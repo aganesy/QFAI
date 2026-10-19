@@ -235,6 +235,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   clock profile, and an adoption checklist. `implement-credentials` and
   `implement-acceptance` point to it. Fixes #3696. Fixes #3758.
 
+- **`qfai validate --rendered <file>` compares rendered text with a screen's
+  `supplements`.** The file is JSON that your own browser run writes; QFAI
+  renders nothing. It holds one entry per screen and state, with the texts the
+  screen showed. `QFAI-CONTRACT-047` names a rendered text that is no title,
+  group heading, label or supplement of that state, and `QFAI-CONTRACT-048`
+  names a supplement of that state the screen did not render, so a list that a
+  redesign made stale is no longer passed in silence. `QFAI-CONTRACT-046`
+  names a file or an entry out of shape. Only the screens and states the file
+  holds are compared, and without the option nothing changes. Fixes #3529.
+
 - **`qfai validate` says when the assistant tree comes from another release.**
   `qfai init` now writes `.qfai/assistant/VERSION` with the version of the
   qfai that ran it: into a new tree or one whose shipped files all match this

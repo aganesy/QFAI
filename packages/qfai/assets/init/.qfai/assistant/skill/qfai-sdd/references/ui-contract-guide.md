@@ -271,6 +271,17 @@ closing punctuation do not make a text different. Whether a sentence is needed i
 judged against the task by the reviewer; validate compares ids and exact wording
 only.
 
+`npx qfai validate --rendered <file>` compares what the screens rendered with
+these lists. Your own browser run writes the file, and QFAI renders nothing:
+`{ "screens": [{ "contract": "UI-0001", "screen": "order_create", "when": "default", "texts": ["..."] }] }`,
+one entry per screen and state, holding the texts the screen showed. Leave out
+data the product shows, text the user typed and the message of a field rule.
+`QFAI-CONTRACT-047` names a rendered text that is no title, group heading, label
+or supplement of that state, and `QFAI-CONTRACT-048` a supplement of that state
+the screen did not render; `QFAI-CONTRACT-046` names a file or an entry out of
+shape. Only the screens and states the file holds are compared, so a render of
+the default state alone checks the default state.
+
 A contract written before these keys was valid without them. Add
 `supplements` to each screen, listing each text it shows beyond its title, group
 headings and labels; `supplements: []` is only for a screen that shows no such

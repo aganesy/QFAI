@@ -388,7 +388,7 @@ async function writeRendered(value: unknown): Promise<void> {
   await writeFile(path.join(root, RENDERED), JSON.stringify(value), "utf-8");
 }
 
-function rendered(texts: string[], overrides: Mapping = {}): Mapping {
+function rendered(texts: unknown[], overrides: Mapping = {}): Mapping {
   return { contract: "UI-0001", screen: "order_create", when: "default", texts, ...overrides };
 }
 

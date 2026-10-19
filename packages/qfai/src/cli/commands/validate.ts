@@ -34,6 +34,8 @@ export type ValidateOptions = {
   platform?: string;
   /** Restrict a story-tree run to the named business flows (`--flow`, repeatable). */
   flowIds?: readonly string[];
+  /** A rendered-text file to compare with the UI contracts (`--rendered`); a relative path resolves against the root. */
+  renderedPath?: string;
   /**
    * Override the tool version this run reports as its own.
    *
@@ -68,6 +70,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       ...(options.profile ? { profile: options.profile } : {}),
       ...(options.platform ? { platform: options.platform } : {}),
       ...(options.flowIds && options.flowIds.length > 0 ? { flowIds: options.flowIds } : {}),
+      ...(options.renderedPath ? { renderedPath: options.renderedPath } : {}),
     });
   } catch (error: unknown) {
     validated = incompleteRunResult(
@@ -1177,6 +1180,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every id a screen's `structure` or `supplements` names is one the screen declares: a group member is an element or action, a group task is a primary task, a supplement sits near an element, action or group, and no element or action is a member of two groups.",
   "QFAI-CONTRACT-045":
     "No text of a screen is shown twice by wording alone: a group heading is not the screen title, and a supplement is not the title, a heading, the label of what it sits near, or another supplement near the same target in the same state.",
+  "QFAI-CONTRACT-046":
+    "The rendered-text file passed with `--rendered` reads as JSON and holds only a `screens` list, each entry with exactly `contract`, `screen`, `when` and `texts`, naming a declared screen and state once.",
+  "QFAI-CONTRACT-047":
+    "Every text a screen rendered in a state is its title, a group heading, a label or one of its supplements of that state.",
+  "QFAI-CONTRACT-048":
+    "Every supplement of a screen in a state the rendered-text file covers is a text the screen rendered in that state.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —
