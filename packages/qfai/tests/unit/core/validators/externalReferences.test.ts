@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -27,6 +27,22 @@ async function inProject(
 const policy = ".qfai/spec/01_policy/principle.md";
 const decisions = ".qfai/spec/decisions.md";
 const contract = ".qfai/spec/03_contract/cli/cli-0001-example.md";
+const decisionsTemplate = path.resolve(
+  import.meta.dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "skill",
+  "qfai-sdd",
+  "templates",
+  "spec",
+  "decisions.md",
+);
 
 // QFAI:EX-0001-0051-10
 describe("validateExternalReferences", () => {
@@ -83,6 +99,59 @@ describe("validateExternalReferences", () => {
       },
       async (root) => {
         expect(await validateExternalReferences(root, defaultConfig)).toEqual([]);
+      },
+    );
+  });
+
+  // QFAI:EX-0001-0051-14
+  it("counts no path in a decision's Evidence item or a change request's Content", async () => {
+    const template = await readFile(decisionsTemplate, "utf8");
+    const release =
+      '| DEC-0001 | Release 1.2.0 approved by Pat on 2026-10-01, option "Ship" | - Evidence: file:CHANGELOG.md; command:npm test → passed - Grounds: the checks pass - Residual risk: none — checked - Rollback: revert the tag | DONE |';
+    const inherited =
+      "| DEC-0002 | Change request: `src/core/a.ts`, [b](src/core/b.ts), `.qfai/spec/decisions.md` | - Evidence: file:`src/core/a.ts`; `tests/a.test.ts`; [c](docs/c.md) - Grounds: UPDATE the rule. - Residual risk: none — kept - Rollback: none — kept | DONE |";
+    const grounds =
+      "| DEC-0003 | Note | - Evidence: file:`src/core/a.ts` - Grounds: `src/core/c.ts` now owns it - Residual risk: none — kept - Rollback: none — kept | DONE |";
+    await inProject(
+      {
+        [decisions]: `${template.trimEnd()}\n${release}\n${inherited}\n${grounds}\n`,
+        [policy]: "- Evidence: `docs/need.md`\n",
+      },
+      async (root) => {
+        const findings = await validateExternalReferences(root, defaultConfig);
+        expect(findings.map(({ message }) => message)).toEqual([
+          "The policy tree has 1 line in 1 file naming a path outside .qfai",
+          "The decision and open-question tree has 1 line in 1 file naming a path outside .qfai",
+        ]);
+      },
+    );
+  });
+
+  // QFAI:EX-0001-0051-15
+  it("ends an Evidence item at the next item and reads it only in a decision row", async () => {
+    const page = ".qfai/spec/decisions/page-0001.md";
+    const questions = ".qfai/spec/open-questions.md";
+    const rows = [
+      "| DEC-0001 | Change request: `src/a.md` \\| `src/b.md` | - Evidence: `src/c.ts` \\| `src/d.ts` - Grounds: kept | DONE |",
+      "| DEC-0002 | Note | - Evidence: file:`src/e.ts` - Residual risk: `src/f.ts` may move - Rollback: none — kept | DONE |",
+      "| DEC-0003 | Note | - Evidence: file:x - Grounds: the `- Evidence:` item names `src/g.ts` - Residual risk: none — kept - Rollback: none — kept | DONE |",
+    ];
+    await inProject(
+      {
+        [decisions]: `${rows.join("\n")}\n`,
+        [page]:
+          "| DEC-0004 | Change request: `src/h.md` | - Evidence: `src/h.md` - Grounds: kept | DONE |\n",
+        [questions]: "| OQ-0001 | Open | - Evidence: `src/i.ts` | TODO |\n",
+      },
+      async (root) => {
+        const findings = await validateExternalReferences(root, defaultConfig);
+        expect(findings.map(({ message, file }) => [message, file])).toEqual([
+          [
+            "The decision and open-question tree has 3 lines in 2 files naming a path outside .qfai",
+            path.join(root, ...decisions.split("/")),
+          ],
+        ]);
+        expect(findings[0]?.relatedFiles).toEqual([path.join(root, ...questions.split("/"))]);
       },
     );
   });
