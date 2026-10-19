@@ -610,7 +610,7 @@ describe("qfai-run", () => {
   it("keeps person-only operations and deletions on the extraction reference", async () => {
     const extract = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(extract).toMatch(
-      /an operation on finished work that the session runs itself and that deletes nothing is `\{ intent: order, artifacts: \[\] \}`/i,
+      /an operation on finished work, or on a device or system the session reaches, that the session runs itself and that deletes nothing is `\{ intent: order, artifacts: \[\] \}`/i,
     );
     const qualifiers = sectionOf(await readShipped(EXTRACTION), "## Qualifiers");
     expect(itemOf(qualifiers, "human-run")).toMatch(/with `order`: only a person can run/i);
@@ -650,7 +650,11 @@ describe("qfai-run", () => {
 
   // QFAI:AC-0001-0211-05
   it("reads a device operation the session runs itself, with no repository change, as an operation", async () => {
-    const line = sectionOf(await readShipped(EXTRACTION), "## Examples")
+    const reference = await readShipped(EXTRACTION);
+    expect(flat(sectionOf(reference, "## Intent"))).toContain(
+      "An operation the session runs on a device or system outside the repository, such as restarting an app on a connected phone, changes no tracked file: extract it as `order` with no artifacts. One that deletes something there needs the user's explicit instruction first. A request only to read that device's state is a question: `question-why` with `session-answerable`.",
+    );
+    const line = sectionOf(reference, "## Examples")
       .split("\n")
       .find((each) =>
         each.startsWith(
@@ -667,6 +671,27 @@ describe("qfai-run", () => {
       routeOf(routingOutcome(pinned)),
       routeOf(routingOutcome({ ...pinned, qualifiers: ["human-run"] })),
     ]).toEqual(["run-operation", "hand-off-operation"]);
+  });
+
+  // QFAI:AC-0001-0211-05
+  it("reads a request to read a device's state as a question the session answers", async () => {
+    const line = sectionOf(await readShipped(EXTRACTION), "## Examples")
+      .split("\n")
+      .find((each) =>
+        each.startsWith(
+          '- "Which app version is installed on the test phone connected to this machine?", which the session can read itself → ',
+        ),
+      );
+    const parsed: unknown = parse(/→ `(\{.*\})`$/.exec(line ?? "")?.[1] ?? "null");
+    expect(parsed).toEqual({
+      intent: "question-why",
+      qualifiers: ["session-answerable"],
+      confidence: "high",
+    });
+    const pinned: unknown = { ...extraction(), ...(isRecord(parsed) ? parsed : {}) };
+    if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
+    const outcome = routingOutcome(pinned);
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("answer-in-session");
   });
 
   // QFAI:AC-0001-0211-05

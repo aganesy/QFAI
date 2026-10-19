@@ -115,6 +115,12 @@ Feedback on the tools is still drafted and approved as
 `.agents/rules/session-feedback.md` sets out: the user chooses which drafts are
 filed. Leftovers to sort again, with no request to file them, stay `follow-up`.
 
+An operation the session runs on a device or system outside the repository,
+such as restarting an app on a connected phone, changes no tracked file: extract
+it as `order` with no artifacts. One that deletes something there needs the
+user's explicit instruction first. A request only to read that device's state
+is a question: `question-why` with `session-answerable`.
+
 Each intent below is followed by when to set it.
 
 ### Answers and no work
@@ -324,6 +330,7 @@ Each request is followed by its extraction. Fields not shown are empty.
 - "Merge the pull request." → `{ intent: order, confidence: high }`
 - "File issues for everything this task left over." → `{ intent: order, artifacts: [], confidence: high }`
 - "Restart the app on the test phone connected to this machine", which the session runs itself and which deletes nothing → `{ intent: order, artifacts: [], confidence: high }`
+- "Which app version is installed on the test phone connected to this machine?", which the session can read itself → `{ intent: question-why, qualifiers: [session-answerable], confidence: high }`
 - "How do I export the results as CSV?" → `{ intent: question-how, confidence: high }`
 - "Remove this task's completed temporary directory under the repository's ignored tmp root", with current user authority and ownership evidence → `{ intent: order, qualifiers: [owned-temporary-cleanup], artifacts: [], risks: [data-loss], confidence: high }`
 - "Last night's deploy failed.", with no cause given → `{ intent: question-why, confidence: high }`
