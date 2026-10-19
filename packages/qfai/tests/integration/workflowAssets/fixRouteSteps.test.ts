@@ -427,6 +427,12 @@ describe("where qfai-run runs the policy check and the commit", () => {
       expect(report).toContain(status);
     }
     expect(report).toMatch(/no gate reads the table/i);
+    expect(report).toMatch(
+      /`passed` is not a gate verdict: a step whose gate ran and passed is `ran`, and so is a step that ran and found nothing to do/i,
+    );
+    expect(report).toMatch(
+      /a step whose gate is UNRUN is `not run`, with the UNRUN reason; a step where some gates are delegated is `ran`, and its gate verdicts show the delegation/i,
+    );
     const run = flat(sectionOf(await readShipped("skill/qfai-run/SKILL.md"), "## The work"));
     expect(run).toMatch(/note each step's status for the final report/i);
     expect(

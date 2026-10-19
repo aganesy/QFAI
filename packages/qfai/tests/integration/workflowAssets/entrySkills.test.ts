@@ -639,10 +639,10 @@ describe("qfai-run", () => {
     );
   });
 
-  it("says what the env flag adds to a defect plan, and reads a diagnostics-only change", async () => {
+  it("routes an env-bound defect without repro to fix-env-bound, says what that adds, and reads a diagnostics-only change", async () => {
     const reference = await readShipped(EXTRACTION);
     expect(itemOf(sectionOf(reference, "## Entry flags"), "env")).toMatch(
-      /on a defect without `repro`, it adds a stage before diagnosis that asks the reporter .* and a stage after verification that confirms the fix there/i,
+      /on a defect without `repro`, it routes the request to `fix-env-bound` unless an earlier rule applies, .* that route adds a stage before diagnosis that asks the reporter .* and a stage after verification that confirms the fix there/i,
     );
     const outcome = routingOutcome(
       extraction({

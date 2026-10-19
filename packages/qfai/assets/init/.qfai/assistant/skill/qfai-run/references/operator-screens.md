@@ -329,8 +329,11 @@ reset, a stash, a branch switch or a worktree removal.
   reason. A status is `ran`; `passed`, a pass-through whose Passes when
   condition held, so it wrote nothing; `delegated`, to CI or a person, with
   where its result appears; `not run`, a reached step that did not run; or
-  `not reached`, a step outside the chosen scope or after the work stopped. No
-  gate reads the table.
+  `not reached`, a step outside the chosen scope or after the work stopped.
+  `passed` is not a gate verdict: a step whose gate ran and passed is `ran`, and
+  so is a step that ran and found nothing to do. A step whose gate is UNRUN is
+  `not run`, with the UNRUN reason; a step where some gates are delegated is
+  `ran`, and its gate verdicts show the delegation. No gate reads the table.
 - A gate shows its verdict only.
 - An external effect nobody requested is listed as not requested.
 - The report does not restate the history of the work.
