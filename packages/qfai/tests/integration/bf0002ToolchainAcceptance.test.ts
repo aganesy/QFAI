@@ -1038,7 +1038,7 @@ function expectedPending(fixture: CatchupFixture): {
   };
 }
 
-async function expectRejectedConflict(fixture: CatchupFixture): Promise<void> {
+async function expectRejectedConflict(fixture: CatchupFixture): Promise<string> {
   const expected = expectedPending(fixture);
   const head = nativeGit(fixture.root, ["rev-parse", "HEAD"]).stdout.trim();
   const run = invokeCatchup(fixture, [], await catchupPreload(fixture));
@@ -1059,6 +1059,7 @@ async function expectRejectedConflict(fixture: CatchupFixture): Promise<void> {
         program === "git" && ["add", "commit", "push", "reset", "rebase"].includes(args[0] ?? ""),
     ),
   ).toEqual([]);
+  return run.output;
 }
 
 async function expectPreflightRefusal(
@@ -1612,22 +1613,23 @@ describe("branch catch-up acceptance", () => {
 
   // QFAI:AC-0002-0025-08
   // QFAI:EX-0002-0025-26
+  // QFAI:EX-0002-0025-28
   it.each([
     {
-      spacing: "unspaced",
+      name: "unspaced entries",
       topic: `### Changed\n\n${BASE_CHANGE}\n### Fixed\n\n- **Topic fix.** From the branch.\n  Fixes #1.\n\n`,
-      default:
+      theirs:
         `### Changed\n\n${BASE_CHANGE}\n### Changed\n\n- **Default change.** From the default branch.\n\n` +
         "### Fixed\n\n- **Default fix.** From the default branch.\n\n",
       merged:
-        `### Changed\n\n${BASE_CHANGE}- **Default change.** From the default branch.\n\n` +
+        `### Changed\n\n${BASE_CHANGE}\n- **Default change.** From the default branch.\n\n` +
         "### Fixed\n\n- **Topic fix.** From the branch.\n  Fixes #1.\n" +
         "- **Default fix.** From the default branch.\n\n",
     },
     {
-      spacing: "spaced",
+      name: "spaced entries",
       topic: `### Changed\n\n${BASE_CHANGE}\n- **Topic change.** From the branch.\n\n`,
-      default:
+      theirs:
         `### Changed\n\n${BASE_CHANGE}\n- **Default change.** From the default branch.\n\n` +
         "### Fixed\n\n- **Default fix.** From the default branch.\n\n",
       merged:
@@ -1635,10 +1637,48 @@ describe("branch catch-up acceptance", () => {
         "- **Default change.** From the default branch.\n\n" +
         "### Fixed\n\n- **Default fix.** From the default branch.\n\n",
     },
-  ])(
-    "combines both sides' $spacing entries of an Unreleased-only changelog conflict under one heading per type",
-    async ({ topic, default: theirs, merged }) => {
+    ...(["merge", "diff3", "zdiff3"] as const).map((style) => ({
+      name: `a new branch group in the ${style} conflict style`,
+      style,
+      topic: `### Changed\n\n${BASE_CHANGE}\n### Security\n\n- **Topic security.** From the branch.\n\n`,
+      theirs: `### Changed\n\n${BASE_CHANGE}\n- **Default change.** From the default branch.\n\n`,
+      merged:
+        `### Changed\n\n${BASE_CHANGE}\n- **Default change.** From the default branch.\n\n` +
+        "### Security\n\n- **Topic security.** From the branch.\n\n",
+    })),
+    {
+      name: "mixed spacing",
+      base:
+        "### Changed\n\n- **First.** One.\n- **Second.** Two.\n\n" +
+        "### Fixed\n\n- **Fix one.** One.\n\n- **Fix two.** Two.\n\n",
+      topic:
+        "### Changed\n\n- **First.** One.\n- **Second.** Two.\n- **Topic change.** From the branch.\n\n" +
+        "### Fixed\n\n- **Fix one.** One.\n\n- **Fix two.** Two.\n\n",
+      theirs:
+        "### Changed\n\n- **First.** One.\n- **Second.** Two.\n- **Default change.** From the default branch.\n\n" +
+        "### Fixed\n\n- **Fix one.** One.\n\n- **Fix two.** Two.\n\n",
+      merged:
+        "### Changed\n\n- **First.** One.\n- **Second.** Two.\n- **Topic change.** From the branch.\n\n" +
+        "- **Default change.** From the default branch.\n\n" +
+        "### Fixed\n\n- **Fix one.** One.\n\n- **Fix two.** Two.\n\n",
+    },
+  ] as {
+    name: string;
+    style?: string;
+    base?: string;
+    topic: string;
+    theirs: string;
+    merged: string;
+  }[])(
+    "combines both sides' entries of an Unreleased-only changelog conflict with $name",
+    async ({ style, base, topic, theirs, merged }) => {
       await withCatchup(async (fixture) => {
+        if (base !== undefined) {
+          await advanceOrigin(fixture, { [CHANGELOG]: changelogText(base) });
+          nativeGit(fixture.root, ["pull", "-q", "--no-rebase", "--no-edit", "origin", "trunk"]);
+          nativeGit(fixture.root, ["push", "-q", "origin", "topic"]);
+        }
+        if (style !== undefined) nativeGit(fixture.root, ["config", "merge.conflictStyle", style]);
         await commitChanges(fixture.root, { [CHANGELOG]: changelogText(topic) });
         const defaultTip = await advanceOrigin(fixture, { [CHANGELOG]: changelogText(theirs) });
         const topicHead = nativeGit(fixture.root, ["rev-parse", "HEAD"]).stdout.trim();
@@ -1668,38 +1708,74 @@ describe("branch catch-up acceptance", () => {
 
   // QFAI:AC-0002-0025-08
   // QFAI:EX-0002-0025-27
-  it.each(["released section", "edited entry"] as const)(
-    "stops for a person when a changelog conflict touches a %s",
-    async (kind) => {
+  it.each([
+    {
+      name: "a released section",
+      topic: `### Changed\n\n${BASE_CHANGE}\n- **Topic change.** From the branch.\n\n`,
+      theirs: `## [1.1.0] - 2026-02-01\n\n### Changed\n\n${BASE_CHANGE}\n- **Default change.** From the default branch.\n\n`,
+      reason: "a conflict lies outside ## [Unreleased]",
+    },
+    {
+      name: "an entry both sides edited",
+      topic: `### Changed\n\n${BASE_CHANGE.replace("Already", "Edited")}\n`,
+      theirs: `### Changed\n\n${BASE_CHANGE.replace("Already", "Reworded")}\n`,
+      reason: "a side changed or removed an Unreleased entry",
+    },
+    {
+      name: "an unknown group heading",
+      topic: `### Changed\n\n${BASE_CHANGE}\n### Fixed (wave)\n\n- **Topic fix.** From the branch.\n\n`,
+      theirs: `### Changed\n\n${BASE_CHANGE}\n- **Default change.** From the default branch.\n\n`,
+      reason: 'unknown group heading "Fixed (wave)"',
+    },
+    {
+      name: "an entry above the first group",
+      topic: `- **Topic change.** From the branch.\n\n### Changed\n\n${BASE_CHANGE}\n`,
+      theirs: `- **Default change.** From the default branch.\n\n### Changed\n\n${BASE_CHANGE}\n`,
+      reason: "an entry sits above the first group",
+    },
+    {
+      name: "a carriage return",
+      topic: `### Changed\n\n${BASE_CHANGE}\n- **Topic change.** From the branch.\r\n\n`,
+      theirs: `### Changed\n\n${BASE_CHANGE}\n- **Default change.** From the default branch.\n\n`,
+      reason: "carriage returns are not supported",
+    },
+    {
+      name: "an entry both sides added",
+      topic: `### Changed\n\n${BASE_CHANGE}\n- **Shared.** Same.\n\n- **Topic change.** From the branch.\n\n`,
+      theirs: `### Changed\n\n${BASE_CHANGE}\n- **Shared.** Same.\n\n- **Default change.** From the default branch.\n\n`,
+      reason: "both sides added the same entry",
+    },
+  ])(
+    "stops for a person when a changelog conflict holds $name",
+    async ({ topic, theirs, reason }) => {
       await withCatchup(async (fixture) => {
-        const topicEntry = "- **Topic change.** From the branch.\n\n";
-        const defaultEntry = "- **Default change.** From the default branch.\n\n";
-        if (kind === "released section") {
-          await commitChanges(fixture.root, {
-            [CHANGELOG]: changelogText(`### Changed\n\n${BASE_CHANGE}\n${topicEntry}`),
-          });
-          await advanceOrigin(fixture, {
-            [CHANGELOG]: changelogText(
-              `## [1.1.0] - 2026-02-01\n\n### Changed\n\n${BASE_CHANGE}\n${defaultEntry}`,
-            ),
-          });
-        } else {
-          await commitChanges(fixture.root, {
-            [CHANGELOG]: changelogText(
-              `### Changed\n\n${BASE_CHANGE.replace("Already", "Edited")}\n`,
-            ),
-          });
-          await advanceOrigin(fixture, {
-            [CHANGELOG]: changelogText(
-              `### Changed\n\n${BASE_CHANGE.replace("Already", "Reworded")}\n`,
-            ),
-          });
-        }
-        await expectRejectedConflict(fixture);
+        await commitChanges(fixture.root, { [CHANGELOG]: changelogText(topic) });
+        await advanceOrigin(fixture, { [CHANGELOG]: changelogText(theirs) });
+        const output = await expectRejectedConflict(fixture);
+        expect(output).toContain(`Manual conflict resolution required: ${CHANGELOG} (${reason}).`);
         expect(await readFile(path.join(fixture.root, CHANGELOG), "utf-8")).toContain("<<<<<<<");
       });
     },
   );
+
+  // QFAI:AC-0002-0025-08
+  // QFAI:EX-0002-0025-27
+  it("writes no digest file when a changelog conflict beside eligible digest conflicts is refused", async () => {
+    await withCatchup(async (fixture) => {
+      await commitChanges(fixture.root, {
+        [CHANGELOG]: changelogText(
+          `### Changed\n\n${BASE_CHANGE}\n### Fixed (wave)\n\n- **Topic fix.** x\n\n`,
+        ),
+      });
+      await digestConflict(fixture, {
+        [CHANGELOG]: changelogText(`### Changed\n\n${BASE_CHANGE}\n- **Default change.** y\n\n`),
+      });
+      const output = await expectRejectedConflict(fixture);
+      expect(output).toContain(`${CHANGELOG} (unknown group heading "Fixed (wave)").`);
+      for (const relative of CATCHUP_OUTPUTS.slice(0, 3))
+        expect(await readFile(path.join(fixture.root, relative), "utf-8")).toContain("<<<<<<<");
+    });
+  });
 
   // QFAI:AC-0002-0025-04
   // QFAI:EX-0002-0025-18

@@ -207,11 +207,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Fixes #3535.
 - **`pnpm branch:catchup` merges a changelog conflict inside Unreleased.** When
   a catch-up conflicts in `CHANGELOG.md` only under `## [Unreleased]`, the
-  helper keeps both sides' entries, the branch's first,
-  and rebuilds that section with one heading per type in Keep a Changelog order,
-  so parallel pull requests no longer need a hand merge of the file. A conflict
-  in or next to a released section, a side that changed an existing entry, or
-  an unknown group heading still stops for a person with the merge kept.
+  helper keeps both sides' entries, the branch's first, each under the type its
+  side filed it under and with its own spacing, and rebuilds that section with
+  one heading per type in Keep a Changelog order, so parallel pull requests no
+  longer need a hand merge of the file. A conflict in or next to a released
+  section, a side that changed or moved an existing entry, an entry both sides
+  added, or an unknown group heading still stops for a person with the merge
+  kept and the reason named.
   Fixes #3670.
 - **The verify report lists what a test run records, apart from what is
   covered.** `verify-repo-gate` gains a `### Run report` recipe: when the report

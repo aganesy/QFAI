@@ -35,7 +35,9 @@ const CHANGELOG_GROUPS = [
   "Fixed",
   "Security",
 ];
-const SECTION_HEADING = /^#{1,2} /;
+const TITLE_HEADING = /^#{1,2} /;
+const RELEASE_HEADING = /^## \[/;
+const GROUP_HEADING = /^### (.+?)\s*$/;
 const UNRELEASED_HEADING = /^## \[Unreleased\]\s*$/;
 const WRITERS = ["scripts/pin-guard-bytes.mjs", "scripts/pin-verification-bodies.mjs"];
 const MAX_BYTES = 64 * 1024 * 1024;
@@ -243,123 +245,194 @@ function changelogRefusal(reason) {
   refuse(`Manual conflict resolution required: ${CHANGELOG} (${reason}).`);
 }
 
-/** The lines up to and including the one `## [Unreleased]` heading, its section, and the rest. */
-function unreleasedSplit(lines) {
+/** The body of the one `## [Unreleased]` section as [first line, end], ended by `## [`. */
+function unreleasedRange(lines) {
   const starts = lines.flatMap((line, index) => (UNRELEASED_HEADING.test(line) ? [index] : []));
   if (starts.length !== 1) changelogRefusal("a side does not hold exactly one ## [Unreleased]");
   const start = starts[0] + 1;
-  const found = lines.findIndex((line, index) => index >= start && SECTION_HEADING.test(line));
-  const end = found === -1 ? lines.length : found;
-  return [lines.slice(0, start), lines.slice(start, end), lines.slice(end)];
+  const found = lines.findIndex((line, index) => index >= start && RELEASE_HEADING.test(line));
+  return [start, found === -1 ? lines.length : found];
 }
 
-/** How often each entry line occurs; blank lines and group headings are not entries. */
-function entryCounts(section) {
+/**
+ * The section's entries in order, each with its type, its own lines including the blank lines
+ * after it, and whether this merge made its adjacency to the previous entry new.
+ */
+function sectionEntries(items) {
+  const entries = [];
+  let type;
+  let fresh = true;
+  let joined = false;
+  for (const item of items) {
+    if (item.joined === true) joined = true;
+    const heading = GROUP_HEADING.exec(item.line);
+    if (heading !== null) {
+      if (!CHANGELOG_GROUPS.includes(heading[1]))
+        changelogRefusal(`unknown group heading "${heading[1]}"`);
+      type = heading[1];
+      fresh = true;
+    } else if (item.line.startsWith("- ")) {
+      if (type === undefined) changelogRefusal("an entry sits above the first group");
+      entries.push({ type, lines: [item.line], joined: fresh || joined });
+      fresh = false;
+      joined = false;
+    } else if (item.line.trim() !== "") {
+      if (fresh) changelogRefusal("text sits outside an entry");
+      entries.at(-1).lines.push(item.line);
+    } else if (!fresh) entries.at(-1).lines.push(item.line);
+  }
+  return entries;
+}
+
+function sectionOf(source) {
+  const lines = linesOf(source);
+  const [start, end] = unreleasedRange(lines);
+  return sectionEntries(lines.slice(start, end).map((line) => ({ line })));
+}
+
+/** An entry's text without the blank lines after it, optionally under its type. */
+function entryKey(entry, typed) {
+  const last = entry.lines.findLastIndex((line) => line.trim() !== "");
+  const text = entry.lines.slice(0, last + 1).join("");
+  return typed ? `${entry.type}\n${text}` : text;
+}
+
+function tally(entries, typed) {
   const counts = new Map();
-  for (const line of section) {
-    if (line.trim() === "" || line.startsWith("### ")) continue;
-    const key = line.replace(/\n$/, "");
+  for (const entry of entries) {
+    const key = entryKey(entry, typed);
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return counts;
 }
 
-/** Whether a blank line separates two entries of one group in the section. */
-function spacedEntries(section) {
-  let previous = "";
-  let blank = false;
-  for (const line of section) {
-    if (line.trim() === "") {
-      blank = true;
-      continue;
-    }
-    if (blank && line.startsWith("- ") && previous !== "" && !previous.startsWith("### "))
-      return true;
-    previous = line;
-    blank = false;
-  }
-  return false;
+/** Whether a blank line ends an entry that the next entry of its group follows. */
+function spacedEntries(entries) {
+  return entries.some(
+    (entry, index) =>
+      index + 1 < entries.length && !entries[index + 1].joined && entry.lines.at(-1).trim() === "",
+  );
 }
 
-/** The section rebuilt with one heading per type, in Keep a Changelog order. */
-function regroup(section, followed, spaced) {
-  const groups = new Map();
-  let entries;
-  for (const line of section) {
-    const heading = /^### (.+?)\s*$/.exec(line);
-    if (heading !== null) {
-      if (!CHANGELOG_GROUPS.includes(heading[1]))
-        changelogRefusal(`unknown group heading "${heading[1]}"`);
-      entries = groups.get(heading[1]) ?? [];
-      groups.set(heading[1], entries);
-    } else if (line.startsWith("- ")) {
-      if (entries === undefined) changelogRefusal("an entry sits above the first group");
-      entries.push([line]);
-    } else if (line.trim() !== "") {
-      if (entries?.at(-1) === undefined) changelogRefusal("text sits outside an entry");
-      entries.at(-1).push(line);
-    } else entries?.at(-1)?.push(line);
-  }
+/**
+ * The section rebuilt with one heading per type in Keep a Changelog order. Each entry keeps its
+ * own lines; a blank line is added only where this merge made two entries adjacent and a side
+ * already spaces entries, and before a heading that would otherwise follow an entry directly.
+ */
+function regroup(entries, followed, spaced) {
   const rebuilt = [];
   for (const name of CHANGELOG_GROUPS) {
-    const kept = groups.get(name) ?? [];
+    const kept = entries.filter((entry) => entry.type === name);
     if (kept.length === 0) continue;
-    rebuilt.push("\n", `### ${name}\n`, "\n");
+    if (rebuilt.length === 0 || rebuilt.at(-1).trim() !== "") rebuilt.push("\n");
+    rebuilt.push(`### ${name}\n`, "\n");
     kept.forEach((entry, index) => {
-      const last = entry.findLastIndex((line) => line.trim() !== "");
-      rebuilt.push(...(index > 0 && spaced ? ["\n"] : []), ...entry.slice(0, last + 1));
+      if (index > 0 && entry.joined && spaced && rebuilt.at(-1).trim() !== "") rebuilt.push("\n");
+      rebuilt.push(...entry.lines);
     });
   }
-  if (followed) rebuilt.push("\n");
+  if (followed && (rebuilt.length === 0 || rebuilt.at(-1).trim() !== "")) rebuilt.push("\n");
   return rebuilt;
 }
 
 /**
- * Keeps both sides of every conflict region inside `## [Unreleased]` and regroups that section.
- * Each side may only add entry lines to the merge base's section, and the result must hold
- * exactly the entries both sides added on top of the base; anything else stops for a person.
+ * The merged lines with both sides of every region, the branch's side first. Each side's entries
+ * stay under the type in effect on that side: a heading is inserted where the merged text would
+ * otherwise file an entry under another type, and shared text after a region whose sides leave
+ * different types in effect stops the resolution.
  */
-function changelogResolution(source, stages) {
-  if ([source, ...stages].some((value) => value.includes("\r")))
-    changelogRefusal("carriage returns are not supported");
-  const merged = [];
+function mergedLines(source) {
+  const items = [];
   let section = "";
+  let inside = false;
+  const types = { ours: undefined, theirs: undefined, merged: undefined };
+  const emit = (line, sides, joined) => {
+    const ended = line.endsWith("\n") ? line : `${line}\n`;
+    const heading = GROUP_HEADING.exec(ended);
+    if (inside && heading !== null) {
+      for (const side of [...sides, "merged"]) types[side] = heading[1];
+    } else if (inside && ended.startsWith("- ")) {
+      const type = types[sides[0]];
+      if (sides.some((side) => types[side] !== type))
+        changelogRefusal(
+          "shared entries after a conflict fall under a different type on each side",
+        );
+      if (type === undefined) changelogRefusal("an entry sits above the first group");
+      if (types.merged !== type) {
+        items.push({ line: `### ${type}\n` });
+        types.merged = type;
+      }
+    }
+    items.push({ line: ended, joined });
+  };
   for (const segment of conflictSegments(source)) {
     if (segment.common !== undefined) {
-      for (const line of segment.common) if (SECTION_HEADING.test(line)) section = line;
-      merged.push(...segment.common);
+      for (const line of segment.common) {
+        if (TITLE_HEADING.test(line)) {
+          section = line;
+          inside = UNRELEASED_HEADING.test(line);
+          types.ours = types.theirs = types.merged = undefined;
+        }
+        emit(line, ["ours", "theirs"], false);
+      }
       continue;
     }
     if (!UNRELEASED_HEADING.test(section))
       changelogRefusal("a conflict lies outside ## [Unreleased]");
-    const sides = [...segment.left, ...segment.right];
-    if (sides.some((line) => SECTION_HEADING.test(line)))
+    if ([...segment.left, ...segment.right].some((line) => TITLE_HEADING.test(line)))
       changelogRefusal("a conflict holds a release or title heading");
-    merged.push(...sides.map((line) => (line.endsWith("\n") ? line : `${line}\n`)));
+    for (const line of segment.left) emit(line, ["ours"], false);
+    segment.right.forEach((line, index) => emit(line, ["theirs"], index === 0));
   }
-  const [head, body, rest] = unreleasedSplit(merged);
-  const sections = stages.map((value) => unreleasedSplit(linesOf(value))[1]);
-  // Entries keep the spacing either side already uses between two entries of one group.
-  const rebuilt = regroup(body, rest.length > 0, sections.slice(1).some(spacedEntries));
-  const [base, ours, theirs] = sections.map(entryCounts);
-  const resolved = entryCounts(rebuilt);
-  for (const key of new Set([
-    ...base.keys(),
-    ...ours.keys(),
-    ...theirs.keys(),
-    ...resolved.keys(),
-  ])) {
-    const [b, o, t] = [base, ours, theirs].map((counts) => counts.get(key) ?? 0);
-    if (o < b || t < b) changelogRefusal("a side changed or removed an Unreleased entry");
-    if ((resolved.get(key) ?? 0) !== o + t - b)
-      changelogRefusal("the combined entries differ from what both sides added");
+  return items;
+}
+
+/**
+ * Keeps both sides of every conflict region inside `## [Unreleased]` and regroups that section.
+ * Each side may only add entries to the merge base's section, no entry may be added by both, and
+ * the result must hold exactly the base's entries plus each side's additions, each under the type
+ * its side filed it under; anything else stops for a person.
+ */
+function changelogResolution(source, stages) {
+  if ([source, ...stages].some((value) => value.includes("\r")))
+    changelogRefusal("carriage returns are not supported");
+  const items = mergedLines(source);
+  const lines = items.map((item) => item.line);
+  const [start, end] = unreleasedRange(lines);
+  const sides = stages.map(sectionOf);
+  const rebuilt = regroup(
+    sectionEntries(items.slice(start, end)),
+    end < lines.length,
+    sides.slice(1).some(spacedEntries),
+  );
+  const resolved = sectionEntries(rebuilt.map((line) => ({ line })));
+  // Each check runs over every entry before the next, so the reported reason is the first that applies.
+  const checks = [
+    [true, ([b, o, t]) => o >= b && t >= b, "a side changed or removed an Unreleased entry"],
+    [false, ([b, o, t]) => o <= b || t <= b, "both sides added the same entry"],
+    [
+      false,
+      ([b, o, t, r]) => r === o + t - b,
+      "the combined entries differ from what both sides added",
+    ],
+    [
+      true,
+      ([b, o, t, r]) => r === o + t - b,
+      "an entry would leave the type its side filed it under",
+    ],
+  ];
+  for (const [typed, holds, reason] of checks) {
+    const counts = [...sides, resolved].map((entries) => tally(entries, typed));
+    const keys = new Set(counts.flatMap((count) => [...count.keys()]));
+    for (const key of keys)
+      if (!holds(counts.map((count) => count.get(key) ?? 0))) changelogRefusal(reason);
   }
-  return [...head, ...rebuilt, ...rest].join("");
+  return [...lines.slice(0, start), ...rebuilt, ...lines.slice(end)].join("");
 }
 
 function listShape(source) {
   const paths = new Set();
-  const lines = source.match(/[^\n]*(?:\n|$)/g)?.filter((line) => line !== "") ?? [];
+  const lines = linesOf(source);
   const normalized = lines.map((line) => {
     if (/^\r?\n$/.test(line) || line.startsWith("#")) return line;
     const match = /^([0-9a-f]{64}) {2}([^\r\n]+)(?:\r?\n)?$/.exec(line);

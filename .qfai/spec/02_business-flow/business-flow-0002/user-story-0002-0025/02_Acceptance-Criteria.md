@@ -82,7 +82,8 @@ Feature: Safe branch catch-up with CI pin resealing
     Given a catch-up merge conflicts in `CHANGELOG.md`
     When every conflict region lies inside `## [Unreleased]` and each merge side only added entries to that section
     Then the helper keeps both sides' entries, the branch's first, under one heading per change type in Keep a Changelog order
+    And each entry stays under the type its side filed it under, and keeps its own lines and the blank lines after it
     And it stages `CHANGELOG.md` explicitly beside the writer outputs and commits the complete merge
-    And a region in or touching a released section, a side that changed or removed an existing entry, an unknown group heading or a result that does not hold exactly the entries both sides added stops the helper
+    And a region in or touching a released section, a side that changed or removed an existing entry, an entry both sides added, an unknown group heading or a result that does not hold exactly the entries both sides added stops the helper
     And a stopped changelog conflict retains the pending merge and its markers without partial automatic resolution, abort or reset
 ```
