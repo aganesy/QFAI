@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
+import type { AcceptedDrift } from "../config.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { SHIPPED_WORKFLOW_NAMES } from "../../shared/shippedWorkflowNames.js";
 
@@ -13,7 +15,7 @@ export type WorkflowDriftCheck = {
   severity: "warning" | "info";
   title: string;
   message: string;
-  details: { path: string; packagedCopy: string; acceptedReason?: string };
+  details: { path: string; packagedCopy: string; digest: string; acceptedReason?: string };
 };
 
 export async function readText(target: string): Promise<string | undefined> {
@@ -141,14 +143,24 @@ export function describeWorkflowDifference(installed: string, packaged: string):
 }
 
 /**
+ * The digest `workflow.acceptedDrift` records for a workflow text: `sha256:` and the lowercase hex
+ * SHA-256 of the text with its line endings read as `\n`, encoded as UTF-8, so a checkout that
+ * converts line endings keeps the same digest.
+ */
+export function workflowDigest(text: string): string {
+  return `sha256:${createHash("sha256").update(withLf(text), "utf8").digest("hex")}`;
+}
+
+/**
  * A warning for each shipped workflow installed in the project whose text is not the text this
- * package ships, and an `info` finding instead for one `accepted` names, carrying its reason.
- * Both copies are read and nothing is written. A workflow the project does not have raises no
- * finding here.
+ * package ships, carrying the installed text's digest, and an `info` finding instead for one
+ * `accepted` names with that same digest, carrying its reason. A file whose digest is not the
+ * recorded one changed after it was accepted and is a warning again. Both copies are read and
+ * nothing is written. A workflow the project does not have raises no finding here.
  */
 export async function checkWorkflowDrift(
   root: string,
-  accepted: ReadonlyMap<string, string>,
+  accepted: ReadonlyMap<string, AcceptedDrift>,
 ): Promise<WorkflowDriftCheck[]> {
   const packagedDir = packagedWorkflowsDir();
   if (packagedDir === undefined) return [];
@@ -162,30 +174,40 @@ export async function checkWorkflowDrift(
     const installedPath = [...WORKFLOWS_DIR, name].join("/");
     const id = `workflows.drift.${name.replace(/\.yml$/, "")}`;
     const difference = describeWorkflowDifference(installed, packaged);
-    const acceptedReason = accepted.get(name);
-    if (acceptedReason !== undefined) {
+    const digest = workflowDigest(installed);
+    const entry = accepted.get(name);
+    if (entry?.digest === digest) {
       findings.push({
         id,
         severity: "info",
         title: `Shipped workflow differs, accepted (${installedPath})`,
         message:
           `${installedPath} differs from the copy this qfai package ships in ${difference}. ` +
-          `workflow.acceptedDrift in qfai.config.yaml accepts the difference: ${acceptedReason}`,
-        details: { path: installedPath, packagedCopy, acceptedReason },
+          `workflow.acceptedDrift in qfai.config.yaml accepts the difference at ${digest}: ` +
+          entry.reason,
+        details: { path: installedPath, packagedCopy, digest, acceptedReason: entry.reason },
       });
       continue;
     }
+    const opening =
+      entry === undefined
+        ? `${installedPath} differs`
+        : `${installedPath} changed since workflow.acceptedDrift accepted it: the entry records ` +
+          `${entry.digest}, and the file now reads ${digest}. It differs`;
+    const keep =
+      entry === undefined
+        ? "To keep the difference, list the file with that digest and a reason under " +
+          "workflow.acceptedDrift in qfai.config.yaml."
+        : "To keep the new text, put that digest in its workflow.acceptedDrift entry.";
     findings.push({
       id,
       severity: "warning",
       title: `Shipped workflow differs (${installedPath})`,
       message:
-        `${installedPath} differs from the copy this qfai package ships in ` +
-        `${difference}. ` +
+        `${opening} from the copy this qfai package ships in ${difference}. ` +
         `Doctor changes nothing. To take the shipped text, copy ${packagedCopy} over it; ` +
-        `that replaces every local change. To keep the difference, list the file with a reason ` +
-        `under workflow.acceptedDrift in qfai.config.yaml.`,
-      details: { path: installedPath, packagedCopy },
+        `that replaces every local change. Its current digest is ${digest}. ${keep}`,
+      details: { path: installedPath, packagedCopy, digest },
     });
   }
   return findings;

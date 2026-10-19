@@ -10,6 +10,7 @@ import {
   getConfigPath,
   loadConfig,
   readAcceptedDrift,
+  type AcceptedDrift,
   resolvePath,
   type ConfigPathKey,
 } from "./config.js";
@@ -319,7 +320,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   addCheck(checks, await buildAssetLineBudgetCheck(root));
 
   addCheck(checks, await checkDocsLane(root));
-  const acceptedDrift = readAcceptedDrift(configDocument) ?? new Map<string, string>();
+  const acceptedDrift = readAcceptedDrift(configDocument) ?? new Map<string, AcceptedDrift>();
   for (const check of await checkWorkflowDrift(root, acceptedDrift)) addCheck(checks, check);
   for (const check of await checkWorkflowParse(root)) addCheck(checks, check);
   const workflowCost = await checkWorkflowCost(root);

@@ -339,27 +339,34 @@ export function readSkippedWorkflows(document: unknown): ReadonlySet<string> | n
 }
 
 /** The config issue an invalid `workflow.acceptedDrift` raises. */
-export const ACCEPTED_DRIFT_MESSAGE = `workflow.acceptedDrift must be a list of entries, each with a file, one of the shipped workflow file names (${[...SHIPPED_WORKFLOW_NAMES].join(", ")}) listed once, and a reason that is not empty; an absent key means no difference is accepted.`;
+export const ACCEPTED_DRIFT_MESSAGE = `workflow.acceptedDrift must be a list of entries, each with a file, one of the shipped workflow file names (${[...SHIPPED_WORKFLOW_NAMES].join(", ")}) listed once, the digest qfai doctor prints for it (sha256: and 64 lowercase hexadecimal characters), and a reason that is not empty; an absent key means no difference is accepted.`;
+
+/** One `workflow.acceptedDrift` entry: the digest of the accepted text and why it is kept. */
+export type AcceptedDrift = { digest: string; reason: string };
+
+const DRIFT_DIGEST = /^sha256:[0-9a-f]{64}$/;
 
 /**
  * The shipped workflows `workflow.acceptedDrift` accepts as differing from the shipped text, each
- * with its trimmed reason, read from the parsed config document. `null` means the value is not a
- * list of such entries, and no entry is accepted in its place.
+ * with the digest of the accepted text and its trimmed reason, read from the parsed config
+ * document. `null` means the value is not a list of such entries, and no entry is accepted in its
+ * place.
  */
-export function readAcceptedDrift(document: unknown): ReadonlyMap<string, string> | null {
+export function readAcceptedDrift(document: unknown): ReadonlyMap<string, AcceptedDrift> | null {
   const workflow = isRecord(document) ? document.workflow : undefined;
   if (!isRecord(workflow) || workflow.acceptedDrift === undefined) return new Map();
   const listed = workflow.acceptedDrift;
   if (!Array.isArray(listed)) return null;
-  const accepted = new Map<string, string>();
+  const accepted = new Map<string, AcceptedDrift>();
   for (const entry of listed) {
     if (!isRecord(entry)) return null;
-    const { file, reason } = entry;
+    const { file, digest, reason } = entry;
     if (typeof file !== "string" || !SHIPPED_WORKFLOW_NAMES.has(file) || accepted.has(file)) {
       return null;
     }
+    if (typeof digest !== "string" || !DRIFT_DIGEST.test(digest)) return null;
     if (typeof reason !== "string" || reason.trim() === "") return null;
-    accepted.set(file, reason.trim());
+    accepted.set(file, { digest, reason: reason.trim() });
   }
   return accepted;
 }

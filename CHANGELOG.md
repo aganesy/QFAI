@@ -145,6 +145,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   story, BR or contract sets with a one-line note and no decision row.
   Fixes #3779.
 
+- **An accepted workflow difference now records the file's digest, and a file
+  that changes again warns again.** Each `workflow.acceptedDrift` entry needs a
+  `digest`: `sha256:` and the SHA-256 of the installed file with its line
+  endings read as LF. The `workflows.drift.*` warning prints the file's current
+  digest to copy into the entry. Doctor reports `info` only while the file's
+  digest equals the recorded one; otherwise it warns that the file changed since
+  it was accepted, naming both digests. An entry without a digest or with a
+  malformed one is a configuration error and accepts nothing. Fixes #3534.
+
 - **Verify runs a gate that looks unrelated to the change, and a procedure
   edit with no checker records "no applicable checker".** `verify-repo-gate`
   and `common-gate-run` now say that a gate which looks unrelated to the change,
