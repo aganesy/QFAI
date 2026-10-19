@@ -601,6 +601,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   graph preparation fails no longer prints it; the file report above it reads
   `qfai init: files`. Fixes #3744.
 
+- **The README no longer promises an answer with no plan.** Both READMEs said
+  a question that one command or one file read answers is answered directly,
+  but the shipped `qfai-run` skill plans every request that names no skill, the
+  lightest included. The README now says so, and says that a message that is not a
+  request gets no plan. Fixes #3896.
+
 - **The orchestrator starts every finder, griller and reviewer itself.** A
   stage worker that ran a whole `sdd` stage often could not start agents of its
   own, so the concrete-abstract cycle's finder and the delegated grilling were
