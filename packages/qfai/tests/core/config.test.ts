@@ -420,31 +420,40 @@ describe("retired validation.traceability keys", () => {
   });
 });
 
+const DIGEST = `sha256:${"0123456789abcdef".repeat(4)}`;
+
 describe("workflow.acceptedDrift", () => {
   // QFAI:EX-0003-0011-33
-  it("reads each listed shipped workflow with its reason, and an absent key as none", () => {
+  it("reads each listed shipped workflow with its digest and reason, and an absent key as none", () => {
     expect(readAcceptedDrift({})).toEqual(new Map());
     expect(readAcceptedDrift({ workflow: { acceptedDrift: [] } })).toEqual(new Map());
     expect(
       readAcceptedDrift({
-        workflow: { acceptedDrift: [{ file: "qfai-docs.yml", reason: " Our own lane. " }] },
+        workflow: {
+          acceptedDrift: [{ file: "qfai-docs.yml", digest: DIGEST, reason: " Our own lane. " }],
+        },
       }),
-    ).toEqual(new Map([["qfai-docs.yml", "Our own lane."]]));
+    ).toEqual(new Map([["qfai-docs.yml", { digest: DIGEST, reason: "Our own lane." }]]));
   });
 
   // QFAI:EX-0003-0011-34
-  it("reads a value with a missing or empty reason, an unknown file or a repeated file as invalid", () => {
+  it("reads a value with a missing or malformed digest, a missing or empty reason, an unknown file or a repeated file as invalid", () => {
     for (const acceptedDrift of [
       "qfai-docs.yml",
       ["qfai-docs.yml"],
-      [{ file: "qfai-docs.yml" }],
-      [{ file: "qfai-docs.yml", reason: "" }],
-      [{ file: "qfai-docs.yml", reason: "   " }],
-      [{ file: "qfai-docs.yml", reason: 1 }],
-      [{ file: "qfai-orphan.yml", reason: "Ours." }],
+      [{ file: "qfai-docs.yml", digest: DIGEST }],
+      [{ file: "qfai-docs.yml", digest: DIGEST, reason: "" }],
+      [{ file: "qfai-docs.yml", digest: DIGEST, reason: "   " }],
+      [{ file: "qfai-docs.yml", digest: DIGEST, reason: 1 }],
+      [{ file: "qfai-docs.yml", reason: "Ours." }],
+      [{ file: "qfai-docs.yml", digest: DIGEST.slice(0, -1), reason: "Ours." }],
+      [{ file: "qfai-docs.yml", digest: DIGEST.replace("sha256:", ""), reason: "Ours." }],
+      [{ file: "qfai-docs.yml", digest: DIGEST.toUpperCase(), reason: "Ours." }],
+      [{ file: "qfai-docs.yml", digest: 1, reason: "Ours." }],
+      [{ file: "qfai-orphan.yml", digest: DIGEST, reason: "Ours." }],
       [
-        { file: "qfai-docs.yml", reason: "Ours." },
-        { file: "qfai-docs.yml", reason: "Again." },
+        { file: "qfai-docs.yml", digest: DIGEST, reason: "Ours." },
+        { file: "qfai-docs.yml", digest: DIGEST, reason: "Again." },
       ],
     ]) {
       expect(
@@ -455,12 +464,12 @@ describe("workflow.acceptedDrift", () => {
   });
 
   // QFAI:EX-0003-0011-34
-  it("raises one config issue for an entry without a reason", async () => {
+  it("raises one config issue for an entry without a digest", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-accepted-drift-"));
     try {
       await writeFile(
         path.join(root, "qfai.config.yaml"),
-        "workflow:\n  acceptedDrift:\n    - file: qfai-docs.yml\n",
+        "workflow:\n  acceptedDrift:\n    - file: qfai-docs.yml\n      reason: Ours.\n",
         "utf-8",
       );
       const { issues } = await loadConfig(root);
@@ -468,6 +477,7 @@ describe("workflow.acceptedDrift", () => {
       expect(named).toHaveLength(1);
       expect(named[0]?.code).toBe("QFAI-CFG-002");
       expect(named[0]?.severity).toBe("error");
+      expect(named[0]?.message).toContain("sha256:");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
