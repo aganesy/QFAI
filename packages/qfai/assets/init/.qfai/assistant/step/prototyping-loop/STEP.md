@@ -51,7 +51,8 @@ Generation and review use two distinct sub-agent identities. The reviewer
 operates Playwright during the assessment and returns its review payloads;
 it has no write access, so the orchestrator writes them. There is
 no fixed capture identity: a screenshot is taken by whoever needs it. The build
-owner is separate from this identity rule.
+owner is separate from this identity rule. The orchestrator starts every role
+in the table below, the generator included, and never a stage worker.
 
 | Work                                          | Allowed Role                         |
 | --------------------------------------------- | ------------------------------------ |

@@ -286,12 +286,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the line is not taken as passing evidence. The exit code is unchanged.
   Refs #3765.
 
+- **`qfai atdd scaffold` writes `node:test` tests in a `node --test` project.**
+  It wrote tests that import from `vitest` whatever runner the project used.
+  It now reads the nearest `package.json` above the destination that names a
+  runner, so a workspace member decides for its own tests. A project that
+  declares vitest or runs it from a script keeps the vitest test, one whose
+  scripts run `node --test` without vitest gets a test that imports `describe`
+  and `it` from `node:test`, and one that declares only jest or names no runner
+  is refused with exit 2, the supported runners and how to declare one. A
+  project with no `package.json` still gets the vitest test.
+  Fixes #3826.
+
 - **A DESIGN.md violation every screen shares is reported once.** The
   prototyping reviewer repeated a violation whose source every screen shares,
   such as a shared stylesheet or component, in each screen's review payload, so
   one fix read as one entry per screen. Such a violation is now recorded only in
   the per-iteration summary, and each screen's payload keeps the violations that
   come from that screen. Fixes #3666.
+
+- **The orchestrator starts every finder, griller and reviewer itself.** A
+  stage worker that ran a whole `sdd` stage often could not start agents of its
+  own, so the concrete-abstract cycle's finder and the delegated grilling were
+  skipped and the worker decided alone. The shared delegation baseline now has
+  the orchestrator run every step that starts a finder, griller or reviewer and
+  hand a worker only steps that start none; `qfai-run` points to it, and the
+  `sdd` and prototyping steps and references that start such agents say the
+  orchestrator starts them. Fixes #3793.
 
 - **`QFAI-CONTRACT-043` no longer steers a screen with body text to
   `supplements: []`.** When a screen has no `supplements`, the fix now says to
