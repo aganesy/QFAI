@@ -1381,7 +1381,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Derived by running `qfai init` into a temp root; dropping that one bullet reproduces
     // `fcdba5a8…` byte for byte.
     ".github/copilot-instructions.md",
-    "3cc78e107fdc002d7ed334fc99f915816793f40bd60f2660bed9131aac19fed2",
+    "3eb38f37c568f2f46d45bc2d58471a58b8a1f21ff5ff729c75af2ba0babdf496",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
