@@ -141,7 +141,11 @@ describe("a missing or malformed definition", () => {
     expect(finding?.message).toContain("`order_create`");
     expect(finding?.message).toContain("`screens[0]`");
     expect(finding?.message).toContain("`supplements` is absent");
-    expect(finding?.suggested_action).toContain("supplements: []");
+    expect(finding?.suggested_action).toContain("each text the screen shows");
+    expect(finding?.suggested_action).toContain(
+      "`supplements: []` only for a screen that shows no such text",
+    );
+    expect(finding?.suggested_action).toContain("references/ui-contract-guide.md");
   });
 
   // QFAI:EX-0001-0230-04
