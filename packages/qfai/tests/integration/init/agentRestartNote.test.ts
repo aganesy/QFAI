@@ -23,12 +23,14 @@ describe("the agent restart note", () => {
     process.exitCode = undefined;
   });
 
+  // QFAI:EX-0001-0196-71
   it("is printed once by a first init, which writes the skills and hooks", async () => {
     await withEmptyRepo(async (root) => {
       expect(restartLines(await initQuietly(root))).toEqual([RESTART_LINE]);
     });
   });
 
+  // QFAI:EX-0001-0196-72
   it("is printed by --force when it rewrites an edited skill file", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
@@ -43,6 +45,7 @@ describe("the agent restart note", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-72
   it.each([
     [".codex", "hooks.json"],
     [".claude", "settings.json"],
@@ -55,6 +58,7 @@ describe("the agent restart note", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-72
   it("is printed by --force when it regenerates an edited Codex agent profile", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
@@ -72,6 +76,7 @@ describe("the agent restart note", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-72
   it("is printed by --force when it overwrites an edited rule master", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
@@ -86,6 +91,7 @@ describe("the agent restart note", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-73
   it("is not printed when no skill or hook file changed, with or without --force", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
@@ -95,6 +101,7 @@ describe("the agent restart note", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-73
   it("is not printed by a dry run", async () => {
     await withEmptyRepo(async (root) => {
       expect(restartLines(await initQuietly(root, false, true, true))).toEqual([]);
