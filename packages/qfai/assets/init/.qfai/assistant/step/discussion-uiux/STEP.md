@@ -52,6 +52,10 @@ including `cli`:
 - `uiux/40_screen_contracts.md`
 - `uiux/50_review_input_bundle.md`
 
+A pack whose classification declares `design_direction: inherit` may leave out
+the last two, and writes no Trend Scan or competitor references; the playbook
+above says when the declaration is allowed.
+
 ## Procedure
 
 1. Write `40_screen_contracts.md` with every screen contract in the template's

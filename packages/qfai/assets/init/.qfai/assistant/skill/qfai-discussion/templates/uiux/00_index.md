@@ -22,7 +22,10 @@ brand-level intent layer at all.
 ## Completeness Rule
 
 All three required files above must be present for every UI-bearing pack.
-Partial generation is not permitted.
+Partial generation is not permitted. The one exception: a pack whose
+classification declares `design_direction: inherit` may leave out
+`40_screen_contracts.md` and `50_review_input_bundle.md`, under the conditions of
+`.qfai/assistant/skill/qfai-discussion/references/ui-bearing-playbook.md#inheriting-the-current-designmd`.
 
 Root `DESIGN.md` is not one of them. `/qfai-sdd`'s `common-design-md` step authors it, and only
 on a visual-prototyping surface (`web`, `mobile`, `desktop`, `mixed`). A
