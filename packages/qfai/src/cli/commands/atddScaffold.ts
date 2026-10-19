@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { deriveAtddFilePattern } from "../../core/atddTraceability.js";
@@ -8,8 +9,15 @@ import {
   scaffoldDestPath,
   type ScaffoldTarget,
 } from "../../core/atdd/scaffold.js";
-import { resolveScaffoldDialect, SCAFFOLD_RUNNERS } from "../../core/atdd/scaffoldDialect.js";
+import {
+  detectJsTestRunner,
+  type JsTestRunner,
+  applyJsRunner,
+  resolveScaffoldDialect,
+  SCAFFOLD_RUNNERS,
+} from "../../core/atdd/scaffoldDialect.js";
 import { loadConfig } from "../../core/config.js";
+import { isEnoent } from "../../core/fs/errno.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
 import { readStoryTreeModel } from "../../core/storyTree/tree.js";
 import { error as logError, info as logInfo } from "../../core/logger.js";
@@ -31,6 +39,41 @@ function targetsForStory(
     .map((item) => item.id)
     .sort()
     .map((id) => ({ id, kind: "AC" as const, storyId }));
+}
+
+/**
+ * The runner the nearest deciding `package.json` declares, searched from
+ * `fromDir` up to `root`, so a workspace member's manifest decides for its own
+ * tests. A manifest naming no runner leaves the answer to the next one up:
+ * `none` when every manifest on the path named none, `unknown` when the path
+ * holds no manifest.
+ */
+async function readJsTestRunner(root: string, fromDir: string): Promise<JsTestRunner> {
+  let found: JsTestRunner = "unknown";
+  for (let dir = fromDir; ; dir = path.dirname(dir)) {
+    const manifestPath = path.join(dir, "package.json");
+    let text: string | undefined;
+    try {
+      text = await readFile(manifestPath, "utf8");
+    } catch (caught) {
+      if (!isEnoent(caught)) throw caught;
+    }
+    if (text !== undefined) {
+      let manifest: unknown;
+      try {
+        manifest = JSON.parse(text.replace(/^\uFEFF/, ""));
+      } catch (caught) {
+        throw new Error(
+          `${manifestPath} is not valid JSON: ${caught instanceof Error ? caught.message : String(caught)}`,
+          { cause: caught },
+        );
+      }
+      const runner = detectJsTestRunner(manifest);
+      if (runner !== "none") return runner;
+      found = runner;
+    }
+    if (path.relative(root, dir) === "" || path.dirname(dir) === dir) return found;
+  }
 }
 
 export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<number> {
@@ -85,14 +128,30 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
     const relativeDir = path.relative(options.root, path.dirname(probePath)).replace(/\\/g, "/");
     const comparable =
       relativeDir !== ".." && !relativeDir.startsWith("../") && !path.isAbsolute(relativeDir);
-    const resolution = resolveScaffoldDialect(testFileGlobs, {
+    const globResolution = resolveScaffoldDialect(testFileGlobs, {
       ...(comparable ? { scaffoldDir: relativeDir } : {}),
       excludeGlobs,
       ids: targets.map((target) => target.id),
     });
+    const resolution =
+      globResolution.outcome === "resolved" && globResolution.dialect.id === "js-ts"
+        ? applyJsRunner(
+            globResolution.dialect,
+            await readJsTestRunner(
+              options.root,
+              comparable ? path.dirname(probePath) : options.root,
+            ),
+          )
+        : globResolution;
     if (resolution.outcome === "unsupported-stack") {
       writeErr(
         `qfai atdd scaffold: no skeleton dialect for ${deriveAtddFilePattern(testFileGlobs)}; supported runners: ${SCAFFOLD_RUNNERS.join(", ")}.`,
+      );
+      return 2;
+    }
+    if (resolution.outcome === "unsupported-runner") {
+      writeErr(
+        `qfai atdd scaffold: ${resolution.runner === "none" ? "package.json names no test runner" : `package.json runs tests with ${resolution.runner}, which has no skeleton dialect`}; supported runners: ${SCAFFOLD_RUNNERS.join(", ")}. Declare vitest in devDependencies, or run node --test from a package.json script.`,
       );
       return 2;
     }
