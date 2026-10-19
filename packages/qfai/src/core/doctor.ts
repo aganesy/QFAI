@@ -54,6 +54,7 @@ import {
   type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
 import { checkAssistantDrift } from "./doctor/assistantDrift.js";
+import { checkAssistantVersion } from "./doctor/assistantVersion.js";
 import { checkDocsLane } from "./doctor/docsLane.js";
 import { checkGraphHookScript } from "./doctor/graphHook.js";
 import { checkMutationProofs } from "./doctor/mutationProofs.js";
@@ -326,6 +327,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   for (const check of await checkWorkflowParse(root)) addCheck(checks, check);
   const workflowCost = await checkWorkflowCost(root);
   if (workflowCost) addCheck(checks, workflowCost);
+  const assistantVersion = await checkAssistantVersion(root, version);
+  if (assistantVersion) addCheck(checks, assistantVersion);
   for (const check of await checkAssistantDrift(root)) addCheck(checks, check);
   const mutationProofs = await checkMutationProofs(root, config);
   if (mutationProofs)

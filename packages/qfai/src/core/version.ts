@@ -309,8 +309,8 @@ export type InstalledOlderThanDeclared = {
  * Whether the running qfai is older than the lowest version this project's
  * dependency declaration admits.
  *
- * The declaration is the only record of "the qfai this tree was written for"
- * that a project keeps: the files `qfai init` writes carry no version. An
+ * The declaration is the project's own record of "the qfai this tree was
+ * written for", beside the version file `qfai init` writes. An
  * installed copy below that floor is the state a lockfile that moved after the
  * last install leaves, and every rule whose input is a generated file can then
  * disagree with the tree for a reason that is not in the tree.

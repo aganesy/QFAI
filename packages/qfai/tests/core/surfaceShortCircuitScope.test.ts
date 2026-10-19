@@ -19,6 +19,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { validateProject } from "../../src/core/validate.js";
+import { recordAssistantVersion } from "../helpers/assistantVersion.js";
 
 async function withDamagedCanonical(task: (root: string) => Promise<boolean>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
@@ -30,6 +31,7 @@ async function withDamagedCanonical(task: (root: string) => Promise<boolean>): P
     // into.
     await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
     await writeFile(path.join(root, ".qfai", "assistant", "skill"), "not a directory\n", "utf-8");
+    await recordAssistantVersion(root);
     const wrapper = path.join(root, ".claude", "skills", "qfai-sdd");
     await mkdir(path.dirname(wrapper), { recursive: true });
     await symlink(path.join("..", "..", ".qfai", "assistant", "skill", "qfai-sdd"), wrapper);
@@ -67,6 +69,7 @@ describe("the short-circuit follows the configured skills directory", () => {
       const stale = path.join(root, ".qfai", "assistant", "skill");
       await mkdir(path.dirname(stale), { recursive: true });
       await writeFile(stale, "not a directory\n", "utf-8");
+      await recordAssistantVersion(root);
       await mkdir(path.join(root, ".qfai"), { recursive: true });
       await writeFile(
         path.join(root, ".qfai", "waivers.yml"),
@@ -95,6 +98,7 @@ describe("the short-circuit covers the agent directory read by full", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
     try {
       await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
+      await recordAssistantVersion(root);
       await writeFile(path.join(root, ".qfai", "assistant", "agent"), "not a directory\n", "utf-8");
       const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
       await mkdir(path.dirname(wrapper), { recursive: true });
@@ -128,6 +132,7 @@ describe("the agents tree is walked by the profiles that read it", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-agents-"));
     try {
       await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
+      await recordAssistantVersion(root);
       const agents = path.join(root, ".qfai", "assistant", "agent");
       await mkdir(agents, { recursive: true });
       await writeFile(path.join(agents, "README.md"), "# readme\n", "utf-8");

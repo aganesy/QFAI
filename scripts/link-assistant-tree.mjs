@@ -49,6 +49,13 @@ const TARGET = path.join(ROOT, TARGET_REL);
 
 const CHECK_ONLY = process.argv.includes("--check");
 
+/**
+ * The version file `qfai init` writes at the tree root. Here it is generated
+ * from `packages/qfai/package.json` by `scripts/sync-init-to-root.mjs`, so it
+ * is this repository's own file and not a path the assets are missing.
+ */
+const GENERATED_ROOT_FILES = new Set(["VERSION"]);
+
 const toPosix = (p) => p.split(path.sep).join("/");
 
 function entries(dir) {
@@ -77,6 +84,7 @@ function localOnlyUnder(rel) {
   const walk = (relDir) => {
     for (const entry of entries(path.join(TARGET, relDir))) {
       const childRel = relDir === "" ? entry.name : `${relDir}/${entry.name}`;
+      if (relDir === "" && GENERATED_ROOT_FILES.has(entry.name)) continue;
       const stat = lstatSafe(path.join(TARGET, childRel));
       if (stat === undefined) continue;
       const inSource = existsSync(path.join(SOURCE, childRel));

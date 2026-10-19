@@ -17,6 +17,7 @@ import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
+import { recordAssistantVersion } from "../helpers/assistantVersion.js";
 
 const roots: string[] = [];
 
@@ -77,6 +78,7 @@ describe("assistant tree findings", () => {
     for (const name of [...LAYERS, ...directories]) {
       await mkdir(path.join(root, ".qfai", "assistant", name), { recursive: true });
     }
+    await recordAssistantVersion(root);
     return root;
   }
 

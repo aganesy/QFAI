@@ -506,7 +506,8 @@ describe("the assistant tree", () => {
 
     const root = await initializedRoot();
     const assistant = path.join(root, ".qfai", "assistant");
-    expect((await readdir(assistant)).sort()).toEqual(layers);
+    // Beside the layers, init writes the file that records the release that wrote the tree.
+    expect((await readdir(assistant)).sort()).toEqual(["VERSION", ...layers].sort());
     const { config } = await loadConfig(root);
     const named = async () =>
       (await validateAssistantTreeMigration(root, config))
@@ -516,7 +517,7 @@ describe("the assistant tree", () => {
 
     await mkdir(path.join(assistant, "skill.local", "my-skill"), { recursive: true });
     expect((await readdir(assistant)).sort()).toEqual(
-      [...layers.slice(0, 3), "skill", "skill.local", "step"].sort(),
+      ["VERSION", ...layers.slice(0, 3), "skill", "skill.local", "step"].sort(),
     );
     expect(await named()).toEqual([]);
 

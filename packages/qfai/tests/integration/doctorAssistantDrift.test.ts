@@ -88,3 +88,35 @@ describe("qfai doctor reports a shipped assistant file that differs from the shi
     expect(await driftFindings(root)).toEqual([]);
   });
 });
+
+describe("qfai doctor reports an assistant tree written by another release", () => {
+  const versionFile = (root: string): string => path.join(root, ".qfai", "assistant", "VERSION");
+
+  async function versionCheck(root: string) {
+    const data = await createDoctorData({ startDir: root, rootExplicit: true });
+    return data.checks.filter((check) => check.id === "assistant.version");
+  }
+
+  // QFAI:AC-0003-0031-02
+  // QFAI:EX-0003-0031-04
+  it("warns when the version file records another release or none, and changes nothing", async () => {
+    const root = await pool.seedAdopterTree();
+    expect(await versionCheck(root)).toEqual([]);
+
+    await writeFile(versionFile(root), "0.0.1\n", "utf-8");
+    const other = await versionCheck(root);
+    expect(other).toHaveLength(1);
+    expect(other[0]?.severity).toBe("warning");
+    expect(other[0]?.message).toContain("written by qfai 0.0.1");
+    expect(other[0]?.message).toContain("npm ci");
+    expect(other[0]?.message).toContain("qfai init --force");
+    expect(await readFile(versionFile(root), "utf-8")).toBe("0.0.1\n");
+
+    await rm(versionFile(root));
+    const none = await versionCheck(root);
+    expect(none).toHaveLength(1);
+    expect(none[0]?.severity).toBe("warning");
+    expect(none[0]?.message).toContain("records no version");
+    expect(none[0]?.message).toContain("qfai init --force");
+  });
+});

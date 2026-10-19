@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runAutoremediate } from "../../../../src/core/doctor/autoremediate.js";
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import { pathExists } from "../../../helpers/pathExists.js";
+import { recordAssistantVersion } from "../../../helpers/assistantVersion.js";
 
 const tempDirs: string[] = [];
 
@@ -79,6 +80,7 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
     // Seed skill manifest declaring a missing dep.
     const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
+    await recordAssistantVersion(root);
     await writeFile(
       path.join(manifestDir, "manifest.json"),
       JSON.stringify({ runtimeDependencies: ["playwright"] }, null, 2),

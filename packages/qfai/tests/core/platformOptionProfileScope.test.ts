@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import { validateProject } from "../../src/core/validate.js";
 import type { ValidationProfile } from "../../src/core/types.js";
+import { recordAssistantVersion } from "../helpers/assistantVersion.js";
 
 const UNUSED = "QFAI-PLATFORM-003";
 const UNKNOWN = "QFAI-PLATFORM-001";
@@ -38,6 +39,7 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
     // Enough of a surface that init counts as having run here; the findings the
     // profiles raise about the rest of the tree are irrelevant to this test.
     await mkdir(path.join(root, ".qfai", "assistant", "skills"), { recursive: true });
+    await recordAssistantVersion(root);
     await writeFile(
       path.join(root, ".qfai", "assistant", "README.md"),
       [

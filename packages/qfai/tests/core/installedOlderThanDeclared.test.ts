@@ -19,7 +19,9 @@ import {
   compareInstalledToDeclared,
   isOlderVersion,
   lowestVersionOfRange,
+  resolveToolVersion,
 } from "../../src/core/version.js";
+import { recordAssistantVersion } from "../helpers/assistantVersion.js";
 
 /**
  * The project sits under the operating system's temporary directory, not under
@@ -28,12 +30,15 @@ import {
  * nothing would not be tested. The project holds one skill that lacks the
  * drift-protocol marker, and a `package.json` declaring qfai as `declared`, or
  * declaring nothing when `declared` is `null`. `oldLayout` adds a spec-pack
- * directory, which ends the run before the profile's validators.
+ * directory, which ends the run before the profile's validators. `recorded`
+ * is what `.qfai/assistant/VERSION` holds: the running version by default, and
+ * no file at all when it is `null`.
  */
 async function withProject(
   declared: string | null,
   task: (root: string) => Promise<void>,
   oldLayout = false,
+  recorded: string | null | "running" = "running",
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-older-declared-"));
   try {
@@ -55,6 +60,11 @@ async function withProject(
       ].join("\n"),
       "utf-8",
     );
+    if (recorded === "running") {
+      await recordAssistantVersion(root);
+    } else if (recorded !== null) {
+      await writeFile(path.join(root, ".qfai", "assistant", "VERSION"), `${recorded}\n`, "utf-8");
+    }
     await writeFile(
       path.join(root, "package.json"),
       JSON.stringify({
@@ -124,6 +134,74 @@ describe("the installed qfai is older than the declared one", () => {
       });
     },
   );
+});
+
+describe("the running qfai is not the release that wrote the assistant tree", () => {
+  // QFAI:EX-0001-0039-21
+  it("raises QFAI-TOOL-004 first and explains the skill-marker error as a version difference", async () => {
+    await withProject(
+      null,
+      async (root) => {
+        const issues = await findings(root);
+
+        const first = issues[0];
+        expect(first?.code).toBe("QFAI-TOOL-004");
+        expect(first?.severity).toBe("warning");
+        expect(first?.message).toContain("written by qfai 0.0.1");
+        expect(first?.message).toContain(await resolveToolVersion());
+        expect(first?.suggested_action).toContain("npm ci");
+        expect(first?.suggested_action).toContain("qfai init --force");
+
+        const marker = issues.filter((found) => found.code === "QFAI-SKILLS-010");
+        expect(marker).toHaveLength(1);
+        expect(marker[0]?.severity).toBe("error");
+        expect(marker[0]?.message).toContain("QFAI-TOOL-004");
+        expect(marker[0]?.suggested_action).toContain("npm ci");
+      },
+      false,
+      "0.0.1",
+    );
+  });
+
+  // QFAI:EX-0001-0039-21
+  it("raises one QFAI-TOOL-004 for a tree with no version file, also on a tree the old-layout check stops", async () => {
+    await withProject(
+      null,
+      async (root) => {
+        const issues = await findings(root);
+        expect(issues.map((found) => found.code)).toEqual(["QFAI-TOOL-004", "QFAI-LAYOUT-001"]);
+        expect(issues[0]?.message).toContain("records no version");
+        expect(issues[0]?.suggested_action).toContain("qfai init --force");
+      },
+      true,
+      null,
+    );
+  });
+
+  // QFAI:EX-0001-0039-21
+  it("names removing a version entry that is not a regular file as the repair", async () => {
+    await withProject(
+      null,
+      async (root) => {
+        await mkdir(path.join(root, ".qfai", "assistant", "VERSION"));
+        const first = (await findings(root))[0];
+        expect(first?.code).toBe("QFAI-TOOL-004");
+        expect(first?.file).toBe(".qfai/assistant/VERSION");
+        expect(first?.message).toContain("is not a regular file");
+        expect(first?.suggested_action).toContain("Remove the entry at .qfai/assistant/VERSION");
+      },
+      false,
+      null,
+    );
+  });
+
+  // QFAI:EX-0001-0039-21
+  it("raises nothing about the assistant tree when it records the running version", async () => {
+    await withProject(null, async (root) => {
+      const issues = await findings(root);
+      expect(issues.some((found) => found.code === "QFAI-TOOL-004")).toBe(false);
+    });
+  });
 });
 
 describe("lowestVersionOfRange", () => {

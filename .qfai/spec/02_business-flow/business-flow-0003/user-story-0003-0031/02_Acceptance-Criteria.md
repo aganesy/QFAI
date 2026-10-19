@@ -11,4 +11,12 @@ Feature: Shipped assistant file checks
     Then each differing file is a `warning` and never an `error`, naming the installed file, the packaged file and `qfai init --force`
     And a matching file, one that differs only in line endings, an absent one and a file the package does not ship raise no finding
     And doctor writes no assistant file
+
+  # AC-0003-0031-02
+  Scenario: An assistant tree written by another release is reported
+    Given a project whose `.qfai/assistant/VERSION` records a release other than the installed qfai, or is missing
+    When `qfai doctor` runs
+    Then one `assistant.version` check is a `warning` that names the recorded and the running version and the repair
+    And a version file that records the installed qfai raises no such check
+    And doctor writes no assistant file
 ```

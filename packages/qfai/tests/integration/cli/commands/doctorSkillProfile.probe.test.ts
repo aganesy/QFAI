@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import { isRecord } from "../../../../src/core/workflow/parse.js";
+import { recordAssistantVersion } from "../../../helpers/assistantVersion.js";
 
 const tempDirs: string[] = [];
 
@@ -208,6 +209,7 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
     await mkdir(path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping"), {
       recursive: true,
     });
+    await recordAssistantVersion(root);
     const finding = await runAndFind(root, "qfai-prototyping");
     expect(finding.severity).toBe("warning");
     expect(finding.message).toMatch(/no manifest for skill 'qfai-prototyping'/u);

@@ -11,7 +11,8 @@
  * what under there stays a real file. A copy could disagree with its source;
  * a link cannot, so the drift check that guarded the copy went with it.
  *
- * What is left is two project-owned files, and neither is mirrored:
+ * What is left is two project-owned files, neither of them mirrored, and one
+ * generated file:
  *
  *   `qfai.config.yaml`   seeded when absent, never overwritten. The init asset
  *                        is what a FRESH project starts from and deliberately
@@ -30,12 +31,18 @@
  *                        how long, so the shipped file is a starting point and
  *                        the root file is an answer.
  *
+ *   `.qfai/assistant/VERSION`  written from `packages/qfai/package.json#version`
+ *                        on every run. It is the version file `qfai init`
+ *                        writes into an adopter's tree, so `qfai validate`
+ *                        and `qfai doctor` compare this tree with the build
+ *                        that runs them, as they do there.
+ *
  * Usage:
  *   node scripts/sync-init-to-root.mjs          # seed and report
- *   node scripts/sync-init-to-root.mjs --check  # dry-run, exit 1 if missing
+ *   node scripts/sync-init-to-root.mjs --check  # dry-run, exit 1 if missing or stale
  */
 
-import { copyFileSync, existsSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
@@ -83,8 +90,24 @@ for (const { from, to, shown } of SEEDED) {
   seeded += 1;
 }
 
+const versionFile = join(ROOT, ".qfai", "assistant", "VERSION");
+const { version } = JSON.parse(
+  readFileSync(join(ROOT, "packages", "qfai", "package.json"), "utf-8"),
+);
+const versionText = `${version}\n`;
+const recorded = existsSync(versionFile) ? readFileSync(versionFile, "utf-8") : undefined;
+if (recorded !== versionText) {
+  if (CHECK_ONLY) {
+    console.error(`STALE: .qfai/assistant/VERSION does not record ${version}`);
+    missing += 1;
+  } else {
+    writeFileSync(versionFile, versionText, "utf-8");
+    console.log(`Wrote .qfai/assistant/VERSION (${version}).`);
+  }
+}
+
 if (missing > 0) {
-  console.error(`\n${missing} file(s) missing. Run: pnpm sync:ssot`);
+  console.error(`\n${missing} file(s) missing or stale. Run: pnpm sync:ssot`);
   process.exit(1);
 }
 

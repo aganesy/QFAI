@@ -124,6 +124,20 @@ describe("init assets root mirror", () => {
     }
   });
 
+  // `sync-init-to-root.mjs` writes the version file `qfai init` writes into an adopter's tree, from
+  // the package's own version, so `qfai validate` here compares this tree with the build it runs.
+  it("records the package version in the root assistant tree's version file", async () => {
+    const manifest: unknown = JSON.parse(
+      await readFile(path.join(repoRoot, "packages", "qfai", "package.json"), "utf-8"),
+    );
+    const version =
+      typeof manifest === "object" && manifest !== null ? Reflect.get(manifest, "version") : null;
+    expect(typeof version).toBe("string");
+    expect(await readFile(path.join(rootQfaiDir, "assistant", "VERSION"), "utf-8")).toBe(
+      `${String(version)}\n`,
+    );
+  });
+
   // `qfai.config.yaml` is SEEDED, not mirrored: `sync-init-to-root.mjs` writes
   // it only when the root copy is missing. The init asset is what a fresh
   // project starts from and deliberately leaves `testFileGlobs` empty, while

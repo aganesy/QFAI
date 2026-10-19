@@ -7,5 +7,5 @@ As an adopter, I want `qfai doctor` to report each shipped assistant file in my 
 ## Non-goals
 
 - Overwriting, refreshing or removing an assistant file.
-- Recording which release wrote an installed file.
+- Writing a record of which release wrote an installed file; doctor only reads the version file `qfai init` writes.
 - Comparing a file the package does not ship, such as a rule overlay or anything under `skill.local/`.

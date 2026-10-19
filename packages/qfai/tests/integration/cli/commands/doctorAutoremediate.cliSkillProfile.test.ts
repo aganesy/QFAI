@@ -24,6 +24,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import * as autoremediateModule from "../../../../src/core/doctor/autoremediate.js";
+import { recordAssistantVersion } from "../../../helpers/assistantVersion.js";
 
 const tempDirs: string[] = [];
 
@@ -85,6 +86,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     const root = await newTempDir("dispatch");
     const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
+    await recordAssistantVersion(root);
     await writeFile(
       path.join(manifestDir, "manifest.json"),
       JSON.stringify({ runtimeDependencies: ["playwright"] }, null, 2),
@@ -264,6 +266,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     const rootB = await newTempDir("note-present-profile");
     const manifestDir = path.join(rootB, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
+    await recordAssistantVersion(rootB);
     await writeFile(
       path.join(manifestDir, "manifest.json"),
       JSON.stringify({ runtimeDependencies: [] }, null, 2),
