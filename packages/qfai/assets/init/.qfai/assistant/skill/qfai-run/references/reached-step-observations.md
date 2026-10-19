@@ -31,7 +31,7 @@ Use the existing stage report, not a new schema. For each reached step retain th
 | Gate        | Applicable Gate observations from the actual command and result, without borrowing an unrelated green result.           |
 | Assessment  | Supported completion, an observed incomplete result, or UNVERIFIED with missing proof, owner and resume condition.      |
 
-List each step of the stage with its status, as the step-status table in `operator-screens.md` § Final report defines it.
+List each step of the stage with its status, for the step-status table of the final report.
 
 A supported comparison assesses this reached step only. It does not pass unrelated gates, complete later work or establish that an agent understood instructions.
 
