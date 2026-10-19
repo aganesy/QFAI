@@ -55,3 +55,5 @@ the next one against.
   Because: the lane this entry adds holds this repository's own `CHANGELOG.md` entries against the base, and an adopter's changelog is not one QFAI writes or releases.
 - SHIPPED-CI: not-applicable for package.json
   Because: an adopter's shipped validate workflow runs `qfai validate` as its own job, which reports a duplicate register ID; only this repository runs it late, in the build job.
+- SHIPPED-CI: not-applicable for package.json
+  Because: the lane this entry adds checks the relative links of this repository's own `.instruction/` tree, which `qfai init` does not write into an adopter's project.
