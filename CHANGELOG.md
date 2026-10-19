@@ -161,9 +161,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   session repeats far less text. The grilling reminders drop their unused brief
   form. When each reminder prints is unchanged. A project with an unedited copy
   receives the new text on the next `npx qfai init`. Fixes #3788, #3882.
-
-||||||| 20f78d448
-
 - **A dependency update whose checks name a contract to change moves to the
   route that edits the spec.** When `validate`, or another check the update
   runs, reports a finding that names a spec contract, `implement-dep-bump` now
