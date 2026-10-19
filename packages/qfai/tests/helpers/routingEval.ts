@@ -10,15 +10,20 @@ import { spawnSync } from "node:child_process";
 /**
  * Runs the host command once, without a shell. A command that never started — not found, or a
  * Windows `.cmd` shim that needs a shell — throws, naming the command, so no seed is scored
- * against a host that never ran. A command that started returns whatever its exit, and its
- * cases are scored as usual.
+ * against a host that never ran. A command that started returns its exit status and signal, and
+ * each scorer decides what a non-zero exit means for its cases.
  */
-export function runHost(command: string, args: readonly string[], cwd: string): void {
+export function runHost(
+  command: string,
+  args: readonly string[],
+  cwd: string,
+): { status: number | null; signal: string | null } {
   const result = spawnSync(command, args, { cwd, encoding: "utf8", shell: false });
   // A child that started ends with an exit code or a signal; one that never started has neither.
   if (result.error && result.status === null && result.signal === null) {
     throw new Error(`The host command did not start: ${command} (${result.error.message})`);
   }
+  return { status: result.status, signal: result.signal };
 }
 
 export interface RoutingSeed {
