@@ -43,6 +43,20 @@ them; it is the procedure that applies them.
   merge and why no reviewer ran. A parent skill invoked by name uses the
   reviewers its own `## Review` section names, such as `qfai-discussion`'s.
 
+  In a route, a code review whose target replaces at most five lines, a
+  replaced line counting once, and no line added or removed, each changing
+  only a literal value such as a version, a number, a name or a flag in a
+  configuration or build file, gets no reviewer. A change to code, tests, a
+  story-tree or contract file, a screen or a file's structure is not
+  literal-only, and neither is a change that touches permissions, secrets,
+  credentials or tokens; a URL, host, registry, image or action reference; a
+  dependency or tool version resolved from the network; a workflow trigger; a
+  setting that turns a check, lint rule, type check, gate or test on or off;
+  any text inside a shell command, script or recipe; or a package's own
+  version, or any value a release, tag or publish job reads. The stage report
+  and the final report both name the skip, the changed lines and why no
+  reviewer ran.
+
 - **The review target.** The specification review: every path and ID the
   stage it follows wrote or changed, and the source it was written from. The
   code review: the route's whole diff against the revision the route started
@@ -82,11 +96,16 @@ them; it is the procedure that applies them.
 
 - In the stage report: each reviewer's verdict, the findings, and how each was
   fixed or answered.
+- For a code review skipped as a small literal-only change: the skip, the
+  changed lines and why no reviewer ran, in the stage report and in the final
+  report.
 
 ## Gate
 
 Every routed reviewer responded once, every finding is fixed or answered, and
 the stage report names each verdict and each answer, or says why the review
-dispatched no reviewer. A finding the author
+dispatched no reviewer. For a code review skipped as a small literal-only
+change, the stage report names the skip, the changed lines and why, and records
+the skip for the final report. A finding the author
 cannot fix is in the stage's final report, and a critical decision has gone to
 the user.
