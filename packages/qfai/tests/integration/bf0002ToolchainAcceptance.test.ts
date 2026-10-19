@@ -1707,8 +1707,13 @@ describe("branch catch-up acceptance", () => {
   );
 
   // QFAI:AC-0002-0025-08
+  // Known limitation: two added entries that end in the same continuation line, such as
+  // "  Fixes #1.", are refused under the merge and zdiff3 styles, because Git moves the shared
+  // line outside the conflict region. That refusal is safe: the helper stops for a person.
+  // The rebuilt section also writes a blank line after a heading written without one, and drops
+  // a group heading that holds no entry.
   // QFAI:EX-0002-0025-27
-  it.each([
+  it.each<{ name: string; base?: string; topic: string; theirs: string; reason: string }>([
     {
       name: "a released section",
       topic: `### Changed\n\n${BASE_CHANGE}\n- **Topic change.** From the branch.\n\n`,
@@ -1745,10 +1750,24 @@ describe("branch catch-up acceptance", () => {
       theirs: `### Changed\n\n${BASE_CHANGE}\n- **Shared.** Same.\n\n- **Default change.** From the default branch.\n\n`,
       reason: "both sides added the same entry",
     },
+    {
+      name: "a deleted group heading beside an entry the other side added",
+      base: `### Changed\n\n${BASE_CHANGE}\n### Fixed\n\n- **Base fix.** Already fixed.\n\n`,
+      topic: `### Changed\n\n${BASE_CHANGE}\n- **Base fix.** Already fixed.\n\n`,
+      theirs:
+        `### Changed\n\n${BASE_CHANGE}\n- **Default change.** From the default branch.\n\n` +
+        "### Fixed\n\n- **Base fix.** Already fixed.\n\n",
+      reason: "shared entries after a conflict fall under a different type on each side",
+    },
   ])(
     "stops for a person when a changelog conflict holds $name",
-    async ({ topic, theirs, reason }) => {
+    async ({ base, topic, theirs, reason }) => {
       await withCatchup(async (fixture) => {
+        if (base !== undefined) {
+          await advanceOrigin(fixture, { [CHANGELOG]: changelogText(base) });
+          nativeGit(fixture.root, ["pull", "-q", "--no-rebase", "--no-edit", "origin", "trunk"]);
+          nativeGit(fixture.root, ["push", "-q", "origin", "topic"]);
+        }
         await commitChanges(fixture.root, { [CHANGELOG]: changelogText(topic) });
         await advanceOrigin(fixture, { [CHANGELOG]: changelogText(theirs) });
         const output = await expectRejectedConflict(fixture);
