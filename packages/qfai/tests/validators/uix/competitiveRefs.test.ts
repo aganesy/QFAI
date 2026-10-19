@@ -779,3 +779,40 @@ describe("the component catalogue registry", () => {
     expect(issues[0]?.message).toContain("found 0");
   });
 });
+
+describe("validateCompetitiveReferences for a pack that inherits the current DESIGN.md", () => {
+  async function createInheritingPack(root: string): Promise<void> {
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "01_Context.md"),
+      `${classificationBlock(true)}- design_direction: inherit\n`,
+      "utf-8",
+    );
+  }
+
+  it("owes no minimum count of competitive or catalogue references", async () => {
+    const root = await newTempDir();
+    await createInheritingPack(root);
+
+    const issues = await validateCompetitiveReferences(
+      root,
+      withUiux({ competitive_refs_min: 3, catalogue_refs_min: 1 }),
+    );
+
+    expect(issues).toEqual([]);
+  });
+
+  it("still checks a registered reference for completeness", async () => {
+    const root = await newTempDir();
+    await createInheritingPack(root);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([referenceBlock("Linear", { rejected_points: "TBD" })]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-RESEARCH-014"]);
+  });
+});

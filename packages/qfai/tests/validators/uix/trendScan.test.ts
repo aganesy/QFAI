@@ -350,3 +350,28 @@ describe("validateTrendScan against the shipped 04_Sources.md template", () => {
     expect(issues.filter((issue) => issue.code === "QFAI-TREND-005")).toHaveLength(1);
   });
 });
+
+describe("validateTrendScan for a pack that inherits the current DESIGN.md", () => {
+  it("owes no Trend Scan", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(
+      path.join(root, "01_Context.md"),
+      [
+        "# Context",
+        "",
+        "## UI-bearing Classification",
+        "",
+        "- ui_bearing: true",
+        "- primary_surface: web",
+        "- secondary_surfaces:",
+        "- classification_rationale: Adds a login section to existing screens.",
+        "- design_direction: inherit",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    await expect(validateTrendScan(root, defaultConfig)).resolves.toEqual([]);
+  });
+});

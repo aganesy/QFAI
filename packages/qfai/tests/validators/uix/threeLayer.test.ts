@@ -82,3 +82,42 @@ describe("canonical sidecar family completeness", () => {
     expect(issues).toHaveLength(0);
   });
 });
+
+describe("canonical sidecar family of a pack that inherits the current DESIGN.md", () => {
+  async function createInheritingPack(root: string): Promise<void> {
+    await writeFile(
+      path.join(root, "01_Context.md"),
+      [
+        "# Context",
+        "",
+        "## UI-bearing Classification",
+        "",
+        "- ui_bearing: true",
+        "- primary_surface: web",
+        "- secondary_surfaces:",
+        "- classification_rationale: Adds a login section to existing screens.",
+        "- design_direction: inherit",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await mkdir(path.join(root, "uiux"), { recursive: true });
+  }
+
+  it("owes no screen contracts or review bundle", async () => {
+    const root = await newTempDir();
+    await createInheritingPack(root);
+    await writeFile(path.join(root, "uiux", "00_index.md"), "# Index\n", "utf-8");
+
+    await expect(validateThreeLayerFamilyCompleteness(root, defaultConfig)).resolves.toEqual([]);
+  });
+
+  it("still owes the sidecar index", async () => {
+    const root = await newTempDir();
+    await createInheritingPack(root);
+
+    const issues = await validateThreeLayerFamilyCompleteness(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.file)).toEqual(["uiux/00_index.md"]);
+  });
+});

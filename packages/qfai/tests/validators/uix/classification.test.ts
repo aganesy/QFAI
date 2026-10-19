@@ -1,10 +1,10 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { QfaiConfig } from "../../../src/core/config.js";
+import { defaultConfig as shippedConfig, type QfaiConfig } from "../../../src/core/config.js";
 import { validateClassification } from "../../../src/core/validators/uix/classification.js";
 
 const tempDirs: string[] = [];
@@ -153,5 +153,93 @@ describe("validateClassification", () => {
 
     const issues = await validateClassification(root, defaultConfig);
     expect(issues.some((issue) => issue.code === "QFAI-CLASSIFICATION-001")).toBe(true);
+  });
+});
+
+describe("validateClassification of a pack that inherits the current DESIGN.md", () => {
+  /**
+   * A project with one UI contract declaring `SCR-001`, and a pack under it
+   * that declares `design_direction: inherit`. The pack's screen contracts and
+   * Design Direction are the inputs each case varies.
+   */
+  async function createInheritingPack(options: {
+    screenIds?: string[];
+    designDirection?: string[];
+  }): Promise<string> {
+    const project = await newTempDir();
+    await writeFile(path.join(project, "qfai.config.yaml"), "workflow:\n  mode: active\n", "utf-8");
+    const uiDir = path.join(project, ".qfai", "spec", "03_contract", "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "ui-0001-login.yaml"),
+      ["screens:", "  - id: SCR-001", "    route: /login", ""].join("\n"),
+      "utf-8",
+    );
+    const pack = path.join(project, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(path.join(pack, "uiux"), { recursive: true });
+    await writeFile(
+      path.join(pack, "01_Context.md"),
+      [
+        completeContext(),
+        "- design_direction: inherit",
+        "",
+        "## Design Direction",
+        "",
+        ...(options.designDirection ?? [
+          "- adopted_theme: [the published theme or design system this product is built on]",
+          "- brand_accent: [what departs from it]",
+        ]),
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    if (options.screenIds) {
+      await writeFile(
+        path.join(pack, "uiux", "40_screen_contracts.md"),
+        [
+          "# Screen Contracts",
+          "",
+          ...options.screenIds.flatMap((id) => [`### Screen: ${id}`, "", `- screen_id: ${id}`, ""]),
+        ].join("\n"),
+        "utf-8",
+      );
+    }
+    return pack;
+  }
+
+  it("accepts the declaration on a pack that changes declared screens only", async () => {
+    const pack = await createInheritingPack({ screenIds: ["SCR-001"] });
+
+    await expect(validateClassification(pack, shippedConfig)).resolves.toEqual([]);
+  });
+
+  it("accepts the declaration on a pack with no screen contracts", async () => {
+    const pack = await createInheritingPack({});
+
+    await expect(validateClassification(pack, shippedConfig)).resolves.toEqual([]);
+  });
+
+  it("refuses the declaration when the pack adds a screen", async () => {
+    const pack = await createInheritingPack({ screenIds: ["SCR-001", "SCR-NEW"] });
+
+    const issues = await validateClassification(pack, shippedConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-CLASSIFICATION-011");
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.message).toContain("SCR-NEW");
+    expect(issues[0]?.message).not.toContain("SCR-001");
+  });
+
+  it("refuses the declaration when the pack records a design direction of its own", async () => {
+    const pack = await createInheritingPack({
+      designDirection: ["- adopted_theme: Material 3", "- brand_accent: [what departs from it]"],
+    });
+
+    const issues = await validateClassification(pack, shippedConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-CLASSIFICATION-011");
+    expect(issues[0]?.message).toContain("adopted_theme");
   });
 });
