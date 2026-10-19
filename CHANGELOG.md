@@ -35,6 +35,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   targets, so each pull request or issue gets its own extraction and plan
   instead of being worked without one. Fixes #3781.
 
+- **Prototyping has a `restyle` iteration kind for restyling a running app.**
+  When a request changes only the styles and motion of screens the project
+  already runs, the loop records `iterationKind: restyle` in `progress.md`.
+  Each iteration then edits only the project's stylesheet and motion entry
+  points and lists the live routes in scope with their absolute URLs, and the
+  reviewer opens those routes in the running app. The route's implement stage
+  carries those edits to a tested commit. The handoff
+  copies no prototype and writes a short `handoff.json` with `liveRoutes` and
+  the stylesheet and motion `entryPoints` instead of `finalArtifact` and
+  `procurement`. `qfai validate --profile saas-package` reports a restyle record
+  that lacks either. Fixes #3820.
+
 - **The `sdd-triage` step says how a replaced decision is recorded.** Its
   decision-row rules now say that when a later decision replaces a row, that
   row's Status changes to `SUPERSEDED (by DEC-NNNN)`, or to
