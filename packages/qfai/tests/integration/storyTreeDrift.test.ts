@@ -8,7 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { run } from "../../src/cli/main.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
+import { readStoryTreeAtRef } from "../../src/core/storyTree/renumberDecision.js";
+import { buildStoryTreeModel, nextStoryTreeId } from "../../src/core/storyTree/tree.js";
 import { validateStoryTreeStructureModel } from "../../src/core/validators/storyTreeStructure.js";
 import { validateStoryTreeDrift } from "../../src/core/validators/upstreamSsotGuard.js";
 import type * as GitChanges from "../../src/core/gitChanges.js";
@@ -38,6 +39,24 @@ const table =
 
 function git(...args: string[]): void {
   execFileSync("git", args, { cwd: root, stdio: "ignore" });
+}
+
+/**
+ * A branch `linked` on top of `parent` whose tree holds `link` as a symbolic link in place of
+ * whatever was there. Only a scratch index changes, so the working tree and the current index stay
+ * as they are on every platform.
+ */
+function commitWithLink(parent: string, link: string): void {
+  const env = { ...process.env, GIT_INDEX_FILE: path.join(root, ".git", "qfai-link-index") };
+  const gitIn = (args: string[], input?: string): string =>
+    execFileSync("git", args, { cwd: root, env, encoding: "utf8", input }).trim();
+  gitIn(["read-tree", parent]);
+  gitIn(["rm", "-r", "-q", "--cached", "--ignore-unmatch", "--", link]);
+  const blob = gitIn(["hash-object", "-w", "--stdin"], "elsewhere");
+  gitIn(["update-index", "--add", "--cacheinfo", `120000,${blob},${link}`]);
+  const tree = gitIn(["write-tree"]);
+  const commit = gitIn(["commit-tree", tree, "-p", parent, "-m", "linked"]);
+  gitIn(["update-ref", "refs/heads/linked", commit]);
 }
 
 async function put(file: string, content: string): Promise<void> {
@@ -538,6 +557,17 @@ describe("decision renumber public CLI", () => {
     });
   }
 
+  // QFAI:EX-0001-0008-20
+  it("refuses a base whose story-tree path passes through a symbolic link", async () => {
+    await prepare();
+    commitWithLink("main", ".qfai");
+    const before = await snapshot();
+    const result = await invoke([], "DEC-0002", "DEC-0013", "linked");
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain("Unsafe fixed story-tree directory: .qfai");
+    expect(await snapshot()).toEqual(before);
+  });
+
   // QFAI:AC-0001-0008-08
   // QFAI:EX-0001-0008-20
   it("checks a later unsafe candidate before writing any earlier valid candidate", async () => {
@@ -723,6 +753,37 @@ describe("next free ID public CLI", () => {
     const result = await invoke(["BR", "CLI-0003", "--base", "main"]);
     expect(result.code).toBe(0);
     expect(result.stdout.trim()).toBe("BR-0003-0003");
+  });
+
+  // QFAI:EX-0001-0008-30
+  it.each([
+    ["an intermediate story-tree component", ".qfai", false],
+    ["a contracts directory outside the story tree", "contracts", true],
+  ])("refuses a base where %s is a symbolic link", async (_label, link, outside) => {
+    if (outside)
+      await put("qfai.config.yaml", `paths:\n  specsDir: ${specs}\n  contractsDir: contracts\n`);
+    await branchFromMain();
+    commitWithLink("main", link);
+    const result = await invoke(["DEC", "--base", "linked"]);
+    expect(result.code).toBe(2);
+    expect(result.stdout).not.toMatch(/\bDEC-\d{4}/);
+    expect(result.stderr).toContain(`Unsafe fixed story-tree directory: ${link}`);
+  });
+
+  // QFAI:EX-0001-0008-29
+  it("reads a base whose story tree is the repository root", async () => {
+    await put("decisions.md", table + "| DEC-0001 | Root | Keep | DONE |\n");
+    await put("03_contract/cli/cli-0003-check.md", contract(["BR-0003-0001"]));
+    git("add", ".");
+    git("commit", "-m", "root story tree");
+    const { model } = await readStoryTreeAtRef({
+      root,
+      ref: "main",
+      specsDir: ".",
+      contractsDir: "03_contract",
+    });
+    expect(nextStoryTreeId(model, "DEC")).toBe("DEC-0002");
+    expect(nextStoryTreeId(model, "BR", "CLI-0003")).toBe("BR-0003-0002");
   });
 
   // QFAI:EX-0001-0008-30

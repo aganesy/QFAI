@@ -264,7 +264,13 @@ async function blobContents(root: string, shas: readonly string[]): Promise<Buff
   child.stdout.on("data", (chunk: Buffer) => output.push(chunk));
   child.stderr.on("data", (chunk: Buffer) => failure.push(chunk));
   const closed = new Promise<number | null>((resolve, reject) => {
-    child.on("error", reject);
+    child.on("error", (failed) =>
+      reject(
+        new Error(`Git could not resolve or read the local repository: ${failed.message}`, {
+          cause: failed,
+        }),
+      ),
+    );
     child.on("close", resolve);
   });
   // A write error ends in the exit code checked below.
@@ -289,15 +295,24 @@ async function blobContents(root: string, shas: readonly string[]): Promise<Buff
     const size = Number(header[2]);
     if (begin + size > bytes.length)
       throw new Error(`Git returned a truncated blob for a fixed story-tree file: ${sha}`);
+    if (bytes[begin + size] !== 0x0a)
+      throw new Error(`Git returned a malformed blob for a fixed story-tree file: ${sha}`);
     blobs.push(bytes.subarray(begin, begin + size));
     offset = begin + size + 1;
   }
+  if (offset !== bytes.length)
+    throw new Error("Git returned more output than the fixed story-tree files it was asked for.");
   return blobs;
 }
 
 /**
  * The text files under the story-tree directories at a fixed commit, read in a fixed number of Git
  * processes: one listing of the path components, one recursive listing and one batch read.
+ *
+ * Each file is capped at 16 MiB and the batch read holds every selected file in memory at once.
+ * The per-file cap is the deliberate ceiling: no total is enforced, because a story tree holds
+ * Markdown and contract files far below it; a tree whose total approaches the memory of the host
+ * would need a streaming read instead.
  */
 async function fixedSpecTexts(
   root: string,
@@ -327,14 +342,18 @@ async function fixedSpecTexts(
         throw new Error(`Unsafe fixed story-tree directory: ${name}`);
     }
   }
-  const listing = await git(root, ["ls-tree", "-r", "-l", "-z", sha, "--", ...directories]);
+  // An empty relative path is the repository root, which Git names `.`.
+  const pathspecs = directories.map((directory) => directory || ".");
+  const listing = await git(root, ["ls-tree", "-r", "-l", "-z", sha, "--", ...pathspecs]);
   const entries = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(listing);
   const decisionPages = `${path.posix.join(specs, "decisions")}/`;
   const wanted = new Map<string, string>();
   for (const entry of entries.split("\0").filter(Boolean)) {
     const match = /^([0-7]+) blob ([a-f0-9]+) +(\d+)\t(.+)$/.exec(entry);
     if (!match?.[1] || !match[2] || !match[3] || !match[4])
-      throw new Error(`The fixed story tree has a non-blob: ${specs}`);
+      throw new Error(
+        `The fixed story tree has a non-blob: ${entry.slice(entry.indexOf("\t") + 1)}`,
+      );
     const file = match[4];
     if (
       (file === path.posix.join(specs, "decisions.md") || file.startsWith(decisionPages)) &&
@@ -348,8 +367,12 @@ async function fixedSpecTexts(
   }
   const contents = await blobContents(root, [...wanted.values()]);
   const files = new Map<string, string>();
-  for (const [index, file] of [...wanted.keys()].entries())
-    files.set(file, text(contents[index] ?? Buffer.alloc(0), file));
+  for (const [index, file] of [...wanted.keys()].entries()) {
+    const content = contents[index];
+    if (content === undefined)
+      throw new Error(`Git returned no blob for a fixed story-tree file: ${file}`);
+    files.set(file, text(content, file));
+  }
   return files;
 }
 
@@ -368,12 +391,8 @@ export async function readStoryTreeAtRef(options: {
     relative: [specs = "", contracts = ""],
   } = await repositoryPaths(options.root, [options.specsDir, options.contractsDir]);
   const sha = await commit(root, options.ref);
-  const files = await fixedSpecTexts(
-    root,
-    sha,
-    specs,
-    contracts.startsWith(`${specs}/`) ? [] : [contracts],
-  );
+  const contractsInside = specs === "" || contracts === specs || contracts.startsWith(`${specs}/`);
+  const files = await fixedSpecTexts(root, sha, specs, contractsInside ? [] : [contracts]);
   return { sha, model: buildStoryTreeModel(files, { specsDir: specs, contractsDir: contracts }) };
 }
 
