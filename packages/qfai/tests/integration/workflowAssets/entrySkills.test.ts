@@ -730,6 +730,13 @@ describe("qfai-run", () => {
     );
   });
 
+  it("separates a changed default on a published surface from one no published surface exposes", async () => {
+    const intents = flat(sectionOf(await readShipped(EXTRACTION), "## Intent"));
+    expect(intents).toContain(
+      "A changed default is `deprecation` when the default belongs to a published surface, such as a public API, a CLI flag or a configuration key, and `behaviour-change` otherwise, when it changes a default that no published surface exposes.",
+    );
+  });
+
   // QFAI:AC-0001-0224-02
   // QFAI:EX-0001-0224-02
   it("writes artifacts itself, delegates only parallel parts and reviews, and never reviews its own work", async () => {
