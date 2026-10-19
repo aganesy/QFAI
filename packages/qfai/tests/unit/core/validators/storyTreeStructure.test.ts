@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { ISSUE_EXPECTED_BY_CODE } from "../../../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../../../src/core/config.js";
 import { architectureProblems, orderLayers } from "../../../../src/core/storyTree/architecture.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
@@ -411,6 +412,37 @@ describe("story-tree structure", () => {
           "| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n| DEC-0002 | Narrowed | Kept | PARTLY SUPERSEDED (by DEC-0009) |\n| DEC-0008 | A | B | DONE |\n| DEC-0009 | C | D | DONE |",
         ),
         [`${specs}/open-questions.md`]: register("| OQ-0001 | Q | A | DEFERRED |"),
+      }),
+    );
+    expect(declared).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0053-33
+  it("reports an open question whose Status names a decision that no row declares", () => {
+    const register = (rows: string) =>
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
+    const questions = register(
+      "| OQ-0001 | Q | A | DONE (by DEC-0009) |\n| OQ-0002 | Q | A | SUPERSEDED (by DEC-0010) |",
+    );
+    const dangling = validateStoryTreeStructureModel(
+      model({
+        [`${specs}/decisions.md`]: register("| DEC-0009 | C | D | DONE |"),
+        [`${specs}/open-questions.md`]: questions,
+      }),
+    ).filter((item) => item.code === "QFAI-STORY-003");
+    expect(dangling.map((item) => [item.refs, item.file, item.severity])).toEqual([
+      [["OQ-0002", "DEC-0010"], `${specs}/open-questions.md`, "error"],
+    ]);
+    expect(ISSUE_EXPECTED_BY_CODE["QFAI-STORY-003"]).toContain(
+      "a contract rule, a superseded row or an open-question Status names is declared by a row",
+    );
+
+    const declared = validateStoryTreeStructureModel(
+      model({
+        [`${specs}/decisions.md`]: register(
+          "| DEC-0009 | C | D | DONE |\n| DEC-0010 | E | F | DONE |",
+        ),
+        [`${specs}/open-questions.md`]: questions,
       }),
     );
     expect(declared).toEqual([]);

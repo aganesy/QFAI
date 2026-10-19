@@ -117,6 +117,12 @@ describe("shipped qfai-sdd story-tree contract", () => {
     expect(content).toContain(
       "When a later decision replaces a row, change that row's Status to `SUPERSEDED (by DEC-NNNN)`, naming the later row, or to `PARTLY SUPERSEDED (by DEC-NNNN)` when it replaces only part of it.",
     );
+    expect(content).toContain(
+      "When a decision answers an open question, change that row's Status to `DONE (by DEC-NNNN)`; when a decision makes what the row states wrong before the question is answered, change it to `SUPERSEDED (by DEC-NNNN)` and append a new row for the question that remains.",
+    );
+    expect((await reference("sdd-triage.md")).replace(/\s+/g, " ")).toContain(
+      "the `sdd-triage` step says when its Status becomes `DONE (by DEC-NNNN)` or `SUPERSEDED (by DEC-NNNN)`.",
+    );
     expect(content).toContain("including retired IDs named in decisions rows");
     expect(content).toContain("A change request Content begins `Change request:`");
   });

@@ -442,7 +442,7 @@ describe.each([
   {
     kind: "open-questions" as const,
     id: "OQ-0001",
-    allowed: ["TODO", "WIP", "DONE", "DEFERRED"],
+    allowed: ["TODO", "WIP", "DONE", "DONE (by DEC-NNNN)", "DEFERRED", "SUPERSEDED (by DEC-NNNN)"],
     wrongKindStatus: "REJECTED",
   },
 ])("$kind row diagnostics", ({ kind, id, allowed, wrongKindStatus }) => {
@@ -550,6 +550,27 @@ describe.each([
       inForce: false,
     });
   });
+});
+
+// QFAI:EX-0001-0053-32
+it("accepts an open-question Status that names its deciding row only in the exact form", () => {
+  const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const parsed = parseRecordTable(
+    `${header}| OQ-0001 | Q | A | DONE (by DEC-0042) |\n| OQ-0002 | Q | A | SUPERSEDED (by DEC-0042) |\n| OQ-0003 | Q | A | DONE by DEC-0042 |\n| OQ-0004 | Q | A | PARTLY SUPERSEDED (by DEC-0042) |\n| OQ-0005 | Q | A | DONE (by DEC-042) |\n`,
+    "open-questions",
+  );
+  expect(parsed.rows.map((row) => row.status)).toEqual([
+    "DONE (by DEC-0042)",
+    "SUPERSEDED (by DEC-0042)",
+    "DONE by DEC-0042",
+    "PARTLY SUPERSEDED (by DEC-0042)",
+    "DONE (by DEC-042)",
+  ]);
+  expect(parsed.errors.map((error) => error.split(":")[0])).toEqual([
+    "open-questions row OQ-0003 has an invalid Status",
+    "open-questions row OQ-0004 has an invalid Status",
+    "open-questions row OQ-0005 has an invalid Status",
+  ]);
 });
 
 it.each([
