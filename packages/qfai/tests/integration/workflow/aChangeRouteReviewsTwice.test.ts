@@ -229,6 +229,9 @@ it("A review whose target only resolves conflicts between reviewed sides gets no
   );
   expect(after).toContain("A resolution that adds content neither side had is not conflict-only.");
   expect(after).toContain("The stage report names the merge and why no reviewer ran.");
+  expect(after).toContain(
+    "In the `resolve-conflicts` route, a resolution that touches a story-tree file, a contract, or `decisions.md` or `open-questions.md` is not exempt: it gets the code review, and `architecture-reviewer` too for a contract.",
+  );
   expect(gate).toContain(
     "the stage report names each verdict and each answer, or says why the review dispatched no reviewer.",
   );
@@ -275,6 +278,9 @@ it("The entry skill's review step states the same count as the review step", asy
   );
   expect(run).toContain(
     "A review whose target's only edits resolve the conflicts of a merge or branch update between reviewed sides, or a route code review of a small literal-only change, as `common-review-cycle` defines, gets no reviewer.",
+  );
+  expect(run).toContain(
+    "A conflict resolution the plan's own edit stage made in the story tree, a contract or a register still gets one.",
   );
   expect(run).not.toMatch(/flows served by a UI contract/);
 });

@@ -22,7 +22,9 @@ The last step of a change route. It records the run's work as a local commit.
 ## Writes
 
 - One commit on the current branch holding the run's changes.
-- In the final report: the commit, and the files it holds.
+- In the final report: the commit, and the files it holds. In the
+  `resolve-conflicts` route, also each renumber commit the run made, including
+  one left after `git reset --merge ORIG_HEAD`.
 
 A local commit records work; it does not establish formal verification. Push,
 pull request creation and merge each need a user instruction or project policy
@@ -62,8 +64,15 @@ covering that action, target and scope. Commit authority alone covers none of th
    `git add <those paths>`. Never `git add -A`, `git add .` or `git add -f`,
    and never a file git ignores, such as `.qfai/report/*`. A file that was
    already modified before the run and then written by it is committed whole;
-   the final report names it.
-3. Commit with a message in the project's convention that says what changed
+   the final report names it. In the `resolve-conflicts` route, first confirm
+   that the combined diff in the stage report passed the added-line check, then
+   stage the resolved paths and conclude the merge in progress with
+   `git commit` and a message that names the base and gives each renumber as
+   old → new with the renamed record's subject or path. The commit then also holds the base's changes. Record
+   `git show --remerge-diff` of that commit in the stage report. A check that
+   fails after the commit undoes it with `git reset --merge ORIG_HEAD`, which is
+   allowed before a push, and the run stops.
+3. Otherwise, commit with a message in the project's convention that says what changed
    and why.
 4. Where a commit hook refuses the commit, fix the cause and commit again.
    Never skip the hook. When the fix changes code or tests, rerun the verify
@@ -79,7 +88,10 @@ When the delegated check reports, `verify-repo-gate`'s `## After CI` updates the
 
 ## Gate
 
-- The commit exists and holds exactly the tracked deliverables the run wrote.
+- The commit exists and holds exactly the tracked deliverables the run wrote,
+  or, in the `resolve-conflicts` route, the merge the run concluded. The final
+  report names each renumber commit the run made, including one left after
+  `git reset --merge ORIG_HEAD`.
 - Pending CI is named in the report with the target, current head, run ID or URL
   when available, check, observed outcome and counts, blocker and resume condition.
   If no run exists, say so; invent no run ID or result.
@@ -87,4 +99,5 @@ When the delegated check reports, `verify-repo-gate`'s `## After CI` updates the
   `## After CI` compares against. With a delegated check pending, the resume
   condition reads: when `<check>` reports for `<head>`, follow
   `verify-repo-gate` `## After CI`.
-- Nothing was pushed, and no pull request or merge was made by this step.
+- Nothing was pushed, and no pull request or merge was made by this step,
+  except concluding the merge in progress of the `resolve-conflicts` route.

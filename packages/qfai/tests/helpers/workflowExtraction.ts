@@ -33,6 +33,7 @@ const BY_ROUTE: Record<string, Partial<WorkflowExtraction>> = {
   "repair-consistency": { intent: "surface-contradiction" },
   "retire-mechanism": { intent: "unenforced", qualifiers: ["removal-requested"] },
   "restate-records": { intent: "stale-record" },
+  "resolve-conflicts": { intent: "stale-record", qualifiers: ["meaning-preserving"] },
   "add-feature": { intent: "feature" },
   "prototype-feature": { intent: "feature", qualifiers: ["visual-open"] },
   "change-compatibility": { intent: "deprecation" },

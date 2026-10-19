@@ -148,6 +148,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "visual-open",
     "prototype-requested",
     "owned-temporary-cleanup",
+    "meaning-preserving",
     "session-answerable",
   ],
   signals: [
@@ -1262,6 +1263,69 @@ describe("qfai-maintain", () => {
       /no stage of the route serves the finding's owner, so the run is `blocked`, naming the finding and the owner skill to invoke by name/i,
     );
     expect(effect).not.toMatch(/reclassified/i);
+  });
+
+  // QFAI:EX-0001-0220-53
+  it("lets the resolve-conflicts route keep each side's records and stops on content neither side had", async () => {
+    const skill = await readShipped(MAINTAIN_EDIT);
+    expect(flat(sectionOf(skill, "## Non-goals"))).toMatch(
+      /except as \[Resolving conflicts\]\(#resolving-conflicts\) allows/i,
+    );
+    const resolving = flat(sectionOf(skill, "## Resolving conflicts"));
+    expect(resolving).toMatch(/in the `resolve-conflicts` route/i);
+    expect(resolving).toContain(
+      "Fetch the base (`git fetch`), then on a clean tree, before the merge, renumber every `decisions.md` row the branch added, from the lowest one whose ID the fetched base now declares upward, lowest first, by the `npx qfai sdd renumber-decision` procedure in `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md` (two branches taking the same ID), and commit after each run.",
+    );
+    expect(resolving).toContain(
+      "When a merge has already stopped with conflicts, run `git merge --abort`, renumber, and merge again.",
+    );
+    expect(resolving).toContain("Start or resume the merge with `git merge --no-commit <base>`.");
+    expect(resolving).toContain(
+      "The base's item keeps its ID; never rename it. An item the branch added whose ID collides takes the next free ID of its scope, with every citation of it.",
+    );
+    expect(resolving).toContain("Every other edit only keeps what one side already had");
+    expect(resolving).toContain("Content neither side had is a semantic effect.");
+    expect(resolving).toContain(
+      "When both sides changed the same record, keeping both is a semantic effect: stop.",
+    );
+    expect(resolving).toContain(
+      "An ID that two records already share on one history before this merge, carried in by an earlier merge, is a semantic effect: stop.",
+    );
+    expect(resolving).toContain("A conflict in code, or in a file listed under");
+    expect(resolving).toContain("such as a generated file or a lockfile, stops");
+    expect(flat(sectionOf(skill, "## Never a maintenance edit"))).toContain(
+      "SQL, generated files and lockfiles;",
+    );
+    expect(flat(sectionOf(skill, "## The edit"))).toContain(
+      "except a renumber [Resolving conflicts](#resolving-conflicts) allows",
+    );
+    expect(flat(sectionOf(skill, "## Stage report"))).toContain(
+      "the base, each renumber as old → new, and the combined diff of each resolved path, taken with `git diff` before it is staged, and `git diff` of every path the renumbers touched. Every added line is inside one side's text, except the ID changes that list names.",
+    );
+    expect(flat(sectionOf(skill, "## Gate"))).toContain(
+      "The combined diff passes the added-line check before `verify-commit` commits.",
+    );
+    const commit = flat(await readShipped("step/verify-commit/STEP.md"));
+    expect(commit).toContain(
+      "first confirm that the combined diff in the stage report passed the added-line check, then stage the resolved paths and conclude the merge in progress with `git commit` and a message that names the base and gives each renumber as old → new with the renamed record's subject or path.",
+    );
+    expect(commit).not.toContain("--no-edit");
+    expect(commit).toContain("3. Otherwise, commit with a message in the project's convention");
+    expect(flat(sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Writes"))).toContain(
+      "In the `resolve-conflicts` route, also each renumber commit the run made, including one left after `git reset --merge ORIG_HEAD`.",
+    );
+    expect(flat(sectionOf(await readShipped("step/verify-commit/STEP.md"), "## Gate"))).toContain(
+      "The final report names each renumber commit the run made, including one left after `git reset --merge ORIG_HEAD`.",
+    );
+    expect(commit).toContain(
+      "Record `git show --remerge-diff` of that commit in the stage report.",
+    );
+    expect(commit).toContain(
+      "A check that fails after the commit undoes it with `git reset --merge ORIG_HEAD`, which is allowed before a push, and the run stops.",
+    );
+    expect(commit).toContain(
+      "except concluding the merge in progress of the `resolve-conflicts` route",
+    );
   });
 });
 

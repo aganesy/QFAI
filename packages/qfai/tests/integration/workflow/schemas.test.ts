@@ -220,6 +220,45 @@ it("The extraction schema and the parser accept and refuse the same extractions"
   }
 });
 
+// QFAI:EX-0001-0211-55
+it("The extraction schema and the parser hold meaning-preserving to a stale record or an order that names artifacts", async () => {
+  const validate = await loadValidator();
+  const preserving = {
+    ...extraction({ intent: "stale-record", artifacts: ["spec"] }),
+    qualifiers: ["meaning-preserving"],
+  };
+  const preservingReading = {
+    intent: "order",
+    entryFlags: [],
+    qualifiers: ["meaning-preserving"],
+    signals: [],
+  };
+  const alternative = {
+    ...extraction({ intent: "stale-record", confidence: "low", artifacts: ["spec"] }),
+    alternatives: [preservingReading],
+  };
+  const samples = [
+    preserving,
+    { ...preserving, intent: "order" },
+    alternative,
+    { ...preserving, intent: "docs" },
+    { ...preserving, artifacts: [] },
+    { ...alternative, alternatives: [{ ...preservingReading, intent: "refactor" }] },
+    { ...alternative, artifacts: [] },
+  ];
+  expect(samples.map((sample) => [validate(EXTRACTION, sample), extractionFaults(sample)])).toEqual(
+    [
+      [true, []],
+      [true, []],
+      [true, []],
+      [false, ["intent"]],
+      [false, ["artifacts"]],
+      [false, ["alternatives[0].intent"]],
+      [false, ["artifacts"]],
+    ],
+  );
+});
+
 it("The plan of every route validates against the plan schema", async () => {
   const validate = await loadValidator();
   const root = await minimalProject();

@@ -102,6 +102,7 @@ export const PLAN_ROUTES = [
   "repair-consistency",
   "retire-mechanism",
   "restate-records",
+  "resolve-conflicts",
   "add-feature",
   "prototype-feature",
   "change-compatibility",

@@ -262,6 +262,33 @@ it("Consistency: a missing check, a removal, the other disagreements and stale r
   ]);
 });
 
+// QFAI:EX-0001-0211-54
+it("A meaning-preserving change to records or an order resolves conflicts, after the earlier rules", async () => {
+  expect([
+    await decided({ intent: "stale-record", qualifiers: ["meaning-preserving"] }),
+    await decided({
+      intent: "order",
+      qualifiers: ["meaning-preserving"],
+      artifacts: ["spec", "contract"],
+    }),
+    await decided({ intent: "stale-record" }),
+    await decided({ intent: "order", artifacts: ["spec"] }),
+    await decided({ intent: "order", qualifiers: ["meaning-preserving", "human-run"] }),
+    await decided({
+      intent: "stale-record",
+      qualifiers: ["meaning-preserving"],
+      signals: ["approved-record-task"],
+    }),
+  ]).toEqual([
+    ["resolve-conflicts", 21],
+    ["resolve-conflicts", 15],
+    ["restate-records", 21],
+    ["apply-settled", 15],
+    ["hand-off-operation", 14],
+    ["apply-settled", 2],
+  ]);
+});
+
 // QFAI:EX-0001-0211-25
 // QFAI:EX-0001-0211-26
 it("Regressions, conformance and performance", async () => {

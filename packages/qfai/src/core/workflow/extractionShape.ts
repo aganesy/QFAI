@@ -73,24 +73,33 @@ const EXTRACTION: Shape = {
 
 // Each place `value` departs from the extraction's shape, none for an extraction.
 export function extractionFaultsOf(value: unknown): ShapeFault[] {
-  return [...shapeFaults(value, EXTRACTION, ""), ...ownedCleanupFaults(value)];
+  return [
+    ...shapeFaults(value, EXTRACTION, ""),
+    ...ownedCleanupFaults(value),
+    ...meaningPreservingFaults(value),
+  ];
 }
 
-// Cleanup is an order without tracked artifacts, in every reading of the shared input.
-function ownedCleanupFaults(value: unknown): ShapeFault[] {
-  if (!isRecord(value)) return [];
+// The main reading and each alternative of an extraction that carry `qualifier`.
+function readingsWith(value: Record<string, unknown>, qualifier: string) {
   const readings: { at: string; value: unknown }[] = [{ at: "", value }];
   if (Array.isArray(value.alternatives)) {
     value.alternatives.forEach((reading: unknown, index) => {
       readings.push({ at: `alternatives[${index}].`, value: reading });
     });
   }
-  const cleanupReadings = readings.filter(
+  return readings.filter(
     (reading) =>
       isRecord(reading.value) &&
       Array.isArray(reading.value.qualifiers) &&
-      reading.value.qualifiers.includes("owned-temporary-cleanup"),
+      reading.value.qualifiers.includes(qualifier),
   );
+}
+
+// Cleanup is an order without tracked artifacts, in every reading of the shared input.
+function ownedCleanupFaults(value: unknown): ShapeFault[] {
+  if (!isRecord(value)) return [];
+  const cleanupReadings = readingsWith(value, "owned-temporary-cleanup");
   const faults: ShapeFault[] = cleanupReadings.flatMap((reading) =>
     isRecord(reading.value) && reading.value.intent !== "order"
       ? [
@@ -105,6 +114,32 @@ function ownedCleanupFaults(value: unknown): ShapeFault[] {
     faults.push({
       subject: "artifacts",
       cause: "invalid: owned temporary cleanup requires empty artifacts",
+    });
+  }
+  return faults;
+}
+
+// A meaning-preserving change is a stale record or an order, and it names what it changes, in
+// every reading of the shared input.
+function meaningPreservingFaults(value: unknown): ShapeFault[] {
+  if (!isRecord(value)) return [];
+  const preserving = readingsWith(value, "meaning-preserving");
+  const faults: ShapeFault[] = preserving.flatMap((reading) =>
+    isRecord(reading.value) &&
+    reading.value.intent !== "stale-record" &&
+    reading.value.intent !== "order"
+      ? [
+          {
+            subject: `${reading.at}intent`,
+            cause: "invalid: meaning-preserving requires intent stale-record or order",
+          },
+        ]
+      : [],
+  );
+  if (preserving.length > 0 && Array.isArray(value.artifacts) && value.artifacts.length === 0) {
+    faults.push({
+      subject: "artifacts",
+      cause: "invalid: meaning-preserving requires at least one artifact",
     });
   }
   return faults;
