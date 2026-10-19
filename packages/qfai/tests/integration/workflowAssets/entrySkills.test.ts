@@ -828,7 +828,9 @@ describe("qfai-run", () => {
     ]) {
       expect(protocol).toContain("`" + step + "`");
     }
-    expect(protocol).toMatch(/any step with a pre-draft grilling checkpoint/i);
+    expect(protocol).toMatch(
+      /any step that holds a\s+delegated grilling session, such as a pre-draft grilling checkpoint/i,
+    );
     expect(protocol).toMatch(/starts no finder, griller or reviewer/i);
     expect(protocol).toMatch(/a finder is a review someone other than the author has to do/i);
     const owners: ReadonlyArray<readonly [string, RegExp]> = [
@@ -836,7 +838,7 @@ describe("qfai-run", () => {
       ["step/sdd-triage/STEP.md", /the orchestrator starts the griller, never a stage worker/i],
       [
         "step/common-review-cycle/STEP.md",
-        /a stage worker the orchestrator delegated to dispatches no reviewer/i,
+        /sends each reviewer a work order in the\s+shared template, never a stage worker/i,
       ],
       [
         "step/prototyping-grill/STEP.md",

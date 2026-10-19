@@ -20,10 +20,10 @@ rules against their examples. Follow
   or EX changed, or in an append stage.
 - **Finder.** A sub-agent that wrote none of those BRs reads them, the EXs they
   cite and the EXs this invocation wrote or changed. The orchestrator starts
-  it, never a stage worker the orchestrator delegated to. It raises findings of five
-  kinds: a case the rule implies that no example states, a redundant example,
-  an example no rule explains, a rule its examples do not support, and a flow,
-  story or criterion split the rules show to be wrong.
+  it, never a stage worker. It raises findings of five kinds: a case the rule
+  implies that no example states, a redundant example, an example no rule
+  explains, a rule its examples do not support, and a flow, story or criterion
+  split the rules show to be wrong.
 - **Deciding.** The session agent decides each finding that is not critical. A
   finding resting on product intent nothing written states goes to the user.
 - **Scope.** A proposed EX must be implied by an existing BR, an existing AC or
