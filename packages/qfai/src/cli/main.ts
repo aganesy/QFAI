@@ -338,12 +338,12 @@ async function workflowEntry(
   }
   const subjects = workflowRefusalSubjects(invalid, options);
   if (subjects.length > 0) {
-    error(invalidReason ?? "qfai workflow plan: give exactly one of --in and --route.");
+    error(invalidReason ?? "qfai workflow plan: give exactly one of --in, --route and --order.");
     const diagnosis =
       options.workflowUnknownOperation !== undefined ? await unavailableCommandDiagnosis() : null;
     if (diagnosis !== null) error(diagnosis);
     const message =
-      "The command line is not `workflow plan` with exactly one of --in and --route, so run it with --help to see the form.";
+      "The command line is not `workflow plan` with exactly one of --in, --route and --order, so run it with --help to see the form.";
     return emitPlanDocument({
       ok: false,
       message: diagnosis ?? message,
@@ -354,6 +354,7 @@ async function workflowEntry(
     root: await resolveRoot(options, true),
     ...(options.workflowIn !== undefined ? { inPath: options.workflowIn } : {}),
     ...(options.workflowRoute !== undefined ? { route: options.workflowRoute } : {}),
+    ...(options.workflowOrder === true ? { order: true } : {}),
   });
 }
 
@@ -365,7 +366,7 @@ async function unavailableCommandDiagnosis(): Promise<string> {
 }
 
 // What a `workflow` command line gets wrong: an unknown operation or flag, a missing operation,
-// or not exactly one of `--in` and `--route`.
+// or not exactly one of `--in`, `--route` and `--order`.
 function workflowRefusalSubjects(invalid: boolean, options: ParsedArgs["options"]): string[] {
   if (options.workflowUnknownOperation !== undefined) return [options.workflowUnknownOperation];
   if (options.unknownFlags.length > 0) return options.unknownFlags;
@@ -374,6 +375,7 @@ function workflowRefusalSubjects(invalid: boolean, options: ParsedArgs["options"
   const given = [
     ...(options.workflowIn !== undefined ? ["--in"] : []),
     ...(options.workflowRoute !== undefined ? ["--route"] : []),
+    ...(options.workflowOrder === true ? ["--order"] : []),
   ];
   if (given.length === 1) return [];
   return given.length === 0 ? ["--in"] : given;
@@ -396,7 +398,7 @@ Commands:
   sdd renumber-decision --from <DEC-ID> --to <DEC-ID> --base <local-ref> [--apply]  Preview or apply a branch-added decision's renumbering
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
-  workflow plan                Print the route plan for a request extraction (--in <path|->) or a route (--route <route>)
+  workflow plan                Print the route plan for a request extraction (--in <path|->), a route (--route <route>), or an operation on finished work (--order)
 
 Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)

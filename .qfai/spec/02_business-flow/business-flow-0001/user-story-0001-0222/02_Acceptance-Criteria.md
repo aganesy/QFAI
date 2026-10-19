@@ -25,7 +25,7 @@ Feature: Plan a request's route with one command
 
   # AC-0001-0222-04
   Scenario: Invalid input is refused
-    Given an invalid extraction, an unknown route, an unknown operation, or both or neither of `--in` and `--route`
+    Given an invalid extraction, an unknown route, an unknown operation, or not exactly one of `--in`, `--route` and `--order`
     When the command runs
     Then it exits 2 with one JSON document holding `ok: false` and the reasons
     And it writes nothing
@@ -50,4 +50,11 @@ Feature: Plan a request's route with one command
     When the command runs
     Then it exits 1 with one JSON document holding `ok: false` and the reason `io-error`
     And it writes nothing
+
+  # AC-0001-0222-08
+  Scenario: An operation on finished work is planned with no extraction file
+    Given an operation on finished work that names nothing to change
+    When `npx qfai workflow plan --order` runs
+    Then it prints the plan the extraction `{ intent: order, artifacts: [] }` gives and exits 0
+    And it needs no extraction file and writes no file
 ```
