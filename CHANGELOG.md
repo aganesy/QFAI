@@ -398,6 +398,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Node.js 24.16.0 and Graphify on Python 3.12.13. Other combinations are
   unverified and keep using local generation. Fixes #3702. Fixes #3703.
 
+- **The implement stage follows a user's instruction to run tests only in CI.**
+  A user's instruction for a run could already hand the verify gates to a named
+  CI check, but `implement-tdd` and `implement-diagnose` still deferred Red and
+  Green only for a `CI only:` Test entry, so a user who said not to run tests
+  locally still had focused tests run during implement. Where the user's
+  instruction for this run delegates the Test gate to a named CI check, Red,
+  Green and Refactor are now recorded `ci-deferred` for that run, and the stage
+  report quotes the instruction word for word with where it came from. Without
+  an instruction that can be quoted, the focused phases run locally. Refs #3898.
+
 - **A project that runs tests in CI only records Red and Green `ci-deferred`.**
   Where the Standard commands write the Test entry `CI only: <check name>`,
   `implement-tdd` and `implement-diagnose` write the failing test first and do

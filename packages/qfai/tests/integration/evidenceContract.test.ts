@@ -426,7 +426,7 @@ describe("focused evidence guidance", () => {
       "In the example's `### EX-NNNN-NNNN-NN` section, the stage report says `red: ci-deferred`, `green: ci-deferred` and `refactor: ci-deferred`",
     );
     expect(flat(implement)).toContain(
-      "Where the Test entry is `CI only: <check name>`, keep that test's `ci-deferred` Red and do not run it.",
+      "Where the Test entry is `CI only: <check name>`, or the user's instruction for this run delegates that gate to a named CI check, keep that test's `ci-deferred` Red and do not run it.",
     );
     expect(flat(sectionOf(implement, "## Report"))).toContain(
       "For a `ci-deferred` phase, the test path, its selector and the check name take the place of the command, the observed result and the receipt.",
@@ -463,6 +463,52 @@ describe("focused evidence guidance", () => {
       /its `ci-deferred` Red where the Test entry is `CI only: <check name>`/,
     );
     expect(flat(review)).toMatch(/name each test the run recorded `red: ci-deferred`/);
+  });
+
+  // QFAI:EX-0001-0091-17
+  it("defers Red and Green to CI for one run on a quoted user instruction, never on the agent's own judgment", async () => {
+    const [admissibility, implement, diagnose] = await Promise.all([
+      readGuide("skill/qfai-implement/references/red-admissibility.md"),
+      readGuide("step/implement-tdd/STEP.md"),
+      readGuide("step/implement-diagnose/STEP.md"),
+    ]);
+    const byInstruction =
+      "the user's instruction for this run delegates that gate to a named CI check";
+    const ciOnly = flat(sectionOf(admissibility, "## CI-only Test gate"));
+    expect(ciOnly).toContain(
+      `The same holds when ${byInstruction}: that delegation holds for this run only.`,
+    );
+    expect(ciOnly).toMatch(
+      /delegation by instruction, the stage report quotes the instruction word for word and says where it came from/,
+    );
+    expect(ciOnly).toMatch(
+      /standing instruction in the project's agent instructions counts for each run it is in force/,
+    );
+    expect(ciOnly).toContain(
+      "A delegation requires an actual CI check that runs this test; local environment failure alone creates no delegation.",
+    );
+    expect(ciOnly).toContain(
+      "Under a delegation by instruction, that test-only commit is the expected way to observe Red whenever the run has that authority.",
+    );
+    expect(ciOnly).toMatch(
+      /Without an instruction that can be quoted, nothing is deferred and the focused phases run locally; the agent never defers them on its own judgment/,
+    );
+    expect(flat(implement)).toMatch(
+      new RegExp(
+        `or ${byInstruction}, run nothing locally: record Red, Green and Refactor \`ci-deferred\`, quoting that instruction`,
+      ),
+    );
+    expect(flat(sectionOf(implement, "## Gate"))).toContain(
+      `recorded \`ci-deferred\` where the Test entry is \`CI only: <check name>\` or ${byInstruction}.`,
+    );
+    expect(flat(diagnose)).toMatch(
+      new RegExp(
+        `or ${byInstruction}, do not run it: record \`red: ci-deferred\`, quoting that instruction`,
+      ),
+    );
+    expect(flat(sectionOf(diagnose, "## Gate"))).toContain(
+      `its \`ci-deferred\` Red where the Test entry is \`CI only: <check name>\` or ${byInstruction}, and`,
+    );
   });
 });
 

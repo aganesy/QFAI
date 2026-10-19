@@ -54,9 +54,11 @@ gate status, runtime parser or runner.
 
 ## CI-only Test gate
 
-Where the Standard commands entry for Test is written `CI only: <check name>`,
-the project runs its tests in CI alone, and no focused Red, Green or Refactor
-invocation runs locally. Record those phases `ci-deferred` instead:
+Where the Standard commands entry for the Test gate is written
+`CI only: <check name>`, the project runs its tests in CI alone, and no focused
+Red, Green or Refactor invocation runs locally. The same holds when the user's
+instruction for this run delegates that gate to a named CI check: that
+delegation holds for this run only. Record those phases `ci-deferred` instead:
 
 - Write the test before any production code, as for an observed Red, and do
   not run it.
@@ -65,6 +67,14 @@ invocation runs locally. Record those phases `ci-deferred` instead:
   the test path, its selector and the check name.
   This is a report label, not a gate status: no gate counts it, and it is not
   a pass. The Test gate stays DELEGATED to that check in the verify stage.
+- For a delegation by instruction, the stage report quotes the instruction word
+  for word and says where it came from: this request, an answer to a question,
+  or the project's agent instructions. A standing instruction in the project's
+  agent instructions counts for each run it is in force. A delegation requires
+  an actual CI check that runs this test; local environment failure alone
+  creates no delegation. Without an instruction that can be quoted, nothing is
+  deferred and the focused phases run locally; the agent never defers them on
+  its own judgment.
 - The route's code review reads the test against the code before the fix and
   confirms that its assertion fails there on the stated behavior. A test that
   would pass both before and after the fix is a finding.
@@ -73,7 +83,9 @@ Where the run has authority to push and open a pull request, from the user's
 instruction or the project's policy, it may observe Red in CI instead: push a
 commit that holds only the test, for example on a draft pull request, confirm
 that the named check fails on the new test's assertion, and record the run URL
-as the Red. A run without that authority does not push to observe Red.
+as the Red. A run without that authority does not push to observe Red. Under a
+delegation by instruction, that test-only commit is the expected way to observe
+Red whenever the run has that authority.
 
 ## Assertion control
 
