@@ -29,7 +29,7 @@ as [A semantic effect](#a-semantic-effect) says:
 - dependency updates;
 - workflow and CI files;
 - authorization conditions and environment settings;
-- SQL and generated files;
+- SQL, generated files and lockfiles;
 - a command a README states as the way to do something;
 - QFAI's own skills, steps and rules.
 
@@ -41,15 +41,22 @@ changes.
 
 ## Resolving conflicts
 
-In the `resolve-conflicts` route, the step resolves the conflicts of merging
-the named base and keeps every record's meaning. It starts or resumes that merge
-with `git merge --no-commit <base>`; `verify-commit` concludes it.
+In the `resolve-conflicts` route, the step merges the named base into the
+branch and keeps every record's meaning. `verify-commit` concludes the merge.
 
-There the step may edit a story-tree file, a contract, or a row of
-`decisions.md` or `open-questions.md`, but each edit only keeps what one side
-already had: what each side added to a conflicting block, or the incoming item
-renumbered as `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md` (two
-branches taking the same ID) says.
+1. On a clean tree, before the merge, renumber each `decisions.md` row the
+   branch added whose ID the fetched base now declares, by the
+   `npx qfai sdd renumber-decision` procedure in
+   `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md` (two branches
+   taking the same ID), and commit after each run. The union merge of
+   `decisions.md` duplicates a colliding ID without a conflict, so this runs
+   first. When a merge has already stopped with conflicts, run
+   `git merge --abort`, renumber, and merge again.
+2. Start or resume the merge with `git merge --no-commit <base>`.
+3. Resolve each conflict. The base's item keeps its ID; never rename it. An
+   item the branch added whose ID collides takes the next free ID of its scope,
+   with every citation of it. Every other edit only keeps what one side already
+   had: what each side added to a conflicting block.
 
 Stop before the edit, as [A semantic effect](#a-semantic-effect) says, on any
 of these:
@@ -57,7 +64,8 @@ of these:
 - Content neither side had is a semantic effect.
 - When both sides changed the same record, keeping both is a semantic effect:
   stop.
-- An ID two merged records already share is a semantic effect: stop.
+- An ID that both histories had already committed for two records before this
+  merge is a semantic effect: stop.
 - A conflict in code, or in a file listed under
   [Never a maintenance edit](#never-a-maintenance-edit), such as a generated
   file or a lockfile, stops: its owner route resolves or regenerates it.
@@ -117,9 +125,10 @@ edit changes none. Any other entry under
 - The no-behaviour-change judgement, with its reason.
 - The independent review's verdict and who gave it.
 - The lint and link checks run, and their results.
-- In the `resolve-conflicts` route, the combined diff of each resolved path,
-  taken with `git diff` before it is staged, with every added line inside one
-  side's text.
+- In the `resolve-conflicts` route: the base, each renumber as old → new, and
+  the combined diff of each resolved path, taken with `git diff` before it is
+  staged. Every added line is inside one side's text, except the ID changes
+  that list names.
 
 ## Gate
 
@@ -128,4 +137,5 @@ its reason, and every check run over the changed files exited 0. The review that
 follows (`implementation-reviewer`) confirms the diff changes no behaviour; the
 reviewer is never the agent that made the edit. In the `resolve-conflicts`
 route, that review runs as `common-review-cycle` says: a resolution that
-touches no story-tree file, contract or register row gets no reviewer.
+touches no story-tree file, contract or register row gets no reviewer. The
+combined diff passes the added-line check before `verify-commit` commits.
