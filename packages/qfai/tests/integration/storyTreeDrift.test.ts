@@ -668,10 +668,91 @@ describe("next free ID public CLI", () => {
     expect(question.stdout.trim()).toBe("OQ-0001");
   });
 
+  const flow = `${specs}/02_business-flow/business-flow-0001`;
+  const storyFile = (tail: string) => `${flow}/user-story-0001-${tail}/01_User-story.md`;
+  const contract = (rules: string[]) =>
+    "# CLI-0003: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n" +
+    rules.map((id) => `| ${id} | A rule. | - |\n`).join("");
+
+  async function branchFromMain(): Promise<void> {
+    git("config", "core.autocrlf", "false");
+    await put(decisions, table + "| DEC-0001 | Ancestor | Keep | DONE |\n");
+    await put(`${flow}/business-flow.md`, "# BF-0001: Flow\n");
+    await put(storyFile("0001"), "# US-0001-0001: Story\n");
+    git("add", ".");
+    git("commit", "-m", "ancestor");
+    git("checkout", "-b", "topic");
+  }
+
+  // QFAI:EX-0001-0008-29
+  it("reads a parented kind from the base, where the base alone holds the higher ID", async () => {
+    await branchFromMain();
+    git("checkout", "main");
+    await put(storyFile("0004"), "# US-0001-0004: Base story\n");
+    git("add", ".");
+    git("commit", "-m", "base story");
+    git("checkout", "topic");
+    const result = await invoke(["US", "BF-0001", "--base", "main"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe("US-0001-0005");
+  });
+
+  // QFAI:EX-0001-0008-29
+  it("numbers an AC under a story that only the working tree declares", async () => {
+    await branchFromMain();
+    await put(storyFile("0002"), "# US-0001-0002: Uncommitted story\n");
+    await put(
+      `${flow}/user-story-0001-0002/02_Acceptance-Criteria.md`,
+      "# Acceptance Criteria\n\n## Criteria\n\n```gherkin\nFeature: F\n  # AC-0001-0002-01\n  Scenario: S\n    Given a\n```\n",
+    );
+    const result = await invoke(["AC", "US-0001-0002", "--base", "main"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe("AC-0001-0002-02");
+  });
+
+  // QFAI:EX-0001-0008-29
+  it("reads a BR from a contracts directory outside the story tree", async () => {
+    await put("qfai.config.yaml", `paths:\n  specsDir: ${specs}\n  contractsDir: contracts\n`);
+    await put("contracts/cli/cli-0003-check.md", contract(["BR-0003-0001"]));
+    await branchFromMain();
+    git("checkout", "main");
+    await put("contracts/cli/cli-0003-check.md", contract(["BR-0003-0001", "BR-0003-0002"]));
+    git("add", ".");
+    git("commit", "-m", "base rule");
+    git("checkout", "topic");
+    const result = await invoke(["BR", "CLI-0003", "--base", "main"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe("BR-0003-0003");
+  });
+
+  // QFAI:EX-0001-0008-30
+  it.each([
+    [
+      "duplicated",
+      table + "| DEC-0002 | Base | Keep | DONE |\n| DEC-0002 | Again | Keep | DONE |\n",
+    ],
+    [
+      "incomplete",
+      "# Decisions\n\n## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n",
+    ],
+  ])("refuses a %s base decision register", async (_label, register) => {
+    await branchFromMain();
+    git("checkout", "main");
+    await writeFile(path.join(root, decisions), register, "utf8");
+    git("add", ".");
+    git("commit", "-m", "base register");
+    git("checkout", "topic");
+    const result = await invoke(["DEC", "--base", "main"]);
+    expect(result.code).toBe(2);
+    expect(result.stdout).not.toMatch(/\bDEC-\d{4}/);
+    expect(result.stderr).toContain("refused");
+  });
+
   // QFAI:EX-0001-0008-30
   it.each([
     [["US", "--base", "main"], "BF parent"],
     [["DEC", "--base", "no-such-ref"], "no-such-ref"],
+    [["US", "BF-0009", "--base", "main"], "BF-0009"],
   ])("reports %j and exits 2 without printing an ID", async (argv, reason) => {
     await put(decisions, table + "| DEC-0001 | Ancestor | Keep | DONE |\n");
     git("add", ".");

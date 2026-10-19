@@ -22,12 +22,18 @@ export async function runSddNextIdCommand(options: {
     const roots = resolveStoryTreeRoots(options.root, loaded.config);
     const working = await readStoryTreeModel(options.root, loaded.config);
     const atBase = await readStoryTreeAtRef({ root: options.root, ref: options.base, ...roots });
+    const { parent } = options;
+    if (
+      parent !== undefined &&
+      ![working, atBase.model].some((model) =>
+        [...model.declarations, ...model.contracts].some(({ id }) => id === parent),
+      )
+    )
+      throw new Error(`Neither the working tree nor the base declares ${parent}.`);
+    const fromWorking = nextStoryTreeId(working, options.kind, parent);
+    const fromBase = nextStoryTreeId(atBase.model, options.kind, parent);
     // Both IDs share the kind's prefix and fixed width, so the later one in text order is higher.
-    const [id] = [working, atBase.model]
-      .map((model) => nextStoryTreeId(model, options.kind, options.parent))
-      .sort()
-      .reverse();
-    info(id ?? "");
+    info(fromWorking > fromBase ? fromWorking : fromBase);
     return 0;
   } catch (failure) {
     error(

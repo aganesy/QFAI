@@ -257,11 +257,18 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           return;
         }
         if (options.sddAction === "next-id") {
+          const { sddIdKind: kind, sddBase: base } = options;
+          // The parser refuses a next-id without both; this narrows them.
+          if (!kind || !base) {
+            error("qfai sdd next-id: the ID kind and --base are required.");
+            process.exitCode = options.invalidExitCode;
+            return;
+          }
           process.exitCode = await runSddNextIdCommand({
             root: await resolveRoot(options),
-            kind: options.sddIdKind ?? "DEC",
+            kind,
             ...(options.sddIdParent !== undefined ? { parent: options.sddIdParent } : {}),
-            base: options.sddBase ?? "",
+            base,
           });
           return;
         }

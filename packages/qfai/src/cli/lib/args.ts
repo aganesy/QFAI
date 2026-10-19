@@ -1,6 +1,6 @@
-import type { StoryTreeIdKind } from "../../core/storyTree/ids.js";
+import { STORY_TREE_ID_KINDS, type StoryTreeIdKind } from "../../core/storyTree/ids.js";
 
-const STORY_TREE_ID_KINDS: readonly StoryTreeIdKind[] = ["BF", "US", "AC", "EX", "BR", "DEC", "OQ"];
+const NEXT_ID_USAGE = "qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>";
 
 export type ParsedArgs = {
   command: string | null;
@@ -765,10 +765,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (arg?.startsWith("--")) {
           options.unknownFlags.push(arg);
           markInvalid(`qfai: unknown option: ${arg}`);
+        } else if (command === "sdd" && options.sddAction === "next-id" && arg !== undefined) {
+          // The kind, then the parent, may also follow the options.
+          const known = STORY_TREE_ID_KINDS.find((value) => value === arg);
+          if (!options.sddIdKind && known) options.sddIdKind = known;
+          else if (options.sddIdKind && options.sddIdParent === undefined)
+            options.sddIdParent = arg;
+          else
+            markInvalid(
+              `qfai sdd next-id: unexpected argument: ${arg}. Expected: ${NEXT_ID_USAGE}`,
+            );
         } else if (
           (command === "workflow" ||
-            (command === "sdd" &&
-              (options.sddAction === "renumber-decision" || options.sddAction === "next-id"))) &&
+            (command === "sdd" && options.sddAction === "renumber-decision")) &&
           arg !== undefined
         ) {
           // These subcommands take no positional arguments.
@@ -818,7 +827,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "sdd" && options.sddAction === "next-id" && !options.help && !options.version) {
     if (!options.sddIdKind)
       markInvalid(
-        `qfai sdd next-id: the ID kind is missing. Expected: ${STORY_TREE_ID_KINDS.join("|")}`,
+        `qfai sdd next-id: the ID kind is missing; it comes right after next-id, one of ${STORY_TREE_ID_KINDS.join("|")}. Expected: ${NEXT_ID_USAGE}`,
       );
     if (!options.sddBase) markInvalid(missingValue("--base"));
   }

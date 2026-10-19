@@ -818,6 +818,7 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
     [["sdd", "next-id", "DEC", "--base", "main"], "DEC", undefined],
     [["sdd", "next-id", "US", "BF-0001", "--base", "origin/main"], "US", "BF-0001"],
     [["sdd", "next-id", "BR", "CLI-0019", "--base", "main"], "BR", "CLI-0019"],
+    [["sdd", "next-id", "--base", "main", "EX", "US-0001-0008"], "EX", "US-0001-0008"],
   ])("accepts the next-id kind, parent and base %j", (argv, kind, parent) => {
     const parsed = parseArgs(argv, process.cwd());
     expect(parsed.invalid).toBe(false);

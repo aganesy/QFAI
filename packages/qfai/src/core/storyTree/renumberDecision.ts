@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs, {
   lstat,
@@ -120,6 +120,29 @@ async function commit(root: string, ref: string): Promise<string> {
   return value;
 }
 
+/**
+ * The repository's top level and each directory as a repository-relative POSIX path; a directory
+ * outside the repository is refused.
+ */
+async function repositoryPaths(
+  projectRoot: string,
+  directories: readonly string[],
+): Promise<{ root: string; relative: string[] }> {
+  const root = (await git(path.resolve(projectRoot), ["rev-parse", "--show-toplevel"]))
+    .toString()
+    .trim();
+  const relative = directories.map((directory) => {
+    const value = path
+      .relative(root, path.resolve(projectRoot, directory))
+      .split(path.sep)
+      .join("/");
+    if (value === ".." || value.startsWith("../") || path.isAbsolute(value))
+      throw new Error("The story tree must be inside the repository.");
+    return value;
+  });
+  return { root, relative };
+}
+
 function token(id: string): RegExp {
   return new RegExp(`(?<![\\p{L}\\p{N}_-])${id}(?![\\p{L}\\p{N}_-])`, "gu");
 }
@@ -229,38 +252,104 @@ function records(files: ReadonlyMap<string, string>, file: string) {
   return parsed.table.rows;
 }
 
+/**
+ * The contents of the blobs, in order, from one `git cat-file --batch` process: each answer is
+ * `<sha> blob <size>\n<bytes>\n`.
+ */
+async function blobContents(root: string, shas: readonly string[]): Promise<Buffer[]> {
+  if (shas.length === 0) return [];
+  const child = spawn("git", ["cat-file", "--batch"], { cwd: root });
+  const output: Buffer[] = [];
+  const failure: Buffer[] = [];
+  child.stdout.on("data", (chunk: Buffer) => output.push(chunk));
+  child.stderr.on("data", (chunk: Buffer) => failure.push(chunk));
+  const closed = new Promise<number | null>((resolve, reject) => {
+    child.on("error", reject);
+    child.on("close", resolve);
+  });
+  // A write error ends in the exit code checked below.
+  child.stdin.on("error", () => undefined);
+  child.stdin.end(shas.map((sha) => `${sha}\n`).join(""));
+  const code = await closed;
+  if (code !== 0)
+    throw new Error(
+      `Git could not read the fixed story tree: ${Buffer.concat(failure).toString().trim()}`,
+    );
+  const bytes = Buffer.concat(output);
+  const blobs: Buffer[] = [];
+  let offset = 0;
+  for (const sha of shas) {
+    const newline = bytes.indexOf(0x0a, offset);
+    const header = /^([a-f0-9]+) blob (\d+)$/.exec(
+      newline < 0 ? "" : bytes.subarray(offset, newline).toString(),
+    );
+    if (!header?.[2] || header[1] !== sha)
+      throw new Error(`Git returned no blob for a fixed story-tree file: ${sha}`);
+    const begin = newline + 1;
+    const size = Number(header[2]);
+    if (begin + size > bytes.length)
+      throw new Error(`Git returned a truncated blob for a fixed story-tree file: ${sha}`);
+    blobs.push(bytes.subarray(begin, begin + size));
+    offset = begin + size + 1;
+  }
+  return blobs;
+}
+
+/**
+ * The text files under the story-tree directories at a fixed commit, read in a fixed number of Git
+ * processes: one listing of the path components, one recursive listing and one batch read.
+ */
 async function fixedSpecTexts(
   root: string,
   sha: string,
   specs: string,
+  additional: readonly string[] = [],
 ): Promise<Map<string, string>> {
-  let component = "";
-  for (const part of specs.split("/").filter(Boolean)) {
-    component = component ? path.posix.join(component, part) : part;
-    const entry = await git(root, ["ls-tree", "-z", sha, "--", component]);
-    if (entry.length > 0 && !/^040000 tree [a-f0-9]+\t/.test(entry.toString()))
-      throw new Error(`Unsafe fixed story-tree directory: ${component}`);
+  const directories = [specs, ...additional];
+  const components = new Set<string>();
+  for (const directory of directories) {
+    let component = "";
+    for (const part of directory.split("/").filter(Boolean)) {
+      component = component ? path.posix.join(component, part) : part;
+      components.add(component);
+    }
   }
-  const listing = await git(root, ["ls-tree", "-r", "-z", sha, "--", specs]);
+  if (components.size > 0) {
+    // With nested paths, Git lists an intermediate tree's children instead of the tree itself; a
+    // component listed as an entry must be a tree, and one listed through its children is one.
+    const listed = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+      await git(root, ["ls-tree", "-z", sha, "--", ...components]),
+    );
+    for (const entry of listed.split("\0").filter(Boolean)) {
+      const separator = entry.indexOf("\t");
+      const name = entry.slice(separator + 1);
+      if (components.has(name) && !/^040000 tree [a-f0-9]+$/.test(entry.slice(0, separator)))
+        throw new Error(`Unsafe fixed story-tree directory: ${name}`);
+    }
+  }
+  const listing = await git(root, ["ls-tree", "-r", "-l", "-z", sha, "--", ...directories]);
   const entries = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(listing);
-  const files = new Map<string, string>();
+  const decisionPages = `${path.posix.join(specs, "decisions")}/`;
+  const wanted = new Map<string, string>();
   for (const entry of entries.split("\0").filter(Boolean)) {
-    const match = /^[0-7]+ blob ([a-f0-9]+)\t(.+)$/.exec(entry);
-    if (!match?.[1] || !match[2]) throw new Error(`The fixed story tree has a non-blob: ${specs}`);
-    const file = match[2];
+    const match = /^([0-7]+) blob ([a-f0-9]+) +(\d+)\t(.+)$/.exec(entry);
+    if (!match?.[1] || !match[2] || !match[3] || !match[4])
+      throw new Error(`The fixed story tree has a non-blob: ${specs}`);
+    const file = match[4];
     if (
-      (file === path.posix.join(specs, "decisions.md") ||
-        file.startsWith(`${path.posix.join(specs, "decisions")}/`)) &&
-      !/^100[0-7]{3} /.test(entry)
+      (file === path.posix.join(specs, "decisions.md") || file.startsWith(decisionPages)) &&
+      !/^100[0-7]{3}$/.test(match[1])
     )
       throw new Error(`Linked decision path in fixed tree: ${file}`);
-    if (
-      !SUFFIXES.has(path.extname(file).toLowerCase()) &&
-      !file.startsWith(`${path.posix.join(specs, "decisions")}/`)
-    )
+    if (!SUFFIXES.has(path.extname(file).toLowerCase()) && !file.startsWith(decisionPages))
       continue;
-    files.set(file, text(await git(root, ["cat-file", "blob", match[1]]), file));
+    if (Number(match[3]) > MAX_BYTES) throw new Error(`Candidate exceeds 16 MiB: ${file}`);
+    wanted.set(file, match[2]);
   }
+  const contents = await blobContents(root, [...wanted.values()]);
+  const files = new Map<string, string>();
+  for (const [index, file] of [...wanted.keys()].entries())
+    files.set(file, text(contents[index] ?? Buffer.alloc(0), file));
   return files;
 }
 
@@ -274,25 +363,17 @@ export async function readStoryTreeAtRef(options: {
   specsDir: string;
   contractsDir: string;
 }): Promise<{ sha: string; model: StoryTreeModel }> {
-  const root = (await git(path.resolve(options.root), ["rev-parse", "--show-toplevel"]))
-    .toString()
-    .trim();
-  const inside = (directory: string): string => {
-    const relative = path
-      .relative(root, path.resolve(options.root, directory))
-      .split(path.sep)
-      .join("/");
-    if (relative === ".." || relative.startsWith("../") || path.isAbsolute(relative))
-      throw new Error("The story tree must be inside the repository.");
-    return relative;
-  };
-  const specs = inside(options.specsDir);
-  const contracts = inside(options.contractsDir);
+  const {
+    root,
+    relative: [specs = "", contracts = ""],
+  } = await repositoryPaths(options.root, [options.specsDir, options.contractsDir]);
   const sha = await commit(root, options.ref);
-  const files = await fixedSpecTexts(root, sha, specs);
-  if (!contracts.startsWith(`${specs}/`))
-    for (const [file, source] of await fixedSpecTexts(root, sha, contracts))
-      files.set(file, source);
+  const files = await fixedSpecTexts(
+    root,
+    sha,
+    specs,
+    contracts.startsWith(`${specs}/`) ? [] : [contracts],
+  );
   return { sha, model: buildStoryTreeModel(files, { specsDir: specs, contractsDir: contracts }) };
 }
 
@@ -959,15 +1040,10 @@ export async function buildDecisionRenumberPlan(
     options.from === options.to
   )
     throw new Error("--from and --to require distinct four-digit DEC IDs.");
-  const root = (await git(path.resolve(options.root), ["rev-parse", "--show-toplevel"]))
-    .toString()
-    .trim();
-  const specs = path
-    .relative(root, path.resolve(options.root, options.specsDir))
-    .split(path.sep)
-    .join("/");
-  if (specs === ".." || specs.startsWith("../") || path.isAbsolute(specs))
-    throw new Error("The story tree must be inside the repository.");
+  const {
+    root,
+    relative: [specs = ""],
+  } = await repositoryPaths(options.root, [options.specsDir]);
   const decisionFile = path.posix.join(specs, "decisions.md");
   const headSha = await commit(root, "HEAD");
   const baseSha = await commit(root, options.base);
