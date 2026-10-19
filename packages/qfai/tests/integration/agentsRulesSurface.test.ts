@@ -40,6 +40,31 @@ describe("graph exploration rule", () => {
     ])
       expect(await readFile(path.join(ROOT, entry), "utf8")).toContain("graph-exploration.md");
   });
+
+  it("opens with what to do while the graph tools are not ready", async () => {
+    const rule = await readFile(
+      path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/graph-exploration.md"),
+      "utf8",
+    );
+    const headings = rule.match(/^## .+$/gm) ?? [];
+    expect(headings[0]).toBe("## While the graph tools are not ready");
+    const opening = rule.split(/^## /m)[1]?.replace(/\s+/g, " ");
+    for (const clause of [
+      "reports an engine as not ready, use ordinary search",
+      "search protection is reported as unsupported",
+      "Say in your report that the graph was not used and why.",
+      "When a supported hook denies the search, use",
+    ])
+      expect(opening).toContain(clause);
+    for (const entry of [
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/tests/fixtures/shipped-entry/agents.txt",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])
+      expect(await readFile(path.join(ROOT, entry), "utf8")).toContain(
+        "when the graph tools are ready, use the matching graph engine",
+      );
+  });
 });
 
 describe("excess vocabulary covers code and product surface without adding tags", () => {
