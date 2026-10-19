@@ -2158,10 +2158,12 @@ describe("instruction-tree link acceptance", () => {
     } finally {
       await removeTempTree(root);
     }
-    const manifest = JSON.parse(readText("package.json")) as { scripts: Record<string, string> };
-    expect(manifest.scripts["ci:lint:scans"]).toContain(
-      "node ./scripts/check-instruction-links.mjs",
-    );
+    const manifest: unknown = JSON.parse(readText("package.json"));
+    expect(manifest).toMatchObject({
+      scripts: {
+        "ci:lint:scans": expect.stringContaining("node ./scripts/check-instruction-links.mjs"),
+      },
+    });
   });
 
   // QFAI:AC-0002-0028-02

@@ -7,15 +7,22 @@
  * each relative link against the linking file's directory.
  *
  * A link counts when it is an inline link or image, `[text](target)`, or a reference definition,
- * `[label]: target`, outside a fenced code block and outside an inline code span. A target with a
- * URL scheme and a same-file `#fragment` are skipped. The `#fragment` of a cross-file link is
- * dropped: only the file is checked, not the heading. A target that resolves outside the
- * repository counts as broken.
+ * `[label]: target`, outside a fenced or indented code block, an inline code span and an HTML
+ * comment. A footnote definition, `[^1]: text`, is not a reference definition. A target may hold
+ * one level of balanced parentheses, `file_(1).md`. A target with a URL scheme, a
+ * protocol-relative `//host` target and a same-file `#fragment` are skipped. The `#fragment` of
+ * a cross-file link is dropped: only the file is checked, not the heading. A root-relative target,
+ * `/path`, resolves against the repository root. A target that resolves outside the repository
+ * counts as broken.
+ *
+ * An indented code block is told apart from list content by a simple reading: four spaces or a tab
+ * after a blank line, when no list item has opened since the last unindented paragraph.
  *
  * Usage:
  *   node scripts/check-instruction-links.mjs
  *
- * Exit codes: 0 clean, 1 a broken link, 2 the tree or a file in it could not be read.
+ * Exit codes: 0 clean, 1 a broken link, 2 the tree or a file in it could not be read or is a
+ * symbolic link.
  */
 /* global console */
 import { existsSync, lstatSync, readdirSync } from "node:fs";
@@ -35,11 +42,20 @@ const FENCE_RE = /^\s*(`{3,}|~{3,})/;
 /** An inline code span, removed before links are read. */
 const CODE_SPAN_RE = /(`+)[^`]*?\1/g;
 
-/** An inline link or image target, with an optional title. */
-const INLINE_RE = /\]\(\s*(<[^>]*>|[^)\s]+)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/g;
+/** An inline link or image target, with one level of balanced parentheses and an optional title. */
+const INLINE_RE = /\]\(\s*(<[^>]*>|(?:[^()\s]|\([^()\s]*\))+)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/g;
 
-/** A reference definition, `[label]: target`. */
-const DEFINITION_RE = /^\s{0,3}\[[^\]]+\]:\s*(<[^>]*>|\S+)/;
+/** A reference definition, `[label]: target`; a footnote, `[^1]: text`, is not one. */
+const DEFINITION_RE = /^\s{0,3}\[(?!\^)[^\]]+\]:\s*(<[^>]*>|\S+)/;
+
+/** A line indented as code: four spaces or a tab. */
+const INDENTED_RE = /^(?: {4}|\t)/;
+
+/** A list item opener: a bullet or an ordered marker followed by a space. */
+const LIST_ITEM_RE = /^\s*(?:[-*+]|\d+[.)])\s/;
+
+/** An HTML comment that opens and closes on the same line. */
+const COMMENT_RE = /<!--[\s\S]*?-->/g;
 
 /** A URL scheme such as `https:` or `mailto:`. */
 const SCHEME_RE = /^[A-Za-z][A-Za-z0-9+.-]*:/;
@@ -47,8 +63,8 @@ const SCHEME_RE = /^[A-Za-z][A-Za-z0-9+.-]*:/;
 /**
  * Every Markdown file under `TREE`, POSIX-separated and sorted.
  *
- * A symbolic link is neither followed nor read. A directory that cannot be listed is returned as
- * unreadable.
+ * A symbolic link is neither followed nor read; it is returned as unreadable, as is a directory
+ * that cannot be listed.
  */
 function markdownFiles(root) {
   const files = [];
@@ -63,7 +79,8 @@ function markdownFiles(root) {
     }
     for (const entry of entries) {
       const child = `${relative}/${entry.name}`;
-      if (entry.isDirectory()) walk(child);
+      if (entry.isSymbolicLink()) unreadable.push(child);
+      else if (entry.isDirectory()) walk(child);
       else if (entry.isFile() && entry.name.endsWith(".md")) files.push(child);
     }
   };
@@ -77,10 +94,31 @@ function markdownFiles(root) {
   return { files: files.sort(), unreadable };
 }
 
-/** The link targets on each line of `text` outside code, as `{ line, target }`. */
+/**
+ * The part of `line` outside HTML comments, and whether a comment is still open at its end.
+ * `open` says whether the line starts inside a comment.
+ */
+function outsideComments(line, open) {
+  let rest = line;
+  if (open) {
+    const close = rest.indexOf("-->");
+    if (close === -1) return { text: "", open: true };
+    rest = rest.slice(close + 3);
+  }
+  rest = rest.replace(COMMENT_RE, "");
+  const start = rest.indexOf("<!--");
+  if (start === -1) return { text: rest, open: false };
+  return { text: rest.slice(0, start), open: true };
+}
+
+/** The link targets on each line of `text` outside code and comments, as `{ line, target }`. */
 export function linkTargets(text) {
   const targets = [];
   let fence;
+  let comment = false;
+  let indented = false;
+  let list = false;
+  let afterBlank = true;
   text.split(/\r?\n/).forEach((raw, index) => {
     const marker = FENCE_RE.exec(raw)?.[1];
     if (fence !== undefined) {
@@ -89,11 +127,29 @@ export function linkTargets(text) {
       }
       return;
     }
-    if (marker !== undefined) {
-      fence = marker;
-      return;
+    const blank = raw.trim() === "";
+    if (indented) {
+      if (blank || INDENTED_RE.test(raw)) return;
+      indented = false;
     }
-    const line = raw.replace(CODE_SPAN_RE, "");
+    if (!comment) {
+      if (marker !== undefined) {
+        fence = marker;
+        afterBlank = false;
+        return;
+      }
+      if (!blank && afterBlank && !list && INDENTED_RE.test(raw)) {
+        indented = true;
+        afterBlank = false;
+        return;
+      }
+      if (LIST_ITEM_RE.test(raw)) list = true;
+      else if (!blank && afterBlank && !/^\s/.test(raw)) list = false;
+    }
+    afterBlank = blank;
+    const visible = outsideComments(raw.replace(CODE_SPAN_RE, ""), comment);
+    comment = visible.open;
+    const line = visible.text;
     const found = [...line.matchAll(INLINE_RE)].map((match) => match[1]);
     const definition = DEFINITION_RE.exec(line)?.[1];
     if (definition !== undefined) found.push(definition);
@@ -106,7 +162,8 @@ export function linkTargets(text) {
 
 /** The file a relative target names, or `undefined` when the target is not a relative file link. */
 function targetPath(target) {
-  if (target === "" || target.startsWith("#") || SCHEME_RE.test(target)) return undefined;
+  if (target === "" || target.startsWith("#") || target.startsWith("//")) return undefined;
+  if (SCHEME_RE.test(target)) return undefined;
   const file = target.split("#")[0].split("?")[0];
   try {
     return decodeURIComponent(file);
@@ -135,7 +192,8 @@ export function linkFindings(root) {
       const relative = targetPath(target);
       if (relative === undefined) continue;
       checked += 1;
-      const resolved = path.resolve(root, ...path.posix.dirname(file).split("/"), relative);
+      const base = relative.startsWith("/") ? [] : path.posix.dirname(file).split("/");
+      const resolved = path.resolve(root, ...base, relative.replace(/^\/+/, ""));
       const inside = path.relative(path.resolve(root), resolved);
       const outside =
         inside === ".." || inside.startsWith(`..${path.sep}`) || path.isAbsolute(inside);

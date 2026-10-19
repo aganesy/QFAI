@@ -14,7 +14,7 @@ Feature: Relative links in the instruction tree resolve
   # AC-0002-0028-02
   Scenario: Links that resolve, and text that is not a relative link, pass
     Given every relative link under `.instruction/` resolves
-    When the tree also holds URLs, same-file anchors, code spans and fenced blocks
+    When the tree also holds URLs, same-file anchors, footnotes, code spans, HTML comments and fenced or indented code blocks
     Then the link check exits 0 and reports how many links it checked
-    And a missing `.instruction/` tree exits 2
+    And a missing `.instruction/` tree, or a symbolic link under it, exits 2
 ```
