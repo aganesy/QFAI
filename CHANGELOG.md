@@ -402,6 +402,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   flow's `QFAI:BF` in an E2E test. The layer rule no longer surfaces first as a
   `QFAI-STORY-007` error after the tests are written. Fixes #3796.
 
+- **`qfai-run` no longer asks to choose between scopes that run the same work.**
+  `npx qfai workflow plan` left a scope in `scopes` even when the next wider
+  scope added only stages whose steps all pass through, so a feature request
+  was asked to choose between two scopes that differ only by a documentation
+  stage that does nothing by default. Such a scope is now left out and the
+  wider one stays, so one scope remains and no scope question is asked.
+  Fixes #3694.
+
 - **A forbidden-text finding points at the offending line.** `mdschema`
   reports these findings on the section heading. The document check now moves
   each one to the first line the forbidden pattern matches, the earliest when

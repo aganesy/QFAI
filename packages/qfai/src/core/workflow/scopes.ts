@@ -135,5 +135,19 @@ export function scopesOf(
         .some((earlier) => earlier.stages.length === candidate.stages.length),
   );
   distinct.push({ scope: "broad", stages: all });
-  return distinct.map((candidate, index) => ({ ...candidate, recommended: index === 0 }));
+  // A scope the next wider one differs from only by stages whose steps all pass through offers no
+  // real choice, so only the wider one stays.
+  const passesThrough = new Set(
+    stages
+      .filter((stage) => stage.steps.every((step) => step.passThrough === true))
+      .map((stage) => stage.id),
+  );
+  const offered = distinct.filter((candidate, index) => {
+    const wider = distinct[index + 1];
+    return (
+      wider === undefined ||
+      wider.stages.some((id) => !candidate.stages.includes(id) && !passesThrough.has(id))
+    );
+  });
+  return offered.map((candidate, index) => ({ ...candidate, recommended: index === 0 }));
 }

@@ -119,6 +119,7 @@ it("A scope is not offered when the next wider one adds only pass-through stages
     id,
     kind,
     steps,
+    after: [],
   });
   const passing = (name: string): PlanStep => ({ name, passThrough: true });
   const stages = [

@@ -160,7 +160,8 @@ the ids of the stages it runs in plan order, and `true` for the narrowest.
 - A security intake plan gets `broad` alone.
 - `broad` runs every stage.
 
-A scope holding every stage is `broad`, and `medium` is left out when it equals `narrow`. An extraction with
+A scope holding every stage is `broad`, and `medium` is left out when it equals `narrow`. A scope is also left
+out when the next wider one adds only stages whose steps all pass through. An extraction with
 no artifacts, or whose route writes nothing, gets `broad` alone. A candidate
 keeps its scopes: `--route` returns none.
 
