@@ -24,6 +24,7 @@
 // QFAI:AC-0001-0074-01
 // QFAI:AC-0001-0074-02
 // QFAI:AC-0001-0074-03
+// QFAI:AC-0001-0074-04
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -272,5 +273,73 @@ describe("TC-0008-0018 (TDD-0018): the script-naming rule is adopter-only and la
     expect(scope, "the scope statement does not disclaim unit and component").toMatch(
       /no unit or component obligation/i,
     );
+  });
+});
+
+describe("the optional test runner recipes ship beside the rule set", () => {
+  const RECIPES_REL = ".qfai/assistant/skill/qfai-implement/references/test-runner-recipes.md";
+
+  async function read(rel: string): Promise<string> {
+    return readFile(path.join(projectRoot(), rel), "utf-8");
+  }
+
+  /** The body of one `##` section, so a phrase has to land where its subject is. */
+  function section(markdown: string, heading: string): string {
+    return markdown.split(/^## /m).find((body) => body.startsWith(`${heading}\n`)) ?? "";
+  }
+
+  // QFAI:EX-0001-0074-04
+  it("carries the session reuse, shared-state and CI recipes, pointed to by the credentials step", async () => {
+    const recipes = await read(RECIPES_REL);
+    expect(stepEntry, "the credentials step does not point to the recipes").toContain(RECIPES_REL);
+    expect(recipes, "the recipes do not say QFAI leaves them unexecuted").toMatch(
+      /nothing here\s+is executed in this repository/,
+    );
+    const status = section(recipes, "Status and what the adopter supplies");
+    for (const adapter of ["createAccount", "issueSession", "acceptsSession", "deleteAccount"]) {
+      expect(status, `the adapter ${adapter} is not listed`).toContain(`\`${adapter}\``);
+    }
+    const vitest = section(recipes, "Vitest: one session per pool slot and actor");
+    expect(vitest).toContain("process.env.VITEST_POOL_ID");
+    expect(vitest).toContain("TEST_SESSION_CACHE_DIR");
+    expect(vitest, "a rejected session is not refreshed").toContain('"refreshed"');
+    expect(vitest, "a product 401 may be retried").toMatch(/401\s+is never repeated/);
+    const playwright = section(recipes, "Playwright: one account and storage state per worker");
+    expect(playwright).toContain('teardown: "teardown"');
+    expect(playwright).toContain("testInfo.parallelIndex");
+    expect(playwright, "session subjects share the pooled actor").toMatch(
+      /login, logout, expiry, password change/,
+    );
+    expect(section(recipes, "Business data each file owns")).toMatch(/No file resets a mutable/);
+    expect(section(recipes, "Database hooks only where a group needs them")).toMatch(
+      /fails without it rather than skipping/,
+    );
+    expect(section(recipes, "Shared and exclusive access to a common database or server")).toMatch(
+      /\*\*Unknown\*\*[\s\S]*is exclusive/,
+    );
+    expect(section(recipes, "Credential directory hygiene")).toMatch(/exclude the directory/);
+    // The aggregate verdict compares every required lane with the one expected
+    // result, so a failed, cancelled or unexpected skipped lane all fail it.
+    const ci = section(recipes, "CI: auxiliary jobs inside the protected result");
+    expect(ci).toContain("if: ${{ always() }}");
+    expect(ci).toContain('[ "$result" = "$expected" ] ||');
+    expect(ci).toContain('[ "$CHANGE_RESULT" = success ] ||');
+    expect(section(recipes, "Adoption checklist")).toMatch(/skipped unexpectedly/);
+  });
+
+  // QFAI:EX-0001-0074-05
+  it("carries the business time recipe, pointed to by the acceptance step", async () => {
+    const acceptanceStep = await read(
+      path.join(".qfai", "assistant", "step", "implement-acceptance", "STEP.md"),
+    );
+    expect(acceptanceStep, "the acceptance step does not point to the recipes").toContain(
+      RECIPES_REL,
+    );
+    const time = section(await read(RECIPES_REL), "Deterministic business time");
+    expect(time).toMatch(/\*\*Clock adapter\.\*\*[\s\S]*Server-side decisions read the same/);
+    expect(time).toMatch(/\*\*Production-safe boundary\.\*\*[\s\S]*No ordinary production request/);
+    expect(time).toMatch(/No case waits for real time and none skips on the time of day/);
+    expect(time).toMatch(/immutable while that profile is active/);
+    expect(time).toMatch(/one report per profile[\s\S]*worker\s+count[\s\S]*skips/);
   });
 });
