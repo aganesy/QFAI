@@ -268,7 +268,7 @@ describe("parseArgs", () => {
         "qfai discussion: unknown or missing subcommand. Expected: list|use",
       );
       expect(parseArgs(["sdd"], cwd).invalidReason).toBe(
-        "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision",
+        "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision|next-id",
       );
     });
 
@@ -812,6 +812,34 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
     ["sdd", "renumber-decision", "--from", "DEC-0002", "--to", "DEC-0002", "--base", "main"],
   ])("rejects missing or invalid explicit renumber inputs %j", (...argv) => {
     expect(parseArgs(argv, process.cwd()).invalid).toBe(true);
+  });
+
+  it.each([
+    [["sdd", "next-id", "DEC", "--base", "main"], "DEC", undefined],
+    [["sdd", "next-id", "US", "BF-0001", "--base", "origin/main"], "US", "BF-0001"],
+    [["sdd", "next-id", "BR", "CLI-0019", "--base", "main"], "BR", "CLI-0019"],
+    [["sdd", "next-id", "--base", "main", "EX", "US-0001-0008"], "EX", "US-0001-0008"],
+  ])("accepts the next-id kind, parent and base %j", (argv, kind, parent) => {
+    const parsed = parseArgs(argv, process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.sddAction).toBe("next-id");
+    expect(parsed.options.sddIdKind).toBe(kind);
+    expect(parsed.options.sddIdParent).toBe(parent);
+  });
+
+  // QFAI:EX-0001-0008-30
+  it.each([
+    [["sdd", "next-id", "DEC"], "--base"],
+    [["sdd", "next-id", "--base", "main"], "kind"],
+    [["sdd", "next-id", "XX", "--base", "main"], "XX"],
+    [["sdd", "next-id", "DEC", "--base", "main", "--apply"], "--apply"],
+    [["sdd", "next-id", "DEC", "--base", "main", "--format", "json"], "--format"],
+    [["sdd", "next-id", "DEC", "--base", "main", "--from", "DEC-0001"], "--from"],
+    [["sdd", "next-id", "US", "BF-0001", "extra", "--base", "main"], "extra"],
+  ])("rejects next-id input %j", (argv, reason) => {
+    const parsed = parseArgs(argv, process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.invalidReason).toContain(reason);
   });
 
   it("routes `sdd preflight` and its diagnostic flags", () => {

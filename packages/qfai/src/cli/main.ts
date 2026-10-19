@@ -4,6 +4,7 @@ import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
 import { runInit } from "./commands/init.js";
 import { runReport } from "./commands/report.js";
+import { runSddNextIdCommand } from "./commands/sddNextId.js";
 import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runSddRenumberDecisionCommand } from "./commands/sddRenumberDecision.js";
 import { runValidate } from "./commands/validate.js";
@@ -248,9 +249,27 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
     case "sdd":
       {
         if (!options.sddAction) {
-          error("qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision");
+          error(
+            "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision|next-id",
+          );
           info(usage());
           process.exitCode = options.invalidExitCode;
+          return;
+        }
+        if (options.sddAction === "next-id") {
+          const { sddIdKind: kind, sddBase: base } = options;
+          // The parser refuses a next-id without both; this narrows them.
+          if (!kind || !base) {
+            error("qfai sdd next-id: the ID kind and --base are required.");
+            process.exitCode = options.invalidExitCode;
+            return;
+          }
+          process.exitCode = await runSddNextIdCommand({
+            root: await resolveRoot(options),
+            kind,
+            ...(options.sddIdParent !== undefined ? { parent: options.sddIdParent } : {}),
+            base,
+          });
           return;
         }
         if (options.sddAction === "renumber-decision") {
@@ -396,6 +415,7 @@ Commands:
   sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
   sdd preflight --import <path> Use an imported specification as the source when no discussion pack exists
   sdd renumber-decision --from <DEC-ID> --to <DEC-ID> --base <local-ref> [--apply]  Preview or apply a branch-added decision's renumbering
+  sdd next-id <kind> [<parent-ID>] --base <local-ref>  Print the next free ID of a kind (BF|US|AC|EX|BR|DEC|OQ) across the base and the working tree; a US takes its BF, an AC or EX its US, a BR its contract
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
   workflow plan                Print the route plan for a request extraction (--in <path|->), a route (--route <route>), or an operation on finished work (--order)

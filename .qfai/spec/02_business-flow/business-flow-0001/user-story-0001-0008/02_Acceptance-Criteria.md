@@ -25,6 +25,7 @@ Feature: ID grammar
     When the next ID of a shape is chosen
     Then it is the highest ID of that shape the tree names under the same parent (the flow for a US, the story for an AC or EX), all logical decision-register rows included, plus one
     And a gap is never filled and a retired ID is never reissued
+    And `qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` prints that ID, reading both the working tree and the story tree of the base ref's commit, takes the higher of the two, and writes nothing
 
   # AC-0001-0008-04
   Scenario: A contract numbers its own business rules

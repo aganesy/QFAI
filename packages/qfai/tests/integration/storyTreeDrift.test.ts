@@ -8,7 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { run } from "../../src/cli/main.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
+import { readStoryTreeAtRef } from "../../src/core/storyTree/renumberDecision.js";
+import { buildStoryTreeModel, nextStoryTreeId } from "../../src/core/storyTree/tree.js";
 import { validateStoryTreeStructureModel } from "../../src/core/validators/storyTreeStructure.js";
 import { validateStoryTreeDrift } from "../../src/core/validators/upstreamSsotGuard.js";
 import type * as GitChanges from "../../src/core/gitChanges.js";
@@ -38,6 +39,24 @@ const table =
 
 function git(...args: string[]): void {
   execFileSync("git", args, { cwd: root, stdio: "ignore" });
+}
+
+/**
+ * A branch `linked` on top of `parent` whose tree holds `link` as a symbolic link in place of
+ * whatever was there. Only a scratch index changes, so the working tree and the current index stay
+ * as they are on every platform.
+ */
+function commitWithLink(parent: string, link: string): void {
+  const env = { ...process.env, GIT_INDEX_FILE: path.join(root, ".git", "qfai-link-index") };
+  const gitIn = (args: string[], input?: string): string =>
+    execFileSync("git", args, { cwd: root, env, encoding: "utf8", input }).trim();
+  gitIn(["read-tree", parent]);
+  gitIn(["rm", "-r", "-q", "-f", "--cached", "--ignore-unmatch", "--", link]);
+  const blob = gitIn(["hash-object", "-w", "--stdin"], "elsewhere");
+  gitIn(["update-index", "--add", "--cacheinfo", `120000,${blob},${link}`]);
+  const tree = gitIn(["write-tree"]);
+  const commit = gitIn(["commit-tree", tree, "-p", parent, "-m", "linked"]);
+  gitIn(["update-ref", "refs/heads/linked", commit]);
 }
 
 async function put(file: string, content: string): Promise<void> {
@@ -538,6 +557,17 @@ describe("decision renumber public CLI", () => {
     });
   }
 
+  // QFAI:EX-0001-0008-20
+  it("refuses a base whose story-tree path passes through a symbolic link", async () => {
+    await prepare();
+    commitWithLink("main", ".qfai");
+    const before = await snapshot();
+    const result = await invoke([], "DEC-0002", "DEC-0013", "linked");
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain("Unsafe fixed story-tree directory: .qfai");
+    expect(await snapshot()).toEqual(before);
+  });
+
   // QFAI:AC-0001-0008-08
   // QFAI:EX-0001-0008-20
   it("checks a later unsafe candidate before writing any earlier valid candidate", async () => {
@@ -593,6 +623,206 @@ describe("decision renumber public CLI", () => {
       expect(gitText("status", "--porcelain", "--untracked-files=all")).toBe(status);
     },
   );
+});
+
+describe("next free ID public CLI", () => {
+  function gitText(...args: string[]): string {
+    return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  }
+
+  async function invoke(argv: string[]) {
+    const previous = process.exitCode;
+    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    process.exitCode = undefined;
+    try {
+      await run(["sdd", "next-id", ...argv, "--root", root], root);
+      return {
+        code: process.exitCode,
+        stdout: stdout.mock.calls.map((call) => String(call[0])).join(""),
+        stderr: stderr.mock.calls.map((call) => String(call[0])).join(""),
+      };
+    } finally {
+      stdout.mockRestore();
+      stderr.mockRestore();
+      process.exitCode = previous;
+    }
+  }
+
+  // QFAI:EX-0001-0008-29
+  it("prints the number after the highest ID of the base and the working tree, not after the last row", async () => {
+    git("config", "core.autocrlf", "false");
+    await put(decisions, table + "| DEC-0001 | Ancestor | Keep | DONE |\n");
+    git("add", ".");
+    git("commit", "-m", "ancestor");
+    git("checkout", "-b", "topic");
+    await put(
+      decisions,
+      table + "| DEC-0001 | Ancestor | Keep | DONE |\n| DEC-0002 | Topic | Keep | TODO |\n",
+    );
+    git("add", ".");
+    git("commit", "-m", "topic decision");
+    git("checkout", "main");
+    await put(
+      decisions,
+      table +
+        "| DEC-0001 | Ancestor | Keep | DONE |\n" +
+        "| DEC-0006 | Base | Keep | DONE |\n" +
+        "| DEC-0003 | Base, placed after a higher ID | Keep | DONE |\n",
+    );
+    git("add", ".");
+    git("commit", "-m", "base advances");
+    git("checkout", "topic");
+
+    const fromBase = await invoke(["DEC", "--base", "main"]);
+    expect(fromBase.code).toBe(0);
+    expect(fromBase.stdout.trim()).toBe("DEC-0007");
+
+    await put(
+      decisions,
+      table +
+        "| DEC-0001 | Ancestor | Keep | DONE |\n" +
+        "| DEC-0002 | Topic | Keep | TODO |\n" +
+        "| DEC-0009 | Uncommitted | Keep | TODO |\n",
+    );
+    const before = await readFile(path.join(root, decisions));
+    const status = gitText("status", "--porcelain", "--untracked-files=all");
+    const fromWorkingTree = await invoke(["DEC", "--base", "main"]);
+    expect(fromWorkingTree.code).toBe(0);
+    expect(fromWorkingTree.stdout.trim()).toBe("DEC-0010");
+    expect((await readFile(path.join(root, decisions))).equals(before)).toBe(true);
+    expect(gitText("status", "--porcelain", "--untracked-files=all")).toBe(status);
+
+    const question = await invoke(["OQ", "--base", "main"]);
+    expect(question.code).toBe(0);
+    expect(question.stdout.trim()).toBe("OQ-0001");
+  });
+
+  const flow = `${specs}/02_business-flow/business-flow-0001`;
+  const storyFile = (tail: string) => `${flow}/user-story-0001-${tail}/01_User-story.md`;
+  const contract = (rules: string[]) =>
+    "# CLI-0003: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n" +
+    rules.map((id) => `| ${id} | A rule. | - |\n`).join("");
+
+  async function branchFromMain(): Promise<void> {
+    git("config", "core.autocrlf", "false");
+    await put(decisions, table + "| DEC-0001 | Ancestor | Keep | DONE |\n");
+    await put(`${flow}/business-flow.md`, "# BF-0001: Flow\n");
+    await put(storyFile("0001"), "# US-0001-0001: Story\n");
+    git("add", ".");
+    git("commit", "-m", "ancestor");
+    git("checkout", "-b", "topic");
+  }
+
+  // QFAI:EX-0001-0008-29
+  it("reads a parented kind from the base, where the base alone holds the higher ID", async () => {
+    await branchFromMain();
+    git("checkout", "main");
+    await put(storyFile("0004"), "# US-0001-0004: Base story\n");
+    git("add", ".");
+    git("commit", "-m", "base story");
+    git("checkout", "topic");
+    const result = await invoke(["US", "BF-0001", "--base", "main"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe("US-0001-0005");
+  });
+
+  // QFAI:EX-0001-0008-29
+  it("numbers an AC under a story that only the working tree declares", async () => {
+    await branchFromMain();
+    await put(storyFile("0002"), "# US-0001-0002: Uncommitted story\n");
+    await put(
+      `${flow}/user-story-0001-0002/02_Acceptance-Criteria.md`,
+      "# Acceptance Criteria\n\n## Criteria\n\n```gherkin\nFeature: F\n  # AC-0001-0002-01\n  Scenario: S\n    Given a\n```\n",
+    );
+    const result = await invoke(["AC", "US-0001-0002", "--base", "main"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe("AC-0001-0002-02");
+  });
+
+  // QFAI:EX-0001-0008-29
+  it("reads a BR from a contracts directory outside the story tree", async () => {
+    await put("qfai.config.yaml", `paths:\n  specsDir: ${specs}\n  contractsDir: contracts\n`);
+    await put("contracts/cli/cli-0003-check.md", contract(["BR-0003-0001"]));
+    await branchFromMain();
+    git("checkout", "main");
+    await put("contracts/cli/cli-0003-check.md", contract(["BR-0003-0001", "BR-0003-0002"]));
+    git("add", ".");
+    git("commit", "-m", "base rule");
+    git("checkout", "topic");
+    const result = await invoke(["BR", "CLI-0003", "--base", "main"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout.trim()).toBe("BR-0003-0003");
+  });
+
+  // QFAI:EX-0001-0008-30
+  it.each([
+    ["an intermediate story-tree component", ".qfai", false],
+    ["a contracts directory outside the story tree", "contracts", true],
+  ])("refuses a base where %s is a symbolic link", async (_label, link, outside) => {
+    if (outside)
+      await put("qfai.config.yaml", `paths:\n  specsDir: ${specs}\n  contractsDir: contracts\n`);
+    await branchFromMain();
+    commitWithLink("main", link);
+    const result = await invoke(["DEC", "--base", "linked"]);
+    expect(result.code).toBe(2);
+    expect(result.stdout).not.toMatch(/\bDEC-\d{4}/);
+    expect(result.stderr).toContain(`Unsafe fixed story-tree directory: ${link}`);
+  });
+
+  // QFAI:EX-0001-0008-29
+  it("reads a base whose story tree is the repository root", async () => {
+    await put("decisions.md", table + "| DEC-0001 | Root | Keep | DONE |\n");
+    await put("03_contract/cli/cli-0003-check.md", contract(["BR-0003-0001"]));
+    git("add", ".");
+    git("commit", "-m", "root story tree");
+    const { model } = await readStoryTreeAtRef({
+      root,
+      ref: "main",
+      specsDir: ".",
+      contractsDir: "03_contract",
+    });
+    expect(nextStoryTreeId(model, "DEC")).toBe("DEC-0002");
+    expect(nextStoryTreeId(model, "BR", "CLI-0003")).toBe("BR-0003-0002");
+  });
+
+  // QFAI:EX-0001-0008-30
+  it.each([
+    [
+      "duplicated",
+      table + "| DEC-0002 | Base | Keep | DONE |\n| DEC-0002 | Again | Keep | DONE |\n",
+    ],
+    [
+      "incomplete",
+      "# Decisions\n\n## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n",
+    ],
+  ])("refuses a %s base decision register", async (_label, register) => {
+    await branchFromMain();
+    git("checkout", "main");
+    await writeFile(path.join(root, decisions), register, "utf8");
+    git("add", ".");
+    git("commit", "-m", "base register");
+    git("checkout", "topic");
+    const result = await invoke(["DEC", "--base", "main"]);
+    expect(result.code).toBe(2);
+    expect(result.stdout).not.toMatch(/\bDEC-\d{4}/);
+    expect(result.stderr).toContain("refused");
+  });
+
+  // QFAI:EX-0001-0008-30
+  it.each([
+    [["US", "--base", "main"], "BF parent"],
+    [["DEC", "--base", "no-such-ref"], "no-such-ref"],
+    [["US", "BF-0009", "--base", "main"], "BF-0009"],
+  ])("reports %j and exits 2 without printing an ID", async (argv, reason) => {
+    await put(decisions, table + "| DEC-0001 | Ancestor | Keep | DONE |\n");
+    git("add", ".");
+    git("commit", "-m", "ancestor");
+    const result = await invoke(argv);
+    expect(result.code).toBe(2);
+    expect(result.stdout).not.toMatch(/\b(?:US|DEC)-\d{4}/);
+    expect(result.stderr).toContain(reason);
+  });
 });
 
 afterEach(async () => {

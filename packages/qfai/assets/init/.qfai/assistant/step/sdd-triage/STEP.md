@@ -196,8 +196,9 @@ requests, so a gap above the tree's own highest is allowed. BF scope is project-
 scope is its BF; AC and EX scope is their US; a contract number's scope is every
 contract of every kind; BR scope is its contract, whose number the BR carries
 (`BR-0006-0001` belongs to `API-0006`); DEC scope is the complete ordered register; OQ scope is its own table.
-Empty scopes begin at `0001`, or `01` for AC and EX tails. This is a reading
-rule over the tree, not a new command.
+Empty scopes begin at `0001`, or `01` for AC and EX tails. Take each new ID from
+`npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` with a fetched
+base: it prints the number after the highest of the working tree and the base.
 
 ## Pre-draft grilling
 

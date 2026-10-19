@@ -172,6 +172,15 @@ describe("qfai-sdd writes the story tree", () => {
     expect(allocation).toContain(
       "Do not reuse an ID because its file was removed or a row was rejected.",
     );
+    expect(allocation).toContain(
+      "Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` right before writing it",
+    );
+    expect(allocation).toContain(
+      "prints the number after the highest of both, not after the last row. It writes nothing and does not see open pull requests.",
+    );
+    expect(await section(TRIAGE_STEP, "## ID allocation")).toContain(
+      "Take each new ID from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` with a fetched base",
+    );
     const scopes = flat(await readShipped(TRACEABILITY));
     expect(scopes).toContain(
       "Count IDs named in retired-item decisions, so deletion never frees an ID.",

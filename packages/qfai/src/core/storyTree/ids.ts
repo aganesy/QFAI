@@ -8,7 +8,10 @@ import {
 } from "../testDeclarations.js";
 import { maskJsNonCode } from "../validators/jsSourceMask.js";
 
-export type StoryTreeIdKind = "BF" | "US" | "AC" | "EX" | "BR" | "DEC" | "OQ";
+/** Every story-tree ID kind, in the order the tree's layers declare them. */
+export const STORY_TREE_ID_KINDS = ["BF", "US", "AC", "EX", "BR", "DEC", "OQ"] as const;
+
+export type StoryTreeIdKind = (typeof STORY_TREE_ID_KINDS)[number];
 
 const ID_PATTERNS: Record<StoryTreeIdKind, RegExp> = {
   BF: /^BF-\d{4}$/,

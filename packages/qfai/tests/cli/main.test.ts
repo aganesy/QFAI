@@ -347,6 +347,7 @@ describe("cli usage errors", () => {
     expect(stderr).toBe("");
     expect(stdout).toContain("renumber-decision");
     for (const flag of ["--from", "--to", "--base", "--apply"]) expect(stdout).toContain(flag);
+    expect(stdout).toContain("sdd next-id <kind> [<parent-ID>] --base <local-ref>");
   });
 });
 
