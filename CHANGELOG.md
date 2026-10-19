@@ -463,6 +463,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout, and `qfai doctor` warns when the entries point at a missing
   script. Fixes #3750. Fixes #3805.
 
+- **Decision evidence no longer counts as a path outside `.qfai`.** The
+  decision form requires a row's `- Evidence:` item to name repository files,
+  and a change request's Content to list the paths it changes, yet
+  `QFAI-STORY-015` counted those paths, and an inherited row cannot be edited
+  to clear the warning. In `decisions.md`, its pages and `open-questions.md`,
+  the Evidence item and a change request's Content are no longer read; a path
+  in the Grounds or any other part of a row is still counted. Fixes #3756.
+
 - **A DESIGN.md violation every screen shares is reported once.** The
   prototyping reviewer repeated a violation whose source every screen shares,
   such as a shared stylesheet or component, in each screen's review payload, so

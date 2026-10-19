@@ -103,11 +103,11 @@ describe("validateExternalReferences", () => {
     );
   });
 
-  // QFAI:EX-0001-0051-NEXT
+  // QFAI:EX-0001-0051-14
   it("counts no path in a decision's Evidence item or a change request's Content", async () => {
     const template = await readFile(decisionsTemplate, "utf8");
     const release =
-      "| DEC-0001 | Release 1.2.0 approved by Pat on 2026-10-01, option \"Ship\" | - Evidence: file:CHANGELOG.md; command:npm test → passed - Grounds: the checks pass - Residual risk: none — checked - Rollback: revert the tag | DONE |";
+      '| DEC-0001 | Release 1.2.0 approved by Pat on 2026-10-01, option "Ship" | - Evidence: file:CHANGELOG.md; command:npm test → passed - Grounds: the checks pass - Residual risk: none — checked - Rollback: revert the tag | DONE |';
     const inherited =
       "| DEC-0002 | Change request: `src/core/a.ts`, [b](src/core/b.ts), `.qfai/spec/decisions.md` | - Evidence: file:`src/core/a.ts`; `tests/a.test.ts`; [c](docs/c.md) - Grounds: UPDATE the rule. - Residual risk: none — kept - Rollback: none — kept | DONE |";
     const grounds =

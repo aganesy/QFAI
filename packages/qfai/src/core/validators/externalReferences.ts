@@ -12,10 +12,22 @@ const PATH_SHAPE = /^(?:\.{1,2}\/)*[\w@.-]+(?:\/[\w@.-]+)+$/;
 const FILE_EXTENSION = /\.[A-Za-z0-9]{1,8}$/;
 const CODE_SPAN = /`([^`\n]+)`/g;
 const LINK_DESTINATION = /\]\(([^)\s]+)/g;
+/** A decision row's Evidence item, up to its Grounds item or the end of its cell. */
+const EVIDENCE_ITEM = /- Evidence:.*?(?= - Grounds:|(?<!\\)\||$)/g;
+/** The Content cell of a change-request row, which lists the paths the request changes. */
+const CHANGE_REQUEST_CONTENT = /^(\|\s*[A-Z]+-\d+\s*\|)\s*Change request:.*?(?<!\\)\|/;
 
 type Tree = "policy" | "business-flow" | "contract" | "decision and open-question";
 
 type TreeCount = { lines: number; files: string[] };
+
+/**
+ * A decision or open-question line without the parts the decision form requires
+ * to name files: a decision's Evidence item and a change request's Content.
+ */
+function withoutEvidence(line: string): string {
+  return line.replace(CHANGE_REQUEST_CONTENT, "$1 |").replace(EVIDENCE_ITEM, "");
+}
 
 function pathCandidates(line: string): string[] {
   const tokens = [...line.matchAll(CODE_SPAN), ...line.matchAll(LINK_DESTINATION)];
@@ -52,7 +64,9 @@ function plural(count: number, noun: string): string {
  * A story-tree document that names a file by a repository path outside `.qfai`.
  * The path goes stale without a spec review when that file moves. A path counts as
  * inside `.qfai` when it starts with `.qfai/`, or names an existing file there
- * relative to the document, `paths.specsDir` or `paths.contractsDir`. Discussion
+ * relative to the document, `paths.specsDir` or `paths.contractsDir`. In the
+ * decision and open-question tree, a decision's Evidence item and a change
+ * request's Content are not read, since the decision form requires them. Discussion
  * packs are reference material and are not read. One finding per tree carries the
  * counts, so an existing project can bring them down over time.
  */
@@ -78,16 +92,17 @@ export async function validateExternalReferences(
   const counts = new Map<Tree, TreeCount>();
   for (const file of files) {
     const documentDir = path.dirname(file);
+    const tree = treeOf(file, specsDir, contractsDir);
     let outside = 0;
     for (const line of (await readFile(file, "utf8")).split(/\r?\n/)) {
-      for (const token of pathCandidates(line)) {
+      const scanned = tree === "decision and open-question" ? withoutEvidence(line) : line;
+      for (const token of pathCandidates(scanned)) {
         if (await insideQfai(token, documentDir)) continue;
         outside += 1;
         break;
       }
     }
     if (outside === 0) continue;
-    const tree = treeOf(file, specsDir, contractsDir);
     const count = counts.get(tree) ?? { lines: 0, files: [] };
     count.lines += outside;
     count.files.push(file);
