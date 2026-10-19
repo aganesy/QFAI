@@ -194,6 +194,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing to find. The `dependency` intent in the extraction reference now
   covers that contract edit.
   Fixes #3535.
+- **The verify report lists what a test run records, apart from what is
+  covered.** `verify-repo-gate` gains a `### Run report` recipe: when the report
+  cites test runner results, it records for each layer the revision and the CI
+  run and attempt, the deployed source, the runner, command and counts with
+  their report files, each skip with its reason, whether the layer ran fresh or
+  was restored from a cache, retried cases counted once, and support cases
+  apart from behavior cases. A count no report establishes is UNKNOWN, and a
+  layer that did not run is UNRUN with its reason. The recipe says that a
+  passing annotated test does not make a requirement covered, and it adds no
+  JSON field, gate status, parser or runner. Existing projects receive the new
+  text on the next `npx qfai init`. Fixes #3759.
 
 - **`npx qfai workflow plan --order` plans an operation on finished work with
   no extraction file.** A push, a pull request or another operation the user

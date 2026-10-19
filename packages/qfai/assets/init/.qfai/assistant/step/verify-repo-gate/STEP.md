@@ -179,6 +179,29 @@ required during each focused cycle. Record these facts in the existing human
 report; add no permanent inventory, ledger, JSON field, gate status, runtime
 parser or runner.
 
+### Run report
+
+When the report cites test runner results, record these items in the human
+report for each layer the gates ran:
+
+| Item              | Record                                                                                                                                                                                                            |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Revision and run  | What the CI receipt in `.qfai/assistant/step/common-gate-run/STEP.md#ci-evidence` lists, and the deployed source when a test reaches a deployment, with any difference from that commit.                          |
+| Counts per layer  | For each layer, such as unit, integration or API, E2E and device: the runner, the command, and the collected, passed, failed and skipped counts, with the report file each count came from.                       |
+| Skips             | Each skipped case with its reason, and whether the skip is intended for this run, such as a case that runs only on the default branch.                                                                            |
+| Fresh or cached   | Whether each layer ran in this run or was restored from a cache. A result restored from a cache names the run that produced it and is not reported as a fresh execution.                                          |
+| Retries           | A retried case counts once, with its final outcome and the number of attempts.                                                                                                                                    |
+| Support cases     | Setup, teardown and fixture cases, counted apart from the cases that check behavior.                                                                                                                              |
+| UNKNOWN and UNRUN | A count no report establishes is UNKNOWN. A layer that did not run, whose report is missing, or that collected no cases is UNRUN with its reason, such as a test that needs a physical device. Neither is a pass. |
+
+These items say what ran, not what is covered. An annotation, an assertion and a
+passing case do not prove every clause of a requirement. Where the report states
+the semantic coverage of a requirement, state it apart from the run report, and
+do not mark a requirement covered because its annotated test passed.
+
+A layer recorded UNRUN here is UNRUN for the gate that covers it, under
+`## Verdict` and `## A missing environment`; this recipe changes no gate status.
+
 ## Verdict
 
 Write `.qfai/report/verify.json` at the end of the run. It is the
