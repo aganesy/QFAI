@@ -28,6 +28,8 @@ the system's shape has settled.
 ## Writes
 
 - The empty acceptance tests `npx qfai atdd scaffold` writes.
+- In a project that names its test files by purpose, the empty tests and
+  annotation lines this step adds to those files instead.
 
 ## Procedure
 
@@ -51,6 +53,24 @@ command's output.
 
 Unit and component tests are not scaffolded. `implement-tdd` writes them test
 first, one example at a time.
+
+## Purpose-named test files
+
+Read the acceptance tests the project already has. Where they are files named
+for what they test, each carrying its `QFAI:` annotations, run no
+`npx qfai atdd scaffold` for the flow. Write each listed item's test, with an
+empty body, into an existing or a new purpose-named file instead.
+
+- A `QFAI:AC-NNNN-NNNN-NN` test goes in a file under the integration or API
+  layer directory, and a `QFAI:BF-NNNN` test in one under the E2E directory,
+  as `.qfai/assistant/rule/test-layers.md` routes them. The file must be one
+  the configured globs select.
+- An AC or BF annotation counts anywhere in such a file. Put it on the comment
+  line directly before the test it marks, so the pass can name that test.
+- Change no existing test in the file: add no assertion, and move or remove no
+  annotation already there.
+
+The step then passes as Passes when states.
 
 ## Passes when
 

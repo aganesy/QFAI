@@ -187,6 +187,21 @@ describe("a step that may pass with evidence", () => {
     );
   });
 
+  it("annotates purpose-named test files instead of scaffolding where the project uses them", async () => {
+    const section = flat(
+      sectionOf(
+        await readShipped("step/implement-scaffold/STEP.md"),
+        "## Purpose-named test files",
+      ),
+    );
+    expect(section).toMatch(/run no `npx qfai atdd scaffold` for the flow/i);
+    expect(section).toMatch(/into an existing or a new purpose-named file instead/i);
+    expect(section).toMatch(/under the integration or API layer directory/i);
+    expect(section).toMatch(/an AC or BF annotation counts anywhere in such a file/i);
+    expect(section).toMatch(/change no existing test in the file/i);
+    expect(section).toMatch(/the step then passes as Passes when states/i);
+  });
+
   it("leaves no step with a skip condition a plan predicate decided", async () => {
     for (const step of PASS_THROUGH) {
       const text = await readShipped(`step/${step}/STEP.md`);
