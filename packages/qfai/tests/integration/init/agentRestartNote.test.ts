@@ -52,9 +52,14 @@ describe("the agent restart note", () => {
   ])("is printed when the hook file %s/%s is written again", async (dir, file) => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
-      await writeFile(path.join(root, dir, file), "{}\n", "utf-8");
+      const hookFile = path.join(root, dir, file);
+      const written = await readFile(hookFile, "utf-8");
+      await writeFile(hookFile, "{}\n", "utf-8");
 
-      expect(restartLines(await initQuietly(root))).toEqual([RESTART_LINE]);
+      const output = await initQuietly(root);
+
+      expect(await readFile(hookFile, "utf-8")).toBe(written);
+      expect(restartLines(output)).toEqual([RESTART_LINE]);
     });
   });
 

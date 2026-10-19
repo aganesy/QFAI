@@ -172,7 +172,7 @@ Feature: Install or upgrade and get the free-text entry
   Scenario: Init asks for an agent restart after it changes skill or hook text
     Given a fresh project, or an installed project whose skill, Codex agent profile, rule master or hook file differs from this release's
     When `qfai init` runs, with or without `--force`, or with `--dry-run`
-    Then a run that wrote a skill, step, agent or rule file of the assistant tree, a Codex agent profile, a rule master or a hook file prints one line asking to restart any running agent session
+    Then a run that wrote a skill, step, agent or rule file of the assistant tree, a Codex agent profile, a rule master that `--force` overwrote or a hook file prints one line asking to restart any running agent session
     And `.agents/rules/reminders.json` does not count, because the hooks read it on every prompt
     And a dry run, and a run that changed none of those files, print no such line
 ```
