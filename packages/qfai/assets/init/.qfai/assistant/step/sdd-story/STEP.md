@@ -31,6 +31,8 @@ Stage 3 of the story tree: stories and examples.
 - Each affected `user-story-NNNN-NNNN/` with exactly `01_User-story.md`,
   `02_Acceptance-Criteria.md`, and `03_Example.md`, from their paired templates.
   Do not create another document inside a story directory.
+- The `// QFAI:EX-NNNN-NNNN-NN` annotation line that maps an example to an
+  existing test, as procedure item 9 states, and nothing else in a test file.
 
 Write only what the user approved, as
 `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
@@ -67,7 +69,8 @@ states.
 6. Follow `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md`
    and `.qfai/assistant/rule/test-layers.md` when deriving the later BF/E2E,
    AC/API or Integration, and EX/other test obligations. Do not author
-   acceptance tests in this step.
+   acceptance tests in this step. Item 9's annotation line is not test
+   authoring.
 7. Retire a story by removing its directory under the change request that names
    it, and never recycle its IDs.
 8. Where a decision replaced a claim, such as an input, a threshold or a
@@ -75,6 +78,16 @@ states.
    before finishing. List each hit in the stage report, with what it now
    says or why it stays. A hit in a contract is left to `sdd-contract`,
    which reports it.
+9. Where an existing assertion already proves an example this step added or
+   renumbered, add that example's `// QFAI:EX-NNNN-NNNN-NN` line to the test's
+   annotation lines, directly before the test declaration it marks, in a
+   selected non-E2E test file. Replace an old ID only on the test that proves
+   the renumbered example, the incoming item a merge collision renumbered; a
+   test of the item that kept the ID keeps its annotation. This is
+   specification metadata, not a test repair: change no assertion body, add or
+   remove no case, and keep the case count.
+   List each annotated test in the stage report. An example no existing
+   assertion proves stays unannotated for the implementation stage.
 
 ## Passes when
 

@@ -116,6 +116,45 @@ describe("a step that may pass with evidence", () => {
     );
   });
 
+  it("has sdd-story, not the pass-through implement-test-fix, annotate an existing assertion with a new example on restate-records", async () => {
+    const plan = (await loadBuiltInPlans()).find((each) => each.route === "restate-records");
+    const steps = (plan?.stages ?? []).flatMap((stage) => stage.steps);
+    expect(
+      steps
+        .filter((step) => ["sdd-story", "implement-test-fix"].includes(step.name))
+        .map((step) => [step.name, step.passThrough === true]),
+    ).toEqual([
+      ["sdd-story", false],
+      ["implement-test-fix", true],
+    ]);
+    const text = await readShipped("step/sdd-story/STEP.md");
+    expect(flat(sectionOf(text, "## Writes"))).toMatch(
+      /the `\/\/ QFAI:EX-NNNN-NNNN-NN` annotation line that maps an example to an existing test, as procedure item 9 states, and nothing else in a test file/i,
+    );
+    const procedure = flat(sectionOf(text, "## Procedure"));
+    expect(procedure).toMatch(
+      /where an existing assertion already proves an example this step added or renumbered, add that example's `\/\/ QFAI:EX-NNNN-NNNN-NN` line to the test's annotation lines/i,
+    );
+    expect(procedure).toMatch(
+      /directly before the test declaration it marks, in a selected non-E2E test file/i,
+    );
+    expect(procedure).toMatch(
+      /replace an old ID only on the test that proves the renumbered example, the incoming item a merge collision renumbered; a test of the item that kept the ID keeps its annotation/i,
+    );
+    expect(procedure).toMatch(
+      /do not author acceptance tests in this step\. item 9's annotation line is not test authoring/i,
+    );
+    expect(procedure).toMatch(
+      /this is specification metadata, not a test repair: change no assertion body, add or remove no case, and keep the case count/i,
+    );
+    expect(procedure).toMatch(
+      /an example no existing assertion proves stays unannotated for the implementation stage/i,
+    );
+    expect(flat(await readShipped("step/implement-test-fix/STEP.md"))).toMatch(
+      /the fixed test annotates the same IDs as before/i,
+    );
+  });
+
   // QFAI:AC-0001-0186-01
   // QFAI:EX-0001-0186-11
   it("has implement-tdd append nothing where an example states the case, and annotate the failing test with it", async () => {
