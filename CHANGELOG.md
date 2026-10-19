@@ -47,6 +47,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exact dependency pin that moved, naming the old and new versions and whether
   the dependency declares an install script, and it asks each change to name the
   files it retires. Fixes #3547.
+- **The `sdd-cycle` step does not pass after a cycle that adopted a finding
+  until the second cycle has run.** Its Passes when section now states this, so
+  the stage review sees a skipped second cycle. Fixes #3790.
 
 - **The `qfai-run` final report lists every plan step with its status.** A
   step-status table gives one row per plan step and planned review, each marked
@@ -64,11 +67,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Fixes #3498.
 
 - **`qfai-run` shows how to read a request that operates a device and changes
-  nothing in the repository.** The extraction reference gains an example: an
-  operation on a connected device that the session runs itself and that deletes
-  nothing is an `order` with no artifacts, so it takes the existing operation
-  route. A device only a person can operate keeps the `human-run` qualifier.
-  Fixes #3768.
+  nothing in the repository.** An operation the session runs itself on a device
+  or system outside the repository is an `order` with no artifacts, so it takes
+  the existing operation route; one that deletes something needs the user's
+  explicit instruction. A request only to read the device's state is a question
+  the session answers. The `qfai-run` one-read shortcut says so, and the
+  extraction reference adds an example of each. Fixes #3768.
+
+- **`sdd-story` annotates an existing test with the example it proves.** Where
+  an existing assertion already proves an example the step added or
+  renumbered, `sdd-story` now adds that example's `// QFAI:EX-…` line before the
+  test and changes nothing else: no assertion body, no case and no case count.
+  A `restate-records` run therefore no longer leaves the annotation without an
+  owner, and `implement-test-fix` keeps requiring that a repaired test annotate
+  the same IDs. Fixes #3757.
 
 - **A release change produced outside the run no longer needs its own pull
   request for the approval row.** When a release workflow or bot produces the
@@ -79,6 +91,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **Verify runs a gate that looks unrelated to the change, and a procedure
+  edit with no checker records "no applicable checker".** `verify-repo-gate`
+  and `common-gate-run` now say that a gate which looks unrelated to the change,
+  such as a test gate for a documents-only change, is still run and its result
+  recorded; `verify.json` keeps its four statuses and gains no not-applicable
+  status. `implement-procedure` no longer requires a document lint or link
+  check that no Standard commands entry defines for the changed files: the
+  stage report records "no applicable checker", which is neither a pass nor
+  UNRUN and does not block completion. A gate the project defines is still run.
+  Fixes #3764. Fixes #3765.
+
 - **`qfai init` asks you to restart a running agent session after it rewrites
   skills or hooks.** A running session keeps the skill and hook text it loaded
   at start, so after `qfai init --force` it went on acting on the old text.
@@ -88,6 +111,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   on every run), `.claude/settings.json` or `.codex/hooks.json`, the summary
   now has one line saying to restart any running agent session. A dry run, and
   a run that changed none of those files, print no such line. Refs #3536.
+
+- **The `qfai-run` extraction guide decides whether a changed default is a
+  deprecation or a behaviour change.** `deprecation` already covered a published surface given a new
+  default, so a changed default could read as either intent. The guide now says
+  a changed default is `deprecation` when it belongs to a published surface,
+  such as a public API, a CLI flag or a configuration key, and
+  `behaviour-change` otherwise, when it changes a default that no published
+  surface exposes.
+  Fixes #3801.
 
 - **The graph exploration rule states two limits of graph analysis.** It now
   says the quality of document answers depends on the model the operator
