@@ -448,3 +448,24 @@ it("--order plans an operation on finished work with no extraction file", async 
     stray: [2, [{ reason: "invalid-input", subject: "x" }]],
   });
 });
+
+// QFAI:EX-0001-0222-17
+it("The decision flag puts a decision point on the first step that writes when the route names none", async () => {
+  const root = await minimalProject();
+  const pointsOf = (fields: Parameters<typeof extraction>[0]) => {
+    const planned = workflow(root, ["plan", "--in", "-"], JSON.stringify(extraction(fields)));
+    return [field(planned.json, "route"), field(planned.json, "decisionPoints")];
+  };
+
+  expect([
+    pointsOf({ intent: "ci", entryFlags: ["decision", "expect"], artifacts: ["ci", "tests"] }),
+    pointsOf({ intent: "dependency", entryFlags: ["decision"], artifacts: ["deps"] }),
+    pointsOf({ intent: "ci", artifacts: ["ci", "tests"] }),
+    pointsOf({ intent: "question-how", entryFlags: ["decision"], artifacts: [] }),
+  ]).toEqual([
+    ["change-tooling", ["implement-tooling"]],
+    ["bump-dependency", ["implement-dep-bump"]],
+    ["change-tooling", []],
+    ["answer-question", []],
+  ]);
+});
