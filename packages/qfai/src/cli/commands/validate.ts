@@ -1048,7 +1048,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-001": "Every required story-tree policy and contract file exists.",
   "QFAI-STORY-002": "Story-tree IDs are well formed, unique, and consistent with their paths.",
   "QFAI-STORY-003":
-    "The decisions and open-questions tables have valid records, and every decision or question a contract rule or a superseded row cites is declared by a row.",
+    "The decisions and open-questions tables have valid records, and every decision or question a contract rule, a superseded row or an open-question Status names is declared by a row.",
   "QFAI-STORY-004": "Each story has acceptance criteria and examples with valid references.",
   "QFAI-STORY-005":
     "Every business rule and contract reference resolves, and a rule numbered BR-NNNN-NNNN carries the number of the contract that declares it.",

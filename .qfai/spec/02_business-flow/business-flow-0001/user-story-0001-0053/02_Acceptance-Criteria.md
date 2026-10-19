@@ -40,7 +40,7 @@ Feature: Decision and open-question table validation
     Given the story tree, and an `open-questions.md` row opening `Unadjudicated:` with Status TODO or WIP
     When `qfai validate --profile sdd` runs
     Then `QFAI-SPACK-102` is raised at error naming the file and the row ID
-    And the same row at DONE or DEFERRED raises no such finding
+    And the same row at DONE, DEFERRED, `DONE (by DEC-NNNN)` or `SUPERSEDED (by DEC-NNNN)` raises no such finding
 
   # AC-0001-0053-06
   Scenario: A cited decision or question that no row declares is reported

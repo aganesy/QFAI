@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { ISSUE_EXPECTED_BY_CODE } from "../../../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../../../src/core/config.js";
 import { architectureProblems, orderLayers } from "../../../../src/core/storyTree/architecture.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
@@ -432,6 +433,9 @@ describe("story-tree structure", () => {
     expect(dangling.map((item) => [item.refs, item.file, item.severity])).toEqual([
       [["OQ-0002", "DEC-0010"], `${specs}/open-questions.md`, "error"],
     ]);
+    expect(ISSUE_EXPECTED_BY_CODE["QFAI-STORY-003"]).toContain(
+      "a contract rule, a superseded row or an open-question Status names is declared by a row",
+    );
 
     const declared = validateStoryTreeStructureModel(
       model({
