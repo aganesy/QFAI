@@ -272,12 +272,14 @@ ensure the whole index and worktree are clean. Unknown dirty files postpone
 the switch; do not stash, reset or delete them to move on. A reviewer using
 live files or checkout-dependent execution must finish. A read-only reviewer
 using only `git show <fixed SHA>:<path>` may continue across a clean orchestrator switch;
-the reviewer never switches the checkout. CI-only pending gates use the
-existing DELEGATED commit allowance only under a user instruction or project
-policy covering that verification commit and its tracked paths. The project
-must declare the gate CI-only and name its actual check. Every nondelegated gate
+the reviewer never switches the checkout. Pending gates delegated (CI-only or
+by instruction) use the existing DELEGATED commit allowance only under a user
+instruction or project policy covering that verification commit and its tracked
+paths. The project declares the gate CI-only, or the user's instruction for
+this run delegates that gate to a named CI check, quoted as `verify-repo-gate` says.
+Its actual check is named. Every nondelegated gate
 must pass. A delegated red check stops transport of the same unchanged candidate.
-Explicit CI-only delegation covering transport may instead carry actual changes
+Explicit delegation (CI-only or by instruction) covering transport may instead carry actual changes
 addressing that failure through the existing planned fix into a new candidate,
 even while HEAD names the failed commit. Keep the prior head, check, run and
 observed result as FAIL; never relabel that evidence pending. Report the actual
@@ -308,13 +310,13 @@ reset, a stash, a branch switch or a worktree removal.
 
 ## Final report
 
-| The work ended                        | The report                                                                                                           |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Every stage ran and every gate passed | Done: the paths changed, each gate's verdict, and every decision taken without the user, with its reason             |
-| At the chosen scope                   | The chosen stages complete, the stages not chosen, and a verdict for each gate that ran, never that a change is done |
-| At a closing step                     | The closure outcome and each follow-up request, never that a change is done                                          |
-| With a gate failing                   | Each failing gate marked pre-existing or new, with its owner. Nothing reads as complete                              |
-| With delegated CI pending             | The verification commit, pending checks and resume condition; verification remains incomplete                        |
+| The work ended                        | The report                                                                                                                                                                  |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Every stage ran and every gate passed | Done: the paths changed, each gate's verdict, and every decision taken without the user, with its reason                                                                    |
+| At the chosen scope                   | The chosen stages complete, the stages not chosen, and a verdict for each gate that ran, never that a change is done                                                        |
+| At a closing step                     | The closure outcome and each follow-up request, never that a change is done                                                                                                 |
+| With a gate failing                   | Each failing gate marked pre-existing or new, with its owner. Nothing reads as complete                                                                                     |
+| With delegated CI pending             | The verification commit, pending checks and resume condition: when `<check>` reports for `<head>`, follow `verify-repo-gate` `## After CI`; verification remains incomplete |
 
 - For a CI wait, name the target, current head, run ID or URL when available,
   check, actual outcome and counts, blocker and resume condition. State when no
