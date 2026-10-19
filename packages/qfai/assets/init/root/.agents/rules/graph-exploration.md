@@ -57,6 +57,8 @@ project files or directories you want to analyze. Paths are relative to this
 worktree. Start your selected local server, then retry the documents CLI
 command. The CLI prepares missing analysis with these settings. QFAI
 does not install or choose a model for you.
+The quality of document answers depends on the model you select, and QFAI
+does not evaluate it. Check important answers against their cited sources.
 
 The supported backend names are `ollama` and `openai`. An `openai` backend can
 also use a compatible local endpoint. Keep credentials out of this file. When
@@ -143,7 +145,9 @@ Keep generated runtimes, databases, graphs, manifests and caches outside Git.
 Reuse only compatible, completed local analysis from the same repository and
 machine. Restore independent writable copies and check native freshness before
 querying. Worktrees share no live writable analysis, process, socket or lock.
-Unproved restoration combinations use local generation.
+Restoration is proven only on Windows x64, for CodeGraph on Node.js 24.16.0
+and for Graphify on Python 3.12.13. Other platforms, architectures and
+runtime versions are unverified and use local generation instead.
 
 Each worktree serializes CLI queries and preparation with its own local lock.
 Contention reports retry; an abandoned lock reports manual recovery. Do not
