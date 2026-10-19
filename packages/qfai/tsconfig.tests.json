@@ -555,6 +555,7 @@
     "tests/integration/init/claudePermissions.test.ts",
     "tests/integration/init/entryDirective.test.ts",
     "tests/integration/init/entryHooks.test.ts",
+    "tests/integration/init/agentRestartNote.test.ts",
     "tests/integration/init/entryInstallSet.test.ts",
     "tests/integration/init/entryTemplateLint.test.ts",
     "tests/integration/init/installCheckHook.test.ts",
