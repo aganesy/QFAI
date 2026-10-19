@@ -93,6 +93,7 @@ const LINT_PROFILE: Profile = {
     ],
     [
       "node ./scripts/link-assistant-tree.mjs --check",
+      "node ./scripts/sync-init-to-root.mjs --check",
       "node ./scripts/check-bidi.mjs",
       "node ./scripts/check-conflict-markers.mjs",
       "node ./scripts/check-register-duplicates.mjs",
