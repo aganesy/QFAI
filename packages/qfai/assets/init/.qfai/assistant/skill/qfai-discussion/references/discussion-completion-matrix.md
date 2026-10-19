@@ -21,8 +21,8 @@ Blocking for every pack, UI-bearing or not:
    `sources` / `best_practices` / `anti_patterns` / `reflection` are non-empty, every `source_id`
    resolves to a `sources[].id`, and at least one `reflection[]` entry records an apply decision.
    `npx qfai validate --profile discussion --fail-on error` reports `QFAI-RESEARCH-*` until it is.
-2. The stage report's `## Grilling Session` row shows the session ended before authoring began,
-   with `Ended` reading an authoring ending and its conditions met:
+2. Every row of the stage report's `## Grilling Session` table has its `Ended at` before its own
+   `Authoring began` (for a reopened row, when authoring resumed), with `Ended` reading an authoring ending and its conditions met:
 
    | Ended         | Also required                                                                                                                                                                                        |
    | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

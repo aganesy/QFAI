@@ -44,8 +44,9 @@ Each decision record carries the four labelled Approach items stated at the top 
 
 ## One session
 
-The stage holds one session per run. The row goes in the stage report, under
-`## Grilling Session`, and is written before the first authored file:
+The stage holds one session per run, except a reopened node, below. The row
+goes in the stage report, under `## Grilling Session`, and is written before
+the first authored file:
 
 ```text
 | Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |
@@ -70,3 +71,8 @@ A critical decision found while authoring reopens the session for that node
 only, for one round to the user. Append one row for that round under the same
 header, with its own `Ended`, `Ended at` and `Authoring began`, before authoring
 resumes. The earlier rows stay as written. A stopped round is reported, not written.
+
+The round runs until no node it opened is left open, or until what is still
+open is recorded as labelled assumptions or `11_OQ-Register.md` entries. Under
+a no-question mode the row's `Ended` is `no-question`, and the decision is
+registered in `11_OQ-Register.md`.

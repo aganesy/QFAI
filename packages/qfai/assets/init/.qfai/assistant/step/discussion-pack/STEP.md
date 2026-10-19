@@ -33,7 +33,9 @@ node only. Stop writing the pack, ask the user one round on that node, record
 the round as `.qfai/assistant/step/common-grilling-record/STEP.md#a-reopened-node`
 says, then resume. The rest of the session's record stays as it is.
 Recording the decision as an assumption is allowed only under a no-question
-mode, labelled beside its open question. A stop in that round is `Ended: stopped`.
+mode, labelled beside its open question.
+A stop in that round ends the run as `stopped` does: no row is written,
+writing stops, and the report names the pack files already written and the open node.
 
 ## Passes when
 
