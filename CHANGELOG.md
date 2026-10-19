@@ -109,9 +109,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   its pull request is open, and the session that merges it runs
   `qfai sdd renumber-decision` against the fetched base only when that base
   declares an ID the branch added, renumbering every branch-added row from the
-  lowest colliding one upward. The command refuses a ledger an unfinished merge
-  left with conflict markers and writes nothing, so the reference says to abort
-  the merge, renumber, and merge again.
+  lowest colliding one upward. Because the shipped `.gitattributes` union-merges
+  `decisions.md`, a collision never conflicts, so the reference says to check
+  the base before merging, to undo an unpushed merge with
+  `git reset --merge ORIG_HEAD` before renumbering, and to abort a merge that
+  stopped on other conflicts.
   Fixes #3778.
 
 - **Shipped seed and sample data now have an artifact to fall under.** The

@@ -290,13 +290,20 @@ fetches the base and renumbers only when the fetched base now declares an ID
 the branch added. Then it renumbers every row the branch added, from the lowest
 colliding one upward and lowest first, so the rows stay in ascending order.
 Run on a clean tree against the fetched ref, for example `origin/main`, commit
-after each run, then merge the base. The tail conflict that is left holds two
-distinct IDs: keep both rows, the base's first.
+after each run, then merge the base.
 
-The command refuses a ledger that an unfinished merge left with conflict
-markers, as a dirty candidate, and writes nothing. Resolving the markers by
-hand does not help, because the working ledger still differs from HEAD. Abort
-the merge with `git merge --abort`, renumber, and merge again.
+Check the base before merging. The shipped `.gitattributes` merges
+`decisions.md` with `merge=union`, so the ledger never conflicts: a colliding
+ID merges silently into two rows with the same ID, and the command then
+refuses that ledger as a duplicate. If such a merge is committed but not
+pushed, run `git reset --merge ORIG_HEAD`, renumber, and merge again. If it was
+pushed, the two records already share the ID: follow the change request rule
+earlier in this section.
+
+The command also refuses a ledger left dirty by a merge that stopped on
+conflicts in other files, and writes nothing. Abort the merge with
+`git merge --abort`, renumber, and merge again. Then redo any other conflict
+resolutions after the second merge.
 
 The explicit base and HEAD must resolve locally and have one common ancestor
 that declares no source row. The base may already use that ID; the current
