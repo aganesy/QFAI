@@ -576,6 +576,7 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-53
   it("plans the delivery the user asks for after a change plan as an operation", async () => {
     const commit = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(commit).toMatch(
