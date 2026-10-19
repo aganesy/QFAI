@@ -87,6 +87,10 @@ approved it, when, and the option chosen. A declined change request is appended 
 REJECTED, recording who declined it and when. When a later decision replaces a
 row, change that row's Status to `SUPERSEDED (by DEC-NNNN)`, naming the later
 row, or to `PARTLY SUPERSEDED (by DEC-NNNN)` when it replaces only part of it.
+When a decision answers an open question, change that row's Status to
+`DONE (by DEC-NNNN)`; when a decision makes what the row states wrong before the
+question is answered, change it to `SUPERSEDED (by DEC-NNNN)` and append a new
+row for the question that remains. Either names the decision row.
 A decision the agent took
 appends no row. Do not write a second decision-record
 directory or a retired story file. Listed pages are members of the same register, not a second decision home.

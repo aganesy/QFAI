@@ -44,7 +44,7 @@ export type RecordTableDiff = {
 const HEADERS = ["ID", "Content", "Approach", "Status"];
 const DECISION_STATUS = /^(?:TODO|WIP|DONE|REJECTED|(?:PARTLY )?SUPERSEDED \(by DEC-\d{4}\))$/;
 const PARTLY_SUPERSEDED = /^PARTLY SUPERSEDED \(by DEC-\d{4}\)$/;
-const QUESTION_STATUS = /^(?:TODO|WIP|DONE|DEFERRED)$/;
+const QUESTION_STATUS = /^(?:TODO|WIP|DONE|DEFERRED|(?:DONE|SUPERSEDED) \(by DEC-\d{4}\))$/;
 const ROW_KEYS = ["id", "content", "approach", "status"] as const;
 
 /** The optional index is a closed direct-path list; it never follows Markdown links. */
@@ -233,7 +233,7 @@ export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRec
       const allowedStatuses =
         kind === "decisions"
           ? "TODO, WIP, DONE, REJECTED, SUPERSEDED (by DEC-NNNN), PARTLY SUPERSEDED (by DEC-NNNN)"
-          : "TODO, WIP, DONE, DEFERRED";
+          : "TODO, WIP, DONE, DONE (by DEC-NNNN), DEFERRED, SUPERSEDED (by DEC-NNNN)";
       errors.push(
         `${kind} row ${row.id} has an invalid Status: "${statusPreview(row.status)}"; allowed: ${allowedStatuses}`,
       );

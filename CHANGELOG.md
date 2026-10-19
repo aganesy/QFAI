@@ -53,6 +53,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `PARTLY SUPERSEDED (by DEC-NNNN)` when only part of it is replaced, so an
   agent reading only the step finds the existing status. Fixes #3786.
 
+- **An open-question row's Status can name the decision that settled it.**
+  `open-questions.md` now also accepts `DONE (by DEC-NNNN)`, for a question a
+  decision answered, and `SUPERSEDED (by DEC-NNNN)`, for a row whose text a
+  decision made wrong before the question was answered. A reader of the row
+  alone then finds the decision that overrides it, while the row's Content and
+  Approach still never change. `qfai validate --profile sdd` reports
+  `QFAI-STORY-003` when the named decision has no row in `decisions.md`, as it
+  already does for a superseded decision. The `sdd-triage` step and the
+  `open-questions.md` template describe both statuses. Fixes #3798. Fixes #3802.
+
 - **`user-questions.md` withdraws overtaken requests and restates unseen
   options.** When the user changes the direction of the work, a pending question
   or approval request that no longer fits is withdrawn visibly and the latest

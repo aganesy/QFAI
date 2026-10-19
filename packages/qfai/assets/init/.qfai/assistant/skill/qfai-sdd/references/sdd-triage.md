@@ -57,7 +57,8 @@ it and when; it authorizes no edit. Retiring a story removes its directory under
 change request that names it, with no separate retired-story file.
 
 An existing row at REJECTED is a rejected option. Open questions use OQ-NNNN rows; DEFERRED needs a
-specific future decision point. An unanswered critical product decision is an open-questions.md row
+specific future decision point. When a decision settles an open question or makes its text wrong, the
+`sdd-triage` step says when its Status becomes `DONE (by DEC-NNNN)` or `SUPERSEDED (by DEC-NNNN)`. An unanswered critical product decision is an open-questions.md row
 whose Content opens Unadjudicated:, at TODO until decided. A justified test exception opens a
 decision Content with Test exception:, names the exact BF, AC, or EX it exempts, and puts the reason
 in Approach. It takes effect only at DONE; it never exempts descendant items.

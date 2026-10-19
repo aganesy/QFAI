@@ -264,7 +264,7 @@ describe("story-tree validation acceptance", () => {
         [`${specs}/open-questions.md`]: register("Open Questions", COLUMNS, [
           "| OQ-0001 | A | B | REJECTED |",
           "| OQ-0002 | A | B | DEFERRED |",
-          "| OQ-0003 | A | B | SUPERSEDED (by DEC-0004) |",
+          "| OQ-0003 | A | B | PARTLY SUPERSEDED (by DEC-0004) |",
           "| OQ-0004 | A | B | DONE |",
         ]),
       }),
