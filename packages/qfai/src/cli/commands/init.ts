@@ -123,6 +123,14 @@ const STANDARD_ASSET_PATHS: readonly string[] = REFRESHED_ASSISTANT_LAYERS.map(
 const AGENT_RESTART_NOTE =
   "Skill or hook files changed: restart any running agent session so it uses the new text.";
 
+/**
+ * Printed on every run. Init never reads or writes `CLAUDE.md`, and Claude Code reads that file
+ * instead of `AGENTS.md` where it exists, so the rules cited from `AGENTS.md` reach it only
+ * through an `@AGENTS.md` line the project adds.
+ */
+const CLAUDE_MD_NOTE =
+  "If this project has a CLAUDE.md or CLAUDE.local.md, add the line @AGENTS.md to it: Claude Code reads that file instead of AGENTS.md, and qfai init does not write either.";
+
 const STORY_SEED_PATHS = [
   "decisions.md",
   "open-questions.md",
@@ -528,6 +536,7 @@ export async function runInit(
   }
 
   info(await workflowModeLine(destRoot));
+  info(CLAUDE_MD_NOTE);
   const unmet = (await checkWorkflowPreconditions(destRoot)).length;
   if (unmet > 0) {
     info(
