@@ -47,6 +47,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exact dependency pin that moved, naming the old and new versions and whether
   the dependency declares an install script, and it asks each change to name the
   files it retires. Fixes #3547.
+- **The `sdd-cycle` step does not pass after a cycle that adopted a finding
+  until the second cycle has run.** Its Passes when section now states this, so
+  the stage review sees a skipped second cycle. Fixes #3790.
 
 - **The `qfai-run` final report lists every plan step with its status.** A
   step-status table gives one row per plan step and planned review, each marked
@@ -77,6 +80,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and `qfai-sdd` triage passes a seed or sample data change whose values no
   story, BR or contract sets with a one-line note and no decision row.
   Fixes #3779.
+
+- **Verify runs a gate that looks unrelated to the change, and a procedure
+  edit with no checker records "no applicable checker".** `verify-repo-gate`
+  and `common-gate-run` now say that a gate which looks unrelated to the change,
+  such as a test gate for a documents-only change, is still run and its result
+  recorded; `verify.json` keeps its four statuses and gains no not-applicable
+  status. `implement-procedure` no longer requires a document lint or link
+  check that no Standard commands entry defines for the changed files: the
+  stage report records "no applicable checker", which is neither a pass nor
+  UNRUN and does not block completion. A gate the project defines is still run.
+  Fixes #3764. Fixes #3765.
 
 - **`qfai init` asks you to restart a running agent session after it rewrites
   skills or hooks.** A running session keeps the skill and hook text it loaded
@@ -163,6 +177,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `!.qfai/assistant/**`, was written without a newline, so `git diff` showed
   `No newline at end of file`. The file now ends with exactly one newline.
   Fixes #3748.
+
+- **A request to file follow-up issues plans a step that files them.** It was
+  read as leftovers to sort again, whose plan files no issue. The `qfai-run`
+  extraction reference now says an explicit request to file issues is an
+  operation the session carries out, extracted as `order` with no artifacts,
+  and gives it as an example. Leftovers to sort without filing stay
+  `follow-up`. Fixes #3753.
 
 - **`implement-tdd` says where a UI test's annotations go.** Its UI paragraph
   now says a component test carries only `QFAI:EX` annotations, a UI acceptance

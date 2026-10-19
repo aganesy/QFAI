@@ -35,7 +35,9 @@ Neither is restated here.
 
 1. **Determine applicable gates before resolving commands.** Use the calling
    stage's scope and the project's declared scope. Do not narrow the gate set
-   from the diff alone. Decide whether the conditional `Build` (if relevant)
+   from the diff alone: a gate that looks unrelated to the change, such as a
+   test gate for a change to documents only, is still run and its result
+   recorded. Decide whether the conditional `Build` (if relevant)
    and `Pack / distribution` (if distributed) gates apply from those scopes.
    When a condition is false, omit its gate from `gates` and record the reason
    in the stage report. A required gate with a missing command, launcher or

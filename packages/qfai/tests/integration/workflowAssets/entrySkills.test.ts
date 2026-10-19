@@ -628,6 +628,27 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0211-05
+  it("reads an explicit request to file follow-up issues as an operation, not leftovers to sort", async () => {
+    const reference = await readShipped(EXTRACTION);
+    expect(flat(sectionOf(reference, "## Intent"))).toContain(
+      "A request that explicitly asks for issues to be filed, such as follow-up issues for what finished work left over or feedback on the tools it used, names an operation the session carries out: extract it as `order` with no artifacts. Feedback on the tools is still drafted and approved as `.agents/rules/session-feedback.md` sets out: the user chooses which drafts are filed. Leftovers to sort again, with no request to file them, stay `follow-up`.",
+    );
+    const line = sectionOf(reference, "## Examples")
+      .split("\n")
+      .find((each) => each.startsWith('- "File issues for everything this task left over." → '));
+    const parsed: unknown = parse(/→ `(\{.*\})`$/.exec(line ?? "")?.[1] ?? "null");
+    expect(parsed).toEqual({ intent: "order", artifacts: [], confidence: "high" });
+    const pinned: unknown = { ...extraction(), ...(isRecord(parsed) ? parsed : {}) };
+    if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
+    const routeOf = (outcome: ReturnType<typeof routingOutcome>) =>
+      "taken" in outcome ? outcome.taken.route : undefined;
+    expect([
+      routeOf(routingOutcome(pinned)),
+      routeOf(routingOutcome(extraction({ intent: "follow-up", artifacts: [] }))),
+    ]).toEqual(["run-operation", "retriage-bundle"]);
+  });
+
+  // QFAI:AC-0001-0211-05
   // QFAI:EX-0001-0211-35
   it("reads a request to raise qfai itself as a dependency change, whose step carries the upgrade", async () => {
     const intents = sectionOf(await readShipped(EXTRACTION), "## Intent");

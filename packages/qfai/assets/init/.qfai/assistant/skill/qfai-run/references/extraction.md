@@ -108,6 +108,13 @@ can take outside it, such as a dashboard setting or a token to issue, takes the
 intent of the repository change, with the entry flag `env`. `human-run` is for
 a request that is only the operation.
 
+A request that explicitly asks for issues to be filed, such as follow-up issues
+for what finished work left over or feedback on the tools it used, names an
+operation the session carries out: extract it as `order` with no artifacts.
+Feedback on the tools is still drafted and approved as
+`.agents/rules/session-feedback.md` sets out: the user chooses which drafts are
+filed. Leftovers to sort again, with no request to file them, stay `follow-up`.
+
 Each intent below is followed by when to set it.
 
 ### Answers and no work
@@ -314,6 +321,7 @@ Each request is followed by its extraction. Fields not shown are empty.
 - "An empty phone number returns 500; the spec says 400." → `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`
 - "Is the work complete?", asked of the session that did it → `{ intent: question-why, qualifiers: [session-answerable], confidence: high }`
 - "Merge the pull request." → `{ intent: order, confidence: high }`
+- "File issues for everything this task left over." → `{ intent: order, artifacts: [], confidence: high }`
 - "How do I export the results as CSV?" → `{ intent: question-how, confidence: high }`
 - "Remove this task's completed temporary directory under the repository's ignored tmp root", with current user authority and ownership evidence → `{ intent: order, qualifiers: [owned-temporary-cleanup], artifacts: [], risks: [data-loss], confidence: high }`
 - "Last night's deploy failed.", with no cause given → `{ intent: question-why, confidence: high }`
