@@ -190,6 +190,30 @@ describe("README facts", () => {
       expect(readme, readmePath).toContain(".qfai/prototype/");
     }
   });
+
+  it("says qfai-run plans the lightest request, as the shipped skill does", async () => {
+    const skill = await readFile(
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "assets",
+        "init",
+        ".qfai",
+        "assistant",
+        "skill",
+        "qfai-run",
+        "SKILL.md",
+      ),
+      "utf-8",
+    );
+    expect(skill).toContain("the lightest included");
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      expect(readme, readmePath).toContain("plans every such request, the lightest included");
+      expect(readme, readmePath).not.toContain("is answered directly, with no plan");
+    }
+  });
 });
 
 /** Every `options.<key>` the given slice of CLI source touches. */
