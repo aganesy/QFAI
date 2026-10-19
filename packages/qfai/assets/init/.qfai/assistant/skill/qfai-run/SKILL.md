@@ -14,7 +14,7 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:REQUIRED]
 
-In a git worktree, follow the worktree's own `.claude/skills/qfai-run/SKILL.md`, whichever copy the host loaded. Follow the CLI plan's steps in order. Read no reference up front; each line says when.
+In a git worktree, read and follow the worktree's own `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded. Follow the CLI plan's steps in order. Read no reference up front; each line says when.
 
 - `references/extraction.md`: for an extraction step 1 does not give.
 - `references/plan.md`: for a plan field this file does not name, or a refused plan.

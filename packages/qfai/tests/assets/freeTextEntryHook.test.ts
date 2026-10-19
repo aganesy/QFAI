@@ -39,7 +39,7 @@ const FREE_TEXT_CASES =
   "a change, a fix, an investigation of the codebase, a question about the project or an operation on finished work";
 /** The one sentence the reminder and the skill both give on which copy of the skill a worktree follows. */
 const WORKTREE_COPY =
-  "In a git worktree, follow the worktree's own `.claude/skills/qfai-run/SKILL.md`, whichever copy the host loaded.";
+  "In a git worktree, read and follow the worktree's own `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded.";
 
 /** This repository's own Claude Code hooks, and the copy `qfai init` writes. */
 const OWN_SETTINGS = ".claude/settings.json";

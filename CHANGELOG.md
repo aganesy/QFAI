@@ -100,8 +100,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **In a git worktree, the worktree's own `qfai-run` skill is the one to
   follow.** The host may load another checkout's copy of the skill. The
   free-text entry reminder and the top of the `qfai-run` skill now give the
-  same sentence: follow the worktree's own `.claude/skills/qfai-run/SKILL.md`,
-  whichever copy the host loaded. Fixes #3799.
+  same sentence: read and follow the worktree's own
+  `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded.
+  That path is the one every host's skill directory links to. Fixes #3799.
 
 - **A failed launcher preflight stops every `npx qfai` call, not only gates.**
   The shared baseline's launcher rules now name every `npx qfai` call, gates
