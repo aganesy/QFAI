@@ -155,6 +155,9 @@ describe("layer-specific test obligations", () => {
         severity: "error",
         file: expect.stringContaining(examplesFile),
         refs: ["EX-0001-0001-01"],
+        message: expect.stringMatching(
+          /at tests[\\/]unit[\\/](?:header|body)\.test\.ts:\d+ is not on a comment line before a test declaration \(for example `it\(` or `test\(`\), so it counts for nothing\. Move it to a comment line above the test it covers, with only blank or comment lines between$/,
+        ),
       }),
     );
 
