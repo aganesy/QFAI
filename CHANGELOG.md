@@ -202,12 +202,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `DELEGATED` only when the project's Standard commands declared it
   `CI only: <check name>`, so a user who runs tests only in CI saw the verify
   stage run them locally or stop the commit. The user's instruction for a run
-  that delegates a gate to an actual named CI check now counts the same way for
-  that run, with the instruction recorded as its basis; the agent still never
-  delegates a gate on its own judgment. `verify-repo-gate` also says how to
-  update the verdict once the check reports: the gate keeps `DELEGATED` with
-  the observed state, a red check makes the verdict `FAIL`, and the gate is
-  never rewritten `PASS`. Fixes #3554. Fixes #3785.
+  that delegates a gate to a named CI check now counts the same way for that
+  run. The stage report quotes the instruction word for word with where it came
+  from, and without an instruction that can be quoted the gate is not delegated;
+  the agent still never delegates a gate on its own judgment. `verify-repo-gate`
+  also says how to update the verdict once the check reports for the
+  verification commit: the gate keeps `DELEGATED` with the observed state and is
+  never rewritten `PASS`, and the verdict is set again from every gate, so a red
+  check fails it and a later green rerun clears that failure. Fixes #3554.
+  Fixes #3785.
 
 - **The `qfai-run` extraction guide decides whether a changed default is a
   deprecation or a behaviour change.** `deprecation` already covered a published surface given a new

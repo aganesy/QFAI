@@ -27,12 +27,12 @@ Feature: Review a change twice: the specification before the code, and the code 
     Then it holds no review
     And lint, typecheck, build, the full tests and `qfai validate` run there and nowhere earlier in the route
     And when every gate passed, the change is committed locally, and nothing is pushed
-    And a CI-only gate explicitly delegated by user instruction or project policy may remain DELEGATED with its named check pending while a local commit transports only the session's tracked deliverables to CI
+    And a gate delegated (CI-only or by instruction), under a user instruction or project policy covering the commit, may remain DELEGATED with its named check pending while a local commit transports only the session's tracked deliverables to CI
     And every nondelegated gate must pass, and a delegated red check stops transport of the same unchanged candidate
     And an explicitly delegated transport commit may instead carry actual changes addressing that failure through the existing planned fix procedure into a new CI candidate, preserving the prior failing head, check, run and observed result as FAIL
     And neither the pending-check nor the changed-candidate transport completes verification or authorizes a merge; prior failure is never relabelled pending and the new candidate remains unverified until its own CI results are observed
-    And the user's instruction for this run delegating a gate to an actual named CI check delegates it for that run only, recorded as its basis, as a CI-only declaration does
-    And when the delegated check's result is observed for the verdict's head, the verdict is updated with that state, a red check making it FAIL, and the gate is never rewritten PASS
+    And the user's instruction for this run that delegates that gate to a named CI check delegates it for that run only, as a CI-only declaration does, with the instruction quoted word for word in the stage report; without a quotable instruction the gate is not delegated
+    And when the delegated check's result is observed for the verification commit, the verdict's status is set again from every gate, a red check making it FAIL and a later green rerun clearing it, and the gate is never rewritten PASS
     And missing or refused execution outside that delegation, or an ordinary FAIL or UNRUN including a base failure, still stops the commit; the agent never delegates a locally runnable gate on its own judgment to avoid running it
 
   # AC-0001-0225-04
