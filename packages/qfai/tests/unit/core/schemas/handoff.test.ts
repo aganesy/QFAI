@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   HANDOFF_MINIMUM_FIELDS,
+  HANDOFF_RESTYLE_FIELDS,
   parseHandoff,
   validateHandoff,
 } from "../../../../src/core/schemas/handoff.js";
@@ -67,6 +68,39 @@ describe("TC-0015-0025: validateHandoff accepts canonical + extra keys", () => {
       "entryPattern",
       "productScope",
     ]);
+  });
+});
+
+describe("validateHandoff checks the short form of a restyle handoff", () => {
+  const restyle = {
+    iterationKind: "restyle",
+    liveRoutes: ["/", "/settings"],
+    entryPoints: { stylesheet: ["src/styles/theme.css"], motion: [] },
+    implementationNotes: "The motion stays as it was.",
+  };
+
+  // QFAI:EX-0001-0095-02
+  it("accepts a restyle record with live routes and entry points and no procurement", () => {
+    expect(validateHandoff(restyle)).toEqual([]);
+    expect(HANDOFF_RESTYLE_FIELDS).toEqual(["iterationKind", "liveRoutes", "entryPoints"]);
+  });
+
+  it("reports a restyle record that lacks its live routes or its entry points", () => {
+    const fields = (record: Record<string, unknown>): (string | undefined)[] =>
+      validateHandoff(record).map((issue) => issue.field);
+    const noRoutes = { ...restyle, liveRoutes: undefined };
+    expect(fields(noRoutes)).toEqual(["liveRoutes"]);
+    expect(fields({ ...restyle, liveRoutes: [] })).toEqual(["liveRoutes"]);
+    expect(fields({ ...restyle, entryPoints: { stylesheet: ["a.css"] } })).toEqual(["entryPoints"]);
+    expect(fields({ ...restyle, entryPoints: "src/styles/theme.css" })).toEqual(["entryPoints"]);
+    expect(validateHandoff(noRoutes).map((issue) => issue.code)).toEqual([
+      "HANDOFF-SCHEMA-FIELD-TYPE",
+    ]);
+  });
+
+  it("checks no restyle field on a record of another kind", () => {
+    expect(validateHandoff({ finalArtifact: ".qfai/prototype/final/index.html" })).toEqual([]);
+    expect(validateHandoff({ iterationKind: "prototype" })).toEqual([]);
   });
 });
 

@@ -87,6 +87,28 @@ describe.each(TREES)("%s", (tree) => {
     expect(`${skill} ${loop} ${handoff}`).not.toMatch(/certificate|qfai prototyping/);
   });
 
+  // QFAI:AC-0001-0228-01
+  // QFAI:EX-0001-0228-05
+  it("restyles the live app in place, reviews its routes and hands off without a copy", async () => {
+    const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
+    const reviewer = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+    const handoff = flat(await read(tree, "step/prototyping-handoff/STEP.md"));
+
+    expect(loop).toContain(
+      "Record `iterationKind` in `progress.md` with them: `prototype`, the default, or `restyle` when the request changes only the styles and motion of screens the project already runs",
+    );
+    expect(loop).toContain(
+      "writes `iter-NN/index.html` as a list of the live routes in scope, one link per declared screen",
+    );
+    expect(reviewer).toContain(
+      "In a `restyle` iteration, the iteration page lists the live routes in scope: open each listed route in the running app and review it there.",
+    );
+    expect(handoff).toContain("In a `restyle` loop, copy nothing: the iteration is the live app.");
+    expect(flat(section(await read(tree, "step/prototyping-handoff/STEP.md"), "Gate"))).toContain(
+      "or, in a `restyle` loop, when `handoff.json` exists.",
+    );
+  });
+
   // QFAI:AC-0001-0228-02
   // QFAI:EX-0001-0228-02
   it("runs another iteration on a change and keeps the handoff waiting", async () => {
@@ -328,6 +350,27 @@ describe.each(TREES)("%s", (tree) => {
     expect(rule).toContain("`.qfai/prototype/final/handoff.json`");
     expect(rule).toContain("root `DESIGN.md`");
     expect(rule).toContain("| Prototype handoff, when a prototyping loop ran |");
+  });
+
+  // QFAI:AC-0001-0095-01
+  // QFAI:EX-0001-0095-02
+  it("writes a restyle handoff in its short form, which the implementer reads", async () => {
+    const handoff = flat(await read(tree, "skill/qfai-prototyping/references/handoff.md"));
+    const restyle = section(
+      await read(tree, "skill/qfai-prototyping/references/handoff.md"),
+      "Restyle handoff",
+    );
+    for (const field of ["iterationKind", "liveRoutes", "entryPoints", "implementationNotes"]) {
+      expect(restyle).toContain(`"${field}":`);
+    }
+    expect(restyle).not.toMatch(/"finalArtifact":|"procurement":/);
+    expect(handoff).toContain(
+      "`final/handoff.json` takes this short form in place of `finalArtifact` and `procurement`:",
+    );
+    const implement = flat(await read(tree, "skill/qfai-implement/references/ui-affecting.md"));
+    expect(implement).toContain(
+      "or, for a restyle, its live routes, its stylesheet and motion entry points and the implementation notes.",
+    );
   });
 
   // QFAI:AC-0001-0114-01
