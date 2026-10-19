@@ -1,8 +1,17 @@
 # Graph exploration
 
-Use the project graph CLIs for exploratory searches. Run `qfai init` to
-prepare or repair the project-local runtimes, CLI and denial hooks.
-This integration registers and launches no graph MCP server.
+Use the project graph CLIs for exploratory searches once they are ready. Run
+`qfai init` to prepare or repair the project-local runtimes, CLI and denial
+hooks. This integration registers and launches no graph MCP server.
+
+## While the graph tools are not ready
+
+When `qfai init` or the graph CLI reports an engine as not ready, use ordinary
+search for the questions that engine answers. Do the same when search
+protection is reported as unsupported for your host. Say in your report that
+the graph was not used and why. When a supported hook denies the search, use
+the fallback command in "Direct search and result limits" below. Retry the
+graph CLI once the reported cause is corrected.
 
 ## Choose the first engine
 

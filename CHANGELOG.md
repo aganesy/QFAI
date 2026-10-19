@@ -71,6 +71,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `node_modules` is gone or a merge changes the lockfile or `package.json`.
   Fixes #3818.
 
+- **The graph exploration rule opens with what to do while the graph tools are
+  not ready.** Its first section now says to use ordinary search for an engine
+  reported as not ready, or where search protection is unsupported for the host,
+  and to say in the report that the graph was not used and why. The entry-point
+  line in `AGENTS.md` and `.github/copilot-instructions.md` now tells the agent
+  to use the graph engines when they are ready and to follow that section until
+  then. Fixes #3745.
+
 - **The Markdown-schema check names the filesystem failure it met in the decision
   register.** When it cannot inspect a register path, read a register document or
   list the decision pages, the finding now carries the failure code, so a denied
