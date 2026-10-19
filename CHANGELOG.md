@@ -104,6 +104,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **A colliding decision ID is renumbered once, at merge time.** The
+  `qfai-sdd` triage reference now says a branch keeps its decision IDs while
+  its pull request is open, and the session that merges it runs
+  `qfai sdd renumber-decision` against the fetched base only when that base
+  declares an ID the branch added, renumbering every branch-added row from the
+  lowest colliding one upward. The command refuses a ledger an unfinished merge
+  left with conflict markers and writes nothing, so the reference says to abort
+  the merge, renumber, and merge again.
+  Fixes #3778.
+
 - **Shipped seed and sample data now have an artifact to fall under.** The
   `qfai-run` extraction reference files them under `data` rather than `config`,
   and `qfai-sdd` triage passes a seed or sample data change whose values no

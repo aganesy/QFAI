@@ -284,6 +284,20 @@ For a unique decision added by the incoming branch, repair its ID before merging
 qfai sdd renumber-decision --from <old-DEC-ID> --to <new-DEC-ID> --base <local-ref>
 ```
 
+Renumber once, at merge time. While the pull request is open, keep the
+branch's decision IDs even when the base moves. The session that merges it
+fetches the base and renumbers only when the fetched base now declares an ID
+the branch added. Then it renumbers every row the branch added, from the lowest
+colliding one upward and lowest first, so the rows stay in ascending order.
+Run on a clean tree against the fetched ref, for example `origin/main`, commit
+after each run, then merge the base. The tail conflict that is left holds two
+distinct IDs: keep both rows, the base's first.
+
+The command refuses a ledger that an unfinished merge left with conflict
+markers, as a dirty candidate, and writes nothing. Resolving the markers by
+hand does not help, because the working ledger still differs from HEAD. Abort
+the merge with `git merge --abort`, renumber, and merge again.
+
 The explicit base and HEAD must resolve locally and have one common ancestor
 that declares no source row. The base may already use that ID; the current
 tree must declare it only once. Choose an unused destination above both story trees'

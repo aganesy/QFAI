@@ -235,3 +235,41 @@ describe("decision renumber write safety", () => {
     expect(await readFile(path.join(root, third.file))).toEqual(third.original);
   });
 });
+
+describe("decision renumber during an unfinished merge", () => {
+  // QFAI:EX-0001-0008-20
+  it("rejects a ledger left with conflict markers and plans again once the merge is aborted", async () => {
+    await mkdir(path.join(root, specsDir), { recursive: true });
+    const table =
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Inherited | Keep | DONE |\n";
+    await writeFile(path.join(root, ledger), table);
+    git("add", ".");
+    git("commit", "-m", "ancestor");
+    git("checkout", "-b", "topic");
+    await writeFile(
+      path.join(root, ledger),
+      `${table}| DEC-0002 | Branch choice | Mine | TODO |\n`,
+    );
+    git("commit", "-am", "branch decision");
+    git("checkout", "main");
+    await writeFile(
+      path.join(root, ledger),
+      `${table}| DEC-0002 | Base choice | Theirs | TODO |\n`,
+    );
+    git("commit", "-am", "base decision");
+    git("checkout", "topic");
+    expect(() =>
+      execFileSync("git", ["merge", "--no-edit", "main"], { cwd: root, stdio: "ignore" }),
+    ).toThrow();
+    const conflicted = await readFile(path.join(root, ledger));
+    expect(conflicted.toString()).toContain("<<<<<<<");
+    const request = { root, specsDir, from: "DEC-0002", to: "DEC-0003", base: "main" };
+    await expect(buildDecisionRenumberPlan(request)).rejects.toThrow(`Dirty candidate: ${ledger}`);
+    expect(await readFile(path.join(root, ledger))).toEqual(conflicted);
+    git("merge", "--abort");
+    const plan = await buildDecisionRenumberPlan(request);
+    expect(plan.changes.map(({ file, count }) => ({ file, count }))).toEqual([
+      { file: ledger, count: 1 },
+    ]);
+  });
+});

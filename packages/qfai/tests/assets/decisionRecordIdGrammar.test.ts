@@ -63,6 +63,11 @@ describe("decision row identity", () => {
       );
       expect(triage, tree).toMatch(/only provably branch-added exact references change/i);
       expect(triage, tree).toMatch(/inherited references stay fixed/i);
+      expect(triage, tree).toContain("Renumber once, at merge time.");
+      expect(triage, tree).toContain(
+        "renumbers only when the fetched base now declares an ID the branch added",
+      );
+      expect(triage, tree).toContain("Abort the merge with `git merge --abort`, renumber");
       expect(triage, tree).toContain("the renamed record's subject or path in the commit message");
       expect(triage, tree).toContain(
         "A row the incoming branch added takes the next ID of its table",
