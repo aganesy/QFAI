@@ -295,6 +295,7 @@ describe("a question answered without a change", () => {
   });
 
   // QFAI:AC-0001-0220-06
+  // QFAI:EX-0001-0220-52
   it("waits for the checks a merge needs and checks the merged result", async () => {
     const procedure = flat(sectionOf(await step("triage-operate"), "## Procedure"));
     expect(procedure).toMatch(/Wait for checks still running before a merge/);
