@@ -127,6 +127,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so the line is not taken as passing evidence. The exit code is unchanged.
   Refs #3765.
 
+- **A DESIGN.md violation every screen shares is reported once.** The
+  prototyping reviewer repeated a violation whose source every screen shares,
+  such as a shared stylesheet or component, in each screen's review payload, so
+  one fix read as one entry per screen. Such a violation is now recorded only in
+  the per-iteration summary, and each screen's payload keeps the violations that
+  come from that screen. Fixes #3666.
+
 - **`QFAI-CONTRACT-043` no longer steers a screen with body text to
   `supplements: []`.** When a screen has no `supplements`, the fix now says to
   list each text the screen shows beyond its title, group headings and labels,
