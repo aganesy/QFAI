@@ -412,6 +412,34 @@ describe("where qfai-run runs the policy check and the commit", () => {
     );
   });
 
+  // QFAI:EX-0001-0223-15
+  it("has the final report give a step-status table that no gate reads", async () => {
+    const report = flat(
+      sectionOf(
+        await readShipped("skill/qfai-run/references/operator-screens.md"),
+        "## Final report",
+      ),
+    );
+    expect(report).toMatch(
+      /step-status table: one row per plan step in plan order, and one per planned review, each with its status and, for every status but `ran`, the reason/i,
+    );
+    for (const status of ["`ran`", "`passed`", "`delegated`", "`not run`", "`not reached`"]) {
+      expect(report).toContain(status);
+    }
+    expect(report).toMatch(/no gate reads the table/i);
+    expect(report).toMatch(
+      /`passed` is not a gate verdict: a step whose gate ran and passed is `ran`, and so is a step that ran and found nothing to do/i,
+    );
+    expect(report).toMatch(
+      /a step whose gate is UNRUN is `not run`, with the UNRUN reason; a step where some gates are delegated is `ran`, and its gate verdicts show the delegation/i,
+    );
+    const run = flat(sectionOf(await readShipped("skill/qfai-run/SKILL.md"), "## The work"));
+    expect(run).toMatch(/note each step's status for the final report/i);
+    expect(
+      flat(await readShipped("skill/qfai-run/references/reached-step-observations.md")),
+    ).toMatch(/list each step of the stage with its status/i);
+  });
+
   it("commits after an end release point, so the commit holds the approval", async () => {
     const work = flat(
       sectionOf(await readShipped("skill/qfai-run/references/stage-points.md"), "## Release point"),

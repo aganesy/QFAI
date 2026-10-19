@@ -22,6 +22,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **The `qfai-run` final report lists every plan step with its status.** A
+  step-status table gives one row per plan step and planned review, each marked
+  `ran`, `passed`, `delegated`, `not run` or `not reached`, with a reason for
+  every status but `ran`, so a run that skipped or handed off a step says so.
+  No gate reads the table. The extraction reference now says what the `env`
+  flag adds to a defect plan, and how to read a change that only adds or
+  corrects diagnostic output. Fixes #3471.
+
 - **A project that runs tests in CI only records Red and Green `ci-deferred`.**
   Where the Standard commands write the Test entry `CI only: <check name>`,
   `implement-tdd` and `implement-diagnose` write the failing test first and do
