@@ -104,6 +104,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **A critical decision found while writing the discussion pack goes back to
+  the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
+  for that one node: they stop writing, ask the user one round, and resume. The
+  stage report's `## Grilling Session` table gains one row for that round, and
+  the earlier rows stay as written. Only a no-question mode may record the
+  decision as an assumption. Fixes #3794.
+
 - **Shipped seed and sample data now have an artifact to fall under.** The
   `qfai-run` extraction reference files them under `data` rather than `config`,
   and `qfai-sdd` triage passes a seed or sample data change whose values no
