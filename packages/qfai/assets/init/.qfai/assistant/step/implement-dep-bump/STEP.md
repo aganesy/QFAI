@@ -46,20 +46,44 @@ the section "Keeping QFAI itself up to date" of `node_modules/qfai/README.md`:
 `init --force`, the retired files the release notes list, then `doctor` and
 `validate`. `init --force` replaces the skills and steps in use, so read the
 next step from disk after it runs. What `doctor` and `validate` report is part
-of the update: a new required key in `qfai.config.yaml`, and an edit to a spec
-contract, which needs its change request in `decisions.md` under
-`paths.specsDir`, as `.qfai/assistant/rule/drift-protocol.md` describes, before
-the contract file changes.
+of the update: this step writes a new required key in `qfai.config.yaml`, and a
+finding that names a spec contract moves the work as the next section says.
+
+## When a finding names a contract
+
+When `validate`, or another check the update runs, reports a finding that
+names a spec contract to change, leave the contract unchanged. Finish every
+other part of the update first, so the contract finding is the only open item.
+Then get the change approved as `.qfai/assistant/rule/drift-protocol.md`
+describes:
+
+1. Put the finding, the contract it names and the fix it states to the
+   operator as a critical decision: return `awaiting_input` and change nothing
+   more. The attempt holding the answer carries on.
+2. On approval, append one `Change request:` row to `decisions.md` under
+   `paths.specsDir`. Its Content names the contract's path, and its Approach
+   records the finding, the fix, who approved it and when. The row starts at
+   WIP.
+3. Report `branch: { outcome: contract-finding }` citing that row's DEC ID.
+   The work moves to `apply-settled`, whose `spec` stage edits the contract
+   under its change request. Its settled triage applies the cited row.
+
+On a decline, append the row at REJECTED, leave the contract as it is and
+report the finding as unresolved, with no branch. When the operator cannot be
+asked, write no row and report the change as the decision still needed.
 
 ## What it writes
 
 - The actual changed paths for the manifest, lockfile and any adapted call,
   listed in the stage report. When the dependency is `qfai` itself, they also
-  include a new key in `qfai.config.yaml` and a spec-contract edit with its
-  change request.
+  include a new key in `qfai.config.yaml`.
+- On a contract finding the operator answered, the change request row in
+  `decisions.md`, and its DEC ID in the stage report.
 - A record of the versions, the breaking changes read and how each was met, in the stage report.
 
 ## Gate
 
 The step is done when the target version is installed, the runtime check and
-every breaking change are recorded as met, and the relevant suite passes.
+every breaking change are recorded as met, and the relevant suite passes, or
+when every other part of the update is met and recorded and the only finding
+left is the contract one, which it reports as `contract-finding`.
