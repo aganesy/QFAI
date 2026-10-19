@@ -96,6 +96,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **A critical decision found while writing the discussion pack goes back to
+  the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
+  for that one node: they stop writing, ask the user one round, and resume. The
+  stage report's `## Grilling Session` table gains one row for that round, and
+  the earlier rows stay as written. Only a no-question mode may record the
+  decision as an assumption. Fixes #3794.
+
 - **Verify runs a gate that looks unrelated to the change, and a procedure
   edit with no checker records "no applicable checker".** `verify-repo-gate`
   and `common-gate-run` now say that a gate which looks unrelated to the change,

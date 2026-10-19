@@ -23,6 +23,16 @@ human authority in the stage evidence; the ending label alone is insufficient.
 Without that row, or with
 `Ended: stopped`, write nothing and stop.
 
+## A critical decision found while authoring
+
+A decision found while registering that is critical under
+`.agents/rules/grilling.md#critical-decisions` reopens the session for that
+node only. Stop writing, ask the user one round on that node, record the round
+as `.qfai/assistant/step/common-grilling-record/STEP.md#a-reopened-node` says,
+then resume. The rest of the session's record stays as it is.
+Recording the decision as an assumption is allowed only under a no-question
+mode, labelled beside its open question. A stop in that round is `Ended: stopped`.
+
 ## Reads
 
 - `.qfai/assistant/skill/qfai-discussion/references/oq-and-deferred-rules.md`

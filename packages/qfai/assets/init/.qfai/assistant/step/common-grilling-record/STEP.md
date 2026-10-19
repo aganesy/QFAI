@@ -63,3 +63,10 @@ Record these in the stage evidence, not as a fictional human option answer.
 `Ended at` and `Authoring began` are actual timestamps, with authoring later.
 A missing hard-required consumed input authorizes no authoring ending.
 Allowing authoring is not a completion or validation receipt.
+
+## A reopened node
+
+A critical decision found while authoring reopens the session for that node
+only, for one round to the user. Append one row for that round under the same
+header, with its own `Ended`, `Ended at` and `Authoring began`, before authoring
+resumes. The earlier rows stay as written. A stopped round is reported, not written.

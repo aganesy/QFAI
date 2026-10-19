@@ -279,6 +279,28 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(record, "It still cannot prove a session happened");
   });
 
+  it("reopens an ended session for one node a pack writer finds critical", async () => {
+    // A pack written on an assumption is the draft the run then defends, so a
+    // critical decision found while authoring goes back to the user for that
+    // node, and the record keeps the earlier rows rather than rewriting them.
+    for (const step of ["discussion-pack", "discussion-oq"] as const) {
+      const body = await readDiscussionStep(assistantDir, step);
+      expect(body, step).toContain("## A critical decision found while authoring");
+      expectPhrase(body, "reopens the session for that node only");
+      expectPhrase(body, "ask the user one round on that node");
+      expectPhrase(body, "common-grilling-record/STEP.md#a-reopened-node");
+      expectPhrase(body, "The rest of the session's record stays as it is.");
+      expectPhrase(
+        body,
+        "Recording the decision as an assumption is allowed only under a no-question mode",
+      );
+    }
+    const record = await read("assistant/step/common-grilling-record/STEP.md");
+    expect(record).toContain("## A reopened node");
+    expectPhrase(record, "Append one row for that round under the same header");
+    expectPhrase(record, "before authoring resumes. The earlier rows stay as written.");
+  });
+
   it("has the session holder hand the row to a delegated pack author", async () => {
     // A pack author that never held the session cannot know when it ended.
     const skill = await readSkill();
