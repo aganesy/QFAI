@@ -79,6 +79,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   extraction.
   Fixes #3498.
 
+- **`qfai-run` shows how to read a request that operates a device and changes
+  nothing in the repository.** An operation the session runs itself on a device
+  or system outside the repository is an `order` with no artifacts, so it takes
+  the existing operation route; one that deletes something needs the user's
+  explicit instruction. A request only to read the device's state is a question
+  the session answers. The `qfai-run` one-read shortcut says so, and the
+  extraction reference adds an example of each. Fixes #3768.
+
 - **`sdd-story` annotates an existing test with the example it proves.** Where
   an existing assertion already proves an example the step added or
   renumbered, `sdd-story` now adds that example's `// QFAI:EX-…` line before the
@@ -102,6 +110,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stage report's `## Grilling Session` table gains one row for that round, and
   the earlier rows stay as written. Only a no-question mode may record the
   decision as an assumption. Fixes #3794.
+
+- **Shipped seed and sample data now have an artifact to fall under.** The
+  `qfai-run` extraction reference files them under `data` rather than `config`,
+  and `qfai-sdd` triage passes a seed or sample data change whose values no
+  story, BR or contract sets with a one-line note and no decision row.
+  Fixes #3779.
 
 - **Verify runs a gate that looks unrelated to the change, and a procedure
   edit with no checker records "no applicable checker".** `verify-repo-gate`
