@@ -555,6 +555,9 @@ describe("qfai-run", () => {
     expect(extract).toMatch(/neither needs a reference/i);
     expect(extract).toContain("qualifiers: [session-answerable]");
     expect(extract).toContain("`{ intent: order, artifacts: [] }`");
+    expect(extract).toContain(
+      "The session-run operation that deletes nothing, read above as `{ intent: order, artifacts: [] }`, goes to `npx qfai workflow plan --order` instead, with no file; an order read through `references/extraction.md` keeps `--in`.",
+    );
     expect(extract).toMatch(/read any other request as `references\/extraction\.md`/i);
     expect(extract).toMatch(/every other field is empty, with `confidence: high`/i);
     const full = (fields: Partial<WorkflowExtraction>) =>
@@ -581,7 +584,7 @@ describe("qfai-run", () => {
     const commit = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(commit).toMatch(/`verify-commit` runs last, after any release point; never pushes\./);
     expect(commit).toMatch(
-      /A push, pull request, merge or branch update the user asks for after the plan ends is planned next as `\{ intent: order, artifacts: \[\] \}`, and its `triage-operate` delivers it/,
+      /A push, pull request, merge or branch update the user asks for after the plan ends is planned next as `\{ intent: order, artifacts: \[\] \}` with `npx qfai workflow plan --order`, and its `triage-operate` delivers it/,
     );
     const outcome = routingOutcome({
       ...extraction({ intent: "order", artifacts: [], confidence: "high" }),
