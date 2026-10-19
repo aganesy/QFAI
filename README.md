@@ -585,19 +585,23 @@ merges them.
 
 `npx qfai doctor` warns about each installed workflow whose text differs from
 the packaged copy. The warning gives the number of differing lines, the jobs
-that differ and each pinned action whose version differs. To keep a difference
-on purpose, list the file with a reason in `qfai.config.yaml`; doctor then
-reports it as `info` with that reason instead of a warning:
+that differ, each pinned action whose version differs and the file's current
+digest. To keep a difference on purpose, list the file with that digest and a
+reason in `qfai.config.yaml`; doctor then reports it as `info` with that reason
+instead of a warning:
 
 ```yaml
 workflow:
   acceptedDrift:
     - file: qfai-docs.yml
+      digest: <the digest doctor printed, sha256:…>
       reason: We run our own docs lane.
 ```
 
-An entry without a reason or with an empty one, or a file outside the shipped
-set or listed twice, is a configuration error and accepts nothing.
+When the file changes again its digest no longer matches, and doctor warns
+again with the new digest. An entry without a digest or a
+reason, or a file outside the shipped set or listed twice, is a configuration
+error and accepts nothing.
 
 On any other CI platform, configure the job yourself and run:
 
@@ -904,8 +908,8 @@ To upgrade by hand:
    nothing you keep reads them.
 5. `init --force` does not touch the workflows under `.github/workflows/`. For
    each one `npx qfai doctor` reports as differing, copy the packaged file over
-   it, or list it under `workflow.acceptedDrift` with a reason if you keep your
-   own version.
+   it, or list it under `workflow.acceptedDrift` with the digest doctor prints
+   and a reason if you keep your own version.
 6. Run `npx qfai doctor` and `npx qfai validate`, and fix what they report.
 7. Commit the result in one change.
 
