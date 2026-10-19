@@ -46,5 +46,6 @@ Read first: what `sdd-contract` wrote in this stage. The step passes when
 `sdd-contract` wrote or changed no BR Statement and no Examples cell, which is
 when no cycle runs. The pass names the contracts it read.
 
-After a first cycle that adopted a finding, the step does not pass until the
-second cycle has run.
+A step whose first cycle adopted a finding is not a pass. It ends only after
+the second cycle has run, and the review treats a missing second cycle as a
+failure.

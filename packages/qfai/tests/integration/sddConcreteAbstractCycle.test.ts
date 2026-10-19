@@ -200,8 +200,13 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     const text = await section(CYCLE_STEP, "## Passes when");
     expectSentence(
       text,
-      "no pass before the second cycle",
-      /after a first cycle that adopted a finding, the step does not pass until the second cycle has run/i,
+      "an adopting first cycle is not a pass",
+      /a step whose first cycle adopted a finding is not a pass/i,
+    );
+    expectSentence(
+      text,
+      "the step ends only after the second cycle",
+      /it ends only after the second cycle has run, and the review treats a missing second cycle as a failure/i,
     );
   });
 
