@@ -37,6 +37,9 @@ const SHIPPED_MESSAGES = "packages/qfai/assets/init/root/.agents/rules/reminders
 const SHIPPED_RUN_SKILL = "packages/qfai/assets/init/.qfai/assistant/skill/qfai-run/SKILL.md";
 const FREE_TEXT_CASES =
   "a change, a fix, an investigation of the codebase, a question about the project or an operation on finished work";
+/** The one sentence the reminder and the skill both give on which copy of the skill a worktree follows. */
+const WORKTREE_COPY =
+  "In a git worktree, read and follow the worktree's own `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded.";
 
 /** This repository's own Claude Code hooks, and the copy `qfai init` writes. */
 const OWN_SETTINGS = ".claude/settings.json";
@@ -165,7 +168,7 @@ describe("the free-text entry reminder", () => {
       expect(context).toContain(
         "Read the skill once per session rather than working from this line.",
       );
-      expect(context).toContain("In a git worktree, read `.claude/skills/qfai-run/SKILL.md`");
+      expect(context).toContain(WORKTREE_COPY);
       expect(context.length).toBeLessThan(1000);
     },
   );
@@ -185,6 +188,21 @@ describe("the free-text entry reminder", () => {
     expect(description).toMatch(
       /^Use when the user asks for .* in plain words and names no stage skill/,
     );
+  });
+
+  it("names the worktree's copy of qfai-run as the one to follow, in the reminder and the skill", async () => {
+    const stdout = await runReminderHook(
+      {
+        command: "node",
+        args: argsOf(promptEntry(await readGroups(SHIPPED_SETTINGS), FREE_TEXT_ENTRY_HOOK_MARKER)),
+      },
+      projectDirOf(repoRoot, SHIPPED_SETTINGS),
+    );
+    expect(contextOf(stdout)).toContain(WORKTREE_COPY);
+    const skill = await readFile(path.join(repoRoot, SHIPPED_RUN_SKILL), "utf-8");
+    // The first section of the body, which the agent reads before anything else.
+    const top = skill.split(/\r?\n## /)[1];
+    expect(top).toContain(WORKTREE_COPY);
   });
 
   it("says no request skips the run, the lightest included", async () => {
