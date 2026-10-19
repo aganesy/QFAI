@@ -195,6 +195,21 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     expect(decided.some((issue) => issue.code === "QFAI-SPACK-102")).toBe(false);
   });
 
+  // QFAI:AC-0001-0147-12
+  it("does not let the step pass after a first cycle that adopted a finding until the second runs", async () => {
+    const text = await section(CYCLE_STEP, "## Passes when");
+    expectSentence(
+      text,
+      "an adopting first cycle is not a pass",
+      /a step whose first cycle adopted a finding is not a pass/i,
+    );
+    expectSentence(
+      text,
+      "the step ends only after the second cycle",
+      /it ends only after the second cycle has run, and the review treats a missing second cycle as a failure/i,
+    );
+  });
+
   // QFAI:AC-0001-0147-13
   it("raises no decided finding again, and reads a REJECTED row the register accepts as decided", async () => {
     const text = await section(CYCLE, "## A decided finding is not raised again");

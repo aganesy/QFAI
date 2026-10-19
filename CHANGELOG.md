@@ -47,6 +47,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exact dependency pin that moved, naming the old and new versions and whether
   the dependency declares an install script, and it asks each change to name the
   files it retires. Fixes #3547.
+- **The `sdd-cycle` step does not pass after a cycle that adopted a finding
+  until the second cycle has run.** Its Passes when section now states this, so
+  the stage review sees a skipped second cycle. Fixes #3790.
 
 - **The `qfai-run` final report lists every plan step with its status.** A
   step-status table gives one row per plan step and planned review, each marked
