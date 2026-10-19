@@ -140,6 +140,7 @@ function resultOf(issues: Issue[]): ValidationResult {
 type LineKind =
   | "header"
   | "counts"
+  | "codes"
   | "fail-on"
   | "timings"
   | "run-log"
@@ -174,6 +175,11 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
       section = "none";
       severity = undefined;
       return { kind: "counts" as const, line };
+    }
+    if (line.startsWith("codes: ")) {
+      section = "none";
+      severity = undefined;
+      return { kind: "codes" as const, line };
     }
     if (line.startsWith("timings: ")) {
       section = "none";
@@ -575,6 +581,43 @@ describe("validate --format text matches the validate contract's text output gra
     expect(output).toContain("counts: info=1 warning=2 error=1\n");
   });
 
+  // QFAI:EX-0001-0039-20
+  it("follows the counts line with the documented per-code breakdown", async () => {
+    const guideline = await readGuideline();
+    expect(guideline).toContain("`codes: error=<n> (<CODE>: <n>, ...) warning=<n> info=<n>`");
+
+    const output = await captureStdout(() => {
+      emitText(
+        resultOf([
+          ...manyOfOneCode("QFAI-STORY-006", "error", 3),
+          ...manyOfOneCode("QFAI-AGENT-015", "error", 1),
+          ...manyOfOneCode("QFAI-TEST-002", "warning", 2, true),
+          ...manyOfOneCode("QFAI-TEST-001", "info", 1),
+        ]),
+        DEFAULT_FAIL_ON,
+      );
+      return Promise.resolve();
+    });
+    const lines = output.trimEnd().split("\n");
+    const counts = lines.findIndex((line) => line.startsWith("counts: "));
+
+    // Most frequent code first; suppressed issues are left out, as in `counts:`.
+    expect(lines[counts]).toBe("counts: info=1 warning=0 error=4");
+    expect(lines[counts + 1]).toBe(
+      "codes: error=4 (QFAI-STORY-006: 3, QFAI-AGENT-015: 1) warning=0 info=1 (QFAI-TEST-001: 1)",
+    );
+    expect(lines[counts + 2]).toBe("fail-on: error");
+  });
+
+  // QFAI:EX-0001-0039-20
+  it("prints the per-code line with zero counts when there are no issues", async () => {
+    const output = await captureStdout(() => {
+      emitText(resultOf([]), DEFAULT_FAIL_ON);
+      return Promise.resolve();
+    });
+    expect(output).toContain("counts: info=0 warning=0 error=0\ncodes: error=0 warning=0 info=0\n");
+  });
+
   it("reports an incomplete story test scan as a counted error issue", async () => {
     const guideline = await readGuideline();
     expect(guideline).toContain("`QFAI-SCAN-002` as an `error` issue");
@@ -611,7 +654,8 @@ describe("validate --format text matches the validate contract's text output gra
       });
       const lines = output.trimEnd().split("\n");
 
-      expect(lines.at(-3)).toMatch(/^counts: info=\d+ warning=\d+ error=\d+$/);
+      expect(lines.at(-4)).toMatch(/^counts: info=\d+ warning=\d+ error=\d+$/);
+      expect(lines.at(-3)).toMatch(/^codes: error=\d+/);
       expect(lines.at(-2)).toMatch(/^fail-on: \S/);
       expect(lines.at(-1)).toMatch(/^run-log: \S/);
     } finally {
@@ -669,15 +713,23 @@ describe("validate --format text matches the validate contract's text output gra
   it("classifies every structural line ahead of the message-continuation fallback", async () => {
     const guideline = await readGuideline();
     const rules = extractPrecedenceRules(guideline);
-    expect(rules).toHaveLength(7);
-    const anchors = ["`[info]`", "`counts:`", "`fail-on:`", "`timings:`", "`run-log:`", "`fix:`"];
+    expect(rules).toHaveLength(8);
+    const anchors = [
+      "`[info]`",
+      "`counts:`",
+      "`codes:`",
+      "`fail-on:`",
+      "`timings:`",
+      "`run-log:`",
+      "`fix:`",
+    ];
     for (const [index, anchor] of anchors.entries()) {
       expect(rules[index], `precedence rule ${index + 1} must key on ${anchor}`).toContain(anchor);
     }
     expect(rules[0], "the first precedence rule must name the line that closes a group").toContain(
       "and <n> more",
     );
-    expect(rules[6], "the last precedence rule must be the message-continuation fallback").toBe(
+    expect(rules[7], "the last precedence rule must be the message-continuation fallback").toBe(
       "anything else continues the previous issue's message",
     );
 
@@ -693,7 +745,8 @@ describe("validate --format text matches the validate contract's text output gra
 
       expect(classified.at(-1)?.kind).toBe("run-log");
       expect(classified.at(-2)?.kind).toBe("fail-on");
-      expect(classified.at(-3)?.kind).toBe("counts");
+      expect(classified.at(-3)?.kind).toBe("codes");
+      expect(classified.at(-4)?.kind).toBe("counts");
       expect(classified.filter((entry) => entry.kind === "counts")).toHaveLength(1);
 
       const header = classified.findIndex(
@@ -709,6 +762,9 @@ describe("validate --format text matches the validate contract's text output gra
 
       for (const entry of classified.filter((item) => item.kind === "message-continuation")) {
         expect(entry.line.startsWith("counts: "), `structural line absorbed: ${entry.line}`).toBe(
+          false,
+        );
+        expect(entry.line.startsWith("codes: "), `structural line absorbed: ${entry.line}`).toBe(
           false,
         );
         expect(entry.line.startsWith("fail-on: "), `structural line absorbed: ${entry.line}`).toBe(

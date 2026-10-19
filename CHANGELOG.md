@@ -104,6 +104,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **`qfai validate` text output now counts findings per code.** A `codes:`
+  line after `counts:` follows each severity's count with the count of each
+  of its codes, most frequent first, for example
+  `codes: error=94 (QFAI-STORY-006: 94) warning=0 info=0`, so a reader sees at
+  once whether a run holds anything but an expected code. A script that read
+  the line after `counts:` as `fail-on:` must skip the new line.
+  Fixes #3797.
+
 - **Shipped seed and sample data now have an artifact to fall under.** The
   `qfai-run` extraction reference files them under `data` rather than `config`,
   and `qfai-sdd` triage passes a seed or sample data change whose values no
