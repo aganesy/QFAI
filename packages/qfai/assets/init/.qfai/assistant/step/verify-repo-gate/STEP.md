@@ -45,7 +45,9 @@ commands entry named after the colon:
 7. build/package (if relevant): `Build`
 8. pack/verify (if distributed): `Pack / distribution`
 
-Run listed commands and record outputs. A gate whose Standard commands entry
+Run listed commands and record outputs. A gate that looks unrelated to the
+change is still run and its result recorded; `verify.json` has no status for a
+gate that does not apply to the change. A gate whose Standard commands entry
 is `CI only: <check name>` is not run here: record it `DELEGATED` with that
 check name. This requires an actual CI check covering the same gate and scope;
 local environment failure alone creates no delegation. Retain observed FAIL or

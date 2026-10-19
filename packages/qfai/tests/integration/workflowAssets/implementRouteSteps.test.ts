@@ -319,4 +319,22 @@ describe("the route-only procedure writer", () => {
     expect(report).toContain("UNRUN");
     expect(report).toMatch(/(?:unavailable|missing).*checks|checks.*(?:unavailable|missing)/iu);
   });
+
+  it("records no applicable checker when no defined check covers the changed files", async () => {
+    const text = await procedureText();
+    const procedure = flat(sectionOf(text, "## Procedure"));
+    expect(procedure).toContain(
+      "A check applies when the project's Standard commands define one that covers the changed files.",
+    );
+    expect(procedure).toContain(
+      'record "no applicable checker" in the stage report: it is neither a pass nor UNRUN, and it is not required.',
+    );
+    expect(procedure).toContain(
+      "This covers only a check that does not exist; a gate the project defines is still run.",
+    );
+    const gate = flat(sectionOf(text, "## Gate"));
+    expect(gate).toContain(
+      'Where no checker covers the changed files, the stage report records "no applicable checker", which neither passes nor blocks the gate.',
+    );
+  });
 });

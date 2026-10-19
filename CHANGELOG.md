@@ -62,6 +62,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending approval row first.
   Fixes #3551.
 
+- **Verify runs a gate that looks unrelated to the change, and a procedure
+  edit with no checker records "no applicable checker".** `verify-repo-gate`
+  and `common-gate-run` now say that a gate which looks unrelated to the change,
+  such as a test gate for a documents-only change, is still run and its result
+  recorded; `verify.json` keeps its four statuses and gains no not-applicable
+  status. `implement-procedure` no longer requires a document lint or link
+  check that no Standard commands entry defines for the changed files: the
+  stage report records "no applicable checker", which is neither a pass nor
+  UNRUN and does not block completion. A gate the project defines is still run.
+  Fixes #3764. Fixes #3765.
+
 - **`qfai init` asks you to restart a running agent session after it rewrites
   skills or hooks.** A running session keeps the skill and hook text it loaded
   at start, so after `qfai init --force` it went on acting on the old text.

@@ -69,6 +69,20 @@ describe("a gate the project runs in CI only is recorded as delegated", () => {
       ).toEqual(['"PASS"', '"FAIL"', '"UNRUN"', '"DELEGATED"']);
     });
 
+    it(`${tree}: runs and records a gate that looks unrelated to the change, with no not-applicable status`, async () => {
+      const [gateRun, repoGate] = await Promise.all([
+        read(tree, "assistant/step/common-gate-run/STEP.md"),
+        read(tree, "assistant/step/verify-repo-gate/STEP.md"),
+      ]);
+      expect(flat(gateRun)).toContain(
+        "a gate that looks unrelated to the change, such as a test gate for a change to documents only, is still run and its result recorded",
+      );
+      const gates = flat(sectionOf(repoGate, "## Repository gates"));
+      expect(gates).toContain(
+        "A gate that looks unrelated to the change is still run and its result recorded; `verify.json` has no status for a gate that does not apply to the change.",
+      );
+    });
+
     it(`${tree}: the gate step, the repository gate, the commit step and the contract agree`, async () => {
       const gateRun = await read(tree, "assistant/step/common-gate-run/STEP.md");
       const repoGate = await read(tree, "assistant/step/verify-repo-gate/STEP.md");

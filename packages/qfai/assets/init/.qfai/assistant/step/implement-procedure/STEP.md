@@ -41,7 +41,11 @@ what is needed to resume. Never invent values, commands or permission.
 3. Keep the instructions usable: name the actor, prerequisites, expected
    result, stop conditions and recovery for each action.
 4. Run the applicable document lint and link checks through
-   `.qfai/assistant/step/common-gate-run/STEP.md`. Keep actual evidence;
+   `.qfai/assistant/step/common-gate-run/STEP.md`. A check applies when the
+   project's Standard commands define one that covers the changed files. Where
+   none does, record "no applicable checker" in the stage report: it is neither
+   a pass nor UNRUN, and it is not required. This covers only a check that does
+   not exist; a gate the project defines is still run. Keep actual evidence;
    unavailable required checks remain UNRUN with their blocker and resume
    condition. Follow the plan's existing independent code review and closing
    verification stages.
@@ -65,5 +69,7 @@ prove an adopter's operation succeeded.
 
 The authorized document is complete and consistent with existing policy.
 Applicable lint and link checks have actual results through
-`common-gate-run`; failures and unavailable checks prevent completion.
+`common-gate-run`; failures and unavailable checks prevent completion. Where
+no checker covers the changed files, the stage report records "no applicable
+checker", which neither passes nor blocks the gate.
 Protected edits and uncovered actions were stopped before writing or acting.
