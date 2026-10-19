@@ -2,6 +2,7 @@
  * Integration: init prints one line asking the user to restart a running agent session when it
  * wrote a skill or hook file, and nothing when it wrote none.
  */
+// QFAI:AC-0001-0196-19
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -23,12 +24,14 @@ describe("the agent restart note", () => {
     process.exitCode = undefined;
   });
 
+  // QFAI:EX-0001-0196-71
   it("is printed once by a first init, which writes the skills and hooks", async () => {
     await withEmptyRepo(async (root) => {
       expect(restartLines(await initQuietly(root))).toEqual([RESTART_LINE]);
     });
   });
 
+  // QFAI:EX-0001-0196-72
   it("is printed by --force when it rewrites an edited skill file", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
@@ -43,18 +46,25 @@ describe("the agent restart note", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-72
   it.each([
     [".codex", "hooks.json"],
     [".claude", "settings.json"],
   ])("is printed when the hook file %s/%s is written again", async (dir, file) => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
-      await writeFile(path.join(root, dir, file), "{}\n", "utf-8");
+      const hookFile = path.join(root, dir, file);
+      const written = await readFile(hookFile, "utf-8");
+      await writeFile(hookFile, "{}\n", "utf-8");
 
-      expect(restartLines(await initQuietly(root))).toEqual([RESTART_LINE]);
+      const output = await initQuietly(root);
+
+      expect(await readFile(hookFile, "utf-8")).toBe(written);
+      expect(restartLines(output)).toEqual([RESTART_LINE]);
     });
   });
 
+  // QFAI:EX-0001-0196-72
   it("is printed by --force when it regenerates an edited Codex agent profile", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
@@ -72,6 +82,7 @@ describe("the agent restart note", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-72
   it("is printed by --force when it overwrites an edited rule master", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
@@ -86,6 +97,7 @@ describe("the agent restart note", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-73
   it("is not printed when no skill or hook file changed, with or without --force", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
@@ -95,6 +107,7 @@ describe("the agent restart note", () => {
     });
   });
 
+  // QFAI:EX-0001-0196-73
   it("is not printed by a dry run", async () => {
     await withEmptyRepo(async (root) => {
       expect(restartLines(await initQuietly(root, false, true, true))).toEqual([]);
