@@ -114,6 +114,9 @@ describe("shipped qfai-sdd story-tree contract", () => {
     const content = await skill();
     expect(content).toContain("ID | Content | Approach | Status");
     expect(content).toContain("Append rows only; afterwards change only Status");
+    expect(content).toContain(
+      "When a later decision replaces a row, change that row's Status to `SUPERSEDED (by DEC-NNNN)`, naming the later row, or to `PARTLY SUPERSEDED (by DEC-NNNN)` when it replaces only part of it.",
+    );
     expect(content).toContain("including retired IDs named in decisions rows");
     expect(content).toContain("A change request Content begins `Change request:`");
   });

@@ -22,6 +22,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **The `sdd-triage` step says how a replaced decision is recorded.** Its
+  decision-row rules now say that when a later decision replaces a row, that
+  row's Status changes to `SUPERSEDED (by DEC-NNNN)`, or to
+  `PARTLY SUPERSEDED (by DEC-NNNN)` when only part of it is replaced, so an
+  agent reading only the step finds the existing status. Fixes #3786.
+
 - **The free-text entry reminder applies only to a message the user wrote.**
   Its full and brief messages now say that an automated notice, such as a
   finished background task, a wake-up or a CI event, starts no `qfai-run`, so
