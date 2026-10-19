@@ -15,4 +15,7 @@ stages:
     steps: [verify-qfai-gate, verify-repo-gate, verify-commit]
     after: [note]
 decisionPoints: []
-branchPoints: []
+branchPoints:
+  - step: implement-dep-bump
+    outcomes:
+      - { outcome: contract-finding, routes: [apply-settled] }
