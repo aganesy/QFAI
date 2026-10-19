@@ -29,6 +29,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **`qfai-run` plans each item of a standing queue instruction separately.**
+  The extraction reference now gives "merge the open pull requests oldest
+  first, then the issues" as an example of one goal covering independent
+  targets, so each pull request or issue gets its own extraction and plan
+  instead of being worked without one. Fixes #3781.
+
 - **The `sdd-triage` step says how a replaced decision is recorded.** Its
   decision-row rules now say that when a later decision replaces a row, that
   row's Status changes to `SUPERSEDED (by DEC-NNNN)`, or to
