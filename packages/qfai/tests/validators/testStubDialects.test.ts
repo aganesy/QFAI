@@ -1102,3 +1102,173 @@ describe("the runner a finding names is the one the file runs on", () => {
     });
   });
 });
+
+describe("node:test parks a test in forms of its own", () => {
+  // `node --test` parks a test three more ways than the shared chain: an
+  // options object, a call on the test context, and a `.skip` whose first
+  // argument is the test function. Since the finding names node:test for these
+  // files, a clean result would otherwise read as "node:test is covered".
+  const NODE_TEST = 'import { test } from "node:test";';
+  const file = (...lines: string[]): string => [NODE_TEST, "", ...lines, ""].join("\n");
+
+  const findings = async (body: string): Promise<Array<[string, number | undefined]>> =>
+    withTests({ "tests/a.test.mjs": body }, async (root) =>
+      (await validateTestTodoStubs(root, CONFIG)).map((i) => [i.code, i.loc?.line]),
+    );
+
+  it.each([
+    ["{ skip: true }", "QFAI-TEST-003"],
+    ['{ skip: "flaky on CI" }', "QFAI-TEST-003"],
+    ["{ todo: true }", "QFAI-TEST-001"],
+    ["{ timeout: 50, todo: 'later' }", "QFAI-TEST-001"],
+  ])("reports the option form %s", async (options, code) => {
+    expect(await findings(file(`test("parked", ${options}, () => {});`))).toEqual([[code, 3]]);
+  });
+
+  it("reports the option form written as the first argument", async () => {
+    expect(await findings(file("test({ skip: true }, () => {});"))).toEqual([["QFAI-TEST-003", 3]]);
+  });
+
+  it.each([["{ skip: false }"], ["{ skip: process.env.CI !== undefined }"], ["{ timeout: 50 }"]])(
+    "says nothing about the option form %s",
+    async (options) => {
+      expect(await findings(file(`test("runs", ${options}, () => {});`))).toEqual([]);
+    },
+  );
+
+  it.each([
+    [`t${SKIP}()`, "QFAI-TEST-003"],
+    [`t${SKIP}("not on this platform")`, "QFAI-TEST-003"],
+    [`t${TODO}()`, "QFAI-TEST-001"],
+  ])("reports %s called inside a test", async (call, code) => {
+    const body = file('test("parked", (t) => {', `  ${call};`, "});");
+    expect(await findings(body)).toEqual([[code, 4]]);
+  });
+
+  it(`reports ${SKIP} whose first argument is the test function`, async () => {
+    expect(await findings(file(`test${SKIP}(() => {});`))).toEqual([["QFAI-TEST-003", 3]]);
+  });
+
+  it(`reports ${SKIP} with no argument, which parks a test with no name`, async () => {
+    expect(await findings(file(`test${SKIP}();`))).toEqual([["QFAI-TEST-003", 3]]);
+  });
+
+  it("reports each form on its own line, in file order", async () => {
+    const body = file(
+      `test${SKIP}(async () => {});`,
+      'test("b", { todo: true }, () => {});',
+      'test("c", (t) => {',
+      `  t${SKIP}();`,
+      "});",
+    );
+    expect(await findings(body)).toEqual([
+      ["QFAI-TEST-003", 3],
+      ["QFAI-TEST-001", 4],
+      ["QFAI-TEST-003", 6],
+    ]);
+  });
+
+  it("keeps Playwright's runtime guard excluded in a Playwright file", async () => {
+    const guard = [
+      'import { test } from "@playwright/test";',
+      "",
+      `test${SKIP}(({ browserName }) => browserName === "webkit", "not on webkit");`,
+      'test("runs", async ({ page }) => {',
+      `  test${SKIP}();`,
+      "});",
+      "",
+    ].join("\n");
+    await withTests({ "tests/e2e/a.spec.ts": guard }, async (root) => {
+      expect(await stubCodes(root)).toEqual([]);
+    });
+  });
+
+  it.each([
+    ["describe", "QFAI-TEST-003", "{ skip: true }"],
+    ["it", "QFAI-TEST-001", "{ todo: 'later' }"],
+    ["suite", "QFAI-TEST-003", "{ skip: true }"],
+    ["test.only", "QFAI-TEST-003", "{ skip: true }"],
+  ])("reports the option form on %s", async (root, code, options) => {
+    expect(await findings(file(`${root}("s", ${options}, () => {});`))).toEqual([[code, 3]]);
+  });
+
+  it.each([
+    [`suite${SKIP}("s", () => {});`, "QFAI-TEST-003"],
+    [`suite${TODO}("s");`, "QFAI-TEST-001"],
+  ])("reports %s, node:test's own name for describe", async (line, code) => {
+    expect(await findings(file(line))).toEqual([[code, 3]]);
+  });
+
+  it("reports the option form on a subtest, at the context's column", async () => {
+    const body = file(
+      'test("a", async (t) => {',
+      '  await t.test("s", { skip: true }, () => {});',
+      "});",
+    );
+    await withTests({ "tests/a.test.mjs": body }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.map((i) => [i.code, i.loc?.line, i.loc?.column])).toEqual([
+        ["QFAI-TEST-003", 4, 9],
+      ]);
+    });
+  });
+
+  it.each([
+    ["a call that is not a test", "const cfg = makeConfig({ skip: true });"],
+    ["a member call named test", "schema.test({ skip: true });"],
+    ["a comment", `// t${SKIP}() and test("s", { skip: true }, () => {});`],
+    ["a string", `const text = 't${SKIP}() test("s", { todo: true })';`],
+  ])("says nothing about %s", async (_name, line) => {
+    expect(await findings(file(line))).toEqual([]);
+  });
+
+  it.each([
+    [
+      "inside an if",
+      ['  if (process.platform === "win32") {', `    t${SKIP}("posix");`, "    return;", "  }"],
+    ],
+    ["after another statement", ["  const ready = probe();", `  t${TODO}();`]],
+  ])("says nothing about a context call %s, which is a run-time guard", async (_name, lines) => {
+    expect(await findings(file('test("s", (t) => {', ...lines, "});"))).toEqual([]);
+  });
+
+  it("reports a context call that is the whole body of an arrow or a function", async () => {
+    const body = file(`test("a", (t) => t${SKIP}());`, `test("b", function (t) { t${TODO}(); });`);
+    expect(await findings(body)).toEqual([
+      ["QFAI-TEST-003", 3],
+      ["QFAI-TEST-001", 4],
+    ]);
+  });
+
+  it("reports both tokens when one options object sets skip and todo", async () => {
+    const body = file('test("s", { skip: true, todo: true }, () => {});');
+    await withTests({ "tests/a.test.mjs": body }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.map((i) => [i.code, i.loc?.line, i.loc?.column])).toEqual([
+        ["QFAI-TEST-003", 3, 1],
+        ["QFAI-TEST-001", 3, 1],
+      ]);
+    });
+  });
+
+  it("gives each finding its column", async () => {
+    const body = file(`   test("s", { skip: true }); test${SKIP}(() => {});`);
+    await withTests({ "tests/a.test.mjs": body }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.map((i) => [i.code, i.loc?.line, i.loc?.column])).toEqual([
+        ["QFAI-TEST-003", 3, 4],
+        ["QFAI-TEST-003", 3, 31],
+      ]);
+    });
+  });
+
+  it("reads a long blank first argument in linear time", async () => {
+    // The blanks before the options object once sat in front of the optional
+    // first argument, and every split of a long blank run was tried: an 80k
+    // character argument took seconds.
+    const body = file(`test(${" ".repeat(80_000)}, () => {});`);
+    const started = performance.now();
+    expect(await findings(body)).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(2_000);
+  });
+});
