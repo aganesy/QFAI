@@ -151,9 +151,8 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
   // - `tests/helpers/distributedSurfaceScan.ts` (JS RegExp, smoke
   //   against `qfai init` output)
   // The three sites carry the same forbidden classes. Updating one
-  // (e.g. tightening `INTERNAL_VERSION_RE` to a QFAI-context regex)
-  // requires updating all three. Cross-reference comments at the other
-  // two sites point back here.
+  // (e.g. adding a new internal ID class) requires updating all three.
+  // Cross-reference comments at the other two sites point back here.
   //
   // Coverage limitation (Nv8u): `TS_COMMENT_LINE_RE` matches lines
   // whose first non-whitespace character is a comment marker. Trailing

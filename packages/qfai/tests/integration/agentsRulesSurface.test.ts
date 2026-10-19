@@ -2072,9 +2072,11 @@ describe("rule overlays", () => {
         "spec-0001",
         "is the released version",
         "No file name is exempt",
-        // Versions that belong to something else, and the matcher's ceiling.
+        // Versions that belong to something else, and how they are spelled
+        // so the broad matcher lets them through.
         "A version that belongs to something else",
-        "project-qualified form",
+        "Write such a version without the `v`",
+        "never narrow the matcher",
         // The guard layers, and where each of them runs.
         "distributedSurfaceLeakage.test.ts",
         "lint job and in the build job",
