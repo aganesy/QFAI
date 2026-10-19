@@ -95,7 +95,7 @@ describe.each(TREES)("%s", (tree) => {
     const handoff = flat(await read(tree, "step/prototyping-handoff/STEP.md"));
 
     expect(loop).toContain(
-      "Record `iterationKind` in `progress.md` with those fields: `prototype`, the default, or `restyle` when the request changes only the styles and motion of screens the project already runs",
+      "The kind comes from the request, as preflight took it: `prototype`, the default, or `restyle` when the request changes only the styles and motion of screens the project already runs",
     );
     expect(loop).toContain(
       "writes `iter-NN/index.html` as a list of the live routes in scope, one link per declared screen",
@@ -121,6 +121,13 @@ describe.each(TREES)("%s", (tree) => {
     );
     expect(restyle).toContain("Edit only the project's stylesheet and motion entry points");
     expect(restyle).toContain(
+      "a restyle `pivot` rethinks only the visual treatment: screens, fields and behaviour stay.",
+    );
+    expect(preflight).toContain("For a `restyle` request, the live app must already be running.");
+    expect(reviewer).toContain(
+      "Read the edited stylesheet and motion files as well when filling `designMdViolations[]`.",
+    );
+    expect(restyle).toContain(
       "Write `iter-NN/index.html` as the list of live routes in scope: one link per declared screen, each with its absolute URL and the setup it needs",
     );
     expect(flat(section(await read(tree, "step/prototyping-handoff/STEP.md"), "Gate"))).toContain(
@@ -142,7 +149,12 @@ describe.each(TREES)("%s", (tree) => {
     expect(loop).toContain(
       "A restyle's edits are product code. The route's implement stage carries them: there they are change-noted, gated, tested and committed.",
     );
-    expect(loop).toContain("a restyle is not offered the `narrow` scope");
+    expect(loop).toContain(
+      "So a restyle needs a scope that includes the implement stage. Today only `broad` does: `narrow` and `medium` stop before it.",
+    );
+    expect(loop).toContain(
+      "If the route's scope has no implement stage, stop and ask the user to re-plan before iteration 00.",
+    );
   });
 
   // QFAI:AC-0001-0228-02
@@ -181,7 +193,7 @@ describe.each(TREES)("%s", (tree) => {
     const skill = flat(await read(tree, "skill/qfai-prototyping/SKILL.md"));
     expect(skill).toContain("Every file the loop writes stays under `.qfai/prototype/`");
     expect(skill).toContain(
-      "No `qfai` command writes there. The one file a command reads is the handoff record `.qfai/prototype/final/handoff.json`, which `npx qfai validate --profile saas-package` checks against the CLI-HANDOFF schema.",
+      "No `qfai` command writes any of these files. The one file a command reads is the handoff record `.qfai/prototype/final/handoff.json`, which `npx qfai validate --profile saas-package` checks against the CLI-HANDOFF schema.",
     );
 
     for (const step of ["prototyping-grill", "prototyping-loop", "prototyping-handoff"]) {

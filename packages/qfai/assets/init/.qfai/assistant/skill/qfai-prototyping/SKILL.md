@@ -44,7 +44,7 @@ prototyping completes when the user confirms the prototype.
 Every file the loop writes stays under `.qfai/prototype/`: the session record,
 each iteration and its reviews, and the handoff. A `restyle` loop also edits
 the project's stylesheet and motion entry points its handoff names. No `qfai`
-command writes there. The one file a command reads is the handoff record
+command writes any of these files. The one file a command reads is the handoff record
 `.qfai/prototype/final/handoff.json`, which
 `npx qfai validate --profile saas-package` checks against the CLI-HANDOFF schema.
 

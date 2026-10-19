@@ -40,7 +40,7 @@ specialization_tags:
 - Reconcile sidecar artifacts (screen contracts), design tokens, mermaid flows, and rendered output consistency.
   HTML mock is optional fallback evidence only. Design tokens are supporting input.
 - For UI implementation, compare rendered output against the prototype handoff, canonical prototype screenshots, HTML snapshots, and the final prototype the handoff's `finalArtifact` names (`.qfai/prototype/final/index.html`), or, for a `restyle` handoff, its `liveRoutes` (compare in the running app) and `entryPoints`.
-- Check the implementation against the handoff's `procurement` before judging
+- Check the implementation against the handoff's `procurement` (a restyle handoff has none) before judging
   resemblance: a region the manifest says was procured and the code rebuilt is a finding
   with a name, and an authored region the manifest does not list is one too.
 - Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,

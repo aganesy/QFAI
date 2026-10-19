@@ -283,6 +283,9 @@ envelope, the one self-contained file, the `<link rel="stylesheet">` ban and
 - Write `iter-NN/index.html` as the list of live routes in scope: one link
   per declared screen, each with its absolute URL and the setup it needs, such
   as a login or seed data.
+- The seed and pivot rules below do not apply as written. The first restyle
+  iteration restyles the screens as they are, and a restyle `pivot` rethinks
+  only the visual treatment: screens, fields and behaviour stay.
 
 ## The first iteration (seed)
 
