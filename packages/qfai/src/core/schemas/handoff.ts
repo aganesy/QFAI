@@ -12,7 +12,8 @@
  *   - productScope?
  * All fields are optional; `additionalProperties: true` so skills MAY
  * attach per-skill data under custom keys without violating the
- * contract.
+ * contract. A record whose `iterationKind` is `restyle` must also carry
+ * the restyle short form's `liveRoutes` and `entryPoints`.
  */
 
 export const HANDOFF_MINIMUM_FIELDS = [
@@ -25,6 +26,13 @@ export const HANDOFF_MINIMUM_FIELDS = [
 ] as const;
 
 export type HandoffMinimumField = (typeof HANDOFF_MINIMUM_FIELDS)[number];
+
+/**
+ * The fields of the short form a prototyping handoff takes when the loop
+ * restyled the live app in place (`iterationKind: "restyle"`): the live
+ * routes reviewed, and the stylesheet and motion entry points changed.
+ */
+export const HANDOFF_RESTYLE_FIELDS = ["iterationKind", "liveRoutes", "entryPoints"] as const;
 
 /**
  * Canonical (typed) view over the minimum field set. Extra keys are
@@ -83,7 +91,53 @@ export function validateHandoff(input: unknown): HandoffValidationIssue[] {
       });
     }
   }
+  issues.push(...restyleIssues(obj));
   return issues;
+}
+
+/** The prototyping loop's iteration kinds a handoff record may name. */
+const ITERATION_KINDS: readonly unknown[] = ["prototype", "restyle"];
+
+/**
+ * An `iterationKind` names a known kind, and a restyle record names at least
+ * one live route and both lists of entry points.
+ */
+function restyleIssues(obj: Record<string, unknown>): HandoffValidationIssue[] {
+  const [kindField, routesField, entryField] = HANDOFF_RESTYLE_FIELDS;
+  const kind = obj[kindField];
+  if (kind === undefined) return [];
+  if (!ITERATION_KINDS.includes(kind)) {
+    return [
+      {
+        code: "HANDOFF-SCHEMA-FIELD-TYPE",
+        message: `Field "${kindField}" must be "prototype" or "restyle".`,
+        field: kindField,
+      },
+    ];
+  }
+  if (kind !== "restyle") return [];
+  const issues: HandoffValidationIssue[] = [];
+  const routes = obj[routesField];
+  if (!isStringList(routes) || routes.length === 0) {
+    issues.push({
+      code: "HANDOFF-SCHEMA-FIELD-TYPE",
+      message: `A restyle handoff needs "${routesField}", a non-empty list of route strings.`,
+      field: routesField,
+    });
+  }
+  const entry = obj[entryField];
+  if (!isRecord(entry) || !isStringList(entry.stylesheet) || !isStringList(entry.motion)) {
+    issues.push({
+      code: "HANDOFF-SCHEMA-FIELD-TYPE",
+      message: `A restyle handoff needs "${entryField}" with "stylesheet" and "motion" lists of paths.`,
+      field: entryField,
+    });
+  }
+  return issues;
+}
+
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
 /**

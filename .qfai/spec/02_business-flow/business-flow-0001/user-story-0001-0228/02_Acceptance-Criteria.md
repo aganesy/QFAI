@@ -24,4 +24,5 @@ Feature: Finish prototyping when I confirm the prototype
     Given a prototyping session
     When it writes the prototype, its reviews and the handoff
     Then each is under `.qfai/prototype/`
+    And a restyle session also edits only the stylesheet and motion entry points its handoff names
 ```
