@@ -10,8 +10,8 @@ import {
   getConfigPath,
   loadConfig,
   readAcceptedDrift,
-  type AcceptedDrift,
   resolvePath,
+  type AcceptedDrift,
   type ConfigPathKey,
 } from "./config.js";
 import { readUiContractScreenContracts } from "./contracts/screenContracts.js";

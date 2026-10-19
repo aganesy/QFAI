@@ -342,7 +342,7 @@ export function readSkippedWorkflows(document: unknown): ReadonlySet<string> | n
 export const ACCEPTED_DRIFT_MESSAGE = `workflow.acceptedDrift must be a list of entries, each with a file, one of the shipped workflow file names (${[...SHIPPED_WORKFLOW_NAMES].join(", ")}) listed once, the digest qfai doctor prints for it (sha256: and 64 lowercase hexadecimal characters), and a reason that is not empty; an absent key means no difference is accepted.`;
 
 /** One `workflow.acceptedDrift` entry: the digest of the accepted text and why it is kept. */
-export type AcceptedDrift = { digest: string; reason: string };
+export type AcceptedDrift = { readonly digest: string; readonly reason: string };
 
 const DRIFT_DIGEST = /^sha256:[0-9a-f]{64}$/;
 

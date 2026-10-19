@@ -133,7 +133,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   difference with a reason.** The `workflows.drift.*` warning now also names each
   action both files use whose pinned version differs, with the version on each
   side. A file listed under `workflow.acceptedDrift` in `qfai.config.yaml`, each
-  entry with a `file` and a `reason`, is reported as `info` with that reason
+  entry with a `file`, a `digest` and a `reason`, is reported as `info` with that reason
   instead of a warning; an entry without a reason or with an empty one, or a file outside
   the shipped set or listed twice, is a configuration error and accepts nothing. The README upgrade steps now cover
   the workflows `init --force` leaves alone.

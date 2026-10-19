@@ -594,13 +594,12 @@ instead of a warning:
 workflow:
   acceptedDrift:
     - file: qfai-docs.yml
-      digest: sha256:<the digest doctor printed>
+      digest: <the digest doctor printed, sha256:…>
       reason: We run our own docs lane.
 ```
 
-The digest is `sha256:` and the SHA-256 of the installed file with its line
-endings read as LF. When the file changes again its digest no longer matches,
-and doctor warns again with the new digest. An entry without a digest or a
+When the file changes again its digest no longer matches, and doctor warns
+again with the new digest. An entry without a digest or a
 reason, or a file outside the shipped set or listed twice, is a configuration
 error and accepts nothing.
 

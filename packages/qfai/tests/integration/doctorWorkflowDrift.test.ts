@@ -221,6 +221,8 @@ describe("qfai doctor reports a shipped workflow that differs from the shipped t
 });
 
 const OURS = "name: ours\n";
+/** The SHA-256 of `OURS`, written out so the digest is not only checked against itself. */
+const OURS_DIGEST = "sha256:d7bbcd55840ed6edd5e0c7305b786ec5ab712ba4cd652d3ecb3bc48b06e7d12a";
 
 function acceptedDocs(digest: string, reason = "We run our own docs lane."): string {
   return `workflow:\n  acceptedDrift:\n    - file: qfai-docs.yml\n      digest: ${digest}\n      reason: ${reason}\n`;
@@ -257,6 +259,7 @@ describe("qfai doctor reads an accepted drift from qfai.config.yaml", () => {
       `    - file: qfai-docs.yml\n${digest}      reason: "  "\n`,
       "    - file: qfai-docs.yml\n      reason: Ours.\n",
       `    - file: qfai-docs.yml\n${digest.replace("sha256:", "")}      reason: Ours.\n`,
+      `    - file: qfai-docs.yml\n      digest: ${OURS_DIGEST.toUpperCase().replace("SHA256:", "sha256:")}\n      reason: Ours.\n`,
       `    - file: qfai-orphan.yml\n${digest}      reason: Ours.\n`,
       `    - file: qfai-docs.yml\n${digest}      reason: Ours.\n    - file: qfai-docs.yml\n${digest}      reason: Again.\n`,
       "    - qfai-docs.yml\n",
@@ -286,8 +289,8 @@ describe("qfai doctor reads an accepted drift from qfai.config.yaml", () => {
 
     const [docs, tests] = await driftFindings(root);
 
-    expect(docs?.message).toContain(`Its current digest is ${digestOf(OURS)}.`);
-    expect(docs?.details).toMatchObject({ digest: digestOf(OURS) });
+    expect(docs?.message).toContain(`Its current digest is ${OURS_DIGEST}.`);
+    expect(docs?.details).toMatchObject({ digest: OURS_DIGEST });
     expect(tests?.message).toContain(
       `Its current digest is ${digestOf("name: ours\non: push\n")}.`,
     );
@@ -305,8 +308,10 @@ describe("qfai doctor reads an accepted drift from qfai.config.yaml", () => {
       ["workflows.drift.qfai-docs", "warning"],
     ]);
     expect(found[0]?.message).toContain(
-      `changed since workflow.acceptedDrift accepted it: the entry records ${digestOf(OURS)}, and the file now reads ${digestOf(edited)}.`,
+      `changed since workflow.acceptedDrift accepted it: the entry records ${digestOf(OURS)}. It differs`,
     );
+    expect(found[0]?.message).toContain(`Its current digest is ${digestOf(edited)}.`);
+    expect(found[0]?.message).toContain("put that digest in its workflow.acceptedDrift entry");
     expect(await configLoadMessage(root)).toBe("Loaded and normalized with 0 issues");
   });
 });

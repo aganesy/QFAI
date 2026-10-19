@@ -193,7 +193,7 @@ export async function checkWorkflowDrift(
       entry === undefined
         ? `${installedPath} differs`
         : `${installedPath} changed since workflow.acceptedDrift accepted it: the entry records ` +
-          `${entry.digest}, and the file now reads ${digest}. It differs`;
+          `${entry.digest}. It differs`;
     const keep =
       entry === undefined
         ? "To keep the difference, list the file with that digest and a reason under " +
