@@ -16,7 +16,7 @@
  * install; the neutral `written` / `would write` covers both.
  */
 
-import { mkdir, mkdtemp, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -35,7 +35,7 @@ const DESIGN_SAMPLE = ".qfai/assistant/skill/qfai-prototyping/templates/DESIGN.m
 
 /**
  * The `    - <relative path>` entries under a given report heading. A dry run puts the path's
- * state (`new` or `changed`) before it, and that column is dropped here.
+ * state (`new`, `changed`, `identical` or `kept`) before it, and that column is dropped here.
  */
 function pathsUnder(output: string, heading: string): string[] {
   const lines = output.split("\n");
@@ -48,7 +48,7 @@ function pathsUnder(output: string, heading: string): string[] {
     if (!line.startsWith("    - ")) {
       break;
     }
-    listed.push(line.slice("    - ".length).replace(/^(?:new|changed) +/, ""));
+    listed.push(line.slice("    - ".length).replace(/^(?:new|changed|identical|kept) +/, ""));
   }
   return listed;
 }
@@ -101,37 +101,6 @@ describe("qfai init run report", () => {
       expect(pathsUnder(output, "  would write paths:")).not.toContain("DESIGN.md");
       // The past-tense heading must not appear under a dry-run header.
       expect(output).not.toMatch(/ {2}written:\s*\d+/);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // A dry run listed every path it would write without saying which of them already exist, so a
-  // project could not tell what an upgrade would overwrite before running it for real.
-  // QFAI:EX-0001-0023-02
-  it("marks each path a --force dry run would write as new or changed", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const edited = path.join(root, ".agents", "rules", "api-budget.md");
-      await writeFile(edited, "edited by the project\n", "utf-8");
-      await unlink(path.join(root, ".qfai", "assistant", "rule", "constitution.md"));
-
-      const preview = await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: true, yes: true, verbose: true });
-      });
-
-      const lines = preview.split("\n");
-      expect(lines).toContain("    - changed .agents/rules/api-budget.md");
-      expect(lines).toContain("    - new     .qfai/assistant/rule/constitution.md");
-      // A file that already holds this release's content is not written, so it is skipped.
-      expect(pathsUnder(preview, "  would write paths:")).not.toContain(
-        ".agents/rules/action-reversibility.md",
-      );
-      expect(pathsUnder(preview, "  skipped paths:")).toContain(
-        ".agents/rules/action-reversibility.md",
-      );
-      expect(await readFile(edited, "utf-8")).toBe("edited by the project\n");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

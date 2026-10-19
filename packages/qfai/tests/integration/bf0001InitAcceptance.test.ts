@@ -57,12 +57,12 @@ function reportSection(output: string, header: string): string[] {
   const paths: string[] = [];
   for (const line of lines.slice(start + 1)) {
     if (!line.startsWith(bullet)) break;
-    // A dry run puts the path's state (`new` or `changed`) before it.
+    // A dry run puts the path's state before it.
     paths.push(
       line
         .slice(bullet.length)
         .trim()
-        .replace(/^(?:new|changed) +/, "")
+        .replace(/^(?:new|changed|identical|kept) +/, "")
         .replace(/\\/g, "/"),
     );
   }

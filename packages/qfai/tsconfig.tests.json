@@ -310,6 +310,7 @@
     "tests/integration/shippedWorkflowOwnership.test.ts",
     "tests/integration/routeRecordsAndGates.test.ts",
     "tests/integration/initForceNoLock.test.ts",
+    "tests/integration/initDryRunPathStates.test.ts",
     "tests/integration/initKeptAssistantNote.test.ts",
     "tests/integration/validateTimingsLine.test.ts",
     "tests/helpers/doctorFixtures.ts",

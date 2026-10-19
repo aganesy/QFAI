@@ -117,10 +117,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the earlier rows stay as written. Only a no-question mode may record the
   decision as an assumption. Fixes #3794.
 
-- **`qfai init --dry-run` marks each path it would write as `new` or
-  `changed`.** A `changed` path holds a file the run would replace, so the
-  preview of an `init --force` upgrade shows what it would overwrite. A file
-  that already matches is not written and stays under `skipped`. Fixes #3752.
+- **`qfai init --dry-run` marks each path with its state.** The dry-run path
+  lines now carry a state column. A path it would write is `new` or
+  `changed`: a `changed` path holds a file the run would replace or update,
+  so the preview of an `init --force` upgrade shows what it would overwrite; a
+  merged file keeps the project's content and is also named on its
+  `would update:` line. With `--force` and `--verbose`, each skipped path is
+  `identical` when it already holds what init would write, or `kept` when it
+  differs and stays as it is. Fixes #3752.
 
 - **Shipped seed and sample data now have an artifact to fall under.** The
   `qfai-run` extraction reference files them under `data` rather than `config`,

@@ -53,8 +53,8 @@ required guidance. A source fix or package version string alone does not prove
 that a published package contains it.
 
 Preview the refresh with that verified local launcher using
-`npx qfai init --force --dry-run`. Review the managed files it would replace,
-including any direct local edits, before `npx qfai init --force`. Review the
+`npx qfai init --force --dry-run`. Review the paths marked `changed`, which it
+would replace, including any direct local edits, before `npx qfai init --force`. Review the
 resulting diff. Force refresh overwrites managed assistant and rule masters;
 project specs, contracts, rule overlays, `skill.local/`, configuration overrides
 and existing entry documents remain project-owned. Keep them intact; do not

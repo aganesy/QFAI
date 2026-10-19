@@ -92,12 +92,12 @@ function sectionPaths(output: string, header: string): string[] {
     if (!line.startsWith(bulletPrefix)) {
       break;
     }
-    // A dry run puts the path's state (`new` or `changed`) before it.
+    // A dry run puts the path's state before it.
     paths.push(
       line
         .slice(bulletPrefix.length)
         .trim()
-        .replace(/^(?:new|changed) +/, ""),
+        .replace(/^(?:new|changed|identical|kept) +/, ""),
     );
   }
   return paths;
