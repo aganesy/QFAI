@@ -1031,6 +1031,36 @@ describe("the runner a finding names is the one the file runs on", () => {
     });
   });
 
+  it("names node:test for a file that imports it", async () => {
+    const file = `import { test } from "node:test";\n\n${parked}`;
+    await withTests({ "tests/a.test.mjs": file }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const message = issues.find((i) => i.code === "QFAI-TEST-003")?.message ?? "";
+      expect(message).toContain("silent in node:test");
+      expect(message).not.toContain("vitest/jest");
+    });
+  });
+
+  it("names node:test for a require of it too", async () => {
+    const file = `const { test } = require("node:test");\n\n${parked}`;
+    await withTests({ "tests/a.test.cjs": file }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.find((i) => i.code === "QFAI-TEST-003")?.message).toContain(
+        "silent in node:test",
+      );
+    });
+  });
+
+  it("names node:test in a stub finding as well as a skip finding", async () => {
+    const file = `import { it } from "node:test";\n\n${JS_STUB}`;
+    await withTests({ "tests/a.test.ts": file }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.find((i) => i.code === "QFAI-TEST-001")?.message).toContain(
+        "silent in node:test",
+      );
+    });
+  });
+
   it("keeps vitest/jest for a file that imports neither", async () => {
     const file = `import { test } from "vitest";\n\n${parked}`;
     await withTests({ "tests/a.test.ts": file }, async (root) => {
