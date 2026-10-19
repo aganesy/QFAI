@@ -26,10 +26,9 @@ fail=0
 #     `local-reference-id-comment`, which only that lint carries
 #   - packages/qfai/tests/helpers/distributedSurfaceScan.ts
 #     pattern array (smoke against `qfai init` output)
-# Updating a regex here (e.g. tightening INTERNAL_VERSION_RE to a
-# QFAI-context pattern) requires updating both other sites in the same
-# change. The guard table in `.agents/rules/distributed-surface.md`
-# lists the layers.
+# Updating a regex here (e.g. adding a new internal ID class) requires
+# updating both other sites in the same change. The guard table in
+# `.agents/rules/distributed-surface.md` lists the layers.
 #
 # The same forbidden classes are applied twice per surface: once to file
 # CONTENT and once to file NAMES (see the loop at the bottom). The smoke
@@ -51,20 +50,18 @@ fail=0
 INTERNAL_SPEC_RE='[sS][pP][eE][cC]-0*[1-9][0-9]+'
 
 # Internal version markers: any "vN.M" or "vN.M.P" outside of
-# package.json version, plus the "v1.x" sentinel. Intentionally broad
-# in YAGNI mode: this regex does NOT distinguish QFAI-internal version
-# markers from third-party version mentions (e.g. "Node.js v20",
-# "TypeScript v5.4", or example URLs containing "v1"/"v2"). The
-# distributed surfaces currently in scope (README.md / assets/ / dist/)
-# do not contain such third-party version mentions, so the broad pattern
-# is acceptable as a structural backstop.
+# package.json version, plus the "v1.x" sentinel. Deliberately broad:
+# this regex rejects a third-party version written with a leading "v"
+# too (e.g. "Claude Code v2.1.277", "TypeScript v5.4") wherever it
+# stands as its own token, because a private marker such as a
+# `# v6.1.0` comment trailer looks exactly like a third-party one and
+# no context rule tells them apart. A shipped file writes another tool's version
+# without the "v" ("Claude Code 2.1.277"), which does not match.
 #
-# Mid-term path: tighten to a QFAI-context regex such as
-# `\bQFAI[ -]v[0-9]+\.[0-9]+\.[0-9]+\b` once the Rule of Three triggers
-# (i.e., once a real third-party version reference needs to appear in a
-# distributed surface). On false positives, inspect the offending file
-# and CHANGELOG to confirm whether the version is QFAI-internal or
-# third-party context. See .agents/rules/distributed-surface.md.
+# Keep it broad: the shipped spelling adapts to this guard, never the
+# reverse. Do not narrow it to a project-qualified form, add a context
+# exemption or let any listed file through. See
+# .agents/rules/distributed-surface.local.md.
 INTERNAL_VERSION_RE='\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b'
 
 # QFAI internal trace IDs that should not leak (CAP-0010+, DEC, DR,
