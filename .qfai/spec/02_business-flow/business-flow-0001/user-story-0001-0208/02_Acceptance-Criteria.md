@@ -24,6 +24,6 @@ Feature: Verify as the final stage of a route
     When the report is written
     Then it records, for each layer the gates ran, the revision and the CI run and attempt, the deployed source and its difference from that revision, the runner, command and per-layer counts with their report files, each skip with its reason, whether each layer ran fresh or was restored from a cache, each retried case once with its final outcome, and support cases apart from behavior cases
     And a count no report establishes is UNKNOWN, and a layer that did not run, whose report is missing or that collected no cases is UNRUN with its reason, never a pass
-    And semantic coverage of a requirement is reported apart from the run report, so a passing annotated test does not mark a requirement covered
+    And where the report states the semantic coverage of a requirement, it states it apart from the run report and does not mark a requirement covered because its annotated test passed
     And no JSON field, gate status, parser or runner is added
 ```

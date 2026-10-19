@@ -327,16 +327,20 @@ describe("the run report recipe in the human report", () => {
   it("lists what a run report records and keeps it apart from semantic coverage", async () => {
     const recipe = sectionOf(await readShipped(repoGate), recipeHeading);
     expect(recipe).not.toBe("");
-    expect(rowOf(recipe, "| Revision and run")).toMatch(/commit.*run ID.*attempt.*deployed/u);
+    const revision = rowOf(recipe, "| Revision and run");
+    expect(revision).toContain("common-gate-run/STEP.md#ci-evidence");
+    expect(revision).toMatch(/deployed source.*difference from that commit/u);
     expect(rowOf(recipe, "| Counts per layer")).toMatch(
       /each layer.*runner.*command.*collected, passed, failed and skipped.*report/u,
     );
     expect(rowOf(recipe, "| Skips")).toMatch(/skipped case.*reason.*intended/u);
     expect(rowOf(recipe, "| Fresh or cached")).toMatch(
-      /restored from a cache.*not reported as a fresh execution/u,
+      /restored from a cache names the run that produced it.*not reported as a fresh execution/u,
     );
-    expect(rowOf(recipe, "| Retries")).toMatch(/retried case counts once.*final outcome/u);
-    expect(rowOf(recipe, "| Support cases")).toMatch(/Setup, teardown.*apart from/u);
+    expect(rowOf(recipe, "| Retries")).toMatch(/counts once.*final outcome.*number of attempts/u);
+    expect(rowOf(recipe, "| Support cases")).toMatch(
+      /Setup, teardown.*apart from the cases that check behavior/u,
+    );
     const unknown = rowOf(recipe, "| UNKNOWN and UNRUN");
     expect(unknown).toMatch(/UNKNOWN/u);
     expect(unknown).toMatch(/report is missing.*collected no cases.*UNRUN/u);
@@ -347,7 +351,11 @@ describe("the run report recipe in the human report", () => {
     expect(coverage).toMatch(
       /annotation, an assertion and a passing case do not prove every clause of a requirement/u,
     );
-    expect(coverage).toMatch(/semantic coverage.*apart from the run report/u);
-    expect(coverage).toMatch(/no JSON field, gate status, parser or runner/u);
+    expect(coverage).toMatch(
+      /Where the report states the semantic coverage of a requirement, state it apart from the run report, and do not mark a requirement covered because its annotated test passed/u,
+    );
+    expect(coverage).toMatch(
+      /layer recorded UNRUN here is UNRUN for the gate that covers it, under `## Verdict` and `## A missing environment`; this recipe changes no gate status/u,
+    );
   });
 });
