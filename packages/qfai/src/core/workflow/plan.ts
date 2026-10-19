@@ -1,8 +1,7 @@
 // `npx qfai workflow plan`: the route an extraction or a route name gives, with its stages, steps
 // and decision, release and branch points. It starts nothing and writes nothing.
 
-import type { RouteChoice } from "./decisionRules.js";
-import type { Artifact, WorkflowExtraction } from "./extraction.js";
+import type { Artifact } from "./extraction.js";
 import { extractionFaultsOf, isExtraction } from "./extractionShape.js";
 import {
   loadInstalledPlan,
@@ -10,7 +9,7 @@ import {
   type PlanRefusal,
   type WorkflowPlanFile,
 } from "./plans.js";
-import { routingOutcome } from "./routeDecision.js";
+import { routingOutcome, type RouteCandidate } from "./routeDecision.js";
 import { isWorkflowRoute, type WorkflowRoute } from "./routes.js";
 import { firstWritingStep, scopesOf, unservedArtifacts, type PlanScope } from "./scopes.js";
 import { stepPath } from "./steps.js";
@@ -48,6 +47,7 @@ export interface PlanCandidate {
   summary: string;
   recommended: boolean;
   scopes: PlanScope[];
+  decisionPoints: string[];
 }
 
 export type PlanDocument =
@@ -141,9 +141,18 @@ function unservedRefusal(unserved: readonly Artifact[]): PlanDocument {
   );
 }
 
+// The `decision` flag says the work cannot start until someone chooses. A plan that names no
+// decision point then takes the first step that writes as one, so the choice is put to the user
+// before anything changes; the route itself stays as it is.
+function decisionPointsOf(plan: WorkflowPlanFile, flagged: boolean): string[] {
+  if (plan.decisionPoints.length > 0 || !flagged) return plan.decisionPoints;
+  const step = firstWritingStep(plan.stages, plan.family);
+  return step === undefined ? [] : [step];
+}
+
 async function candidatesOf(
   root: string,
-  choices: readonly RouteChoice[],
+  choices: readonly RouteCandidate[],
   recommended: WorkflowRoute,
   artifacts: readonly Artifact[],
 ): Promise<PlanDocument> {
@@ -154,6 +163,7 @@ async function candidatesOf(
     const { family, stages } = load.plan;
     // A candidate that cannot serve the request is not an option.
     if (unservedArtifacts(stages, artifacts).length > 0) continue;
+    const decisionPoints = decisionPointsOf(load.plan, choice.decision);
     const summary = `${FAMILY_SUMMARIES[family] ?? "Run this plan."} Stages: ${stages.map((stage) => stage.id).join(", ")}.`;
     candidates.push({
       route: choice.route,
@@ -162,6 +172,7 @@ async function candidatesOf(
       summary,
       recommended: choice.route === recommended,
       scopes: scopesOf(stages, artifacts),
+      decisionPoints,
     });
   }
   if (candidates.length === 0) return unservedRefusal(artifacts);
@@ -174,17 +185,6 @@ async function candidatesOf(
       recommended: first ? index === 0 : candidate.recommended,
     })),
   };
-}
-
-// The `decision` flag says the work cannot start until someone chooses. A plan that names no
-// decision point then takes the first step that writes as one, so the choice is put to the user
-// before anything changes; the route itself stays as it is.
-function decisionPointsOf(plan: WorkflowPlanFile, extraction: WorkflowExtraction): string[] {
-  if (plan.decisionPoints.length > 0 || !extraction.entryFlags.includes("decision")) {
-    return plan.decisionPoints;
-  }
-  const step = firstWritingStep(plan.stages);
-  return step === undefined ? [] : [step];
 }
 
 async function planOfExtraction(root: string, extraction: unknown): Promise<PlanDocument> {
@@ -209,7 +209,7 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
   if (!load.ok) return load.document;
   const unserved = unservedArtifacts(load.plan.stages, artifacts);
   if (unserved.length > 0) return unservedRefusal(unserved);
-  const decisionPoints = decisionPointsOf(load.plan, extraction);
+  const decisionPoints = decisionPointsOf(load.plan, extraction.entryFlags.includes("decision"));
   return planned(
     { ...load.plan, decisionPoints },
     outcome.taken.rule,

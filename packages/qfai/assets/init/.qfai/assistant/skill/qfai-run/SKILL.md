@@ -65,7 +65,7 @@ values plan nothing.
    The session-run operation that deletes nothing, read above as `{ intent: order, artifacts: [] }`, goes to `npx qfai workflow plan --order` instead, with no file; an order read through `references/extraction.md` keeps `--in`.
 2. **Candidates.** When `plan` returns `candidates`, put one single-select
    question, each option saying in the user's words what that route will do,
-   then run `npx qfai workflow plan --route <route>` for the chosen one.
+   then run `npx qfai workflow plan --route <route>` for the chosen one, keeping the candidate's `decisionPoints`.
 3. **Scope.** With two or more scopes, ask which to run as `references/operator-screens.md` says,
    and run only its stages. With one scope, no scopes, or a branch destination's plan, ask
    nothing and run every stage.

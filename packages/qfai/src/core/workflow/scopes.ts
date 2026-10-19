@@ -47,9 +47,12 @@ function writesSomething(stage: PlanStage): boolean {
   return (WRITES[stage.kind]?.length ?? 0) > 0;
 }
 
-// The first step of the first stage that writes an artifact, or `undefined` when no stage writes.
-export function firstWritingStep(stages: readonly PlanStage[]): string | undefined {
-  return stages.find(writesSomething)?.steps[0]?.name;
+// The first step of the first stage that writes, or `undefined` when no stage writes. In a fix
+// route the diagnosis writes the failing test, so its stage counts.
+export function firstWritingStep(stages: readonly PlanStage[], family: string): string | undefined {
+  const writes = (stage: PlanStage) =>
+    writesSomething(stage) || (family === "fix" && stage.kind === "diagnose");
+  return stages.find(writes)?.steps[0]?.name;
 }
 
 function writesRequested(stage: PlanStage, artifacts: readonly Artifact[]): boolean {

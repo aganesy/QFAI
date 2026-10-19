@@ -439,12 +439,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the per-iteration summary, and each screen's payload keeps the violations that
   come from that screen. Fixes #3666.
 
-- **The `decision` flag puts a decision point in every plan that writes.** An
-  extraction with the `decision` flag set on a route whose plan names no
+- **The `decision` flag puts a decision point in the plan of a flagged extraction.**
+  An extraction with the `decision` flag set on a route whose plan names no
   decision point, such as `change-tooling` for `intent: ci`, returned
   `decisionPoints: []`, so the plan gave no place to ask the open choice before
   `implement-tooling` changed files. `npx qfai workflow plan` now names the
-  first step that writes as the decision point; the route stays the same.
+  first step that writes as the decision point, `implement-diagnose` in a fix
+  route, and each low-confidence candidate carries its own `decisionPoints`,
+  which `qfai-run` keeps for the chosen route. The route stays the same.
   Fixes #3811.
 
 - **A failed graph tool download names the command that shows its cause.**

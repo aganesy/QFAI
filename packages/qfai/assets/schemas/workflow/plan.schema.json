@@ -283,7 +283,15 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["route", "family", "rule", "summary", "recommended", "scopes"],
+            "required": [
+              "route",
+              "family",
+              "rule",
+              "summary",
+              "recommended",
+              "scopes",
+              "decisionPoints"
+            ],
             "properties": {
               "route": {
                 "type": "string",
@@ -314,6 +322,14 @@
               },
               "scopes": {
                 "$ref": "#/$defs/scopes"
+              },
+              "decisionPoints": {
+                "description": "The decision points the route's plan takes for this reading, to use once the candidate is chosen.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
               }
             }
           }

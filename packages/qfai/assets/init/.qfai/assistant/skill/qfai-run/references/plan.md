@@ -110,7 +110,8 @@ The route, its stages in order with each step's file, and its points.
 
 A `low` extraction returns the distinct routes its readings reach, one to three,
 in the order the decision rules reach them, the main reading's route
-recommended.
+recommended. Each candidate carries the `decisionPoints` its reading gives;
+the plan `--route` returns for the chosen one takes them in place of its own.
 
 ```json
 {
@@ -122,7 +123,8 @@ recommended.
       "rule": 13,
       "summary": "Settle the decision before any change. Stages: discussion, close.",
       "recommended": false,
-      "scopes": [{ "scope": "broad", "stages": ["discussion", "close"], "recommended": true }]
+      "scopes": [{ "scope": "broad", "stages": ["discussion", "close"], "recommended": true }],
+      "decisionPoints": ["discussion-interview"]
     },
     {
       "route": "route-d",
@@ -138,7 +140,8 @@ recommended.
           "stages": ["spec", "prototype", "implement", "verify"],
           "recommended": false
         }
-      ]
+      ],
+      "decisionPoints": ["sdd-triage"]
     }
   ]
 }
