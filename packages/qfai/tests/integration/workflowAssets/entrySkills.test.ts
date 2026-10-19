@@ -626,6 +626,22 @@ describe("qfai-run", () => {
     );
   });
 
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-35
+  it("reads an alert whose intent depends on unread facts as an investigation question", async () => {
+    const reference = await readShipped(EXTRACTION);
+    expect(flat(sectionOf(reference, "## Procedure"))).toMatch(
+      /alert or a notice whose intent depends on facts not yet read.*extract it as `question-why`.*finds a defect, it reports a new extraction/i,
+    );
+    expect(flat(sectionOf(reference, "## Examples"))).toContain(
+      '"Last night\'s deploy failed.", with no cause given → `{ intent: question-why, confidence: high }`',
+    );
+    const outcome = routingOutcome(
+      extraction({ intent: "question-why", artifacts: [], confidence: "high" }),
+    );
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("answer-question");
+  });
+
   // QFAI:AC-0001-0229-06
   // QFAI:EX-0001-0229-10
   it("lists code and tests only when the request asks for the change to be implemented", async () => {

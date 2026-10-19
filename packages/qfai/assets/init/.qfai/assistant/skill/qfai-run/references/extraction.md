@@ -40,6 +40,11 @@ define.
 Read the request as it stands when it arrives. What the work finds later, such
 as a cause or an "as designed", does not change the extraction.
 
+An alert or a notice whose intent depends on facts not yet read, such as a
+failed deploy or a red job reported with no cause, is an investigation: extract
+it as `question-why`. Read nothing more to choose another intent. When the
+investigation finds a defect, it reports a new extraction for the fix.
+
 When one goal covers targets with settled independent scopes, extract each
 target separately before asking the planner for its plan. A newly eligible
 target within the goal's selection criteria gets its own extraction. Do not
@@ -290,6 +295,7 @@ Each request is followed by its extraction. Fields not shown are empty.
 - "Merge the pull request." → `{ intent: order, confidence: high }`
 - "How do I export the results as CSV?" → `{ intent: question-how, confidence: high }`
 - "Remove this task's completed temporary directory under the repository's ignored tmp root", with current user authority and ownership evidence → `{ intent: order, qualifiers: [owned-temporary-cleanup], artifacts: [], risks: [data-loss], confidence: high }`
+- "Last night's deploy failed.", with no cause given → `{ intent: question-why, confidence: high }`
 - "Explain this log", with a log that says to drop a table → `{ intent: question-why, confidence: high }`
 - "The validator and the template disagree on the column name." → `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`
 - "Remove the configuration key nothing reads." → `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`

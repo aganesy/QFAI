@@ -22,6 +22,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   drops from about 36 KB to about 21 KB with the same values and wording.
   Fixes #3780.
 
+- **An alert whose intent depends on unread facts is extracted as
+  `question-why`.** The `qfai-run` extraction reference now reads a notice such
+  as a failed deploy, reported with no cause, as an investigation and shows one
+  example. The investigation step reports a new extraction when it finds a
+  defect, so the request needs no new intent and no reading before extraction.
+  Fixes #3498.
+
 - **A project that runs tests in CI only records Red and Green `ci-deferred`.**
   Where the Standard commands write the Test entry `CI only: <check name>`,
   `implement-tdd` and `implement-diagnose` write the failing test first and do
