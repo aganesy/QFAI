@@ -50,9 +50,15 @@ investigation finds a defect, it reports the outcome `defect-found` with a new
 extraction of the request as a defect report.
 
 When one goal covers targets with settled independent scopes, extract each
-target separately before asking the planner for its plan. A newly eligible
-target within the goal's selection criteria gets its own extraction. Do not
-infer independence where a prerequisite is unfinished. Unsettled mixed findings
+target separately before asking the planner for its plan. A standing
+instruction to work through a queue, such as "merge the open pull requests
+oldest first, then the issues", is such a goal: each queue item whose scope
+is settled is a target with its own extraction and plan. A merge item extracts
+as `{ intent: order, artifacts: [] }`. An item that waits on another, such as
+a stacked pull request or one that conflicts until an earlier merge lands,
+waits as an unfinished prerequisite. A newly eligible target within the goal's
+selection criteria gets its own extraction. Do not infer independence where a
+prerequisite is unfinished. Unsettled mixed findings
 keep the bundle/decomposition handling below; a goal is not a new intent.
 
 ## Not the request
