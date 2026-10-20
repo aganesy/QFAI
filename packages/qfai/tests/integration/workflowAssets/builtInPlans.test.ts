@@ -11,6 +11,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
+import { STAGE_KEYS } from "../../../src/core/workflow/planFormat.js";
 import {
   PACKAGE_DEFAULTS,
   PLAN_ROUTES,
@@ -110,8 +111,6 @@ const PASS_THROUGH = [
 ];
 
 const PLAN_KEYS = ["route", "family", "stages", "decisionPoints", "releasePoint", "branchPoints"];
-
-const STAGE_KEYS = ["id", "kind", "steps", "after", "review"];
 
 /**
  * The order the delivery contract fixes for the skills a plan's steps belong to. A triage stage

@@ -12,7 +12,8 @@ export interface PlanScope {
   recommended: boolean;
 }
 
-// The artifacts a stage of each kind writes. A kind not named here writes none.
+// The artifacts a stage of each kind writes. A kind not named here writes none. A stage's `serves`
+// adds to those of its kind.
 const WRITES: Record<string, readonly Artifact[]> = {
   sdd: ["spec", "contract"],
   sdd_append: ["spec", "contract"],
@@ -43,8 +44,17 @@ export function hasPrivateIntake(stages: readonly PlanStage[]): boolean {
   return stages.some((stage) => stage.steps.some((step) => step.name === PRIVATE_INTAKE));
 }
 
+// The artifacts a stage of `kind` writes before its `serves`.
+export function kindWrites(kind: string): readonly Artifact[] {
+  return WRITES[kind] ?? [];
+}
+
+function writtenBy(stage: PlanStage): readonly Artifact[] {
+  return [...kindWrites(stage.kind), ...(stage.serves ?? [])];
+}
+
 export function writesSomething(stage: PlanStage): boolean {
-  return (WRITES[stage.kind]?.length ?? 0) > 0;
+  return writtenBy(stage).length > 0;
 }
 
 // The first step of the first stage that writes, or `undefined` when no stage writes. In a fix
@@ -58,7 +68,7 @@ export function firstWritingStep(stages: readonly PlanStage[], family: string): 
 function writesRequested(stage: PlanStage, artifacts: readonly Artifact[]): boolean {
   return artifacts.some(
     (artifact) =>
-      WRITES[stage.kind]?.includes(artifact) ||
+      writtenBy(stage).includes(artifact) ||
       (artifact === "ui" &&
         stage.kind === "sdd" &&
         stage.steps.some((step) => step.name === "common-design-md")),
