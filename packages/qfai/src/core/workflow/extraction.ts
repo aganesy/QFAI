@@ -67,6 +67,7 @@ export const QUALIFIERS = [
   "removal-requested",
   "visual-open",
   "prototype-requested",
+  "rename-requested",
   "owned-temporary-cleanup",
   "meaning-preserving",
   "session-answerable",

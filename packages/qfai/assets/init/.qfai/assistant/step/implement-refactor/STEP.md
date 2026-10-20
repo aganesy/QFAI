@@ -32,6 +32,20 @@ the story tree changes, so the step adds no example and runs no RED.
    import path. What a test asserts does not change.
 4. Delete code nothing calls and nothing declares.
 
+## Renaming a concept
+
+In the `rename-concept` route, the user asked to rename a concept across the
+project, and the specification stage before this step already renamed it in
+the stories, examples and contract rules, keeping every ID. This step renames
+it to match everywhere else: code identifiers, file names, user-visible text,
+configuration and documents, in the small steps of the procedure. A test
+changes only where it names the concept: an identifier, an import, a test
+title or an expected string that carries the old name takes the new name, and
+nothing else in it changes. No test is added or deleted, and no example
+annotation changes. A name the specification did not rename keeps its old
+name. When the rename would change anything beyond the name, stop as
+[When behaviour has to change](#when-behaviour-has-to-change) says.
+
 ## When behaviour has to change
 
 When finishing the move would change what the code does, stop before
@@ -51,4 +65,5 @@ changing it and report a branch:
 ## Gate
 
 The step is done when the suite passed before and after every move, no
-assertion changed.
+assertion changed except to carry a renamed concept's new name in the
+`rename-concept` route.

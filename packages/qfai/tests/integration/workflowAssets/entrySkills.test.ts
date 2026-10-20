@@ -148,6 +148,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "removal-requested",
     "visual-open",
     "prototype-requested",
+    "rename-requested",
     "owned-temporary-cleanup",
     "meaning-preserving",
     "session-answerable",

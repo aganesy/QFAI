@@ -345,6 +345,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and adds no test. An open choice still routes `decide-design` first, and a
   proposal it adopts may continue to `retire-feature`. Fixes #3650.
 
+- **A rename of a concept across the specification, code and tests takes its own
+  route.** The extraction gains the qualifier `rename-requested`, set when a
+  request renames a concept across the specification and what names it,
+  keeping every ID and changing nothing but the name. On a `behaviour-change`,
+  `refactor` or `docs` reading it now routes `rename-concept` instead of
+  `change-compatibility` or `edit-text`, whose scaffold and test-first steps
+  added tests a rename does not need. The route renames the stories, examples
+  and contract rules under the specification review, keeping every story-tree
+  ID, then runs `implement-refactor`, which renames the concept to match in
+  code, file names, user-visible text, configuration, documents and tests,
+  changes a test only where it names the concept, and adds no test. Fixes #3917.
+
 - **A release the user tells the agent to carry out has its own route.** The
   only release route handed every step to a person, so a user who said "you do
   the preparation, I only approve" left the plan. The extraction gains the

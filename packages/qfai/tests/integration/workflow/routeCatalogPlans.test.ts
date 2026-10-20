@@ -93,6 +93,10 @@ const CATALOG: [string, string][] = [
     "Stages in order — `spec` (sdd, then the specification review): `sdd-triage`, `sdd-story`, `sdd-contract°`; `remove` (implement): `implement-retire`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
   ],
   [
+    "rename-concept",
+    "Stages in order — `spec` (sdd, then the specification review): `sdd-triage`, `sdd-story°`, `sdd-contract°`; `rename` (implement): `implement-refactor`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points `implement-refactor`, `behaviour-change` to `add-feature` or `change-compatibility`",
+  ],
+  [
     "refactor-code",
     "Stages in order — `move` (implement): `implement-refactor`; `tests` (test_fix): `implement-test-fix°`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point none; branch points `implement-refactor`, `behaviour-change` to `add-feature` or `change-compatibility`",
   ],
@@ -263,6 +267,7 @@ for (const [route, expected] of CATALOG) {
   // QFAI:EX-0001-0220-53
   // QFAI:EX-0001-0220-54
   // QFAI:EX-0001-0220-56
+  // QFAI:EX-0001-0220-60
   it(route, async () => {
     const plan = (await loadBuiltInPlans()).find((each) => each.route === route);
 

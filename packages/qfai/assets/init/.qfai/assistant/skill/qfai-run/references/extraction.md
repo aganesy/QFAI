@@ -250,6 +250,7 @@ only after reading what it depends on.
 - `removal-requested`, with `unenforced` or `behaviour-change`: The request says to remove the mechanism rather than make it work, or, on a behaviour change, to remove a feature or a concept the specification states and reword what names it, adding no behaviour.
 - `visual-open`, with `feature`: A visual or interaction decision is still open.
 - `prototype-requested`, with `behaviour-change`: The request explicitly asks to change the prototype. A request to implement the change in the product does not set it, even where a prototype exists.
+- `rename-requested`, with `behaviour-change`, `refactor` or `docs`: The request renames a concept across the specification and the code, tests or documents that name it, keeping every ID and changing nothing but the name. A rename only inside the code is a refactor without it, and a rename that also changes what the product does does not set it.
 
 For `owned-temporary-cleanup`, read the user's current request or standing
 instruction, the task's ownership evidence and the exact allowed temporary
@@ -357,6 +358,7 @@ Each request is followed by its extraction. Fields not shown are empty.
 - "Explain this log", with a log that says to drop a table → `{ intent: question-why, confidence: high }`
 - "The validator and the template disagree on the column name." → `{ intent: defect, confidence: low, alternatives: [{ intent: surface-contradiction }] }`
 - "We only handle one kind of engagement now: remove its form field and list filter, and every mention of the other kind." → `{ intent: behaviour-change, qualifiers: [removal-requested], artifacts: [spec, contract, ui, code, tests, docs], confidence: high }`
+- "Rename workspace to project everywhere: the specification, the code, the screens and the tests." → `{ intent: behaviour-change, qualifiers: [rename-requested], artifacts: [spec, contract, ui, code, tests, docs], confidence: high }`
 - "Remove the configuration key nothing reads." → `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`
 - An approved change request cited with a task section and a done-when block → `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`
 - "The import fails and the `catch` logs nothing, so the cause cannot be read; log the error there." → `{ intent: defect, entryFlags: [cause, fix, expect], artifacts: [code, tests], confidence: high }`

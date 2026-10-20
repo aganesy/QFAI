@@ -213,6 +213,26 @@ describe("the steps the routes add to qfai-implement", () => {
     );
     expect(retiring).toMatch(/no test is added, neither for the removal nor for the new wording/i);
   });
+
+  // QFAI:AC-0001-0220-04
+  // QFAI:EX-0001-0220-61
+  it("lets implement-refactor rename a concept the route's specification stage already renamed, adding no test", async () => {
+    const step = await stepText("implement-refactor");
+    const renaming = flat(sectionOf(step, "## Renaming a concept"));
+    expect(renaming).toMatch(/in the `rename-concept` route/i);
+    expect(renaming).toMatch(
+      /the specification stage before this step already renamed it in the stories, examples and contract rules, keeping every ID/i,
+    );
+    expect(renaming).toMatch(
+      /code identifiers, file names, user-visible text, configuration and documents/i,
+    );
+    expect(renaming).toMatch(/a test changes only where it names the concept/i);
+    expect(renaming).toMatch(/no test is added or deleted, and no example annotation changes/i);
+    expect(renaming).toMatch(/a name the specification did not rename keeps its old name/i);
+    expect(flat(sectionOf(step, "## Gate"))).toMatch(
+      /no assertion changed except to carry a renamed concept's new name in the `rename-concept` route/i,
+    );
+  });
 });
 
 describe("implement-diagnose", () => {
