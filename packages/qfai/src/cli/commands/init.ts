@@ -54,6 +54,7 @@ import {
   citedRuleMastersOutsideCode,
   hasUnclosedRulesSection,
   extractManagedRulesSection,
+  keepProjectEntries,
   needsManagedRulesSection,
   newlyWrittenRuleMasters,
   ruleListBullet,
@@ -300,7 +301,7 @@ export async function runInit(
 
   if (options.force) {
     info(
-      "NOTE: --force overwrites .qfai/assistant/skill/**, step/**, agent/** and rule/**, the rule masters under .agents/rules/, the symlink assets (.agents/.claude/.github/.codex), and the qfai-provided .github/copilot-instructions.md and .github/instructions/**. Local edits to those files are lost. Project specs, contracts, rule overlays, skill.local/, qfai.config.yaml, DESIGN.md and AGENTS.md are preserved.",
+      "NOTE: --force overwrites .qfai/assistant/skill/**, step/**, agent/** and rule/**, the rule masters under .agents/rules/, the symlink assets (.agents/.claude/.github/.codex), and the qfai-provided .github/copilot-instructions.md and .github/instructions/**. Local edits to those files are lost, except that .github/copilot-instructions.md keeps the rule-list entries and sections the project added. Project specs, contracts, rule overlays, skill.local/, qfai.config.yaml, DESIGN.md and AGENTS.md are preserved.",
     );
   }
 
@@ -1803,12 +1804,23 @@ async function syncIntegrationWrappers(
     info(describeSkippedPath(COPILOT_INSTRUCTIONS_ENTRY, copilotUnsafe));
     skipped.push(copilotDest);
   } else {
-    const content = await keepSummariesOfUninstalledMasters(
+    const existingCopilot = copilotExists
+      ? (await readBoundedRegularFile(copilotDest, COPILOT_INSTRUCTIONS_MAX_BYTES))?.toString(
+          "utf-8",
+        )
+      : undefined;
+    const shipped = await keepSummariesOfUninstalledMasters(
       buildCopilotInstructions(),
       destRoot,
-      copilotDest,
+      existingCopilot,
       installedMasters,
     );
+    // The project keeps the entries the shipped text does not know, as in
+    // `AGENTS.md`; a line the shipped text replaced is named, not lost in silence.
+    const { text: content, removed } =
+      existingCopilot === undefined
+        ? { text: shipped, removed: [] }
+        : keepProjectEntries(shipped, existingCopilot);
     if (copilotExists && (await holdsText(copilotDest, content))) {
       skipped.push(copilotDest);
       identical.push(copilotDest);
@@ -1818,6 +1830,23 @@ async function syncIntegrationWrappers(
         await mkdir(path.dirname(copilotDest), { recursive: true });
         await writeFile(copilotDest, content, "utf-8");
       }
+    }
+    if (removed.length > 0) {
+      const [rewrote, lost] = options.dryRun
+        ? ["would rewrite", "would change or remove"]
+        : ["rewrote", "changed or removed"];
+      error(
+        `  WARNING: --force ${rewrote} ${formatReportPath(COPILOT_INSTRUCTIONS_ENTRY)} from the shipped text, ` +
+          `keeping the rule-list entries and sections the shipped text does not have, and ${lost} these lines:`,
+      );
+      for (const line of removed) error(`    ${line}`);
+    }
+    if (copilotExists && existingCopilot === undefined) {
+      // Too large, or not readable as a regular file: nothing of it could be kept.
+      error(
+        `  WARNING: --force ${options.dryRun ? "would rewrite" : "rewrote"} ${formatReportPath(COPILOT_INSTRUCTIONS_ENTRY)} whole from the shipped text, ` +
+          "because it could not be read; none of the project entries in it are kept.",
+      );
     }
   }
 
@@ -2578,7 +2607,7 @@ async function replaceWithRegularFile(dest: string, content: string): Promise<vo
 
 /**
  * `generated` with each rule bullet for a master outside `installed` taken from
- * the rule list of the Copilot file already at `target`, where that list has
+ * the rule list of the Copilot file `existingText` holds, where that list has
  * one.
  *
  * A master outside `installed` keeps the project's text, because its write was
@@ -2590,12 +2619,10 @@ async function replaceWithRegularFile(dest: string, content: string): Promise<vo
 async function keepSummariesOfUninstalledMasters(
   generated: string,
   destRoot: string,
-  target: string,
+  existingText: string | undefined,
   installed: ReadonlySet<string>,
 ): Promise<string> {
-  const existing = await readBoundedRegularFile(target, COPILOT_INSTRUCTIONS_MAX_BYTES);
-  if (existing === undefined) return generated;
-  const existingText = existing.toString("utf-8");
+  if (existingText === undefined) return generated;
   const lines: string[] = [];
   for (const line of generated.split("\n")) {
     const master = line.startsWith("- ") ? citedRuleMasters(line)[0] : undefined;
