@@ -188,6 +188,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `fail-on:` must skip the new line. GitHub format is unchanged.
   Fixes #3941.
 
+- **The document-schema check in `qfai validate` runs its schemas at the same
+  time.** The check starts one `mdschema` process per schema in the manifest,
+  and it used to wait for each one before starting the next. It now starts them
+  together and still reports the findings in manifest order, so the findings
+  are the same. On this repository the check went from 4.5 s to 2.1 s and a
+  full `qfai validate` from 12.5 s to 8.5 s; on a fresh `qfai init` tree, from
+  1.5 s to 0.4 s and from 3.3 s to 2.6 s (medians of three Windows runs).
+  `checkDocuments` in `check-mdschema.mjs` now returns a promise; the
+  command-line lane is unchanged. Fixes #3960.
+
 - **`qfai validate` warns when an open question is DONE without naming its
   decision.** An `open-questions.md` row whose Status is plain `DONE` now
   raises `QFAI-STORY-018` at warning in `sdd`, naming the file and the row,
