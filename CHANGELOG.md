@@ -639,6 +639,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   without a change request's Content. A path in the Grounds or another item of
   the row, and in an open-question row, is still counted. Fixes #3756.
 
+- **`qfai validate --profile verify` and `--profile full` report each
+  discussion-pack finding once.** Both profiles ran the research summary check
+  and the canonical UI checks twice, once with the discussion checks and once
+  with the prototyping checks, so every `QFAI-RESEARCH-*`, `QFAI-TREND-*`,
+  `QFAI-THREELAYER-*` and `QFAI-CLASSIFICATION-*` finding on a pack appeared
+  twice and counted twice. They now run once. A pack that declares
+  `design_direction: inherit` still has its Research Summary checked: the
+  research-first protocol applies to every pack, so `QFAI-RESEARCH-004` to
+  `006`, `010`, `018`, `019` and `021` keep reporting an unfilled summary, and
+  the UI-bearing playbook now says so. Fixes #3890.
+
 - **`qfai init` asks for an agent restart after it adds a rule master or
   rewrites an agent entry point.** The restart line counted a rule master only
   when `--force` overwrote it, so a plain upgrade that created a new master

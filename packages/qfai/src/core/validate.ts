@@ -688,7 +688,9 @@ async function runStoryProfileValidators(
           ...(await validateRepositoryHygiene(root, config)),
           ...(await validateStepTree(root, config)),
           ...(await validateAssistantAssets(root, config)),
-          ...(await runDiscussionValidators(root, config)),
+          // The prototyping group below runs the research summary and the
+          // canonical UIX checks, so the discussion set leaves them to it.
+          ...(await runDiscussionValidators(root, config, false)),
           ...(await sdd(false)),
           ...(await runPrototypingValidators(root, config, timings, platformOption)),
           ...(await atdd()),
@@ -736,9 +738,16 @@ async function runSaasPackage(
   return runSaasPackageProfile(root, prototypingIssues);
 }
 
+/**
+ * The discussion issue set. `includeSharedWithUiux` is false where the
+ * prototyping UI/UX group runs in the same profile: that group also runs the
+ * research summary and the canonical UIX checks, and running them here too
+ * reported each of their findings twice.
+ */
 async function runDiscussionValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  includeSharedWithUiux = true,
 ): Promise<Issue[]> {
   return [
     // A project reaching this profile may already carry a root DESIGN.md —
@@ -752,8 +761,8 @@ async function runDiscussionValidators(
     ...(await validateDesignDirectionProposal(root, config)),
     ...(await validateDiscussionPackReadiness(root, config)),
     ...(await validateDiscussionVisuals(root)),
-    ...(await validateResearchSummary(root, config)),
-    ...(await runCanonicalUixValidators(root, config)),
+    ...(includeSharedWithUiux ? await validateResearchSummary(root, config) : []),
+    ...(includeSharedWithUiux ? await runCanonicalUixValidators(root, config) : []),
   ];
 }
 
