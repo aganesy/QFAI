@@ -4,6 +4,7 @@
 
 - Inputs
 - Outputs
+- Scoped handoff
 - Restyle handoff
 - Checking an implementation's tokens
 
@@ -14,6 +15,9 @@ confirmed. It is one self-contained file with one client-side route per
 declared screen, written by the generator.
 A `restyle` loop has no such file: its iterations restyled the live app
 in place, and its handoff is the short form under Restyle handoff below.
+A scoped run also reads the `final/index.html` and `final/handoff.json` an
+earlier run confirmed, which the merge under Scoped handoff below keeps
+outside the scope.
 
 Root `DESIGN.md` remains the brand SSOT through handoff.
 
@@ -21,8 +25,9 @@ Root `DESIGN.md` remains the brand SSOT through handoff.
 
 ### `.qfai/prototype/final/index.html`
 
-A copy (not a symlink) of the confirmed iteration. `/qfai-implement`
-reads this as a read-only artifact.
+A copy (not a symlink) of the confirmed iteration, or in a scoped run the
+merge under Scoped handoff below. `/qfai-implement` reads this as a
+read-only artifact.
 
 ### `.qfai/prototype/final/handoff.json`
 
@@ -83,6 +88,40 @@ them consistently with each other
 same checkout. `npx qfai validate --profile saas-package` requires it to be present
 and to conform, and reports `QFAI-SAAS-002` naming the file
 otherwise; no other command reads it.
+
+## Scoped handoff
+
+When `progress.md` records a `runScope`, the confirmed iteration changed
+only the in-scope parts of a `final/index.html` an earlier run confirmed.
+The unit of the merge is the screen route, one per declared screen, and each
+place a route renders an in-scope shared component.
+
+- In `final/index.html`, replace each in-scope screen's route, and each
+  in-scope component wherever a route renders it, together with the style
+  only they use, with the confirmed iteration's version. Keep every other
+  part as it was.
+- A difference between the confirmed iteration and `final/` outside those
+  parts is a change the scope left out: keep `final/`'s version and name the
+  difference in the completion report.
+- In `final/handoff.json`, replace the `procurement` rows of the in-scope
+  screens and components, keep every other row, so every declared screen
+  still appears, and record the scope the user confirmed as `runScope`.
+  Keep `finalArtifact`, `implementationNotes` and every other existing key,
+  extending `implementationNotes` with what this run decided rather than
+  rewriting it:
+
+```json
+{
+  "runScope": {
+    "screens": ["<ui-contract-id>/<screen>"],
+    "components": ["<repository path or procurement item>"]
+  }
+}
+```
+
+The confirmed prototype is then the whole of `final/`: the in-scope parts
+this run confirmed, and every other part as an earlier run confirmed it. A
+run with no scope copies the whole iteration and writes no `runScope`.
 
 ## Restyle handoff
 
