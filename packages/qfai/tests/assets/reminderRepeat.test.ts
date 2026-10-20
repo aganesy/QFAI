@@ -23,20 +23,21 @@ const WRITE_ONCE = [
   "documentation-clarity-after-write",
   "documentation-clarity-after-edit",
 ] as const;
-const EVERY_CALL = ["documentation-clarity-before-post"];
-/** Every tool-time reminder with a per-session schedule. */
+/** Every reminder that prints once per session and nothing after it. */
 const FIRST_ONLY = [
+  "structured-question",
   "api-budget",
+  "documentation-clarity-before-post",
   "grilling-design-artifact",
   "grilling-delegation",
   "grilling-plan",
   ...WRITE_ONCE,
 ] as const;
-/** The prompt-time reminders, which follow the full form with a one-line pointer. */
-const POINTERS = [
-  ["free-text-entry", "qfai-run"],
-  ["structured-question", ".agents/rules/user-questions.md"],
-] as const;
+/**
+ * The free-text entry reminder, the one place the routing rule is stated, follows its full form with
+ * a one-line pointer on every later prompt instead of going silent.
+ */
+const POINTERS = [["free-text-entry", "qfai-run"]] as const;
 const SCHEDULED = [...POINTERS.map(([key]) => key), ...FIRST_ONLY];
 
 /** Repeated delivery is checked through invocation twenty-one. */
@@ -123,7 +124,7 @@ function expectPointer(context: string, full: string, reference: string): void {
   }
 }
 
-describe.each(SETTINGS)("%s sends full context first and less on later calls", (rel) => {
+describe.each(SETTINGS)("%s sends full context first and less or nothing later", (rel) => {
   // QFAI:EX-0001-0196-55
   it.each(POINTERS)(
     "prints %s in full once, then a one-line pointer on every relevant trigger",
@@ -139,13 +140,18 @@ describe.each(SETTINGS)("%s sends full context first and less on later calls", (
     },
   );
 
+  // QFAI:EX-0001-0196-55
   // QFAI:EX-0001-0196-56
   it.each(FIRST_ONLY)(
     "prints %s in full once, then nothing on every later relevant call",
     async (key) => {
       const entry = (await entries(rel)).get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
-      const input = { session_id: newSession(), tool_input: { command: "gh api repos/o/r" } };
+      const input = {
+        session_id: newSession(),
+        prompt: "Fix the failing test",
+        tool_input: { command: "gh api repos/o/r" },
+      };
       expect(contextOf(await call(rel, entry, input))).toBe(await fullContext(key));
       for (let count = 2; count <= PERIOD + 1; count += 1) {
         expect(await call(rel, entry, input), `${key}, call ${count}`).toBe("");
@@ -225,7 +231,7 @@ describe.each(SETTINGS)("%s sends full context first and less on later calls", (
     const session_id = newSession();
     for (const [key, reference] of [
       ["free-text-entry", "qfai-run"],
-      ["structured-question", ".agents/rules/user-questions.md"],
+      ["structured-question", null],
     ] as const) {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
@@ -244,6 +250,10 @@ describe.each(SETTINGS)("%s sends full context first and less on later calls", (
           hookSpecificOutput: { hookEventName: "UserPromptSubmit" },
         });
         const second = await promptCall(entry, { ...identity, prompt: "Continue the same fix" });
+        if (reference === null) {
+          expect(second, `${key}: second prompt`).toBe("");
+          continue;
+        }
         expectPointer(contextOf(second), full, reference);
         expect(JSON.parse(second)).toMatchObject({
           hookSpecificOutput: { hookEventName: "UserPromptSubmit" },
@@ -368,16 +378,60 @@ describe.each(SETTINGS)("%s sends full context first and less on later calls", (
   });
 
   // QFAI:EX-0001-0196-55
-  it("counts the API-budget reminder only on a command that names the forge", async () => {
+  it("counts the API-budget reminder only on a command that reaches the network", async () => {
     const entry = (await entries(rel)).get("api-budget");
     if (entry === undefined) throw new Error("no entry carries api-budget");
     const session_id = newSession();
-    for (let n = 0; n < 3; n += 1) {
-      expect(await call(rel, entry, { session_id, tool_input: { command: "git status" } })).toBe(
-        "",
-      );
+    for (const command of ["git status", "cat curl.txt", "ls ~/.gh", "echo high"]) {
+      expect(await call(rel, entry, { session_id, tool_input: { command } }), command).toBe("");
     }
     expect(contextOf(await call(rel, entry, { session_id }))).toBe(await fullContext("api-budget"));
+  });
+
+  // QFAI:EX-0001-0196-56
+  it("prints the API-budget reminder for each network client or the API host, and nothing else", async () => {
+    const entry = (await entries(rel)).get("api-budget");
+    if (entry === undefined) throw new Error("no entry carries api-budget");
+    const full = await fullContext("api-budget");
+    for (const command of [
+      "gh pr view 1",
+      "cd a && curl -s https://example.com",
+      "curl.exe -s https://example.com",
+      "/usr/bin/wget -q https://example.com",
+      "Invoke-WebRequest -Uri https://example.com",
+      "invoke-restmethod https://example.com",
+      "iwr https://example.com",
+      "irm https://example.com | Out-Null",
+      "node -e \"fetch('https://api.github.com/rate_limit')\"",
+    ]) {
+      const input = { session_id: newSession(), tool_input: { command } };
+      expect(contextOf(await call(rel, entry, input)), command).toBe(full);
+    }
+    for (const command of [
+      "git push origin main",
+      "npm run gh-pages",
+      "cat curl.txt wget.log",
+      "Get-Content Invoke-WebRequest.md",
+      "echo ghost firm",
+    ]) {
+      const input = { session_id: newSession(), tool_input: { command } };
+      expect(await call(rel, entry, input), command).toBe("");
+    }
+  });
+
+  // QFAI:EX-0001-0196-56
+  it("prints a once-per-session reminder exactly once when calls race", async () => {
+    const byKey = await entries(rel);
+    for (const key of FIRST_ONLY) {
+      const entry = byKey.get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      const input = { session_id: newSession() };
+      const printed = await Promise.all([1, 2, 3, 4, 5].map(() => call(rel, entry, input)));
+      expect(
+        printed.filter((stdout) => stdout.trim() !== ""),
+        key,
+      ).toHaveLength(1);
+    }
   });
 
   // QFAI:EX-0001-0196-53
@@ -401,22 +455,21 @@ describe.each(SETTINGS)("%s sends full context first and less on later calls", (
   });
 
   // QFAI:EX-0001-0196-56
-  it("leaves before-post full on every call even after editing reminders", async () => {
+  it("prints before-post once per session, apart from the editing reminders", async () => {
     const byKey = await entries(rel);
-    for (const key of EVERY_CALL) {
-      const entry = byKey.get(key);
-      if (entry === undefined) throw new Error(`no entry carries ${key}`);
-      const session_id = newSession();
-      for (const editKey of WRITE_ONCE) {
-        const editing = byKey.get(editKey);
-        if (editing === undefined) throw new Error(`no entry carries ${editKey}`);
-        await call(rel, editing, { session_id });
-        await call(rel, editing, { session_id });
-      }
-      const full = await fullContext(key);
-      for (let n = 1; n <= PERIOD + 1; n += 1) {
-        expect(contextOf(await call(rel, entry, { session_id })), `${key}, call ${n}`).toBe(full);
-      }
+    const entry = byKey.get("documentation-clarity-before-post");
+    if (entry === undefined) throw new Error("no entry carries documentation-clarity-before-post");
+    const session_id = newSession();
+    for (const editKey of WRITE_ONCE) {
+      const editing = byKey.get(editKey);
+      if (editing === undefined) throw new Error(`no entry carries ${editKey}`);
+      await call(rel, editing, { session_id });
+      await call(rel, editing, { session_id });
+    }
+    const full = await fullContext("documentation-clarity-before-post");
+    expect(contextOf(await call(rel, entry, { session_id }))).toBe(full);
+    for (let n = 2; n <= PERIOD + 1; n += 1) {
+      expect(await call(rel, entry, { session_id }), `call ${n}`).toBe("");
     }
   });
 });
