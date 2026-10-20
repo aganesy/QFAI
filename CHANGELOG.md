@@ -255,6 +255,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   repeated `flows` is refused as a schema fault. Plans without `flows` are
   unchanged. Refs #3668.
 
+- **The ID allocation rule says how to read the IDs open pull requests add.**
+  Before taking a new story-tree ID, the `sdd-triage` step and its reference now
+  fetch the base, list the open pull requests once per session through the
+  forge's REST API, fetch each head ref (fork pull requests included) and read
+  the IDs it adds from `git diff <base>...<head>`; a project with no forge CLI
+  reads the base alone. When the base is merged in, the base's item keeps a
+  colliding ID and the branch renumbers its own: a DEC or OQ row is checked
+  before the merge, since the union merge would duplicate it silently, and any
+  other ID after. The change-request row stays last in `decisions.md` so the
+  merge-time renumbering works on the trailing rows, and the change-request
+  template points at this rule. Fixes #3845.
+
 - **A prototyping run can be scoped to part of a confirmed prototype.** The
   grilling record `.qfai/prototype/grilling.md` takes an optional
   `## Run scope` that names screens as `<ui-contract-id>/<screen>` and shared
