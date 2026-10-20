@@ -36,7 +36,10 @@ async function markdownFiles(directory: string): Promise<string[]> {
   }
 }
 
-/** The tree a document belongs to, or null for the decision and open-question trees. */
+/**
+ * The tree a document belongs to, or null for every other document under the spec root
+ * (the decision and open-question trees; anything else is a schema error).
+ */
 function treeOf(file: string, specsDir: string, contractsDir: string): Tree | null {
   if (isInside(contractsDir, file)) return "contract";
   const [top] = path.relative(specsDir, file).split(path.sep);

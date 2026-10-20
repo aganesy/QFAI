@@ -162,11 +162,7 @@ describe("story-tree layout dispatch", () => {
   it("counts the paths outside .qfai that a document names, for each tree", async () => {
     await put(
       `${specs}/01_policy/principle.md`,
-      "Read `docs/guide.md` and https://example.com/a.md\n",
-    );
-    await put(
-      `${specs}/decisions.md`,
-      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | See `.qfai/spec/decisions.md` | - | DONE |\n",
+      "Read `docs/guide.md` and https://example.com/a.md, and see `.qfai/spec/decisions.md`\n",
     );
     await put(".qfai/discussion/discussion-x/notes.md", "Cites `src/b.ts`.\n");
 

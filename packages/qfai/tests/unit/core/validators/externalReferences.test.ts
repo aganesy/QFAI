@@ -79,7 +79,7 @@ describe("validateExternalReferences", () => {
   });
 
   // QFAI:EX-0001-0051-16
-  it("counts no path anywhere in the decision and open-question trees", async () => {
+  it("counts no path in the decision and open-question trees or another spec-root document", async () => {
     await inProject(
       {
         [decisions]:
@@ -87,6 +87,7 @@ describe("validateExternalReferences", () => {
         ".qfai/spec/decisions/page-0001.md":
           "| DEC-0002 | Note | - Evidence: file:x - Residual risk: [the guide](docs/guide.md) may move | DONE |\n",
         ".qfai/spec/open-questions.md": "| OQ-0001 | Does `src/i.ts` stay? | - | TODO |\n",
+        ".qfai/spec/notes.md": "Cites `src/x.ts`.\n",
         [policy]: "Read `docs/need.md`.\n",
       },
       async (root) => {
