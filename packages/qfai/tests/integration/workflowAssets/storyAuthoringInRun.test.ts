@@ -188,6 +188,45 @@ describe("qfai-sdd writes the story tree", () => {
     expect(scopes).toContain("Directory names match their BF and US IDs.");
   });
 
+  // QFAI:AC-0001-0147-05
+  // QFAI:EX-0001-0147-46
+  it("reads the IDs open pull requests add, checks them at merge time, and keeps the change-request row last", async () => {
+    const step = await section(TRIAGE_STEP, "## ID allocation");
+    const reference = await section(TRIAGE, "## ID allocation");
+    for (const text of [step, reference]) {
+      expect(text).toContain(
+        "list the open pull requests once per session through its REST API, for example `gh api repos/{owner}/{repo}/pulls?state=open`, and reuse that listing for every ID the session takes.",
+      );
+      expect(text).toContain(
+        "Fetch each one's head ref, such as `refs/pull/<n>/head`, so a pull request from a fork is read too, and read the IDs it adds from `git diff <base>...<head>`.",
+      );
+      expect(text).toContain(
+        "Take the highest across the base, the working tree and those heads, plus one.",
+      );
+      expect(text).toContain("Without a forge CLI, read the base alone.");
+      expect(text).toContain(
+        "When merging the base into the branch, check each ID the branch adds against the fetched base. The base's item keeps its ID; the branch renumbers its own item and every reference to it, then runs the gates again.",
+      );
+      expect(text).toMatch(
+        /DEC or OQ row:? check before the merge|Check a DEC or OQ row before the merge/,
+      );
+      expect(text).toMatch(/renumber a DEC row with `(?:npx qfai sdd )?renumber-decision`/);
+      expect(text).toContain("or an OQ row and its references by hand");
+      expect(text).toContain(
+        "union merge of `decisions.md` and `open-questions.md` would duplicate a colliding ID without a conflict",
+      );
+      expect(text).toMatch(
+        /Any other ID: check after the merge|Check any other ID after the merge/,
+      );
+      expect(text).toContain(
+        "Keep the change-request row last in `decisions.md`, so the rows the branch added stay in ascending order at the end of the register, where the merge-time renumbering works from the lowest colliding one upward.",
+      );
+    }
+    expect(flat(await readShipped("skill/qfai-sdd/templates/change-request.md"))).toContain(
+      "Allocate `DEC-NNNN` by `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#id-allocation`",
+    );
+  });
+
   // QFAI:AC-0001-0147-06
   // QFAI:EX-0001-0147-09
   it("writes each rule inside the contract that enforces it, in that file type's form", async () => {

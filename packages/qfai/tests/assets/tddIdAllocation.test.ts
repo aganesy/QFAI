@@ -28,7 +28,9 @@ describe("story-tree identifiers are allocated without reuse", () => {
       }
       expect(rules).toContain("Use highest existing number plus one in the scope");
       expect(rules).toContain("Count IDs named in retired-item decisions");
-      expect(rules).toContain("Do not add a CLI allocator");
+      expect(rules).toContain(
+        "Take the number from `npx qfai sdd next-id`, which reads the working tree and a fetched base and reserves no ID.",
+      );
     });
 
     it(tree + ": moving a story rewrites dependent IDs and reserves retired ones", async () => {
