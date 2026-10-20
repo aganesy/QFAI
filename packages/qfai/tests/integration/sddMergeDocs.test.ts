@@ -313,7 +313,7 @@ describe("qfai sdd merge-docs", () => {
     const handFixed = gitOutput.replace("Two sides edit one row.", "Fixed by hand.");
     await put(EXAMPLES, handFixed);
     const edited = await mergeDocs();
-    expect(edited.stdout).toContain("differs from Git's conflict output");
+    expect(edited.stdout).toContain("does not match Git's conflict output for its stages");
     expect(await read(EXAMPLES)).toBe(handFixed);
     expect(edited.code).toBe(1);
 
@@ -324,6 +324,19 @@ describe("qfai sdd merge-docs", () => {
     expect(rerun.stdout).toContain("markers of an earlier merge-docs run");
     expect(await read(EXAMPLES)).toBe(firstRun);
     expect(rerun.code).toBe(1);
+  });
+
+  // QFAI:EX-0001-0238-16
+  it("leaves a half-resolved file whose closing marker remains as it is", async () => {
+    await sameSentence();
+    const halfResolved = (await read(EXAMPLES)).replace(/^<<<<<<< .*\n/mu, "");
+    expect(halfResolved).not.toMatch(/^<{7}/mu);
+    await put(EXAMPLES, halfResolved);
+    const result = await mergeDocs();
+    expect(result.stdout).toContain(`${EXAMPLES}: left as is; the working file does not match`);
+    expect(result.stdout).not.toContain("holds no conflict markers");
+    expect(await read(EXAMPLES)).toBe(halfResolved);
+    expect(result.code).toBe(1);
   });
 
   // QFAI:EX-0001-0238-12

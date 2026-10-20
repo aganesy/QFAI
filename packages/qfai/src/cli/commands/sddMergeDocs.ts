@@ -12,7 +12,8 @@ import { EXIT_CODES } from "../lib/exitCodes.js";
 const execute = promisify(execFile);
 const MAX_BUFFER = 64 * 1024 * 1024;
 const DOCUMENT = /\.(?:md|ya?ml)$/u;
-const CONFLICT_MARKER = /^<{7,}(?: |\r?$)/mu;
+/** An opening or closing marker; either one left behind means the file is not resolved. */
+const CONFLICT_MARKER = /^(?:<{7,}|>{7,})(?: |\r?$)/mu;
 const OWN_MARKER = /^(?:<<<<<<< ours|>>>>>>> theirs)\r?$/mu;
 const REGULAR_FILE = new Set(["100644", "100755"]);
 const SCHEMA_VIOLATION = "QFAI-DOCSCHEMA-001";
@@ -94,7 +95,9 @@ async function mergeOne(root: string, file: string, stages: Stages): Promise<Out
   const [base = "", ours = "", theirs = ""] = texts;
   if (texts.some((text) => text === null)) return left("it is not UTF-8 text");
   if (!(await isGitConflictOutput(working, base ?? "", ours ?? "", theirs ?? "")))
-    return left("the working file differs from Git's conflict output, so it may hold a hand fix");
+    return left(
+      "the working file does not match Git's conflict output for its stages (a hand edit or a non-default conflict style)",
+    );
   const merged = await mergeDocument(base ?? "", ours ?? "", theirs ?? "");
   if (merged === null) return left("a line in it reads as a merge marker");
   await writeFile(target, merged.text, "utf8");

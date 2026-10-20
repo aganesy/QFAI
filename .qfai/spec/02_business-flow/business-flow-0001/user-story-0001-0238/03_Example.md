@@ -19,3 +19,4 @@
 | EX-0001-0238-13 | AC-0001-0238-03 | The document-schema check cannot run                                                                      | QFAI-DOCSCHEMA-002 reported; the check named as not run; exit 1                       |
 | EX-0001-0238-14 | AC-0001-0238-04 | A project directory that is not in a Git work tree                                                        | Nothing written; exit 2                                                               |
 | EX-0001-0238-15 | AC-0001-0238-04 | A conflicted document; qfai.config.yaml that cannot be parsed                                             | The configuration named; nothing written; exit 2                                      |
+| EX-0001-0238-16 | AC-0001-0238-02 | A half-resolved working file: the opening marker removed, the closing marker kept                         | Working file unchanged; named as left as is, not as free of markers; exit 1           |
