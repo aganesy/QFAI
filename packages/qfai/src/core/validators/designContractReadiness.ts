@@ -43,6 +43,23 @@ export async function validateRootDesignMdParse(root: string): Promise<Issue[]> 
 }
 
 /**
+ * The parse check for a run that also runs {@link validateDesignContractReadiness}.
+ * The readiness gate reports the parse of a UI-bearing project itself, so this
+ * reports only for a project whose UI contracts declare no screen.
+ */
+export async function validateRootDesignMdParseOutsideReadiness(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
+  return (await hasUiContractScreens(root, config)) ? [] : validateRootDesignMdParse(root);
+}
+
+/** True when a UI contract of the project declares a screen. */
+async function hasUiContractScreens(root: string, config: QfaiConfig): Promise<boolean> {
+  return (await readUiContractInventory(root, config)).some((entry) => entry.hasScreens);
+}
+
+/**
  * The `QFAI-DCON-033` finding, built in one place.
  *
  * Two callers emit it — the readiness gate and the discussion-profile parse
@@ -76,7 +93,7 @@ export async function validateDesignContractReadiness(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const uiBearing = (await readUiContractInventory(root, config)).some((entry) => entry.hasScreens);
+  const uiBearing = await hasUiContractScreens(root, config);
 
   // The unreplaced-sample gate runs first. Every other check runs only for a
   // UI-bearing project, known once SDD has authored UI contracts; the sample

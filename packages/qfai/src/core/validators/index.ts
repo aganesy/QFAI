@@ -48,6 +48,7 @@ export type { LayoutAntiPattern, LayoutAntiPatternScope } from "./layoutAntiPatt
 export {
   validateDesignContractReadiness,
   validateRootDesignMdParse,
+  validateRootDesignMdParseOutsideReadiness,
 } from "./designContractReadiness.js";
 export { isUiBearingSpec } from "./uixDetection.js";
 export { validateThreeLayerFamilyCompleteness } from "./uix/threeLayer.js";
