@@ -113,11 +113,12 @@ function withTriageStale(cited: string): string {
 }
 
 // The decisions table with a new change request approving `triage-stale`.
-function withNewRequest(): string {
+function withNewRequest(status = "DONE"): string {
   const row =
     `| DEC-9001 | Change request: ${CONTRACT} | - Date: 2026-10-01 - Change: add the route ` +
     "triage-stale, which closes a request whose premise no longer holds. - Approval: the user " +
-    "approved it on 2026-10-01, because stale requests had no route of their own. | DONE |";
+    "approved it on 2026-10-01, because stale requests had no route of their own. | " +
+    `${status} |`;
   return insertedAfterLast(decisions.split("\n"), (line) => line.startsWith("| DEC-"), row);
 }
 
@@ -141,6 +142,18 @@ it("A new route row citing the catalog's first approval, and one citing a new ch
     ],
     approvedCitation: [],
     approvedChange: [],
+  });
+});
+
+it("A route row approved by a change request a later row partly supersedes, and by one it fully supersedes", () => {
+  const cited = withTriageStale("DEC-9001");
+
+  expect({
+    partly: citationFaults(cited, withNewRequest("PARTLY SUPERSEDED (by DEC-9002)")),
+    fully: citationFaults(cited, withNewRequest("SUPERSEDED (by DEC-9002)")),
+  }).toEqual({
+    partly: [],
+    fully: [`triage-stale: DEC-9001 is not an in-force change request naming ${CONTRACT}`],
   });
 });
 
