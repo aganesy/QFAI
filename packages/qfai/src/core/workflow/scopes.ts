@@ -44,8 +44,13 @@ function hasPrivateIntake(stages: readonly PlanStage[]): boolean {
   return stages.some((stage) => stage.steps.some((step) => step.name === PRIVATE_INTAKE));
 }
 
+// The artifacts a stage of `kind` writes before its `serves`.
+export function kindWrites(kind: string): readonly Artifact[] {
+  return WRITES[kind] ?? [];
+}
+
 function writtenBy(stage: PlanStage): readonly Artifact[] {
-  return [...(WRITES[stage.kind] ?? []), ...(stage.serves ?? [])];
+  return [...kindWrites(stage.kind), ...(stage.serves ?? [])];
 }
 
 function writesSomething(stage: PlanStage): boolean {

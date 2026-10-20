@@ -3,6 +3,7 @@ import { parse as parseYaml } from "yaml";
 import { ARTIFACTS, type Artifact } from "./extraction.js";
 import { isRecord } from "./parse.js";
 import { isWorkflowRoute, ROUTE_FAMILIES } from "./routes.js";
+import { kindWrites } from "./scopes.js";
 import { SEAM_STEP } from "./steps.js";
 
 // One step of a stage, with the mode the route fixes for it and whether it is pass-through.
@@ -257,7 +258,7 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
     return refused(refuse, "shape", typeof id === "string" ? id : "stages");
   }
   const review = reviewOf(value.review, kind, id, refuse);
-  const serves = servesOf(value.serves, id, refuse);
+  const serves = servesOf(value.serves, kind, id, refuse);
   const stage = {
     id,
     kind,
@@ -290,11 +291,23 @@ function isArtifact(value: string): value is Artifact {
   return ARTIFACTS.some((artifact) => artifact === value);
 }
 
-// A stage's `serves`: absent, or a non-empty list of artifacts that names none twice.
-function servesOf(value: unknown, id: string, refuse: Refuse): Artifact[] | undefined {
+// A stage's `serves`: absent, or a non-empty list of artifacts that names none twice and none its
+// kind already writes.
+function servesOf(
+  value: unknown,
+  kind: string,
+  id: string,
+  refuse: Refuse,
+): Artifact[] | undefined {
   if (value === undefined) return undefined;
   const names = stringList(value);
-  if (!names || names.length === 0 || new Set(names).size !== names.length) {
+  const written = kindWrites(kind);
+  if (
+    !names ||
+    names.length === 0 ||
+    new Set(names).size !== names.length ||
+    names.some((name) => written.some((artifact) => artifact === name))
+  ) {
     refuse("shape", id);
     return undefined;
   }

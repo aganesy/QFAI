@@ -13,8 +13,8 @@
  *     naming the workflow contract, or one whose Approach does not name the route and record who
  *     approved it and when;
  *   - a plan file with no row, a row with no plan file, or a plan that states something its row
- *     does not: its family, its stages, their steps and reviews, or its decision, release or
- *     branch points;
+ *     does not: its family, its stages, their steps, reviews and served artifacts, or its
+ *     decision, release or branch points;
  *   - against the base of the change, a route row added or changed that does not cite a change
  *     request this change appended, or a route row removed with no appended change request naming
  *     the route.
@@ -150,10 +150,13 @@ function stepText(entry) {
   return `${name}${step.mode ? `(${step.mode})` : ""}${step.passThrough ? "°" : ""}`;
 }
 
-// A stage as a row states it: `id[steps]`, then `{spec}` or `{code}` for the review after it.
+// A stage as a row states it: `id[steps]`, then `{spec}` or `{code}` for the review after it,
+// then `<artifacts>` for what it serves beyond its kind.
 function stageText(stage) {
   const steps = (stage.steps ?? []).map(stepText).join(" → ");
-  return `${stage.id}[${steps}]${stage.review ? `{${stage.review}}` : ""}`;
+  const review = stage.review ? `{${stage.review}}` : "";
+  const serves = Array.isArray(stage.serves) ? `<${stage.serves.join(", ")}>` : "";
+  return `${stage.id}[${steps}]${review}${serves}`;
 }
 
 /** A plan file as its route row states it. */

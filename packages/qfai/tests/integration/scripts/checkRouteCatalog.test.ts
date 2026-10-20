@@ -97,6 +97,20 @@ it("The shipped plans, an extra plan, a missing plan, and a plan its row no long
   });
 });
 
+// QFAI:EX-0001-0217-04
+it("A plan whose stage drops what it serves while its row keeps it", () => {
+  const plans = readPlans(REPO_ROOT);
+  const unserved = new Map(plans);
+  unserved.set(
+    "resolve-conflicts",
+    (plans.get("resolve-conflicts") ?? "").replace("    serves: [spec, contract]\n", ""),
+  );
+
+  expect(planFaults(contract, unserved)).toEqual([
+    "resolve-conflicts: the plan's plan is not what its route row states",
+  ]);
+});
+
 const TRIAGE_STALE = (cited: string) =>
   `| BR-0015-9001 | Route \`triage-stale\` — family \`close\`. Plan: \`close[triage-close]\`. Decision points: none. Release point: none. Branch points: none. Approved by ${cited}. | EX-0001-0220-01 |`;
 
