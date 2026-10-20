@@ -13,7 +13,6 @@ export interface SeedExtraction {
   qualifiers: string[];
   signals: string[];
   risks: string[];
-  gate: string;
   artifacts: string[];
   confidence: "high" | "medium" | "low";
   alternatives?: {

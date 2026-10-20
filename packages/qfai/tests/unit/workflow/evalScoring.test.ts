@@ -203,7 +203,6 @@ function routeSeed(id: string, route: string, extraction: Partial<SeedExtraction
       qualifiers: [],
       signals: [],
       risks: [],
-      gate: "none",
       artifacts: [],
       confidence: "high",
       ...extraction,

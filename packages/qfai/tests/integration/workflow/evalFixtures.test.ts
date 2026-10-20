@@ -16,6 +16,7 @@ import type * as FsPromises from "node:fs/promises";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { parseDesignMd, validateDesignMd } from "../../../src/core/design/designMd.js";
+import { extractionFaultsOf } from "../../../src/core/workflow/extractionShape.js";
 import { loadBuiltInPlans, WORKFLOW_ROUTES } from "../../../src/core/workflow/plans.js";
 
 import {
@@ -526,6 +527,16 @@ it("A drawn seed holds a rewritten request and its source item's ID, and a hand-
     drawnReroutes: true,
     cjk: [],
   });
+});
+
+// Each seed's extraction is one `plan` accepts, so a test can plan a seed as it stands. No seed
+// is deliberately malformed.
+it("Every route seed's extraction passes the extraction shape check", async () => {
+  const faulty = (await routeSeeds())
+    .map((seed) => ({ id: seed.id, faults: extractionFaultsOf(seed.extraction) }))
+    .filter((each) => each.faults.length > 0);
+
+  expect(faulty).toEqual([]);
 });
 
 // The boundary pairs, keyed by their two routes in alphabetical order, each pair's seeds in
