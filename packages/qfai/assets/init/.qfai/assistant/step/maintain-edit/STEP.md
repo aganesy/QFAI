@@ -70,6 +70,29 @@ of these:
 - A conflict in code, or in a file listed under
   [Never a maintenance edit](#never-a-maintenance-edit), such as a generated
   file or a lockfile, stops: its owner route resolves or regenerates it.
+- A conflict in a pin or digest file, or in a file with an owner marker or a
+  CODEOWNERS entry, stops.
+- After the merge, check each union-merged register, such as `decisions.md`,
+  for an ID declared twice. A duplicate is a semantic effect: stop.
+
+### Several branches
+
+When the user names several branches to take one base into, each branch is its
+own run of this route, one branch at a time, with every rule above.
+
+- Take the base in by merge, never by rebase. Never force-push a branch.
+- On a stop, abort that branch's merge with `git merge --abort`, or keep each
+  branch in its own worktree, report the branch at its commit before the merge,
+  and go on with the next branch.
+- The verify block repairs no failure on such a branch: a failing gate undoes
+  the merge and holds the branch.
+- The route pushes nothing. A push the user's instruction names is planned
+  after the run as an order. A branch with a failed or UNRUN gate is not
+  pushed. A gate DELEGATED to CI may be pushed under the user's push
+  instruction once every gate that runs locally has passed, and the branch is
+  not merged until that CI check is green.
+- Report each branch's result: merged locally, pushed, stopped on the named
+  file and hunk, or held by the named gate.
 
 ## Reads
 
