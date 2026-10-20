@@ -594,6 +594,13 @@ describe("parseArgs", () => {
 
       const twice = parseArgs(["validate", "--rendered", "a.json", "--rendered", "b.json"], cwd);
       expect(twice.invalid).toBe(true);
+
+      const timings = parseArgs(["validate", "--timings"], cwd);
+      expect(timings.invalid).toBe(false);
+      expect(timings.options.validateTimings).toBe(true);
+      const timingsOnReport = parseArgs(["report", "--timings"], cwd);
+      expect(timingsOnReport.invalid).toBe(true);
+      expect(timingsOnReport.options.validateTimings).toBeUndefined();
     });
   });
 
