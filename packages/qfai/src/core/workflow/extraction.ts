@@ -70,6 +70,7 @@ export const QUALIFIERS = [
   "owned-temporary-cleanup",
   "meaning-preserving",
   "session-answerable",
+  "restyle",
 ] as const;
 
 export const SIGNALS = [

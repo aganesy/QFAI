@@ -186,7 +186,7 @@ async function candidatesOf(
       rule: choice.rule,
       summary,
       recommended: choice.route === recommended,
-      scopes: scopesOf(stages, artifacts),
+      scopes: scopesOf(stages, artifacts, choice.restyle),
       decisionPoints,
     });
   }
@@ -228,7 +228,7 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
   return planned(
     { ...load.plan, decisionPoints },
     outcome.taken.rule,
-    scopesOf(load.plan.stages, artifacts),
+    scopesOf(load.plan.stages, artifacts, extraction.qualifiers.includes("restyle")),
     extraction.flows,
   );
 }
