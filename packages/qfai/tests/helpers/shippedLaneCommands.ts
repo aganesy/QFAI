@@ -1516,11 +1516,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the guarded graph hook group init appends after the template's groups: the same
   // matcher and marker, with `-e` and the guard before the script path. Restoring the unguarded
   // group reproduces `6d3610ad…` byte for byte.
-  // Re-pinned when the two prompt-time reminders and the documentation-clarity reminder before a
-  // post started printing once per session, as the other tool-time ones do, and the API-budget
-  // reminder started matching `PowerShell` as well and printing only for a command that runs a
-  // network client. Restoring the four groups reproduces `3cbebe52…`.
-  [".claude/settings.json", "5082d9c6b48317bfe42672159f5eaf01924a4fca72eb4080a977a26887943ba5"],
+  // Re-pinned when every counted program created its session marker atomically, the
+  // question-form reminder and the documentation-clarity reminder before a post started printing
+  // once per session, and the API-budget reminder started matching `PowerShell` as well and
+  // printing for a network client or the API host. Restoring the nine groups reproduces `3cbebe52…`.
+  [".claude/settings.json", "680a01620f0a9ba4d98becb4060bc6bd6e5cb8822cf94f79f6e57f3e3a4a2109"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1567,10 +1567,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // after the first eligible call. Restoring the five programs reproduces `252e94e4…`.
   // Re-pinned for the same guarded graph hook group as `.claude/settings.json`, one line with no
   // character a hook shell expands. Restoring the unguarded command reproduces `49a89560…`.
-  // Re-pinned for the same change as `.claude/settings.json`: the prompt-time reminders and the
-  // reminder before a post print once per session and the API-budget reminder only for a network
-  // client. Restoring the four groups reproduces `a3cb9f3f…`.
-  [".codex/hooks.json", "f5d7413957127d3b28ea3b159909f7efd0043156acea115358e5f1be9b4bf9fa"],
+  // Re-pinned for the same change as `.claude/settings.json`: an atomic session marker, the
+  // question-form reminder and the reminder before a post once per session, and the API-budget
+  // reminder for a network client or the API host. Restoring the eight groups reproduces
+  // `a3cb9f3f…`.
+  [".codex/hooks.json", "939d69695cde4e2d2b2bef8b5da5713606f454f87c6a6df5be9bbe347e1c2e87"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

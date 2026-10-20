@@ -427,7 +427,10 @@ describe.each(SETTINGS)("%s sends full context first and less or nothing later",
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       const input = { session_id: newSession() };
       const printed = await Promise.all([1, 2, 3, 4, 5].map(() => call(rel, entry, input)));
-      expect(printed.filter((stdout) => stdout.trim() !== ""), key).toHaveLength(1);
+      expect(
+        printed.filter((stdout) => stdout.trim() !== ""),
+        key,
+      ).toHaveLength(1);
     }
   });
 
