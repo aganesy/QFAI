@@ -172,12 +172,13 @@ it("Each review takes one reviewer for its kind, the architect only for an unrea
   );
   expect(items[3]).toBe("no other reviewer. A stage the plan marks with no review gets none.");
   expect(flat(await shipped("step/common-review-cycle/STEP.md"))).toContain(
-    "No reviewer is rerun.",
+    "re-review. No other reviewer is rerun.",
   );
   const evidence = flat(await shipped("skill/qfai-implement/references/ui-affecting.md"));
   expect(evidence).toContain(
-    "A fix made for a finding of that review refreshes the capture it changes and is not reviewed again",
+    "A fix made for a finding of that review refreshes the capture it changes, and a fix that changes behaviour gets its one focused re-review",
   );
+  expect(evidence).not.toContain("is not reviewed again");
   expect(evidence).not.toContain("refresh the capture and review");
   expect(reviews(await planOf("add-feature"))).toEqual(["sdd:spec", "note:code"]);
   expect(reviews(await planOf("fix-defect"))).toEqual(["note:code"]);
@@ -282,5 +283,6 @@ it("The entry skill's review step states the same count as the review step", asy
   expect(run).toContain(
     "A conflict resolution the plan's own edit stage made in the story tree, a contract or a register still gets one.",
   );
+  expect(run).toContain("a behaviour fix gets one re-review, as `common-review-cycle` says.");
   expect(run).not.toMatch(/flows served by a UI contract/);
 });

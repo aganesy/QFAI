@@ -92,6 +92,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   until the second cycle has run.** Its Passes when section now states this, so
   the stage review sees a skipped second cycle. Fixes #3790.
 
+- **A review fix that changes behaviour gets one focused re-review.** When a
+  fix changes code, a test's assertions or a contract statement, the reviewer
+  whose finding it fixed reviews only the fix's diff, once, in
+  `common-review-cycle`. Findings of that re-review are fixed or answered with
+  no further re-review, and a fix that changes wording only gets none, so the
+  cycle still ends. Before, no review read a fix, however much it rewrote.
+  Fixes #3945.
+
 - **The `qfai-run` final report lists every plan step with its status.** A
   step-status table gives one row per plan step and planned review, each marked
   `ran`, `passed`, `delegated`, `not run` or `not reached`, with a reason for

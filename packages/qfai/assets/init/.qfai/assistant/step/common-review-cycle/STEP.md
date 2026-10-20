@@ -89,8 +89,15 @@ them; it is the procedure that applies them.
 3. **Address every finding** once: fix it in its owning source with the
    smallest edit that resolves it, or record a reasoned answer beside it, and
    rerun the tests a fix touches. An upstream finding is not repaired here:
-   stop under `.qfai/assistant/rule/drift-protocol.md`. No reviewer is rerun.
-4. **Complete** once every reviewer has responded and every finding is fixed or
+   stop under `.qfai/assistant/rule/drift-protocol.md`.
+4. **Re-review a behaviour fix** once. A fix that changes behaviour (code, a
+   test's assertions or a contract statement, not wording alone) goes back to
+   the reviewer whose finding it fixed, with only the fix's diff as the target.
+   Fix or answer each finding of that re-review as step 3 says, with no further
+   re-review. A fix that changes wording only gets no re-review. No other
+   reviewer is rerun.
+5. **Complete** once every reviewer has responded, each behaviour fix has had
+   its one re-review, and every finding is fixed or
    answered. A finding the author cannot fix goes in the stage's final report;
    a critical decision goes to the user
    (`.qfai/assistant/rule/review-convergence.md#one-review`).
@@ -98,14 +105,16 @@ them; it is the procedure that applies them.
 ## Writes
 
 - In the stage report: each reviewer's verdict, the findings, and how each was
-  fixed or answered.
+  fixed or answered, and for each behaviour fix its re-review's verdict and
+  findings.
 - For a code review skipped as a small literal-only change: the skip, the
   changed lines and why no reviewer ran, in the stage report and in the final
   report.
 
 ## Gate
 
-Every routed reviewer responded once, every finding is fixed or answered, and
+Every routed reviewer responded once, each behaviour fix had its one focused
+re-review, every finding is fixed or answered, and
 the stage report names each verdict and each answer, or says why the review
 dispatched no reviewer. For a code review skipped as a small literal-only
 change, the stage report names the skip, the changed lines and why, and records
