@@ -488,6 +488,28 @@ describe("story-tree structure", () => {
     ]);
     expect(ISSUE_FIX_BY_CODE["QFAI-STORY-019"]).toContain("higher number");
     expect(ISSUE_FIX_BY_CODE["QFAI-STORY-019"]).not.toMatch(/npx|pnpm/);
+
+    const malformed = validateStoryTreeStructureModel(
+      model({
+        [`${specs}/decisions.md`]: register(
+          "| DEC-0003 | Earlier | Kept | DONE |\n| DEC-12 | Short ID | Kept | SUPERSEDED (by DEC-0003) |",
+        ),
+      }),
+    );
+    expect(malformed.some((item) => item.code === "QFAI-STORY-003")).toBe(true);
+    expect(malformed.some((item) => item.code === "QFAI-STORY-019")).toBe(false);
+
+    const undeclaredAndEarlier = validateStoryTreeStructureModel(
+      model({
+        [`${specs}/decisions.md`]: register(
+          "| DEC-0008 | Backwards | Kept | SUPERSEDED (by DEC-0001) |",
+        ),
+      }),
+    ).filter((item) => item.code === "QFAI-STORY-019" || item.code === "QFAI-STORY-003");
+    expect(undeclaredAndEarlier.map((item) => [item.code, item.refs])).toEqual([
+      ["QFAI-STORY-019", ["DEC-0008", "DEC-0001"]],
+      ["QFAI-STORY-003", ["DEC-0008", "DEC-0001"]],
+    ]);
   });
 
   // QFAI:EX-0001-0053-09

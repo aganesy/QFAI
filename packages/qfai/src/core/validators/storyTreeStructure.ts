@@ -361,7 +361,7 @@ const DECIDED_BY = /^(?:DONE|SUPERSEDED) \(by (DEC-\d{4})\)$/;
  * superseded row names as its successor, and every decision an open question's
  * Status names, is declared by a row. A superseded row's successor is also a
  * later decision: both IDs are `DEC-` and four digits, so string order is number
- * order. A row whose own ID is malformed already raises `QFAI-STORY-003`.
+ * order. A row whose own ID is malformed raises its ID errors and no `QFAI-STORY-019`.
  */
 function validateRecordCitations(model: StoryTreeModel): Issue[] {
   const decisions = new Set((model.decisions?.rows ?? []).map(({ id }) => id));
