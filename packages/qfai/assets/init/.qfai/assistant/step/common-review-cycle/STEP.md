@@ -92,8 +92,9 @@ them; it is the procedure that applies them.
    stop under `.qfai/assistant/rule/drift-protocol.md`.
 4. **Re-review a behaviour fix** once. A fix that changes behaviour (code, a
    test's assertions or a contract statement, not wording alone) goes back to
-   the reviewer whose finding it fixed, with only the fix's diff as the target.
-   Fix or answer each finding of that re-review as step 3 says, with no further
+   the reviewer whose finding it fixed: each reviewer whose findings had a
+   behaviour fix re-reviews the combined diff of those fixes, once, and reads
+   nothing else. Fix or answer each finding of that re-review as step 3 says, with no further
    re-review. A fix that changes wording only gets no re-review. No other
    reviewer is rerun.
 5. **Complete** once every reviewer has responded, each behaviour fix has had

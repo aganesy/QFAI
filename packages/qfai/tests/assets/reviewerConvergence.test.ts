@@ -142,7 +142,7 @@ describe("reviewer convergence", () => {
       const content = await read(tree, OPERATING);
       expectPhrase(
         content,
-        "A reviewer's `REVISE` is not a gate failure and is not rerun: the author fixes or answers each finding once",
+        "A reviewer's `REVISE` is not a gate failure and is not rerun as one: the author fixes or answers each finding, with a behaviour fix's one focused re-review,",
       );
       expectNoPhrase(content, "or when a blocking reviewer returns `REVISE`");
     });

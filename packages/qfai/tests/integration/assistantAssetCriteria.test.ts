@@ -157,7 +157,7 @@ describe("reviewer depth and completion", () => {
   it("sends a fix that changes behaviour back to the same reviewer once, for its diff alone", async () => {
     const cycle = await readFlat(assistant, "step", "common-review-cycle", "STEP.md");
     expect(cycle).toContain(
-      "4. **Re-review a behaviour fix** once. A fix that changes behaviour (code, a test's assertions or a contract statement, not wording alone) goes back to the reviewer whose finding it fixed, with only the fix's diff as the target.",
+      "4. **Re-review a behaviour fix** once. A fix that changes behaviour (code, a test's assertions or a contract statement, not wording alone) goes back to the reviewer whose finding it fixed: each reviewer whose findings had a behaviour fix re-reviews the combined diff of those fixes, once, and reads nothing else.",
     );
     expect(cycle).toContain(
       "Fix or answer each finding of that re-review as step 3 says, with no further re-review.",
@@ -168,13 +168,18 @@ describe("reviewer depth and completion", () => {
     );
     const convergence = await readFlat(assistant, "rule", "review-convergence.md");
     expect(convergence).toContain(
-      "A fix that changes behaviour (code, a test's assertions or a contract statement, not wording alone) gets one focused re-review: the reviewer whose finding it fixed reads only the fix's diff, once. Each finding of that re-review is fixed or answered with no further re-review,",
+      "A fix that changes behaviour (code, a test's assertions or a contract statement, not wording alone) gets one focused re-review: each reviewer whose findings had a behaviour fix reads only the combined diff of those fixes, once. Each finding of that re-review is fixed or answered with no further re-review,",
     );
     const run = await readFlat(assistant, "skill", "qfai-run", "SKILL.md");
     expect(run).toContain(
       "Fix or answer each finding once; a behaviour fix gets one re-review, as `common-review-cycle` says.",
     );
     expect(run).not.toContain("with no re-review");
+    const research = await readFlat(assistant, "skill", "web-research", "SKILL.md");
+    expect(research).toContain(
+      "a fix that changes behaviour gets the one re-review `common-review-cycle` sets.",
+    );
+    expect(research).not.toContain("no second review runs");
   });
 
   // QFAI:EX-0001-0157-04

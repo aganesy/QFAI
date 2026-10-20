@@ -49,7 +49,7 @@ Feature: Review a change twice: the specification before the code, and the code 
     Then one reviewer reviews for its kind: `requirements-reviewer` for the specification review, `implementation-reviewer` for the code review
     And `architecture-reviewer` joins only when the target holds a contract change that no earlier review of the route read
     And no reviewer joins but these and `product-surface-reviewer` for a screen change
-    And each reviewer reviews once in each review it joins, and none is rerun after a finding is fixed
+    And each reviewer reviews once in each review it joins, and none is rerun after a finding is fixed, except that each reviewer whose findings had a behaviour fix re-reviews the combined diff of those fixes once
 
   # AC-0001-0225-06
   Scenario: A review whose target only resolves conflicts between reviewed sides gets no reviewer
