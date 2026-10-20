@@ -14,9 +14,10 @@ name: Tag release commit
 # A version is a fact about the tree; a commit subject is a fact about how somebody merged.
 #
 # `.agents/rules/version-discipline.md` requires an explicit instruction for a tag. That instruction
-# is a human merging the release pull request; this workflow performs the mechanical half of a
-# decision already taken, and it fires on nothing else. Publishing is still gated separately, by the
-# `release` environment's required reviewer.
+# is the merge of the release pull request, made by a person or on that person's quoted
+# delegation; this workflow performs the mechanical half of a decision already taken, and it fires
+# on nothing else. Publishing is still gated separately, by the `release` environment's required
+# reviewer.
 #
 # The push uses `RELEASE_AUTOMATION_TOKEN`, and that is load-bearing rather than incidental: GitHub
 # raises no workflow events for pushes made with `GITHUB_TOKEN`, so a tag pushed with the job token

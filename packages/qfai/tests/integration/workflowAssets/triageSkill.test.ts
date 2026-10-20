@@ -311,6 +311,52 @@ describe("a question answered without a change", () => {
     );
   });
 
+  // QFAI:AC-0001-0220-07
+  // QFAI:EX-0001-0220-57
+  it("carries out a release only on a quoted delegation, and never tags, publishes or approves it", async () => {
+    const operate = await step("triage-operate");
+    const release = flat(sectionOf(operate, "## A delegated release"));
+    expect(release).toMatch(/runs this step after the user approves the release/);
+    expect(release).toMatch(
+      /Quote that instruction word for word, with where it came from: this request or an answer the user gave\. Never infer a delegation/,
+    );
+    expect(release).toMatch(
+      /With no instruction to quote, or no version the user named, stop before any operation/,
+    );
+    expect(release).toMatch(/with the version the user named, never another/);
+    expect(release).toMatch(/covers only the version edit stops once that edit is made/);
+    expect(release).toMatch(
+      /A release edit the documents make by hand is a tracked change: report `needs-change`/,
+    );
+    expect(release).toMatch(
+      /Review the release pull request as the project's review rules say, and merge it only when they allow/,
+    );
+    expect(release).toMatch(
+      /Create or push no tag by hand, publish nothing, and never approve the publication/,
+    );
+    expect(release).toMatch(/run the checks the release documents name for after it/);
+    expect(release).toMatch(
+      /Where the release documents make the merge the instruction for the tag, .*merge only when the quoted instruction names the merge or the whole release\. Otherwise stop once the release pull request is open, and hand the merge to the user/,
+    );
+    expect(release).toMatch(
+      /carry the quoted instruction and the named version into that extraction's request/,
+    );
+    expect(release).toMatch(
+      /Where the documents leave the tag to a person, or no release run starts after the merge, stop waiting and report the tag and the publication as the user's pending follow-ups/,
+    );
+    expect(release).toMatch(
+      /While the run waits on the approval and the user has not said they will approve it in this session, stop waiting and report the approval as pending/,
+    );
+    expect(release).toMatch(/the preparation up to an open release pull request/);
+    expect(flat(sectionOf(operate, "## Reads"))).toMatch(/version-discipline\.md/);
+    expect(flat(sectionOf(operate, "## Gate"))).toMatch(
+      /the delegation is quoted with its source, and that no tag, publication or publication approval came from the agent/,
+    );
+    expect(flat(sectionOf(await step("triage-handoff"), "## Procedure"))).toMatch(
+      /delegates the release to the agent while this step waits.*Quote the instruction word for word with its source, do not report `handed-off`, and list the delegated release as the follow-up for the closing step, which closes the request as `deferred`/,
+    );
+  });
+
   // QFAI:AC-0001-0214-02
   // QFAI:EX-0001-0214-03
   it("records a documentation gap the answer shows as a follow-up, and plans nothing for it", async () => {

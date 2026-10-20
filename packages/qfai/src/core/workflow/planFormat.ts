@@ -350,6 +350,7 @@ const ONE_STEP_PLANS: Readonly<Record<string, string>> = {
   "draft-release-notes": "verify-release-notes",
   "answer-in-session": "triage-answer",
   "run-operation": "triage-operate",
+  "run-release": "triage-operate",
 };
 
 // A route with no verify block ends at one stage running `triage-close`, or is one of the

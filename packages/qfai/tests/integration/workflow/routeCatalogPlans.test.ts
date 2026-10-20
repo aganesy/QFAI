@@ -157,6 +157,11 @@ const CATALOG: [string, string][] = [
     "hand-off-operation",
     "Stages in order — `inspect` (diagnose): `implement-diagnose(read-only)`; `handoff` (triage): `triage-handoff`; `close` (triage): `triage-close`; decision points none; release point `triage-handoff`; branch points none",
   ],
+  // QFAI:EX-0001-0220-56
+  [
+    "run-release",
+    "Stages in order — `release` (triage): `triage-operate`; decision points none; release point `triage-operate`; branch points `triage-operate`, `needs-change` to the route the decision rules give",
+  ],
   [
     "backport-fix",
     "Stages in order — `pick` (implement): `implement-backport`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points none; release point the end; branch points none",
@@ -257,6 +262,7 @@ for (const [route, expected] of CATALOG) {
   // QFAI:EX-0001-0220-42
   // QFAI:EX-0001-0220-53
   // QFAI:EX-0001-0220-54
+  // QFAI:EX-0001-0220-56
   it(route, async () => {
     const plan = (await loadBuiltInPlans()).find((each) => each.route === route);
 

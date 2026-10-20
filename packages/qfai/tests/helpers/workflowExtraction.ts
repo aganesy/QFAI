@@ -66,6 +66,7 @@ const BY_ROUTE: Record<string, Partial<WorkflowExtraction>> = {
   },
   "hand-off-operation": { intent: "order", qualifiers: ["human-run"] },
   "run-operation": { intent: "order", artifacts: [] },
+  "run-release": { intent: "release", qualifiers: ["release-delegated"] },
   "backport-fix": { intent: "release", signals: ["backport"] },
   "draft-release-notes": { intent: "release", signals: ["release-notes"] },
   "verify-manually": { intent: "release", signals: ["test-plan"] },
