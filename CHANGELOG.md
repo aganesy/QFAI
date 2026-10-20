@@ -717,6 +717,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   condition, a `t.skip()` or `t.todo()` inside an `if` or after other
   statements, and a `.skip` with a condition in a Playwright file. Fixes #3888.
 
+- **A merge whose conflicts lie in story-tree or contract files can be planned.**
+  `npx qfai workflow plan` refused such a request with `artifact-unserved`,
+  because the `resolve-conflicts` edit stage was counted as writing only
+  documents. A plan stage may now carry `serves`, the artifacts it writes beyond
+  those of its kind, and that stage serves `spec` and `contract`. A conflict
+  only in code is still refused. Fixes #3953.
+
 - **The Markdown-schema check no longer reports `0 file(s) conform`.** When no
   spec or contract document is in scope, for example when only operational
   Markdown outside the story tree changed, it now says that nothing was checked,
