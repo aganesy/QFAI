@@ -807,6 +807,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reads "Agent instruction files changed: restart any running agent session so
   it uses the new text." Fixes #3851.
 
+- **A chosen low-confidence candidate keeps the `spec` stage its request
+  needs.** `qfai-run` planned the chosen candidate with
+  `npx qfai workflow plan --route`, which knew no artifacts, so a request that
+  named the story tree lost the `spec` stage on a route without a `spec`
+  review. `--route` now also takes `--in` with the extraction that gave the
+  candidates: the route is refused `artifact-unserved` as the extraction's
+  plan would be, and otherwise gains the same `spec` stage. Each candidate's
+  summary, scopes and decision points now list that stage, and `qfai-run`
+  passes the same `--in` when it plans the chosen one. Fixes #3954.
+
 - **A DESIGN.md violation every screen shares is reported once.** The
   prototyping reviewer repeated a violation whose source every screen shares,
   such as a shared stylesheet or component, in each screen's review payload, so

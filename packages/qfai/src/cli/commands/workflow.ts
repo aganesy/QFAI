@@ -10,6 +10,7 @@ import { EXIT_CODES } from "../lib/exitCodes.js";
 export const WORKFLOW_HELP = [
   "plan --in <path|->   Print the route plan for the request extraction in the file, or on stdin",
   "plan --route <route> Print the plan of the named route",
+  "  [--in <path|->]     With the extraction whose candidate the route is, add the stages its artifacts need",
   "plan --order         Print the plan of an operation on finished work, with no extraction",
 ].join("\n");
 
@@ -61,15 +62,19 @@ async function readExtraction(root: string, inPath: string): Promise<Read> {
   }
 }
 
-// `npx qfai workflow plan`, given exactly one of `--in`, `--route` and `--order`.
+// `npx qfai workflow plan`, given one of `--in`, `--route` and `--order`, or `--route` with `--in`.
 export async function runWorkflowPlan(options: WorkflowOptions): Promise<number> {
   if (options.order === true) {
     return emitPlanDocument(await planOf(options.root, { extraction: orderExtraction() }));
   }
-  if (options.route !== undefined) {
+  if (options.route !== undefined && options.inPath === undefined) {
     return emitPlanDocument(await planOf(options.root, { route: options.route }));
   }
   const read = await readExtraction(options.root, options.inPath ?? "-");
   if (!read.ok) return emitPlanDocument(read.document);
-  return emitPlanDocument(await planOf(options.root, { extraction: read.value }));
+  const input =
+    options.route === undefined
+      ? { extraction: read.value }
+      : { route: options.route, extraction: read.value };
+  return emitPlanDocument(await planOf(options.root, input));
 }

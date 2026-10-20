@@ -475,7 +475,7 @@ describe("qfai-run", () => {
     expect(work).toMatch(/when `plan` returns `candidates`, put one single-select question/i);
     expect(work).toMatch(/each option saying in the user's words what that route will do/i);
     expect(work).toMatch(
-      /`npx qfai workflow plan --route <route>` for the chosen one, keeping the candidate's `decisionPoints`/,
+      /`npx qfai workflow plan --route <route>` with the same `--in` for the chosen one, keeping the candidate's `decisionPoints`/,
     );
     const screens = await readShipped(SCREENS);
     const row = rowOf(sectionOf(screens, "## Questions"), "| The candidate question");

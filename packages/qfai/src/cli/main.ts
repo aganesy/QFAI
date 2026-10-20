@@ -365,12 +365,15 @@ async function workflowEntry(
   }
   const subjects = workflowRefusalSubjects(invalid, options);
   if (subjects.length > 0) {
-    error(invalidReason ?? "qfai workflow plan: give exactly one of --in, --route and --order.");
+    error(
+      invalidReason ??
+        "qfai workflow plan: give one of --in, --route and --order, or --route with --in.",
+    );
     const diagnosis =
       options.workflowUnknownOperation !== undefined ? await unavailableCommandDiagnosis() : null;
     if (diagnosis !== null) error(diagnosis);
     const message =
-      "The command line is not `workflow plan` with exactly one of --in, --route and --order, so run it with --help to see the form.";
+      "The command line is not `workflow plan` with one of --in, --route and --order, or --route with --in, so run it with --help to see the form.";
     return emitPlanDocument({
       ok: false,
       message: diagnosis ?? message,
@@ -393,7 +396,7 @@ async function unavailableCommandDiagnosis(): Promise<string> {
 }
 
 // What a `workflow` command line gets wrong: an unknown operation or flag, a missing operation,
-// or not exactly one of `--in`, `--route` and `--order`.
+// or not one of `--in`, `--route` and `--order`, or `--route` with `--in`.
 function workflowRefusalSubjects(invalid: boolean, options: ParsedArgs["options"]): string[] {
   if (options.workflowUnknownOperation !== undefined) return [options.workflowUnknownOperation];
   if (options.unknownFlags.length > 0) return options.unknownFlags;
@@ -404,7 +407,7 @@ function workflowRefusalSubjects(invalid: boolean, options: ParsedArgs["options"
     ...(options.workflowRoute !== undefined ? ["--route"] : []),
     ...(options.workflowOrder === true ? ["--order"] : []),
   ];
-  if (given.length === 1) return [];
+  if (given.length === 1 || given.join(" ") === "--in --route") return [];
   return given.length === 0 ? ["--in"] : given;
 }
 
@@ -427,7 +430,7 @@ Commands:
   sdd merge-docs               Merge each conflicted story-tree document from the index by table row and sentence, leave what it cannot settle between conflict markers, and check the result's document schema
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
-  workflow plan                Print the route plan for a request extraction (--in <path|->), a route (--route <route>), or an operation on finished work (--order)
+  workflow plan                Print the route plan for a request extraction (--in <path|->), a route (--route <route>, with --in for a chosen candidate's extraction), or an operation on finished work (--order)
 
 Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)

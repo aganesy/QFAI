@@ -14,12 +14,13 @@ are exact: an unknown key is refused.
 
 ## Calls
 
-| Call                                     | When                                                                    |
-| ---------------------------------------- | ----------------------------------------------------------------------- |
-| `npx qfai workflow plan --in <file>`     | A request, with its extraction in a JSON file                           |
-| `npx qfai workflow plan --in -`          | The same, with the extraction on standard input                         |
-| `npx qfai workflow plan --route <route>` | The candidate chosen, or a branch destination                           |
-| `npx qfai workflow plan --order`         | An operation the session runs itself that deletes nothing, with no file |
+| Call                                                 | When                                                                    |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| `npx qfai workflow plan --in <file>`                 | A request, with its extraction in a JSON file                           |
+| `npx qfai workflow plan --in -`                      | The same, with the extraction on standard input                         |
+| `npx qfai workflow plan --route <route> --in <file>` | The candidate chosen, with the extraction that gave the candidates      |
+| `npx qfai workflow plan --route <route>`             | A branch destination                                                    |
+| `npx qfai workflow plan --order`                     | An operation the session runs itself that deletes nothing, with no file |
 
 - Each call prints one JSON document and writes no file.
 - Exit 0 is a plan or candidates, 2 a refused input, and 1 an input file that
@@ -109,8 +110,9 @@ The route, its stages in order with each step's file, and its points.
 | `scopes`         | How far the work may go, narrowest first; absent for `--route`                                                                                                  |
 | `workOrders`     | On an implement stage when the extraction lists `flows`: one `{ target }` per flow, in ascending ID order; absent otherwise                                     |
 
-A plan from an extraction that names `spec` or `contract` can hold a `spec`
-stage its route's catalog row lacks, when no stage of the route is marked for
+A plan or a candidate from an extraction that names `spec` or `contract`, and
+the plan `--route` returns with that `--in`, can hold a `spec` stage its route's
+catalog row lacks, when no stage of the route is marked for
 the `spec` review; run it like any other stage.
 
 A stage with `workOrders` runs every one of its steps once per work order, for
