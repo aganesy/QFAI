@@ -1114,6 +1114,90 @@ export function ruleListBullet(existing: string, master: string): string | undef
 }
 
 /**
+ * `generated`, the Copilot instruction file as this release writes it, with the
+ * project's own entries from `existing` carried over, and the lines of
+ * `existing` the result no longer holds.
+ *
+ * The project keeps what the shipped text does not know, as it does in
+ * `AGENTS.md`: a list item in the rule list that cites no master the shipped
+ * list cites, and a section whose heading the shipped text does not have. An
+ * item goes after the last shipped rule bullet, in the project's order, and a
+ * section goes at the end of the file. Every other line sits in a section the
+ * shipped text owns and is replaced by it, so a line there that the result does
+ * not hold is returned for the run to name.
+ */
+export function keepProjectEntries(
+  generated: string,
+  existing: string,
+): { text: string; removed: string[] } {
+  const lines = existing.split("\n").map((line) => line.replace(/\r$/, ""));
+  const open = outsideFences(lines);
+  const out = generated.split("\n");
+  const shippedMasters = new Set(citedRuleMastersOutsideCode(generated));
+  const kept = new Set<number>();
+
+  // A list item is kept only where the shipped text has a list to put it in.
+  const shippedOpen = outsideFences(out);
+  const shippedRange = ruleListRange(out, shippedOpen);
+  const entries: string[] = [];
+  const range = ruleListRange(lines, open);
+  if (range !== null && shippedRange !== null) {
+    for (let index = range.from; index < range.to; index += 1) {
+      const line = lines[index] ?? "";
+      if (open[index] !== true || isQuoted(line) || !LIST_ITEM_RE.test(line)) continue;
+      const end = Math.min(endOfListItem(lines, open, index), range.to);
+      const item = lines.slice(index, end);
+      const cites = citedRuleMasters(item.join("\n"));
+      if (!out.includes(line) && cites.every((master) => !shippedMasters.has(master))) {
+        entries.push(...item);
+        for (let at = index; at < end; at += 1) kept.add(at);
+      }
+      index = end - 1;
+    }
+  }
+  if (entries.length > 0 && shippedRange !== null) {
+    let at = shippedRange.to;
+    for (let index = shippedRange.from; index < shippedRange.to; index += 1) {
+      if (isRuleBullet(out, shippedOpen, index)) at = endOfListItem(out, shippedOpen, index);
+    }
+    out.splice(at, 0, ...entries);
+  }
+
+  const outOpen = outsideFences(out);
+  const shippedHeadings = new Set(sectionStarts(out, outOpen).map((at) => headingKey(out[at])));
+  const starts = sectionStarts(lines, open);
+  let text = out.join("\n");
+  for (const [n, start] of starts.entries()) {
+    if (shippedHeadings.has(headingKey(lines[start]))) continue;
+    let end = starts[n + 1] ?? lines.length;
+    for (let at = start; at < end; at += 1) kept.add(at);
+    while (end > start + 1 && (lines[end - 1] ?? "").trim() === "") end -= 1;
+    text += `${text.endsWith("\n") ? "" : "\n"}\n${lines.slice(start, end).join("\n")}\n`;
+  }
+
+  const held = new Set(text.split("\n"));
+  const removed = lines.filter(
+    (line, index) => !kept.has(index) && line.trim() !== "" && !held.has(line),
+  );
+  return { text, removed: [...new Set(removed)] };
+}
+
+/** Where a heading of level 1 or 2 opens a section, outside fences and quotes. */
+function sectionStarts(lines: readonly string[], open: readonly boolean[]): number[] {
+  return lines.flatMap((line, index) =>
+    open[index] === true && !isQuoted(line) && (atxLevel(plainLine(line)) ?? 7) <= 2 ? [index] : [],
+  );
+}
+
+/** A heading's text, without its marker, closing run of `#` or surrounding space. */
+function headingKey(line: string | undefined): string {
+  return plainLine(line)
+    .replace(/^ {0,3}#{1,6}/, "")
+    .replace(/(?:[ \t]+#+)?[ \t]*$/, "")
+    .trim();
+}
+
+/**
  * Whether the line is `CROSS_AI_RULES_HEADING` itself: the exact heading, at the
  * top level, in no blockquote.
  *
