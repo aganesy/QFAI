@@ -334,10 +334,11 @@ export async function findUiScreenCopyFindings(
   contractsDirRelative = ".qfai/contracts",
 ): Promise<UiScreenCopyFinding[]> {
   const found: UiScreenCopyFinding[] = [];
-  for (const { file, index, screenId, entry } of await readUiContractScreens(
+  for (const { file, index, screenId, entry, firstInScope } of await readUiContractScreens(
     root,
     contractsDirRelative,
   )) {
+    if (!firstInScope) continue;
     for (const finding of analyzeScreenCopy(entry)) {
       found.push({ ...finding, file, index, screenId });
     }
@@ -355,11 +356,13 @@ export type UiContractScreenEntry = {
   index: number;
   screenId: string;
   entry: Record<string, unknown>;
+  /** Whether it is the first entry for its `id` in its contract scope, the one the screen reader reads. */
+  firstInScope: boolean;
 };
 
 /**
- * The `screens[]` entries the screen reader reads, in walk order: those with an
- * `id` and a `route`, and the first entry for an `id` in its contract scope.
+ * The `screens[]` entries with an `id` and a `route`, in walk order, each
+ * marked with whether it is the first for its `id` in its contract scope.
  */
 export async function readUiContractScreens(
   root: string,
@@ -377,9 +380,10 @@ export async function readUiContractScreens(
       const screenId = typeof entry.id === "string" ? entry.id.trim() : "";
       const route = typeof entry.route === "string" ? entry.route.trim() : "";
       const key = JSON.stringify([scope, screenId]);
-      if (!screenId || !route || seen.has(key)) return;
+      if (!screenId || !route) return;
+      const firstInScope = !seen.has(key);
       seen.add(key);
-      entries.push({ contractId, file: relativePath, index, screenId, entry });
+      entries.push({ contractId, file: relativePath, index, screenId, entry, firstInScope });
     });
   }
   return entries;

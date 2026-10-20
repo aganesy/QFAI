@@ -167,6 +167,9 @@ that cannot be undone. Each is an entry with exactly these keys, all non-empty:
 | `text` | the words as displayed                                                                    |
 | `why`  | what the user could not know or do without it, and why a label or structure is not enough |
 
+A text shown in several states is listed once per state it shows in, each entry
+with its own `id`.
+
 `supplements: []` says the screen shows none. Most screens need few, and a screen
 need not have any. Two kinds of text are not supplements: the message of a field
 rule is owned by the `validations` of its element, and data the product shows or
@@ -279,7 +282,9 @@ data the product shows, text the user typed and the message of a field rule.
 `QFAI-CONTRACT-047` names a rendered text that is no title, group heading, label
 or supplement of that state, and `QFAI-CONTRACT-048` a supplement of that state
 the screen did not render; `QFAI-CONTRACT-046` names a file or an entry out of
-shape. Only the screens and states the file holds are compared, so a render of
+shape. A supplement counts only for its own `when`, so a text shown in several
+states needs its entry for each. Only the screens and states the file holds are
+compared, so a render of
 the default state alone checks the default state.
 
 A contract written before these keys was valid without them. Add

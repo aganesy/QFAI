@@ -146,9 +146,14 @@ describe.each(TREES)("%s: the guidance that reads the copy keys", (tree) => {
       "`npx qfai validate --rendered <file>` compares what the screens rendered",
     );
     expect(guide).toContain("Your own browser run writes the file, and QFAI renders nothing");
+    expect(guide).toContain("A text shown in several states is listed once per state it shows in");
     for (const code of ["QFAI-CONTRACT-046", "QFAI-CONTRACT-047", "QFAI-CONTRACT-048"]) {
       expect(guide, code).toContain(code);
     }
+    const rules = flat(await read(tree, `${SDD}/references/contract-artifact-rules.md`));
+    expect(rules).toContain(
+      "with `--rendered`, `QFAI-CONTRACT-046` to `QFAI-CONTRACT-048` compare rendered text",
+    );
   });
 
   // QFAI:EX-0001-0230-12

@@ -447,6 +447,7 @@ describe("rendered text compared with the screen's copy", () => {
       ["QFAI-CONTRACT-046", "error"],
     ]);
     expect(missing[0]?.message).toContain("absent.json");
+    expect(missing[0]?.message).toContain("cannot be read (ENOENT)");
 
     await writeRendered({
       screens: [
@@ -455,6 +456,8 @@ describe("rendered text compared with the screen's copy", () => {
         rendered([], { when: "busy" }),
         rendered([], { note: "x" }),
         rendered([1]),
+        rendered([], { when: undefined }),
+        { ...rendered([]), texts: "Create Order" },
         rendered(["Create Order"]),
         rendered(["Create Order"]),
       ],
@@ -464,18 +467,64 @@ describe("rendered text compared with the screen's copy", () => {
       expect(finding.file).toBe(RENDERED);
       return finding.message;
     });
-    expect(messages).toHaveLength(6);
+    expect(messages).toHaveLength(8);
     expect(messages.some((message) => message.includes("`UI-0009`"))).toBe(true);
     expect(messages.some((message) => message.includes("`nope`"))).toBe(true);
     expect(messages.some((message) => message.includes("`when` is `busy`"))).toBe(true);
     expect(messages.some((message) => message.includes("carries `note`"))).toBe(true);
     expect(messages.some((message) => message.includes("`screens[4]`"))).toBe(true);
-    expect(messages.some((message) => message.includes("`screens[6]` repeats"))).toBe(true);
+    expect(messages.some((message) => message.includes("`screens[5]` is missing"))).toBe(true);
+    expect(messages.some((message) => message.includes("`screens[6]` has a `texts`"))).toBe(true);
+    expect(messages.some((message) => message.includes("`screens[8]` repeats"))).toBe(true);
+
+    for (const top of [{ screens: [], note: "x" }, { screens: "order_create" }]) {
+      await writeRendered(top);
+      const findings = await renderedFindings();
+      expect(findings.map((finding) => finding.code)).toEqual(["QFAI-CONTRACT-046"]);
+      expect(findings[0]?.message).toContain("holding only a `screens` list");
+    }
 
     await writeFile(path.join(root, RENDERED), "{ not json", "utf-8");
     expect((await renderedFindings()).map((finding) => finding.code)).toEqual([
       "QFAI-CONTRACT-046",
     ]);
+
+    // A byte-order mark, as some editors and shells write, is not a reason to call the file not JSON.
+    await writeFile(
+      path.join(root, RENDERED),
+      `\uFEFF${JSON.stringify({ screens: [rendered(["Create Order"])] })}`,
+      "utf-8",
+    );
+    expect(await renderedFindings()).toEqual([]);
+  });
+
+  it("reports a text the screen shows twice once", async () => {
+    await writeContract([screen()]);
+    await writeRendered({
+      screens: [rendered(["Create Order", "Free shipping", "free  shipping.", "Free shipping"])],
+    });
+    const findings = await renderedFindings();
+    expect(findings.map((finding) => finding.code)).toEqual(["QFAI-CONTRACT-047"]);
+    expect(findings[0]?.message).toContain('"Free shipping"');
+  });
+
+  it("finds a screen in a second contract that shares its id with a first, in files named by no number", async () => {
+    for (const [name, id] of [
+      ["orders.yaml", "UI-0001"],
+      ["billing.yaml", "UI-0002"],
+    ] as const) {
+      const file = path.join(root, ".qfai/spec/03_contract/ui", name);
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(
+        file,
+        `# QFAI-CONTRACT-ID: ${id}\n${stringify({ "x-qfai-depends-on": [], screens: [screen()] })}`,
+        "utf-8",
+      );
+    }
+    await writeRendered({
+      screens: [rendered(["Create Order"], { contract: "UI-0002" })],
+    });
+    expect(await renderedFindings()).toEqual([]);
   });
 
   // QFAI:EX-0001-0230-16

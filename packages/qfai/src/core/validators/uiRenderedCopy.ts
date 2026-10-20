@@ -63,10 +63,9 @@ export async function validateUiRenderedCopy(
     );
   let parsed: unknown;
   try {
-    parsed = JSON.parse(await readFile(absolute, "utf-8"));
+    parsed = JSON.parse((await readFile(absolute, "utf-8")).replace(/^\uFEFF/u, ""));
   } catch (error: unknown) {
-    const reason = error instanceof SyntaxError ? "it is not JSON" : "it cannot be read";
-    return [shape(`${reason}.`)];
+    return [shape(`${readFailure(error)}.`)];
   }
   if (!isMapping(parsed) || !Array.isArray(parsed["screens"]) || Object.keys(parsed).length > 1) {
     return [shape("the top level is not a mapping holding only a `screens` list.")];
@@ -91,6 +90,16 @@ export async function validateUiRenderedCopy(
     entries.push(read);
   });
   return [...issues, ...entries.flatMap(compareEntry)];
+}
+
+/** Why the file gave no JSON value: not JSON, or not readable, with the system's error code. */
+function readFailure(error: unknown): string {
+  if (error instanceof SyntaxError) return "it is not JSON";
+  const code =
+    error instanceof Error && "code" in error && typeof error.code === "string"
+      ? ` (${error.code})`
+      : "";
+  return `it cannot be read${code}`;
 }
 
 /** The entry, or what is wrong with it. */
@@ -132,8 +141,15 @@ function compareEntry({ screen, contract, when, texts }: RenderedEntry): Issue[]
   const shownTexts = new Set(texts.map(normalizeCopy));
   const where = `Screen \`${screen.screenId}\` of ${contract} (\`when: ${when}\`)`;
   const refs = [contract, screen.screenId];
-  const excess = texts
-    .filter((value) => normalizeCopy(value) !== "" && !listed.has(normalizeCopy(value)))
+  // One finding per wording: a text the screen shows twice is one text the contract lacks.
+  const distinct = new Map<string, string>();
+  for (const value of texts) {
+    const key = normalizeCopy(value);
+    if (key !== "" && !distinct.has(key)) distinct.set(key, value);
+  }
+  const excess = [...distinct]
+    .filter(([key]) => !listed.has(key))
+    .map(([, value]) => value)
     .map((value) =>
       issue(
         "QFAI-CONTRACT-047",
