@@ -241,7 +241,16 @@ describe("BF-0001 init preserves project content", () => {
       const shippedLine = "- Always match the user's language in your outputs.";
       const editedLine = "- Always answer in English.";
       expect(shipped).toContain(shippedLine);
-      await writeFile(copilot, shipped.replace(shippedLine, editedLine), "utf8");
+      const edited = shipped.replace(shippedLine, editedLine);
+      await writeFile(copilot, edited, "utf8");
+
+      const preview = await captureStderr(() =>
+        captureStdout(() => runInit({ dir: root, force: true, dryRun: true, yes: true })),
+      );
+
+      expect(await readFile(copilot, "utf8")).toBe(edited);
+      expect(preview).toContain("would change or remove");
+      expect(preview).toContain(editedLine);
 
       const stderr = await captureStderr(() =>
         captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true })),

@@ -1956,6 +1956,30 @@ describe("the Copilot file this run cannot extend", () => {
     });
   });
 
+  it("says --force rewrote a file it could not read whole", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      await writeFile(copilot, `# House instructions\n\n${"x".repeat(600 * 1024)}\n`, "utf-8");
+
+      const chunks: string[] = [];
+      const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+        chunks.push(String(chunk));
+        return true;
+      });
+      try {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      } finally {
+        spy.mockRestore();
+      }
+
+      expect(chunks.join("")).toContain(
+        "rewrote .github/copilot-instructions.md whole from the shipped text, because it could not be read",
+      );
+      expect(await readFile(copilot, "utf-8")).not.toContain("# House instructions");
+    });
+  });
+
   it("leaves the file to the wrapper regeneration under --force", async () => {
     await withProject(async (root) => {
       const master = ".agents/rules/grilling.md";

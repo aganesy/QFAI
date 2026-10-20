@@ -1841,6 +1841,13 @@ async function syncIntegrationWrappers(
       );
       for (const line of removed) error(`    ${line}`);
     }
+    if (copilotExists && existingCopilot === undefined) {
+      // Too large, or not readable as a regular file: nothing of it could be kept.
+      error(
+        `  WARNING: --force ${options.dryRun ? "would rewrite" : "rewrote"} ${formatReportPath(COPILOT_INSTRUCTIONS_ENTRY)} whole from the shipped text, ` +
+          "because it could not be read; none of the project entries in it are kept.",
+      );
+    }
   }
 
   // Step 3: Distribute Copilot review instructions (create-only, `--force` refreshes).
