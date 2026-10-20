@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { ISSUE_EXPECTED_BY_CODE } from "../../../../src/cli/commands/validate.js";
+import {
+  ISSUE_EXPECTED_BY_CODE,
+  ISSUE_FIX_BY_CODE,
+} from "../../../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../../../src/core/config.js";
 import { architectureProblems, orderLayers } from "../../../../src/core/storyTree/architecture.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
@@ -446,6 +449,67 @@ describe("story-tree structure", () => {
       }),
     );
     expect(declared).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0053-35
+  it("reports a superseded row whose successor is not a later decision", () => {
+    const register = (rows: string) =>
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
+    const issues = validateStoryTreeStructureModel(
+      model({
+        [`${specs}/decisions.md`]: register(
+          [
+            "| DEC-0003 | Earlier | Kept | DONE |",
+            "| DEC-0004 | Replaced | Kept | SUPERSEDED (by DEC-0007) |",
+            "| DEC-0005 | Backwards | Kept | SUPERSEDED (by DEC-0003) |",
+            "| DEC-0006 | Itself | Kept | PARTLY SUPERSEDED (by DEC-0006) |",
+            "| DEC-0007 | Later | Kept | DONE |",
+          ].join("\n"),
+        ),
+      }),
+    );
+    expect(
+      issues.map((item) => [item.code, item.refs, item.file, item.severity, item.message]),
+    ).toEqual([
+      [
+        "QFAI-STORY-019",
+        ["DEC-0005", "DEC-0003"],
+        `${specs}/decisions.md`,
+        "error",
+        `DEC-0005 is superseded by DEC-0003, which is not a later decision, in ${specs}/decisions.md`,
+      ],
+      [
+        "QFAI-STORY-019",
+        ["DEC-0006", "DEC-0006"],
+        `${specs}/decisions.md`,
+        "error",
+        `DEC-0006 is superseded by DEC-0006, which is not a later decision, in ${specs}/decisions.md`,
+      ],
+    ]);
+    expect(ISSUE_FIX_BY_CODE["QFAI-STORY-019"]).toContain("higher number");
+    expect(ISSUE_FIX_BY_CODE["QFAI-STORY-019"]).not.toMatch(/npx|pnpm/);
+
+    const malformed = validateStoryTreeStructureModel(
+      model({
+        [`${specs}/decisions.md`]: register(
+          "| DEC-0003 | Earlier | Kept | DONE |\n| DEC-12 | Short ID | Kept | SUPERSEDED (by DEC-0003) |",
+        ),
+      }),
+    );
+    expect(malformed.some((item) => item.code === "QFAI-STORY-003")).toBe(true);
+    expect(malformed.some((item) => item.code === "QFAI-STORY-019")).toBe(false);
+
+    const undeclaredAndEarlier = validateStoryTreeStructureModel(
+      model({
+        [`${specs}/decisions.md`]: register(
+          "| DEC-0008 | Backwards | Kept | SUPERSEDED (by DEC-0001) |",
+        ),
+      }),
+    ).filter((item) => item.code === "QFAI-STORY-019" || item.code === "QFAI-STORY-003");
+    expect(undeclaredAndEarlier.map((item) => [item.code, item.refs])).toEqual([
+      ["QFAI-STORY-019", ["DEC-0008", "DEC-0001"]],
+      ["QFAI-STORY-003", ["DEC-0008", "DEC-0001"]],
+    ]);
   });
 
   // QFAI:EX-0001-0053-09
