@@ -1074,7 +1074,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-013":
     "The `## Architecture` section of the contract-layer tech.md draws exactly the layers and dependencies its table lists, and each row depends only on layers in rows below it.",
   "QFAI-STORY-015":
-    "Story-tree documents name no file outside `.qfai` by a repository path, so a spec does not depend on a file that changes without a spec review.",
+    "Policy, business-flow and contract documents name no file outside `.qfai` by a repository path, so a spec does not depend on a file that changes without a spec review.",
   "QFAI-STORY-016":
     "No spec document states a term `validation.staleTerms` lists, apart from the decision and open-question registers.",
   "QFAI-STORY-017":

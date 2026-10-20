@@ -54,7 +54,7 @@ Feature: Story-tree layout and ID validation
   Scenario: A path outside .qfai is counted for each tree
     Given the story tree, and Markdown documents that name a file by a repository path that does not start with `.qfai/`
     When `qfai validate --profile sdd` runs
-    Then one warning for each of the policy, business-flow, contract, and decision and open-question trees counts its lines and its files
+    Then one warning for each of the policy, business-flow and contract trees counts its lines and its files
     And a path under `.qfai`, a URL, and a discussion pack raise nothing
-    And a decision row's Evidence items and a change request's Content, which the decision form requires to name files, raise nothing
+    And the decision and open-question trees, which record history and cite files by design, raise nothing
 ```
