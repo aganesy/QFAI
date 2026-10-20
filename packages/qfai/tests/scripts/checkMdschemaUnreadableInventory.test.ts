@@ -116,7 +116,7 @@ describe("a document directory the lane cannot list", () => {
       const root = await newTree();
       refusal.code = code;
 
-      const result = checkDocuments(root);
+      const result = await checkDocuments(root);
 
       expect(result).toEqual({
         ok: true,
@@ -130,7 +130,7 @@ describe("a document directory the lane cannot list", () => {
           }),
         ],
       });
-      expect(JSON.stringify(checkDocuments(root))).not.toContain(path.basename(root));
+      expect(JSON.stringify(await checkDocuments(root))).not.toContain(path.basename(root));
     },
   );
 
@@ -149,7 +149,7 @@ describe("a document directory the lane cannot list", () => {
     const root = await newTree();
     refusal.code = "ENOENT";
 
-    expect(checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+    expect(await checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
     const result = runMain(root);
     expect(result.status).toBe(0);
     expect(result.stderr).toBe("");
@@ -159,7 +159,7 @@ describe("a document directory the lane cannot list", () => {
     const root = await newTree();
     refusal.dir = "";
 
-    expect(checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+    expect(await checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
   });
 });
 
@@ -171,7 +171,7 @@ describe("a configured document root the lane cannot walk", () => {
     refusal.dir = "";
     await writeFile(path.join(root, CONTRACTS), "not a directory", "utf-8");
 
-    expect(checkDocuments(root)).toEqual({
+    expect(await checkDocuments(root)).toEqual({
       ok: true,
       checked: 1,
       violations: [
@@ -193,7 +193,7 @@ describe("a configured document root the lane cannot walk", () => {
     await mkdir(path.join(root, CONTRACTS), { recursive: true });
     refusal.stat = path.join(root, CONTRACTS);
 
-    expect(checkDocuments(root)).toEqual({
+    expect(await checkDocuments(root)).toEqual({
       ok: true,
       checked: 1,
       violations: [
@@ -214,6 +214,6 @@ describe("a configured document root the lane cannot walk", () => {
     const root = await newTree();
     refusal.dir = "";
 
-    expect(checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+    expect(await checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
   });
 });

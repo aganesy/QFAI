@@ -494,7 +494,7 @@ describe("a Markdown file no schema covers", () => {
 
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toContain("1 file(s) conform");
-      expect(checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+      expect(await checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
     },
   );
 
@@ -504,7 +504,7 @@ describe("a Markdown file no schema covers", () => {
     await mkdir(path.join(root, ".qfai", "specs"), { recursive: true });
     await writeFile(path.join(root, notes), "# Readme\n", "utf-8");
 
-    expect(checkDocuments(root)).toEqual({
+    expect(await checkDocuments(root)).toEqual({
       ok: true,
       checked: 0,
       violations: [expect.objectContaining({ file: notes, rule: "coverage", line: 1 })],
@@ -1128,7 +1128,7 @@ describe("checking documents for a caller", () => {
     const root = await newTempDir();
     const file = await writeFlow(root, "business-flow-0001", NON_CONFORMING_FLOW);
 
-    const result = checkDocuments(root);
+    const result = await checkDocuments(root);
 
     expect(result.ok).toBe(true);
     expect(result.checked).toBe(1);
@@ -1147,7 +1147,7 @@ describe("checking documents for a caller", () => {
     const root = await newTempDir();
     await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
 
-    expect(checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+    expect(await checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
   });
 
   it("returns the refused marker and the root heading as violations of their own", async () => {
@@ -1159,7 +1159,7 @@ describe("checking documents for a caller", () => {
     );
     const wrong = await writeFlow(root, "business-flow-0002", WRONG_ROOT);
 
-    const result = checkDocuments(root);
+    const result = await checkDocuments(root);
 
     expect(result.violations).toEqual([
       expect.objectContaining({ file: marked, rule: "ignore", line: 1 }),
@@ -1173,7 +1173,10 @@ describe("checking documents for a caller", () => {
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "business-flow.md"), NON_CONFORMING_FLOW, "utf-8");
 
-    const result = checkDocuments(root, { specsDir: "docs", contractsDir: "docs/03_contract" });
+    const result = await checkDocuments(root, {
+      specsDir: "docs",
+      contractsDir: "docs/03_contract",
+    });
 
     expect(result.ok).toBe(true);
     expect(result.violations.map((v: { file: string }) => v.file)).toContain(
@@ -1320,7 +1323,7 @@ describe("a forbidden-text finding", () => {
     const root = await newTempDir();
     await writeTech(root, PROSE_DEPENDENCIES);
 
-    const result = checkDocuments(root, {
+    const result = await checkDocuments(root, {
       specsDir: ".qfai/specs",
       contractsDir: ".qfai/contracts",
     });
@@ -1391,7 +1394,7 @@ describe("a forbidden-text finding", () => {
     await writeTech(root, body);
     const expected = body.split("\n").indexOf("- `react` 18.3.1") + 1;
 
-    const result = checkDocuments(root, {
+    const result = await checkDocuments(root, {
       specsDir: ".qfai/specs",
       contractsDir: ".qfai/contracts",
     });
@@ -1420,7 +1423,7 @@ describe("the configured decision register", () => {
     await writeFile(path.join(root, ".qfai", "specs", "decisions", "page-0001.md"), table, "utf-8");
     const result = runDriver(["--root", root, "--scope", "all"]);
     expect(result.status, result.stderr).toBe(0);
-    expect(checkDocuments(root)).toEqual({ ok: true, checked: 2, violations: [] });
+    expect(await checkDocuments(root)).toEqual({ ok: true, checked: 2, violations: [] });
   });
 
   // QFAI:EX-0001-0011-18
@@ -1443,7 +1446,7 @@ describe("the configured decision register", () => {
     const result = runDriver(["--root", root, "--scope", "all"]);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("[decision-register]");
-    expect(checkDocuments(root).violations).toContainEqual(
+    expect((await checkDocuments(root)).violations).toContainEqual(
       expect.objectContaining({ rule: "decision-register" }),
     );
   });
@@ -1461,7 +1464,7 @@ describe("the configured decision register", () => {
     const result = runDriver(["--root", root, "--scope", "all"]);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("[decision-register]");
-    expect(checkDocuments(root).violations).toContainEqual(
+    expect((await checkDocuments(root)).violations).toContainEqual(
       expect.objectContaining({ rule: "decision-register" }),
     );
   });
@@ -1488,7 +1491,7 @@ describe("the configured decision register", () => {
       );
       if (kind === "page") await writeFile(path.join(dir, "page-0001.md"), bytes, "utf-8");
       const result = runDriver(["--root", root, "--scope", "all"]);
-      const findings = checkDocuments(root).violations;
+      const findings = (await checkDocuments(root)).violations;
       expect(result.status, result.stderr).toBe(count > 500 ? 1 : 0);
       if (count > 500) {
         expect(result.stderr).toContain("at most 500 physical lines; found 501");
@@ -1540,7 +1543,7 @@ describe("unsafe decision-register read boundary", () => {
     unsafeReads.paths.length = 0;
     unsafeReads.active = true;
     try {
-      const result = checkDocuments(root);
+      const result = await checkDocuments(root);
       expect(result.ok).toBe(true);
       expect(result.checked).toBe(0);
       expect(result.violations).toEqual([
@@ -1625,7 +1628,7 @@ describe("unsafe decision-register read boundary", () => {
       unsafeReads.active = true;
       try {
         if (consumer === "API") {
-          const result = checkDocuments(root);
+          const result = await checkDocuments(root);
           expect(result.ok).toBe(true);
           expect(result.checked).toBe(0);
           expect(result.violations).toEqual(
@@ -1692,7 +1695,7 @@ describe("decision-register filesystem causes", () => {
     async (_, operation, prefix, relative, code) => {
       const { root } = await paged();
       unsafeReads.faults.push({ operation, file: path.join(root, ...relative.split("/")), code });
-      const result = checkDocuments(root);
+      const result = await checkDocuments(root);
       expect(result.ok).toBe(true);
       expect(result.checked).toBe(0);
       expect(result.violations).toEqual([
@@ -1716,7 +1719,7 @@ describe("decision-register filesystem causes", () => {
   it("keeps a listed page that inspection finds absent as a missing page, not an access failure", async () => {
     const { root, page } = await paged();
     unsafeReads.faults.push({ operation: "lstat", file: page, code: "ENOENT" });
-    const result = checkDocuments(root);
+    const result = await checkDocuments(root);
     expect(result.ok).toBe(true);
     expect(result.violations).toContainEqual(
       expect.objectContaining({
@@ -1746,7 +1749,7 @@ describe("decision-register filesystem causes", () => {
         file: path.join(root, ...relative.split("/")),
         code: "ENOENT",
       });
-      const result = checkDocuments(root);
+      const result = await checkDocuments(root);
       expect(result.ok).toBe(true);
       expect(result.checked).toBe(0);
       expect(result.violations).toEqual([

@@ -106,7 +106,7 @@
  * on stdout, names them, and counts them in its closing line, which is why the
  * exit code alone is not the whole answer there.
  */
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
   lstatSync,
@@ -777,14 +777,74 @@ function changedFiles(base, root) {
  * @returns {{ ok: boolean, output: string, spawnFailed: boolean }}
  */
 function runMdschema(mdschema, schemaPath, files, root) {
-  const result = spawnSync(
-    mdschema.command,
-    [...mdschema.args, "check", "--schema", schemaPath, ...files],
-    {
-      cwd: root,
-      encoding: "utf-8",
-    },
-  );
+  const result = spawnSync(mdschema.command, mdschemaArgs(mdschema, schemaPath, files), {
+    cwd: root,
+    encoding: "utf-8",
+    // `checkDocuments` reads output of any length, so the lane reads far more
+    // than the 1 MiB default rather than calling a long report a failed run.
+    maxBuffer: MDSCHEMA_MAX_OUTPUT,
+  });
+  return mdschemaResult(result, schemaPath);
+}
+
+/**
+ * {@link runMdschema} without blocking, so `checkDocuments` can run the
+ * manifest's entries at the same time. Each entry is its own mdschema process,
+ * and starting those one after another was most of the check's time.
+ *
+ * @param {{ command: string, args: string[] }} mdschema
+ * @param {string} schemaPath
+ * @param {string[]} files
+ * @param {string} root
+ * @returns {Promise<{ ok: boolean, output: string, spawnFailed: boolean }>}
+ */
+function runMdschemaAsync(mdschema, schemaPath, files, root) {
+  return new Promise((resolve) => {
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    // A failed start emits `error`, and Node does not promise a `close` after it.
+    const settle = (/** @type {{ error?: Error, status: number | null }} */ end) => {
+      if (settled) return;
+      settled = true;
+      resolve(mdschemaResult({ ...end, stdout, stderr }, schemaPath));
+    };
+    // `spawn` throws for some start failures (an argument list too long), and
+    // leaves the output streams null for others (no descriptors left). Both are
+    // a run that did not happen, as `spawnSync` reports them.
+    let child;
+    try {
+      child = spawn(mdschema.command, mdschemaArgs(mdschema, schemaPath, files), { cwd: root });
+    } catch (error) {
+      settle({ error: error instanceof Error ? error : new Error(String(error)), status: null });
+      return;
+    }
+    child.on("error", (error) => settle({ error, status: null }));
+    child.stdout?.setEncoding("utf-8").on("data", (chunk) => (stdout += chunk));
+    child.stderr?.setEncoding("utf-8").on("data", (chunk) => (stderr += chunk));
+    child.on("close", (status) => settle({ status }));
+  });
+}
+
+/** How much output the synchronous runner reads from one mdschema run. */
+const MDSCHEMA_MAX_OUTPUT = 256 * 1024 * 1024;
+
+/** How many manifest entries `checkDocuments` runs at the same time. */
+const CONCURRENT_ENTRIES = 8;
+
+/** The arguments of one `mdschema check` run. */
+function mdschemaArgs(mdschema, schemaPath, files) {
+  return [...mdschema.args, "check", "--schema", schemaPath, ...files];
+}
+
+/**
+ * What one finished mdschema process means.
+ *
+ * @param {{ error?: Error, status: number | null, stdout?: string, stderr?: string }} result
+ * @param {string} schemaPath
+ * @returns {{ ok: boolean, output: string, spawnFailed: boolean }}
+ */
+function mdschemaResult(result, schemaPath) {
   if (result.error !== undefined || result.status === null) {
     return {
       ok: false,
@@ -1275,9 +1335,9 @@ export function parseViolations(output, files, root) {
 /**
  * Checks one manifest entry's documents and appends what fails to `violations`.
  *
- * @returns {string | null} why the check could not run, or `null`
+ * @returns {Promise<string | null>} why the check could not run, or `null`
  */
-function checkEntryDocuments(context, entry, violations) {
+async function checkEntryDocuments(context, entry, violations) {
   const { root, paths, universe, mdschema } = context;
   const schemaPath = path.join(SCHEMA_ROOT, entry.schema);
   if (!existsSync(schemaPath)) {
@@ -1302,7 +1362,7 @@ function checkEntryDocuments(context, entry, violations) {
     gradable.push(file);
   }
   if (gradable.length === 0) return null;
-  const result = runMdschema(mdschema, schemaPath, gradable, root);
+  const result = await runMdschemaAsync(mdschema, schemaPath, gradable, root);
   if (result.spawnFailed) {
     return `mdschema did not run: ${result.output}`;
   }
@@ -1485,11 +1545,14 @@ function decisionRegisterViolations(root, paths) {
  * as `main`, over the whole tree: a validation run has no merge base to ratchet
  * against.
  *
+ * Up to eight entries run at the same time, and their findings are reported in
+ * manifest order, so the answer does not depend on which process finished first.
+ *
  * @param {string} root
  * @param {{ specsDir: string, contractsDir: string }} [paths] tree-relative roots
- * @returns {{ ok: true, checked: number, violations: {file: string, line: number, column: number, rule: string, message: string}[] } | { ok: false, reason: string }}
+ * @returns {Promise<{ ok: true, checked: number, violations: {file: string, line: number, column: number, rule: string, message: string}[] } | { ok: false, reason: string }>}
  */
-export function checkDocuments(root, paths = configuredPaths(root)) {
+export async function checkDocuments(root, paths = configuredPaths(root)) {
   const mdschema = findMdschemaCommand(root);
   if (mdschema === null) {
     return { ok: false, reason: `no ${MDSCHEMA_PACKAGE} installation was found` };
@@ -1504,9 +1567,24 @@ export function checkDocuments(root, paths = configuredPaths(root)) {
     ...coverageViolations(entries, files.toSorted(), paths),
     ...register.violations,
   ];
-  for (const entry of entries) {
-    const failure = checkEntryDocuments(context, entry, violations);
+  // A few entries at a time, each one process; each result keeps its entry's slot.
+  /** @type {{ failure: string | null, found: object[] }[]} */
+  const perEntry = [];
+  let next = 0;
+  const worker = async () => {
+    while (next < entries.length) {
+      const index = next++;
+      const found = [];
+      perEntry[index] = {
+        failure: await checkEntryDocuments(context, entries[index], found),
+        found,
+      };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENT_ENTRIES, entries.length) }, worker));
+  for (const { failure, found } of perEntry) {
     if (failure !== null) return { ok: false, reason: failure };
+    violations.push(...found);
   }
   return { ok: true, checked: context.checked, violations };
 }
