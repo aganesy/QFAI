@@ -86,7 +86,8 @@
           "rename-requested",
           "owned-temporary-cleanup",
           "meaning-preserving",
-          "session-answerable"
+          "session-answerable",
+          "restyle"
         ]
       }
     },
@@ -383,7 +384,8 @@
               "rename-requested",
               "owned-temporary-cleanup",
               "meaning-preserving",
-              "session-answerable"
+              "session-answerable",
+              "restyle"
             ]
           }
         },

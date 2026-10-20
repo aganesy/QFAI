@@ -5,9 +5,11 @@ import { decideRoute, reachedFirst, type RouteChoice } from "./decisionRules.js"
 import type { RoutingReading, WorkflowExtraction } from "./extraction.js";
 import type { WorkflowRoute } from "./routes.js";
 
-// A route the readings reach, and whether a reading that reaches it sets the `decision` flag.
+// A route the readings reach, whether a reading that reaches it sets the `decision` flag, and
+// whether one carries the `restyle` qualifier.
 export interface RouteCandidate extends RouteChoice {
   decision: boolean;
+  restyle: boolean;
 }
 
 export type RoutingOutcome =
@@ -26,9 +28,12 @@ function choicesOf(
   for (const reading of readings) {
     const choice = decideRoute({ ...reading, artifacts });
     const decision = reading.entryFlags.includes("decision");
+    const restyle = reading.qualifiers.includes("restyle");
     const reached = choices.find((each) => each.route === choice.route);
-    if (reached) reached.decision ||= decision;
-    else choices.push({ ...choice, decision });
+    if (reached) {
+      reached.decision ||= decision;
+      reached.restyle ||= restyle;
+    } else choices.push({ ...choice, decision, restyle });
   }
   return choices;
 }
