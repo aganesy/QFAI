@@ -359,7 +359,9 @@ const DECIDED_BY = /^(?:DONE|SUPERSEDED) \(by (DEC-\d{4})\)$/;
 /**
  * Every decision or open question a contract rule cites, every decision a
  * superseded row names as its successor, and every decision an open question's
- * Status names, is declared by a row.
+ * Status names, is declared by a row. A superseded row's successor is also a
+ * later decision: both IDs are `DEC-` and four digits, so string order is number
+ * order. A row whose own ID is malformed already raises `QFAI-STORY-003`.
  */
 function validateRecordCitations(model: StoryTreeModel): Issue[] {
   const decisions = new Set((model.decisions?.rows ?? []).map(({ id }) => id));
@@ -384,7 +386,18 @@ function validateRecordCitations(model: StoryTreeModel): Issue[] {
   for (const { row, origin } of model.decisionOccurrences) {
     const decisionFile = origin.path;
     const successor = SUPERSEDED_BY.exec(row.status)?.[1];
-    if (successor === undefined || decisions.has(successor)) continue;
+    if (successor === undefined) continue;
+    if (isStoryTreeId(row.id, "DEC") && successor <= row.id) {
+      issues.push(
+        finding(
+          "QFAI-STORY-019",
+          `${row.id} is superseded by ${successor}, which is not a later decision, in ${decisionFile}`,
+          decisionFile,
+          [row.id, successor],
+        ),
+      );
+    }
+    if (decisions.has(successor)) continue;
     issues.push(
       finding(
         "QFAI-STORY-003",

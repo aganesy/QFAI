@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { ISSUE_EXPECTED_BY_CODE, ISSUE_FIX_BY_CODE } from "../../../../src/cli/commands/validate.js";
+import {
+  ISSUE_EXPECTED_BY_CODE,
+  ISSUE_FIX_BY_CODE,
+} from "../../../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../../../src/core/config.js";
 import { architectureProblems, orderLayers } from "../../../../src/core/storyTree/architecture.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
