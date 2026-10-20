@@ -647,6 +647,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   project with no `package.json` still gets the vitest test.
   Fixes #3826.
 
+- **`qfai init --force` keeps the project's entries in
+  `.github/copilot-instructions.md`.** It rewrote the file whole from the
+  shipped text, so a rule the project had added to the `Cross-AI rules` list and
+  a section the project had written were removed without a word, while
+  `AGENTS.md` kept them. The rewrite now keeps each list item that cites no
+  shipped rule master, after the shipped rules, and each section whose heading
+  the shipped text does not have, at the end of the file. Where it still
+  changes or removes a line, such as an edited line in a shipped section, it
+  prints a warning that names each line. Fixes #3832.
+
 - **An unknown qfai command says it may come from another qfai version.**
   The refusal of an unknown command, or of an unknown `qfai workflow`
   operation, already named the running version and the directory it is
