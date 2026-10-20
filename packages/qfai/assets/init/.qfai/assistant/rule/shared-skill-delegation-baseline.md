@@ -186,7 +186,7 @@ cannot accept its own output.
 - Test volume ratios, floors and planning estimates are signals, not gates,
   unless the skill explicitly says so.
 - Do not declare DONE until every finding of its one review is fixed or answered, as `.qfai/assistant/rule/review-convergence.md` sets out.
-- An in-scope blocking finding from a routed reviewer prevents DONE until it is fixed or answered; no reviewer is rerun.
+- An in-scope blocking finding from a routed reviewer prevents DONE until it is fixed or answered; only a behaviour fix is re-reviewed, once.
 - Every reviewer returning `REVISE` must include a concrete fix proposal.
 
 #### A griller's recommendations, and what they disqualify
@@ -195,7 +195,7 @@ Read `.qfai/assistant/rule/references/griller-recommendations.md` when a griller
 
 ### Review convergence
 
-A stage is reviewed once, and the author fixes or answers every finding with no re-review: `.qfai/assistant/rule/review-convergence.md`.
+A stage is reviewed once, and the author fixes or answers every finding: `.qfai/assistant/rule/review-convergence.md`.
 
 ### Reviewer remit (in scope per stage)
 
