@@ -19,6 +19,7 @@ describe("answered review demands are carried into the next existing request", (
         "Close a repeat by citing its recorded answer",
         "what a reviewer may require, not what a reviewer may report",
         "they never start a second review in the same stage",
+        "is not a second review: it may not re-raise a demand the first review answered unless the fix changed what that answer rests on",
         "`review_request.md` carries those answers",
         "a new defect or evidence that an answer no longer applies",
       ]) {

@@ -87,7 +87,7 @@ values plan nothing.
    joins. A review whose target's only edits resolve the conflicts of a merge or branch update between
    reviewed sides, or a route code review of a small literal-only change, as `common-review-cycle` defines, gets no reviewer. A conflict resolution the plan's own edit stage made in the story tree, a contract or a register still gets one.
    No agent reviews its own work; no step adds a review. Each returns PASS or REVISE.
-   Fix or answer each finding once, with no re-review. Stop a step that exceeds the request.
+   Fix or answer each finding once; a behaviour fix gets one re-review, as `common-review-cycle` says. Stop a step that exceeds the request.
 7. **Approvals.** Each approval of a specification change, a critical decision or a release is one `decisions.md` row: what was approved, who approved it, when, and the chosen option's label, in the `qfai-sdd` decisions template's form. A decision you took appends no row.
    When the release change is produced outside this run (by a release workflow or bot), record its approval in the final report with the same four items and list the row as a pending follow-up;
    the next change that touches `decisions.md` appends the row, and a `qfai-run` that writes `decisions.md` appends any pending approval row first.
@@ -147,4 +147,4 @@ retained; ordinary completion requires no unsolicited upload.
 project_memory:
 
 - The user names no stage after the first request.
-- The plan is fixed by its route; the session runs every step of the chosen scope.
+- The plan is fixed by its route and the extraction's artifacts; the session runs every step of the chosen scope.
