@@ -115,16 +115,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the session answers. The `qfai-run` one-read shortcut says so, and the
   extraction reference adds an example of each. Fixes #3768.
 
-- **`triage-operate` has a rule for one base change taken into several
-  branches.** It merges the change into one branch at a time, never by rebase,
-  and never force-pushes. It resolves without asking only identical changes,
-  table rows whose keys differ, append-only entries such as changelog entries
-  in different slots, and generated files, which it regenerates with their own
-  command. Any other conflict, including one in code, specification or contract
-  text, one whose resolution would drop either side's change, or one in a file
-  that names its owner, stops that branch unpushed with the file and hunk named.
-  Each branch then runs its gates, is pushed only when they pass, and has its
-  own result in the report. Fixes #3848.
+- **`resolve-conflicts` has a rule for one base taken into several
+  branches.** Each branch is its own run of the route, one at a time, by merge,
+  never by rebase or force-push, and keeps the route's decision renumbering,
+  code review and verify block. A run resolves without asking only identical
+  changes, table rows whose first cells differ outside the story tree,
+  contracts and union-merged registers, append-only entries in different
+  slots, and a documented generated file regenerated offline by its named
+  command. It always stops on a lockfile, a pin or digest file, a hunk both
+  sides changed differently, a dropped side, an owner-marked file and a
+  duplicate register ID, aborting only that branch's merge. The route pushes
+  nothing; a push the user names waits for that branch's green gate, and the
+  report gives each branch's result. `triage-operate` reports such a request
+  as `needs-change` and still changes no tracked file. Fixes #3848.
 
 - **`sdd-story` annotates an existing test with the example it proves.** Where
   an existing assertion already proves an example the step added or
