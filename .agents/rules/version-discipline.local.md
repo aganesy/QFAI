@@ -57,6 +57,10 @@ Merging a release pull request asks too. In Claude Code a hook
 (`scripts/release-merge-ask.mjs`) reads the head branch of each `gh pr merge`
 and asks when it starts with `release/`, or when it cannot be read. Codex has
 no equivalent: its rules match command text, and the head branch is not in it.
+The hook is not a boundary either. It does not see a merge run through
+`bash -c` or inside backticks, a merge made through `gh api`, or a `cd` before
+the merge. It reads the current branch and the `origin` remote, not the
+repository `gh repo set-default` or the branch's upstream picks.
 
 The lists match command text, so they are a reminder and not a boundary. They do
 not catch a tag created by pushing a ref (`git push origin v1.2.3`), an option

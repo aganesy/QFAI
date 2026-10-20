@@ -13,9 +13,9 @@
  * - no argument means the current branch, which `gh` merges the pull request of.
  *
  * When a head branch starts with `release/`, the hook answers `ask` with the reason. When a head
- * branch cannot be read (the lookup fails, or the argument is a shell expansion), it answers `ask`
- * as well: this check fails closed. Otherwise it prints nothing, and the call goes through the
- * normal permission flow.
+ * branch cannot be read (the lookup fails or runs out of time, or the argument is a shell
+ * expansion), it answers `ask` as well: this check fails closed. Otherwise it prints nothing, and
+ * the call goes through the normal permission flow.
  *
  * This repository's own guard. `qfai init` does not ship it: an adopter's release flow is its own.
  */
@@ -54,10 +54,12 @@ const VALUE_OPTIONS = new Set([
  * The words of a shell command, with each unquoted operator as its own token.
  *
  * `dynamic` marks a word the shell would expand (an unquoted or double-quoted `$` or a
- * backtick), whose value this cannot know.
+ * backtick), whose value this cannot know. A comment and the body of a here-document are not
+ * words: the shell runs neither, and a quote inside them would otherwise hide what follows.
  */
 export function shellWords(command) {
   const words = [];
+  const heredocs = [];
   let text = "";
   let dynamic = false;
   let started = false;
@@ -69,7 +71,28 @@ export function shellWords(command) {
   };
   for (let i = 0; i < command.length; i += 1) {
     const ch = command[i];
-    if (ch === "'") {
+    if (ch === "\n" && heredocs.length > 0) {
+      flush();
+      words.push({ text: "\n", dynamic: false, operator: true });
+      i = skipHeredocBodies(command, i + 1, heredocs.splice(0)) - 1;
+    } else if (ch === "#" && !started) {
+      const end = command.indexOf("\n", i);
+      i = (end < 0 ? command.length : end) - 1;
+    } else if (ch === "<" && command[i + 1] === "<" && command[i + 2] !== "<") {
+      flush();
+      const heredoc = /^<<(-?)[ \t]*(?:'([^']*)'|"([^"]*)"|\\?([^\s;&|<>()]+))/.exec(
+        command.slice(i),
+      );
+      if (heredoc === null) {
+        i += 1;
+        continue;
+      }
+      heredocs.push({
+        strip: heredoc[1] === "-",
+        delimiter: heredoc[2] ?? heredoc[3] ?? heredoc[4],
+      });
+      i += heredoc[0].length - 1;
+    } else if (ch === "'") {
       const end = command.indexOf("'", i + 1);
       const stop = end < 0 ? command.length : end;
       text += command.slice(i + 1, stop);
@@ -110,6 +133,28 @@ export function shellWords(command) {
 }
 
 /**
+ * The index just past the here-document bodies that start at `start`, read in order; each runs
+ * up to its delimiter line, which `<<-` lets carry leading tabs.
+ */
+function skipHeredocBodies(command, start, heredocs) {
+  let pos = start;
+  for (const { strip, delimiter } of heredocs) {
+    while (pos < command.length) {
+      const end = command.indexOf("\n", pos);
+      const line = command.slice(pos, end < 0 ? command.length : end).replace(/\r$/, "");
+      pos = end < 0 ? command.length : end + 1;
+      if ((strip ? line.replace(/^\t+/, "") : line) === delimiter) break;
+    }
+  }
+  return pos;
+}
+
+/** True for a word that runs the GitHub CLI: `gh`, or `gh.exe`, by any path. */
+function isGh(word) {
+  return word.operator !== true && /(?:^|[\\/])gh(?:\.exe)?$/i.test(word.text);
+}
+
+/**
  * Each `gh pr merge` the command runs: its pull request argument, if any, and its `--repo`.
  *
  * `selector` is undefined when no argument is given; `dynamic` is true when the argument or the
@@ -120,17 +165,22 @@ export function mergeCalls(command) {
   const calls = [];
   for (let i = 0; i + 2 < words.length; i += 1) {
     const [gh, pr, merge] = words.slice(i, i + 3);
-    if (gh.operator || gh.text !== "gh" || pr.text !== "pr" || merge.text !== "merge") continue;
+    if (!isGh(gh) || pr.text !== "pr" || merge.text !== "merge") continue;
     const call = { selector: undefined, repo: undefined, dynamic: false };
     for (let j = i + 3; j < words.length && words[j].operator !== true; j += 1) {
       const word = words[j];
+      // `--name=value`, and a short option with its value attached: `-Rowner/repo`.
       const [name, inline] = word.text.startsWith("--")
         ? word.text.split(/=(.*)/s, 2)
-        : [word.text, undefined];
+        : VALUE_OPTIONS.has(word.text.slice(0, 2)) && word.text.length > 2
+          ? [word.text.slice(0, 2), word.text.slice(2)]
+          : [word.text, undefined];
       if (name.startsWith("-") && name.length > 1) {
         if (!VALUE_OPTIONS.has(name) || inline !== undefined) {
-          if (name === "--repo") call.repo = inline;
-          if (name === "--repo" && word.dynamic) call.dynamic = true;
+          if (name === "--repo" || name === "-R") {
+            call.repo = inline;
+            if (word.dynamic) call.dynamic = true;
+          }
           continue;
         }
         const value = words[j + 1];
@@ -197,40 +247,54 @@ export function decide(command, env) {
           "release/ pull request cuts the release, so confirm this merge is not one.",
       );
     } else if (head.startsWith(RELEASE_HEAD_PREFIX)) {
+      const named = target === head ? head : `${target} (head branch ${head})`;
       reasons.push(
-        `The pull request for ${target} has the head branch ${head}. Merging it tags the ` +
-          "release and starts release.yml, so a person confirms it first.",
+        `Merging the pull request for ${named} tags the release and starts release.yml, ` +
+          "so a person confirms it first.",
       );
     }
   }
   return reasons.length === 0 ? undefined : { reason: reasons.join(" ") };
 }
 
-/** The trimmed output of a command, or undefined when it fails. */
-function output(file, args, options) {
-  try {
-    return execFileSync(file, args, {
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "ignore"],
-      timeout: 60_000,
-      ...options,
-    }).trim();
-  } catch {
-    return undefined;
-  }
-}
+/** The longest one lookup may take. */
+const CALL_TIMEOUT_MS = 15_000;
+
+/**
+ * The longest all lookups together may take. It stays under the 60-second hook timeout in
+ * `.claude/settings.json`: a hook the host stops answers nothing, which lets the merge through,
+ * while a lookup this deadline cuts short answers `ask`.
+ */
+const DEADLINE_MS = 45_000;
 
 /** What the hook reads outside the command, from the directory the command runs in. */
 function liveEnv(cwd) {
+  const deadline = Date.now() + DEADLINE_MS;
+  // The trimmed output of a command, or undefined when it fails, times out, or the deadline
+  // has passed, so that a lookup it skips counts as unread.
+  const output = (file, args) => {
+    const timeout = Math.min(CALL_TIMEOUT_MS, deadline - Date.now());
+    if (timeout <= 0) return undefined;
+    try {
+      const text = execFileSync(file, args, {
+        cwd,
+        encoding: "utf-8",
+        stdio: ["pipe", "pipe", "ignore"],
+        timeout,
+      }).trim();
+      return text === "" ? undefined : text;
+    } catch {
+      return undefined;
+    }
+  };
   return {
-    currentBranch: () => output("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd }) || undefined,
+    currentBranch: () => output("git", ["rev-parse", "--abbrev-ref", "HEAD"]),
     originRepo: () => {
-      const remote = output("git", ["remote", "get-url", "origin"], { cwd });
+      const remote = output("git", ["remote", "get-url", "origin"]);
       return remote === undefined ? undefined : repoSlug(remote);
     },
     headRefOf: (repo, number) =>
-      output("gh", ["api", `repos/${repo}/pulls/${number}`, "--jq", ".head.ref"], { cwd }) ||
-      undefined,
+      output("gh", ["api", `repos/${repo}/pulls/${number}`, "--jq", ".head.ref"]),
   };
 }
 

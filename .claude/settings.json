@@ -175,7 +175,7 @@
             "statusMessage": "Release pull request merge check",
             "command": "node",
             "args": ["${CLAUDE_PROJECT_DIR}/scripts/release-merge-ask.mjs"],
-            "timeout": 120
+            "timeout": 60
           }
         ]
       },

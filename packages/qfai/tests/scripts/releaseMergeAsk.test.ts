@@ -61,10 +61,14 @@ function hookInput(command: string): string {
 describe("which pull request a command merges", () => {
   it.each([
     ["gh pr merge 10 --merge", "10", undefined],
-    ["gh pr merge #10", "#10", undefined],
+    ["gh pr merge '#10'", "#10", undefined],
+    ["gh pr merge #10, a comment", undefined, undefined],
+    ["/usr/local/bin/gh pr merge 10", "10", undefined],
+    [String.raw`'C:\Program Files\GitHub CLI\gh.exe' pr merge 10`, "10", undefined],
     ["gh pr merge --merge --body 'merge 20 now' -t \"title words\" 10", "10", undefined],
     ["gh pr merge -R fork/QFAI 30 --squash", "30", "fork/QFAI"],
     ["gh pr merge --repo=fork/QFAI 30", "30", "fork/QFAI"],
+    ["gh pr merge -Rfork/QFAI 30", "30", "fork/QFAI"],
     [
       "gh pr merge https://github.com/aganesy/QFAI/pull/20",
       "https://github.com/aganesy/QFAI/pull/20",
@@ -79,6 +83,19 @@ describe("which pull request a command merges", () => {
     const command = 'echo "gh pr merge 20" && gh pr merge 10; git status | gh pr merge 30';
     expect(mergeCalls(command).map((call) => call.selector)).toEqual(["10", "30"]);
     expect(mergeCalls("gh pr view 20 && git merge main")).toEqual([]);
+  });
+
+  it("reads past a here-document body and a comment", () => {
+    // An apostrophe in the body would otherwise open a quote that hides the merge after it.
+    expect(mergeCalls("cat > f <<'EOF2'\ndon't\nEOF2\ngh pr merge release/v9")).toEqual([
+      { selector: "release/v9", repo: undefined, dynamic: false },
+    ]);
+    expect(mergeCalls("cat <<-EOF\n\tgh pr merge 20\n\tEOF\ngh pr merge 10")).toEqual([
+      { selector: "10", repo: undefined, dynamic: false },
+    ]);
+    expect(mergeCalls("git status # gh pr merge 20 it's\ngh pr merge 10")).toEqual([
+      { selector: "10", repo: undefined, dynamic: false },
+    ]);
   });
 
   it("marks an argument the shell expands", () => {
@@ -109,17 +126,34 @@ describe("the hook's answer", () => {
     ["a second merge in the command", "gh pr merge 10 && gh pr merge 20"],
   ])("asks for a release head branch named by %s", (_, command) => {
     const answer = decide(command, fakeEnv(HEADS));
-    expect(answer?.reason).toMatch(/head branch release\/v\d/);
+    expect(answer?.reason).toMatch(/release\/v\d/);
+    expect(answer?.reason).toContain("tags the release");
+  });
+
+  it("asks for a release branch after a here-document whose body holds a quote", () => {
+    const probe = "cat > f <<'EOF2'\ndon't\nEOF2\ngh pr merge release/v9";
+    expect(decide(probe, fakeEnv(HEADS))?.reason).toContain("release/v9");
+  });
+
+  it("names the head branch once when the argument is the head branch", () => {
+    expect(decide("gh pr merge release/v2.2.0", fakeEnv(HEADS))?.reason).toBe(
+      "Merging the pull request for release/v2.2.0 tags the release and starts release.yml, " +
+        "so a person confirms it first.",
+    );
+    expect(decide("gh pr merge 20", fakeEnv(HEADS))?.reason).toContain(
+      "for 20 (head branch release/v2.2.0)",
+    );
   });
 
   it("asks when the current branch is a release branch", () => {
     expect(decide("gh pr merge --merge", fakeEnv(HEADS, "release/v2.2.0"))?.reason).toContain(
-      "the current branch has the head branch release/v2.2.0",
+      "for the current branch (head branch release/v2.2.0)",
     );
   });
 
   it.each([
     ["the lookup fails", "gh pr merge 99", fakeEnv(HEADS)],
+    ["the second of two lookups fails", "gh pr merge 10 && gh pr merge 99", fakeEnv(HEADS)],
     ["the argument is expanded", 'gh pr merge "$PR"', fakeEnv(HEADS)],
     ["HEAD is detached", "gh pr merge", fakeEnv(HEADS, "HEAD")],
     ["the current branch is unknown", "gh pr merge", fakeEnv(HEADS, undefined)],
@@ -170,7 +204,22 @@ describe("the hook as Claude Code runs it", () => {
     const groups = settings.hooks.PreToolUse.filter((group) =>
       group.hooks.some((hook) => hook.statusMessage === HOOK_STATUS),
     );
-    expect(groups.map((group) => group.matcher)).toEqual(["Bash|PowerShell"]);
+    // The 60-second timeout sits above the hook's own 45-second deadline: the host stopping the
+    // hook would answer nothing and let the merge through.
+    expect(groups).toEqual([
+      {
+        matcher: "Bash|PowerShell",
+        hooks: [
+          {
+            type: "command",
+            statusMessage: HOOK_STATUS,
+            command: "node",
+            args: ["${CLAUDE_PROJECT_DIR}/scripts/release-merge-ask.mjs"],
+            timeout: 60,
+          },
+        ],
+      },
+    ]);
     const entry = groups[0]?.hooks[0];
     if (entry === undefined) throw new Error("no release-merge entry");
 
