@@ -9,7 +9,8 @@ Process one open EX at a time in ascending ID order within the selected BF flow.
 When the extraction declares several flows, the plan gives each implement stage
 one work order per flow, its `target` naming that flow, in ascending flow ID
 order. Run them one at a time in that order. Each runs every step of the stage
-for its own flow and completes on that flow's gates. Two work orders run in
+for its own flow and completes on that flow's gates. The stage's review runs
+once, after its last work order. Two work orders run in
 parallel only with explicit user approval and a delivery-planner PASS on the
 independence gate below, compared across both flows.
 

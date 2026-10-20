@@ -113,8 +113,10 @@ A stage with `workOrders` runs every one of its steps once per work order, for
 that work order's `target` flow alone, before the next stage starts. Run the
 work orders in the order listed; the implementation skill's parallelization
 policy says when two may run at once. No work order adds a step, a stage or a
-review. A plan `--route` returns has none: for a chosen candidate, take the
-work orders from the extraction's `flows` in the same way.
+review. The stage's review runs once, after its last work order. A plan
+`--route` returns has none: for a chosen candidate or a branch destination, give
+each of its implement stages one work order per flow of the extraction's
+`flows`, in ascending ID order.
 
 ## Candidates
 

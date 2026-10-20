@@ -124,6 +124,7 @@
           "description": "On an implement stage when the extraction declares its flows: one work order per flow, in ascending ID order, each running every step of the stage for its target flow.",
           "type": "array",
           "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "type": "object",
             "additionalProperties": false,
