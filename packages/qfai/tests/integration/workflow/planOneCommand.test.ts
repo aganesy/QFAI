@@ -4,6 +4,7 @@
 // QFAI:AC-0001-0222-04
 // QFAI:AC-0001-0222-05
 // QFAI:AC-0001-0222-08
+// QFAI:AC-0001-0222-09
 // QFAI:AC-0001-0210-05
 
 import { mkdir, rm, writeFile } from "node:fs/promises";
@@ -490,4 +491,74 @@ it("The decision flag puts a decision point on the first step that writes when t
     [0, ["decide-design", ["discussion-interview"]], ["change-tooling", ["implement-tooling"]]],
     [0, "change-tooling", []],
   ]);
+});
+
+// The document with every stage's `workOrders` left out.
+function withoutWorkOrders(json: unknown): string {
+  return JSON.stringify(json, (key, value: unknown) => (key === "workOrders" ? undefined : value));
+}
+
+// How a refusal's cause departs: the word before its colon.
+function causeKind(json: unknown): unknown {
+  const cause = field(json, "reasons.0.cause");
+  return typeof cause === "string" ? cause.split(":")[0] : cause;
+}
+
+// QFAI:EX-0001-0222-18
+it("An extraction declaring flows gives the implement stage one work order per flow", async () => {
+  const root = await minimalProject();
+  const plan = (value: unknown) => workflow(root, ["plan", "--in", "-"], JSON.stringify(value));
+  const withFlows = plan({ ...FEATURE, flows: ["BF-0003", "BF-0001"] });
+  const without = plan(FEATURE);
+  const named = workflow(root, ["plan", "--route", "add-feature"]);
+  const stages = field(withFlows.json, "stages");
+
+  expect({
+    status: [withFlows.status, without.status, named.status],
+    route: field(withFlows.json, "route"),
+    orders: Array.isArray(stages)
+      ? stages.map((stage) => [field(stage, "kind"), field(stage, "workOrders")])
+      : stages,
+    rest: withoutWorkOrders(withFlows.json) === JSON.stringify(without.json),
+    none: [without.stdout, named.stdout].map((stdout) => stdout.includes('"workOrders"')),
+  }).toEqual({
+    status: [0, 0, 0],
+    route: "add-feature",
+    orders: [
+      ["sdd", undefined],
+      ["implement", [{ target: "BF-0001" }, { target: "BF-0003" }]],
+      ["maintenance", undefined],
+      ["verify", undefined],
+      ["verify", undefined],
+    ],
+    rest: true,
+    none: [false, false],
+  });
+});
+
+// QFAI:EX-0001-0222-19
+it("An empty, repeated or malformed flows list is refused as a schema fault", async () => {
+  const root = await minimalProject();
+  const before = await listTree(root);
+  const runs = [[], ["BF-0001", "BF-0001"], ["flow-1"]].map((flows) =>
+    workflow(root, ["plan", "--in", "-"], JSON.stringify({ ...FEATURE, flows })),
+  );
+
+  expect({
+    refused: runs.map((run) => [
+      run.status,
+      field(run.json, "ok"),
+      field(run.json, "reasons.0.reason"),
+      field(run.json, "reasons.0.subject"),
+      causeKind(run.json),
+    ]),
+    unchanged: JSON.stringify(await listTree(root)) === JSON.stringify(before),
+  }).toEqual({
+    refused: [
+      [2, false, "schema", "flows", "invalid"],
+      [2, false, "schema", "flows", "invalid"],
+      [2, false, "schema", "flows[0]", "wrong-value"],
+    ],
+    unchanged: true,
+  });
 });

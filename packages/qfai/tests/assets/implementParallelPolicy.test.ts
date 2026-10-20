@@ -61,6 +61,20 @@ describe.each(trees)("%s — qfai-implement parallel item policy", (tree) => {
     );
   });
 
+  it("runs one work order per flow in ascending order, in parallel only under the same gates", async () => {
+    const policy = (await read(tree, policyPath)).replace(/\s*\n\s*/g, " ");
+    expect(policy).toContain("## Work orders per flow");
+    expect(policy).toMatch(
+      /one work order per flow, its `target` naming that flow, in ascending flow ID order/,
+    );
+    expect(policy).toContain("Run them one at a time in that order.");
+    expect(policy).toMatch(/completes on that flow's gates/);
+    expect(policy).toContain("The stage's review runs once, after its last work order.");
+    expect(policy).toMatch(
+      /parallel only with explicit user approval and a delivery-planner PASS on the independence gate/,
+    );
+  });
+
   it("rechecks the merged result and refreshes revision-bound evidence", async () => {
     const policy = await read(tree, policyPath);
     expect(policy).toContain("rerun every item selector on the merged tree");

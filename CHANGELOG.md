@@ -223,6 +223,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   kept and the reason named.
   Fixes #3670.
 
+- **A plan runs the implement stage once per declared flow.** An extraction
+  may now list `flows`, the distinct `BF-NNNN` flows the change implements, and
+  `npx qfai workflow plan` then gives each implement stage `workOrders`, one
+  `{ target }` per flow in ascending ID order. The session runs the stage's
+  steps once per work order for that flow alone, one at a time, and in parallel
+  only under the implementation skill's parallelization conditions. An empty or
+  repeated `flows` is refused as a schema fault. Plans without `flows` are
+  unchanged. Refs #3668.
+
 - **`qfai-implement` ships optional Playwright and Vitest recipes.** A new
   test runner recipes reference puts the worker session-reuse rules into code:
   a Vitest session cache keyed by the run's private directory, the pool slot
