@@ -148,6 +148,7 @@ type LineKind =
   | "codes"
   | "fail-on"
   | "timings"
+  | "summary"
   | "run-log"
   | "fix"
   | "fix-continuation"
@@ -159,7 +160,7 @@ type LineKind =
  * previous message" fallback. A guideline whose rules only worked in this
  * order on paper would still leave `counts:` swallowed by a multi-line message.
  *
- * Rule 6 keys on the run's `--fail-on` threshold, not on `error` alone: the
+ * Rule 8 keys on the run's `--fail-on` threshold, not on `error` alone: the
  * emitter prints `fix` lines for every severity that can fail the run, so a
  * `--fail-on warning` run puts them under its warnings too and a classifier
  * pinned to `error` would read them as more message text.
@@ -195,6 +196,11 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
       section = "none";
       severity = undefined;
       return { kind: "fail-on" as const, line };
+    }
+    if (line.startsWith("qfai validate: profile ")) {
+      section = "none";
+      severity = undefined;
+      return { kind: "summary" as const, line };
     }
     if (line.startsWith("run-log: ")) {
       section = "none";
@@ -676,14 +682,18 @@ describe("validate --format text matches the validate contract's text output gra
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-format-"));
     try {
       await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      let code = -1;
       const output = await captureStdout(async () => {
-        await runValidate({ root, strict: false, format: "text" });
+        code = await runValidate({ root, strict: false, format: "text" });
       });
       const lines = output.trimEnd().split("\n");
+      // A run that passes prints its summary just ahead of `run-log:`.
+      const summary = code === 0 ? 1 : 0;
 
-      expect(lines.at(-4)).toMatch(/^counts: info=\d+ warning=\d+ error=\d+$/);
-      expect(lines.at(-3)).toMatch(/^codes: error=\d+/);
-      expect(lines.at(-2)).toMatch(/^fail-on: \S/);
+      expect(lines.at(-4 - summary)).toMatch(/^counts: info=\d+ warning=\d+ error=\d+$/);
+      expect(lines.at(-3 - summary)).toMatch(/^codes: error=\d+/);
+      expect(lines.at(-2 - summary)).toMatch(/^fail-on: \S/);
+      if (summary === 1) expect(lines.at(-2)).toMatch(/^qfai validate: profile /);
       expect(lines.at(-1)).toMatch(/^run-log: \S/);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -740,13 +750,14 @@ describe("validate --format text matches the validate contract's text output gra
   it("classifies every structural line ahead of the message-continuation fallback", async () => {
     const guideline = await readGuideline();
     const rules = extractPrecedenceRules(guideline);
-    expect(rules).toHaveLength(8);
+    expect(rules).toHaveLength(9);
     const anchors = [
       "`[info]`",
       "`counts:`",
       "`codes:`",
       "`fail-on:`",
       "`timings:`",
+      "`qfai validate: profile`",
       "`run-log:`",
       "`fix:`",
     ];
@@ -756,7 +767,7 @@ describe("validate --format text matches the validate contract's text output gra
     expect(rules[0], "the first precedence rule must name the line that closes a group").toContain(
       "and <n> more",
     );
-    expect(rules[7], "the last precedence rule must be the message-continuation fallback").toBe(
+    expect(rules[8], "the last precedence rule must be the message-continuation fallback").toBe(
       "anything else continues the previous issue's message",
     );
 
@@ -803,6 +814,10 @@ describe("validate --format text matches the validate contract's text output gra
         expect(entry.line.startsWith("run-log: "), `structural line absorbed: ${entry.line}`).toBe(
           false,
         );
+        expect(
+          entry.line.startsWith("qfai validate: profile "),
+          `structural line absorbed: ${entry.line}`,
+        ).toBe(false);
         expect(entry.line.startsWith("  fix: "), `structural line absorbed: ${entry.line}`).toBe(
           false,
         );

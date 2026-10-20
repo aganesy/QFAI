@@ -48,6 +48,10 @@ export type ValidateOptions = {
 
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const startedAt = new Date();
+  const format = options.format ?? "text";
+  if (format === "text") {
+    emitStartedLine(options.profile ?? "full");
+  }
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
   // The CI narrow-profile finding is appended to a real run, not substituted
@@ -142,9 +146,12 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const scopedReportRel =
     scopedFlowIds.length > 0 ? scopedReportPath(configuredValidateJsonPath, scopedFlowIds) : null;
 
-  const format = options.format ?? "text";
   if (format === "text") {
     emitText(normalized, failOn);
+    if (!willFail) {
+      process.stdout.write(`${formatPassSummary(normalized, Date.now() - startedAt.getTime())}
+`);
+    }
     emitTextRunLog(runLogPath);
   }
   if (format === "github") {
@@ -766,6 +773,35 @@ function formatOverrunMs(value: number, budget: number): string {
     }
   }
   return String(value);
+}
+
+/**
+ * Said on stderr before any work, so a run that outlives its caller's timeout
+ * still leaves a line saying what it was doing, and stdout stays the report.
+ */
+function emitStartedLine(profile: string): void {
+  process.stderr.write(`qfai validate: running profile ${profile}...
+`);
+}
+
+/**
+ * The one line a passing text run prints ahead of `run-log:`: the profile, how
+ * many of its check groups ran, the counts and the elapsed time, so a pass reads
+ * as a run that happened rather than as missing output.
+ */
+export function formatPassSummary(result: ValidationResult, elapsedMs: number): string {
+  const profile = result.profile ?? "full";
+  const groups =
+    result.profileValidatorsRan === false || !isKnownProfile(profile)
+      ? 0
+      : PROFILE_GATE_GROUPS[profile].length;
+  const plural = (count: number, noun: string): string =>
+    `${count} ${noun}${count === 1 ? "" : "s"}`;
+  return (
+    `qfai validate: profile ${profile}, ${plural(groups, "check group")}, ` +
+    `${plural(result.counts.error, "error")}, ${plural(result.counts.warning, "warning")}, ` +
+    `${(elapsedMs / 1000).toFixed(1)}s`
+  );
 }
 
 function emitTextRunLog(runLogPath: string): void {
