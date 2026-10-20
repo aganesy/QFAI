@@ -52,7 +52,7 @@ const CATALOG: [string, string][] = [
   ],
   [
     "decide-design",
-    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack°`, `discussion-uiux°`, `discussion-oq`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature`, `change-compatibility` or `retire-feature`",
+    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack°`, `discussion-uiux°`, `discussion-oq`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature`, `change-compatibility`, `retire-feature` or `rename-concept`",
   ],
   [
     "decompose-epic",
@@ -91,6 +91,10 @@ const CATALOG: [string, string][] = [
   [
     "retire-feature",
     "Stages in order — `spec` (sdd, then the specification review): `sdd-triage`, `sdd-story`, `sdd-contract°`; `remove` (implement): `implement-retire`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points none",
+  ],
+  [
+    "rename-concept",
+    "Stages in order — `spec` (sdd, then the specification review): `sdd-triage`, `sdd-flow°`, `sdd-story°`, `sdd-contract°`; `rename` (implement): `implement-refactor`; `note` (verify, then the code review): `verify-change-note°`; `verify` (verify): `verify-qfai-gate`, `verify-repo-gate`, `verify-commit`; decision points `sdd-triage`; release point none; branch points `implement-refactor`, `behaviour-change` to `add-feature` or `change-compatibility`",
   ],
   [
     "refactor-code",
@@ -263,6 +267,7 @@ for (const [route, expected] of CATALOG) {
   // QFAI:EX-0001-0220-53
   // QFAI:EX-0001-0220-54
   // QFAI:EX-0001-0220-56
+  // QFAI:EX-0001-0220-60
   it(route, async () => {
     const plan = (await loadBuiltInPlans()).find((each) => each.route === route);
 
