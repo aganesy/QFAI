@@ -5,6 +5,7 @@
 // QFAI:AC-0001-0225-05
 // QFAI:AC-0001-0225-06
 // QFAI:AC-0001-0225-07
+// QFAI:AC-0001-0225-08
 // QFAI:AC-0001-0226-01
 /**
  * The reviews a route's plan declares: a change route reviews the specification change once and
@@ -17,9 +18,17 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { expect, it } from "vitest";
+import { afterEach, expect, it } from "vitest";
 
-import { loadBuiltInPlans, type WorkflowPlanFile } from "../../../src/core/workflow/plans.js";
+import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
+import {
+  loadBuiltInPlans,
+  parsePlan,
+  type WorkflowPlanFile,
+} from "../../../src/core/workflow/plans.js";
+import { withSpecStage } from "../../../src/core/workflow/specStage.js";
+import { extraction } from "../../helpers/workflowExtraction.js";
+import { field, minimalProject, removeProjects, workflow, writeJson } from "./workflowProject.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -33,6 +42,221 @@ function reviews(plan: WorkflowPlanFile | undefined): string[] {
 async function planOf(route: string): Promise<WorkflowPlanFile | undefined> {
   return (await loadBuiltInPlans()).find((plan) => plan.route === route);
 }
+
+afterEach(removeProjects);
+
+// The plan `npx qfai workflow plan --in` prints for the extraction.
+async function planJson(value: WorkflowExtraction): Promise<unknown> {
+  const root = await minimalProject();
+  const file = await writeJson(root, "tmp/request.json", value);
+  return workflow(root, ["plan", "--in", file]).json;
+}
+
+const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+
+// The route, each stage as `id[steps]{review}` and the decision points of the plan for the
+// extraction.
+async function plannedFor(value: WorkflowExtraction): Promise<unknown> {
+  const json = await planJson(value);
+  const shown = list(field(json, "stages")).map((stage) => {
+    const names = list(field(stage, "steps")).map(
+      (step) => `${String(field(step, "name"))}${field(step, "passThrough") === true ? "°" : ""}`,
+    );
+    const review = field(stage, "review");
+    return `${String(field(stage, "id"))}[${names.join(" ")}]${review ? `{${String(review)}}` : ""}`;
+  });
+  return {
+    route: field(json, "route"),
+    stages: shown,
+    decisionPoints: field(json, "decisionPoints"),
+  };
+}
+
+// Each scope of the plan for the extraction, as `scope:stage/stage`.
+async function scopesFor(value: WorkflowExtraction): Promise<string[]> {
+  return list(field(await planJson(value), "scopes")).map(
+    (scope) =>
+      `${String(field(scope, "scope"))}:${list(field(scope, "stages")).map(String).join("/")}`,
+  );
+}
+
+const SPEC_STAGE = "spec[sdd-triage sdd-story° sdd-contract°]{spec}";
+const NOTE = "note[verify-change-note°]{code}";
+const GATES = "verify[verify-qfai-gate verify-repo-gate verify-commit]";
+const CI_REQUEST = extraction({
+  intent: "ci",
+  entryFlags: ["expect"],
+  artifacts: ["tests", "spec", "ci"],
+  confidence: "medium",
+  alternatives: [
+    { intent: "behaviour-change", entryFlags: ["expect"], qualifiers: [], signals: [] },
+  ],
+});
+
+// QFAI:EX-0001-0225-20
+it("A tooling request that names the story tree gets a specification stage and its review", async () => {
+  const withoutSpec = extraction({ ...CI_REQUEST, artifacts: ["tests", "ci"] });
+
+  expect({
+    withSpec: await plannedFor(CI_REQUEST),
+    withoutSpec: await plannedFor(withoutSpec),
+    scopes: [await scopesFor(CI_REQUEST), await scopesFor(withoutSpec)],
+  }).toEqual({
+    withSpec: {
+      route: "change-tooling",
+      stages: [SPEC_STAGE, "edit[implement-tooling]", NOTE, GATES],
+      decisionPoints: ["sdd-triage"],
+    },
+    withoutSpec: {
+      route: "change-tooling",
+      stages: ["edit[implement-tooling]", NOTE, GATES],
+      decisionPoints: [],
+    },
+    scopes: [["broad:spec/edit/note/verify"], ["broad:edit/note/verify"]],
+  });
+});
+
+// QFAI:EX-0001-0225-21
+it("The specification stage follows the route's last sdd stage, or else precedes its first writing stage", async () => {
+  expect({
+    fix: await plannedFor(
+      extraction({ intent: "defect", artifacts: ["code", "tests", "contract"] }),
+    ),
+    flagged: field(
+      await plannedFor(
+        extraction({
+          intent: "defect",
+          entryFlags: ["decision"],
+          artifacts: ["code", "tests", "spec"],
+        }),
+      ),
+      "decisionPoints",
+    ),
+    retire: await plannedFor(
+      extraction({
+        intent: "unenforced",
+        qualifiers: ["removal-requested"],
+        artifacts: ["code", "spec"],
+      }),
+    ),
+  }).toEqual({
+    fix: {
+      route: "fix-defect",
+      stages: ["diagnose[implement-diagnose]", SPEC_STAGE, "implement[implement-tdd]", NOTE, GATES],
+      decisionPoints: ["sdd-triage"],
+    },
+    flagged: ["implement-diagnose", "sdd-triage"],
+    retire: {
+      route: "retire-mechanism",
+      stages: [
+        "diagnose[implement-diagnose]",
+        "decide[sdd-triage]",
+        "spec[sdd-story° sdd-contract°]{spec}",
+        "remove[implement-retire]",
+        NOTE,
+        GATES,
+      ],
+      decisionPoints: ["sdd-triage"],
+    },
+  });
+});
+
+// A plan in the shape of a plan file, so the plan format can read it back.
+function asPlanFile(plan: WorkflowPlanFile): string {
+  return JSON.stringify({
+    route: plan.route,
+    family: plan.family,
+    stages: plan.stages.map((stage) => ({
+      id: stage.id,
+      kind: stage.kind,
+      steps: stage.steps.map((step) =>
+        step.passThrough === undefined && step.mode === undefined
+          ? step.name
+          : { step: step.name, passThrough: step.passThrough, mode: step.mode },
+      ),
+      ...(stage.after.length > 0 ? { after: stage.after } : {}),
+      ...(stage.review ? { review: stage.review } : {}),
+    })),
+    decisionPoints: plan.decisionPoints,
+    ...(plan.releasePoint === undefined ? {} : { releasePoint: plan.releasePoint }),
+    branchPoints: plan.branchPoints,
+  });
+}
+
+// QFAI:EX-0001-0225-21
+it("Every plan the specification stage expands still reads back as a valid plan", async () => {
+  const plans = await loadBuiltInPlans();
+  const expanded = plans
+    .map((plan) => ({ plan, wider: withSpecStage(plan, ["code", "tests", "spec"]) }))
+    .filter(({ plan, wider }) => wider !== plan)
+    .map(({ wider }) => wider);
+  const faults = expanded.flatMap((plan) => {
+    const load = parsePlan(asPlanFile(plan), plan.route);
+    return load.ok
+      ? []
+      : load.refusals.map((each) => `${each.route}:${each.reason}:${each.subject}`);
+  });
+
+  expect(expanded.map((plan) => plan.route)).toEqual(
+    expect.arrayContaining(["change-tooling", "fix-defect", "retire-mechanism"]),
+  );
+  expect(faults).toEqual([]);
+});
+
+// QFAI:EX-0001-0225-22
+it("A security intake, a conflict resolution, a route that writes nothing and a refused request gain no specification stage", async () => {
+  const planned = [
+    await plannedFor(extraction({ intent: "security", artifacts: ["spec"] })),
+    await plannedFor(
+      extraction({
+        intent: "stale-record",
+        qualifiers: ["meaning-preserving"],
+        artifacts: ["docs", "spec"],
+      }),
+    ),
+    await plannedFor(extraction({ intent: "design", artifacts: ["spec"] })),
+  ];
+
+  expect(planned.map((each) => field(each, "route"))).toEqual([
+    "fix-vulnerability",
+    "resolve-conflicts",
+    "decide-design",
+  ]);
+  const stages = planned.flatMap((each) => list(field(each, "stages")));
+  expect(stages.filter((stage) => String(stage).startsWith("spec["))).toEqual([]);
+
+  const refused = await planJson(
+    extraction({ intent: "docs", artifacts: ["code", "tests", "spec"] }),
+  );
+  expect(list(field(refused, "reasons")).map((each) => field(each, "subject"))).toEqual([
+    "code",
+    "tests",
+    "spec",
+  ]);
+
+  const candidates = list(
+    field(
+      await planJson(
+        extraction({
+          intent: "ci",
+          artifacts: ["spec", "ci"],
+          confidence: "low",
+          alternatives: [{ intent: "refactor", entryFlags: [], qualifiers: [], signals: [] }],
+        }),
+      ),
+      "candidates",
+    ),
+  );
+  expect(
+    candidates.map((each) => [
+      field(each, "route"),
+      list(field(each, "scopes")).some((scope) => list(field(scope, "stages")).includes("spec")),
+    ]),
+  ).toEqual([
+    ["change-tooling", false],
+    ["refactor-code", false],
+  ]);
+});
 
 // QFAI:EX-0001-0225-01
 // QFAI:EX-0001-0225-02
@@ -172,12 +396,13 @@ it("Each review takes one reviewer for its kind, the architect only for an unrea
   );
   expect(items[3]).toBe("no other reviewer. A stage the plan marks with no review gets none.");
   expect(flat(await shipped("step/common-review-cycle/STEP.md"))).toContain(
-    "No reviewer is rerun.",
+    "re-review. No other reviewer is rerun.",
   );
   const evidence = flat(await shipped("skill/qfai-implement/references/ui-affecting.md"));
   expect(evidence).toContain(
-    "A fix made for a finding of that review refreshes the capture it changes and is not reviewed again",
+    "A fix made for a finding of that review refreshes the capture it changes, and a fix that changes behaviour gets its one focused re-review",
   );
+  expect(evidence).not.toContain("is not reviewed again");
   expect(evidence).not.toContain("refresh the capture and review");
   expect(reviews(await planOf("add-feature"))).toEqual(["sdd:spec", "note:code"]);
   expect(reviews(await planOf("fix-defect"))).toEqual(["note:code"]);
@@ -282,5 +507,6 @@ it("The entry skill's review step states the same count as the review step", asy
   expect(run).toContain(
     "A conflict resolution the plan's own edit stage made in the story tree, a contract or a register still gets one.",
   );
+  expect(run).toContain("a behaviour fix gets one re-review, as `common-review-cycle` says.");
   expect(run).not.toMatch(/flows served by a UI contract/);
 });

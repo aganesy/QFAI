@@ -72,6 +72,7 @@ import {
   validateUiDefinitionConsistency,
   validateDesignAudit,
   validateRootDesignMdParse,
+  validateRootDesignMdParseOutsideReadiness,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
   validateTestTodoStubs,
@@ -747,7 +748,10 @@ async function runStoryProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const sdd = async (includePolicy = true): Promise<Issue[]> => [
+  // `standalone` is false in `verify` and `full`. They leave out the policy
+  // placeholders, and leave the root DESIGN.md readiness gate to the prototyping
+  // group, which runs it in the same profile.
+  const sdd = async (standalone = true): Promise<Issue[]> => [
     ...(await timed(timings, "story-structure", () =>
       validateStoryTreeStructure(root, config, model),
     )),
@@ -756,15 +760,17 @@ async function runStoryProfileValidators(
     ...(await timed(timings, "story-contract-index", () =>
       validateStoryTreeContractReferences(root, config, model),
     )),
-    ...(includePolicy
+    ...(standalone
       ? await timed(timings, "policy-placeholders", () =>
           validateStoryPolicyPlaceholders(root, config),
         )
       : []),
     ...(await timed(timings, "contracts", () => validateContracts(root, config))),
-    ...(await timed(timings, "design-contract-readiness", () =>
-      validateDesignContractReadiness(root, config),
-    )),
+    ...(standalone
+      ? await timed(timings, "design-contract-readiness", () =>
+          validateDesignContractReadiness(root, config),
+        )
+      : []),
     ...(await timed(timings, "assistant-tree-migration", () =>
       validateAssistantTreeMigration(root, config),
     )),
@@ -814,7 +820,10 @@ async function runStoryProfileValidators(
           ...(await timed(timings, "assistant-assets", () =>
             validateAssistantAssets(root, config),
           )),
-          ...(await runDiscussionValidators(root, config, timings)),
+          // The prototyping group below runs the research summary, the
+          // canonical UIX checks and the root DESIGN.md readiness gate, so the
+          // discussion and sdd sets leave them to it.
+          ...(await runDiscussionValidators(root, config, timings, false)),
           ...(await sdd(false)),
           ...(await runPrototypingValidators(root, config, timings, platformOption)),
           ...(await atdd()),
@@ -866,10 +875,17 @@ async function runSaasPackage(
   );
 }
 
+/**
+ * The discussion issue set. `includeSharedWithUiux` is false where the
+ * prototyping group runs in the same profile: that group also runs the
+ * research summary, the canonical UIX checks and the root DESIGN.md readiness
+ * gate, and running them here too reported each of their findings twice.
+ */
 async function runDiscussionValidators(
   root: string,
   config: ConfigLoadResult["config"],
   timings: TimingsSink,
+  includeSharedWithUiux = true,
 ): Promise<Issue[]> {
   return [
     // A project reaching this profile may already carry a root DESIGN.md —
@@ -878,7 +894,11 @@ async function runDiscussionValidators(
     // Catching it here means a malformed file surfaces before `/qfai-sdd`
     // builds on it. Only the parse half — the UI-contract checks belong to
     // later stages.
-    ...(await timed(timings, "root-design-md-parse", () => validateRootDesignMdParse(root))),
+    ...(includeSharedWithUiux
+      ? await timed(timings, "root-design-md-parse", () => validateRootDesignMdParse(root))
+      : await timed(timings, "root-design-md-parse", () =>
+          validateRootDesignMdParseOutsideReadiness(root, config),
+        )),
     ...(await timed(timings, "discussion-mermaid", () => validateDiscussionMermaid(root))),
     ...(await timed(timings, "design-direction-proposal", () =>
       validateDesignDirectionProposal(root, config),
@@ -887,8 +907,12 @@ async function runDiscussionValidators(
       validateDiscussionPackReadiness(root, config),
     )),
     ...(await timed(timings, "discussion-visuals", () => validateDiscussionVisuals(root))),
-    ...(await timed(timings, "research-summary", () => validateResearchSummary(root, config))),
-    ...(await timed(timings, "canonical-uix", () => runCanonicalUixValidators(root, config))),
+    ...(includeSharedWithUiux
+      ? await timed(timings, "research-summary", () => validateResearchSummary(root, config))
+      : []),
+    ...(includeSharedWithUiux
+      ? await timed(timings, "canonical-uix", () => runCanonicalUixValidators(root, config))
+      : []),
   ];
 }
 

@@ -49,7 +49,7 @@ Feature: Review a change twice: the specification before the code, and the code 
     Then one reviewer reviews for its kind: `requirements-reviewer` for the specification review, `implementation-reviewer` for the code review
     And `architecture-reviewer` joins only when the target holds a contract change that no earlier review of the route read
     And no reviewer joins but these and `product-surface-reviewer` for a screen change
-    And each reviewer reviews once in each review it joins, and none is rerun after a finding is fixed
+    And each reviewer reviews once in each review it joins, and none is rerun after a finding is fixed, except that each reviewer whose findings had a behaviour fix re-reviews the combined diff of those fixes once
 
   # AC-0001-0225-06
   Scenario: A review whose target only resolves conflicts between reviewed sides gets no reviewer
@@ -67,4 +67,12 @@ Feature: Review a change twice: the specification before the code, and the code 
     And the review is still held, and the stage report and the final report both name the skip, the changed lines and why no reviewer ran
     And a target that also changes code, tests, a story-tree or contract file, a screen or a file's structure, or replaces more than five lines, or adds or removes a line, dispatches its reviewers
     And a target that touches permissions, secrets, credentials or tokens; a URL, host, registry, image or action reference; a dependency or tool version resolved from the network; a workflow trigger; a setting that turns a check, lint rule, type check, gate or test on or off; any text inside a shell command, script or recipe; or a package's own version, or any value a release, tag or publish job reads is not literal-only, and dispatches its reviewers
+
+  # AC-0001-0225-08
+  Scenario: A request that names the story tree gets the specification review on any route
+    Given an extraction whose artifacts include `spec` or `contract`, planned on a route with a stage that writes and no stage marked for the specification review
+    When the plan is made
+    Then the plan holds a specification stage marked for the specification review, whatever the request's intent family
+    And a request that names neither keeps the route's stages as they are
+    And the plan of a private security report, and of a merge that only resolves conflicts, keeps its stages
 ```

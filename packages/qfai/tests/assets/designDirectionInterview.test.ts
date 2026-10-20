@@ -125,6 +125,9 @@ describe("a pack may inherit the current DESIGN.md", () => {
         "owes no Trend Scan, no minimum count of competitive or catalogue references",
       );
       expect(playbook).toContain("### Inheriting the current DESIGN.md");
+      expect(playbook).toContain(
+        "The declaration waives nothing in the Research Summary of `04_Sources.md`: the research-first protocol runs for every pack.",
+      );
       const matrix = flat(await read(tree, MATRIX));
       expect(matrix).toContain("## Inheriting Packs");
       expect(matrix).toContain("UI-bearing items 1 and 5 do not apply");
