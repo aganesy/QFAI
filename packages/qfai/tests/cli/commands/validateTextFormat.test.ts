@@ -16,10 +16,15 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { captureStdout } from "../../helpers/stdout.js";
-import { emitText, resolveIssueFix, runValidate } from "../../../src/cli/commands/validate.js";
+import {
+  emitText,
+  formatPassSummary,
+  resolveIssueFix,
+  runValidate,
+} from "../../../src/cli/commands/validate.js";
 import { loadConfig, type FailOn } from "../../../src/core/config.js";
 import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
 import { validateDesignToken } from "../../../src/core/validators/designToken.js";
@@ -822,3 +827,110 @@ async function writeMalformedDesignTokens(root: string): Promise<void> {
     "utf-8",
   );
 }
+
+/** Everything `task` writes to stderr, with the writes still swallowed. */
+async function captureStderr(task: () => Promise<void>): Promise<string> {
+  const spy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  try {
+    await task();
+    return spy.mock.calls.map(([chunk]) => String(chunk)).join("");
+  } finally {
+    spy.mockRestore();
+  }
+}
+
+describe("validate --format text says that it started and, when it passes, what it checked", () => {
+  // QFAI:EX-0001-0039-22
+  it("states the pass summary and the started line in the validate contract", async () => {
+    const guideline = await readGuideline();
+    expect(guideline).toContain(
+      "`qfai validate: profile <profile>, <n> check groups, <n> errors, <n> warnings, <seconds>s`",
+    );
+    expect(guideline).toContain("`qfai validate: running profile <profile>...`");
+  });
+
+  // QFAI:EX-0001-0039-22
+  it("formats the pass summary from the profile, its check groups, the counts and the time", () => {
+    const warnings = resultOf(manyOfOneCode("QFAI-TEST-002", "warning", 2));
+    expect(formatPassSummary({ ...warnings, profile: "atdd" }, 12_345)).toBe(
+      "qfai validate: profile atdd, 3 check groups, 0 errors, 2 warnings, 12.3s",
+    );
+    const one = resultOf([
+      ...manyOfOneCode("QFAI-TEST-001", "error", 1),
+      ...manyOfOneCode("QFAI-TEST-002", "warning", 1),
+    ]);
+    expect(formatPassSummary({ ...one, profile: "drift" }, 40)).toBe(
+      "qfai validate: profile drift, 2 check groups, 1 error, 1 warning, 0.0s",
+    );
+    // A run whose own validators did not run checked none of the profile's groups.
+    expect(formatPassSummary({ ...one, profile: "atdd", profileValidatorsRan: false }, 0)).toBe(
+      "qfai validate: profile atdd, 0 check groups, 1 error, 1 warning, 0.0s",
+    );
+  });
+
+  // QFAI:EX-0001-0039-22
+  it("prints the pass summary just ahead of the run-log line of a run that passes", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-summary-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      let code = -1;
+      const output = await captureStdout(async () => {
+        code = await runValidate({ root, strict: false, format: "text", failOn: "never" });
+      });
+      const lines = output.trimEnd().split("\n");
+
+      expect(code).toBe(0);
+      expect(lines.at(-1)).toMatch(/^run-log: \S/);
+      expect(lines.at(-2)).toMatch(
+        /^qfai validate: profile full, [1-9]\d* check groups, \d+ errors?, \d+ warnings?, \d+\.\ds$/,
+      );
+      expect(lines.at(-3)).toBe("fail-on: never");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0039-22
+  it("prints no pass summary when the run fails", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-summary-fail-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      await writeMalformedDesignTokens(root);
+      let code = -1;
+      const output = await captureStdout(async () => {
+        code = await runValidate({ root, strict: false, format: "text" });
+      });
+
+      expect(code).toBe(1);
+      expect(output).not.toContain("qfai validate: profile ");
+      expect(output.trimEnd().split("\n").at(-2)).toMatch(/^fail-on: \S/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0039-22
+  it("names the profile on stderr before the run, in text format only", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-started-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      let stdout = "";
+      const text = await captureStderr(async () => {
+        stdout = await captureStdout(async () => {
+          await runValidate({ root, strict: false, format: "text", profile: "atdd" });
+        });
+      });
+      expect(text.startsWith("qfai validate: running profile atdd...\n")).toBe(true);
+      expect(stdout).not.toContain("running profile");
+
+      const github = await captureStderr(() =>
+        captureStdout(async () => {
+          await runValidate({ root, strict: false, format: "github", profile: "atdd" });
+        }).then(() => undefined),
+      );
+      expect(github).not.toContain("running profile");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
