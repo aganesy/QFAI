@@ -10,7 +10,7 @@ Use these checkpoints with the ordered stages of the SDD steps. A checked item r
 - Only an approved change request, a declined change request, a critical decision the user made, and a justified `Test exception:` row are decision rows; a declined change request is a REJECTED `Change request:` row. Open questions are open-questions.md rows. An existing REJECTED row stays as it is.
 - Both tables have exactly ID, Content, Approach, Status. Existing rows are unchanged except Status.
 - Approval-required rows have the user's decision before any dependent write. Under --auto, pending approvals stopped the run without an invented approval.
-- New IDs use highest-in-scope plus one, including retired IDs in decision rows.
+- New IDs use highest-in-scope plus one, including retired IDs in decision rows and the IDs open pull requests add.
 
 ## Policy and business flow
 
