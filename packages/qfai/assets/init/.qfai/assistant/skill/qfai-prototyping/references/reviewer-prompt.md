@@ -42,6 +42,12 @@ transition-pass percentages as a substitute for the qualitative review.
   The list page is not a screen, and the screens are the project's own.
   Read the edited stylesheet and motion files as well when filling
   `designMdViolations[]`.
+  When `progress.md` records a `runScope`, review its in-scope screens in
+  full. On each render-check screen, check only that the in-scope component
+  renders there: one that does not render, or that breaks the screen around
+  it, is a blocking finding, and the impressions speak of the component alone.
+  Return payloads for those pairs only, fold only them into the summary, and
+  open no other screen.
 - A screenshot or HTML snapshot, only when one was taken. Name any mandatory
   input you did not receive in a finding.
 - The layout anti-pattern registry the package ships.

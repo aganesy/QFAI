@@ -287,6 +287,15 @@ envelope, the one self-contained file, the `<link rel="stylesheet">` ban and
   iteration restyles the screens as they are, and a restyle `pivot` rethinks
   only the visual treatment: screens, fields and behaviour stay.
 
+### Scoped runs
+
+When `progress.md` records a `runScope`, start every iteration from a copy of
+`.qfai/prototype/final/index.html`, not from a seed. Change only the in-scope
+screen routes and each in-scope shared component wherever a screen route
+renders it, with the style only they use. Leave everything else as `final/`
+has it, so the handoff can merge the in-scope parts back. A change the scope
+needs outside those parts is reported, not made.
+
 ## The first iteration (seed)
 
 Produce one self-contained `iter-00/index.html` that satisfies the spec

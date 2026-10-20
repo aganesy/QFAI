@@ -4,6 +4,7 @@
 
 - Inputs
 - Outputs
+- Scoped handoff
 - Restyle handoff
 - Checking an implementation's tokens
 
@@ -83,6 +84,37 @@ them consistently with each other
 same checkout. `npx qfai validate --profile saas-package` requires it to be present
 and to conform, and reports `QFAI-SAAS-002` naming the file
 otherwise; no other command reads it.
+
+## Scoped handoff
+
+When `progress.md` records a `runScope`, the confirmed iteration changed
+only the in-scope parts of a `final/index.html` an earlier run confirmed.
+The unit of the merge is the screen route, one per declared screen, and each
+place a route renders an in-scope shared component.
+
+- In `final/index.html`, replace each in-scope screen's route, and each
+  in-scope component wherever a route renders it, together with the style
+  only they use, with the confirmed iteration's version. Keep every other
+  part as it was.
+- A difference between the confirmed iteration and `final/` outside those
+  parts is a change the scope left out: keep `final/`'s version and name the
+  difference in the completion report.
+- In `final/handoff.json`, replace the `procurement` rows of the in-scope
+  screens and components, keep every other row, so every declared screen
+  still appears, and record the scope the user confirmed as `runScope`:
+
+```json
+{
+  "runScope": {
+    "screens": ["<ui-contract-id>/<screen>"],
+    "components": ["<repository path or procurement item>"]
+  }
+}
+```
+
+The confirmed prototype is then the whole of `final/`: the in-scope parts
+this run confirmed, and every other part as an earlier run confirmed it. A
+run with no scope copies the whole iteration and writes no `runScope`.
 
 ## Restyle handoff
 

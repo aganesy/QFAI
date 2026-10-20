@@ -157,6 +157,65 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  // QFAI:AC-0001-0228-01
+  // QFAI:EX-0001-0228-07
+  it("builds and reviews only the run scope the record names, plus where a component renders", async () => {
+    const grill = flat(await read(tree, "step/prototyping-grill/STEP.md"));
+    const loop = flat(section(await read(tree, "step/prototyping-loop/STEP.md"), "Run scope"));
+    const generator = flat(
+      await read(tree, "skill/qfai-prototyping/references/generator-prompt.md"),
+    );
+    const reviewer = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+
+    expect(grill).toContain(
+      "The record's optional `## Run scope` section names what the run changes, one entry per line: a screen as `<ui-contract-id>/<screen>`, or a shared component by its repository path or by the `item` that `final/handoff.json` `procurement` names for it.",
+    );
+    expect(grill).toContain("a `## Run scope` an earlier run left does not carry over.");
+    expect(grill).toContain("With no `## Run scope`, the run covers the whole product, as above.");
+    expect(grill).toContain(
+      "A run scope needs the `.qfai/prototype/final/index.html` an earlier run confirmed.",
+    );
+    expect(grill).toContain("no session narrows it");
+    expect(loop).toContain(
+      "the render-check screens, which are the other screens that render an in-scope shared component.",
+    );
+    expect(loop).toContain(
+      "The generator starts each iteration from a copy of `final/index.html` and changes only the in-scope screens and components.",
+    );
+    expect(generator).toContain(
+      "When `progress.md` records a `runScope`, start every iteration from a copy of `.qfai/prototype/final/index.html`, not from a seed.",
+    );
+    expect(reviewer).toContain(
+      "On each render-check screen, check only that the in-scope component renders there:",
+    );
+    expect(reviewer).toContain(
+      "Return payloads for those pairs only, fold only them into the summary, and open no other screen.",
+    );
+  });
+
+  // QFAI:AC-0001-0228-01
+  // QFAI:EX-0001-0228-08
+  it("merges a scoped result into final/ and records the confirmed scope", async () => {
+    const handoffStep = flat(await read(tree, "step/prototyping-handoff/STEP.md"));
+    const scoped = flat(
+      section(await read(tree, "skill/qfai-prototyping/references/handoff.md"), "Scoped handoff"),
+    );
+
+    expect(handoffStep).toContain(
+      "In a scoped run, replace only the in-scope parts and keep the rest, as the handoff reference's Scoped handoff says.",
+    );
+    expect(handoffStep).toContain("in a scoped run, the scope the user confirmed.");
+    expect(scoped).toContain(
+      "The unit of the merge is the screen route, one per declared screen, and each place a route renders an in-scope shared component.",
+    );
+    expect(scoped).toContain("Keep every other part as it was.");
+    expect(scoped).toContain(
+      "replace the `procurement` rows of the in-scope screens and components, keep every other row, so every declared screen still appears, and record the scope the user confirmed as `runScope`:",
+    );
+    expect(scoped).toContain('"runScope": {');
+    expect(scoped).toContain("The confirmed prototype is then the whole of `final/`");
+  });
+
   // QFAI:AC-0001-0228-02
   // QFAI:EX-0001-0228-02
   it("runs another iteration on a change and keeps the handoff waiting", async () => {

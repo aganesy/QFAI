@@ -89,6 +89,20 @@ and `medium` stop before it.
 If the route's scope has no implement stage, stop and ask the user to re-plan
 before iteration 00.
 
+## Run scope
+
+When `grilling.md` has a `## Run scope`, record `runScope` in `progress.md`
+beside `iterationKind`: the in-scope screens, and the render-check screens,
+which are the other screens that render an in-scope shared component. Find
+those in the `final/handoff.json` `procurement` rows and in `final/index.html`.
+
+- The generator starts each iteration from a copy of `final/index.html` and
+  changes only the in-scope screens and components.
+- The reviewer reviews the in-scope screens in full and, on a render-check
+  screen, only that the component renders there. No other screen is opened.
+
+With no `## Run scope`, every screen is in scope and nothing here applies.
+
 ## Procedure
 
 Run these for iteration `NN`: the next index after the iterations already
