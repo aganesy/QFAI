@@ -476,6 +476,7 @@ const FLOORS: Record<string, number> = {
   "fix-env-bound": 8,
   "hand-off-operation": 8,
   "retriage-bundle": 8,
+  "run-release": 5,
 };
 
 it("Every catalog route has seeds, the thin ones up to their floors, each naming its route and family", async () => {

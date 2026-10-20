@@ -40,6 +40,12 @@ operation and records what happened.
 Run none of the operation here: no push, publication, tag or change to an
 account.
 
+A user who delegates the release to the agent while this step waits gives a
+new instruction, and the handoff has no result to record. Quote the
+instruction word for word with its source, do not report `handed-off`, and
+list the delegated release as the follow-up for the closing step, which closes
+the request as `deferred`, so it is planned again as a request of its own.
+
 ## What it writes
 
 - No file git tracks.

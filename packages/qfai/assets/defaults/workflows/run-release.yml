@@ -1,0 +1,12 @@
+route: run-release
+family: release
+stages:
+  - id: release
+    kind: triage
+    steps: [triage-operate]
+decisionPoints: []
+releasePoint: triage-operate
+branchPoints:
+  - step: triage-operate
+    outcomes:
+      - { outcome: needs-change, routes: decision-table }

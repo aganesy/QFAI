@@ -12,6 +12,8 @@ runs without the approval, which authorizes no push, merge, tag or publication.
 After approval at a handoff release point, `qfai-run` records the approval as
 step 7 says before `triage-handoff` runs. Every triage step
 still changes no tracked file. No handed-off operation runs on the user's behalf.
+After approval at a release point before `triage-operate`, that step carries
+out only what its `## A delegated release` section allows.
 
 ## Decision point
 

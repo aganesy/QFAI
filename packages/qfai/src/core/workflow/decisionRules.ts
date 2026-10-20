@@ -116,6 +116,15 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   rule(13, clause(is("design"), "decide-design")),
   rule(
     14,
+    // A release the user's own quoted instruction delegates is carried out up to the user's
+    // approval; a distribution incident stays with a person.
+    clause(
+      (input) =>
+        is("release")(input) &&
+        qualified(input, "release-delegated") &&
+        !qualified(input, "distribution-incident"),
+      "run-release",
+    ),
     clause(
       (input) => (is("order")(input) && qualified(input, "human-run")) || is("release")(input),
       "hand-off-operation",
