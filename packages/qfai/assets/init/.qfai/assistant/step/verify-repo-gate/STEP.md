@@ -89,6 +89,9 @@ one code review reads the repair, as `qfai-verify`'s `## Review` section says.
   `/qfai-sdd` or `/qfai-implement`.
 - A fix made after the code review is listed in the final report with its
   diff. No review runs again.
+- In a `resolve-conflicts` run for one of several branches, the fix loop
+  repairs nothing: a failing gate undoes the merge (`git merge --abort`, or
+  `git reset --merge ORIG_HEAD` after the commit), and the branch is held.
 
 ## Report
 
