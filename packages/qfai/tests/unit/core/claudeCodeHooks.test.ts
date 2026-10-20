@@ -505,20 +505,20 @@ describe.each([
     "earlier-brief-tool-groups.json",
     ["PreToolUse", "PostToolUse"],
   ],
-  // The prompt-time groups that printed a brief reminder after the first prompt, the
-  // before-post group that printed on every post, and the API-budget group that printed for any
-  // command naming the forge.
+  // Every counted group as it stood before the counter marker was created atomically, the
+  // question-form and before-post reminders printed once per session, and the API-budget
+  // reminder covered every network client.
   [
     "assets/init/.claude/settings.json",
     "tests/fixtures/claude-settings",
     "earlier-repeating-reminder-groups.json",
-    ["UserPromptSubmit", "PreToolUse"],
+    ["UserPromptSubmit", "PreToolUse", "PostToolUse"],
   ],
   [
     "assets/init/.codex/hooks.json",
     "tests/fixtures/codex-hooks",
     "earlier-repeating-reminder-groups.json",
-    ["UserPromptSubmit", "PreToolUse"],
+    ["UserPromptSubmit", "PreToolUse", "PostToolUse"],
   ],
 ] as const)("the superseded reminder groups in %s, from %s/%s", (file, dir, fixture, events) => {
   const template = readFileSync(path.join(packageRoot, file), "utf-8");

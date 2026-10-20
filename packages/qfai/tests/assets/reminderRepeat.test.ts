@@ -23,11 +23,9 @@ const WRITE_ONCE = [
   "documentation-clarity-after-write",
   "documentation-clarity-after-edit",
 ] as const;
-/** The prompt-time reminders, which print once per session as the tool-time ones do. */
-const PROMPT_ONCE = ["free-text-entry", "structured-question"] as const;
-/** Every reminder with a per-session schedule. */
+/** Every reminder that prints once per session and nothing after it. */
 const FIRST_ONLY = [
-  ...PROMPT_ONCE,
+  "structured-question",
   "api-budget",
   "documentation-clarity-before-post",
   "grilling-design-artifact",
@@ -35,7 +33,12 @@ const FIRST_ONLY = [
   "grilling-plan",
   ...WRITE_ONCE,
 ] as const;
-const SCHEDULED = FIRST_ONLY;
+/**
+ * The free-text entry reminder, the one place the routing rule is stated, follows its full form with
+ * a one-line pointer on every later prompt instead of going silent.
+ */
+const POINTERS = [["free-text-entry", "qfai-run"]] as const;
+const SCHEDULED = [...POINTERS.map(([key]) => key), ...FIRST_ONLY];
 
 /** Repeated delivery is checked through invocation twenty-one. */
 const PERIOD = 20;
@@ -106,7 +109,37 @@ async function fullContext(key: string): Promise<string> {
   );
 }
 
-describe.each(SETTINGS)("%s sends full context once per session", (rel) => {
+function expectPointer(context: string, full: string, reference: string): void {
+  expect(context).toContain(reference);
+  expect(context.trim()).not.toBe("");
+  expect(context).not.toMatch(/[\r\n\u2028\u2029]/);
+  expect(context.length).toBeLessThan(full.length);
+  if (reference === "qfai-run") {
+    expect(context).toMatch(/\bnew requests?\b.*\bplan\b/i);
+    expect(context).toMatch(
+      /\b(?:requested|pending|waiting)\b.*\b(?:answers?|results?|repl(?:y|ies))\b/i,
+    );
+    expect(context).toMatch(/\b(?:current|same|waiting)\b.*\bstep\b/i);
+    expect(context).not.toMatch(/\b(?:activeRun|turn_id)\b/);
+  }
+}
+
+describe.each(SETTINGS)("%s sends full context first and less or nothing later", (rel) => {
+  // QFAI:EX-0001-0196-55
+  it.each(POINTERS)(
+    "prints %s in full once, then a one-line pointer on every relevant trigger",
+    async (key, reference) => {
+      const entry = (await entries(rel)).get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      const full = await fullContext(key);
+      const input = { session_id: newSession(), prompt: "Fix the failing test" };
+      expect(contextOf(await call(rel, entry, input))).toBe(full);
+      for (let count = 2; count <= PERIOD + 1; count += 1) {
+        expectPointer(contextOf(await call(rel, entry, input)), full, reference);
+      }
+    },
+  );
+
   // QFAI:EX-0001-0196-55
   // QFAI:EX-0001-0196-56
   it.each(FIRST_ONLY)(
@@ -135,13 +168,16 @@ describe.each(SETTINGS)("%s sends full context once per session", (rel) => {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       const full = await fullContext(key);
+      const pointer = POINTERS.find(([prompt]) => prompt === key);
       for (const input of [
         { session_id },
         { session_id, agent_id: "helper" },
         { session_id: newSession() },
       ]) {
         expect(contextOf(await call(rel, entry, input))).toBe(full);
-        expect(await call(rel, entry, input), key).toBe("");
+        const second = await call(rel, entry, input);
+        if (pointer === undefined) expect(second, key).toBe("");
+        else expectPointer(contextOf(second), full, pointer[1]);
       }
     }
   });
@@ -193,7 +229,10 @@ describe.each(SETTINGS)("%s sends full context once per session", (rel) => {
   it("filters CI-monitor prompt lines before each session, agent and key counter", async () => {
     const byKey = await entries(rel);
     const session_id = newSession();
-    for (const key of PROMPT_ONCE) {
+    for (const [key, reference] of [
+      ["free-text-entry", "qfai-run"],
+      ["structured-question", null],
+    ] as const) {
       const entry = byKey.get(key);
       if (entry === undefined) throw new Error(`no entry carries ${key}`);
       const full = await fullContext(key);
@@ -211,7 +250,14 @@ describe.each(SETTINGS)("%s sends full context once per session", (rel) => {
           hookSpecificOutput: { hookEventName: "UserPromptSubmit" },
         });
         const second = await promptCall(entry, { ...identity, prompt: "Continue the same fix" });
-        expect(second, `${key}: second prompt`).toBe("");
+        if (reference === null) {
+          expect(second, `${key}: second prompt`).toBe("");
+          continue;
+        }
+        expectPointer(contextOf(second), full, reference);
+        expect(JSON.parse(second)).toMatchObject({
+          hookSpecificOutput: { hookEventName: "UserPromptSubmit" },
+        });
       }
     }
   });
@@ -332,18 +378,18 @@ describe.each(SETTINGS)("%s sends full context once per session", (rel) => {
   });
 
   // QFAI:EX-0001-0196-55
-  it("counts the API-budget reminder only on a command that runs a network client", async () => {
+  it("counts the API-budget reminder only on a command that reaches the network", async () => {
     const entry = (await entries(rel)).get("api-budget");
     if (entry === undefined) throw new Error("no entry carries api-budget");
     const session_id = newSession();
-    for (const command of ["git status", "cat api.github.com.txt", "ls ~/.gh", "echo high"]) {
+    for (const command of ["git status", "cat curl.txt", "ls ~/.gh", "echo high"]) {
       expect(await call(rel, entry, { session_id, tool_input: { command } }), command).toBe("");
     }
     expect(contextOf(await call(rel, entry, { session_id }))).toBe(await fullContext("api-budget"));
   });
 
   // QFAI:EX-0001-0196-56
-  it("prints the API-budget reminder for each network client and for no other command", async () => {
+  it("prints the API-budget reminder for each network client or the API host, and nothing else", async () => {
     const entry = (await entries(rel)).get("api-budget");
     if (entry === undefined) throw new Error("no entry carries api-budget");
     const full = await fullContext("api-budget");
@@ -356,13 +402,13 @@ describe.each(SETTINGS)("%s sends full context once per session", (rel) => {
       "invoke-restmethod https://example.com",
       "iwr https://example.com",
       "irm https://example.com | Out-Null",
+      "node -e \"fetch('https://api.github.com/rate_limit')\"",
     ]) {
       const input = { session_id: newSession(), tool_input: { command } };
       expect(contextOf(await call(rel, entry, input)), command).toBe(full);
     }
     for (const command of [
       "git push origin main",
-      "node -e \"fetch('https://api.github.com')\"",
       "npm run gh-pages",
       "cat curl.txt wget.log",
       "Get-Content Invoke-WebRequest.md",
@@ -370,6 +416,18 @@ describe.each(SETTINGS)("%s sends full context once per session", (rel) => {
     ]) {
       const input = { session_id: newSession(), tool_input: { command } };
       expect(await call(rel, entry, input), command).toBe("");
+    }
+  });
+
+  // QFAI:EX-0001-0196-56
+  it("prints a once-per-session reminder exactly once when calls race", async () => {
+    const byKey = await entries(rel);
+    for (const key of FIRST_ONLY) {
+      const entry = byKey.get(key);
+      if (entry === undefined) throw new Error(`no entry carries ${key}`);
+      const input = { session_id: newSession() };
+      const printed = await Promise.all([1, 2, 3, 4, 5].map(() => call(rel, entry, input)));
+      expect(printed.filter((stdout) => stdout.trim() !== ""), key).toHaveLength(1);
     }
   });
 

@@ -9,7 +9,8 @@
     "hookSpecificOutput": {
       "hookEventName": "UserPromptSubmit",
       "additionalContext": "QFAI free-text entry: for each new request the user wrote that names no skill, the lightest included, invoke the `qfai-run` skill before any other work, or stop and say so if it cannot start, never answering without it; an automated notice starts no run, and a pending answer or requested operation result resumes the current step. Read the skill once per session, and in a git worktree read and follow the worktree's own `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded."
-    }
+    },
+    "briefContext": "For new requests the user wrote, use qfai-run to plan; automated notices start no run, and pending answers or requested operation results resume the current step."
   },
   "qfai-not-installed": {
     "hookSpecificOutput": {

@@ -290,9 +290,10 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Six shared readers cover prompt and tool filters, once-per-session delivery and the
-    // install check; the reminder before a post shares the unfiltered tool-time reader.
-    expect(readers.size, "each entry uses one of the six shared readers").toBe(6);
+    // Seven shared readers cover the question-form and free-text entry schedules, the tool
+    // filters, once-per-session delivery and the install check; the reminder before a post shares
+    // the unfiltered tool-time reader.
+    expect(readers.size, "each entry uses one of the seven shared readers").toBe(7);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
@@ -302,7 +303,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   // The matcher fires on every shell command, so the program is what narrows it.
   // `documentation-clarity.md` keeps its own hook off the shell for exactly the
   // over-matching this filter prevents, and that decision is unchanged.
-  it("prints the budget reminder only for a command that runs a network client", async () => {
+  it("prints the budget reminder only for a network client or the API host", async () => {
     const group = (hooks.get("PreToolUse") ?? []).find(
       (candidate) => candidate.matcher === "Bash|PowerShell",
     );
@@ -319,6 +320,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
       "wget -q https://example.com",
       "Invoke-RestMethod -Uri https://example.com",
       "iwr https://example.com",
+      "python3 fetch.py https://api.github.com/rate_limit",
     ]) {
       const printed = await runReminderHook(entry, project, hookInput(command));
       expect(printed, `${command} printed nothing`).toContain("api-budget.md");
@@ -328,7 +330,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
       "git status && pnpm check-types",
       "node scripts/check-bidi.mjs --highlight",
       "echo ghost",
-      "echo https://api.github.com/rate_limit",
+      "cat curl.txt",
     ]) {
       await expect(runReminderHook(entry, project, hookInput(command))).resolves.toBe("");
     }
@@ -444,12 +446,20 @@ describe("the shipped reminder catalog", () => {
   });
 
   // QFAI:EX-0001-0196-70
-  it("asks for a rule to be read once per session, and keeps no brief form", () => {
+  it("asks for a rule to be read once per session, and never from a brief", () => {
     if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
     for (const [key, message] of Object.entries(catalog)) {
       if (typeof message !== "object" || message === null) continue;
-      // Every reminder prints once per session, so no message keeps a shorter form for later calls.
-      expect(message, `${key} keeps a brief form`).not.toHaveProperty("briefContext");
+      // Only the free-text entry keeps a brief form; every other reminder goes silent after its
+      // first display.
+      if (key !== "free-text-entry") {
+        expect(message, `${key} keeps a brief form`).not.toHaveProperty("briefContext");
+      }
+      const brief: unknown = Reflect.get(message, "briefContext");
+      if (typeof brief === "string") {
+        expect(brief, `${key} brief sends the agent back to the file`).not.toMatch(/\bread\b/i);
+        expect(brief, `${key} brief names no rule or skill`).toMatch(/\.agents\/rules\/|qfai-run/);
+      }
       const output: unknown = Reflect.get(message, "hookSpecificOutput");
       const full: unknown =
         typeof output === "object" && output !== null
