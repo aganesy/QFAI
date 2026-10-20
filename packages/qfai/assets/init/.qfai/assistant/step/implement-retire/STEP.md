@@ -58,6 +58,8 @@ In this route, step 2 of the procedure is narrowed:
 - A test that annotates any example the specification keeps stays. The step
   changes its assertions to what the rewritten specification states, and
   moves its example annotation to the rewritten example.
+  Before it moves an annotation, it reads the test's body and confirms that it
+  asserts the rewritten example's observable outcome.
 - A test that refers to the feature but annotates no removed example is not
   deleted. The stage report lists it.
 
