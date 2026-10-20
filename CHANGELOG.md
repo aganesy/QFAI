@@ -116,8 +116,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   extraction reference adds an example of each. Fixes #3768.
 
 - **`resolve-conflicts` has a rule for one base taken into several
-  branches.** `triage-operate` reports such a request as `needs-change` with
-  one `order` extraction qualified `meaning-preserving` per named branch, and
+  branches.** `triage-operate` checks each branch with
+  `git merge-tree --write-tree`, which writes nothing, and updates a branch
+  that merges cleanly itself, as the user's instruction names. For each branch
+  with conflicts it reports `needs-change` with one `order` extraction
+  qualified `meaning-preserving` naming the conflicting paths' artifacts, and
   the session runs them one after another; a blocked run does not stop the
   next. Each run merges, never rebases or force-pushes, keeps the route's
   decision renumbering, code review and verify block, and on a stop aborts

@@ -1420,7 +1420,7 @@ describe("qfai-maintain", () => {
       "In a `resolve-conflicts` run for one of several branches, the fix loop repairs nothing: a failing gate undoes the merge (`git merge --abort`, or `git reset --merge ORIG_HEAD` after the commit), and the branch is held.",
     );
     expect(flat(await readShipped("step/triage-operate/STEP.md"))).toContain(
-      "A request to take one base change into several branches is not an operation: report `needs-change` with one extraction per named branch, each `{ intent: order, qualifiers: [meaning-preserving] }` naming the artifacts its conflicts touch, so the decision rules plan `resolve-conflicts` for each. The session runs them one after another, and a blocked run does not stop the next.",
+      "For a request to take one base change into several branches, first check each branch with `git merge-tree --write-tree <branch> <base>`, which writes nothing. A branch that merges cleanly is a branch update the user asked for: update it here as an operation, merged and pushed only as the instruction names. A branch with conflicts is not an operation: report `needs-change` with one extraction for each such branch, `{ intent: order, qualifiers: [meaning-preserving] }` naming the artifacts of its conflicting paths, so the decision rules plan `resolve-conflicts` for each. The session runs them one after another, and a blocked run does not stop the next.",
     );
     const line = sectionOf(await readShipped(EXTRACTION), "## Examples")
       .split("\n")
