@@ -23,7 +23,11 @@ import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
 import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
-import { buildIncompleteRunIssue, incompleteRunResult } from "../lib/warnings.js";
+import {
+  buildIncompleteRunIssue,
+  incompleteRunResult,
+  isIncompleteRunResult,
+} from "../lib/warnings.js";
 
 export type ValidateOptions = {
   root: string;
@@ -48,6 +52,10 @@ export type ValidateOptions = {
 
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const startedAt = new Date();
+  const format = options.format ?? "text";
+  if (format === "text") {
+    emitStartedLine(options.profile ?? "full");
+  }
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
   // The CI narrow-profile finding is appended to a real run, not substituted
@@ -56,8 +64,8 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const ciProfileIssue = buildCiProfileIssue(options.profile);
   // Wrapped, because an unhandled rejection here would leave the operator with
   // one stderr line and no verdict — no `counts:`, no `run-log:`, no
-  // `validate.json` — and every shipped skill pipes validate through `| tail`,
-  // so that line would be all an agent sees. Enumerating the `stat` sites
+  // `validate.json` — and a caller that keeps only the end of the output, as
+  // an agent often does, would see that line alone. Enumerating the `stat` sites
   // that can raise reduces the ways in; this is what answers when the next one
   // appears.
   //
@@ -142,9 +150,13 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const scopedReportRel =
     scopedFlowIds.length > 0 ? scopedReportPath(configuredValidateJsonPath, scopedFlowIds) : null;
 
-  const format = options.format ?? "text";
   if (format === "text") {
     emitText(normalized, failOn);
+    // A run that did not finish has no pass to report, even under `--fail-on never`.
+    if (!willFail && !isIncompleteRunResult(normalized)) {
+      const elapsedMs = Date.now() - startedAt.getTime();
+      process.stdout.write(`${formatPassSummary(normalized, failOn, elapsedMs)}\n`);
+    }
     emitTextRunLog(runLogPath);
   }
   if (format === "github") {
@@ -767,6 +779,33 @@ function formatOverrunMs(value: number, budget: number): string {
     }
   }
   return String(value);
+}
+
+/**
+ * Said on stderr before any work, so a run that outlives its caller's timeout
+ * still leaves a line saying what it was doing, and stdout stays the report.
+ */
+function emitStartedLine(profile: string): void {
+  process.stderr.write(`qfai validate: running profile ${profile}...\n`);
+}
+
+/**
+ * The one line a passing text run prints ahead of `run-log:`: the verdict and
+ * its threshold first, then the profile, the counts and the elapsed time, so a
+ * pass reads as a run that happened rather than as missing output.
+ */
+export function formatPassSummary(
+  result: ValidationResult,
+  failOn: FailOn,
+  elapsedMs: number,
+): string {
+  const plural = (count: number, noun: string): string =>
+    `${count} ${noun}${count === 1 ? "" : "s"}`;
+  return (
+    `qfai validate: passed (fail-on ${failOn}): profile ${result.profile ?? "full"}, ` +
+    `${plural(result.counts.error, "error")}, ${plural(result.counts.warning, "warning")}, ` +
+    `${(elapsedMs / 1000).toFixed(1)}s`
+  );
 }
 
 function emitTextRunLog(runLogPath: string): void {
