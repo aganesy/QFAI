@@ -12,6 +12,7 @@ import {
 import { routingOutcome, type RouteCandidate } from "./routeDecision.js";
 import { isWorkflowRoute, type WorkflowRoute } from "./routes.js";
 import { firstWritingStep, scopesOf, unservedArtifacts, type PlanScope } from "./scopes.js";
+import { withSpecStage } from "./specStage.js";
 import { stepPath } from "./steps.js";
 
 export type PlanReason =
@@ -222,13 +223,17 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
   }
   const load = await loaded(root, outcome.taken.route);
   if (!load.ok) return load.document;
+  // The route alone decides what is served and where the `decision` flag stops the work; the
+  // specification stage comes after. A chosen candidate is planned by `--route`, which knows no
+  // artifacts, so only a plan taken here gains that stage.
   const unserved = unservedArtifacts(load.plan.stages, artifacts);
   if (unserved.length > 0) return unservedRefusal(unserved);
   const decisionPoints = decisionPointsOf(load.plan, extraction.entryFlags.includes("decision"));
+  const plan = withSpecStage({ ...load.plan, decisionPoints }, artifacts);
   return planned(
-    { ...load.plan, decisionPoints },
+    plan,
     outcome.taken.rule,
-    scopesOf(load.plan.stages, artifacts, extraction.qualifiers.includes("restyle")),
+    scopesOf(plan.stages, artifacts, extraction.qualifiers.includes("restyle")),
     extraction.flows,
   );
 }
