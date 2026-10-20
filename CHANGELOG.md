@@ -123,6 +123,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the session answers. The `qfai-run` one-read shortcut says so, and the
   extraction reference adds an example of each. Fixes #3768.
 
+- **`resolve-conflicts` has a rule for one base taken into several
+  branches.** `triage-operate` checks each branch with
+  `git merge-tree --write-tree`, which writes nothing, and updates a branch
+  that merges cleanly itself, as the user's instruction names. For each branch
+  with conflicts it reports `needs-change` with one `order` extraction
+  qualified `meaning-preserving` naming the conflicting paths' artifacts, and
+  the session runs them one after another; a blocked run does not stop the
+  next. Each run merges, never rebases or force-pushes, keeps the route's
+  decision renumbering, code review and verify block, and on a stop aborts
+  only that branch's merge. Its fix loop repairs nothing: a failing gate undoes
+  the merge and holds the branch. The route pushes nothing; a failed or UNRUN
+  gate is never pushed, and a gate delegated to CI may be pushed under the
+  user's push instruction once the local gates pass, with no merge until CI is
+  green. The report gives each branch's result. Every run of the route now also
+  stops on a pin or digest file, a file with an owner marker or a CODEOWNERS
+  entry, and a register ID declared twice after the merge. Fixes #3848.
+
 - **`sdd-story` annotates an existing test with the example it proves.** Where
   an existing assertion already proves an example the step added or
   renumbered, `sdd-story` now adds that example's `// QFAI:EX-…` line before the
