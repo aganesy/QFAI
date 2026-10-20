@@ -38,6 +38,7 @@ export const WORKFLOW_ROUTES = [
   "revert-culprit",
   "write-acceptance-tests",
   "hand-off-operation",
+  "run-release",
   "backport-fix",
   "draft-release-notes",
   "verify-manually",

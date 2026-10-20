@@ -49,7 +49,8 @@ it is the release notes adopters read before they upgrade.
 ## Permissions and responsibilities
 
 - Creating PRs and commits: anyone
-- Merging, tagging and release work: permission holders only
+- Merging, tagging and release work: permission holders only, or an agent the
+  user delegated the release to, as `.agents/rules/version-discipline.local.md` says
 - In an environment without permission, stop at creating the PR and hand merging,
   tagging and publishing over to a permission holder
 
@@ -65,10 +66,12 @@ it is the release notes adopters read before they upgrade.
   - The Codex review of that head is complete and holds no P0 or P1 finding.
     If Codex has posted no review of that head, an independent read-only reviewer
     reviews it instead and reports no P0 or P1 findings.
-- A permission holder merges the PR by hand with a merge commit. Do not enable
-  GitHub auto-merge. On the automated path, Tag release commit
-  pushes the tag. It does not tag a merge from `feature/vX.Y.Z`, so on the manual
-  path a permission holder pushes the tag by hand (step 4 of the manual procedure)
+- A permission holder merges the PR by hand with a merge commit, or an agent
+  the user delegated the release to does, as
+  `.agents/rules/version-discipline.local.md` says. Do not enable GitHub
+  auto-merge. On the automated path, Tag release commit pushes the tag. It does
+  not tag a merge from `feature/vX.Y.Z`, so on the manual path a permission
+  holder pushes the tag by hand (step 4 of the manual procedure)
 
 ## Automated path (recommended)
 
