@@ -19,5 +19,6 @@ branchPoints:
     outcomes:
       - {
           outcome: adopted,
-          routes: [add-feature, prototype-feature, change-compatibility, retire-feature],
+          routes:
+            [add-feature, prototype-feature, change-compatibility, retire-feature, rename-concept],
         }
