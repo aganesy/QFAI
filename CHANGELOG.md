@@ -351,11 +351,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeping every ID and changing nothing but the name. On a `behaviour-change`,
   `refactor` or `docs` reading it now routes `rename-concept` instead of
   `change-compatibility` or `edit-text`, whose scaffold and test-first steps
-  added tests a rename does not need. The route renames the stories, examples
-  and contract rules under the specification review, keeping every story-tree
-  ID, then runs `implement-refactor`, which renames the concept to match in
-  code, file names, user-visible text, configuration, documents and tests,
-  changes a test only where it names the concept, and adds no test. Fixes #3917.
+  added tests a rename does not need. The route renames the glossary,
+  business-flow documents, stories, examples and contract rules under the
+  specification review, keeping every story-tree ID, then runs
+  `implement-refactor`, which renames the concept to match in code, file names,
+  user-visible text, configuration, documents and tests, changes a test only
+  where it names the concept, and adds no test. A rename a `decide-design`
+  session adopts may continue to `rename-concept`. Fixes #3917.
 
 - **A release the user tells the agent to carry out has its own route.** The
   only release route handed every step to a person, so a user who said "you do

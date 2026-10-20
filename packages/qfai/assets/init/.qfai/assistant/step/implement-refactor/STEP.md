@@ -12,8 +12,10 @@ routing-profile: default
 
 # implement-refactor
 
-The request changes how the code is arranged, not what it does. Nothing in
-the story tree changes, so the step adds no example and runs no RED.
+Outside the `rename-concept` route, the request changes how the code is
+arranged, not what it does. Nothing in the story tree changes, so the step
+adds no example and runs no RED. In that route,
+[Renaming a concept](#renaming-a-concept) says what changes.
 
 ## Reads
 
@@ -28,15 +30,18 @@ the story tree changes, so the step adds no example and runs no RED.
    behaviour that was already broken.
 2. Move in small steps: rename, extract, inline, move a file. Run the suite
    after each one.
-3. A test may change only where it names something that moved, such as an
-   import path. What a test asserts does not change.
+3. Outside the `rename-concept` route, a test may change only where it names
+   something that moved, such as an import path. What a test asserts does not
+   change. In that route, [Renaming a concept](#renaming-a-concept) says how a
+   test changes.
 4. Delete code nothing calls and nothing declares.
 
 ## Renaming a concept
 
 In the `rename-concept` route, the user asked to rename a concept across the
 project, and the specification stage before this step already renamed it in
-the stories, examples and contract rules, keeping every ID. This step renames
+the glossary, business-flow documents, stories, examples and contract rules,
+keeping every ID. This step renames
 it to match everywhere else: code identifiers, file names, user-visible text,
 configuration and documents, in the small steps of the procedure. A test
 changes only where it names the concept: an identifier, an import, a test

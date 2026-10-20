@@ -221,7 +221,7 @@ describe("the steps the routes add to qfai-implement", () => {
     const renaming = flat(sectionOf(step, "## Renaming a concept"));
     expect(renaming).toMatch(/in the `rename-concept` route/i);
     expect(renaming).toMatch(
-      /the specification stage before this step already renamed it in the stories, examples and contract rules, keeping every ID/i,
+      /the specification stage before this step already renamed it in the glossary, business-flow documents, stories, examples and contract rules, keeping every ID/i,
     );
     expect(renaming).toMatch(
       /code identifiers, file names, user-visible text, configuration and documents/i,
