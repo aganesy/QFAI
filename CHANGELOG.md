@@ -301,6 +301,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   without the search. The report names the issue matched or created.
   Fixes #3857.
 
+- **`qfai validate --timings` shows what is slow.** The option prints one
+  more line, `timings: by family <FAMILY> <ms>ms, ...`, after `fail-on:`,
+  naming each finding family by its code (`STORY`, `DOCSCHEMA`, `CONTRACT`)
+  with the time its checks took, slowest first. The UI/UX checks, which run
+  side by side, follow apart as `side by side, overlapping:`. The same times
+  go to `validate.json#familyTimings`. Without the option the output is
+  unchanged.
+  Fixes #3946.
+
 - **`qfai-implement` ships optional Playwright and Vitest recipes.** A new
   test runner recipes reference puts the worker session-reuse rules into code:
   a Vitest session cache keyed by the run's private directory, the pool slot

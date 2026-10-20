@@ -130,6 +130,24 @@ export type ValidationTimings = {
   uiuxParts: readonly { name: string; ms: number }[];
 };
 
+/** The time the checks of one finding family took, named as its codes are (`STORY` for `QFAI-STORY-*`). */
+export type ValidationFamilyTiming = { family: string; ms: number };
+
+/**
+ * Wall-clock cost of each finding family, slowest first, written only when `--timings` asks for it.
+ *
+ * Like `ValidationTimings` it describes the machine, not the tree, so it raises no finding.
+ */
+export type ValidationFamilyTimings = {
+  /** Checks that ran one after another, summed per family. */
+  sequential: readonly ValidationFamilyTiming[];
+  /**
+   * The UI/UX group, whose checks run side by side: each time includes waiting for the others,
+   * so these overlap and do not add up to the group's own time.
+   */
+  overlapping: readonly ValidationFamilyTiming[];
+};
+
 export type ValidationResult = {
   toolVersion: string;
   /**
@@ -163,4 +181,5 @@ export type ValidationResult = {
   counts: ValidationCounts;
   waivers?: ValidationWaivers;
   timings?: ValidationTimings;
+  familyTimings?: ValidationFamilyTimings;
 };
