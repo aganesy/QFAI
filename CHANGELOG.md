@@ -672,16 +672,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout, and `qfai doctor` warns when the entries point at a missing
   script. Fixes #3750. Fixes #3805.
 
-- **Decision evidence no longer counts as a path outside `.qfai`.** The
-  decision form requires a decision row's `- Evidence:` item to name
-  repository files, and a change request's Content to list the paths it
-  changes. `QFAI-STORY-015` counted a path that the Evidence item or the
-  Content wrote in a code span or a link, and an inherited row cannot be edited
-  to clear the warning. A plain `file:` entry in the template's form was never
-  counted. In `decisions.md` and its pages, a `DEC-NNNN` row is now read
-  without its Evidence items, each running to the next labelled item, and
-  without a change request's Content. A path in the Grounds or another item of
-  the row, and in an open-question row, is still counted. Fixes #3756.
+- **Decision and open-question records no longer count as paths outside
+  `.qfai`.** `QFAI-STORY-015` counted every path a decision row or an open
+  question wrote in a code span or a link, and an inherited row cannot be
+  edited to clear the warning. These records cite files as evidence by design,
+  so nearly every decision record was flagged and the warning taught readers
+  to ignore the check. `decisions.md`, its decision pages and
+  `open-questions.md` are no longer read by the check; the policy,
+  business-flow and contract trees still are. Fixes #3756. Fixes #3910.
 
 - **A restyle prototype is no longer offered a scope that stops before
   implementation.** A restyle edits the project's live stylesheet and motion
