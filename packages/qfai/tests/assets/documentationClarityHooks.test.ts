@@ -290,8 +290,9 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Seven shared readers cover prompt and tool filters, full/brief delivery,
-    // posting and the install check.
+    // Seven shared readers cover the question-form and free-text entry schedules, the tool
+    // filters, once-per-session delivery and the install check; the reminder before a post shares
+    // the unfiltered tool-time reader.
     expect(readers.size, "each entry uses one of the seven shared readers").toBe(7);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
@@ -302,9 +303,11 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   // The matcher fires on every shell command, so the program is what narrows it.
   // `documentation-clarity.md` keeps its own hook off the shell for exactly the
   // over-matching this filter prevents, and that decision is unchanged.
-  it("prints the budget reminder only for a command that names the forge", async () => {
-    const group = (hooks.get("PreToolUse") ?? []).find((candidate) => candidate.matcher === "Bash");
-    expect(group, "no PreToolUse group matches Bash").toBeDefined();
+  it("prints the budget reminder only for a network client or the API host", async () => {
+    const group = (hooks.get("PreToolUse") ?? []).find(
+      (candidate) => candidate.matcher === "Bash|PowerShell",
+    );
+    expect(group, "no PreToolUse group matches Bash and PowerShell").toBeDefined();
     expect(group?.hooks.map((entry) => entry.statusMessage)).toEqual([API_BUDGET_HOOK_MARKER]);
     const entry = group?.hooks[0];
     if (entry === undefined) return;
@@ -314,6 +317,10 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
       "gh api repos/owner/repo/actions/runs",
       "gh pr checks",
       "curl https://api.github.com/rate_limit",
+      "wget -q https://example.com",
+      "Invoke-RestMethod -Uri https://example.com",
+      "iwr https://example.com",
+      "python3 fetch.py https://api.github.com/rate_limit",
     ]) {
       const printed = await runReminderHook(entry, project, hookInput(command));
       expect(printed, `${command} printed nothing`).toContain("api-budget.md");
@@ -323,6 +330,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
       "git status && pnpm check-types",
       "node scripts/check-bidi.mjs --highlight",
       "echo ghost",
+      "cat curl.txt",
     ]) {
       await expect(runReminderHook(entry, project, hookInput(command))).resolves.toBe("");
     }
@@ -331,7 +339,9 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   // The host's payload is not part of this repository, so the entry prints
   // nothing for input it does not recognise rather than guessing at a shape.
   it("prints nothing for input that carries no command", async () => {
-    const group = (hooks.get("PreToolUse") ?? []).find((candidate) => candidate.matcher === "Bash");
+    const group = (hooks.get("PreToolUse") ?? []).find(
+      (candidate) => candidate.matcher === "Bash|PowerShell",
+    );
     const entry = group?.hooks[0];
     if (entry === undefined) return;
     const project = projectDirOf(repoRoot, rel);
@@ -440,6 +450,11 @@ describe("the shipped reminder catalog", () => {
     if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
     for (const [key, message] of Object.entries(catalog)) {
       if (typeof message !== "object" || message === null) continue;
+      // Only the free-text entry keeps a brief form; every other reminder goes silent after its
+      // first display.
+      if (key !== "free-text-entry") {
+        expect(message, `${key} keeps a brief form`).not.toHaveProperty("briefContext");
+      }
       const brief: unknown = Reflect.get(message, "briefContext");
       if (typeof brief === "string") {
         expect(brief, `${key} brief sends the agent back to the file`).not.toMatch(/\bread\b/i);
