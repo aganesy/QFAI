@@ -7,6 +7,7 @@ import {
   ARTIFACTS,
   CONFIDENCES,
   ENTRY_FLAGS,
+  FLOW_ID,
   INTENTS,
   QUALIFIERS,
   RISKS,
@@ -17,6 +18,7 @@ import { isRecord } from "./parse.js";
 
 type Shape =
   | { kind: "enum"; values: readonly (string | null)[] }
+  | { kind: "pattern"; pattern: RegExp; expected: string }
   | { kind: "array"; items: Shape }
   | {
       kind: "object";
@@ -58,6 +60,7 @@ const EXTRACTION: Shape = {
     risks: list(oneOf(...RISKS)),
     artifacts: list(oneOf(...ARTIFACTS)),
     confidence: oneOf(...CONFIDENCES),
+    flows: list({ kind: "pattern", pattern: FLOW_ID, expected: "a flow ID BF-NNNN" }),
     alternatives: list({
       kind: "object",
       fields: READING_FIELDS,
@@ -77,7 +80,16 @@ export function extractionFaultsOf(value: unknown): ShapeFault[] {
     ...shapeFaults(value, EXTRACTION, ""),
     ...ownedCleanupFaults(value),
     ...meaningPreservingFaults(value),
+    ...flowsFaults(value),
   ];
+}
+
+// `flows`, when present, holds one or more flows, none named twice.
+function flowsFaults(value: unknown): ShapeFault[] {
+  if (!isRecord(value) || !Array.isArray(value.flows)) return [];
+  const { flows } = value;
+  if (flows.length > 0 && new Set(flows).size === flows.length) return [];
+  return [{ subject: "flows", cause: "invalid: flows hold one or more flows, none named twice" }];
 }
 
 // The main reading and each alternative of an extraction that carry `qualifier`.
@@ -174,6 +186,11 @@ function shapeFaults(value: unknown, shape: Shape, at: string): ShapeFault[] {
       if (shape.values.some((allowed) => allowed === value)) return [];
       const expected = shape.values.map(String).join(", ");
       const cause = `wrong-value: expected one of ${expected}, received ${receivedOf(value)}`;
+      return [{ subject: at, cause }];
+    }
+    case "pattern": {
+      if (typeof value === "string" && shape.pattern.test(value)) return [];
+      const cause = `wrong-value: expected ${shape.expected}, received ${receivedOf(value)}`;
       return [{ subject: at, cause }];
     }
     case "array":

@@ -44,7 +44,9 @@ route, stage or step.
 ```
 
 At `low` confidence, `alternatives` holds the one or two other readings, each
-with `intent`, `entryFlags`, `qualifiers` and `signals`.
+with `intent`, `entryFlags`, `qualifiers` and `signals`. The optional
+`flows` lists the business flows the implementation works, as distinct
+`BF-NNNN` IDs.
 
 ## Plan
 
@@ -105,6 +107,14 @@ The route, its stages in order with each step's file, and its points.
 | `releasePoint`   | The step the user approves the release before, `end` for after the last stage, or `null`                                                                        |
 | `branchPoints`   | Each outcome with its destinations; `decision-table` means plan the step's new extraction                                                                       |
 | `scopes`         | How far the work may go, narrowest first; absent for `--route`                                                                                                  |
+| `workOrders`     | On an implement stage when the extraction lists `flows`: one `{ target }` per flow, in ascending ID order; absent otherwise                                     |
+
+A stage with `workOrders` runs every one of its steps once per work order, for
+that work order's `target` flow alone, before the next stage starts. Run the
+work orders in the order listed; the implementation skill's parallelization
+policy says when two may run at once. No work order adds a step, a stage or a
+review. A plan `--route` returns has none: for a chosen candidate, take the
+work orders from the extraction's `flows` in the same way.
 
 ## Candidates
 
@@ -190,7 +200,7 @@ keeps its scopes: `--route` returns none.
 field that is absent, `unknown` for a key the extraction does not take,
 `wrong-type` for a value of another type, `wrong-value` for a value outside the
 field's vocabulary, and `invalid` for the rules tying `alternatives` to
-`confidence` or requiring `owned-temporary-cleanup` to use `intent: order` and
+`confidence`, refusing an empty or repeated `flows`, or requiring `owned-temporary-cleanup` to use `intent: order` and
 empty `artifacts`, including alternative readings. Each cause states what was
 expected and received, or the field name. `unknown-route` for a route the catalog does
 not name, `plan-invalid` for a plan that does not load, naming its `file` and

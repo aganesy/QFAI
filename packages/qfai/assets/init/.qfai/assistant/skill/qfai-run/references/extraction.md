@@ -36,6 +36,10 @@ define.
 7. Set the `risks`.
 8. Set the `confidence`, and write an alternative for each other reading the
    text supports.
+9. When the change is to be implemented and the request or the story tree
+   already names the business flows it touches, list them in `flows` as
+   distinct `BF-NNNN` IDs. The plan then runs each implement stage once per
+   flow. Leave `flows` out when no flow is named yet.
 
 Read the request as it stands when it arrives. What the work finds later, such
 as a cause or an "as designed", does not change the extraction.

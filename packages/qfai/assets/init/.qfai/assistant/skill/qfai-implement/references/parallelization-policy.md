@@ -4,6 +4,15 @@
 
 Process one open EX at a time in ascending ID order within the selected BF flow. Parallel item work requires explicit user approval and a delivery-planner PASS on concrete independence. Parallel role review of one item does not require parallel item authorization.
 
+## Work orders per flow
+
+When the extraction declares several flows, the plan gives each implement stage
+one work order per flow, its `target` naming that flow, in ascending flow ID
+order. Run them one at a time in that order. Each runs every step of the stage
+for its own flow and completes on that flow's gates. Two work orders run in
+parallel only with explicit user approval and a delivery-planner PASS on the
+independence gate below, compared across both flows.
+
 ## Independence gate
 
 For each candidate item, name its production files, test files, contracts, fixtures, schema or database objects, and shared resources such as ports. Disjoint filenames alone are insufficient: compare read and write sets, imports, shared fixtures, persistence, generated assets, and external process state. If any dependency is uncertain, use serial execution.

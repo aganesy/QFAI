@@ -33,11 +33,18 @@ export interface PlannedStep {
   passThrough: boolean;
 }
 
+// One pass of an implement stage's steps over one business flow.
+export interface WorkOrder {
+  target: string;
+}
+
 export interface PlannedStage {
   id: string;
   kind: string;
   review?: "spec" | "code";
   steps: PlannedStep[];
+  // Present on an implement stage when the extraction declares its flows.
+  workOrders?: WorkOrder[];
 }
 
 export interface PlanCandidate {
@@ -82,10 +89,17 @@ export function refusal(message: string, reasons: PlanReasonEntry[]): PlanDocume
   return { ok: false, message, reasons };
 }
 
+// An implement stage runs once per declared flow, in ascending ID order.
+function workOrdersOf(kind: string, flows: readonly string[] | undefined) {
+  if (kind !== "implement" || flows === undefined) return {};
+  return { workOrders: [...flows].sort().map((target) => ({ target })) };
+}
+
 export function planned(
   plan: WorkflowPlanFile,
   rule?: number | null,
   scopes?: PlanScope[],
+  flows?: readonly string[],
 ): PlanDocument {
   return {
     ok: true,
@@ -102,6 +116,7 @@ export function planned(
         mode: step.mode ?? null,
         passThrough: step.passThrough ?? false,
       })),
+      ...workOrdersOf(stage.kind, flows),
     })),
     decisionPoints: plan.decisionPoints,
     // Where nothing after it may run without the user's approval: a step, `end`, or none.
@@ -214,6 +229,7 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
     { ...load.plan, decisionPoints },
     outcome.taken.rule,
     scopesOf(load.plan.stages, artifacts),
+    extraction.flows,
   );
 }
 

@@ -14,7 +14,7 @@ import { planOf } from "../../../src/core/workflow/plan.js";
 import { parsePlan } from "../../../src/core/workflow/plans.js";
 import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
-import { extraction } from "../../helpers/workflowExtraction.js";
+import { extraction, extractionFor, ROUTED_ROUTES } from "../../helpers/workflowExtraction.js";
 import { minimalProject, removeProjects } from "./workflowProject.js";
 
 afterEach(removeProjects);
@@ -355,4 +355,61 @@ it("Only documentation kind may own the procedure step", () => {
     reason: "kind-mismatch",
     subject: "documentation",
   });
+});
+
+// QFAI:EX-0001-0222-19
+it("The extraction schema and the parser accept and refuse the same flows", async () => {
+  const validate = await loadValidator();
+  const lists: unknown[] = [
+    ["BF-0001"],
+    ["BF-0003", "BF-0001"],
+    [],
+    ["BF-0001", "BF-0001"],
+    ["flow-1"],
+    ["BF-001"],
+    [1],
+    "BF-0001",
+  ];
+  const samples = lists.map((flows) => ({ ...extraction(), flows }));
+
+  expect(samples.map((sample) => [validate(EXTRACTION, sample), extractionFaults(sample)])).toEqual(
+    [
+      [true, []],
+      [true, []],
+      [false, ["flows"]],
+      [false, ["flows"]],
+      [false, ["flows[0]"]],
+      [false, ["flows[0]"]],
+      [false, ["flows[0]"]],
+      [false, ["flows"]],
+    ],
+  );
+});
+
+// QFAI:EX-0001-0222-18
+it("Every routed plan gives work orders to its implement stages alone and otherwise stays the same", async () => {
+  const validate = await loadValidator();
+  const root = await minimalProject();
+  const drop = (key: string, value: unknown) => (key === "workOrders" ? undefined : value);
+  const expected = JSON.stringify([{ target: "BF-0001" }, { target: "BF-0002" }]);
+  const faults: string[] = [];
+  let expanded = 0;
+  for (const route of ROUTED_ROUTES) {
+    const document = await planOf(root, {
+      extraction: extractionFor(route, { flows: ["BF-0002", "BF-0001"] }),
+    });
+    const plain = await planOf(root, { extraction: extractionFor(route) });
+    if (JSON.stringify(document, drop) !== JSON.stringify(plain)) faults.push(`${route}: changed`);
+    if (!validate(PLAN, document)) faults.push(`${route}: invalid`);
+    const stages = "stages" in document ? document.stages : [];
+    for (const stage of stages) {
+      const orders = stage.workOrders === undefined ? undefined : JSON.stringify(stage.workOrders);
+      if (orders !== (stage.kind === "implement" ? expected : undefined)) {
+        faults.push(`${route}: ${stage.id}`);
+      }
+      if (orders !== undefined) expanded += 1;
+    }
+  }
+
+  expect({ faults, expanded: expanded > 0 }).toEqual({ faults: [], expanded: true });
 });
