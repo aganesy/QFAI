@@ -55,6 +55,18 @@ export function describeIncompleteRun(error: unknown, context: string): Error | 
 export const INCOMPLETE_RUN_CODE = "QFAI-SCAN-002";
 
 /**
+ * The rule only the incomplete-run finding carries. The code alone is shared
+ * with a story-tree test scan that stopped at its cap, which is a claim about
+ * part of the tree rather than no claim at all.
+ */
+export const INCOMPLETE_RUN_RULE = "validate.runIncomplete";
+
+/** Whether a result is the shell {@link incompleteRunResult} builds for a run that did not finish. */
+export function isIncompleteRunResult(result: ValidationResult): boolean {
+  return result.issues.some((issue) => issue.rule === INCOMPLETE_RUN_RULE);
+}
+
+/**
  * The verdict for a run that could not finish.
  *
  * `runValidate` awaited `validateProject` with no `try`, so an fs error from
@@ -90,7 +102,7 @@ export function buildIncompleteRunIssue(error: unknown, context: string): Issue 
     message:
       `${context}: validation could not run to completion — ${code}${at}. ` +
       `This run is NOT a clean result; it is no result at all: ${detail}`,
-    rule: "validate.runIncomplete",
+    rule: INCOMPLETE_RUN_RULE,
     ...(typeof errno?.path === "string" ? { file: errno.path } : {}),
     suggested_action:
       "Check the path reported above. On a Windows git worktree, .claude/skills/* are FILE " +

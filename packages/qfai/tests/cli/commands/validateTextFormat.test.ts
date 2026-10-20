@@ -18,8 +18,14 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { captureStderr } from "../../helpers/stderr.js";
 import { captureStdout } from "../../helpers/stdout.js";
-import { emitText, resolveIssueFix, runValidate } from "../../../src/cli/commands/validate.js";
+import {
+  emitText,
+  formatPassSummary,
+  resolveIssueFix,
+  runValidate,
+} from "../../../src/cli/commands/validate.js";
 import { loadConfig, type FailOn } from "../../../src/core/config.js";
 import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
 import { validateDesignToken } from "../../../src/core/validators/designToken.js";
@@ -143,6 +149,7 @@ type LineKind =
   | "codes"
   | "fail-on"
   | "timings"
+  | "summary"
   | "run-log"
   | "fix"
   | "fix-continuation"
@@ -154,7 +161,7 @@ type LineKind =
  * previous message" fallback. A guideline whose rules only worked in this
  * order on paper would still leave `counts:` swallowed by a multi-line message.
  *
- * Rule 6 keys on the run's `--fail-on` threshold, not on `error` alone: the
+ * Rule 8 keys on the run's `--fail-on` threshold, not on `error` alone: the
  * emitter prints `fix` lines for every severity that can fail the run, so a
  * `--fail-on warning` run puts them under its warnings too and a classifier
  * pinned to `error` would read them as more message text.
@@ -190,6 +197,11 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
       section = "none";
       severity = undefined;
       return { kind: "fail-on" as const, line };
+    }
+    if (line.startsWith("qfai validate: passed ")) {
+      section = "none";
+      severity = undefined;
+      return { kind: "summary" as const, line };
     }
     if (line.startsWith("run-log: ")) {
       section = "none";
@@ -671,14 +683,18 @@ describe("validate --format text matches the validate contract's text output gra
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-format-"));
     try {
       await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      let code = -1;
       const output = await captureStdout(async () => {
-        await runValidate({ root, strict: false, format: "text" });
+        code = await runValidate({ root, strict: false, format: "text" });
       });
       const lines = output.trimEnd().split("\n");
+      // A run that passes prints its summary just ahead of `run-log:`.
+      const summary = code === 0 ? 1 : 0;
 
-      expect(lines.at(-4)).toMatch(/^counts: info=\d+ warning=\d+ error=\d+$/);
-      expect(lines.at(-3)).toMatch(/^codes: error=\d+/);
-      expect(lines.at(-2)).toMatch(/^fail-on: \S/);
+      expect(lines.at(-4 - summary)).toMatch(/^counts: info=\d+ warning=\d+ error=\d+$/);
+      expect(lines.at(-3 - summary)).toMatch(/^codes: error=\d+/);
+      expect(lines.at(-2 - summary)).toMatch(/^fail-on: \S/);
+      if (summary === 1) expect(lines.at(-2)).toMatch(/^qfai validate: passed /);
       expect(lines.at(-1)).toMatch(/^run-log: \S/);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -735,13 +751,14 @@ describe("validate --format text matches the validate contract's text output gra
   it("classifies every structural line ahead of the message-continuation fallback", async () => {
     const guideline = await readGuideline();
     const rules = extractPrecedenceRules(guideline);
-    expect(rules).toHaveLength(8);
+    expect(rules).toHaveLength(9);
     const anchors = [
       "`[info]`",
       "`counts:`",
       "`codes:`",
       "`fail-on:`",
       "`timings:`",
+      "`qfai validate: passed`",
       "`run-log:`",
       "`fix:`",
     ];
@@ -751,7 +768,7 @@ describe("validate --format text matches the validate contract's text output gra
     expect(rules[0], "the first precedence rule must name the line that closes a group").toContain(
       "and <n> more",
     );
-    expect(rules[7], "the last precedence rule must be the message-continuation fallback").toBe(
+    expect(rules[8], "the last precedence rule must be the message-continuation fallback").toBe(
       "anything else continues the previous issue's message",
     );
 
@@ -798,6 +815,10 @@ describe("validate --format text matches the validate contract's text output gra
         expect(entry.line.startsWith("run-log: "), `structural line absorbed: ${entry.line}`).toBe(
           false,
         );
+        expect(
+          entry.line.startsWith("qfai validate: passed "),
+          `structural line absorbed: ${entry.line}`,
+        ).toBe(false);
         expect(entry.line.startsWith("  fix: "), `structural line absorbed: ${entry.line}`).toBe(
           false,
         );
@@ -822,3 +843,95 @@ async function writeMalformedDesignTokens(root: string): Promise<void> {
     "utf-8",
   );
 }
+
+describe("validate --format text says that it started and, when it passes, what it checked", () => {
+  // QFAI:EX-0001-0039-22
+  it("states the pass summary and the started line in the validate contract", async () => {
+    const guideline = await readGuideline();
+    expect(guideline).toContain(
+      "`qfai validate: passed (fail-on <threshold>): profile <profile>, <n> errors, <n> warnings, <seconds>s`",
+    );
+    expect(guideline).toContain("`qfai validate: running profile <profile>...`");
+  });
+
+  // QFAI:EX-0001-0039-22
+  it("formats the pass summary from the verdict, the profile, the counts and the time", () => {
+    const warnings = resultOf(manyOfOneCode("QFAI-TEST-002", "warning", 2));
+    expect(formatPassSummary({ ...warnings, profile: "atdd" }, "error", 12_345)).toBe(
+      "qfai validate: passed (fail-on error): profile atdd, 0 errors, 2 warnings, 12.3s",
+    );
+    const one = resultOf([
+      ...manyOfOneCode("QFAI-TEST-001", "error", 1),
+      ...manyOfOneCode("QFAI-TEST-002", "warning", 1),
+    ]);
+    expect(formatPassSummary({ ...one, profile: "drift" }, "never", 40)).toBe(
+      "qfai validate: passed (fail-on never): profile drift, 1 error, 1 warning, 0.0s",
+    );
+  });
+
+  // QFAI:EX-0001-0039-22
+  it("prints the pass summary just ahead of the run-log line of a run that passes", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-summary-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      let code = -1;
+      const output = await captureStdout(async () => {
+        code = await runValidate({ root, strict: false, format: "text", failOn: "never" });
+      });
+      const lines = output.trimEnd().split("\n");
+
+      expect(code).toBe(0);
+      expect(lines.at(-1)).toMatch(/^run-log: \S/);
+      expect(lines.at(-2)).toMatch(
+        /^qfai validate: passed \(fail-on never\): profile full, \d+ errors?, \d+ warnings?, \d+\.\ds$/,
+      );
+      expect(lines.at(-3)).toBe("fail-on: never");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0039-22
+  it("prints no pass summary when the run fails", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-summary-fail-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      await writeMalformedDesignTokens(root);
+      let code = -1;
+      const output = await captureStdout(async () => {
+        code = await runValidate({ root, strict: false, format: "text" });
+      });
+
+      expect(code).toBe(1);
+      expect(output).not.toMatch(/^qfai validate: passed /m);
+      expect(output.trimEnd().split("\n").at(-2)).toMatch(/^fail-on: \S/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0039-22
+  it("names the profile on stderr before the run, in text format only", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-started-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      let stdout = "";
+      const text = await captureStderr(async () => {
+        stdout = await captureStdout(async () => {
+          await runValidate({ root, strict: false, format: "text", profile: "atdd" });
+        });
+      });
+      expect(text.startsWith("qfai validate: running profile atdd...\n")).toBe(true);
+      expect(stdout).not.toMatch(/^qfai validate: running profile /m);
+
+      const github = await captureStderr(() =>
+        captureStdout(async () => {
+          await runValidate({ root, strict: false, format: "github", profile: "atdd" });
+        }).then(() => undefined),
+      );
+      expect(github).not.toMatch(/^qfai validate: running profile /m);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
