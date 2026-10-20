@@ -1,7 +1,7 @@
 /**
  * verify semantics audit tests — spec-0014 migration / compatibility alignment
  */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -273,5 +273,135 @@ describe("a UI-bearing pack that inherits the current DESIGN.md", () => {
     expect(direction?.severity).toBe("error");
     expect(direction?.message).toContain("adopted_theme");
     await expect(refusalOf(clean.root)).resolves.toEqual([]);
+  });
+});
+
+// QFAI:AC-0001-0019-02
+// QFAI:AC-0001-0019-03
+describe("a UI-bearing pack copied from the shipped templates", () => {
+  const TEMPLATES = path.join(
+    repoRoot,
+    "packages",
+    "qfai",
+    "assets",
+    "init",
+    ".qfai",
+    "assistant",
+    "skill",
+    "qfai-discussion",
+    "templates",
+  );
+  /** The new-direction research an inheriting pack does not owe. */
+  const WAIVED = ["QFAI-TREND-003", "QFAI-TREND-005", "QFAI-RESEARCH-013", "QFAI-RESEARCH-014"];
+  /** The Research Summary the research-first protocol asks of every pack. */
+  const KEPT = [
+    "QFAI-RESEARCH-004",
+    "QFAI-RESEARCH-005",
+    "QFAI-RESEARCH-006",
+    "QFAI-RESEARCH-010",
+    "QFAI-RESEARCH-018",
+    "QFAI-RESEARCH-019",
+    "QFAI-RESEARCH-021",
+  ];
+
+  /**
+   * A project whose UI contract declares `SCR-001`, the screen the template's
+   * screen contracts name, and one web pack holding every shipped template as
+   * written, with the classification filled in.
+   */
+  async function createTemplateProject(
+    direction: string,
+  ): Promise<{ root: string; packDir: string }> {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "qfai.config.yaml"), "workflow:\n  mode: active\n", "utf-8");
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "ui-0001-login.yaml"),
+      ["# QFAI-CONTRACT-ID: UI-0001", "screens:", "  - id: SCR-001", "    route: /login", ""].join(
+        "\n",
+      ),
+      "utf-8",
+    );
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await cp(TEMPLATES, packDir, { recursive: true });
+    const contextPath = path.join(packDir, "01_Context.md");
+    const context = (await readFile(contextPath, "utf-8"))
+      .replace("- ui_bearing: [true|false]", "- ui_bearing: true")
+      .replace("- primary_surface: [web|mobile|desktop|cli|mixed|non-ui]", "- primary_surface: web")
+      .replace(/- secondary_surfaces:\r?\n\s*- \[optional\]/, "- secondary_surfaces: []")
+      .replace(
+        "- classification_rationale: [Why this classification was chosen]",
+        "- classification_rationale: Changes an existing screen.",
+      )
+      .replace("- design_direction: [new|inherit]", `- design_direction: ${direction}`);
+    await writeFile(contextPath, context, "utf-8");
+    return { root, packDir };
+  }
+
+  async function codesOf(root: string, profile: "verify" | "full" = "verify"): Promise<string[]> {
+    const result = await validateProject(root, undefined, { profile });
+    return result.issues.map((issue) => issue.code);
+  }
+
+  // QFAI:EX-0001-0019-05
+  it("waives the new-direction research for an inheriting pack and keeps the Research Summary", async () => {
+    const inheriting = await createTemplateProject("inherit");
+    const declaring = await createTemplateProject("new");
+
+    const inheritingCodes = await codesOf(inheriting.root);
+    const declaringCodes = await codesOf(declaring.root);
+
+    for (const code of WAIVED) {
+      expect(inheritingCodes, `${code} with design_direction: inherit`).not.toContain(code);
+      expect(declaringCodes, `${code} with design_direction: new`).toContain(code);
+    }
+    for (const code of KEPT) {
+      expect(inheritingCodes, `${code} with design_direction: inherit`).toContain(code);
+      expect(declaringCodes, `${code} with design_direction: new`).toContain(code);
+    }
+    expect(inheritingCodes).not.toContain("QFAI-CLASSIFICATION-011");
+  });
+
+  // QFAI:EX-0001-0019-06
+  it("reports each discussion-pack finding once in verify and full", async () => {
+    const { root, packDir } = await createTemplateProject("inherit");
+    await writeFile(
+      path.join(packDir, "uiux", "40_screen_contracts.md"),
+      "# Screen Contracts\n\n### Screen: New\n\n- screen_id: SCR-NEW\n",
+      "utf-8",
+    );
+
+    // A root DESIGN.md that does not parse, read by the discussion parse check
+    // and by the readiness gate.
+    await writeFile(path.join(root, "DESIGN.md"), "no front matter here\n", "utf-8");
+    // The same file in a project whose UI contracts declare no screen, where
+    // only the discussion parse check reports it.
+    const noScreens = await newTempDir();
+    await writeFile(
+      path.join(noScreens, "qfai.config.yaml"),
+      "workflow:\n  mode: active\n",
+      "utf-8",
+    );
+    await writeFile(path.join(noScreens, "DESIGN.md"), "no front matter here\n", "utf-8");
+
+    for (const profile of ["verify", "full"] as const) {
+      const issues = (await validateProject(root, undefined, { profile })).issues;
+      const count = (code: string) => issues.filter((entry) => entry.code === code).length;
+      expect(count("QFAI-CLASSIFICATION-011"), `QFAI-CLASSIFICATION-011 in ${profile}`).toBe(1);
+      expect(count("QFAI-RESEARCH-021"), `QFAI-RESEARCH-021 in ${profile}`).toBe(1);
+      expect(count("QFAI-DCON-033"), `QFAI-DCON-033 in ${profile}`).toBe(1);
+      const keys = issues.map((entry) =>
+        [entry.code, entry.file ?? "", entry.message].join("\u0000"),
+      );
+      const repeated = keys.filter((key, index) => keys.indexOf(key) !== index);
+      expect(repeated, `findings repeated in ${profile}`).toEqual([]);
+
+      const noScreenIssues = (await validateProject(noScreens, undefined, { profile })).issues;
+      expect(
+        noScreenIssues.filter((entry) => entry.code === "QFAI-DCON-033"),
+        `QFAI-DCON-033 without UI screens in ${profile}`,
+      ).toHaveLength(1);
+    }
   });
 });
