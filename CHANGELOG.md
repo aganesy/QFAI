@@ -313,6 +313,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   before this release has no version file, so it gets the warning until
   `qfai init --force` writes one. Fixes #3538.
 
+- **A procedure change may edit the script the procedure tells the operator to
+  run.** The `implement-procedure` step edits a script only when the document
+  names it for the operator to run and the procedure change requires the edit,
+  and only as far as that change requires. It keeps the script's existing tests
+  and checks passing, adds coverage where the repository has tests for the
+  script, and still invents no business flow, specification or contract. The
+  `qfai-run` extraction guide reads such a request as `procedure` with `docs`
+  and `ci`, not as `docs` or `ci`, so it keeps the procedure writer; a
+  request whose point is the script change stays `ci`. Fixes #3831.
+
 - **The verify report lists what a test run records, apart from what is
   covered.** `verify-repo-gate` gains a `### Run report` recipe: when the report
   cites test runner results, it records for each layer the revision and the CI
