@@ -87,7 +87,7 @@ The table holds no rule. A behaviour a layer must show is a BR in the contract t
 | Decision             | DEC-NNNN        | decisions.md                                          |
 | Open question        | OQ-NNNN         | open-questions.md                                     |
 
-Use highest existing number plus one in the scope. Count IDs named in retired-item decisions, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Do not add a CLI allocator.
+Use highest existing number plus one in the scope. Count IDs named in retired-item decisions, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Take the number from `npx qfai sdd next-id`, which reads the working tree and a fetched base and reserves no ID.
 
 AC/EX tails remain two digits with upper bound 99. Before planned additions,
 compare requested additions with the retired-inclusive remaining 99-H. Stop an
