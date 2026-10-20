@@ -45,4 +45,12 @@ Feature: Purposeful copy in a screen's UI contract
     Then the SDD contract step, the UI definition protocol, the implementation guidance and the reviewer instructions each name `supplements` and `structure` as the input to read
     And the design anti-patterns carry the three meaning patterns apart from the brand patterns, and the prototype reviewer applies them
     And a word or character count is never a verdict
+
+  # AC-0001-0230-07
+  Scenario: The texts a screen rendered are compared with its contract
+    Given a UI contract and a JSON file of the texts a screen rendered in a state, written by the caller's own browser run
+    When `qfai validate --rendered <file>` runs
+    Then it raises `QFAI-CONTRACT-047` at error for each rendered text that is no title, group heading, label or supplement of that state
+    And it raises `QFAI-CONTRACT-048` at error for each supplement of that state the screen did not render
+    And a file or entry out of shape raises `QFAI-CONTRACT-046` at error, and a screen or state the file does not cover is not compared
 ```

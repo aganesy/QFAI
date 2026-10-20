@@ -449,6 +449,13 @@ describe("parseArgs", () => {
         untouched: (o) => expect(o.platform).toBeUndefined(),
       },
       {
+        flag: "--rendered",
+        value: "rendered.json",
+        wrongCommand: ["report"],
+        probe: (o) => expect(o.reportFormat).toBe("json"),
+        untouched: (o) => expect(o.validateRendered).toBeUndefined(),
+      },
+      {
         flag: "--target-url",
         value: "https://example.com/",
         wrongCommand: ["validate"],
@@ -580,6 +587,13 @@ describe("parseArgs", () => {
       const validate = parseArgs(["validate", "--platform", "web"], cwd);
       expect(validate.invalid).toBe(false);
       expect(validate.options.platform).toBe("web");
+
+      const rendered = parseArgs(["validate", "--rendered", "out/rendered.json"], cwd);
+      expect(rendered.invalid).toBe(false);
+      expect(rendered.options.validateRendered).toBe("out/rendered.json");
+
+      const twice = parseArgs(["validate", "--rendered", "a.json", "--rendered", "b.json"], cwd);
+      expect(twice.invalid).toBe(true);
     });
   });
 
