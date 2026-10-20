@@ -274,6 +274,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-016",
     "QFAI-STORY-017",
     "QFAI-STORY-018",
+    "QFAI-STORY-019",
     "QFAI-SPACK-102",
   ],
   "story-contract-index": ["QFAI-CONTRACT-034"],
@@ -1116,6 +1117,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A decisions.md row recorded after the Approach form began to be checked holds Evidence, Grounds, Residual risk and Rollback in that order, none empty, with every Evidence entry a file: or command: item.",
   "QFAI-STORY-018":
     "An open-questions.md row that is DONE names the decision that answered it, as DONE (by DEC-NNNN).",
+  "QFAI-STORY-019":
+    "A decisions row at SUPERSEDED (by DEC-NNNN) or PARTLY SUPERSEDED (by DEC-NNNN) names a successor with a higher number than its own.",
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
@@ -1490,6 +1493,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Rewrite the named row's Approach cell in the form the qfai-sdd decisions template shows.",
   "QFAI-STORY-018":
     "Set the named row's Status to DONE (by DEC-NNNN), naming the decisions row that answered the question.",
+  "QFAI-STORY-019":
+    "Name the later decision that replaced the row, which has a higher number than the row's own ID, or set the row back to DONE if no later decision replaced it.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":
