@@ -75,7 +75,8 @@ export type PlanLoad =
   { ok: true; plan: WorkflowPlanFile } | { ok: false; refusals: PlanRefusal[] };
 
 const PLAN_KEYS = ["route", "family", "stages", "decisionPoints", "releasePoint", "branchPoints"];
-const STAGE_KEYS = ["id", "kind", "steps", "after", "review", "serves"];
+// The keys a plan stage may carry.
+export const STAGE_KEYS = ["id", "kind", "steps", "after", "review", "serves"];
 const STEP_KEYS = ["step", "mode", "passThrough"];
 const BRANCH_KEYS = ["step", "outcomes"];
 const OUTCOME_KEYS = ["outcome", "routes"];
