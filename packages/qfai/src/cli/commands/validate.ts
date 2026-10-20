@@ -12,6 +12,7 @@ import { saasPackageSkippedGateFamilies } from "../../core/saasPackage/skippedGa
 import type {
   Issue,
   ValidationProfile,
+  ValidationFamilyTimings,
   ValidationResult,
   ValidationTimings,
 } from "../../core/types.js";
@@ -40,6 +41,8 @@ export type ValidateOptions = {
   flowIds?: readonly string[];
   /** A rendered-text file to compare with the UI contracts (`--rendered`); a relative path resolves against the root. */
   renderedPath?: string;
+  /** Print the time each finding family took (`--timings`) and write it to `validate.json#familyTimings`. */
+  timings?: boolean;
   /**
    * Override the tool version this run reports as its own.
    *
@@ -79,6 +82,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       ...(options.platform ? { platform: options.platform } : {}),
       ...(options.flowIds && options.flowIds.length > 0 ? { flowIds: options.flowIds } : {}),
       ...(options.renderedPath ? { renderedPath: options.renderedPath } : {}),
+      ...(options.timings ? { familyTimings: true } : {}),
     });
   } catch (error: unknown) {
     validated = incompleteRunResult(
@@ -696,6 +700,10 @@ export function emitText(result: ValidationResult, failOn: FailOn): void {
   if (overruns) {
     process.stdout.write(`${overruns}\n`);
   }
+  const families = formatFamilyTimings(result.familyTimings);
+  if (families) {
+    process.stdout.write(`${families}\n`);
+  }
 }
 
 /**
@@ -757,6 +765,24 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
   return parts.length > 0
     ? `timings: over budget ${parts.join(" ")}; a target, not a gate: no finding is raised`
     : null;
+}
+
+/**
+ * The `--timings` line: each finding family with its time, slowest first, or `null` when the run
+ * was not asked for it. The UI/UX group's checks run side by side, so their times follow
+ * separately, as the over-budget line marks them: they overlap and do not add to the rest.
+ */
+export function formatFamilyTimings(families: ValidationFamilyTimings | undefined): string | null {
+  if (!families) {
+    return null;
+  }
+  const list = (entries: ValidationFamilyTimings["sequential"]): string =>
+    entries.map((entry) => `${entry.family} ${Math.round(entry.ms)}ms`).join(", ");
+  const overlapping =
+    families.overlapping.length > 0
+      ? `; side by side, overlapping: ${list(families.overlapping)}`
+      : "";
+  return `timings: by family ${list(families.sequential)}${overlapping}`;
 }
 
 const MAX_OVERRUN_DECIMALS = 9;

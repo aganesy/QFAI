@@ -66,6 +66,8 @@ export type ParsedArgs = {
     platform?: string;
     /** `--rendered <path>` for `qfai validate`: the rendered-text file to compare with the UI contracts. */
     validateRendered?: string;
+    /** `--timings` for `qfai validate`: print the time each finding family took. */
+    validateTimings?: boolean;
     prototypingTargetUrl?: string;
     /** Subcommand for `qfai discussion <list|use>`. */
     discussionAction?: "list" | "use";
@@ -484,6 +486,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.discussionActive = true;
         } else {
           markInvalid(notValidHere("--active"));
+        }
+        break;
+      case "--timings":
+        if (command === "validate") {
+          options.validateTimings = true;
+        } else {
+          markInvalid(notValidHere("--timings"));
         }
         break;
       case "--strict":
