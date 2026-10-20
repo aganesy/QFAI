@@ -357,6 +357,35 @@ describe("the route-only procedure writer", () => {
     expect(report).toMatch(/(?:unavailable|missing).*checks|checks.*(?:unavailable|missing)/iu);
   });
 
+  // QFAI:AC-0001-0224-13
+  // QFAI:EX-0001-0224-54
+  it("edits a script the procedure names only as far as the change needs, keeping its checks", async () => {
+    const text = await procedureText();
+    expect(flat(sectionOf(text, "## What this is for"))).toContain(
+      "The one exception is a script the document itself names for the operator to run",
+    );
+    const scripts = flat(sectionOf(text, "## Named scripts"));
+    expect(scripts).toContain(
+      "Edit a script only when the document names it for the operator to run and the procedure change requires the edit, and only as far as the change requires.",
+    );
+    expect(scripts).toContain(
+      "Keep that script's existing tests and checks passing, and add coverage for the change where the repository has tests for the script.",
+    );
+    expect(scripts).toContain(
+      "Any other code, a new script, or a script change the procedure does not need belongs to another stage: stop before writing and name it.",
+    );
+    expect(flat(sectionOf(text, "## Procedure"))).toContain(
+      "When a named script changed, also run its existing tests or checks through `common-gate-run`",
+    );
+    expect(flat(sectionOf(text, "## Gate"))).toContain(
+      "A changed named script passes its existing tests and checks",
+    );
+    const extraction = flat(await readShipped("skill/qfai-run/references/extraction.md"));
+    expect(extraction).toContain(
+      "where the change also needs that script edited, still takes `procedure`, not `docs`, and lists `docs` and `ci`",
+    );
+  });
+
   it("records no applicable checker when no defined check covers the changed files", async () => {
     const text = await procedureText();
     const procedure = flat(sectionOf(text, "## Procedure"));

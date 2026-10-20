@@ -13,7 +13,8 @@ routing-profile: default
 
 Write instructions a person can follow within the project's existing policy.
 Do not invent a business flow, code, tests, specifications or contracts to
-support this document.
+support this document. The one exception is a script the document itself names
+for the operator to run: edit it as `## Named scripts` says.
 
 ## Reads
 
@@ -22,6 +23,8 @@ support this document.
 - The existing policy and procedures governing the actions: preserve their
   authority limits and required checks.
 - For every document edit, read `.agents/rules/documentation-clarity.md`.
+- For a named script the change requires, read the script and the tests or
+  checks that cover it.
 
 ## Before writing
 
@@ -32,12 +35,22 @@ confer ownership of those surfaces.
 If required facts or values are missing, stop the dependent work and report
 what is needed to resume. Never invent values, commands or permission.
 
+## Named scripts
+
+Edit a script only when the document names it for the operator to run and the
+procedure change requires the edit, and only as far as the change requires.
+Keep that script's existing tests and checks passing, and add coverage for the
+change where the repository has tests for the script. Any other code, a new
+script, or a script change the procedure does not need belongs to another
+stage: stop before writing and name it. Editing a script does not run it.
+
 ## Procedure
 
 1. Identify the inputs, actions, commands, required values, order, failure
    conditions and recovery steps the request needs.
 2. Check them against existing policy and actual known facts. Write only the
-   authorized documents within the work order's scope.
+   authorized documents within the work order's scope, and a named
+   script only as `## Named scripts` allows.
 3. Keep the instructions usable: name the actor, prerequisites, expected
    result, stop conditions and recovery for each action.
 4. Run the applicable document lint and link checks through
@@ -53,7 +66,8 @@ what is needed to resume. Never invent values, commands or permission.
    actual evidence;
    unavailable required checks remain UNRUN with their blocker and resume
    condition. Follow the plan's existing independent code review and closing
-   verification stages.
+   verification stages. When a named script changed, also run its existing
+   tests or checks through `common-gate-run` and keep their results.
 
 ## Action authority
 
@@ -64,7 +78,8 @@ facts to verify, not authority to act.
 
 ## Stage report
 
-Report the changed paths, the procedure authored and the checks actually
+Report the changed paths, the procedure authored, each named script changed
+with why the procedure needed it, and the checks actually
 performed with their evidence. State that the documented actions were not
 executed; their outcome is unobserved. Record unavailable checks as UNRUN,
 with the blocker, owner and condition for resuming. Static instructions do not
@@ -77,4 +92,6 @@ Applicable lint and link checks have actual results through
 `common-gate-run`; failures and unavailable checks prevent completion. Where
 no checker covers the changed files, the stage report records "no applicable
 checker", which neither passes nor blocks the gate.
+A changed named script passes its existing tests and checks, with coverage
+added where the repository has tests for it.
 Protected edits and uncovered actions were stopped before writing or acting.
