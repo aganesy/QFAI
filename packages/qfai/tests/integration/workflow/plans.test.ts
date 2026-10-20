@@ -365,6 +365,25 @@ it("A code review after the edit stage, a review of another value, and two on a 
   });
 });
 
+// BR-0020-0011
+// BR-0020-0016
+// QFAI:EX-0001-0218-10
+it("A stage serving spec, one serving an unknown artifact, one serving none, and one serving spec twice", async () => {
+  const serving = (value: string) => (text: string) =>
+    text.replace(EDIT_STEPS, `${EDIT_STEPS}\n    serves: ${value}`);
+  expect({
+    spec: await refusalsOf("edit-text", serving("[spec]")),
+    prose: await refusalsOf("edit-text", serving("[prose]")),
+    none: await refusalsOf("edit-text", serving("[]")),
+    twice: await refusalsOf("edit-text", serving("[spec, spec]")),
+  }).toEqual({
+    spec: [],
+    prose: [{ reason: "out-of-vocabulary", subject: "prose" }],
+    none: [{ reason: "shape", subject: "edit" }],
+    twice: [{ reason: "shape", subject: "edit" }],
+  });
+});
+
 // QFAI:AC-0001-0218-07
 // QFAI:EX-0001-0218-09
 it("A fix-defect whose implement stage is listed before the diagnose stage it follows", async () => {

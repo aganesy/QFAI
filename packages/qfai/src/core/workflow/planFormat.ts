@@ -1,5 +1,6 @@
 import { parse as parseYaml } from "yaml";
 
+import { ARTIFACTS, type Artifact } from "./extraction.js";
 import { isRecord } from "./parse.js";
 import { isWorkflowRoute, ROUTE_FAMILIES } from "./routes.js";
 import { SEAM_STEP } from "./steps.js";
@@ -18,6 +19,8 @@ export interface PlanStage {
   after: string[];
   // The review that follows the stage: the specification review or the code review.
   review?: "spec" | "code";
+  // The artifacts the stage writes beyond those of its kind.
+  serves?: Artifact[];
 }
 
 // A step at which the run may change route, and where each outcome it reports sends the run:
@@ -71,7 +74,7 @@ export type PlanLoad =
   { ok: true; plan: WorkflowPlanFile } | { ok: false; refusals: PlanRefusal[] };
 
 const PLAN_KEYS = ["route", "family", "stages", "decisionPoints", "releasePoint", "branchPoints"];
-const STAGE_KEYS = ["id", "kind", "steps", "after", "review"];
+const STAGE_KEYS = ["id", "kind", "steps", "after", "review", "serves"];
 const STEP_KEYS = ["step", "mode", "passThrough"];
 const BRANCH_KEYS = ["step", "outcomes"];
 const OUTCOME_KEYS = ["outcome", "routes"];
@@ -254,7 +257,15 @@ function stageOf(value: unknown, refuse: Refuse): PlanStage | null {
     return refused(refuse, "shape", typeof id === "string" ? id : "stages");
   }
   const review = reviewOf(value.review, kind, id, refuse);
-  const stage = { id, kind, steps, after, ...(review ? { review } : {}) };
+  const serves = servesOf(value.serves, id, refuse);
+  const stage = {
+    id,
+    kind,
+    steps,
+    after,
+    ...(review ? { review } : {}),
+    ...(serves ? { serves } : {}),
+  };
   vocabularyRefusals(stage, refuse);
   return stage;
 }
@@ -273,6 +284,22 @@ function reviewOf(
     return undefined;
   }
   return value;
+}
+
+function isArtifact(value: string): value is Artifact {
+  return ARTIFACTS.some((artifact) => artifact === value);
+}
+
+// A stage's `serves`: absent, or a non-empty list of artifacts that names none twice.
+function servesOf(value: unknown, id: string, refuse: Refuse): Artifact[] | undefined {
+  if (value === undefined) return undefined;
+  const names = stringList(value);
+  if (!names || names.length === 0 || new Set(names).size !== names.length) {
+    refuse("shape", id);
+    return undefined;
+  }
+  for (const name of names) if (!isArtifact(name)) refuse("out-of-vocabulary", name);
+  return names.filter(isArtifact);
 }
 
 function stagesOf(document: Record<string, unknown>, refuse: Refuse): PlanStage[] | null {

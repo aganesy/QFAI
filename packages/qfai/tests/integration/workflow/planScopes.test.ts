@@ -548,3 +548,26 @@ it("An SDD route without a design authoring step still refuses UI-only work", as
   expect(field(planned.json, "ok")).toBe(false);
   expect(reasonsOf(planned.json)).toEqual([{ reason: "artifact-unserved", subject: "ui" }]);
 });
+
+// The facts the route evaluation seeds SEED-467 and SEED-468 carry: a merge whose conflicts lie in
+// the decision register and a contract.
+const conflictResolution = (
+  intent: "order" | "stale-record",
+  artifacts: WorkflowExtraction["artifacts"],
+) => extraction({ intent, qualifiers: ["meaning-preserving"], artifacts });
+
+// BR-0015-0322
+// QFAI:EX-0001-0229-32
+it("A conflict resolution in spec and contract files plans, and one in code is refused", async () => {
+  const staleRecord = await planFor(conflictResolution("stale-record", ["spec", "contract"]));
+  const order = await planFor(conflictResolution("order", ["spec", "contract"]));
+  const code = await planFor(conflictResolution("order", ["code"]));
+
+  expect([staleRecord, order].map((each) => [each.status, field(each.json, "route")])).toEqual([
+    [0, "resolve-conflicts"],
+    [0, "resolve-conflicts"],
+  ]);
+  expect(field(order.json, "scopes")).toEqual(broadOnly(order.json));
+  expect(code.status).toBe(2);
+  expect(reasonsOf(code.json)).toEqual([{ reason: "artifact-unserved", subject: "code" }]);
+});
