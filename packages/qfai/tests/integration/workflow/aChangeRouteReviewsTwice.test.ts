@@ -5,6 +5,7 @@
 // QFAI:AC-0001-0225-05
 // QFAI:AC-0001-0225-06
 // QFAI:AC-0001-0225-07
+// QFAI:AC-0001-0225-08
 // QFAI:AC-0001-0226-01
 /**
  * The reviews a route's plan declares: a change route reviews the specification change once and
@@ -17,9 +18,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { expect, it } from "vitest";
+import { afterEach, expect, it } from "vitest";
 
+import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
 import { loadBuiltInPlans, type WorkflowPlanFile } from "../../../src/core/workflow/plans.js";
+import { extraction } from "../../helpers/workflowExtraction.js";
+import { field, minimalProject, removeProjects, workflow, writeJson } from "./workflowProject.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -33,6 +37,144 @@ function reviews(plan: WorkflowPlanFile | undefined): string[] {
 async function planOf(route: string): Promise<WorkflowPlanFile | undefined> {
   return (await loadBuiltInPlans()).find((plan) => plan.route === route);
 }
+
+afterEach(removeProjects);
+
+// The route, each stage as `id[steps]{review}` and the decision points of the plan
+// `npx qfai workflow plan --in` prints for the extraction.
+async function plannedFor(value: WorkflowExtraction): Promise<unknown> {
+  const root = await minimalProject();
+  const json = workflow(root, [
+    "plan",
+    "--in",
+    await writeJson(root, "tmp/request.json", value),
+  ]).json;
+  const stages = field(json, "stages");
+  const shown = (Array.isArray(stages) ? stages : []).map((stage) => {
+    const steps = field(stage, "steps");
+    const names = (Array.isArray(steps) ? steps : []).map(
+      (step) => `${String(field(step, "name"))}${field(step, "passThrough") === true ? "°" : ""}`,
+    );
+    const review = field(stage, "review");
+    return `${String(field(stage, "id"))}[${names.join(" ")}]${review ? `{${String(review)}}` : ""}`;
+  });
+  return {
+    route: field(json, "route"),
+    stages: shown,
+    decisionPoints: field(json, "decisionPoints"),
+  };
+}
+
+const SPEC_STAGE = "spec[sdd-triage sdd-story° sdd-contract°]{spec}";
+const NOTE = "note[verify-change-note°]{code}";
+const GATES = "verify[verify-qfai-gate verify-repo-gate verify-commit]";
+const CI_REQUEST = extraction({
+  intent: "ci",
+  entryFlags: ["expect"],
+  artifacts: ["tests", "spec", "ci"],
+  confidence: "medium",
+  alternatives: [
+    { intent: "behaviour-change", entryFlags: ["expect"], qualifiers: [], signals: [] },
+  ],
+});
+
+// QFAI:EX-0001-0225-20
+it("A tooling request that names the story tree gets a specification stage and its review", async () => {
+  expect({
+    withSpec: await plannedFor(CI_REQUEST),
+    withoutSpec: await plannedFor({ ...CI_REQUEST, artifacts: ["tests", "ci"] }),
+  }).toEqual({
+    withSpec: {
+      route: "change-tooling",
+      stages: [SPEC_STAGE, "edit[implement-tooling]", NOTE, GATES],
+      decisionPoints: ["sdd-triage"],
+    },
+    withoutSpec: {
+      route: "change-tooling",
+      stages: ["edit[implement-tooling]", NOTE, GATES],
+      decisionPoints: [],
+    },
+  });
+});
+
+// QFAI:EX-0001-0225-21
+it("The specification stage follows the route's last sdd stage, or else precedes its first writing stage", async () => {
+  expect({
+    fix: await plannedFor(
+      extraction({ intent: "defect", artifacts: ["code", "tests", "contract"] }),
+    ),
+    retire: await plannedFor(
+      extraction({
+        intent: "unenforced",
+        qualifiers: ["removal-requested"],
+        artifacts: ["code", "spec"],
+      }),
+    ),
+  }).toEqual({
+    fix: {
+      route: "fix-defect",
+      stages: ["diagnose[implement-diagnose]", SPEC_STAGE, "implement[implement-tdd]", NOTE, GATES],
+      decisionPoints: ["sdd-triage"],
+    },
+    retire: {
+      route: "retire-mechanism",
+      stages: [
+        "diagnose[implement-diagnose]",
+        "decide[sdd-triage]",
+        "spec[sdd-story° sdd-contract°]{spec}",
+        "remove[implement-retire]",
+        NOTE,
+        GATES,
+      ],
+      decisionPoints: ["sdd-triage"],
+    },
+  });
+});
+
+// QFAI:EX-0001-0225-22
+it("A security intake, a conflict resolution and a route that writes nothing gain no specification stage", async () => {
+  const planned = [
+    await plannedFor(extraction({ intent: "security", artifacts: ["spec"] })),
+    await plannedFor(
+      extraction({
+        intent: "stale-record",
+        qualifiers: ["meaning-preserving"],
+        artifacts: ["docs", "spec"],
+      }),
+    ),
+    await plannedFor(extraction({ intent: "design", artifacts: ["spec"] })),
+  ];
+
+  expect(planned.map((each) => field(each, "route"))).toEqual([
+    "fix-vulnerability",
+    "resolve-conflicts",
+    "decide-design",
+  ]);
+  const stages = planned.flatMap((each) => {
+    const list = field(each, "stages");
+    return Array.isArray(list) ? list : [];
+  });
+  expect(stages.filter((stage) => String(stage).startsWith("spec["))).toEqual([]);
+
+  const root = await minimalProject();
+  const lowRequest = extraction({
+    intent: "ci",
+    artifacts: ["spec", "ci"],
+    confidence: "low",
+    alternatives: [{ intent: "refactor", entryFlags: [], qualifiers: [], signals: [] }],
+  });
+  const file = await writeJson(root, "tmp/request.json", lowRequest);
+  const candidates = field(workflow(root, ["plan", "--in", file]).json, "candidates");
+  expect(
+    (Array.isArray(candidates) ? candidates : []).map((each) => [
+      field(each, "route"),
+      String(field(each, "summary")).includes("spec"),
+    ]),
+  ).toEqual([
+    ["change-tooling", false],
+    ["refactor-code", false],
+  ]);
+});
 
 // QFAI:EX-0001-0225-01
 // QFAI:EX-0001-0225-02

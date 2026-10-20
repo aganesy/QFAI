@@ -680,6 +680,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   implement stage, today `broad`. The prototyping loop still stops and asks to
   re-plan when the chosen scope has no implement stage. Fixes #3889.
 
+- **A plan whose request names the story tree now reviews the specification
+  change, whatever the route.** When the extraction listed `spec` or
+  `contract` but the route had no stage marked for the `spec` review, such as
+  `change-tooling` or `fix-defect`, `npx qfai workflow plan` gave no stage that
+  edits the story tree, so no requirements reviewer read retired or rewritten
+  criteria and examples. Such a plan now gains a `spec` stage
+  (`sdd-triage`, then `sdd-story` and `sdd-contract` when there is work for
+  them), marked for the `spec` review, after the route's last `sdd` stage or
+  before its first stage that writes; `sdd-triage` becomes a decision point. A
+  private security intake, a conflict resolution and a route that writes
+  nothing keep their stages, as do the candidates of a low-confidence
+  extraction. Fixes #3943.
+
 - **`qfai init` asks for an agent restart after it adds a rule master or
   rewrites an agent entry point.** The restart line counted a rule master only
   when `--force` overwrote it, so a plain upgrade that created a new master
