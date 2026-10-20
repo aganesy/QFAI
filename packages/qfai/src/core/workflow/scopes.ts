@@ -124,19 +124,32 @@ export function unservedArtifacts(
   return [...artifacts];
 }
 
-// The plan's distinct scopes, narrowest first, the narrowest recommended.
+// A restyle edits the project's live stylesheet and motion files in the prototype stage, and only
+// the implement stage carries those edits into the product. So when the request is a restyle and
+// the plan has a prototype stage, a scope must hold an implement stage.
+function carriesRestyle(stages: readonly PlanStage[], scope: readonly string[]): boolean {
+  if (!stages.some((stage) => stage.kind === "prototype")) return true;
+  return stages.some((stage) => stage.kind === "implement" && scope.includes(stage.id));
+}
+
+// The plan's distinct scopes, narrowest first, the narrowest recommended. `restyle` says the
+// reading that reached the route carries the qualifier of that name.
 export function scopesOf(
   stages: readonly PlanStage[],
   artifacts: readonly Artifact[],
+  restyle = false,
 ): PlanScope[] {
   const all = stages.map((stage) => stage.id);
   const narrower = narrowerScopes(stages, artifacts);
-  const candidates: Array<{ scope: ScopeName; stages: string[] }> = narrower
+  const narrowerCandidates: Array<{ scope: ScopeName; stages: string[] }> = narrower
     ? [
         { scope: "narrow", stages: narrower.narrow },
         { scope: "medium", stages: narrower.medium },
       ]
     : [];
+  const candidates = narrowerCandidates.filter(
+    (candidate) => !restyle || carriesRestyle(stages, candidate.stages),
+  );
   // A scope holding every stage is `broad`; of two other scopes holding the same stages, the
   // narrower name stays.
   const distinct = candidates.filter(
