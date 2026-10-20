@@ -33,11 +33,15 @@ identity.
    makes it answerable and leave it open — treating it as a settled constraint
    decides on the user's behalf the one kind of question this loop exists to
    return to them.
-5. From the second iteration on: the user's last answer,
+5. From the run's second iteration on: the user's last answer in this run,
    `iter-(NN-1)/review.json` (critique, scores,
    `layoutAntiPatternsDetected`, `designMdViolations`,
    `pivotDirective`), `iter-(NN-2)/review.json` when present, and
-   `progress.md`.
+   `progress.md`. A review or confirmation from an earlier run is not one of
+   them: the run's first iteration is the first after `progress.md` records
+   its `runScope`, present or absent.
+6. In a scoped run, every iteration: `runScope` in `progress.md` and
+   `.qfai/prototype/final/index.html`.
 
 ## HTML envelope (mandatory on every iter)
 
@@ -286,6 +290,17 @@ envelope, the one self-contained file, the `<link rel="stylesheet">` ban and
 - The seed and pivot rules below do not apply as written. The first restyle
   iteration restyles the screens as they are, and a restyle `pivot` rethinks
   only the visual treatment: screens, fields and behaviour stay.
+
+### Scoped runs
+
+When `progress.md` records a `runScope`, the run's first iteration starts from
+a copy of `.qfai/prototype/final/index.html`, not from a seed, and each later
+iteration builds on the previous one, whose out-of-scope parts are still
+`final/`'s. Change only the in-scope screen routes and each in-scope shared
+component wherever a screen route renders it, with the style only they use.
+Leave everything else as `final/` has it, so the handoff can merge the
+in-scope parts back. A `pivot` rethinks only what is inside the scope. A
+change the scope needs outside those parts is reported, not made.
 
 ## The first iteration (seed)
 
