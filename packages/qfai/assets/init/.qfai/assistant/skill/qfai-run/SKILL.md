@@ -147,4 +147,4 @@ retained; ordinary completion requires no unsolicited upload.
 project_memory:
 
 - The user names no stage after the first request.
-- The plan is fixed by its route; the session runs every step of the chosen scope.
+- The plan is fixed by its route and the extraction's artifacts; the session runs every step of the chosen scope.

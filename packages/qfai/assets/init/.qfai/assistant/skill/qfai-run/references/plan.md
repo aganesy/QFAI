@@ -109,6 +109,10 @@ The route, its stages in order with each step's file, and its points.
 | `scopes`         | How far the work may go, narrowest first; absent for `--route`                                                                                                  |
 | `workOrders`     | On an implement stage when the extraction lists `flows`: one `{ target }` per flow, in ascending ID order; absent otherwise                                     |
 
+A plan from an extraction that names `spec` or `contract` can hold a `spec`
+stage its route's catalog row lacks, when no stage of the route is marked for
+the `spec` review; run it like any other stage.
+
 A stage with `workOrders` runs every one of its steps once per work order, for
 that work order's `target` flow alone, before the next stage starts. Run the
 work orders in the order listed; the implementation skill's parallelization
