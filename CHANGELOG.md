@@ -246,6 +246,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   repeated `flows` is refused as a schema fault. Plans without `flows` are
   unchanged. Refs #3668.
 
+- **The ID allocation rule says how to read the IDs open pull requests add.**
+  Before taking a new story-tree ID, the `sdd-triage` step and its reference now
+  fetch the base, use a forge CLI only to list the open pull requests' heads,
+  and read the IDs each head adds from `git diff <base>...<head>`; a project
+  with no forge CLI reads the base alone. After merging the base, the branch
+  checks that each ID it adds is still unused there and renumbers its own item
+  if not, and the change-request row stays last in `decisions.md`, so parallel
+  appends conflict only at the end of the file. Fixes #3845.
+
 - **`qfai-implement` ships optional Playwright and Vitest recipes.** A new
   test runner recipes reference puts the worker session-reuse rules into code:
   a Vitest session cache keyed by the run's private directory, the pool slot

@@ -188,6 +188,32 @@ describe("qfai-sdd writes the story tree", () => {
     expect(scopes).toContain("Directory names match their BF and US IDs.");
   });
 
+  // QFAI:AC-0001-0147-05
+  // QFAI:EX-0001-0147-46
+  it("reads the IDs open pull requests add, rechecks them after a merge, and keeps the change-request row last", async () => {
+    const step = await section(TRIAGE_STEP, "## ID allocation");
+    const reference = await section(TRIAGE, "## ID allocation");
+    for (const text of [step, reference]) {
+      expect(text).toMatch(
+        /where a forge CLI is available, use it only to list the open pull requests' head branches/i,
+      );
+      expect(text).toContain("read the IDs it adds from `git diff <base>...<head>`");
+      expect(text).toContain(
+        "Take the highest across the base, the working tree and those heads, plus one",
+      );
+      expect(text).toContain("Without a forge CLI, read the base alone.");
+      expect(text).toContain(
+        "After merging the base into the branch, check that each ID the branch adds is still unused on the base.",
+      );
+      expect(text).toMatch(
+        /If one is taken, renumber the branch's own item and every reference to it(?: by the collision steps below)?, then run the gates again\./,
+      );
+      expect(text).toContain(
+        "Keep the change-request row last in `decisions.md`, so parallel appends conflict only at the end of the file.",
+      );
+    }
+  });
+
   // QFAI:AC-0001-0147-06
   // QFAI:EX-0001-0147-09
   it("writes each rule inside the contract that enforces it, in that file type's form", async () => {

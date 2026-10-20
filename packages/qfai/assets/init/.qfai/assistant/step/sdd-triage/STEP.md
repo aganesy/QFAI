@@ -190,15 +190,26 @@ this step took it or the operator answered it.
 ## ID allocation
 
 Allocate each new ID from the highest ID of its kind in scope plus one,
-including retired IDs named in decisions rows. A project that also counts the
-IDs its open pull requests add takes the highest across the tree and those pull
-requests, so a gap above the tree's own highest is allowed. BF scope is project-wide; US
+including retired IDs named in decisions rows. BF scope is project-wide; US
 scope is its BF; AC and EX scope is their US; a contract number's scope is every
 contract of every kind; BR scope is its contract, whose number the BR carries
 (`BR-0006-0001` belongs to `API-0006`); DEC scope is the complete ordered register; OQ scope is its own table.
 Empty scopes begin at `0001`, or `01` for AC and EX tails. Take each new ID from
 `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` with a fetched
 base: it prints the number after the highest of the working tree and the base.
+
+Parallel branches pick the same next ID unless each reads the others first:
+
+1. Before taking an ID, fetch the base. Where a forge CLI is available, use it
+   only to list the open pull requests' head branches; fetch each head and read
+   the IDs it adds from `git diff <base>...<head>`. Take the highest across the
+   base, the working tree and those heads, plus one, so a gap above the tree's own
+   highest is allowed. Without a forge CLI, read the base alone.
+2. After merging the base into the branch, check that each ID the branch adds is
+   still unused on the base. If one is taken, renumber the branch's own item and
+   every reference to it, then run the gates again.
+3. Keep the change-request row last in `decisions.md`, so parallel appends
+   conflict only at the end of the file.
 
 ## Pre-draft grilling
 

@@ -199,11 +199,16 @@ A retirement touches every place the ID is written. Do all of them in one change
 
 ## ID allocation
 
-Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. A project that also counts the IDs its open pull requests add takes the highest across the tree and those pull requests, so a gap above the tree's own highest is allowed. BF spans the project. US is inside its BF. AC and EX are inside their US.
+Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US.
 A contract number spans every contract kind, and a BR is numbered inside its contract. DEC spans the complete ordered decision register; OQ spans its own table.
 Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
 Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` right before writing it: a US names its BF, an AC or EX its US, and a BR its contract.
 It reads the working tree and the base ref's commit, a fetched ref such as `origin/main`, and prints the number after the highest of both, not after the last row. It writes nothing and does not see open pull requests.
+
+Read the IDs open pull requests add before taking one. Fetch the base; where a forge CLI is available, use it only to list the open pull requests' head branches, fetch each head and read the IDs it adds from `git diff <base>...<head>`. Without a forge CLI, read the base alone.
+Take the highest across the base, the working tree and those heads, plus one, so a gap above the tree's own highest is allowed.
+After merging the base into the branch, check that each ID the branch adds is still unused on the base. If one is taken, renumber the branch's own item and every reference to it by the collision steps below, then run the gates again.
+Keep the change-request row last in `decisions.md`, so parallel appends conflict only at the end of the file.
 
 ### Capacity before writing
 
