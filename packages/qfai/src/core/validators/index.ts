@@ -32,6 +32,7 @@ export type { HtmlMockTiming } from "./htmlMock.js";
 export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
+export { validateUiRenderedCopy } from "./uiRenderedCopy.js";
 export { validateUiScreenCopy } from "./uiScreenCopy.js";
 export { validateUiScreenEntries } from "./uiScreenEntries.js";
 export { validateUiContractParse } from "./contracts.js";

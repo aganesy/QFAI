@@ -90,6 +90,12 @@ const PROFILE_INDEPENDENT_CODES: ReadonlyMap<string, Exemption> = new Map([
     "QFAI-TOOL-003": "as QFAI-TOOL-001",
     "QFAI-TOOL-004": "as QFAI-TOOL-001",
   }),
+  ...raisedBy("src/core/validators/uiRenderedCopy.ts", {
+    "QFAI-CONTRACT-046":
+      "the `--rendered` file is a caller input, compared in every profile it is passed to",
+    "QFAI-CONTRACT-047": "as QFAI-CONTRACT-046",
+    "QFAI-CONTRACT-048": "as QFAI-CONTRACT-046",
+  }),
   ...raisedBy("src/core/config.ts", {
     "QFAI-CFG-001": "the `qfai.config.yaml` read, which every profile needs first",
     "QFAI-CFG-002": "config parse failure: nothing downstream runs, so no group owns it",
