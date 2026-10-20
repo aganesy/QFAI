@@ -63,12 +63,13 @@ export const GRILLING_DELEGATION_HOOK_MARKER = "QFAI grilling reminder: delegati
 export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
 
 /**
- * Identity of the group that restates the question-form rule on every turn.
+ * Identity of the group that restates the question-form rule on a session's
+ * first prompt.
  *
- * `UserPromptSubmit` rather than a one-shot event: the rule has to be in view at
- * the moment a question forms, and that moment is unpredictable. A session-start
- * reminder is gone by the time the context is compacted, which is exactly when a
- * long session starts skipping it.
+ * `UserPromptSubmit` rather than a session-start event: the program reads the
+ * prompt, so a turn the host starts on its own does not use up the one display.
+ * It prints once per `session_id`, and on every prompt when the input names no
+ * session.
  *
  * Its program reads the prompt out of the hook's input and stays silent when a
  * line of it opens with a task-notification, wake-up or CI-monitor wrapper, or
@@ -78,14 +79,12 @@ export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
 export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
 
 /**
- * Identity of the group that sends, on every turn, a request naming no skill
- * to `qfai-run`.
+ * Identity of the group that sends a request naming no skill to `qfai-run`.
  *
  * The host picks a skill from the request's wording, and may pick another one
- * or none. The hook is the one place the rule is stated, and it states it with
- * each message so that it does not fade as a session grows.
- *
- * It uses the same supplied prompt markers as the question-form group.
+ * or none. The hook is the one place the rule is stated. It uses the same
+ * supplied prompt markers and the same once-per-session schedule as the
+ * question-form group.
  */
 export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
 
@@ -105,9 +104,10 @@ export const INSTALL_CHECK_HOOK_MARKER = "QFAI install check reminder";
  * Identity of the group that restates the API-budget rule before a shell command.
  *
  * Its program decides whether to print: it reads the command out of the hook's
- * own input and stays silent unless the command mentions the forge. The matcher
- * alone would fire on every compound command, which is the reason the writing
- * rule's hook stays off the shell entirely.
+ * own input and stays silent unless the command runs a network client (`gh`,
+ * `curl`, `wget`, `Invoke-WebRequest`, `Invoke-RestMethod`, `iwr` or `irm`).
+ * The matcher alone would fire on every compound command, which is the reason
+ * the writing rule's hook stays off the shell entirely.
  */
 export const API_BUDGET_HOOK_MARKER = "QFAI api-budget reminder";
 
@@ -233,6 +233,19 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "a05e541a30e43d166bedd13b06275aed6c5550c9db3ec6ef91e32fc42c657556",
   "40b6b79f51f908712c1bf66f02510e21b39c7e6da1f3dbcc3508f3911ad678f9",
   "71c8c279203aba4bee78f5bce2c97b5d819cfae0fa3282c18dc7ad8ee8bf658b",
+  // Groups that printed on more than one call of a session: the prompt-time groups that printed a
+  // one-line reminder after the first prompt, the documentation-clarity group before a post that
+  // printed on every post, and the API-budget group that printed for any command naming the
+  // forge's CLI or its API host. The structured-question, free-text entry, before-post and
+  // API-budget groups in `.claude/settings.json`, then the same four in `.codex/hooks.json`.
+  "30fec6dcb459c3914f2403e07e2bd5cfd521e9858ba741e8364dd3c4c80fff94",
+  "68808419bc25201bdcce1a3281825383a7468fd766ee62b7e0f7ee4c4c93f0f1",
+  "b8feaebe144c47285ac98569d2abbbf4d81ab82e5b982b92570cd49cee497ff9",
+  "d207c98dd2ef64180d00e80436d1f2087981d334b268bcb38d258f97f782b435",
+  "32177b4ddc0e74ce17e12685a5a308bec5452f4dfdfbe0c9916bb6c1840d0616",
+  "133674358fb09676d3ecd3bedcc45988df375365d99bb3e0af7a191045aa3342",
+  "c28533d2bf43b4f70187a3c373f216ac919acfbe311ab38379a4a9837437ac66",
+  "6fcd02fcf8572f926a2821d38067f18d016f15ce5c8f3e487503d45fb5f392fe",
 ]);
 
 export type HookMergeResult =

@@ -345,9 +345,8 @@ describe("BF-0004: the migration from a 1.x project, and again on a migrated one
     );
     expect(await textOrNull(root, REMINDERS)).toBe(shipped);
 
-    const { briefContext, ...fullReminder } = record(freeText);
-    expect(typeof briefContext).toBe("string");
-    const reminder = JSON.stringify(fullReminder);
+    expect(record(freeText)).not.toHaveProperty("briefContext");
+    const reminder = JSON.stringify(record(freeText));
     const claudeHook = await freeTextHook(root, ".claude/settings.json");
     const claudeArgs = isUnknownArray(claudeHook.args) ? claudeHook.args.map(String) : [];
     const claude = spawnSync(

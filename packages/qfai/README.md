@@ -1066,6 +1066,8 @@ file prints nothing. `qfai init` refreshes that file wherever the project has
 not edited it, so a new release's wording reaches an existing project without
 changing `.claude/settings.json`. Remove the entries from that file and from
 `.codex/hooks.json` to turn the reminder off; the rule still applies.
+Each rule reminder prints at most once per session, counted per `session_id` in the
+operating system's temporary directory, and there is no setting to change that.
 
 Codex gets the same reminders from `.codex/hooks.json` once you trust the
 project's hooks with `/hooks`. Each is one command line that runs the same under

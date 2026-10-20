@@ -396,6 +396,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai init` replaces the earlier groups in place unless the project edited
   them. Fixes #3762.
 
+- **Every rule reminder prints once per session, and the API-budget reminder
+  only for a network client.** The free-text entry and question-form reminders
+  and the documentation-clarity reminder before a post now print on a session's
+  first eligible call and nothing after it, as the other tool-time reminders
+  do, counted per `session_id` in the operating system's temporary directory.
+  Input with no session id still prints on every call. The API-budget reminder
+  fires only for a command that runs `gh`, `curl`, `wget`, `Invoke-WebRequest`,
+  `Invoke-RestMethod`, `iwr` or `irm`, and in Claude Code it also covers the
+  `PowerShell` tool. `.agents/rules/reminders.json` drops its brief forms, and
+  `qfai init` replaces the earlier groups in place unless the project edited
+  them. Fixes #3942.
+
 - **`qfai doctor` says what a shipped workflow changed, and a project can accept a
   difference with a reason.** The `workflows.drift.*` warning now also names each
   action both files use whose pinned version differs, with the version on each

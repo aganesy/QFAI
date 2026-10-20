@@ -290,9 +290,9 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Seven shared readers cover prompt and tool filters, full/brief delivery,
-    // posting and the install check.
-    expect(readers.size, "each entry uses one of the seven shared readers").toBe(7);
+    // Six shared readers cover prompt and tool filters, once-per-session delivery and the
+    // install check; the reminder before a post shares the unfiltered tool-time reader.
+    expect(readers.size, "each entry uses one of the six shared readers").toBe(6);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");
@@ -302,9 +302,11 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   // The matcher fires on every shell command, so the program is what narrows it.
   // `documentation-clarity.md` keeps its own hook off the shell for exactly the
   // over-matching this filter prevents, and that decision is unchanged.
-  it("prints the budget reminder only for a command that names the forge", async () => {
-    const group = (hooks.get("PreToolUse") ?? []).find((candidate) => candidate.matcher === "Bash");
-    expect(group, "no PreToolUse group matches Bash").toBeDefined();
+  it("prints the budget reminder only for a command that runs a network client", async () => {
+    const group = (hooks.get("PreToolUse") ?? []).find(
+      (candidate) => candidate.matcher === "Bash|PowerShell",
+    );
+    expect(group, "no PreToolUse group matches Bash and PowerShell").toBeDefined();
     expect(group?.hooks.map((entry) => entry.statusMessage)).toEqual([API_BUDGET_HOOK_MARKER]);
     const entry = group?.hooks[0];
     if (entry === undefined) return;
@@ -314,6 +316,9 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
       "gh api repos/owner/repo/actions/runs",
       "gh pr checks",
       "curl https://api.github.com/rate_limit",
+      "wget -q https://example.com",
+      "Invoke-RestMethod -Uri https://example.com",
+      "iwr https://example.com",
     ]) {
       const printed = await runReminderHook(entry, project, hookInput(command));
       expect(printed, `${command} printed nothing`).toContain("api-budget.md");
@@ -323,6 +328,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
       "git status && pnpm check-types",
       "node scripts/check-bidi.mjs --highlight",
       "echo ghost",
+      "echo https://api.github.com/rate_limit",
     ]) {
       await expect(runReminderHook(entry, project, hookInput(command))).resolves.toBe("");
     }
@@ -331,7 +337,9 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
   // The host's payload is not part of this repository, so the entry prints
   // nothing for input it does not recognise rather than guessing at a shape.
   it("prints nothing for input that carries no command", async () => {
-    const group = (hooks.get("PreToolUse") ?? []).find((candidate) => candidate.matcher === "Bash");
+    const group = (hooks.get("PreToolUse") ?? []).find(
+      (candidate) => candidate.matcher === "Bash|PowerShell",
+    );
     const entry = group?.hooks[0];
     if (entry === undefined) return;
     const project = projectDirOf(repoRoot, rel);
@@ -436,15 +444,12 @@ describe("the shipped reminder catalog", () => {
   });
 
   // QFAI:EX-0001-0196-70
-  it("asks for a rule to be read once per session, and never from a brief", () => {
+  it("asks for a rule to be read once per session, and keeps no brief form", () => {
     if (typeof catalog !== "object" || catalog === null) throw new Error("no reminder catalog");
     for (const [key, message] of Object.entries(catalog)) {
       if (typeof message !== "object" || message === null) continue;
-      const brief: unknown = Reflect.get(message, "briefContext");
-      if (typeof brief === "string") {
-        expect(brief, `${key} brief sends the agent back to the file`).not.toMatch(/\bread\b/i);
-        expect(brief, `${key} brief names no rule or skill`).toMatch(/\.agents\/rules\/|qfai-run/);
-      }
+      // Every reminder prints once per session, so no message keeps a shorter form for later calls.
+      expect(message, `${key} keeps a brief form`).not.toHaveProperty("briefContext");
       const output: unknown = Reflect.get(message, "hookSpecificOutput");
       const full: unknown =
         typeof output === "object" && output !== null

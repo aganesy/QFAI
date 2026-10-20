@@ -264,14 +264,18 @@ by hand under the rules above, and a project that writes one names it here.
 ## The reminder
 
 `.claude/settings.json` and `.codex/hooks.json` put this rule in front of the
-agent before a shell command, through a `PreToolUse` hook matching `Bash`.
+agent before a shell command, through a `PreToolUse` hook matching `Bash` and,
+in Claude Code, `PowerShell`.
 
 `documentation-clarity.md` keeps its own hook off the shell, and that decision
 stands: a matcher on the tool name alone fires on every compound command, and a
 reminder about writing would arrive in front of work that has nothing to do with
 it. This hook takes the same matcher and then reads the command, printing only
-where the command mentions the forge's CLI or its API host. The filter is in the
-program rather than in the matcher, which is the whole of the difference.
+where the command runs a network client: `gh`, `curl`, `wget`,
+`Invoke-WebRequest`, `Invoke-RestMethod`, `iwr` or `irm`. The filter is in the
+program rather than in the matcher, which is the whole of the difference. It
+prints on the first such command of a session and not again; input that names
+no session prints it every time.
 
 It reminds and never blocks. Claude Code runs `node` directly, with no shell and
 no network. Codex runs the same filter as one command line, the same under

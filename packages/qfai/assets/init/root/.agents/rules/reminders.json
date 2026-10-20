@@ -3,15 +3,13 @@
     "hookSpecificOutput": {
       "hookEventName": "UserPromptSubmit",
       "additionalContext": "QFAI user questions (.agents/rules/user-questions.md): does the next step need the user's answer? Only then ask, through the host's structured question tool or that rule's fallback where it is not callable; waiting and completion reports need none, and reply in the user's working language (.qfai/assistant/rule/communication.md); read the rule once per session rather than working from this line."
-    },
-    "briefContext": "QFAI user questions (.agents/rules/user-questions.md): ask in the answer's shape only when an answer is needed; waiting and completion reports need none; reply in the user's working language."
+    }
   },
   "free-text-entry": {
     "hookSpecificOutput": {
       "hookEventName": "UserPromptSubmit",
       "additionalContext": "QFAI free-text entry: for each new request the user wrote that names no skill, the lightest included, invoke the `qfai-run` skill before any other work, or stop and say so if it cannot start, never answering without it; an automated notice starts no run, and a pending answer or requested operation result resumes the current step. Read the skill once per session, and in a git worktree read and follow the worktree's own `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded."
-    },
-    "briefContext": "For new requests the user wrote, use qfai-run to plan; automated notices start no run, and pending answers or requested operation results resume the current step."
+    }
   },
   "qfai-not-installed": {
     "hookSpecificOutput": {

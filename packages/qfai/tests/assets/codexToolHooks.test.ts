@@ -303,14 +303,12 @@ describe("the Codex tool-time reminders", () => {
     for (const entry of entries) expect(entry.commandWindows).toBeUndefined();
 
     const programs = entries.map((entry) => partsOf(entry).program);
-    // The filtered readers read the tool call first; the install check looks for the launcher.
-    const unfiltered = new Set(
-      programs.filter(
-        (program) => !program.includes("readFileSync(0") && !program.includes("'.bin'"),
-      ),
-    );
-    expect(unfiltered.size).toBe(1);
-    const reader = [...unfiltered][0] ?? "";
+    // The tool-time readers with no filter share one program, which reads the hook input only for
+    // its session counter: grilling before a delegation and documentation clarity before a post.
+    const reader = partsOf(await codexEntry("PreToolUse", "grilling-delegation")).program;
+    expect(
+      partsOf(await codexEntry("PreToolUse", "documentation-clarity-before-post")).program,
+    ).toBe(reader);
     expect(reader.startsWith("try{") && reader.endsWith("}catch{}")).toBe(true);
     // The walk that finds the message file, up to where each program decides what to print.
     const locate = reader.slice("try{".length, reader.indexOf("if(r){"));
@@ -344,7 +342,8 @@ describe("the Codex tool-time reminders", () => {
     }
   });
 
-  it("remind about the API budget only for a command that names the forge", async () => {
+  // QFAI:EX-0001-0196-56
+  it("remind about the API budget only for a command that runs a network client", async () => {
     const entry = await codexEntry("PreToolUse", "api-budget");
     await withProject(async (cwd) => {
       for (const [command, fires] of [
@@ -353,9 +352,17 @@ describe("the Codex tool-time reminders", () => {
         ["gh api repos/o/r | jq .x > out & echo ^(y) <in", true],
         ["echo %PATH% $env:X `id` && gh pr list", true],
         ["gh", true],
+        ["wget -q https://example.com", true],
+        ["curl.exe -s https://example.com", true],
+        ["Invoke-WebRequest -Uri https://example.com", true],
+        ["Invoke-RestMethod https://example.com", true],
+        ["iwr https://example.com", true],
+        ["irm https://example.com", true],
         ["git status && echo sigh", false],
         ["ghost", false],
         ["npm run gh-pages", false],
+        ["echo https://api.github.com/x", false],
+        ["cat curl.txt", false],
         ["echo %PATH% $env:X | findstr x > nul & type <in", false],
       ] as const) {
         const event = await firedEvent(entry, cwd, codexInput("PreToolUse", "Bash", command));
@@ -428,31 +435,24 @@ const WRITE_ONCE = [
   ["PostToolUse", "minimal-implementation", "apply_patch", patch("*** Update File: src/a.ts")],
 ] as const;
 
-/** Every tool-time reminder with a per-session schedule. */
+/** Every reminder, prompt-time and tool-time, each printed once per session. */
 const FIRST_ONLY = [
+  ["UserPromptSubmit", "free-text-entry", "", "Fix the failing test"],
+  ["UserPromptSubmit", "structured-question", "", "Fix the failing test"],
+  [
+    "PreToolUse",
+    "documentation-clarity-before-post",
+    "mcp__github__create_issue",
+    "Post the prepared issue",
+  ],
   ["PreToolUse", "grilling-design-artifact", "apply_patch", patch("*** Update File: src/a.ts")],
   ["PreToolUse", "grilling-delegation", "spawn_agent", "delegate"],
   ["PreToolUse", "api-budget", "Bash", "gh api repos/o/r"],
   ...WRITE_ONCE,
 ] as const;
 
-/** The prompt-time reminders, which follow the full form with a one-line pointer. */
-const POINTERS = [
-  ["UserPromptSubmit", "free-text-entry", "", "Fix the failing test", "qfai-run"],
-  [
-    "UserPromptSubmit",
-    "structured-question",
-    "",
-    "Fix the failing test",
-    ".agents/rules/user-questions.md",
-  ],
-] as const;
-
-/** Every reminder with a per-session schedule, prompt-time and tool-time. */
-const SCHEDULED = [
-  ...POINTERS.map(([event, key, tool, command]) => [event, key, tool, command] as const),
-  ...FIRST_ONLY,
-];
+/** Every reminder with a per-session schedule. */
+const SCHEDULED = FIRST_ONLY;
 
 async function fullContext(key: string): Promise<string> {
   const messages = asRecord(
@@ -480,40 +480,10 @@ async function firedContext(
   return output.additionalContext;
 }
 
-function expectPointer(context: string, full: string, reference: string): void {
-  expect(context).toContain(reference);
-  expect(context.trim()).not.toBe("");
-  expect(context).not.toMatch(/[\r\n\u2028\u2029]/);
-  expect(context.length).toBeLessThan(full.length);
-  if (reference === "qfai-run") {
-    expect(context).toMatch(/\bnew requests?\b.*\bplan\b/i);
-    expect(context).toMatch(
-      /\b(?:requested|pending|waiting)\b.*\b(?:answers?|results?|repl(?:y|ies))\b/i,
-    );
-    expect(context).toMatch(/\b(?:current|same|waiting)\b.*\bstep\b/i);
-    expect(context).not.toMatch(/\b(?:activeRun|turn_id)\b/);
-  }
-}
-
 // QFAI:EX-0001-0196-40
 describe("the Codex reminders that repeat", () => {
   describe.each(CODEX_SHELLS)("through %s", (shell) => {
     // QFAI:EX-0001-0196-55
-    it.each(POINTERS)(
-      "prints %s/%s in full once, then a pointer",
-      async (event, key, tool, command, reference) => {
-        const entry = await codexEntry(event, key);
-        const full = await fullContext(key);
-        await withProject(async (cwd) => {
-          const input = inSession(codexInput(event, tool, command), newSession());
-          expect(await firedContext(entry, shell, cwd, input, event)).toBe(full);
-          for (let call = 2; call <= PERIOD + 1; call += 1) {
-            expectPointer(await firedContext(entry, shell, cwd, input, event), full, reference);
-          }
-        });
-      },
-    );
-
     // QFAI:EX-0001-0196-56
     it.each(FIRST_ONLY)(
       "prints %s/%s in full once, then nothing",
@@ -537,7 +507,6 @@ describe("the Codex reminders that repeat", () => {
     await withProject(async (cwd) => {
       const session = newSession();
       for (const [event, key, tool, command] of SCHEDULED) {
-        const pointer = POINTERS.find((row) => row[1] === key);
         const entry = await codexEntry(event, key);
         const full = await fullContext(key);
         const main = inSession(codexInput(event, tool, command), session);
@@ -547,11 +516,7 @@ describe("the Codex reminders that repeat", () => {
         });
         for (const input of [main, helper, inSession(main, newSession())]) {
           expect(await firedContext(entry, "sh", cwd, input, event)).toBe(full);
-          if (pointer === undefined) {
-            expect(await firedEventIn(entry, "sh", cwd, input), key).toBeNull();
-          } else {
-            expectPointer(await firedContext(entry, "sh", cwd, input, event), full, pointer[4]);
-          }
+          expect(await firedEventIn(entry, "sh", cwd, input), key).toBeNull();
         }
       }
     });
@@ -709,7 +674,7 @@ describe("the Codex reminders that repeat", () => {
   });
 
   // QFAI:EX-0001-0196-56
-  it("keep before-post full on every call after editing under every shell", async () => {
+  it("print before-post once per session, apart from editing, under every shell", async () => {
     const posting = await codexEntry("PreToolUse", "documentation-clarity-before-post");
     const full = await fullContext("documentation-clarity-before-post");
     await withProject(async (cwd) => {
@@ -728,11 +693,12 @@ describe("the Codex reminders that repeat", () => {
           codexInput("PreToolUse", "mcp__github__create_issue", "Post the prepared issue"),
           session,
         );
-        for (let call = 1; call <= PERIOD + 1; call += 1) {
+        expect(await firedContext(posting, shell, cwd, input, "PreToolUse")).toBe(full);
+        for (let call = 2; call <= PERIOD + 1; call += 1) {
           expect(
-            await firedContext(posting, shell, cwd, input, "PreToolUse"),
+            await firedEventIn(posting, shell, cwd, input),
             `${shell}, call ${call}`,
-          ).toBe(full);
+          ).toBeNull();
         }
       }
     });

@@ -1516,7 +1516,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the guarded graph hook group init appends after the template's groups: the same
   // matcher and marker, with `-e` and the guard before the script path. Restoring the unguarded
   // group reproduces `6d3610ad…` byte for byte.
-  [".claude/settings.json", "3cbebe52cc7f9786d2b3ce101e3f31f2404bb88a3f0cced0976420adbfd83f07"],
+  // Re-pinned when the two prompt-time reminders and the documentation-clarity reminder before a
+  // post started printing once per session, as the other tool-time ones do, and the API-budget
+  // reminder started matching `PowerShell` as well and printing only for a command that runs a
+  // network client. Restoring the four groups reproduces `3cbebe52…`.
+  [".claude/settings.json", "5082d9c6b48317bfe42672159f5eaf01924a4fca72eb4080a977a26887943ba5"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1563,7 +1567,10 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // after the first eligible call. Restoring the five programs reproduces `252e94e4…`.
   // Re-pinned for the same guarded graph hook group as `.claude/settings.json`, one line with no
   // character a hook shell expands. Restoring the unguarded command reproduces `49a89560…`.
-  [".codex/hooks.json", "a3cb9f3fe0bbba3b612c6a73316fc750b93f6cd93f1efd57350184ee20437ab7"],
+  // Re-pinned for the same change as `.claude/settings.json`: the prompt-time reminders and the
+  // reminder before a post print once per session and the API-budget reminder only for a network
+  // client. Restoring the four groups reproduces `a3cb9f3f…`.
+  [".codex/hooks.json", "f5d7413957127d3b28ea3b159909f7efd0043156acea115358e5f1be9b4bf9fa"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

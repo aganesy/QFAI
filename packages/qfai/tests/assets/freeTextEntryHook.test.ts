@@ -248,9 +248,8 @@ describe("the free-text entry reminder", () => {
       expect(full).toContain(
         "an automated notice starts no run, and a pending answer or requested operation result resumes the current step.",
       );
-      const brief = contextOf(await runReminderHook(entry, project, sessionInput));
-      expect(brief).toContain("For new requests the user wrote, use qfai-run to plan;");
-      expect(brief).toContain("automated notices start no run");
+      // Once per session: the second prompt of the same session prints nothing.
+      expect(await runReminderHook(entry, project, sessionInput)).toBe("");
     } finally {
       // The hook keeps a per-session counter in the temp directory.
       const counters = (await readdir(os.tmpdir())).filter((name) =>
