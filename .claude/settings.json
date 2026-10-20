@@ -168,6 +168,18 @@
         ]
       },
       {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Release pull request merge check",
+            "command": "node",
+            "args": ["${CLAUDE_PROJECT_DIR}/scripts/release-merge-ask.mjs"],
+            "timeout": 60
+          }
+        ]
+      },
+      {
         "matcher": "Bash|PowerShell|Grep",
         "hooks": [
           {
