@@ -22,5 +22,5 @@ Feature: direct-pack validator alignment
   Scenario: A composed profile reports each discussion-pack finding once
     Given a UI-bearing discussion pack
     When `qfai validate --profile verify` or `--profile full` checks it
-    Then each finding of the research summary and the canonical UI checks appears once
+    Then each finding of the research summary, the canonical UI checks and the root `DESIGN.md` checks appears once
 ```

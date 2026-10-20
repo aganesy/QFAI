@@ -318,7 +318,9 @@ describe("a UI-bearing pack copied from the shipped templates", () => {
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "ui-0001-login.yaml"),
-      ["screens:", "  - id: SCR-001", "    route: /login", ""].join("\n"),
+      ["# QFAI-CONTRACT-ID: UI-0001", "screens:", "  - id: SCR-001", "    route: /login", ""].join(
+        "\n",
+      ),
       "utf-8",
     );
     const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
@@ -370,11 +372,36 @@ describe("a UI-bearing pack copied from the shipped templates", () => {
       "utf-8",
     );
 
+    // A root DESIGN.md that does not parse, read by the discussion parse check
+    // and by the readiness gate.
+    await writeFile(path.join(root, "DESIGN.md"), "no front matter here\n", "utf-8");
+    // The same file in a project whose UI contracts declare no screen, where
+    // only the discussion parse check reports it.
+    const noScreens = await newTempDir();
+    await writeFile(
+      path.join(noScreens, "qfai.config.yaml"),
+      "workflow:\n  mode: active\n",
+      "utf-8",
+    );
+    await writeFile(path.join(noScreens, "DESIGN.md"), "no front matter here\n", "utf-8");
+
     for (const profile of ["verify", "full"] as const) {
-      const codes = await codesOf(root, profile);
-      const count = (code: string) => codes.filter((entry) => entry === code).length;
+      const issues = (await validateProject(root, undefined, { profile })).issues;
+      const count = (code: string) => issues.filter((entry) => entry.code === code).length;
       expect(count("QFAI-CLASSIFICATION-011"), `QFAI-CLASSIFICATION-011 in ${profile}`).toBe(1);
       expect(count("QFAI-RESEARCH-021"), `QFAI-RESEARCH-021 in ${profile}`).toBe(1);
+      expect(count("QFAI-DCON-033"), `QFAI-DCON-033 in ${profile}`).toBe(1);
+      const keys = issues.map((entry) =>
+        [entry.code, entry.file ?? "", entry.message].join("\u0000"),
+      );
+      const repeated = keys.filter((key, index) => keys.indexOf(key) !== index);
+      expect(repeated, `findings repeated in ${profile}`).toEqual([]);
+
+      const noScreenIssues = (await validateProject(noScreens, undefined, { profile })).issues;
+      expect(
+        noScreenIssues.filter((entry) => entry.code === "QFAI-DCON-033"),
+        `QFAI-DCON-033 without UI screens in ${profile}`,
+      ).toHaveLength(1);
     }
   });
 });

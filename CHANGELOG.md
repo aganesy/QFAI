@@ -640,11 +640,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the row, and in an open-question row, is still counted. Fixes #3756.
 
 - **`qfai validate --profile verify` and `--profile full` report each
-  discussion-pack finding once.** Both profiles ran the research summary check
-  and the canonical UI checks twice, once with the discussion checks and once
-  with the prototyping checks, so every `QFAI-RESEARCH-*`, `QFAI-TREND-*`,
-  `QFAI-THREELAYER-*` and `QFAI-CLASSIFICATION-*` finding on a pack appeared
-  twice and counted twice. They now run once. A pack that declares
+  discussion-pack finding once.** Every research-summary finding and every
+  canonical UI finding (`QFAI-RESEARCH-*`, `QFAI-TREND-*`, `QFAI-THREELAYER-*`,
+  `QFAI-CLASSIFICATION-*`) appeared twice in both profiles and counted twice,
+  and so did the root `DESIGN.md` findings `QFAI-DCON-030` and
+  `QFAI-DCON-034`, with `QFAI-DCON-033` three times. Each is now reported once. A pack that declares
   `design_direction: inherit` still has its Research Summary checked: the
   research-first protocol applies to every pack, so `QFAI-RESEARCH-004` to
   `006`, `010`, `018`, `019` and `021` keep reporting an unfilled summary, and

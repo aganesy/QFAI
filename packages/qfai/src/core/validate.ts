@@ -71,6 +71,7 @@ import {
   validateUiDefinitionConsistency,
   validateDesignAudit,
   validateRootDesignMdParse,
+  validateRootDesignMdParseOutsideReadiness,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
   validateTestTodoStubs,
@@ -649,14 +650,17 @@ async function runStoryProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const sdd = async (includePolicy = true): Promise<Issue[]> => [
+  // `standalone` is false in `verify` and `full`. They leave out the policy
+  // placeholders, and leave the root DESIGN.md readiness gate to the prototyping
+  // group, which runs it in the same profile.
+  const sdd = async (standalone = true): Promise<Issue[]> => [
     ...(await validateStoryTreeStructure(root, config, model)),
     ...(await validateDocumentSchema(root, config)),
     ...(await validateStaleTerms(root, config)),
     ...(await validateStoryTreeContractReferences(root, config, model)),
-    ...(includePolicy ? await validateStoryPolicyPlaceholders(root, config) : []),
+    ...(standalone ? await validateStoryPolicyPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
-    ...(await validateDesignContractReadiness(root, config)),
+    ...(standalone ? await validateDesignContractReadiness(root, config) : []),
     ...(await validateAssistantTreeMigration(root, config)),
     ...(await validateSkillDocReferences(root, config)),
     ...(await validateAutopilotPolicy(root, { config })),
@@ -688,8 +692,9 @@ async function runStoryProfileValidators(
           ...(await validateRepositoryHygiene(root, config)),
           ...(await validateStepTree(root, config)),
           ...(await validateAssistantAssets(root, config)),
-          // The prototyping group below runs the research summary and the
-          // canonical UIX checks, so the discussion set leaves them to it.
+          // The prototyping group below runs the research summary, the
+          // canonical UIX checks and the root DESIGN.md readiness gate, so the
+          // discussion and sdd sets leave them to it.
           ...(await runDiscussionValidators(root, config, false)),
           ...(await sdd(false)),
           ...(await runPrototypingValidators(root, config, timings, platformOption)),
@@ -740,9 +745,9 @@ async function runSaasPackage(
 
 /**
  * The discussion issue set. `includeSharedWithUiux` is false where the
- * prototyping UI/UX group runs in the same profile: that group also runs the
- * research summary and the canonical UIX checks, and running them here too
- * reported each of their findings twice.
+ * prototyping group runs in the same profile: that group also runs the
+ * research summary, the canonical UIX checks and the root DESIGN.md readiness
+ * gate, and running them here too reported each of their findings twice.
  */
 async function runDiscussionValidators(
   root: string,
@@ -756,7 +761,9 @@ async function runDiscussionValidators(
     // Catching it here means a malformed file surfaces before `/qfai-sdd`
     // builds on it. Only the parse half — the UI-contract checks belong to
     // later stages.
-    ...(await validateRootDesignMdParse(root)),
+    ...(includeSharedWithUiux
+      ? await validateRootDesignMdParse(root)
+      : await validateRootDesignMdParseOutsideReadiness(root, config)),
     ...(await validateDiscussionMermaid(root)),
     ...(await validateDesignDirectionProposal(root, config)),
     ...(await validateDiscussionPackReadiness(root, config)),
