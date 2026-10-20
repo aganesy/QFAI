@@ -83,8 +83,8 @@ reviewer drives those routes directly.
 
 A restyle's edits are product code. The route's implement stage carries them:
 there they are change-noted, gated, tested and committed. So a restyle needs a
-scope that includes the implement stage. Today only `broad` does: `narrow`
-and `medium` stop before it.
+scope that includes the implement stage. A request extracted with the
+qualifier `restyle` is planned with only such scopes.
 
 If the route's scope has no implement stage, stop and ask the user to re-plan
 before iteration 00.

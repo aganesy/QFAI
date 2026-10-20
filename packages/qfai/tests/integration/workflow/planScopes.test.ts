@@ -58,6 +58,84 @@ it("A spec-and-prototype request offers the prototype stage as its narrowest sco
   ]);
 });
 
+// QFAI:EX-0001-0229-31
+it("A restyle prototype offers only the scopes that carry its edits through implementation", async () => {
+  const restyle = await planFor(
+    extraction({
+      intent: "feature",
+      qualifiers: ["visual-open", "restyle"],
+      artifacts: ["spec", "ui"],
+    }),
+  );
+  expect(field(restyle.json, "route")).toBe("prototype-feature");
+  expect(field(restyle.json, "scopes")).toEqual(broadOnly(restyle.json));
+
+  const candidates = field(
+    (
+      await planFor(
+        extraction({
+          intent: "feature",
+          qualifiers: ["visual-open", "restyle"],
+          artifacts: ["spec", "ui"],
+          confidence: "low",
+          alternatives: [{ intent: "design", entryFlags: [], qualifiers: [], signals: [] }],
+        }),
+      )
+    ).json,
+    "candidates",
+  );
+  const prototype = (Array.isArray(candidates) ? candidates : []).find(
+    (each) => field(each, "route") === "prototype-feature",
+  );
+  expect(field(prototype, "scopes")).toEqual([
+    { scope: "broad", stages: stageIds(restyle.json), recommended: true },
+  ]);
+
+  const merged = field(
+    (
+      await planFor(
+        extraction({
+          intent: "feature",
+          qualifiers: ["visual-open"],
+          artifacts: ["spec", "ui"],
+          confidence: "low",
+          alternatives: [
+            {
+              intent: "feature",
+              entryFlags: [],
+              qualifiers: ["visual-open", "restyle"],
+              signals: [],
+            },
+          ],
+        }),
+      )
+    ).json,
+    "candidates",
+  );
+  expect(
+    (Array.isArray(merged) ? merged : []).map((each) => [
+      field(each, "route"),
+      field(each, "scopes"),
+    ]),
+  ).toEqual([
+    ["prototype-feature", [{ scope: "broad", stages: stageIds(restyle.json), recommended: true }]],
+  ]);
+
+  const noPrototype = await planFor(
+    extraction({ intent: "surface-contradiction", qualifiers: ["restyle"], artifacts: ["ui"] }),
+  );
+  expect(field(noPrototype.json, "route")).toBe("repair-consistency");
+  expect(field(noPrototype.json, "scopes")).toEqual([
+    { scope: "narrow", stages: ["diagnose", "sdd"], recommended: true },
+    { scope: "medium", stages: ["diagnose", "sdd", "note", "verify"], recommended: false },
+    {
+      scope: "broad",
+      stages: ["diagnose", "sdd", "implement", "note", "verify"],
+      recommended: false,
+    },
+  ]);
+});
+
 // QFAI:EX-0001-0229-02
 it("A scope that writes code holds the closing verification stages", async () => {
   const planned = await planFor(

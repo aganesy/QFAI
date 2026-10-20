@@ -254,6 +254,7 @@ only after reading what it depends on.
 - `removal-requested`, with `unenforced` or `behaviour-change`: The request says to remove the mechanism rather than make it work, or, on a behaviour change, to remove a feature or a concept the specification states and reword what names it, adding no behaviour.
 - `visual-open`, with `feature`: A visual or interaction decision is still open.
 - `prototype-requested`, with `behaviour-change`: The request explicitly asks to change the prototype. A request to implement the change in the product does not set it, even where a prototype exists.
+- `restyle`, with `visual-open` or `prototype-requested`: The user asks for a change to the live stylesheet or motion of screens the project already runs, keeping their screens, fields and behaviour, so the prototype loop runs it as a restyle. Its edits are product code, so the plan then offers only the scopes that carry them through implementation.
 
 For `owned-temporary-cleanup`, read the user's current request or standing
 instruction, the task's ownership evidence and the exact allowed temporary
@@ -366,5 +367,6 @@ Each request is followed by its extraction. Fields not shown are empty.
 - "The import fails and the `catch` logs nothing, so the cause cannot be read; log the error there." → `{ intent: defect, entryFlags: [cause, fix, expect], artifacts: [code, tests], confidence: high }`
 - "Merging main left conflicts in the decision register; renumber our colliding rows and keep both sides." → `{ intent: stale-record, qualifiers: [meaning-preserving], artifacts: [spec], confidence: high }`
 - "Release 2.4.0. You run the preparation and merge the release pull request; I only approve the publish." → `{ intent: release, qualifiers: [release-delegated], artifacts: [release], confidence: high }`
+- "Give the live dashboard a calmer palette and softer page transitions; keep every screen and field as it is." → `{ intent: feature, qualifiers: [visual-open, restyle], artifacts: [ui], confidence: high }`
 - "Support multiple tenants across the product." → `{ intent: epic, entryFlags: [decision], confidence: high }`
 - "Turn off branch creation in the hosted database dashboard, add its access token as a repository secret, and update the workflow to use it." → `{ intent: ci, entryFlags: [env], artifacts: [ci, docs], confidence: high }`

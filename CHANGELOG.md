@@ -669,6 +669,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `open-questions.md` are no longer read by the check; the policy,
   business-flow and contract trees still are. Fixes #3756. Fixes #3910.
 
+- **A restyle prototype is no longer offered a scope that stops before
+  implementation.** A restyle edits the project's live stylesheet and motion
+  files during the prototype stage, and only the implement stage carries those
+  edits into the product, but `npx qfai workflow plan` still offered `narrow`
+  and `medium`, which end before it. The extraction now has a `restyle`
+  qualifier, which the `qfai-run` extraction reference sets for a change to the
+  live stylesheet or motion that the prototype loop runs as a restyle. With it,
+  a plan that has a prototype stage lists only the scopes that hold the
+  implement stage, today `broad`. The prototyping loop still stops and asks to
+  re-plan when the chosen scope has no implement stage. Fixes #3889.
+
 - **`qfai init` asks for an agent restart after it adds a rule master or
   rewrites an agent entry point.** The restart line counted a rule master only
   when `--force` overwrote it, so a plain upgrade that created a new master
