@@ -102,7 +102,11 @@ An operational document that gives actions within existing policy takes
 `procedure`. A change to policy, a story, a contract or QFAI assistant
 instructions keeps its owning consistency intent; Markdown is not permission
 to change those surfaces. A request for actual code changes keeps its code
-artifacts and checks, even when it also asks for instructions.
+artifacts and checks, even when it also asks for instructions. A procedure
+that names a script for the operator to run, where the change also needs that
+script edited, takes `procedure`, not `docs` or `ci`, and lists `docs` and
+`ci`. When the script change is the point of the request and the runbook line
+is a side effect, it stays `ci`.
 
 A change that only adds or corrects diagnostic output, such as a log line in an
 error path so a cause can be read, is `defect` when the missing or wrong output

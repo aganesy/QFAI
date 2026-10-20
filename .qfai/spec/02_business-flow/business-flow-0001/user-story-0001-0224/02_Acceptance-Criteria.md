@@ -129,6 +129,7 @@ Feature: Follow a route in the session
     And every step keeps the existing four output keys and applicable checks; no release point, branch point or extra review is added
     And qfai-implement owns the route-only step with doc-steward; ordinary named business-flow implementation and wording-only maintenance keep their existing procedures
     And the writer changes only authorized procedure documents within existing policy, stopping before protected-owner edits or invented required facts
+    And a script the procedure names for the operator to run is edited only as far as the procedure change requires, keeping its existing tests and checks passing
     And writing the procedure grants no permission to execute its actions or expand external authority
     And a mixed request retains its actual artifacts and existing checks rather than hiding implementation in a docs-only reading
     And unavailable required checks remain UNRUN; unobserved procedure execution is not reported as completed
