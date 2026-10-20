@@ -153,7 +153,7 @@ describe.each(TREES)("%s", (tree) => {
       "So a restyle needs a scope that includes the implement stage. A request extracted with the qualifier `restyle` is planned with only such scopes.",
     );
     expect(loop).toContain(
-      "If a restyle was not extracted as one and the route's scope has no implement stage, stop and ask the user to re-plan before iteration 00.",
+      "If the route's scope has no implement stage, stop and ask the user to re-plan before iteration 00.",
     );
   });
 

@@ -648,7 +648,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   live stylesheet or motion that the prototype loop runs as a restyle. With it,
   a plan that has a prototype stage lists only the scopes that hold the
   implement stage, today `broad`. The prototyping loop still stops and asks to
-  re-plan a restyle that was not extracted as one. Fixes #3889.
+  re-plan when the chosen scope has no implement stage. Fixes #3889.
 
 - **`qfai init` asks for an agent restart after it adds a rule master or
   rewrites an agent entry point.** The restart line counted a rule master only

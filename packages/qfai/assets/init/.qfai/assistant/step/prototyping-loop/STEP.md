@@ -86,8 +86,8 @@ there they are change-noted, gated, tested and committed. So a restyle needs a
 scope that includes the implement stage. A request extracted with the
 qualifier `restyle` is planned with only such scopes.
 
-If a restyle was not extracted as one and the route's scope has no implement
-stage, stop and ask the user to re-plan before iteration 00.
+If the route's scope has no implement stage, stop and ask the user to re-plan
+before iteration 00.
 
 ## Procedure
 

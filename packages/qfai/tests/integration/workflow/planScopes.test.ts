@@ -91,6 +91,36 @@ it("A restyle prototype offers only the scopes that carry its edits through impl
     { scope: "broad", stages: stageIds(restyle.json), recommended: true },
   ]);
 
+  const merged = field(
+    (
+      await planFor(
+        extraction({
+          intent: "feature",
+          qualifiers: ["visual-open"],
+          artifacts: ["spec", "ui"],
+          confidence: "low",
+          alternatives: [
+            {
+              intent: "feature",
+              entryFlags: [],
+              qualifiers: ["visual-open", "restyle"],
+              signals: [],
+            },
+          ],
+        }),
+      )
+    ).json,
+    "candidates",
+  );
+  expect(
+    (Array.isArray(merged) ? merged : []).map((each) => [
+      field(each, "route"),
+      field(each, "scopes"),
+    ]),
+  ).toEqual([
+    ["prototype-feature", [{ scope: "broad", stages: stageIds(restyle.json), recommended: true }]],
+  ]);
+
   const noPrototype = await planFor(
     extraction({ intent: "surface-contradiction", qualifiers: ["restyle"], artifacts: ["ui"] }),
   );
