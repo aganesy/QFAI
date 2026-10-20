@@ -157,6 +157,109 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  // QFAI:AC-0001-0228-01
+  // QFAI:EX-0001-0228-07
+  it("builds and reviews only the run scope the record names, plus where a component renders", async () => {
+    const grill = flat(await read(tree, "step/prototyping-grill/STEP.md"));
+    const loop = flat(section(await read(tree, "step/prototyping-loop/STEP.md"), "Run scope"));
+    const generator = flat(
+      await read(tree, "skill/qfai-prototyping/references/generator-prompt.md"),
+    );
+    const reviewer = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+
+    expect(grill).toContain(
+      "The record's optional `## Run scope` section names what the run changes, one entry per line: a screen as `<ui-contract-id>/<screen>`, or a shared component by its repository path or by the `item` that `final/handoff.json` `procurement` names for it.",
+    );
+    expect(grill).toContain("a `## Run scope` an earlier run left does not carry over.");
+    expect(grill).toContain("the record has no `## Run scope`, or an empty one;");
+    expect(grill).toContain(
+      "`final/handoff.json` is missing or lacks `finalArtifact` or `procurement`, as the restyle short form does;",
+    );
+    expect(grill).toContain(
+      "Check the earlier `final/` against every declared screen outside the scope: it needs a route in `final/index.html` and a `procurement` row.",
+    );
+    expect(grill).toContain(
+      "that at least one screen in `final/index.html` renders. Any other entry stops the run before the first iteration, naming it.",
+    );
+    expect(grill).toContain("no session narrows it");
+    expect(grill).not.toContain("which UI contracts the confirmed prototype covers");
+    expect(loop).toContain(
+      "it holds three lists: the in-scope screens, the in-scope components, and the render-check screens, each the other screen that renders an in-scope component, named `<ui-contract-id>/<screen>` with that component.",
+    );
+    expect(loop).toContain(
+      "The run's first iteration starts from a copy of `final/index.html`. Each later one builds on the previous iteration, whose out-of-scope parts are still `final/`'s.",
+    );
+    expect(loop).toContain("a `pivot` applies only inside the scope.");
+    expect(loop).toContain(
+      "Each run records `runScope` in `progress.md` afresh, beside `iterationKind`, before its first iteration, overwriting any earlier one.",
+    );
+    expect(loop).toContain("Otherwise `runScope` is recorded as absent.");
+    expect(loop).toContain(
+      "The run's first iteration is the first one after that record. It treats no earlier run's review or confirmation as its prior review or the user's last answer: those start with this run.",
+    );
+    expect(flat(await read(tree, "step/prototyping-loop/STEP.md"))).toContain(
+      "`previousScore` and the prior reviews come from this run's own iterations; the run's first iteration has none.",
+    );
+    expect(generator).toContain(
+      "A review or confirmation from an earlier run is not one of them: the run's first iteration is the first after `progress.md` records its `runScope`, present or absent.",
+    );
+    expect(reviewer).toContain(
+      "from this run only: the run's first iteration, the first after `progress.md` records its `runScope`, has none.",
+    );
+    expect(reviewer).toContain(
+      "cover the live review of all declared screens or, in a scoped run, of the pairs it reviews.",
+    );
+    expect(grill).toContain("Write no `## Run scope` in any of these cases.");
+    expect(flat(await read(tree, "step/prototyping-loop/STEP.md"))).toContain(
+      "In a scoped run it also reads `runScope` in `progress.md` and `.qfai/prototype/final/index.html`, every iteration.",
+    );
+    expect(generator).toContain(
+      "6. In a scoped run, every iteration: `runScope` in `progress.md` and `.qfai/prototype/final/index.html`.",
+    );
+    expect(generator).toContain(
+      "When `progress.md` records a `runScope`, the run's first iteration starts from a copy of `.qfai/prototype/final/index.html`, not from a seed, and each later iteration builds on the previous one",
+    );
+    expect(generator).toContain("A `pivot` rethinks only what is inside the scope.");
+    expect(reviewer).toContain(
+      "On each render-check screen, check only that the in-scope component renders there:",
+    );
+    expect(reviewer).toContain(
+      "Return payloads for those pairs only, fold only them into the summary, and open no other screen.",
+    );
+    expect(reviewer).toContain(
+      "When the scope names components only, the render-check screens are the whole review, and the summary's four scores rate the component as those screens render it.",
+    );
+    expect(flat(await read(tree, "skill/qfai-prototyping/references/iteration-loop.md"))).toContain(
+      "A scoped run writes payloads only for the pairs it reviews: its in-scope and render-check screens.",
+    );
+  });
+
+  // QFAI:AC-0001-0228-01
+  // QFAI:EX-0001-0228-08
+  it("merges a scoped result into final/ and records the confirmed scope", async () => {
+    const handoffStep = flat(await read(tree, "step/prototyping-handoff/STEP.md"));
+    const scoped = flat(
+      section(await read(tree, "skill/qfai-prototyping/references/handoff.md"), "Scoped handoff"),
+    );
+
+    expect(handoffStep).toContain(
+      "In a scoped run, replace only the in-scope parts and keep the rest, as the handoff reference's Scoped handoff says.",
+    );
+    expect(handoffStep).toContain("in a scoped run, the scope the user confirmed.");
+    expect(scoped).toContain(
+      "The unit of the merge is the screen route, one per declared screen, and each place a route renders an in-scope shared component.",
+    );
+    expect(scoped).toContain("Keep every other part as it was.");
+    expect(scoped).toContain(
+      "replace the `procurement` rows of the in-scope screens and components, keep every other row, so every declared screen still appears, and record the scope the user confirmed as `runScope`.",
+    );
+    expect(scoped).toContain(
+      "Keep `finalArtifact`, `implementationNotes` and every other existing key, extending `implementationNotes` with what this run decided rather than rewriting it:",
+    );
+    expect(scoped).toContain('"runScope": {');
+    expect(scoped).toContain("The confirmed prototype is then the whole of `final/`");
+  });
+
   // QFAI:AC-0001-0228-02
   // QFAI:EX-0001-0228-02
   it("runs another iteration on a change and keeps the handoff waiting", async () => {
