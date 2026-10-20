@@ -16,8 +16,9 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { captureStderr } from "../../helpers/stderr.js";
 import { captureStdout } from "../../helpers/stdout.js";
 import {
   emitText,
@@ -25,6 +26,7 @@ import {
   resolveIssueFix,
   runValidate,
 } from "../../../src/cli/commands/validate.js";
+import { buildIncompleteRunIssue, incompleteRunResult } from "../../../src/cli/lib/warnings.js";
 import { loadConfig, type FailOn } from "../../../src/core/config.js";
 import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
 import { validateDesignToken } from "../../../src/core/validators/designToken.js";
@@ -197,7 +199,7 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
       severity = undefined;
       return { kind: "fail-on" as const, line };
     }
-    if (line.startsWith("qfai validate: profile ")) {
+    if (line.startsWith("qfai validate: passed ")) {
       section = "none";
       severity = undefined;
       return { kind: "summary" as const, line };
@@ -693,7 +695,7 @@ describe("validate --format text matches the validate contract's text output gra
       expect(lines.at(-4 - summary)).toMatch(/^counts: info=\d+ warning=\d+ error=\d+$/);
       expect(lines.at(-3 - summary)).toMatch(/^codes: error=\d+/);
       expect(lines.at(-2 - summary)).toMatch(/^fail-on: \S/);
-      if (summary === 1) expect(lines.at(-2)).toMatch(/^qfai validate: profile /);
+      if (summary === 1) expect(lines.at(-2)).toMatch(/^qfai validate: passed /);
       expect(lines.at(-1)).toMatch(/^run-log: \S/);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -757,7 +759,7 @@ describe("validate --format text matches the validate contract's text output gra
       "`codes:`",
       "`fail-on:`",
       "`timings:`",
-      "`qfai validate: profile`",
+      "`qfai validate: passed`",
       "`run-log:`",
       "`fix:`",
     ];
@@ -815,7 +817,7 @@ describe("validate --format text matches the validate contract's text output gra
           false,
         );
         expect(
-          entry.line.startsWith("qfai validate: profile "),
+          entry.line.startsWith("qfai validate: passed "),
           `structural line absorbed: ${entry.line}`,
         ).toBe(false);
         expect(entry.line.startsWith("  fix: "), `structural line absorbed: ${entry.line}`).toBe(
@@ -843,43 +845,40 @@ async function writeMalformedDesignTokens(root: string): Promise<void> {
   );
 }
 
-/** Everything `task` writes to stderr, with the writes still swallowed. */
-async function captureStderr(task: () => Promise<void>): Promise<string> {
-  const spy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-  try {
-    await task();
-    return spy.mock.calls.map(([chunk]) => String(chunk)).join("");
-  } finally {
-    spy.mockRestore();
-  }
-}
-
 describe("validate --format text says that it started and, when it passes, what it checked", () => {
   // QFAI:EX-0001-0039-22
   it("states the pass summary and the started line in the validate contract", async () => {
     const guideline = await readGuideline();
     expect(guideline).toContain(
-      "`qfai validate: profile <profile>, <n> check groups, <n> errors, <n> warnings, <seconds>s`",
+      "`qfai validate: passed (fail-on <threshold>): profile <profile>, <n> errors, <n> warnings, <seconds>s`",
     );
     expect(guideline).toContain("`qfai validate: running profile <profile>...`");
   });
 
   // QFAI:EX-0001-0039-22
-  it("formats the pass summary from the profile, its check groups, the counts and the time", () => {
+  it("formats the pass summary from the verdict, the profile, the counts and the time", () => {
     const warnings = resultOf(manyOfOneCode("QFAI-TEST-002", "warning", 2));
-    expect(formatPassSummary({ ...warnings, profile: "atdd" }, 12_345)).toBe(
-      "qfai validate: profile atdd, 3 check groups, 0 errors, 2 warnings, 12.3s",
+    expect(formatPassSummary({ ...warnings, profile: "atdd" }, "error", 12_345)).toBe(
+      "qfai validate: passed (fail-on error): profile atdd, 0 errors, 2 warnings, 12.3s",
     );
     const one = resultOf([
       ...manyOfOneCode("QFAI-TEST-001", "error", 1),
       ...manyOfOneCode("QFAI-TEST-002", "warning", 1),
     ]);
-    expect(formatPassSummary({ ...one, profile: "drift" }, 40)).toBe(
-      "qfai validate: profile drift, 2 check groups, 1 error, 1 warning, 0.0s",
+    expect(formatPassSummary({ ...one, profile: "drift" }, "never", 40)).toBe(
+      "qfai validate: passed (fail-on never): profile drift, 1 error, 1 warning, 0.0s",
     );
-    // A run whose own validators did not run checked none of the profile's groups.
-    expect(formatPassSummary({ ...one, profile: "atdd", profileValidatorsRan: false }, 0)).toBe(
-      "qfai validate: profile atdd, 0 check groups, 1 error, 1 warning, 0.0s",
+  });
+
+  // QFAI:EX-0001-0039-22
+  it("counts the error of a run that could not complete under --fail-on never", () => {
+    const crashed = incompleteRunResult(
+      "0.0.0-test",
+      buildIncompleteRunIssue(new Error("boom"), "validate"),
+      "atdd",
+    );
+    expect(formatPassSummary(crashed, "never", 0)).toBe(
+      "qfai validate: passed (fail-on never): profile atdd, 1 error, 0 warnings, 0.0s",
     );
   });
 
@@ -897,7 +896,7 @@ describe("validate --format text says that it started and, when it passes, what 
       expect(code).toBe(0);
       expect(lines.at(-1)).toMatch(/^run-log: \S/);
       expect(lines.at(-2)).toMatch(
-        /^qfai validate: profile full, [1-9]\d* check groups, \d+ errors?, \d+ warnings?, \d+\.\ds$/,
+        /^qfai validate: passed \(fail-on never\): profile full, \d+ errors?, \d+ warnings?, \d+\.\ds$/,
       );
       expect(lines.at(-3)).toBe("fail-on: never");
     } finally {
@@ -917,7 +916,7 @@ describe("validate --format text says that it started and, when it passes, what 
       });
 
       expect(code).toBe(1);
-      expect(output).not.toContain("qfai validate: profile ");
+      expect(output).not.toContain("qfai validate: passed ");
       expect(output.trimEnd().split("\n").at(-2)).toMatch(/^fail-on: \S/);
     } finally {
       await rm(root, { recursive: true, force: true });

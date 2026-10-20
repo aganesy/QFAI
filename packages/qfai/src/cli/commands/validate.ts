@@ -60,8 +60,8 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const ciProfileIssue = buildCiProfileIssue(options.profile);
   // Wrapped, because an unhandled rejection here would leave the operator with
   // one stderr line and no verdict — no `counts:`, no `run-log:`, no
-  // `validate.json` — and every shipped skill pipes validate through `| tail`,
-  // so that line would be all an agent sees. Enumerating the `stat` sites
+  // `validate.json` — and a caller that keeps only the end of the output, as
+  // an agent often does, would see that line alone. Enumerating the `stat` sites
   // that can raise reduces the ways in; this is what answers when the next one
   // appears.
   //
@@ -149,8 +149,8 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   if (format === "text") {
     emitText(normalized, failOn);
     if (!willFail) {
-      process.stdout.write(`${formatPassSummary(normalized, Date.now() - startedAt.getTime())}
-`);
+      const elapsedMs = Date.now() - startedAt.getTime();
+      process.stdout.write(`${formatPassSummary(normalized, failOn, elapsedMs)}\n`);
     }
     emitTextRunLog(runLogPath);
   }
@@ -781,25 +781,23 @@ function formatOverrunMs(value: number, budget: number): string {
  * still leaves a line saying what it was doing, and stdout stays the report.
  */
 function emitStartedLine(profile: string): void {
-  process.stderr.write(`qfai validate: running profile ${profile}...
-`);
+  process.stderr.write(`qfai validate: running profile ${profile}...\n`);
 }
 
 /**
- * The one line a passing text run prints ahead of `run-log:`: the profile, how
- * many of its check groups ran, the counts and the elapsed time, so a pass reads
- * as a run that happened rather than as missing output.
+ * The one line a passing text run prints ahead of `run-log:`: the verdict and
+ * its threshold first, then the profile, the counts and the elapsed time, so a
+ * pass reads as a run that happened rather than as missing output.
  */
-export function formatPassSummary(result: ValidationResult, elapsedMs: number): string {
-  const profile = result.profile ?? "full";
-  const groups =
-    result.profileValidatorsRan === false || !isKnownProfile(profile)
-      ? 0
-      : PROFILE_GATE_GROUPS[profile].length;
+export function formatPassSummary(
+  result: ValidationResult,
+  failOn: FailOn,
+  elapsedMs: number,
+): string {
   const plural = (count: number, noun: string): string =>
     `${count} ${noun}${count === 1 ? "" : "s"}`;
   return (
-    `qfai validate: profile ${profile}, ${plural(groups, "check group")}, ` +
+    `qfai validate: passed (fail-on ${failOn}): profile ${result.profile ?? "full"}, ` +
     `${plural(result.counts.error, "error")}, ${plural(result.counts.warning, "warning")}, ` +
     `${(elapsedMs / 1000).toFixed(1)}s`
   );
