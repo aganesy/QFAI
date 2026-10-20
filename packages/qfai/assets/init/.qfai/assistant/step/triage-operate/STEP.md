@@ -43,6 +43,17 @@ operation. This step runs it and reports what happened.
    merge itself stands.
 6. Report the result as observed, including a failure.
 
+Before creating an issue, search the tracker for a matching open issue with the
+forge CLI's issue search and key terms from the title. When one request files
+several issues, list the open issues once, with a limit, and match each title
+against that list. On a match, create no duplicate: comment on it only when the
+user's instruction allows comments and the finding adds what the match lacks;
+otherwise report the match and what the finding would add, and skip. Where the
+search cannot run, such as with no tracker CLI, an authentication error or a
+rate limit, report that and leave creating the issue to the user, unless the
+instruction allows creating it without the search. The report names the issue
+matched or created.
+
 An operation that needs a tracked file to change, such as a conflict to resolve
 or a failing check to fix, stops here: report the outcome `needs-change` with an
 extraction of the request as the change it needs, naming the artifacts that
