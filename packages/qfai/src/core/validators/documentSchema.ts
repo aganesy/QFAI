@@ -12,7 +12,10 @@ const RULE = "storyTree.documentSchema";
 
 type Violation = { file: string; line: number; column: number; rule: string; message: string };
 type CheckResult = { ok: true; violations: Violation[] } | { ok: false; reason: string };
-type CheckDocuments = (root: string, paths: { specsDir: string; contractsDir: string }) => unknown;
+type CheckDocuments = (
+  root: string,
+  paths: { specsDir: string; contractsDir: string },
+) => Promise<unknown>;
 
 /**
  * The shipped checker, `assets/scripts/check-mdschema.mjs`.
@@ -36,7 +39,10 @@ async function loadCheckDocuments(): Promise<CheckDocuments | string> {
   if (typeof loaded === "object" && loaded !== null && "checkDocuments" in loaded) {
     const run = loaded.checkDocuments;
     if (typeof run === "function") {
-      return (root, paths): unknown => Reflect.apply(run, undefined, [root, paths]);
+      return async (root, paths): Promise<unknown> => {
+        const result: unknown = await Reflect.apply(run, undefined, [root, paths]);
+        return result;
+      };
     }
   }
   return `the checker ${file} exports no checkDocuments function`;
@@ -89,7 +95,7 @@ export async function validateDocumentSchema(root: string, config: QfaiConfig): 
   if (typeof checkDocuments === "string") {
     return [unavailable(checkDocuments, specsDir, root)];
   }
-  const result = checkDocuments(root, {
+  const result = await checkDocuments(root, {
     specsDir: treeRelative(root, specsDir),
     contractsDir: treeRelative(root, resolvePath(root, config, "contractsDir")),
   });
