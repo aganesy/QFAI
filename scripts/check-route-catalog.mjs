@@ -122,7 +122,12 @@ function citationFault(route, row, decisions) {
   if (!cited) return `${route}: the row cites no change request`;
   const decision = decisions.get(cited);
   if (!decision) return `${route}: the row cites ${cited}, which decisions.md does not hold`;
-  const inForce = decision.status === "WIP" || decision.status === "DONE";
+  // The rule `qfai validate` applies to a change request: a later row that only narrows it leaves
+  // it in force.
+  const inForce =
+    decision.status === "WIP" ||
+    decision.status === "DONE" ||
+    /^PARTLY SUPERSEDED \(by DEC-\d{4}\)$/.test(decision.status);
   const request = /^Change request:/.test(decision.content) && decision.content.includes(CONTRACT);
   if (!request || !inForce) {
     return `${route}: ${cited} is not an in-force change request naming ${CONTRACT}`;

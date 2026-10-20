@@ -92,6 +92,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   until the second cycle has run.** Its Passes when section now states this, so
   the stage review sees a skipped second cycle. Fixes #3790.
 
+- **A review fix that changes behaviour gets one focused re-review.** When a
+  fix changes code, a test's assertions or a contract statement, the reviewer
+  whose finding it fixed reviews only the fix's diff, once, in
+  `common-review-cycle`. Findings of that re-review are fixed or answered with
+  no further re-review, and a fix that changes wording only gets none, so the
+  cycle still ends. Before, no review read a fix, however much it rewrote.
+  Fixes #3945.
+
 - **The `qfai-run` final report lists every plan step with its status.** A
   step-status table gives one row per plan step and planned review, each marked
   `ran`, `passed`, `delegated`, `not run` or `not reached`, with a reason for
@@ -467,6 +475,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai init` replaces the earlier groups in place unless the project edited
   them. Fixes #3762.
 
+- **Rule reminders print once per session, and the API-budget reminder only for
+  a network call.** The question-form reminder and the documentation-clarity
+  reminder before a post now print on a session's first eligible call and
+  nothing after it, as the other tool-time reminders do. The free-text entry
+  reminder keeps its full message first and one line on every later prompt,
+  since it is the only place the `qfai-run` routing rule is stated. The session
+  marker in the operating system's temporary directory is now created
+  atomically, so hooks that race print once; input with no session id still
+  prints every time. The API-budget reminder fires only for a command that runs
+  `gh`, `curl`, `wget`, `Invoke-WebRequest`, `Invoke-RestMethod`, `iwr` or `irm`,
+  or names `api.github.com`, and in Claude Code it also covers the `PowerShell`
+  tool. `qfai init` replaces the earlier groups in place unless the project
+  edited them. Fixes #3942.
+
 - **`qfai doctor` says what a shipped workflow changed, and a project can accept a
   difference with a reason.** The `workflows.drift.*` warning now also names each
   action both files use whose pinned version differs, with the version on each
@@ -768,6 +790,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a plan that has a prototype stage lists only the scopes that hold the
   implement stage, today `broad`. The prototyping loop still stops and asks to
   re-plan when the chosen scope has no implement stage. Fixes #3889.
+
+- **A plan whose request names the story tree now reviews the specification
+  change, whatever the route.** When the extraction listed `spec` or
+  `contract` but the route had no stage marked for the `spec` review, such as
+  `change-tooling` or `fix-defect`, `npx qfai workflow plan` gave no stage that
+  edits the story tree, so no requirements reviewer read retired or rewritten
+  criteria and examples. Such a plan now gains a `spec` stage
+  (`sdd-triage`, then `sdd-story` and `sdd-contract` when there is work for
+  them), marked for the `spec` review, after the route's last `sdd` stage or
+  before its first stage that writes; `sdd-triage` becomes a decision point. A
+  private security intake, a conflict resolution and a route that writes
+  nothing keep their stages, as do the candidates of a low-confidence
+  extraction. Fixes #3943.
 
 - **`qfai init` asks for an agent restart after it adds a rule master or
   rewrites an agent entry point.** The restart line counted a rule master only

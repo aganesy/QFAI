@@ -492,46 +492,67 @@ describe("the Codex tool-time groups that printed on every call", () => {
 });
 
 describe.each([
-  ["assets/init/.claude/settings.json", "tests/fixtures/claude-settings"],
-  ["assets/init/.codex/hooks.json", "tests/fixtures/codex-hooks"],
-])(
-  "the tool-time groups that printed a brief reminder after the first call, in %s",
-  (file, dir) => {
-    const template = readFileSync(path.join(packageRoot, file), "utf-8");
-    const brief = readFileSync(
-      path.join(packageRoot, dir, "earlier-brief-tool-groups.json"),
-      "utf-8",
-    );
+  // The tool-time groups that printed a brief reminder after the first call.
+  [
+    "assets/init/.claude/settings.json",
+    "tests/fixtures/claude-settings",
+    "earlier-brief-tool-groups.json",
+    ["PreToolUse", "PostToolUse"],
+  ],
+  [
+    "assets/init/.codex/hooks.json",
+    "tests/fixtures/codex-hooks",
+    "earlier-brief-tool-groups.json",
+    ["PreToolUse", "PostToolUse"],
+  ],
+  // Every counted group as it stood before the counter marker was created atomically, the
+  // question-form and before-post reminders printed once per session, and the API-budget
+  // reminder covered every network client.
+  [
+    "assets/init/.claude/settings.json",
+    "tests/fixtures/claude-settings",
+    "earlier-repeating-reminder-groups.json",
+    ["UserPromptSubmit", "PreToolUse", "PostToolUse"],
+  ],
+  [
+    "assets/init/.codex/hooks.json",
+    "tests/fixtures/codex-hooks",
+    "earlier-repeating-reminder-groups.json",
+    ["UserPromptSubmit", "PreToolUse", "PostToolUse"],
+  ],
+] as const)("the superseded reminder groups in %s, from %s/%s", (file, dir, fixture, events) => {
+  const template = readFileSync(path.join(packageRoot, file), "utf-8");
+  const brief = readFileSync(path.join(packageRoot, dir, fixture), "utf-8");
 
-    // QFAI:EX-0001-0196-56
-    it("are each replaced where they stand, and a second run changes nothing", () => {
-      const result = mergeDocumentationClarityHooks(brief, template);
-      expect(result.outcome).toBe("merged");
-      if (result.outcome !== "merged") return;
-      expect(result.edited).toEqual([]);
-      const shipped: Record<string, unknown> = JSON.parse(template);
-      const earlier: Record<string, unknown> = JSON.parse(brief);
-      for (const event of ["PreToolUse", "PostToolUse"]) {
-        const groups = groupsFor(earlier, event);
-        expect(groups.length, event).toBeGreaterThan(0);
-        groups.forEach((group, index) => {
-          const counterpart = groupsFor(shipped, event).find(
-            (candidate) => markersOf(candidate) === markersOf(group),
-          );
-          expect(counterpart, `${event} ${markersOf(group)}`).not.toEqual(group);
-          expect(groupsFor(result.settings, event)[index], `${event} ${markersOf(group)}`).toEqual(
-            counterpart,
-          );
-        });
-      }
-      const again = mergeDocumentationClarityHooks(
-        serializeClaudeSettings(result.settings),
-        template,
-      );
-      expect(again).toEqual({ outcome: "already-present", edited: [] });
-    });
-  },
-);
+  // QFAI:EX-0001-0196-55
+  // QFAI:EX-0001-0196-56
+  it("are each replaced where they stand, and a second run changes nothing", () => {
+    const result = mergeDocumentationClarityHooks(brief, template);
+    expect(result.outcome).toBe("merged");
+    if (result.outcome !== "merged") return;
+    expect(result.edited).toEqual([]);
+    const shipped: Record<string, unknown> = JSON.parse(template);
+    const earlier: Record<string, unknown> = JSON.parse(brief);
+    for (const event of events) {
+      const groups = groupsFor(earlier, event);
+      expect(groups.length, event).toBeGreaterThan(0);
+      groups.forEach((group, index) => {
+        const counterpart = groupsFor(shipped, event).find(
+          (candidate) => markersOf(candidate) === markersOf(group),
+        );
+        expect(counterpart, `${event} ${markersOf(group)}`).not.toEqual(group);
+        expect(groupsFor(result.settings, event)[index], `${event} ${markersOf(group)}`).toEqual(
+          counterpart,
+        );
+      });
+    }
+    const again = mergeDocumentationClarityHooks(
+      serializeClaudeSettings(result.settings),
+      template,
+    );
+    expect(again).toEqual({ outcome: "already-present", edited: [] });
+  });
+});
 
 // QFAI:EX-0001-0196-47
 // QFAI:EX-0001-0196-48

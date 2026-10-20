@@ -111,8 +111,8 @@ The `qfai-run` skill reads it into facts: what it asks for, its risks, and how s
 and returns the route's plan, writing nothing. The session runs each step of the plan in order and
 asks you only the decisions that are yours and each release. You type no stage name.
 
-`npx qfai init` adds a hook that repeats this on every prompt: a request that names no skill goes
-to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
+`npx qfai init` adds a hook that states this on a session's first prompt and repeats it in one line
+on every later prompt: a request that names no skill goes to `qfai-run`. Claude Code reads it from `.claude/settings.json` and Codex from `.codex/hooks.json`.
 `qfai-run` plans every such request, the lightest included: a question that one command or one
 file read answers gets a plan too, and a question about the project plans an answer without
 changes. A message that is not a request, such as an automated notice, gets no plan; a notice that
@@ -1066,6 +1066,10 @@ file prints nothing. `qfai init` refreshes that file wherever the project has
 not edited it, so a new release's wording reaches an existing project without
 changing `.claude/settings.json`. Remove the entries from that file and from
 `.codex/hooks.json` to turn the reminder off; the rule still applies.
+The free-text entry reminder prints in full on a session's first prompt and in one line
+on every later prompt. Every other rule reminder prints at most once per session. Both
+are counted per `session_id` in the operating system's temporary directory, and there is
+no setting to change that.
 
 Codex gets the same reminders from `.codex/hooks.json` once you trust the
 project's hooks with `/hooks`. Each is one command line that runs the same under

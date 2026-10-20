@@ -9,8 +9,12 @@ which owns the delegation rules these sit beside.
 - The review runs once, after the stage's last step.
 - The author fixes or answers every finding: a fix in the finding's owning
   source, or a reasoned answer recorded beside the finding.
-- There is no re-review and no `REVISE` loop. Once every finding is fixed or
-  answered, the work proceeds.
+- There is no `REVISE` loop. A fix that changes behaviour (code, a test's
+  assertions or a contract statement, not wording alone) gets one focused
+  re-review: each reviewer whose findings had a behaviour fix reads only the
+  combined diff of those fixes, once. Each finding of that re-review is fixed or answered with no further
+  re-review, and a fix that changes wording only gets none. Once every finding
+  is fixed or answered, the work proceeds.
 - A finding the author cannot fix is reported in the stage's final report, with
   the finding and why it stays open.
 - A critical decision requires actual user authority under
@@ -27,7 +31,9 @@ which owns the delegation rules these sit beside.
 Within a stage there is one review, so no demand comes back in it. The rules
 below are for a later, separate stage whose own one review reads an artifact an
 earlier stage's review already answered on; they never start a second review in
-the same stage.
+the same stage. The focused re-review of a behaviour fix,
+under One review above, is not a second review: it may not re-raise a demand the first
+review answered unless the fix changed what that answer rests on.
 
 Record each finding's fix or answer, and its evidence, in the Response and
 Evidence cells. When a later stage reviews the same artifact, its

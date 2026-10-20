@@ -66,7 +66,13 @@ describe("reviewer convergence", () => {
       expectPhrase(content, "## One review");
       expectPhrase(content, "The review runs once, after the stage's last step.");
       expectPhrase(content, "The author fixes or answers every finding");
-      expectPhrase(content, "There is no re-review and no `REVISE` loop.");
+      expectPhrase(content, "There is no `REVISE` loop.");
+      expectPhrase(
+        content,
+        "A fix that changes behaviour (code, a test's assertions or a contract statement, not wording alone) gets one focused re-review",
+      );
+      expectPhrase(content, "fixed or answered with no further re-review");
+      expectNoPhrase(content, "There is no re-review");
       expectPhrase(
         content,
         "A finding the author cannot fix is reported in the stage's final report",
@@ -136,7 +142,7 @@ describe("reviewer convergence", () => {
       const content = await read(tree, OPERATING);
       expectPhrase(
         content,
-        "A reviewer's `REVISE` is not a gate failure and is not rerun: the author fixes or answers each finding once",
+        "A reviewer's `REVISE` is not a gate failure and is not rerun as one: the author fixes or answers each finding, with a behaviour fix's one focused re-review,",
       );
       expectNoPhrase(content, "or when a blocking reviewer returns `REVISE`");
     });

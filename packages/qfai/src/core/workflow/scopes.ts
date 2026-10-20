@@ -40,7 +40,7 @@ const GATE_STEPS = new Set([
 // A private security report must not reach a tracked file before its fix, so no scope stops early.
 const PRIVATE_INTAKE = "triage-security-intake";
 
-function hasPrivateIntake(stages: readonly PlanStage[]): boolean {
+export function hasPrivateIntake(stages: readonly PlanStage[]): boolean {
   return stages.some((stage) => stage.steps.some((step) => step.name === PRIVATE_INTAKE));
 }
 
@@ -53,7 +53,7 @@ function writtenBy(stage: PlanStage): readonly Artifact[] {
   return [...kindWrites(stage.kind), ...(stage.serves ?? [])];
 }
 
-function writesSomething(stage: PlanStage): boolean {
+export function writesSomething(stage: PlanStage): boolean {
   return writtenBy(stage).length > 0;
 }
 
@@ -76,7 +76,10 @@ function writesRequested(stage: PlanStage, artifacts: readonly Artifact[]): bool
 }
 
 // The index of the last stage of `stages` that `holds`, or -1.
-function lastIndex(stages: readonly PlanStage[], holds: (stage: PlanStage) => boolean): number {
+export function lastIndex(
+  stages: readonly PlanStage[],
+  holds: (stage: PlanStage) => boolean,
+): number {
   let last = -1;
   stages.forEach((stage, index) => {
     if (holds(stage)) last = index;

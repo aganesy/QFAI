@@ -232,6 +232,7 @@ describe("the free-text entry reminder", () => {
     );
   });
 
+  // QFAI:EX-0001-0196-43
   // QFAI:EX-0001-0196-74
   it("applies only to a message the user wrote, not to an automated notice", async () => {
     const entry = promptEntry(await readGroups(SHIPPED_SETTINGS), FREE_TEXT_ENTRY_HOOK_MARKER);
@@ -248,9 +249,14 @@ describe("the free-text entry reminder", () => {
       expect(full).toContain(
         "an automated notice starts no run, and a pending answer or requested operation result resumes the current step.",
       );
-      const brief = contextOf(await runReminderHook(entry, project, sessionInput));
-      expect(brief).toContain("For new requests the user wrote, use qfai-run to plan;");
-      expect(brief).toContain("automated notices start no run");
+      // Unlike the once-per-session reminders, every later prompt of the session gets the brief form.
+      for (const prompt of [2, 3]) {
+        const brief = contextOf(await runReminderHook(entry, project, sessionInput));
+        expect(brief, `prompt ${prompt}`).toContain(
+          "For new requests the user wrote, use qfai-run to plan;",
+        );
+        expect(brief, `prompt ${prompt}`).toContain("automated notices start no run");
+      }
     } finally {
       // The hook keeps a per-session counter in the temp directory.
       const counters = (await readdir(os.tmpdir())).filter((name) =>

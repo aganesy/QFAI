@@ -350,4 +350,4 @@ Create lightweight evidence that records:
 - Need more evidence:
   Action: rerun the pipeline with refined query, allowlist, or `--max-depth` settings.
 - Reviewer returned REVISE:
-  Action: fix or answer each cited gap and record it before reuse; no second review runs.
+  Action: fix or answer each cited gap and record it before reuse; a fix that changes behaviour gets the one re-review `common-review-cycle` sets.
