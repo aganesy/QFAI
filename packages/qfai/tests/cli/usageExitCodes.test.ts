@@ -66,6 +66,15 @@ describe("qfai --help exit-code section", () => {
     );
   });
 
+  it("documents what sdd merge-docs leaves for a person apart from a usage error", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+
+    expect(section).toMatch(
+      /sdd merge-docs\s+0 = every document merged[\s\S]*?1 = a conflict[\s\S]*?2 = a usage error/,
+    );
+  });
+
   it("records the non-usage exit codes the other commands actually return", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));

@@ -223,6 +223,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   kept and the reason named.
   Fixes #3670.
 
+- **`qfai sdd merge-docs` merges conflicted story-tree documents by row and
+  sentence.** Story tables and contract statements keep each row on one line,
+  so two edits to different sentences of one row conflicted as a whole line.
+  The new command takes each document Git holds as unmerged under the specs
+  directory, merges its base, ours and theirs versions from the index row by
+  row (keyed by the first cell) and sentence by sentence, and writes the
+  result. Rows both sides appended are both kept. What it cannot settle stays
+  between standard conflict markers, and the command exits 1. It then runs the
+  document-schema check on the merged documents, so a stray line break inside
+  a row is reported before the result is staged. It works after a merge GitHub
+  reported as conflicting too, because it runs after the merge rather than as a
+  merge driver. A working file a person or an earlier run already edited is
+  left as it is, and CRLF documents keep their line ends. Fixes #3651.
+
 - **A plan runs the implement stage once per declared flow.** An extraction
   may now list `flows`, the distinct `BF-NNNN` flows the change implements, and
   `npx qfai workflow plan` then gives each implement stage `workOrders`, one

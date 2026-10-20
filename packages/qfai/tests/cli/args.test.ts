@@ -268,7 +268,7 @@ describe("parseArgs", () => {
         "qfai discussion: unknown or missing subcommand. Expected: list|use",
       );
       expect(parseArgs(["sdd"], cwd).invalidReason).toBe(
-        "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision|next-id",
+        "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision|next-id|merge-docs",
       );
     });
 
@@ -826,6 +826,24 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
     ["sdd", "renumber-decision", "--from", "DEC-0002", "--to", "DEC-0002", "--base", "main"],
   ])("rejects missing or invalid explicit renumber inputs %j", (...argv) => {
     expect(parseArgs(argv, process.cwd()).invalid).toBe(true);
+  });
+
+  it("accepts merge-docs with only --root", () => {
+    const parsed = parseArgs(["sdd", "merge-docs", "--root", "."], process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.sddAction).toBe("merge-docs");
+  });
+
+  it.each([
+    ["--base", "main"],
+    ["--apply"],
+    ["--format", "json"],
+    ["--import", "legacy"],
+    ["extra"],
+  ])("rejects %s on merge-docs", (...extra) => {
+    const parsed = parseArgs(["sdd", "merge-docs", ...extra], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.invalidReason).toContain(extra[0]);
   });
 
   it.each([

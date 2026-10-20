@@ -87,6 +87,16 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
+    label: "sdd merge-docs",
+    lines: [
+      `${EXIT_CODES.ok} = every document merged and conforms to its schema,`,
+      `${EXIT_CODES.findings} = a conflict or a document left for a person, or a schema finding`,
+      "      or a schema check that did not run,",
+      `${EXIT_CODES.inputError} = a usage error, or it could not run (no Git work tree, a configuration`,
+      "      issue, or a failed Git call or file write)",
+    ],
+  },
+  {
     label: "workflow",
     lines: [
       `${EXIT_CODES.ok} = a plan or candidate routes,`,

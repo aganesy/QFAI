@@ -24,3 +24,4 @@
 | CLI-0020 | Workflow Files | `.qfai/spec/03_contract/cli/cli-0020-workflow-files.md` | - | - | Plan files and schemas. |
 | CLI-0021 | Graph exploration | `.qfai/spec/03_contract/cli/cli-0021-graph-exploration.md` | - | UI-0022 | CLI-only graph routing, denial, scoped fallback, native freshness and independent completed reuse. |
 | UI-0022 | Graph exploration terminal surfaces | `.qfai/spec/03_contract/ui/ui-0022-graph-exploration.yaml` | - | CLI-0009, CLI-0021 | CLI preparation, preview, denial, pending-attempt recovery and query-result presentation. |
+| CLI-0023 | `qfai sdd merge-docs` | `.qfai/spec/03_contract/cli/cli-0023-qfai-sdd-merge-docs.md` | - | - | Sentence-level merge of conflicted story-tree documents. |
