@@ -150,10 +150,10 @@ describe.each(TREES)("%s", (tree) => {
       "A restyle's edits are product code. The route's implement stage carries them: there they are change-noted, gated, tested and committed.",
     );
     expect(loop).toContain(
-      "So a restyle needs a scope that includes the implement stage. Today only `broad` does: `narrow` and `medium` stop before it.",
+      "So a restyle needs a scope that includes the implement stage. A request extracted with the qualifier `restyle` is planned with only such scopes.",
     );
     expect(loop).toContain(
-      "If the route's scope has no implement stage, stop and ask the user to re-plan before iteration 00.",
+      "If a restyle was not extracted as one and the route's scope has no implement stage, stop and ask the user to re-plan before iteration 00.",
     );
   });
 

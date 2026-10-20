@@ -85,7 +85,8 @@
           "prototype-requested",
           "owned-temporary-cleanup",
           "meaning-preserving",
-          "session-answerable"
+          "session-answerable",
+          "restyle"
         ]
       }
     },
@@ -381,7 +382,8 @@
               "prototype-requested",
               "owned-temporary-cleanup",
               "meaning-preserving",
-              "session-answerable"
+              "session-answerable",
+              "restyle"
             ]
           }
         },
