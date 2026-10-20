@@ -350,6 +350,22 @@ it("A docs-only procedure gets its dedicated writer and the full closing checks"
 });
 
 // QFAI:AC-0001-0224-13
+// QFAI:EX-0001-0224-54
+it("A procedure that also edits the script it names stays on its writer with the full closing checks", async () => {
+  const result = await rawProcedurePlan({ artifacts: ["docs", "ci"] });
+  expect(result.status).toBe(0);
+  expect([
+    field(result.json, "route"),
+    field(result.json, "family"),
+    field(result.json, "rule"),
+  ]).toEqual(["write-procedure", "change", 29]);
+  expect(stageIds(result.json)).toEqual(["documentation", "note", "verify"]);
+  expect(field(result.json, "scopes")).toEqual([
+    { scope: "broad", stages: ["documentation", "note", "verify"], recommended: true },
+  ]);
+});
+
+// QFAI:AC-0001-0224-13
 // QFAI:EX-0001-0224-46
 it("The public planner rejects procedure as a qualifier with schema exit 2", async () => {
   const result = await rawProcedurePlan({ qualifiers: ["procedure"] });
