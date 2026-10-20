@@ -2,7 +2,7 @@
 name: triage-operate
 owner: qfai-triage
 purpose: "Carry out an operation the user named on work that is already done, observe its result, and change no tracked file."
-requires: []
+requires: [common-gate-run]
 roles: [devops-ci-engineer]
 routing-profile: default
 ---
@@ -44,11 +44,37 @@ operation. This step runs it and reports what happened.
 6. Report the result as observed, including a failure.
 
 An operation that needs a tracked file to change, such as a conflict to resolve
-or a failing check to fix, stops here: report the outcome `needs-change` with an
-extraction of the request as the change it needs, naming the artifacts that
-change, so the decision rules route it again. Change nothing to make the
-operation pass. List each follow-up in the final report, since no close step
-follows.
+outside the cases the next section allows or a failing check to fix, stops
+here: report the outcome `needs-change` with an extraction of the request as
+the change it needs, naming the artifacts that change, so the decision rules
+route it again. Change nothing to make the operation pass. List each
+follow-up in the final report, since no close step follows.
+
+## One base change taken into several branches
+
+When the user names one base change to take into several branches, such as a
+shared fix merged into each open feature branch, the merge on each branch and
+the resolutions below are the operation itself.
+
+1. Take the base change into one branch at a time, by merge as the project's
+   rules say, never by rebase. Never force-push a branch.
+2. Resolve a conflict without asking only where:
+   - both sides made the identical change;
+   - table rows conflict whose keys differ: keep both rows;
+   - an append-only list, such as changelog entries in different slots,
+     conflicts: keep both entries;
+   - a generated file conflicts: regenerate it with its own command.
+3. Stop on that branch, leave it unpushed and ask the user, naming the file and
+   the hunk, for any other conflict, and always for:
+   - a hunk where both sides changed the same lines differently in code,
+     specification or contract text;
+   - a resolution that would drop either side's change;
+   - a conflict in a file that names who owns it.
+4. After each merge, run the branch's gates through `common-gate-run`. A branch
+   whose gates fail is not pushed. Each branch goes on independently of the
+   others.
+5. Report each branch's result: pushed with its gates passing, stopped on the
+   named hunk, or held back by the named failing gate.
 
 ## A delegated release
 
@@ -90,12 +116,16 @@ request, or the version edit alone.
 
 ## What it writes
 
-- No file git tracks.
+- No file git tracks, beyond the merges of a base change taken into
+  several branches, as above.
 - The operation, its result and any `needs-change` outcome, in the report.
 
 ## Gate
 
 The stage worker confirms the operation was one the user named, its result is
-recorded as observed, and no tracked file changed. For a release, it also
-confirms the delegation is quoted with its source, and that no tag, publication
-or publication approval came from the agent.
+recorded as observed, and no tracked file changed beyond those merges. For a
+base change taken into several branches, it also confirms each branch's gate
+result is reported, and no branch with a failing gate or a hunk left to the
+user was pushed. For a release, it also confirms the delegation is quoted with
+its source, and that no tag, publication or publication approval came from the
+agent.

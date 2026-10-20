@@ -311,6 +311,39 @@ describe("a question answered without a change", () => {
     );
   });
 
+  // QFAI:AC-0001-0220-06
+  // QFAI:EX-0001-0220-59
+  it("takes one base change into several branches by merge, resolves only mechanical conflicts, and gates each branch", async () => {
+    const operate = await step("triage-operate");
+    const section = flat(sectionOf(operate, "## One base change taken into several branches"));
+    expect(section).toMatch(
+      /Take the base change into one branch at a time, by merge as the project's rules say, never by rebase\. Never force-push a branch/,
+    );
+    expect(section).toMatch(/Resolve a conflict without asking only where/);
+    expect(section).toMatch(/both sides made the identical change/);
+    expect(section).toMatch(/table rows conflict whose keys differ: keep both rows/);
+    expect(section).toMatch(
+      /an append-only list, such as changelog entries in different slots, conflicts: keep both entries/,
+    );
+    expect(section).toMatch(/a generated file conflicts: regenerate it with its own command/);
+    expect(section).toMatch(
+      /Stop on that branch, leave it unpushed and ask the user, naming the file and the hunk, for any other conflict, and always for/,
+    );
+    expect(section).toMatch(
+      /a hunk where both sides changed the same lines differently in code, specification or contract text/,
+    );
+    expect(section).toMatch(/a resolution that would drop either side's change/);
+    expect(section).toMatch(/a conflict in a file that names who owns it/);
+    expect(section).toMatch(
+      /After each merge, run the branch's gates through `common-gate-run`\. A branch whose gates fail is not pushed\. Each branch goes on independently of the others/,
+    );
+    expect(section).toMatch(/Report each branch's result/);
+    expect(operate).toMatch(/^requires: \[common-gate-run\]\r?$/m);
+    expect(flat(sectionOf(operate, "## Gate"))).toMatch(
+      /confirms each branch's gate result is reported, and no branch with a failing gate or a hunk left to the user was pushed/,
+    );
+  });
+
   // QFAI:AC-0001-0220-07
   // QFAI:EX-0001-0220-57
   it("carries out a release only on a quoted delegation, and never tags, publishes or approves it", async () => {

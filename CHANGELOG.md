@@ -115,6 +115,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the session answers. The `qfai-run` one-read shortcut says so, and the
   extraction reference adds an example of each. Fixes #3768.
 
+- **`triage-operate` has a rule for one base change taken into several
+  branches.** It merges the change into one branch at a time, never by rebase,
+  and never force-pushes. It resolves without asking only identical changes,
+  table rows whose keys differ, append-only entries such as changelog entries
+  in different slots, and generated files, which it regenerates with their own
+  command. Any other conflict, including one in code, specification or contract
+  text, one whose resolution would drop either side's change, or one in a file
+  that names its owner, stops that branch unpushed with the file and hunk named.
+  Each branch then runs its gates, is pushed only when they pass, and has its
+  own result in the report. Fixes #3848.
+
 - **`sdd-story` annotates an existing test with the example it proves.** Where
   an existing assertion already proves an example the step added or
   renumbered, `sdd-story` now adds that example's `// QFAI:EX-…` line before the
