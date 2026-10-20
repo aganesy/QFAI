@@ -30,6 +30,7 @@ import {
   citedRuleMastersOutsideCode,
   extractManagedRulesSection,
   hasUnclosedRulesSection,
+  keepProjectEntries,
   needsManagedRulesSection,
 } from "../../src/core/agentEntryPoints.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
@@ -1955,6 +1956,30 @@ describe("the Copilot file this run cannot extend", () => {
     });
   });
 
+  it("says --force rewrote a file it could not read whole", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      await writeFile(copilot, `# House instructions\n\n${"x".repeat(600 * 1024)}\n`, "utf-8");
+
+      const chunks: string[] = [];
+      const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+        chunks.push(String(chunk));
+        return true;
+      });
+      try {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      } finally {
+        spy.mockRestore();
+      }
+
+      expect(chunks.join("")).toContain(
+        "rewrote .github/copilot-instructions.md whole from the shipped text, because it could not be read",
+      );
+      expect(await readFile(copilot, "utf-8")).not.toContain("# House instructions");
+    });
+  });
+
   it("leaves the file to the wrapper regeneration under --force", async () => {
     await withProject(async (root) => {
       const master = ".agents/rules/grilling.md";
@@ -1978,8 +2003,65 @@ describe("the Copilot file this run cannot extend", () => {
       // The wrapper sync writes it whole from the same source, so a diagnostic
       // here would name a file this run goes on to replace.
       expect(chunks.join("")).not.toContain("carries no rule list");
-      expect(await readFile(copilot, "utf-8")).toContain(master);
+      const after = await readFile(copilot, "utf-8");
+      expect(after).toContain(master);
+      // The project's own heading is a section the shipped text does not have.
+      expect(after).toContain("# House instructions");
     });
+  });
+});
+
+describe("what a forced rewrite keeps of the Copilot file", () => {
+  const shipped = [
+    "# Shipped",
+    "",
+    "## Golden rules",
+    "",
+    "- Keep changes small.",
+    "",
+    CROSS_AI_RULES_HEADING,
+    "",
+    "- `.agents/rules/grilling.md` — interview the decision tree.",
+    "",
+  ].join("\n");
+
+  it("replaces a shipped master's bullet and names the project's wording", () => {
+    const existing = shipped.replace("interview the decision tree.", "ask first.");
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(shipped);
+    expect(result.removed).toEqual(["- `.agents/rules/grilling.md` — ask first."]);
+  });
+
+  it("keeps a project bullet and section, CRLF included, and names nothing", () => {
+    const existing =
+      `${shipped}- \`.agents/rules/house.md\` — our rule.\n\n## Notes\n\nOurs.\n`.replace(
+        /\n/g,
+        "\r\n",
+      );
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(
+      shipped.replace(
+        "interview the decision tree.\n",
+        "interview the decision tree.\n- `.agents/rules/house.md` — our rule.\n",
+      ) + "\n## Notes\n\nOurs.\n",
+    );
+    expect(result.removed).toEqual([]);
+  });
+
+  it("reads a heading or bullet inside a fence or a quote as neither", () => {
+    const existing = shipped.replace(
+      "- Keep changes small.\n",
+      "- Keep changes small.\n\n```markdown\n## Example\n```\n\n> ## Quoted\n",
+    );
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(shipped);
+    expect(result.removed).toEqual(["```markdown", "## Example", "```", "> ## Quoted"]);
   });
 });
 
