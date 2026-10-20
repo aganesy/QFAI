@@ -30,6 +30,7 @@ import {
   citedRuleMastersOutsideCode,
   extractManagedRulesSection,
   hasUnclosedRulesSection,
+  keepProjectEntries,
   needsManagedRulesSection,
 } from "../../src/core/agentEntryPoints.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
@@ -1978,8 +1979,65 @@ describe("the Copilot file this run cannot extend", () => {
       // The wrapper sync writes it whole from the same source, so a diagnostic
       // here would name a file this run goes on to replace.
       expect(chunks.join("")).not.toContain("carries no rule list");
-      expect(await readFile(copilot, "utf-8")).toContain(master);
+      const after = await readFile(copilot, "utf-8");
+      expect(after).toContain(master);
+      // The project's own heading is a section the shipped text does not have.
+      expect(after).toContain("# House instructions");
     });
+  });
+});
+
+describe("what a forced rewrite keeps of the Copilot file", () => {
+  const shipped = [
+    "# Shipped",
+    "",
+    "## Golden rules",
+    "",
+    "- Keep changes small.",
+    "",
+    CROSS_AI_RULES_HEADING,
+    "",
+    "- `.agents/rules/grilling.md` — interview the decision tree.",
+    "",
+  ].join("\n");
+
+  it("replaces a shipped master's bullet and names the project's wording", () => {
+    const existing = shipped.replace("interview the decision tree.", "ask first.");
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(shipped);
+    expect(result.removed).toEqual(["- `.agents/rules/grilling.md` — ask first."]);
+  });
+
+  it("keeps a project bullet and section, CRLF included, and names nothing", () => {
+    const existing =
+      `${shipped}- \`.agents/rules/house.md\` — our rule.\n\n## Notes\n\nOurs.\n`.replace(
+        /\n/g,
+        "\r\n",
+      );
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(
+      shipped.replace(
+        "interview the decision tree.\n",
+        "interview the decision tree.\n- `.agents/rules/house.md` — our rule.\n",
+      ) + "\n## Notes\n\nOurs.\n",
+    );
+    expect(result.removed).toEqual([]);
+  });
+
+  it("reads a heading or bullet inside a fence or a quote as neither", () => {
+    const existing = shipped.replace(
+      "- Keep changes small.\n",
+      "- Keep changes small.\n\n```markdown\n## Example\n```\n\n> ## Quoted\n",
+    );
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(shipped);
+    expect(result.removed).toEqual(["```markdown", "## Example", "```", "> ## Quoted"]);
   });
 });
 

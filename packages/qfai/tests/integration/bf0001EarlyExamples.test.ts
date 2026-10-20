@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../helpers/legacyInit.js";
 import { classifyRecordRow, parseRecordTable } from "../../src/core/storyTree/tables.js";
@@ -193,4 +193,80 @@ describe("BF-0001 init preserves project content", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // QFAI:AC-0001-0029-04
+  // QFAI:EX-0001-0029-04
+  it("keeps the project's rule-list entries and sections when --force rewrites the Copilot file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-copilot-force-"));
+    try {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const shipped = await readFile(copilot, "utf8");
+      const ownRule = [
+        "- `.agents/rules/house-style.md` — read when you write prose: follow the house style.",
+        "  It also covers commit messages.",
+      ].join("\n");
+      const ownSection = ["## Project notes", "", "Deploy from the main branch only."].join("\n");
+      const lastShippedBullet = shipped
+        .split("\n")
+        .filter((line) => line.startsWith("- `.agents/rules/"))
+        .at(-1);
+      if (lastShippedBullet === undefined) throw new Error("the shipped file has no rule bullet");
+      const withRule = shipped.replace(
+        `${lastShippedBullet}\n`,
+        `${lastShippedBullet}\n${ownRule}\n`,
+      );
+      await writeFile(copilot, `${withRule}\n${ownSection}\n`, "utf8");
+
+      const stderr = await captureStderr(() =>
+        captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true })),
+      );
+
+      const after = await readFile(copilot, "utf8");
+      expect(after.startsWith(withRule)).toBe(true);
+      expect(after).toContain(ownSection);
+      expect(stderr).not.toContain("copilot-instructions.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0029-05
+  it("names each line --force changed or removed in the Copilot file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-copilot-removed-"));
+    try {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const shipped = await readFile(copilot, "utf8");
+      const shippedLine = "- Always match the user's language in your outputs.";
+      const editedLine = "- Always answer in English.";
+      expect(shipped).toContain(shippedLine);
+      await writeFile(copilot, shipped.replace(shippedLine, editedLine), "utf8");
+
+      const stderr = await captureStderr(() =>
+        captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true })),
+      );
+
+      expect(await readFile(copilot, "utf8")).toBe(shipped);
+      expect(stderr).toContain(".github/copilot-instructions.md");
+      expect(stderr).toContain(editedLine);
+      expect(stderr).not.toContain(shippedLine);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
+
+async function captureStderr(task: () => Promise<unknown>): Promise<string> {
+  const chunks: string[] = [];
+  const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+    chunks.push(String(chunk));
+    return true;
+  });
+  try {
+    await task();
+  } finally {
+    spy.mockRestore();
+  }
+  return chunks.join("");
+}
