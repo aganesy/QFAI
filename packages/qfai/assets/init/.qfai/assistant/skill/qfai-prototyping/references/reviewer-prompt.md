@@ -55,7 +55,8 @@ transition-pass percentages as a substitute for the qualitative review.
   input you did not receive in a finding.
 - The layout anti-pattern registry the package ships.
 - Prior reviews: `iter-(NN-1)/review.json`, `iter-(NN-2)/review.json`
-  (when present)
+  (when present), from this run only: the run's first iteration, the first
+  after `progress.md` records its `runScope`, has none.
 - Progress log: `.qfai/prototype/progress.md`
 - Root `DESIGN.md` (read-only context: `# Brand Philosophy`,
   `audience.emotion`, `audience.do_not_look_like`).
@@ -159,7 +160,7 @@ screen-independent violation is recorded.
 Score `informationArchitecture`, `navigationFlow`, `usability`, and
 `functionality` on the `weak` → `acceptable` → `strong` → `exceptional` scale.
 The four scores belong to the per-iteration summary and cover the live review of
-all declared screens. They do not replace the six bounded qualitative
+all declared screens or, in a scoped run, of the pairs it reviews. They do not replace the six bounded qualitative
 `impressions.*Feel` fields or actionable `blockingFindings` on each closed
 per-screen payload. The user reads the scores and every finding before
 confirming the prototype, so do not inflate a score: a favorable score that

@@ -68,11 +68,11 @@ The run covers the whole product, and the session report says so, when:
 
 - the record has no `## Run scope`, or an empty one;
 - `.qfai/prototype/final/index.html` is missing, or `final/handoff.json` is
-  missing or lacks `finalArtifact` and `procurement`, as the restyle short
+  missing or lacks `finalArtifact` or `procurement`, as the restyle short
   form does;
 - the run is a `restyle` loop.
 
-Write no `## Run scope` in the last two cases.
+Write no `## Run scope` in any of these cases.
 
 Check the earlier `final/` against every declared screen outside the scope: it
 needs a route in `final/index.html` and a `procurement` row. Add each screen

@@ -91,12 +91,17 @@ before iteration 00.
 
 ## Run scope
 
-When `grilling.md` has a `## Run scope`, record `runScope` in `progress.md`
-beside `iterationKind`, with three lists: the in-scope screens, the in-scope
+Each run records `runScope` in `progress.md` afresh, beside `iterationKind`,
+before its first iteration, overwriting any earlier one. When `grilling.md`
+has a non-empty `## Run scope`, it holds three lists: the in-scope screens, the in-scope
 components, and the render-check screens, each the other screen that renders
 an in-scope component, named `<ui-contract-id>/<screen>` with that component.
 Find them in the `final/handoff.json` `procurement` rows and in
-`final/index.html`.
+`final/index.html`. Otherwise `runScope` is recorded as absent.
+
+The run's first iteration is the first one after that record. It treats no
+earlier run's review or confirmation as its prior review or the user's last
+answer: those start with this run.
 
 - The run's first iteration starts from a copy of `final/index.html`. Each
   later one builds on the previous iteration, whose out-of-scope parts are
@@ -105,7 +110,7 @@ Find them in the `final/handoff.json` `procurement` rows and in
 - The reviewer reviews the in-scope screens in full and, on a render-check
   screen, only that the component renders there. No other screen is opened.
 
-With no `## Run scope`, every screen is in scope and nothing here applies.
+With `runScope` absent, every screen is in scope and nothing here applies.
 
 ## Procedure
 
@@ -114,8 +119,8 @@ under `.qfai/prototype/`, or `00` when there are none.
 
 1. **Generator** (product-experience-architect). Reads the contracts,
    `.qfai/prototype/grilling.md`, the generator prompt, the `DESIGN.md` tokens
-   and, from the second iteration on, the latest reviews and the user's last
-   answer. In a scoped run it also reads `runScope` in `progress.md` and
+   and, from the run's second iteration on, this run's latest reviews and the
+   user's last answer. In a scoped run it also reads `runScope` in `progress.md` and
    `.qfai/prototype/final/index.html`, every iteration. It starts from the
    primary UI contract preflight resolved: the one the request names, else
    `prototyping.primaryUiContract`. Writes
@@ -183,7 +188,8 @@ confirmation.
 
 - The live prototype, opened in the reviewer's own Playwright session.
 - Root `DESIGN.md` (read-only), `axisDefs`, `previousScore` and
-  `designSystemChecklist`.
+  `designSystemChecklist`. `previousScore` and the prior reviews come from
+  this run's own iterations; the run's first iteration has none.
 - The prior `review.json` files and `progress.md`.
 - The layout anti-pattern registry the package ships.
 - `.qfai/prototype/grilling.md` — what the prototype is for, what counts as

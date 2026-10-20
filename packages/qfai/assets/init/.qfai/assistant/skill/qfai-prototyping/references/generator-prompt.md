@@ -33,11 +33,13 @@ identity.
    makes it answerable and leave it open — treating it as a settled constraint
    decides on the user's behalf the one kind of question this loop exists to
    return to them.
-5. From the second iteration on: the user's last answer,
+5. From the run's second iteration on: the user's last answer in this run,
    `iter-(NN-1)/review.json` (critique, scores,
    `layoutAntiPatternsDetected`, `designMdViolations`,
    `pivotDirective`), `iter-(NN-2)/review.json` when present, and
-   `progress.md`.
+   `progress.md`. A review or confirmation from an earlier run is not one of
+   them: the run's first iteration is the first after `progress.md` records
+   its `runScope`, present or absent.
 6. In a scoped run, every iteration: `runScope` in `progress.md` and
    `.qfai/prototype/final/index.html`.
 

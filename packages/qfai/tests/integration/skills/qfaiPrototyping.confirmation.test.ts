@@ -173,7 +173,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(grill).toContain("a `## Run scope` an earlier run left does not carry over.");
     expect(grill).toContain("the record has no `## Run scope`, or an empty one;");
     expect(grill).toContain(
-      "`final/handoff.json` is missing or lacks `finalArtifact` and `procurement`, as the restyle short form does;",
+      "`final/handoff.json` is missing or lacks `finalArtifact` or `procurement`, as the restyle short form does;",
     );
     expect(grill).toContain(
       "Check the earlier `final/` against every declared screen outside the scope: it needs a route in `final/index.html` and a `procurement` row.",
@@ -184,12 +184,32 @@ describe.each(TREES)("%s", (tree) => {
     expect(grill).toContain("no session narrows it");
     expect(grill).not.toContain("which UI contracts the confirmed prototype covers");
     expect(loop).toContain(
-      "with three lists: the in-scope screens, the in-scope components, and the render-check screens, each the other screen that renders an in-scope component, named `<ui-contract-id>/<screen>` with that component.",
+      "it holds three lists: the in-scope screens, the in-scope components, and the render-check screens, each the other screen that renders an in-scope component, named `<ui-contract-id>/<screen>` with that component.",
     );
     expect(loop).toContain(
       "The run's first iteration starts from a copy of `final/index.html`. Each later one builds on the previous iteration, whose out-of-scope parts are still `final/`'s.",
     );
     expect(loop).toContain("a `pivot` applies only inside the scope.");
+    expect(loop).toContain(
+      "Each run records `runScope` in `progress.md` afresh, beside `iterationKind`, before its first iteration, overwriting any earlier one.",
+    );
+    expect(loop).toContain("Otherwise `runScope` is recorded as absent.");
+    expect(loop).toContain(
+      "The run's first iteration is the first one after that record. It treats no earlier run's review or confirmation as its prior review or the user's last answer: those start with this run.",
+    );
+    expect(flat(await read(tree, "step/prototyping-loop/STEP.md"))).toContain(
+      "`previousScore` and the prior reviews come from this run's own iterations; the run's first iteration has none.",
+    );
+    expect(generator).toContain(
+      "A review or confirmation from an earlier run is not one of them: the run's first iteration is the first after `progress.md` records its `runScope`, present or absent.",
+    );
+    expect(reviewer).toContain(
+      "from this run only: the run's first iteration, the first after `progress.md` records its `runScope`, has none.",
+    );
+    expect(reviewer).toContain(
+      "cover the live review of all declared screens or, in a scoped run, of the pairs it reviews.",
+    );
+    expect(grill).toContain("Write no `## Run scope` in any of these cases.");
     expect(flat(await read(tree, "step/prototyping-loop/STEP.md"))).toContain(
       "In a scoped run it also reads `runScope` in `progress.md` and `.qfai/prototype/final/index.html`, every iteration.",
     );
