@@ -68,7 +68,8 @@ it is the release notes adopters read before they upgrade.
     reviews it instead and reports no P0 or P1 findings.
 - A permission holder merges the PR by hand with a merge commit, or an agent
   the user delegated the release to does, as
-  `.agents/rules/version-discipline.local.md` says. Do not enable GitHub
+  `.agents/rules/version-discipline.local.md` says. In Claude Code, `gh pr merge`
+  of a `release/` pull request asks a person first. Do not enable GitHub
   auto-merge. On the automated path, Tag release commit pushes the tag. It does
   not tag a merge from `feature/vX.Y.Z`, so on the manual path a permission
   holder pushes the tag by hand (step 4 of the manual procedure)
