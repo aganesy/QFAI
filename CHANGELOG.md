@@ -733,6 +733,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `open-questions.md` are no longer read by the check; the policy,
   business-flow and contract trees still are. Fixes #3756. Fixes #3910.
 
+- **`qfai validate --profile verify` and `--profile full` report each
+  discussion-pack finding once.** Every research-summary finding and every
+  canonical UI finding (`QFAI-RESEARCH-*`, `QFAI-TREND-*`, `QFAI-THREELAYER-*`,
+  `QFAI-CLASSIFICATION-*`) appeared twice in both profiles and counted twice,
+  and so did the root `DESIGN.md` findings `QFAI-DCON-030` and
+  `QFAI-DCON-034`, with `QFAI-DCON-033` three times. Each is now reported once. A pack that declares
+  `design_direction: inherit` still has its Research Summary checked: the
+  research-first protocol applies to every pack, so `QFAI-RESEARCH-004` to
+  `006`, `010`, `018`, `019` and `021` keep reporting an unfilled summary, and
+  the UI-bearing playbook now says so. Fixes #3890.
+
 - **A restyle prototype is no longer offered a scope that stops before
   implementation.** A restyle edits the project's live stylesheet and motion
   files during the prototype stage, and only the implement stage carries those
