@@ -4,6 +4,7 @@ import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
 import { runInit } from "./commands/init.js";
 import { runReport } from "./commands/report.js";
+import { runSddMergeDocsCommand } from "./commands/sddMergeDocs.js";
 import { runSddNextIdCommand } from "./commands/sddNextId.js";
 import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runSddRenumberDecisionCommand } from "./commands/sddRenumberDecision.js";
@@ -250,7 +251,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       {
         if (!options.sddAction) {
           error(
-            "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision|next-id",
+            "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision|next-id|merge-docs",
           );
           info(usage());
           process.exitCode = options.invalidExitCode;
@@ -270,6 +271,10 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
             ...(options.sddIdParent !== undefined ? { parent: options.sddIdParent } : {}),
             base,
           });
+          return;
+        }
+        if (options.sddAction === "merge-docs") {
+          process.exitCode = await runSddMergeDocsCommand({ root: await resolveRoot(options) });
           return;
         }
         if (options.sddAction === "renumber-decision") {
@@ -416,6 +421,7 @@ Commands:
   sdd preflight --import <path> Use an imported specification as the source when no discussion pack exists
   sdd renumber-decision --from <DEC-ID> --to <DEC-ID> --base <local-ref> [--apply]  Preview or apply a branch-added decision's renumbering
   sdd next-id <kind> [<parent-ID>] --base <local-ref>  Print the next free ID of a kind (BF|US|AC|EX|BR|DEC|OQ) across the base and the working tree; a US takes its BF, an AC or EX its US, a BR its contract
+  sdd merge-docs               Merge each conflicted story-tree document from the index by table row and sentence, leave what it cannot settle between conflict markers, and check the result's document schema
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
   workflow plan                Print the route plan for a request extraction (--in <path|->), a route (--route <route>), or an operation on finished work (--order)

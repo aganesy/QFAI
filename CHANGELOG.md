@@ -223,6 +223,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   kept and the reason named.
   Fixes #3670.
 
+- **`qfai sdd merge-docs` merges conflicted story-tree documents by row and
+  sentence.** Story tables and contract statements keep each row on one line,
+  so two edits to different sentences of one row conflicted as a whole line.
+  The new command takes each document Git holds as unmerged under the specs
+  directory, merges its base, ours and theirs versions from the index row by
+  row (keyed by the first cell) and sentence by sentence, and writes the
+  result. Rows both sides appended are both kept. What it cannot settle stays
+  between standard conflict markers, and the command exits 1. It then runs the
+  document-schema check on the merged documents, so a stray line break inside
+  a row is reported before the result is staged. It works after a merge GitHub
+  reported as conflicting too, because it runs after the merge rather than as a
+  merge driver. Fixes #3651.
+
 - **`qfai-implement` ships optional Playwright and Vitest recipes.** A new
   test runner recipes reference puts the worker session-reuse rules into code:
   a Vitest session cache keyed by the run's private directory, the pool slot

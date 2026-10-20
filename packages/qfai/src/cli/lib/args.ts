@@ -74,7 +74,7 @@ export type ParsedArgs = {
     /** Positional `<id>` for `qfai discussion use <id>`. */
     discussionId?: string;
     /** Subcommand for `qfai sdd`. */
-    sddAction?: "preflight" | "renumber-decision" | "next-id";
+    sddAction?: "preflight" | "renumber-decision" | "next-id" | "merge-docs";
     /** Positional `<kind>` for `qfai sdd next-id`. */
     sddIdKind?: StoryTreeIdKind;
     /** Positional `<parent-ID>` for `qfai sdd next-id`: the BF of a US, the US of an AC or EX, the contract of a BR. */
@@ -254,7 +254,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (
         candidate === "preflight" ||
         candidate === "renumber-decision" ||
-        candidate === "next-id"
+        candidate === "next-id" ||
+        candidate === "merge-docs"
       ) {
         options.sddAction = candidate;
       } else {
@@ -777,7 +778,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
             );
         } else if (
           (command === "workflow" ||
-            (command === "sdd" && options.sddAction === "renumber-decision")) &&
+            (command === "sdd" &&
+              (options.sddAction === "renumber-decision" || options.sddAction === "merge-docs"))) &&
           arg !== undefined
         ) {
           // These subcommands take no positional arguments.
@@ -845,7 +847,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["discussion", "list|use"],
   ["atdd", "scaffold"],
-  ["sdd", "preflight|renumber-decision|next-id"],
+  ["sdd", "preflight|renumber-decision|next-id|merge-docs"],
   ["workflow", WORKFLOW_OPERATIONS.join("|")],
 ]);
 
