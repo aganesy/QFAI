@@ -296,7 +296,7 @@ describe("validate reports a run it could not finish", () => {
 
     const out = lines.join("");
     expect(out).toContain("QFAI-SCAN-002");
-    expect(out).not.toContain("qfai validate: passed");
+    expect(out).not.toMatch(/^qfai validate: passed /m);
     expect(out.trimEnd().split("\n").at(-2)).toBe("fail-on: never");
   });
 

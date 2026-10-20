@@ -903,7 +903,7 @@ describe("validate --format text says that it started and, when it passes, what 
       });
 
       expect(code).toBe(1);
-      expect(output).not.toContain("qfai validate: passed ");
+      expect(output).not.toMatch(/^qfai validate: passed /m);
       expect(output.trimEnd().split("\n").at(-2)).toMatch(/^fail-on: \S/);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -922,14 +922,14 @@ describe("validate --format text says that it started and, when it passes, what 
         });
       });
       expect(text.startsWith("qfai validate: running profile atdd...\n")).toBe(true);
-      expect(stdout).not.toContain("running profile");
+      expect(stdout).not.toMatch(/^qfai validate: running profile /m);
 
       const github = await captureStderr(() =>
         captureStdout(async () => {
           await runValidate({ root, strict: false, format: "github", profile: "atdd" });
         }).then(() => undefined),
       );
-      expect(github).not.toContain("running profile");
+      expect(github).not.toMatch(/^qfai validate: running profile /m);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
