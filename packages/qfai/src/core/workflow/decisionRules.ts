@@ -232,6 +232,13 @@ export const DECISION_RULES: readonly DecisionRule[] = [
       (input) => is("behaviour-change")(input) && qualified(input, "removal-requested"),
       "retire-feature",
     ),
+    // A rename of a concept across the specification, code and tests changes names only: it
+    // renames the specification, then the code and tests to match, adding no test.
+    clause(
+      (input) =>
+        is("behaviour-change", "refactor", "docs")(input) && qualified(input, "rename-requested"),
+      "rename-concept",
+    ),
     clause(is("deprecation", "behaviour-change"), "change-compatibility"),
     clause((input) => is("feature")(input) && qualified(input, "visual-open"), "prototype-feature"),
     clause(is("feature"), "add-feature"),
