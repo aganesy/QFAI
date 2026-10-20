@@ -253,6 +253,9 @@ it("A chosen candidate's plan, named with its extraction, holds the specificatio
   const shown = list(field(named.json, "stages")).map((stage) => String(field(stage, "id")));
   const bare = workflow(root, ["plan", "--route", "change-tooling"]);
   const refused = workflow(root, ["plan", "--route", "edit-text", "--in", file]);
+  const partial = await writeJson(root, "tmp/partial.json", { intent: "ci" });
+  const malformed = workflow(root, ["plan", "--route", "change-tooling", "--in", partial]);
+  const malformedReasons = list(field(malformed.json, "reasons"));
 
   expect({
     candidates: candidates.map((each) => [
@@ -263,6 +266,11 @@ it("A chosen candidate's plan, named with its extraction, holds the specificatio
     named: [named.status, shown, field(named.json, "decisionPoints"), field(named.json, "rule")],
     bare: list(field(bare.json, "stages")).map((stage) => String(field(stage, "id"))),
     refused: [refused.status, field(refused.json, "reasons")],
+    malformed: [
+      malformed.status,
+      malformedReasons.length > 0,
+      [...new Set(malformedReasons.map((each) => field(each, "reason")))],
+    ],
   }).toEqual({
     candidates: [
       ["change-tooling", true, ["sdd-triage"]],
@@ -277,6 +285,7 @@ it("A chosen candidate's plan, named with its extraction, holds the specificatio
         { reason: "artifact-unserved", subject: "ci" },
       ],
     ],
+    malformed: [2, true, ["schema"]],
   });
 });
 
