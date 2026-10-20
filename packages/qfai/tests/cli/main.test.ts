@@ -287,6 +287,7 @@ describe("cli usage errors", () => {
     expect(stderr).toMatch(/may come from a different qfai version/);
   }
 
+  // QFAI:EX-0001-0222-20
   it("identifies the running installation when a top-level command is unknown", async () => {
     const { stdout, stderr, exitCode } = await captureRun(["bogus"]);
 
