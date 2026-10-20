@@ -48,7 +48,7 @@ describe("decision row identity", () => {
         " ",
       );
       expect(triage, tree).toContain(
-        "The merge target's item keeps the ID. Renumber the incoming item",
+        "The base's item keeps the ID, whichever way the merge runs. Renumber the incoming item",
       );
       expect(triage, tree).toContain(
         "A renumbered BF or US takes its child IDs and its directory names with it",

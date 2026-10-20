@@ -33,7 +33,7 @@ Feature: Unified SDD Workflow
   Scenario: IDs Are The Highest In Their Scope Plus One
     Given the story tree,
     When `/qfai-sdd` allocates a BF, US, AC, EX, BR, DEC or OQ ID,
-    Then the ID is the highest number its scope already names plus one. An empty scope starts at `0001`, or at `01` for the AC and EX tail. An ID whose item was retired is never reissued, and a new flow or story directory is named after its ID.
+    Then the ID is the highest number its scope already names plus one, counting the IDs the base and, where a forge CLI lists them, the open pull requests' heads add. An empty scope starts at `0001`, or at `01` for the AC and EX tail. An ID whose item was retired is never reissued, and a new flow or story directory is named after its ID.
 
   # AC-0001-0147-06
   Scenario: Business Rules Are Written Inside Contracts
