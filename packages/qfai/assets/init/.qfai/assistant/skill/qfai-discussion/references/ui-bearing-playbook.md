@@ -79,7 +79,8 @@ no minimum count of competitive or catalogue references, and no
 `uiux/40_screen_contracts.md` or `uiux/50_review_input_bundle.md`. A reference
 or screen contract it does write is still checked. An existing screen is one
 whose `screen_id` equals the `screens[].id` of a UI contract under
-`<paths.contractsDir>/ui/`.
+`<paths.contractsDir>/ui/`. The declaration waives nothing in the Research
+Summary of `04_Sources.md`: the research-first protocol runs for every pack.
 
 The declaration is not allowed when the pack adds a screen or changes the
 design direction. `npx qfai validate` reports `QFAI-CLASSIFICATION-011` when the
