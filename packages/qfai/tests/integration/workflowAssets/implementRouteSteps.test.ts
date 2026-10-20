@@ -214,19 +214,25 @@ describe("the steps the routes add to qfai-implement", () => {
     expect(retiring).toMatch(/no test is added, neither for the removal nor for the new wording/i);
   });
 
-  // QFAI:AC-0001-0225-02
-  // QFAI:EX-0001-0225-23
-  it("has the writer and the code review read the body of a test an annotation moves onto", async () => {
+  // QFAI:AC-0001-0220-04
+  // QFAI:EX-0001-0220-62
+  it("has implement-retire read a kept test's body before it moves the test's annotation", async () => {
     const retiring = flat(sectionOf(await stepText("implement-retire"), "## Retiring a feature"));
     expect(retiring).toMatch(
-      /before it moves an annotation, it reads the receiving test's body and confirms that it asserts the example's observable outcome/i,
+      /before it moves an annotation, it reads the test's body and confirms that it asserts the rewritten example's observable outcome/i,
     );
+  });
 
+  // QFAI:AC-0001-0225-02
+  // QFAI:EX-0001-0225-23
+  it("has the code review read the body of a test whose annotation the change adds, moves or copies", async () => {
     const reviewer = flat(await readShipped("agent/implementation-reviewer.md"));
     expect(reviewer).toMatch(
-      /when the change adds, moves or copies an AC or EX annotation, read the annotated test's body and confirm that it asserts the example's observable outcome/i,
+      /when the change adds, moves or copies an AC or EX annotation, read the annotated test's body and confirm that it asserts the example's observable outcome, or for an AC annotation that it asserts the criterion/i,
     );
-    expect(reviewer).toMatch(/an annotation on a test that checks something else is a finding/i);
+    expect(reviewer).toMatch(
+      /an annotation on a test that checks something else is a finding and traces to `defect:correctness`/i,
+    );
   });
 });
 

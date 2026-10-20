@@ -294,8 +294,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The code review reads the body of a test an annotation moves onto.** When a
   change adds, moves or copies an AC or EX annotation, `implementation-reviewer`
   now reads the annotated test's body and reports an annotation on a test that
-  checks something else as a finding, and `implement-retire` confirms a
-  receiving test asserts the example before it moves an annotation there.
+  checks something else as a finding, and `implement-retire` reads a kept
+  test's body and confirms that it asserts the rewritten example before it
+  moves the test's annotation there.
   `npx qfai validate` still counts an annotation as coverage wherever it sits.
   Fixes #3944.
 

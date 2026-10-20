@@ -60,8 +60,9 @@ specialization_tags:
   This is the one reach beyond the touched files, and it covers only the inputs the change handles.
   A security finding the review demonstrates traces to `defect:security`.
 - Check the EX test's oracle, selector and RED/GREEN/Refactor evidence.
-- When the change adds, moves or copies an AC or EX annotation, read the annotated test's body and confirm that it asserts the example's observable outcome.
-  An annotation on a test that checks something else is a finding.
+- When the change adds, moves or copies an AC or EX annotation, read the annotated test's body and confirm that it asserts the example's observable outcome,
+  or for an AC annotation that it asserts the criterion.
+  An annotation on a test that checks something else is a finding and traces to `defect:correctness`.
 - Check for code written only to pass a test: no value hard-coded to the test's
   inputs and no branch written only for the test, and a wrong test or infeasible
   task raised as a Change Request, not worked around
