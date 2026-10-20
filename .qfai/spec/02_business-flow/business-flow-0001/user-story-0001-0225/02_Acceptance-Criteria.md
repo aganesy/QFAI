@@ -73,6 +73,7 @@ Feature: Review a change twice: the specification before the code, and the code 
     Given an extraction whose artifacts include `spec` or `contract`, planned on a route with a stage that writes and no stage marked for the specification review
     When the plan is made
     Then the plan holds a specification stage marked for the specification review, whatever the request's intent family
+    And a low-confidence request's candidates hold that stage, and so does the plan of the chosen one when it is named with the same extraction
     And a request that names neither keeps the route's stages as they are
     And the plan of a private security report, and of a merge that only resolves conflicts, keeps its stages
 ```

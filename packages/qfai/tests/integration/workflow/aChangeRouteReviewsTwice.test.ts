@@ -233,29 +233,60 @@ it("A security intake, a conflict resolution, a route that writes nothing and a 
     "tests",
     "spec",
   ]);
+});
 
-  const candidates = list(
-    field(
-      await planJson(
-        extraction({
-          intent: "ci",
-          artifacts: ["spec", "ci"],
-          confidence: "low",
-          alternatives: [{ intent: "refactor", entryFlags: [], qualifiers: [], signals: [] }],
-        }),
-      ),
-      "candidates",
-    ),
+// QFAI:EX-0001-0225-24
+it("A chosen candidate's plan, named with its extraction, holds the specification stage its scopes list", async () => {
+  const root = await minimalProject();
+  const file = await writeJson(
+    root,
+    "tmp/request.json",
+    extraction({
+      intent: "ci",
+      artifacts: ["spec", "ci"],
+      confidence: "low",
+      alternatives: [{ intent: "refactor", entryFlags: [], qualifiers: [], signals: [] }],
+    }),
   );
-  expect(
-    candidates.map((each) => [
+  const candidates = list(field(workflow(root, ["plan", "--in", file]).json, "candidates"));
+  const named = workflow(root, ["plan", "--route", "change-tooling", "--in", file]);
+  const shown = list(field(named.json, "stages")).map((stage) => String(field(stage, "id")));
+  const bare = workflow(root, ["plan", "--route", "change-tooling"]);
+  const refused = workflow(root, ["plan", "--route", "edit-text", "--in", file]);
+  const partial = await writeJson(root, "tmp/partial.json", { intent: "ci" });
+  const malformed = workflow(root, ["plan", "--route", "change-tooling", "--in", partial]);
+  const malformedReasons = list(field(malformed.json, "reasons"));
+
+  expect({
+    candidates: candidates.map((each) => [
       field(each, "route"),
       list(field(each, "scopes")).some((scope) => list(field(scope, "stages")).includes("spec")),
+      field(each, "decisionPoints"),
     ]),
-  ).toEqual([
-    ["change-tooling", false],
-    ["refactor-code", false],
-  ]);
+    named: [named.status, shown, field(named.json, "decisionPoints"), field(named.json, "rule")],
+    bare: list(field(bare.json, "stages")).map((stage) => String(field(stage, "id"))),
+    refused: [refused.status, field(refused.json, "reasons")],
+    malformed: [
+      malformed.status,
+      malformedReasons.length > 0,
+      [...new Set(malformedReasons.map((each) => field(each, "reason")))],
+    ],
+  }).toEqual({
+    candidates: [
+      ["change-tooling", true, ["sdd-triage"]],
+      ["refactor-code", true, ["sdd-triage"]],
+    ],
+    named: [0, ["spec", "edit", "note", "verify"], ["sdd-triage"], undefined],
+    bare: ["edit", "note", "verify"],
+    refused: [
+      2,
+      [
+        { reason: "artifact-unserved", subject: "spec" },
+        { reason: "artifact-unserved", subject: "ci" },
+      ],
+    ],
+    malformed: [2, true, ["schema"]],
+  });
 });
 
 // QFAI:EX-0001-0225-01

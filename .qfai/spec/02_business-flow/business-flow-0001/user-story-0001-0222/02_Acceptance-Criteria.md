@@ -25,7 +25,7 @@ Feature: Plan a request's route with one command
 
   # AC-0001-0222-04
   Scenario: Invalid input is refused
-    Given an invalid extraction, an unknown route, an unknown operation, or not exactly one of `--in`, `--route` and `--order`
+    Given an invalid extraction, an unknown route, an unknown operation, or not one of `--in`, `--route` and `--order`, `--route` with `--in` aside
     When the command runs
     Then it exits 2 with one JSON document holding `ok: false` and the reasons
     And it writes nothing
@@ -41,7 +41,7 @@ Feature: Plan a request's route with one command
   Scenario: The session asks which candidate route to take
     Given candidate routes that `plan` returned
     When the session handles them
-    Then it puts one single-select question, each option saying in plain words what that route will do, and plans the chosen route with `--route`
+    Then it puts one single-select question, each option saying in plain words what that route will do, and plans the chosen route with `--route` and the same `--in`
     And under a no-question mode it takes the first candidate and the final report lists the choice as an assumption
 
   # AC-0001-0222-07

@@ -161,13 +161,13 @@ it("An operation other than plan is refused, naming it", async () => {
 });
 
 // QFAI:EX-0001-0222-08
-it("Both inputs, or neither, are refused", async () => {
+it("All three inputs, or none, are refused", async () => {
   const { root, file } = await withRequest();
-  const both = workflow(root, ["plan", "--in", file, "--route", "add-feature"]);
+  const all = workflow(root, ["plan", "--in", file, "--route", "add-feature", "--order"]);
   const neither = workflow(root, ["plan"]);
 
   expect(
-    [both, neither].map((run) => [
+    [all, neither].map((run) => [
       run.status,
       field(run.json, "ok"),
       field(run.json, "reasons.0.reason"),

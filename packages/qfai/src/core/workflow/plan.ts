@@ -74,7 +74,8 @@ export type PlanDocument =
   | { ok: true; candidates: PlanCandidate[] }
   | { ok: false; message: string; reasons: PlanReasonEntry[] };
 
-export type PlanInput = { extraction: unknown } | { route: string };
+// A named route may come with the extraction whose candidate it is, for its artifacts.
+export type PlanInput = { extraction: unknown } | { route: string; extraction?: unknown };
 
 const FAMILY_SUMMARIES: Record<string, string> = {
   close: "Close the request without a change.",
@@ -180,15 +181,16 @@ async function candidatesOf(
     // A candidate that cannot serve the request is not an option.
     if (unservedArtifacts(stages, artifacts).length > 0) continue;
     const decisionPoints = decisionPointsOf(load.plan, choice.decision);
-    const summary = `${FAMILY_SUMMARIES[family] ?? "Run this plan."} Stages: ${stages.map((stage) => stage.id).join(", ")}.`;
+    const plan = withSpecStage({ ...load.plan, decisionPoints }, artifacts);
+    const summary = `${FAMILY_SUMMARIES[family] ?? "Run this plan."} Stages: ${plan.stages.map((stage) => stage.id).join(", ")}.`;
     candidates.push({
       route: choice.route,
       family,
       rule: choice.rule,
       summary,
       recommended: choice.route === recommended,
-      scopes: scopesOf(stages, artifacts, choice.restyle),
-      decisionPoints,
+      scopes: scopesOf(plan.stages, artifacts, choice.restyle),
+      decisionPoints: plan.decisionPoints,
     });
   }
   if (candidates.length === 0) return unservedRefusal(artifacts);
@@ -203,19 +205,21 @@ async function candidatesOf(
   };
 }
 
+function schemaRefusal(extraction: unknown): PlanDocument {
+  const message =
+    "The extraction does not match its schema, so fix each named field as its cause says.";
+  return refusal(
+    message,
+    extractionFaultsOf(extraction).map(({ subject, cause }) => ({
+      reason: "schema",
+      subject,
+      cause,
+    })),
+  );
+}
+
 async function planOfExtraction(root: string, extraction: unknown): Promise<PlanDocument> {
-  if (!isExtraction(extraction)) {
-    const message =
-      "The extraction does not match its schema, so fix each named field as its cause says.";
-    return refusal(
-      message,
-      extractionFaultsOf(extraction).map(({ subject, cause }) => ({
-        reason: "schema",
-        subject,
-        cause,
-      })),
-    );
-  }
+  if (!isExtraction(extraction)) return schemaRefusal(extraction);
   const outcome = routingOutcome(extraction);
   const { artifacts } = extraction;
   if ("candidates" in outcome) {
@@ -224,8 +228,7 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
   const load = await loaded(root, outcome.taken.route);
   if (!load.ok) return load.document;
   // The route alone decides what is served and where the `decision` flag stops the work; the
-  // specification stage comes after. A chosen candidate is planned by `--route`, which knows no
-  // artifacts, so only a plan taken here gains that stage.
+  // specification stage comes after.
   const unserved = unservedArtifacts(load.plan.stages, artifacts);
   if (unserved.length > 0) return unservedRefusal(unserved);
   const decisionPoints = decisionPointsOf(load.plan, extraction.entryFlags.includes("decision"));
@@ -241,11 +244,27 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
 // The plan of an extraction or of a named route, the candidates of a low-confidence extraction,
 // or the refusal.
 export async function planOf(root: string, input: PlanInput): Promise<PlanDocument> {
-  if ("extraction" in input) return planOfExtraction(root, input.extraction);
-  if (!isWorkflowRoute(input.route)) {
+  if (!("route" in input)) return planOfExtraction(root, input.extraction);
+  return planOfRoute(root, input.route, input.extraction);
+}
+
+// The plan of a named route. Given the extraction of the candidate chosen, the route serves its
+// artifacts or is refused, and gains the specification stage the candidate's scopes list; only the
+// artifacts are read, since the session keeps the candidate's decision points.
+async function planOfRoute(
+  root: string,
+  route: string,
+  extraction: unknown,
+): Promise<PlanDocument> {
+  if (!isWorkflowRoute(route)) {
     const message = "No route has that name, so name a route of the catalog.";
-    return refusal(message, [{ reason: "unknown-route", subject: input.route || "--route" }]);
+    return refusal(message, [{ reason: "unknown-route", subject: route || "--route" }]);
   }
-  const load = await loaded(root, input.route);
-  return load.ok ? planned(load.plan) : load.document;
+  if (extraction !== undefined && !isExtraction(extraction)) return schemaRefusal(extraction);
+  const load = await loaded(root, route);
+  if (!load.ok) return load.document;
+  if (extraction === undefined) return planned(load.plan);
+  const unserved = unservedArtifacts(load.plan.stages, extraction.artifacts);
+  if (unserved.length > 0) return unservedRefusal(unserved);
+  return planned(withSpecStage(load.plan, extraction.artifacts));
 }
