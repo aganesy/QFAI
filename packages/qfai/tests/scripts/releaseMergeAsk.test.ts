@@ -9,7 +9,9 @@
  * Nothing here calls the forge. The lookups are passed in, and the cases that run the hook
  * itself name a branch, which needs no lookup.
  */
-import { readFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { mkdtemp, readFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,14 +19,19 @@ import { describe, expect, it } from "vitest";
 
 import { HOOK_STATUS, decide, main, mergeCalls } from "../../../../scripts/release-merge-ask.mjs";
 import { runReminderHook } from "../helpers/reminderHooks.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
-/** Lookups that answer from fixed tables, recording each pull request looked up. */
+/**
+ * Lookups that answer from fixed tables, recording each pull request looked up. The current
+ * branch is wrapped in an object so that an unknown branch (`{ current: undefined }`) is not
+ * replaced by the default, as a bare `undefined` argument would be.
+ */
 function fakeEnv(
   heads: Record<string, string>,
-  current: string | undefined = "claude/issue-1-work",
+  branch: { readonly current: string | undefined } = { current: "claude/issue-1-work" },
 ): {
   readonly looked: string[];
   readonly currentBranch: () => string | undefined;
@@ -34,7 +41,7 @@ function fakeEnv(
   const looked: string[] = [];
   return {
     looked,
-    currentBranch: () => current,
+    currentBranch: () => branch.current,
     originRepo: () => "aganesy/QFAI",
     headRefOf: (repo, number) => {
       looked.push(`${repo}#${number}`);
@@ -49,12 +56,12 @@ const HEADS = {
   "fork/QFAI#30": "release/v9.0.0",
 };
 
-function hookInput(command: string): string {
+function hookInput(command: string, cwd: string = repoRoot): string {
   return JSON.stringify({
     hook_event_name: "PreToolUse",
     tool_name: "Bash",
     tool_input: { command },
-    cwd: repoRoot,
+    cwd,
   });
 }
 
@@ -146,17 +153,17 @@ describe("the hook's answer", () => {
   });
 
   it("asks when the current branch is a release branch", () => {
-    expect(decide("gh pr merge --merge", fakeEnv(HEADS, "release/v2.2.0"))?.reason).toContain(
-      "for the current branch (head branch release/v2.2.0)",
-    );
+    expect(
+      decide("gh pr merge --merge", fakeEnv(HEADS, { current: "release/v2.2.0" }))?.reason,
+    ).toContain("for the current branch (head branch release/v2.2.0)");
   });
 
   it.each([
     ["the lookup fails", "gh pr merge 99", fakeEnv(HEADS)],
     ["the second of two lookups fails", "gh pr merge 10 && gh pr merge 99", fakeEnv(HEADS)],
     ["the argument is expanded", 'gh pr merge "$PR"', fakeEnv(HEADS)],
-    ["HEAD is detached", "gh pr merge", fakeEnv(HEADS, "HEAD")],
-    ["the current branch is unknown", "gh pr merge", fakeEnv(HEADS, undefined)],
+    ["HEAD is detached", "gh pr merge", fakeEnv(HEADS, { current: "HEAD" })],
+    ["the current branch is unknown", "gh pr merge", fakeEnv(HEADS, { current: undefined })],
     [
       "the URL is not a pull request on github.com",
       "gh pr merge https://example.com/o/r/pull/1",
@@ -187,6 +194,34 @@ describe("the hook as Claude Code runs it", () => {
     expect(main(hookInput("git status"))).toBeUndefined();
     for (const input of ["", "{ not json", "{}", JSON.stringify({ tool_name: "Bash" })]) {
       expect(main(input)).toBeUndefined();
+    }
+  });
+
+  it("asks for a merge of the current branch on a detached HEAD", async () => {
+    // A detached checkout has no branch whose pull request gh could merge, so the head branch is
+    // unread. Read from a real repository: git reports `HEAD` there, which is what the hook sees.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-release-merge-"));
+    try {
+      const git = (...args: string[]): string =>
+        execFileSync("git", ["-C", root, ...args], { encoding: "utf-8" });
+      git("init", "-q");
+      git(
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@example.com",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "c",
+      );
+      git("checkout", "-q", "--detach");
+      const printed = main(hookInput("gh pr merge --merge", root));
+      expect(printed).toContain('"permissionDecision":"ask"');
+      expect(printed).toContain("Could not read the head branch");
+    } finally {
+      await removeTempTree(root);
     }
   });
 
