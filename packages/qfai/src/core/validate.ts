@@ -47,6 +47,7 @@ import {
   type AssistantVersionMismatch,
 } from "./assistantVersion.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
+import { validateUiRenderedCopy } from "./validators/uiRenderedCopy.js";
 import { validateUiScreenCopy } from "./validators/uiScreenCopy.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
@@ -103,6 +104,8 @@ export type ValidationOptions = {
   profile?: ValidationProfile;
   platform?: string;
   flowIds?: readonly string[];
+  /** A rendered-text file the caller wrote (`--rendered`), compared with the UI contracts in every profile. */
+  renderedPath?: string;
 };
 
 export async function validateProject(
@@ -175,6 +178,10 @@ export async function validateProject(
       ),
     ) ?? [];
 
+  const renderedIssues = options.renderedPath
+    ? await validateUiRenderedCopy(root, config, options.renderedPath)
+    : [];
+
   const timingsSink: TimingsSink = {};
   const profileRun = await runProfileValidators(
     root,
@@ -185,7 +192,14 @@ export async function validateProject(
     storyModel,
   );
   const findings = explainVersionMismatch(
-    [...versionIssues, ...configIssues, ...securityIssues, ...scopeIssues, ...profileRun.issues],
+    [
+      ...versionIssues,
+      ...configIssues,
+      ...securityIssues,
+      ...scopeIssues,
+      ...renderedIssues,
+      ...profileRun.issues,
+    ],
     versionDifferenceNotes(olderThanDeclared, assistantMismatch),
   );
   const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));

@@ -3,6 +3,7 @@ import path from "node:path";
 import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
+import { declaredContractId } from "../contractsDecl.js";
 import { readSafe } from "../validators/utils.js";
 import { analyzeScreenCopy, isMapping, type ScreenCopyFinding } from "./screenCopy.js";
 
@@ -93,12 +94,12 @@ export async function readUiContractScreenContracts(
 async function readUiContractDocuments(
   uiDir: string,
   root: string,
-): Promise<Array<{ relativePath: string; parsed: unknown }>> {
+): Promise<Array<{ relativePath: string; raw: string; parsed: unknown }>> {
   // The directory is the walk's `cwd` rather than part of the pattern: a project
   // under `/tmp/build[1]` holds a literal `[`, which a pattern reads as syntax,
   // and the walk then found no contract at all.
   const files = await fg("**/*.{yaml,yml}", { cwd: uiDir, absolute: true });
-  const documents: Array<{ relativePath: string; parsed: unknown }> = [];
+  const documents: Array<{ relativePath: string; raw: string; parsed: unknown }> = [];
   for (const filePath of files) {
     const raw = await readSafe(filePath);
     if (!raw) continue;
@@ -108,7 +109,7 @@ async function readUiContractDocuments(
     } catch {
       continue;
     }
-    documents.push({ relativePath: toPosix(path.relative(root, filePath)), parsed });
+    documents.push({ relativePath: toPosix(path.relative(root, filePath)), raw, parsed });
   }
   return documents;
 }
@@ -332,25 +333,60 @@ export async function findUiScreenCopyFindings(
   root: string,
   contractsDirRelative = ".qfai/contracts",
 ): Promise<UiScreenCopyFinding[]> {
-  const uiDir = path.resolve(root, contractsDirRelative, "ui");
   const found: UiScreenCopyFinding[] = [];
+  for (const { file, index, screenId, entry, firstInScope } of await readUiContractScreens(
+    root,
+    contractsDirRelative,
+  )) {
+    if (!firstInScope) continue;
+    for (const finding of analyzeScreenCopy(entry)) {
+      found.push({ ...finding, file, index, screenId });
+    }
+  }
+  return found;
+}
+
+/** One `screens[]` entry the screen reader reads, with the contract that holds it. */
+export type UiContractScreenEntry = {
+  /** The `UI-NNNN` the file declares, or `null` when it declares none. */
+  contractId: string | null;
+  /** The contract file, repository-relative. */
+  file: string;
+  /** The entry's index in that file's `screens` list, from 0. */
+  index: number;
+  screenId: string;
+  entry: Record<string, unknown>;
+  /** Whether it is the first entry for its `id` in its contract scope, the one the screen reader reads. */
+  firstInScope: boolean;
+};
+
+/**
+ * The `screens[]` entries with an `id` and a `route`, in walk order, each
+ * marked with whether it is the first for its `id` in its contract scope.
+ */
+export async function readUiContractScreens(
+  root: string,
+  contractsDirRelative: string,
+): Promise<UiContractScreenEntry[]> {
+  const uiDir = path.resolve(root, contractsDirRelative, "ui");
+  const entries: UiContractScreenEntry[] = [];
   const seen = new Set<string>();
-  for (const { relativePath, parsed } of await readUiContractDocuments(uiDir, root)) {
+  for (const { relativePath, raw, parsed } of await readUiContractDocuments(uiDir, root)) {
     if (!isMapping(parsed) || !Array.isArray(parsed.screens)) continue;
     const scope = specScopeOf(toPosix(path.relative(uiDir, path.resolve(root, relativePath))));
+    const contractId = declaredContractId(relativePath, raw);
     parsed.screens.forEach((entry: unknown, index) => {
       if (!isMapping(entry)) return;
       const screenId = typeof entry.id === "string" ? entry.id.trim() : "";
       const route = typeof entry.route === "string" ? entry.route.trim() : "";
       const key = JSON.stringify([scope, screenId]);
-      if (!screenId || !route || seen.has(key)) return;
+      if (!screenId || !route) return;
+      const firstInScope = !seen.has(key);
       seen.add(key);
-      for (const finding of analyzeScreenCopy(entry)) {
-        found.push({ ...finding, file: relativePath, index, screenId });
-      }
+      entries.push({ contractId, file: relativePath, index, screenId, entry, firstInScope });
     });
   }
-  return found;
+  return entries;
 }
 
 /**

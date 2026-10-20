@@ -67,6 +67,31 @@ export function analyzeScreenCopy(screen: Record<string, unknown>): ScreenCopyFi
   return findings;
 }
 
+/** The words one screen states: the ones shown in every state, and each supplement with its state. */
+export type ScreenCopyInventory = {
+  /** The `title`, the group headings and the labels of elements and actions. */
+  fixed: string[];
+  supplements: Supplement[];
+};
+
+/**
+ * What a `screens[]` mapping says it shows, read from the entries that are well
+ * formed. A malformed entry is left out here; `analyzeScreenCopy` names it.
+ */
+export function screenCopyInventory(screen: Record<string, unknown>): ScreenCopyInventory {
+  const ignore: Report = () => undefined;
+  const headings = readStructure(screen["structure"], ignore).flatMap((group) =>
+    group.heading === null ? [] : [group.heading],
+  );
+  const labels = [...labelled(screen["elements"]), ...labelled(screen["actions"])].map(
+    (control) => control.label,
+  );
+  return {
+    fixed: [text(screen["title"]), ...headings, ...labels].filter((value) => value !== ""),
+    supplements: readSupplements(screen["supplements"], ignore),
+  };
+}
+
 export function isMapping(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
