@@ -190,13 +190,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The document-schema check in `qfai validate` runs its schemas at the same
   time.** The check starts one `mdschema` process per schema in the manifest,
-  and it used to wait for each one before starting the next. It now starts them
-  together and still reports the findings in manifest order, so the findings
-  are the same. On this repository the check went from 4.5 s to 2.1 s and a
+  and it used to wait for each one before starting the next. It now runs up to
+  eight at once and still reports the findings in manifest order, so the
+  findings are the same; a process that cannot start is still reported as a
+  check that did not run. On this repository the check went from 4.5 s to 2.1 s and a
   full `qfai validate` from 12.5 s to 8.5 s; on a fresh `qfai init` tree, from
   1.5 s to 0.4 s and from 3.3 s to 2.6 s (medians of three Windows runs).
-  `checkDocuments` in `check-mdschema.mjs` now returns a promise; the
-  command-line lane is unchanged. Fixes #3960.
+  `checkDocuments` in `check-mdschema.mjs` now returns a promise. The
+  command-line lane now reads up to 256 MiB of `mdschema` output instead of
+  1 MiB, so a long report is graded rather than called a failed run, as
+  `qfai validate` does. Fixes #3960.
 
 - **`qfai validate` warns when an open question is DONE without naming its
   decision.** An `open-questions.md` row whose Status is plain `DONE` now

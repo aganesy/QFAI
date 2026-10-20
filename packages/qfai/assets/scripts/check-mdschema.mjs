@@ -780,6 +780,9 @@ function runMdschema(mdschema, schemaPath, files, root) {
   const result = spawnSync(mdschema.command, mdschemaArgs(mdschema, schemaPath, files), {
     cwd: root,
     encoding: "utf-8",
+    // `checkDocuments` reads output of any length, so the lane reads far more
+    // than the 1 MiB default rather than calling a long report a failed run.
+    maxBuffer: MDSCHEMA_MAX_OUTPUT,
   });
   return mdschemaResult(result, schemaPath);
 }
@@ -806,13 +809,28 @@ function runMdschemaAsync(mdschema, schemaPath, files, root) {
       settled = true;
       resolve(mdschemaResult({ ...end, stdout, stderr }, schemaPath));
     };
-    const child = spawn(mdschema.command, mdschemaArgs(mdschema, schemaPath, files), { cwd: root });
-    child.stdout.setEncoding("utf-8").on("data", (chunk) => (stdout += chunk));
-    child.stderr.setEncoding("utf-8").on("data", (chunk) => (stderr += chunk));
+    // `spawn` throws for some start failures (an argument list too long), and
+    // leaves the output streams null for others (no descriptors left). Both are
+    // a run that did not happen, as `spawnSync` reports them.
+    let child;
+    try {
+      child = spawn(mdschema.command, mdschemaArgs(mdschema, schemaPath, files), { cwd: root });
+    } catch (error) {
+      settle({ error: error instanceof Error ? error : new Error(String(error)), status: null });
+      return;
+    }
     child.on("error", (error) => settle({ error, status: null }));
+    child.stdout?.setEncoding("utf-8").on("data", (chunk) => (stdout += chunk));
+    child.stderr?.setEncoding("utf-8").on("data", (chunk) => (stderr += chunk));
     child.on("close", (status) => settle({ status }));
   });
 }
+
+/** How much output the synchronous runner reads from one mdschema run. */
+const MDSCHEMA_MAX_OUTPUT = 256 * 1024 * 1024;
+
+/** How many manifest entries `checkDocuments` runs at the same time. */
+const CONCURRENT_ENTRIES = 8;
 
 /** The arguments of one `mdschema check` run. */
 function mdschemaArgs(mdschema, schemaPath, files) {
@@ -1527,8 +1545,8 @@ function decisionRegisterViolations(root, paths) {
  * as `main`, over the whole tree: a validation run has no merge base to ratchet
  * against.
  *
- * The entries run at the same time, and their findings are reported in manifest
- * order, so the answer does not depend on which process finished first.
+ * Up to eight entries run at the same time, and their findings are reported in
+ * manifest order, so the answer does not depend on which process finished first.
  *
  * @param {string} root
  * @param {{ specsDir: string, contractsDir: string }} [paths] tree-relative roots
@@ -1549,14 +1567,21 @@ export async function checkDocuments(root, paths = configuredPaths(root)) {
     ...coverageViolations(entries, files.toSorted(), paths),
     ...register.violations,
   ];
-  // Every entry starts at once, one process each. That holds while the manifest
-  // keeps to a few dozen entries; past that, cap how many run together.
-  const perEntry = await Promise.all(
-    entries.map(async (entry) => {
+  // A few entries at a time, each one process; each result keeps its entry's slot.
+  /** @type {{ failure: string | null, found: object[] }[]} */
+  const perEntry = [];
+  let next = 0;
+  const worker = async () => {
+    while (next < entries.length) {
+      const index = next++;
       const found = [];
-      return { failure: await checkEntryDocuments(context, entry, found), found };
-    }),
-  );
+      perEntry[index] = {
+        failure: await checkEntryDocuments(context, entries[index], found),
+        found,
+      };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENT_ENTRIES, entries.length) }, worker));
   for (const { failure, found } of perEntry) {
     if (failure !== null) return { ok: false, reason: failure };
     violations.push(...found);
