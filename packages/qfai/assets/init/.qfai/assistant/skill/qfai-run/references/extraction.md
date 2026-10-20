@@ -366,6 +366,7 @@ Each request is followed by its extraction. Fields not shown are empty.
 - An approved change request cited with a task section and a done-when block → `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`
 - "The import fails and the `catch` logs nothing, so the cause cannot be read; log the error there." → `{ intent: defect, entryFlags: [cause, fix, expect], artifacts: [code, tests], confidence: high }`
 - "Merging main left conflicts in the decision register; renumber our colliding rows and keep both sides." → `{ intent: stale-record, qualifiers: [meaning-preserving], artifacts: [spec], confidence: high }`
+- "Take main's shared fix into the branches feature-a and feature-b, keeping what each side means.", read once for each named branch and run one after another → `{ intent: order, qualifiers: [meaning-preserving], artifacts: [spec, docs], confidence: high }`
 - "Release 2.4.0. You run the preparation and merge the release pull request; I only approve the publish." → `{ intent: release, qualifiers: [release-delegated], artifacts: [release], confidence: high }`
 - "Give the live dashboard a calmer palette and softer page transitions; keep every screen and field as it is." → `{ intent: feature, qualifiers: [visual-open, restyle], artifacts: [ui], confidence: high }`
 - "Support multiple tenants across the product." → `{ intent: epic, entryFlags: [decision], confidence: high }`
