@@ -263,6 +263,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   repeated `flows` is refused as a schema fault. Plans without `flows` are
   unchanged. Refs #3668.
 
+- **A prototyping run can be scoped to part of a confirmed prototype.** The
+  grilling record `.qfai/prototype/grilling.md` takes an optional
+  `## Run scope` that names screens as `<ui-contract-id>/<screen>` and shared
+  components by repository path or `procurement` item. A scoped run starts
+  from a copy of `final/index.html` and changes only the scope;
+  the reviewer reviews the in-scope screens and, on each other screen that
+  renders an in-scope component, only that it renders. The handoff replaces
+  only the in-scope screen routes and component places in `final/index.html`,
+  keeps everything else, and records `runScope` in `final/handoff.json`. A run
+  with no run scope covers the whole product as before. The constitution's
+  prototyping scope floor now applies to what `final/` covers. Fixes #3846.
+
 - **`triage-operate` searches for an existing issue before filing one.** The
   step now searches the tracker for a matching open issue with the forge CLI's
   issue search and key terms from the title, and for several issues lists the
