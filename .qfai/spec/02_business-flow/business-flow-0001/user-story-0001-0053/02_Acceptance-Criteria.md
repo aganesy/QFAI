@@ -48,6 +48,7 @@ Feature: Decision and open-question table validation
     When `qfai validate --profile sdd` runs
     Then `QFAI-STORY-003` is raised at error naming the file, the citing rule or row, and the missing ID
     And an `open-questions.md` row at plain DONE, which names no decision, raises `QFAI-STORY-018` at warning naming the file and the row ID
+    And a `decisions.md` or decision-page row at `SUPERSEDED (by DEC-NNNN)` or `PARTLY SUPERSEDED (by DEC-NNNN)` whose successor's number is not higher than the row's own raises `QFAI-STORY-019` at error naming the file, the row and the successor
   # AC-0001-0053-07
   Scenario: A document that states a term the project lists as stale is reported
     Given the story tree, and `validation.staleTerms` in `qfai.config.yaml` listing a term that a document under `paths.specsDir` or `paths.contractsDir` states
