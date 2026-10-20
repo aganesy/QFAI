@@ -50,8 +50,9 @@ Inside an `npx qfai workflow` run the work order narrows that set:
 
 A standalone invocation still resolves every UI-bearing UI contract.
 
-The scope floor is unchanged: which UI contracts the confirmed prototype
-covers is decided by their declared IDs and screens, and no session narrows it.
+The scope floor is unchanged, and no session narrows it: its single home is
+`.qfai/assistant/rule/constitution.md` Article VII § Prototyping exception
+(scope floor).
 
 ### Run scope
 
@@ -63,16 +64,20 @@ names for it. Take the entries from the request, settle them in the session,
 and write them afresh each run: a `## Run scope` an earlier run left does not
 carry over.
 
-- With no `## Run scope`, the run covers the whole product, as above.
-- A run scope needs the `.qfai/prototype/final/index.html` an earlier run
-  confirmed. Without one, or in a `restyle` loop, which writes none, write no
-  `## Run scope`, and say in the session report that the run covers the whole
-  product.
-- An entry that names no declared screen, no existing path and no
-  `procurement` item stops the run before the first iteration, naming it.
+The run covers the whole product, and the session report says so, when:
 
-The handoff merges the run's result into `final/`, which still covers every
-UI-bearing contract and screen, so the scope floor holds.
+- the record has no `## Run scope`, or an empty one;
+- `.qfai/prototype/final/index.html` is missing, or `final/handoff.json` is
+  missing or lacks `finalArtifact` and `procurement`, as the restyle short
+  form does;
+- the run is a `restyle` loop.
+
+Write no `## Run scope` in the last two cases.
+
+Check the earlier `final/` against every declared screen outside the scope: it
+needs a route in `final/index.html` and a `procurement` row. Add each screen
+that lacks either to the scope; when the scope would then hold every screen,
+run the whole product instead.
 
 ## What is grilled, and what is prototyped
 
@@ -194,5 +199,7 @@ this gate's subject — those are what the loop exists to make answerable, and
 they are open by design until the user has something to react to.
 
 Otherwise the step passes when `.qfai/prototype/grilling.md` exists
-with both sections, every row carries a `Scope`, and every `## Run scope`
-entry names a declared screen, an existing path or a `procurement` item.
+with both sections and every row carries a `Scope`. Every `## Run scope`
+entry names a declared screen, or a component (by existing path or
+`procurement` item) that at least one screen in `final/index.html` renders.
+Any other entry stops the run before the first iteration, naming it.

@@ -38,6 +38,8 @@ identity.
    `layoutAntiPatternsDetected`, `designMdViolations`,
    `pivotDirective`), `iter-(NN-2)/review.json` when present, and
    `progress.md`.
+6. In a scoped run, every iteration: `runScope` in `progress.md` and
+   `.qfai/prototype/final/index.html`.
 
 ## HTML envelope (mandatory on every iter)
 
@@ -289,12 +291,14 @@ envelope, the one self-contained file, the `<link rel="stylesheet">` ban and
 
 ### Scoped runs
 
-When `progress.md` records a `runScope`, start every iteration from a copy of
-`.qfai/prototype/final/index.html`, not from a seed. Change only the in-scope
-screen routes and each in-scope shared component wherever a screen route
-renders it, with the style only they use. Leave everything else as `final/`
-has it, so the handoff can merge the in-scope parts back. A change the scope
-needs outside those parts is reported, not made.
+When `progress.md` records a `runScope`, the run's first iteration starts from
+a copy of `.qfai/prototype/final/index.html`, not from a seed, and each later
+iteration builds on the previous one, whose out-of-scope parts are still
+`final/`'s. Change only the in-scope screen routes and each in-scope shared
+component wherever a screen route renders it, with the style only they use.
+Leave everything else as `final/` has it, so the handoff can merge the
+in-scope parts back. A `pivot` rethinks only what is inside the scope. A
+change the scope needs outside those parts is reported, not made.
 
 ## The first iteration (seed)
 

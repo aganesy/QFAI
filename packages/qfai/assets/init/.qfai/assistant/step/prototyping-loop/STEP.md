@@ -92,12 +92,16 @@ before iteration 00.
 ## Run scope
 
 When `grilling.md` has a `## Run scope`, record `runScope` in `progress.md`
-beside `iterationKind`: the in-scope screens, and the render-check screens,
-which are the other screens that render an in-scope shared component. Find
-those in the `final/handoff.json` `procurement` rows and in `final/index.html`.
+beside `iterationKind`, with three lists: the in-scope screens, the in-scope
+components, and the render-check screens, each the other screen that renders
+an in-scope component, named `<ui-contract-id>/<screen>` with that component.
+Find them in the `final/handoff.json` `procurement` rows and in
+`final/index.html`.
 
-- The generator starts each iteration from a copy of `final/index.html` and
-  changes only the in-scope screens and components.
+- The run's first iteration starts from a copy of `final/index.html`. Each
+  later one builds on the previous iteration, whose out-of-scope parts are
+  still `final/`'s. Either way only the in-scope screens and components change,
+  and a `pivot` applies only inside the scope.
 - The reviewer reviews the in-scope screens in full and, on a render-check
   screen, only that the component renders there. No other screen is opened.
 
@@ -111,8 +115,10 @@ under `.qfai/prototype/`, or `00` when there are none.
 1. **Generator** (product-experience-architect). Reads the contracts,
    `.qfai/prototype/grilling.md`, the generator prompt, the `DESIGN.md` tokens
    and, from the second iteration on, the latest reviews and the user's last
-   answer. It starts from the primary UI contract preflight resolved: the one
-   the request names, else `prototyping.primaryUiContract`. Writes
+   answer. In a scoped run it also reads `runScope` in `progress.md` and
+   `.qfai/prototype/final/index.html`, every iteration. It starts from the
+   primary UI contract preflight resolved: the one the request names, else
+   `prototyping.primaryUiContract`. Writes
    `.qfai/prototype/iter-NN/index.html`.
 2. **Build** (devops-ci-engineer). Serves `.qfai/prototype/` at the URL
    preflight checked, starting the server on the first iteration and keeping it

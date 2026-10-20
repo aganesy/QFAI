@@ -250,12 +250,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   grilling record `.qfai/prototype/grilling.md` takes an optional
   `## Run scope` that names screens as `<ui-contract-id>/<screen>` and shared
   components by repository path or `procurement` item. A scoped run starts
-  each iteration from a copy of `final/index.html` and changes only the scope;
+  from a copy of `final/index.html` and changes only the scope;
   the reviewer reviews the in-scope screens and, on each other screen that
   renders an in-scope component, only that it renders. The handoff replaces
   only the in-scope screen routes and component places in `final/index.html`,
   keeps everything else, and records `runScope` in `final/handoff.json`. A run
-  with no run scope covers the whole product as before. Fixes #3846.
+  with no run scope covers the whole product as before. The constitution's
+  prototyping scope floor now applies to what `final/` covers. Fixes #3846.
 
 - **`qfai-implement` ships optional Playwright and Vitest recipes.** A new
   test runner recipes reference puts the worker session-reuse rules into code:

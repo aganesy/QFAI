@@ -171,25 +171,46 @@ describe.each(TREES)("%s", (tree) => {
       "The record's optional `## Run scope` section names what the run changes, one entry per line: a screen as `<ui-contract-id>/<screen>`, or a shared component by its repository path or by the `item` that `final/handoff.json` `procurement` names for it.",
     );
     expect(grill).toContain("a `## Run scope` an earlier run left does not carry over.");
-    expect(grill).toContain("With no `## Run scope`, the run covers the whole product, as above.");
+    expect(grill).toContain("the record has no `## Run scope`, or an empty one;");
     expect(grill).toContain(
-      "A run scope needs the `.qfai/prototype/final/index.html` an earlier run confirmed.",
+      "`final/handoff.json` is missing or lacks `finalArtifact` and `procurement`, as the restyle short form does;",
+    );
+    expect(grill).toContain(
+      "Check the earlier `final/` against every declared screen outside the scope: it needs a route in `final/index.html` and a `procurement` row.",
+    );
+    expect(grill).toContain(
+      "that at least one screen in `final/index.html` renders. Any other entry stops the run before the first iteration, naming it.",
     );
     expect(grill).toContain("no session narrows it");
+    expect(grill).not.toContain("which UI contracts the confirmed prototype covers");
     expect(loop).toContain(
-      "the render-check screens, which are the other screens that render an in-scope shared component.",
+      "with three lists: the in-scope screens, the in-scope components, and the render-check screens, each the other screen that renders an in-scope component, named `<ui-contract-id>/<screen>` with that component.",
     );
     expect(loop).toContain(
-      "The generator starts each iteration from a copy of `final/index.html` and changes only the in-scope screens and components.",
+      "The run's first iteration starts from a copy of `final/index.html`. Each later one builds on the previous iteration, whose out-of-scope parts are still `final/`'s.",
+    );
+    expect(loop).toContain("a `pivot` applies only inside the scope.");
+    expect(flat(await read(tree, "step/prototyping-loop/STEP.md"))).toContain(
+      "In a scoped run it also reads `runScope` in `progress.md` and `.qfai/prototype/final/index.html`, every iteration.",
     );
     expect(generator).toContain(
-      "When `progress.md` records a `runScope`, start every iteration from a copy of `.qfai/prototype/final/index.html`, not from a seed.",
+      "6. In a scoped run, every iteration: `runScope` in `progress.md` and `.qfai/prototype/final/index.html`.",
     );
+    expect(generator).toContain(
+      "When `progress.md` records a `runScope`, the run's first iteration starts from a copy of `.qfai/prototype/final/index.html`, not from a seed, and each later iteration builds on the previous one",
+    );
+    expect(generator).toContain("A `pivot` rethinks only what is inside the scope.");
     expect(reviewer).toContain(
       "On each render-check screen, check only that the in-scope component renders there:",
     );
     expect(reviewer).toContain(
       "Return payloads for those pairs only, fold only them into the summary, and open no other screen.",
+    );
+    expect(reviewer).toContain(
+      "When the scope names components only, the render-check screens are the whole review, and the summary's four scores rate the component as those screens render it.",
+    );
+    expect(flat(await read(tree, "skill/qfai-prototyping/references/iteration-loop.md"))).toContain(
+      "A scoped run writes payloads only for the pairs it reviews: its in-scope and render-check screens.",
     );
   });
 
@@ -210,7 +231,10 @@ describe.each(TREES)("%s", (tree) => {
     );
     expect(scoped).toContain("Keep every other part as it was.");
     expect(scoped).toContain(
-      "replace the `procurement` rows of the in-scope screens and components, keep every other row, so every declared screen still appears, and record the scope the user confirmed as `runScope`:",
+      "replace the `procurement` rows of the in-scope screens and components, keep every other row, so every declared screen still appears, and record the scope the user confirmed as `runScope`.",
+    );
+    expect(scoped).toContain(
+      "Keep `finalArtifact`, `implementationNotes` and every other existing key, extending `implementationNotes` with what this run decided rather than rewriting it:",
     );
     expect(scoped).toContain('"runScope": {');
     expect(scoped).toContain("The confirmed prototype is then the whole of `final/`");

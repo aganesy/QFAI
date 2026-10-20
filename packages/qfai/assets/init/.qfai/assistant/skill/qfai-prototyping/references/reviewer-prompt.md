@@ -48,6 +48,9 @@ transition-pass percentages as a substitute for the qualitative review.
   it, is a blocking finding, and the impressions speak of the component alone.
   Return payloads for those pairs only, fold only them into the summary, and
   open no other screen.
+  When the scope names components only, the render-check screens are the
+  whole review, and the summary's four scores rate the component as those
+  screens render it.
 - A screenshot or HTML snapshot, only when one was taken. Name any mandatory
   input you did not receive in a finding.
 - The layout anti-pattern registry the package ships.
