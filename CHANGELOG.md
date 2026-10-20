@@ -326,6 +326,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   without the search. The report names the issue matched or created.
   Fixes #3857.
 
+- **`qfai validate --timings` shows what is slow.** The option prints one
+  more line, `timings: by family <label> <ms>ms, ...`, after the over-budget
+  `timings:` line when there is one, else after `fail-on:`. It lists each
+  check slowest first, labelled by the code families of the findings it
+  returned (`STORY`, `CONTRACT`), or by its own name when it found nothing.
+  The UI/UX group counts as one entry, `uiux`, and its checks, which run side
+  by side, follow apart as `side by side, overlapping:`. The same times go to
+  `validate.json#familyTimings`. A run that stops early prints no such line.
+  Without the option the output is unchanged.
+  Fixes #3946.
+
 - **The code review reads the body of a test an annotation moves onto.** When a
   change adds, moves or copies an AC or EX annotation, `implementation-reviewer`
   now reads the annotated test's body and reports an annotation on a test that

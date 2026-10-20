@@ -185,6 +185,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.validateRendered !== undefined
             ? { renderedPath: options.validateRendered }
             : {}),
+          ...(options.validateTimings ? { timings: true } : {}),
         });
       }
       return;
@@ -451,6 +452,7 @@ Options:
   --fail-on <error|warning|never>  sdd preflight: failure threshold (never exits 0 even when blocked; preflight has no warning tier, so warning means the same as error)
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
   --rendered <path>             validate: compare a JSON file of the texts each screen rendered with its UI contract's copy (a relative path is resolved against --root)
+  --timings                     validate: print the time each finding family took, slowest first
   --out <path>                  report/doctor: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)
   --run-validate                report: run validate first, then generate the report
