@@ -43,8 +43,8 @@ account.
 A user who delegates the release to the agent while this step waits gives a
 new instruction, and the handoff has no result to record. Quote the
 instruction word for word with its source, do not report `handed-off`, and
-close as `deferred` with the delegated release as the follow-up, so it is
-planned again as a request of its own.
+list the delegated release as the follow-up for the closing step, which closes
+the request as `deferred`, so it is planned again as a request of its own.
 
 ## What it writes
 

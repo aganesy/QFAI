@@ -297,8 +297,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   new route `run-release`: after the user approves the release, `triage-operate`
   starts the preparation the release documents name, reviews and merges the
   release pull request under the project's review rules, and runs the checks
-  named for after publication. It never tags by hand, publishes or approves the
-  publication. A request that only edits the version number reads the same way,
+  named for after publication. Where the merge tags the release, it merges only
+  when the instruction names the merge or the whole release. It never tags by
+  hand, publishes or approves the publication. A request that only edits the version number reads the same way,
   and a release with no such instruction is still handed to a person. Fixes #3550.
 
 - **A critical decision found while writing the discussion pack goes back to

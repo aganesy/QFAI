@@ -335,12 +335,21 @@ describe("a question answered without a change", () => {
       /Create or push no tag by hand, publish nothing, and never approve the publication/,
     );
     expect(release).toMatch(/run the checks the release documents name for after it/);
+    expect(release).toMatch(
+      /Where the release documents make the merge the instruction for the tag, .*merge only when the quoted instruction names the merge or the whole release\. Otherwise stop once the release pull request is open, and hand the merge to the user/,
+    );
+    expect(release).toMatch(
+      /carry the quoted instruction and the named version into that extraction's request/,
+    );
+    expect(release).toMatch(
+      /no release run starts after the merge, stop waiting and report the tag and the publication as the user's pending follow-ups/,
+    );
     expect(flat(sectionOf(operate, "## Reads"))).toMatch(/version-discipline\.md/);
     expect(flat(sectionOf(operate, "## Gate"))).toMatch(
       /the delegation is quoted with its source, and that no tag, publication or publication approval came from the agent/,
     );
     expect(flat(sectionOf(await step("triage-handoff"), "## Procedure"))).toMatch(
-      /delegates the release to the agent while this step waits.*Quote the instruction word for word with its source, do not report `handed-off`, and close as `deferred` with the delegated release as the follow-up/,
+      /delegates the release to the agent while this step waits.*Quote the instruction word for word with its source, do not report `handed-off`, and list the delegated release as the follow-up for the closing step, which closes the request as `deferred`/,
     );
   });
 

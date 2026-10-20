@@ -67,14 +67,22 @@ the release up to its publication, or the version edit alone.
    sets the version and opens the release pull request. An instruction that
    covers only the version edit stops once that edit is made. A release edit
    the documents make by hand is a tracked change: report `needs-change` with
-   an extraction of it as an `order` naming the `release` artifact.
+   an extraction of it as an `order` naming the `release` artifact, and carry
+   the quoted instruction and the named version into that extraction's
+   request, so the next plan makes the edit under the same instruction.
 3. Review the release pull request as the project's review rules say, and
-   merge it only when they allow, waiting for its checks as above.
+   merge it only when they allow, waiting for its checks as above. Where the
+   release documents make the merge the instruction for the tag, such as a
+   release workflow that tags on merge, merge only when the quoted instruction
+   names the merge or the whole release. Otherwise stop once the release pull
+   request is open, and hand the merge to the user.
 4. Create or push no tag by hand, publish nothing, and never approve the
    publication: the project's release workflow and the person who approves it
    do these. Wait for the publication, polling no faster than it changes, then
    run the checks the release documents name for after it, outside the
-   repository.
+   repository. Where the documents leave the tag to a person, or no release run
+   starts after the merge, stop waiting and report the tag and the publication
+   as the user's pending follow-ups.
 5. Report each operation and its result, including an approval still pending.
 
 ## What it writes
