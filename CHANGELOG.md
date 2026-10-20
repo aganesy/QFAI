@@ -246,6 +246,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   repeated `flows` is refused as a schema fault. Plans without `flows` are
   unchanged. Refs #3668.
 
+- **`triage-operate` searches for an existing issue before filing one.** The
+  step now searches the tracker for a matching open issue with the forge CLI's
+  issue search and key terms from the title. On a match it files no duplicate:
+  it comments on the match only when your instruction allows comments, or when
+  the finding adds what the match lacks and posting is within the instruction,
+  and otherwise reports the match and skips. Without a tracker CLI it reports
+  that the search could not run and leaves the filing to you, unless your
+  instruction already allows it. The report names the issue matched or
+  created. Fixes #3857.
+
 - **`qfai-implement` ships optional Playwright and Vitest recipes.** A new
   test runner recipes reference puts the worker session-reuse rules into code:
   a Vitest session cache keyed by the run's private directory, the pool slot
