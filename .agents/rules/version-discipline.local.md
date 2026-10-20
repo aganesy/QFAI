@@ -53,6 +53,11 @@ and `yarn npm` publish, `gh release create`, and `gh workflow run` for
 `prepare-release.yml`, `tag-release.yml` and `release.yml`. Add a command to
 both.
 
+Merging a release pull request asks too. In Claude Code a hook
+(`scripts/release-merge-ask.mjs`) reads the head branch of each `gh pr merge`
+and asks when it starts with `release/`, or when it cannot be read. Codex has
+no equivalent: its rules match command text, and the head branch is not in it.
+
 The lists match command text, so they are a reminder and not a boundary. They do
 not catch a tag created by pushing a ref (`git push origin v1.2.3`), an option
 placed before the subcommand (`git -C . tag`), `corepack pnpm publish`, a
