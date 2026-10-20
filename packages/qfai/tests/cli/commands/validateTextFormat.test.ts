@@ -26,7 +26,6 @@ import {
   resolveIssueFix,
   runValidate,
 } from "../../../src/cli/commands/validate.js";
-import { buildIncompleteRunIssue, incompleteRunResult } from "../../../src/cli/lib/warnings.js";
 import { loadConfig, type FailOn } from "../../../src/core/config.js";
 import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
 import { validateDesignToken } from "../../../src/core/validators/designToken.js";
@@ -867,18 +866,6 @@ describe("validate --format text says that it started and, when it passes, what 
     ]);
     expect(formatPassSummary({ ...one, profile: "drift" }, "never", 40)).toBe(
       "qfai validate: passed (fail-on never): profile drift, 1 error, 1 warning, 0.0s",
-    );
-  });
-
-  // QFAI:EX-0001-0039-22
-  it("counts the error of a run that could not complete under --fail-on never", () => {
-    const crashed = incompleteRunResult(
-      "0.0.0-test",
-      buildIncompleteRunIssue(new Error("boom"), "validate"),
-      "atdd",
-    );
-    expect(formatPassSummary(crashed, "never", 0)).toBe(
-      "qfai validate: passed (fail-on never): profile atdd, 1 error, 0 warnings, 0.0s",
     );
   });
 

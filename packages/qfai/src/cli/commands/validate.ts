@@ -23,7 +23,11 @@ import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
 import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
-import { buildIncompleteRunIssue, incompleteRunResult } from "../lib/warnings.js";
+import {
+  buildIncompleteRunIssue,
+  incompleteRunResult,
+  isIncompleteRunResult,
+} from "../lib/warnings.js";
 
 export type ValidateOptions = {
   root: string;
@@ -148,7 +152,8 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
 
   if (format === "text") {
     emitText(normalized, failOn);
-    if (!willFail) {
+    // A run that did not finish has no pass to report, even under `--fail-on never`.
+    if (!willFail && !isIncompleteRunResult(normalized)) {
       const elapsedMs = Date.now() - startedAt.getTime();
       process.stdout.write(`${formatPassSummary(normalized, failOn, elapsedMs)}\n`);
     }

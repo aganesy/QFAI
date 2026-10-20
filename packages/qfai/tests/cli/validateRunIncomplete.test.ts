@@ -279,6 +279,27 @@ describe("validate reports a run it could not finish", () => {
     }
   });
 
+  // QFAI:EX-0001-0039-22
+  it("prints no pass summary for a run that did not finish, even under --fail-on never", async () => {
+    const root = await project();
+    validateProjectSpy.mockImplementation(() => Promise.reject(errno("EPERM", root)));
+    const lines: string[] = [];
+    const write = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    try {
+      expect(await runValidate({ root, strict: false, format: "text", failOn: "never" })).toBe(0);
+    } finally {
+      write.mockRestore();
+    }
+
+    const out = lines.join("");
+    expect(out).toContain("QFAI-SCAN-002");
+    expect(out).not.toContain("qfai validate: passed");
+    expect(out.trimEnd().split("\n").at(-2)).toBe("fail-on: never");
+  });
+
   it("does not report an incomplete run when validation completes", async () => {
     // The negative control. Without it a handler that always reported would
     // pass every row above.
