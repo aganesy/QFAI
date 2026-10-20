@@ -311,6 +311,25 @@ describe("a question answered without a change", () => {
     );
   });
 
+  // QFAI:AC-0001-0220-06
+  // QFAI:EX-0001-0220-58
+  it("searches for a matching open issue before creating one", async () => {
+    const procedure = flat(sectionOf(await step("triage-operate"), "## Procedure"));
+    expect(procedure).toMatch(
+      /Before creating an issue, search the tracker for a matching open issue with the forge CLI's issue search and key terms from the title/,
+    );
+    expect(procedure).toMatch(
+      /When one request files several issues, list the open issues once, with a limit, and match each title against that list/,
+    );
+    expect(procedure).toMatch(
+      /On a match, create no duplicate: comment on it only when the user's instruction allows comments and the finding adds what the match lacks; otherwise report the match and what the finding would add, and skip/,
+    );
+    expect(procedure).toMatch(
+      /Where the search cannot run, such as with no tracker CLI, an authentication error or a rate limit, report that and leave creating the issue to the user, unless the instruction allows creating it without the search/,
+    );
+    expect(procedure).toMatch(/The report names the issue matched or created/);
+  });
+
   // QFAI:AC-0001-0220-07
   // QFAI:EX-0001-0220-57
   it("carries out a release only on a quoted delegation, and never tags, publishes or approves it", async () => {
