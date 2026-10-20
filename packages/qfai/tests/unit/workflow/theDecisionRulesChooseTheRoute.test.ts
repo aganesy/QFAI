@@ -419,6 +419,25 @@ it("A behaviour change that removes a feature retires it, unless a choice is ope
   ]);
 });
 
+// QFAI:EX-0001-0211-60
+it("A rename of a concept routes rename-concept from any of its readings, unless a choice is open", async () => {
+  expect([
+    await decided({ intent: "behaviour-change", qualifiers: ["rename-requested"] }),
+    await decided({ intent: "refactor", qualifiers: ["rename-requested"] }),
+    await decided({ intent: "docs", qualifiers: ["rename-requested"] }),
+    await decided({
+      intent: "behaviour-change",
+      entryFlags: ["decision"],
+      qualifiers: ["rename-requested"],
+    }),
+  ]).toEqual([
+    ["rename-concept", 28],
+    ["rename-concept", 28],
+    ["rename-concept", 28],
+    ["decide-design", 28],
+  ]);
+});
+
 // QFAI:EX-0001-0211-42
 // QFAI:EX-0001-0211-43
 it("A settled behaviour change that asks to change the prototype applies its record, then prototypes", async () => {
