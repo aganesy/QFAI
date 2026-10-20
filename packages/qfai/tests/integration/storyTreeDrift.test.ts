@@ -869,7 +869,7 @@ describe("story-tree drift", () => {
           ],
           [
             decisions,
-            `${table}| DEC-2098 | Published choice | ${approach} | ${status} |\n| DEC-0001 | Successor | Keep | DONE |\n`,
+            `${table}| DEC-2098 | Published choice | ${approach} | ${status} |\n| DEC-2099 | Successor | ${proposed} | DONE |\n`,
           ],
           [`${specs}/open-questions.md`, table],
         ]),
@@ -878,14 +878,14 @@ describe("story-tree drift", () => {
       return validateStoryTreeStructureModel(model);
     };
     expect(findings(proposed, "DONE")).toEqual([]);
-    expect(findings(proposed, "SUPERSEDED (by DEC-0001)")).toEqual([]);
+    expect(findings(proposed, "SUPERSEDED (by DEC-2099)")).toEqual([]);
     for (const status of [
       "TODO",
       "WIP",
       "DONE",
       "REJECTED",
-      "SUPERSEDED (by DEC-0001)",
-      "PARTLY SUPERSEDED (by DEC-0001)",
+      "SUPERSEDED (by DEC-2099)",
+      "PARTLY SUPERSEDED (by DEC-2099)",
     ]) {
       const invalid = findings(original, status);
       expect(
@@ -906,9 +906,9 @@ describe("story-tree drift", () => {
     const invalidStatus = findings(proposed, "APPROVED");
     expect(invalidStatus.map(({ code }) => code)).toEqual(["QFAI-STORY-003"]);
     expect(invalidStatus[0]?.message).toMatch(/DEC-2098.*invalid Status/);
-    const absentSuccessor = findings(proposed, "SUPERSEDED (by DEC-0009)");
+    const absentSuccessor = findings(proposed, "SUPERSEDED (by DEC-2109)");
     expect(absentSuccessor.map(({ code }) => code)).toEqual(["QFAI-STORY-003"]);
-    expect(absentSuccessor[0]).toMatchObject({ file: decisions, refs: ["DEC-2098", "DEC-0009"] });
+    expect(absentSuccessor[0]).toMatchObject({ file: decisions, refs: ["DEC-2098", "DEC-2109"] });
   });
 
   // QFAI:AC-0001-0054-03

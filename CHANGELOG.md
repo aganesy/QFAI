@@ -177,6 +177,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   answered it. Plain `DONE` is still accepted, so `--fail-on error` keeps
   passing on an existing register. Fixes #3906.
 
+- **`qfai validate` reports a superseded decision whose successor is not
+  later.** A `decisions.md` or decision-page row at `SUPERSEDED (by DEC-NNNN)`
+  or `PARTLY SUPERSEDED (by DEC-NNNN)` whose successor's number is equal to or
+  lower than the row's own ID now raises `QFAI-STORY-019` at error in `sdd`,
+  naming the file, the row and the successor. A successor no row declares
+  still raises `QFAI-STORY-003`. Finding a DONE row that a later row reverses
+  is not checked, because a later row citing an earlier one is not a reversal.
+  Fixes #3861.
+
 - **A colliding decision ID is renumbered once, at merge time.** The
   `qfai-sdd` triage reference now says a branch keeps its decision IDs while
   its pull request is open, and the session that merges it runs
