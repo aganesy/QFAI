@@ -151,6 +151,7 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
     "owned-temporary-cleanup",
     "meaning-preserving",
     "session-answerable",
+    "restyle",
   ],
   signals: [
     "approved-record-task",
@@ -689,6 +690,33 @@ describe("qfai-run", () => {
       routeOf(routingOutcome(pinned)),
       routeOf(routingOutcome({ ...pinned, qualifiers: [] })),
     ]).toEqual(["run-release", "hand-off-operation"]);
+  });
+
+  // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-59
+  it("reads a change to the live stylesheet or motion as a restyle", async () => {
+    const reference = await readShipped(EXTRACTION);
+    expect(itemOf(sectionOf(reference, "## Qualifiers"), "restyle")).toContain(
+      "with `visual-open` or `prototype-requested`: The user asks for a change to the live stylesheet or motion of screens the project already runs, keeping their screens, fields and behaviour, so the prototype loop runs it as a restyle. Its edits are product code, so the plan then offers only the scopes that carry them through implementation.",
+    );
+    const line = sectionOf(reference, "## Examples")
+      .split("\n")
+      .find((each) =>
+        each.startsWith(
+          '- "Give the live dashboard a calmer palette and softer page transitions; keep every screen and field as it is." → ',
+        ),
+      );
+    const parsed: unknown = parse(/→ `(\{.*\})`$/.exec(line ?? "")?.[1] ?? "null");
+    expect(parsed).toEqual({
+      intent: "feature",
+      qualifiers: ["visual-open", "restyle"],
+      artifacts: ["ui"],
+      confidence: "high",
+    });
+    const pinned: unknown = { ...extraction(), ...(isRecord(parsed) ? parsed : {}) };
+    if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
+    const outcome = routingOutcome(pinned);
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("prototype-feature");
   });
 
   // QFAI:AC-0001-0211-05
