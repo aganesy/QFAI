@@ -6,9 +6,11 @@ import { promisify } from "node:util";
 
 const execute = promisify(execFile);
 const MAX_BUFFER = 64 * 1024 * 1024;
-/** Longer than any rule or setext underline a document holds, so no content line reads as one. */
+/** The marker size of the inner merges; longer than any marker Git writes into a working file. */
 const MARKER_SIZE = 40;
-const RESERVED_MARKER = new RegExp(`^([<|=>])\\1{${MARKER_SIZE - 1}}`);
+/** A line Git or this merge could write as a conflict marker: 7 or more of one marker character. */
+const MARKER_LINE = /^([<|=>])\1{6,}/u;
+const OUR_MARKERS = new Set(["<<<<<<< ours", "=======", ">>>>>>> theirs"]);
 /** The token that stands for a line end while sentences are merged. */
 const LINE_END = "␞ qfai merge-docs line end ␞";
 /**
@@ -33,14 +35,19 @@ export type MergedDocument = { text: string; conflicts: number };
  * the first cell, when every line in it is a table row, and otherwise sentence by sentence. What
  * is still unsettled is written between standard conflict markers around the whole lines.
  *
- * @returns null when a line of the input could be read as a merge marker
+ * CRLF is read as a line end. The result uses CRLF when every version that has a line end uses it.
+ *
+ * @returns null when a line of the input could be read as a merge marker, or when a marker line
+ *   other than the ones this merge writes would reach the result
  */
 export async function mergeDocument(
   base: string,
   ours: string,
   theirs: string,
 ): Promise<MergedDocument | null> {
-  const versions = [base, ours, theirs].map(toLines);
+  const ended = [base, ours, theirs].filter((text) => text.includes("\n"));
+  const crlf = ended.length > 0 && ended.every((text) => !/(?<!\r)\n/u.test(text));
+  const versions = [base, ours, theirs].map((text) => toLines(text.replace(/\r\n/gu, "\n")));
   if (versions.some((lines) => lines.some((line) => isReserved(line)))) return null;
   const [baseLines = [], ourLines = [], theirLines = []] = versions;
   const lines: string[] = [];
@@ -56,7 +63,11 @@ export async function mergeDocument(
     lines.push(...resolved.lines);
     conflicts += resolved.conflicts;
   }
-  return { text: lines.map((line) => `${line}\n`).join(""), conflicts };
+  // Every marker line of the input was refused above, so any other one here means a region was
+  // not read as a conflict; leaving the document to a person is safer than calling it merged.
+  if (lines.some((line) => MARKER_LINE.test(line) && !OUR_MARKERS.has(line))) return null;
+  const end = crlf ? "\r\n" : "\n";
+  return { text: lines.map((line) => `${line}${end}`).join(""), conflicts };
 }
 
 function toLines(text: string): string[] {
@@ -66,7 +77,7 @@ function toLines(text: string): string[] {
 }
 
 function isReserved(line: string): boolean {
-  return RESERVED_MARKER.test(line) || line.includes(LINE_END);
+  return MARKER_LINE.test(line) || line.includes(LINE_END);
 }
 
 /** Merges a region of table rows key by key; null when it is not such a region. */
@@ -204,37 +215,74 @@ function conflictBlock(ours: string[], theirs: string[]): string[] {
 
 /** A three-way merge of line lists by `git merge-file`, split into settled and unsettled regions. */
 async function mergeFile(base: string[], ours: string[], theirs: string[]): Promise<Hunk[]> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-merge-docs-"));
-  try {
-    const write = async (name: string, lines: string[]): Promise<string> => {
-      const file = path.join(dir, name);
-      await writeFile(file, lines.map((line) => `${line}\n`).join(""), "utf8");
-      return file;
-    };
-    const files = [
-      await write("ours", ours),
-      await write("base", base),
-      await write("theirs", theirs),
-    ];
-    const args = ["merge-file", "-p", "--diff3", `--marker-size=${MARKER_SIZE}`];
-    const labels = ["-L", "ours", "-L", "base", "-L", "theirs"];
-    return parseMerge(await runMergeFile([...args, ...labels, ...files], dir));
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  const join = (lines: string[]): string => lines.map((line) => `${line}\n`).join("");
+  const output = await runMergeFile(join(base), join(ours), join(theirs), [
+    "--diff3",
+    `--marker-size=${MARKER_SIZE}`,
+    "-L",
+    "ours",
+    "-L",
+    "base",
+    "-L",
+    "theirs",
+  ]);
+  return parseMerge(output);
 }
 
-async function runMergeFile(args: string[], cwd: string): Promise<string> {
+/**
+ * Whether a working file is still the conflict output Git wrote for these versions, in the merge,
+ * diff3 or zdiff3 style. Labels and line ends are not compared, so a file a person or an earlier
+ * run edited reads as changed.
+ */
+export async function isGitConflictOutput(
+  working: string,
+  base: string,
+  ours: string,
+  theirs: string,
+): Promise<boolean> {
+  const normal = (text: string): string =>
+    text.replace(/\r\n/gu, "\n").replace(/^(<{7}|\|{7}|>{7}) .*$/gmu, "$1");
+  const [b, o, t] = [base, ours, theirs].map((text) => text.replace(/\r\n/gu, "\n"));
+  for (const style of [[], ["--diff3"], ["--zdiff3"]]) {
+    if (normal(await runMergeFile(b ?? "", o ?? "", t ?? "", style)) === normal(working))
+      return true;
+  }
+  return false;
+}
+
+/** `git merge-file -p` of three texts; its exit status counts conflicts, at most 127. */
+async function runMergeFile(
+  base: string,
+  ours: string,
+  theirs: string,
+  options: string[],
+): Promise<string> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-merge-docs-"));
   try {
-    const { stdout } = await execute("git", args, { cwd, maxBuffer: MAX_BUFFER, encoding: "utf8" });
-    return stdout;
-  } catch (failure) {
-    // git merge-file exits with the number of conflicts, at most 127; above that it failed.
-    const code = failure instanceof Error && "code" in failure ? failure.code : undefined;
-    const stdout = failure instanceof Error && "stdout" in failure ? failure.stdout : undefined;
-    if (typeof code === "number" && code > 0 && code < 128 && typeof stdout === "string")
+    const files = ["ours", "base", "theirs"].map((name) => path.join(dir, name));
+    const [oursFile = "", baseFile = "", theirsFile = ""] = files;
+    await Promise.all([
+      writeFile(oursFile, ours, "utf8"),
+      writeFile(baseFile, base, "utf8"),
+      writeFile(theirsFile, theirs, "utf8"),
+    ]);
+    const args = ["merge-file", "-p", ...options, oursFile, baseFile, theirsFile];
+    try {
+      const { stdout } = await execute("git", args, {
+        cwd: dir,
+        maxBuffer: MAX_BUFFER,
+        encoding: "utf8",
+      });
       return stdout;
-    throw failure;
+    } catch (failure) {
+      const code = failure instanceof Error && "code" in failure ? failure.code : undefined;
+      const stdout = failure instanceof Error && "stdout" in failure ? failure.stdout : undefined;
+      if (typeof code === "number" && code > 0 && code < 128 && typeof stdout === "string")
+        return stdout;
+      throw failure;
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
 }
 

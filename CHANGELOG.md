@@ -234,7 +234,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   document-schema check on the merged documents, so a stray line break inside
   a row is reported before the result is staged. It works after a merge GitHub
   reported as conflicting too, because it runs after the merge rather than as a
-  merge driver. Fixes #3651.
+  merge driver. A working file a person or an earlier run already edited is
+  left as it is, and CRLF documents keep their line ends. Fixes #3651.
 
 - **`qfai-implement` ships optional Playwright and Vitest recipes.** A new
   test runner recipes reference puts the worker session-reuse rules into code:

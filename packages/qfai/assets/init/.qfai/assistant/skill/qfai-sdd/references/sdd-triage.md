@@ -12,6 +12,7 @@ Triage selects the smallest story-tree change that answers each incoming require
 - Approval and no-question mode
 - Retiring an EX, AC or BR
 - ID allocation
+- Conflicted story-tree documents
 - Completion of triage
 
 ## Inputs
@@ -328,14 +329,17 @@ Rollback restores a changed file only if its bytes still match this invocation's
 replacement, preserving concurrent changes and naming any unrestored path.
 These checks guarantee neither atomic concurrency nor power-loss safety.
 
+A move to another BF changes the story's US ID and all child AC and EX IDs. It follows the existing approval path, not the same-BF capacity exception. Apply the complete map above to approved active citations and retire old IDs in a new approved record; inherited DEC cells and their historical references stay unchanged.
+
+## Conflicted story-tree documents
+
 When a merge leaves story-tree documents conflicted, run `npx qfai sdd merge-docs`
 before resolving them by hand. It merges each unmerged document from the index by
 table row, keyed by the first cell, and by sentence, so edits to different sentences
 of one long row no longer conflict as a whole line. What it cannot settle stays
 between conflict markers; it then reports the document-schema findings of the result.
+A document already edited by hand, or by an earlier run, is left as it is.
 Review the result and stage it with `git add`; it stages nothing itself.
-
-A move to another BF changes the story's US ID and all child AC and EX IDs. It follows the existing approval path, not the same-BF capacity exception. Apply the complete map above to approved active citations and retire old IDs in a new approved record; inherited DEC cells and their historical references stay unchanged.
 
 ## Completion of triage
 
