@@ -200,16 +200,25 @@ base: it prints the number after the highest of the working tree and the base.
 
 Parallel branches pick the same next ID unless each reads the others first:
 
-1. Before taking an ID, fetch the base. Where a forge CLI is available, use it
-   only to list the open pull requests' head branches; fetch each head and read
+1. Before taking an ID, fetch the base. Where a forge CLI is available, list the
+   open pull requests once per session through its REST API, for example
+   `gh api repos/{owner}/{repo}/pulls?state=open`, and reuse that listing for
+   every ID the session takes. Fetch each one's head ref, such as
+   `refs/pull/<n>/head`, so a pull request from a fork is read too, and read
    the IDs it adds from `git diff <base>...<head>`. Take the highest across the
-   base, the working tree and those heads, plus one, so a gap above the tree's own
-   highest is allowed. Without a forge CLI, read the base alone.
-2. After merging the base into the branch, check that each ID the branch adds is
-   still unused on the base. If one is taken, renumber the branch's own item and
-   every reference to it, then run the gates again.
-3. Keep the change-request row last in `decisions.md`, so parallel appends
-   conflict only at the end of the file.
+   base, the working tree and those heads, plus one. Without a forge CLI, read
+   the base alone.
+2. When merging the base into the branch, check each ID the branch adds against
+   the fetched base. The base's item keeps its ID; the branch renumbers its own
+   item and every reference to it, then runs the gates again.
+   - A DEC or OQ row: check before the merge, and renumber a DEC row with
+     `npx qfai sdd renumber-decision` as the triage reference's ID allocation
+     section says. The union merge of `decisions.md` and `open-questions.md`
+     would duplicate a colliding ID without a conflict.
+   - Any other ID: check after the merge.
+3. Keep the change-request row last in `decisions.md`, so the rows the branch
+   added stay in ascending order at the end of the register, where the
+   merge-time renumbering works from the lowest colliding one upward.
 
 ## Pre-draft grilling
 

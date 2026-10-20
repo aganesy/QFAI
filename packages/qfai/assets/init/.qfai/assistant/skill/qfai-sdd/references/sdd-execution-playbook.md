@@ -49,7 +49,7 @@ questions in open-questions.md. In --auto, ask nothing and stop dependent work. 
    A layer is a group of modules whose dependencies point one way: down. The section draws the layers as one `flowchart TD`, then lists them in the table from the uppermost down, and the two name the same layers and edges.
    Implementation places new code by that table and reviewers judge a change against it, as the `Architecture` section of the spec traceability rules states.
 2. Write 02_business-flow/business-flows.md and the affected business-flow-NNNN/business-flow.md files. Each flow's `## Flow` section is exactly one Mermaid flowchart or sequenceDiagram.
-3. Allocate BF and US IDs from the highest existing ID in their scopes, counting retired IDs named in decisions rows. Add rows to the flow and story indexes.
+3. Allocate BF and US IDs from the highest existing ID in their scopes, counting retired IDs named in decisions rows and the IDs open pull requests add. Add rows to the flow and story indexes.
 
 ## Stage 3: concrete stories
 

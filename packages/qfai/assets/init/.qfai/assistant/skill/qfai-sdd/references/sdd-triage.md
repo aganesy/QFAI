@@ -205,10 +205,11 @@ Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an
 Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` right before writing it: a US names its BF, an AC or EX its US, and a BR its contract.
 It reads the working tree and the base ref's commit, a fetched ref such as `origin/main`, and prints the number after the highest of both, not after the last row. It writes nothing and does not see open pull requests.
 
-Read the IDs open pull requests add before taking one. Fetch the base; where a forge CLI is available, use it only to list the open pull requests' head branches, fetch each head and read the IDs it adds from `git diff <base>...<head>`. Without a forge CLI, read the base alone.
-Take the highest across the base, the working tree and those heads, plus one, so a gap above the tree's own highest is allowed.
-After merging the base into the branch, check that each ID the branch adds is still unused on the base. If one is taken, renumber the branch's own item and every reference to it by the collision steps below, then run the gates again.
-Keep the change-request row last in `decisions.md`, so parallel appends conflict only at the end of the file.
+Read the IDs open pull requests add before taking one. Fetch the base. Where a forge CLI is available, list the open pull requests once per session through its REST API, for example `gh api repos/{owner}/{repo}/pulls?state=open`, and reuse that listing for every ID the session takes.
+Fetch each one's head ref, such as `refs/pull/<n>/head`, so a pull request from a fork is read too, and read the IDs it adds from `git diff <base>...<head>`. Take the highest across the base, the working tree and those heads, plus one. Without a forge CLI, read the base alone.
+When merging the base into the branch, check each ID the branch adds against the fetched base. The base's item keeps its ID; the branch renumbers its own item and every reference to it, then runs the gates again.
+Check a DEC or OQ row before the merge, and renumber a DEC row with `renumber-decision` as below: the union merge of `decisions.md` and `open-questions.md` would duplicate a colliding ID without a conflict. Check any other ID after the merge.
+Keep the change-request row last in `decisions.md`, so the rows the branch added stay in ascending order at the end of the register, where the merge-time renumbering works from the lowest colliding one upward.
 
 ### Capacity before writing
 
