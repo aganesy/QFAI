@@ -302,12 +302,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Fixes #3857.
 
 - **`qfai validate --timings` shows what is slow.** The option prints one
-  more line, `timings: by family <FAMILY> <ms>ms, ...`, after `fail-on:`,
-  naming each finding family by its code (`STORY`, `DOCSCHEMA`, `CONTRACT`)
-  with the time its checks took, slowest first. The UI/UX checks, which run
-  side by side, follow apart as `side by side, overlapping:`. The same times
-  go to `validate.json#familyTimings`. Without the option the output is
-  unchanged.
+  more line, `timings: by family <label> <ms>ms, ...`, after the over-budget
+  `timings:` line when there is one, else after `fail-on:`. It lists each
+  check slowest first, labelled by the code families of the findings it
+  returned (`STORY`, `CONTRACT`), or by its own name when it found nothing.
+  The UI/UX group counts as one entry, `uiux`, and its checks, which run side
+  by side, follow apart as `side by side, overlapping:`. The same times go to
+  `validate.json#familyTimings`. A run that stops early prints no such line.
+  Without the option the output is unchanged.
   Fixes #3946.
 
 - **`qfai-implement` ships optional Playwright and Vitest recipes.** A new

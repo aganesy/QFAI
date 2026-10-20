@@ -1188,6 +1188,9 @@ const CALLBACK_INVOKING_METHODS: ReadonlySet<string> = new Set<string>([
   "then",
   "catch",
   "finally",
+  // `core/validate.ts` runs each check through its timer, which awaits the closure at once.
+  "timed",
+  "timedResult",
 ]);
 
 /**
@@ -1956,6 +1959,40 @@ describe("meta-test: story-tree test obligations are reachable from each profile
       ),
     );
     expect(reachesSample(mappedGraph, mapped, "runStoryTestValidators")).toBe(true);
+  });
+
+  it("a validator run through the timer is reachable, one parked in a registrar still is not", () => {
+    const timedFile = path.join(SRC_ROOT, "timedSample.ts");
+    const timedGraph = buildCallGraph(
+      caller(
+        timedFile,
+        [
+          'import { validateStorySample } from "./atddSample.js";',
+          "async function runStoryTestValidators(sink) {",
+          '  return timed(sink, "X", () => validateStorySample());',
+          "}",
+        ].join("\n"),
+      ),
+    );
+    expect(reachesSample(timedGraph, timedFile, "runStoryTestValidators")).toBe(true);
+
+    const parked = path.join(SRC_ROOT, "parkedSample.ts");
+    const parkedGraph = buildCallGraph(
+      caller(
+        parked,
+        [
+          'import { validateStorySample } from "./atddSample.js";',
+          "function register(task) {",
+          "  return task;",
+          "}",
+          "async function runStoryTestValidators() {",
+          "  register(() => validateStorySample());",
+          "  return [];",
+          "}",
+        ].join("\n"),
+      ),
+    );
+    expect(reachesSample(parkedGraph, parked, "runStoryTestValidators")).toBe(false);
   });
 
   it("prose that merely names a story code does not make a module an emitter", () => {

@@ -89,8 +89,6 @@ import { readSafe } from "./validators/utils.js";
 import { isEnoent } from "./fs/errno.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
-/** The families the canonical UIX checks report, as one timing entry: they run as one check. */
-const CANONICAL_UIX_FAMILIES = "CLASSIFICATION/DIRECTION/OQ/SCREEN/SIDECAR/THREELAYER/TREND";
 const HTML_MOCK_VALIDATION_BUDGET_MS = 2000;
 
 /**
@@ -101,37 +99,72 @@ const HTML_MOCK_VALIDATION_BUDGET_MS = 2000;
  * the host's speed into `counts.warning`; the sink keeps the signal without
  * letting it reach the issue stream.
  */
-type TimingsSink = { timings?: ValidationTimings; families: FamilyClock };
+type TimingsSink = { timings?: ValidationTimings; sequential: CheckClock; overlapping: CheckClock };
 
 /**
- * Milliseconds per finding family, measured on every run and reported only when `--timings` asks.
- * A clock costs one `performance.now()` pair per check, so it is kept unconditional rather than
- * threading the option through every runner.
+ * What each check took, keyed by the check, with the code families of the issues it returned.
+ * Measured on every run and reported only when `--timings` asks: a clock costs one
+ * `performance.now()` pair per check, so it stays unconditional rather than threading the option
+ * through every runner.
  */
-type FamilyClock = { sequential: Map<string, number>; overlapping: Map<string, number> };
+type CheckClock = Map<string, { ms: number; families: Set<string> }>;
 
 function newTimingsSink(): TimingsSink {
-  return { families: { sequential: new Map(), overlapping: new Map() } };
+  return { sequential: new Map(), overlapping: new Map() };
 }
 
-function addFamilyTime(clock: Map<string, number>, family: string, ms: number): void {
-  clock.set(family, (clock.get(family) ?? 0) + ms);
+/** The family a finding code belongs to, as users read it: `QFAI-CFG-LINK-002` is `CFG-LINK`. */
+function familyOfCode(code: string): string {
+  return code.replace(/^QFAI-/, "").replace(/-\d+$/, "");
+}
+
+function recordCheck(clock: CheckClock, check: string, ms: number, issues: readonly Issue[]): void {
+  const entry = clock.get(check) ?? { ms: 0, families: new Set<string>() };
+  entry.ms += ms;
+  for (const found of issues) entry.families.add(familyOfCode(found.code));
+  clock.set(check, entry);
 }
 
 /**
- * Runs one check and adds its wall-clock time to the finding family it reports, named as its
- * codes are. Wrap a check, never a group of checks, so no time is counted twice.
+ * Runs one check and adds its wall-clock time to `check`. Wrap a check, never a group of
+ * checks, so no time is counted twice.
  */
-async function timed<T>(sink: TimingsSink, family: string, run: () => Promise<T>): Promise<T> {
+async function timedResult<T>(
+  sink: TimingsSink,
+  check: string,
+  run: () => Promise<T>,
+  issuesOf: (result: T) => readonly Issue[],
+): Promise<T> {
   const start = performance.now();
   const result = await run();
-  addFamilyTime(sink.families.sequential, family, performance.now() - start);
+  recordCheck(sink.sequential, check, performance.now() - start, issuesOf(result));
   return result;
 }
 
-/** The families of a clock, slowest first, ties in name order. */
-export function orderFamilyTimings(clock: ReadonlyMap<string, number>): ValidationFamilyTiming[] {
-  return [...clock]
+/** `timedResult` for a check that returns its issues. */
+async function timed(
+  sink: TimingsSink,
+  check: string,
+  run: () => Promise<Issue[]>,
+): Promise<Issue[]> {
+  return timedResult(sink, check, run, (found) => found);
+}
+
+/**
+ * The checks of a clock under the label a user can read, summed per label, slowest first and ties
+ * in name order. The label is the code families of the issues the check returned, sorted and
+ * joined with `/`, so it cannot disagree with the findings; a check that returned none keeps its
+ * own name.
+ */
+export function labelCheckTimings(
+  clock: ReadonlyMap<string, { ms: number; families: ReadonlySet<string> }>,
+): ValidationFamilyTiming[] {
+  const byLabel = new Map<string, number>();
+  for (const [check, entry] of clock) {
+    const label = entry.families.size > 0 ? [...entry.families].sort().join("/") : check;
+    byLabel.set(label, (byLabel.get(label) ?? 0) + entry.ms);
+  }
+  return [...byLabel]
     .map(([family, ms]) => ({ family, ms }))
     .sort((left, right) => right.ms - left.ms || left.family.localeCompare(right.family));
 }
@@ -167,7 +200,7 @@ export async function validateProject(
   const forbiddenIdentifiers = config.validation.forbiddenIdentifiers ?? [];
   const securityIssues =
     forbiddenIdentifiers.length > 0
-      ? await timed(timingsSink, "SECURITY", () =>
+      ? await timed(timingsSink, "forbidden-identifiers", () =>
           validateForbiddenIdentifiers(root, forbiddenIdentifiers),
         )
       : [];
@@ -205,7 +238,12 @@ export async function validateProject(
       counts: countIssues(layoutIssues),
     };
   }
-  const storyModel = await timed(timingsSink, "STORY", () => readStoryTreeModel(root, config));
+  const storyModel = await timedResult(
+    timingsSink,
+    "story-tree-read",
+    () => readStoryTreeModel(root, config),
+    () => [],
+  );
   const flowScope = options.flowIds ? resolveFlowScope(options.flowIds, storyModel) : undefined;
   const scopeIssues =
     flowScope?.invalidValues.map((value) =>
@@ -221,7 +259,9 @@ export async function validateProject(
 
   const renderedPath = options.renderedPath;
   const renderedIssues = renderedPath
-    ? await timed(timingsSink, "CONTRACT", () => validateUiRenderedCopy(root, config, renderedPath))
+    ? await timed(timingsSink, "ui-rendered-copy", () =>
+        validateUiRenderedCopy(root, config, renderedPath),
+      )
     : [];
 
   const profileRun = await runProfileValidators(
@@ -264,8 +304,8 @@ export async function validateProject(
     ...(options.familyTimings
       ? {
           familyTimings: {
-            sequential: orderFamilyTimings(timingsSink.families.sequential),
-            overlapping: orderFamilyTimings(timingsSink.families.overlapping),
+            sequential: labelCheckTimings(timingsSink.sequential),
+            overlapping: labelCheckTimings(timingsSink.overlapping),
           },
         }
       : {}),
@@ -627,7 +667,12 @@ async function runProfileValidators(
   // integration link means the assistant loaded no skill and routed no agent,
   // so every gate the profile is about was defined by files nothing read. That
   // is not an SDD fact or an ATDD fact; it invalidates the run.
-  const surface = await timed(timings, "LINK", () => inspectIntegrationSurface(root));
+  const surface = await timedResult(
+    timings,
+    "integration-surface",
+    () => inspectIntegrationSurface(root),
+    (inspected) => inspected.issues,
+  );
   // A CLI-boundary observation, independent of the tree below: it survives the
   // short-circuit so the operator still learns the flag went nowhere.
   const unusedPlatform = buildUnusedPlatformIssues(profile, platformOption);
@@ -635,7 +680,9 @@ async function runProfileValidators(
   // tree, so it survives the short-circuit below. It is also the finding most
   // worth keeping when the tree turns out to be damaged — a validate run
   // against another checkout's qfai explains a whole class of confusing damage.
-  const toolProvenance = await timed(timings, "TOOL", () => buildToolProvenanceIssues(root));
+  const toolProvenance = await timed(timings, "tool-provenance", () =>
+    buildToolProvenanceIssues(root),
+  );
   // Damage on a path the profile validators themselves walk stops here. One of
   // them reading the same tree raises `ENOTDIR` / `ELOOP` from its own
   // `readdir`, and one rejection took the whole run down — losing the finding
@@ -666,7 +713,7 @@ async function runProfileValidators(
   // intact half of the tree stayed hidden until `QFAI-LINK-001` was repaired —
   // "every profile" is what this rule promises, and structural damage
   // elsewhere is not a reason to withhold a finding the walk already has.
-  const anchorIssues = await timed(timings, "LINK", () =>
+  const anchorIssues = await timed(timings, "assistant-anchors", () =>
     validateAssistantAnchorReferences(root, config),
   );
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
@@ -700,34 +747,54 @@ async function runStoryProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
 ): Promise<Issue[]> {
-  const time = <T>(family: string, run: () => Promise<T>): Promise<T> =>
-    timed(timings, family, run);
   const sdd = async (includePolicy = true): Promise<Issue[]> => [
-    ...(await time("STORY", () => validateStoryTreeStructure(root, config, model))),
-    ...(await time("DOCSCHEMA", () => validateDocumentSchema(root, config))),
-    ...(await time("STORY", () => validateStaleTerms(root, config))),
-    ...(await time("CONTRACT", () => validateStoryTreeContractReferences(root, config, model))),
+    ...(await timed(timings, "story-structure", () =>
+      validateStoryTreeStructure(root, config, model),
+    )),
+    ...(await timed(timings, "document-schema", () => validateDocumentSchema(root, config))),
+    ...(await timed(timings, "stale-terms", () => validateStaleTerms(root, config))),
+    ...(await timed(timings, "story-contract-index", () =>
+      validateStoryTreeContractReferences(root, config, model),
+    )),
     ...(includePolicy
-      ? await time("ASSETS", () => validateStoryPolicyPlaceholders(root, config))
+      ? await timed(timings, "policy-placeholders", () =>
+          validateStoryPolicyPlaceholders(root, config),
+        )
       : []),
-    ...(await time("CONTRACT", () => validateContracts(root, config))),
-    ...(await time("DCON", () => validateDesignContractReadiness(root, config))),
-    ...(await time("ASSISTANT", () => validateAssistantTreeMigration(root, config))),
-    ...(await time("SKILLDOC", () => validateSkillDocReferences(root, config))),
-    ...(await time("POLICY", () => validateAutopilotPolicy(root, { config }))),
-    ...(await time("HANDOFF/MANIFEST", () => runPackageSelfGovernanceValidators(root))),
+    ...(await timed(timings, "contracts", () => validateContracts(root, config))),
+    ...(await timed(timings, "design-contract-readiness", () =>
+      validateDesignContractReadiness(root, config),
+    )),
+    ...(await timed(timings, "assistant-tree-migration", () =>
+      validateAssistantTreeMigration(root, config),
+    )),
+    ...(await timed(timings, "skill-doc-references", () =>
+      validateSkillDocReferences(root, config),
+    )),
+    ...(await timed(timings, "autopilot-policy", () => validateAutopilotPolicy(root, { config }))),
+    ...(await timed(timings, "package-self-governance", () =>
+      runPackageSelfGovernanceValidators(root),
+    )),
   ];
   const atdd = async (): Promise<Issue[]> => [
-    ...(await time("STORY", () => validateStoryTreeObligations(root, config, "atdd", model))),
-    ...(await time("TEST", () =>
+    ...(await timed(timings, "story-test-obligations", () =>
+      validateStoryTreeObligations(root, config, "atdd", model),
+    )),
+    ...(await timed(timings, "test-stubs", () =>
       validateTestTodoStubs(root, config, acceptanceStubScan(root, config)),
     )),
   ];
   const tdd = async (includeContracts = true, includeDrift = true): Promise<Issue[]> => [
-    ...(await time("STORY", () => validateStoryTreeObligations(root, config, "tdd", model))),
-    ...(includeDrift ? await time("DRIFT", () => validateStoryTreeDrift(root, config, "tdd")) : []),
-    ...(await time("TEST", () => validateTestTodoStubs(root, config))),
-    ...(includeContracts ? await time("CONTRACT", () => validateContracts(root, config)) : []),
+    ...(await timed(timings, "story-test-obligations", () =>
+      validateStoryTreeObligations(root, config, "tdd", model),
+    )),
+    ...(includeDrift
+      ? await timed(timings, "drift", () => validateStoryTreeDrift(root, config, "tdd"))
+      : []),
+    ...(await timed(timings, "test-stubs", () => validateTestTodoStubs(root, config))),
+    ...(includeContracts
+      ? await timed(timings, "contracts", () => validateContracts(root, config))
+      : []),
   ];
   switch (profile) {
     case "sdd":
@@ -737,20 +804,24 @@ async function runStoryProfileValidators(
     case "tdd":
       return tdd();
     case "drift":
-      return time("DRIFT", () => validateStoryTreeDrift(root, config, "drift"));
+      return timed(timings, "drift", () => validateStoryTreeDrift(root, config, "drift"));
     case "verify":
     case "full":
       return dedupeStubFindings(
         dedupeStoryFindings([
-          ...(await time("HYG", () => validateRepositoryHygiene(root, config))),
-          ...(await time("SKILLS", () => validateStepTree(root, config))),
-          ...(await time("SKILLS", () => validateAssistantAssets(root, config))),
+          ...(await timed(timings, "hygiene", () => validateRepositoryHygiene(root, config))),
+          ...(await timed(timings, "step-tree", () => validateStepTree(root, config))),
+          ...(await timed(timings, "assistant-assets", () =>
+            validateAssistantAssets(root, config),
+          )),
           ...(await runDiscussionValidators(root, config, timings)),
           ...(await sdd(false)),
           ...(await runPrototypingValidators(root, config, timings, platformOption)),
           ...(await atdd()),
           ...(await tdd(false, false)),
-          ...(await time("PROTOSKILL", () => validatePrototypingSkill(root, config))),
+          ...(await timed(timings, "prototyping-skill", () =>
+            validatePrototypingSkill(root, config),
+          )),
         ]),
       );
     case "discussion":
@@ -790,7 +861,9 @@ async function runSaasPackage(
     timings,
     platformOption,
   );
-  return timed(timings, "SAAS", () => runSaasPackageProfile(root, prototypingIssues));
+  return timed(timings, "saas-package-profile", () =>
+    runSaasPackageProfile(root, prototypingIssues),
+  );
 }
 
 async function runDiscussionValidators(
@@ -798,8 +871,6 @@ async function runDiscussionValidators(
   config: ConfigLoadResult["config"],
   timings: TimingsSink,
 ): Promise<Issue[]> {
-  const time = <T>(family: string, run: () => Promise<T>): Promise<T> =>
-    timed(timings, family, run);
   return [
     // A project reaching this profile may already carry a root DESIGN.md —
     // from `npx qfai init`, from a hand-edit, or from an earlier pass of the
@@ -807,13 +878,17 @@ async function runDiscussionValidators(
     // Catching it here means a malformed file surfaces before `/qfai-sdd`
     // builds on it. Only the parse half — the UI-contract checks belong to
     // later stages.
-    ...(await time("DCON", () => validateRootDesignMdParse(root))),
-    ...(await time("DPACK", () => validateDiscussionMermaid(root))),
-    ...(await time("DPACK", () => validateDesignDirectionProposal(root, config))),
-    ...(await time("DPACK", () => validateDiscussionPackReadiness(root, config))),
-    ...(await time("VIS", () => validateDiscussionVisuals(root))),
-    ...(await time("RESEARCH", () => validateResearchSummary(root, config))),
-    ...(await time(CANONICAL_UIX_FAMILIES, () => runCanonicalUixValidators(root, config))),
+    ...(await timed(timings, "root-design-md-parse", () => validateRootDesignMdParse(root))),
+    ...(await timed(timings, "discussion-mermaid", () => validateDiscussionMermaid(root))),
+    ...(await timed(timings, "design-direction-proposal", () =>
+      validateDesignDirectionProposal(root, config),
+    )),
+    ...(await timed(timings, "discussion-pack", () =>
+      validateDiscussionPackReadiness(root, config),
+    )),
+    ...(await timed(timings, "discussion-visuals", () => validateDiscussionVisuals(root))),
+    ...(await timed(timings, "research-summary", () => validateResearchSummary(root, config))),
+    ...(await timed(timings, "canonical-uix", () => runCanonicalUixValidators(root, config))),
   ];
 }
 
@@ -826,9 +901,13 @@ async function runPrototypingValidators(
 ): Promise<Issue[]> {
   return [
     ...(await runUiuxValidators(root, config, timings, platformOption)),
-    ...(await timed(timings, "MOCKHREF", () => detectMockHrefDrift(root))),
-    ...(await timed(timings, "DCON", () => validateDesignContractReadiness(root, config))),
-    ...(await timed(timings, "CFG-LINK", () => validateConfigReferenceIntegrity(root, config))),
+    ...(await timed(timings, "mock-href", () => detectMockHrefDrift(root))),
+    ...(await timed(timings, "design-contract-readiness", () =>
+      validateDesignContractReadiness(root, config),
+    )),
+    ...(await timed(timings, "config-reference-integrity", () =>
+      validateConfigReferenceIntegrity(root, config),
+    )),
   ];
 }
 
@@ -847,9 +926,9 @@ async function runPrototypingProfileValidators(
     // An entry no screen is read from is reported here too, and so is a UI
     // contract that does not parse. Kept out of `runPrototypingValidators`:
     // `full` also runs `validateContracts`, which reports both already.
-    ...(await timed(timings, "CONTRACT", () => validateUiScreenEntries(root, config))),
-    ...(await timed(timings, "CONTRACT", () => validateUiScreenCopy(root, config))),
-    ...(await timed(timings, "CONTRACT", () => validateUiContractParse(root, config))),
+    ...(await timed(timings, "ui-screen-entries", () => validateUiScreenEntries(root, config))),
+    ...(await timed(timings, "ui-screen-copy", () => validateUiScreenCopy(root, config))),
+    ...(await timed(timings, "contract-parse", () => validateUiContractParse(root, config))),
   ];
 }
 
@@ -938,9 +1017,7 @@ async function runUiuxValidators(
   platformOption?: string,
 ): Promise<Issue[]> {
   const uiuxStart = performance.now();
-  const platformResult = await timed(timings, "PLATFORM", () =>
-    detectPlatform(root, config, platformOption),
-  );
+  const platformResult = await detectPlatform(root, config, platformOption);
   const platform = platformResult.platform;
   // The html-mock pass times itself and reports through here, rather than
   // being wall-clocked from this side. Its budget is for parsing the mock
@@ -956,27 +1033,24 @@ async function runUiuxValidators(
   // paid once per process, and on a cold disk cache it alone outran the whole
   // group's budget.
   const htmlMockTiming: HtmlMockTiming = { parseMs: 0, loadMs: 0 };
-  const uiuxValidators: Array<[name: string, family: string, run: () => Promise<Issue[]>]> = [
-    ["design tokens", "DT", () => validateDesignToken(root, config)],
-    ["html mock", "MOCK", () => validateHtmlMock(root, platform, config, htmlMockTiming)],
-    ["mermaid screen flow", "FLOW", () => validateMermaidScreenFlow(root, config)],
-    [
-      "UI definition consistency",
-      "CONSISTENCY",
-      () => validateUiDefinitionConsistency(root, config),
-    ],
-    ["research summary", "RESEARCH", () => validateResearchSummary(root, config)],
-    ["agent definition", "AGENT", () => validateAgentDefinition(root, config)],
-    ["design audit", "AUD", () => validateDesignAudit(root, config)],
-    ["canonical UIX", CANONICAL_UIX_FAMILIES, () => runCanonicalUixValidators(root, config)],
+  const uiuxValidators: Array<[name: string, run: () => Promise<Issue[]>]> = [
+    ["design tokens", () => validateDesignToken(root, config)],
+    ["html mock", () => validateHtmlMock(root, platform, config, htmlMockTiming)],
+    ["mermaid screen flow", () => validateMermaidScreenFlow(root, config)],
+    ["UI definition consistency", () => validateUiDefinitionConsistency(root, config)],
+    ["research summary", () => validateResearchSummary(root, config)],
+    ["agent definition", () => validateAgentDefinition(root, config)],
+    ["design audit", () => validateDesignAudit(root, config)],
+    ["canonical UIX", () => runCanonicalUixValidators(root, config)],
   ];
-  const familyOf = new Map(uiuxValidators.map(([name, family]) => [name, family]));
   const uiuxParts: { name: string; ms: number }[] = [];
+  const partIssues = new Map<string, Issue[]>();
   const uiuxIssueGroups = await Promise.all(
-    uiuxValidators.map(async ([name, , run]) => {
+    uiuxValidators.map(async ([name, run]) => {
       const start = performance.now();
       const found = await run();
       uiuxParts.push({ name, ms: performance.now() - start });
+      partIssues.set(name, found);
       return found;
     }),
   );
@@ -985,8 +1059,11 @@ async function runUiuxValidators(
   // The html-mock part leaves out the one-off load of its parser, as `uiuxMs` does.
   const orderedParts = orderUiuxParts(uiuxParts, htmlMockTiming.loadMs);
   for (const part of orderedParts) {
-    addFamilyTime(timings.families.overlapping, familyOf.get(part.name) ?? part.name, part.ms);
+    recordCheck(timings.overlapping, part.name, part.ms, partIssues.get(part.name) ?? []);
   }
+  // The group as one entry of the checks that ran one after another, so that list sums close to
+  // the run. Its whole wall clock, the parser load included, because the run paid for it.
+  recordCheck(timings.sequential, "uiux", performance.now() - uiuxStart, []);
   timings.timings = {
     uiuxMs: performance.now() - uiuxStart - htmlMockTiming.loadMs,
     uiuxBudgetMs: UIUX_VALIDATION_BUDGET_MS,

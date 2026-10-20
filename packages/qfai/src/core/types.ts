@@ -130,7 +130,10 @@ export type ValidationTimings = {
   uiuxParts: readonly { name: string; ms: number }[];
 };
 
-/** The time the checks of one finding family took, named as its codes are (`STORY` for `QFAI-STORY-*`). */
+/**
+ * The time the checks under one label took. The label is the code families of the issues those
+ * checks returned (`STORY` for `QFAI-STORY-*`), or a check's own name when it returned none.
+ */
 export type ValidationFamilyTiming = { family: string; ms: number };
 
 /**
