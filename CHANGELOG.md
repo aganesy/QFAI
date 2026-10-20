@@ -161,6 +161,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the line after `counts:` as `fail-on:` must skip the new line.
   Fixes #3797.
 
+- **`qfai validate` says that it started and, when it passes, what it
+  checked.** In text format, stderr gets
+  `qfai validate: running profile <profile>...` before the run, so a run cut
+  off by a time limit still leaves a line. A passing run prints
+  `qfai validate: passed (fail-on <threshold>): profile <profile>, <n> errors, <n> warnings, <seconds>s`
+  just ahead of `run-log:`; a run that could not complete prints none, even
+  under `--fail-on never`. A script that read the line before `run-log:` as
+  `fail-on:` must skip the new line. GitHub format is unchanged.
+  Fixes #3941.
+
 - **`qfai validate` warns when an open question is DONE without naming its
   decision.** An `open-questions.md` row whose Status is plain `DONE` now
   raises `QFAI-STORY-018` at warning in `sdd`, naming the file and the row,
