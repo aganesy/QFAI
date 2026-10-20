@@ -294,9 +294,11 @@ should exist is a Change Request.
 
 ### Prototyping exception (scope floor)
 
-For `/qfai-prototyping`, the minimum allowed scope includes every declared UI
-contract and screen in the configured story tree. Shrinking the loop to one
-contract is prohibited unless a documented Change Request approves it.
+For `/qfai-prototyping`, the confirmed prototype in `.qfai/prototype/final/`
+covers every declared UI contract and screen in the configured story tree.
+Shrinking what it covers is prohibited unless a documented Change Request
+approves it. A run scoped per `prototyping-grill` § Run scope rebuilds part of
+a confirmed `final/` and merges it back, so it does not shrink the floor.
 
 ---
 

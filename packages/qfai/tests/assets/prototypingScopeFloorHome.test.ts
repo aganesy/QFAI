@@ -19,6 +19,10 @@ describe.each(trees)("%s prototyping scope floor", (tree) => {
     expect(article).toContain("### Prototyping exception (scope floor)");
     expect(article).toContain("every declared UI contract and screen in the configured story tree");
     expect(article).toContain("documented Change Request approves it");
+    expect(article).toContain("the confirmed prototype in `.qfai/prototype/final/` covers");
+    expect(article).toContain(
+      "A run scoped per `prototyping-grill` § Run scope rebuilds part of a confirmed `final/` and merges it back, so it does not shrink the floor.",
+    );
     expect(article).toContain("The least that satisfies a requirement is the right amount");
   });
 
