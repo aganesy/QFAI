@@ -291,6 +291,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   without the search. The report names the issue matched or created.
   Fixes #3857.
 
+- **The code review reads the body of a test an annotation moves onto.** When a
+  change adds, moves or copies an AC or EX annotation, `implementation-reviewer`
+  now reads the annotated test's body and reports an annotation on a test that
+  checks something else as a finding, and `implement-retire` confirms a
+  receiving test asserts the example before it moves an annotation there.
+  `npx qfai validate` still counts an annotation as coverage wherever it sits.
+  Fixes #3944.
+
 - **`qfai-implement` ships optional Playwright and Vitest recipes.** A new
   test runner recipes reference puts the worker session-reuse rules into code:
   a Vitest session cache keyed by the run's private directory, the pool slot
