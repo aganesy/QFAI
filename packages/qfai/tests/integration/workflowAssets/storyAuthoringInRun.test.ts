@@ -211,6 +211,7 @@ describe("qfai-sdd writes the story tree", () => {
         /DEC or OQ row:? check before the merge|Check a DEC or OQ row before the merge/,
       );
       expect(text).toMatch(/renumber a DEC row with `(?:npx qfai sdd )?renumber-decision`/);
+      expect(text).toContain("or an OQ row and its references by hand");
       expect(text).toContain(
         "union merge of `decisions.md` and `open-questions.md` would duplicate a colliding ID without a conflict",
       );

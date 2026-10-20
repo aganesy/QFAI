@@ -208,7 +208,7 @@ It reads the working tree and the base ref's commit, a fetched ref such as `orig
 Read the IDs open pull requests add before taking one. Fetch the base. Where a forge CLI is available, list the open pull requests once per session through its REST API, for example `gh api repos/{owner}/{repo}/pulls?state=open`, and reuse that listing for every ID the session takes.
 Fetch each one's head ref, such as `refs/pull/<n>/head`, so a pull request from a fork is read too, and read the IDs it adds from `git diff <base>...<head>`. Take the highest across the base, the working tree and those heads, plus one. Without a forge CLI, read the base alone.
 When merging the base into the branch, check each ID the branch adds against the fetched base. The base's item keeps its ID; the branch renumbers its own item and every reference to it, then runs the gates again.
-Check a DEC or OQ row before the merge, and renumber a DEC row with `renumber-decision` as below: the union merge of `decisions.md` and `open-questions.md` would duplicate a colliding ID without a conflict. Check any other ID after the merge.
+Check a DEC or OQ row before the merge, and renumber a DEC row with `renumber-decision` as below, or an OQ row and its references by hand: the union merge of `decisions.md` and `open-questions.md` would duplicate a colliding ID without a conflict. Check any other ID after the merge.
 Keep the change-request row last in `decisions.md`, so the rows the branch added stay in ascending order at the end of the register, where the merge-time renumbering works from the lowest colliding one upward.
 
 ### Capacity before writing
@@ -275,7 +275,7 @@ approval and mapping procedure, not a relocation executor or mapping schema.
 
 Two branches can take the same next ID. When a merge leaves one ID on two items:
 
-1. The merge target's item keeps the ID. Renumber the incoming item, the one the merge brings in.
+1. The base's item keeps the ID, whichever way the merge runs. Renumber the incoming item, the one the branch added.
 2. Give it the next ID of its scope.
    A renumbered BF or US takes its child IDs and its directory names with it, as a move to another BF does below.
 3. Change every citation belonging to the incoming item in the same commit.

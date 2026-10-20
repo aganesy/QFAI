@@ -213,7 +213,7 @@ Parallel branches pick the same next ID unless each reads the others first:
    item and every reference to it, then runs the gates again.
    - A DEC or OQ row: check before the merge, and renumber a DEC row with
      `npx qfai sdd renumber-decision` as the triage reference's ID allocation
-     section says. The union merge of `decisions.md` and `open-questions.md`
+     section says, or an OQ row and its references by hand. The union merge of `decisions.md` and `open-questions.md`
      would duplicate a colliding ID without a conflict.
    - Any other ID: check after the merge.
 3. Keep the change-request row last in `decisions.md`, so the rows the branch
