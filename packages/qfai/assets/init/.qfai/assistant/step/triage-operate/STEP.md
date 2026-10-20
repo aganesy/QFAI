@@ -61,6 +61,17 @@ change, so the decision rules route it again. Change nothing to make the
 operation pass. List each follow-up in the final report, since no close step
 follows.
 
+For a request to take one base change into several branches, first check each
+branch with `git merge-tree --write-tree <branch> <base>`, which writes
+nothing. A branch that merges cleanly is a branch update the user asked for:
+update it here as an operation, merged and pushed only as the instruction
+names. A branch with conflicts is not an operation: report `needs-change` with
+one extraction for each such branch,
+`{ intent: order, qualifiers: [meaning-preserving] }` naming the artifacts of
+its conflicting paths, so the decision rules plan `resolve-conflicts` for
+each. The session runs them one after another, and a blocked run does not stop
+the next.
+
 ## A delegated release
 
 A release plan runs this step after the user approves the release. It carries
