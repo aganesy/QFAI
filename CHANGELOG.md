@@ -116,18 +116,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   extraction reference adds an example of each. Fixes #3768.
 
 - **`resolve-conflicts` has a rule for one base taken into several
-  branches.** Each branch is its own run of the route, one at a time, by merge,
-  never by rebase or force-push, and keeps the route's decision renumbering,
-  code review and verify block. A run resolves without asking only identical
-  changes, table rows whose first cells differ outside the story tree,
-  contracts and union-merged registers, append-only entries in different
-  slots, and a documented generated file regenerated offline by its named
-  command. It always stops on a lockfile, a pin or digest file, a hunk both
-  sides changed differently, a dropped side, an owner-marked file and a
-  duplicate register ID, aborting only that branch's merge. The route pushes
-  nothing; a push the user names waits for that branch's green gate, and the
-  report gives each branch's result. `triage-operate` reports such a request
-  as `needs-change` and still changes no tracked file. Fixes #3848.
+  branches.** `triage-operate` reports such a request as `needs-change` with
+  one `order` extraction qualified `meaning-preserving` per named branch, and
+  the session runs them one after another; a blocked run does not stop the
+  next. Each run merges, never rebases or force-pushes, keeps the route's
+  decision renumbering, code review and verify block, and on a stop aborts
+  only that branch's merge. Its fix loop repairs nothing: a failing gate undoes
+  the merge and holds the branch. The route pushes nothing; a failed or UNRUN
+  gate is never pushed, and a gate delegated to CI may be pushed under the
+  user's push instruction once the local gates pass, with no merge until CI is
+  green. The report gives each branch's result. Every run of the route now also
+  stops on a pin or digest file, a file with an owner marker or a CODEOWNERS
+  entry, and a register ID declared twice after the merge. Fixes #3848.
 
 - **`sdd-story` annotates an existing test with the example it proves.** Where
   an existing assertion already proves an example the step added or

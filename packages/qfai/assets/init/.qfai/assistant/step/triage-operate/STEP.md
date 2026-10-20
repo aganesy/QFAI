@@ -51,8 +51,10 @@ operation pass. List each follow-up in the final report, since no close step
 follows.
 
 A request to take one base change into several branches is not an operation:
-report `needs-change` with an extraction of it, so the decision rules plan
-`resolve-conflicts` once per branch.
+report `needs-change` with one extraction per named branch, each
+`{ intent: order, qualifiers: [meaning-preserving] }` naming the artifacts its
+conflicts touch, so the decision rules plan `resolve-conflicts` for each. The
+session runs them one after another, and a blocked run does not stop the next.
 
 ## A delegated release
 
