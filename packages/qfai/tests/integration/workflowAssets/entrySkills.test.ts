@@ -441,6 +441,30 @@ describe("qfai-run", () => {
     expect(naming).toEqual([]);
   });
 
+  // QFAI:EX-0001-0222-18
+  it("lists declared flows in the extraction and runs an implement stage once per work order", async () => {
+    const reference = await readShipped(EXTRACTION);
+    expect(flat(sectionOf(reference, "## Procedure"))).toMatch(
+      /list the business flows the change implements in `flows`, as \[flows\]\(#flows\) says/i,
+    );
+    const flows = flat(sectionOf(reference, "## Flows"));
+    expect(flows).toMatch(/list them in `flows`: each a `BF-NNNN` ID, all distinct, at least one/);
+    expect(flows).toContain("Leave it out when no flow is named.");
+    expect(sectionOf(reference, "## Contents")).toContain("- Flows\n");
+    const plan = flat(sectionOf(await readShipped(PLAN), "## Plan"));
+    expect(plan).toMatch(
+      /\| `workOrders` +\| On an implement stage when the extraction lists `flows`/,
+    );
+    expect(plan).toMatch(
+      /runs every one of its steps once per work order, for that work order's `target` flow alone/,
+    );
+    expect(plan).toContain("No work order adds a step, a stage or a review.");
+    expect(plan).toContain("The stage's review runs once, after its last work order.");
+    expect(plan).toMatch(
+      /for a chosen candidate or a branch destination, give each of its implement stages one work order per flow of the extraction's `flows`, in ascending ID order/,
+    );
+  });
+
   // QFAI:AC-0001-0222-06
   // QFAI:EX-0001-0222-11
   // QFAI:EX-0001-0222-12

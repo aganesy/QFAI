@@ -57,4 +57,11 @@ Feature: Plan a request's route with one command
     When `npx qfai workflow plan --order` runs
     Then it prints the plan the extraction `{ intent: order, artifacts: [] }` gives and exits 0
     And it needs no extraction file and writes no file
+
+  # AC-0001-0222-09
+  Scenario: An extraction that declares flows gets one implement work order per flow
+    Given an extraction whose `flows` lists the business flows the change implements
+    When the command plans it
+    Then each implement stage of the plan holds one work order per flow, each naming its flow as `target`, in ascending flow ID order
+    And the plan's stages, steps, points and scopes are those the extraction without `flows` gives
 ```

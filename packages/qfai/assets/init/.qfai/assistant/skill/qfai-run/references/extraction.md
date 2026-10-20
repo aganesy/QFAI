@@ -19,6 +19,7 @@ define.
 - Artifacts
 - Risks
 - Confidence and alternatives
+- Flows
 - Examples
 
 ## Procedure
@@ -36,6 +37,8 @@ define.
 7. Set the `risks`.
 8. Set the `confidence`, and write an alternative for each other reading the
    text supports.
+9. List the business flows the change implements in `flows`, as
+   [Flows](#flows) says.
 
 Read the request as it stands when it arrives. What the work finds later, such
 as a cause or an "as designed", does not change the extraction.
@@ -330,6 +333,13 @@ Each risk is followed by when to set it.
 - Write an alternative only for a reading that changes one of those four.
 - Record the confidence the text supports. Never raise it to avoid a question or
   lower it to cause one, under `--auto` included.
+
+## Flows
+
+When the change is to be implemented and the request or the story tree
+already names the business flows it touches, list them in `flows`: each a
+`BF-NNNN` ID, all distinct, at least one. The plan then runs each implement
+stage once per flow. Leave it out when no flow is named.
 
 ## Examples
 

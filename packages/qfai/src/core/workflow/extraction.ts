@@ -132,7 +132,13 @@ export interface WorkflowExtraction extends RoutingReading {
   artifacts: Artifact[];
   confidence: Confidence;
   alternatives?: RoutingReading[];
+  // The business flows the implementation works, each a distinct `BF-NNNN` ID. The planner
+  // expands each implement stage into one work order per flow.
+  flows?: string[];
 }
+
+// A business flow's ID, as `flows` holds it.
+export const FLOW_ID = /^BF-[0-9]{4}$/;
 
 // The extraction `npx qfai workflow plan --order` plans: an order that names nothing to change,
 // read at high confidence, so the decision rules give the route as for any extraction. Each call

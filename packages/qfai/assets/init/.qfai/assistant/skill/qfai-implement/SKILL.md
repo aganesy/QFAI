@@ -120,8 +120,8 @@ Read the `STEP.md` of the current step only, run it, then move to the next.
 Each step names the common steps it runs in `requires`; read those when the
 step reaches them.
 
-Inside an `npx qfai workflow` run, the work order lists the steps to run and
-this file adds nothing to it.
+Inside an `npx qfai workflow` run, the plan's stage lists the steps to run, and
+its work order names the flow; this file adds nothing.
 
 ### Reviewer Gate
 
