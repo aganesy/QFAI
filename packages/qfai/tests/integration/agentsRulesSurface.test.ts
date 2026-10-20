@@ -2147,6 +2147,10 @@ describe("rule overlays", () => {
         // The merge is the tag instruction; publishing waits on approval.
         "Merging that pull request is the instruction for the tag",
         "publishes only after a reviewer of",
+        // An agent carries out that path only on a quoted delegation, and never
+        // approves the publish.
+        "quoted word for word with its source",
+        "It never approves the `release` environment",
         // No hand bump before the dispatch, no hand tag on that path, and
         // re-publishing an existing tag.
         "Do not bump the manifest by hand first",

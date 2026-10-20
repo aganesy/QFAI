@@ -59,6 +59,7 @@ export const QUALIFIERS = [
   "mixed-bundle",
   "human-run",
   "distribution-incident",
+  "release-delegated",
   "settled-design",
   "red-since-change",
   "check-misses",
