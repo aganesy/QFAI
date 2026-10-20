@@ -389,7 +389,7 @@ async function unavailableCommandDiagnosis(): Promise<string> {
   const [version, packageDir] = await Promise.all([resolveToolVersion(), resolveToolPackageDir()]);
   const location =
     packageDir === null ? "; package directory could not be determined" : ` from ${packageDir}`;
-  return `This command is unavailable in qfai ${version}${location}; if you expected it, install or update the project's local qfai dependency.`;
+  return `This command is unavailable in qfai ${version}${location}; it may come from a different qfai version, so if you expected it, install or update the project's local qfai dependency.`;
 }
 
 // What a `workflow` command line gets wrong: an unknown operation or flag, a missing operation,

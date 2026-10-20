@@ -596,6 +596,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   project with no `package.json` still gets the vitest test.
   Fixes #3826.
 
+- **An unknown `qfai workflow` operation says it may come from another qfai
+  version.** The refusal already named the running version and the directory
+  it is installed in. It now also says the operation may come from a different
+  qfai version, so an agent whose `npx qfai` resolved an older copy, such as
+  one in a parent directory of a fresh worktree, installs the project's own
+  dependency instead of deciding the command does not exist. The same sentence
+  follows an unknown top-level command. The launcher preflight already runs
+  before the first `npx qfai` call, `workflow plan` included.
+  Fixes #3844.
+
 - **The graph hook no longer fails in a checkout that has not run `qfai init`.**
   The hook entries in `.claude/settings.json`, `.codex/hooks.json` and
   `.github/hooks/qfai-graph.json` are committed, but `.qfai/tools/` is

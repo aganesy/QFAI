@@ -284,6 +284,7 @@ describe("cli usage errors", () => {
     expect(packageDir).not.toBeNull();
     expect(stderr).toContain(version);
     expect(stderr).toContain(packageDir);
+    expect(stderr).toMatch(/may come from a different qfai version/);
   }
 
   it("identifies the running installation when a top-level command is unknown", async () => {
@@ -295,7 +296,7 @@ describe("cli usage errors", () => {
     await expectInstallationDiagnostic(stderr);
   });
 
-  // QFAI:EX-0001-0222-07
+  // QFAI:EX-0001-0222-07 QFAI:EX-0001-0222-20
   it("identifies the running installation while keeping an unknown workflow operation's refusal JSON", async () => {
     const { stdout, stderr, exitCode } = await captureRun([
       "workflow",
