@@ -342,8 +342,12 @@ describe("a question answered without a change", () => {
       /carry the quoted instruction and the named version into that extraction's request/,
     );
     expect(release).toMatch(
-      /no release run starts after the merge, stop waiting and report the tag and the publication as the user's pending follow-ups/,
+      /Where the documents leave the tag to a person, or no release run starts after the merge, stop waiting and report the tag and the publication as the user's pending follow-ups/,
     );
+    expect(release).toMatch(
+      /While the run waits on the approval and the user has not said they will approve it in this session, stop waiting and report the approval as pending/,
+    );
+    expect(release).toMatch(/the preparation up to an open release pull request/);
     expect(flat(sectionOf(operate, "## Reads"))).toMatch(/version-discipline\.md/);
     expect(flat(sectionOf(operate, "## Gate"))).toMatch(
       /the delegation is quoted with its source, and that no tag, publication or publication approval came from the agent/,

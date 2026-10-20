@@ -641,7 +641,7 @@ describe("qfai-run", () => {
   it("reads a release the user's quoted instruction delegates as a delegated release, and a bare release as none", async () => {
     const reference = await readShipped(EXTRACTION);
     expect(itemOf(sectionOf(reference, "## Qualifiers"), "release-delegated")).toContain(
-      "with `release`: The user's own instruction for this run, quoted word for word with its source, has the agent carry out the release, or only its version edit, for a version the user named. A request that only asks for a release, a version named without saying who carries it out, a branch name or a project policy delegates nothing.",
+      "with `release`: The user's own instruction for this run, quoted word for word with its source, has the agent carry out the release, its preparation up to an open release pull request, or its version edit, for a version the user named. A request only for a release, a version with no one named to carry it out, a branch name or a project policy delegates nothing.",
     );
     const line = sectionOf(reference, "## Examples")
       .split("\n")

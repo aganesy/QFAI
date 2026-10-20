@@ -54,7 +54,8 @@ follows.
 
 A release plan runs this step after the user approves the release. It carries
 out only what the user's own instruction for this run delegates to the agent:
-the release up to its publication, or the version edit alone.
+the release up to its publication, the preparation up to an open release pull
+request, or the version edit alone.
 
 1. Quote that instruction word for word, with where it came from: this request
    or an answer the user gave. Never infer a delegation: a request that only
@@ -82,7 +83,9 @@ the release up to its publication, or the version edit alone.
    run the checks the release documents name for after it, outside the
    repository. Where the documents leave the tag to a person, or no release run
    starts after the merge, stop waiting and report the tag and the publication
-   as the user's pending follow-ups.
+   as the user's pending follow-ups. While the run waits on the approval and
+   the user has not said they will approve it in this session, stop waiting and
+   report the approval as pending.
 5. Report each operation and its result, including an approval still pending.
 
 ## What it writes

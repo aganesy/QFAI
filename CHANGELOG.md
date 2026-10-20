@@ -293,14 +293,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the preparation, I only approve" left the plan. The extraction gains the
   qualifier `release-delegated`, set only when the user's own instruction for
   the run, quoted word for word with its source, has the agent carry out the
-  release or only its version edit for a version the user named. It routes the
-  new route `run-release`: after the user approves the release, `triage-operate`
-  starts the preparation the release documents name, reviews and merges the
-  release pull request under the project's review rules, and runs the checks
-  named for after publication. Where the merge tags the release, it merges only
-  when the instruction names the merge or the whole release. It never tags by
-  hand, publishes or approves the publication. A request that only edits the version number reads the same way,
-  and a release with no such instruction is still handed to a person. Fixes #3550.
+  release, the preparation up to an open release pull request, or only the
+  version edit, for a version the user named. It routes the new route
+  `run-release`: after the user approves the release, `triage-operate` starts
+  the preparation the release documents name, reviews and merges the release
+  pull request under the project's review rules, and runs the checks named for
+  after publication. Where the merge tags the release, it merges only when the
+  instruction names the merge or the whole release. It never tags by hand,
+  publishes or approves the publication. A request that only edits the version
+  number reads the same way, and a release with no such instruction is still
+  handed to a person. Fixes #3550.
 
 - **A critical decision found while writing the discussion pack goes back to
   the user.** `discussion-pack` and `discussion-oq` now reopen the ended session
