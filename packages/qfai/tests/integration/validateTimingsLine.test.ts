@@ -4,8 +4,13 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { formatTimingOverruns } from "../../src/cli/commands/validate.js";
-import { orderUiuxParts, validateProject } from "../../src/core/validate.js";
+import {
+  formatFamilyTimings,
+  formatTimingOverruns,
+  runValidate,
+} from "../../src/cli/commands/validate.js";
+import { labelCheckTimings, orderUiuxParts, validateProject } from "../../src/core/validate.js";
+import { captureStdout } from "../helpers/stdout.js";
 
 describe("the timings line of a UI/UX group over its budget", () => {
   // QFAI:AC-0001-0039-02
@@ -92,6 +97,135 @@ describe("the timings line of a UI/UX group over its budget", () => {
       const parts = (result.timings?.uiuxParts ?? []).map((part) => part.ms);
       expect(parts).toHaveLength(8);
       expect(parts).toEqual([...parts].sort((left, right) => right - left));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the --timings line of each finding family", () => {
+  // QFAI:EX-0001-0039-23
+  it("lists the families slowest first, then the side-by-side group apart", () => {
+    expect(
+      formatFamilyTimings({
+        sequential: labelCheckTimings(
+          new Map([
+            ["story-structure", { ms: 4021.4, families: new Set(["STORY"]) }],
+            ["document-schema", { ms: 8071.2, families: new Set<string>() }],
+            ["test-stubs", { ms: 2235, families: new Set(["TEST"]) }],
+          ]),
+        ),
+        overlapping: labelCheckTimings(
+          new Map([
+            ["design tokens", { ms: 5, families: new Set<string>() }],
+            ["html mock", { ms: 876.3, families: new Set(["MOCK"]) }],
+          ]),
+        ),
+      }),
+    ).toBe(
+      "timings: by family document-schema 8071ms, STORY 4021ms, TEST 2235ms; side by side, overlapping: MOCK 876ms, design tokens 5ms",
+    );
+  });
+
+  // QFAI:EX-0001-0039-23
+  it("names a check by the code families it returned, and sums the checks that share one", () => {
+    expect(
+      labelCheckTimings(
+        new Map([
+          ["story-structure", { ms: 3, families: new Set(["STORY", "SPACK"]) }],
+          ["stale-terms", { ms: 2, families: new Set(["STORY"]) }],
+          ["story-test-obligations", { ms: 4, families: new Set(["STORY"]) }],
+          ["contracts", { ms: 1, families: new Set<string>() }],
+        ]),
+      ),
+    ).toEqual([
+      { family: "STORY", ms: 6 },
+      { family: "SPACK/STORY", ms: 3 },
+      { family: "contracts", ms: 1 },
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-23
+  it("prints no side-by-side part when no group ran side by side, and no line when not asked", () => {
+    expect(
+      formatFamilyTimings({
+        sequential: [
+          { family: "CONTRACT", ms: 3 },
+          { family: "LINK", ms: 3 },
+        ],
+        overlapping: [],
+      }),
+    ).toBe("timings: by family CONTRACT 3ms, LINK 3ms");
+    expect(formatFamilyTimings(undefined)).toBeNull();
+  });
+
+  // QFAI:EX-0001-0039-23
+  it("takes each label from the findings a check returned, and adds the times only when asked", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-timings-families-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      await mkdir(path.join(root, "tokens"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "uiux:\n  designTokensDir: tokens\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "tokens", "design-tokens.yaml"),
+        "primitive:\n  color: [unclosed\n",
+        "utf-8",
+      );
+      const asked = await validateProject(root, undefined, {
+        profile: "prototyping",
+        familyTimings: true,
+      });
+      const sequential = (asked.familyTimings?.sequential ?? []).map((entry) => entry.family);
+      const overlapping = (asked.familyTimings?.overlapping ?? []).map((entry) => entry.family);
+      expect(sequential).toContain("uiux");
+      expect(sequential).toContain("integration-surface");
+      expect(overlapping).toHaveLength(8);
+      expect(overlapping).toContain("DT");
+      expect(overlapping).toContain("html mock");
+      const ms = (asked.familyTimings?.sequential ?? []).map((entry) => entry.ms);
+      expect(ms).toEqual([...ms].sort((left, right) => right - left));
+
+      const unasked = await validateProject(root, undefined, { profile: "prototyping" });
+      expect(unasked.familyTimings).toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0039-23
+  it("prints the line after fail-on under --timings, and leaves the default output without it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-timings-text-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      const timed = await captureStdout(async () => {
+        await runValidate({ root, strict: false, format: "text", failOn: "never", timings: true });
+      });
+      const lines = timed.trimEnd().split("\n");
+      const at = lines.findIndex((line) => line.startsWith("timings: by family "));
+      expect(at).toBeGreaterThan(lines.indexOf("fail-on: never"));
+      expect(lines[at + 1]).toMatch(/^qfai validate: passed /);
+
+      const plain = await captureStdout(async () => {
+        await runValidate({ root, strict: false, format: "text", failOn: "never" });
+      });
+      expect(plain).not.toContain("timings: by family");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0039-23
+  it("prints no line for a run the old-layout check stops", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-timings-old-layout-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      const result = await validateProject(root, undefined, { familyTimings: true });
+      expect(result.issues.map((entry) => entry.code)).toContain("QFAI-LAYOUT-001");
+      expect(result.familyTimings).toBeUndefined();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
