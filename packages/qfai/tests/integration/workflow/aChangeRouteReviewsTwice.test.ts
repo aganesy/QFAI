@@ -21,7 +21,12 @@ import { fileURLToPath } from "node:url";
 import { afterEach, expect, it } from "vitest";
 
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
-import { loadBuiltInPlans, type WorkflowPlanFile } from "../../../src/core/workflow/plans.js";
+import {
+  loadBuiltInPlans,
+  parsePlan,
+  type WorkflowPlanFile,
+} from "../../../src/core/workflow/plans.js";
+import { withSpecStage } from "../../../src/core/workflow/specStage.js";
 import { extraction } from "../../helpers/workflowExtraction.js";
 import { field, minimalProject, removeProjects, workflow, writeJson } from "./workflowProject.js";
 
@@ -40,19 +45,21 @@ async function planOf(route: string): Promise<WorkflowPlanFile | undefined> {
 
 afterEach(removeProjects);
 
-// The route, each stage as `id[steps]{review}` and the decision points of the plan
-// `npx qfai workflow plan --in` prints for the extraction.
-async function plannedFor(value: WorkflowExtraction): Promise<unknown> {
+// The plan `npx qfai workflow plan --in` prints for the extraction.
+async function planJson(value: WorkflowExtraction): Promise<unknown> {
   const root = await minimalProject();
-  const json = workflow(root, [
-    "plan",
-    "--in",
-    await writeJson(root, "tmp/request.json", value),
-  ]).json;
-  const stages = field(json, "stages");
-  const shown = (Array.isArray(stages) ? stages : []).map((stage) => {
-    const steps = field(stage, "steps");
-    const names = (Array.isArray(steps) ? steps : []).map(
+  const file = await writeJson(root, "tmp/request.json", value);
+  return workflow(root, ["plan", "--in", file]).json;
+}
+
+const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+
+// The route, each stage as `id[steps]{review}` and the decision points of the plan for the
+// extraction.
+async function plannedFor(value: WorkflowExtraction): Promise<unknown> {
+  const json = await planJson(value);
+  const shown = list(field(json, "stages")).map((stage) => {
+    const names = list(field(stage, "steps")).map(
       (step) => `${String(field(step, "name"))}${field(step, "passThrough") === true ? "°" : ""}`,
     );
     const review = field(stage, "review");
@@ -63,6 +70,14 @@ async function plannedFor(value: WorkflowExtraction): Promise<unknown> {
     stages: shown,
     decisionPoints: field(json, "decisionPoints"),
   };
+}
+
+// Each scope of the plan for the extraction, as `scope:stage/stage`.
+async function scopesFor(value: WorkflowExtraction): Promise<string[]> {
+  return list(field(await planJson(value), "scopes")).map(
+    (scope) =>
+      `${String(field(scope, "scope"))}:${list(field(scope, "stages")).map(String).join("/")}`,
+  );
 }
 
 const SPEC_STAGE = "spec[sdd-triage sdd-story° sdd-contract°]{spec}";
@@ -80,9 +95,12 @@ const CI_REQUEST = extraction({
 
 // QFAI:EX-0001-0225-20
 it("A tooling request that names the story tree gets a specification stage and its review", async () => {
+  const withoutSpec = extraction({ ...CI_REQUEST, artifacts: ["tests", "ci"] });
+
   expect({
     withSpec: await plannedFor(CI_REQUEST),
-    withoutSpec: await plannedFor({ ...CI_REQUEST, artifacts: ["tests", "ci"] }),
+    withoutSpec: await plannedFor(withoutSpec),
+    scopes: [await scopesFor(CI_REQUEST), await scopesFor(withoutSpec)],
   }).toEqual({
     withSpec: {
       route: "change-tooling",
@@ -94,6 +112,7 @@ it("A tooling request that names the story tree gets a specification stage and i
       stages: ["edit[implement-tooling]", NOTE, GATES],
       decisionPoints: [],
     },
+    scopes: [["broad:spec/edit/note/verify"], ["broad:edit/note/verify"]],
   });
 });
 
@@ -102,6 +121,16 @@ it("The specification stage follows the route's last sdd stage, or else precedes
   expect({
     fix: await plannedFor(
       extraction({ intent: "defect", artifacts: ["code", "tests", "contract"] }),
+    ),
+    flagged: field(
+      await plannedFor(
+        extraction({
+          intent: "defect",
+          entryFlags: ["decision"],
+          artifacts: ["code", "tests", "spec"],
+        }),
+      ),
+      "decisionPoints",
     ),
     retire: await plannedFor(
       extraction({
@@ -116,6 +145,7 @@ it("The specification stage follows the route's last sdd stage, or else precedes
       stages: ["diagnose[implement-diagnose]", SPEC_STAGE, "implement[implement-tdd]", NOTE, GATES],
       decisionPoints: ["sdd-triage"],
     },
+    flagged: ["implement-diagnose", "sdd-triage"],
     retire: {
       route: "retire-mechanism",
       stages: [
@@ -131,8 +161,50 @@ it("The specification stage follows the route's last sdd stage, or else precedes
   });
 });
 
+// A plan in the shape of a plan file, so the plan format can read it back.
+function asPlanFile(plan: WorkflowPlanFile): string {
+  return JSON.stringify({
+    route: plan.route,
+    family: plan.family,
+    stages: plan.stages.map((stage) => ({
+      id: stage.id,
+      kind: stage.kind,
+      steps: stage.steps.map((step) =>
+        step.passThrough === undefined && step.mode === undefined
+          ? step.name
+          : { step: step.name, passThrough: step.passThrough, mode: step.mode },
+      ),
+      ...(stage.after.length > 0 ? { after: stage.after } : {}),
+      ...(stage.review ? { review: stage.review } : {}),
+    })),
+    decisionPoints: plan.decisionPoints,
+    ...(plan.releasePoint === undefined ? {} : { releasePoint: plan.releasePoint }),
+    branchPoints: plan.branchPoints,
+  });
+}
+
+// QFAI:EX-0001-0225-21
+it("Every plan the specification stage expands still reads back as a valid plan", async () => {
+  const plans = await loadBuiltInPlans();
+  const expanded = plans
+    .map((plan) => ({ plan, wider: withSpecStage(plan, ["code", "tests", "spec"]) }))
+    .filter(({ plan, wider }) => wider !== plan)
+    .map(({ wider }) => wider);
+  const faults = expanded.flatMap((plan) => {
+    const load = parsePlan(asPlanFile(plan), plan.route);
+    return load.ok
+      ? []
+      : load.refusals.map((each) => `${each.route}:${each.reason}:${each.subject}`);
+  });
+
+  expect(expanded.map((plan) => plan.route)).toEqual(
+    expect.arrayContaining(["change-tooling", "fix-defect", "retire-mechanism"]),
+  );
+  expect(faults).toEqual([]);
+});
+
 // QFAI:EX-0001-0225-22
-it("A security intake, a conflict resolution and a route that writes nothing gain no specification stage", async () => {
+it("A security intake, a conflict resolution, a route that writes nothing and a refused request gain no specification stage", async () => {
   const planned = [
     await plannedFor(extraction({ intent: "security", artifacts: ["spec"] })),
     await plannedFor(
@@ -150,25 +222,35 @@ it("A security intake, a conflict resolution and a route that writes nothing gai
     "resolve-conflicts",
     "decide-design",
   ]);
-  const stages = planned.flatMap((each) => {
-    const list = field(each, "stages");
-    return Array.isArray(list) ? list : [];
-  });
+  const stages = planned.flatMap((each) => list(field(each, "stages")));
   expect(stages.filter((stage) => String(stage).startsWith("spec["))).toEqual([]);
 
-  const root = await minimalProject();
-  const lowRequest = extraction({
-    intent: "ci",
-    artifacts: ["spec", "ci"],
-    confidence: "low",
-    alternatives: [{ intent: "refactor", entryFlags: [], qualifiers: [], signals: [] }],
-  });
-  const file = await writeJson(root, "tmp/request.json", lowRequest);
-  const candidates = field(workflow(root, ["plan", "--in", file]).json, "candidates");
+  const refused = await planJson(
+    extraction({ intent: "docs", artifacts: ["code", "tests", "spec"] }),
+  );
+  expect(list(field(refused, "reasons")).map((each) => field(each, "subject"))).toEqual([
+    "code",
+    "tests",
+    "spec",
+  ]);
+
+  const candidates = list(
+    field(
+      await planJson(
+        extraction({
+          intent: "ci",
+          artifacts: ["spec", "ci"],
+          confidence: "low",
+          alternatives: [{ intent: "refactor", entryFlags: [], qualifiers: [], signals: [] }],
+        }),
+      ),
+      "candidates",
+    ),
+  );
   expect(
-    (Array.isArray(candidates) ? candidates : []).map((each) => [
+    candidates.map((each) => [
       field(each, "route"),
-      String(field(each, "summary")).includes("spec"),
+      list(field(each, "scopes")).some((scope) => list(field(scope, "stages")).includes("spec")),
     ]),
   ).toEqual([
     ["change-tooling", false],

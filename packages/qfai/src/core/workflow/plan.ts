@@ -223,14 +223,15 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
   }
   const load = await loaded(root, outcome.taken.route);
   if (!load.ok) return load.document;
-  // A chosen candidate is planned by `--route`, which knows no artifacts, so only a plan taken
-  // here gains the specification stage.
-  const plan = withSpecStage(load.plan, artifacts);
-  const unserved = unservedArtifacts(plan.stages, artifacts);
+  // The route alone decides what is served and where the `decision` flag stops the work; the
+  // specification stage comes after. A chosen candidate is planned by `--route`, which knows no
+  // artifacts, so only a plan taken here gains that stage.
+  const unserved = unservedArtifacts(load.plan.stages, artifacts);
   if (unserved.length > 0) return unservedRefusal(unserved);
-  const decisionPoints = decisionPointsOf(plan, extraction.entryFlags.includes("decision"));
+  const decisionPoints = decisionPointsOf(load.plan, extraction.entryFlags.includes("decision"));
+  const plan = withSpecStage({ ...load.plan, decisionPoints }, artifacts);
   return planned(
-    { ...plan, decisionPoints },
+    plan,
     outcome.taken.rule,
     scopesOf(plan.stages, artifacts, extraction.qualifiers.includes("restyle")),
     extraction.flows,

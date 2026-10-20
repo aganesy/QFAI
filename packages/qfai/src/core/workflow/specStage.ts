@@ -7,6 +7,7 @@ import type { PlanStage, PlanStep, WorkflowPlanFile } from "./planFormat.js";
 import { hasPrivateIntake, lastIndex, writesSomething } from "./scopes.js";
 
 const STORY_TREE: readonly Artifact[] = ["spec", "contract"];
+const SPEC_STAGE_ID = "spec";
 
 // The steps of the specification stage the change routes share.
 const SPEC_STEPS: readonly PlanStep[] = [
@@ -31,7 +32,9 @@ function needsSpecStage(plan: WorkflowPlanFile, artifacts: readonly Artifact[]):
 
 // The plan with a `spec` stage when the request needs one: after the route's last `sdd` stage, or
 // else before its first stage that writes, holding the shared steps the route does not already run.
-// An added `sdd-triage` is a decision point, as it is in every route that runs it.
+// The stage after it now follows it, so the stage graph stays one the plan format admits. An added
+// `sdd-triage` is a decision point, as it is in every route that runs it, in plan order among the
+// plan's own. A route that already has a stage of that id, or runs every shared step, is unchanged.
 export function withSpecStage(
   plan: WorkflowPlanFile,
   artifacts: readonly Artifact[],
@@ -40,17 +43,25 @@ export function withSpecStage(
   const { stages } = plan;
   const present = new Set(stages.flatMap((stage) => stage.steps.map((step) => step.name)));
   const steps = SPEC_STEPS.filter((step) => !present.has(step.name));
+  if (steps.length === 0 || stages.some((stage) => stage.id === SPEC_STAGE_ID)) return plan;
   const lastSdd = lastIndex(stages, (stage) => stage.kind === "sdd");
   const at = lastSdd >= 0 ? lastSdd + 1 : stages.findIndex(writesSomething);
   const previous = stages[at - 1];
   const spec: PlanStage = {
-    id: "spec",
+    id: SPEC_STAGE_ID,
     kind: "sdd",
     steps,
     after: previous ? [previous.id] : [],
     review: "spec",
   };
-  const planned = [...stages.slice(0, at), spec, ...stages.slice(at)];
+  const following = stages.slice(at).map((stage, index) => {
+    if (index > 0) return stage;
+    const after = previous
+      ? stage.after.map((id) => (id === previous.id ? SPEC_STAGE_ID : id))
+      : [SPEC_STAGE_ID];
+    return { ...stage, after };
+  });
+  const planned = [...stages.slice(0, at), spec, ...following];
   const points = new Set(plan.decisionPoints);
   if (steps.some((step) => step.name === "sdd-triage")) points.add("sdd-triage");
   // Every decision point names a step the plan runs once, so plan order lists them all.
