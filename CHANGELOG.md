@@ -287,7 +287,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and checks passing, adds coverage where the repository has tests for the
   script, and still invents no business flow, specification or contract. The
   `qfai-run` extraction guide reads such a request as `procedure` with `docs`
-  and `ci`, not as `docs`, so it keeps the procedure writer. Fixes #3831.
+  and `ci`, not as `docs` or `ci`, so it keeps the procedure writer; a
+  request whose point is the script change stays `ci`. Fixes #3831.
 
 - **The verify report lists what a test run records, apart from what is
   covered.** `verify-repo-gate` gains a `### Run report` recipe: when the report

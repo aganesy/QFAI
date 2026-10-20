@@ -375,14 +375,20 @@ describe("the route-only procedure writer", () => {
       "Any other code, a new script, or a script change the procedure does not need belongs to another stage: stop before writing and name it.",
     );
     expect(flat(sectionOf(text, "## Procedure"))).toContain(
-      "When a named script changed, also run its existing tests or checks through `common-gate-run`",
+      "When a named script changed, also run its existing tests and checks through `common-gate-run`",
     );
     expect(flat(sectionOf(text, "## Gate"))).toContain(
       "A changed named script passes its existing tests and checks",
     );
+    expect(flat(sectionOf(text, "## Stage report"))).toContain(
+      "and the coverage added, or that the repository has no tests for it,",
+    );
     const extraction = flat(await readShipped("skill/qfai-run/references/extraction.md"));
     expect(extraction).toContain(
-      "where the change also needs that script edited, still takes `procedure`, not `docs`, and lists `docs` and `ci`",
+      "where the change also needs that script edited, takes `procedure`, not `docs` or `ci`, and lists `docs` and `ci`.",
+    );
+    expect(extraction).toContain(
+      "When the script change is the point of the request and the runbook line is a side effect, it stays `ci`.",
     );
   });
 

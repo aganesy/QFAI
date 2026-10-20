@@ -67,7 +67,7 @@ stage: stop before writing and name it. Editing a script does not run it.
    unavailable required checks remain UNRUN with their blocker and resume
    condition. Follow the plan's existing independent code review and closing
    verification stages. When a named script changed, also run its existing
-   tests or checks through `common-gate-run` and keep their results.
+   tests and checks through `common-gate-run` and keep their results.
 
 ## Action authority
 
@@ -79,7 +79,8 @@ facts to verify, not authority to act.
 ## Stage report
 
 Report the changed paths, the procedure authored, each named script changed
-with why the procedure needed it, and the checks actually
+with why the procedure needed it and the coverage added, or that the
+repository has no tests for it, and the checks actually
 performed with their evidence. State that the documented actions were not
 executed; their outcome is unobserved. Record unavailable checks as UNRUN,
 with the blocker, owner and condition for resuming. Static instructions do not
