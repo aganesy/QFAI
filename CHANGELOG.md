@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-10-21
+
 ### Changed
 
 - **Reviewers run no test suite the verify stage runs.** The delegation baseline
