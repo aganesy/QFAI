@@ -7,7 +7,7 @@
 // QFAI:AC-0001-0221-05
 // QFAI:EX-0001-0194-03
 
-import { cp, mkdtemp, readdir, readFile } from "node:fs/promises";
+import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,7 +30,11 @@ import {
   DESIGN_MD,
   DESIGN_OUTCOMES,
   DESIGN_OVERLAYS,
+  designRunOf,
   isDesignSeed,
+  readFixtureFile,
+  scoreDesignCases,
+  snapshotDesignFiles,
   type DesignSeed,
 } from "../../helpers/designAuthoringEval.js";
 import {
@@ -666,11 +670,15 @@ it("The design-authoring seeds cover each file outcome case and build from the q
   const base = await tempRoot("qfai-eval-base-");
   buildBase(base);
   const built: Record<string, string> = {};
+  const absent: string[] = [];
   for (const each of seeds) {
     const root = await tempRoot("qfai-eval-seed-");
     await cp(base, root, { recursive: true });
     await buildSeedFixture(root, each, DESIGN_OVERLAYS);
     built[each.id] = await designStateOf(root);
+    for (const rel of each.expected.preserved) {
+      if ((await readFixtureFile(root, rel)).digest === null) absent.push(`${each.id} ${rel}`);
+    }
   }
   const facts = (id: string) => seeds.find((each) => each.id === id)?.repoFacts ?? {};
 
@@ -682,8 +690,17 @@ it("The design-authoring seeds cover each file outcome case and build from the q
       Reflect.get(Object(facts(each.id).changeRequest), "status"),
     ),
     packs: seeds.map((each) => facts(each.id).discussionPack),
+    absent,
   }).toEqual({
-    ids: ["DESIGN-001", "DESIGN-002", "DESIGN-003", "DESIGN-004", "DESIGN-005", "DESIGN-006"],
+    ids: [
+      "DESIGN-001",
+      "DESIGN-002",
+      "DESIGN-003",
+      "DESIGN-004",
+      "DESIGN-005",
+      "DESIGN-006",
+      "DESIGN-007",
+    ],
     outcomes: true,
     built: {
       "DESIGN-001": "authored",
@@ -692,8 +709,70 @@ it("The design-authoring seeds cover each file outcome case and build from the q
       "DESIGN-004": "sample",
       "DESIGN-005": "absent",
       "DESIGN-006": "authored",
+      "DESIGN-007": "authored",
     },
-    changeRequests: ["WIP", "WIP", "DONE", undefined, undefined, undefined],
-    packs: ["web", "web", "web", "web", "web-no-direction", "cli"],
+    changeRequests: ["WIP", "WIP", "DONE", undefined, undefined, undefined, undefined],
+    packs: ["web", "web", "web", "web", "web-no-direction", "cli", "web"],
+    absent: [],
+  });
+}, 300_000);
+
+// No host runs here: the "after" tree is a copy of the built fixture edited by this test, so this
+// checks only how the scorer reads a before and after pair, never what an agent does.
+it("The design-authoring scorer, given synthetic before and after fixture trees and no host run, scores each file outcome", async () => {
+  const seeds = await designSeeds();
+  const seed = (id: string): DesignSeed => {
+    const found = seeds.find((each) => each.id === id);
+    if (!found) throw new Error(`no seed ${id}`);
+    return found;
+  };
+  const base = await tempRoot("qfai-eval-base-");
+  buildBase(base);
+  const host = { exit: 0, signal: null, engaged: true };
+  // Builds the seed's fixture, snapshots it, applies `edit` to a copy and snapshots that copy.
+  async function scoreEdited(id: string, edit: (root: string) => Promise<void>) {
+    const before = await tempRoot("qfai-eval-before-");
+    await cp(base, before, { recursive: true });
+    await buildSeedFixture(before, seed(id), DESIGN_OVERLAYS);
+    const after = await tempRoot("qfai-eval-after-");
+    await cp(before, after, { recursive: true });
+    await edit(after);
+    const run = designRunOf(
+      id,
+      await snapshotDesignFiles(before, seed(id)),
+      await snapshotDesignFiles(after, seed(id)),
+      host,
+    );
+    const [score] = scoreDesignCases([seed(id)], [run]);
+    return [score?.outcome, score?.notKept, score?.pass];
+  }
+  const setPrimary = (value: string) => async (root: string) => {
+    const file = path.join(root, DESIGN_MD);
+    const text = await readFile(file, "utf8");
+    await writeFile(file, text.replace(/^(\s*primary:\s*)"#[0-9A-Fa-f]{6}"/m, `$1"${value}"`));
+  };
+  const theme = "themes/harbor.css";
+  const keep = async () => {};
+
+  expect({
+    themeValue: await scoreEdited("DESIGN-001", setPrimary("#0F766E")),
+    untouchedRepair: await scoreEdited("DESIGN-001", keep),
+    coralWritten: await scoreEdited("DESIGN-002", setPrimary("#FF7F50")),
+    themeEdited: await scoreEdited("DESIGN-002", async (root) => {
+      await writeFile(path.join(root, theme), ":root { --primary: #FF7F50; }");
+    }),
+    inheritedKept: await scoreEdited("DESIGN-003", keep),
+    noBrand: await scoreEdited("DESIGN-005", keep),
+    cliRemoved: await scoreEdited("DESIGN-006", async (root) => rm(path.join(root, DESIGN_MD))),
+    unauthorizedKept: await scoreEdited("DESIGN-007", keep),
+  }).toEqual({
+    themeValue: ["changed", [], true],
+    untouchedRepair: ["unchanged", [], false],
+    coralWritten: ["changed", [], false],
+    themeEdited: ["unchanged", [theme], false],
+    inheritedKept: ["unchanged", [], true],
+    noBrand: ["absent", [], true],
+    cliRemoved: ["removed", [], false],
+    unauthorizedKept: ["unchanged", [], true],
   });
 }, 300_000);

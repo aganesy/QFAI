@@ -293,8 +293,19 @@ it("A re-routing seed passes only where the run ends at its declared destination
   expect([verdict.rerouteMisses, verdict.pass]).toEqual([["SEED-921"], false]);
 });
 
-function designSeed(id: string, expected: DesignSeed["expected"]): DesignSeed {
-  return { id, userPrompt: "Author DESIGN.md.", repoFacts: {}, expected, rationale: "A case." };
+function designSeed(
+  id: string,
+  expected: Omit<DesignSeed["expected"], "preserved">,
+  preserved: string[] = [],
+): DesignSeed {
+  const outcome = { ...expected, preserved };
+  return {
+    id,
+    userPrompt: "Author DESIGN.md.",
+    repoFacts: {},
+    expected: outcome,
+    rationale: "A case.",
+  };
 }
 
 // The shipped sample `DESIGN.md`, whose brand is Acme Ledger, with its primary color set.
@@ -313,9 +324,10 @@ function designRun(
   before: string | null,
   after: string | null,
   text: string | null,
-  ran: Partial<Pick<DesignRun, "exit" | "signal" | "engaged">> = {},
+  ran: Partial<Pick<DesignRun, "exit" | "signal" | "engaged" | "preserved">> = {},
 ): DesignRun {
-  return { seedId, before, after, text, exit: 0, signal: null, engaged: true, ...ran };
+  const host = { exit: 0, signal: null, engaged: true, preserved: {} };
+  return { seedId, before, after, text, ...host, ...ran };
 }
 
 it("A design-authoring case passes on the file outcome it expects and the fields it must hold", () => {
@@ -373,5 +385,32 @@ it("A design-authoring case fails where the host exited non-zero, on a signal, o
     ["DESIGN-913", false],
     ["DESIGN-914", false],
     ["DESIGN-915", true],
+  ]);
+});
+
+it("The design-authoring scorer fails a case whose preserved file changed, vanished, was absent before or was not read", () => {
+  const kept = ["themes/harbor.css"];
+  const seeds = ["DESIGN-921", "DESIGN-922", "DESIGN-923", "DESIGN-924", "DESIGN-925"].map((id) =>
+    designSeed(id, { designMd: "unchanged" }, kept),
+  );
+  const file = (before: string | null, after: string | null) => ({
+    preserved: { "themes/harbor.css": { before, after } },
+  });
+  const runs = [
+    designRun("DESIGN-921", "a", "a", "kept", file("t", "t")),
+    designRun("DESIGN-922", "a", "a", "kept", file("t", "u")),
+    designRun("DESIGN-923", "a", "a", "kept", file("t", null)),
+    designRun("DESIGN-924", "a", "a", "kept", file(null, null)),
+    designRun("DESIGN-925", "a", "a", "kept"),
+  ];
+
+  expect(
+    scoreDesignCases(seeds, runs).map(({ seedId, notKept, pass }) => [seedId, notKept, pass]),
+  ).toEqual([
+    ["DESIGN-921", [], true],
+    ["DESIGN-922", kept, false],
+    ["DESIGN-923", kept, false],
+    ["DESIGN-924", kept, false],
+    ["DESIGN-925", kept, false],
   ]);
 });

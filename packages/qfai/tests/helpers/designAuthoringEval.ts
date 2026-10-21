@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -22,6 +23,9 @@ export interface DesignSeed extends RoutingSeed {
     // Front-matter fields the resulting file must hold, keyed by dotted path and compared without
     // case: a value taken from the token source, or a brand field the change had to preserve.
     fields?: Readonly<Record<string, string>>;
+    // The other fixture files the run must leave byte-identical, as `/`-separated paths from the
+    // fixture root: the token source, the discussion pack and the shipped sample.
+    preserved: readonly string[];
   };
   rationale: string;
 }
@@ -35,15 +39,28 @@ export const isDesignSeed = (value: unknown): value is DesignSeed =>
   typeof read(value, "userPrompt") === "string" &&
   typeof read(value, "expected") === "object" &&
   read(value, "expected") !== null &&
-  typeof read(read(value, "expected"), "designMd") === "string";
+  typeof read(read(value, "expected"), "designMd") === "string" &&
+  isTextList(read(read(value, "expected"), "preserved"));
 
-// What the manual runner observed for one seed: the file's digests and its text after the run,
-// how the host exited, and whether the session engaged, that is planned at least once.
+function isTextList(value: unknown): boolean {
+  return Array.isArray(value) && value.every((each) => typeof each === "string" && each !== "");
+}
+
+// The sha256 digests of one file before and after the run, `null` where it was absent.
+export interface FileDigests {
+  before: string | null;
+  after: string | null;
+}
+
+// What the manual runner observed for one seed: the root file's digests and its text after the
+// run, the digests of each file the seed preserves, how the host exited, and whether the session
+// engaged, that is planned at least once.
 export interface DesignRun {
   seedId: string;
   before: string | null;
   after: string | null;
   text: string | null;
+  preserved: Readonly<Record<string, FileDigests>>;
   exit: number | null;
   signal: string | null;
   engaged: boolean;
@@ -53,6 +70,8 @@ export interface DesignCaseScore {
   seedId: string;
   outcome: DesignOutcome | null;
   missing: string[];
+  // The preserved files that changed, vanished, were absent before the run or were not read.
+  notKept: string[];
   pass: boolean;
 }
 
@@ -80,9 +99,17 @@ function ranCleanly(run: DesignRun, outcome: DesignOutcome): boolean {
   return outcome === "unchanged" || outcome === "absent" ? run.engaged : true;
 }
 
+// A preserved file is kept only where it existed before the run and its bytes did not change.
+function notKept(run: DesignRun, preserved: readonly string[]): string[] {
+  return preserved.filter((rel) => {
+    const file = Object.hasOwn(run.preserved, rel) ? run.preserved[rel] : undefined;
+    return !file || file.before === null || file.before !== file.after;
+  });
+}
+
 /**
- * Scores each seed's run on the file outcome, the fields it must hold and how the host ran. A seed
- * with no run fails.
+ * Scores each seed's run on the file outcome, the fields it must hold, the files it must keep
+ * byte-identical and how the host ran. A seed with no run fails.
  */
 export function scoreDesignCases(
   seeds: readonly DesignSeed[],
@@ -92,15 +119,22 @@ export function scoreDesignCases(
     const run = runs.find((each) => each.seedId === seed.id);
     if (!run) {
       const missing = Object.keys(seed.expected.fields ?? {});
-      return { seedId: seed.id, outcome: null, missing, pass: false };
+      const kept = [...seed.expected.preserved];
+      return { seedId: seed.id, outcome: null, missing, notKept: kept, pass: false };
     }
     const missing = seed.expected.fields ? missingFields(run.text, seed.expected.fields) : [];
+    const altered = notKept(run, seed.expected.preserved);
     const outcome = outcomeOf(run);
     return {
       seedId: seed.id,
       outcome,
       missing,
-      pass: outcome === seed.expected.designMd && missing.length === 0 && ranCleanly(run, outcome),
+      notKept: altered,
+      pass:
+        outcome === seed.expected.designMd &&
+        missing.length === 0 &&
+        altered.length === 0 &&
+        ranCleanly(run, outcome),
     };
   });
 }
@@ -115,6 +149,62 @@ export function designVerdict(scores: readonly DesignCaseScore[]): {
 }
 
 export const DESIGN_MD = "DESIGN.md";
+
+const isMissing = (error: unknown): boolean => read(error, "code") === "ENOENT";
+
+/**
+ * A fixture file as the runner reads it before and after the host session: the sha256 digest of
+ * its bytes and its text, or `null` for both when it is absent. Any other read error is thrown.
+ */
+export async function readFixtureFile(
+  root: string,
+  rel: string,
+): Promise<{ digest: string | null; text: string | null }> {
+  let bytes: Buffer;
+  try {
+    bytes = await readFile(path.join(root, ...rel.split("/")));
+  } catch (error) {
+    if (isMissing(error)) return { digest: null, text: null };
+    throw error;
+  }
+  return { digest: createHash("sha256").update(bytes).digest("hex"), text: bytes.toString("utf8") };
+}
+
+// What one tree holds of the files a seed scores: the root file and each preserved file.
+export interface DesignSnapshot {
+  designMd: { digest: string | null; text: string | null };
+  preserved: Readonly<Record<string, string | null>>;
+}
+
+/** Reads the root `DESIGN.md` and every file the seed preserves from `root`. */
+export async function snapshotDesignFiles(root: string, seed: DesignSeed): Promise<DesignSnapshot> {
+  const preserved: Record<string, string | null> = {};
+  for (const rel of seed.expected.preserved) {
+    preserved[rel] = (await readFixtureFile(root, rel)).digest;
+  }
+  return { designMd: await readFixtureFile(root, DESIGN_MD), preserved };
+}
+
+/** The run a seed is scored on, from the snapshots taken before and after the host session. */
+export function designRunOf(
+  seedId: string,
+  before: DesignSnapshot,
+  after: DesignSnapshot,
+  host: Pick<DesignRun, "exit" | "signal" | "engaged">,
+): DesignRun {
+  const preserved: Record<string, FileDigests> = {};
+  for (const [rel, digest] of Object.entries(before.preserved)) {
+    preserved[rel] = { before: digest, after: after.preserved[rel] ?? null };
+  }
+  return {
+    seedId,
+    before: before.designMd.digest,
+    after: after.designMd.digest,
+    text: after.designMd.text,
+    preserved,
+    ...host,
+  };
+}
 const PACK = path.join(".qfai", "discussion", "discussion-20261019000000000");
 const SAMPLE = path.join(
   ".qfai",
