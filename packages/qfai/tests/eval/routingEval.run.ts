@@ -18,12 +18,11 @@
  * the local launcher installed; a route evaluation seed runs on the base as it is. The runner
  * reads what each run recorded, scores every case and writes the eval record to
  * `tests/eval/records/<host>-<version>.json`. A design-authoring seed is scored on the root
- * `DESIGN.md` the run leaves, with its digests before and after the run, the host's exit and
- * whether the session planned in the record. A failing route evaluation or design-authoring case
- * blocks the verdict.
+ * `DESIGN.md` the run leaves and on the files it must keep byte-identical, with the digests of
+ * each before and after the run, the host's exit and whether the session planned in the record.
+ * A failing route evaluation or design-authoring case blocks the verdict.
  */
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -33,11 +32,12 @@ import { it } from "vitest";
 
 import { loadBuiltInPlans } from "../../src/core/workflow/plans.js";
 import {
-  DESIGN_MD,
   DESIGN_OVERLAYS,
+  designRunOf,
   designVerdict,
   isDesignSeed,
   scoreDesignCases,
+  snapshotDesignFiles,
   type DesignRun,
   type DesignSeed,
 } from "../helpers/designAuthoringEval.js";
@@ -253,38 +253,15 @@ async function routeEval(baseRoot: string, argv: string[]) {
   };
 }
 
-const isMissing = (error: unknown): boolean => read(error, "code") === "ENOENT";
-
-// The root `DESIGN.md`: the sha256 digest of its bytes and its text, or `null` for both when it
-// is absent. Any other read error stops the eval.
-async function designFile(root: string): Promise<{ digest: string | null; text: string | null }> {
-  let bytes: Buffer;
-  try {
-    bytes = await readFile(path.join(root, DESIGN_MD));
-  } catch (error) {
-    if (isMissing(error)) return { digest: null, text: null };
-    throw error;
-  }
-  return { digest: createHash("sha256").update(bytes).digest("hex"), text: bytes.toString("utf8") };
-}
-
 async function runDesignSeed(baseRoot: string, seed: DesignSeed, argv: string[]) {
   return inTempCopy(baseRoot, async (root): Promise<DesignRun> => {
     await buildSeedFixture(root, seed, DESIGN_OVERLAYS);
     commit(root);
-    const before = await designFile(root);
+    const before = await snapshotDesignFiles(root, seed);
     const { status, signal } = spawnHost(root, seed.userPrompt, argv);
-    const after = await designFile(root);
+    const after = await snapshotDesignFiles(root, seed);
     const engaged = (await planDocuments(root)).length > 0;
-    return {
-      seedId: seed.id,
-      before: before.digest,
-      after: after.digest,
-      text: after.text,
-      exit: status,
-      signal,
-      engaged,
-    };
+    return designRunOf(seed.id, before, after, { exit: status, signal, engaged });
   });
 }
 
@@ -295,7 +272,7 @@ async function designEval(baseRoot: string, argv: string[]) {
   const seeds = lines.filter(isDesignSeed);
   if (seeds.length !== lines.length) {
     throw new Error(
-      "A design-authoring seed line lacks an id, a userPrompt or an expected outcome",
+      "A design-authoring seed line lacks an id, a userPrompt, an expected outcome or its preserved files",
     );
   }
   const runs: DesignRun[] = [];
@@ -306,6 +283,7 @@ async function designEval(baseRoot: string, argv: string[]) {
       ...score,
       before: run?.before ?? null,
       after: run?.after ?? null,
+      preserved: run?.preserved ?? {},
       exit: run?.exit ?? null,
       signal: run?.signal ?? null,
       engaged: run?.engaged ?? false,
