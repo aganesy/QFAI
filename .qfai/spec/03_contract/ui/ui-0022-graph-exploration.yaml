@@ -68,7 +68,7 @@ screens:
         near: graph_prepare_failed_step
         when: error
         text: Preparation failed. Fix the cause, then run qfai init again.
-        why: The failed step needs a recovery action. Installer output is not shown because it can carry credentials, so a failed download names the command to rerun by hand to see the cause; the previous installation field records whether usable state was retained.
+        why: The failed step needs a recovery action. Installer output is not shown because it can carry credentials, so a failed download names the command to rerun by hand to see the cause, and a failed version check, which carries none, names its exit code and first error lines or the version it printed; the previous installation field records whether usable state was retained.
       - id: graph_prepare_unverified
         near: graph_prepare_host_status
         when: default
