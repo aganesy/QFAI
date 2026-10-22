@@ -16,6 +16,8 @@ export const GRAPH_PYTHON_FLAGS = ["-I", "-X", "utf8"] as const;
 export interface GraphProcessResult {
   exitCode: number;
   stdout: string;
+  /** Set when the process failed. Only a version check shows it, bounded, since installer output can carry credentials. */
+  stderr?: string;
 }
 
 export type GraphProcess = (
@@ -122,9 +124,13 @@ export const runGraphProcess: GraphProcess = async (command, args, options) => {
     return { exitCode: 0, stdout: result.stdout };
   } catch (cause: unknown) {
     if (!(cause instanceof Error) || !("code" in cause)) throw cause;
-    // Installation and backend stderr can contain credentials. Report the step instead; the
-    // preparation names the command a failed download can be rerun with by hand.
-    return { exitCode: typeof cause.code === "number" ? cause.code : 1, stdout: "" };
+    // Installation and backend stderr can contain credentials. Callers report the step instead;
+    // the preparation names the command a failed download can be rerun with by hand.
+    return {
+      exitCode: typeof cause.code === "number" ? cause.code : 1,
+      stdout: "",
+      ...("stderr" in cause && typeof cause.stderr === "string" ? { stderr: cause.stderr } : {}),
+    };
   }
 };
 

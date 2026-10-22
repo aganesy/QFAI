@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, it, vi } from "vitest";
@@ -6,6 +6,7 @@ import {
   GRAPH_VERSIONS,
   graphRuntimePaths,
   prepareGraphRuntimes,
+  windowsPathLimitRecovery,
 } from "../../../src/core/graph/prepare.js";
 import { renderGraphPreparation } from "../../../src/core/graph/presentation.js";
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
@@ -230,6 +231,85 @@ it("escapes a control character in the rerun directory", async () => {
     expect(output.split("\n").some((line) => line.startsWith("line"))).toBe(false);
   } finally {
     tmpdir.mockRestore();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0237-27
+// Mutation: packages/qfai/src/core/graph/prepare.ts `.slice(0, CAUSE_LINES)` -> `` fails "names the cause of a failed version check"
+it("names the cause of a failed version check", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-version-cause-"));
+  const fixture = graphProcessFixture();
+  const stderr = ["first\tline", "", ...Array.from({ length: 7 }, (_, index) => `line ${index}`)];
+  try {
+    const failed = await prepareGraphRuntimes(root, (command, args, options) =>
+      args.includes("--version")
+        ? Promise.resolve({ exitCode: 3, stdout: "", stderr: `${stderr.join("\r\n")}\n` })
+        : fixture.run(command, args, options),
+    );
+    expect(failed.failedStep).toBe("CodeGraph compatibility");
+    const output = renderGraphPreparation(failed);
+    expect(output).toContain(
+      "Cause: the CodeGraph version check exited with code 3: first line | line 0 | line 1 | line 2 | line 3.",
+    );
+    expect(output).not.toContain("line 4");
+    const forged = await prepareGraphRuntimes(root, (command, args, options) =>
+      args.includes("--version")
+        ? Promise.resolve({ exitCode: 1, stdout: "", stderr: `\u001b[2J${"x".repeat(600)}` })
+        : fixture.run(command, args, options),
+    );
+    expect(renderGraphPreparation(forged)).toContain(`"\\x1b[2J${"x".repeat(496)}..."`);
+    const printed = await prepareGraphRuntimes(root, (command, args, options) =>
+      args.includes("-c")
+        ? Promise.resolve({ exitCode: 0, stdout: "0.9.85\n" })
+        : fixture.run(command, args, options),
+    );
+    expect(printed.failedStep).toBe("Graphify compatibility");
+    expect(renderGraphPreparation(printed)).toContain(
+      `Cause: the Graphify version check printed 0.9.85, expected ${GRAPH_VERSIONS.graphify}.`,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0237-27
+// Mutation: packages/qfai/src/core/graph/prepare.ts `if (platform !== "win32") return undefined;` -> `` fails "names the Windows path limit for a deep project root"
+it("names the Windows path limit for a deep project root", () => {
+  const deep = path.win32.join("C:", "d".repeat(170));
+  expect(windowsPathLimitRecovery(deep, "win32")).toBe(
+    "The graph tool files reach about 339 characters, near or past the Windows limit of 260. Move the project to a shorter path, or enable Windows long paths (LongPathsEnabled), then run qfai init again.",
+  );
+  expect(windowsPathLimitRecovery(path.win32.join("C:", "tmp", "qs"), "win32")).toBeUndefined();
+  expect(windowsPathLimitRecovery(deep, "linux")).toBeUndefined();
+});
+
+// QFAI:EX-0001-0237-28
+// Mutation: packages/qfai/src/core/graph/prepare.ts `path.join(path.dirname(current.directory), ...)` -> `path.join(root, ".qfai", "tools", ...)` fails "stages a runtime beside the installed one"
+it("stages a runtime beside the installed one", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-staging-"));
+  const fixture = graphProcessFixture();
+  try {
+    const installed = graphRuntimePaths(root);
+    expect((await prepareGraphRuntimes(root, fixture.run)).runtime).toBe("installed");
+    const install = fixture.calls.find((call) => call.args.includes("--prefix"));
+    const prefix = install?.args[install.args.indexOf("--prefix") + 1] ?? "";
+    const staging = path.dirname(prefix);
+    expect(path.basename(prefix)).toBe("codegraph");
+    expect(path.dirname(staging)).toBe(path.dirname(installed.directory));
+    expect(path.basename(staging)).toMatch(/^\.p-[0-9a-f]{8}$/);
+    expect(staging.length - installed.directory.length).toBeLessThanOrEqual(12);
+    const version = fixture.calls.find((call) => call.args.includes("--version"));
+    expect(version?.args[0]).toBe(
+      path.join(staging, path.relative(installed.directory, installed.codegraph)),
+    );
+    expect(fixture.calls.find((call) => call.args[0] === "venv")?.args.at(-1)).toBe(
+      path.join(staging, "graphify"),
+    );
+    expect(await readdir(path.dirname(installed.directory))).toEqual([
+      path.basename(installed.directory),
+    ]);
+  } finally {
     await rm(root, { recursive: true, force: true });
   }
 });

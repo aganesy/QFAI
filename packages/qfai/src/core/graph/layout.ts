@@ -23,7 +23,17 @@ export function graphRuntimePaths(
   root: string,
   environment: GraphExecutionEnvironment = graphExecutionEnvironment(),
 ) {
-  const directory = path.join(root, ".qfai", "tools", "runtimes", graphEnvironmentKey(environment));
+  return graphRuntimeFiles(
+    path.join(root, ".qfai", "tools", "runtimes", graphEnvironmentKey(environment)),
+    environment,
+  );
+}
+
+/** The runtime files inside one runtime directory, the installed one or a staged copy of it. */
+export function graphRuntimeFiles(
+  directory: string,
+  environment: GraphExecutionEnvironment = graphExecutionEnvironment(),
+) {
   return {
     directory,
     codegraph: path.join(
