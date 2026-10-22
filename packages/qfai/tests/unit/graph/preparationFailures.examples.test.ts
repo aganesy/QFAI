@@ -11,6 +11,7 @@ import {
 import { renderGraphPreparation } from "../../../src/core/graph/presentation.js";
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
 import { graphAnalysisRoot } from "../../../src/core/graph/analysis.js";
+import { runGraphProcess } from "../../../src/core/graph/process.js";
 
 // QFAI:EX-0001-0237-05
 // Mutation: packages/qfai/src/core/graph/prepare.ts `recovery: "Install Python 3.10 or later and uv, then run qfai init again."` -> `recovery: "Install Python 3.9 and uv, then run qfai init again."` fails "reports an unmet interpreter prerequisite with a recovery action"
@@ -309,6 +310,78 @@ it("stages a runtime beside the installed one", async () => {
     expect(await readdir(path.dirname(installed.directory))).toEqual([
       path.basename(installed.directory),
     ]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0237-27
+// Mutation: packages/qfai/src/core/graph/process.ts `? \`was stopped (${signal})\`` -> `? undefined` fails "says a version check could not start or was stopped instead of giving an exit code"
+it("says a version check could not start or was stopped instead of giving an exit code", async () => {
+  const exited = await runGraphProcess(
+    process.execPath,
+    ["-e", "process.stderr.write('boom'); process.exit(4)"],
+    { cwd: os.tmpdir(), captureStderr: true },
+  );
+  expect(exited).toEqual({ exitCode: 4, stdout: "", stderr: "boom" });
+  expect(
+    await runGraphProcess(
+      process.execPath,
+      ["-e", "process.stderr.write('boom'); process.exit(4)"],
+      {
+        cwd: os.tmpdir(),
+      },
+    ),
+  ).toEqual({ exitCode: 4, stdout: "" });
+  const missing = await runGraphProcess(path.join(os.tmpdir(), "qfai-no-such-command"), [], {
+    cwd: os.tmpdir(),
+    captureStderr: true,
+  });
+  expect(missing.failure).toBe("could not start (ENOENT)");
+  const stopped = await runGraphProcess(process.execPath, ["-e", "setTimeout(() => {}, 30000)"], {
+    cwd: os.tmpdir(),
+    timeoutMs: 200,
+  });
+  expect(stopped.failure).toBe("was stopped (SIGTERM)");
+
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-version-start-"));
+  const fixture = graphProcessFixture();
+  try {
+    for (const failure of ["could not start (ENOENT)", "was stopped (SIGTERM)"]) {
+      const result = await prepareGraphRuntimes(root, (command, args, options) =>
+        args.includes("--version")
+          ? Promise.resolve({ exitCode: 1, stdout: "", failure })
+          : fixture.run(command, args, options),
+      );
+      const output = renderGraphPreparation(result);
+      expect(output).toContain(`Cause: the CodeGraph version check ${failure}.`);
+      expect(output).not.toContain("exited with code");
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0237-28
+// Mutation: packages/qfai/src/core/graph/prepare.ts `await rm(staged.directory, { recursive: true, force: true });` -> `` fails "removes the staging directory after a failed version check"
+it("removes the staging directory after a failed version check", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-staging-failed-"));
+  const fixture = graphProcessFixture();
+  const captured: boolean[] = [];
+  try {
+    const result = await prepareGraphRuntimes(root, (command, args, options) => {
+      captured.push(options.captureStderr === true);
+      return args.includes("--version")
+        ? Promise.resolve({ exitCode: 2, stdout: "" })
+        : fixture.run(command, args, options);
+    });
+    expect(result.failedStep).toBe("CodeGraph compatibility");
+    const install = fixture.calls.find((call) => call.args.includes("--prefix"));
+    const prefix = install?.args[install.args.indexOf("--prefix") + 1] ?? "";
+    expect(path.basename(path.dirname(prefix))).toMatch(/^\.p-[0-9a-f]{8}$/);
+    expect(await readdir(path.dirname(graphRuntimePaths(root).directory))).toEqual([]);
+    // Only the version check asks for stderr; the install does not.
+    expect(captured).toEqual([false, true]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -16,14 +16,23 @@ export const GRAPH_PYTHON_FLAGS = ["-I", "-X", "utf8"] as const;
 export interface GraphProcessResult {
   exitCode: number;
   stdout: string;
-  /** Set when the process failed. Only a version check shows it, bounded, since installer output can carry credentials. */
+  /** Set only for a failed process run with captureStderr; installer output can carry credentials. */
   stderr?: string;
+  /** Why a process that did not exit on its own ended: it could not start, or it was stopped. */
+  failure?: string;
 }
 
 export type GraphProcess = (
   command: string,
   args: readonly string[],
-  options: { cwd: string; env?: NodeJS.ProcessEnv; timeoutMs?: number; maxBufferBytes?: number },
+  options: {
+    cwd: string;
+    env?: NodeJS.ProcessEnv;
+    timeoutMs?: number;
+    maxBufferBytes?: number;
+    /** Keep a failed process's stderr in the result. Only version checks ask for it. */
+    captureStderr?: boolean;
+  },
 ) => Promise<GraphProcessResult>;
 
 function privateEngineEnvironment(
@@ -126,10 +135,19 @@ export const runGraphProcess: GraphProcess = async (command, args, options) => {
     if (!(cause instanceof Error) || !("code" in cause)) throw cause;
     // Installation and backend stderr can contain credentials. Callers report the step instead;
     // the preparation names the command a failed download can be rerun with by hand.
+    const signal = "signal" in cause && typeof cause.signal === "string" ? cause.signal : undefined;
+    const failure = signal
+      ? `was stopped (${signal})`
+      : typeof cause.code === "string"
+        ? `could not start (${cause.code})`
+        : undefined;
     return {
       exitCode: typeof cause.code === "number" ? cause.code : 1,
       stdout: "",
-      ...("stderr" in cause && typeof cause.stderr === "string" ? { stderr: cause.stderr } : {}),
+      ...(failure ? { failure } : {}),
+      ...(options.captureStderr && "stderr" in cause && typeof cause.stderr === "string"
+        ? { stderr: cause.stderr }
+        : {}),
     };
   }
 };

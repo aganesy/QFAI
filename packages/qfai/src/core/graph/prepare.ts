@@ -87,7 +87,10 @@ export async function prepareGraphRuntimes(
     documents: "documents-not-ready",
     previousInstallation: codegraphReady || graphifyReady ? "retained" : "none",
   };
-  await mkdir(staged.directory, { recursive: true });
+  // The leaf is created without recursive, so a leftover directory of that name fails with
+  // EEXIST instead of being reused.
+  await mkdir(path.dirname(staged.directory), { recursive: true });
+  await mkdir(staged.directory);
   try {
     if (codegraphReady) {
       await cp(
@@ -131,6 +134,7 @@ export async function prepareGraphRuntimes(
       const codeVersion = await run(process.execPath, [staged.codegraph, "--version"], {
         cwd: root,
         env,
+        captureStderr: true,
       });
       if (codeVersion.exitCode !== 0 || codeVersion.stdout.trim() !== GRAPH_VERSIONS.codegraph) {
         return {
@@ -196,7 +200,7 @@ export async function prepareGraphRuntimes(
           "-c",
           'from importlib.metadata import version; print(version("graphifyy"))',
         ],
-        { cwd: root, env: pythonEnvironment },
+        { cwd: root, env: pythonEnvironment, captureStderr: true },
       );
       if (
         graphifyVersion.exitCode !== 0 ||
@@ -228,7 +232,12 @@ export async function prepareGraphRuntimes(
 
 const CAUSE_LINES = 5;
 const CAUSE_CHARACTERS = 500;
-/** The deepest file of the staged CodeGraph tree, below the project root, for the pinned version. */
+/**
+ * The deepest file of the staged CodeGraph tree below the project root, with its separator:
+ * .qfai/tools/runtimes/.p-<8 hex>/codegraph/node_modules/@colbymchenry/codegraph-win32-x64/lib/
+ * dist/viewer/assets/ibm-plex-mono-cyrillic-ext-400-italic-CBjNughH.woff2, measured for CodeGraph
+ * 1.6.2 under the win32-x64 environment key. Under win32-arm64 the path is 2 characters longer.
+ */
 const STAGED_TOOL_DEPTH = 166;
 const WINDOWS_PATH_LIMIT = 260;
 const WINDOWS_PATH_MARGIN = 20;
@@ -242,8 +251,8 @@ function versionCheckRecovery(
   root: string,
 ): string {
   const cause =
-    result.exitCode !== 0
-      ? `Cause: the ${engine} version check exited with code ${result.exitCode}${shownOutput(result.stderr, ": ")}.`
+    result.exitCode !== 0 || result.failure
+      ? `Cause: the ${engine} version check ${result.failure ?? `exited with code ${result.exitCode}`}${shownOutput(result.stderr, ": ")}.`
       : `Cause: the ${engine} version check printed ${shownOutput(result.stdout, "") || "nothing"}, expected ${expected}.`;
   const pathLimit = windowsPathLimitRecovery(root);
   return pathLimit ? `${cause}\n${pathLimit}` : cause;

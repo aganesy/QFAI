@@ -13,7 +13,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   260-character path limit, and the failed `CodeGraph compatibility` step
   said only to fix the cause. Staging now uses a short sibling of the
   installed runtime directory. A failed CodeGraph or Graphify version check
-  now prints its exit code and first error lines, or the version it printed,
+  now prints its exit code, or that it could not start or was stopped, with
+  its first error lines, or the version it printed,
   and on Windows a project root near the limit adds a line saying to move the
   project to a shorter path or enable Windows long paths
   (`LongPathsEnabled`). Fixes #3971.
