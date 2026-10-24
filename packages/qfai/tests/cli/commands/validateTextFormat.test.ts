@@ -23,6 +23,7 @@ import { captureStdout } from "../../helpers/stdout.js";
 import {
   emitText,
   formatPassSummary,
+  ISSUE_FIX_BY_CODE,
   resolveIssueFix,
   runValidate,
 } from "../../../src/cli/commands/validate.js";
@@ -46,7 +47,6 @@ const OPTIONAL_SLOTS = {
 const DROPPED_LABELS = /^ {2}(error_code|target|expected|current): /m;
 
 // QFAI:EX-0001-0039-02
-// QFAI:EX-0001-0039-03
 it("directs agent routing repairs to package defaults or project config overrides", () => {
   for (const code of ["QFAI-AGENT-015", "QFAI-AGENT-017", "QFAI-AGENT-018", "QFAI-AGENT-019"]) {
     const fix = resolveIssueFix({ code, severity: "error", category: "canonical", message: code });
@@ -389,11 +389,13 @@ describe("validate --format text matches the validate contract's text output gra
   });
 
   /**
-   * The `fix` lines follow the run's `--fail-on` threshold, not the literal
-   * severity `error`: under `--fail-on warning` a warning is what fails the
-   * run, so it gets the same lines. The guideline says so in both places it
-   * describes them, and this is what holds the two together.
+   * Under `--fail-on warning` a warning is what fails the run, so its group
+   * prints every remedy, the generic fallback included, as an error's does.
+   * Below that threshold a warning with no action of its own prints none. The
+   * guideline says so in both places it describes them, and this is what holds
+   * the two together.
    */
+  // QFAI:EX-0001-0039-03
   it("gives warnings their fix line under --fail-on warning, as documented", async () => {
     const guideline = await readGuideline();
     expect(guideline).toContain("`--fail-on warning`");
@@ -455,6 +457,27 @@ describe("validate --format text matches the validate contract's text output gra
     }
   });
 
+  // QFAI:EX-0001-0039-24
+  it("prints a catalogued warning code's action once for its group below the threshold", async () => {
+    const code = "QFAI-CONTRACT-034";
+    const catalogued = ISSUE_FIX_BY_CODE[code];
+    expect(catalogued).toBeDefined();
+    const warnings: Issue[] = [1, 2].map((index) => ({
+      code,
+      severity: "warning",
+      category: "canonical",
+      message: `contract row ${index} disagrees`,
+      file: `.qfai/spec/03_contract/cli/cli-000${index}-example.md`,
+    }));
+    const output = await captureStdout(() => {
+      emitText(resultOf(warnings), DEFAULT_FAIL_ON);
+      return Promise.resolve();
+    });
+    expect(output.split("\n").filter((line) => line.startsWith("  fix: "))).toEqual([
+      `  fix: ${catalogued ?? ""}`,
+    ]);
+  });
+
   /**
    * `--fail-on never` fails on nothing, and the guide used to describe the
    * remedy as belonging to "issues at a severity that can fail this run" —
@@ -462,6 +485,7 @@ describe("validate --format text matches the validate contract's text output gra
    * emitting them for every `error`, so a parser built on the old wording read
    * `  fix: …` as more message text.
    */
+  // QFAI:EX-0001-0039-03
   it("keeps the error fix line under --fail-on never, as documented", async () => {
     const guideline = await readGuideline();
     expect(guideline).toContain("`--fail-on never`");

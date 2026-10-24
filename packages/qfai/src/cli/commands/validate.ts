@@ -946,10 +946,11 @@ export function capPerLevel(issues: Issue[]): { emitted: Issue[]; levels: LevelT
 }
 
 /**
- * Whether a group of issues prints its `fix` lines: every error, and a warning
- * when warnings fail the run. Tied to `severity === "error"` alone, the
- * remedy of every warning-severity code would be unreachable, although under
- * `--strict` / `--fail-on warning` the warning is exactly what fails the run.
+ * Whether an issue's severity fails the run's remedy threshold: every error,
+ * and a warning when warnings fail the run. It decides whether a text group
+ * prints every issue's remedy, the generic fallback included, and whether a
+ * GitHub annotation gets its `expected` / `fix` suffix. A warning below the
+ * threshold still prints the actions its issues carry (`textGroupFixes`).
  */
 function shouldEmitIssueDetail(issue: Issue, failOn: FailOn): boolean {
   if (issue.severity === "error") {
