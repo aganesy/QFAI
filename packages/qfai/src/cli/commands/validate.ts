@@ -664,6 +664,23 @@ function formatTextIssueLine(item: Issue): string {
 }
 
 /**
+ * The distinct `fix` values a text group prints, in first-appearance order. A
+ * severity that fails the run prints every issue's fix, the generic fallback
+ * included; a warning below the threshold prints only the actions its issues
+ * carry, so the terminal still says how to clear it; info prints none.
+ */
+function textGroupFixes(head: Issue, shown: readonly Issue[], failOn: FailOn): Set<string> {
+  if (shouldEmitIssueDetail(head, failOn)) {
+    return new Set(shown.map(resolveIssueFix));
+  }
+  if (head.severity !== "warning") {
+    return new Set();
+  }
+  const known = shown.map((item) => item.suggested_action ?? ISSUE_FIX_BY_CODE[item.code]);
+  return new Set(known.filter((fix): fix is string => fix !== undefined));
+}
+
+/**
  * Renders the default `--format text` output.
  *
  * The emitted line grammar is the validate contract's text output grammar;
@@ -682,10 +699,8 @@ export function emitText(result: ValidationResult, failOn: FailOn): void {
         `[${group.head.severity}] ${group.head.code} and ${hidden} more${suppressed}\n`,
       );
     }
-    if (shouldEmitIssueDetail(group.head, failOn)) {
-      for (const fix of new Set(shown.map(resolveIssueFix))) {
-        emitTextField("fix", fix);
-      }
+    for (const fix of textGroupFixes(group.head, shown, failOn)) {
+      emitTextField("fix", fix);
     }
   }
   process.stdout.write(
@@ -931,10 +946,11 @@ export function capPerLevel(issues: Issue[]): { emitted: Issue[]; levels: LevelT
 }
 
 /**
- * Whether a group of issues prints its `fix` lines: every error, and a warning
- * when warnings fail the run. Tied to `severity === "error"` alone, the
- * remedy of every warning-severity code would be unreachable, although under
- * `--strict` / `--fail-on warning` the warning is exactly what fails the run.
+ * Whether an issue's severity fails the run's remedy threshold: every error,
+ * and a warning when warnings fail the run. It decides whether a text group
+ * prints every issue's remedy, the generic fallback included, and whether a
+ * GitHub annotation gets its `expected` / `fix` suffix. A warning below the
+ * threshold still prints the actions its issues carry (`textGroupFixes`).
  */
 function shouldEmitIssueDetail(issue: Issue, failOn: FailOn): boolean {
   if (issue.severity === "error") {

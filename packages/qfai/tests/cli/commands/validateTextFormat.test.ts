@@ -23,6 +23,7 @@ import { captureStdout } from "../../helpers/stdout.js";
 import {
   emitText,
   formatPassSummary,
+  ISSUE_FIX_BY_CODE,
   resolveIssueFix,
   runValidate,
 } from "../../../src/cli/commands/validate.js";
@@ -46,7 +47,6 @@ const OPTIONAL_SLOTS = {
 const DROPPED_LABELS = /^ {2}(error_code|target|expected|current): /m;
 
 // QFAI:EX-0001-0039-02
-// QFAI:EX-0001-0039-03
 it("directs agent routing repairs to package defaults or project config overrides", () => {
   for (const code of ["QFAI-AGENT-015", "QFAI-AGENT-017", "QFAI-AGENT-018", "QFAI-AGENT-019"]) {
     const fix = resolveIssueFix({ code, severity: "error", category: "canonical", message: code });
@@ -161,14 +161,13 @@ type LineKind =
  * previous message" fallback. A guideline whose rules only worked in this
  * order on paper would still leave `counts:` swallowed by a multi-line message.
  *
- * Rule 8 keys on the run's `--fail-on` threshold, not on `error` alone: the
- * emitter prints `fix` lines for every severity that can fail the run, so a
- * `--fail-on warning` run puts them under its warnings too and a classifier
- * pinned to `error` would read them as more message text.
+ * Rule 8 keys on warnings and errors, not on `error` alone: a warning prints
+ * the action it carries whatever the threshold, so a classifier pinned to
+ * `error` would read its `fix` line as more message text.
  */
-function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind; line: string }[] {
+function classifyByGuideline(lines: string[]): { kind: LineKind; line: string }[] {
   const carriesFix = (value: string | undefined): boolean =>
-    value === "error" || (failOn === "warning" && value === "warning");
+    value === "error" || value === "warning";
   let section: "none" | "message" | "fix" = "none";
   let severity: string | undefined;
   return lines.map((line) => {
@@ -390,11 +389,13 @@ describe("validate --format text matches the validate contract's text output gra
   });
 
   /**
-   * The `fix` lines follow the run's `--fail-on` threshold, not the literal
-   * severity `error`: under `--fail-on warning` a warning is what fails the
-   * run, so it gets the same lines. The guideline says so in both places it
-   * describes them, and this is what holds the two together.
+   * Under `--fail-on warning` a warning is what fails the run, so its group
+   * prints every remedy, the generic fallback included, as an error's does.
+   * Below that threshold a warning with no action of its own prints none. The
+   * guideline says so in both places it describes them, and this is what holds
+   * the two together.
    */
+  // QFAI:EX-0001-0039-03
   it("gives warnings their fix line under --fail-on warning, as documented", async () => {
     const guideline = await readGuideline();
     expect(guideline).toContain("`--fail-on warning`");
@@ -407,7 +408,7 @@ describe("validate --format text matches the validate contract's text output gra
       emitText(resultOf([warning]), "warning");
       return Promise.resolve();
     });
-    expect(classifyByGuideline(atThreshold.trimEnd().split("\n"), "warning")).toContainEqual({
+    expect(classifyByGuideline(atThreshold.trimEnd().split("\n"))).toContainEqual({
       kind: "fix",
       line: `  fix: ${resolveIssueFix(warning)}`,
     });
@@ -420,12 +421,71 @@ describe("validate --format text matches the validate contract's text output gra
   });
 
   /**
+   * A warning below the threshold still prints the action it carries: a reader
+   * of the terminal alone otherwise sees a warning with no way to clear it. Only
+   * the generic fallback stays reserved for severities that fail the run.
+   */
+  // QFAI:EX-0001-0039-24
+  it("prints a warning's own suggested action below the threshold, and no info action", async () => {
+    const warning: Issue = {
+      code: "QFAI-TEST-006",
+      severity: "warning",
+      category: "canonical",
+      message: "a wrapper does not resolve",
+      file: ".claude/skills/qfai-run",
+      suggested_action: "Run `qfai init` in this checkout to relink the wrappers it owns.",
+    };
+    const info: Issue = {
+      code: "QFAI-TEST-007",
+      severity: "info",
+      category: "canonical",
+      message: "a note",
+      suggested_action: "Nothing to repair.",
+    };
+    for (const failOn of [DEFAULT_FAIL_ON, "never"] as const) {
+      const output = await captureStdout(() => {
+        emitText(resultOf([warning, info]), failOn);
+        return Promise.resolve();
+      });
+      const lines = output.trimEnd().split("\n");
+      const header = lines.findIndex((line) => line.startsWith("[warning] QFAI-TEST-006 "));
+      expect(header).toBeGreaterThanOrEqual(0);
+      expect(lines[header + 1]).toBe(`  fix: ${warning.suggested_action ?? ""}`);
+      expect(lines.filter((line) => line.startsWith("  fix: "))).toHaveLength(1);
+      expect(classifyByGuideline(lines)[header + 1]?.kind).toBe("fix");
+      expect(lines.at(-1)).toBe(`fail-on: ${failOn}`);
+    }
+  });
+
+  // QFAI:EX-0001-0039-24
+  it("prints a catalogued warning code's action once for its group below the threshold", async () => {
+    const code = "QFAI-CONTRACT-034";
+    const catalogued = ISSUE_FIX_BY_CODE[code];
+    expect(catalogued).toBeDefined();
+    const warnings: Issue[] = [1, 2].map((index) => ({
+      code,
+      severity: "warning",
+      category: "canonical",
+      message: `contract row ${index} disagrees`,
+      file: `.qfai/spec/03_contract/cli/cli-000${index}-example.md`,
+    }));
+    const output = await captureStdout(() => {
+      emitText(resultOf(warnings), DEFAULT_FAIL_ON);
+      return Promise.resolve();
+    });
+    expect(output.split("\n").filter((line) => line.startsWith("  fix: "))).toEqual([
+      `  fix: ${catalogued ?? ""}`,
+    ]);
+  });
+
+  /**
    * `--fail-on never` fails on nothing, and the guide used to describe the
    * remedy as belonging to "issues at a severity that can fail this run" —
    * which reads as "no fix lines at all" in that mode. `emitText` keeps
    * emitting them for every `error`, so a parser built on the old wording read
    * `  fix: …` as more message text.
    */
+  // QFAI:EX-0001-0039-03
   it("keeps the error fix line under --fail-on never, as documented", async () => {
     const guideline = await readGuideline();
     expect(guideline).toContain("`--fail-on never`");
@@ -438,12 +498,12 @@ describe("validate --format text matches the validate contract's text output gra
       emitText(resultOf([error]), "never");
       return Promise.resolve();
     });
-    const classified = classifyByGuideline(output.trimEnd().split("\n"), "never");
+    const classified = classifyByGuideline(output.trimEnd().split("\n"));
     expect(classified).toContainEqual({ kind: "fix", line: `  fix: ${MULTILINE_FIX[0]}` });
     // …and the structural lines are still structural, not swallowed as message.
     expect(classified.filter((entry) => entry.kind === "message-continuation")).toEqual([]);
 
-    // Over-correction pin: a warning still gets nothing in this mode.
+    // Over-correction pin: a warning with no action of its own still gets nothing.
     const warning = SYNTHETIC_ISSUES.find((issue) => issue.code === "QFAI-TEST-002");
     expect(warning).toBeDefined();
     if (warning === undefined) return;
@@ -780,7 +840,7 @@ describe("validate --format text matches the validate contract's text output gra
       const output = await captureStdout(() =>
         runValidate({ root, strict: false, format: "text" }).then(() => undefined),
       );
-      const classified = classifyByGuideline(output.trimEnd().split("\n"), DEFAULT_FAIL_ON);
+      const classified = classifyByGuideline(output.trimEnd().split("\n"));
 
       expect(classified.at(-1)?.kind).toBe("run-log");
       expect(classified.at(-2)?.kind).toBe("fail-on");
