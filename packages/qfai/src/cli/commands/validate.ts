@@ -664,6 +664,23 @@ function formatTextIssueLine(item: Issue): string {
 }
 
 /**
+ * The distinct `fix` values a text group prints, in first-appearance order. A
+ * severity that fails the run prints every issue's fix, the generic fallback
+ * included; a warning below the threshold prints only the actions its issues
+ * carry, so the terminal still says how to clear it; info prints none.
+ */
+function textGroupFixes(head: Issue, shown: readonly Issue[], failOn: FailOn): Set<string> {
+  if (shouldEmitIssueDetail(head, failOn)) {
+    return new Set(shown.map(resolveIssueFix));
+  }
+  if (head.severity !== "warning") {
+    return new Set();
+  }
+  const known = shown.map((item) => item.suggested_action ?? ISSUE_FIX_BY_CODE[item.code]);
+  return new Set(known.filter((fix): fix is string => fix !== undefined));
+}
+
+/**
  * Renders the default `--format text` output.
  *
  * The emitted line grammar is the validate contract's text output grammar;
@@ -682,10 +699,8 @@ export function emitText(result: ValidationResult, failOn: FailOn): void {
         `[${group.head.severity}] ${group.head.code} and ${hidden} more${suppressed}\n`,
       );
     }
-    if (shouldEmitIssueDetail(group.head, failOn)) {
-      for (const fix of new Set(shown.map(resolveIssueFix))) {
-        emitTextField("fix", fix);
-      }
+    for (const fix of textGroupFixes(group.head, shown, failOn)) {
+      emitTextField("fix", fix);
     }
   }
   process.stdout.write(

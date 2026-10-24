@@ -19,6 +19,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   project to a shorter path or enable Windows long paths
   (`LongPathsEnabled`). Fixes #3971.
 
+- **`qfai validate --format text` shows a warning's suggested action.**
+  Under the default `--fail-on error`, a warning printed only its message,
+  file and refs, so a warning such as a wrapper that does not resolve gave no
+  hint that `qfai init` clears it; the action was only in `validate.json`.
+  A warning that carries an action is now followed by an indented
+  `fix: <action>` line under every threshold, as an error already was. Info
+  findings, the GitHub and JSON formats and the summary lines are unchanged.
+  Fixes #3976.
+
 ## [2.2.1] - 2026-10-21
 
 ### Added
