@@ -1,1 +1,0 @@
-../../.qfai/assistant/agent/devops-ci-engineer.md

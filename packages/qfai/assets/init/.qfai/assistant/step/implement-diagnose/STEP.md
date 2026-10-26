@@ -3,12 +3,6 @@ name: implement-diagnose
 owner: qfai-implement
 purpose: "Reproduce a reported failure in one business flow, find its cause and give the one verdict that decides what the run does next. On a fix route the reproduction is a failing test."
 requires: [common-gate-run]
-roles:
-  - test-design-analyst
-  - frontend-engineer
-  - backend-engineer
-  - devops-ci-engineer
-routing-profile: default
 ---
 
 # implement-diagnose

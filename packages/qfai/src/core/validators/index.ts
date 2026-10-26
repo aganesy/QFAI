@@ -40,7 +40,6 @@ export { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
-export { validateSkillRoles } from "./skillRoles.js";
 export { validateStepTree } from "./stepTree.js";
 export { validateDesignAudit } from "./designAudit.js";
 export { loadLayoutAntiPatterns, findLayoutAntiPatterns } from "./layoutAntiPatterns.js";

@@ -10,13 +10,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
-
-import { defaultConfig } from "../../../src/core/config.js";
 import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
   assistantLineCeiling,
 } from "../../../src/core/doctor/assetLineBudget.js";
-import { validateAgentDefinition } from "../../../src/core/validators/agentDefinition.js";
 import { approachProblems } from "../../../src/core/validators/storyTreeStructure.js";
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
 import { extractionFaults, isExtraction } from "../../../src/core/workflow/extractionShape.js";
@@ -25,7 +22,6 @@ import { WORKFLOW_ROUTES } from "../../../src/core/workflow/routes.js";
 import {
   PACKAGE_DEFAULTS,
   SHIPPED_ASSISTANT,
-  defaultRoutingEntries,
   flat,
   frontMatterOf,
   readDefault,
@@ -44,42 +40,8 @@ const MAINTAIN = "skill/qfai-maintain/SKILL.md";
 const MAINTAIN_EDIT = "step/maintain-edit/STEP.md";
 const SDD_TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
 
-const PROFILES = ["architecture-heavy", "default", "runtime-heavy"];
-
-const AGENT_FIELDS = ["mandatory_agents", "conditional_agents"] as const;
-
-type Phase = Record<string, unknown>;
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function strings(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
-}
-
-function phaseAgents(phase: Phase): string[] {
-  const grouped = Array.isArray(phase.parallel_groups)
-    ? phase.parallel_groups.flatMap(strings)
-    : [];
-  return [...AGENT_FIELDS.flatMap((field) => strings(phase[field])), ...grouped];
-}
-
-async function routingEntry(
-  name: string,
-  key: "skill" | "step" = "skill",
-): Promise<Record<string, unknown> | undefined> {
-  const routing = await defaultRoutingEntries();
-  return routing.filter(isRecord).find((entry) => entry[key] === name);
-}
-
-async function profiles(): Promise<Record<string, unknown>> {
-  const file: unknown = parse(await readDefault("review-profiles.yml"));
-  return isRecord(file) && isRecord(file.profiles) ? file.profiles : {};
-}
-
-function phasesOf(entry: Record<string, unknown> | undefined): Phase[] {
-  return entry && Array.isArray(entry.phases) ? entry.phases.filter(isRecord) : [];
 }
 
 // The closed vocabulary of each extraction field, as the workflow contract states it.
@@ -892,15 +854,17 @@ describe("qfai-run", () => {
 
   // QFAI:AC-0001-0224-02
   // QFAI:EX-0001-0224-02
-  it("writes artifacts itself, delegates only parallel parts and reviews, and never reviews its own work", async () => {
+  it("writes every artifact itself, delegates only for the two reasons, and never reviews its own work", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
-    expect(work).toMatch(/write (?:any )?artifacts? yourself/i);
-    expect(work).toMatch(/delegate independent parallel work or review/i);
+    expect(work).toMatch(/write every artifact yourself/i);
+    expect(work).toMatch(
+      /an independent judgement, or parallel units that pass the parallel-unit gate/i,
+    );
     expect(work).toMatch(/whose `review` is `spec`, `requirements-reviewer` reviews/);
     expect(work).toMatch(/no agent reviews its own work/i);
   });
 
-  it("runs each step that starts a finder, griller or reviewer at the orchestrator", async () => {
+  it("runs each step that starts a finder, griller or reviewer in the session agent", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
     expect(work).toMatch(
       /a worker starts no finder, griller or reviewer: run each step that starts one yourself/i,
@@ -908,11 +872,11 @@ describe("qfai-run", () => {
     const protocol = flat(
       sectionOf(
         await readShipped("rule/shared-skill-delegation-baseline.md"),
-        "### Orchestrator Protocol",
+        "### Session Agent Protocol",
       ),
     );
     expect(protocol).toMatch(
-      /the orchestrator runs every step that starts a finder, griller or reviewer, and starts those agents itself/i,
+      /the session agent runs every step that starts a finder, griller or reviewer, and starts those agents itself/i,
     );
     for (const step of [
       "sdd-cycle",
@@ -925,34 +889,33 @@ describe("qfai-run", () => {
     expect(protocol).toMatch(
       /any step that holds a\s+delegated grilling session, such as a pre-draft grilling checkpoint/i,
     );
-    expect(protocol).toMatch(/starts no finder, griller or reviewer/i);
-    expect(protocol).toMatch(/a finder is a review someone other than the author has to do/i);
+    expect(protocol).toMatch(/`fullstack-engineer` it delegates to starts no agent of its own/i);
     const owners: ReadonlyArray<readonly [string, RegExp]> = [
-      ["step/sdd-cycle/STEP.md", /the orchestrator starts it, never a stage worker/i],
-      ["step/sdd-triage/STEP.md", /the orchestrator starts the griller, never a stage worker/i],
+      ["step/sdd-cycle/STEP.md", /the session agent starts it, never a stage worker/i],
+      ["step/sdd-triage/STEP.md", /the session agent starts the griller, never a stage worker/i],
       [
         "step/common-review-cycle/STEP.md",
         /sends each reviewer a work order in the\s+shared template, never a stage worker/i,
       ],
       [
         "step/prototyping-grill/STEP.md",
-        /the orchestrator starts the griller, never a stage worker/i,
+        /the session agent starts the griller, never a stage worker/i,
       ],
       [
         "step/prototyping-loop/STEP.md",
-        /the orchestrator starts every role in the table below, the generator included, and never a stage worker/i,
+        /the session agent generates, implements and builds; `product-surface-reviewer`\s+reviews/i,
       ],
       [
         "skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
-        /the orchestrator starts the griller; a stage worker starts none/i,
+        /the session agent starts the griller./i,
       ],
       [
         "skill/qfai-sdd/references/concrete-abstract-cycle.md",
-        /the orchestrator starts it; a stage worker starts none/i,
+        /the session agent starts it; a stage worker starts none/i,
       ],
       [
         "skill/qfai-sdd/references/sdd-execution-playbook.md",
-        /started by the orchestrator and never by a stage worker/i,
+        /started by the session agent and never by a stage worker/i,
       ],
     ];
     for (const [file, owner] of owners) {
@@ -1469,35 +1432,6 @@ describe("qfai-maintain", () => {
     if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
     const outcome = routingOutcome(pinned);
     expect("taken" in outcome ? outcome.taken.route : undefined).toBe("resolve-conflicts");
-  });
-});
-
-describe("the entry skills' routing entries", () => {
-  // QFAI:AC-0001-0161-05
-  // QFAI:EX-0001-0161-06
-  it("routes qfai-run to the orchestrator only, and qfai-maintain to an author and no reviewer", async () => {
-    const run = await routingEntry("qfai-run");
-    expect(run, "the routing defaults have a qfai-run entry").toBeDefined();
-    const runPhases = phasesOf(run);
-    expect(runPhases.length, "qfai-run has a phase").toBeGreaterThan(0);
-    expect([...new Set(runPhases.flatMap(phaseAgents))]).toEqual(["orchestrator"]);
-    expect(run?.review_profile, "qfai-run names no review profile").toBeUndefined();
-
-    const maintain = await routingEntry("maintain-edit", "step");
-    expect(maintain?.review_profile).toBe("default");
-    const maintainPhases = phasesOf(maintain);
-    const authors = maintainPhases.flatMap(phaseAgents);
-    expect(authors.length, "qfai-maintain has an authoring phase").toBeGreaterThan(0);
-    expect(
-      authors.filter((agent) => agent.endsWith("-reviewer") || agent === "qa-gatekeeper"),
-      "no reviewer is routed here",
-    ).toEqual([]);
-    expect(maintainPhases.some((phase) => phase.id === "review")).toBe(false);
-
-    expect(Object.keys(await profiles()).sort()).toEqual(PROFILES);
-
-    const shippedRoot = path.dirname(path.dirname(SHIPPED_ASSISTANT));
-    expect(await validateAgentDefinition(shippedRoot, defaultConfig)).toEqual([]);
   });
 });
 

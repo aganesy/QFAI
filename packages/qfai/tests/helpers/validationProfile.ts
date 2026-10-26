@@ -35,7 +35,6 @@ import * as reviewerGate from "../../src/core/validators/reviewerGate.js";
 import * as prototypingSkill from "../../src/core/validators/skill/prototypingSkill.js";
 import * as skillDocReferences from "../../src/core/validators/skillDocReferences.js";
 import * as skillManifestDrift from "../../src/core/validators/skillManifestDrift.js";
-import * as skillRoles from "../../src/core/validators/skillRoles.js";
 import * as staleTerms from "../../src/core/validators/staleTerms.js";
 import * as stepTree from "../../src/core/validators/stepTree.js";
 import * as storyTreeObligations from "../../src/core/validators/storyTreeObligations.js";
@@ -312,11 +311,6 @@ export function measureValidators() {
       "core/validators/skillManifestDrift:detectSkillManifestDrift",
       skillManifestDrift.detectSkillManifestDrift,
       (call) => vi.spyOn(skillManifestDrift, "detectSkillManifestDrift").mockImplementation(call),
-    );
-    register(
-      "core/validators/skillRoles:validateSkillRoles",
-      skillRoles.validateSkillRoles,
-      (call) => vi.spyOn(skillRoles, "validateSkillRoles").mockImplementation(call),
     );
     register(
       "core/validators/staleTerms:validateStaleTerms",

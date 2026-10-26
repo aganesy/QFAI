@@ -360,7 +360,7 @@ describe("qfai init", () => {
         path.join(root, ".qfai", "assistant", "skill", "qfai-configure", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "skill", "qfai-discussion", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "rule", "constitution.md"),
-        path.join(root, ".qfai", "assistant", "agent", "delivery-planner.md"),
+        path.join(root, ".qfai", "assistant", "agent", "fullstack-engineer.md"),
         path.join(
           root,
           ".qfai",
@@ -395,13 +395,13 @@ describe("qfai init", () => {
       await access(skillMdViaSymlink);
 
       // Agent file symlinks
-      const claudeAgent = path.join(root, ".claude", "agents", "delivery-planner.md");
+      const claudeAgent = path.join(root, ".claude", "agents", "fullstack-engineer.md");
       await expectSymlink(claudeAgent);
-      await expectSymlinkTarget(claudeAgent, ".qfai/assistant/agent/delivery-planner.md");
+      await expectSymlinkTarget(claudeAgent, ".qfai/assistant/agent/fullstack-engineer.md");
 
-      const githubAgent = path.join(root, ".github", "agents", "delivery-planner.agent.md");
+      const githubAgent = path.join(root, ".github", "agents", "fullstack-engineer.agent.md");
       await expectSymlink(githubAgent);
-      await expectSymlinkTarget(githubAgent, ".qfai/assistant/agent/delivery-planner.md");
+      await expectSymlinkTarget(githubAgent, ".qfai/assistant/agent/fullstack-engineer.md");
       for (const readme of [
         ".agents/README.md",
         ".codex/README.md",
@@ -1995,7 +1995,7 @@ describe("qfai init", () => {
         path.join(root, ".qfai", "assistant", "skill", "qfai-configure", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "skill", "qfai-discussion", "SKILL.md"),
         path.join(root, ".qfai", "assistant", "rule", "constitution.md"),
-        path.join(root, ".qfai", "assistant", "agent", "delivery-planner.md"),
+        path.join(root, ".qfai", "assistant", "agent", "fullstack-engineer.md"),
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, "AGENTS.md"),
       ];

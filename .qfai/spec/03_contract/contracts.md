@@ -4,7 +4,7 @@
 
 | ID | Title | File | Depends On | Reconciled With | Purpose |
 | --- | --- | --- | --- | --- | --- |
-| CLI-0001 | Assistant Routing | `.qfai/spec/03_contract/cli/cli-0001-assistant-routing.md` | - | - | Agent cards, routing, and review profiles. |
+| CLI-0001 | Assistant Routing | `.qfai/spec/03_contract/cli/cli-0001-assistant-routing.md` | - | - | Agent cards, delegation by context, and reviewer independence. |
 | CLI-0002 | Assistant Steps | `.qfai/spec/03_contract/cli/cli-0002-assistant-steps.md` | - | - | Step tree, parent step lists, the review of a skill invoked by name, and the step-tree check. |
 | CLI-0003 | Configuration | `.qfai/spec/03_contract/cli/cli-0003-configuration.md` | - | - | Project override and path resolution. |
 | CLI-0004 | Delivery Workflow | `.qfai/spec/03_contract/cli/cli-0004-delivery-workflow.md` | - | - | Acceptance tests, implementation and verification handoffs. |

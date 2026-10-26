@@ -3,8 +3,6 @@ name: prototyping-loop
 owner: qfai-prototyping
 purpose: "Build and review one prototype lineage per UI contract and screen, and put each reviewed prototype to the user until they confirm it."
 requires: []
-roles: [orchestrator, product-experience-architect, product-surface-reviewer, devops-ci-engineer]
-routing-profile: default
 ---
 
 # prototyping-loop
@@ -26,7 +24,7 @@ answer. No command, score or check decides that the loop is done.
   loop the project's stylesheet and motion files it restyles.
 - `.qfai/prototype/iter-NN/review.json` and
   `iter-NN/<ui-contract-id>/<screen>.review.json` (the reviewer).
-- `.qfai/prototype/progress.md` (the orchestrator).
+- `.qfai/prototype/progress.md` (the session agent).
 - The session rows of `.qfai/prototype/grilling.md`.
 
 ## Required References
@@ -47,25 +45,25 @@ answer. No command, score or check decides that the loop is done.
 
 ## Delegation Scope Table
 
-Generation and review use two distinct sub-agent identities. The reviewer
-operates Playwright during the assessment and returns its review payloads;
-it has no write access, so the orchestrator writes them. There is
-no fixed capture identity: a screenshot is taken by whoever needs it. The build
-owner is separate from this identity rule. The orchestrator starts every role
-in the table below, the generator included, and never a stage worker.
+The session agent generates, implements and builds; `product-surface-reviewer`
+reviews, started from a fresh context and a black-box brief, never with the
+session's conversation. The reviewer operates Playwright during the assessment
+and returns its review payloads; it has no write access, so the session agent
+writes them. There is no fixed capture identity: a screenshot is taken by
+whoever needs it.
 
-| Work                                          | Allowed Role                         |
-| --------------------------------------------- | ------------------------------------ |
-| Generation and implementation                 | product-experience-architect         |
-| Live Playwright review and evaluation scoring | product-surface-reviewer             |
-| Build                                         | devops-ci-engineer, backend-engineer |
+| Work                                          | Owner                      |
+| --------------------------------------------- | -------------------------- |
+| Generation and implementation                 | The session agent          |
+| Live Playwright review and evaluation scoring | `product-surface-reviewer` |
+| Build                                         | The session agent          |
 
 Record `targetIterations`, `evaluationAxesSource`, `delegationMap` and
 `plannedAt` in `.qfai/prototype/progress.md` before the first review.
 `targetIterations` is an estimate of the iterations before the user confirms;
 the loop does not stop at it. Report an
-assignment that gives generation and review to one identity before either
-runs.
+assignment that gives review scoring to the session agent, or generation to
+the reviewer, before either runs.
 
 ## Iteration kind
 
@@ -117,7 +115,7 @@ With `runScope` absent, every screen is in scope and nothing here applies.
 Run these for iteration `NN`: the next index after the iterations already
 under `.qfai/prototype/`, or `00` when there are none.
 
-1. **Generator** (product-experience-architect). Reads the contracts,
+1. **Generator** (the session agent). Reads the contracts,
    `.qfai/prototype/grilling.md`, the generator prompt, the `DESIGN.md` tokens
    and, from the run's second iteration on, this run's latest reviews and the
    user's last answer. In a scoped run it also reads `runScope` in `progress.md` and
@@ -125,7 +123,7 @@ under `.qfai/prototype/`, or `00` when there are none.
    primary UI contract preflight resolved: the one the request names, else
    `prototyping.primaryUiContract`. Writes
    `.qfai/prototype/iter-NN/index.html`.
-2. **Build** (devops-ci-engineer). Serves `.qfai/prototype/` at the URL
+2. **Build** (the session agent). Serves `.qfai/prototype/` at the URL
    preflight checked, starting the server on the first iteration and keeping it
    running for the loop, and hands `<url>/iter-NN/` to the reviewer.
 3. **Reviewer** (product-surface-reviewer). Opens that URL, operates
@@ -134,7 +132,7 @@ under `.qfai/prototype/`, or `00` when there are none.
    prompt: the four ordinal UX axes, a critique of at most 500 words,
    `blockingFindings`, `layoutAntiPatternsDetected[]`,
    `designMdViolations[]` and `pivotDirective`.
-4. **Orchestrator.** Writes each payload to
+4. **Session agent.** Writes each payload to
    `iter-NN/<ui-contract-id>/<screen>.review.json` and the summary to
    `iter-NN/review.json`. Each payload is checked against the closed schema
    before it is written, and one that does not conform is asked for again. A

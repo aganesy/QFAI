@@ -35,12 +35,11 @@ async function writeDoc(rel: string, content: string): Promise<void> {
 async function writeParent(
   name: string,
   steps: string,
-  roles = "[orchestrator]",
   extra: Record<string, string> = {},
 ): Promise<void> {
   await writeDoc(
     `.qfai/assistant/skill/${name}/SKILL.md`,
-    frontmatter({ name, description: '"Use when testing."', steps, roles, ...extra }),
+    frontmatter({ name, description: '"Use when testing."', steps, ...extra }),
   );
 }
 
@@ -154,7 +153,7 @@ describe("validateStepTree", () => {
     const orphaned = await run();
     expect(rules(orphaned)).toEqual(["stepTree.orphan"]);
     expect(orphaned[0]?.file).toBe(".qfai/assistant/step/common-review-cycle/STEP.md");
-    await writeParent("qfai-demo", "[demo-one, common-share]", "[orchestrator]", {
+    await writeParent("qfai-demo", "[demo-one, common-share]", {
       requires: "[common-review-cycle]",
     });
     expect(await run()).toEqual([]);
@@ -191,7 +190,7 @@ describe("validateStepTree", () => {
     ];
     for (const [requires, rule, named] of cases) {
       await seedCleanTree();
-      await writeParent("qfai-demo", "[demo-one, common-share]", "[orchestrator]", { requires });
+      await writeParent("qfai-demo", "[demo-one, common-share]", { requires });
       const found = await run();
       expect(rules(found), requires).toEqual([rule]);
       expect(found[0]?.file, requires).toBe(".qfai/assistant/skill/qfai-demo/SKILL.md");
@@ -205,34 +204,5 @@ describe("validateStepTree", () => {
     await writeParent("qfai-demo", "[common-share]");
     await writeParent("qfai-other", "[demo-one]");
     expect(rules(await run())).toEqual(["stepTree.ownerOmitsStep"]);
-  });
-
-  it("refuses a parent whose roles: omit orchestrator or a role one of its steps declares", async () => {
-    await seedCleanTree();
-    await writeStep("demo-one", {
-      owner: "qfai-demo",
-      requires: "[common-share]",
-      roles: "[solution-architect, completion-reviewer]",
-    });
-    await writeParent("qfai-demo", "[demo-one, common-share]", "[completion-reviewer]");
-    const found = await run();
-    expect(rules(found)).toEqual(["stepTree.parentRolesMissing"]);
-    expect(found[0]?.file).toBe(".qfai/assistant/skill/qfai-demo/SKILL.md");
-    expect(found[0]?.message).toContain("orchestrator, solution-architect");
-  });
-
-  it("accepts a parent whose roles: cover orchestrator and the roles of every listed step", async () => {
-    await seedCleanTree();
-    await writeStep("demo-one", {
-      owner: "qfai-demo",
-      requires: "[common-share]",
-      roles: "[solution-architect]",
-    });
-    await writeParent(
-      "qfai-demo",
-      "[demo-one, common-share]",
-      "[orchestrator, solution-architect]",
-    );
-    expect(await run()).toEqual([]);
   });
 });

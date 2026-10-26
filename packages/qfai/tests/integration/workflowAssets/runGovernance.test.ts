@@ -263,11 +263,11 @@ describe("independent targets under one goal", () => {
       /reviewer using live files or (?:local|checkout-dependent) execution must finish/i,
     );
     expect(targets).toMatch(
-      /read-only reviewer using only `git show <fixed SHA>:<path>`.*may continue across a clean orchestrator switch/i,
+      /read-only reviewer using only `git show <fixed SHA>:<path>`.*may continue across a clean session-agent switch/i,
     );
     expect(targets).toMatch(/reviewer never switches the checkout/i);
-    const delegation = await passage(DELEGATION, "### Orchestrator Protocol");
-    expect(delegation).toMatch(/each reviewer.*fixed commit/i);
+    const delegation = await passage(DELEGATION, "### Session Agent Protocol");
+    expect(delegation).toMatch(/each judge.*fixed revision/i);
     expect(delegation).toMatch(/only read-only fixed-SHA `git show` reviews.*clean switches/i);
     expect(delegation).toMatch(
       /writers, local gates.*reviews using live files or checkout-dependent execution.*finish first/i,
@@ -585,7 +585,7 @@ describe("report ownership after workflow record retirement", () => {
     expect(writes).toMatch(/stage report/iu);
     expect(writes).toMatch(/reviewer.*verdict.*findings.*(?:fixed|answered)/iu);
     const gate = await passage(file, "## Gate");
-    expect(gate).toMatch(/every routed reviewer responded once/iu);
+    expect(gate).toMatch(/every required reviewer responded once/iu);
     expect(gate).toMatch(/critical decision.*user/iu);
   });
 

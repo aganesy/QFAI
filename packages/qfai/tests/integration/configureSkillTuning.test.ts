@@ -95,15 +95,13 @@ function resolveMdschemaCli(): string {
 
 describe("Config Minimal Diff", () => {
   // QFAI:AC-0001-0076-02
-  it("edits the test globs, overrides only on request, and writes nothing else", async () => {
+  it("edits the test globs, adds no default, and writes nothing else", async () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
     const step4 = section(skill, "## Step 4 - Update `qfai.config.yaml` (minimal diff)");
 
     expect(step4).toContain("- `validation.traceability.testFileGlobs`");
     expect(step4).toContain("- `validation.traceability.testFileExcludeGlobs` (only if needed)");
-    expect(step4.replace(/\s+/g, " ")).toMatch(
-      /`routing` or `reviewProfiles`[^.;]*only (?:when|if) the user (?:asks to change one|requests (?:a change|an override))/,
-    );
+    expect(step4).toContain("Keep all other config keys unchanged.");
     expect(step4).toContain("Add no key the package already defaults");
 
     const constraints = section(skill, "## Constraints");

@@ -427,11 +427,11 @@ for (const deprecatedSkillId of deprecatedSkillIds) {
 }
 
 // Agent symlinks
-if (!existsSync(path.join(claudeAgentsDir, "delivery-planner.md"))) {
-  throw new Error("init did not generate .claude/agents/delivery-planner.md.");
+if (!existsSync(path.join(claudeAgentsDir, "fullstack-engineer.md"))) {
+  throw new Error("init did not generate .claude/agents/fullstack-engineer.md.");
 }
-if (!existsSync(path.join(githubAgentsDir, "delivery-planner.agent.md"))) {
-  throw new Error("init did not generate .github/agents/delivery-planner.agent.md.");
+if (!existsSync(path.join(githubAgentsDir, "fullstack-engineer.agent.md"))) {
+  throw new Error("init did not generate .github/agents/fullstack-engineer.agent.md.");
 }
 
 // Empty scaffold init omits generated discussion-pack files.
@@ -653,9 +653,9 @@ writeFileSync(
   ].join("\n"),
 );
 writeFileSync(
-  path.join(seededReviewPackDir, "R01_completion-reviewer.md"),
+  path.join(seededReviewPackDir, "R01_implementation-reviewer.md"),
   [
-    "# R01 Completion Reviewer",
+    "# R01 Implementation Reviewer",
     "",
     "- Status: PASS",
     "- Feedback count: 0",
@@ -678,8 +678,7 @@ writeFileSync(
         kind: "discussion",
         path: `.qfai/discussion/${seededDiscussionPack}`,
       },
-      routing_profile: "completion",
-      reviewers: [{ reviewer: "completion-reviewer", status: "PASS", feedback_count: 0 }],
+      reviewers: [{ reviewer: "implementation-reviewer", status: "PASS", feedback_count: 0 }],
       conditional_reviewers: [],
       overall_status: "PASS",
     },

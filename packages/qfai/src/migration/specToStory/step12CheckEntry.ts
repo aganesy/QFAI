@@ -19,12 +19,9 @@ function skillPath(skill: string, ...rest: string[]): string {
 
 /** One `## For a person` item, named by its check as `workflow plan` names the reason. */
 function refusalItem(refusal: PlanRefusal): string {
-  const [skill = refusal.subject, detail = ""] = refusal.subject.split(":");
   switch (refusal.reason) {
-    case "reviewer-missing":
-      return `reviewer-missing: qfai.config.yaml: the \`routing:\` override for \`${skill}\` drops \`${detail}\`, which the package's default routing requires`;
     case "step-missing":
-      return `plan-invalid: .qfai/assistant/step/${skill}/STEP.md: the ${refusal.route} plan runs this step and it is not installed`;
+      return `plan-invalid: .qfai/assistant/step/${refusal.subject}/STEP.md: the ${refusal.route} plan runs this step and it is not installed`;
     default:
       return `plan-invalid: the built-in ${refusal.route} plan: it does not load (${refusal.reason} at ${refusal.subject}); reinstall the qfai package`;
   }
@@ -80,7 +77,7 @@ export const step12: MigrationStep = {
   async plan(context) {
     // Read git first: a git failure ends the step before any other check reads the index.
     const scan = await scanOldPaths(context);
-    const refusals = await allPlanRefusals(context.root, context.config);
+    const refusals = await allPlanRefusals(context.root);
     return {
       operations: [],
       filesScanned: [scan.scanned],

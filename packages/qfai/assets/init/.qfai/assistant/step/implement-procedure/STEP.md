@@ -3,8 +3,6 @@ name: implement-procedure
 owner: qfai-implement
 purpose: Write an authorized operational procedure within existing policy.
 requires: [common-gate-run]
-roles: [doc-steward]
-routing-profile: default
 ---
 
 # implement-procedure

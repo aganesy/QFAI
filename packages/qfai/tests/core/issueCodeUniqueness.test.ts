@@ -183,13 +183,8 @@ describe("issue code uniqueness", () => {
 
 const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-AGENT-005",
-  "QFAI-AGENT-007",
-  "QFAI-AGENT-008",
-  "QFAI-AGENT-009",
-  "QFAI-AGENT-010",
   "QFAI-AGENT-011",
   "QFAI-AGENT-012",
-  "QFAI-AGENT-013",
   "QFAI-ASSETS-001",
   "QFAI-ASSETS-002",
   "QFAI-CFG-002",

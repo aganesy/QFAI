@@ -3,8 +3,6 @@ name: triage-operate
 owner: qfai-triage
 purpose: "Carry out an operation the user named on work that is already done, observe its result, and change no tracked file."
 requires: []
-roles: [devops-ci-engineer]
-routing-profile: default
 ---
 
 # triage-operate

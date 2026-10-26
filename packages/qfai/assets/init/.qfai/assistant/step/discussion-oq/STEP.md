@@ -3,8 +3,6 @@ name: discussion-oq
 owner: qfai-discussion
 purpose: "Register every open question the discussion leaves, and drive the open count to zero."
 requires: []
-roles: [requirements-analyst]
-routing-profile: default
 ---
 
 # discussion-oq

@@ -1,14 +1,15 @@
 # Research-First Protocol
 
-QFAI's initial research protocol for `discovery-analyst`. Select the role by
-its card ID and the resolved routing entry, as
-`.qfai/assistant/rule/agent-selection.md` requires.
+QFAI's initial research protocol. The session agent runs it and frames the
+research itself. Two or more self-contained lookups may run in parallel on
+`fullstack-engineer` under the parallel-unit gate of
+`.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md`;
+the session agent reads their answers into the summary.
 
 ## Trigger
 
-`/qfai-discussion` triggers this protocol. The resolved routing entry makes
-`discovery-analyst` mandatory in its framing phase. Run it whether or not the
-work includes UI.
+`/qfai-discussion` triggers this protocol. Run it whether or not the work
+includes UI.
 
 ## Output Schema
 

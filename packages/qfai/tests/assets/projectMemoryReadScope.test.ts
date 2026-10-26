@@ -31,7 +31,7 @@ describe.each(trees)("%s project memory scope", (tree) => {
     const selection = await read(tree, "assistant/rule/agent-selection.md");
     const constitution = await read(tree, "assistant/rule/constitution.md");
     const cards = await readdir(path.join(root, tree, "assistant/agent"));
-    expect(cards).toContain("orchestrator.md");
+    expect(cards).toContain("fullstack-engineer.md");
     for (const field of [
       "owned_artifacts",
       "tool_profile",
@@ -41,16 +41,7 @@ describe.each(trees)("%s project memory scope", (tree) => {
       expect(constitution).toContain(field);
     }
     expect(selection).toContain("card in `.qfai/assistant/agent/`");
-    expect(selection).toContain("Do not keep another copy");
-  });
-
-  it("resolves package defaults and project overrides for routing", async () => {
-    const selection = (await read(tree, "assistant/rule/agent-selection.md")).replace(/\s+/g, " ");
-    expect(selection).toContain("assets/defaults/agent-routing/");
-    expect(selection).toContain("assets/defaults/review-profiles.yml");
-    expect(selection).toContain("qfai.config.yaml");
-    expect(selection).toContain("replaces the matching default entry as a whole");
-    expect(selection).toContain("does not own copies of these default files");
+    expect(selection.replace(/\s+/g, " ")).toContain("keep no other copy of its definition");
   });
 
   it("composes project memory with the policy check", async () => {

@@ -95,7 +95,7 @@ Implementation stage:
 
 - Inside a route, `/qfai-implement` works the examples its work order names and runs no `npx qfai validate`. Invoked by name, it validates the flow once, at completion, with `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN`. For each example it records an observable assertion failure, the passing result, and the refactor check for that EX.
 - A collection, import, syntax, or fixture failure is not an admissible RED. When existing behavior already satisfies the EX, record falsifiability evidence under the rule in `references/red-not-observable.md`. Never weaken a correct test to manufacture RED.
-- While implementing, run only the test being written. Lint, typecheck, build, the full suite and `npx qfai validate` run once, in the verify stage. Parallel execution requires disjoint writes and user consent.
+- While implementing, run only the test being written. Lint, typecheck, build, the full suite and `npx qfai validate` run once, in the verify stage. Parallel execution is only for the units the parallel-unit gate admits, which the session agent decides.
 
 ### Concurrency (stage-independent, mandatory)
 
@@ -108,10 +108,10 @@ from the skills and baselines that cite it.
   files concurrently. One agent per worktree; no shared index.
 - If worktree separation is not available, parallel delegation degrades to
   "one agent commits at a time; the others hand back an unstaged diff to the
-  orchestrator". State which of the two modes is in force in the stage
+  session agent". State which of the two modes is in force in the stage
   evidence.
 - Commit scoping is mandatory in both modes and binds **every** committer —
-  delegated agent and orchestrator alike. Stage only the paths belonging to the
+  delegated agent and session agent alike. Stage only the paths belonging to the
   task being committed (`git add <paths>`). `git add -A`, `git add .` and
   `git commit -a` are forbidden while any parallel stage is in flight.
   - In **degraded / shared-index** mode the damage is immediate: the siblings
@@ -123,7 +123,7 @@ from the skills and baselines that cite it.
     else is loose in that agent's own worktree — build output, scratch files, a
     half-finished edit outside the work order — so the commit still stops
     matching its declared deliverables, which is what the audit trail reads.
-- Degraded mode makes this the **orchestrator's** obligation above all, since
+- Degraded mode makes this the **session agent's** obligation above all, since
   it is the one holding the commit: it commits one handed-back diff at a time,
   staging that agent's declared deliverable paths only, and never blanket-stages
   the shared worktree. A diff whose paths it cannot enumerate is not

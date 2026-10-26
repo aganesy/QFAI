@@ -25,7 +25,7 @@ async function readShipped(relative: string): Promise<string[]> {
  */
 describe("reviewer verdict vocabulary", () => {
   it("has every verdict producer return REVISE, not FAIL", async () => {
-    for (const relative of ["agent/qa-gatekeeper.md", "agent/completion-reviewer.md"]) {
+    for (const relative of ["agent/implementation-reviewer.md"]) {
       for (const content of await readShipped(relative)) {
         expect(content, `${relative} must not instruct a FAIL verdict`).not.toMatch(/\bFAIL\b/);
         // Case-insensitive on purpose. The `\bFAIL\b` check above is
@@ -43,14 +43,15 @@ describe("reviewer verdict vocabulary", () => {
   // The Codex agent is generated from the shipped card. Both must tell a
   // reviewer which in-flight verdict to return.
   it("carries the card's verdict vocabulary into the codex agent", async () => {
-    for (const content of await readShipped("agent/completion-reviewer.md")) {
-      expect(content).toContain("Return PASS or REVISE with actionable rework");
+    const verdict = "Return REVISE for an unexplained";
+    for (const content of await readShipped("agent/implementation-reviewer.md")) {
+      expect(content.replace(/s+/g, " ")).toContain(verdict);
     }
     const codex = await readFile(
-      path.join(repoRoot, ".codex/agents/completion-reviewer.toml"),
+      path.join(repoRoot, ".codex/agents/implementation-reviewer.toml"),
       "utf-8",
     );
-    expect(codex).toContain("Return PASS or REVISE with actionable rework");
+    expect(codex.replace(/s+/g, " ")).toContain(verdict);
     expect(codex).not.toContain("Return pass/fail only");
   });
 

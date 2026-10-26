@@ -3,8 +3,6 @@ name: verify-release-notes
 owner: qfai-verify
 purpose: "Draft the release notes for a release from the changes it contains."
 requires: []
-roles: [orchestrator, doc-steward]
-routing-profile: default
 ---
 
 # verify-release-notes

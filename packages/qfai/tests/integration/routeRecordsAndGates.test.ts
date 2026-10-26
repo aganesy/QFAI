@@ -9,7 +9,6 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { planOf } from "../../src/core/workflow/plan.js";
-import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
 import { readRule } from "../helpers/ruleWithReferences.js";
 import { minimalProject, removeProjects } from "./workflow/workflowProject.js";
 
@@ -80,23 +79,6 @@ describe("the gates run once, in the verify stage", () => {
       expect(text, step).not.toContain("project gates pass");
     }
     expect((await stepNames()).includes("implement-checkpoint")).toBe(false);
-  });
-});
-
-describe("the reviews a route runs are the ones its plan names", () => {
-  // QFAI:AC-0001-0161-06
-  // QFAI:EX-0001-0161-07
-  it("routes no review phase, blocking agent or reviewer profile to a step", async () => {
-    for (const entry of await defaultRoutingEntries()) {
-      if (typeof entry.step !== "string") continue;
-      expect([undefined, "default"], entry.step).toContain(entry.review_profile);
-      const phases: unknown[] = Array.isArray(entry.phases) ? entry.phases : [];
-      for (const phase of phases) {
-        if (typeof phase !== "object" || phase === null) continue;
-        expect(Reflect.get(phase, "id"), entry.step).not.toBe("review");
-        expect(Object.keys(phase), entry.step).not.toContain("blocking_agents");
-      }
-    }
   });
 });
 
@@ -175,7 +157,7 @@ describe("a step with no open design decision starts no griller", () => {
     expect(checkpoint).toContain("It asks the user each critical decision the frontier holds.");
     const text = await rule();
     expect(text).toMatch(
-      /\| Delegated +\| Any other stage, when it meets a design decision the request needs and the repository cannot settle +\| The authors, interviewed by a griller +\| Critical decisions only +\|/,
+      /\| Delegated +\| Any other stage, when it meets a design decision the request needs and the repository cannot settle +\| The session agent, interviewed by a griller +\| Critical decisions only +\|/,
     );
     expect(text).toContain("A critical decision met on the way still goes to the user.");
     // `sdd-triage` names no kind of session, so the default decides it.

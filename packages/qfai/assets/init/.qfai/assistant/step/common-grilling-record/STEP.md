@@ -3,7 +3,6 @@ name: common-grilling-record
 owner: common
 purpose: "Write the record of the discussion stage's grilling session in the stage report, so a session that ran and one that was skipped can be told apart."
 requires: []
-roles: []
 ---
 
 # common-grilling-record

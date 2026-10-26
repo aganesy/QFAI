@@ -2,9 +2,6 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
-import type { QfaiConfig } from "../config.js";
-import { readEffectiveRouting } from "../validators/agentDefinition.js";
-import type { SkillRouting } from "../validators/skillRoles.js";
 import { isRecord } from "./parse.js";
 import { parsePlan, type PlanLoad, type PlanRefusal, type WorkflowPlanFile } from "./planFormat.js";
 import { WORKFLOW_ROUTES, type WorkflowRoute } from "./routes.js";
@@ -84,11 +81,6 @@ async function contractRefusals(root: string, steps: Map<string, string>): Promi
   return found.flat();
 }
 
-function requiredAgents(routing: Map<string, SkillRouting> | undefined, step: string): string[] {
-  const agents = routing?.get(step)?.agents ?? new Map<string, string>();
-  return [...agents].filter(([, binding]) => binding === "required").map(([agent]) => agent);
-}
-
 // One of the package's plans, refused as well when a step it runs is not installed in the
 // project.
 export async function loadInstalledPlan(root: string, route: WorkflowRoute): Promise<PlanLoad> {
@@ -98,36 +90,12 @@ export async function loadInstalledPlan(root: string, route: WorkflowRoute): Pro
   return missing.length > 0 ? { ok: false, refusals: missing } : load;
 }
 
-// Every agent the package's default routing requires for a step a plan runs must still be
-// required by the effective routing. An agent the project adds is the project's.
-async function reviewerRefusals(
-  config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
-  steps: Map<string, string>,
-): Promise<PlanRefusal[]> {
-  const { routing, defaultRouting } = await readEffectiveRouting(config);
-  const refusals: PlanRefusal[] = [];
-  for (const [step, route] of steps) {
-    const kept = requiredAgents(routing, step);
-    for (const agent of requiredAgents(defaultRouting, step)) {
-      if (!kept.includes(agent)) {
-        refusals.push({ route, reason: "reviewer-missing", subject: `${step}:${agent}` });
-      }
-    }
-  }
-  return refusals;
-}
-
-// Every refusal over the package's plans, the steps they run and the reviewers the effective
-// routing keeps.
-export async function allPlanRefusals(
-  projectRoot: string,
-  config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
-): Promise<PlanRefusal[]> {
+// Every refusal over the package's plans and the steps they run.
+export async function allPlanRefusals(projectRoot: string): Promise<PlanRefusal[]> {
   const loaded = await Promise.all(WORKFLOW_ROUTES.map((route) => loadPackagePlan(route)));
   const steps = planSteps(loaded.flatMap((load) => (load.ok ? [load.plan] : [])));
   return [
     ...loaded.flatMap((load) => (load.ok ? [] : load.refusals)),
     ...(await contractRefusals(projectRoot, steps)),
-    ...(await reviewerRefusals(config, steps)),
   ];
 }

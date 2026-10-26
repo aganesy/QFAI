@@ -346,14 +346,14 @@ describe("a skip line names the path relative to the project", () => {
   it("A Codex profile that is a directory is named without the project root", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
-      const profile = path.join(root, ".codex", "agents", "qa-gatekeeper.toml");
+      const profile = path.join(root, ".codex", "agents", "implementation-reviewer.toml");
       await rm(profile, { force: true });
       await mkdir(profile);
 
       const output = await initQuietly(root, true);
 
       expect(output).toContain(
-        "skip: .codex/agents/qa-gatekeeper.toml (a directory is in the way, so nothing can be generated here)",
+        "skip: .codex/agents/implementation-reviewer.toml (a directory is in the way, so nothing can be generated here)",
       );
       // The report header names the destination; no skip line may.
       expect(skipLines(output)).not.toContain(root);

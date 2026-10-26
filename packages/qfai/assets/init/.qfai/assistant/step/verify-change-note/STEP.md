@@ -3,8 +3,6 @@ name: verify-change-note
 owner: qfai-verify
 purpose: "Write the changelog entry, the migration steps and the breaking changes a user needs for this change, or show that none is needed."
 requires: []
-roles: [orchestrator, doc-steward]
-routing-profile: default
 ---
 
 # verify-change-note

@@ -3,11 +3,6 @@ name: implement-dep-bump
 owner: qfai-implement
 purpose: "Raise a dependency to a new version and check that the runtime, the version floors the project declares, and every call into it still hold."
 requires: [common-gate-run]
-roles:
-  - devops-ci-engineer
-  - frontend-engineer
-  - backend-engineer
-routing-profile: default
 ---
 
 # implement-dep-bump

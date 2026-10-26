@@ -3,10 +3,6 @@ name: implement-seam
 owner: qfai-implement
 purpose: "Land the minimal connection an acceptance test needs to reach its assertion, and leave that test failing at the assertion."
 requires: [common-gate-run]
-roles:
-  - frontend-engineer
-  - backend-engineer
-routing-profile: default
 ---
 
 # implement-seam

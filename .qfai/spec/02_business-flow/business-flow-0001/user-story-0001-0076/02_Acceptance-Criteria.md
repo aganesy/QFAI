@@ -17,7 +17,6 @@ Feature: Config Glob Tuning
     When /qfai-configure updates its configuration
     Then it changes `validation.traceability.testFileGlobs` and, if needed, `testFileExcludeGlobs`
     And it adds no key whose value is the package default
-    And it adds routing or review-profile overrides only when the user asks to change one
     And it writes only `qfai.config.yaml` and the project-owned policy and contract files, and nothing under `.qfai/assistant/` unless the user explicitly asks
 
   # AC-0001-0076-03

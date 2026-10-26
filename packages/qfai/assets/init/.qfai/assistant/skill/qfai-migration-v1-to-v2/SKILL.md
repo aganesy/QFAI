@@ -3,15 +3,6 @@ name: qfai-migration-v1-to-v2
 title: QFAI 1.x to 2.x Migration
 description: "Move an existing QFAI 1.x spec-pack project to the 2.x story-based spec tree using the bundled steps, then install and check the free-text entry. Use when asked to migrate a project that still holds QFAI 1.x spec packs."
 allowed-tools: [Read, Glob, Write, Edit, Bash]
-roles:
-  [
-    orchestrator,
-    requirements-analyst,
-    solution-architect,
-    devops-ci-engineer,
-    architecture-reviewer,
-  ]
-routing-profile: architecture-heavy
 ---
 
 ## /qfai-migration-v1-to-v2
@@ -132,9 +123,7 @@ keep authors separate from reviewers.
    `## Reminder hooks`, the line about trusting the Codex hooks with `/hooks`
    included. Step 12 checks the entry and writes nothing.
 7. Resolve every item step 12 lists under `## For a person`. Rerun step 11 for
-   an item it installs, and step 10 for a `gitignore` item. A
-   `qfai.config.yaml` routing override is the project's, so ask its owner
-   before changing it. Resolve each `old-path` item with the
+   an item it installs, and step 10 for a `gitignore` item. Resolve each `old-path` item with the
    person who wrote the file, by rewording the line so that it no longer names
    the old path, using the 2.x path that the guide's table gives for it. Rerun step 12 until it exits 0.
 8. Then run `npx qfai validate` through the launcher proven by preflight.
@@ -178,7 +167,7 @@ saying it is already done. The complete write boundary is in
 
 ### Reviewer Gate
 
-The architecture reviewer checks the old-to-new mapping and preservation of
+The reviewer is `architecture-reviewer`. It checks the old-to-new mapping and preservation of
 unplaced content. The reviewer checks the twelve reports, rerun
 behavior, and validation result. Enforce the Drift Protocol and
 `.qfai/assistant/rule/test-layers.md` when reviewing test obligations. Counts and effort

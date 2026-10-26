@@ -1,13 +1,9 @@
-import { isDeepStrictEqual } from "node:util";
 import { lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { parseDocument, parse as parseYaml, type Document } from "yaml";
+import { parseDocument, type Document } from "yaml";
 
-import { routingEntryName } from "../../core/config.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
-import { readRoutingDefaultsFiles } from "../../core/routingDefaults.js";
-import { getInitAssetsDir } from "../../shared/assets.js";
 import { OLD_CONTRACT_TOKEN, planContracts, type ContractPlan } from "./contractIds.js";
 import { renderContractIndex } from "./contractIndex.js";
 import {
@@ -163,38 +159,6 @@ function route(source: string, heading: string, context: MigrationContext): stri
   return mapped === "contracts.md" ? contract(mapped) : policy(mapped);
 }
 
-function parseYamlInput(content: string, file: string): unknown {
-  try {
-    return parseYaml(content);
-  } catch (error) {
-    throw new MigrationInputError(`Cannot parse migration input ${file}: ${String(error)}`);
-  }
-}
-
-function asRecord(value: unknown, label: string): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new MigrationInputError(`${label} must be a mapping.`);
-  }
-  return value as Record<string, unknown>;
-}
-
-async function defaultsFile(name: string): Promise<string> {
-  const absolute = path.resolve(getInitAssetsDir(), "..", "defaults", name);
-  return readInput(absolute);
-}
-
-/** The package's routing defaults, every file's `routing:` list joined in reading order. */
-async function defaultRoutingEntries(): Promise<unknown[]> {
-  const entries: unknown[] = [];
-  for (const file of await readRoutingDefaultsFiles()) {
-    const routing: unknown = asRecord(parseYamlInput(file.text, file.rel), file.rel).routing;
-    if (!Array.isArray(routing)) throw new MigrationInputError("Routing must be a list.");
-    const list: unknown[] = routing;
-    entries.push(...list);
-  }
-  return entries;
-}
-
 type PrimaryReplacement = { notes: string[]; forAPerson: string[] };
 
 /**
@@ -276,53 +240,14 @@ async function replacePrimarySpec(
   return replacement;
 }
 
-/**
- * The entries of a project's routing manifest that differ from the installed
- * default of the same name. Each is kept as a configuration override and listed
- * for a person, because an entry copied from a 1.x manifest hides the roles the
- * 2.x skills declare.
- */
-async function planRoutingOverrides(
-  routing: unknown[],
-): Promise<{ overrides: unknown[]; forAPerson: string[] }> {
-  const defaultByName = new Map(
-    (await defaultRoutingEntries()).map((entry) => {
-      const name = routingEntryName(asRecord(entry, "default routing entry"));
-      if (name === undefined)
-        throw new MigrationInputError("Default routing entry needs a step or a skill.");
-      return [name, entry] as const;
-    }),
-  );
-  const overrides: unknown[] = [];
-  const forAPerson: string[] = [];
-  for (const entry of routing) {
-    const name = routingEntryName(asRecord(entry, "project routing entry"));
-    if (name === undefined)
-      throw new MigrationInputError("Project routing entry needs a step or a skill.");
-    if (isDeepStrictEqual(entry, defaultByName.get(name))) continue;
-    overrides.push(entry);
-    forAPerson.push(
-      defaultByName.has(name)
-        ? `qfai.config.yaml routing ${name}: an entry copied from a 1.x routing manifest hides the roles the 2.x skills declare; delete it from routing to use the installed one, or keep it to override.`
-        : `qfai.config.yaml routing ${name}: an entry copied from a 1.x routing manifest hides the roles the 2.x skills declare; no installed entry has this name, so it is kept as written and deleting it removes the route.`,
-    );
-  }
-  return { overrides, forAPerson };
-}
-
 async function planOverrides(
   context: MigrationContext,
   contractMap: ContractMap,
   surfacePaths: string[] | undefined,
 ): Promise<{ operation: MigrationOperation | null; forAPerson: string[] }> {
   const root = context.root;
-  const routingPath = path.join(root, ".qfai/assistant/manifest/agent-routing.yml");
-  const reviewPath = path.join(root, ".qfai/assistant/manifest/review-profiles.yml");
-  const forAPerson: string[] = [];
-  const hasRouting = await exists(routingPath);
-  const hasReview = await exists(reviewPath);
   const configPath = path.join(root, "qfai.config.yaml");
-  if (!hasRouting && !hasReview && surfacePaths === undefined && !(await exists(configPath)))
+  if (surfacePaths === undefined && !(await exists(configPath)))
     return { operation: null, forAPerson: [] };
   const config = parseDocument(await readInput(configPath), { keepSourceTokens: true });
   if (config.errors.length > 0)
@@ -334,42 +259,11 @@ async function planOverrides(
   if (surfacePaths !== undefined && !config.hasIn(["uiux", "surfacePaths"])) changed = true;
   if (surfacePaths !== undefined && !config.hasIn(["uiux", "surfacePaths"]))
     config.setIn(["uiux", "surfacePaths"], surfacePaths);
-  if (hasRouting) {
-    const project = asRecord(
-      parseYamlInput(await readInput(routingPath), routingPath),
-      routingPath,
-    );
-    if (!Array.isArray(project.routing)) throw new MigrationInputError("Routing must be a list.");
-    const planned = await planRoutingOverrides(project.routing);
-    if (planned.overrides.length > 0) {
-      config.set("routing", planned.overrides);
-      changed = true;
-    }
-    forAPerson.push(...planned.forAPerson);
-  }
-  if (hasReview) {
-    const project = asRecord(parseYamlInput(await readInput(reviewPath), reviewPath), reviewPath);
-    const defaults = asRecord(
-      parseYamlInput(await defaultsFile("review-profiles.yml"), "default review-profiles.yml"),
-      "default review-profiles.yml",
-    );
-    const projectProfiles = asRecord(project.profiles, "project profiles");
-    const defaultProfiles = asRecord(defaults.profiles, "default profiles");
-    const overrides = Object.fromEntries(
-      Object.entries(projectProfiles).filter(
-        ([name, value]) => !isDeepStrictEqual(value, defaultProfiles[name]),
-      ),
-    );
-    if (Object.keys(overrides).length > 0) {
-      config.set("reviewProfiles", overrides);
-      changed = true;
-    }
-  }
   return {
     operation: changed
       ? { kind: "write", target: "qfai.config.yaml", content: String(config), notes: primary.notes }
       : null,
-    forAPerson: [...primary.forAPerson, ...forAPerson],
+    forAPerson: primary.forAPerson,
   };
 }
 

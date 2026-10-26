@@ -14,8 +14,6 @@ import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
-
-import { loadConfig } from "../../../src/core/config.js";
 import { planOf as planned } from "../../../src/core/workflow/plan.js";
 import {
   allPlanRefusals,
@@ -50,8 +48,7 @@ async function project(config?: string): Promise<string> {
 
 // Every refusal over the package's plans for the project.
 async function refusalsFor(root: string) {
-  const { config } = await loadConfig(root);
-  return allPlanRefusals(root, config);
+  return allPlanRefusals(root);
 }
 
 // Each stage as its kind and its steps, a pass-through step marked with `°`.
@@ -469,35 +466,6 @@ it("Every shipped plan loads and every step it names is installed", async () => 
   const root = await project();
 
   expect(await refusalsFor(root)).toEqual([]);
-});
-
-// A `routing:` override for `maintain-edit` whose edit phase binds the agents given.
-function maintainEditOverride(mandatory: string, conditional: string): string {
-  return [
-    "routing:",
-    "  - step: maintain-edit",
-    "    phases:",
-    "      - id: edit",
-    `        mandatory_agents: [${mandatory}]`,
-    `        conditional_agents: [${conditional}]`,
-    "        parallel_groups: []",
-    "        rerun_policy: changed-scope-dependents",
-    "    review_profile: default",
-    "",
-  ].join("\n");
-}
-
-it("A routing override that keeps every required agent, and one that drops one", async () => {
-  const kept = await project(maintainEditOverride("doc-steward", "qa-strategist"));
-  const dropped = await project(maintainEditOverride("qa-strategist", ""));
-
-  expect({
-    kept: await refusalsFor(kept),
-    dropped: (await refusalsFor(dropped)).map(({ reason, subject }) => ({ reason, subject })),
-  }).toEqual({
-    kept: [],
-    dropped: [{ reason: "reviewer-missing", subject: "maintain-edit:doc-steward" }],
-  });
 });
 
 it("A project whose sdd-story step is not installed", async () => {

@@ -132,7 +132,7 @@ describe("reviewer finding provenance", () => {
     expect(drift).toMatch(
       /reviewer records the incorrect statement and the artifact that proves what happened/,
     );
-    expect(drift).toMatch(/orchestrator\s+places it in the queue/);
+    expect(drift).toMatch(/session agent\s+places it in the queue/);
     expect(drift).toMatch(/Repair the record to match the run\./);
   });
 

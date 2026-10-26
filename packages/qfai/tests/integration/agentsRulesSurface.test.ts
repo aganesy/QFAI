@@ -114,7 +114,7 @@ describe("excess vocabulary covers code and product surface without adding tags"
 
   it.each(
     ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
-      ["completion-reviewer", "implementation-reviewer", "qa-gatekeeper"].map((role) => ({
+      ["implementation-reviewer"].map((role) => ({
         tree,
         role,
       })),
@@ -123,16 +123,10 @@ describe("excess vocabulary covers code and product surface without adding tags"
     "$tree/$role keeps excess findings concrete without weakening obligations",
     async ({ tree, role }) => {
       const text = await readFile(path.join(ROOT, tree, "assistant/agent", `${role}.md`), "utf-8");
-      if (role === "qa-gatekeeper") {
-        expect(text).toContain("`defect:code-quality`");
-        expect(text).toContain("what replaces it");
-        expect(text).toContain("Do not weaken an active obligation");
-      } else {
-        expect(text).toContain(".agents/rules/minimal-implementation.md");
-        expect(text).toContain(
-          "The finding would add a product obligation upstream never asked for.",
-        );
-      }
+      expect(text).toContain(".agents/rules/minimal-implementation.md");
+      expect(text).toContain(
+        "The finding would add a product obligation upstream never asked for.",
+      );
     },
   );
 });
@@ -210,7 +204,7 @@ describe("the implementation reviewer reads silent failure and type design", () 
 describe("reviewer stop conditions distinguish named-rule defects from new product obligations", () => {
   it.each(
     ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
-      ["completion-reviewer", "implementation-reviewer"].map((role) => ({ tree, role })),
+      ["implementation-reviewer"].map((role) => ({ tree, role })),
     ),
   )("$tree/$role retains the named-rule defect route", async ({ tree, role }) => {
     const text = await readFile(path.join(ROOT, tree, "assistant/agent", `${role}.md`), "utf-8");
@@ -906,8 +900,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // sentence, which is where a rule it has not opened still reaches it.
     it.each([
       ".qfai/spec/03_contract/cli/cli-0014-qfai-validate.md",
-      "packages/qfai/assets/init/.qfai/assistant/agent/product-experience-architect.md",
-      "packages/qfai/assets/init/.qfai/assistant/agent/frontend-engineer.md",
+      "packages/qfai/assets/init/.qfai/assistant/agent/fullstack-engineer.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/product-surface-reviewer.md",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");

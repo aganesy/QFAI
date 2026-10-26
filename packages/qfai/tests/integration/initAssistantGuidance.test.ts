@@ -25,21 +25,6 @@ const instructionsDir = path.join(
   "rule",
 );
 describe("init assistant guidance: exploration-first alignment", () => {
-  it("frontend-engineer.md references the selected direction / screen contracts", async () => {
-    const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
-    expect(content).toMatch(/selected direction|design system|screen contracts/i);
-  });
-
-  it("product-experience-architect.md references the exploration / evaluation artifacts", async () => {
-    const content = await readFile(
-      path.join(agentsDir, "product-experience-architect.md"),
-      "utf-8",
-    );
-    expect(content).toMatch(
-      /exploration brief|reference pool|evaluation rubric|selected direction/i,
-    );
-  });
-
   it("routes discussion sidecars through SDD before downstream UI work", async () => {
     const content = await readFile(
       path.join(instructionsDir, "ui-definition-protocol.md"),
@@ -67,12 +52,6 @@ describe("init assistant guidance: exploration-first alignment", () => {
     expect(content).toContain(
       "**Prototype handoff** (`.qfai/prototype/final/handoff.json`, when a prototyping loop ran): the final prototype, procurement and implementation notes",
     );
-  });
-
-  it("uses the canonical frontend card mission", async () => {
-    const content = await readFile(path.join(agentsDir, "frontend-engineer.md"), "utf-8");
-    expect(content).toMatch(/mission: Implement frontend behavior aligned with selected direction/);
-    expect(content).toMatch(/design system, screen contracts, and product-surface decisions/);
   });
 
   it("distributed agent cards do not require repo-private .instruction paths", async () => {

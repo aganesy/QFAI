@@ -1,11 +1,11 @@
 # Review Payload Schema (`<screen>.review.json`)
 
 SSOT for the per-UI-contract / per-screen review payload. The
-product-surface-reviewer sub-agent returns it, the orchestrator writes it,
+product-surface-reviewer sub-agent returns it, the session agent writes it,
 and the user reads what it finds before confirming the prototype.
 
 The schema is **closed**: any key not listed below is rejected. The
-orchestrator checks each payload against it before writing it, and asks the
+session agent checks each payload against it before writing it, and asks the
 reviewer again for one that does not conform before the prototype is put to
 the user. A near-miss (extra key, misspelled field) fails the
 whole file.
@@ -120,12 +120,12 @@ exponential backoff (`base * 2^attemptIndex` ms, `base = 250`).
 
 Who records which status:
 
-- The orchestrator dispatches the reviewer for each pair and runs the
+- The session agent dispatches the reviewer for each pair and runs the
   attempts. A session that completed is `ok`, including one that
   succeeded after earlier failed attempts: the reviewer returns
   `sessionStatus: "ok"` with the retries consumed in `retryCount`.
 - When the reviewer cannot be started, or every attempt fails, no
-  reviewer payload exists. The orchestrator writes the pair's payload
+  reviewer payload exists. The session agent writes the pair's payload
   itself, with `sessionStatus` `launchFailed` or `retryExhausted`,
   `retryCount` the retries consumed, every impression and array empty,
   `wallTimeSec` the time spent, and `softWarnings.timeBudget` derived

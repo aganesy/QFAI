@@ -3,8 +3,6 @@ name: verify-commit
 owner: qfai-verify
 purpose: "Commit the authorized tracked changes after verification is recorded, keeping pending CI visible."
 requires: []
-roles: [orchestrator]
-routing-profile: default
 ---
 
 # verify-commit

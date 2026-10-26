@@ -54,7 +54,7 @@ For a prose asset, raising the ceiling or claiming an exemption is not the remed
 
 ### Machine-readable assets split in their own format, or say why they cannot
 
-The ceiling is measured over YAML assets too — package routing and review-profile defaults and the shipped contract templates. The split above is not open to them: a validator parses those files as structured data, or a skill copies one whole into a project, so an entry moved into a Markdown sibling under `references/` leaves the parsed document and stops meaning anything. Prose about the
+The ceiling is measured over YAML assets too — package workflow plans and the shipped contract templates. The split above is not open to them: a validator parses those files as structured data, or a skill copies one whole into a project, so an entry moved into a Markdown sibling under `references/` leaves the parsed document and stops meaning anything. Prose about the
 file may move there; the file's own items may not.
 
 So for a machine-readable asset at the ceiling the remedy is, in order:

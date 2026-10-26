@@ -4,6 +4,53 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The session agent does the work, and delegates by context, never by role.**
+  The agent the user talks to now researches, designs, writes the
+  specification, the code, the tests and the documents itself. It starts a
+  sub-agent for two reasons only: an independent judgement of its work (a
+  review, the finder, a griller, the prototyping evaluator), and two or more
+  parallel units that pass the parallel-unit gate. Context size is not a reason.
+  A judge starts from a fresh context and a black-box brief: the fixed revision,
+  the request in the user's words, the story tree and contracts that bind the
+  work, and the written decisions, never the author's rationale.
+- **Parallel work is split by story.** In an implement stage, user stories that
+  no test covers yet may each go to a `fullstack-engineer`, and in discussion
+  research, a grilling session or web research, two or more self-contained
+  lookups may run in parallel. The session agent applies the gate and records
+  its result without asking. Every change to an implemented story runs in the
+  session agent.
+- **Five agent cards ship.** `fullstack-engineer` is the one worker, beside
+  `requirements-reviewer`, `architecture-reviewer`, `implementation-reviewer`
+  and `product-surface-reviewer`. The finder and a griller run on
+  `requirements-reviewer`, or a griller on `architecture-reviewer` for a
+  contract or architecture decision. `/qfai-configure` is reviewed by
+  `implementation-reviewer`.
+
+### Removed
+
+- **Role-based routing.** The package no longer ships
+  `assets/defaults/agent-routing/` or `assets/defaults/review-profiles.yml`.
+  No `STEP.md` or `SKILL.md` carries `roles:` or `routing-profile:`.
+  `qfai.config.yaml` no longer reads `routing:` or `reviewProfiles:`; a key a
+  project kept is ignored. `qfai validate` no longer raises `QFAI-AGENT-007`
+  to `QFAI-AGENT-010`, `QFAI-AGENT-013` or `QFAI-AGENT-015` to
+  `QFAI-AGENT-019`, and the v1-to-v2 migration no longer carries routing
+  manifests into the configuration or reports `reviewer-missing`.
+- **Fifteen agent cards and the optional review modes.** The cards
+  `acceptance-test-engineer`, `backend-engineer`, `completion-reviewer`,
+  `delivery-planner`, `devops-ci-engineer`, `discovery-analyst`, `doc-steward`,
+  `frontend-engineer`, `orchestrator`, `product-experience-architect`,
+  `qa-gatekeeper`, `qa-strategist`, `requirements-analyst`,
+  `solution-architect` and `test-design-analyst` are gone, and so are the
+  `devils-advocate` and `pattern-doubler` modes. `qfai init --force` does not
+  delete what an earlier release wrote. To remove them from a project, delete
+  `.qfai/assistant/agent/<name>.md`, `.claude/agents/<name>.md`,
+  `.github/agents/<name>.agent.md` and `.codex/agents/<name>.toml` for each
+  name above. No shipped instruction names them, so a copy left behind is
+  never dispatched.
+
 ### Fixed
 
 - **Graph preparation on Windows at a long project path names its cause.**

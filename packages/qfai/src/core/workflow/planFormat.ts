@@ -61,8 +61,7 @@ export type PlanRefusalReason =
   | "destination"
   | "no-verify-path"
   | "terminal"
-  | "step-missing"
-  | "reviewer-missing";
+  | "step-missing";
 
 // Why a plan was refused, and the key, stage, step or route the refusal is about.
 export interface PlanRefusal {

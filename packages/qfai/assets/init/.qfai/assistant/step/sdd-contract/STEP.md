@@ -3,8 +3,6 @@ name: sdd-contract
 owner: qfai-sdd
 purpose: "Write the contracts and business rules the flow's examples need, or repair one named contract."
 requires: []
-roles: [solution-architect, test-design-analyst, product-experience-architect]
-routing-profile: default
 ---
 
 # sdd-contract
@@ -107,8 +105,8 @@ the run.
 
 ## Gate
 
-`solution-architect` accepts the connected BF → US → AC → EX ← BR design and
-its contract realization before `sdd-gate` runs.
+The connected BF → US → AC → EX ← BR design and its contract realization hold
+before `sdd-gate` runs; the specification review checks both.
 
 ## Passes when
 

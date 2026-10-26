@@ -45,12 +45,22 @@ specialization_tags:
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Require more work only on what `.qfai/assistant/rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must` admits, and report any other gap as advisory.
+- Briefed as the finder of the concrete-abstract cycle, which wrote none of the BRs it reads, follow
+  the finder section of `skill/qfai-sdd/references/concrete-abstract-cycle.md`: read each
+  BR whose Statement or Examples cell the invocation wrote or changed, the EXs
+  each cites and the EXs the invocation wrote or changed, and raise findings of
+  the five kinds it lists. A finding names its kind and target IDs and changes
+  no file. Do not raise again a finding already decided, rejected, or answered
+  by a pending or declined change request, and do not decide your own findings.
+- Briefed as a griller, follow `.agents/rules/grilling.md` and
+  `skill/qfai-grilling/SKILL.md`: put each round to the session agent with a
+  recommendation, and never review an artifact whose decision you recommended.
 
 ## Inputs you must read
 
 - .qfai/assistant/rule/** (shared operating rules)
 - <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/tech.md (project context)
-- .qfai/assistant/rule/agent-selection.md (routing and this card's frontmatter are authoritative)
+- .qfai/assistant/rule/agent-selection.md (this card's frontmatter is authoritative)
 - .qfai/assistant/rule/test-layers.md
 - <paths.specsDir>/decisions.md and open-questions.md
 - Requirement drafts, option tables, and OQ ledgers
@@ -75,7 +85,7 @@ specialization_tags:
 
 ## When to use
 
-- Use when this review domain is required by the resolved routing entry or explicitly requested.
+- Use when the plan's review names this reviewer, as the finder of the concrete-abstract cycle, or as a griller.
 - Use when an independent specialist check is needed before completion.
 
 ## When not to use

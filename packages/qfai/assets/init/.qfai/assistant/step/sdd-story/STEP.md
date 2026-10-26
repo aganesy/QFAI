@@ -3,8 +3,6 @@ name: sdd-story
 owner: qfai-sdd
 purpose: "Write the stories, acceptance criteria and examples of each affected flow."
 requires: []
-roles: [requirements-analyst, test-design-analyst, qa-strategist, product-experience-architect]
-routing-profile: default
 ---
 
 # sdd-story

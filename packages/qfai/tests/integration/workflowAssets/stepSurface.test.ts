@@ -6,9 +6,6 @@
  * each plan stage runs only steps its owner lists. How the core loads a plan is not this module's.
  */
 import { describe, expect, it } from "vitest";
-
-import { defaultConfig } from "../../../src/core/config.js";
-import { readEffectiveRouting, stepReview } from "../../../src/core/validators/agentDefinition.js";
 import {
   PLAN_ROUTES,
   PLAN_STEP_OWNERS,
@@ -110,23 +107,15 @@ describe("the skills a workflow run's steps belong to", () => {
     ]);
     for (const skill of PLAN_STEP_OWNERS) {
       const front = frontMatterOf(await readShipped(`skill/${skill}/SKILL.md`));
+      // The session agent does every step's work, so no parent or step lists who may act.
       expect(Object.keys(front), skill).not.toContain("routing-profile");
-      const stepRoles: string[] = [];
+      expect(Object.keys(front), skill).not.toContain("roles");
       for (const step of await skillSteps(skill)) {
-        const roles = frontMatterOf(await readShipped(`step/${step}/STEP.md`)).roles;
-        if (Array.isArray(roles)) stepRoles.push(...roles.map(String));
+        expect(
+          Object.keys(frontMatterOf(await readShipped(`step/${step}/STEP.md`))),
+          step,
+        ).not.toContain("roles");
       }
-      const declared = Array.isArray(front.roles) ? front.roles.map(String) : [];
-      const owed = new Set(["orchestrator", ...stepRoles]);
-      // The parent also names the reviewers of its one review, which no step routes.
-      expect(
-        [...owed].filter((role) => !declared.includes(role)),
-        skill,
-      ).toEqual([]);
-      expect(
-        declared.filter((role) => !owed.has(role) && !role.endsWith("-reviewer")),
-        skill,
-      ).toEqual([]);
     }
     const sdd = await readShipped("skill/qfai-sdd/SKILL.md");
     expect(sdd).toContain(".qfai/assistant/step/");
@@ -263,13 +252,6 @@ describe("the skills a workflow run's steps belong to", () => {
   });
 });
 
-/** The reviewers one review takes after the given steps ran: the union of their profiles'. */
-async function unionOfReviewers(steps: string[]): Promise<string[]> {
-  const effective = await readEffectiveRouting(defaultConfig);
-  const union = new Set(steps.flatMap((step) => stepReview(effective, step).alwaysRequired));
-  return [...union].sort();
-}
-
 describe("a parent skill invoked by name", () => {
   // QFAI:AC-0001-0195-07
   it("reads one step at a time, in order, and reviews once after the last step", async () => {
@@ -305,12 +287,6 @@ describe("a parent skill invoked by name", () => {
       "verify-qfai-gate",
       "verify-repo-gate",
     ]);
-    const context = frontMatterOf(await readShipped("step/verify-context/STEP.md"));
-    expect(context["routing-profile"]).toBeUndefined();
-    for (const step of ["verify-qfai-gate", "verify-repo-gate"]) {
-      const front = frontMatterOf(await readShipped(`step/${step}/STEP.md`));
-      expect(front["routing-profile"], step).toBe("default");
-    }
     expect(flat(sectionOf(skill, "## Review"))).toMatch(
       /a run that wrote no tracked file holds no review/i,
     );
@@ -330,13 +306,10 @@ describe("a parent skill invoked by name", () => {
     ]);
     const skill = await readShipped("skill/qfai-sdd/SKILL.md");
     expect(rowOf(skill, "| `common-design-md`")).toMatch(/The flow is not UI-bearing/);
-    const ran = steps.filter((step) => step !== "common-design-md");
-    // No step routes a reviewer of its own: the parent's one review names them.
-    expect(await unionOfReviewers(ran)).toEqual([]);
-    const roles = frontMatterOf(skill).roles;
-    expect(Array.isArray(roles) ? roles : []).toEqual(
-      expect.arrayContaining(["architecture-reviewer", "requirements-reviewer"]),
-    );
+    // No step names a reviewer of its own: the parent's one review names them.
+    const review = flat(sectionOf(skill, "## Review"));
+    expect(review).toContain("`requirements-reviewer`");
+    expect(review).toContain("`architecture-reviewer`");
   });
 });
 

@@ -1,0 +1,1 @@
+../../.qfai/assistant/agent/fullstack-engineer.md

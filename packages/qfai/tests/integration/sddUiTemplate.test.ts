@@ -40,8 +40,10 @@ const AGENT_GUIDE_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "agent",
-  "requirements-analyst.md",
+  "skill",
+  "qfai-sdd",
+  "references",
+  "contract-artifact-rules.md",
 );
 
 type ParsedScreens = {
@@ -66,7 +68,7 @@ describe("TC-0013-0025: shipped ui-contract.sample.yaml carries a primary_tasks 
     }
   });
 
-  it("requirements-analyst guide instructs >=1 primary_task per screen", async () => {
+  it("qfai-sdd contract authoring guidance instructs >=1 primary_task per screen", async () => {
     const content = await readFile(AGENT_GUIDE_PATH, "utf-8");
     // The optional backtick admits the field name written as code, which is
     // how the rest of the guide writes one. Without it the assertion fails

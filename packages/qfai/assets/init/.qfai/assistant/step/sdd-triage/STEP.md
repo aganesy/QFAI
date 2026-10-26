@@ -3,8 +3,6 @@ name: sdd-triage
 owner: qfai-sdd
 purpose: "Select the requirement source, classify each requirement against the story tree, and record the decisions, questions and approvals the later writes depend on."
 requires: []
-roles: [delivery-planner, requirements-analyst]
-routing-profile: default
 ---
 
 # sdd-triage
@@ -14,7 +12,7 @@ changes, and record that decision before anything depends on it.
 
 ## Reads
 
-- The applicable `.qfai/assistant/rule/` files and the routed agent cards.
+- The applicable `.qfai/assistant/rule/` files.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md`: the operation set,
   the approval boundary and the decision-row format.
 - `.qfai/assistant/skill/qfai-sdd/references/requirements-decomposition.md` and
@@ -114,9 +112,9 @@ before the dependent write and report pending approvals.
 
 UI-bearing is a property of the affected flow, not of the files this run
 happened to edit. Resolve it from the source's surface classification and the UI
-contracts linked to that flow, and record it for each affected flow. Route
-`product-experience-architect` during design whenever either signal identifies
-the flow as UI-bearing. `product-surface-reviewer` joins a review in a route
+contracts linked to that flow, and record it for each affected flow; the
+session agent designs the screens of a UI-bearing flow itself.
+`product-surface-reviewer` joins a review in a route
 only for a screen change, as `common-review-cycle`'s reviewer set says;
 `qfai-sdd` invoked by name keeps the reviewers its own `## Review` section names.
 
@@ -224,7 +222,7 @@ Parallel branches pick the same next ID unless each reads the others first:
 
 Before this step's first mutation, run the checkpoint for `Triage and records`
 in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md`. The
-orchestrator starts the griller, never a stage worker. Put each critical
+session agent starts the griller, never a stage worker. Put each critical
 decision it holds to the user, and list each decision it adopted in the final
 report. Each later design-writing step runs its own checkpoint the
 same way.
@@ -237,8 +235,8 @@ sets out. Every later step of the stage writes under that rule.
 
 ## Gate
 
-`delivery-planner` accepts the affected-flow scope and approval state before any
-drafting step starts. Every requirement has a target, an approved or
+The affected-flow scope and approval state are recorded before any drafting
+step starts. Every requirement has a target, an approved or
 approval-free operation and a recorded impact path, as
 `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#completion-of-triage`
 states.

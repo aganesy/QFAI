@@ -4,20 +4,6 @@ title: QFAI Implement (TDD micro-cycle)
 description: "Use when invoked by name or handed a QFAI work order to implement, diagnose or repair the examples of one business flow."
 argument-hint: "<BF-ID> [EX-ID...]"
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, TodoWrite, Task, Agent]
-roles:
-  [
-    orchestrator,
-    delivery-planner,
-    test-design-analyst,
-    qa-strategist,
-    acceptance-test-engineer,
-    frontend-engineer,
-    backend-engineer,
-    devops-ci-engineer,
-    implementation-reviewer,
-    product-surface-reviewer,
-    doc-steward,
-  ]
 steps:
   - implement-scaffold
   - implement-credentials

@@ -9,10 +9,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../.
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const reviewers = [
   "architecture-reviewer",
-  "completion-reviewer",
   "implementation-reviewer",
   "product-surface-reviewer",
-  "qa-gatekeeper",
   "requirements-reviewer",
 ];
 
@@ -22,7 +20,7 @@ describe.each(trees)("reviewer excess route in %s", (tree) => {
       path.join(root, tree, "assistant/rule/shared-skill-delegation-baseline.md"),
     );
     const text = baseline.replace(/\s+/g, " ");
-    expect(text).toContain("An in-scope blocking finding from a routed reviewer prevents DONE");
+    expect(text).toContain("An in-scope blocking finding from a required reviewer prevents DONE");
     expect(text).toContain("Article VII excess in the reviewing stage's own artifacts is in scope");
     expect(text).toContain(
       "quality of downstream implementation code is deferred at upstream stages",

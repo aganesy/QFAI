@@ -4,18 +4,6 @@ title: QFAI Discussion (Exploration Planner)
 description: "Use when invoked by name or handed a QFAI work order. Its subject is a product idea or problem whose scope is not settled yet."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
-roles:
-  [
-    orchestrator,
-    delivery-planner,
-    discovery-analyst,
-    requirements-analyst,
-    solution-architect,
-    product-experience-architect,
-    requirements-reviewer,
-    architecture-reviewer,
-    product-surface-reviewer,
-  ]
 steps: [discussion-research, discussion-interview, discussion-pack, discussion-oq, discussion-uiux]
 requires: [common-review-cycle, common-gate-run]
 mode: interactive-by-default
@@ -45,7 +33,7 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-a
 When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/rule/*`, and `.qfai/assistant/skill/qfai-grilling/SKILL.md` before the interview
-- P2: `.qfai/assistant/rule/agent-selection.md`, the routed cards under `.qfai/assistant/agent/`, and project context under `<paths.specsDir>/01_policy/**` and `<paths.specsDir>/03_contract/**`
+- P2: `.qfai/assistant/rule/agent-selection.md`, the cards under `.qfai/assistant/agent/`, and project context under `<paths.specsDir>/01_policy/**` and `<paths.specsDir>/03_contract/**`
 - P3: the pack under work — `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/**`
 - P4: what the project already settled (`qfai.config.yaml`, `<paths.specsDir>/01_policy/**`, `<paths.specsDir>/02_business-flow/**`, and `<paths.contractsDir>/**`)
 

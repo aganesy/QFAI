@@ -43,7 +43,7 @@ import { readBoundedText } from "./lib/bounded-read.mjs";
 
 // pnpm hoists `yaml` under the qfai workspace; resolve from there so this
 // root-level script works without adding yaml to the root package.json. Same
-// pattern and same reason as `scripts/check-review-profile-consistency.mjs` —
+// pattern and same reason as the other root scripts that read YAML —
 // a bare `import ... from "yaml"` here fails with ERR_MODULE_NOT_FOUND, because
 // every other root script imports `node:*` built-ins only.
 const require = createRequire(import.meta.url);

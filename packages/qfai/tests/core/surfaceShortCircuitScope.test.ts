@@ -100,10 +100,10 @@ describe("the short-circuit covers the agent directory read by full", () => {
       await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
       await recordAssistantVersion(root);
       await writeFile(path.join(root, ".qfai", "assistant", "agent"), "not a directory\n", "utf-8");
-      const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
+      const wrapper = path.join(root, ".claude", "agents", "implementation-reviewer.md");
       await mkdir(path.dirname(wrapper), { recursive: true });
       await symlink(
-        path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
+        path.join("..", "..", ".qfai", "assistant", "agent", "implementation-reviewer.md"),
         wrapper,
       );
       await mkdir(path.join(root, ".qfai"), { recursive: true });
@@ -137,11 +137,11 @@ describe("the agents tree is walked by the profiles that read it", () => {
       await mkdir(agents, { recursive: true });
       await writeFile(path.join(agents, "README.md"), "# readme\n", "utf-8");
       // The document the roster names, replaced by a directory.
-      await mkdir(path.join(agents, "completion-reviewer.md"), { recursive: true });
-      const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
+      await mkdir(path.join(agents, "implementation-reviewer.md"), { recursive: true });
+      const wrapper = path.join(root, ".claude", "agents", "implementation-reviewer.md");
       await mkdir(path.dirname(wrapper), { recursive: true });
       await symlink(
-        path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
+        path.join("..", "..", ".qfai", "assistant", "agent", "implementation-reviewer.md"),
         wrapper,
       );
       await mkdir(path.join(root, ".qfai"), { recursive: true });
@@ -190,11 +190,9 @@ describe("the short-circuit is scoped to the profiles that walk the damage", () 
   });
 
   it("stops `prototyping`, whose agent-definition validator reads the skills tree", async () => {
-    // `validateAgentDefinition` gained `QFAI-AGENT-019` / `QFAI-AGENT-015`,
-    // which read every routed skill's `SKILL.md` and `readdir` the configured
-    // skills directory. Listing only the agents tree for this profile left
-    // that read raising `ENOTDIR` — or blocking forever on a FIFO — with the
-    // finding that names the path already in hand.
+    // The profile reads the assistant tree. A damaged canonical tree must stop
+    // with the finding that names the path, not raise `ENOTDIR` or block on a
+    // FIFO.
     await withDamagedCanonical(async (root) => {
       const result = await validateProject(root, undefined, { profile: "prototyping" });
       const codes = new Set(result.issues.map((entry) => entry.code));

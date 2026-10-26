@@ -14,10 +14,13 @@ async function read(relative: string): Promise<string> {
 describe("story-tree acceptance and implementation assets", () => {
   it("permits parallel EX work only on declared independent seams", async () => {
     const policy = await read("skill/qfai-implement/references/parallelization-policy.md");
-    expect(policy).toContain("explicit user approval and a delivery-planner PASS");
-    expect(policy).toContain("compare read and write sets");
-    expect(policy).toContain("If any dependency is uncertain, use serial execution");
-    expect(policy).toContain("A worker's isolated PASS is not an integrated PASS");
+    expect(policy).toContain("compared by read and write sets");
+    expect(policy.replace(/\s+/g, " ")).toContain(
+      "Where any condition is uncertain, the units run serially",
+    );
+    expect(policy.replace(/\s+/g, " ")).toContain(
+      "A worker's isolated PASS is not an integrated PASS",
+    );
   });
 
   it("traces cross-flow consumers before editing and revalidates each affected BF", async () => {
@@ -54,7 +57,7 @@ describe("story-tree acceptance and implementation assets", () => {
 
   it("routes UI effects from contracts and changed paths to captured product review", async () => {
     const ui = await read("skill/qfai-implement/references/ui-affecting.md");
-    const gatekeeper = await read("agent/qa-gatekeeper.md");
+    const reviewer = await read("agent/implementation-reviewer.md");
     expect(ui).toContain("uiux.surfacePaths");
     expect(ui).toContain("UI contracts");
     expect(ui).toContain("rendered surface");
@@ -62,7 +65,7 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(ui).toContain(
       "refreshes the capture it changes, and a fix that changes behaviour gets its one focused re-review",
     );
-    expect(gatekeeper).toContain("For UI work, inspect the rendered surface");
+    expect(reviewer).toContain("For UI work, inspect the rendered surface");
   });
 
   it("names the layers a UI test's annotations belong in where UI work is implemented", async () => {

@@ -11,7 +11,7 @@ const baselinePath = "assistant/rule/shared-skill-delegation-baseline.md";
 /** The Orchestrator Protocol, where a delegating agent reads both rules, with wrapping undone. */
 async function readProtocol(tree: string): Promise<string> {
   const content = await readRule(path.join(repoRoot, tree, baselinePath));
-  const start = content.indexOf("### Orchestrator Protocol");
+  const start = content.indexOf("### Session Agent Protocol");
   const end = content.indexOf("### Capability Probe (MUST)");
   expect(start).toBeGreaterThanOrEqual(0);
   expect(end).toBeGreaterThan(start);
@@ -39,7 +39,7 @@ describe.each(trees)("%s — delegation in a shared worktree", (tree) => {
   it("fixes the commit a reviewer reads before the review starts", async () => {
     const protocol = await readProtocol(tree);
     expect(protocol).toContain(
-      "Give each reviewer a fixed commit. Leave the checkout alone until reviews return.",
+      "Give each judge a fixed revision: a commit, or the base commit with the exact diff of the uncommitted work saved where the judge can read it. Leave the checkout alone until reviews return.",
     );
     expect(protocol).toContain(
       "Only read-only fixed-SHA `git show` reviews permit clean switches.",

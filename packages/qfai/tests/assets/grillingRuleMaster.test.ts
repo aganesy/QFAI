@@ -97,7 +97,7 @@ describe.each(TREES)("%s", (rel) => {
     expectPhrase(master, "The discussion stage is that stage: there the interview is\nthe work.");
     expectPhrase(
       master,
-      "After two rounds every decision that is not\ncritical takes the griller's recommendation, whether the authors agreed with it\nor not.",
+      "After two rounds every decision that is not\ncritical takes the griller's recommendation, whether the session agent agreed with it\nor not.",
     );
   });
 

@@ -3,10 +3,6 @@ name: implement-acceptance
 owner: qfai-implement
 purpose: "Write the bodies of a business flow's empty acceptance tests, keeping each test's annotation and file."
 requires: [common-gate-run]
-roles:
-  - acceptance-test-engineer
-  - devops-ci-engineer
-routing-profile: default
 ---
 
 # implement-acceptance

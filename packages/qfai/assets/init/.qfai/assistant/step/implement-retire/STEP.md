@@ -4,12 +4,6 @@ owner: qfai-implement
 purpose: "Delete a mechanism the project decided to retire: its code, its tests, its configuration and its documents, with no test added to prove it is gone."
 requires:
   - common-gate-run
-roles:
-  - frontend-engineer
-  - backend-engineer
-  - devops-ci-engineer
-  - doc-steward
-routing-profile: default
 ---
 
 # implement-retire

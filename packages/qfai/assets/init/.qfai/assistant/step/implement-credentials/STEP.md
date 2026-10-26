@@ -3,10 +3,6 @@ name: implement-credentials
 owner: qfai-implement
 purpose: "Set up per-worker sign-in reuse for acceptance tests that need an authenticated actor."
 requires: []
-roles:
-  - acceptance-test-engineer
-  - devops-ci-engineer
-routing-profile: default
 ---
 
 # implement-credentials

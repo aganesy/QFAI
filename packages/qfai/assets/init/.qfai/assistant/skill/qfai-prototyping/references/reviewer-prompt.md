@@ -73,7 +73,7 @@ transition-pass percentages as a substitute for the qualitative review.
 
 ## Outputs — two files, two schemas
 
-You return two different results, and the orchestrator writes each to
+You return two different results, and the session agent writes each to
 its file. They are not interchangeable. Both paths are given in full
 below and are relative to the project root.
 

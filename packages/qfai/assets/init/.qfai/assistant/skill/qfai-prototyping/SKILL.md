@@ -4,14 +4,6 @@ title: QFAI Prototyping (DESIGN.md-driven UX Loop)
 description: "Use when invoked by name or handed a QFAI work order to settle a visual or interaction decision by prototyping UI contracts under the root DESIGN.md."
 argument-hint: ""
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
-roles:
-  [
-    orchestrator,
-    product-experience-architect,
-    devops-ci-engineer,
-    product-surface-reviewer,
-    implementation-reviewer,
-  ]
 steps: [prototyping-grill, prototyping-preflight, prototyping-loop, prototyping-handoff]
 requires: [common-review-cycle]
 mode: execution-focused
@@ -53,7 +45,7 @@ command writes any of these files. The one file a command reads is the handoff r
 When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/rule/*`, and `.qfai/assistant/skill/qfai-grilling/SKILL.md` before either session — the one before the loop and the one each reviewed prototype resumes
-- P2: `.qfai/assistant/rule/agent-selection.md`, the routed cards under `.qfai/assistant/agent/`, and project context in the story tree
+- P2: `.qfai/assistant/rule/agent-selection.md`, the cards under `.qfai/assistant/agent/`, and project context in the story tree
 - P3: root `DESIGN.md` — the brand identity every iteration is built and reviewed against
 - P4: the UI contracts under `<contractsDir>/ui/**/*.{yaml,yml}` and the references each step lists
 - P5: earlier iterations and their reviews under `.qfai/prototype/`

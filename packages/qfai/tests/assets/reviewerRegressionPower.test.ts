@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const GATEKEEPER = path.join("assistant", "agent", "qa-gatekeeper.md");
+const GATEKEEPER = path.join("assistant", "agent", "implementation-reviewer.md");
 const ORACLE_STRENGTH = path.join(
   "assistant",
   "skill",
@@ -34,7 +34,7 @@ const section = (card: string, heading: string): string => {
 const CHECK = "## Refactor survival check (advisory)";
 
 describe.each(TREES)("%s", (tree) => {
-  it("gives the gatekeeper a refactor survival check", async () => {
+  it("gives the code reviewer a refactor survival check", async () => {
     const check = section(await read(tree, GATEKEEPER), CHECK);
     expect(check).toContain(
       "| Would it survive a refactor that keeps the behaviour? | This check |",

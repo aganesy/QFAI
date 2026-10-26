@@ -62,9 +62,9 @@ const VALID_SKILL_CONTENT = [
   "screenshots, HTML snapshots, axisDefs, previousScore, designSystemChecklist",
   "",
   "## Delegation Scope Table",
-  "| Generation and implementation | product-experience-architect |",
-  "| Live Playwright review and evaluation scoring | product-surface-reviewer |",
-  "| Build | devops-ci-engineer, backend-engineer |",
+  "| Generation and implementation | The session agent |",
+  "| Live Playwright review and evaluation scoring | `product-surface-reviewer` |",
+  "| Build | The session agent |",
 ].join("\n");
 
 describe("prototyping skill validator", () => {
@@ -218,15 +218,13 @@ describe("prototyping skill asset — the reviewer and its inputs", () => {
     expect(prompt).toMatch(/^## Layout anti-pattern matching \(`lap-\*`\)$/m);
   });
 
-  it("the loop step delegates generation and evaluation to two different sub-agents", async () => {
+  it("the loop step keeps generation in the session agent and evaluation with the reviewer", async () => {
     const skill = await readLoopStep();
+    expect(skill).toMatch(/^\|\s*Generation and implementation\s*\|\s*The session agent\s*\|/m);
     expect(skill).toMatch(
-      /^\|\s*Generation and implementation\s*\|\s*product-experience-architect\s*\|/m,
+      /^\|\s*Live Playwright review and evaluation scoring\s*\|\s*`product-surface-reviewer`\s*\|/m,
     );
-    expect(skill).toMatch(
-      /^\|\s*Live Playwright review and evaluation scoring\s*\|\s*product-surface-reviewer\s*\|/m,
-    );
-    expect(skill).toMatch(/Generation and review use two distinct sub-agent\s+identities\./);
+    expect(skill).toMatch(/started from a fresh context and a black-box brief/);
     expect(skill).toMatch(/There is\s+no fixed capture identity/);
     expect(skill).toMatch(/operates\s+Playwright live/);
   });

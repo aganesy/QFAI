@@ -172,13 +172,6 @@ Step 3 groups its `## For a person` items under `### Content` and
 or decides. `### Identifiers` holds an item that only pairs an old ID with its
 new one, such as a changed constraint ID. A group with no item is not printed.
 
-Step 3 writes a `routing:` override into `qfai.config.yaml` only for an entry
-of `agent-routing.yml` that differs from the installed default. It writes none
-for an entry equal to a default or to an entry a 1.x release shipped. Step 3
-lists each routing entry it does write under `## For a person`, with its name
-and a warning that a routing entry copied from a 1.x manifest hides the roles
-the 2.x skills declare.
-
 ## Business rules
 
 Rules are numbered per contract, `BR-<contract number>-NNNN` from `0001` in plan

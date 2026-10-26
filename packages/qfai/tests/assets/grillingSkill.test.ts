@@ -56,7 +56,7 @@ describe("the grilling primitive", () => {
         /a node hangs off whatever it depends on/,
         /prerequisites are all settled/,
         /Recompute the frontier from what is now settled/,
-        /Read it, or dispatch a sub-agent to read it/,
+        /Read it, or run reads as parallel lookups/,
         /answerable by number/,
         /spends no clarification budget/,
         /no fact lookup is still running/,
@@ -118,7 +118,9 @@ describe("the grilling primitive", () => {
       // and it is set apart from auto-decide by the rounds before it and the
       // record after it.
       expect(text).toMatch(/A delegated session's adoption is not that/);
-      expect(text).toMatch(/the griller interviewed the authors first, and the record carries why/);
+      expect(text).toMatch(
+        /the griller interviewed the session agent first, and the record carries why/,
+      );
       // The subject is the one input with no default: a session must be about
       // something, and picking that is answering the first question.
       expect(text).toMatch(/grilling subject/);

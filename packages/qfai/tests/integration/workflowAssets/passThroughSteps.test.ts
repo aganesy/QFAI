@@ -8,13 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import { loadBuiltInPlans } from "../../../src/core/workflow/plans.js";
-import {
-  defaultRoutingEntries,
-  flat,
-  frontMatterOf,
-  readShipped,
-  sectionOf,
-} from "../../helpers/shippedAssistant.js";
+import { flat, frontMatterOf, readShipped, sectionOf } from "../../helpers/shippedAssistant.js";
 
 /** Every step a plan may mark pass-through. */
 const PASS_THROUGH = [
@@ -39,10 +33,6 @@ const PASS_THROUGH = [
 
 async function passesWhen(step: string): Promise<string> {
   return flat(sectionOf(await readShipped(`step/${step}/STEP.md`), "## Passes when"));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 describe("a step that may pass with evidence", () => {
@@ -271,25 +261,6 @@ describe("a step that may pass with evidence", () => {
 });
 
 describe("the verify steps a route adds", () => {
-  it("gives each its review profile and a routing entry that names it", async () => {
-    const profiles: Record<string, string> = {
-      "verify-change-note": "default",
-      "verify-repeat-run": "default",
-      "verify-external": "default",
-      "verify-manual": "default",
-      "verify-advisory": "default",
-      "verify-release-notes": "default",
-    };
-    const routing = await defaultRoutingEntries();
-    for (const [step, profile] of Object.entries(profiles)) {
-      const front = frontMatterOf(await readShipped(`step/${step}/STEP.md`));
-      expect(front.owner, step).toBe("qfai-verify");
-      expect(front["routing-profile"], step).toBe(profile);
-      const entry = routing.filter(isRecord).find((each) => each.step === step);
-      expect(entry?.review_profile, step).toBe(profile);
-    }
-  });
-
   it("publishes, tags and sends nothing", async () => {
     const advisory = flat(await readShipped("step/verify-advisory/STEP.md"));
     expect(advisory).toMatch(/nothing was published, requested or sent/i);

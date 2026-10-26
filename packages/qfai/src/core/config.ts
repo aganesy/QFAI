@@ -142,22 +142,6 @@ export type QfaiReportConfig = {
   keepLatestRuns?: number;
 };
 
-/**
- * Project routing overrides replace a complete entry, keyed by the step or the
- * skill it routes. An entry carries exactly one of `step:` and `skill:`.
- */
-export type QfaiRoutingEntry = Record<string, unknown> & { step?: string; skill?: string };
-
-/** The name a routing entry is keyed by: its `step:`, else its `skill:`. */
-export function routingEntryName(entry: { step?: unknown; skill?: unknown }): string | undefined {
-  if (typeof entry.step === "string" && entry.step.length > 0) return entry.step;
-  if (typeof entry.skill === "string" && entry.skill.length > 0) return entry.skill;
-  return undefined;
-}
-
-/** Project review-profile overrides replace a complete profile, keyed by name. */
-export type QfaiReviewProfile = Record<string, unknown>;
-
 export type QfaiConfig = {
   paths: QfaiPaths;
   validation: QfaiValidationConfig;
@@ -165,8 +149,6 @@ export type QfaiConfig = {
   uiux?: QfaiUiuxConfig;
   prototyping?: QfaiPrototypingConfig;
   report?: QfaiReportConfig;
-  routing?: QfaiRoutingEntry[];
-  reviewProfiles?: Record<string, QfaiReviewProfile>;
   baseBranch?: string;
 };
 
@@ -384,8 +366,6 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
   const prototyping = normalizePrototyping(raw.prototyping, configPath, issues);
   const report = normalizeReport(raw.report, configPath, issues);
-  const routing = normalizeRouting(raw.routing, configPath, issues);
-  const reviewProfiles = normalizeReviewProfiles(raw.reviewProfiles, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
     validation: normalizeValidation(raw.validation, configPath, issues),
@@ -400,77 +380,11 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   if (report) {
     base.report = report;
   }
-  if (routing) {
-    base.routing = routing;
-  }
-  if (reviewProfiles) {
-    base.reviewProfiles = reviewProfiles;
-  }
   const baseBranch = readOptionalString(raw.baseBranch, "baseBranch", configPath, issues);
   if (baseBranch !== undefined) {
     base.baseBranch = baseBranch;
   }
   return base;
-}
-
-function normalizeRouting(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): QfaiRoutingEntry[] | undefined {
-  if (raw === undefined) return undefined;
-  if (!Array.isArray(raw)) {
-    issues.push(
-      configIssue(configPath, "routing must be a list of entries keyed by step or skill."),
-    );
-    return undefined;
-  }
-  const entries: QfaiRoutingEntry[] = [];
-  const seen = new Set<string>();
-  for (const [index, value] of raw.entries()) {
-    const name = isRecord(value) ? routingEntryName(value) : undefined;
-    const keys = isRecord(value)
-      ? [value.step, value.skill].filter((key) => key !== undefined)
-      : [];
-    if (!isRecord(value) || name === undefined || keys.length !== 1) {
-      issues.push(
-        configIssue(configPath, `routing[${index}] must have exactly one non-empty step or skill.`),
-      );
-      continue;
-    }
-    if (seen.has(name)) {
-      issues.push(configIssue(configPath, `routing has duplicate entry ${name}.`));
-      continue;
-    }
-    seen.add(name);
-    entries.push(
-      isNonEmptyString(value.step) ? { ...value, step: name } : { ...value, skill: name },
-    );
-  }
-  return entries;
-}
-
-function normalizeReviewProfiles(
-  raw: unknown,
-  configPath: string,
-  issues: Issue[],
-): Record<string, QfaiReviewProfile> | undefined {
-  if (raw === undefined) return undefined;
-  if (!isRecord(raw)) {
-    issues.push(
-      configIssue(configPath, "reviewProfiles must be a map of profile names to entries."),
-    );
-    return undefined;
-  }
-  const profiles: Record<string, QfaiReviewProfile> = {};
-  for (const [name, value] of Object.entries(raw)) {
-    if (!isNonEmptyString(name) || !isRecord(value)) {
-      issues.push(configIssue(configPath, `reviewProfiles.${name} must be an entry.`));
-      continue;
-    }
-    profiles[name] = { ...value };
-  }
-  return profiles;
 }
 
 function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): QfaiPaths {
@@ -1241,8 +1155,4 @@ async function exists(target: string): Promise<boolean> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
 }

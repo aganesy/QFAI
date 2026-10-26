@@ -214,10 +214,8 @@ runs only from its parent or from the plan `qfai-run` follows.
 - **A parent's `requires` names the `common-*` steps its own body runs**, such
   as `common-review-cycle` after the last step. Like a step's, it names no
   other kind of step.
-- **A step has no review of its own.** Its `routing-profile`, where it has one,
-  is `default`. The review is the one its parent or its plan names.
-- **Routing and review-profile overrides in `qfai.config.yaml` are keyed by
-  step name.**
+- **A step has no review of its own.** The review is the one its parent or its
+  plan names.
 
 ### A parent skill invoked by name
 

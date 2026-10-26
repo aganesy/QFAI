@@ -1,1 +1,0 @@
-../../.qfai/assistant/agent/test-design-analyst.md

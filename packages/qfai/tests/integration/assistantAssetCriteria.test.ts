@@ -122,19 +122,12 @@ describe("reviewer depth and completion", () => {
   // QFAI:AC-0001-0072-01
   // QFAI:EX-0001-0072-01
   it("returns REVISE for a normal-path-only obligation and invents no failure case", async () => {
-    const analyst = await readFlat(assistant, "agent", "test-design-analyst.md");
-    expect(analyst).toContain(
-      "Score normal, error, boundary, special, state transition and combinatorial cases where the active AC, EX, BR or contract makes them meaningful.",
-    );
-    expect(analyst).toContain("Do not invent a failure case for every row.");
-    expect(analyst).toContain(
-      "Return REVISE with the ID, missing behavior and owner when a required case is absent",
-    );
-    const gatekeeper = await readFlat(assistant, "agent", "qa-gatekeeper.md");
-    expect(gatekeeper).toContain(
+    const reviewer = await readFlat(assistant, "agent", "implementation-reviewer.md");
+    expect(reviewer).toContain(
       "Check the normal, failure, boundary, special, state-transition and combinatorial cases the active story and contract make meaningful.",
     );
-    expect(gatekeeper).toContain("Return REVISE for an unexplained required gap or weak oracle");
+    expect(reviewer).toContain("Return REVISE for an unexplained required gap or weak oracle");
+    expect(reviewer).toContain("Invent no failure case for an obligation that declares none.");
   });
 
   // QFAI:AC-0001-0157-01
@@ -146,7 +139,7 @@ describe("reviewer depth and completion", () => {
     );
     const baseline = await readFlat(assistant, "rule", "shared-skill-delegation-baseline.md");
     expect(baseline).toContain(
-      "An in-scope blocking finding from a routed reviewer prevents DONE until it is fixed or answered; only a behaviour fix is re-reviewed, once.",
+      "An in-scope blocking finding from a required reviewer prevents DONE until it is fixed or answered; only a behaviour fix is re-reviewed, once.",
     );
     const convergence = await readFlat(assistant, "rule", "review-convergence.md");
     expect(convergence).toContain("There is no `REVISE` loop.");
@@ -164,7 +157,7 @@ describe("reviewer depth and completion", () => {
     );
     expect(cycle).toContain("No other reviewer is rerun.");
     expect(cycle).toContain(
-      "Every routed reviewer responded once, each behaviour fix had its one focused re-review,",
+      "Every required reviewer responded once, each behaviour fix had its one focused re-review,",
     );
     const convergence = await readFlat(assistant, "rule", "review-convergence.md");
     expect(convergence).toContain(

@@ -13,10 +13,8 @@ const DELEGATION = "assistant/rule/shared-skill-delegation-baseline.md";
 const DRIFT = "assistant/rule/drift-protocol.md";
 const REVIEWER_CARDS = [
   "architecture-reviewer",
-  "completion-reviewer",
   "implementation-reviewer",
   "product-surface-reviewer",
-  "qa-gatekeeper",
   "requirements-reviewer",
 ];
 

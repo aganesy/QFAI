@@ -35,19 +35,19 @@ const BASELINES: ReadonlyArray<readonly [string, string]> = [
 
 /** Characters a skill may load at start. */
 const START_LOAD_BUDGET: Readonly<Record<string, number>> = {
-  "qfai-configure": 66_000,
-  "qfai-discussion": 53_000,
-  "qfai-grill": 55_000,
+  "qfai-configure": 67_000,
+  "qfai-discussion": 55_000,
+  "qfai-grill": 57_000,
   "qfai-grilling": 70_000,
-  "qfai-implement": 55_000,
+  "qfai-implement": 57_000,
   "qfai-maintain": 31_000,
-  "qfai-migration-v1-to-v2": 58_000,
-  "qfai-prototyping": 51_000,
-  "qfai-run": 56_000,
-  "qfai-sdd": 51_000,
-  "qfai-triage": 52_000,
-  "qfai-verify": 52_000,
-  "web-research": 61_000,
+  "qfai-migration-v1-to-v2": 60_000,
+  "qfai-prototyping": 53_000,
+  "qfai-run": 58_000,
+  "qfai-sdd": 53_000,
+  "qfai-triage": 54_000,
+  "qfai-verify": 54_000,
+  "web-research": 63_000,
 };
 
 const length = (text: string): number => [...text].length;

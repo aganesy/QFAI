@@ -4,10 +4,6 @@ owner: qfai-implement
 purpose: "Fix the production code behind a regression that an existing, correct test catches, and confirm the fix by that test turning GREEN again."
 requires:
   - common-gate-run
-roles:
-  - frontend-engineer
-  - backend-engineer
-routing-profile: default
 ---
 
 # implement-regression-fix

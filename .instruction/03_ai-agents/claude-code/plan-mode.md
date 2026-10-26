@@ -26,4 +26,4 @@ In Plan mode, stay read-only and limit the work to investigation and planning.
 ## Presenting the Plan
 
 - Present a plan split into small steps and move to implementation after agreement.
-- Consider using sub-agents according to their roles, and make the task split explicit.
+- Start a sub-agent only for an independent judgement or for parallel units that pass the parallel-unit gate, and say which in the plan.

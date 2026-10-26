@@ -71,7 +71,7 @@ const SCRIPT_NAMES = [
 const HOST_SKILL_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
 const HOST_AGENT_DIRS = [".claude/agents", ".github/agents"];
 const agentName = (dir: string) =>
-  dir === ".github/agents" ? "orchestrator.agent.md" : "orchestrator.md";
+  dir === ".github/agents" ? "requirements-reviewer.agent.md" : "requirements-reviewer.md";
 const HOST_WRAPPERS = new Set([
   ...HOST_SKILL_DIRS.map((dir) => `${dir}/qfai-sdd`),
   ...HOST_AGENT_DIRS.map((dir) => `${dir}/${agentName(dir)}`),
@@ -180,7 +180,7 @@ async function copyOldProject(): Promise<string> {
     await oldLink(
       root,
       `${dir}/${agentName(dir)}`,
-      ".qfai/assistant/agents/orchestrator.md",
+      ".qfai/assistant/agents/requirements-reviewer.md",
       "file",
     );
   }
@@ -587,7 +587,7 @@ describe("spec-0018: one shipped-script migration journey", () => {
     for (const dir of HOST_AGENT_DIRS) {
       expect(
         (await readlink(path.join(journey.root, dir, agentName(dir)))).replace(/\\/g, "/"),
-      ).toContain("assistant/agent/orchestrator.md");
+      ).toContain("assistant/agent/requirements-reviewer.md");
     }
     const ignore = await textAt(journey.root, ".gitignore");
     expect(ignore).toContain("# Local notes stay ignored.\nscratch/\n");

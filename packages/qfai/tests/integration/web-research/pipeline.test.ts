@@ -100,7 +100,6 @@ describe("web-research pipeline", () => {
     }
   });
 
-  // QFAI:EX-0001-0176-06
   it("specifies conservative concurrency defaults max_threads=2", async () => {
     const content = await readSkill();
     expect(content).toMatch(/max[_\s-]?threads\s*[=:]\s*2/i);

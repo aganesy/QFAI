@@ -70,6 +70,78 @@ specialization_tags:
 - Require more work only under `rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must`. Send new scope to the SDD owner as advisory.
 - Apply `rule/ui-procurement.md` to UI changes and report a usable standard or component that was passed over.
 
+## Coverage gate
+
+Read `rule/test-layers.md` and current flow-scoped validation findings.
+The BF obligation belongs in E2E with `QFAI:BF-NNNN`. Every AC belongs in
+integration or API with `QFAI:AC-NNNN-NNNN-NN`. Every EX belongs in another
+test layer with `QFAI:EX-NNNN-NNNN-NN`. A test must contain an executed,
+observable assertion. An annotation alone does not discharge an obligation.
+An acceptance test with an empty body raises no finding, whoever wrote it,
+until `implement-acceptance` writes its assertions; it is not proof before
+then. A DONE `Test exception:` decision can resolve one only when it
+names the item.
+
+Once the acceptance tests exist, read the annotated tests themselves. Check the normal,
+failure, boundary, special, state-transition and combinatorial cases the
+active story and contract make meaningful. Return REVISE for an unexplained
+required gap or weak oracle, naming the missing case and its owner: a BF or AC
+with no test to `implement-scaffold`, an empty acceptance body to
+`implement-acceptance`, a defective written assertion to `implement-test-fix`,
+and an EX gap to `/qfai-implement`. Invent no failure case for an obligation
+that declares none. During SDD, assess the requirement links without demanding tests that
+implementation has not written.
+
+## Refactor survival check (advisory)
+
+Read each test on four questions. Three are already judged elsewhere; apply
+them there, not twice.
+
+| Question                                                          | Where it is judged                                                      |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Does it cover the behaviour that matters, not just the lines run? | The coverage gate above                                                 |
+| Are the recurring gaps covered: kept failures and boundary cases? | The coverage gate above                                                 |
+| Would it fail on a concrete regression?                           | `skill/qfai-implement/references/oracle-strength.md`, proof per example |
+| Would it survive a refactor that keeps the behaviour?             | This check                                                              |
+
+A test fails the last question when it asserts on what the contract does not
+name: a private function, an internal call order, a mock of the code's own
+collaborators, or the structure of a value rather than what it means. Such a
+test breaks on a safe change and teaches authors to weaken the test instead of
+fixing the code.
+
+Read the whole of every test file the change touches, not only the tests it
+adds or alters. Record each finding with the test and a concrete
+behaviour-preserving change it would fail on. A finding with no named change is
+not admitted. A finding on a test that existed before the change is recorded
+and deferred. This check does not REVISE on its own and carries no score.
+
+## Gate results
+
+- Read the current BF's test selectors, command results and reviewer
+  verdicts, and check that each names the revision under review.
+- An acceptance-test gate uses
+  `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error`.
+  An implementation gate uses
+  `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN`.
+  Implement's selection result is usable only when its JSON exists,
+  `profile` is `tdd`, and `generatedAt` is no earlier than the run
+  start. Read the result even when the command exits nonzero.
+- Test, Lint, Typecheck and Build commands come only from the Standard
+  commands section of `<paths.contractsDir>/tech.md`. Confirm each
+  applicable command actually ran on the reviewed tree. A skipped,
+  interrupted or stale run is UNRUN, not PASS.
+- For UI work, inspect the rendered surface and its behavior using the
+  applicable product review evidence. For a CLI surface, inspect captured
+  output and the action it tells the operator to take. Follow
+  `skill/qfai-implement/references/ui-affecting.md`.
+
+A failure owned by another BF or stage must name its owner and remain
+visible. A global error does not become a scoped PASS by omission. Return
+REVISE for any in-scope failure, missing result, stale result, missing
+required review, or unresolved blocker. Cite the exact finding, ID and
+command.
+
 ## Inputs you must read
 
 - `rule/**`, especially `agent-selection.md`, `test-layers.md` and the drift protocol.
@@ -109,7 +181,7 @@ specialization_tags:
 
 ## When to use
 
-- Use when this review domain is required by the resolved routing entry or explicitly requested.
+- Use when the plan's review, or the skill being run, names this reviewer.
 - Use when an independent specialist check is needed before completion.
 
 ## When not to use

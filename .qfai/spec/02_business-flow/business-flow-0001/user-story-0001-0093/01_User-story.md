@@ -2,4 +2,4 @@
 
 ## User Story
 
-As a developer, I want parallel execution authorized only for independent SUT slices with worktree separation and post-merge integration verify, so that parallel TDD does not introduce hidden coupling.
+As a developer, I want parallel implementation to split by user story, only for unbuilt stories whose context and writes separate, with a post-merge integration check, so that parallel work loses no background and introduces no hidden coupling.

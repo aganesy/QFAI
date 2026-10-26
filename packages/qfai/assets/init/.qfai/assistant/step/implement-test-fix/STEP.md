@@ -4,11 +4,6 @@ owner: qfai-implement
 purpose: "Repair a defective test, at whatever layer, so that it checks what its business flow, criterion or example states and nothing else."
 requires:
   - common-gate-run
-roles:
-  - frontend-engineer
-  - backend-engineer
-  - acceptance-test-engineer
-routing-profile: default
 ---
 
 # implement-test-fix

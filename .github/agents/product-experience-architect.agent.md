@@ -1,1 +1,0 @@
-../../.qfai/assistant/agent/product-experience-architect.md
