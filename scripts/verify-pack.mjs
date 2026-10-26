@@ -655,7 +655,7 @@ writeFileSync(
 writeFileSync(
   path.join(seededReviewPackDir, "R01_implementation-reviewer.md"),
   [
-    "# R01 Completion Reviewer",
+    "# R01 Implementation Reviewer",
     "",
     "- Status: PASS",
     "- Feedback count: 0",

@@ -56,7 +56,7 @@ describe("the grilling primitive", () => {
         /a node hangs off whatever it depends on/,
         /prerequisites are all settled/,
         /Recompute the frontier from what is now settled/,
-        /Read it, or dispatch a sub-agent to read it/,
+        /Read it, or run reads as parallel lookups/,
         /answerable by number/,
         /spends no clarification budget/,
         /no fact lookup is still running/,

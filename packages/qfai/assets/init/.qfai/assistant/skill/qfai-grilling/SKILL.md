@@ -149,10 +149,10 @@ host that cannot show it whole; it never makes two rounds, and
 
 ## Facts are not asked
 
-| Kind                                     | Who settles it | How                                         |
-| ---------------------------------------- | -------------- | ------------------------------------------- |
-| A fact the environment holds             | The agent      | Read it, or dispatch a sub-agent to read it |
-| A decision about what is wanted or worth | The user       | Ask it, and wait                            |
+| Kind                                     | Who settles it | How                                       |
+| ---------------------------------------- | -------------- | ----------------------------------------- |
+| A fact the environment holds             | The agent      | Read it, or run reads as parallel lookups |
+| A decision about what is wanted or worth | The user       | Ask it, and wait                          |
 
 Asking the user for a fact the repository already states spends the one thing a
 round is spending, which is the user's attention.
@@ -292,8 +292,9 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`. The
 sections below add only what is specific to a session; where they and the
 baseline overlap, the baseline governs.
 
-One thing is delegated and one only: reading a fact the environment holds. The
-questions are never delegated — a round is put by the agent that holds the
+One thing may be delegated: reading facts the environment holds, as parallel
+lookups under the baseline's gate. The questions are
+never delegated — a round is put by the agent that holds the
 session, to whoever is answering it.
 
 Who that is depends on the mode. In a session with a user, it is the user, and

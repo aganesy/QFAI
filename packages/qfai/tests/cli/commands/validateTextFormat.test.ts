@@ -658,7 +658,7 @@ describe("validate --format text matches the validate contract's text output gra
       emitText(
         resultOf([
           ...manyOfOneCode("QFAI-STORY-006", "error", 3),
-          ...manyOfOneCode("QFAI-AGENT-015", "error", 1),
+          ...manyOfOneCode("QFAI-AGENT-005", "error", 1),
           ...manyOfOneCode("QFAI-TEST-002", "warning", 2, true),
           ...manyOfOneCode("QFAI-TEST-001", "info", 1),
         ]),
@@ -672,7 +672,7 @@ describe("validate --format text matches the validate contract's text output gra
     // Most frequent code first; suppressed issues are left out, as in `counts:`.
     expect(lines[counts]).toBe("counts: info=1 warning=0 error=4");
     expect(lines[counts + 1]).toBe(
-      "codes: error=4 (QFAI-STORY-006: 3, QFAI-AGENT-015: 1) warning=0 info=1 (QFAI-TEST-001: 1)",
+      "codes: error=4 (QFAI-STORY-006: 3, QFAI-AGENT-005: 1) warning=0 info=1 (QFAI-TEST-001: 1)",
     );
     expect(lines[counts + 2]).toBe("fail-on: error");
   });

@@ -20,13 +20,13 @@ independent judgement, or parallel units that pass the parallel-unit gate.
 
 ## The cards
 
-| Card                       | Briefed for                                                                   |
-| -------------------------- | ----------------------------------------------------------------------------- |
-| `fullstack-engineer`       | One parallel unit: an unbuilt story, or one self-contained read-only lookup   |
-| `requirements-reviewer`    | The specification review, the finder, a griller                               |
-| `architecture-reviewer`    | A contract change in the specification review, a griller on a contract choice |
-| `implementation-reviewer`  | The code review, and the review `/qfai-configure` names                       |
-| `product-surface-reviewer` | A screen change in a review, and the prototyping evaluator                    |
+| Card                       | Briefed for                                                                                        |
+| -------------------------- | -------------------------------------------------------------------------------------------------- |
+| `fullstack-engineer`       | One of two or more units that pass the parallel-unit gate: an unbuilt story, or a read-only lookup |
+| `requirements-reviewer`    | The specification review, the finder, a griller                                                    |
+| `architecture-reviewer`    | A contract change in the specification review, a griller on a contract choice                      |
+| `implementation-reviewer`  | The code review, and the review `/qfai-configure` names                                            |
+| `product-surface-reviewer` | A screen change in a review, and the prototyping evaluator                                         |
 
 ## Applying the Principles
 

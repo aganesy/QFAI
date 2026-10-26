@@ -355,6 +355,6 @@ reset, a stash, a branch switch or a worktree removal.
 Read this section when parts ran in parallel. Report one row per part given to
 a sub-agent.
 
-| Step | Role (sub-agent) | Agent instance  | Task title        | Input (refs)  | Output (refs) | Status (PASS/REVISE/PENDING) |
-| ---- | ---------------- | --------------- | ----------------- | ------------- | ------------- | ---------------------------- |
-| 1    | `<role>`         | `<instance id>` | `<part in words>` | The step file | The result    | PASS/REVISE                  |
+| Step | Agent (sub-agent) | Agent instance  | Task title        | Input (refs)  | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ----------------- | --------------- | ----------------- | ------------- | ------------- | ---------------------------- |
+| 1    | `<agent>`         | `<instance id>` | `<part in words>` | The step file | The result    | PASS/REVISE                  |

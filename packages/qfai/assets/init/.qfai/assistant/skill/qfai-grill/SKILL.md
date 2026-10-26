@@ -85,8 +85,9 @@ When unsure, read inputs in this order:
 ## Sub-agent Delegation (MANDATORY)
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`. The
-primitive's delegation rules apply unchanged: one thing is delegated, reading a
-fact the environment holds, and the questions are never delegated.
+primitive's delegation rules apply unchanged: one thing may be delegated,
+reading facts the environment holds as parallel lookups under the baseline's
+gate, and the questions are never delegated.
 
 ### Session Agent Protocol
 
@@ -119,9 +120,9 @@ table to the user. Use the shared schema from
 the `Agent instance` column. It is reported, not written: this skill produces no
 file.
 
-| Step | Role (sub-agent) | Agent instance  | Task title                      | Input (refs)                    | Output (refs)                   | Status (PASS/REVISE/PENDING) |
-| ---- | ---------------- | --------------- | ------------------------------- | ------------------------------- | ------------------------------- | ---------------------------- |
-| 1    | Reviewer         | `<instance id>` | Read the facts a round waits on | Decision and what it depends on | The fact, and where it was read | PASS/REVISE                  |
+| Step | Agent (sub-agent)    | Agent instance  | Task title                      | Input (refs)                    | Output (refs)                   | Status (PASS/REVISE/PENDING) |
+| ---- | -------------------- | --------------- | ------------------------------- | ------------------------------- | ------------------------------- | ---------------------------- |
+| 1    | `fullstack-engineer` | `<instance id>` | Read the facts a round waits on | Decision and what it depends on | The fact, and where it was read | PASS/REVISE                  |
 
 ### Reviewer Gate
 

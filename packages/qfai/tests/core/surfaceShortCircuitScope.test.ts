@@ -190,11 +190,9 @@ describe("the short-circuit is scoped to the profiles that walk the damage", () 
   });
 
   it("stops `prototyping`, whose agent-definition validator reads the skills tree", async () => {
-    // `validateAgentDefinition` gained `QFAI-AGENT-019` / `QFAI-AGENT-015`,
-    // which read every routed skill's `SKILL.md` and `readdir` the configured
-    // skills directory. Listing only the agents tree for this profile left
-    // that read raising `ENOTDIR` — or blocking forever on a FIFO — with the
-    // finding that names the path already in hand.
+    // The profile reads the assistant tree. A damaged canonical tree must stop
+    // with the finding that names the path, not raise `ENOTDIR` or block on a
+    // FIFO.
     await withDamagedCanonical(async (root) => {
       const result = await validateProject(root, undefined, { profile: "prototyping" });
       const codes = new Set(result.issues.map((entry) => entry.code));
