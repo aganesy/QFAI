@@ -248,7 +248,8 @@ Notes on the skills.
 - Every skill replies in your language.
 - A skill that leaves the next step to you ends with a question that lists the next actions, the recommended one first.
 - Except `qfai-discussion`, each skill reads the project context (architecture, tech stack, test framework, repo structure) before it writes artifacts or code.
-- The agent you talk to does the work itself: research, design, the specification, code, tests and documentation. It starts a sub-agent only for an independent judgement, such as a review, or for two or more parallel units that pass the parallel-unit gate.
+- The agent you talk to does the work itself: research, design, the specification, code, tests and documentation.
+  It starts a sub-agent only for an independent judgement, such as a review, or for two or more parallel units that pass the parallel-unit gate.
 - Triage decisions and change requests live in `.qfai/spec/decisions.md`;
   unresolved questions live in `.qfai/spec/open-questions.md`.
 - Agent cards under `.qfai/assistant/agent/` define the four reviewers and the one `fullstack-engineer` worker a parallel unit runs on.
