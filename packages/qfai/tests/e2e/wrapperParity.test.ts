@@ -102,7 +102,7 @@ describe("wrapper parity across all three platforms", () => {
         "Record command, selector and failure",
         "RED, GREEN and Refactor result",
         "While implementing, run only the selected test",
-        "required user consent",
+        "the parallel-unit gate passes",
       ];
       const forbiddenPhrases = [
         "qfai-tdd-red",

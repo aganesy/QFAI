@@ -23,7 +23,7 @@ function cardNames(): string[] {
 describe("Codex agent profiles derive from cards", () => {
   it("keeps one generated profile for each card", () => {
     const cards = cardNames();
-    expect(cards).toHaveLength(19);
+    expect(cards).toHaveLength(5);
     expect(
       readdirSync(codexDir)
         .filter((name) => name.endsWith(".toml"))

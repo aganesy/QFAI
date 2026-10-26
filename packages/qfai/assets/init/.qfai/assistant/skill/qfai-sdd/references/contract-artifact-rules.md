@@ -43,7 +43,7 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   information the user needs there, and write the ones that stay into the
   contract with the reason. A text that only repeats a heading, an action or a
   condition the user already has is left out. Discussion sidecars inform these
-  keys; they do not replace them. See `ui-contract-guide.md`.
+  keys; they do not replace them.
 - UI contracts must be mockable for prototypes: define stable `elements` and
   `actions` with enough inspection-target text for Playwright evidence.
 - **The `prototype` mapping is optional, and what it declares is checked.** A

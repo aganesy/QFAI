@@ -38,7 +38,9 @@ describe("E2E: implementation follows flow-scoped example obligations", () => {
     const content = await skill();
     const policy = await reference("parallelization-policy.md");
     expect(content).toContain("Work one EX at a time by default");
-    expect(content).toMatch(/disjoint\s+writes, a passing technical gate/);
-    expect(policy).toContain("explicit user approval");
+    expect(content).toMatch(/in parallel only when the parallel-unit gate passes/);
+    expect(policy.replace(/\s+/g, " ")).toContain(
+      "fans out only when every condition holds for every pair of units",
+    );
   });
 });

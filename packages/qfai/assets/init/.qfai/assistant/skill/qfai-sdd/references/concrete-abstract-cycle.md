@@ -29,7 +29,7 @@ No cycle runs when:
 
 ## The finder
 
-The finder is a `requirements-reviewer`, started from a fresh context, that wrote none of
+The finder is a sub-agent on `requirements-reviewer`, started from a fresh context, that wrote none of
 the BRs it reads. The session agent starts it; a stage worker starts none. It
 reads:
 

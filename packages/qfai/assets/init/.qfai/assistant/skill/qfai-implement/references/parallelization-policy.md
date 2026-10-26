@@ -57,7 +57,7 @@ Workers do not change another worker's files or the story tree.
 
 The session agent integrates the results and resolves every overlap before
 judging any story complete. It reruns every story unit's selectors and
-`qfai validate --profile tdd --fail-on error --flow BF-NNNN` on the merged
+`npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` on the merged
 tree; the suites run once, in the verify stage. A worker's isolated PASS is not
 an integrated PASS.
 

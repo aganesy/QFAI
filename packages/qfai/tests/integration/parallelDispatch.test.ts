@@ -73,7 +73,7 @@ describe("parallel dispatch by story, under the gate the session agent applies",
     expect(brief).toContain("Workers do not change another worker's files or the story tree.");
     const integration = section(text, "Integration gate");
     expect(integration).toContain(
-      "It reruns every story unit's selectors and `qfai validate --profile tdd --fail-on error --flow BF-NNNN` on the merged tree",
+      "It reruns every story unit's selectors and `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` on the merged tree",
     );
     expect(integration).toContain("A worker's isolated PASS is not an integrated PASS.");
   });
