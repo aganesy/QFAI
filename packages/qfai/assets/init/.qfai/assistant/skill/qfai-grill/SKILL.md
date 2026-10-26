@@ -88,9 +88,9 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`. The
 primitive's delegation rules apply unchanged: one thing is delegated, reading a
 fact the environment holds, and the questions are never delegated.
 
-### Orchestrator Protocol
+### Session Agent Protocol
 
-- The orchestrator reads the primitive, puts each round and reads the answers.
+- The session agent reads the primitive, puts each round and reads the answers.
 - It must not decide a frontier question on the user's behalf, and must not
   self-approve the session's end condition.
 

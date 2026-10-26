@@ -3,9 +3,6 @@ name: implement-tooling
 owner: qfai-implement
 purpose: "Change a workflow, a script or a development tool, record whether the change reaches the CI the project ships to others, and record any release-path check that has to wait for the next release."
 requires: [common-gate-run]
-roles:
-  - devops-ci-engineer
-routing-profile: default
 ---
 
 # implement-tooling

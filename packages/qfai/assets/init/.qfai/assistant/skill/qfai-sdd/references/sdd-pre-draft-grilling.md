@@ -18,8 +18,8 @@ The checkpoint occurs before this invocation's first design mutation in that sta
 
 ## Roles and disposition
 
-- The orchestrator starts the griller; a stage worker starts none.
-- Include the decisions of every role routed to draft the stage's artifacts in one frontier. Keep grilling and the final review apart: the reviewer reviews no decision it recommended.
+- The session agent starts the griller.
+- One frontier holds every decision the stage's drafts need. Keep grilling and the final review apart: the reviewer reviews no decision it recommended.
 - Read existing policy, decisions, open questions, discussion provenance, and current contracts before asking. Do not ask the user for facts already recorded there.
 - The session identifies options and failure cases and gives an evidence-based recommendation. A critical product decision goes to the user; an agent's preference cannot supply approval.
 - Settle a critical question before the affected author writes.

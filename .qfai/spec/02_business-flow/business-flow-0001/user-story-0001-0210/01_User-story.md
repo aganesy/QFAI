@@ -7,4 +7,3 @@ As a QFAI maintainer or adopter, I want `qfai validate` to refuse a step tree in
 ## Non-goals
 
 - Checking what a step's body says
-- Checking a step's review profile against the routing defaults, which the agent-routing checks do

@@ -54,7 +54,7 @@ specialization_tags:
 
 - .qfai/assistant/rule/** (shared operating rules)
 - <paths.specsDir>/01_policy/** and <paths.specsDir>/03_contract/tech.md (project context)
-- .qfai/assistant/rule/agent-selection.md (routing and this card's frontmatter are authoritative)
+- .qfai/assistant/rule/agent-selection.md (this card's frontmatter is authoritative)
 - .qfai/assistant/rule/test-layers.md
 - <paths.specsDir>/decisions.md and open-questions.md
 - .github/instructions/code-review.instructions.md
@@ -83,7 +83,7 @@ specialization_tags:
 
 ## When to use
 
-- Use when this review domain is required by the resolved routing entry or explicitly requested.
+- Use when the plan's review, or the skill being run, names this reviewer, or for a griller on a contract or architecture decision.
 - Use when an independent specialist check is needed before completion.
 
 ## When not to use

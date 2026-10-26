@@ -3,11 +3,6 @@ name: implement-bisect
 owner: qfai-implement
 purpose: "Find the change that broke a behaviour between a revision where it worked and one where it fails, without changing any tracked file."
 requires: [common-gate-run]
-roles:
-  - devops-ci-engineer
-  - frontend-engineer
-  - backend-engineer
-routing-profile: default
 ---
 
 # implement-bisect

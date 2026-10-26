@@ -409,16 +409,14 @@ describe("focused evidence guidance", () => {
   // QFAI:AC-0001-0091-01
   // QFAI:EX-0001-0091-16
   it("records Red and Green ci-deferred where the Test entry is CI only, and the code review reads the test against the pre-fix code", async () => {
-    const [admissibility, implement, diagnose, review, reviewer, backend, frontend] =
-      await Promise.all([
-        readGuide("skill/qfai-implement/references/red-admissibility.md"),
-        readGuide("step/implement-tdd/STEP.md"),
-        readGuide("step/implement-diagnose/STEP.md"),
-        readGuide("step/common-review-cycle/STEP.md"),
-        readGuide("agent/implementation-reviewer.md"),
-        readGuide("agent/backend-engineer.md"),
-        readGuide("agent/frontend-engineer.md"),
-      ]);
+    const [admissibility, implement, diagnose, review, reviewer, worker] = await Promise.all([
+      readGuide("skill/qfai-implement/references/red-admissibility.md"),
+      readGuide("step/implement-tdd/STEP.md"),
+      readGuide("step/implement-diagnose/STEP.md"),
+      readGuide("step/common-review-cycle/STEP.md"),
+      readGuide("agent/implementation-reviewer.md"),
+      readGuide("agent/fullstack-engineer.md"),
+    ]);
     const ciOnly = flat(sectionOf(admissibility, "## CI-only Test gate"));
     expect(ciOnly).toContain("`CI only: <check name>`");
     expect(ciOnly).toMatch(/Write the test before any production code[^.]*do not run it/);
@@ -438,9 +436,7 @@ describe("focused evidence guidance", () => {
       "A `ci-deferred` Red or Green is not a missing observation: read the test against the code before the fix instead",
     );
     expect(flat(reviewer)).toContain("red-admissibility.md#ci-only-test-gate");
-    for (const card of [backend, frontend]) {
-      expect(flat(card)).toContain("observed RED/GREEN/Refactor results (or `ci-deferred`)");
-    }
+    expect(flat(worker)).toContain("observed RED/GREEN/Refactor results (or `ci-deferred`)");
     expect(ciOnly).toMatch(
       /report label, not a gate status: no gate counts it, and it is not a pass/,
     );

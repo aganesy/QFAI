@@ -3,7 +3,6 @@ name: sdd-gate
 owner: qfai-sdd
 purpose: "Validate each affected business flow on its own and report its result."
 requires: [common-gate-run]
-roles: []
 ---
 
 # sdd-gate

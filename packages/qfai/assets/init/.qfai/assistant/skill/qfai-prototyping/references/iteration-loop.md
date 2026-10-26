@@ -17,7 +17,7 @@
 .qfai/prototype/iter-NN/UI-NNNN/<screen>.review.json
 ```
 
-The orchestrator writes the reviewer's payload for each `(UI contract, screen)` pair beside the
+The session agent writes the reviewer's payload for each `(UI contract, screen)` pair beside the
 per-iteration `review.json` summary, from the first iteration on (the payload schema and the aggregation rule are
 in the reviewer references the loop step names). That holds for a single-contract run as much
 as for a multi-contract one. A scoped run writes payloads only for the pairs it
@@ -26,7 +26,7 @@ reviews: its in-scope and render-check screens.
 The reviewer operates Playwright live. A screenshot or HTML snapshot is an
 additional input, taken only when someone needs it.
 
-`progress.md` is one file for the whole run. The orchestrator appends a
+`progress.md` is one file for the whole run. The session agent appends a
 one-line summary at the end of each iteration.
 
 ## When the loop ends

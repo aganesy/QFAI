@@ -33,9 +33,9 @@ type StepDir = {
 
 /**
  * A skill that runs steps: the names its `steps:` lists, the common steps its
- * own body runs in `requires:`, and the roles it declares.
+ * own body runs in `requires:`.
  */
-type Parent = { name: string; rel: string; steps: unknown[]; requires: unknown; roles: unknown };
+type Parent = { name: string; rel: string; steps: unknown[]; requires: unknown };
 
 type Tree = {
   steps: StepDir[];
@@ -72,7 +72,6 @@ export async function validateStepTree(root: string, config: QfaiConfig): Promis
       requiresListIssues(parent.rel, parent.requires, tree),
     ),
     ...orphanIssues(tree),
-    ...parentRolesIssues(tree),
   ];
 }
 
@@ -134,7 +133,6 @@ async function readParents(
         rel,
         steps,
         requires: mapping?.requires ?? [],
-        roles: mapping?.roles,
       });
     }
   }
@@ -329,36 +327,4 @@ function orphanIssues(tree: Tree): Issue[] {
         "orphan",
       ),
     );
-}
-
-function stringList(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === "string")
-    : [];
-}
-
-/**
- * A skill invoked by name runs its steps and dispatches their agents, so its
- * `roles:` holds `orchestrator` and every role its listed steps declare.
- */
-function parentRolesIssues(tree: Tree): Issue[] {
-  const rolesOf = new Map(
-    tree.steps.map((step) => [step.dir, stringList(step.frontmatter?.roles)] as const),
-  );
-  return [...tree.parents.values()].flatMap((parent) => {
-    const declared = new Set(stringList(parent.roles));
-    const needed = new Set([
-      "orchestrator",
-      ...stringList(parent.steps).flatMap((name) => rolesOf.get(name) ?? []),
-    ]);
-    const missing = [...needed].filter((role) => !declared.has(role)).sort();
-    if (missing.length === 0) return [];
-    return [
-      finding(
-        `${parent.rel} roles: omits ${missing.join(", ")}. A skill run by name dispatches the agents of every step it lists, so it declares orchestrator and each of their roles.`,
-        parent.rel,
-        "parentRolesMissing",
-      ),
-    ];
-  });
 }

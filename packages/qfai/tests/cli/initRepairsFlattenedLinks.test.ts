@@ -92,13 +92,13 @@ describe("qfai init repairs a link a checkout flattened", () => {
   });
 
   it("preserves a file whose content is not the link target", async () => {
-    // A team that customised `.claude/agents/qa-gatekeeper.md`, or replaced a
+    // A team that customised `.claude/agents/implementation-reviewer.md`, or replaced a
     // generated skill link with a real directory, has content of its own there.
     // Auto-repair is scoped to the flattened-link signature — the target path
     // and nothing else — and `--force` stays the documented overwrite path.
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const customised = path.join(root, ".claude", "agents", "qa-gatekeeper.md");
+      const customised = path.join(root, ".claude", "agents", "implementation-reviewer.md");
       await rm(customised, { force: true });
       await writeFile(customised, "# our own gatekeeper\n", "utf-8");
 
@@ -163,7 +163,7 @@ describe("qfai init repairs a link a checkout flattened", () => {
   it("still overwrites a customised wrapper under --force", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const customised = path.join(root, ".claude", "agents", "qa-gatekeeper.md");
+      const customised = path.join(root, ".claude", "agents", "implementation-reviewer.md");
       await rm(customised, { force: true });
       await writeFile(customised, "# our own gatekeeper\n", "utf-8");
 

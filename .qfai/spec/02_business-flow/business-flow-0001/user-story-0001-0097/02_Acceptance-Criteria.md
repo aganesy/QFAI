@@ -8,14 +8,13 @@ Feature: Prototyping delegation scope
   Scenario: Each prototyping role has a documented owner
     Given a prototyping cycle delegates work
     When the skill documents role ownership
-    Then evaluator and reviewer role ownership is documented.
-    And the skill spells out which roles own implementation, evaluation scoring, and build.
+    Then the delegation map names the session agent as the owner of implementation and build and `product-surface-reviewer` as the owner of evaluation scoring
     And the delegation map has no fixed capture identity.
 
   # AC-0001-0097-02
-  Scenario: Generator and reviewer identities remain distinct
+  Scenario: The session generates and an independent reviewer scores
     Given the delegation map assigns generation and review in a prototyping cycle
-    When the cycle dispatches those roles
-    Then the generator and reviewer are distinct sub-agent identities
-    And assigning the same identity to both roles raises a delegation finding
+    When the cycle dispatches the review
+    Then the session agent generates and `product-surface-reviewer` scores from a fresh, black-box brief
+    And a map that gives review scoring to the session agent, or generation to the reviewer, raises a delegation finding
 ```

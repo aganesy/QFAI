@@ -3,7 +3,6 @@ name: common-gate-run
 owner: common
 purpose: "Run one gate — a qfai validate profile or a project command from the Standard commands — and record its command, result and revision, so a gate that did not run is never read as a pass."
 requires: []
-roles: []
 ---
 
 # common-gate-run

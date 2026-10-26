@@ -6,9 +6,6 @@
  * workflow core accepts from a result is not this module's.
  */
 import { describe, expect, it } from "vitest";
-
-import { defaultConfig } from "../../../src/core/config.js";
-import { readEffectiveRouting, stepReview } from "../../../src/core/validators/agentDefinition.js";
 import {
   flat,
   frontMatterOf,
@@ -59,20 +56,14 @@ async function stepText(name: string): Promise<string> {
 describe("the steps the routes add to qfai-implement", () => {
   // QFAI:AC-0001-0200-02
   // QFAI:EX-0001-0200-02
-  it("lists each one, owned by qfai-implement, with its review profile routed", async () => {
+  it("lists each one, owned by qfai-implement", async () => {
     const owned = await skillSteps("qfai-implement");
     const skill = await readShipped("skill/qfai-implement/SKILL.md");
-    const effective = await readEffectiveRouting(defaultConfig);
-    for (const [name, profile] of Object.entries(ROUTE_STEPS)) {
+    for (const name of Object.keys(ROUTE_STEPS)) {
       expect(owned, name).toContain(name);
       expect(rowOf(skill, `| \`${name}\``), name).toContain(`.qfai/assistant/step/${name}/STEP.md`);
       const front = frontMatterOf(await stepText(name));
-      expect([front.name, front.owner, front["routing-profile"]], name).toEqual([
-        name,
-        "qfai-implement",
-        profile,
-      ]);
-      expect(stepReview(effective, name).profile, name).toBe(profile);
+      expect([front.name, front.owner], name).toEqual([name, "qfai-implement"]);
     }
   });
 
@@ -301,21 +292,11 @@ async function procedureText(): Promise<string> {
 describe("the route-only procedure writer", () => {
   // QFAI:AC-0001-0224-13
   // QFAI:EX-0001-0224-49
-  it("has a real doc-steward owner while named business-flow implementation skips it", async () => {
+  it("belongs to qfai-implement while named business-flow implementation skips it", async () => {
     expect(await skillSteps("qfai-implement")).toContain("implement-procedure");
     const text = await procedureText();
     const front = frontMatterOf(text);
-    expect([front.name, front.owner, front["routing-profile"], front.roles]).toEqual([
-      "implement-procedure",
-      "qfai-implement",
-      "default",
-      ["doc-steward"],
-    ]);
-    const effective = await readEffectiveRouting(defaultConfig);
-    expect(effective.routing?.has("implement-procedure")).toBe(true);
-    expect(effective.routing?.get("implement-procedure")?.agents.get("doc-steward")).toBe(
-      "required",
-    );
+    expect([front.name, front.owner]).toEqual(["implement-procedure", "qfai-implement"]);
     const skill = await readShipped("skill/qfai-implement/SKILL.md");
     const routeOnly = flat(sectionOf(skill, "## Route-only procedure authoring"));
     expect(routeOnly).toMatch(/(?:only|when).*plan.*names.*implement-procedure/iu);

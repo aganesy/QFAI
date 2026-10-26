@@ -1,6 +1,6 @@
 # Generator Iteration Prompt
 
-Injected into the product-experience-architect sub-agent each iteration.
+Read by the session agent, which generates, at the start of each iteration.
 Brand identity is locked by root `DESIGN.md`. Iterate on **information
 architecture**, **navigation flow**, and **usability** — not visual
 identity.

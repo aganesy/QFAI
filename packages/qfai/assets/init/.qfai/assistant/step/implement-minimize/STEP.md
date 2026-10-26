@@ -3,11 +3,6 @@ name: implement-minimize
 owner: qfai-implement
 purpose: "Shrink the input that makes a program crash to the smallest one that still crashes the same way, without changing any tracked file."
 requires: [common-gate-run]
-roles:
-  - devops-ci-engineer
-  - frontend-engineer
-  - backend-engineer
-routing-profile: default
 ---
 
 # implement-minimize

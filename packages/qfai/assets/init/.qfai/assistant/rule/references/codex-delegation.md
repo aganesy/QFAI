@@ -4,9 +4,9 @@ Read before the first `spawn_agent` call when the host is Codex.
 
 ## Codex delegation notes
 
-A sub-agent should cost the orchestrator one brief and one final answer. A call
+A sub-agent should cost the session agent one brief and one final answer. A call
 that only checks progress, such as a short wait, a sleep or an agent listing,
-is one more model call, so the orchestrator makes none.
+is one more model call, so the session agent makes none.
 
 - **Self-contained brief.** Call `spawn_agent` with `fork_turns: "none"` and a
   `message` that holds everything the sub-agent needs: the task, the files to
@@ -17,8 +17,8 @@ is one more model call, so the orchestrator makes none.
 - **One final answer, no interim messages.** The brief tells the sub-agent to
   send no `send_message` updates and to return its result once, as its final
   answer. Where `wait_agent` takes no `targets`, every queued message ends the
-  orchestrator's wait early.
-- **Long wait.** With no work of its own left, the orchestrator calls
+  session agent's wait early.
+- **Long wait.** With no work of its own left, the session agent calls
   `wait_agent` with a `timeout_ms` of minutes within the maximum the tool states,
   such as `600000`, not 10 to 60 seconds. A wait that times out is
   followed by another long wait.

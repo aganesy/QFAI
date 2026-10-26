@@ -61,8 +61,7 @@ describe("architectural rules have one story-tree home", () => {
       for (const card of [
         "architecture-reviewer",
         "implementation-reviewer",
-        "backend-engineer",
-        "frontend-engineer",
+        "fullstack-engineer",
       ]) {
         expect(await read(`agent/${card}.md`), card).toContain(LAYERS);
       }

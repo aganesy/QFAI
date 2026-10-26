@@ -187,13 +187,13 @@ describe("qfai init generates the Codex agent profiles", () => {
 
   it("leaves an existing profile alone, and --force regenerates the stale one", async () => {
     const root = await initProject();
-    const target = codexAgentPath(root, "qa-gatekeeper");
+    const target = codexAgentPath(root, "implementation-reviewer");
     const generated = await readFile(target, "utf-8");
 
     // A profile written by an older release: `init` alone must not clobber it,
     // because a generated wrapper and a project's own edit are the same bytes
     // to the filesystem.
-    await writeFile(target, 'name = "qa-gatekeeper"\ndescription = "stale"\n', "utf-8");
+    await writeFile(target, 'name = "implementation-reviewer"\ndescription = "stale"\n', "utf-8");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     expect(await readFile(target, "utf-8")).toContain('description = "stale"');
 
@@ -257,11 +257,15 @@ describe("qfai init generates the Codex agent profiles", () => {
   // rewritten — the one command for repairing a checkout left a mixed tree.
   it("skips a destination occupied by a directory instead of aborting the run", async () => {
     const root = await initProject();
-    const target = codexAgentPath(root, "doc-steward");
-    const neighbour = codexAgentPath(root, "qa-gatekeeper");
+    const target = codexAgentPath(root, "fullstack-engineer");
+    const neighbour = codexAgentPath(root, "implementation-reviewer");
     await rm(target, { force: true });
     await mkdir(target, { recursive: true });
-    await writeFile(neighbour, 'name = "qa-gatekeeper"\ndescription = "stale"\n', "utf-8");
+    await writeFile(
+      neighbour,
+      'name = "implementation-reviewer"\ndescription = "stale"\n',
+      "utf-8",
+    );
 
     const output = await captureStdout(async () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
@@ -281,15 +285,19 @@ describe("qfai init generates the Codex agent profiles", () => {
       return;
     }
     const root = await initProject();
-    const target = codexAgentPath(root, "doc-steward");
-    const neighbour = codexAgentPath(root, "qa-gatekeeper");
+    const target = codexAgentPath(root, "fullstack-engineer");
+    const neighbour = codexAgentPath(root, "implementation-reviewer");
     await rm(target, { force: true });
     const made = spawnSync("mkfifo", [target]);
     if (made.status !== 0) {
       // No `mkfifo` here — nothing for this case to assert.
       return;
     }
-    await writeFile(neighbour, 'name = "qa-gatekeeper"\ndescription = "stale"\n', "utf-8");
+    await writeFile(
+      neighbour,
+      'name = "implementation-reviewer"\ndescription = "stale"\n',
+      "utf-8",
+    );
 
     const output = await captureStdout(async () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
@@ -350,12 +358,12 @@ describe("qfai init generates the Codex agent profiles", () => {
   // destination made the preview describe a state the real run replaces.
   it("--force --dry-run previews the profile the real --force writes", async () => {
     const root = await initProject();
-    const target = codexAgentPath(root, "qa-gatekeeper");
+    const target = codexAgentPath(root, "implementation-reviewer");
     const generated = await readFile(target, "utf-8");
 
     // A stale copy from an older release, missing the heading the renderer
     // needs. `--force` replaces it before the profile is rendered.
-    const canonical = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
+    const canonical = path.join(root, ".qfai", "assistant", "agent", "implementation-reviewer.md");
     const stale = (await readFile(canonical, "utf-8")).replace(/^## Mission\b/m, "## Purpose");
     await writeFile(canonical, stale, "utf-8");
 
@@ -377,7 +385,7 @@ describe("qfai init generates the Codex agent profiles", () => {
     const outside = path.join(root, "outside-the-wrapper-tree.txt");
     await writeFile(outside, "untouched\n", "utf-8");
 
-    const target = codexAgentPath(root, "qa-gatekeeper");
+    const target = codexAgentPath(root, "implementation-reviewer");
     const generated = await readFile(target, "utf-8");
     await rm(target, { force: true });
     await symlink(outside, target, "file");
@@ -576,16 +584,8 @@ describe("the TOML renderer", () => {
 // here (or the reverse) fails this.
 describe("this repository's own Codex profiles", () => {
   it("preserves first-rung scope and repository-first reuse across all agent copies", async () => {
-    const firstRungRoles = [
-      "architecture-reviewer",
-      "delivery-planner",
-      "discovery-analyst",
-      "product-experience-architect",
-      "orchestrator",
-      "requirements-analyst",
-      "solution-architect",
-    ];
-    const reuseRoles = ["backend-engineer", "frontend-engineer", "devops-ci-engineer"];
+    const firstRungRoles = ["architecture-reviewer"];
+    const reuseRoles = ["fullstack-engineer"];
     const rule = await readFile(
       path.join(repoRoot, ".agents", "rules", "minimal-implementation.md"),
       "utf-8",

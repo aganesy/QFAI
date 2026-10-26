@@ -216,13 +216,13 @@ describe("the integration surface is checked for links that did not survive chec
   it("leaves a project's own agent definition alone", async () => {
     // `endsWith('.md')` turned a normal file into an error in every profile.
     await withProject(async (root) => {
-      await seedCanonical(root, [], ["qa-gatekeeper"]);
+      await seedCanonical(root, [], ["implementation-reviewer"]);
       const agents = path.join(root, ".claude", "agents");
       await mkdir(agents, { recursive: true });
       await writeFile(path.join(agents, "our-own-reviewer.md"), "# ours\n", "utf-8");
       // No `README.md` here: that is one of the markers proving `qfai init`
       // ran, and this fixture is a project that has not run it — otherwise the
-      // absent `qa-gatekeeper` wrapper is a finding of its own.
+      // absent `implementation-reviewer` wrapper is a finding of its own.
 
       expect(await validateIntegrationSurface(root)).toEqual([]);
     });
@@ -259,7 +259,7 @@ describe("the integration surface is checked for links that did not survive chec
   it("reports every broken wrapper, with the rest as relatedFiles", async () => {
     await withProject(async (root) => {
       const skills = ["qfai-implement", "qfai-sdd"];
-      await seedCanonical(root, skills, ["qa-gatekeeper"]);
+      await seedCanonical(root, skills, ["implementation-reviewer"]);
       for (const dir of SKILL_INTEGRATION_DIRS) {
         const absolute = path.join(root, ...dir.split("/"));
         await mkdir(absolute, { recursive: true });
@@ -274,8 +274,8 @@ describe("the integration surface is checked for links that did not survive chec
         const absolute = path.join(root, ...dir.split("/"));
         await mkdir(absolute, { recursive: true });
         await writeFile(
-          path.join(absolute, `qa-gatekeeper${suffix}`),
-          agentTarget(dir, "qa-gatekeeper"),
+          path.join(absolute, `implementation-reviewer${suffix}`),
+          agentTarget(dir, "implementation-reviewer"),
           "utf-8",
         );
       }
@@ -378,7 +378,7 @@ describe("ownership is the roster init ships, not the canonical tree", () => {
 
   it("ignores a project-owned agent published by hand", async () => {
     await withProject(async (root) => {
-      await seedCanonical(root, [], ["qa-gatekeeper", "our-reviewer"]);
+      await seedCanonical(root, [], ["implementation-reviewer", "our-reviewer"]);
       const agents = path.join(root, ".claude", "agents");
       await mkdir(agents, { recursive: true });
       await writeFile(path.join(agents, "our-reviewer.md"), "# ours\n", "utf-8");
@@ -491,8 +491,14 @@ describe("a wrapper has to resolve to the right kind of thing", () => {
     // it at all.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, [], ["qa-gatekeeper"]);
-      const canonical = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
+      await seedCanonical(root, [], ["implementation-reviewer"]);
+      const canonical = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "agent",
+        "implementation-reviewer.md",
+      );
       await rm(canonical, { force: true });
       await mkdir(canonical, { recursive: true });
       // Wired after the swap, and as a directory link, so the link resolves on
@@ -502,7 +508,7 @@ describe("a wrapper has to resolve to the right kind of thing", () => {
         await mkdir(dirAbsolute, { recursive: true });
         await symlink(
           path.relative(dirAbsolute, canonical),
-          path.join(dirAbsolute, `qa-gatekeeper${suffix}`),
+          path.join(dirAbsolute, `implementation-reviewer${suffix}`),
           "dir",
         );
       }
@@ -898,15 +904,21 @@ describe("the canonical itself has to be in the project", () => {
     // this project does not own.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, [], ["qa-gatekeeper"]);
-      await wireAll(root, [], ["qa-gatekeeper"]);
+      await seedCanonical(root, [], ["implementation-reviewer"]);
+      await wireAll(root, [], ["implementation-reviewer"]);
       const outside = path.join(root, "..", `${path.basename(root)}-theirs`);
       await mkdir(outside, { recursive: true });
-      await writeFile(path.join(outside, "qa-gatekeeper.md"), "# theirs\n", "utf-8");
-      const canonical = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
+      await writeFile(path.join(outside, "implementation-reviewer.md"), "# theirs\n", "utf-8");
+      const canonical = path.join(
+        root,
+        ".qfai",
+        "assistant",
+        "agent",
+        "implementation-reviewer.md",
+      );
       try {
         await rm(canonical, { force: true });
-        await symlink(path.join(outside, "qa-gatekeeper.md"), canonical, "file");
+        await symlink(path.join(outside, "implementation-reviewer.md"), canonical, "file");
 
         const found = await finding(root);
         // The symlink rule reaches it first and says both things: init writes
@@ -1197,13 +1209,13 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       // same pathname, so the run ends under every profile that routes agents.
       await withProject(async (root) => {
         if (!(await canCreateSymlink(root))) return;
-        await seedCanonical(root, [], ["completion-reviewer"]);
-        await wireAll(root, [], ["completion-reviewer"]);
-        const doc = path.join(root, ".qfai", "assistant", "agent", "completion-reviewer.md");
+        await seedCanonical(root, [], ["implementation-reviewer"]);
+        await wireAll(root, [], ["implementation-reviewer"]);
+        const doc = path.join(root, ".qfai", "assistant", "agent", "implementation-reviewer.md");
         await chmod(doc, 0o000);
         try {
           const report = await inspectIntegrationSurface(root);
-          expect(report.unwalkable).toContain(".qfai/assistant/agent/completion-reviewer.md");
+          expect(report.unwalkable).toContain(".qfai/assistant/agent/implementation-reviewer.md");
         } finally {
           await chmod(doc, 0o644);
         }
@@ -1351,12 +1363,14 @@ describe("a broken link on the way to a surface is not an absent surface", () =>
     // "not taken yet" swallowed a whole surface the assistant cannot load.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, ["qfai-implement"], ["qa-gatekeeper"]);
-      await wireAll(root, ["qfai-implement"], ["qa-gatekeeper"]);
+      await seedCanonical(root, ["qfai-implement"], ["implementation-reviewer"]);
+      await wireAll(root, ["qfai-implement"], ["implementation-reviewer"]);
       // The agent wrappers go, and the canonical directory they named becomes
       // a link to nothing. The skill wrappers stay, so init is still proven.
       for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
-        await rm(path.join(root, ...dir.split("/"), "qa-gatekeeper" + suffix), { force: true });
+        await rm(path.join(root, ...dir.split("/"), "implementation-reviewer" + suffix), {
+          force: true,
+        });
       }
       const agentsDir = path.join(root, ".qfai", "assistant", "agent");
       await rm(agentsDir, { recursive: true, force: true });
@@ -1589,9 +1603,12 @@ describe("a target can resolve and still be unusable", () => {
     if (process.geteuid?.() === 0) return;
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root, [], ["qa-gatekeeper"]);
-      await wireAll(root, [], ["qa-gatekeeper"]);
-      await chmod(path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md"), 0o000);
+      await seedCanonical(root, [], ["implementation-reviewer"]);
+      await wireAll(root, [], ["implementation-reviewer"]);
+      await chmod(
+        path.join(root, ".qfai", "assistant", "agent", "implementation-reviewer.md"),
+        0o000,
+      );
 
       const found = await finding(root);
       expect(found?.message).toContain("unreadable");

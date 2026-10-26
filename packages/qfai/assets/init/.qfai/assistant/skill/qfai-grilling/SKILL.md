@@ -26,7 +26,7 @@ where its stage's gate reads it.
 
 **The invoking stage picks the session.** A stage whose work is the
 interview holds a user session; any other holds a delegated one, where a griller
-interviews the authors and only a critical decision reaches the user, and only
+interviews the session agent and only a critical decision reaches the user, and only
 for a decision the repository cannot settle (`.agents/rules/grilling.md` § When
 a session is held). Without one, no griller starts. A stage that says nothing
 holds a delegated session where one is held. Read
@@ -298,16 +298,15 @@ session, to whoever is answering it.
 
 Who that is depends on the mode. In a session with a user, it is the user, and
 the agent they are talking to is the one that asks. In a session between agents
-there is no user to reach, so the griller puts the round to the authors and the
-orchestrator holds both. That is a different answerer, not a delegated question:
-nothing hands the asking to a third agent, and the orchestrator still answers
-nothing itself.
+there is no user to reach, so the griller puts the round to the session agent,
+the one author of the draft. That is a different answerer, not a delegated
+question: nothing hands the asking to a third agent.
 
 ### Rounds between agents
 
-Read `references/delegated-session.md` when a griller puts the round to authors
-instead of a user. It holds how a round with several authors is held, which
-role puts the round, why a fact only the user holds goes to the user, and when
+Read `references/delegated-session.md` when a griller puts the round to the session agent
+instead of a user. It holds how the round is held, which
+agent puts the round, why a fact only the user holds goes to the user, and when
 the griller's recommendation settles a decision. A session with a user does not
 need it.
 
@@ -365,7 +364,7 @@ rather than an entry added to the prototype.
 
 The buckets are the method, not a tuning surface. Moving a frontier decision to
 `auto-decide` is the agent answering its own question without the rounds. A
-delegated session's adoption is not that: the griller interviewed the authors
+delegated session's adoption is not that: the griller interviewed the session agent
 first, and the record carries why.
 
 ## Related

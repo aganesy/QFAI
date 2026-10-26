@@ -84,7 +84,7 @@ describe("--force regenerates the standard asset trees", () => {
     // The retired manifest is adopter content. Init does not create or update it.
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const agent = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
+      const agent = path.join(root, ".qfai", "assistant", "agent", "implementation-reviewer.md");
       const manifest = path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml");
       await writeFile(agent, "# stale" + NL, "utf-8");
       await mkdir(path.dirname(manifest), { recursive: true });
@@ -100,7 +100,7 @@ describe("--force regenerates the standard asset trees", () => {
   it("leaves them alone without --force", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const agent = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
+      const agent = path.join(root, ".qfai", "assistant", "agent", "implementation-reviewer.md");
       await writeFile(agent, "# ours\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });

@@ -14,13 +14,6 @@ Feature: Move policy and catalog content into the merged files once
     And no paragraph appears twice in a destination
     And the consumed source files are gone
 
-  # AC-0004-0006-02
-  Scenario: A manifest entry that equals a shipped default is not carried, and a changed entry is listed
-    Given a project whose agent manifests hold entries changed from the package default and entries equal to it
-    When step 3 runs
-    Then qfai.config.yaml holds an override for each changed entry only
-    And each changed routing entry is listed under For a person with a warning that a copied 1.x entry hides roles the 2.x skills declare
-
   # AC-0004-0006-03
   Scenario: An overlay moves beside its rule, or is retired for a person
     Given `.local.md` overlays under the constitution and catalog directories, one whose rule is under `rule/` and one whose rule is not

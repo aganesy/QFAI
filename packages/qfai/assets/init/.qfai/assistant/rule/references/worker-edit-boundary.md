@@ -15,7 +15,7 @@ paths and a reviewable diff that can be prepared within the worker's permitted
 area. Do not bypass the refusal through a shell, script or another tool.
 This does not forbid shell authoring where the host already permits it.
 
-The orchestrator checks the diff against the current files in its own permitted
+The session agent checks the diff against the current files in its own permitted
 checkout before applying it. If that edit is refused too, leave the application
 pending and continue only independent work. Follow the existing worktree or
 shared-index mode in `.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory`
@@ -25,8 +25,8 @@ when assigning writers and integrating their paths.
 
 ```text
 Task title: <short>
-Role: <sub-agent role>
-Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # review work orders only
+Agent: <card name>
+Review series: <reviewed artifact> + <reviewer card> + <replacement ordinal>   # review work orders only
 Goal: <what to decide/produce>
 Checkout: <absolute checkout assigned to this task by the host>
 Write paths: <exact owned paths, or none for a read-only task>

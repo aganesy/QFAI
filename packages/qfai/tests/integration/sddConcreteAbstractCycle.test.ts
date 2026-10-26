@@ -25,7 +25,7 @@ const CONTRACT_STEP = "step/sdd-contract/STEP.md";
 const CYCLE_CITATION = ".qfai/assistant/skill/qfai-sdd/references/concrete-abstract-cycle.md";
 const TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
 const DECISIONS_TEMPLATE = "skill/qfai-sdd/templates/spec/decisions.md";
-const FINDER_CARD = "agent/test-design-analyst.md";
+const FINDER_CARD = "agent/requirements-reviewer.md";
 
 async function section(file: string, heading: string): Promise<string> {
   const text = sectionOf(await readShipped(file), heading);

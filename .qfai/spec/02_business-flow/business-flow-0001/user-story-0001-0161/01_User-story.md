@@ -2,4 +2,4 @@
 
 ## User Story
 
-As a QFAI maintainer, I want each of the 19 agents defined once in its card's frontmatter, with routing and review-profile defaults built into the package and whole-entry project overrides in `qfai.config.yaml`, so that agent delegation is standardized without a second copy of an agent definition or default.
+As a QFAI maintainer, I want five agents, one full-stack worker and four reviewers, each defined once in its card's frontmatter, so that delegation is split by context and no agent is defined by a technical domain.

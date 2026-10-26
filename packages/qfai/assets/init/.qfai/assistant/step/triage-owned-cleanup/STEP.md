@@ -3,8 +3,6 @@ name: triage-owned-cleanup
 owner: qfai-triage
 purpose: "Remove explicitly authorized, current-task temporary directories inside this repository, then verify their absence without changing tracked files or the index."
 requires: []
-roles: [devops-ci-engineer]
-routing-profile: default
 ---
 
 # triage-owned-cleanup

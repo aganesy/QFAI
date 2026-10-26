@@ -12,7 +12,7 @@ const notesCitation = ".qfai/assistant/rule/references/codex-delegation.md";
 /** The Orchestrator Protocol of the delegation baseline, with wrapping undone. */
 async function readProtocol(tree: string): Promise<string> {
   const content = await readFile(path.join(repoRoot, tree, baselinePath), "utf-8");
-  const start = content.indexOf("### Orchestrator Protocol");
+  const start = content.indexOf("### Session Agent Protocol");
   const end = content.indexOf("### Worker edit boundary");
   expect(start).toBeGreaterThanOrEqual(0);
   expect(end).toBeGreaterThan(start);

@@ -1,6 +1,6 @@
 # Shared Skill Delegation Baseline
 
-Skills cite this baseline and add only role, stage or gate overrides.
+Skills cite this baseline and add only stage or gate overrides.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -8,50 +8,67 @@ This section binds every skill and step. A skill or step repeats none of it
 and adds no placeholder for a subsection it does not change. State only an
 override, under the subsection it overrides.
 
-Delegation is optional. The session agent, called the orchestrator below, may
-author any artifact itself. It uses a sub-agent only for work that runs in
-parallel and for a review that someone other than the author should do. The
-griller of a delegated grilling session is such a review: it examines decisions
-it did not author, before the draft rather than after it. A fact lookup a
-grilling session dispatches is parallel work: the session asks the rest of the
-frontier while the lookup runs.
-Whatever the skill, a role is never simulated, and a failed delegation is
+The session agent, the agent the user talks to, does the work itself:
+research, design, the specification, code, tests and documentation. Background
+shared in one context is not lost in a hand-off, so the session agent starts a
+sub-agent for exactly two reasons:
+
+| Reason                   | What it covers                                                                                                                                               | Agent                                                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| An independent judgement | A review, the finder of the concrete-abstract cycle, a griller, the prototyping evaluator: work whose value is that its judge did not make what it judges    | The reviewer the plan or the skill names; the finder and a griller on `requirements-reviewer`, a griller on a contract or architecture decision on `architecture-reviewer` |
+| Parallel units           | Two or more story units or read-only lookups that pass the parallel-unit gate of `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md` | `fullstack-engineer`, one per unit                                                                                                                                         |
+
+Nothing else is a reason. Context size is not: the host compacts a long run. A
+technical domain is not, and neither is keeping the session's own context
+small. A host's built-in agents follow the same two reasons. An agent that only
+stands in for a tool the host lacks, and returns that tool's result, is a tool
+call, not a delegation.
+Whatever the skill, an agent is never simulated, and a failed delegation is
 classified by the taxonomy below before any response.
 
-### Orchestrator Protocol
+### Session Agent Protocol
 
-- The orchestrator may author any artifact itself, or give independent parts of
-  the work to sub-agents that run in parallel. It integrates and presents the
-  results.
-- The orchestrator is not required to wait while a sub-agent runs. Where the
+- The session agent authors every artifact itself, starts a sub-agent only for
+  one of the two reasons above, and integrates and presents the results.
+- **No sub-agent inherits the conversation.** Each starts from a
+  self-contained brief: never a forked copy of the session. A host that can
+  only fork the conversation is `unavailable` for an independent judgement.
+- **A judgement brief is black-box.** It holds the fixed revision, the request
+  in the user's own words, the story tree and contracts that bind the work, the
+  written decisions and the remit. It never holds the author's rationale, the
+  options the session weighed, or the session's view of its own work.
+- **A unit brief is complete.** It holds the step files to run, the story-tree
+  IDs, the owned paths (none for a lookup) and the answer's shape. A unit whose
+  brief would have to retell the conversation is not a unit; the session agent
+  does that work itself.
+- The session agent is not required to wait while a sub-agent runs. Where the
   host starts a delegation and returns at once, delivers the finished result
-  later as a message, and lets the orchestrator wait for a result on purpose,
-  the orchestrator carries on with its own work meanwhile and waits only when
-  it has none. A host without all three keeps the orchestrator waiting.
-- That work is planning, preparing the next work order, integrating results
+  later as a message, and lets the session agent wait for a result on purpose,
+  the session agent carries on with its own work meanwhile and waits only when
+  it has none. A host without all three keeps the session agent waiting.
+- That work is planning, preparing the next brief, integrating results
   already returned, and its own part of the task. It never repeats the work it
-  handed out. Starting another delegation needs the independence conditions of
-  `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md`.
+  handed out. Starting another delegation needs the parallel-unit gate.
   Where the stage's ledger or a seam makes an ordering mandatory, carrying on
   does not override it.
 - On Codex, read `.qfai/assistant/rule/references/codex-delegation.md` before delegating.
-- The orchestrator runs every step that starts a finder, griller or reviewer,
+- The session agent runs every step that starts a finder, griller or reviewer,
   and starts those agents itself: `sdd-cycle`, `common-review-cycle`,
   `prototyping-grill`, `prototyping-loop` and any step that holds a
-  delegated grilling session, such as a pre-draft grilling checkpoint. A worker it delegates to gets only steps that start
-  none, and starts no finder, griller or reviewer. A finder is a review
-  someone other than the author has to do; where it cannot be delegated, the
-  failure handling below applies.
+  delegated grilling session, such as a pre-draft grilling checkpoint. A
+  `fullstack-engineer` it delegates to starts no agent of its own. Where a
+  judgement cannot be delegated, the failure handling below applies.
 - A review is done by an agent that did not author what it reviews. The
-  orchestrator never reviews its own work and never approves it for
+  session agent never judges its own work and never approves it for
   convenience.
 - A read-only agent never runs `git checkout` or `git switch` in a worktree it
   shares; it reads other revisions with `git show <rev>:<path>`. Each agent
   writes scratch files only under a path of its own.
-- Give each reviewer a fixed commit. Leave the checkout alone until reviews
-  return. Only read-only fixed-SHA `git show` reviews permit clean switches.
-  Writers, local gates and reviews using live files or checkout-dependent
-  execution must finish first.
+- Give each judge a fixed revision: a commit, or the base commit with the
+  exact diff of the uncommitted work saved where the judge can read it. Leave
+  the checkout alone until reviews return. Only read-only fixed-SHA `git show`
+  reviews permit clean switches. Writers, local gates and reviews using live
+  files or checkout-dependent execution must finish first.
 - A reviewer runs no suite or gate the verify stage runs; it reads their
   results.
 
@@ -62,23 +79,23 @@ Before assigning write paths or handling a refused edit, read
 
 ### Capability Probe (MUST)
 
-1. No delegation attempt is required at the start of a stage. The orchestrator
+1. No delegation attempt is required at the start of a stage. The session agent
    delegates only when it chooses to.
 2. When it does, the real delegation attempt is the capability check. Do not
    gate execution on preflight availability questions or synthetic probe-only
    checks.
 3. If the delegation fails, classify the failure first (see
    `Delegation Failure Taxonomy`), then apply the response for that class.
-   Never simulate a role.
+   Never simulate an agent.
 
 ### Delegation Failure Taxonomy (MUST)
 
 Every delegation failure belongs to exactly one of two classes.
 
-| Class         | Meaning                                                                                                                                                                                                     | Sanctioned response                                                                                             |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `unavailable` | The host has no usable delegation mechanism, the role is unknown, or the failure is a configuration / tooling / quota gap only the user can close — including a limit that waiting cannot clear.            | The orchestrator does the work itself. A review someone other than the author has to do stops the stage instead |
-| `saturated`   | The host can delegate but is momentarily out of budget — `agent thread limit reached`, concurrency cap, queue full, rate limit, busy pool. The identical call would succeed later with no change by anyone. | Bounded wait-and-retry of the identical delegation                                                              |
+| Class         | Meaning                                                                                                                                                                                                     | Sanctioned response                                                                      |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `unavailable` | The host has no usable delegation mechanism, the agent is unknown, or the failure is a configuration / tooling / quota gap only the user can close — including a limit that waiting cannot clear.           | The session agent does the work itself. An independent judgement stops the stage instead |
+| `saturated`   | The host can delegate but is momentarily out of budget — `agent thread limit reached`, concurrency cap, queue full, rate limit, busy pool. The identical call would succeed later with no change by anyone. | Bounded wait-and-retry of the identical delegation                                       |
 
 - Classify from the raw failure reason, and classify `saturated` only when the reason states or plainly implies that the identical call would succeed later **with no change by anyone**: a queue or pool that is currently full, a rate limit with a retry window, a concurrency cap that is momentarily reached, an explicit "try again later".
 - A limit or quota that only a user can lift is `unavailable`, not `saturated` — a configured concurrency cap of 0, a maximum delegation depth, an input-size limit, an exhausted account quota or plan. Waiting cannot clear those, so a retry loop would only delay the response.
@@ -88,40 +105,39 @@ Every delegation failure belongs to exactly one of two classes.
 ### Delegation Failure — `saturated` (Bounded Retry)
 
 - Retry the identical delegation with backoff: 30s, then 60s, then 120s. Attempt cap: 3 retries per delegation.
-- Do not re-scope, re-plan, or re-route the delegation between retries — same role, same task.
+- Do not re-scope, re-plan, or re-route the delegation between retries — same agent, same task.
 - Report on entering the retry loop and on its outcome:
   - `Delegation deferred: <raw reason or concise summary>`
   - `Failure class: saturated`
-  - `Attempted role: <role>`
+  - `Attempted agent: <agent>`
   - `Attempted task: <task title>`
   - `Retry condition: retry after <N> seconds / when a delegation slot frees`
   - `Attempts used: <n>/3`
 
-### Delegation Failure — `unavailable` (The Orchestrator Does The Work)
+### Delegation Failure — `unavailable` (The Session Agent Does The Work)
 
-- The orchestrator does the work itself and reports it as its own, never as the
-  attempted role's.
+- The session agent does the work itself and reports it as its own, never as the
+  attempted agent's.
 - Report all of:
   - `Delegation failure: <raw reason or concise summary>`
   - `Failure class: unavailable | saturated (retry budget exhausted)`
-  - `Attempted role: <role>`
+  - `Attempted agent: <agent>`
   - `Attempted task: <task title>`
-  - `Done by: the orchestrator`
-- A review someone other than the author has to do is the exception. The
-  orchestrator does not do it, and the stage stops under the hard stop below.
+  - `Done by: the session agent`
+- An independent judgement is the exception. The
+  session agent does not do it, and the stage stops under the hard stop below.
 
 ### Delegation Failure (Hard Stop)
 
-Applies when the failed delegation is a review someone other than the author
-has to do, and the class is `unavailable` or
-`saturated (retry budget exhausted)`.
+Applies when the failed delegation is an independent judgement, and the class
+is `unavailable` or `saturated (retry budget exhausted)`.
 
 - Report all of:
   - `Delegation failure: <raw reason or concise summary>`
   - `Failure class: unavailable | saturated (retry budget exhausted)`
-  - `Attempted role: <role>`
+  - `Attempted agent: <agent>`
   - `Attempted task: <task title>`
-  - `Why stopped: this review needs a reviewer that did not author the work.`
+  - `Why stopped: this judgement needs an agent that did not author the work.`
   - `User action needed: <settings or tooling changes required — or "none; wait for a delegation slot to free" when the class is saturated>`
   - `Retry condition: rerun after the review delegation succeeds`
 
@@ -129,7 +145,7 @@ has to do, and the class is `unavailable` or
 
 - A delegated agent stages only the paths it declared as deliverables in its work order: `git add <path> …`.
 - `git add -A`, `git add .` and `git commit -a` are forbidden for delegated agents, in both isolation modes. In degraded / shared-index mode the concurrent agents share one index, so a sweeping stage command commits a sibling agent's in-flight files and misattributes work in the audit trail. Under worktree separation the command still stages whatever else is loose in that agent's own worktree.
-- When the agent's deliverable paths are not known up front, it hands back an unstaged diff and the orchestrator commits — under the same rule. The orchestrator commits one handed-back diff at a time, stages that agent's declared paths only, and is equally forbidden from `git add -A` / `git add .` / `git commit -a` while a parallel stage is in flight. Being the committer does not exempt it.
+- When the agent's deliverable paths are not known up front, it hands back an unstaged diff and the session agent commits — under the same rule. The session agent commits one handed-back diff at a time, stages that agent's declared paths only, and is equally forbidden from `git add -A` / `git add .` / `git commit -a` while a parallel stage is in flight. Being the committer does not exempt it.
 - Isolation requirements for concurrent stages are defined once in `.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory`.
 
 ### Host backstops above the declared shape
@@ -140,12 +156,12 @@ Read `.qfai/assistant/rule/references/host-backstops.md` when you set or read a 
 
 A stage that fans work out to agents in parallel records the fan-out in this table:
 
-| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
-| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
-| 1    | <role>           | <instance id>  | <task>     | <refs>       | <refs>        | PASS/REVISE/PENDING          |
+| Step | Agent (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ----------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1    | <agent>           | <instance id>  | <task>     | <refs>       | <refs>        | PASS/REVISE/PENDING          |
 
 - `Output (refs)` should point to in-file anchors or relative evidence paths.
-- `Agent instance` is a run-stable identifier for the sub-agent that actually performed the step (platform-supplied id where available, otherwise `<role>#<n>` assigned in order of first use). It exists so an author→reviewer collision is detectable after the fact from the evidence alone; the same instance appearing in an authoring step and in a review step over the same artifact is a
+- `Agent instance` is a run-stable identifier for the sub-agent that actually performed the step (platform-supplied id where available, otherwise `<agent>#<n>` assigned in order of first use). It exists so an author→reviewer collision is detectable after the fact from the evidence alone; the same instance appearing in an authoring step and in a review step over the same artifact is a
   reviewer-independence violation.
 - `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while any row is `PENDING`. A skill that allows only `PASS`/`REVISE` would force an agent on that path to either break the schema or mislabel an unrun gate.
 
@@ -168,9 +184,9 @@ review its parent names
 
 An **independent reviewer** is a sub-agent that did **not** author or edit any artifact under review in this run.
 
-- The protected invariant is independence from authorship, not reviewer instance identity. An agent that produced or modified none of the artifacts under review is independent even if it filled another role earlier in the run; an agent that drafted or edited one of them is not independent, however it is routed.
+- The protected invariant is independence from authorship, not reviewer instance identity. An agent that produced or modified none of the artifacts under review is independent even if it filled another role earlier in the run; an agent that drafted or edited one of them is not independent, however it is briefed.
 - Independence is judged per review target, over the whole run — not per phase. Authoring in an earlier phase disqualifies the agent from reviewing that artifact in a later one.
-- Role name alone never establishes independence. Routing dispatches by role; independence is a separate constraint the routed agent must satisfy and attest to.
+- A card alone never establishes independence: independence is a separate constraint the briefed agent must satisfy and attest to.
 - A reviewer that discovers it authored or edited a review target must stop, declare the conflict, and hand the same evidence set to a non-participating reviewer. It must not return `PASS` on an artifact it authored.
 - This definition governs every skill. Skill-local wording (e.g. `qfai-configure`'s "a reviewer who did not modify the config") is an instance of it, not a competing rule.
 
@@ -186,7 +202,7 @@ cannot accept its own output.
 - Test volume ratios, floors and planning estimates are signals, not gates,
   unless the skill explicitly says so.
 - Do not declare DONE until every finding of its one review is fixed or answered, as `.qfai/assistant/rule/review-convergence.md` sets out.
-- An in-scope blocking finding from a routed reviewer prevents DONE until it is fixed or answered; only a behaviour fix is re-reviewed, once.
+- An in-scope blocking finding from a required reviewer prevents DONE until it is fixed or answered; only a behaviour fix is re-reviewed, once.
 - Every reviewer returning `REVISE` must include a concrete fix proposal.
 
 #### A griller's recommendations, and what they disqualify
@@ -214,7 +230,7 @@ What a reviewer may demand is in `.qfai/assistant/rule/references/reviewer-findi
 A blocking review that cannot be delegated because the agent budget is spent is a `saturated` failure, not a licence to skip the gate or to self-review.
 
 - First apply the `saturated` bounded retry. A freed slot is the preferred outcome.
-- If retries are exhausted, a reviewer role MAY be reused sequentially with a cleared context, provided the reviewer did not author or edit any artifact under review in this run. The protected invariant is independence from authorship, not reviewer instance identity.
+- If retries are exhausted, a reviewer card MAY be reused sequentially with a cleared context, provided the reviewer did not author or edit any artifact under review in this run. The protected invariant is independence from authorship, not reviewer instance identity.
 - Record the reuse in the stage report.
 - If even sequential reuse is impossible, hard stop with the review gate recorded as `PENDING` rather than `PASS`. `PENDING` is not `PASS`, and DONE stays blocked.
 - Never record a waived or self-performed review as `PASS`.

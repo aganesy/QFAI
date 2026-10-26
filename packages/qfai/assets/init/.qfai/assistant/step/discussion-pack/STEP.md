@@ -3,8 +3,6 @@ name: discussion-pack
 owner: qfai-discussion
 purpose: "Author the discussion pack from what the interview settled."
 requires: []
-roles: [requirements-analyst, solution-architect, product-experience-architect]
-routing-profile: default
 ---
 
 # discussion-pack

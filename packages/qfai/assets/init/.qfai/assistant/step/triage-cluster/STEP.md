@@ -3,8 +3,6 @@ name: triage-cluster
 owner: qfai-triage
 purpose: "Group automated reports by the signature of their failure, and separate the groups caused by an environment from those caused by the product."
 requires: []
-roles: [devops-ci-engineer, frontend-engineer, backend-engineer]
-routing-profile: default
 ---
 
 # triage-cluster

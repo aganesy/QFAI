@@ -16,21 +16,18 @@ import {
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { isDeepStrictEqual } from "node:util";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import { runInit } from "../helpers/legacyInit.js";
 import { ensureRootGitignoreEntries } from "../../src/core/init/rootGitignore.js";
-import { defaultConfig, routingEntryName } from "../../src/core/config.js";
+import { defaultConfig } from "../../src/core/config.js";
 import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
-import { legacyRoutingEntries } from "../helpers/legacyRouting.js";
 import { expectLinkToCanonicalSkill } from "../helpers/skillLink.js";
 import { atLocation } from "../helpers/reportLocation.js";
-import { defaultRoutingEntries } from "../helpers/shippedAssistant.js";
 import { expectSentence, sentencesOf } from "../helpers/shippedSentences.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -150,13 +147,6 @@ function prepareAllowingPerson(root: string, last: number): Result[] {
     results.push(result);
   }
   return results;
-}
-
-/** The name a routing entry is listed under: its step, or its skill in a 1.x manifest. */
-function entryName(entry: Record<string, unknown>): string {
-  const name = routingEntryName(entry);
-  if (name === undefined) throw new Error("A routing entry names neither a step nor a skill");
-  return name;
 }
 
 /** A property of a value read from a file, or undefined where the value has none. */
@@ -1450,47 +1440,6 @@ describe("BF-0004 acceptance criteria", () => {
     }
   });
 
-  // QFAI:AC-0004-0006-02
-  it("keeps only changed manifest routing entries as configuration overrides and lists them", async () => {
-    const root = await project();
-    const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
-    const defaults = { routing: await defaultRoutingEntries() };
-    const unchanged = defaults.routing[0];
-    const original = defaults.routing[1];
-    if (!unchanged || !original) throw new Error("Routing defaults need two entries");
-    const changed = { ...original, review_profile: "migration-acceptance" };
-    const copied = (await legacyRoutingEntries()).find(
-      (entry) => !defaults.routing.some((candidate) => isDeepStrictEqual(candidate, entry)),
-    );
-    if (!copied) throw new Error("The 1.x manifest needs an entry that differs from every default");
-    const manifest = path.join(root, ".qfai/assistant/manifest");
-    await writeFile(
-      path.join(manifest, "agent-routing.yml"),
-      stringifyYaml({ routing: [unchanged, copied, changed] }),
-    );
-    await writeFile(
-      path.join(manifest, "review-profiles.yml"),
-      await readFile(path.join(defaultsDir, "review-profiles.yml"), "utf8"),
-    );
-    const results = prepareAllowingPerson(root, 3);
-    const config = parseYaml(await readFile(path.join(root, "qfai.config.yaml"), "utf8")) as {
-      routing?: Array<Record<string, unknown>>;
-      reviewProfiles?: Record<string, unknown>;
-    };
-    expect(config.reviewProfiles).toBeUndefined();
-    // Every entry that differs from the default of its name is carried; the one equal to it is not.
-    expect(config.routing).toEqual([copied, changed]);
-    const step3 = results[2];
-    expect(step3?.status).toBe(3);
-    const listed = section(step3?.stdout ?? "", "For a person");
-    const warning = listed.filter((line) => line.includes(entryName(changed)));
-    expect(warning).toHaveLength(1);
-    expect(warning.join("\n")).toMatch(/1\.x/);
-    expect(warning.join("\n")).toMatch(/hides?\b/i);
-    expect(warning.join("\n")).toMatch(/roles?\b/i);
-    expect(listed.filter((line) => line.includes(entryName(copied)))).toHaveLength(1);
-  });
-
   // QFAI:AC-0004-0007-01
   it("records new story, criterion and example IDs in the flow tree and ID map", async () => {
     const ids = journey.map.ids["spec-0001"];
@@ -2606,7 +2555,7 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0012-03
-  it("teaches the routing entries, the E2E annotation, the outline and shared-criterion items and an unfinished test", async () => {
+  it("teaches the E2E annotation, the outline and shared-criterion items and an unfinished test", async () => {
     const guide = await readGuideParts();
     const sentences = sentencesOf(guide);
     const sentenceWith = (...parts: readonly (string | RegExp)[]): boolean =>
@@ -2617,14 +2566,6 @@ describe("BF-0004 acceptance criteria", () => {
       );
 
     const markers: ReadonlyArray<readonly [string, boolean]> = [
-      [
-        "an entry copied from a 1.x routing manifest hides the roles 2.x declares",
-        sentenceWith("routing", "1.x", /\bhides?\b/, /\broles\b/),
-      ],
-      [
-        "step 3 lists each routing entry it keeps",
-        sentenceWith("Step 3", /routing entr/i, "`## For a person`"),
-      ],
       [
         "step 8 leaves a test-case annotation in an E2E file as it is",
         sentenceWith(/test-case annotation/i, "E2E", /\b(?:unchanged|stays|kept|keeps|leaves)\b/),

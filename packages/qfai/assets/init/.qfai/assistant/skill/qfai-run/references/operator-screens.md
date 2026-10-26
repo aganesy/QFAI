@@ -271,7 +271,7 @@ using it, preserve target edits in a permitted commit of only its paths, and
 ensure the whole index and worktree are clean. Unknown dirty files postpone
 the switch; do not stash, reset or delete them to move on. A reviewer using
 live files or checkout-dependent execution must finish. A read-only reviewer
-using only `git show <fixed SHA>:<path>` may continue across a clean orchestrator switch;
+using only `git show <fixed SHA>:<path>` may continue across a clean session-agent switch;
 the reviewer never switches the checkout. Pending gates delegated (CI-only or
 by instruction) use the existing DELEGATED commit allowance only under a user
 instruction or project policy covering that verification commit and its tracked

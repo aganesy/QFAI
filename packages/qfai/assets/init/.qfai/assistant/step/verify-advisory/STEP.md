@@ -3,8 +3,6 @@ name: verify-advisory
 owner: qfai-verify
 purpose: "Prepare the security advisory, the CVE request and the coordinated disclosure for a fixed vulnerability, without publishing any of them."
 requires: []
-roles: [orchestrator, doc-steward]
-routing-profile: default
 ---
 
 # verify-advisory

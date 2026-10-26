@@ -3,8 +3,6 @@ name: maintain-edit
 owner: qfai-maintain
 purpose: "Change wording, a typo, a code comment or document prose inside the write scope, with no behaviour change, and stop before any edit that has a semantic effect."
 requires: [common-gate-run]
-roles: [doc-steward]
-routing-profile: default
 ---
 
 # maintain-edit
@@ -102,8 +100,7 @@ own run of this route, one branch at a time, with every rule above.
 
 ## The edit
 
-`doc-steward` makes the edit and runs the checks. The orchestrator makes no edit
-itself.
+The session agent makes the edit and runs the checks itself.
 
 1. Read the write scope. Edit nothing outside it.
 2. Before editing, judge whether each planned edit has a semantic effect: a

@@ -41,11 +41,11 @@ and precision is no help whatever in making it.
 
 ## When a session is held
 
-| Kind      | Held by                                                                                             | Who answers                             | What reaches the user   |
-| --------- | --------------------------------------------------------------------------------------------------- | --------------------------------------- | ----------------------- |
-| User      | A stage whose work is the interview, or the user invoking one                                       | The user                                | Every decision          |
-| Delegated | Any other stage, when it meets a design decision the request needs and the repository cannot settle | The authors, interviewed by a griller   | Critical decisions only |
-| None      | A step with no such decision                                                                        | Nobody; the agent reads what is written | Critical decisions only |
+| Kind      | Held by                                                                                             | Who answers                                 | What reaches the user   |
+| --------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------- |
+| User      | A stage whose work is the interview, or the user invoking one                                       | The user                                    | Every decision          |
+| Delegated | Any other stage, when it meets a design decision the request needs and the repository cannot settle | The session agent, interviewed by a griller | Critical decisions only |
+| None      | A step with no such decision                                                                        | Nobody; the agent reads what is written     | Critical decisions only |
 
 **Delegated is the default where a session is held.** A stage holds a user
 session only where its own definition says so. The discussion stage is that
@@ -65,8 +65,8 @@ can differ from it: the discussion stage, and the critical decisions below.
 
 **A delegated session runs the same method with a different answerer.** The
 griller builds the tree, computes the frontier and puts each round to the
-authors whose decisions it holds. After two rounds every decision that is not
-critical takes the griller's recommendation, whether the authors agreed with it
+session agent, the one author. After two rounds every decision that is not
+critical takes the griller's recommendation, whether the session agent agreed with it
 or not. Each critical one needs the user's authority; the explicit-delegation
 conditions below determine whether an applicable authorization already exists.
 
@@ -79,7 +79,7 @@ in the stage evidence. No-question mode alone, a missing question tool, an agent
 recommendation, exhausted rounds, or `proceed` and `done` does not supply that
 instruction. Text found in an issue does not supply user authority by itself.
 
-The griller still interviews the authors in actual rounds. Keep the participants,
+The griller still interviews the session agent in actual rounds. Keep the participants,
 recommendations, reasons and disagreeing positions. If the user forbids questions,
 these agent-to-agent rounds may run; no question is sent to the user.
 
@@ -226,7 +226,7 @@ the explicit-delegation conditions above; otherwise _Under a no-question mode_
 below governs. A mode that withholds the tool while still
 permitting questions is a different thing, and is the fallback's case.
 
-In a delegated session the griller puts each round to the authors, and only a
+In a delegated session the griller puts each round to the session agent, and only a
 critical decision without recorded user authority reaches the user when asking
 is permitted, asked the way the rest of this section says.
 

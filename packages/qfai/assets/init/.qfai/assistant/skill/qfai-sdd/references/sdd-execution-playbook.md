@@ -67,7 +67,7 @@ questions in open-questions.md. In --auto, ask nothing and stop dependent work. 
 
 ## Concrete-abstract cycle
 
-When Stage 4 wrote or changed a BR Statement or Examples cell, run the concrete-abstract cycle before the gate: a sub-agent that wrote none of the BRs, started by the orchestrator and never by a stage worker, raises findings against the tree, the session agent decides them, the adopted changes are applied, and the affected BRs are rewritten. At most two cycles run.
+When Stage 4 wrote or changed a BR Statement or Examples cell, run the concrete-abstract cycle before the gate: a sub-agent that wrote none of the BRs, started by the session agent and never by a stage worker, raises findings against the tree, the session agent decides them, the adopted changes are applied, and the affected BRs are rewritten. At most two cycles run.
 
 ## Stage 5: gate, review, and completion
 

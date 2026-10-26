@@ -32,6 +32,5 @@ The skill owns its tool-specific instructions and its cache format. It adds no
 | BR-0017-0015 | HITL gates MUST use risk-based granularity: auto-approve low-risk, gate high-risk only. Per-fetch approval is prohibited. | EX-0001-0183-01, EX-0001-0183-02 |
 | BR-0017-0016 | Security-critical HITL gates MUST NOT be bypassable by --yolo or similar flags. | EX-0001-0183-03 |
 | BR-0017-0017 | Cache key MUST be hash(URL+etag). Both raw and cleaned content MUST be stored. Default staleness threshold is 24 hours, configurable. | EX-0001-0176-04, EX-0001-0176-05, EX-0001-0176-07 |
-| BR-0017-0018 | Research sub-agents MUST use conservative defaults: max_threads=2, max_depth=2. Explicit opt-in required for higher values. | EX-0001-0176-06 |
 | BR-0017-0019 | MCP configuration templates MUST be valid for at least 2 of 3 major CLI agents without modification. | EX-0001-0177-05 |
 | BR-0017-0020 | Configuration MUST document both hosted URL and local npx deployment modes. Local deployment MUST be recommended for sensitive environments. | EX-0001-0177-06 |

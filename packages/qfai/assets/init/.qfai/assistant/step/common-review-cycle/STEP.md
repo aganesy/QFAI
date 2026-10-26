@@ -3,7 +3,6 @@ name: common-review-cycle
 owner: common
 purpose: "Run a review the route or the parent skill calls for: dispatch the independent reviewers once, fix or answer every finding, and report the result."
 requires: []
-roles: []
 ---
 
 # common-review-cycle
@@ -79,7 +78,7 @@ them; it is the procedure that applies them.
    the reviewer reads it against the code before the fix and confirms that
    its assertion fails there
    (`.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#ci-only-test-gate`).
-2. **Dispatch.** The orchestrator sends each reviewer a work order in the
+2. **Dispatch.** The session agent sends each reviewer a work order in the
    shared template, never a stage worker. An agent that authored, edited or
    recommended a decision in the reviewed artifact is not its independent
    reviewer. The session report names its authors, editors and decision
@@ -114,7 +113,7 @@ them; it is the procedure that applies them.
 
 ## Gate
 
-Every routed reviewer responded once, each behaviour fix had its one focused
+Every required reviewer responded once, each behaviour fix had its one focused
 re-review, every finding is fixed or answered, and
 the stage report names each verdict and each answer, or says why the review
 dispatched no reviewer. For a code review skipped as a small literal-only

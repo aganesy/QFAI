@@ -356,13 +356,6 @@ function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: stri
       // Plus the agents tree, which `validateAgentDefinition` opens by
       // pathname: a canonical agent replaced by a directory gives it `EISDIR`
       // and a FIFO blocks it, either way taking the finding down with the run.
-      //
-      // `prototyping` and `saas-package` run `validateAgentDefinition` too,
-      // and since `QFAI-AGENT-019` / `QFAI-AGENT-015` it reaches the skills
-      // tree as well — it reads every routed skill's `SKILL.md` and `readdir`s
-      // the configured skills directory. Listing only the agents tree for them
-      // left a FIFO at a routed `SKILL.md` blocking the run forever with the
-      // `QFAI-LINK-001` that names it already in hand.
       return [skillsRelative, STEP_DIR_REL, AGENTS_RELATIVE];
     case "sdd":
       return [skillsRelative];
@@ -1063,7 +1056,7 @@ async function runUiuxValidators(
     ["mermaid screen flow", () => validateMermaidScreenFlow(root, config)],
     ["UI definition consistency", () => validateUiDefinitionConsistency(root, config)],
     ["research summary", () => validateResearchSummary(root, config)],
-    ["agent definition", () => validateAgentDefinition(root, config)],
+    ["agent definition", () => validateAgentDefinition(root)],
     ["design audit", () => validateDesignAudit(root, config)],
     ["canonical UIX", () => runCanonicalUixValidators(root, config)],
   ];

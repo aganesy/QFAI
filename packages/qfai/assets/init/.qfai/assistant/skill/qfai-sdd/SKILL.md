@@ -6,19 +6,6 @@ argument-hint: "[<BF-ID-or-name>] [--contract <contract-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 steps: [sdd-triage, sdd-flow, sdd-story, sdd-contract, common-design-md, sdd-cycle, sdd-gate]
 requires: [common-review-cycle]
-roles:
-  [
-    orchestrator,
-    delivery-planner,
-    requirements-analyst,
-    solution-architect,
-    product-experience-architect,
-    test-design-analyst,
-    qa-strategist,
-    architecture-reviewer,
-    requirements-reviewer,
-    product-surface-reviewer,
-  ]
 mode: approval-gated
 ---
 

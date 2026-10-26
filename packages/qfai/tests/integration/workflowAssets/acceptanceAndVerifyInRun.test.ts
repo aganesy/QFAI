@@ -7,10 +7,6 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
-
-import { parseAgentFrontmatter } from "../../../src/core/agentFrontmatter.js";
-import { defaultConfig } from "../../../src/core/config.js";
-import { readEffectiveRouting, stepReview } from "../../../src/core/validators/agentDefinition.js";
 import {
   SHIPPED_ASSISTANT,
   flat,
@@ -23,7 +19,6 @@ import {
 const OPERATING = "rule/shared-skill-operating-baseline.md";
 const VERIFY_SKILL = "skill/qfai-verify/SKILL.md";
 const VERIFY_CONTEXT = "step/verify-context/STEP.md";
-const AGENT_SELECTION = "rule/agent-selection.md";
 
 /** Every file `/qfai-verify` reads as text: its skill directory and its steps. */
 async function verifyAssets(): Promise<string[]> {
@@ -101,56 +96,6 @@ describe("qfai-verify loads its inputs from the shipped assistant tree", () => {
     expect(await readFile(contextLoad, "utf-8")).toContain(".qfai/assistant/rule/constitution.md");
     expect(shippedExists("rule/constitution.md")).toBe(true);
     expect(shippedExists("constitution")).toBe(false);
-  });
-
-  // QFAI:AC-0001-0159-03
-  // QFAI:EX-0001-0159-04
-  it("takes routing and review profiles from the package defaults with the overrides applied, and an agent's entry from its card", async () => {
-    expect(await section(VERIFY_CONTEXT, "## Delegation")).toContain(
-      "Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.",
-    );
-    const selection = flat(await readShipped(AGENT_SELECTION));
-    expect(selection).toContain(
-      "A `qfai.config.yaml` `routing:` or `reviewProfiles:` entry replaces the matching default entry as a whole; a new key adds an entry.",
-    );
-    expect(selection).toContain("Do not keep another copy of its definition in a routing file.");
-
-    const defaults = await readEffectiveRouting(defaultConfig);
-    const overridden = await readEffectiveRouting({
-      routing: [
-        {
-          step: "verify-context",
-          phases: [{ id: "plan", mandatory_agents: ["qa-strategist"] }],
-        },
-      ],
-    });
-    expect(stepReview(defaults, "verify-context").requiredAgents).toEqual([
-      "delivery-planner",
-      "qa-strategist",
-    ]);
-    expect(stepReview(overridden, "verify-context").requiredAgents).toEqual(["qa-strategist"]);
-    const names = [...(defaults.routing?.keys() ?? [])];
-    expect(names.length).toBeGreaterThan(1);
-    for (const name of names.filter((entry) => entry !== "verify-context")) {
-      expect(stepReview(overridden, name), name).toEqual(stepReview(defaults, name));
-    }
-    expect([...(overridden.profiles?.keys() ?? [])]).toEqual([
-      ...(defaults.profiles?.keys() ?? []),
-    ]);
-
-    const card = parseAgentFrontmatter(
-      await readFile(path.join(SHIPPED_ASSISTANT, "agent", "qa-strategist.md"), "utf-8"),
-    );
-    if (!card.ok) throw new Error(card.error);
-    expect(["worker", "reviewer"]).toContain(card.frontmatter.kind);
-    expect(card.frontmatter.owned_artifacts.length).toBeGreaterThan(0);
-    expect(card.frontmatter.tool_profile).not.toBe("");
-    expect(card.frontmatter.permission_profile).not.toBe("");
-    expect(card.frontmatter.specialization_tags.length).toBeGreaterThan(0);
-    const assistantFiles = await readdir(SHIPPED_ASSISTANT, { recursive: true });
-    expect(assistantFiles.filter((name) => path.basename(name) === "agent-catalog.yml")).toEqual(
-      [],
-    );
   });
 });
 
@@ -357,5 +302,38 @@ describe("the run report recipe in the human report", () => {
     expect(coverage).toMatch(
       /layer recorded UNRUN here is UNRUN for the gate that covers it, under `## Verdict` and `## A missing environment`; this recipe changes no gate status/u,
     );
+  });
+});
+
+describe("verify reads an agent's entry from its card", () => {
+  // QFAI:EX-0001-0159-04
+  it("reads the cards under the agent tree, and the card's frontmatter is the agent's entry", async () => {
+    expect(flat(await readShipped(VERIFY_CONTEXT))).toContain(
+      "The rules this step cites, the cards under `.qfai/assistant/agent/`",
+    );
+    const selection = flat(await readShipped("rule/agent-selection.md"));
+    expect(selection).toContain(
+      "Its frontmatter is the source for its identity, mission, domain, artifacts, tools, permissions, and specializations.",
+    );
+    expect(shippedExists("agent-catalog.yml")).toBe(false);
+  });
+});
+
+describe("no shipped file names a full-harness review", () => {
+  // QFAI:EX-0001-0158-01
+  it("finds `full-harness` in no shipped asset and no package source", async () => {
+    const packageRoot = path.resolve(SHIPPED_ASSISTANT, "..", "..", "..", "..");
+    const hits: string[] = [];
+    for (const dir of ["assets", "src"]) {
+      const root = path.join(packageRoot, dir);
+      for (const entry of await readdir(root, { recursive: true, withFileTypes: true })) {
+        if (!entry.isFile()) continue;
+        const file = path.join(entry.parentPath, entry.name);
+        if ((await readFile(file, "utf-8")).includes("full-harness")) {
+          hits.push(path.relative(packageRoot, file));
+        }
+      }
+    }
+    expect(hits).toEqual([]);
   });
 });

@@ -46,16 +46,6 @@ const OPTIONAL_SLOTS = {
 /** The labels the old per-issue detail block printed; none of them is printed any more. */
 const DROPPED_LABELS = /^ {2}(error_code|target|expected|current): /m;
 
-// QFAI:EX-0001-0039-02
-it("directs agent routing repairs to package defaults or project config overrides", () => {
-  for (const code of ["QFAI-AGENT-015", "QFAI-AGENT-017", "QFAI-AGENT-018", "QFAI-AGENT-019"]) {
-    const fix = resolveIssueFix({ code, severity: "error", category: "canonical", message: code });
-    expect(fix).toContain("packages/qfai/assets/defaults/");
-    expect(fix).toContain("qfai.config.yaml");
-    expect(fix).not.toContain(".qfai/assistant/manifest/");
-  }
-});
-
 /** The business rules that state the text output grammar, one statement per line. */
 async function readGuideline(): Promise<string> {
   const content = await readFile(CONTRACT_PATH, "utf-8");
@@ -311,6 +301,7 @@ function manyOfOneCode(
 }
 
 describe("validate --format text matches the validate contract's text output grammar", () => {
+  // QFAI:EX-0001-0039-02
   it("emits every issue in the documented grammar", async () => {
     const grammar = extractGrammar(await readGuideline());
     const output = await captureStdout(() => {
@@ -358,6 +349,7 @@ describe("validate --format text matches the validate contract's text output gra
     }
   });
 
+  // QFAI:EX-0001-0039-02
   it("renders a multi-line fix as the documented continuation lines", async () => {
     const guideline = await readGuideline();
     const label = extractRemedyLabel(guideline);

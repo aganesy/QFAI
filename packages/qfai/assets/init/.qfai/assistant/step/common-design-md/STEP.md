@@ -3,8 +3,6 @@ name: common-design-md
 owner: common
 purpose: "Author a missing root DESIGN.md or repair its authorized part from the recorded design direction, validate it, and check it again before anything is built from it."
 requires: []
-roles: [product-experience-architect]
-routing-profile: default
 ---
 
 # common-design-md

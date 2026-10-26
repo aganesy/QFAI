@@ -100,10 +100,10 @@ describe("the short-circuit covers the agent directory read by full", () => {
       await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
       await recordAssistantVersion(root);
       await writeFile(path.join(root, ".qfai", "assistant", "agent"), "not a directory\n", "utf-8");
-      const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
+      const wrapper = path.join(root, ".claude", "agents", "implementation-reviewer.md");
       await mkdir(path.dirname(wrapper), { recursive: true });
       await symlink(
-        path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
+        path.join("..", "..", ".qfai", "assistant", "agent", "implementation-reviewer.md"),
         wrapper,
       );
       await mkdir(path.join(root, ".qfai"), { recursive: true });
@@ -137,11 +137,11 @@ describe("the agents tree is walked by the profiles that read it", () => {
       await mkdir(agents, { recursive: true });
       await writeFile(path.join(agents, "README.md"), "# readme\n", "utf-8");
       // The document the roster names, replaced by a directory.
-      await mkdir(path.join(agents, "completion-reviewer.md"), { recursive: true });
-      const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
+      await mkdir(path.join(agents, "implementation-reviewer.md"), { recursive: true });
+      const wrapper = path.join(root, ".claude", "agents", "implementation-reviewer.md");
       await mkdir(path.dirname(wrapper), { recursive: true });
       await symlink(
-        path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
+        path.join("..", "..", ".qfai", "assistant", "agent", "implementation-reviewer.md"),
         wrapper,
       );
       await mkdir(path.join(root, ".qfai"), { recursive: true });

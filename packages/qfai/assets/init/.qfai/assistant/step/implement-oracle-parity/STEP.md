@@ -3,12 +3,6 @@ name: implement-oracle-parity
 owner: qfai-implement
 purpose: "Build a check that runs the same inputs through the project and through the outside reference it should match, and lists every difference."
 requires: [common-gate-run]
-roles:
-  - test-design-analyst
-  - frontend-engineer
-  - backend-engineer
-  - devops-ci-engineer
-routing-profile: default
 ---
 
 # implement-oracle-parity

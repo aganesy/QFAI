@@ -111,8 +111,7 @@ describe("four ordinal axes and eight diagnostic questions", () => {
     // stage that applies them rather than living only in the loop.
     it(`${tree}: every role that checks procurement carries the line`, async () => {
       const roles = [
-        "product-experience-architect",
-        "frontend-engineer",
+        "fullstack-engineer",
         "product-surface-reviewer",
         "architecture-reviewer",
         "implementation-reviewer",

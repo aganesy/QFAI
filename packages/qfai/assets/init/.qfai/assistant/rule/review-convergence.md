@@ -103,7 +103,7 @@ status is not permission to pass those.
 ## Agent-to-agent grilling (MUST)
 
 A grilling session between agents is a **delegated session**
-(`.agents/rules/grilling.md`): a griller interviews the authors, and the user is
+(`.agents/rules/grilling.md`): a griller interviews the session agent, and the user is
 asked only an uncovered critical decision when questions are permitted.
 Actual scoped user delegation may authorize reversible requested judgment
 without an individual option answer; record the agents' adoption and authority

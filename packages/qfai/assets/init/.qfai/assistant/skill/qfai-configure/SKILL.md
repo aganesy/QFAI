@@ -4,16 +4,6 @@ title: QFAI Configure (Tune qfai.config.yaml)
 description: "Analyze the repository and tune qfai.config.yaml test globs and project overrides. Use when asked to configure QFAI for a repository, or to fix test globs that match the wrong files or none."
 argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Write, Edit, TodoWrite, Task, Agent]
-roles:
-  [
-    orchestrator,
-    delivery-planner,
-    qa-strategist,
-    devops-ci-engineer,
-    qa-gatekeeper,
-    implementation-reviewer,
-  ]
-routing-profile: runtime-heavy
 mode: evidence-focused
 ---
 
@@ -61,7 +51,7 @@ both outlive an exhausted budget.
 When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/rule/*`
-- P2: Read `.qfai/assistant/rule/agent-selection.md`, the routed cards under `.qfai/assistant/agent/`, and project context under `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/`.
+- P2: Read `.qfai/assistant/rule/agent-selection.md`, the cards under `.qfai/assistant/agent/`, and project context under `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/`.
 - P3: `.qfai/spec/decisions.md` (Decision Records; if no decision exists, state "not applicable").
 - P4: the business flows, stories, contracts, tests, and evidence relevant to the configuration.
 
@@ -75,9 +65,9 @@ Use the shared schema.
 
 ### Stage Minimum Roles
 
-- Author: the orchestrator writes the artifacts itself, or gives independent parts to sub-agents that run in parallel.
-- Integrate: the orchestrator presents the result to the user for confirmation.
-- Gate: a reviewer that did not author the work returns only `PASS` or `REVISE`. The orchestrator never approves its own work.
+- Author: the session agent writes the artifacts itself.
+- Integrate: the session agent presents the result to the user for confirmation.
+- Gate: a reviewer that did not author the work returns only `PASS` or `REVISE`. The session agent never approves its own work.
 
 ### Reviewer Gate
 
@@ -88,9 +78,8 @@ Use the shared schema.
   - Drift Protocol enforced;
   - test-layer policy enforced against `.qfai/assistant/rule/test-layers.md`;
   - tool-count heuristics are signals, not gates.
-- Route specialist reviewers from `.qfai/assistant/rule/agent-selection.md`.
-- Default configure review set:
-  - `qa-gatekeeper`
+- The reviewer is `implementation-reviewer`, briefed as the delegation baseline
+  states.
 - Do not declare DONE or handoff until every finding of its one review is fixed or answered.
 
 ### Work order template (copy/paste)
@@ -190,35 +179,17 @@ Do not create `.qfai/**/README.md` files as scaffold or format documentation; ke
 - If the user mixes languages, prefer the dominant language unless explicitly instructed otherwise.  
   This rule overrides all other stylistic preferences.
 
-## Multi-Role Orchestration (Subagents)
+## Who does the work
 
-When the orchestrator delegates, it uses the platform's native sub-agent mechanism for Claude Code, GitHub Copilot, and Codex.
-
-### Delegation order
-
-Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.
-
-- Routed phases, in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`).
-
-### Delegation contract (tool-neutral)
-
-```text
-Role: delivery-planner
-Task title: Analyze repo and propose testFileGlobs
-Goal: Tune qfai.config.yaml with a minimal diff
-Inputs:
-- relevant policy and repo layout
-Constraints:
-- minimal diff
-- evidence-first
-Return:
-- proposed globs + rationale + evidence refs
-```
+The session agent analyzes the repository and writes the configuration itself.
+The one sub-agent is `implementation-reviewer`, which reviews what the session
+wrote; the delegation baseline says how it is briefed.
 
 ## Completion Separation (mandatory)
 
-- Config changes (`devops-ci-engineer`) and their approval (`qa-gatekeeper`) must be separate.
-- `qa-gatekeeper` must confirm evidence sampling before approval.
+- The session agent's configuration change and its approval are separate: the
+  reviewer approves, never the session agent.
+- The reviewer confirms the evidence sampling before approval.
 
 ## Context Refresh (mandatory for long tasks)
 
@@ -304,7 +275,6 @@ Edit:
 
 - `validation.traceability.testFileGlobs`
 - `validation.traceability.testFileExcludeGlobs` (only if needed)
-- `routing` or `reviewProfiles` only when the user asks to change one; each matching entry replaces the shipped default as a whole
 - `uiux.surfacePaths`: the repository-relative globs of the paths observed to render a user-visible surface, or `[]` when the repository renders none. Keep an existing value unless the user asks to change it. An absent key leaves the UI impact decision unevaluable.
 
 Keep all other config keys unchanged. Add no key the package already defaults, `paths.specsDir` included; a value the project set stays.
@@ -340,8 +310,7 @@ Provide:
 2. Updated project-owned policy and contract files (diff or summary).
 3. A short summary of changes and rationale.
 4. Validation checklist with sampled files.
-5. If routing or review profiles changed, list each whole-entry override and its reason.
-6. Open questions (blocking vs non-blocking).
+5. Open questions (blocking vs non-blocking).
 
 Suggest next step: `/qfai-discussion` (or rerun `/qfai-configure` if configuration is not ready).
 
@@ -404,6 +373,6 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
 
 project_memory:
 
-- qfai-configure is the user-facing entrypoint for editing `qfai.config.yaml`, including the `routing:` and `reviewProfiles:` overrides. The package supplies their defaults; an override replaces a matching entry as a whole.
+- qfai-configure is the user-facing entrypoint for editing `qfai.config.yaml`: the test globs, `uiux.surfacePaths` and the other values a project may override.
 - Each agent card under `.qfai/assistant/agent/` is the sole definition of that role. Edit the card to change its mission or other role metadata.
 - Run after every major workflow change to refresh the consuming project to the current QFAI baseline. Do NOT edit `qfai.config.yaml` directly when the skill is available.

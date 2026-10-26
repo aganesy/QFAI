@@ -11,7 +11,7 @@ const baselinePath = "assistant/rule/shared-skill-delegation-baseline.md";
 /** The Orchestrator Protocol, where a delegating agent reads both rules, with wrapping undone. */
 async function readProtocol(tree: string): Promise<string> {
   const content = await readRule(path.join(repoRoot, tree, baselinePath));
-  const start = content.indexOf("### Orchestrator Protocol");
+  const start = content.indexOf("### Session Agent Protocol");
   const end = content.indexOf("### Capability Probe (MUST)");
   expect(start).toBeGreaterThanOrEqual(0);
   expect(end).toBeGreaterThan(start);

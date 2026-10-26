@@ -5,7 +5,6 @@ import path from "node:path";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
-import { parse as parseYaml } from "yaml";
 
 import { runInit } from "../helpers/legacyInit.js";
 import { runReport } from "../../src/cli/commands/report.js";
@@ -39,7 +38,6 @@ import {
   widestMeasurableLine,
 } from "../helpers/skillBudget.js";
 import { readDiscussionSkill } from "../helpers/discussionSteps.js";
-import { readDefaultRoutingText } from "../helpers/shippedAssistant.js";
 import { readRule } from "../helpers/ruleWithReferences.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -47,7 +45,6 @@ const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const templateRootDir = path.join(templateRoot, "root");
 const templateQfaiDir = path.join(templateRoot, ".qfai");
 const assistantDir = path.join(templateQfaiDir, "assistant");
-const defaultsDir = path.join(repoRoot, "packages", "qfai", "assets", "defaults");
 
 /** The prototyping skill's shipped files: the parent and every `prototyping-*` step. */
 async function prototypingProcedureFiles(): Promise<string[]> {
@@ -255,11 +252,11 @@ describe("assets guardrails", () => {
       // response is class-dependent; the invariant that survives is that a
       // failure is never answered by simulating a role.
       "If the delegation fails, classify the failure first",
-      "Never simulate a role.",
+      "Never simulate an agent.",
       "Delegation failure:",
-      "Attempted role:",
+      "Attempted agent:",
       "Attempted task:",
-      "Why stopped: this review needs a reviewer that did not author the work.",
+      "Why stopped: this judgement needs an agent that did not author the work.",
       "User action needed:",
       "Retry condition: rerun after the review delegation succeeds",
     ];
@@ -277,7 +274,7 @@ describe("assets guardrails", () => {
       "shared-skill-delegation-baseline.md",
     );
     const baseline = await readFile(baselinePath, "utf-8");
-    const start = baseline.indexOf("### Orchestrator Protocol");
+    const start = baseline.indexOf("### Session Agent Protocol");
     const end = baseline.indexOf("### Capability Probe (MUST)");
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
@@ -286,17 +283,17 @@ describe("assets guardrails", () => {
     const requiredPhrases = [
       // The permission itself: without it "delegate, then integrate" reads as
       // an order and the orchestrator waits on every delegation.
-      "The orchestrator is not required to wait while a sub-agent runs.",
+      "The session agent is not required to wait while a sub-agent runs.",
       // The three host capabilities the permission depends on.
       "starts a delegation and returns at once",
       "delivers the finished result later as a message",
-      "lets the orchestrator wait for a result on purpose",
+      "lets the session agent wait for a result on purpose",
       // With all three, the orchestrator works while work remains. Otherwise it waits.
       "carries on with its own work meanwhile and waits only when it has none.",
-      "A host without all three keeps the orchestrator waiting.",
+      "A host without all three keeps the session agent waiting.",
       // The work it may do, and the bounds on it.
       "It never repeats the work it handed out.",
-      "Starting another delegation needs the independence conditions of `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md`.",
+      "Starting another delegation needs the parallel-unit gate.",
       "carrying on does not override it.",
     ];
 
@@ -426,39 +423,6 @@ describe("assets guardrails", () => {
     ).filter((result): result is string => result !== null);
 
     expect(offenders).toEqual([]);
-  });
-
-  it("ensures configure and verify delegation order follows routing SSOT", async () => {
-    const configurePath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-configure",
-      "SKILL.md",
-    );
-    const verifyPath = path.join(assistantDir, "step", "verify-context", "STEP.md");
-
-    const [routing, configure, verify] = await Promise.all([
-      readDefaultRoutingText(),
-      readFile(configurePath, "utf-8"),
-      readFile(verifyPath, "utf-8"),
-    ]);
-
-    expect(routing).toContain("skill: qfai-configure");
-    expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
-    expect(routing).toContain("step: verify-context");
-    expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
-    expect(existsSync(path.join(assistantDir, "manifest"))).toBe(false);
-
-    expect(configure).toContain(
-      "Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.",
-    );
-    expect(configure).toContain(
-      "Routed phases, in order: `analysis` (`delivery-planner`, `qa-strategist`) -> `config` (`devops-ci-engineer`) -> `review` (`qa-gatekeeper`).",
-    );
-
-    expect(verify).toContain("Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.");
-    expect(verify).toContain("Routed phase: `plan` (`delivery-planner`, `qa-strategist`).");
   });
 
   it("keeps qfai-verify fix-until-PASS contract", async () => {
@@ -672,16 +636,6 @@ describe("assets guardrails", () => {
     ]) {
       expect(findBudgetRestatements(allowed), `must allow: ${allowed}`).toEqual([]);
     }
-  });
-
-  it("ships qa-gatekeeper agent card", async () => {
-    const agentPath = path.join(templateQfaiDir, "assistant", "agent", "qa-gatekeeper.md");
-    const content = await readFile(agentPath, "utf-8");
-
-    expect(content).toContain("QA Gatekeeper");
-    expect(content).toContain("validation");
-    expect(content).toContain("runtime-proof");
-    expect(content).toContain("prototyping evidence");
   });
 
   // TC-0003 (static) — workflow template exists in init tree
@@ -1389,52 +1343,6 @@ describe("assets guardrails", () => {
     expect(storyTemplate).toContain("```css");
   });
 
-  it("ships agent cards and package routing defaults without project manifests", async () => {
-    for (const directory of ["rule", "skill", "agent", "prompt"]) {
-      expect(existsSync(path.join(assistantDir, directory)), directory).toBe(true);
-    }
-    expect(existsSync(path.join(assistantDir, "catalog"))).toBe(false);
-    const layers = await readFile(path.join(assistantDir, "rule", "test-layers.md"), "utf-8");
-    expect(layers).toContain("# Test Layers Policy");
-    expect(existsSync(path.join(assistantDir, "catalog", "test-layers.md"))).toBe(false);
-    for (const retired of ["manifest", "process", "constitution", "skills", "agents"]) {
-      expect(existsSync(path.join(assistantDir, retired)), retired).toBe(false);
-    }
-
-    const cardDir = path.join(assistantDir, "agent");
-    const cards = await fg(["*.md"], { cwd: cardDir });
-    expect(cards).toHaveLength(19);
-    expect(existsSync(path.join(cardDir, "agent-catalog.yml"))).toBe(false);
-    for (const file of cards) {
-      const card = await readFile(path.join(cardDir, file), "utf-8");
-      const frontmatter = card.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-      expect(frontmatter, file).not.toBeNull();
-      const parsed: unknown = parseYaml(frontmatter?.[1] ?? "");
-      expect(parsed, file).toMatchObject({ name: path.basename(file, ".md") });
-      for (const key of [
-        "kind",
-        "domain",
-        "mission",
-        "replaces",
-        "owned_artifacts",
-        "tool_profile",
-        "permission_profile",
-        "specialization_tags",
-      ]) {
-        expect(parsed, `${file}: ${key}`).toHaveProperty(key);
-      }
-    }
-
-    const routing = await readDefaultRoutingText();
-    const profiles = await readFile(path.join(defaultsDir, "review-profiles.yml"), "utf-8");
-    expect(routing).toContain("routing:");
-    expect(profiles).toContain("profiles:");
-    for (const file of ["agent-routing.yml", "review-profiles.yml", "agent-catalog.yml"]) {
-      expect(existsSync(path.join(assistantDir, file)), file).toBe(false);
-      expect(existsSync(path.join(assistantDir, "manifest", file)), file).toBe(false);
-    }
-  });
-
   it("keeps discussion and SDD review templates at their skill paths", async () => {
     const sddGatePath = path.join(templateQfaiDir, "assistant", "step", "sdd-gate", "STEP.md");
     const legacyRcpFooterPath = path.join(
@@ -1798,18 +1706,6 @@ describe("assets guardrails", () => {
       });
       expect(files.sort()).toEqual(expected);
     }
-  });
-
-  it("ensures solution-architect agent contains required contract constraints", async () => {
-    const agentPath = path.join(templateQfaiDir, "assistant", "agent", "solution-architect.md");
-    const content = await readFile(agentPath, "utf-8");
-
-    expect(content).toMatch(/architecture boundaries/i);
-    expect(content).toMatch(/UI, API, and DB contracts/i);
-    expect(content).toMatch(/rejected options/i);
-
-    expect(content).toContain("## Stop conditions");
-    expect(content).toContain("## Sign-off");
   });
 
   // W5: SSOT alignment tests

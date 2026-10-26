@@ -1,7 +1,4 @@
-export const PROTOTYPING_REQUIRED_ROLE_IDS = [
-  "product-experience-architect",
-  "product-surface-reviewer",
-] as const;
+export const PROTOTYPING_REQUIRED_ROLE_IDS = ["product-surface-reviewer"] as const;
 
 export const PROTOTYPING_ROLE_WRAPPER_INTEGRATIONS = [
   { id: "claude", dir: ".claude/agents", suffix: ".md", label: "Claude Code" },

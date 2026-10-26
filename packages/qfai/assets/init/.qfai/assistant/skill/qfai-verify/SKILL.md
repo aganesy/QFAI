@@ -4,15 +4,6 @@ title: QFAI Verify (Quality Gates + Evidence)
 description: "Use when invoked by name or handed a QFAI work order to verify a change before it is handed off."
 argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Bash, Write, Edit, TodoWrite, Task, Agent]
-roles:
-  [
-    orchestrator,
-    delivery-planner,
-    qa-strategist,
-    devops-ci-engineer,
-    doc-steward,
-    implementation-reviewer,
-  ]
 steps:
   [
     verify-repeat-run,

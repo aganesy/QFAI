@@ -131,32 +131,32 @@ describe("BF-0003 configuration discovery and loading", () => {
   it("lists a loader issue whole when its key holds a decoded newline", async () => {
     // QFAI:AC-0003-0001-03
     const root = await newTempDir("invalid-newline");
-    await put(root, "qfai.config.yaml", 'reviewProfiles:\n  "a\\nb": 5\n');
+    await put(root, "qfai.config.yaml", 'uiux:\n  registries:\n    "a\\nb": 5\n');
     const load = check(await doctorJson(root), "config.load");
-    expect(load?.message).toContain("reviewProfiles.a\\x0ab must be an entry");
+    expect(load?.message).toContain("uiux.registries.a\\x0ab must be a non-empty string");
   });
 
   it("lists every loader issue in the config.load message, past the tenth", async () => {
     // QFAI:AC-0003-0001-03
     const root = await newTempDir("invalid-many");
-    const entries = Array.from({ length: 25 }, (_, index) => `  p${index}: 5\n`).join("");
-    await put(root, "qfai.config.yaml", `reviewProfiles:\n${entries}`);
+    const entries = Array.from({ length: 25 }, (_, index) => `    p${index}: 5\n`).join("");
+    await put(root, "qfai.config.yaml", `uiux:\n  registries:\n${entries}`);
     const load = check(await doctorJson(root), "config.load");
     const issues = (load?.details as { issues?: Array<{ message: string }> } | undefined)?.issues;
     expect(issues?.length).toBeGreaterThanOrEqual(25);
-    expect(load?.message).toContain("reviewProfiles.p0 must be an entry");
+    expect(load?.message).toContain("uiux.registries.p0 must be a non-empty string");
     for (const issue of issues ?? []) {
       expect(load?.message).toContain(issue.message);
     }
-    expect(load?.message).toContain("reviewProfiles.p24 must be an entry");
+    expect(load?.message).toContain("uiux.registries.p24 must be a non-empty string");
   });
 
   it("lists a loader issue whole when its key holds two decoded newlines in a row", async () => {
     // QFAI:AC-0003-0001-03
     const root = await newTempDir("invalid-blank-line");
-    await put(root, "qfai.config.yaml", 'reviewProfiles:\n  "a\\n\\nb": 5\n');
+    await put(root, "qfai.config.yaml", 'uiux:\n  registries:\n    "a\\n\\nb": 5\n');
     const load = check(await doctorJson(root), "config.load");
-    expect(load?.message).toContain("reviewProfiles.a\\x0a\\x0ab must be an entry");
+    expect(load?.message).toContain("uiux.registries.a\\x0a\\x0ab must be a non-empty string");
   });
 
   it("cuts a very long rejected value in the config.load message and keeps it whole in details", async () => {
@@ -189,14 +189,14 @@ describe("BF-0003 configuration discovery and loading", () => {
     const root = await newTempDir("invalid-escapes");
     // A YAML implicit key may run to 1024 characters, so 150 escapes of six fit.
     const key = "\\u2028".repeat(150);
-    await put(root, "qfai.config.yaml", `reviewProfiles:\n  "${key}": 5\n`);
+    await put(root, "qfai.config.yaml", `uiux:\n  registries:\n    "${key}": 5\n`);
     const load = check(await doctorJson(root), "config.load");
     const message = load?.message ?? "";
     const listed = message.slice(message.indexOf(": ", message.indexOf("issue(s)")) + 2);
-    const part = listed.split("; ").find((entry) => entry.startsWith("reviewProfiles."));
+    const part = listed.split("; ").find((entry) => entry.startsWith("uiux.registries."));
     expect(part?.length).toBeLessThanOrEqual(500);
     expect(part).toContain(" ... ");
-    expect(part?.endsWith(" must be an entry.")).toBe(true);
+    expect(part?.endsWith(" must be a non-empty string.")).toBe(true);
     expect(/\\(?!u2028)/.test(part ?? "")).toBe(false);
   });
 

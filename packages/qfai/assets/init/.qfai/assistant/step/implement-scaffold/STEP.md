@@ -3,8 +3,6 @@ name: implement-scaffold
 owner: qfai-implement
 purpose: "Write, with `npx qfai atdd scaffold` or, in a project with purpose-named test files, by hand, the E2E test of each business flow and the integration test of each acceptance criterion the flow lacks, each with an empty body."
 requires: [common-gate-run]
-roles: [test-design-analyst]
-routing-profile: default
 ---
 
 # implement-scaffold

@@ -360,13 +360,16 @@ describe.each(TREES)("%s", (tree) => {
 
   // QFAI:AC-0001-0097-02
   // QFAI:EX-0001-0097-02
-  it("reports one identity assigned to both generation and review before either runs", async () => {
+  it("has the session generate and the reviewer score, and reports a swapped assignment before either runs", async () => {
     const table = flat(
       section(await read(tree, "step/prototyping-loop/STEP.md"), "Delegation Scope Table"),
     );
-    expect(table).toContain("Generation and review use two distinct sub-agent identities.");
     expect(table).toContain(
-      "Report an assignment that gives generation and review to one identity before either runs.",
+      "The session agent generates, implements and builds; `product-surface-reviewer` reviews, started from a fresh context and a black-box brief, never with the session's conversation.",
+    );
+    const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
+    expect(loop).toContain(
+      "Report an assignment that gives review scoring to the session agent, or generation to the reviewer, before either runs.",
     );
   });
 
@@ -454,7 +457,7 @@ describe.each(TREES)("%s", (tree) => {
   it("serves the iteration it reviews and checks each payload before writing it", async () => {
     const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
     expect(loop).toContain(
-      "**Build** (devops-ci-engineer). Serves `.qfai/prototype/` at the URL preflight checked, starting the server on the first iteration and keeping it running for the loop, and hands `<url>/iter-NN/` to the reviewer.",
+      "**Build** (the session agent). Serves `.qfai/prototype/` at the URL preflight checked, starting the server on the first iteration and keeping it running for the loop, and hands `<url>/iter-NN/` to the reviewer.",
     );
     expect(loop).toContain(
       "It starts from the primary UI contract preflight resolved: the one the request names, else `prototyping.primaryUiContract`.",
@@ -462,15 +465,15 @@ describe.each(TREES)("%s", (tree) => {
     expect(loop).toContain(
       "Each payload is checked against the closed schema before it is written, and one that does not conform is asked for again.",
     );
-    // The reviewer runs read-only, so the orchestrator writes what it returns.
+    // The reviewer runs read-only, so the session agent writes what it returns.
     expect(loop).toContain(
-      "**Orchestrator.** Writes each payload to `iter-NN/<ui-contract-id>/<screen>.review.json` and the summary to `iter-NN/review.json`.",
+      "**Session agent.** Writes each payload to `iter-NN/<ui-contract-id>/<screen>.review.json` and the summary to `iter-NN/review.json`.",
     );
     const schema = flat(
       await read(tree, "skill/qfai-prototyping/references/review-payload-schema.md"),
     );
     expect(schema).toContain(
-      "The orchestrator writes the pair's payload itself, with `sessionStatus` `launchFailed` or `retryExhausted`,",
+      "The session agent writes the pair's payload itself, with `sessionStatus` `launchFailed` or `retryExhausted`,",
     );
   });
 

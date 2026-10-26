@@ -4,7 +4,6 @@ title: "Web Research Pipeline"
 description: "8-stage web research pipeline with MCP integration, caching, and citation generation. Use when asked to research a topic on the web and report the findings with cited sources."
 argument-hint: "[query] [--max-depth N] [--yolo]"
 allowed-tools: [Read, Glob, Bash, Write, Task, Agent, WebSearch, WebFetch]
-roles: [Researcher, Analyst, FactChecker]
 mode: research-pipeline
 ---
 
@@ -33,9 +32,12 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 The sections below add only pipeline-specific detail; where they and the
 baseline overlap, the baseline governs.
 
-### Orchestrator Protocol
+### Session Agent Protocol
 
-- The orchestrator may write the research artifact itself, or give independent searches to sub-agents that run in parallel.
+- The session agent frames the research and writes the research artifact itself.
+- Two or more self-contained searches or fetches may run in parallel on
+  `fullstack-engineer` with no owned paths, under the parallel-unit gate; the
+  session agent reads their answers.
 - It never approves its own work.
 
 ## Work Orders Summary
@@ -46,17 +48,16 @@ Use the shared schema from `.qfai/assistant/rule/shared-skill-delegation-baselin
 collision cannot be detected from the evidence afterwards. Typical pipeline
 steps:
 
-| Step | Role (sub-agent) | Agent instance  | Task title                 | Input (refs)          | Output (refs)     | Status (PASS/REVISE/PENDING) |
-| ---- | ---------------- | --------------- | -------------------------- | --------------------- | ----------------- | ---------------------------- |
-| 1    | Researcher       | `<instance id>` | Discover candidate sources | User request + config | Candidate list    | PASS/REVISE                  |
-| 2    | Analyst          | `<instance id>` | Prepare research notes     | Candidate URLs        | Research notes    | PASS/REVISE                  |
-| 3    | Reviewer         | `<instance id>` | Review evidence and claims | Notes + sources       | Approval decision | PASS/REVISE                  |
+| Step | Agent (sub-agent)       | Agent instance  | Task title                 | Input (refs)    | Output (refs)     | Status (PASS/REVISE/PENDING) |
+| ---- | ----------------------- | --------------- | -------------------------- | --------------- | ----------------- | ---------------------------- |
+| 1    | `fullstack-engineer`    | `<instance id>` | Answer one lookup question | The question    | Cited answer      | PASS/REVISE                  |
+| 2    | `requirements-reviewer` | `<instance id>` | Review evidence and claims | Notes + sources | Approval decision | PASS/REVISE                  |
 
 ### Reviewer Gate
 
 - The final completion gate must be performed by an independent reviewer, as defined
   normatively in `.qfai/assistant/rule/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`.
-  Being routed as `Reviewer` does not by itself make an agent independent: an agent
+  Being briefed as the reviewer does not by itself make an agent independent: an agent
   that drafted or edited any artifact under review is disqualified for the whole run,
   and must hand the same evidence set to a non-participating reviewer instead of
   returning `PASS`.
@@ -215,16 +216,15 @@ Default TTL: **24 hours** (24h).
 
 Cache is stored under `.qfai/cache/web-research/` using content-addressable storage.
 
-## 8. Sub-Agent Architecture
+## 8. Parallel Lookups
 
-The pipeline may delegate stages to specialised sub-agents:
-
-- **SearchAgent**: Manages search provider interaction (Stage 1).
-- **FetchAgent**: Handles concurrent URL fetching with isolation (Stage 3).
-- **VerifyAgent**: Cross-references claims across sources (Stage 7).
-
-Sub-agents communicate via structured message passing and share
-the session log as the coordination artifact.
+The session agent runs every stage itself. Within the search (Stage 1), fetch
+(Stage 3) and verify (Stage 7) stages, two or more self-contained questions may
+run in parallel, each on a `fullstack-engineer` with no owned paths, under the
+parallel-unit gate of
+`.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md`.
+Each worker writes nothing and returns its answer with its sources; the session
+agent records them in the session log.
 
 ## 9. Error Handling
 

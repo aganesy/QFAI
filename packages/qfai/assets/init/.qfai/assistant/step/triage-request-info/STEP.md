@@ -3,8 +3,6 @@ name: triage-request-info
 owner: qfai-triage
 purpose: "Ask for the facts a request is missing as structured questions, and record the deadline for the answers."
 requires: []
-roles: [discovery-analyst]
-routing-profile: default
 ---
 
 # triage-request-info

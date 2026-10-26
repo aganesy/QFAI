@@ -116,9 +116,7 @@
 | US-0001-0159 | Removed compatibility namespaces                                                       | `user-story-0001-0159/` |
 | US-0001-0161 | Agent Cards                                                                            | `user-story-0001-0161/` |
 | US-0001-0162 | Standard Agent Contract                                                                | `user-story-0001-0162/` |
-| US-0001-0163 | Orchestrator Protocol                                                                  | `user-story-0001-0163/` |
-| US-0001-0164 | Devils-Advocate Reviewer                                                               | `user-story-0001-0164/` |
-| US-0001-0165 | Pattern-Doubler Reviewer                                                               | `user-story-0001-0165/` |
+| US-0001-0163 | Delegation Protocol                                                                    | `user-story-0001-0163/` |
 | US-0001-0166 | All-Reviewer REVISE Obligation                                                         | `user-story-0001-0166/` |
 | US-0001-0169 | SKILL.md `## Default Autopilot Policy` section                                         | `user-story-0001-0169/` |
 | US-0001-0171 | Cross-skill handoff schema                                                             | `user-story-0001-0171/` |

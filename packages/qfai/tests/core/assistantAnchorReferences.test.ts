@@ -563,7 +563,7 @@ describe("profile wiring", () => {
         ".qfai/assistant/skill/qfai-sdd/SKILL.md": ["# qfai-sdd", ""].join("\n"),
         ".qfai/assistant/agent/README.md": "# readme\n",
         // The document the roster names, replaced by a directory.
-        ".qfai/assistant/agent/completion-reviewer.md/.keep": "",
+        ".qfai/assistant/agent/implementation-reviewer.md/.keep": "",
         // Enough of a surface that init counts as having run here.
         ".qfai/waivers.yml": "version: 1\nwaivers: []\n",
         ".qfai/assistant/rule/drift-protocol.md": ["# Drift protocol", ""].join("\n"),

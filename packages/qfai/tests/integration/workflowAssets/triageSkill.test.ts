@@ -4,11 +4,8 @@
  * request that ends without a change leaves behind.
  */
 import { describe, expect, it } from "vitest";
-
-import { defaultConfig } from "../../../src/core/config.js";
 import { loadBuiltInPlans } from "../../../src/core/workflow/plans.js";
 import { parseAutopilotPolicy } from "../../../src/core/validators/autopilotPolicy.js";
-import { readEffectiveRouting, stepReview } from "../../../src/core/validators/agentDefinition.js";
 import {
   flat,
   frontMatterOf,
@@ -59,17 +56,11 @@ describe("qfai-triage as a stage skill", () => {
     expect(Object.keys(front)).not.toContain("disable-model-invocation");
     expect(Object.keys(front)).not.toContain("routing-profile");
 
-    const stepRoles: string[] = [];
     for (const name of steps) {
       const stepFront = frontMatterOf(await step(name));
       expect(stepFront.name, name).toBe(name);
       expect(stepFront.owner, name).toBe("qfai-triage");
-      if (Array.isArray(stepFront.roles)) stepRoles.push(...stepFront.roles.map(String));
     }
-    const declared = Array.isArray(front.roles) ? front.roles.map(String) : [];
-    expect([...new Set(declared)].sort()).toEqual(
-      [...new Set(["orchestrator", ...stepRoles])].sort(),
-    );
     const cleanup = await step("triage-owned-cleanup");
     const reads = flat(sectionOf(cleanup, "## Reads"));
     expect(reads).toMatch(/user.*(?:current request|standing instruction).*exact cleanup targets/i);
@@ -169,19 +160,6 @@ describe("qfai-triage as a stage skill", () => {
     expect(close).toMatch(
       /denial.*partial failure.*missing check.*unfinished.*not closed.*cleaned/i,
     );
-  });
-
-  // QFAI:AC-0001-0214-04
-  // QFAI:EX-0001-0214-05
-  it("routes each step by name on its own profile and gives the skill no entry", async () => {
-    const effective = await readEffectiveRouting(defaultConfig);
-    expect(effective.routing?.has("qfai-triage")).toBe(false);
-    for (const name of TRIAGE_STEPS) {
-      expect(frontMatterOf(await step(name))["routing-profile"], name).toBe("default");
-      expect(effective.routing?.has(name), name).toBe(true);
-      expect(stepReview(effective, name).profile, name).toBe("default");
-      expect(stepReview(effective, name).alwaysRequired, name).toEqual([]);
-    }
   });
 });
 

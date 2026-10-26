@@ -3,8 +3,6 @@ name: prototyping-handoff
 owner: qfai-prototyping
 purpose: "Publish the prototype the user confirmed and record the handoff for implementation."
 requires: []
-roles: [orchestrator, product-experience-architect, devops-ci-engineer]
-routing-profile: default
 ---
 
 # prototyping-handoff

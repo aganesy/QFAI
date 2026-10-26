@@ -118,7 +118,9 @@ describe("the grilling primitive", () => {
       // and it is set apart from auto-decide by the rounds before it and the
       // record after it.
       expect(text).toMatch(/A delegated session's adoption is not that/);
-      expect(text).toMatch(/the griller interviewed the authors first, and the record carries why/);
+      expect(text).toMatch(
+        /the griller interviewed the session agent first, and the record carries why/,
+      );
       // The subject is the one input with no default: a session must be about
       // something, and picking that is answering the first question.
       expect(text).toMatch(/grilling subject/);

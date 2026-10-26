@@ -3,7 +3,6 @@ name: verify-context
 owner: qfai-verify
 purpose: "Load what the change is verified against, fix the run's scope, and give every gate in that scope a command."
 requires: []
-roles: [orchestrator, delivery-planner, qa-strategist]
 ---
 
 # verify-context
@@ -15,7 +14,7 @@ sure each gate the scope needs has a command. It runs no gate.
 
 In this order when unsure:
 
-1. The rules this step cites, the routed cards under `.qfai/assistant/agent/`,
+1. The rules this step cites, the cards under `.qfai/assistant/agent/`,
    and the project context under `.qfai/spec/01_policy/` and
    `.qfai/spec/03_contract/`.
 2. `.qfai/spec/decisions.md`. When no decision applies, say "not applicable".
@@ -38,34 +37,16 @@ contracts and evidence only.
 
 ## Procedure
 
-1. Write the plan, or delegate it (below), and read the inputs.
+1. Write the plan and read the inputs.
 2. Analyse the project (below).
 3. Fix the scope (below) and state it in the stage report.
 4. Give each gate in scope a command (below).
 
-## Delegation
+## The plan
 
-Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.
-
-- Routed phase: `plan` (`delivery-planner`, `qa-strategist`).
-
-```text
-Role: delivery-planner
-Task title: Create an execution plan and DoD
-Goal: sequence quality gates and evidence work
-Inputs:
-- current change context
-- required gates
-Constraints:
-- evidence-first
-- no self-approval
-Return:
-- phases + risks + DoD
-```
-
-The gate runner and the report writer draft the execution evidence and the
-verification summary. The orchestrator consolidates their output and presents
-it to the user.
+The session agent writes the execution plan and its definition of done itself:
+the phases, the risks and the gates in order, evidence first. It runs the gates,
+drafts the verification summary and presents it to the user.
 
 ## Project analysis
 

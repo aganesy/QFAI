@@ -421,7 +421,7 @@ describe("explicit discussion delegation in shipped and linked root assets", () 
       "an actual user instruction explicitly delegates judgment for its requested scope",
     );
     expectPhrase(delegation, "record the instruction's source, scope and authority");
-    expectPhrase(delegation, "The griller still interviews the authors in actual rounds");
+    expectPhrase(delegation, "The griller still interviews the session agent in actual rounds");
     expectPhrase(delegation, "participants, recommendations, reasons and disagreeing positions");
     expectPhrase(delegation, "no node remains open, the frontier is empty, no lookup is in flight");
     expectPhrase(

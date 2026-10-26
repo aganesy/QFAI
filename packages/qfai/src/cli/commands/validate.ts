@@ -1223,16 +1223,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Root DESIGN.md exists but failed to parse per design-md-spec (front-matter is malformed).",
   "QFAI-DCON-034":
     "Root DESIGN.md must be the project's own brand SSOT, not the unreplaced qfai sample seeded by `qfai init`.",
-  "QFAI-AGENT-015":
-    "Every role a step or skill declares is dispatchable: some routing phase or its review profile selects it.",
-  "QFAI-AGENT-016":
-    "Every routed step's `STEP.md` and routed skill's `SKILL.md` frontmatter parses, and its `roles:` and `routing-profile:` are usable, so the routing cross-check has something to read.",
-  "QFAI-AGENT-017":
-    "Every step or skill that declares a `routing-profile:` is routed at least one dispatchable phase by the routing manifest.",
-  "QFAI-AGENT-018":
-    "Each routed step or skill has exactly one review gate, named by both sides and defined in the review-profile manifest.",
-  "QFAI-AGENT-019":
-    "A step's or skill's `roles:` is a superset of every agent the routing manifest binds to it, including the reviewers its review profile selects.",
   "QFAI-RESEARCH-012":
     "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
   // The apply-order family. Each of these reads a column or a declaration that
@@ -1285,7 +1275,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-SKILLS-015":
     "Every skill carries both fields a host registers it by: a `name:` that is its own directory, in lowercase letters, digits and single hyphens to 64 characters, and a `description:` with text in it, to 1024 characters and with no `<` or `>` — a skill that should not be offered to the model declares `disable-model-invocation: true` and keeps the description, rather than dropping the field and losing the registration with it.",
   "QFAI-SKILLS-016":
-    "The step layer holds only `STEP.md` steps named after their directories; each is owned by `common` or by a skill whose `steps:` lists it, `requires:` names only installed `common-*` steps, every step a skill or a workflow plan names is installed and used, and a skill that lists steps declares `orchestrator` and every role those steps declare.",
+    "The step layer holds only `STEP.md` steps named after their directories; each is owned by `common` or by a skill whose `steps:` lists it, `requires:` names only installed `common-*` steps, every step a skill or a workflow plan names is installed and used.",
   "QFAI-SAAS-001":
     "The saas-package profile finds a design-system attestation at its configured path.",
   "QFAI-SAAS-002":
@@ -1321,17 +1311,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-ASSISTANT-002": "Every canonical `.qfai/assistant/` layer directory is seeded.",
   "QFAI-CFG-002": "Every value in qfai.config.yaml has the type and range its key declares.",
   "QFAI-AGENT-005": "Every agent definition file has each required section heading.",
-  "QFAI-AGENT-007":
-    "The agent routing manifest and its defaults file can be read and parse to the shape the routing check expects.",
-  "QFAI-AGENT-008": "Every agent a routing phase names is a defined agent.",
-  "QFAI-AGENT-009":
-    "`review-profiles.yml` can be parsed, is an object holding a `profiles` object, and each profile field is a list of reviewer ids.",
-  "QFAI-AGENT-010":
-    "Every id a review profile lists in its `_required` fields is a reviewer agent.",
   "QFAI-AGENT-011": "Every agent definition file carries front matter that parses.",
   "QFAI-AGENT-012": "An agent definition's front-matter `name` equals its file's agent id.",
-  "QFAI-AGENT-013":
-    "Every routing phase declares an `iteration`, `rerun_policy`, `review_profile` and agent fields drawn from the values the routing check allows.",
   "QFAI-ASSETS-001": "The drift-protocol rule file exists under the assistant tree.",
   "QFAI-ASSETS-002": "The test-layers rule file exists under the assistant tree.",
   "QFAI-AUD-001": "Every screen in a UI contract lists at least one `primary_tasks` entry.",
@@ -1553,18 +1534,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // two rows, two CAPs on one directory) pass no `suggested_action`, and one
   // repair covers them: the `Spec` cell is the mapping, so the fix is always to
   // make each row name exactly one directory that no other row names.
-  "QFAI-AGENT-015":
-    "Remove the role from the skill's `roles:`, or bind it in the package defaults (the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or `review-profiles.yml`). For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
-  "QFAI-AGENT-016":
-    "Repair the `SKILL.md` frontmatter the message names: close the `---` block, and give `roles:` a list of strings and `routing-profile:` a non-empty profile name.",
-  "QFAI-AGENT-017":
-    "Add a route with a dispatching phase to the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or add a complete project-specific route under `qfai.config.yaml#routing`. Drop the skill's `routing-profile:` if it is deliberately un-routed.",
-  "QFAI-AGENT-018":
-    "Make the skill's `routing-profile:` and the route's `review_profile:` name the same profile. Define package defaults in `packages/qfai/assets/defaults/review-profiles.yml`; use `qfai.config.yaml#routing` and `#reviewProfiles` for complete project-specific overrides.",
-  "QFAI-AGENT-019":
-    "Add the agent to the skill's `roles:`, or remove its binding from the owner's file under `packages/qfai/assets/defaults/agent-routing/`, or from `review-profiles.yml`. For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
   "QFAI-SKILLS-016":
-    "Run `qfai init --force` to restore the shipped step tree. For a step of the project's own, fix the `STEP.md` or the skill's `steps:` or `requires:` the message names: rename a `SKILL.md` under the step layer to `STEP.md`, match `name:` to the directory, set `owner:` to `common` or to the skill that lists the step, keep a step's or a skill's `requires:` to a list of installed `common-*` steps, list a common step a skill's body runs in that skill's `requires:`, and add the roles the message names to the skill's `roles:`.",
+    "Run `qfai init --force` to restore the shipped step tree. For a step of the project's own, fix the `STEP.md` or the skill's `steps:` or `requires:` the message names: rename a `SKILL.md` under the step layer to `STEP.md`, match `name:` to the directory, set `owner:` to `common` or to the skill that lists the step, keep a step's or a skill's `requires:` to a list of installed `common-*` steps, and list a common step a skill's body runs in that skill's `requires:`.",
   // The orphan-prohibition emitter passes no `suggested_action` on any path, so
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an

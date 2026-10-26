@@ -3,8 +3,6 @@ name: triage-investigate
 owner: qfai-triage
 purpose: "Investigate a question the documents do not answer by reading internals, history and outside facts, without changing any tracked file."
 requires: []
-roles: [discovery-analyst, frontend-engineer, backend-engineer]
-routing-profile: default
 ---
 
 # triage-investigate

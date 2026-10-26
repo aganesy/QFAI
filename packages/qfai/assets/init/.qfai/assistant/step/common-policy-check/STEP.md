@@ -3,7 +3,6 @@ name: common-policy-check
 owner: common
 purpose: "Once, at the start of a run, find the project facts in policy and technology that are missing or stale, fill the verified ones the run owns, and record what cannot be verified."
 requires: []
-roles: []
 ---
 
 # common-policy-check

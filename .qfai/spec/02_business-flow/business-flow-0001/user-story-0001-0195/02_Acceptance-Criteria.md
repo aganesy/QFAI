@@ -33,7 +33,7 @@ Feature: A stage skill picked up by free text hands over
     Given every skill that owns a step a built-in plan names
     When its `SKILL.md` is read
     Then its frontmatter `steps:` lists, in the order they run, every step it owns, and any other entry is a `common-*` step
-    And its frontmatter carries no `routing-profile:`, and its `roles:` is `orchestrator` plus the union of the `roles:` of the steps it lists
+    And its frontmatter carries no `routing-profile:` and no `roles:`
     And its body names each step with the condition that skips it, and has the agent read only the current step's `STEP.md`
     And no step's procedure is written in the body
 

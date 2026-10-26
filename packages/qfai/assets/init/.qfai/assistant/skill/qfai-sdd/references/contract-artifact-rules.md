@@ -32,6 +32,18 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
 ## Rules
 
 - Keep contract files minimal: only what flows, stories, and tests actually reference.
+- Every entry in a UI contract's `screens[]` carries at least one
+  `primary_task`. An empty `primary_tasks` array blocks `/qfai-prototyping` at
+  the validate lane, under `QFAI-AUD-001`. The shipped `ui-contract.sample.yaml`
+  carries filled entries; replace them with the screen's own rather than
+  emptying the list.
+- Every screen also declares `supplements` (`[]` when it shows no text beyond
+  its title, group headings and labels), and `structure` when it shows a heading
+  beyond its title. Check each proposed text against the screen's tasks and the
+  information the user needs there, and write the ones that stay into the
+  contract with the reason. A text that only repeats a heading, an action or a
+  condition the user already has is left out. Discussion sidecars inform these
+  keys; they do not replace them. See `ui-contract-guide.md`.
 - UI contracts must be mockable for prototypes: define stable `elements` and
   `actions` with enough inspection-target text for Playwright evidence.
 - **The `prototype` mapping is optional, and what it declares is checked.** A

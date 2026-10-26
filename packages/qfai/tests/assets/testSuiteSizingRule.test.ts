@@ -34,11 +34,7 @@ describe("the layer rule sizes a new test suite without removing coverage", () =
   });
 
   it("every reviewer check links the sizing section and § 4 of the rule", async () => {
-    for (const rel of [
-      "agent/implementation-reviewer.md",
-      "agent/qa-gatekeeper.md",
-      "skill/qfai-implement/SKILL.md",
-    ]) {
+    for (const rel of ["agent/implementation-reviewer.md", "skill/qfai-implement/SKILL.md"]) {
       const body = flat(await read(rel));
       expect(body, rel).toContain(
         "adds test files sized like their neighbours, commits no scratch checks, " +

@@ -1,1 +1,0 @@
-../../.qfai/assistant/agent/qa-strategist.md

@@ -17,16 +17,6 @@ const implementSkillPath = path.join(
 );
 const implementAssistantDir = path.join(templateRoot, ".qfai", "assistant");
 
-describe("E2E: sub-agent roster formalization", () => {
-  it("SKILL.md defines a formal routed specialist roster", async () => {
-    const content = await readImplementFlowSteps(implementAssistantDir);
-    expect(content).toContain("roles:");
-    expect(content).toContain("delivery-planner");
-    expect(content).toContain("frontend-engineer");
-    expect(content).toContain("backend-engineer");
-  });
-});
-
 describe("E2E: evidence contract hardening", () => {
   it("SKILL.md defines minimum evidence with command+result pairs", async () => {
     const content = await readImplementFlowSteps(implementAssistantDir);
@@ -37,7 +27,7 @@ describe("E2E: evidence contract hardening", () => {
 });
 
 describe("E2E: parallel dispatch rules", () => {
-  it("SKILL.md defines allow/deny conditions and delivery-planner authority", async () => {
+  it("SKILL.md defines allow/deny conditions and the session agent's authority", async () => {
     // Full conditions live in references/parallelization-policy.md.
     const content = await readImplementFlowSteps(implementAssistantDir);
     const policy = (
@@ -47,9 +37,11 @@ describe("E2E: parallel dispatch rules", () => {
       )
     ).replace(/\s*\n\s*/g, " ");
     expect(content).toContain("Work one EX at a time by default");
-    expect(policy).toContain("explicit user approval and a delivery-planner PASS");
-    expect(policy).toContain("Deny parallel dispatch when two items write the same shared fixture");
-    expect(policy).toMatch(/each worker.*exact file ownership list.*checkout assigned by the host/);
+    expect(policy).toContain(
+      "It decides alone, records the result in the stage report, and asks the user nothing",
+    );
+    expect(policy).toContain("Two units that write the same shared fixture or mock file");
+    expect(policy).toMatch(/exact owned-path list.*checkout assigned by the host/);
     expect(policy).toMatch(
       /separate worktrees when.*host supports editing.*otherwise.*shared-index mode/,
     );
@@ -62,8 +54,8 @@ describe("E2E: parallel dispatch rules", () => {
     );
     expect(policy).toContain("Workers do not change another worker's files or the story tree.");
     expect(policy).toMatch(
-      /orchestrator integrates their results and resolves every overlap before judging either item complete/,
+      /session agent integrates the results and resolves every overlap before judging any story complete/,
     );
-    expect(policy).toContain("After integration, rerun every item selector on the merged tree");
+    expect(policy).toContain("It reruns every story unit's selectors");
   });
 });

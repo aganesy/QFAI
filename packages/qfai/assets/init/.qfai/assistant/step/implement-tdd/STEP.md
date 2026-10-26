@@ -4,14 +4,6 @@ owner: qfai-implement
 purpose: "Take each example of one business flow that no test annotates through an observed Red, Green and Refactor cycle, appending the one example a diagnosed missing test needs, and align every surface that does not own the truth."
 requires:
   - common-gate-run
-roles:
-  - delivery-planner
-  - test-design-analyst
-  - qa-strategist
-  - frontend-engineer
-  - backend-engineer
-  - devops-ci-engineer
-routing-profile: default
 ---
 
 # implement-tdd
@@ -141,8 +133,9 @@ See `.qfai/assistant/skill/qfai-implement/references/cross-spec-ownership.md`
 for changes that touch another flow and
 `.qfai/assistant/skill/qfai-implement/references/parallelization-policy.md`
 for independently owned
-slices. Work one EX at a time by default. Parallel work requires disjoint
-writes, a passing technical gate, and the required user consent.
+story units. Work one EX at a time by default. Stories with no test yet may
+run in parallel only when the parallel-unit gate passes, which the session
+agent decides and records.
 
 ## Red, Green, Refactor
 

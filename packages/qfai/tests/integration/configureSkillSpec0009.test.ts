@@ -15,7 +15,6 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { collectFilesByGlobs } from "../../src/core/fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../../src/core/traceability.js";
-import { readEffectiveRouting } from "../../src/core/validators/agentDefinition.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const SKILL_PATH = path.resolve(
@@ -163,49 +162,6 @@ describe("Config Update Is Minimal", () => {
     expect(content).toMatch(/minimal.*diff/i);
     expect(content).toContain("traceability globs");
     expect(content).toContain("Write no `validation.require` key");
-  });
-
-  // QFAI:EX-0001-0076-03
-  it("records one whole routing entry and copies no other default into the config", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    const update = section(content, "Step 4");
-    expect(update).toMatch(
-      /`routing` or `reviewProfiles`[^.;]*only (?:when|if) the user (?:asks to change one|requests (?:a change|an override))/,
-    );
-    expect(update).toMatch(/each matching entry replaces[^.]*default as a whole/);
-    expect(update).toMatch(/(?:Keep|Preserve) all other config keys unchanged/);
-    expect(section(content, "Constraints")).toMatch(
-      /Only update `qfai\.config\.yaml`[^.]*project-owned policy and contract files under `\.qfai\/spec\/`[^.]*unless explicitly (?:asked|requested)/,
-    );
-    expect(section(content, "Default Autopilot Policy")).toMatch(
-      /an override replaces a matching entry as a whole/,
-    );
-
-    // The routing defaults are keyed by step, so the override is keyed by the step it changes.
-    const override = {
-      step: "sdd-contract",
-      phases: [
-        {
-          id: "review",
-          mandatory_agents: ["implementation-reviewer"],
-          parallel_groups: [],
-          rerun_policy: "changed-scope-dependents",
-        },
-      ],
-      review_profile: "default",
-    };
-    const effective = await readEffectiveRouting({ routing: [override] });
-    const agentsOf = (entry: { agents: Map<string, string> } | undefined): string[] =>
-      [...(entry?.agents.keys() ?? [])].sort();
-    expect(agentsOf(effective.defaultRouting?.get("sdd-contract"))).toContain("solution-architect");
-    expect(
-      agentsOf(effective.routing?.get("sdd-contract")),
-      "the override is the whole entry, with none of the default's agents merged in",
-    ).toEqual(["implementation-reviewer"]);
-    for (const [name, entry] of effective.defaultRouting ?? []) {
-      if (name === "sdd-contract") continue;
-      expect(agentsOf(effective.routing?.get(name)), name).toEqual(agentsOf(entry));
-    }
   });
 });
 

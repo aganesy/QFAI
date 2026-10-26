@@ -8,48 +8,28 @@ update_frequency: occasional
 
 Each card in `.qfai/assistant/agent/` defines one agent. Its frontmatter is the
 source for its identity, mission, domain, artifacts, tools, permissions, and
-specializations. Read the card before assigning work. Do not keep another copy
-of its definition in a routing file.
+specializations. Read the card before briefing the agent, and keep no other
+copy of its definition.
 
-The installed QFAI package supplies routing defaults from every file in
-`assets/defaults/agent-routing/`, read in file-name order as one routing list,
-and review-profile defaults from `assets/defaults/review-profiles.yml`. Find
-that directory beside the package's `assets/init/` directory. A
-`qfai.config.yaml` `routing:` or `reviewProfiles:` entry replaces the matching
-default entry as a whole; a new key adds an entry.
-Resolve defaults and project overrides before selecting agents. The project
-does not own copies of these default files.
+## The catalogue
 
-A local installation of QFAI is required in an adopting project. If it is
-unavailable, stop and ask for a local install with `npm install -D qfai`.
-Do not infer routing from a skill body or continue without the defaults.
+QFAI delegates by context, never by role. The session agent does every piece of
+work itself and starts a sub-agent only for one of the two reasons
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#sub-agent-delegation-mandatory`
+states. Each card serves one of them:
 
-## Selection
+| Card                       | Kind     | Briefed for                                                                                   |
+| -------------------------- | -------- | --------------------------------------------------------------------------------------------- |
+| `fullstack-engineer`       | worker   | One parallel unit: a story with no implementation yet, or one self-contained read-only lookup |
+| `requirements-reviewer`    | reviewer | The specification review, the finder of the concrete-abstract cycle, a griller                |
+| `architecture-reviewer`    | reviewer | A contract change in the specification review, a griller on a contract or architecture choice |
+| `implementation-reviewer`  | reviewer | The code review of the whole diff                                                             |
+| `product-surface-reviewer` | reviewer | A screen change in a review, and the prototyping evaluator                                    |
 
-| Work                       | Primary agent                  | Review or support          |
-| -------------------------- | ------------------------------ | -------------------------- |
-| Initial discovery          | `discovery-analyst`            | `delivery-planner`         |
-| Requirements and options   | `requirements-analyst`         | `requirements-reviewer`    |
-| Architecture and contracts | `solution-architect`           | `architecture-reviewer`    |
-| UX and screen behavior     | `product-experience-architect` | `product-surface-reviewer` |
-| Backend implementation     | `backend-engineer`             | `implementation-reviewer`  |
-| Frontend implementation    | `frontend-engineer`            | `product-surface-reviewer` |
-| Acceptance tests           | `acceptance-test-engineer`     | `test-design-analyst`      |
-| CI and runtime proof       | `devops-ci-engineer`           | `qa-gatekeeper`            |
-| Documentation              | `doc-steward`                  | `delivery-planner`         |
-| Completion audit           | `completion-reviewer`          | `qa-gatekeeper`            |
-
-The resolved routing entry, not this table, decides mandatory agents, phase
-order, and rerun policy. It routes no reviewer to a step: inside a route, the
-plan's `review` is the only review. The table helps identify a domain when no
-skill phase is being routed.
-
-A routed role names the expertise a phase needs, not a required hand-off. The
-session agent may do an authoring role's work itself, reading that role's card
-as it does. It delegates to a role only for work that runs in parallel, and for
-a review that someone other than the author should do, as
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#orchestrator-protocol`
-states.
+Inside a route, the plan's `review` and `common-review-cycle` pick the
+reviewers. A skill run by name names its own reviewer in its body. No card is
+defined by a technical domain, and no step or skill declares the agents it may
+dispatch.
 
 For MCP search and retrieval choices, see the MCP Integration section of
 `.qfai/assistant/skill/web-research/SKILL.md`.

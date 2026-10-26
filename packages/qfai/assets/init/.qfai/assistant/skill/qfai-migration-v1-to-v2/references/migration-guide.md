@@ -270,19 +270,16 @@ Step 12 makes the checks a shipped plan needs of the project, checks what step
 11 installs, and lists the project files that still name a 1.x path. Each failed
 check is reported by name:
 
-| Check              | Fails when                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------------ |
-| `plan-invalid`     | A step a built-in plan runs is not installed under `.qfai/assistant/step/`                       |
-| `reviewer-missing` | A `routing:` override in `qfai.config.yaml` drops a reviewer the package's default routing needs |
-| `invalid-mode`     | `workflow.mode` is set to anything other than `active`, `shadow` or `off`                        |
-| `gitignore`        | The managed `.gitignore` block differs from the one the installed package writes                 |
-| `qfai-run-link`    | A host skill directory has no link to `.qfai/assistant/skill/qfai-run/`                          |
-| `old-path`         | A line of a tracked project file names a 1.x path                                                |
+| Check           | Fails when                                                                       |
+| --------------- | -------------------------------------------------------------------------------- |
+| `plan-invalid`  | A step a built-in plan runs is not installed under `.qfai/assistant/step/`       |
+| `invalid-mode`  | `workflow.mode` is set to anything other than `active`, `shadow` or `off`        |
+| `gitignore`     | The managed `.gitignore` block differs from the one the installed package writes |
+| `qfai-run-link` | A host skill directory has no link to `.qfai/assistant/skill/qfai-run/`          |
+| `old-path`      | A line of a tracked project file names a 1.x path                                |
 
 Run step 11 again for what it installs, and step 10 again for a `gitignore`
-item. A routing override belongs to the
-project, so its owner decides whether to restore the reviewer. Rerun step 12
-until it exits 0.
+item. Rerun step 12 until it exits 0.
 
 ### Files the project wrote
 

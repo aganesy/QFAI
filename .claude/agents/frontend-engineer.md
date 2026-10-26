@@ -1,1 +1,0 @@
-../../.qfai/assistant/agent/frontend-engineer.md

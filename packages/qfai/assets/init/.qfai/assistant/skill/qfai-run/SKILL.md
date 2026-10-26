@@ -4,7 +4,6 @@ title: QFAI Run (Change request entry)
 description: "Use when the user asks for a change, a fix, an investigation of the codebase, a question about the project or an operation on finished work in plain words and names no stage skill. Plans every such request, the lightest included, with `npx qfai workflow plan` and runs the plan's steps in order to its end."
 argument-hint: "<the change, in your own words>"
 allowed-tools: [Read, Glob, Grep, Write, Edit, Bash, TodoWrite, Task, Agent]
-roles: [orchestrator]
 steps: []
 requires: [common-policy-check, common-review-cycle]
 mode: execution-focused
@@ -76,7 +75,7 @@ values plan nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in
    order, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory` says.
    Note each step's status for the final report; when a step is short or passes without edits, read `references/operator-screens.md`.
-   Write artifacts yourself or delegate independent parallel work or review. A worker starts no finder, griller or reviewer: run each step that starts one yourself, as the delegation baseline's Orchestrator Protocol says.
+   Do the work and write every artifact yourself. Start a sub-agent only for the two reasons the delegation baseline states: an independent judgement, or parallel units that pass the parallel-unit gate. A worker starts no finder, griller or reviewer: run each step that starts one yourself, as the delegation baseline's Session Agent Protocol says.
    At a step the plan marks with a point, follow `references/stage-points.md`:
    - **Release point.** Ask the user to approve the release before the step `releasePoint` names.
    - **Decision point.** Put each critical decision at a step `decisionPoints` names to the user.

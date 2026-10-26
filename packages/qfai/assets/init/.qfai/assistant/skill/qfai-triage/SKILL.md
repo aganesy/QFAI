@@ -4,17 +4,6 @@ title: QFAI Triage (Requests that end without a tracked change)
 description: "Use when invoked by name or handed a QFAI work order for a request that ends without a tracked change: a question, a duplicate, missing information, a split, automated reports, a security report, an operation only a person can run, an operation the user named on finished work, or authorized cleanup of current-task temporary directories."
 argument-hint: "<the request, as it was reported>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
-roles:
-  [
-    orchestrator,
-    discovery-analyst,
-    requirements-analyst,
-    delivery-planner,
-    solution-architect,
-    frontend-engineer,
-    backend-engineer,
-    devops-ci-engineer,
-  ]
 steps:
   - triage-dedupe
   - triage-request-info

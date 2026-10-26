@@ -16,22 +16,11 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content.length).toBeGreaterThan(0);
   });
 
-  it("defines the routed implementation specialists", async () => {
-    content ??= await readImplementFlowSteps(implementAssistantDir);
-
-    const subAgents = ["delivery-planner", "frontend-engineer", "backend-engineer"];
-
-    for (const agent of subAgents) {
-      expect(content, `Sub-agent ${agent} must be defined in SKILL.md`).toContain(agent);
-    }
-  });
-
   it("defines control guardrails for parallel work and reviewers", async () => {
     content ??= await readImplementFlowSteps(implementAssistantDir);
 
     expect(content).toContain("Work one EX at a time by default");
-    expect(content).toContain("Parallel work requires disjoint");
-    expect(content).toContain("required user consent");
+    expect(content).toContain("only when the parallel-unit gate passes");
   });
 
   it("defines the example handoff and review sequence", async () => {
@@ -60,21 +49,6 @@ describe("watch-it-fail enforcement and resubmission", () => {
 
     expect(content).toContain("Run the same selector and record");
     expect(content).toContain("Re-run the selector and record the result");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// spec-0006: Wording alignment + routing consistency
-// ---------------------------------------------------------------------------
-
-describe("wording alignment implementation mode", () => {
-  it("SKILL.md claims match implementation keywords", async () => {
-    const content = await readImplementFlowSteps(implementAssistantDir);
-    const agents = ["delivery-planner", "frontend-engineer", "backend-engineer"];
-    for (const agent of agents) {
-      expect(content).toContain(agent);
-    }
-    expect(content).toMatch(/RED|GREEN|refactor/i);
   });
 });
 

@@ -3,8 +3,6 @@ name: discussion-interview
 owner: qfai-discussion
 purpose: "Interview the user as a grilling session and record how and when it ended."
 requires: [common-grilling-record]
-roles: [discovery-analyst, requirements-analyst, solution-architect, product-experience-architect]
-routing-profile: default
 ---
 
 # discussion-interview

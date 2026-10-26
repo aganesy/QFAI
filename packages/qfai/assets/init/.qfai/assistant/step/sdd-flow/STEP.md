@@ -3,8 +3,6 @@ name: sdd-flow
 owner: qfai-sdd
 purpose: "Write the policy and technology facts and the business flows the triage decided to change."
 requires: []
-roles: [requirements-analyst, solution-architect, product-experience-architect]
-routing-profile: default
 ---
 
 # sdd-flow

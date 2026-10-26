@@ -16,7 +16,7 @@ Feature: Follow a route in the session
   Scenario: The session may author any artifact
     Given a stage of the plan
     When the session does its work
-    Then it writes the artifact itself, or gives independent parts to sub-agents to run in parallel
+    Then it writes the artifact itself, or gives each unit that passes the parallel-unit gate to a sub-agent to run in parallel
     And a review is done by an agent that did not author what it reviews
     And on Codex a sub-agent costs one self-contained brief and one final answer, with no polling between them
 
@@ -51,11 +51,11 @@ Feature: Follow a route in the session
   # AC-0001-0224-08
   Scenario: The shared checkout changes only when its users and files are safe
     Given one target waiting for CI or review and another authorized independent target
-    When the orchestrator changes the checkout to continue the other target
+    When the session agent changes the checkout to continue the other target
     Then every shared-checkout writer and locally executing gate has finished, target edits are preserved by a permitted path-limited commit, and the whole index and worktree are clean
     And unknown or unrelated dirty files postpone the switch without stashing, resetting or deleting them
     And a review still using live checkout files or local execution prevents the switch until it returns
-    And a read-only reviewer bound to a fixed commit and using only `git show <fixed SHA>:<path>` may continue while the orchestrator switches a clean checkout
+    And a read-only reviewer bound to a fixed commit and using only `git show <fixed SHA>:<path>` may continue while the session agent switches a clean checkout
     And a read-only child never switches the shared checkout itself
     And a CI-only pending gate uses the existing DELEGATED commit allowance only under explicit user instruction or project policy
 
@@ -127,7 +127,7 @@ Feature: Follow a route in the session
     And rule 29 selects write-procedure after refactor and before docs, while rules 1 through 28 retain priority
     And the plan runs implement-procedure in a documentation stage, followed by the existing change-note code review and QFAI, repository and commit verification
     And every step keeps the existing four output keys and applicable checks; no release point, branch point or extra review is added
-    And qfai-implement owns the route-only step with doc-steward; ordinary named business-flow implementation and wording-only maintenance keep their existing procedures
+    And qfai-implement owns the route-only step; ordinary named business-flow implementation and wording-only maintenance keep their existing procedures
     And the writer changes only authorized procedure documents within existing policy, stopping before protected-owner edits or invented required facts
     And a script the procedure names for the operator to run is edited only as far as the procedure change requires, keeping its existing tests and checks passing
     And writing the procedure grants no permission to execute its actions or expand external authority

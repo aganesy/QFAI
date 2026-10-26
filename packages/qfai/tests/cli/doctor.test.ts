@@ -443,7 +443,7 @@ describe("doctor", () => {
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.severity).toBe("ok");
       expect(findCheck(parsed.checks, "prototyping.requiredRoles")?.details?.requiredRoles).toEqual(
-        ["product-experience-architect", "product-surface-reviewer"],
+        ["product-surface-reviewer"],
       );
     } finally {
       await stopTestServer(server.server);

@@ -207,20 +207,6 @@ describe("validateStepTree", () => {
     expect(rules(await run())).toEqual(["stepTree.ownerOmitsStep"]);
   });
 
-  it("refuses a parent whose roles: omit orchestrator or a role one of its steps declares", async () => {
-    await seedCleanTree();
-    await writeStep("demo-one", {
-      owner: "qfai-demo",
-      requires: "[common-share]",
-      roles: "[solution-architect, completion-reviewer]",
-    });
-    await writeParent("qfai-demo", "[demo-one, common-share]", "[completion-reviewer]");
-    const found = await run();
-    expect(rules(found)).toEqual(["stepTree.parentRolesMissing"]);
-    expect(found[0]?.file).toBe(".qfai/assistant/skill/qfai-demo/SKILL.md");
-    expect(found[0]?.message).toContain("orchestrator, solution-architect");
-  });
-
   it("accepts a parent whose roles: cover orchestrator and the roles of every listed step", async () => {
     await seedCleanTree();
     await writeStep("demo-one", {

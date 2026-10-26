@@ -9,7 +9,6 @@ import { fileURLToPath } from "node:url";
 
 import { parse } from "yaml";
 
-import { readRoutingDefaultsFiles } from "../../src/core/routingDefaults.js";
 import { nextHeadingAt } from "./recordProse.js";
 import { readRule } from "./ruleWithReferences.js";
 
@@ -35,25 +34,6 @@ export function readShipped(relativePath: string): Promise<string> {
 /** A file under the package defaults, by its path relative to `assets/defaults`. */
 export function readDefault(relativePath: string): Promise<string> {
   return readFile(path.join(PACKAGE_DEFAULTS, relativePath), "utf-8");
-}
-
-/** Every routing defaults file's text, joined in the order the package reads them. */
-export async function readDefaultRoutingText(): Promise<string> {
-  return (await readRoutingDefaultsFiles()).map((file) => file.text).join("\n");
-}
-
-function isEntry(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** The package's routing defaults as the one `routing:` list the package reads them as. */
-export async function defaultRoutingEntries(): Promise<Record<string, unknown>[]> {
-  return (await readRoutingDefaultsFiles()).flatMap((file) => {
-    const parsed: unknown = parse(file.text);
-    const routing: unknown = isEntry(parsed) ? parsed.routing : undefined;
-    if (!Array.isArray(routing)) throw new Error(`${file.rel} holds no routing list`);
-    return routing.filter(isEntry);
-  });
 }
 
 /**
