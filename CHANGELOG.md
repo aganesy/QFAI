@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-10-28
+
 ### Changed
 
 - **The session agent does the work, and delegates by context, never by role.**
