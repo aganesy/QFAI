@@ -13,6 +13,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   carries, and from the project directory only when the input has none.
   `qfai init` replaces the earlier group of an unchanged settings file.
 
+- **The `qfai-run` extraction examples say every required field must be
+  written.** `workflow plan` refuses an extraction that leaves out
+  `entryFlags`, `qualifiers`, `signals`, `risks` or `artifacts`. Step 1 of the
+  skill now says to write every other required list field as `[]`, and the
+  extraction reference says the examples abbreviate: the file carries every
+  required field, while `flows` and `alternatives` stay absent when unused.
+
 ## [2.3.0] - 2026-10-28
 
 ### Changed
