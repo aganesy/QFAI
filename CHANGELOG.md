@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The `qfai-run` extraction examples say every required field must be
+  written.** `workflow plan` refuses an extraction that leaves out
+  `entryFlags`, `qualifiers`, `signals`, `risks` or `artifacts`. Step 1 of the
+  skill now shows the full minimal JSON, and the examples in the extraction
+  reference say the omitted fields go into the file as `[]`.
+
 ## [2.3.0] - 2026-10-28
 
 ### Changed

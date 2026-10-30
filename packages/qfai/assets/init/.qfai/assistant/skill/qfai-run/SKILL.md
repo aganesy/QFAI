@@ -60,6 +60,8 @@ values plan nothing.
 1. **Extract.** A question one read answers is `{ intent: question-why, qualifiers: [session-answerable] }`
    (or `question-how`, `question-help`); an operation on finished work, or on a device or system the session reaches, that the session runs itself and
    that deletes nothing is `{ intent: order, artifacts: [] }`. Every other field is empty, with `confidence: high`; neither needs a reference.
+   `plan` refuses an omitted field, so write each of `entryFlags`, `qualifiers`, `signals`, `risks` and `artifacts` out, as `[]` when empty:
+   `{"intent":"question-why","entryFlags":[],"qualifiers":["session-answerable"],"signals":[],"risks":[],"artifacts":[],"confidence":"high"}`.
    Read any other request as `references/extraction.md` sets out. Then run the launcher preflight above; after it passes, hand the extraction to `npx qfai workflow plan --in <file>`, or `--in -`.
    The session-run operation that deletes nothing, read above as `{ intent: order, artifacts: [] }`, goes to `npx qfai workflow plan --order` instead, with no file; an order read through `references/extraction.md` keeps `--in`.
 2. **Candidates.** When `plan` returns `candidates`, put one single-select
