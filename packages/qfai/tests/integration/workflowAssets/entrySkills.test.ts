@@ -552,7 +552,7 @@ describe("qfai-run", () => {
     );
     expect(extract).toMatch(/read any other request as `references\/extraction\.md`/i);
     expect(extract).toMatch(
-      /write every other required list field as `[]`, since `plan` refuses an omitted one, with `confidence: high`/i,
+      /write every other required list field as `\[\]`, since `plan` refuses an omitted one, with `confidence: high`/i,
     );
     const full = (fields: Partial<WorkflowExtraction>) =>
       ({
