@@ -551,7 +551,9 @@ describe("qfai-run", () => {
       "The session-run operation that deletes nothing, read above as `{ intent: order, artifacts: [] }`, goes to `npx qfai workflow plan --order` instead, with no file; an order read through `references/extraction.md` keeps `--in`.",
     );
     expect(extract).toMatch(/read any other request as `references\/extraction\.md`/i);
-    expect(extract).toMatch(/every other field is empty, with `confidence: high`/i);
+    expect(extract).toMatch(
+      /write every other required list field as `\[\]`, since `plan` refuses an omitted one, with `confidence: high`/i,
+    );
     const full = (fields: Partial<WorkflowExtraction>) =>
       ({
         ...extraction({ artifacts: [], confidence: "high" }),

@@ -13,6 +13,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   carries, and from the project directory only when the input has none.
   `qfai init` replaces the earlier group of an unchanged settings file.
 
+- **The `qfai-run` extraction examples say every required field must be
+  written.** `workflow plan` refuses an extraction that leaves out
+  `entryFlags`, `qualifiers`, `signals`, `risks` or `artifacts`. Step 1 of the
+  skill now says to write every other required list field as `[]`, and the
+  extraction reference says the examples abbreviate: the file carries every
+  required field, while `flows` and `alternatives` stay absent when unused.
+
 - **A hand-made release-notes edit in a delegated release now plans.** The
   `triage-operate` step told the agent to extract the edit as an `order`
   naming the `release` artifact, which `workflow plan` refused because no
