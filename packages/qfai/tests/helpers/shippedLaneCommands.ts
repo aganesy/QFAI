@@ -1520,7 +1520,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // question-form reminder and the documentation-clarity reminder before a post started printing
   // once per session, and the API-budget reminder started matching `PowerShell` as well and
   // printing for a network client or the API host. Restoring the nine groups reproduces `3cbebe52…`.
-  [".claude/settings.json", "680a01620f0a9ba4d98becb4060bc6bd6e5cb8822cf94f79f6e57f3e3a4a2109"],
+  [".claude/settings.json", "60f443e327f641e6ee94c04382ec74c8d6df86ab0de36c02576703704f47d6bc"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
