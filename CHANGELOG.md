@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A hand-made release edit in a delegated release now plans.** The
+  `triage-operate` step told the agent to extract the edit as an `order`
+  naming the `release` artifact, which `workflow plan` refused because no
+  route writes that artifact without the `release-notes` signal. The step now
+  names the signal, so the extraction plans the release-notes route.
+
 ## [2.3.0] - 2026-10-28
 
 ### Changed

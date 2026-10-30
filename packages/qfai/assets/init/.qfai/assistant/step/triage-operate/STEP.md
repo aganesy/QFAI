@@ -88,7 +88,8 @@ request, or the version edit alone.
    sets the version and opens the release pull request. An instruction that
    covers only the version edit stops once that edit is made. A release edit
    the documents make by hand is a tracked change: report `needs-change` with
-   an extraction of it as an `order` naming the `release` artifact, and carry
+   an extraction of it as an `order` naming the `release` artifact and the
+   `release-notes` signal (without the signal no route writes `release`), and carry
    the quoted instruction and the named version into that extraction's
    request, so the next plan makes the edit under the same instruction.
 3. Review the release pull request as the project's review rules say, and
