@@ -39,7 +39,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         throw Object.assign(new Error("EACCES: permission denied, stat"), { code: "EACCES" });
       }
       const stats = await actual.stat(...args);
-      return fault.zeroInode && typeof stats.ino === "bigint"
+      return stats !== undefined && fault.zeroInode && typeof stats.ino === "bigint"
         ? Object.assign(stats, { ino: 0n })
         : stats;
     },

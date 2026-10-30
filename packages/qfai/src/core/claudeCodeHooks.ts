@@ -98,7 +98,10 @@ export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
  * with no install of its own resolves the copy a parent directory holds, which
  * may be an older version, or fetches one. The group's program looks for this
  * checkout's own launcher, up to its git root and no further, and prints the
- * remedy only where there is none.
+ * remedy only where there is none. It starts from the `cwd` of the hook input,
+ * the checkout the session works in, and from the project directory only when
+ * the input names none: a session in a nested worktree has the main checkout as
+ * its project directory.
  */
 export const INSTALL_CHECK_HOOK_MARKER = "QFAI install check reminder";
 
@@ -262,6 +265,8 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "7245e9f615cc0d769895fc79d778576eae14e930615788ab335f2a8bda1e1a86",
   "ed6c7271f8c4e1bde3eac78df2c7c47f8f5bfb3d0837b68e9c68c46eef81116c",
   "4f6f93dce5cde82e9957ab4802471b8714db812436837746b9abf1af284da94c",
+  // install check: the program that judged the project directory, not the session's working directory
+  "450e2cc202904e46053c08e55744a6cc665cfe9492b4939865e724e66770b3b5",
 ]);
 
 export type HookMergeResult =

@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The Claude Code install check judges the checkout the session works in.**
+  In a nested worktree the project directory is the main checkout, so the
+  reminder kept saying `qfai` was not installed after the worktree's own
+  install. The hook now starts its search from the `cwd` the hook input
+  carries, and from the project directory only when the input has none.
+  `qfai init` replaces the earlier group of an unchanged settings file.
+
 - **A hand-made release-notes edit in a delegated release now plans.** The
   `triage-operate` step told the agent to extract the edit as an `order`
   naming the `release` artifact, which `workflow plan` refused because no
