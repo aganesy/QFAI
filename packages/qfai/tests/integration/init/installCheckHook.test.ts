@@ -137,6 +137,33 @@ describe("the install check of the Claude Code settings", () => {
       await removeTempTree(base);
     }
   });
+
+  it("judges the session's working directory from the hook input, not the project directory", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai install check cwd "));
+    try {
+      const entry = await installCheckEntry(path.join(".claude", "settings.json"));
+      const run = (projectDir: string, cwd: string): Promise<string> =>
+        runReminderHook(
+          { command: "node", args: argsOf(entry) },
+          projectDir,
+          JSON.stringify({ cwd }),
+        );
+
+      // The project directory is the main checkout with no install; the session works in a
+      // nested worktree that has one.
+      const main = await project(path.join(base, "main"));
+      const worktree = await project(path.join(main, "worktrees", "installed"), "file");
+      await launcherIn(worktree);
+      expect(await run(main, path.join(worktree, "src"))).toBe("");
+
+      // The reverse: the main checkout is installed, the working worktree is not.
+      await launcherIn(main);
+      const fresh = await project(path.join(main, "worktrees", "fresh"), "file");
+      expectRemedy(await run(main, fresh));
+    } finally {
+      await removeTempTree(base);
+    }
+  });
 });
 
 describe("the install check of the Codex hook file", () => {
