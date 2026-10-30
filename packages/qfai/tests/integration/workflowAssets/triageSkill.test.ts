@@ -323,7 +323,11 @@ describe("a question answered without a change", () => {
     expect(release).toMatch(/with the version the user named, never another/);
     expect(release).toMatch(/covers only the version edit stops once that edit is made/);
     expect(release).toMatch(
-      /A release edit the documents make by hand is a tracked change: report `needs-change`/,
+      /A release-notes or changelog edit the documents make by hand is a tracked change: report `needs-change`/,
+    );
+    expect(release).toMatch(/naming the `release` artifact and the `release-notes` signal/);
+    expect(release).toMatch(
+      /Any other hand-made release edit, such as a version bump the preparation does not make, has no route: report it as a blocker/,
     );
     expect(release).toMatch(
       /Review the release pull request as the project's review rules say, and merge it only when they allow/,
