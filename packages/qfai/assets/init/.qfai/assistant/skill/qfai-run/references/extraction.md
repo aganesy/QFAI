@@ -352,7 +352,8 @@ stage once per flow. Leave it out when no flow is named.
 Each request is followed by its extraction. Fields not shown are empty. The examples leave them out
 for brevity; the file handed to `plan` writes every required field (`intent`, `entryFlags`,
 `qualifiers`, `signals`, `risks`, `artifacts`, `confidence`), each empty list as `[]`, or `plan`
-refuses it.
+refuses it. `flows` and `alternatives` stay absent when unused: `plan` refuses an empty
+`alternatives`, and any `alternatives` at `confidence: high`.
 
 - "An empty phone number returns 500; the spec says 400." → `{ intent: defect, entryFlags: [repro, expect], artifacts: [code, tests], confidence: high }`
 - "Is the work complete?", asked of the session that did it → `{ intent: question-why, qualifiers: [session-answerable], confidence: high }`
