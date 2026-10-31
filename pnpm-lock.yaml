@@ -231,7 +231,7 @@ importers:
     devDependencies:
       '@electric-sql/pglite':
         specifier: ^0.5.8
-        version: 0.5.12
+        version: 0.5.13
       '@types/jsdom':
         specifier: ^30.0.0
         version: 30.0.0
@@ -342,8 +342,8 @@ packages:
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
 
-  '@electric-sql/pglite@0.5.12':
-    resolution: {integrity: sha512-IiAxv1ld1V9QP0AWsflliDqrGRo+20O+yXOr2fjk6YzBHsCvTPclwQhCB1uZ7eHtPrxUrSllNzWgqy/Ot76PEw==}
+  '@electric-sql/pglite@0.5.13':
+    resolution: {integrity: sha512-4rZuxK1k07w6sSpJzjMri0B9+HuXuC7V9pxVB51pR0T9KPqXg6TD0mdaEwBA9rkcL4jdht4tGDf/wYzAiGhT7g==}
 
   '@esbuild/aix-ppc64@0.27.2':
     resolution: {integrity: sha512-GZMB+a0mOMZs4MpDbj8RJp4cw+w1WV5NYD6xzgvzUJ5Ek2jerwfO2eADyI6ExDSUED+1X8aMbegahsJi+8mgpw==}
@@ -2661,7 +2661,7 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.0': {}
 
-  '@electric-sql/pglite@0.5.12': {}
+  '@electric-sql/pglite@0.5.13': {}
 
   '@esbuild/aix-ppc64@0.27.2':
     optional: true
