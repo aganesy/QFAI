@@ -3,7 +3,7 @@ import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from "no
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { loadConfig } from "../../../src/core/config.js";
@@ -144,7 +144,8 @@ const SPEC_TABLES = ["04_Business-Rules.md", "05_Examples.md", "06_Test-Cases.md
  * Steps 1 to 5 over a copy of the old-layout project. Each replacement renames the ID header of
  * one table file in both of its packs. The result holds the exit codes and reports of steps 4 and
  * 5, and every file the project then holds, the three table files by name only since they differ
- * in the header they were given.
+ * in the header they were given. The clock is fixed, since step 2 takes its record IDs from the
+ * time it runs.
  */
 async function runOldPack(...headers: [file: string, from: string, to: string][]): Promise<{
   codes: number[];
@@ -152,6 +153,7 @@ async function runOldPack(...headers: [file: string, from: string, to: string][]
   snapshot: [string, string][];
 }> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migrate-old-pack-"));
+  const clock = vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2026, 10, 5, 12));
   try {
     await cp(OLD_LAYOUT, root, { recursive: true });
     await cp(OLD_CRITERIA, path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md"));
@@ -200,6 +202,7 @@ async function runOldPack(...headers: [file: string, from: string, to: string][]
     }
     return { codes, outputs, snapshot: snapshot.sort(([a], [b]) => a.localeCompare(b)) };
   } finally {
+    clock.mockRestore();
     await rm(root, { recursive: true, force: true });
   }
 }
@@ -437,15 +440,15 @@ describe("migration steps 1 to 4", () => {
       const result = await run(step02, await context(root));
       expect(result.code).toBe(0);
       const decisions = await readFile(path.join(root, ".qfai/spec/decisions.md"), "utf8");
-      expect(decisions).toContain("DEC-0001");
-      expect(decisions).toContain("spec-0001/07_Decisions.md#DR-0001-0001");
-      expect(decisions).toContain("spec-0001/09_delta.md#DL-0001");
+      expect(decisions).toMatch(/\| DEC-\d{14} \| [^|]*spec-0001\/09_delta\.md#DL-0001/);
+      // A proposed record is not decided yet, so it becomes a question row.
+      expect(decisions).not.toContain("#DR-0001-0001");
       await expect(
         readFile(path.join(root, ".qfai/spec/spec-0001/07_Decisions.md")),
       ).rejects.toMatchObject({ code: "ENOENT" });
-      expect(await readFile(path.join(root, ".qfai/spec/open-questions.md"), "utf8")).toContain(
-        "Who owns this?",
-      );
+      const questions = await readFile(path.join(root, ".qfai/spec/open-questions.md"), "utf8");
+      expect(questions).toContain("Who owns this?");
+      expect(questions).toMatch(/\| OQ-\d{14} \| [^|]*spec-0001\/07_Decisions\.md#DR-0001-0001/);
       expect((await run(step02, await context(root))).output).toContain("## Operations\nnone");
     });
   });

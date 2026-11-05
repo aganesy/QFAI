@@ -133,7 +133,8 @@ Feature: Install or upgrade and get the free-text entry
   Scenario: Init seeds a union merge for the two registers
     Given a fresh project with no `.gitattributes`
     When `qfai init` runs
-    Then `.gitattributes` sets `merge=union` on `.qfai/spec/decisions.md` and `.qfai/spec/open-questions.md`, and on no other path
+    Then `.gitattributes` sets `merge=union` on `.qfai/spec/decisions.md`, `.qfai/spec/decisions/page-*.md` and `.qfai/spec/open-questions.md`, and on no other path
+    And its comment says that register rows are only appended, never edited or renumbered, and that a register conflict is resolved by merging the base branch locally
     And an existing `.gitattributes` is left as it is
 
   # AC-0001-0196-16

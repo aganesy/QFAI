@@ -14,8 +14,8 @@ function decisions(rows: string[]): string {
   return [
     "# Decisions",
     "",
-    "| ID | Content | Approach | Status |",
-    "| --- | --- | --- | --- |",
+    "| ID | Content | Approach |",
+    "| --- | --- | --- |",
     ...rows,
     "",
   ].join("\n");
@@ -26,26 +26,30 @@ describe("reopening a rejected option", () => {
     for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
       const baseline = await readFile(path.join(repoRoot, tree, BASELINE), "utf-8");
       const triage = await readFile(path.join(repoRoot, tree, TRIAGE), "utf-8");
-      expect(baseline).toContain("Leave the rejected row intact");
+      expect(baseline).toContain("Leave the declined row intact");
       expect(baseline).toContain("Content begins `Change request:`");
+      expect(baseline).toContain("Its Approach opens `Reopens DEC-…`");
       expect(baseline).toContain("approval provenance");
-      expect(triage).toContain("explicit reopening decision is appended");
+      expect(triage).toContain("a decision row whose Approach opens `Reopens DEC-…` is appended");
     }
   });
 
-  it("keeps the rejection immutable and authorizes only the new in-force row", () => {
-    const rejected = "| DEC-0001 | Reject option A | Unsafe under current constraints | REJECTED |";
+  it("keeps the declined row unchanged and adds the reopening request as a new row", () => {
+    const declined =
+      "| DEC-0001 | Declined change request: 02_business-flow/business-flow-0001/business-flow.md | Declined by the operator |";
     const request =
-      "| DEC-0002 | Change request: 02_business-flow/business-flow-0001/business-flow.md, DEC-0001; reopen option A | New evidence and operator approval | WIP |";
-    const base = decisions([rejected]);
-    const head = decisions([rejected, request]);
-    const diff = diffRecordTables(base, head, "decisions");
+      "| DEC-0002 | Change request: 02_business-flow/business-flow-0001/business-flow.md | Reopens DEC-0001 - New evidence and operator approval |";
+    const diff = diffRecordTables(
+      decisions([declined]),
+      decisions([declined, request]),
+      "decisions",
+    );
     expect(diff.removed).toEqual([]);
-    expect(diff.rewritten).toEqual([]);
-    expect(diff.appended).toHaveLength(1);
-    const newRow = diff.appended[0];
+    expect(diff.changed).toEqual([]);
+    expect(diff.added).toHaveLength(1);
+    const newRow = diff.added[0];
     expect(newRow).toBeDefined();
     if (!newRow) return;
-    expect(classifyRecordRow(newRow).inForce).toBe(true);
+    expect(classifyRecordRow(newRow).kind).toBe("change-request");
   });
 });

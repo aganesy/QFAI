@@ -1031,6 +1031,17 @@ describe("assets guardrails", () => {
         `${file} sets a merge driver only on the two registers and direct decision pages`,
       ).toHaveLength(3);
     }
+    const seedComment = (await readFile(path.join(templateRootDir, ".gitattributes"), "utf-8"))
+      .split("\n")
+      .filter((line) => line.startsWith("#"))
+      .map((line) => line.replace(/^#\s?/, "").trim())
+      .join(" ");
+    expect(seedComment).toContain(
+      "Register rows are only appended, never edited or renumbered, so Git union merging keeps both branches' rows.",
+    );
+    expect(seedComment).toContain(
+      "When a host shows a conflict in these files, merge the base branch locally and push; edit no row.",
+    );
   });
 
   it("states the LF line-ending policy in the Drift Protocol", async () => {

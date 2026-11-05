@@ -4,7 +4,7 @@ import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { isStoryTreeId } from "./ids.js";
 
 export type RecordTableKind = "decisions" | "open-questions";
-export type RecordRow = { id: string; content: string; approach: string; status: string };
+export type RecordRow = { id: string; content: string; approach: string };
 export type ParsedRecordTable = { rows: RecordRow[]; errors: string[] };
 export type DecisionOccurrence = {
   row: RecordRow;
@@ -18,34 +18,34 @@ export type DecisionRegister = {
   files: string[];
   occurrences: DecisionOccurrence[];
   errors: DecisionRegisterError[];
-  /** A size finding still reads the complete legacy register. */
+  /** A size finding still reads the complete register. */
   complete: boolean;
 };
-export type ClassifiedRecordRow = {
-  kind: "test-exception" | "change-request" | "unadjudicated" | "other";
-  refs: string[];
-  inForce: boolean;
-  row: RecordRow;
-};
+/**
+ * What a row does follows from its Content keyword and its presence. Whether a change request
+ * authorises anything also depends on whether the base holds the row, which the caller reads.
+ */
+export type RecordRowKind =
+  "test-exception" | "change-request" | "declined-change-request" | "unadjudicated" | "other";
+export type ClassifiedRecordRow = { kind: RecordRowKind; refs: string[]; row: RecordRow };
 export type ChangedRecordCell = {
   id: string;
-  cell: keyof RecordRow;
+  cell: "content" | "approach";
   before: string;
   after: string;
 };
+/** Base and head rows matched by ID; the order of rows means nothing. */
 export type RecordTableDiff = {
+  /** Base rows whose ID the head does not hold. */
   removed: RecordRow[];
+  /** Cells of base rows the head holds with different text. */
   changed: ChangedRecordCell[];
-  rewritten: ChangedRecordCell[];
-  appended: RecordRow[];
-  onlyChangeRequestRows: boolean;
+  /** Head rows whose ID the base does not hold, wherever they sit. */
+  added: RecordRow[];
 };
 
-const HEADERS = ["ID", "Content", "Approach", "Status"];
-const DECISION_STATUS = /^(?:TODO|WIP|DONE|REJECTED|(?:PARTLY )?SUPERSEDED \(by DEC-\d{4}\))$/;
-const PARTLY_SUPERSEDED = /^PARTLY SUPERSEDED \(by DEC-\d{4}\)$/;
-const QUESTION_STATUS = /^(?:TODO|WIP|DONE|DEFERRED|(?:DONE|SUPERSEDED) \(by DEC-\d{4}\))$/;
-const ROW_KEYS = ["id", "content", "approach", "status"] as const;
+const HEADERS = ["ID", "Content", "Approach"];
+const CELLS = ["content", "approach"] as const;
 
 /** The optional index is a closed direct-path list; it never follows Markdown links. */
 export function decisionPagePaths(text: string): { paths: string[]; errors: string[] } {
@@ -112,7 +112,8 @@ export function parseDecisionRegister(
       continue;
     }
     const physical = text.match(/[^\n]*\n|[^\n]+$/g) ?? [];
-    if (physical.length > 500)
+    // A page keeps its line cap; the root has none, because rows never move out of it.
+    if (file !== rootFile && physical.length > 500)
       report(
         file,
         `Decision document has ${physical.length} physical lines; maximum is 500`,
@@ -150,11 +151,7 @@ export function parseDecisionRegister(
     );
     for (const error of table.errors) {
       const numbered = /^decisions row (\d+) has/.exec(error)?.[1];
-      const named = /^decisions row (DEC-[^ ]+) has/.exec(error)?.[1];
-      const rowIndex = numbered
-        ? Number(numbered) - 1
-        : table.rows.findIndex((row) => row.id === named);
-      const actualRow = stored[rowIndex]?.actualRow;
+      const actualRow = numbered ? stored[Number(numbered) - 1]?.actualRow : undefined;
       tableErrors.push(`${file}${actualRow === undefined ? "" : `:${actualRow}`}: ${error}`);
     }
     if (stored.length !== table.rows.length)
@@ -184,12 +181,6 @@ export function parseDecisionRegister(
     complete,
   };
 }
-
-function statusPreview(status: string): string {
-  const characters = Array.from(status.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/gu, " ").trim());
-  return characters.slice(0, 40).join("") + (characters.length > 40 ? "..." : "");
-}
-
 export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRecordTable {
   const tables = parseAllMarkdownTables(text);
   const errors: string[] = [];
@@ -207,13 +198,12 @@ export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRec
     missing.length === 0 &&
     table.headers.some((header, index) => header !== HEADERS[index])
   ) {
-    errors.push(`${kind} columns must be ID, Content, Approach and Status, in that order`);
+    errors.push(`${kind} columns must be ID, Content and Approach, in that order`);
   }
   const rows = table.rows.map((cells) => ({
     id: cells[0] ?? "",
     content: cells[1] ?? "",
     approach: cells[2] ?? "",
-    status: cells[3] ?? "",
   }));
   const seen = new Set<string>();
   for (const [index, row] of rows.entries()) {
@@ -228,31 +218,22 @@ export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRec
     }
     if (seen.has(row.id)) errors.push(`${kind} declares ${row.id} more than once`);
     seen.add(row.id);
-    const statusPattern = kind === "decisions" ? DECISION_STATUS : QUESTION_STATUS;
-    if (!statusPattern.test(row.status)) {
-      const allowedStatuses =
-        kind === "decisions"
-          ? "TODO, WIP, DONE, REJECTED, SUPERSEDED (by DEC-NNNN), PARTLY SUPERSEDED (by DEC-NNNN)"
-          : "TODO, WIP, DONE, DONE (by DEC-NNNN), DEFERRED, SUPERSEDED (by DEC-NNNN)";
-      errors.push(
-        `${kind} row ${row.id} has an invalid Status: "${statusPreview(row.status)}"; allowed: ${allowedStatuses}`,
-      );
-    }
   }
   return { rows, errors };
 }
 
+const ROW_KEYWORD =
+  /^(Declined change request|Test exception|Change request|Unadjudicated):\s*(.*)$/i;
+const KIND_BY_KEYWORD: Record<string, RecordRowKind> = {
+  "declined change request": "declined-change-request",
+  "test exception": "test-exception",
+  "change request": "change-request",
+  unadjudicated: "unadjudicated",
+};
+
 export function classifyRecordRow(row: RecordRow): ClassifiedRecordRow {
-  const match = /^(Test exception|Change request|Unadjudicated):\s*(.*)$/i.exec(row.content);
-  const keyword = match?.[1]?.toLowerCase();
-  const kind =
-    keyword === "test exception"
-      ? "test-exception"
-      : keyword === "change request"
-        ? "change-request"
-        : keyword === "unadjudicated"
-          ? "unadjudicated"
-          : "other";
+  const match = ROW_KEYWORD.exec(row.content);
+  const kind = KIND_BY_KEYWORD[match?.[1]?.toLowerCase() ?? ""] ?? "other";
   const refs =
     kind === "unadjudicated" || kind === "other"
       ? []
@@ -260,15 +241,7 @@ export function classifyRecordRow(row: RecordRow): ClassifiedRecordRow {
           .split(",")
           .map((part) => part.trim())
           .filter(Boolean);
-  const inForce =
-    kind === "test-exception"
-      ? row.status === "DONE"
-      : kind === "change-request"
-        ? row.status === "WIP" || row.status === "DONE" || PARTLY_SUPERSEDED.test(row.status)
-        : kind === "unadjudicated"
-          ? row.status === "TODO" || row.status === "WIP"
-          : false;
-  return { kind, refs, inForce, row };
+  return { kind, refs, row };
 }
 
 export function diffRecordTables(
@@ -276,50 +249,35 @@ export function diffRecordTables(
   headText: string,
   kind: RecordTableKind,
 ): RecordTableDiff {
-  return diffRecordRows(parseRecordTable(baseText, kind), parseRecordTable(headText, kind), kind);
+  return diffRecordRows(
+    parseRecordTable(baseText, kind).rows,
+    parseRecordTable(headText, kind).rows,
+  );
 }
 
-/** Compares physical occurrences in logical register order, retaining duplicate copies. */
+/**
+ * Matches base and head rows by ID, never by position, because a union merge interleaves the rows
+ * two branches appended. A base row is kept when a head row with its ID holds the same cells.
+ */
 export function diffRecordRows(
-  baseTable: ParsedRecordTable,
-  headTable: ParsedRecordTable,
-  kind: RecordTableKind,
+  base: readonly RecordRow[],
+  head: readonly RecordRow[],
 ): RecordTableDiff {
-  const base = baseTable.rows;
-  const head = headTable.rows;
   const removed: RecordRow[] = [];
   const changed: ChangedRecordCell[] = [];
-  const rewritten: ChangedRecordCell[] = [];
-  for (const [index, before] of base.entries()) {
-    const after = head[index];
-    if (!after) {
+  for (const before of base) {
+    const candidates = head.filter((row) => row.id === before.id);
+    const first = candidates[0];
+    if (!first) {
       removed.push(before);
       continue;
     }
-    for (const cell of ROW_KEYS) {
-      if (before[cell] === after[cell]) continue;
-      const difference = { id: before.id, cell, before: before[cell], after: after[cell] };
-      changed.push(difference);
-      if (cell !== "status") rewritten.push(difference);
+    if (candidates.some((row) => CELLS.every((cell) => row[cell] === before[cell]))) continue;
+    for (const cell of CELLS) {
+      if (before[cell] !== first[cell])
+        changed.push({ id: before.id, cell, before: before[cell], after: first[cell] });
     }
   }
-  const appended = head.slice(base.length);
-  return {
-    removed,
-    changed,
-    rewritten,
-    appended,
-    onlyChangeRequestRows:
-      kind === "decisions" &&
-      baseTable.errors.length === 0 &&
-      headTable.errors.length === 0 &&
-      removed.length === 0 &&
-      rewritten.length === 0 &&
-      changed.every((difference) =>
-        head.some(
-          (row) => row.id === difference.id && classifyRecordRow(row).kind === "change-request",
-        ),
-      ) &&
-      appended.every((row) => classifyRecordRow(row).kind === "change-request"),
-  };
+  const baseIds = new Set(base.map(({ id }) => id));
+  return { removed, changed, added: head.filter(({ id }) => !baseIds.has(id)) };
 }

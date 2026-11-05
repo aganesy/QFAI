@@ -209,7 +209,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     await put(
       root,
       question,
-      "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| OQ-0001 | Unadjudicated: does checkout need a UI? | Decide before implementation. | TODO |\n",
+      "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n| OQ-0001 | Unadjudicated: does checkout need a UI? | Decide before implementation. |\n",
     );
 
     expect(
@@ -233,7 +233,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     await put(
       root,
       question,
-      "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| OQ-0001 | Checkout needs no UI in this slice. | Use the CLI contract. | DONE |\n",
+      "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n| OQ-0001 | Checkout needs no UI in this slice. | Use the CLI contract. |\n",
     );
     await runValidate({ root, strict: false, profile: "sdd", failOn: "never", flowIds: [flowId] });
     const repaired = await readFlowFindings(root);

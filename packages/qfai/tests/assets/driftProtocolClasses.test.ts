@@ -18,10 +18,10 @@ describe.each(trees)("drift classification in %s", (tree) => {
     expect(rule).toContain("Record a reproduction:");
     expect(rule).toContain("without invented alternatives");
     expect(rule).toContain("Both classes use the same approval and owner-rerun path.");
-    expect(rule).toContain("A page preserves the same row identity and Status permissions");
-    expect(rule).toContain("A historical DONE row is not permission to relocate");
-    expect(rule).toContain("separately adopted execution change request");
-    expect(rule).toContain("reviewed raw-byte receipt");
+    expect(rule).toContain("A page row follows the same rules as a root row.");
+    expect(rule.replace(/\s+/g, " ")).toContain(
+      "appending a row to a page is a protected edit, and no row moves between files",
+    );
   });
 
   it("keeps discussion discovery outside the upstream ownership boundary", async () => {

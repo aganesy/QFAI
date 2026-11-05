@@ -33,9 +33,9 @@ vi.mock("node:child_process", async () => {
 const { checkDocuments } = await import("../../assets/scripts/check-mdschema.mjs");
 
 const DECISIONS =
-  "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
 const OPEN_QUESTIONS =
-  "# Open Questions\n\n## Open Questions\n\n| ID | Question | Status |\n| --- | --- | --- |\n";
+  "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
 
 const roots: string[] = [];
 

@@ -274,7 +274,7 @@ async function authoredDesignMd(root: string): Promise<string> {
 }
 
 const DECISIONS_HEAD =
-  "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | ------- | -------- | ------ |\n";
+  "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | ------- | -------- |\n";
 
 export const DESIGN_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
   // `web` with the direction recorded, `web-no-direction` with no brand chosen, or `cli`.

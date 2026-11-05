@@ -33,8 +33,8 @@ function decisions(...rows: string[]): string {
     "",
     "## Decisions",
     "",
-    "| ID | Content | Approach | Status |",
-    "| --- | --- | --- | --- |",
+    "| ID | Content | Approach |",
+    "| --- | --- | --- |",
     ...rows,
     "",
   ].join("\n");
@@ -222,12 +222,10 @@ describe("layer-specific test obligations", () => {
 
   // QFAI:AC-0001-0056-06
   // QFAI:EX-0001-0056-06
-  it("exempts only the named item while the test exception is DONE", async () => {
+  it("exempts only the named item while the test exception row exists", async () => {
     const decisionsFile = `${spec}/decisions.md`;
     const done = await project({
-      [decisionsFile]: decisions(
-        "| DEC-0001 | Test exception: BF-0001 | No E2E environment | DONE |",
-      ),
+      [decisionsFile]: decisions("| DEC-0001 | Test exception: BF-0001 | No E2E environment |"),
     });
     expect(await findings(done, "atdd", "QFAI-STORY-009")).toContainEqual(
       expect.objectContaining({ severity: "info", refs: ["BF-0001", "DEC-0001"] }),
@@ -236,17 +234,13 @@ describe("layer-specific test obligations", () => {
     expect(doneOwed).not.toContain("BF-0001");
     expect(doneOwed).toEqual(expect.arrayContaining(["AC-0001-0001-01", "AC-0001-0001-02"]));
 
-    const wip = await project({
-      [decisionsFile]: decisions(
-        "| DEC-0001 | Test exception: BF-0001 | No E2E environment | WIP |",
-      ),
-    });
-    expect(await owed(wip, "atdd")).toContain("BF-0001");
-    expect(await findings(wip, "atdd", "QFAI-STORY-009")).toEqual([]);
+    const none = await project({ [decisionsFile]: decisions() });
+    expect(await owed(none, "atdd")).toContain("BF-0001");
+    expect(await findings(none, "atdd", "QFAI-STORY-009")).toEqual([]);
 
     const criterion = await project({
       [decisionsFile]: decisions(
-        "| DEC-0001 | Test exception: AC-0001-0001-01 | No API environment | DONE |",
+        "| DEC-0001 | Test exception: AC-0001-0001-01 | No API environment |",
       ),
     });
     expect(await owed(criterion, "atdd")).not.toContain("AC-0001-0001-01");
@@ -258,7 +252,7 @@ describe("layer-specific test obligations", () => {
   it("exempts nothing for a test exception naming an ID the tree does not define", async () => {
     const root = await project({
       [`${spec}/decisions.md`]: decisions(
-        "| DEC-0001 | Test exception: EX-0001-0001-01, EX-0001-0001-03 | No test yet | DONE |",
+        "| DEC-0001 | Test exception: EX-0001-0001-01, EX-0001-0001-03 | No test yet |",
       ),
     });
     const result = await validateProject(root, undefined, { profile: "tdd" });
@@ -293,22 +287,18 @@ describe("layer-specific test obligations", () => {
 
   // QFAI:AC-0001-0091-04
   // QFAI:EX-0001-0091-04
-  it("selects an unannotated example again while the exception naming it is WIP or TODO", async () => {
-    const withStatuses = (first: string, second: string) =>
-      project({
-        [`${spec}/decisions.md`]: decisions(
-          `| DEC-0001 | Test exception: EX-0001-0001-01 | No test yet | ${first} |`,
-          `| DEC-0002 | Test exception: EX-0001-0001-02 | No test yet | ${second} |`,
-        ),
-      });
-
-    const mixed = await withStatuses("DONE", "WIP");
+  it("selects an unannotated example that no test exception row names", async () => {
+    const mixed = await project({
+      [`${spec}/decisions.md`]: decisions(
+        "| DEC-0001 | Test exception: EX-0001-0001-01 | No test yet |",
+      ),
+    });
     expect(await owed(mixed, "tdd")).toEqual(["EX-0001-0001-02"]);
     expect((await findings(mixed, "tdd", "QFAI-STORY-009")).map((finding) => finding.refs)).toEqual(
       [["EX-0001-0001-01", "DEC-0001"]],
     );
 
-    const open = await withStatuses("TODO", "WIP");
+    const open = await project({ [`${spec}/decisions.md`]: decisions() });
     expect(await owed(open, "tdd")).toEqual(["EX-0001-0001-01", "EX-0001-0001-02"]);
     expect(await findings(open, "tdd", "QFAI-STORY-009")).toEqual([]);
   });
@@ -331,14 +321,7 @@ describe("layer-specific test obligations", () => {
   });
 });
 
-describe.each([
-  "DONE",
-  "TODO",
-  "WIP",
-  "REJECTED",
-  "SUPERSEDED (by DEC-0002)",
-  "PARTLY SUPERSEDED (by DEC-0002)",
-] as const)("whole validation of test exceptions at %s", (status) => {
+describe("whole validation of test exceptions", () => {
   // QFAI:AC-0001-0056-06
   // QFAI:EX-0001-0056-06
   // QFAI:EX-0001-0056-07
@@ -346,22 +329,20 @@ describe.each([
     ["BF-0001", "atdd"],
     ["AC-0001-0001-01", "atdd"],
     ["EX-0001-0001-01", "tdd"],
-  ] as const)("only DONE exempts %s under %s", async (id, profile) => {
+  ] as const)("a test exception row exempts %s under %s", async (id, profile) => {
     const approach =
       "- Evidence: none — isolated fixture - Grounds: no test environment - Residual risk: coverage remains unverified - Rollback: restore the obligation";
     const root = await project({
       [`${spec}/decisions.md`]: decisions(
-        `| DEC-0001 | Test exception: ${id} | ${approach} | ${status} |`,
-        `| DEC-0002 | Successor decision | ${approach} | DONE |`,
+        `| DEC-0001 | Test exception: ${id} | ${approach} |`,
+        `| DEC-0002 | Successor decision | ${approach} |`,
       ),
     });
     const missing = await owed(root, profile);
-    expect(missing.includes(id)).toBe(status !== "DONE");
-    expect(await findings(root, profile, "QFAI-STORY-009")).toEqual(
-      status === "DONE"
-        ? [expect.objectContaining({ severity: "info", refs: [id, "DEC-0001"] })]
-        : [],
-    );
+    expect(missing.includes(id)).toBe(false);
+    expect(await findings(root, profile, "QFAI-STORY-009")).toEqual([
+      expect.objectContaining({ severity: "info", refs: [id, "DEC-0001"] }),
+    ]);
     if (id === "BF-0001") {
       expect(missing).toEqual(expect.arrayContaining(["AC-0001-0001-01", "AC-0001-0001-02"]));
     }

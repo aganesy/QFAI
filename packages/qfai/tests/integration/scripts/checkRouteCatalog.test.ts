@@ -45,7 +45,7 @@ function withRow(route: string, change: (row: string) => string): string {
 
 function approvedBy(route: string): string {
   const row = contract.split("\n").find((line) => line.includes(`| Route \`${route}\` —`));
-  return /Approved by (DEC-\d{4})/.exec(row ?? "")?.[1] ?? "";
+  return /Approved by (DEC-(?:\d{14}|\d{4}))\b/.exec(row ?? "")?.[1] ?? "";
 }
 
 // QFAI:EX-0001-0217-01
@@ -64,9 +64,7 @@ it("The shipped catalog, a row citing an unknown decision, and one citing a row 
   }).toEqual({
     shipped: [],
     unknown: ["edit-text: the row cites DEC-9999, which decisions.md does not hold"],
-    notARequest: [
-      `fix-intermittent: DEC-0003 is not an in-force change request naming ${CONTRACT}`,
-    ],
+    notARequest: [`fix-intermittent: DEC-0003 is not a change request naming ${CONTRACT}`],
   });
 });
 
@@ -126,13 +124,14 @@ function withTriageStale(cited: string): string {
   return insertedAfterLast(contract.split("\n"), isRoute, TRIAGE_STALE(cited));
 }
 
-// The decisions table with a new change request approving `triage-stale`.
-function withNewRequest(status = "DONE"): string {
+const NEW_REQUEST = "DEC-20261001090000";
+
+// The decisions table with a new change request approving `triage-stale`, or declining it.
+function withNewRequest(kind = "Change request"): string {
   const row =
-    `| DEC-9001 | Change request: ${CONTRACT} | - Date: 2026-10-01 - Change: add the route ` +
+    `| ${NEW_REQUEST} | ${kind}: ${CONTRACT} | - Date: 2026-10-01 - Change: add the route ` +
     "triage-stale, which closes a request whose premise no longer holds. - Approval: the user " +
-    "approved it on 2026-10-01, because stale requests had no route of their own. | " +
-    `${status} |`;
+    "approved it on 2026-10-01, because stale requests had no route of their own. |";
   return insertedAfterLast(decisions.split("\n"), (line) => line.startsWith("| DEC-"), row);
 }
 
@@ -140,7 +139,7 @@ function withNewRequest(status = "DONE"): string {
 it("A new route row citing the catalog's first approval, and one citing a new change request", () => {
   const base = { contract, decisions };
   const reused = { contract: withTriageStale(approvedBy("edit-text")), decisions };
-  const approved = { contract: withTriageStale("DEC-9001"), decisions: withNewRequest() };
+  const approved = { contract: withTriageStale(NEW_REQUEST), decisions: withNewRequest() };
 
   expect({
     reusedCitation: citationFaults(reused.contract, reused.decisions),
@@ -159,15 +158,34 @@ it("A new route row citing the catalog's first approval, and one citing a new ch
   });
 });
 
-it("A route row approved by a change request a later row partly supersedes, and by one it fully supersedes", () => {
-  const cited = withTriageStale("DEC-9001");
+// QFAI:EX-0001-0217-01
+it("A route row citing a timestamp change request, which has no Status, and a declined one", () => {
+  const cited = withTriageStale(NEW_REQUEST);
 
   expect({
-    partly: citationFaults(cited, withNewRequest("PARTLY SUPERSEDED (by DEC-9002)")),
-    fully: citationFaults(cited, withNewRequest("SUPERSEDED (by DEC-9002)")),
+    approved: citationFaults(cited, withNewRequest()),
+    declined: citationFaults(cited, withNewRequest("Declined change request")),
   }).toEqual({
-    partly: [],
-    fully: [`triage-stale: DEC-9001 is not an in-force change request naming ${CONTRACT}`],
+    approved: [],
+    declined: [`triage-stale: ${NEW_REQUEST} is not a change request naming ${CONTRACT}`],
+  });
+});
+
+// QFAI:EX-0001-0217-03
+it("A route row citing a change request the base already holds, and one this change appended", () => {
+  const requestOnBase =
+    "| ID | Content | Approach |\n| --- | --- | --- |\n" +
+    `| ${NEW_REQUEST} | Change request: ${CONTRACT} | triage-stale |\n`;
+  const head = { contract: withTriageStale(NEW_REQUEST), decisions: withNewRequest() };
+
+  expect({
+    alreadyOnBase: changeFaults({ contract, decisions: requestOnBase }, head),
+    appended: changeFaults({ contract, decisions }, head),
+  }).toEqual({
+    alreadyOnBase: [
+      "triage-stale: the route row changed, and cites no change request this change appended",
+    ],
+    appended: [],
   });
 });
 
@@ -193,10 +211,10 @@ async function checksHistoricalCatalogRegister(fault: string): Promise<void> {
     writeFileSync(target, text);
   };
   const header =
-    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
   const page = ".qfai/spec/decisions/page-0001.md";
-  const historical = "| DEC-0001 | Historical choice | Keep | DONE |\n";
-  const request = `| DEC-0002 | Change request: ${CONTRACT} | - Date: 2026-10-12 - Approval: user approved triage-stale | DONE |\n`;
+  const historical = "| DEC-0001 | Historical choice | Keep |\n";
+  const request = `| DEC-0002 | Change request: ${CONTRACT} | - Date: 2026-10-12 - Approval: user approved triage-stale |\n`;
   const tail =
     header.replace(
       "## Decisions",
@@ -205,7 +223,7 @@ async function checksHistoricalCatalogRegister(fault: string): Promise<void> {
   const valid = header + historical;
   const invalid = fault.startsWith("duplicate")
     ? valid + request
-    : valid.replace("| DONE |", "| DONE | extra |");
+    : valid.replace("| Keep |", "| Keep | extra |");
   try {
     git("init", "-b", "main");
     git("config", "user.email", "test@example.test");
@@ -249,7 +267,9 @@ async function checksHistoricalCatalogRegister(fault: string): Promise<void> {
         env: { ...process.env, BASE_REF: "main", GITHUB_EVENT_NAME: "pull_request" },
       },
     );
-    if (fault === "EOF without newline") {
+    // The base is read by the ID cell of each row: an open change may predate a register layout,
+    // and the base's own faults were reported when it merged.
+    if (fault === "EOF without newline" || fault.endsWith("base")) {
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toContain("1 routes, each approved");
     } else {

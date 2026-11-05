@@ -246,6 +246,15 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     appliesTo: ["src-comment"],
   },
   {
+    // A timestamp-form ID has no sample band; the letter placeholder
+    // DEC-yyyymmddhhMMss passes. The four-digit rules above never match
+    // its leading part, so it is reported once.
+    name: "internal-story-timestamp-id-jsdoc-leak",
+    re: /\b(?:DEC|OQ)-\d{14}\b/,
+    suggestion: "Write a decision or question ID in shipped source comments as DEC-yyyymmddhhMMss.",
+    appliesTo: ["src-comment"],
+  },
+  {
     name: "internal-story-bf-id-jsdoc-leak",
     re: /\bBF-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
     suggestion: "Keep story-tree business-flow IDs outside shipped source comments.",

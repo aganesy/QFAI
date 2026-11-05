@@ -1408,8 +1408,7 @@ describe("a forbidden-text finding", () => {
 });
 
 describe("the configured decision register", () => {
-  const table =
-    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const table = "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
   const indexed = table.replace(
     "## Decisions",
     "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
@@ -1530,7 +1529,7 @@ describe("unsafe decision-register read boundary", () => {
     await mkdir(path.join(root, ".qfai"));
     await writeFile(
       path.join(outside, "decisions.md"),
-      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n",
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n",
       "utf-8",
     );
     await writeFile(path.join(outside, "sentinel.md"), "# Outside sentinel must not be graded\n");
@@ -1582,7 +1581,7 @@ describe("unsafe decision-register read boundary", () => {
       await mkdir(path.dirname(specs), { recursive: true });
       const sentinel = path.join(outside, "sentinel.md");
       const table =
-        "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+        "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
       await writeFile(sentinel, "# Outside sentinel must not be graded\n", "utf-8");
 
       let target = sentinel;
@@ -1655,8 +1654,7 @@ describe("unsafe decision-register read boundary", () => {
 });
 
 describe("decision-register filesystem causes", () => {
-  const table =
-    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const table = "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
   const indexed = table.replace(
     "## Decisions",
     "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",

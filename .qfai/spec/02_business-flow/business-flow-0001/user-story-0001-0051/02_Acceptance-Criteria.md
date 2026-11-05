@@ -20,7 +20,7 @@ Feature: Story-tree layout and ID validation
 
   # AC-0001-0051-03
   Scenario: A malformed ID is reported
-    Given the story tree, and an ID the tree defines that does not match its shape — `BF-NNNN`, `US-NNNN-NNNN`, `AC-NNNN-NNNN-NN`, `EX-NNNN-NNNN-NN`, `BR-NNNN`, `DEC-NNNN` or `OQ-NNNN`
+    Given the story tree, and an ID the tree defines that does not match its shape — `BF-NNNN`, `US-NNNN-NNNN`, `AC-NNNN-NNNN-NN`, `EX-NNNN-NNNN-NN`, `BR-NNNN`, `DEC-NNNN` or `DEC-yyyymmddhhMMss`, `OQ-NNNN` or `OQ-yyyymmddhhMMss` — or a timestamp ID whose 14 digits are not a real UTC calendar time
     When `qfai validate --profile sdd` runs
     Then an error names the ID and the file that defines it
 

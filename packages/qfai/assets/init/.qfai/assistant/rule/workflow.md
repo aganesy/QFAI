@@ -82,7 +82,7 @@ Stage 3 (`/qfai-sdd`) target policy:
 
 - With a BF argument, scope requested work to that flow and its shared dependencies.
 - Without an argument, triage the incoming requirements and update the flows they affect.
-- Record approval-required operations in `decisions.md`; a pending `TODO` row does not authorize a protected change.
+- Record approval-required operations in `decisions.md`; only a `Change request:` row the branch adds authorizes a protected change.
 - Write policy and flows before stories, AC, EX, and enforcing contracts. Validate every affected BF.
 
 Prototyping stage policy:

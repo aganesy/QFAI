@@ -1527,7 +1527,8 @@ describe("migration step 8 leaves a test-case annotation in an E2E file", () => 
     expect(listed).toMatch(new RegExp(`Test exception: (?:<EX>|${example})`));
     expect(listed).toContain("decisions.md");
     expect(listed).toMatch(/Approach/);
-    expect(listed).toMatch(/DONE/);
+    // The register has no Status column, so the remedy names none.
+    expect(listed).not.toMatch(/Status|DONE/);
     expect(listed).toMatch(/delete/i);
 
     const second = capture();

@@ -81,6 +81,9 @@ OUTSIDE_FOUR='(0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})'
 OUTSIDE_TWO='(00|[1-9][0-9])'
 SINGLE_ID_END='(-([^0-9]|$)|[^0-9-]|$)'
 STORY_ID_RE="\b(DEC|OQ|BF|BR)-$OUTSIDE_FOUR\b$SINGLE_ID_END"
+# A timestamp-form decision or question ID has no sample band at any value:
+# shipped text writes the shape with letters (DEC-yyyymmddhhMMss).
+STORY_ID_RE="$STORY_ID_RE|\b(DEC|OQ)-[0-9]{14}\b"
 STORY_ID_RE="$STORY_ID_RE|\bUS-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b"
 STORY_ID_RE="$STORY_ID_RE|\b(AC|EX)-($OUTSIDE_FOUR-[0-9]{4}-[0-9]{2}|[0-9]{4}-$OUTSIDE_FOUR-[0-9]{2}|[0-9]{4}-[0-9]{4}-$OUTSIDE_TWO)\b"
 STORY_ID_RE="$STORY_ID_RE|\bBR-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b"

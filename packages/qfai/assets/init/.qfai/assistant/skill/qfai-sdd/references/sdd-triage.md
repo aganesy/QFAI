@@ -7,8 +7,7 @@ Triage selects the smallest story-tree change that answers each incoming require
 - Inputs
 - Operation choice
 - Decision and question rows
-- Published decision prefix recovery
-- Merge-added identical decision copy recovery
+- Where a decision's result lives
 - Approval and no-question mode
 - Retiring an EX, AC or BR
 - ID allocation
@@ -36,42 +35,55 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 
 ## Decision and question rows
 
-Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change, including to `PARTLY SUPERSEDED (by DEC-NNNN)` when a later row narrows a decision without replacing it.
-Do not edit the first three cells or remove the row, except for explicit branch-added decision renumbering under ID allocation below
-or the bounded published decision prefix recovery below, and remove a row only as a proven surplus copy under the merge-added
-identical decision copy recovery below. Inherited rows retain those cells. Use the next highest ID in the table plus one; for DEC, include every listed page and the root tail. A retired item still reserves its BF or US ID.
+Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content and Approach.
+A new decisions.md row takes `DEC-yyyymmddhhMMss` and a new open-questions.md row `OQ-yyyymmddhhMMss`: the UTC
+time the row is written, as 14 digits. When a row of the same register already holds that second, take the next
+second no row holds. A legacy `DEC-NNNN` or `OQ-NNNN` row keeps its ID; a row the branch adds never takes that form.
+
+A decisions.md row is appended once the decision is made and is never edited, moved or removed afterwards. A
+later decision that refers to an earlier row is a new row whose Approach opens with the earlier ID:
+`Supersedes DEC-…` when it replaces it, `Narrows DEC-…` when it replaces part of it, and `Reopens DEC-…` when it
+reopens a declined option. The earlier row stays as written. The order of rows in the file means nothing: a merge
+may interleave the rows two branches appended. The base and the head are compared by row ID, on the three cells.
 
 decisions.md records only what the user decided: each change request the user approved or declined,
 and each critical decision the user made. A row is appended once the user has decided what it records.
 A decision the agent took, an approval-free change and a finding it dropped append no row; the final report lists the
-decisions the agent took.
+decisions the agent took. Anything not decided yet is an open-questions.md row.
 
-A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form.
+A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form. Validation checks that form only on a legacy `DEC-NNNN` row.
 
 A change request is a decision row whose Content begins Change request: and names the
 repository-relative paths it changes; an ID there authorizes nothing. Its Approach names the operation and target BF or US, the source as
 discussion-<id>#REQ-NNNN when there is one or the actual source path or user requirement otherwise,
-the intended files and rationale with the change classification Primary and Tags, and who approved
-it, when, and the option chosen. The row starts at WIP and moves to DONE once every change it names
-is written. A declined change request is appended at REJECTED, recording in Approach who declined
-it and when; it authorizes no edit. Retiring a story removes its directory under the
-change request that names it, with no separate retired-story file.
+the change classification Primary and Tags, and who approved it, when, and the option chosen. It does not restate
+the edit. It authorizes edits to the paths it names only on the branch that adds it; a change request the base
+already holds authorizes nothing, and later work appends a new one. A declined change request is a row whose
+Content opens `Declined change request:`, recording in Approach who declined it and when. Any other option the user
+rejects is a row whose Content opens `Declined:`. Both are rejected options and authorize nothing.
+Retiring a story removes its directory under the change request that names it, with no
+separate retired-story file.
 
-An existing row at REJECTED is a rejected option. Open questions use OQ-NNNN rows; DEFERRED needs a
-specific future decision point. When a decision settles an open question or makes its text wrong, the
-`sdd-triage` step says when its Status becomes `DONE (by DEC-NNNN)` or `SUPERSEDED (by DEC-NNNN)`. An unanswered critical product decision is an open-questions.md row
-whose Content opens Unadjudicated:, at TODO until decided. A justified test exception opens a
-decision Content with Test exception:, names the exact BF, AC, or EX it exempts, and puts the reason
-in Approach. It takes effect only at DONE; it never exempts descendant items.
+An open-questions.md row exists exactly while its question is open, and is never edited. When a decision settles
+a question, the same change appends the decision row, which names the OQ ID, and deletes the question row. To
+defer a question already written, delete its row and append a new question row whose Approach names the next
+decision point and says `Replaces OQ-…` with the deleted ID. An unanswered critical product decision is an
+open-questions.md row whose Content opens Unadjudicated:, pending while the row exists.
+
+Appending a row to either register, or deleting a settled question row, needs no change request.
+
+A justified test exception opens a decision Content with Test exception:, names the exact BF, AC, or EX it
+exempts, and puts the reason in Approach. It holds while the row exists, and a decision row is never removed; it never
+exempts descendant items.
 
 A test annotation may remain pending only when authority to change the
 specification covers that state and the test deferral is approved. Record the
 specification change in its own `Change request:` row. Record the deferral as a
-`Test exception:` decision naming the exact AC at DONE. Its Approach states
+`Test exception:` decision naming the exact AC. Its Approach states
 the reason, untested scope, owner, next decision date and condition for restoring
 the annotation.
 
-DONE establishes the exception decision; it does not mean test completion.
+The row records the exception decision; it does not mean test completion.
 The existing info finding names the exempted AC and its decision without
 claiming test execution or coverage. The exception never exempts descendant EX
 obligations or authorizes changes to EX or BR scope. Do not silently substitute
@@ -80,7 +92,7 @@ decision date for manual review; there is no automatic expiry and no automatic
 warning.
 
 When specification changes are forbidden or either authority is missing, first
-append an `Unadjudicated:` OQ at TODO. Name the affected IDs, expected versus
+append an `Unadjudicated:` question row. Name the affected IDs, expected versus
 actual behavior, implementation-change evidence, owner and required permission.
 Stop dependent AC, EX and BR edits; independent authorized work may continue.
 
@@ -90,77 +102,39 @@ The root may have one optional `## Decision pages` section before its unique
 `## Decisions` section. Its body holds only unique direct
 `- decisions/page-NNNN.md` entries with four digits; links, annotations, nested
 paths, traversal and unrelated prose are invalid. A page has `# Decisions`,
-one `## Decisions` section and one closed ID, Content, Approach, Status table.
-It has no page index or other section. The root retains its own four-column table.
+one `## Decisions` section and one closed ID, Content, Approach table.
+It has no page index or other section. The root retains its own three-column table.
 
-Read pages in list order, followed by the root table. This is one logical
-register: ID allocation, duplicate detection, retirement references and Status
-permissions include every row. Append new rows only to the root table.
-A root without a page list remains a valid legacy register and is read in full.
+Read pages in list order, followed by the root table. This is one
+register: ID uniqueness, retirement references and the base-to-head comparison
+include every row. Append new rows only to the root table, which has no line limit; appending a row to a page is
+a protected edit. Never move a row between files. A root without a page list is read in full.
 Read errors or an incomplete inventory stop permission and allocation decisions.
 
-Each physical root and page has at most 500 lines, including comments, blanks,
-the index and table wrappers. Oversized files are reported without truncation.
 Every entry in the decisions directory must be a listed direct page. Register
 paths must be regular directories and files, without symbolic or hard links.
 A formatter exclusion preserves reviewed bytes; it does not waive validation.
-Use consumers that support the complete register before adopting pages; older
-consumers are not assumed to read them.
 
-Physical relocation needs a separately adopted execution change request and a
-reviewed raw-byte receipt for the exact source and target. Preserve every raw
-row occurrence, cell, Status, order and line ending; keep the current root tail.
-A historical DONE row is not approval to run a later relocation. Do not rotate
-automatically, repair Status, remove duplicates or normalize inherited cells.
-A read-only proposal or a migration projection grants no permission to write.
+## Where a decision's result lives
 
-## Published decision prefix recovery
+Where a decision's result lives, write the current state only, and rewrite it in
+place when the decision changes:
 
-When an approved request names a published malformed decision added by the
-branch, read `.qfai/assistant/rule/drift-protocol.md#published-decision-prefix-recovery`.
-That rule defines the source, byte boundaries, exact prefix and stop conditions.
-Approval of the generic protocol alone authorizes no target; append a separate
-new target-specific recovery change request using `templates/change-request.md`.
-
-Record the fixed base and unique common ancestor, absence of the target in both,
-the published source commit's ancestry, raw Approach digests and the exact
-approved prefix. Immediately before writing, recheck the unique current row,
-its original ID, Content and Status, and its old digest. Preserve every original
-Approach byte as the suffix and leave every other row unchanged. Recheck the
-existing form and validation; status or supersession clears no malformed form.
-Record actual results, including any stopped recovery, without claiming an
-automatic repair. Inherited records and open-question rows remain excluded.
-Rollback follows the recorded new-digest check and restores the original form
-failure; it never resets, amends or force pushes.
-
-## Merge-added identical decision copy recovery
-
-When a merge left a second byte-identical copy of an inherited decision and the
-duplicate-ID check rejects it, read
-`.qfai/assistant/rule/drift-protocol.md#merge-added-identical-decision-copy-recovery`.
-That rule defines the lineage, the raw-row proof and the stop conditions.
-Approval of the generic protocol alone authorizes no target; append a separate
-new target-specific change request using `templates/change-request.md`.
-
-The request names the exact path, the ID, the bad merge, both parents, the
-common ancestor, the base and its comparison ancestor, each occurrence's
-location, the raw SHA-256 including the line ending and the retain/remove
-mapping. Fresh evidence, reviewed independently after the request is appended,
-fixes the actual write HEAD, the complete preimage and replacement hashes and
-the current authority. Immediately before writing, recheck refs, path,
-authority, counts, mapping and bytes; stale or changed proof stops the
-recovery. Remove only the mapped surplus copies. Keep one original and every
-other row, reference and byte. Open-question rows, rows that differ in any cell,
-padding or line ending, and surplus the base already holds stay excluded.
-Duplicate, drift and Status rules apply as before. The result is no whole-target
-PASS, and the request stays WIP while any named action or required check is
-unfinished. Rollback restores the recorded preimage only while the file still
-equals the replacement; it never resets, amends or force pushes.
+- No date, approver, quoted request or history: the decision row holds those.
+- One statement per concept, with at most one sentence of reason.
+- `01_policy/` holds a result only when it binds more than one flow or the whole
+  product.
+- A non-functional requirement is a contract BR with a measurable threshold and
+  an example. Only a product-wide one goes to `constraint.md`.
+- A trivial edit adds no policy or constraint entry and no decision row beyond
+  its change request.
+- A `Change request:` row names the paths and the approval (who, when and the
+  option chosen), and does not restate the edit.
 
 ## Approval and no-question mode
 
 Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. A request from the user in the session that names the operation and its effect is the approval, and no second question is asked.
-In --auto, ask no question: append one `open-questions.md` row per pending operation naming it and its target, at TODO with its Content opening Unadjudicated:; stop before the dependent writes, and report every pending operation with its target as open.
+In --auto, ask no question: append one `open-questions.md` row per pending operation naming it and its target, with its Content opening Unadjudicated:; stop before the dependent writes, and report every pending operation with its target as open.
 Approval-free changes may proceed only if they do not depend on a pending operation.
 
 Clarifications follow the constitution's question budget. Approval questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not approval for an operation not yet classified.
@@ -176,12 +150,11 @@ A story-tree or contract file changes only on the user's approval:
    request as the option chosen.
 2. On approval, write the change and append one `decisions.md` row whose Content
    opens `Change request:` and names every story-tree and contract file it
-   changed, and `decisions.md` when it appended any other row. Its Approach
-   records who approved it, when, and the label of the option chosen.
-3. Move the row to DONE once every change it names is written.
+   changed. Its Approach records who approved it, when, and the label of the
+   option chosen. Appending a row to `decisions.md` or `open-questions.md`
+   needs no change request.
 
-A row present before the stage started keeps its ID, Content and Approach, except for explicit branch-added decision renumbering under ID allocation below or published decision prefix recovery above. Inherited rows keep those cells without exception; the merge-added identical decision copy recovery above removes only surplus copies and keeps the original.
-Only a row this stage appended changes its Status.
+A decisions.md row present before the stage started is never edited, moved or removed, and an open-questions.md row is never edited.
 
 ## Retiring an EX, AC or BR
 
@@ -200,16 +173,29 @@ A retirement touches every place the ID is written. Do all of them in one change
 ## ID allocation
 
 Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US.
-A contract number spans every contract kind, and a BR is numbered inside its contract. DEC spans the complete ordered decision register; OQ spans its own table.
-Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.
+A contract number spans every contract kind, and a BR is numbered inside its contract.
+Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a change request was declined.
 Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` right before writing it: a US names its BF, an AC or EX its US, and a BR its contract.
-It reads the working tree and the base ref's commit, a fetched ref such as `origin/main`, and prints the number after the highest of both, not after the last row. It writes nothing and does not see open pull requests.
+It reads the working tree and the base ref's commit, a fetched ref such as `origin/main`, and prints the number after the highest of both, wherever a row sits. It writes nothing and does not see open pull requests.
+A decisions.md or open-questions.md row takes its timestamp ID from the time it is written instead; no count and no other branch decides it.
 
-Read the IDs open pull requests add before taking one. Fetch the base. Where a forge CLI is available, list the open pull requests once per session through its REST API, for example `gh api repos/{owner}/{repo}/pulls?state=open`, and reuse that listing for every ID the session takes.
+Read the IDs open pull requests add before taking a BF, US, AC, EX or BR ID. Fetch the base. Where a forge CLI is available, list the open pull requests once per session through its REST API, for example `gh api repos/{owner}/{repo}/pulls?state=open`, and reuse that listing for every ID the session takes.
 Fetch each one's head ref, such as `refs/pull/<n>/head`, so a pull request from a fork is read too, and read the IDs it adds from `git diff <base>...<head>`. Take the highest across the base, the working tree and those heads, plus one. Without a forge CLI, read the base alone.
-When merging the base into the branch, check each ID the branch adds against the fetched base. The base's item keeps its ID; the branch renumbers its own item and every reference to it, then runs the gates again.
-Check a DEC or OQ row before the merge, and renumber a DEC row with `renumber-decision` as below, or an OQ row and its references by hand: the union merge of `decisions.md` and `open-questions.md` would duplicate a colliding ID without a conflict. Check any other ID after the merge.
-Keep the change-request row last in `decisions.md`, so the rows the branch added stay in ascending order at the end of the register, where the merge-time renumbering works from the lowest colliding one upward.
+When merging the base into the branch, check each such ID the branch adds against the merged base. The base's item keeps its ID; the branch renumbers its own item and every reference to it, then runs the gates again.
+
+### Register conflicts
+
+The shipped `.gitattributes` merges `decisions.md`, its pages and
+`open-questions.md` with `merge=union`. A forge may still show a conflict in
+them. Resolve it by merging the fetched base locally, `git merge origin/<base>`:
+the union merge keeps both sides' rows. Push the merge. Renumber no row, and
+edit or move none.
+
+Two rows left with one ID come only from two rows written in the same second,
+and the duplicate-ID check names that ID. The row the base holds keeps it. The
+branch deletes its own row, which the base does not yet hold, appends it again
+under a new timestamp ID, and updates the citations of it that the branch
+added.
 
 ### Capacity before writing
 
@@ -220,7 +206,7 @@ valid IDs in the tree and decisions, including retired IDs, plus observed
 published parallel heads and known reservations under the project's existing
 method. Name the fixed observation and what it did not cover. A snapshot
 reserves nothing and cannot cover unpublished concurrent work. Read decisions as
-the complete ordered register: every listed page followed by the root tail.
+the complete register: every listed page and the root table.
 
 If requested additions exceed 99-H, stop before any partial allocation or
 invalid declaration. Never fill gaps, reuse retired IDs or emit tail 100.
@@ -234,7 +220,7 @@ Only additions exceeding an actual AC or EX scope's remaining 99-H qualify for
 a capacity-only story partition. Record the source story, affected kind, H,
 remainder and requested count first. Prefer leaving every published case and ID
 in place and putting a cohesive incoming group in a capacity-checked sibling
-under the same BF and actual actor goal. An in-force owning change request must
+under the same BF and actual actor goal. An owning change request this branch adds must
 explicitly approve this partition and its affected paths before writing.
 
 State the sibling's truthful cohesive scope and settle each criterion's owner;
@@ -271,7 +257,7 @@ fixed provenance and meaning, and change only the provably incoming item,
 without blanket replacement. Unknown ownership, ambiguous collisions,
 uncovered declarations, missing counted test links, changed assertions or an
 incomplete map stops the move without a completion claim. This is a manual
-approval and mapping procedure, not a relocation executor or mapping schema.
+approval and mapping procedure, not a move executor or mapping schema.
 
 Two branches can take the same next ID. When a merge leaves one ID on two items:
 
@@ -284,56 +270,9 @@ Two branches can take the same next ID. When a merge leaves one ID on two items:
    A citation of the old ID elsewhere is then told apart from the item that kept it.
 
 A `decisions.md` or `open-questions.md` row already on the target keeps its ID, Content and Approach.
-A row the incoming branch added takes the next ID of its table.
+No register row is renumbered; [Register conflicts](#register-conflicts) covers them.
 An ID that two merged records already share is not renumbered:
 ask the user for a change request row that states which record each citation meant.
-
-For a unique decision added by the incoming branch, repair its ID before merging:
-
-```text
-qfai sdd renumber-decision --from <old-DEC-ID> --to <new-DEC-ID> --base <local-ref>
-```
-
-Renumber once, at merge time. While the pull request is open, keep the
-branch's decision IDs even when the base moves. The session that merges it
-fetches the base and renumbers only when the fetched base now declares an ID
-the branch added. Then it renumbers every row the branch added, from the lowest
-colliding one upward and lowest first, so the rows stay in ascending order.
-Run on a clean tree against the fetched ref, for example `origin/main`, commit
-after each run, then merge the base.
-
-Check the base before merging. The shipped `.gitattributes` merges
-`decisions.md` with `merge=union`, so the ledger never conflicts: a colliding
-ID merges silently into two rows with the same ID, and the command then
-refuses that ledger as a duplicate. If such a merge is committed but not
-pushed, run `git reset --merge ORIG_HEAD`, renumber, and merge again. If it was
-pushed, the two records already share the ID: follow the change request rule
-earlier in this section.
-
-The command also refuses a ledger left dirty by a merge that stopped on
-conflicts in other files, and writes nothing. Abort the merge with
-`git merge --abort`, renumber, and merge again. Then redo any other conflict
-resolutions after the second merge.
-
-The explicit base and HEAD must resolve locally and have one common ancestor
-that declares no source row. The base may already use that ID; the current
-tree must declare it only once. Choose an unused destination above both story trees'
-highest decision number, retired IDs included, within the four-digit grammar.
-The command reserves no number and chooses no final number automatically.
-
-Read the preview's fixed SHAs, IDs, relative paths and replacement lines or
-counts. It writes nothing and dumps no original lines or full files. Each
-invocation builds its own plan. Run with `--apply` to recheck that invocation's
-fixed refs and original bytes before writing; changed refs after a preview can
-produce a different plan. Preflight-only
-`--format`, `--fail-on`, `--import` and `--assume` are not accepted here.
-Only provably branch-added exact references change. Inherited references stay
-fixed; ambiguous ownership, dirty or linked candidates, unsupported text or
-failed reads stop the whole plan before writing. Unrelated links and dirty
-files are not candidates. Apply rechecks original bytes before each write.
-Rollback restores a changed file only if its bytes still match this invocation's
-replacement, preserving concurrent changes and naming any unrestored path.
-These checks guarantee neither atomic concurrency nor power-loss safety.
 
 A move to another BF changes the story's US ID and all child AC and EX IDs. It follows the existing approval path, not the same-BF capacity exception. Apply the complete map above to approved active citations and retire old IDs in a new approved record; inherited DEC cells and their historical references stay unchanged.
 
@@ -349,7 +288,7 @@ Review the result and stage it with `git add`; it stages nothing itself.
 
 ## Completion of triage
 
-Every requirement has a target, an approved or approval-free operation, and a recorded impact path. Every product ambiguity has an OQ. The next stage may write only the approved scope. A rejected option stays excluded until an explicit reopening decision is appended.
+Every requirement has a target, an approved or approval-free operation, and a recorded impact path. Every product ambiguity has an OQ. The next stage may write only the approved scope. A rejected option stays excluded until a decision row whose Approach opens `Reopens DEC-…` is appended.
 
 The one exception: a change to shipped seed or sample data whose values no
 story, BR or contract sets changes no story-tree file. Triage states that in one

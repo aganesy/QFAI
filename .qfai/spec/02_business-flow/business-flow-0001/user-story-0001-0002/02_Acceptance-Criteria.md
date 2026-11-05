@@ -8,9 +8,9 @@ Feature: Drift protocol
   Scenario: The drift protocol procedure is defined
     Given `drift-protocol.md`
     When the procedure on drift detection is read
-    Then it defines the steps stop the affected scope → record a CR → approval → owner skill rerun → recheck dependent obligations → DONE
-    And on the story tree, a change request is a row opening `Change request:` that is appended to `decisions.md` at WIP once the user approves it, and a declined request is appended at REJECTED and authorizes no edit
-    And on the story tree, the owner skill reruns and the row ends DONE
+    Then it defines the steps stop the affected scope → prepare a change request → approval, recorded as a `Change request:` row the branch appends → owner skill rerun → recheck dependent obligations
+    And on the story tree, a change request is a row opening `Change request:` that the branch making the change appends to `decisions.md` once the user approves it, and a declined request is a row opening `Declined change request:` that authorizes no edit
+    And on the story tree, a change request authorizes edits to the paths it names only on the branch that adds it, and the row is never edited afterwards
 
   # AC-0001-0002-02
   Scenario: A bugfix that changes no upstream file raises no change request

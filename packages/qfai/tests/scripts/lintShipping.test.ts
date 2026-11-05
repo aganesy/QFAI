@@ -22,6 +22,8 @@ import { formatViolations, runLintShipping } from "../../scripts/lint-shipping.j
 import {
   STORY_ID_BOUNDARIES,
   STORY_ID_TRAILING_HYPHEN_BOUNDARIES,
+  TIMESTAMP_IDS,
+  TIMESTAMP_PLACEHOLDERS,
   scanDistributedSurface,
 } from "../helpers/distributedSurfaceScan.js";
 
@@ -184,6 +186,30 @@ describe("lint-shipping fixture — detection rules", () => {
       ).toBe(true);
     },
   );
+
+  // QFAI:EX-0002-0009-06
+  it.each(TIMESTAMP_IDS)("flags the timestamp ID %s once in a source comment", async (id) => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(path.join(root, "src", "guard.ts"), `// ${id}\nexport const guard = true;\n`);
+    expect((await scanDistributedSurface(root)).hits.map((hit) => hit.match)).toEqual([id]);
+    const { violations } = await runLintShipping(root);
+    expect(violations.map((violation) => [violation.file, violation.line])).toEqual([
+      ["src/guard.ts", 1],
+    ]);
+  });
+
+  // QFAI:EX-0002-0009-06
+  it.each(TIMESTAMP_PLACEHOLDERS)("keeps the placeholder %s", async (placeholder) => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(
+      path.join(root, "src", "guard.ts"),
+      `// ${placeholder}\nexport const guard = true;\n`,
+    );
+    expect((await scanDistributedSurface(root)).hits).toEqual([]);
+    expect((await runLintShipping(root)).violations).toEqual([]);
+  });
 
   it.each(STORY_ID_TRAILING_HYPHEN_BOUNDARIES)(
     "keeps %s but flags %s at a comment line end",

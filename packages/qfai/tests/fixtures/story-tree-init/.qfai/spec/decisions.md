@@ -2,5 +2,5 @@
 
 ## Decisions
 
-| ID  | Content | Approach | Status |
-| --- | ------- | -------- | ------ |
+| ID  | Content | Approach |
+| --- | ------- | -------- |

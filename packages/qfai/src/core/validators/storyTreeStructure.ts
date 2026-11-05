@@ -8,6 +8,7 @@ import { architectureProblems, MERMAID_FENCE } from "../storyTree/architecture.j
 import {
   contractNumber,
   isStoryTreeId,
+  RECORD_ID_SOURCE,
   itemIdMatchesStory,
   ruleContractNumber,
   storyIdMatchesFlow,
@@ -170,27 +171,14 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
       );
     }
   }
+  // An unadjudicated question is pending while its row exists.
   for (const row of model.openQuestions?.rows ?? []) {
-    const classified = classifyRecordRow(row);
-    if (classified.kind === "unadjudicated" && classified.inForce) {
+    if (classifyRecordRow(row).kind === "unadjudicated") {
       issues.push(
         finding(
           "QFAI-SPACK-102",
           `Unadjudicated question ${row.id} in ${model.openQuestionsFile}`,
           model.openQuestionsFile ?? "",
-          [row.id],
-        ),
-      );
-    }
-    // A plain DONE is still accepted; the warning asks for the deciding row to be named.
-    if (row.status === "DONE") {
-      issues.push(
-        issue(
-          "QFAI-STORY-018",
-          `${row.id} is DONE and names no decision in ${model.openQuestionsFile}`,
-          "warning",
-          model.openQuestionsFile ?? "",
-          "storyTree.structure",
           [row.id],
         ),
       );
@@ -348,20 +336,18 @@ function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
   return issues;
 }
 
-/**
- * A `DEC-NNNN` or `OQ-NNNN` standing on its own. The guards keep a longer
- * dashed token such as `DEC-NNNN-NNNN` from being read as its leading segment.
- */
-const CITED_RECORD_ID = /(?<![A-Za-z0-9_-])((?:DEC|OQ)-\d{4})(?![0-9-])/g;
-const SUPERSEDED_BY = /^(?:PARTLY )?SUPERSEDED \(by (DEC-\d{4})\)$/;
-const DECIDED_BY = /^(?:DONE|SUPERSEDED) \(by (DEC-\d{4})\)$/;
+/** A decision or open-question ID in either form, standing on its own. */
+const CITED_RECORD_ID = new RegExp(`(${RECORD_ID_SOURCE})`, "g");
+/** A decision an Approach replaces or narrows, named right after the word. */
+const SUPERSEDES = new RegExp(
+  String.raw`\b(Supersedes|Narrows|Reopens)\s+(${RECORD_ID_SOURCE})`,
+  "g",
+);
 
 /**
- * Every decision or open question a contract rule cites, every decision a
- * superseded row names as its successor, and every decision an open question's
- * Status names, is declared by a row. A superseded row's successor is also a
- * later decision: both IDs are `DEC-` and four digits, so string order is number
- * order. A row whose own ID is malformed raises its ID errors and no `QFAI-STORY-019`.
+ * Every decision or open question a contract rule cites, and every decision a decision row's
+ * Approach names after `Supersedes` or `Narrows`, is declared by a row. Nothing else is read
+ * from `Supersedes` or `Narrows`.
  */
 function validateRecordCitations(model: StoryTreeModel): Issue[] {
   const decisions = new Set((model.decisions?.rows ?? []).map(({ id }) => id));
@@ -384,47 +370,23 @@ function validateRecordCitations(model: StoryTreeModel): Issue[] {
     }
   }
   for (const { row, origin } of model.decisionOccurrences) {
-    const decisionFile = origin.path;
-    const successor = SUPERSEDED_BY.exec(row.status)?.[1];
-    if (successor === undefined) continue;
-    if (isStoryTreeId(row.id, "DEC") && successor <= row.id) {
+    for (const [, word = "", earlier = ""] of row.approach.matchAll(SUPERSEDES)) {
+      if (decisions.has(earlier)) continue;
       issues.push(
         finding(
-          "QFAI-STORY-019",
-          `${row.id} is superseded by ${successor}, which is not a later decision, in ${decisionFile}`,
-          decisionFile,
-          [row.id, successor],
+          "QFAI-STORY-003",
+          `${row.id} names ${earlier} after ${word}, which no decisions row declares, in ${origin.path}`,
+          origin.path,
+          [row.id, earlier],
         ),
       );
     }
-    if (decisions.has(successor)) continue;
-    issues.push(
-      finding(
-        "QFAI-STORY-003",
-        `${row.id} is superseded by ${successor}, which no decisions row declares, in ${decisionFile}`,
-        decisionFile,
-        [row.id, successor],
-      ),
-    );
-  }
-  const questionFile = model.openQuestionsFile ?? "";
-  for (const row of model.openQuestions?.rows ?? []) {
-    const decision = DECIDED_BY.exec(row.status)?.[1];
-    if (decision === undefined || decisions.has(decision)) continue;
-    issues.push(
-      finding(
-        "QFAI-STORY-003",
-        `${row.id} names ${decision} in its Status, which no decisions row declares, in ${questionFile}`,
-        questionFile,
-        [row.id, decision],
-      ),
-    );
   }
   return issues;
 }
 
-// SIMPLIFIED: rows up to this number are not read, because they were written before the form
-// was checked.
+// SIMPLIFIED: four-digit rows up to this number are not read, because they were written before
+// the form was checked, and a timestamp row is not read either: adopters owe the form nothing.
 // Lift when: those rows are rewritten in the form; then delete this constant.
 const APPROACH_CHECKED_AFTER = 2097;
 const APPROACH_LABELS = ["Evidence", "Grounds", "Residual risk", "Rollback"];
@@ -469,7 +431,7 @@ export function approachProblems(approach: string): string[] {
 }
 
 /**
- * A `decisions.md` row above the checked ID holds, in its Approach cell, the items
+ * A four-digit `decisions.md` row above the checked ID holds, in its Approach cell, the items
  * Evidence, Grounds, Residual risk and Rollback in that order, none empty, with every
  * Evidence entry a `file:` or `command:` item.
  */
@@ -477,7 +439,8 @@ function validateDecisionApproaches(model: StoryTreeModel): Issue[] {
   const issues: Issue[] = [];
   for (const { row, origin } of model.decisionOccurrences) {
     const file = origin.path;
-    if (!(Number(row.id.slice("DEC-".length)) > APPROACH_CHECKED_AFTER)) continue;
+    const number = /^DEC-(\d{4})$/.exec(row.id)?.[1];
+    if (number === undefined || Number(number) <= APPROACH_CHECKED_AFTER) continue;
     for (const problem of approachProblems(row.approach)) {
       issues.push(
         finding(

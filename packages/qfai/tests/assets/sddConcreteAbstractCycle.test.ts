@@ -148,7 +148,7 @@ describe("how an adopted finding changes the tree", () => {
   it("puts the removal of an approved example to the user and leaves it until approval", async () => {
     const text = await applying();
     const existing = rowOf(text, "existed when the invocation started");
-    expect(existing).toMatch(/only under an in-force `Change request:` row/i);
+    expect(existing).toMatch(/only under a `Change request:` row this branch adds/i);
     expect(existing).toMatch(/approved change covers this change/i);
     const uncovered = rowOf(text, "no row that covers the change");
     expect(uncovered).toMatch(/put to the user/i);
@@ -206,11 +206,10 @@ describe("how an adopted finding changes the tree", () => {
   });
 
   // QFAI:EX-0001-0147-39
-  it("applies a change the in-force change request describes, with no new row", async () => {
+  it("applies a change the branch's change request describes, with no new row", async () => {
     const covered = rowOf(await applying(), "existed when the invocation started");
-    expect(covered).toMatch(/Changed directly only under an in-force `Change request:` row/i);
     expect(covered).toMatch(
-      /\(WIP, or DONE on this branch\) whose approved change covers this change/i,
+      /Changed directly only under a `Change request:` row this branch adds whose approved change covers this change/i,
     );
   });
 });
@@ -246,8 +245,8 @@ describe("how many cycles run", () => {
     expectSentence(text, "the gate", /per-flow gate reports that row as `QFAI-SPACK-102`/i);
     expectSentence(
       text,
-      "the protected row is authorized when decided",
-      /change request the user approves when the finding is decided names `open-questions\.md`/i,
+      "appending the row needs no change request",
+      /Appending the row needs no change request/i,
     );
   });
 
@@ -258,10 +257,10 @@ describe("how many cycles run", () => {
       text,
       "the row",
       /finding still undecided when the session ends/i,
-      /one `open-questions\.md`\s+row at TODO whose Content opens `Unadjudicated:`/i,
+      /one `open-questions\.md`\s+row whose Content opens `Unadjudicated:`/i,
       /target IDs/i,
     );
-    expectSentence(text, "the gate", /`QFAI-SPACK-102` until it\s+is decided/i);
+    expectSentence(text, "the gate", /`QFAI-SPACK-102` while it\s+exists/i);
   });
 
   // QFAI:EX-0001-0147-35
@@ -299,12 +298,16 @@ describe("a decided finding is not raised again", () => {
       /declined change request is the user deciding that finding/i,
     );
     expectSentence(text, "wording", /Matching never goes by wording/i);
-    expectSentence(text, "reopening", /decision appended to reopen a REJECTED row lifts it/i);
-    expectSentence(text, "its row", /its REJECTED row in `decisions\.md` bars the finding/i);
+    expectSentence(text, "reopening", /Approach opens `Reopens DEC-…`[\s\S]*lifts it/i);
+    expectSentence(
+      text,
+      "its row",
+      /its\s+`Declined change request:` row in `decisions\.md` bars the finding/i,
+    );
     expectSentence(
       await section(TRIAGE, "## Decision and question rows"),
-      "a declined change is a REJECTED row",
-      /declined change request is appended at REJECTED/i,
+      "a declined change is a declined row",
+      /declined change request is a row whose Content opens `Declined change request:`/i,
     );
   });
 });

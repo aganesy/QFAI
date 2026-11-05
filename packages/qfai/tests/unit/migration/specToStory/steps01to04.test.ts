@@ -1,27 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { mapDecisionStatus } from "../../../../src/migration/specToStory/step02MergeTables.js";
 import {
   numberPlannedItems,
   parseOldCriteria,
   parseOldStories,
 } from "../../../../src/migration/specToStory/step04RenumberIds.js";
-
-describe("migration record status", () => {
-  // QFAI:EX-0004-0005-03
-  // QFAI:EX-0004-0005-04
-  it("maps current, superseded and absent statuses", () => {
-    expect([
-      mapDecisionStatus("proposed"),
-      mapDecisionStatus("accepted"),
-      mapDecisionStatus("rejected"),
-      mapDecisionStatus("re-open"),
-      mapDecisionStatus("superseded", "DEC-0007"),
-      mapDecisionStatus(undefined),
-      mapDecisionStatus("on-hold"),
-    ]).toEqual(["TODO", "DONE", "REJECTED", "WIP", "SUPERSEDED (by DEC-0007)", "DONE", "TODO"]);
-  });
-});
 
 describe("migration numbering", () => {
   // QFAI:EX-0004-0007-02

@@ -2,7 +2,7 @@ import { loadConfig } from "../../core/config.js";
 import { error, info } from "../../core/logger.js";
 import type { StoryTreeIdKind } from "../../core/storyTree/ids.js";
 import { resolveStoryTreeRoots } from "../../core/storyTree/layout.js";
-import { readStoryTreeAtRef } from "../../core/storyTree/renumberDecision.js";
+import { readStoryTreeAtRef } from "../../core/storyTree/storyTreeAtRef.js";
 import { nextStoryTreeId, readStoryTreeModel } from "../../core/storyTree/tree.js";
 
 /**

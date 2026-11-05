@@ -244,10 +244,12 @@ only after reading what it depends on.
 - `mixed-bundle`, with `bundle`: The bundled findings differ in kind. Findings that share one intent take that intent instead.
 - `human-run`, with `order`: Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold.
 - `owned-temporary-cleanup`, with `order`: Existing user authority permits deleting specific repository-local, Git-ignored temporary directories the current task owns, without a tracked change or files still needed for a deliverable.
-- `meaning-preserving`, with `stale-record` or `order`: The change keeps every record's meaning. It only resolves the conflicts of a merge or a branch update, or renumbers an ID the branch added that the base also took, and adds no content neither side had. It lists the artifacts the conflict touches; a conflict in code, a generated file or a lockfile is not this qualifier.
+- `meaning-preserving`, with `stale-record` or `order`: The change keeps every record's meaning. It only resolves the conflicts of a merge or a branch update, or gives a story-tree item the branch added a free ID when the base took the same ID, and adds no content neither side had.
+  A conflict confined to `decisions.md`, its pages and `open-questions.md` is resolved by merging the base, whose union merge keeps both sides' rows; no register row is edited or renumbered.
+  It lists the artifacts the conflict touches; a conflict in code, a generated file or a lockfile is not this qualifier.
 - `distribution-incident`, with `release`: A published key, certificate, feed or package is broken.
 - `release-delegated`, with `release`: The user's own instruction for this run, quoted word for word with its source, has the agent carry out the release, its preparation up to an open release pull request, or its version edit, for a version the user named. A request only for a release, a version with no one named to carry it out, a branch name or a project policy delegates nothing.
-- `settled-design`, with `upstream`: The cited record exists, is in force, and settles the design.
+- `settled-design`, with `upstream`: The cited record exists, no later decision row supersedes it, and it settles the design.
 - `red-since-change`, with `ci`: CI fails since a named change, and a correct existing test catches it.
 - `check-misses`, with `unenforced`: A check exists and misses cases, or a check the declaration needs is absent.
 - `mechanism-inert`, with `unenforced`: A declared mechanism does nothing: a key never read, a check that never fires, an obligation nothing produces.
@@ -371,7 +373,7 @@ refuses it. `flows` and `alternatives` stay absent when unused: `plan` refuses a
 - "Remove the configuration key nothing reads." → `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`
 - An approved change request cited with a task section and a done-when block → `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`
 - "The import fails and the `catch` logs nothing, so the cause cannot be read; log the error there." → `{ intent: defect, entryFlags: [cause, fix, expect], artifacts: [code, tests], confidence: high }`
-- "Merging main left conflicts in the decision register; renumber our colliding rows and keep both sides." → `{ intent: stale-record, qualifiers: [meaning-preserving], artifacts: [spec], confidence: high }`
+- "Merging main left conflicts in our story files; give our colliding story the next free ID and keep both sides." → `{ intent: stale-record, qualifiers: [meaning-preserving], artifacts: [spec], confidence: high }`
 - "Take main's shared fix into the branches feature-a and feature-b, keeping what each side means.", read once for each named branch and run one after another → `{ intent: order, qualifiers: [meaning-preserving], artifacts: [spec, docs], confidence: high }`
 - "Release 2.4.0. You run the preparation and merge the release pull request; I only approve the publish." → `{ intent: release, qualifiers: [release-delegated], artifacts: [release], confidence: high }`
 - "Give the live dashboard a calmer palette and softer page transitions; keep every screen and field as it is." → `{ intent: feature, qualifiers: [visual-open, restyle], artifacts: [ui], confidence: high }`

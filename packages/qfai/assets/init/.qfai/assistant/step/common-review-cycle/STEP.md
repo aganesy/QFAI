@@ -40,9 +40,11 @@ them; it is the procedure that applies them.
   this route or its pull request covered its commits. A resolution that adds
   content neither side had is not conflict-only. The stage report names the
   merge and why no reviewer ran. In the `resolve-conflicts` route, a
-  resolution that touches a story-tree file, a contract, or `decisions.md` or
-  `open-questions.md` is not exempt: it gets the code review, and
-  `architecture-reviewer` too for a contract. A parent skill invoked by name
+  resolution that touches a story-tree file or a contract is not exempt: it
+  gets the code review, and `architecture-reviewer` too for a contract. A
+  conflict confined to `decisions.md`, its pages and `open-questions.md` is
+  resolved by merging the base, whose union merge keeps both sides' rows; that
+  merge edits no row and gets no reviewer. A parent skill invoked by name
   uses the reviewers its own `## Review` section names, such as `qfai-discussion`'s.
 
   In a route, a code review whose target replaces at most five lines, a

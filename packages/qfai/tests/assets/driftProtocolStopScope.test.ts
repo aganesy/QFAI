@@ -21,12 +21,11 @@ describe.each(trees)("drift protocol in %s", (tree) => {
     const rule = (
       await readFile(path.join(repoRoot, tree, "assistant/rule/drift-protocol.md"), "utf-8")
     ).replace(/\s*\n\s*/g, " ");
-    expect(rule).toContain("Content starts with Change request:");
-    expect(rule).toContain("TODO is not authorization.");
-    expect(rule).toContain("A WIP Change request: row is the in-force authorization");
+    expect(rule).toContain("Content starts with `Change request:`");
     expect(rule).toContain(
-      "A DONE row authorizes only on the branch that appended it or moved it from WIP.",
+      "A `Change request:` row authorizes the paths it names only on the branch that adds it.",
     );
+    expect(rule).toContain("A row the base already holds authorizes nothing");
     expect(rule).not.toContain(".qfai/decisions/");
     expect(rule).not.toContain("tdd/test-list.md");
   });

@@ -486,7 +486,7 @@ it("A review whose target only resolves conflicts between reviewed sides gets no
   expect(after).toContain("A resolution that adds content neither side had is not conflict-only.");
   expect(after).toContain("The stage report names the merge and why no reviewer ran.");
   expect(after).toContain(
-    "In the `resolve-conflicts` route, a resolution that touches a story-tree file, a contract, or `decisions.md` or `open-questions.md` is not exempt: it gets the code review, and `architecture-reviewer` too for a contract.",
+    "In the `resolve-conflicts` route, a resolution that touches a story-tree file or a contract is not exempt: it gets the code review, and `architecture-reviewer` too for a contract. A conflict confined to `decisions.md`, its pages and `open-questions.md` is resolved by merging the base, whose union merge keeps both sides' rows; that merge edits no row and gets no reviewer.",
   );
   expect(gate).toContain(
     "the stage report names each verdict and each answer, or says why the review dispatched no reviewer.",

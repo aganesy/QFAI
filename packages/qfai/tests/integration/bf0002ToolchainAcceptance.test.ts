@@ -616,14 +616,22 @@ const WORKFLOW_INPUTS = [
 ];
 
 /** A register whose rows carry the prefix's IDs from 0001, one row per last-column value. */
-function registerText(prefix: "DEC" | "OQ", values: string[]): string {
+/** A register of legacy rows numbered from one, then the appended rows, each `[id, content]`. */
+function registerText(
+  prefix: "DEC" | "OQ",
+  legacy: number,
+  appended: ReadonlyArray<[string, string]> = [],
+): string {
+  const rows: Array<[string, string]> = [
+    ...Array.from({ length: legacy }, (_, index): [string, string] => [
+      `${prefix}-${String(index + 1).padStart(4, "0")}`,
+      "row",
+    ]),
+    ...appended,
+  ];
   return (
-    "# Register\n\n| ID | Content | Status |\n| --- | --- | --- |\n" +
-    values
-      .map(
-        (value, index) => `| ${prefix}-${String(index + 1).padStart(4, "0")} | row | ${value} |\n`,
-      )
-      .join("")
+    "# Register\n\n| ID | Content | Approach |\n| --- | --- | --- |\n" +
+    rows.map(([id, content]) => `| ${id} | ${content} | - |\n`).join("")
   );
 }
 type CatchupFixture = {
@@ -771,8 +779,8 @@ async function withCatchup(run: (fixture: CatchupFixture) => Promise<void>): Pro
     await put(seed, PIN_PATHS[0] ?? "", "#!/bin/sh\nexit 0\n");
     await put(seed, PIN_PATHS[1] ?? "", "export {};\n");
     await put(seed, ".gitattributes", REGISTERS.map((file) => `/${file} merge=union\n`).join(""));
-    await put(seed, REGISTERS[0], registerText("DEC", ["WIP", "WIP"]));
-    await put(seed, REGISTERS[1], registerText("OQ", ["open"]));
+    await put(seed, REGISTERS[0], registerText("DEC", 2));
+    await put(seed, REGISTERS[1], registerText("OQ", 1));
     await put(seed, CHANGELOG, changelogText(`### Changed\n\n${BASE_CHANGE}\n`));
     await cp(path.join(REPO_ROOT, "scripts/lib"), path.join(seed, "scripts/lib"), {
       recursive: true,
@@ -1234,13 +1242,13 @@ describe("branch catch-up acceptance", () => {
     async (kind) => {
       await withCatchup(async (fixture) => {
         await commitChanges(fixture.root, {
-          [REGISTERS[0]]: registerText("DEC", ["WIP", "DONE"]),
+          [REGISTERS[0]]: registerText("DEC", 2, [["DEC-20261105120000", "branch row"]]),
         });
         const head = nativeGit(fixture.root, ["rev-parse", "HEAD"]).stdout.trim();
         let defaultTip: string;
         if (kind === "duplicate") {
           defaultTip = await advanceOrigin(fixture, {
-            [REGISTERS[0]]: registerText("DEC", ["WIP", "DROPPED"]),
+            [REGISTERS[0]]: registerText("DEC", 2, [["DEC-20261105120000", "default row"]]),
           });
         } else {
           nativeGit(fixture.seed, ["rm", "-q", REGISTERS[1]]);
@@ -1259,11 +1267,15 @@ describe("branch catch-up acceptance", () => {
         expect(nativeGit(fixture.root, ["ls-files", "--unmerged"]).stdout).toBe("");
         const staged = nativeGit(fixture.root, ["diff", "--cached", "--name-only"]).stdout;
         if (kind === "duplicate") {
-          expect(run.output).toContain(`${REGISTERS[0]}:6,7: DEC-0002 is defined more than once`);
-          expect(staged.split("\n")).toContain(REGISTERS[0]);
-          expect(readFileSync(path.join(fixture.root, REGISTERS[0]), "utf-8")).toContain(
-            "| DEC-0002 | row | DONE |\n| DEC-0002 | row | DROPPED |\n",
+          expect(run.output).toContain(
+            `${REGISTERS[0]}:7,8: DEC-20261105120000 is defined more than once`,
           );
+          expect(staged.split("\n")).toContain(REGISTERS[0]);
+          // The union merge kept both appended rows, and no row was renumbered.
+          const merged = readFileSync(path.join(fixture.root, REGISTERS[0]), "utf-8");
+          expect(merged).toContain("| DEC-0001 | row | - |\n| DEC-0002 | row | - |\n");
+          expect(merged).toContain("| DEC-20261105120000 | branch row | - |\n");
+          expect(merged).toContain("| DEC-20261105120000 | default row | - |\n");
         } else {
           expect(run.output).toContain(`${REGISTERS[1]} could not be read`);
           expect(staged.split("\n")).toContain(REGISTERS[1]);

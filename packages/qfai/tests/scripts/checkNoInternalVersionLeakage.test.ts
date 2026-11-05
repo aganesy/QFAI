@@ -28,7 +28,7 @@
  * falls through to `ROOT="."`.
  */
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,6 +38,8 @@ import { removeTempTree } from "../helpers/tempTree.js";
 import {
   STORY_ID_BOUNDARIES,
   STORY_ID_TRAILING_HYPHEN_BOUNDARIES,
+  TIMESTAMP_IDS,
+  TIMESTAMP_PLACEHOLDERS,
   scanDistributedSurface,
 } from "../helpers/distributedSurfaceScan.js";
 
@@ -114,6 +116,47 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
       expect(result.stderr).toContain("sample.md");
     },
   );
+
+  // QFAI:EX-0002-0023-01
+  it("lists the timestamp shapes beside the shapes the table already held", async () => {
+    const rule = await readFile(
+      path.join(PKG_ROOT, "../../.agents/rules/distributed-surface.local.md"),
+      "utf-8",
+    );
+    const shapeCells = rule
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("| "))
+      .map((line) => line.split("|")[2] ?? "");
+    for (const shape of ["`DEC-yyyymmddhhMMss`", "`OQ-yyyymmddhhMMss`", "`DEC-NNNN-NNNN`"]) {
+      expect(
+        shapeCells.filter((cell) => cell.includes(shape)),
+        shape,
+      ).toHaveLength(1);
+    }
+    const flat = rule.replace(/\s+/g, " ");
+    expect(flat).toMatch(/A timestamp ID has no sample band/);
+    expect(flat).toMatch(/writes the shape with letters/);
+  });
+
+  // QFAI:EX-0002-0009-06
+  it.each(TIMESTAMP_IDS)("rejects the timestamp ID %s once in packed content", async (id) => {
+    const root = await newTempDir();
+    await stageAssets(root, [["sample.md", `${id}\n`]]);
+    const hits = (await scanDistributedSurface(root)).hits;
+    expect(hits.map((hit) => [hit.className, hit.match])).toEqual([["internal story id", id]]);
+    const result = runGuard(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("sample.md");
+    expect(result.stderr.split(id).length - 1).toBe(1);
+  });
+
+  // QFAI:EX-0002-0009-06
+  it.each(TIMESTAMP_PLACEHOLDERS)("passes the placeholder %s", async (placeholder) => {
+    const root = await newTempDir();
+    await stageAssets(root, [["sample.md", `${placeholder}\n`]]);
+    expect((await scanDistributedSurface(root)).hits).toEqual([]);
+    expect(runGuard(root).status).toBe(0);
+  });
 
   it.each(STORY_ID_TRAILING_HYPHEN_BOUNDARIES)(
     "accepts %s and rejects %s at a packed line end",

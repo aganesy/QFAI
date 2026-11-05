@@ -287,6 +287,19 @@ describe("a question answered without a change", () => {
     expect(procedure).toMatch(
       /A failure there is reported as `needs-change`, naming the merge commit, since the merge itself stands/,
     );
+    expect(procedure).toMatch(/Never enable a host's auto-merge/);
+    expect(procedure).toMatch(
+      /Before a merge, merge the base branch into the pull request's branch locally \(`git merge origin\/<base>`\), push, and wait for the checks that push starts; only then merge/,
+    );
+    expect(procedure).toMatch(
+      /A conflict the host shows only in `decisions\.md`, its pages or `open-questions\.md` is resolved the same way: the union merge completes it/,
+    );
+    expect(procedure).toMatch(
+      /Edit no register row, renumber no ID, and ask for no new review of that merge/,
+    );
+    expect(procedure).toMatch(
+      /A conflict in any other file stops the operation as a tracked change it needs/,
+    );
   });
 
   // QFAI:AC-0001-0220-06

@@ -29,7 +29,7 @@ describe("autopilot choices cannot supply missing approval", () => {
       expect(triage).toContain(
         "In --auto, ask no question: append one `open-questions.md` row per pending operation",
       );
-      expect(triage).toContain("at TODO with its Content opening Unadjudicated:");
+      expect(triage).toContain("with its Content opening Unadjudicated:");
       expect(triage).toContain("stop before the dependent writes");
       expect(triage).toContain("report every pending operation with its target as open");
     });

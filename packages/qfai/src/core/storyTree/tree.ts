@@ -89,14 +89,20 @@ function indexIds(text: string, column: "BF-ID" | "US-ID"): string[] {
 }
 
 const RESERVED_ID =
-  /\b(?:BF-\d{4}|US-\d{4}-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2}|BR-\d{4}-\d{4}(?![\w-])|DEC-\d{4}|OQ-\d{4})(?![\d-])/g;
+  /\b(?:BF-\d{4}|US-\d{4}-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2}|BR-\d{4}-\d{4}(?![\w-])|(?:DEC|OQ)-(?:\d{14}|\d{4}))(?![\d-])/g;
 
-/** Allocates after every declaration and every ID named in a decision row. */
+/**
+ * Allocates a BF, US, AC, EX or BR ID after every declaration and every ID named in a decision
+ * row. A decision or question row takes the UTC time it is written instead, so DEC and OQ are
+ * refused.
+ */
 export function nextStoryTreeId(
   model: StoryTreeModel,
   kind: StoryTreeIdKind,
   parentId?: string,
 ): string {
+  // `nextId` refuses DEC and OQ before the register is read.
+  if (kind === "DEC" || kind === "OQ") return nextId(kind, []);
   if (!model.decisionRegisterComplete || (model.decisions?.errors.length ?? 0) > 0) {
     const problems = [
       ...model.decisionRegisterErrors.map(({ file, message }) => `${file}: ${message}`),

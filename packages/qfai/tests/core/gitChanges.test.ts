@@ -151,13 +151,13 @@ it("distinguishes an unreadable existing Git blob from an absent base file", asy
 // Supplementary positive root-inventory regression; this does not prove unsafe-page refusal.
 it.each([".", "./", ""])("reads a repository-root register at configured %j", async (directory) => {
   const header =
-    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
-  const page = header + "| DEC-0001 | Historical | Keep | DONE |\n";
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
+  const page = header + "| DEC-0001 | Historical | Keep |\n";
   const tail =
     header.replace(
       "## Decisions",
       "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
-    ) + "| DEC-0002 | Append tail | Keep | WIP |\n";
+    ) + "| DEC-0002 | Append tail | Keep |\n";
   const root = await newRepo({
     "decisions.md": tail,
     "decisions/page-0001.md": page,

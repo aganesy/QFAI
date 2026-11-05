@@ -14,46 +14,115 @@ import {
 } from "./harness.js";
 
 type OldRecord = {
-  kind: "decision" | "question";
+  kind: "decision" | "question" | "change-request";
   source: string;
   oldId: string;
   summary: string;
   approach: string;
   status?: string | undefined;
   successor?: string | undefined;
-  prefix?: string | undefined;
+};
+
+/** A migrated record placed in one register, before its ID is assigned. */
+type Placed = {
+  record: OldRecord;
+  register: "decisions" | "open-questions";
+  content: string;
+  approach: string;
 };
 
 const LEGACY_HEADING_ID = /^((?:DR|OQ)-\d+(?:-[A-Za-z0-9]+)*)(?=[:\s]|$)/;
+const TIMESTAMP_ID = /^(?:DEC|OQ)-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/;
 
-export function mapDecisionStatus(status?: string, successorId?: string): string {
-  switch (status?.trim().toLowerCase()) {
-    case undefined:
-    case "accepted":
-    case "approved":
-      return "DONE";
-    case "proposed":
-      return "TODO";
-    case "rejected":
-      return "REJECTED";
-    case "re-open":
-      return "WIP";
-    case "superseded":
-      return successorId ? `SUPERSEDED (by ${successorId})` : "TODO";
-    default:
-      return "TODO";
+/**
+ * Where a record goes and what its row says. The decision register holds
+ * decisions only, so a record nobody has decided becomes a question row.
+ */
+function place(record: OldRecord): Placed {
+  const status = record.status?.trim().toLowerCase();
+  const from = origin(record);
+  const decision = (content: string, approach: string): Placed => ({
+    record,
+    register: "decisions",
+    content,
+    approach,
+  });
+  const question = (content: string, approach: string): Placed => ({
+    record,
+    register: "open-questions",
+    content,
+    approach,
+  });
+  // A keyword row's Content holds only its keyword and option, so its origin begins the Approach.
+  const originFirst = `${from}: ${record.approach}`;
+  if (record.kind === "change-request") {
+    if (status === "approved") return decision(`Change request: ${record.summary}`, originFirst);
+    if (status === "rejected")
+      return decision(`Declined change request: ${record.summary}`, originFirst);
+    return question(`${from}: Change request: ${record.summary}`, record.approach);
   }
+  if (record.kind === "question") {
+    if (status === "resolved" || status === "superseded")
+      return decision(
+        `${from}: ${record.summary} Answer: ${record.approach || "not recorded"}`,
+        `The question was ${status} in ${record.source}.`,
+      );
+    if (status === "unadjudicated")
+      return question(`Unadjudicated: ${record.summary}`, `${from}: ${record.approach}`);
+    if (status === "deferred")
+      return question(
+        `${from}: ${record.summary}`,
+        `Deferred; next decision point: ${record.approach || "not recorded"}`,
+      );
+    return question(`${from}: ${record.summary}`, record.approach);
+  }
+  if (status === "rejected") return decision(`Declined: ${record.summary}`, originFirst);
+  const content = `${from}: ${record.summary}`;
+  if (status === undefined || status === "accepted" || status === "superseded")
+    return decision(content, record.approach);
+  return question(content, record.approach);
 }
 
-export function mapQuestionStatus(status?: string): string {
-  switch (status?.trim().toLowerCase()) {
-    case "resolved":
-      return "DONE";
-    case "deferred":
-      return "DEFERRED";
-    default:
-      return "TODO";
-  }
+/** The UTC time a timestamp ID names, or null for a legacy ID. */
+function timestampOf(id: string): number | null {
+  const parts = TIMESTAMP_ID.exec(id)?.slice(1).map(Number);
+  if (!parts) return null;
+  const [year = 0, month = 1, day = 1, hour = 0, minute = 0, second = 0] = parts;
+  return Date.UTC(year, month - 1, day, hour, minute, second);
+}
+
+function formatTimestamp(time: number): string {
+  return new Date(time).toISOString().replace(/\D/g, "").slice(0, 14);
+}
+
+/**
+ * `count` IDs for one register: from the run's start, or one second after the
+ * highest timestamp ID the register already holds when that is later, one
+ * second apart.
+ */
+function timestampIds(
+  prefix: "DEC" | "OQ",
+  existing: readonly string[],
+  runStart: number,
+  count: number,
+): string[] {
+  const first = existing.reduce(
+    (start, id) => {
+      const time = id.startsWith(`${prefix}-`) ? timestampOf(id) : null;
+      return time === null ? start : Math.max(start, time + 1000);
+    },
+    Math.floor(runStart / 1000) * 1000,
+  );
+  return Array.from(
+    { length: count },
+    (_, index) => `${prefix}-${formatTimestamp(first + index * 1000)}`,
+  );
+}
+
+/** Whether a row names the origin, and not merely a longer origin it prefixes. */
+function mentionsOrigin(text: string, from: string): boolean {
+  const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`${escaped}(?![A-Za-z0-9-])`).test(text);
 }
 
 function relative(root: string, file: string): string {
@@ -128,7 +197,6 @@ function questionRows(text: string, source: string): OldRecord[] {
       summary: row[question] ?? "",
       approach: row[notes] ?? "",
       status: row[status],
-      prefix: row[status]?.toLowerCase() === "unadjudicated" ? "Unadjudicated: " : undefined,
     }));
 }
 
@@ -183,19 +251,14 @@ function changeRequest(text: string, source: string): OldRecord | null {
   const impact = extractH2Sections(text).get("Impact scope")?.body ?? "";
   const paths = [...impact.matchAll(/`([^`]+)`/g)].map((match) => match[1] ?? "");
   const status = /^- Status:\s*`?([^\s`]+)`?/m.exec(text)?.[1];
-  const appliedAt = /^- Applied at:[ \t]*`?([^\s`]*)`?/m.exec(text)?.[1] ?? "";
   const title = /^- Title:\s*(.+)$/m.exec(text)?.[1] ?? oldId;
-  // An approved request that was never applied is still in progress: DONE
-  // would record the change as made when only the approval was.
-  const unapplied = status?.toLowerCase() === "approved" && /^-?$/.test(appliedAt);
   return {
-    kind: "decision",
+    kind: "change-request",
     source,
     oldId,
     summary: paths.length > 0 ? paths.join(", ") : title,
     approach: `${source}: ${title}`,
-    status: unapplied ? "re-open" : status,
-    prefix: "Change request: ",
+    status,
   };
 }
 
@@ -211,14 +274,6 @@ function retiredPack(text: string, source: string, pack: string): OldRecord | nu
     approach: `Retired pack: ${source}`,
     status: "accepted",
   };
-}
-
-function nextRecordId(kind: "DEC" | "OQ", existing: readonly string[], offset: number): string {
-  const largest = existing.reduce((max, id) => {
-    const match = new RegExp(`^${kind}-(\\d{4})$`).exec(id);
-    return match ? Math.max(max, Number(match[1])) : max;
-  }, 0);
-  return `${kind}-${String(largest + offset + 1).padStart(4, "0")}`;
 }
 
 function appendRows(text: string, rows: readonly string[]): string {
@@ -301,7 +356,7 @@ export async function pendingMergeInput(context: MigrationContext): Promise<stri
     .map((row) => `${row.content} ${row.approach}`)
     .join("\n");
   const unmerged = (await retiredPackRecords(context)).find(
-    (record) => !decisions.includes(origin(record)),
+    (record) => !mentionsOrigin(decisions, origin(record)),
   );
   return unmerged?.source ?? null;
 }
@@ -340,14 +395,15 @@ export const step02: MigrationStep = {
       if (origins.has(key)) throw new MigrationInputError(`Duplicate migration record: ${key}`);
       origins.add(key);
     }
+    const runStart = Date.now();
     const decisionsTarget = `${specsRelative}/decisions.md`;
     const questionsTarget = `${specsRelative}/open-questions.md`;
     const decisionsOriginal =
       (await readIfPresent(path.join(context.root, decisionsTarget))) ??
-      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
     const questionsOriginal =
       (await readIfPresent(path.join(context.root, questionsTarget))) ??
-      "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+      "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
     const tree = await readStoryTreeModel(context.root, {
       ...context.config,
       paths: {
@@ -370,60 +426,68 @@ export const step02: MigrationStep = {
         `Cannot merge into invalid decisions.md or open-questions.md: ${details.join("; ")}`,
       );
     }
-    const decided = records.filter(
-      (record) =>
-        record.kind === "decision" &&
-        !existingDecisions.rows.some((row) => row.content.includes(origin(record))),
+    // A record an earlier run wrote names its origin in either register, in Content or Approach.
+    const written = [...existingDecisions.rows, ...existingQuestions.rows]
+      .map((row) => `${row.content} ${row.approach}`)
+      .join("\n");
+    const placed = records
+      .filter((record) => !mentionsOrigin(written, origin(record)))
+      .map((record) => place(record));
+    const newDecisions = placed.filter((entry) => entry.register === "decisions");
+    const newQuestions = placed.filter((entry) => entry.register === "open-questions");
+    const decisionIds = timestampIds(
+      "DEC",
+      existingDecisions.rows.map((row) => row.id),
+      runStart,
+      newDecisions.length,
     );
-    const questioned = records.filter(
-      (record) =>
-        record.kind === "question" &&
-        !existingQuestions.rows.some((row) => row.content.includes(origin(record))),
+    const questionIds = timestampIds(
+      "OQ",
+      existingQuestions.rows.map((row) => row.id),
+      runStart,
+      newQuestions.length,
     );
-    const decisionIds = new Map(
-      decided.map((record, index) => [
-        origin(record),
-        nextRecordId(
-          "DEC",
-          existingDecisions.rows.map((row) => row.id),
-          index,
-        ),
-      ]),
+    const idOf = new Map(
+      newDecisions.map((entry, index) => [origin(entry.record), decisionIds[index] ?? ""]),
     );
-    const decisionRows = decided.map((record) => {
-      const newId = decisionIds.get(origin(record)) ?? "";
-      const sameSourceSuccessor = decided.find(
-        (candidate) =>
-          candidate.oldId === record.successor &&
-          path.dirname(candidate.source) === path.dirname(record.source),
-      );
-      const globalSuccessors = decided.filter((candidate) => candidate.oldId === record.successor);
+    // What a supersession adds to the front of a row's Approach, by origin.
+    const lead = new Map<string, string>();
+    for (const { record } of newDecisions) {
+      if (record.kind !== "decision" || record.status?.trim().toLowerCase() !== "superseded")
+        continue;
+      const candidates = newDecisions
+        .map((entry) => entry.record)
+        .filter(
+          (candidate) => candidate.kind === "decision" && candidate.oldId === record.successor,
+        );
       const successor =
-        sameSourceSuccessor ?? (globalSuccessors.length === 1 ? globalSuccessors[0] : undefined);
-      const successorId = successor
-        ? decisionIds.get(origin(successor))
-        : existingDecisions.rows.find((row) => row.content.includes(`#${record.successor}:`))?.id;
-      if (record.status?.toLowerCase() === "superseded" && !successorId) {
-        forAPerson.push(`${record.source}: ${record.oldId} has no migrated successor`);
+        candidates.find(
+          (candidate) => path.dirname(candidate.source) === path.dirname(record.source),
+        ) ?? (candidates.length === 1 ? candidates[0] : undefined);
+      if (successor) {
+        const key = origin(successor);
+        lead.set(key, `${lead.get(key) ?? ""}Supersedes ${idOf.get(origin(record)) ?? ""}. `);
+        continue;
       }
-      const content = record.prefix
-        ? `${record.prefix}${record.summary} (${origin(record)})`
-        : `${origin(record)}: ${record.summary}`;
-      return `| ${newId} | ${escapeTableCell(content)} | ${escapeTableCell(record.approach)} | ${mapDecisionStatus(record.status, successorId)} |`;
-    });
-    const questionRowsToWrite = questioned.map((record, index) => {
-      const id = nextRecordId(
-        "OQ",
-        existingQuestions.rows.map((row) => row.id),
-        index,
-      );
-      const unadjudicated = record.prefix === "Unadjudicated: ";
-      const content = unadjudicated
-        ? `${record.prefix}${record.summary}`
-        : `${origin(record)}: ${record.summary}`;
-      const approach = unadjudicated ? `${origin(record)}: ${record.approach}` : record.approach;
-      return `| ${id} | ${escapeTableCell(content)} | ${escapeTableCell(approach)} | ${mapQuestionStatus(record.status)} |`;
-    });
+      const earlier =
+        record.successor === undefined
+          ? undefined
+          : existingDecisions.rows.find((row) =>
+              `${row.content} ${row.approach}`.includes(`#${record.successor}:`),
+            );
+      if (earlier) lead.set(origin(record), `Superseded by ${earlier.id}. `);
+      else forAPerson.push(`${record.source}: ${record.oldId} has no migrated successor`);
+    }
+    const render = (id: string, entry: Placed): string =>
+      `| ${id} | ${escapeTableCell(entry.content)} | ${escapeTableCell(
+        `${lead.get(origin(entry.record)) ?? ""}${entry.approach}`,
+      )} |`;
+    const decisionRows = newDecisions.map((entry, index) =>
+      render(decisionIds[index] ?? "", entry),
+    );
+    const questionRowsToWrite = newQuestions.map((entry, index) =>
+      render(questionIds[index] ?? "", entry),
+    );
     if (decisionRows.length > 0) {
       operations.push({
         kind: "write",

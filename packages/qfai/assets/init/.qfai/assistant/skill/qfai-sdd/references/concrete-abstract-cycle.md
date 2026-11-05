@@ -71,7 +71,7 @@ The age of the target decides the route.
 | Target                                              | Route                                                                                                                                       |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | An AC, EX or BR this invocation wrote               | Changed directly, with no approval. An AC it wrote is split the same way, with no approval, and each EX re-cites the criterion it exercises |
-| An item that existed when the invocation started    | Changed directly only under an in-force `Change request:` row (WIP, or DONE on this branch) whose approved change covers this change        |
+| An item that existed when the invocation started    | Changed directly only under a `Change request:` row this branch adds whose approved change covers this change                               |
 | The same item, with no row that covers the change   | The change is put to the user, and the item stays unchanged until the user approves it                                                      |
 | Creating, splitting, merging or retiring a BF or US | Put to the user, even when this invocation wrote the item                                                                                   |
 
@@ -97,17 +97,15 @@ updated EXs.
 - No third cycle runs, even when the second adopted one.
 
 A finding still undecided when the session ends becomes one `open-questions.md`
-row at TODO whose Content opens `Unadjudicated:`, followed by the finding and
-its target IDs. The per-flow gate reports that row as `QFAI-SPACK-102` until it
-is decided.
+row whose Content opens `Unadjudicated:`, followed by the finding and
+its target IDs. The per-flow gate reports that row as `QFAI-SPACK-102` while it
+exists.
 
 Under `--auto` nothing is asked. A finding that would go to the user becomes
 that row in the cycle that raised it.
 
-The row changes `open-questions.md`, which the drift gate protects. The change
-request the user approves when the finding is decided names
-`open-questions.md`, and that row is what authorizes the change. Until then the
-per-flow gate holds the flow, so no later stage builds on it.
+Appending the row needs no change request. While it exists the per-flow gate
+holds the flow, so no later stage builds on it.
 
 No other record is written. A finding the session decided, and one it dropped,
 append no row.
@@ -120,11 +118,12 @@ Within a session, the finder does not raise a finding again when either holds:
   its case is equal to that case, includes it, or is included in it.
 - The proposed change of a change request the user declined already answers
   it. A declined change request is the user deciding that finding, and its
-  REJECTED row in `decisions.md` bars the finding it answers.
+  `Declined change request:` row in `decisions.md` bars the finding it answers.
 
 Matching never goes by wording. A declined change for `BR-0006-0001` and
 `EX-0002-0003-02` whose case is "an order of 20 000 in euros" also bars "an order
 of 20 000 in any currency other than the default", however either is worded. It
 does not bar a finding on the same IDs for an order of exactly 10 000.
 
-A decision appended to reopen a REJECTED row lifts it.
+A later decision row whose Approach opens `Reopens DEC-…` with the declined
+row's ID lifts it.

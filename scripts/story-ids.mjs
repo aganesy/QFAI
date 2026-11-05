@@ -13,6 +13,13 @@
  * every ID a row of `decisions.md` names, so a retired ID is not handed out
  * again and an ID written only as an example in prose is not counted.
  *
+ * A decision or question row takes the UTC time it is written as its ID, so
+ * `next` offers no DEC or OQ scope. `check` still names a DEC or OQ ID this
+ * branch adds that another head adds too: two rows written in the same second.
+ * Main and the open heads are read with the parser too, except their registers:
+ * a head may still hold an older register layout, so their DEC and OQ IDs are
+ * read from the first cell of each table row.
+ *
  * Reading the listed pull-request heads and requested scopes costs one REST
  * listing and one `git fetch`. The listing goes
  * through `gh-budget.mjs`, which keeps its reserve and reports the remaining
@@ -23,7 +30,7 @@
  *   node scripts/story-ids.mjs next <scope>...
  *   node scripts/story-ids.mjs check
  *
- * Scopes: `DEC`, `OQ`, `BF`, `US-<flow>`, `AC-<flow>-<story>`,
+ * Scopes: `BF`, `US-<flow>`, `AC-<flow>-<story>`,
  * `EX-<flow>-<story>`, `BR-<contract>`.
  *
  * Requires Node.js 22.18 or later, which runs the package's TypeScript
@@ -61,7 +68,7 @@ const MAX_OUTPUT_BYTES = 512 * 1024 * 1024;
 
 /** The kind and parent a scope allocates under, or `undefined` for an unknown scope. */
 export function parseScope(scope) {
-  if (/^(?:DEC|OQ|BF)$/.test(scope)) return { kind: scope, parentId: undefined };
+  if (scope === "BF") return { kind: scope, parentId: undefined };
   const flow = /^US-(\d{4})$/.exec(scope);
   if (flow !== null) return { kind: "US", parentId: `BF-${flow[1]}` };
   const story = /^(AC|EX)-(\d{4}-\d{4})$/.exec(scope);
@@ -175,6 +182,47 @@ export function fetchedHeads(fetchHead) {
   return heads;
 }
 
+/** A table row of a register, with the DEC or OQ ID in its first cell. */
+const REGISTER_ROW = /^\|\s*((?:DEC|OQ)-(?:\d{4}|\d{14}))\s*\|/;
+
+/** Whether a story-tree file is the decision register, one of its pages or the question register. */
+export function isRegisterFile(file) {
+  return (
+    file === `${SPEC_DIR}/decisions.md` ||
+    file === `${SPEC_DIR}/open-questions.md` ||
+    file.startsWith(`${SPEC_DIR}/decisions/`)
+  );
+}
+
+/**
+ * The IDs a register declares, and each of its rows as text the allocator
+ * scans for the IDs a row names, read without the table parser: any layout
+ * whose rows begin with the ID cell.
+ */
+export function registerRowIds(text) {
+  const ids = [];
+  const rows = [];
+  for (const line of text.split(/\r?\n/)) {
+    const id = REGISTER_ROW.exec(line)?.[1];
+    if (id === undefined) continue;
+    ids.push(id);
+    rows.push({ content: line, approach: "" });
+  }
+  return { ids, rows };
+}
+
+/** The guidance for each kind of collision `check` found. */
+export function collisionGuidance(found) {
+  const lines = [];
+  if (found.some(({ id }) => !/^(?:DEC|OQ)-/.test(id)))
+    lines.push("Renumber the story-tree IDs with `node scripts/story-ids.mjs next <scope>`.");
+  if (found.some(({ id }) => /^(?:DEC|OQ)-/.test(id)))
+    lines.push(
+      "For a DEC or OQ ID, delete this branch's own row and append it again under a new timestamp ID, updating each citation this branch added; never renumber a row another branch holds.",
+    );
+  return lines.join("\n");
+}
+
 /** The blobs a `git cat-file --batch` output holds, keyed by object name. */
 export function batchBlobs(output) {
   const blobs = new Map();
@@ -273,7 +321,26 @@ class TreeReader {
         this.parsed.set(key, text);
       }
     }
-    return this.parse(new Map(entries.map(({ key, file }) => [file, this.parsed.get(key)])));
+    const texts = new Map(entries.map(({ key, file }) => [file, this.parsed.get(key) ?? ""]));
+    return this.parseOtherRef(texts);
+  }
+
+  /**
+   * Another branch's tree: the parser reads everything but the registers,
+   * whose IDs and rows come from `registerRowIds`.
+   */
+  parseOtherRef(texts) {
+    const registers = [...texts].filter(([file]) => isRegisterFile(file));
+    const model = this.buildModel(new Map([...texts].filter(([file]) => !isRegisterFile(file))), {
+      specsDir: SPEC_DIR,
+    });
+    const read = registers.map(([, text]) => registerRowIds(text));
+    return [
+      {
+        ids: [...model.declarations.map(({ id }) => id), ...read.flatMap(({ ids }) => ids)],
+        rows: read.flatMap(({ rows }) => rows),
+      },
+    ];
   }
 
   /** Each file under the story tree in the working tree, untracked ones included. */
@@ -423,7 +490,7 @@ function checkCommand(reader, pulls) {
   for (const { id, heads: where } of found) {
     console.log(`${id} is also added by ${where.join(", ")}`);
   }
-  console.error("Renumber these with `node scripts/story-ids.mjs next <scope>`.");
+  console.error(collisionGuidance(found));
   return 1;
 }
 
@@ -465,7 +532,7 @@ const USAGE = [
   "  node scripts/story-ids.mjs next <scope>...",
   "  node scripts/story-ids.mjs check",
   "check: finish any pending merge first; an unfinished merge exits 2.",
-  "Scopes: DEC, OQ, BF, US-<flow>, AC-<flow>-<story>, EX-<flow>-<story>, BR-<contract>",
+  "Scopes: BF, US-<flow>, AC-<flow>-<story>, EX-<flow>-<story>, BR-<contract>",
 ].join("\n");
 
 /** The package's story-tree parser, which is TypeScript. */

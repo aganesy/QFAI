@@ -21,7 +21,7 @@ const files = new Map<string, string>([
     `${story}/03_Example.md`,
     "| EX-ID | AC-Ref | Example |\n| --- | --- | --- |\n| EX-0001-0001-01 | AC-0001-0001-01 | paid |",
   ],
-  [`${specs}/decisions.md`, "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |"],
+  [`${specs}/decisions.md`, "| ID | Content | Approach |\n| --- | --- | --- |"],
 ]);
 
 function model(decisions?: string, examples?: string) {
@@ -106,8 +106,8 @@ function expectParsingWork(profile: StoryObligationProfile): void {
   };
   const ordinary = model();
   const exception = model(
-    "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n" +
-      "| DEC-0001 | Test exception: EX-0001-0001-01, EX-0001-0001-99 | No test environment | DONE |\n",
+    "| ID | Content | Approach |\n| --- | --- | --- |\n" +
+      "| DEC-0001 | Test exception: EX-0001-0001-01, EX-0001-0001-99 | No test environment |\n",
     "| EX-ID | AC-Ref | Example |\n| --- | --- | --- |\n" +
       "| EX-0001-0001-01 | AC-0001-0001-01 | paid |\n" +
       "| EX-0001-0001-02 | AC-0001-0001-01 | second payment |\n",
@@ -172,7 +172,7 @@ function expectParsingWork(profile: StoryObligationProfile): void {
       expected: { atdd: [missingBF, missingAC], tdd: [unplacedEX] },
     },
     {
-      name: "DONE exception exempts only its declared EX",
+      name: "an exception exempts only its declared EX",
       test: { ...selectedUnit, content: unattached },
       tree: exception,
       tddCalls: 1,
@@ -470,9 +470,9 @@ describe("story-tree test obligations", () => {
     ).toBe(true);
   });
 
-  it("applies a DONE exception only to its own item and emits an info finding", () => {
+  it("applies an exception only to its own item and emits an info finding", () => {
     const decisions =
-      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Test exception: BF-0001 | Temporarily exempt | DONE |";
+      "| ID | Content | Approach |\n| --- | --- | --- |\n| DEC-0001 | Test exception: BF-0001 | Temporarily exempt |";
     const findings = validateStoryTreeObligationsModel(model(decisions), [], "atdd");
     expect(
       findings.some((item) => item.code === "QFAI-STORY-006" && item.refs?.includes("BF-0001")),
@@ -487,9 +487,9 @@ describe("story-tree test obligations", () => {
     ).toBe(true);
   });
 
-  it("does not let a WIP exception or an unknown exempted ID clear an obligation", () => {
+  it("does not let an ordinary decision or an unknown exempted ID clear an obligation", () => {
     const decisions =
-      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Test exception: BF-0001, AC-9999-0001-01 | Temporary | WIP |";
+      "| ID | Content | Approach |\n| --- | --- | --- |\n| DEC-0001 | Exempt BF-0001, AC-9999-0001-01 | Temporary |\n| DEC-0002 | Test exception: AC-9999-0001-01 | Temporary |";
     const findings = validateStoryTreeObligationsModel(model(decisions), [], "atdd");
     expect(
       findings.some((item) => item.code === "QFAI-STORY-006" && item.refs?.includes("BF-0001")),
@@ -519,37 +519,31 @@ describe("story-tree test obligations", () => {
   });
 });
 
-describe.each([
-  "DONE",
-  "TODO",
-  "WIP",
-  "REJECTED",
-  "SUPERSEDED (by DEC-0002)",
-  "PARTLY SUPERSEDED (by DEC-0002)",
-] as const)("test exceptions with Status %s", (status) => {
+describe("test exceptions", () => {
   // QFAI:EX-0001-0056-06
   // QFAI:EX-0001-0056-07
   it.each([
     ["BF-0001", "atdd"],
     ["AC-0001-0001-01", "atdd"],
     ["EX-0001-0001-01", "tdd"],
-  ] as const)("exempts only %s at DONE under %s", (id, profile) => {
+  ] as const)("exempts only %s while its row exists under %s", (id, profile) => {
     const decisions =
-      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n" +
-      `| DEC-0001 | Test exception: ${id} | No test environment | ${status} |\n` +
-      "| DEC-0002 | Successor decision | Keep obligations | DONE |\n";
+      "| ID | Content | Approach |\n| --- | --- | --- |\n" +
+      `| DEC-0001 | Test exception: ${id} | No test environment |\n` +
+      "| DEC-20261105093000 | Successor decision | Keep obligations |\n";
     const current = model(decisions);
     const findings = validateStoryTreeObligationsModel(current, [], profile);
     expect(
       findings.filter((finding) => finding.code === "QFAI-STORY-006" && finding.refs?.includes(id)),
-    ).toEqual(
-      status === "DONE" ? [] : [expect.objectContaining({ severity: "error", refs: [id] })],
-    );
-    expect(findings.filter((finding) => finding.code === "QFAI-STORY-009")).toEqual(
-      status === "DONE"
-        ? [expect.objectContaining({ severity: "info", refs: [id, "DEC-0001"] })]
-        : [],
-    );
+    ).toEqual([]);
+    expect(findings.filter((finding) => finding.code === "QFAI-STORY-009")).toEqual([
+      expect.objectContaining({ severity: "info", refs: [id, "DEC-0001"] }),
+    ]);
+    expect(
+      validateStoryTreeObligationsModel(model(), [], profile).filter(
+        (finding) => finding.code === "QFAI-STORY-006" && finding.refs?.includes(id),
+      ),
+    ).toEqual([expect.objectContaining({ severity: "error", refs: [id] })]);
     if (id === "BF-0001") {
       expect(findings).toContainEqual(
         expect.objectContaining({ code: "QFAI-STORY-006", refs: ["AC-0001-0001-01"] }),
@@ -565,11 +559,11 @@ describe.each([
 
 // QFAI:EX-0001-0056-07
 it.each(["BF-9999", "AC-9999-0001-01", "EX-0001-0001-99"] as const)(
-  "a DONE exception naming undefined %s exempts nothing",
+  "an exception naming undefined %s exempts nothing",
   (id) => {
     const decisions =
-      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n" +
-      `| DEC-0001 | Test exception: ${id} | No test environment | DONE |\n`;
+      "| ID | Content | Approach |\n| --- | --- | --- |\n" +
+      `| DEC-0001 | Test exception: ${id} | No test environment |\n`;
     for (const profile of ["atdd", "tdd"] as const) {
       const findings = validateStoryTreeObligationsModel(model(decisions), [], profile);
       expect(findings.filter((finding) => finding.code === "QFAI-STORY-006")).toEqual(
@@ -585,8 +579,8 @@ it.each(["BF-9999", "AC-9999-0001-01", "EX-0001-0001-99"] as const)(
 
 function refusesInvalidHistoricalException(fault: string): void {
   const header =
-    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
-  const row = "| DEC-0001 | Test exception: EX-0001-0001-01 | No environment | DONE |\n";
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
+  const row = "| DEC-0001 | Test exception: EX-0001-0001-01 | No environment |\n";
   const entries = new Map(files);
   entries.set(
     `${specs}/decisions.md`,
@@ -598,8 +592,10 @@ function refusesInvalidHistoricalException(fault: string): void {
   entries.set(
     `${specs}/decisions/page-0001.md`,
     header +
-      (fault === "fifth cell" ? row.replace("| DONE |", "| DONE | extra |") : row) +
-      (fault === "invalid sibling status" ? "| DEC-0002 | Other | Keep | UNKNOWN |\n" : ""),
+      (fault === "fourth cell"
+        ? row.replace("| No environment |", "| No environment | extra |")
+        : row) +
+      (fault === "invalid sibling ID" ? "| DEC-20261305093000 | Other | Keep |\n" : ""),
   );
   const current = buildStoryTreeModel(entries, {
     specsDir: specs,
@@ -617,11 +613,11 @@ function refusesInvalidHistoricalException(fault: string): void {
 }
 
 // QFAI:EX-0001-0053-31
-it.each(["fifth cell", "invalid sibling status"])(
-  "does not grant a DONE Test exception from an invalid historical page: %s",
+it.each(["fourth cell", "invalid sibling ID"])(
+  "does not grant a Test exception from an invalid decision page: %s",
   refusesInvalidHistoricalException,
 );
 
 // QFAI:EX-0001-0053-26
-it("does not grant a DONE Test exception from duplicate page/root occurrences", () =>
+it("does not grant a Test exception from duplicate page/root occurrences", () =>
   refusesInvalidHistoricalException("duplicate exception"));

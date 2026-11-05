@@ -6,9 +6,8 @@ Read when the placeholder scan reports a hit.
 
 **`OQ` and `OPEN QUESTION` are exempt only as tracking structure.** Exempt: the `Open Questions` heading, a register
 table header, and a question row containing the fields required by its register. Story-tree `open-questions.md` uses
-`ID | Content | Approach | Status`; an empty register contains the heading and table header without a question row.
-Discussion registers use their own template fields. A register row's Status is structure too: `TODO` in the Status cell of a
-`decisions.md` or `open-questions.md` row is the row's state, not a placeholder. Article II and `.qfai/assistant/rule/workflow.md` both end an
+`ID | Content | Approach`; an empty register contains the heading and table header without a question row.
+Discussion registers use their own template fields. Article II and `.qfai/assistant/rule/workflow.md` both end an
 unverifiable fact by recording an Open Question, so the tracked record they prescribe must never be reported as an
 unresolved placeholder. Everywhere else the two strings are still scanned: a bare `OQ` or `OPEN QUESTION` left as a
 value in generated spec prose or a contract field, or a row missing a required field, is a hit like any other token.

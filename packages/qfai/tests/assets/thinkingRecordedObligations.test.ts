@@ -89,10 +89,10 @@ describe("every decision a stage records carries one form", () => {
       expect(template.indexOf("`Rollback:`")).toBeLessThan(template.indexOf("| ID"));
     });
 
-    it(`${tree}: the template is still one empty four-column record table`, async () => {
+    it(`${tree}: the template is still one empty three-column record table`, async () => {
       const template = await read(tree, TEMPLATE);
       expect(template).toMatch(
-        /^<!--\r?\n[\s\S]+?\r?\n-->\s*# Decisions\s+## Decisions\s+\|\s*ID\s*\|\s*Content\s*\|\s*Approach\s*\|\s*Status\s*\|\s+\|\s*---\s*\|\s*-------\s*\|\s*--------\s*\|\s*------\s*\|\s*$/,
+        /^<!--\r?\n[\s\S]+?\r?\n-->\s*# Decisions\s+## Decisions\s+\|\s*ID\s*\|\s*Content\s*\|\s*Approach\s*\|\s+\|\s*---\s*\|\s*-------\s*\|\s*--------\s*\|\s*$/,
       );
       const parsed = parseRecordTable(template, "decisions");
       expect(parsed.errors).toEqual([]);

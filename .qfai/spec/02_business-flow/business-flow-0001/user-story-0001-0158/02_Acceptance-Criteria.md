@@ -21,5 +21,5 @@ Feature: Contract-first verification gates
   Scenario: Verify Reads Decisions From decisions.md
     Given a project on the story tree,
     When `/qfai-verify` gathers its decision sources,
-    Then it reads the rows of `decisions.md`, cites them by `DEC-NNNN`, and treats a row with Status REJECTED as a rejected option.
+    Then it reads the rows of `decisions.md`, cites each by its ID, and treats a row whose Content opens `Declined:` or `Declined change request:` as a rejected option that authorizes nothing.
 ```

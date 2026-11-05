@@ -33,8 +33,8 @@ the system's shape has settled.
 
 1. Run `npx qfai validate --profile atdd --flow BF-NNNN --fail-on never` as
    `common-gate-run` says, and list the BF and AC items no test annotates.
-   Drop from that list each item a `Test exception:` row at DONE names: it is
-   owed no test.
+   Drop from that list each item a `Test exception:` row names: it is owed no
+   test.
 2. Unless § Purpose-named test files applies, when the flow is still on that
    list, run `npx qfai atdd scaffold --flow BF-NNNN`. It writes
    `<testsDir>/e2e/<BF-ID>.test.<ext>`.
@@ -76,12 +76,12 @@ apply.
 ## Passes when
 
 Read first: the BF and AC items of the flow that no `Test exception:` row
-at DONE names, and the tests that annotate them. The step passes when every one
+names, and the tests that annotate them. The step passes when every one
 already has an annotating test at its layer. The pass names the test for each item.
 
 ## Gate
 
-PASS when every BF and AC of the flow that no `Test exception:` row at DONE
-names has an annotating test at its layer, and
+PASS when every BF and AC of the flow that no `Test exception:` row names
+has an annotating test at its layer, and
 `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
 error owned by this flow.

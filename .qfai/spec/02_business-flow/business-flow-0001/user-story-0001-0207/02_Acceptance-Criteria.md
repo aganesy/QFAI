@@ -31,13 +31,13 @@ Feature: Run `/qfai-sdd` as a scoped stage
     Given a proposed specification change whose test annotation is not yet added
     When the stage checks specification-change authority and test-deferral authority
     Then it may record the intermediate state only when both authorities cover it
-    And it records the specification change separately from an exact AC-ID Test exception row at DONE
-    And DONE means the exception decision is established, not that the test is complete
+    And it records the specification change separately from an exact AC-ID Test exception row
+    And the row records the exception decision, not that the test is complete
     And the exception Approach records the reason, untested scope, owner, next decision date and condition for adding the annotation
     And the date is for manual review and creates no automatic warning or expiry
     And the existing QFAI-STORY-009 info finding names the exempted AC and decision without claiming test coverage
     And an AC exception does not exempt descendant EX obligations
-    And a no-spec-change request or uncovered authority creates an Unadjudicated OQ at TODO before dependent AC, EX or BR edits
+    And a no-spec-change request or uncovered authority creates an Unadjudicated OQ row before dependent AC, EX or BR edits
     And that OQ names the affected IDs, expected versus actual behavior, implementation-change evidence, owner and required permission
     And those dependent edits stop while independent authorized work may continue
     And the stage never rewrites an EX or prose as an approved specification change without that authority

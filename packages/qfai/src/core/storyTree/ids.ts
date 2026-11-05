@@ -19,9 +19,37 @@ const ID_PATTERNS: Record<StoryTreeIdKind, RegExp> = {
   AC: /^AC-\d{4}-\d{4}-\d{2}$/,
   EX: /^EX-\d{4}-\d{4}-\d{2}$/,
   BR: /^BR-\d{4}-\d{4}$/,
-  DEC: /^DEC-\d{4}$/,
-  OQ: /^OQ-\d{4}$/,
+  DEC: /^DEC-(?:\d{4}|\d{14})$/,
+  OQ: /^OQ-(?:\d{4}|\d{14})$/,
 };
+
+/**
+ * A decision or open-question ID in either form, standing on its own. The timestamp form is tried
+ * first, and the guards keep a longer dashed token or digit run from being read as its leading part.
+ */
+export const RECORD_ID_SOURCE = String.raw`(?<![A-Za-z0-9_-])(?:DEC|OQ)-(?:\d{14}|\d{4})(?![0-9-])`;
+
+/** Whether 14 digits read as a real UTC calendar time, `yyyymmddhhMMss`. */
+function isUtcTimestamp(digits: string): boolean {
+  const [year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0] = [0, 4, 6, 8, 10, 12].map(
+    (start) => Number(digits.slice(start, start === 0 ? 4 : start + 2)),
+  );
+  const time = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  return (
+    time.getUTCFullYear() === year &&
+    time.getUTCMonth() === month - 1 &&
+    time.getUTCDate() === day &&
+    time.getUTCHours() === hour &&
+    time.getUTCMinutes() === minute &&
+    time.getUTCSeconds() === second
+  );
+}
+
+/** Whether a decision or open-question ID takes the timestamp form, `DEC-yyyymmddhhMMss`. */
+export function isTimestampRecordId(id: string): boolean {
+  const digits = /^(?:DEC|OQ)-(\d{14})$/.exec(id)?.[1];
+  return digits !== undefined && isUtcTimestamp(digits);
+}
 
 /** A contract ID: the kind its directory names, then a number unique across kinds. */
 const CONTRACT_ID = /^(?:CLI|API|DB|UI)-(\d{4})$/;
@@ -55,7 +83,9 @@ export const STORY_TEST_ANNOTATIONS = {
 } as const;
 
 export function isStoryTreeId(value: string, kind: StoryTreeIdKind): boolean {
-  return ID_PATTERNS[kind].test(value);
+  if (!ID_PATTERNS[kind].test(value)) return false;
+  // A timestamp ID names a real UTC calendar time.
+  return (kind !== "DEC" && kind !== "OQ") || value.length < 14 || isTimestampRecordId(value);
 }
 
 export function storyIdMatchesFlow(storyId: string, flowId: string): boolean {
@@ -78,6 +108,11 @@ function allocationScope(
   kind: StoryTreeIdKind,
   parentId: string | undefined,
 ): { prefix: string; width: number } {
+  if (kind === "DEC" || kind === "OQ") {
+    throw new TypeError(
+      `${kind} IDs take the UTC time the row is written, ${kind}-yyyymmddhhMMss; no count allocates them`,
+    );
+  }
   if (kind === "BR") {
     const number = contractNumber(parentId ?? "");
     if (!number) throw new TypeError("BR requires a valid contract parent ID");

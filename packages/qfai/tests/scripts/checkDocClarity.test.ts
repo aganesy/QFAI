@@ -495,9 +495,9 @@ describe("scripts/check-doc-clarity.mjs", () => {
             "",
             "## Decision register",
             "",
-            "| ID | Content | Approach | Status |",
-            "| --- | --- | --- | --- |",
-            `| DEC-0001 | Change request: src/thing.ts | Historical provenance from #${"1234"}. | DONE |`,
+            "| ID | Content | Approach |",
+            "| --- | --- | --- |",
+            `| DEC-0001 | Change request: src/thing.ts | Historical provenance from #${"1234"}. |`,
             "",
           ].join("\n"),
         });

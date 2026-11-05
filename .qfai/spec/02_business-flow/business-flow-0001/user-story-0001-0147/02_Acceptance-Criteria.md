@@ -20,8 +20,9 @@ Feature: Unified SDD Workflow
   Scenario: Records Go To The Two Tables
     Given the story tree,
     When `/qfai-sdd` records a triage decision, a change request, a retired story, a rejected option or an open question,
-    Then each of the first four is a row of `decisions.md` and the open question is a row of `open-questions.md`. Every row carries exactly the cells ID, Content, Approach and Status, with a Status from its table's vocabulary. Nothing is written under `.qfai/decisions/`, no `01_Spec-retired` file is written, and an inherited row changes only its Status.
-    And the only ID-change exception is explicit renumbering of a unique branch-added DEC absent from the common ancestor of HEAD and an explicit local base, with only provably branch-added references changed; inherited ID, Content and Approach cells stay fixed.
+    Then each of the first four is a row of `decisions.md` and the open question is a row of `open-questions.md`. Every row carries exactly the cells ID, Content and Approach, and a rejected option is a row whose Content opens `Declined:`, or `Declined change request:` when it is a change request the user declined; either authorizes nothing. Nothing is written under `.qfai/decisions/`, no `01_Spec-retired` file is written, and a row the register holds is never edited.
+    And a decision that replaces or narrows an earlier one is a new row whose Approach cites the earlier ID, and the earlier row stays as written.
+    And a question deferred after its row was written is deleted, and a new question row is appended whose Approach names the next decision point and says `Replaces OQ-…` with the deleted ID.
 
   # AC-0001-0147-04
   Scenario: The Four Merged Files State Each Fact Once
@@ -32,8 +33,9 @@ Feature: Unified SDD Workflow
   # AC-0001-0147-05
   Scenario: IDs Are The Highest In Their Scope Plus One
     Given the story tree,
-    When `/qfai-sdd` allocates a BF, US, AC, EX, BR, DEC or OQ ID,
+    When `/qfai-sdd` allocates a BF, US, AC, EX or BR ID,
     Then the ID is the highest number its scope already names plus one, counting the IDs the base and, where a forge CLI lists them, the open pull requests' heads add. An empty scope starts at `0001`, or at `01` for the AC and EX tail. An ID whose item was retired is never reissued, and a new flow or story directory is named after its ID.
+    And a `decisions.md` or `open-questions.md` row takes as its ID the UTC time it is written, `DEC-yyyymmddhhMMss` or `OQ-yyyymmddhhMMss`, without reading the base or any pull request.
 
   # AC-0001-0147-06
   Scenario: Business Rules Are Written Inside Contracts
@@ -65,16 +67,16 @@ Feature: Unified SDD Workflow
   Scenario: Adopted Findings Change The Tree By The Existing Routes
     Given a finding the cycle adopted,
     When its change is applied,
-    Then an AC or EX this invocation wrote is changed directly, an item that existed when the invocation started changes only under an in-force `Change request:` row whose approved change covers it, and creating, splitting, merging or retiring a BF or US is put to the user however recently the item was written.
+    Then an AC or EX this invocation wrote is changed directly, an item that existed when the invocation started changes only under a `Change request:` row this branch adds whose approved change covers it, and creating, splitting, merging or retiring a BF or US is put to the user however recently the item was written.
     And under `--contract` a finding that only a story change answers asks for a wider change request and leaves the story unchanged, and after the changes the BRs are rewritten from the updated EXs.
-    And a capacity-only story partition instead requires an in-force owning change request explicitly covering its paths, requested AC or EX additions exceeding the source story's retired-inclusive remaining 99-H at its actual observed high-water H, and a truthful cohesive scope under the same BF and actual actor goal without inventing a product outcome; it grants no wider semantic change or flow operation
+    And a capacity-only story partition instead requires an owning change request this branch adds, explicitly covering its paths, requested AC or EX additions exceeding the source story's retired-inclusive remaining 99-H at its actual observed high-water H, and a truthful cohesive scope under the same BF and actual actor goal without inventing a product outcome; it grants no wider semantic change or flow operation
 
   # AC-0001-0147-12
   Scenario: At Most Two Cycles
     Given a cycle has ended,
     When the next cycle is considered,
     Then a cycle that adopted nothing ends the loop, a second cycle follows only a first cycle that adopted a finding, and no third cycle runs.
-    And a finding that has no decision when the loop ends becomes an `open-questions.md` row at TODO whose Content opens `Unadjudicated:`.
+    And a finding that has no decision when the loop ends becomes an `open-questions.md` row whose Content opens `Unadjudicated:`, pending while the row exists.
 
   # AC-0001-0147-13
   Scenario: A Decided Finding Is Not Raised Again
@@ -82,7 +84,7 @@ Feature: Unified SDD Workflow
     When a later cycle of the session looks for findings,
     Then the finder raises no finding that has the kind and target IDs of a finding the session already decided and a case equal to, including or included in that finding's case, and no finding that the proposed change of a change request the user declined already answers.
     And a decided or dropped finding appends no row; only a finding still undecided when the session ends becomes an `open-questions.md` row.
-    And matching never goes by wording, and an appended reopening decision lifts a REJECTED row.
+    And matching never goes by wording, and a decision row whose Approach opens `Reopens DEC-…` with the ID of a declined change request the register holds lifts that row.
 
   # AC-0001-0147-15
   Scenario: A Pre-draft Grilling Checkpoint Precedes Each Design Write
@@ -98,7 +100,7 @@ Feature: Unified SDD Workflow
     When the owner considers a capacity-only partition or an actual case move
     Then it records the kind, source story, observed H, remainder and requested count, and additions that fit the original scope do not qualify for this exception
     And it first preserves existing published cases and IDs and prefers a cohesive incoming group in a capacity-checked sibling story within the same BF
-    And only an in-force owning change request explicitly approving the partition and affected paths permits that narrow creation exception under the same actual actor goal without inventing a new product outcome
+    And only an owning change request this branch adds, explicitly approving the partition and affected paths permits that narrow creation exception under the same actual actor goal without inventing a new product outcome
     And truthful cohesive scope and criterion ownership are settled before writing, without silently duplicating or weakening obligations
     And a different actor, goal, flow or intended behavior returns to its existing owning approval path, and no truthful partition or insufficient destination capacity stops the dependent write
     And an actual move or incoming collision repair has a complete one-to-one map binding fixed source commit and paths and original identity and meaning to destination story and AC and EX identity and paths, active BR citations and every counted adjacent test declaration, with unchanged cases identified
@@ -106,4 +108,20 @@ Feature: Unified SDD Workflow
     And moved old IDs are retired through a new approved record and never reissued, while inherited published decision ID and Content and Approach cells and their historical references stay unchanged
     And only approved active references and provably incoming collision items change, without blanket replacement or claiming completion from an ID change
     And an incomplete map, ambiguous ownership or collision, missing counted link, uncovered declaration or changed assertion stops the move, with no new executor or schema
+
+  # AC-0001-0147-17
+  Scenario: A Conflict Confined To The Registers Is Resolved By Merging The Base
+    Given a branch whose rows in `decisions.md` or `open-questions.md` conflict with rows the base gained after the branch started,
+    When `/qfai-sdd` brings the branch up to date with its base,
+    Then it runs `git merge` of the fetched base locally, the union merge keeps the rows of both sides, and it pushes the merge.
+    And no row is renumbered, edited or moved.
+
+  # AC-0001-0147-18
+  Scenario: A Decision's Result Lives In One Place, As The Current State
+    Given a decision the user made that changes the story tree,
+    When `/qfai-sdd` writes its result,
+    Then the result is written in place where it lives, as the current state: one statement per concept with at most one sentence of reason, and no date, approver, quoted request or history.
+    And it goes to `01_policy/` only when it binds more than one flow or the whole product; a non-functional requirement is a contract BR with a measurable threshold and an example, and only a product-wide one goes to `constraint.md`.
+    And the `Change request:` row names the paths and the approval, who, when and the option chosen, without restating the edit.
+    And a trivial edit adds no policy or constraint entry and no decision row beyond its change request.
 ```

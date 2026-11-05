@@ -37,7 +37,7 @@ Feature: TDD Micro-Cycle Execution
   Scenario: Exempted Examples Are Not Selected
     Given a project on the story tree and an EX that no test annotates, named by a `decisions.md` row whose Content opens `Test exception:`
     When `/qfai-implement` selects its next test
-    Then the EX is skipped while that row's Status is DONE, and is selected like any other unannotated EX while the row is TODO or WIP.
+    Then the EX is skipped while that row exists, and an unannotated EX that no such row names is selected like any other.
 
   # AC-0001-0091-05
   Scenario: Shipped Minimal-Implementation Rule Drops TC and the Ledger

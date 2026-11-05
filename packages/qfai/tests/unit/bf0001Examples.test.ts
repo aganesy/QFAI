@@ -62,9 +62,7 @@ function findings(contents: Map<string, string>, code: string) {
 }
 
 function table(rows: string[] = []): string {
-  return ["| ID | Content | Approach | Status |", "| --- | --- | --- | --- |", ...rows, ""].join(
-    "\n",
-  );
+  return ["| ID | Content | Approach |", "| --- | --- | --- |", ...rows, ""].join("\n");
 }
 
 function testFile(file: string, kind: StoryTestFile["kind"], annotation: string): StoryTestFile {
@@ -161,12 +159,9 @@ describe("BF-0001 ID examples", () => {
     const contents = files();
     contents.set(
       `${spec}/decisions.md`,
-      "# Decisions\n\n## Decisions\n\n" + table(["| DEC-0001 | Accepted choice | Reason | DONE |"]),
+      "# Decisions\n\n## Decisions\n\n" + table(["| DEC-0001 | Accepted choice | Reason |"]),
     );
-    contents.set(
-      `${spec}/open-questions.md`,
-      table(["| OQ-0001 | Resolved question | Answer | DONE |"]),
-    );
+    contents.set(`${spec}/open-questions.md`, table(["| OQ-0001 | Resolved question | Answer |"]));
     const model = buildStoryTreeModel(contents);
     expect(model.declarations.map((entry) => entry.id)).toEqual([
       "AC-0001-0001-01",
@@ -525,91 +520,62 @@ describe("BF-0001 EX and BR reference examples", () => {
 });
 
 describe("BF-0001 decision and question examples", () => {
-  // QFAI:EX-0001-0053-02
-  it("rejects malformed supersession and a question-only status", () => {
+  // QFAI:EX-0001-0053-03
+  it("rejects a record ID of the other table's shape", () => {
     const contents = files();
     contents.set(
       `${spec}/decisions.md`,
       "# Decisions\n\n## Decisions\n\n" +
-        table(["| DEC-0001 | First decision | Reason | SUPERSEDED by DEC-0002 |"]),
+        table([
+          "| OQ-0001 | Wrong ID kind | Reason |",
+          "| DEC-20261105100000 | Right ID kind | Reason |",
+        ]),
     );
     contents.set(
       `${spec}/open-questions.md`,
-      table(["| OQ-0001 | Open question | Reason | REJECTED |"]),
+      table(["| DEC-20261105093000 | Wrong ID kind | Reason |"]),
     );
     const issues = findings(contents, "QFAI-STORY-003");
     expect(issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           file: `${spec}/decisions.md`,
-          message: expect.stringContaining("DEC-0001"),
+          message: expect.stringContaining("OQ-0001"),
         }),
         expect.objectContaining({
           file: `${spec}/open-questions.md`,
-          message: expect.stringContaining("OQ-0001"),
+          message: expect.stringContaining("DEC-20261105093000"),
         }),
       ]),
     );
-    contents.set(
-      `${spec}/decisions.md`,
-      "# Decisions\n\n## Decisions\n\n" +
-        table([
-          "| DEC-0001 | First decision | Reason | SUPERSEDED (by DEC-0002) |",
-          "| DEC-0002 | Second decision | Reason | DONE |",
-        ]),
-    );
-    expect(
-      findings(contents, "QFAI-STORY-003").some((entry) => entry.file === `${spec}/decisions.md`),
-    ).toBe(false);
-  });
-
-  // QFAI:EX-0001-0053-03
-  it("rejects a question ID declared in the decision table", () => {
-    const contents = files();
-    contents.set(
-      `${spec}/decisions.md`,
-      "# Decisions\n\n## Decisions\n\n" + table(["| OQ-0001 | Wrong ID kind | Reason | TODO |"]),
-    );
-    expect(findings(contents, "QFAI-STORY-003")).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          file: `${spec}/decisions.md`,
-          message: expect.stringContaining("OQ-0001"),
-        }),
-      ]),
-    );
+    expect(issues.some(({ message }) => message.includes("DEC-20261105100000"))).toBe(false);
   });
 
   // QFAI:EX-0001-0053-04
-  it("classifies test exceptions and change requests by status and references", () => {
+  it("classifies test exceptions, change requests and declined requests by their keyword", () => {
     const rows = parseRecordTable(
       table([
-        "| DEC-0001 | Test exception: EX-0001-0001-01, AC-0001-0001-01 | Reason | DONE |",
-        "| DEC-0002 | Change request: 01_policy/glossary.md | Reason | TODO |",
+        "| DEC-0001 | Test exception: EX-0001-0001-01, AC-0001-0001-01 | Reason |",
+        "| DEC-0002 | Change request: 01_policy/glossary.md | Reason |",
+        "| DEC-0003 | Declined change request: 01_policy/principle.md | Declined by the owner |",
       ]),
       "decisions",
     ).rows;
-    expect(rows).toHaveLength(2);
-    const [exception, change] = rows;
-    if (!exception || !change) throw new Error("Expected both decision rows");
-    expect(classifyRecordRow(exception)).toMatchObject({
-      kind: "test-exception",
-      refs: ["EX-0001-0001-01", "AC-0001-0001-01"],
-      inForce: true,
-    });
-    expect(classifyRecordRow(change)).toMatchObject({
-      kind: "change-request",
-      refs: ["01_policy/glossary.md"],
-      inForce: false,
-    });
+    expect(rows.map((row) => classifyRecordRow(row)).map(({ kind, refs }) => [kind, refs])).toEqual(
+      [
+        ["test-exception", ["EX-0001-0001-01", "AC-0001-0001-01"]],
+        ["change-request", ["01_policy/glossary.md"]],
+        ["declined-change-request", ["01_policy/principle.md"]],
+      ],
+    );
   });
 
   // QFAI:EX-0001-0053-05
-  it("blocks an unadjudicated WIP question and releases it at DONE", () => {
+  it("blocks an unadjudicated question while its row exists", () => {
     const contents = files();
     contents.set(
       `${spec}/open-questions.md`,
-      table(["| OQ-0001 | Unadjudicated: choose layout | Pending answer | WIP |"]),
+      table(["| OQ-0001 | Unadjudicated: choose layout | Pending answer |"]),
     );
     const pending = findings(contents, "QFAI-SPACK-102");
     expect(pending).toEqual([
@@ -619,14 +585,11 @@ describe("BF-0001 decision and question examples", () => {
         message: expect.stringContaining("OQ-0001"),
       }),
     ]);
+    contents.set(`${spec}/open-questions.md`, table());
     contents.set(
-      `${spec}/open-questions.md`,
-      table(["| OQ-0001 | Unadjudicated: choose layout | Settled | DONE |"]),
-    );
-    expect(findings(contents, "QFAI-SPACK-102")).toEqual([]);
-    contents.set(
-      `${spec}/open-questions.md`,
-      table(["| OQ-0001 | Unadjudicated: choose layout | Deferred | DEFERRED |"]),
+      `${spec}/decisions.md`,
+      "# Decisions\n\n## Decisions\n\n" +
+        table(["| DEC-20261105093000 | Grid layout, settling OQ-0001 | Asked |"]),
     );
     expect(findings(contents, "QFAI-SPACK-102")).toEqual([]);
   });
@@ -778,12 +741,12 @@ describe("BF-0001 layer and exception examples", () => {
   });
 
   // QFAI:EX-0001-0056-06
-  it("applies a DONE BF test exception without exempting its AC", () => {
+  it("applies a BF test exception without exempting its AC", () => {
     const contents = files();
     contents.set(
       `${spec}/decisions.md`,
       "# Decisions\n\n## Decisions\n\n" +
-        table(["| DEC-0001 | Test exception: BF-0001 | No E2E environment | DONE |"]),
+        table(["| DEC-0001 | Test exception: BF-0001 | No E2E environment |"]),
     );
     const done = validateStoryTreeObligationsModel(buildStoryTreeModel(contents), [], "atdd");
     expect(done).toEqual(
@@ -795,11 +758,7 @@ describe("BF-0001 layer and exception examples", () => {
     expect(
       done.some((entry) => entry.code === "QFAI-STORY-006" && entry.refs?.includes("BF-0001")),
     ).toBe(false);
-    contents.set(
-      `${spec}/decisions.md`,
-      "# Decisions\n\n## Decisions\n\n" +
-        table(["| DEC-0001 | Test exception: BF-0001 | No E2E environment | WIP |"]),
-    );
+    contents.set(`${spec}/decisions.md`, "# Decisions\n\n## Decisions\n\n" + table());
     expect(validateStoryTreeObligationsModel(buildStoryTreeModel(contents), [], "atdd")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "QFAI-STORY-006", refs: ["BF-0001"] }),
@@ -808,12 +767,12 @@ describe("BF-0001 layer and exception examples", () => {
   });
 
   // QFAI:EX-0001-0056-06
-  it("applies a DONE AC test exception without exempting its EX", () => {
+  it("applies an AC test exception without exempting its EX", () => {
     const contents = files();
     contents.set(
       `${spec}/decisions.md`,
       "# Decisions\n\n## Decisions\n\n" +
-        table(["| DEC-0001 | Test exception: AC-0001-0001-01 | No API environment | DONE |"]),
+        table(["| DEC-0001 | Test exception: AC-0001-0001-01 | No API environment |"]),
     );
     const model = buildStoryTreeModel(contents);
     const atdd = validateStoryTreeObligationsModel(model, [], "atdd");
@@ -839,9 +798,7 @@ describe("BF-0001 layer and exception examples", () => {
     contents.set(
       `${spec}/decisions.md`,
       "# Decisions\n\n## Decisions\n\n" +
-        table([
-          "| DEC-0001 | Test exception: EX-0001-0001-01, EX-0001-0001-03 | No test yet | DONE |",
-        ]),
+        table(["| DEC-0001 | Test exception: EX-0001-0001-01, EX-0001-0001-03 | No test yet |"]),
     );
     const issues = validateStoryTreeObligationsModel(buildStoryTreeModel(contents), [], "tdd");
     expect(issues).toEqual(

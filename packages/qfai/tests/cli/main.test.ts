@@ -344,11 +344,9 @@ describe("cli usage errors", () => {
     expect(stdout).toContain("qfai <command> [options]");
   });
 
-  it("exposes the explicit decision-renumber preview and apply command in help", async () => {
+  it("exposes the sdd next-id and merge-docs commands in help", async () => {
     const { stdout, stderr } = await captureRun(["sdd", "--help"]);
     expect(stderr).toBe("");
-    expect(stdout).toContain("renumber-decision");
-    for (const flag of ["--from", "--to", "--base", "--apply"]) expect(stdout).toContain(flag);
     expect(stdout).toContain("sdd next-id <kind> [<parent-ID>] --base <local-ref>");
     expect(stdout).toContain("sdd merge-docs ");
   });

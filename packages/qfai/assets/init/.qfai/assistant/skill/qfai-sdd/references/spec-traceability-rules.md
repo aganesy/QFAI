@@ -44,7 +44,7 @@ A table the template shows with no rows is complete with no rows. The rules belo
 | glossary.md                     | One `## Terms` table: a term and its definition. No finding code, file name, configuration key, value set, rule text, retired term or history; the definition links the contract that defines the thing. A distinction goes in the definition.                                                                                                            |
 | constraint.md                   | All three sections stay, each one table of ID, Constraint and Rationale, which may have no rows. A row states the limit and its reason in plain words: no file name, command or configuration key, and no BR, EX, AC or contract ID. A constraint a contract enforces is written there as a BR; a layer boundary is a row of tech.md's `## Architecture`. |
 | tech.md                         | `## Architecture` is one `mermaid` flowchart TD of the layers, then one table with a row per layer from the uppermost down: its responsibility, and the layers below it that it uses, or `-`. A layer is named, never located: no path, file name or command. See [Architecture](#architecture).                                                          |
-| decisions.md, open-questions.md | Exactly one table and nothing else. Rows are appended; afterwards only Status changes.                                                                                                                                                                                                                                                                    |
+| decisions.md, open-questions.md | Exactly one table and nothing else. Rows are appended and never edited; a settled question row is deleted.                                                                                                                                                                                                                                                |
 | business-flows.md               | `Flow` is the title in the flow's H1, after its ID, and `Path` is `` `business-flow-NNNN/` ``. Rows are in ID order.                                                                                                                                                                                                                                      |
 | business-flow.md                | `## Purpose` is prose only. `## Flow` is one `mermaid` block, a flowchart or sequenceDiagram, and nothing else. `## Alternate and exception paths` is one list of at least one item.                                                                                                                                                                      |
 | user-stories.md                 | `Story` is the title in the story's H1, after its ID, word for word, and `Path` is `` `user-story-NNNN-NNNN/` ``. Rows are in ID order.                                                                                                                                                                                                                   |
@@ -76,18 +76,19 @@ The table holds no rule. A behaviour a layer must show is a BR in the contract t
 
 ## Identifier scopes
 
-| Kind                 | Format          | Scope                                                 |
-| -------------------- | --------------- | ----------------------------------------------------- |
-| Business flow        | BF-NNNN         | All business flows                                    |
-| User story           | US-NNNN-NNNN    | Its BF; first number equals the BF number             |
-| Acceptance criterion | AC-NNNN-NNNN-NN | Its US                                                |
-| Example              | EX-NNNN-NNNN-NN | Its US                                                |
-| Contract             | KIND-NNNN       | All contracts of every kind; its directory names KIND |
-| Business rule        | BR-NNNN-NNNN    | Its contract; first number equals the contract number |
-| Decision             | DEC-NNNN        | decisions.md                                          |
-| Open question        | OQ-NNNN         | open-questions.md                                     |
+| Kind                 | Format             | Scope                                                 |
+| -------------------- | ------------------ | ----------------------------------------------------- |
+| Business flow        | BF-NNNN            | All business flows                                    |
+| User story           | US-NNNN-NNNN       | Its BF; first number equals the BF number             |
+| Acceptance criterion | AC-NNNN-NNNN-NN    | Its US                                                |
+| Example              | EX-NNNN-NNNN-NN    | Its US                                                |
+| Contract             | KIND-NNNN          | All contracts of every kind; its directory names KIND |
+| Business rule        | BR-NNNN-NNNN       | Its contract; first number equals the contract number |
+| Decision             | DEC-yyyymmddhhMMss | decisions.md                                          |
+| Open question        | OQ-yyyymmddhhMMss  | open-questions.md                                     |
 
-Use highest existing number plus one in the scope. Count IDs named in retired-item decisions, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Take the number from `npx qfai sdd next-id`, which reads the working tree and a fetched base and reserves no ID.
+Use highest existing number plus one in the scope. A decision or question row instead takes the UTC time it is written; a legacy `DEC-NNNN` or `OQ-NNNN` row keeps its ID.
+Count IDs named in retired-item decisions, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Take the number from `npx qfai sdd next-id`, which reads the working tree and a fetched base and reserves no ID.
 
 AC/EX tails remain two digits with upper bound 99. Before planned additions,
 compare requested additions with the retired-inclusive remaining 99-H. Stop an
@@ -127,16 +128,16 @@ Each contract file written has a contracts.md row in the same change. The index 
 
 Follow .qfai/assistant/rule/test-layers.md. A BF yields an E2E obligation; each AC yields an API or Integration obligation according to its observable boundary; EXs supply concrete examples and remaining layer obligations. The later acceptance-test skill authors tests. /qfai-sdd supplies unambiguous BF, AC, EX, and contract sources and does not create an execution ledger.
 
-A justified exception is a decisions.md row whose Content opens Test exception: and names the BF, AC, or EX it exempts. Put the reason in Approach. Only a DONE exception is in force; it exempts that item alone, not its descendants. An ID that does not exist exempts nothing.
+A justified exception is a decisions.md row whose Content opens Test exception: and names the BF, AC, or EX it exempts. Put the reason in Approach. It holds while the row exists; it exempts that item alone, not its descendants. An ID that does not exist exempts nothing.
 
 ## Decision provenance and drift
 
 decisions.md records only what the user decided: each change request the user approved or declined,
 retired stories included, and each critical decision the user made. Open questions are rows of open-questions.md. Both tables have
-ID, Content, Approach, Status, and only Status changes after append. The change request's Content
-begins Change request: and names its allowed
-repository-relative paths. A rejected option remains REJECTED unless
-a later decision explicitly reopens it.
+ID, Content and Approach. A decision row is never edited, moved or removed; a question row is never edited. The
+change request's Content begins Change request: and names its allowed repository-relative paths. A declined option
+(`Declined change request:` or `Declined:`) stays rejected unless a later decision row whose Approach opens
+`Reopens DEC-…` reopens it.
 
 A decisions.md row's Approach takes the form stated at the top of templates/spec/decisions.md.
 

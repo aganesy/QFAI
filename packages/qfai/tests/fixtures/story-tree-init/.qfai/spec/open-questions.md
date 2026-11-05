@@ -2,5 +2,5 @@
 
 ## Open Questions
 
-| ID  | Content | Approach | Status |
-| --- | ------- | -------- | ------ |
+| ID  | Content | Approach |
+| --- | ------- | -------- |

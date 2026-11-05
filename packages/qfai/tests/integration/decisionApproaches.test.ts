@@ -33,8 +33,8 @@ async function approachFindings(rows: string[]) {
       "",
       "## Decisions",
       "",
-      "| ID | Content | Approach | Status |",
-      "| --- | --- | --- | --- |",
+      "| ID | Content | Approach |",
+      "| --- | --- | --- |",
       ...rows,
       "",
     ].join("\n"),
@@ -55,7 +55,7 @@ describe("the Approach cell of a decision row above the checked ID", () => {
   // QFAI:EX-0001-0053-09
   it("is reported as an error naming the row when an item is missing", async () => {
     const findings = await approachFindings([
-      "| DEC-2098 | Decide | - Evidence: file:a.ts - Residual risk: x - Rollback: y | DONE |",
+      "| DEC-2098 | Decide | - Evidence: file:a.ts - Residual risk: x - Rollback: y |",
     ]);
     expect(findings.map((item) => [item.refs, item.severity])).toEqual([[["DEC-2098"], "error"]]);
     expect(findings[0]?.message).toContain("lacks the item Grounds");
@@ -66,9 +66,9 @@ describe("the Approach cell of a decision row above the checked ID", () => {
   // QFAI:EX-0001-0053-23
   it("passes a complete row and leaves an earlier row unread", async () => {
     const findings = await approachFindings([
-      "| DEC-0008 | Old | Kept | DONE |",
-      "| DEC-2097 | Old | Kept | DONE |",
-      "| DEC-2098 | Decide | - Evidence: file:a.ts - Grounds: g - Residual risk: none — read-only - Rollback: none — nothing to undo | DONE |",
+      "| DEC-0008 | Old | Kept |",
+      "| DEC-2097 | Old | Kept |",
+      "| DEC-2098 | Decide | - Evidence: file:a.ts - Grounds: g - Residual risk: none — read-only - Rollback: none — nothing to undo |",
     ]);
     expect(findings).toEqual([]);
   });
@@ -77,7 +77,7 @@ describe("the Approach cell of a decision row above the checked ID", () => {
 describe("inline code in a parsed decision Approach", () => {
   const complete = (grounds: string, evidence = "file:a.ts") =>
     `- Evidence: ${evidence} - Grounds: ${grounds} - Residual risk: x - Rollback: y`;
-  const row = (approach: string) => `| DEC-2098 | Decide | ${approach} | DONE |`;
+  const row = (approach: string) => `| DEC-2098 | Decide | ${approach} |`;
 
   // QFAI:AC-0001-0053-08
   // QFAI:EX-0001-0053-16
@@ -90,8 +90,8 @@ describe("inline code in a parsed decision Approach", () => {
       "",
       "## Decisions",
       "",
-      "| ID | Content | Approach | Status |",
-      "| --- | --- | --- | --- |",
+      "| ID | Content | Approach |",
+      "| --- | --- | --- |",
       row(approach),
     ].join("\n");
     const tree = buildStoryTreeModel(new Map([[`${specs}/decisions.md`, markdown]]), {

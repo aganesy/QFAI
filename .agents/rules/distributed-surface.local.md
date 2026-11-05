@@ -32,6 +32,8 @@ the identifier does not belong in it.
 | Internal open-question ID    | `OQ-NNNN-NNNN`                                              | `OQ-0012-0006`           |
 | Story decision ID            | `DEC-NNNN`                                                  | `DEC-0010`               |
 | Story open-question ID       | `OQ-NNNN`                                                   | `OQ-0010`                |
+| Timestamp decision ID        | `DEC-yyyymmddhhMMss`                                        | `DEC-20261105120000`     |
+| Timestamp open-question ID   | `OQ-yyyymmddhhMMss`                                         | `OQ-20261105120000`      |
 | Story business-flow ID       | `BF-NNNN`                                                   | `BF-0010`                |
 | Story user-story ID          | `US-NNNN-NNNN`                                              | `US-0001-0010`           |
 | Story acceptance ID          | `AC-NNNN-NNNN-NN`                                           | `AC-0001-0001-10`        |
@@ -61,6 +63,10 @@ the identifier does not belong in it.
   name, counts only where no letter, digit, `_` or `-` precedes it, so a
   `CON-UI-NNNN` ID is not read as `UI-NNNN`; it is matched whole, as the
   retired contract ID.
+- A timestamp ID has no sample band: `DEC-` or `OQ-` followed by fourteen
+  digits is internal at any value, and a shipped file writes the shape with
+  letters, `DEC-yyyymmddhhMMss`. The four-digit patterns do not match the
+  leading part of a timestamp ID, so the timestamp class reports it once.
 - A business-rule ID or a contract file name inside the sample band is rejected
   when this repository's spec tree declares it, because it then names a
   document that exists here. `packages/qfai/scripts/lib/declared-sample-band-ids.mjs`

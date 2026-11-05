@@ -5,27 +5,22 @@
 ```gherkin
 Feature: Decision and open-question tables
   # AC-0001-0007-01
-  Scenario: The two tables carry four columns and their own status vocabulary
+  Scenario: The two tables carry three columns and IDs of their own form
     Given a project on the story tree
     When `decisions.md` and `open-questions.md` are read
-    Then each holds one table with exactly the columns ID, Content, Approach and Status
-    And a `decisions.md` row has an ID of the form `DEC-NNNN` and a Status of TODO, WIP, DONE, `SUPERSEDED (by DEC-NNNN)`, `PARTLY SUPERSEDED (by DEC-NNNN)` or REJECTED
-    And an `open-questions.md` row has an ID of the form `OQ-NNNN` and a Status of TODO, WIP, DONE, DEFERRED, `DONE (by DEC-NNNN)` or `SUPERSEDED (by DEC-NNNN)`
+    Then each holds one table with exactly the columns ID, Content and Approach, and no Status column
+    And a `decisions.md` row has an ID of the form `DEC-yyyymmddhhMMss`, the UTC time the row was written as 14 digits of a real calendar time, or of the legacy form `DEC-NNNN`
+    And an `open-questions.md` row has an ID of the form `OQ-yyyymmddhhMMss` or of the legacy form `OQ-NNNN`
+    And a row written in a UTC second that a row of its register already took takes the next second no row of that register holds
 
   # AC-0001-0007-02
-  Scenario: Original table records are preserved
-    Given a row that `decisions.md` or `open-questions.md` inherits from the common ancestor of the branch and its explicit base
-    When the table changes
-    Then the row is still present in the logical register with the same ID, Content and Approach
-    And only its Status may differ
-    And the separate source-bound physical relocation exception permits a different physical table only while preserving every raw row occurrence and cell
-    And a new decision is appended to the root Decisions table, and a new question to its own table
-    And the only ID-change exception is explicit renumbering of a unique branch-added DEC absent from that ancestor, with only provably branch-added references changed
-    And a published branch-added malformed DEC may receive only a source-bound exact Approach prefix repair under a separate new approved recovery change request
-    And that repair preserves its ID, Content, Status and original Approach suffix, excludes inherited and open-question rows, and stops on unknown or stale proof
-    And a rollback removes only the recorded prefix while its new digest matches and restores the original form error
-    And only proven identical physical surplus DEC copies introduced by an exact two-parent merge may be removed under the separately authorized manual recovery criterion
-    And that recovery retains the original inherited occurrence and all distinct records, references and unrelated current bytes
+  Scenario: A decision row is never edited, moved or removed
+    Given a row that the base's decision register holds
+    When the branch changes the register
+    Then the head's register holds a row with the same ID, Content and Approach cells, matched by its ID wherever it sits
+    And a row the head adds may sit anywhere among the base's rows, as a union merge of two branches leaves them
+    And a new decision is appended to the root Decisions table, and a new question to `open-questions.md`
+    And a decision that replaces or narrows an earlier one is a new row whose Approach cites the earlier ID, and that ID is a row of the register
 
   # AC-0001-0007-03
   Scenario: Triage records, change requests and retired stories are decision rows
@@ -33,34 +28,20 @@ Feature: Decision and open-question tables
     When a triage operation, a change request or a story retirement is recorded
     Then it is recorded as a row of `decisions.md`
     And no file is written under `.qfai/decisions/` and no `01_Spec-retired.md` file exists
-  # AC-0001-0007-04
-  Scenario: A separate change request permits only a proven physical relocation
-    Given a separately adopted in-force execution change request naming every exact source and destination path
-    And a reviewed receipt fixing the source, current HEAD, base and unique common ancestor commits, whole-file SHA-256 digests and the ordinal and occurrence map
-    When an existing decision table is partitioned into listed historical pages and a root append tail
-    Then removal from the original physical table is permitted only as the explicit relocation exception
-    And every original occurrence retains its exact raw row bytes, four stored cells, line ending and logical order, including duplicate IDs
-    And rows appended after the fixed historical source stay in the root with their original bytes and order
-    And no ID, Content, Approach or Status repair, deduplication, open-question move or semantic rewrite is authorized
-    And missing authority or provenance, stale bytes or refs, parallel appends, Status changes, unsafe paths and incomplete maps stop before writing
-    And every original and replacement is prepared before writing, including recorded absence for new targets, and expected bytes or absence and fixed refs are rechecked before each write
-    And a write failure stops further writes and restores only files still holding this invocation's exact replacement bytes, removing an owned newly created file only while those exact bytes match
-    And concurrent changes and unrestored paths are preserved and reported, and partial application is never success
-    And the normative change request alone authorizes no relocation before adoption of the exact execution receipt
 
-  # AC-0001-0007-05
-  Scenario: The owner manually removes only proven merge-introduced identical surplus copies
-    Given an exact two-parent bad merge that is an available ancestor of current HEAD
-    And its parents and unique common ancestor each hold one byte-identical original DEC row
-    And the explicit fixed base and its unique comparison ancestor hold one original and no surplus selected for removal
-    And each selected current copy matches the complete proven stored UTF-8 raw row including all four cells, delimiters, padding and line ending
-    When the SDD owner adopts a separate new in-force target change request and independently reviewed fresh post-request proof
-    Then only its mapped surplus occurrences may be removed while one original and all unrelated current bytes, records, references and Git history remain unchanged
-    And missing, ambiguous, conflicting, stale or changed proof or authority stops the bounded action before writing
-    And the request fixes input lineage and mapping while fresh evidence fixes actual write HEAD, base, ancestor, complete preimage and replacement hashes and current authority
-    And a changed target or operation needs a new change request without rewriting earlier immutable cells
-    And rollback restores the complete preimage only while current bytes exactly match the owned replacement, otherwise preserving concurrent bytes and reporting nonrestoration
-    And existing duplicate validation, positional drift, consumed-DONE authorization and valid Status-only rules remain without an exemption
-    And unrelated existing drift remains diagnosed without adding a clean-prefix prerequisite to every correction
-    And an actual required stage gate may stop dependent work and unfinished actions or required gates keep the request WIP without a whole-target completion claim
+  # AC-0001-0007-06
+  Scenario: A question row lives while the question is open
+    Given a row that the base's `open-questions.md` holds
+    When the branch changes `open-questions.md`
+    Then the head holds a row with the same ID, Content and Approach cells, or has deleted the row while a decision row or a question row of the head register names its ID
+    And a question row is never edited
+    And a question deferred after its row was written is deleted, and the same change appends a new question row whose Approach names the next decision point and says `Replaces OQ-…` with the deleted ID
+    And a question row deleted while no decision row and no question row of the head register names it is an error
+
+  # AC-0001-0007-07
+  Scenario: A row a branch adds takes the timestamp form
+    Given a branch that appends a row to `decisions.md` or `open-questions.md`
+    When its rows are compared with the base
+    Then each row the branch added has a timestamp ID
+    And a branch-added row with a legacy `DEC-NNNN` or `OQ-NNNN` ID is an error, while the rows the base holds keep their legacy IDs
 ```

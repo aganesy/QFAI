@@ -6,7 +6,7 @@
 Feature: Item Completion Gate
   # AC-0001-0094-03
   Scenario: Completed Items Skipped
-    Given every EX in scope is annotated by a test or exempted by a `Test exception:` row in force
+    Given every EX in scope is annotated by a test or exempted by a `Test exception:` row
     And the scoped `tdd` validate result is current
     When `/qfai-implement` runs
     Then it reports "nothing to do" and exits

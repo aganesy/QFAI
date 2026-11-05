@@ -21,7 +21,7 @@ function lineItems(content: string, pattern: RegExp, file: string, root: string)
 
 /** What a person does with a test-case annotation that stays in a file of the E2E layer. */
 function e2eExampleItem(example: string): string {
-  return `maps to ${example}, and an example annotation is not allowed in the E2E layer; annotate ${example} in a test outside the E2E layer, or add a decisions.md row whose Content is "Test exception: ${example}", whose Approach holds the reason and whose Status is DONE; then delete this annotation`;
+  return `maps to ${example}, and an example annotation is not allowed in the E2E layer; annotate ${example} in a test outside the E2E layer, or add a decisions.md row whose Content is "Test exception: ${example}" and whose Approach holds the reason; then delete this annotation`;
 }
 
 export const step08: MigrationStep = {
