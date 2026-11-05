@@ -268,7 +268,7 @@ describe("parseArgs", () => {
         "qfai discussion: unknown or missing subcommand. Expected: list|use",
       );
       expect(parseArgs(["sdd"], cwd).invalidReason).toBe(
-        "qfai sdd: unknown or missing subcommand. Expected: preflight|renumber-decision|next-id|merge-docs",
+        "qfai sdd: unknown or missing subcommand. Expected: preflight|next-id|merge-docs",
       );
     });
 
@@ -784,57 +784,6 @@ describe("parseArgs dash-leading positionals", () => {
 });
 
 describe("parseArgs: qfai sdd <subcommand>", () => {
-  const renumber = [
-    "sdd",
-    "renumber-decision",
-    "--from",
-    "DEC-0002",
-    "--to",
-    "DEC-0013",
-    "--base",
-    "main",
-  ];
-
-  it.each([false, true])("accepts explicit renumber arguments with apply=%s", (apply) => {
-    const parsed = parseArgs([...renumber, ...(apply ? ["--apply"] : [])], process.cwd());
-    expect(parsed.invalid).toBe(false);
-    expect(parsed.command).toBe("sdd");
-    expect(parsed.options.sddAction).toBe("renumber-decision");
-    expect(parsed.options.help).toBe(false);
-  });
-
-  // QFAI:EX-0001-0008-16
-  it.each([
-    ["--format", "json"],
-    ["--fail-on", "never"],
-    ["--import", "legacy"],
-    ["--assume", "reviewed"],
-  ])("rejects the preflight-only option %s on renumber", (...option) => {
-    const parsed = parseArgs([...renumber, ...option], process.cwd());
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.invalidReason).toContain(option[0]);
-  });
-
-  // QFAI:EX-0001-0008-16
-  it("rejects the validation profile option on renumber", () => {
-    const parsed = parseArgs([...renumber, "--profile", "full"], process.cwd());
-    expect(parsed.invalid).toBe(true);
-    expect(parsed.invalidReason).toContain("--profile");
-    expect(parsed.invalidReason).toMatch(/not valid/i);
-  });
-
-  // QFAI:EX-0001-0008-16
-  it.each([
-    ["sdd", "renumber-decision", "--from", "DEC-0002", "--to", "DEC-0013"],
-    ["sdd", "renumber-decision", "--to", "DEC-0013", "--base", "main"],
-    ["sdd", "renumber-decision", "--from", "DEC-0002", "--base", "main"],
-    ["sdd", "renumber-decision", "--from", "DEC-2", "--to", "DEC-0013", "--base", "main"],
-    ["sdd", "renumber-decision", "--from", "DEC-0002", "--to", "DEC-10000", "--base", "main"],
-    ["sdd", "renumber-decision", "--from", "DEC-0002", "--to", "DEC-0002", "--base", "main"],
-  ])("rejects missing or invalid explicit renumber inputs %j", (...argv) => {
-    expect(parseArgs(argv, process.cwd()).invalid).toBe(true);
-  });
-
   it("accepts merge-docs with only --root", () => {
     const parsed = parseArgs(["sdd", "merge-docs", "--root", "."], process.cwd());
     expect(parsed.invalid).toBe(false);
@@ -854,7 +803,7 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
   });
 
   it.each([
-    [["sdd", "next-id", "DEC", "--base", "main"], "DEC", undefined],
+    [["sdd", "next-id", "BF", "--base", "main"], "BF", undefined],
     [["sdd", "next-id", "US", "BF-0001", "--base", "origin/main"], "US", "BF-0001"],
     [["sdd", "next-id", "BR", "CLI-0019", "--base", "main"], "BR", "CLI-0019"],
     [["sdd", "next-id", "--base", "main", "EX", "US-0001-0008"], "EX", "US-0001-0008"],
@@ -868,17 +817,30 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
 
   // QFAI:EX-0001-0008-30
   it.each([
-    [["sdd", "next-id", "DEC"], "--base"],
+    [["sdd", "next-id", "BF"], "--base"],
     [["sdd", "next-id", "--base", "main"], "kind"],
     [["sdd", "next-id", "XX", "--base", "main"], "XX"],
-    [["sdd", "next-id", "DEC", "--base", "main", "--apply"], "--apply"],
-    [["sdd", "next-id", "DEC", "--base", "main", "--format", "json"], "--format"],
-    [["sdd", "next-id", "DEC", "--base", "main", "--from", "DEC-0001"], "--from"],
+    [["sdd", "next-id", "BF", "--base", "main", "--apply"], "--apply"],
+    [["sdd", "next-id", "BF", "--base", "main", "--format", "json"], "--format"],
+    [["sdd", "next-id", "BF", "--base", "main", "--from", "DEC-0001"], "--from"],
     [["sdd", "next-id", "US", "BF-0001", "extra", "--base", "main"], "extra"],
   ])("rejects next-id input %j", (argv, reason) => {
     const parsed = parseArgs(argv, process.cwd());
     expect(parsed.invalid).toBe(true);
     expect(parsed.invalidReason).toContain(reason);
+  });
+
+  // QFAI:EX-0001-0008-30
+  it.each([
+    [["sdd", "next-id", "DEC", "--base", "main"], "DEC", "decision", "DEC-yyyymmddhhMMss"],
+    [["sdd", "next-id", "--base", "main", "OQ"], "OQ", "question", "OQ-yyyymmddhhMMss"],
+  ])("refuses next-id for the timestamped kind %j", (argv, kind, row, shape) => {
+    const parsed = parseArgs(argv, process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.sddIdKind).toBeUndefined();
+    expect(parsed.invalidReason).toBe(
+      `qfai sdd next-id: ${kind} takes no number; a ${row} row takes the UTC time it is written, as ${shape}. Expected one of BF|US|AC|EX|BR.`,
+    );
   });
 
   it("routes `sdd preflight` and its diagnostic flags", () => {

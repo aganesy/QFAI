@@ -1,19 +1,23 @@
 <!--
-Each row records one open question. After a row is added, only its Status
-changes. Status is TODO, WIP, DONE, DEFERRED, `DONE (by DEC-NNNN)` or
-`SUPERSEDED (by DEC-NNNN)`.
+Each row records one open question, and exists exactly while the question is
+open. A row is never edited.
 
-When a decision row answers the question, set `DONE (by DEC-NNNN)`, naming that
-row. When a decision makes what the row states wrong before the question is
-answered, set `SUPERSEDED (by DEC-NNNN)` and append a new row for the question
-that remains. A reader of the row then finds the decision that overrides its
-text. Validation reports a named decision that no decisions row declares,
-and warns on a plain DONE, because it names no decision.
+A new row's ID is OQ-yyyymmddhhMMss: the UTC time the row is written, as 14
+digits. When a row of this register already holds that second, take the next
+second no row holds. A legacy OQ-NNNN row keeps its ID.
+
+When a decision settles a question, the same change appends the decision row
+to decisions.md, naming this row's ID, and deletes this row. To defer a
+question already written, delete its row and append a new one whose Approach
+names the next decision point and says `Replaces OQ-…` with the deleted ID.
+Validation reports a deleted question that no decision row and no question
+row names. A row whose Content opens `Unadjudicated:` is an unanswered
+critical product decision, pending while the row exists.
 -->
 
 # Open Questions
 
 ## Open Questions
 
-| ID  | Content | Approach | Status |
-| --- | ------- | -------- | ------ |
+| ID  | Content | Approach |
+| --- | ------- | -------- |

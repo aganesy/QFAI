@@ -57,13 +57,13 @@ describes:
    more. The attempt holding the answer carries on.
 2. On approval, append one `Change request:` row to `decisions.md` under
    `paths.specsDir`. Its Content names the contract's path, and its Approach
-   records the finding, the fix, who approved it and when. The row starts at
-   WIP.
+   records the finding, the fix, who approved it and when.
 3. Report `branch: { outcome: contract-finding }` citing that row's DEC ID.
    The work moves to `apply-settled`, whose `spec` stage edits the contract
    under its change request. Its settled triage applies the cited row.
 
-On a decline, append the row at REJECTED, leave the contract as it is and
+On a decline, append a `Declined change request:` row naming the same path,
+recording who declined it and when, leave the contract as it is and
 report the finding as unresolved, with no branch. When the operator cannot be
 asked, write no row and report the change as the decision still needed.
 

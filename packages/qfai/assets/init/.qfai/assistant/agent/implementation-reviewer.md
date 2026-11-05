@@ -79,7 +79,7 @@ test layer with `QFAI:EX-NNNN-NNNN-NN`. A test must contain an executed,
 observable assertion. An annotation alone does not discharge an obligation.
 An acceptance test with an empty body raises no finding, whoever wrote it,
 until `implement-acceptance` writes its assertions; it is not proof before
-then. A DONE `Test exception:` decision can resolve one only when it
+then. A `Test exception:` decision row can resolve one only when it
 names the item.
 
 Once the acceptance tests exist, read the annotated tests themselves. Check the normal,

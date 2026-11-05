@@ -28,8 +28,8 @@ const decisions = (rows: string[]): string =>
     "",
     "## Decisions",
     "",
-    "| ID | Content | Approach | Status |",
-    "| --- | --- | --- | --- |",
+    "| ID | Content | Approach |",
+    "| --- | --- | --- |",
     ...rows,
     "",
   ].join("\n");
@@ -40,8 +40,8 @@ const questions = (rows: string[]): string =>
     "",
     "## Open Questions",
     "",
-    "| ID | Content |",
-    "| --- | --- |",
+    "| ID | Content | Approach |",
+    "| --- | --- | --- |",
     ...rows,
     "",
   ].join("\n");
@@ -73,12 +73,12 @@ describe("check-register-duplicates", () => {
   it("fails on a register ID defined on two rows, naming the ID, the register and both lines", async () => {
     const root = await treeWith({
       [DECISIONS]: decisions([
-        "| DEC-0001 | first | - Approach | DONE |",
-        "| DEC-0002 | second | - Approach | WIP |",
-        "| DEC-0003 | third | - Approach | WIP |",
-        "| DEC-0002 | second | - Approach | DONE |",
+        "| DEC-0001 | first | - Approach |",
+        "| DEC-0002 | second | - Approach |",
+        "| DEC-0003 | third | - Approach |",
+        "| DEC-0002 | second | - Approach |",
       ]),
-      [QUESTIONS]: questions(["| OQ-0001 | open |", "| OQ-0002 | open |"]),
+      [QUESTIONS]: questions(["| OQ-0001 | open | - |", "| OQ-0002 | open | - |"]),
     });
 
     const run = check(root);
@@ -89,14 +89,14 @@ describe("check-register-duplicates", () => {
     );
     expect(run.output).not.toContain("DEC-0001");
     expect(run.output).not.toContain("OQ-");
-    expect(run.output).toContain("Keep one row per ID");
+    expect(run.output).toContain("delete that row and append it again under a new timestamp ID");
   });
 
   // QFAI:EX-0002-0025-24
   it("fails on an open-question ID defined twice", async () => {
     const root = await treeWith({
-      [DECISIONS]: decisions(["| DEC-0001 | first | - Approach | DONE |"]),
-      [QUESTIONS]: questions(["| OQ-0007 | open |", "| OQ-0007 | resolved |"]),
+      [DECISIONS]: decisions(["| DEC-0001 | first | - Approach |"]),
+      [QUESTIONS]: questions(["| OQ-0007 | open | - |", "| OQ-0007 | resolved | - |"]),
     });
 
     const run = check(root);
@@ -112,12 +112,12 @@ describe("check-register-duplicates", () => {
     const root = await treeWith({
       [DECISIONS]:
         decisions([
-          "| DEC-0001 | supersedes nothing | - Approach | DONE |",
-          "| DEC-0002 | cites DEC-0001 in its content | - Approach | WIP |",
-          "| DEC-12 | malformed, left to validation | - Approach | WIP |",
-          "| DEC-12 | malformed, left to validation | - Approach | WIP |",
+          "| DEC-0001 | supersedes nothing | - Approach |",
+          "| DEC-0002 | cites DEC-0001 in its content | - Approach |",
+          "| DEC-12 | malformed, left to validation | - Approach |",
+          "| DEC-12 | malformed, left to validation | - Approach |",
         ]) + "\nDEC-0001 is cited in prose.\n- DEC-0002 is cited in a list.\n",
-      [QUESTIONS]: questions(["| OQ-0001 | see DEC-0002 |"]),
+      [QUESTIONS]: questions(["| OQ-0001 | see DEC-0002 | - |"]),
     });
 
     const run = check(root);
@@ -131,7 +131,7 @@ describe("check-register-duplicates", () => {
   // QFAI:EX-0002-0025-24
   it("fails closed when a register cannot be read", async () => {
     const root = await treeWith({
-      [DECISIONS]: decisions(["| DEC-0001 | first | - Approach | DONE |"]),
+      [DECISIONS]: decisions(["| DEC-0001 | first | - Approach |"]),
     });
 
     const run = check(root);
@@ -143,13 +143,13 @@ describe("check-register-duplicates", () => {
   describe("with decision pages", () => {
     const PAGE_ONE = path.join(".qfai", "spec", "decisions", "page-0001.md");
     const PAGE_TWO = path.join(".qfai", "spec", "decisions", "page-0002.md");
-    const row = (id: string): string => `| ${id} | text | - Approach | DONE |`;
+    const row = (id: string): string => `| ${id} | text | - Approach |`;
 
     // QFAI:EX-0002-0025-24
     it("fails on an ID defined in two pages, naming both pages and lines", async () => {
       const root = await treeWith({
         [DECISIONS]: decisions([row("DEC-0003")]),
-        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [QUESTIONS]: questions(["| OQ-0001 | open | - |"]),
         [PAGE_ONE]: decisions([row("DEC-0001"), row("DEC-0002")]),
         [PAGE_TWO]: decisions([row("DEC-0004"), row("DEC-0001")]),
       });
@@ -168,7 +168,7 @@ describe("check-register-duplicates", () => {
     it("fails on an ID defined in a page and in the root tail", async () => {
       const root = await treeWith({
         [DECISIONS]: decisions([row("DEC-0009"), row("DEC-0002")]),
-        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [QUESTIONS]: questions(["| OQ-0001 | open | - |"]),
         [PAGE_ONE]: decisions([row("DEC-0001"), row("DEC-0002")]),
       });
 
@@ -184,7 +184,7 @@ describe("check-register-duplicates", () => {
     it("fails on an ID defined twice in one page, naming both lines", async () => {
       const root = await treeWith({
         [DECISIONS]: decisions([row("DEC-0009")]),
-        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [QUESTIONS]: questions(["| OQ-0001 | open | - |"]),
         [PAGE_ONE]: decisions([row("DEC-0001"), row("DEC-0001")]),
       });
 
@@ -197,10 +197,29 @@ describe("check-register-duplicates", () => {
     });
 
     // QFAI:EX-0002-0025-24
+    it("fails on a timestamp ID in a page and in the root, and passes the pair once unique", async () => {
+      const files = {
+        [QUESTIONS]: questions(["| OQ-20261105120000 | open | - |"]),
+        [PAGE_ONE]: decisions([row("DEC-20261105120000")]),
+      };
+      const duplicate = check(
+        await treeWith({ ...files, [DECISIONS]: decisions([row("DEC-20261105120000")]) }),
+      );
+      expect(duplicate.status, duplicate.output).toBe(1);
+      expect(duplicate.output).toContain(
+        ".qfai/spec/decisions.md:7 and .qfai/spec/decisions/page-0001.md:7: DEC-20261105120000 is defined more than once",
+      );
+      const unique = check(
+        await treeWith({ ...files, [DECISIONS]: decisions([row("DEC-20261105120001")]) }),
+      );
+      expect(unique.status, unique.output).toBe(0);
+    });
+
+    // QFAI:EX-0002-0025-24
     it("passes unique IDs across the pages and the root, counting every row", async () => {
       const root = await treeWith({
         [DECISIONS]: decisions([row("DEC-0003")]),
-        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [QUESTIONS]: questions(["| OQ-0001 | open | - |"]),
         [PAGE_ONE]: decisions([row("DEC-0001")]),
         [PAGE_TWO]: decisions([row("DEC-0002")]),
         [path.join(".qfai", "spec", "decisions", "notes.md")]: decisions([row("DEC-0001")]),
@@ -218,7 +237,7 @@ describe("check-register-duplicates", () => {
     it("fails closed when a page cannot be read", async () => {
       const root = await treeWith({
         [DECISIONS]: decisions([row("DEC-0003")]),
-        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [QUESTIONS]: questions(["| OQ-0001 | open | - |"]),
       });
       await mkdir(path.join(root, PAGE_ONE), { recursive: true });
 
@@ -232,7 +251,7 @@ describe("check-register-duplicates", () => {
     it("fails closed on a pages directory that is a link, reading nothing through it", async (context) => {
       const root = await treeWith({
         [DECISIONS]: decisions([row("DEC-0001")]),
-        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [QUESTIONS]: questions(["| OQ-0001 | open | - |"]),
         [path.join("elsewhere", "page-0001.md")]: decisions([row("DEC-0001")]),
       });
       const linked = await createSymlinkFixture(
@@ -256,7 +275,7 @@ describe("check-register-duplicates", () => {
     it("fails closed on a page that is a link, reading nothing through it", async (context) => {
       const root = await treeWith({
         [DECISIONS]: decisions([row("DEC-0001")]),
-        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [QUESTIONS]: questions(["| OQ-0001 | open | - |"]),
         [path.join("elsewhere", "page.md")]: decisions([row("DEC-0001")]),
       });
       await mkdir(path.join(root, ".qfai", "spec", "decisions"), { recursive: true });
@@ -281,7 +300,7 @@ describe("check-register-duplicates", () => {
     it("fails closed on a pages path that is a plain file", async () => {
       const root = await treeWith({
         [DECISIONS]: decisions([row("DEC-0001")]),
-        [QUESTIONS]: questions(["| OQ-0001 | open |"]),
+        [QUESTIONS]: questions(["| OQ-0001 | open | - |"]),
         [path.join(".qfai", "spec", "decisions")]: decisions([row("DEC-0001")]),
       });
 
@@ -290,6 +309,32 @@ describe("check-register-duplicates", () => {
       expect(run.status, run.output).toBe(2);
       expect(run.output).toContain(".qfai/spec/decisions could not be read");
     });
+  });
+
+  // QFAI:EX-0002-0025-29
+  it("passes once the branch appends its own colliding row again under a new ID", async () => {
+    const base = "| DEC-20261105120000 | Base decision | Kept on the default branch |";
+    const own = (id: string): string => `| ${id} | Branch decision | Kept |`;
+    const citing = (id: string): string =>
+      `| DEC-20261105120200 | Later branch decision | Narrows ${id} |`;
+    const stopped = await treeWith({
+      [DECISIONS]: decisions([base, own("DEC-20261105120000"), citing("DEC-20261105120000")]),
+      [QUESTIONS]: questions([]),
+    });
+    const first = check(stopped);
+    expect(first.status, first.output).toBe(1);
+    expect(first.output).toContain("DEC-20261105120000 is defined more than once");
+    expect(first.output).toMatch(/row your branch added/);
+    expect(first.output).toMatch(/updating each citation your branch added/);
+    expect(first.output).toMatch(/Never renumber or edit a row the default branch holds/);
+
+    const repaired = await treeWith({
+      [DECISIONS]: decisions([base, citing("DEC-20261105120107"), own("DEC-20261105120107")]),
+      [QUESTIONS]: questions([]),
+    });
+    const second = check(repaired);
+    expect(second.status, second.output).toBe(0);
+    expect(await readFile(path.join(repaired, DECISIONS), "utf-8")).toContain(base);
   });
 
   // QFAI:EX-0002-0025-24

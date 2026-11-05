@@ -4,10 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  ISSUE_EXPECTED_BY_CODE,
-  ISSUE_FIX_BY_CODE,
-} from "../../../../src/cli/commands/validate.js";
+import { ISSUE_EXPECTED_BY_CODE } from "../../../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../../../src/core/config.js";
 import { architectureProblems, orderLayers } from "../../../../src/core/storyTree/architecture.js";
 import { buildStoryTreeModel } from "../../../../src/core/storyTree/tree.js";
@@ -44,11 +41,8 @@ function model(overrides: Record<string, string> = {}) {
       `${contracts}/api/checkout.yaml`,
       "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: Paid checkout\n    examples: [EX-0001-0001-01]",
     ],
-    [`${specs}/decisions.md`, "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |"],
-    [
-      `${specs}/open-questions.md`,
-      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |",
-    ],
+    [`${specs}/decisions.md`, "| ID | Content | Approach |\n| --- | --- | --- |"],
+    [`${specs}/open-questions.md`, "| ID | Content | Approach |\n| --- | --- | --- |"],
   ]);
   for (const [file, text] of Object.entries(overrides)) files.set(file, text);
   const decisionText = files.get(`${specs}/decisions.md`);
@@ -380,135 +374,140 @@ describe("story-tree structure", () => {
     }
   });
 
-  it("accepts a linked story, example, rule and the four-column registers", () => {
+  it("accepts a linked story, example, rule and the three-column registers", () => {
     expect(validateStoryTreeStructureModel(model())).toEqual([]);
   });
 
   // QFAI:EX-0001-0053-07
-  it("reports a cited decision or successor that no row declares", () => {
+  it("reports a cited decision or superseded decision that no row declares", () => {
     const rule = (statement: string) =>
       `# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: ${statement}\n    examples: [EX-0001-0001-01]`;
-    const register = (rows: string) =>
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
+    const register = (rows: string) => `| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
     const dangling = validateStoryTreeStructureModel(
       model({
         [`${contracts}/api/checkout.yaml`]: rule(
           "Approved by DEC-0008, again DEC-0008, then OQ-0002, not DEC-0001-0002",
         ),
-        [`${specs}/decisions.md`]: register(
-          "| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n| DEC-0002 | Narrowed | Kept | PARTLY SUPERSEDED (by DEC-0010) |",
-        ),
+        [`${specs}/decisions.md`]: register("| DEC-0001 | New | Supersedes DEC-0009 |"),
       }),
     ).filter((item) => item.code === "QFAI-STORY-003");
     expect(dangling.map((item) => item.refs)).toEqual([
       ["BR-0001-0001", "DEC-0008"],
       ["BR-0001-0001", "OQ-0002"],
       ["DEC-0001", "DEC-0009"],
-      ["DEC-0002", "DEC-0010"],
     ]);
     expect(dangling.every((item) => item.severity === "error")).toBe(true);
+    expect(dangling[2]?.message).toBe(
+      `DEC-0001 names DEC-0009 after Supersedes, which no decisions row declares, in ${specs}/decisions.md`,
+    );
 
     const declared = validateStoryTreeStructureModel(
       model({
         [`${contracts}/api/checkout.yaml`]: rule("Approved by DEC-0008 and OQ-0001"),
         [`${specs}/decisions.md`]: register(
-          "| DEC-0001 | Old | Kept | SUPERSEDED (by DEC-0009) |\n| DEC-0002 | Narrowed | Kept | PARTLY SUPERSEDED (by DEC-0009) |\n| DEC-0008 | A | B | DONE |\n| DEC-0009 | C | D | DONE |",
+          "| DEC-0001 | New | Supersedes DEC-0009 |\n| DEC-0008 | A | B |\n| DEC-0009 | C | D |",
         ),
-        [`${specs}/open-questions.md`]: register("| OQ-0001 | Q | A | DEFERRED |"),
+        [`${specs}/open-questions.md`]: register("| OQ-0001 | Q | A |"),
       }),
     );
+    expect(declared).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0147-37
+  it("reports a Reopens citation that no decisions row declares", () => {
+    const register = (rows: string) => `| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
+    const reopen = "| DEC-20261105093000 | Reopened | Reopens DEC-0009 |";
+    const dangling = validateStoryTreeStructureModel(
+      model({ [`${specs}/decisions.md`]: register(reopen) }),
+    ).filter((item) => item.code === "QFAI-STORY-003");
+    expect(dangling.map((item) => item.refs)).toEqual([["DEC-20261105093000", "DEC-0009"]]);
+    const declared = validateStoryTreeStructureModel(
+      model({
+        [`${specs}/decisions.md`]: register(
+          `${reopen}\n| DEC-0009 | Declined change request: docs/a.md | Declined |`,
+        ),
+      }),
+    ).filter((item) => item.code === "QFAI-STORY-003");
     expect(declared).toEqual([]);
   });
 
   // QFAI:EX-0001-0053-33
-  it("reports an open question whose Status names a decision that no row declares", () => {
-    const register = (rows: string) =>
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
-    const questions = register(
-      "| OQ-0001 | Q | A | DONE (by DEC-0009) |\n| OQ-0002 | Q | A | SUPERSEDED (by DEC-0010) |",
-    );
+  it("reads cited and narrowed decisions in the timestamp form", () => {
+    const rule = (statement: string) =>
+      `# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: ${statement}\n    examples: [EX-0001-0001-01]`;
+    const register = (rows: string) => `| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
+    const contract = rule("Approved by DEC-20261105093000 and asked in OQ-20261105093000");
+    const narrowing = "| DEC-0001 | Narrower | Narrows DEC-20261104120000 |";
     const dangling = validateStoryTreeStructureModel(
       model({
-        [`${specs}/decisions.md`]: register("| DEC-0009 | C | D | DONE |"),
-        [`${specs}/open-questions.md`]: questions,
+        [`${contracts}/api/checkout.yaml`]: contract,
+        [`${specs}/decisions.md`]: register(narrowing),
       }),
     ).filter((item) => item.code === "QFAI-STORY-003");
-    expect(dangling.map((item) => [item.refs, item.file, item.severity])).toEqual([
-      [["OQ-0002", "DEC-0010"], `${specs}/open-questions.md`, "error"],
+    expect(dangling.map((item) => item.refs)).toEqual([
+      ["BR-0001-0001", "DEC-20261105093000"],
+      ["BR-0001-0001", "OQ-20261105093000"],
+      ["DEC-0001", "DEC-20261104120000"],
     ]);
     expect(ISSUE_EXPECTED_BY_CODE["QFAI-STORY-003"]).toContain(
-      "a contract rule, a superseded row or an open-question Status names is declared by a row",
+      "after Supersedes, Narrows or Reopens",
     );
 
     const declared = validateStoryTreeStructureModel(
       model({
+        [`${contracts}/api/checkout.yaml`]: contract,
         [`${specs}/decisions.md`]: register(
-          "| DEC-0009 | C | D | DONE |\n| DEC-0010 | E | F | DONE |",
+          `${narrowing}\n| DEC-20261104120000 | A | B |\n| DEC-20261105093000 | C | D |`,
         ),
-        [`${specs}/open-questions.md`]: questions,
+        [`${specs}/open-questions.md`]: register("| OQ-20261105093000 | Q | A |"),
       }),
     );
     expect(declared).toEqual([]);
   });
 
-  // QFAI:EX-0001-0053-35
-  it("reports a superseded row whose successor is not a later decision", () => {
-    const register = (rows: string) =>
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows}`;
+  // QFAI:EX-0001-0053-36
+  it("checks the Approach items of a four-digit row and never of a timestamp row", () => {
+    const register = (rows: string) => `| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
     const issues = validateStoryTreeStructureModel(
       model({
         [`${specs}/decisions.md`]: register(
           [
-            "| DEC-0003 | Earlier | Kept | DONE |",
-            "| DEC-0004 | Replaced | Kept | SUPERSEDED (by DEC-0007) |",
-            "| DEC-0005 | Backwards | Kept | SUPERSEDED (by DEC-0003) |",
-            "| DEC-0006 | Itself | Kept | PARTLY SUPERSEDED (by DEC-0006) |",
-            "| DEC-0007 | Later | Kept | DONE |",
+            "| DEC-20261105093000 | Decide | Kept |",
+            "| DEC-2101 | Decide | - Evidence: file:a.ts - Residual risk: x - Rollback: y |",
+            "| DEC-2102 | Decide | - Evidence: file:a.ts - Grounds: g - Residual risk: x - Rollback: y |",
           ].join("\n"),
         ),
       }),
     );
-    expect(
-      issues.map((item) => [item.code, item.refs, item.file, item.severity, item.message]),
-    ).toEqual([
-      [
-        "QFAI-STORY-019",
-        ["DEC-0005", "DEC-0003"],
-        `${specs}/decisions.md`,
-        "error",
-        `DEC-0005 is superseded by DEC-0003, which is not a later decision, in ${specs}/decisions.md`,
-      ],
-      [
-        "QFAI-STORY-019",
-        ["DEC-0006", "DEC-0006"],
-        `${specs}/decisions.md`,
-        "error",
-        `DEC-0006 is superseded by DEC-0006, which is not a later decision, in ${specs}/decisions.md`,
-      ],
+    expect(issues.map(({ code, refs, file }) => [code, refs, file])).toEqual([
+      ["QFAI-STORY-017", ["DEC-2101"], `${specs}/decisions.md`],
     ]);
-    expect(ISSUE_FIX_BY_CODE["QFAI-STORY-019"]).toContain("higher number");
-    expect(ISSUE_FIX_BY_CODE["QFAI-STORY-019"]).not.toMatch(/npx|pnpm/);
+    expect(issues[0]?.message).toContain("lacks the item Grounds");
+  });
 
+  // QFAI:EX-0001-0051-17
+  it("reports a timestamp ID that names no real UTC calendar time", () => {
+    const register = (rows: string) => `| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
+    const ids = [
+      "DEC-20261305093000",
+      "DEC-20260230093000",
+      "DEC-20261105243000",
+      "DEC-20280229093000",
+      "DEC-20261105093000",
+    ];
     const malformed = validateStoryTreeStructureModel(
       model({
         [`${specs}/decisions.md`]: register(
-          "| DEC-0003 | Earlier | Kept | DONE |\n| DEC-12 | Short ID | Kept | SUPERSEDED (by DEC-0003) |",
+          ids.map((id) => `| ${id} | Decide | Keep |`).join("\n"),
         ),
+        [`${specs}/open-questions.md`]: register("| OQ-2026110509300 | Q | A |"),
       }),
-    );
-    expect(malformed.some((item) => item.code === "QFAI-STORY-003")).toBe(true);
-    expect(malformed.some((item) => item.code === "QFAI-STORY-019")).toBe(false);
-
-    const undeclaredAndEarlier = validateStoryTreeStructureModel(
-      model({
-        [`${specs}/decisions.md`]: register(
-          "| DEC-0008 | Backwards | Kept | SUPERSEDED (by DEC-0001) |",
-        ),
-      }),
-    ).filter((item) => item.code === "QFAI-STORY-019" || item.code === "QFAI-STORY-003");
-    expect(undeclaredAndEarlier.map((item) => [item.code, item.refs])).toEqual([
-      ["QFAI-STORY-019", ["DEC-0008", "DEC-0001"]],
-      ["QFAI-STORY-003", ["DEC-0008", "DEC-0001"]],
+    ).filter((item) => item.code === "QFAI-STORY-002");
+    expect(malformed.map((item) => [item.refs, item.file])).toEqual([
+      [["DEC-20260230093000"], `${specs}/decisions.md`],
+      [["DEC-20261105243000"], `${specs}/decisions.md`],
+      [["DEC-20261305093000"], `${specs}/decisions.md`],
+      [["OQ-2026110509300"], `${specs}/open-questions.md`],
     ]);
   });
 
@@ -516,13 +515,13 @@ describe("story-tree structure", () => {
   // QFAI:EX-0001-0053-10
   // QFAI:EX-0001-0053-11
   // QFAI:EX-0001-0053-12
-  it("checks the Approach items of a decision row above DEC-2097", () => {
+  it("checks the Approach items of a four-digit decision row above DEC-2097 only", () => {
     const approach = (...items: string[]) => items.map((item) => `- ${item}`).join(" ");
-    const row = (id: string, cell: string) => `| ${id} | Decide | ${cell} | DONE |`;
+    const row = (id: string, cell: string) => `| ${id} | Decide | ${cell} |`;
     const findings = (...rows: string[]) =>
       validateStoryTreeStructureModel(
         model({
-          [`${specs}/decisions.md`]: `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${rows.join("\n")}`,
+          [`${specs}/decisions.md`]: `| ID | Content | Approach |\n| --- | --- | --- |\n${rows.join("\n")}`,
         }),
       ).filter((item) => item.code === "QFAI-STORY-017");
     const whole = approach(
@@ -532,7 +531,9 @@ describe("story-tree structure", () => {
       "Rollback: none — nothing to undo.",
     );
     expect(findings(row("DEC-2098", whole))).toEqual([]);
-    expect(findings(row("DEC-0008", "Kept"), row("DEC-2097", "Kept"))).toEqual([]);
+    expect(
+      findings(row("DEC-0008", "Kept"), row("DEC-2097", "Kept"), row("DEC-20261105093000", "Kept")),
+    ).toEqual([]);
 
     const labels = findings(
       row("DEC-2098", approach("Evidence: file:a.ts", "Residual risk: x", "Rollback: y")),
@@ -590,8 +591,8 @@ describe("story-tree structure", () => {
       validateStoryTreeStructureModel(
         model({
           [`${specs}/decisions.md`]:
-            "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n" +
-            `| DEC-2098 | Decide | ${cell} | DONE |`,
+            "| ID | Content | Approach |\n| --- | --- | --- |\n" +
+            `| DEC-2098 | Decide | ${cell} |`,
         }),
       ).filter((item) => item.code === "QFAI-STORY-017");
     const whole = (grounds: string, evidence = "file:a.ts") =>
@@ -683,21 +684,21 @@ describe("story-tree structure", () => {
     expect(issues.some((item) => item.message.includes("defined more than once"))).toBe(true);
   });
 
-  it("reports open unadjudicated rows and invalid register columns", () => {
+  // QFAI:EX-0001-0053-05
+  it("reports an unadjudicated row while it exists, and invalid register columns", () => {
     const issues = validateStoryTreeStructureModel(
       model({
-        [`${specs}/decisions.md`]:
-          "| ID | Content | Approach | Date | Status |\n| --- | --- | --- | --- | --- |",
+        [`${specs}/decisions.md`]: "| ID | Content | Approach | Date |\n| --- | --- | --- | --- |",
         [`${specs}/open-questions.md`]:
-          "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| OQ-0001 | Unadjudicated: Which path? | Ask | WIP |",
+          "| ID | Content | Approach |\n| --- | --- | --- |\n| OQ-0001 | Unadjudicated: Which path? | Ask |",
       }),
     );
     expect(issues.some((item) => item.code === "QFAI-SPACK-102")).toBe(true);
     expect(issues.some((item) => item.message.includes("unexpected column Date"))).toBe(true);
     const closed = validateStoryTreeStructureModel(
       model({
-        [`${specs}/open-questions.md`]:
-          "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| OQ-0001 | Unadjudicated: Which path? | Ask | DONE |",
+        [`${specs}/decisions.md`]:
+          "| ID | Content | Approach |\n| --- | --- | --- |\n| DEC-20261105093000 | Take the first path, settling OQ-0001 | Asked |",
       }),
     );
     expect(closed.some((item) => item.code === "QFAI-SPACK-102")).toBe(false);

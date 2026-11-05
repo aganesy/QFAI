@@ -204,13 +204,11 @@ describe("a step that may pass with evidence", () => {
     );
   });
 
-  it("scaffolds no test for a BF or AC that a test exception at DONE names", async () => {
+  it("scaffolds no test for a BF or AC that a test exception names", async () => {
     const procedure = flat(
       sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Procedure"),
     );
-    expect(procedure).toMatch(
-      /drop from that list each item a `Test exception:` row at DONE names/i,
-    );
+    expect(procedure).toMatch(/drop from that list each item a `Test exception:` row names/i);
     expect(procedure).toMatch(
       /when the flow is still on that list, run `npx qfai atdd scaffold --flow BF-NNNN`/i,
     );
@@ -279,7 +277,9 @@ describe("what the routes ask of sdd-triage and the review cycle", () => {
   it("has sdd-triage decide the owner, wire or retire, and stop outside a settled record", async () => {
     const text = await readShipped("step/sdd-triage/STEP.md");
     const owner = flat(sectionOf(text, "## Which surface owns the truth"));
-    expect(owner).toMatch(/an in-force `decisions\.md` row that settles it/i);
+    expect(owner).toMatch(
+      /a `decisions\.md` row that settles it and that no later row supersedes/i,
+    );
     expect(owner).toMatch(/the surface that does not own the truth is the one that changes/i);
     const inert = flat(sectionOf(text, "## A mechanism nothing runs"));
     expect(inert).toMatch(/report `branch: \{ outcome: retire \}`/);

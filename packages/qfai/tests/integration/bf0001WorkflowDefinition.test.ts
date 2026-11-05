@@ -170,9 +170,12 @@ describe("BF-0001 workflow definition", () => {
     expect(drift).toContain("1. Stop work on the affected obligation");
     expect(drift).toContain("2. Prepare the change request for the SDD owner");
     expect(drift).toContain("3. Obtain the user's explicit answer");
+    expect(drift).toContain("on the branch that makes the change");
+    expect(drift).toContain("Approved: Content starts with `Change request:`");
     expect(drift).toContain("4. Rerun the owner skill");
     expect(drift).toContain("5. Recheck every dependent BF, AC, and EX test obligation");
-    expect(drift).toContain("6. Complete the decision row");
+    expect(drift).not.toMatch(/^6\. /m);
+    expect(drift).toContain("No step edits the row afterwards.");
     expect(drift).toContain("A project may add a local overlay beside a shipped rule");
     expect(drift).toContain(
       "An owner skill may change its own upstream artifact after the required approval",

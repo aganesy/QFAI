@@ -10,28 +10,29 @@ const read = (tree: string, file: string): Promise<string> =>
 
 describe("story-tree decision records replace the per-spec delta", () => {
   for (const tree of trees) {
-    it(tree + ": ships a four-column append-only decision template", async () => {
+    it(tree + ": ships a three-column append-only decision template", async () => {
       const template = await read(tree, "assistant/skill/qfai-sdd/templates/spec/decisions.md");
       const rules = await read(
         tree,
         "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(template).toContain("| ID  | Content | Approach | Status |");
-      expect(rules).toContain("only Status changes after append");
+      expect(template).toContain("| ID  | Content | Approach |");
+      expect(template).toContain("is never edited, moved or removed afterwards");
+      expect(rules).toContain("A decision row is never edited, moved or removed");
       expect(rules).toContain("Change request:");
-      expect(rules).toContain("REJECTED");
+      expect(rules).toContain("`Declined change request:`");
     });
 
-    it(tree + ": keeps questions in a separate four-column register", async () => {
+    it(tree + ": keeps questions in a separate three-column register", async () => {
       const template = await read(
         tree,
         "assistant/skill/qfai-sdd/templates/spec/open-questions.md",
       );
-      expect(template).toContain("| ID  | Content | Approach | Status |");
+      expect(template).toContain("| ID  | Content | Approach |");
       expect(template).not.toContain("Owner | Due");
-      expect(template).toContain("set `DONE (by DEC-NNNN)`, naming that");
-      expect(template).toContain("set `SUPERSEDED (by DEC-NNNN)` and append a new row");
-      expect(template).toContain("warns on a plain DONE, because it names no decision");
+      expect(template).toContain("exists exactly while the question is");
+      expect(template).toContain("the same change appends the decision row");
+      expect(template).toContain("says `Replaces OQ-…` with the deleted ID");
     });
   }
 });

@@ -90,7 +90,7 @@ function tree(contractText: string, decisions = ""): Map<string, string> {
   if (decisions) {
     files.set(
       `${spec}/decisions.md`,
-      `# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n${decisions}\n`,
+      `# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n${decisions}\n`,
     );
   }
   return files;
@@ -151,7 +151,7 @@ describe("contract IDs and contract-scoped business rules", () => {
         "| BR-0003-0001 | First | EX-0001-0001-01 |",
         "| BR-0003-0002 | Second | EX-0001-0001-01 |",
       ]),
-      "| DEC-0001 | Retired BR-0003-0004 | Keep its ID reserved | DONE |",
+      "| DEC-0001 | Retired BR-0003-0004 | Keep its ID reserved |",
     );
     const model = buildStoryTreeModel(files);
     expect(model.contracts).toEqual([{ id: "CLI-0003", file: check }]);
@@ -161,7 +161,7 @@ describe("contract IDs and contract-scoped business rules", () => {
     const suffixed = buildStoryTreeModel(
       tree(
         contract("CLI-0003: Check", ["| BR-0003-0001 | First | EX-0001-0001-01 |"]),
-        "| DEC-0001 | Notes on BR-0003-0009copy | None | DONE |",
+        "| DEC-0001 | Notes on BR-0003-0009copy | None |",
       ),
     );
     expect(nextStoryTreeId(suffixed, "BR", "CLI-0003")).toBe("BR-0003-0002");

@@ -6,138 +6,114 @@ import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../helpers/legacyInit.js";
 import { classifyRecordRow, parseRecordTable } from "../../src/core/storyTree/tables.js";
+import { buildStoryTreeModel } from "../../src/core/storyTree/tree.js";
+import { validateStoryTreeStructureModel } from "../../src/core/validators/storyTreeStructure.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-const headings = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+const headings = "| ID | Content | Approach |\n| --- | --- | --- |\n";
 
 describe("BF-0001 project records", () => {
   // QFAI:AC-0001-0007-01
   // QFAI:EX-0001-0007-01
-  it("accepts an empty decisions table with the four canonical columns", () => {
+  it("accepts an empty decisions table with the three canonical columns", () => {
     expect(parseRecordTable(headings, "decisions").errors).toEqual([]);
   });
 
   // QFAI:EX-0001-0007-02
   it("rejects an added Date column in open questions", () => {
-    const text = "| ID | Content | Approach | Status | Date |\n| --- | --- | --- | --- | --- |\n";
+    const text = "| ID | Content | Approach | Date |\n| --- | --- | --- | --- |\n";
     expect(parseRecordTable(text, "open-questions").errors).toContain(
       "open-questions has the unexpected column Date",
     );
   });
 
+  // QFAI:EX-0001-0007-04
+  it("rejects a Status column that a decisions table still has", () => {
+    const text = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+    expect(parseRecordTable(text, "decisions").errors).toEqual([
+      "decisions has the unexpected column Status",
+    ]);
+  });
+
   it("names a missing column and a column order that differs", () => {
-    const missing = "| ID | Content | Status |\n| --- | --- | --- |\n";
+    const missing = "| ID | Content |\n| --- | --- |\n";
     expect(parseRecordTable(missing, "decisions").errors).toEqual([
       "decisions is missing the column Approach",
     ]);
-    const reordered = "| ID | Content | Status | Approach |\n| --- | --- | --- | --- |\n";
+    const reordered = "| ID | Approach | Content |\n| --- | --- | --- |\n";
     expect(parseRecordTable(reordered, "decisions").errors).toEqual([
-      "decisions columns must be ID, Content, Approach and Status, in that order",
+      "decisions columns must be ID, Content and Approach, in that order",
     ]);
   });
 
   // QFAI:AC-0001-0007-01
   // QFAI:EX-0001-0007-03
-  it("accepts the declared decision and question statuses", () => {
-    const decisions = ["TODO", "WIP", "DONE", "SUPERSEDED (by DEC-0005)", "REJECTED"]
-      .map((status, index) => `| DEC-000${index + 1} | Choice | Reason | ${status} |`)
-      .join("\n");
-    const questions = ["TODO", "WIP", "DONE", "DEFERRED"]
-      .map((status, index) => `| OQ-000${index + 1} | Question | Owner | ${status} |`)
-      .join("\n");
-    expect(parseRecordTable(`${headings}${decisions}\n`, "decisions").errors).toEqual([]);
-    expect(parseRecordTable(`${headings}${questions}\n`, "open-questions").errors).toEqual([]);
+  it("accepts both ID forms in each table", () => {
+    const decisions = "| DEC-0007 | Choice | Reason |\n| DEC-20261105093000 | Choice | Reason |\n";
+    const questions = "| OQ-0012 | Question | Owner |\n| OQ-20261105093000 | Question | Owner |\n";
+    expect(parseRecordTable(`${headings}${decisions}`, "decisions").errors).toEqual([]);
+    expect(parseRecordTable(`${headings}${questions}`, "open-questions").errors).toEqual([]);
   });
 
-  // QFAI:EX-0001-0007-12
-  it("accepts a parenthesised partial supersession and keeps the row in force", () => {
-    const accepted = parseRecordTable(
-      `${headings}| DEC-0001 | Change request: 01_policy/glossary.md | Reason | PARTLY SUPERSEDED (by DEC-0002) |\n`,
-      "decisions",
+  // QFAI:AC-0001-0007-02
+  // QFAI:EX-0001-0007-38
+  it("requires the decision a Supersedes or Narrows citation names to be a row", () => {
+    const tree = (rows: string) =>
+      buildStoryTreeModel(
+        new Map([
+          ["spec/decisions.md", `# Decisions\n\n## Decisions\n\n${headings}${rows}`],
+          [
+            "spec/02_business-flow/business-flows.md",
+            "| BF-ID | Flow | Path |\n| --- | --- | --- |\n",
+          ],
+        ]),
+        { specsDir: "spec", contractsDir: "spec/03_contract" },
+      );
+    const findings = validateStoryTreeStructureModel(
+      tree(
+        "| DEC-0007 | Choice | Reason |\n" +
+          "| DEC-20261105093000 | Newer choice | Supersedes DEC-0007 |\n" +
+          "| DEC-20261105093001 | Narrower choice | Narrows DEC-0999 |\n",
+      ),
     );
-    expect(accepted.errors).toEqual([]);
-    expect(accepted.rows.map((row) => classifyRecordRow(row).inForce)).toEqual([true]);
-    const rejected = parseRecordTable(
-      `${headings}| DEC-0001 | Choice | Reason | PARTLY SUPERSEDED by DEC-0002 |\n`,
-      "decisions",
-    );
-    expect(rejected.errors).toContain(
-      'decisions row DEC-0001 has an invalid Status: "PARTLY SUPERSEDED by DEC-0002"; allowed: TODO, WIP, DONE, REJECTED, SUPERSEDED (by DEC-NNNN), PARTLY SUPERSEDED (by DEC-NNNN)',
-    );
-  });
-
-  // QFAI:EX-0001-0007-04
-  it("rejects DEFERRED on a decision row and identifies that row", () => {
-    const result = parseRecordTable(
-      `${headings}| DEC-0001 | Choice | Reason | DEFERRED |\n`,
-      "decisions",
-    );
-    expect(result.errors).toContain(
-      'decisions row DEC-0001 has an invalid Status: "DEFERRED"; allowed: TODO, WIP, DONE, REJECTED, SUPERSEDED (by DEC-NNNN), PARTLY SUPERSEDED (by DEC-NNNN)',
-    );
+    expect(findings.map(({ code, refs, file }) => [code, refs, file])).toEqual([
+      ["QFAI-STORY-003", ["DEC-20261105093001", "DEC-0999"], "spec/decisions.md"],
+    ]);
   });
 
   // QFAI:EX-0001-0007-05
   it("rejects a decision ID in open questions and identifies the row", () => {
     const result = parseRecordTable(
-      `${headings}| DEC-0001 | Question | Owner | TODO |\n`,
+      `${headings}| DEC-0001 | Question | Owner |\n`,
       "open-questions",
     );
     expect(result.errors).toContain("open-questions row 1 has an invalid ID: DEC-0001");
   });
 
   // QFAI:AC-0001-0053-04
-  it("reads the references of a keyword row and holds the row by its Status alone", () => {
-    const classify = (kind: "decisions" | "open-questions", content: string, status: string) => {
+  it("reads the kind and references of a keyword row from its Content alone", () => {
+    const classify = (kind: "decisions" | "open-questions", content: string) => {
       const id = kind === "decisions" ? "DEC-0001" : "OQ-0001";
-      const parsed = parseRecordTable(
-        `${headings}| ${id} | ${content} | Reason | ${status} |\n`,
-        kind,
-      );
+      const parsed = parseRecordTable(`${headings}| ${id} | ${content} | Reason |\n`, kind);
       expect(parsed.errors).toEqual([]);
-      return parsed.rows.map((row) => classifyRecordRow(row));
+      return parsed.rows.map((row) => {
+        const { kind: rowKind, refs } = classifyRecordRow(row);
+        return [rowKind, refs];
+      });
     };
-    const heldAt = (kind: "decisions" | "open-questions", content: string, statuses: string[]) =>
-      statuses.map((status) => classify(kind, content, status).map((row) => row.inForce));
-
-    const exception = classify(
-      "decisions",
-      "Test exception: EX-0001-0001-01, AC-0001-0001-01",
-      "DONE",
-    );
-    expect(exception.map((row) => [row.kind, row.refs])).toEqual([
+    expect(classify("decisions", "Test exception: EX-0001-0001-01, AC-0001-0001-01")).toEqual([
       ["test-exception", ["EX-0001-0001-01", "AC-0001-0001-01"]],
     ]);
-    const request = classify(
-      "decisions",
-      "Change request: 01_policy/glossary.md, 01_policy/constraint.md",
-      "WIP",
-    );
-    expect(request.map((row) => [row.kind, row.refs])).toEqual([
-      ["change-request", ["01_policy/glossary.md", "01_policy/constraint.md"]],
-    ]);
-
-    const statuses = ["TODO", "WIP", "DONE", "REJECTED"];
-    expect(heldAt("decisions", "Test exception: EX-0001-0001-01", statuses)).toEqual([
-      [false],
-      [false],
-      [true],
-      [false],
-    ]);
-    expect(heldAt("decisions", "Change request: 01_policy/glossary.md", statuses)).toEqual([
-      [false],
-      [true],
-      [true],
-      [false],
-    ]);
     expect(
-      heldAt("open-questions", "Unadjudicated: choose a layout", [
-        "TODO",
-        "WIP",
-        "DONE",
-        "DEFERRED",
-      ]),
-    ).toEqual([[true], [true], [false], [false]]);
+      classify("decisions", "Change request: 01_policy/glossary.md, 01_policy/constraint.md"),
+    ).toEqual([["change-request", ["01_policy/glossary.md", "01_policy/constraint.md"]]]);
+    expect(classify("decisions", "Declined change request: 01_policy/glossary.md")).toEqual([
+      ["declined-change-request", ["01_policy/glossary.md"]],
+    ]);
+    expect(classify("decisions", "Declined: 01_policy/glossary.md")).toEqual([["other", []]]);
+    expect(classify("open-questions", "Unadjudicated: choose a layout")).toEqual([
+      ["unadjudicated", []],
+    ]);
   });
 });
 

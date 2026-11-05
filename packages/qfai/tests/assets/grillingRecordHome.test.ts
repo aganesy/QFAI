@@ -16,8 +16,8 @@ describe("SDD decision and question homes", () => {
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
       expect(loop).toContain("appropriate `decisions.md` row");
       expect(loop).toContain("Record an unresolved choice in `open-questions.md`");
-      expect(loop).toContain("REJECTED decision row");
-      expect(triage).toContain("exactly ID, Content, Approach, Status");
+      expect(loop).toContain("decision row whose Content opens `Declined:`");
+      expect(triage).toContain("each with exactly ID, Content and Approach");
     });
   }
 });

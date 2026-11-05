@@ -42,20 +42,14 @@ changes.
 In the `resolve-conflicts` route, the step merges the named base into the
 branch and keeps every record's meaning. `verify-commit` concludes the merge.
 
-1. Fetch the base (`git fetch`), then on a clean tree, before the merge,
-   renumber every `decisions.md` row the branch added, from the lowest one
-   whose ID the fetched base now declares upward, lowest first, by the
-   `npx qfai sdd renumber-decision` procedure in
-   `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md` (two branches
-   taking the same ID), and commit after each run. The union merge of
-   `decisions.md` duplicates a colliding ID without a conflict, so this runs
-   first. When a merge has already stopped with conflicts, run
-   `git merge --abort`, renumber, and merge again.
-2. Start or resume the merge with `git merge --no-commit <base>`.
-3. Resolve each conflict. The base's item keeps its ID; never rename it. An
-   item the branch added whose ID collides takes the next free ID of its scope,
-   with every citation of it. Every other edit only keeps what one side already
-   had: what each side added to a conflicting block.
+1. Fetch the base (`git fetch`).
+2. Start or resume the merge with `git merge --no-commit <base>`. The union
+   merge resolves `decisions.md`, its pages and `open-questions.md` by keeping
+   both sides' rows. Edit, move and renumber no register row.
+3. Resolve each other conflict. The base's item keeps its ID; never rename it.
+   A story-tree item the branch added whose ID collides takes the next free ID
+   of its scope, with every citation of it. Every other edit only keeps what
+   one side already had: what each side added to a conflicting block.
 
 Stop before the edit, as [A semantic effect](#a-semantic-effect) says, on any
 of these:
@@ -70,8 +64,11 @@ of these:
   file or a lockfile, stops: its owner route resolves or regenerates it.
 - A conflict in a pin or digest file, or in a file with an owner marker or a
   CODEOWNERS entry, stops.
-- After the merge, check each union-merged register, such as `decisions.md`,
-  for an ID declared twice. A duplicate is a semantic effect: stop.
+- After the merge, check each union-merged register for an ID declared twice.
+  Stop, and name the ID. A row the base holds is never renumbered: when the
+  branch's own unmerged row collides, the branch deletes that row and appends
+  it again under a new timestamp ID, updating the citations of it the branch
+  added.
 
 ### Several branches
 
@@ -158,5 +155,6 @@ its reason, and every check run over the changed files exited 0. The review that
 follows (`implementation-reviewer`) confirms the diff changes no behaviour; the
 reviewer is never the agent that made the edit. In the `resolve-conflicts`
 route, that review runs as `common-review-cycle` says: a resolution that
-touches no story-tree file, contract or register row gets no reviewer. The
+touches no story-tree file or contract gets no reviewer, and the union merge of
+the registers adds none. The
 combined diff passes the added-line check before `verify-commit` commits.

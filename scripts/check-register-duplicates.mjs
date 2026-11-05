@@ -1,9 +1,10 @@
 /**
  * A register ID defined on more than one row of `decisions.md` or `open-questions.md`.
  *
- * `.gitattributes` merges the two registers with the union driver, so two branches that each
- * append a row merge without a text conflict. The same driver keeps both versions of a row that
- * both sides edited, and Git reports the merge as clean. The full `qfai validate` run reports the
+ * `.gitattributes` merges the registers with the union driver, so two branches that each append
+ * rows merge without a text conflict. Rows are only appended, and a new row takes the UTC second
+ * it is written as its ID, so two branches can still write one ID in the same second, and two
+ * legacy rows can still share one. Git reports the union merge as clean. The full `qfai validate` run reports the
  * duplicate, but it runs in the build job, minutes after the push. This check reads only the
  * registers, so the scans lane and `pnpm branch:catchup` report the duplicate before a push. The
  * decisions register is its root file and every `decisions/page-NNNN.md` page: an ID defined twice
@@ -37,8 +38,8 @@ const PAGE_RE = /^page-\d{4}\.md$/;
 
 const MAX_BYTES = 64 * 1024 * 1024;
 
-/** A table row whose first cell is a register ID, in the four-digit form validation accepts. */
-const ROW_RE = /^\|\s*((?:DEC|OQ)-\d{4})\s*\|/;
+/** A table row whose first cell is a register ID: legacy four digits or a 14-digit UTC time. */
+const ROW_RE = /^\|\s*((?:DEC|OQ)-(?:\d{4}|\d{14}))\s*\|/;
 
 /**
  * Every document of one register: the file, and for the decisions register its pages in name order.
@@ -126,9 +127,9 @@ export function describeFindings({ unreadable, duplicates }) {
   if (unreadable.length > 0) lines.push("Restore each register at the path named above.");
   if (duplicates.length > 0) {
     lines.push(
-      "Keep one row per ID: renumber a new row your branch added under an ID already taken, " +
-        "with its references, and merge two edits of one existing row into one row that " +
-        "carries both intended changes.",
+      "Keep one row per ID. For a row your branch added under an ID already taken, delete that " +
+        "row and append it again under a new timestamp ID, updating each citation your branch " +
+        "added. Never renumber or edit a row the default branch holds.",
     );
   }
   return lines;

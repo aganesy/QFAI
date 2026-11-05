@@ -87,11 +87,13 @@ describe("qfai-sdd changes the story tree", () => {
     expect(text).toMatch(/decisions\.md records only what the user decided/i);
     expect(text).toMatch(/a row is appended once the user has decided what it records/i);
     expect(text).toMatch(/who approved it, when, and the option chosen/i);
-    expect(text).toMatch(/a declined change request is appended at REJECTED/i);
+    expect(text).toMatch(
+      /a declined change request is a row whose Content opens `Declined change request:`/i,
+    );
     expect(text).toMatch(/who declined it and when/i);
-    expect(text).toMatch(/open questions use OQ-NNNN rows/i);
+    expect(text).toMatch(/a new open-questions\.md row `OQ-yyyymmddhhMMss`/i);
     expect(flat(await readShipped(CHECKLISTS))).toMatch(
-      /a declined change request is a REJECTED `Change request:` row/i,
+      /a declined change request is a `Declined change request:` row/i,
     );
   });
 
@@ -118,13 +120,13 @@ describe("qfai-sdd changes the story tree", () => {
     expect(text).toMatch(
       /on approval, write the change and append one `decisions\.md` row whose Content opens `Change request:`/i,
     );
-    expect(text).toMatch(
-      /names every story-tree and contract file it changed, and `decisions\.md` when it appended any other row/i,
-    );
+    expect(text).toMatch(/names every story-tree and contract file it changed/i);
     expect(text).toMatch(
       /its Approach records who approved it, when, and the label of the option chosen/i,
     );
-    expect(text).toMatch(/move the row to DONE once every change it names is written/i);
+    expect(text).toMatch(
+      /appending a row to `decisions\.md` or `open-questions\.md` needs no change request/i,
+    );
     const step = await section(TRIAGE_STEP, "## A change to the story tree");
     expect(step).toMatch(/sdd-triage\.md#a-change-to-the-story-tree/);
   });
@@ -170,13 +172,13 @@ describe("qfai-sdd writes the story tree", () => {
       "Empty numeric scopes begin at 0001, and AC/EX tails begin at 01.",
     );
     expect(allocation).toContain(
-      "Do not reuse an ID because its file was removed or a row was rejected.",
+      "Do not reuse an ID because its file was removed or a change request was declined.",
     );
     expect(allocation).toContain(
       "Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` right before writing it",
     );
     expect(allocation).toContain(
-      "prints the number after the highest of both, not after the last row. It writes nothing and does not see open pull requests.",
+      "prints the number after the highest of both, wherever a row sits. It writes nothing and does not see open pull requests.",
     );
     expect(await section(TRIAGE_STEP, "## ID allocation")).toContain(
       "Take each new ID from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` with a fetched base",
@@ -190,7 +192,7 @@ describe("qfai-sdd writes the story tree", () => {
 
   // QFAI:AC-0001-0147-05
   // QFAI:EX-0001-0147-46
-  it("reads the IDs open pull requests add, checks them at merge time, and keeps the change-request row last", async () => {
+  it("reads the IDs open pull requests add, checks them at merge time, and resolves register conflicts by merging the base", async () => {
     const step = await section(TRIAGE_STEP, "## ID allocation");
     const reference = await section(TRIAGE, "## ID allocation");
     for (const text of [step, reference]) {
@@ -205,25 +207,18 @@ describe("qfai-sdd writes the story tree", () => {
       );
       expect(text).toContain("Without a forge CLI, read the base alone.");
       expect(text).toContain(
-        "When merging the base into the branch, check each ID the branch adds against the fetched base. The base's item keeps its ID; the branch renumbers its own item and every reference to it, then runs the gates again.",
+        "When merging the base into the branch, check each such ID the branch adds against the merged base. The base's item keeps its ID; the branch renumbers its own item and every reference to it, then runs the gates again.",
       );
-      expect(text).toMatch(
-        /DEC or OQ row:? check before the merge|Check a DEC or OQ row before the merge/,
-      );
-      expect(text).toMatch(/renumber a DEC row with `(?:npx qfai sdd )?renumber-decision`/);
-      expect(text).toContain("or an OQ row and its references by hand");
-      expect(text).toContain(
-        "union merge of `decisions.md` and `open-questions.md` would duplicate a colliding ID without a conflict",
-      );
-      expect(text).toMatch(
-        /Any other ID: check after the merge|Check any other ID after the merge/,
-      );
-      expect(text).toContain(
-        "Keep the change-request row last in `decisions.md`, so the rows the branch added stay in ascending order at the end of the register, where the merge-time renumbering works from the lowest colliding one upward.",
-      );
+      expect(text).toContain("`git merge origin/<base>`");
     }
+    expect(step).toContain(
+      "A decisions.md or open-questions.md row takes its timestamp ID instead, and reads neither the base nor any pull request.",
+    );
+    expect(reference).toContain(
+      "A decisions.md or open-questions.md row takes its timestamp ID from the time it is written instead; no count and no other branch decides it.",
+    );
     expect(flat(await readShipped("skill/qfai-sdd/templates/change-request.md"))).toContain(
-      "Allocate `DEC-NNNN` by `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#id-allocation`",
+      "The ID is the UTC time the row is written, `DEC-yyyymmddhhMMss`.",
     );
   });
 
@@ -369,7 +364,7 @@ describe("capacity-safe story authoring guidance", () => {
       /cohesive incoming group.*capacity-checked sibling.*same BF and actual actor goal/u,
     );
     expect(partition).toMatch(
-      /in-force owning change request.*explicitly approve.*partition.*affected paths before writing/u,
+      /owning change request this branch adds.*explicitly approve.*partition.*affected paths before writing/u,
     );
     expect(partition).toMatch(/truthful cohesive scope.*each criterion.s owner/u);
     expect(partition).toMatch(
@@ -452,7 +447,7 @@ describe("capacity-safe story authoring guidance", () => {
       /Unknown ownership, ambiguous collisions.*incomplete map stops the move without a completion claim/u,
     );
     expect(moves).toMatch(
-      /manual approval and mapping procedure, not a relocation executor or mapping schema/u,
+      /manual approval and mapping procedure, not a move executor or mapping schema/u,
     );
     const scopes = await section(TRACEABILITY, "## Identifier scopes");
     expect(scopes).toMatch(

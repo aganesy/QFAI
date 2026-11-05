@@ -153,6 +153,8 @@ function shapeRows(markdown: string): ShapeRow[] {
 const STORY_TREE_SHAPES = [
   "DEC-NNNN",
   "OQ-NNNN",
+  "DEC-yyyymmddhhMMss",
+  "OQ-yyyymmddhhMMss",
   "BF-NNNN",
   "US-NNNN-NNNN",
   "AC-NNNN-NNNN-NN",
@@ -192,6 +194,7 @@ describe("BF-0002 distributed-surface shape table", () => {
     expect(flat).toContain(
       "every four-digit segment is `0001` to `0009` and every two-digit tail is `01` to `09`",
     );
+    expect(flat).toContain("A timestamp ID has no sample band");
 
     const examples = rows.flatMap((row) => row.examples);
     expect(examples.length).toBeGreaterThanOrEqual(STORY_TREE_SHAPES.length);

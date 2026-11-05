@@ -14,34 +14,34 @@ function table(rows: string[]): string {
   return [
     "# Decisions",
     "",
-    "| ID | Content | Approach | Status |",
-    "| --- | --- | --- | --- |",
+    "| ID | Content | Approach |",
+    "| --- | --- | --- |",
     ...rows,
     "",
   ].join("\n");
 }
 
 describe("decision row identity", () => {
-  it("ships one four-column decision table with the project-wide DEC grammar", async () => {
+  it("ships one three-column decision table with the project-wide DEC grammar", async () => {
     for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
       const template = await readFile(path.join(repoRoot, tree, TEMPLATE), "utf-8");
       const triage = await readFile(path.join(repoRoot, tree, TRIAGE), "utf-8");
-      expect(template).toMatch(/\| ID\s+\| Content \| Approach \| Status \|/);
+      expect(template).toMatch(/^\| ID\s+\| Content \| Approach \|\r?$/m);
       expect(triage).toContain("<paths.specsDir>/decisions.md");
-      expect(triage).toContain("Use the next highest ID in the table plus one");
+      expect(triage).toContain("A new decisions.md row takes `DEC-yyyymmddhhMMss`");
       expect(template).not.toContain("DR-NNNN");
       const page = await readFile(
         path.join(repoRoot, tree, TEMPLATE.replace("decisions.md", "decisions/page-NNNN.md")),
         "utf-8",
       );
-      expect(page).toMatch(/\| ID\s+\| Content \| Approach \| Status \|/);
+      expect(page).toMatch(/^\| ID\s+\| Content \| Approach \|\r?$/m);
       expect(page).not.toContain("## Decision pages");
       expect(triage).toContain("Read pages in list order, followed by the root table");
       expect(triage).toContain("Append new rows only to the root table");
     }
   });
 
-  it("says how an ID two branches both took is renumbered", async () => {
+  it("says how a story-tree ID two branches both took is renumbered", async () => {
     for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
       const triage = (await readFile(path.join(repoRoot, tree, TRIAGE), "utf-8")).replace(
         /\s+/g,
@@ -56,32 +56,8 @@ describe("decision row identity", () => {
       expect(triage, tree).toContain(
         "Change every citation belonging to the incoming item in the same commit",
       );
-      expect(triage, tree).toMatch(/unique decision added by the incoming branch/i);
       expect(triage, tree).toContain("--base <local-ref>");
-      expect(triage, tree).toMatch(
-        /base and HEAD must resolve locally and have one common ancestor/i,
-      );
-      expect(triage, tree).toMatch(/only provably branch-added exact references change/i);
-      expect(triage, tree).toMatch(/inherited references stay fixed/i);
-      expect(triage, tree).toContain("Renumber once, at merge time.");
-      expect(triage, tree).toContain(
-        "renumbers only when the fetched base now declares an ID the branch added",
-      );
-      expect(triage, tree).toContain("Check the base before merging.");
-      expect(triage, tree).toContain(
-        "`decisions.md` with `merge=union`, so the ledger never conflicts",
-      );
-      expect(triage, tree).toContain(
-        "run `git reset --merge ORIG_HEAD`, renumber, and merge again",
-      );
-      expect(triage, tree).toContain("follow the change request rule");
-      expect(triage, tree).toContain("conflicts in other files");
-      expect(triage, tree).toContain("`git merge --abort`, renumber, and merge again");
-      expect(triage, tree).toContain("redo any other conflict");
       expect(triage, tree).toContain("the renamed record's subject or path in the commit message");
-      expect(triage, tree).toContain(
-        "A row the incoming branch added takes the next ID of its table",
-      );
       expect(triage, tree).toContain(
         "ask the user for a change request row that states which record each citation meant",
       );
@@ -91,15 +67,15 @@ describe("decision row identity", () => {
   it("rejects duplicate and legacy-shaped IDs", () => {
     const duplicate = parseRecordTable(
       table([
-        "| DEC-0001 | First decision | Keep it | DONE |",
-        "| DEC-0001 | Another decision | Apply it | TODO |",
+        "| DEC-0001 | First decision | Keep it |",
+        "| DEC-0001 | Another decision | Apply it |",
       ]),
       "decisions",
     );
     expect(duplicate.errors).toContain("decisions declares DEC-0001 more than once");
 
     const legacy = parseRecordTable(
-      table(["| DR-0001-0001 | Legacy record | Keep it | DONE |"]),
+      table(["| DR-0001-0001 | Legacy record | Keep it |"]),
       "decisions",
     );
     expect(legacy.errors.some((error) => error.includes("invalid ID"))).toBe(true);

@@ -432,8 +432,9 @@ describe("spec-0018: one shipped-script migration journey", () => {
     const decisions = await textAt(journey.root, ".qfai/spec/decisions.md");
     const questions = await textAt(journey.root, ".qfai/spec/open-questions.md");
     expect(decisions).toContain("spec-0002/01_Spec.md#spec-0002");
-    expect(decisions).toContain("CR-0001.md#CR-0001");
-    expect(questions).toContain("OQ-0001-0001");
+    // The resolved question becomes a decision; the proposed change request is still open.
+    expect(decisions).toContain("08_Open-questions.md#OQ-0001-0001");
+    expect(questions).toContain("CR-0001.md#CR-0001");
   });
 
   it("merges policy and catalog facts and deletes obsolete assistant directories", async () => {
@@ -524,7 +525,6 @@ describe("spec-0018: one shipped-script migration journey", () => {
     expect(item).toMatch(/decisions\.md/);
     expect(item).toMatch(new RegExp(`Test exception: (?:<EX>|${example})`));
     expect(item).toMatch(/Approach/);
-    expect(item).toMatch(/\bDONE\b/);
     expect(item).toMatch(/delet/i);
   });
 
@@ -555,7 +555,7 @@ describe("spec-0018: one shipped-script migration journey", () => {
     // The person settles the test case with a recorded exception and deletes the old
     // annotation, and settles the two other items this run listed.
     const decisions = await textAt(root, ".qfai/spec/decisions.md");
-    const row = `| DEC-9001 | Test exception: ${example} | The flow's E2E test covers it | DONE |\n`;
+    const row = `| DEC-20991231235959 | Test exception: ${example} | The flow's E2E test covers it |\n`;
     await writeFile(
       path.join(root, ".qfai/spec/decisions.md"),
       `${decisions.endsWith("\n") ? decisions : `${decisions}\n`}${row}`,

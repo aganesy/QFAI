@@ -8,7 +8,7 @@ Feature: Change the route catalog only with a recorded approval
   Scenario: Every route row cites the change request that approved it
     Given the route rows of the workflow contract
     When the catalog check runs on a pull request
-    Then each row cites a change-request row in force that names the contract and the route
+    Then each row cites a `Change request:` row of the decision register that names the contract and the route
     And a row with no such citation fails the check
 
   # AC-0001-0217-02

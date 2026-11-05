@@ -65,42 +65,38 @@ only when the existing tree cannot represent it. Trace impact through BF → US 
 AC → EX and every enforcing contract.
 
 Read the complete decision register using the Decision pages rules in the triage
-reference before allocating IDs or relying on an in-force decision. Append new
-rows only to the root table. Listed pages preserve the same row identity and
-Status permissions; an unreadable or incomplete register stops this stage.
-No automatic rotation is permitted. A physical relocation requires a separately
-adopted execution change request and reviewed raw-byte receipt.
+reference before allocating IDs or relying on a decision. Append new rows only
+to the root table, and never move a row between files; an unreadable or
+incomplete register stops this stage.
 
 Record in `<paths.specsDir>/decisions.md` only what the user decided: each
 change request the user approved or declined, and each critical decision the
-user made. Record unresolved
-questions in `<paths.specsDir>/open-questions.md`. Every row has exactly
-`ID | Content | Approach | Status`. Append rows only; afterwards change only
-Status, except for explicit branch-added decision renumbering or the bounded
-published decision prefix recovery in the drift protocol. A change request
-Content begins `Change request:` and names the
-affected repository-relative paths; its Approach names the operation, the affected BF or US,
-its source as `discussion-<id>#REQ-NNNN` when that source exists, and who
-approved it, when, and the option chosen. A declined change request is appended at
-REJECTED, recording who declined it and when. When a later decision replaces a
-row, change that row's Status to `SUPERSEDED (by DEC-NNNN)`, naming the later
-row, or to `PARTLY SUPERSEDED (by DEC-NNNN)` when it replaces only part of it.
-When a decision answers an open question, change that row's Status to
-`DONE (by DEC-NNNN)`; when a decision makes what the row states wrong before the
-question is answered, change it to `SUPERSEDED (by DEC-NNNN)` and append a new
-row for the question that remains. Either names the decision row.
-A decision the agent took
-appends no row. Do not write a second decision-record
-directory or a retired story file. Listed pages are members of the same register, not a second decision home.
+user made. Record unresolved questions in `<paths.specsDir>/open-questions.md`.
+Every row has exactly `ID | Content | Approach`. A new row's ID is
+`DEC-yyyymmddhhMMss` or `OQ-yyyymmddhhMMss`, the UTC time it is written.
 
-For a published malformed branch-added decision, follow
-`.qfai/assistant/rule/drift-protocol.md#published-decision-prefix-recovery`
-before any write. A separate new target-specific approved recovery change
-request must bind the original source, base, ancestor, raw cell bytes, digests
-and exact prefix. Preserve ID, Content, Status and the entire original suffix.
-Inherited rows, unknown provenance and stale data stop recovery. A diagnostic
-suggestion does not authorize a rewrite. Record the pre-write checks and the
-existing validation result; this step provides no recovery executor.
+- A decisions.md row is appended once and never edited, moved or removed.
+- A change request Content begins `Change request:` and names the affected
+  repository-relative paths; its Approach names the operation, the affected BF
+  or US, its source as `discussion-<id>#REQ-NNNN` when that source exists, and
+  who approved it, when, and the option chosen. It authorizes those paths only
+  on the branch that adds it.
+- A declined change request is a row whose Content opens
+  `Declined change request:`, recording who declined it and when. Any other
+  option the user rejects opens `Declined:`. Neither authorizes anything.
+- A decision that refers to an earlier row is a new row whose Approach opens
+  with the earlier ID: `Supersedes DEC-…`, `Narrows DEC-…`, or `Reopens DEC-…`
+  for a declined option.
+- When a decision settles an open question, the same change appends the
+  decision row, naming the OQ ID, and deletes the question row.
+- To defer a question already written, delete its row and append a new one
+  whose Approach names the next decision point and says `Replaces OQ-…`.
+
+A decision the agent took appends no row. Do not write a second
+decision-record directory or a retired story file. Listed pages are members of
+the same register, not a second decision home. Write each decision's result
+where it lives as the triage reference's "Where a decision's result lives"
+section says: the current state only, one statement per concept.
 
 Put each approval-required operation to the user before anything depends on
 it. A request from the user in the session that names the operation and its
@@ -125,7 +121,7 @@ validator and the template it checks, a contract and the code, a record and
 what was built — decide which one owns the truth before any later step writes.
 
 1. Take the order the project has recorded, highest first:
-   - an in-force `decisions.md` row that settles it;
+   - a `decisions.md` row that settles it and that no later row supersedes;
    - the story tree and the contracts, over the code, tests and prose that
      implement them, as Article IV of `.qfai/assistant/rule/constitution.md`
      states;
@@ -163,7 +159,7 @@ approved: the one the work order's `settled` field or the request cites.
   changed criterion, a behaviour the record never mentions — stops the step.
   Write nothing, and report `branch: { outcome: outside-record }`, which moves
   the work to `decide-design`.
-- A citation that resolves to no in-force row stops the step: put the missing
+- A citation that resolves to no `decisions.md` row stops the step: put the missing
   record to the operator as a question, and write nothing.
 
 ## At a decision point
@@ -187,14 +183,16 @@ this step took it or the operator answered it.
 
 ## ID allocation
 
-Allocate each new ID from the highest ID of its kind in scope plus one,
-including retired IDs named in decisions rows. BF scope is project-wide; US
-scope is its BF; AC and EX scope is their US; a contract number's scope is every
-contract of every kind; BR scope is its contract, whose number the BR carries
-(`BR-0006-0001` belongs to `API-0006`); DEC scope is the complete ordered register; OQ scope is its own table.
-Empty scopes begin at `0001`, or `01` for AC and EX tails. Take each new ID from
+Allocate each new BF, US, AC, EX or BR ID from the highest ID of its kind in
+scope plus one, including retired IDs named in decisions rows. BF scope is
+project-wide; US scope is its BF; AC and EX scope is their US; a contract
+number's scope is every contract of every kind; BR scope is its contract, whose
+number the BR carries (`BR-0006-0001` belongs to `API-0006`). Empty scopes begin
+at `0001`, or `01` for AC and EX tails. Take each new ID from
 `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` with a fetched
 base: it prints the number after the highest of the working tree and the base.
+A decisions.md or open-questions.md row takes its timestamp ID instead, and
+reads neither the base nor any pull request.
 
 Parallel branches pick the same next ID unless each reads the others first:
 
@@ -206,17 +204,12 @@ Parallel branches pick the same next ID unless each reads the others first:
    the IDs it adds from `git diff <base>...<head>`. Take the highest across the
    base, the working tree and those heads, plus one. Without a forge CLI, read
    the base alone.
-2. When merging the base into the branch, check each ID the branch adds against
-   the fetched base. The base's item keeps its ID; the branch renumbers its own
-   item and every reference to it, then runs the gates again.
-   - A DEC or OQ row: check before the merge, and renumber a DEC row with
-     `npx qfai sdd renumber-decision` as the triage reference's ID allocation
-     section says, or an OQ row and its references by hand. The union merge of `decisions.md` and `open-questions.md`
-     would duplicate a colliding ID without a conflict.
-   - Any other ID: check after the merge.
-3. Keep the change-request row last in `decisions.md`, so the rows the branch
-   added stay in ascending order at the end of the register, where the
-   merge-time renumbering works from the lowest colliding one upward.
+2. When merging the base into the branch, check each such ID the branch adds
+   against the merged base. The base's item keeps its ID; the branch renumbers
+   its own item and every reference to it, then runs the gates again.
+3. A conflict confined to `decisions.md`, its pages or `open-questions.md` is
+   resolved by `git merge origin/<base>` run locally: the union merge keeps
+   both sides' rows. Push the merge. Renumber, edit or move no register row.
 
 ## Pre-draft grilling
 

@@ -28,7 +28,7 @@ describe("completion placeholder scan respects recorded unknowns", () => {
         tree,
         "assistant/skill/qfai-sdd/templates/spec/open-questions.md",
       );
-      expect(questions).toContain("| ID  | Content | Approach | Status |");
+      expect(questions).toMatch(/^\| ID {2}\| Content \| Approach \|\r?$/m);
       expect(questions).not.toContain("Due");
     });
   }

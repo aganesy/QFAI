@@ -58,7 +58,7 @@ describe("qfai-verify in a workflow run", () => {
 describe("qfai-verify loads its inputs from the shipped assistant tree", () => {
   // QFAI:AC-0001-0158-03
   // QFAI:EX-0001-0158-03
-  it("reads the rows of decisions.md, cites the ones it relied on and treats a REJECTED row as a rejected option", async () => {
+  it("reads the rows of decisions.md, cites the ones it relied on and treats a declined row as a rejected option", async () => {
     const reads = await section(VERIFY_CONTEXT, "## Reads");
     expect(reads).toContain(
       '`.qfai/spec/decisions.md`. When no decision applies, say "not applicable".',
@@ -71,9 +71,9 @@ describe("qfai-verify loads its inputs from the shipped assistant tree", () => {
     );
     const guard = await section(OPERATING, "## Rejected Option Guard");
     expect(guard).toContain(
-      "Do not reintroduce an option whose row in `<paths.specsDir>/decisions.md` has Status `REJECTED`.",
+      "Do not reintroduce an option whose row in `<paths.specsDir>/decisions.md` has Content opening `Declined change request:` or `Declined:`.",
     );
-    expect(guard).toContain("append a new `DEC-NNNN` row");
+    expect(guard).toContain("append a new `DEC-yyyymmddhhMMss` row");
     for (const file of await verifyAssets()) {
       expect(await readFile(file, "utf-8"), file).not.toMatch(/0[78]_Decisions/);
     }

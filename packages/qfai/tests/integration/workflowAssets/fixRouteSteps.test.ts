@@ -263,7 +263,7 @@ describe("a fix route from the diagnosis to the commit", () => {
       /on a fix route, the EX the diagnosis matched or this step appended, first/i,
     );
     expect(text).toMatch(/it is still owed/i);
-    expect(text).toMatch(/opening `Test exception:` names, with Status DONE, is exempt/i);
+    expect(text).toMatch(/opening `Test exception:` names is exempt while that row exists/i);
   });
 
   // QFAI:AC-0001-0206-01

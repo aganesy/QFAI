@@ -22,7 +22,7 @@ Feature: Design Direction Handoff
   Scenario: SDD repairs only the authorized part of an existing design
     Given a visual flow with an existing root `DESIGN.md`
     And SDD triage names that path and the requested change
-    And a new WIP change-request row authorizes that path and change
+    And a change-request row the branch adds authorizes that path and change
     When the SDD design-authoring step runs
     Then it applies only that change and validates the result
     And it preserves the existing brand and tokens unless their change is authorized and supported by recorded direction or named theme values
@@ -30,7 +30,7 @@ Feature: Design Direction Handoff
   # AC-0001-0087-04
   Scenario: An existing design without an authorized change is preserved
     Given a visual flow with an existing root `DESIGN.md`
-    And no new WIP change-request row authorizes the triaged change to that path
+    And no change-request row the branch adds authorizes the triaged change to that path
     When the SDD design-authoring step runs
     Then it writes nothing to that file and validates it as it stands
     And an unreplaced sample is refused

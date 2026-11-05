@@ -94,20 +94,23 @@ export function routeRowsOf(contractText) {
       decisionPoints: listAfter(statement, "Decision points"),
       releasePoint: releasePointOf(statement),
       branchPoints: branchStepsOf(statement),
-      approvedBy: /Approved by (DEC-\d{4})\b/.exec(statement)?.[1],
+      approvedBy: /Approved by (DEC-(?:\d{14}|\d{4}))\b/.exec(statement)?.[1],
     });
   }
   return routes;
 }
 
-/** Each row of the decisions table, by ID. */
+/**
+ * Each row of the decisions table, by ID: the ID, Content and Approach cells of every line that
+ * starts with a DEC ID, whatever cells follow.
+ */
 export function decisionRowsOf(decisionsText) {
   if (Array.isArray(decisionsText)) return new Map(decisionsText.map((row) => [row.id, row]));
   const rows = new Map();
   for (const line of decisionsText.split(/\r?\n/)) {
     if (!line.startsWith("| DEC-")) continue;
-    const [id, content = "", approach = "", status = ""] = cellsOf(line);
-    rows.set(id, { id, content, approach, status });
+    const [id, content = "", approach = ""] = cellsOf(line);
+    rows.set(id, { id, content, approach });
   }
   return rows;
 }
@@ -122,16 +125,10 @@ function citationFault(route, row, decisions) {
   if (!cited) return `${route}: the row cites no change request`;
   const decision = decisions.get(cited);
   if (!decision) return `${route}: the row cites ${cited}, which decisions.md does not hold`;
-  // The rule `qfai validate` applies to a change request: a later row that only narrows it leaves
-  // it in force.
-  const inForce =
-    decision.status === "WIP" ||
-    decision.status === "DONE" ||
-    /^PARTLY SUPERSEDED \(by DEC-\d{4}\)$/.test(decision.status);
+  // A change request row exists once the change is approved; a declined one opens
+  // `Declined change request:` and approves nothing.
   const request = /^Change request:/.test(decision.content) && decision.content.includes(CONTRACT);
-  if (!request || !inForce) {
-    return `${route}: ${cited} is not an in-force change request naming ${CONTRACT}`;
-  }
+  if (!request) return `${route}: ${cited} is not a change request naming ${CONTRACT}`;
   const approach = decision.approach;
   const recorded = /\b\d{4}-\d{2}-\d{2}\b/.test(approach) && /approv/i.test(approach);
   if (!namesRoute(approach, route) || !recorded) {
@@ -252,7 +249,6 @@ async function baseFaults(head, root) {
   }
   const { readFileAtRevision, readDecisionFilesAtRevision } =
     await import("../packages/qfai/src/core/gitChanges.ts");
-  const { buildStoryTreeModel } = await import("../packages/qfai/src/core/storyTree/tree.ts");
   const contract = readFileAtRevision(root, range.baseRev, CONTRACT);
   const texts = readDecisionFilesAtRevision(root, range.baseRev, ".qfai/spec");
   if (contract === null) return [];
@@ -261,17 +257,9 @@ async function baseFaults(head, root) {
     ![...texts.keys()].some((file) => file.startsWith(".qfai/spec/decisions/"))
   )
     return [];
-  const model = buildStoryTreeModel(texts, { specsDir: ".qfai/spec" });
-  if (!model.decisionRegisterComplete || (model.decisions?.errors.length ?? 0) > 0) {
-    const problems = [
-      ...model.decisionRegisterErrors.map(({ file, message }) => `${file}: ${message}`),
-      ...(model.decisions?.errors ?? []),
-    ];
-    throw new Error(
-      `The complete base decision register could not be read safely: ${problems.join("; ")}`,
-    );
-  }
-  return changeFaults({ contract, decisions: model.decisions?.rows ?? [] }, head);
+  // Only the IDs the base holds matter here, and an open change may predate a register layout, so
+  // the base is read by the ID cell of each row rather than by the parser.
+  return changeFaults({ contract, decisions: [...texts.values()].join("\n") }, head);
 }
 
 async function main() {

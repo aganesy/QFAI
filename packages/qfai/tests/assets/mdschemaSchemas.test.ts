@@ -370,7 +370,7 @@ describe("a table-only section holds its template's columns and nothing above th
   }
 
   const decisionTable =
-    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
 
   // QFAI:EX-0001-0011-17
   it.each([

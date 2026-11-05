@@ -75,8 +75,7 @@ const STORY = `${SPECS}/02_business-flow/business-flow-0001/user-story-0001-0001
 
 /** A one-flow story tree, with the given register text in place of an empty one. */
 function storyTree(registers: { decisions?: string; openQuestions?: string }) {
-  const empty =
-    "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |";
+  const empty = "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |";
   const files = new Map<string, string>([
     [
       `${SPECS}/02_business-flow/business-flows.md`,
@@ -185,13 +184,19 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     expectSentence(
       text,
       "the row",
-      /`open-questions\.md` row at TODO whose Content opens `Unadjudicated:`/i,
+      /`open-questions\.md` row whose Content opens `Unadjudicated:`/i,
     );
-    const register = (status: string): string =>
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| OQ-0001 | Unadjudicated: is an unapproved order above 10 000 refused or queued? BR-0001-0001 | Ask the user | ${status} |`;
-    const open = validateStoryTreeStructureModel(storyTree({ openQuestions: register("TODO") }));
+    const register = (rows: string): string =>
+      `| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
+    const open = validateStoryTreeStructureModel(
+      storyTree({
+        openQuestions: register(
+          "| OQ-0001 | Unadjudicated: is an unapproved order above 10 000 refused or queued? BR-0001-0001 | Ask the user |",
+        ),
+      }),
+    );
     expect(open.filter((issue) => issue.code === "QFAI-SPACK-102")).toHaveLength(1);
-    const decided = validateStoryTreeStructureModel(storyTree({ openQuestions: register("DONE") }));
+    const decided = validateStoryTreeStructureModel(storyTree({ openQuestions: register("") }));
     expect(decided.some((issue) => issue.code === "QFAI-SPACK-102")).toBe(false);
   });
 
@@ -211,20 +216,26 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
   });
 
   // QFAI:AC-0001-0147-13
-  it("raises no decided finding again, and reads a REJECTED row the register accepts as decided", async () => {
+  it("raises no decided finding again, and reads a declined change request the register accepts", async () => {
     const text = await section(CYCLE, "## A decided finding is not raised again");
     expectSentence(text, "decided findings", /does not raise a finding again/i);
     expectSentence(text, "wording", /Matching never goes by wording/i);
-    expectSentence(text, "reopening", /reopen a REJECTED row lifts it/i);
+    expectSentence(
+      text,
+      "reopening",
+      /Approach opens `Reopens DEC-…` with the declined row's ID lifts it/i,
+    );
     const template = await readShipped(DECISIONS_TEMPLATE);
-    expect(headerCells(template, "Content")).toEqual(["ID", "Content", "Approach", "Status"]);
-    const register = (status: string): string =>
-      `# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Change request: user-story-0001-0001/03_Example.md; an order of 20 000 in euros | Declined by the user | ${status} |`;
-    const decisionsIssues = (status: string) =>
-      validateStoryTreeStructureModel(storyTree({ decisions: register(status) })).filter(
+    expect(headerCells(template, "Content")).toEqual(["ID", "Content", "Approach"]);
+    const register = (rows: string): string =>
+      `# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
+    const declined =
+      "| DEC-0001 | Declined change request: user-story-0001-0001/03_Example.md; an order of 20 000 in euros | Declined by the user |";
+    const decisionsIssues = (rows: string) =>
+      validateStoryTreeStructureModel(storyTree({ decisions: register(rows) })).filter(
         (issue) => issue.file?.endsWith("decisions.md") ?? false,
       );
-    expect(decisionsIssues("REJECTED")).toEqual([]);
-    expect(decisionsIssues("CLOSED")).not.toEqual([]);
+    expect(decisionsIssues(declined)).toEqual([]);
+    expect(decisionsIssues(`${declined} REJECTED |`)).not.toEqual([]);
   });
 });

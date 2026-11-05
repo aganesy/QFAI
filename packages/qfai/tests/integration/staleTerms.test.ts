@@ -45,7 +45,7 @@ describe("a spec document that states a term the project lists as stale", () => 
     await put(storyFile, "# US-0001-0001: Mail\n\nMail goes out over smtp.\n");
     await put(
       `${specs}/decisions.md`,
-      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Send mail | Rejected: SMTP | DONE |\n",
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n| DEC-0001 | Send mail | Rejected: SMTP |\n",
     );
     const findings = await staleFindings(["SMTP"]);
     expect(findings.map((item) => [item.file, item.loc?.line, item.refs, item.severity])).toEqual([
@@ -58,11 +58,11 @@ describe("a spec document that states a term the project lists as stale", () => 
     await put(storyFile, "# US-0001-0001: Mail\n\nMail goes out over smtp.\n");
     await put(
       `${specs}/decisions.md`,
-      "# Decisions\n\n## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n",
+      "# Decisions\n\n## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n",
     );
     await put(
       `${specs}/decisions/page-0001.md`,
-      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Send mail | Rejected: SMTP | DONE |\n",
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n| DEC-0001 | Send mail | Rejected: SMTP |\n",
     );
     expect((await staleFindings(["SMTP"])).map((item) => [item.file, item.loc?.line])).toEqual([
       [storyFile, 3],

@@ -21,11 +21,11 @@ import {
   type BaseComparison,
 } from "../gitChanges.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
-import { parseCountedExampleAnnotations } from "../storyTree/ids.js";
+import { parseCountedExampleAnnotations, RECORD_ID_SOURCE } from "../storyTree/ids.js";
 import {
   classifyRecordRow,
-  diffRecordTables,
   diffRecordRows,
+  parseRecordTable,
   type RecordRow,
 } from "../storyTree/tables.js";
 import { buildStoryTreeModel, readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
@@ -33,7 +33,7 @@ import type { Issue } from "../types.js";
 import { countsForExample, readStoryTests, storyTestScanIssue } from "./storyTreeObligations.js";
 import { issue } from "./utils.js";
 
-/** Story-tree protected files and append-only register rows. */
+/** Story-tree protected files, and register rows compared with the base by ID. */
 export async function validateStoryTreeDrift(
   root: string,
   config: QfaiConfig,
@@ -67,7 +67,7 @@ export async function validateStoryTreeDrift(
   const issues: Issue[] = [];
   const baseDecisions = readFileAtBase(root, baseBranch, decisions);
   // Read first: a failure that is not a missing file stops the run instead of being compared.
-  const headRoot = await readSafePath(path.join(root, decisions));
+  await readSafePath(path.join(root, decisions));
   let baseModel: StoryTreeModel;
   let headModel: StoryTreeModel;
   try {
@@ -79,8 +79,11 @@ export async function validateStoryTreeDrift(
       if (!ancestors || ancestors.length !== 1 || !ancestors[0])
         throw new Error("A unique readable common ancestor is required");
       files = readDecisionFilesAtRevision(root, ancestors[0], specs);
+      for (const [file, text] of files) files.set(file, withoutStatusColumn(text));
     } else {
-      files = new Map(baseDecisions === null ? [] : [[decisions, baseDecisions]]);
+      files = new Map(
+        baseDecisions === null ? [] : [[decisions, withoutStatusColumn(baseDecisions)]],
+      );
     }
     const hasPages = [...files.keys()].some((file) =>
       file.startsWith(`${path.posix.join(specs, "decisions")}/`),
@@ -125,173 +128,30 @@ export async function validateStoryTreeDrift(
     ];
   }
   const rows = headModel.decisions?.rows ?? [];
-  const baseRows = baseModel.decisions?.rows ?? [];
+  const baseIds = new Set((baseModel.decisions?.rows ?? []).map(({ id }) => id));
+  // A change request authorises its paths only on the branch that adds it.
   const authorised = new Map<string, string>();
   for (const row of rows) {
-    const classified = classifyRecordRow(row);
-    if (classified.kind !== "change-request" || !classified.inForce) continue;
-    const inherited = baseRows.filter((candidate) => candidate.id === row.id);
-    if (inherited.length > 1 || rows.filter((candidate) => candidate.id === row.id).length !== 1)
+    if (baseIds.has(row.id) || rows.filter((candidate) => candidate.id === row.id).length !== 1)
       continue;
-    const baseRow = inherited[0];
-    if (!authorisesThisBranch(row.status, baseRow?.status)) continue;
-    if (baseRow && rewritesImmutableCell(baseRow, row)) continue;
+    const classified = classifyRecordRow(row);
+    if (classified.kind !== "change-request") continue;
     for (const file of classified.refs) authorised.set(normalizeRepoPath(file), row.id);
   }
-  // Existing duplicate history remains an error, but it does not remove the existing
-  // exemption for a uniquely identified request whose only changed cell is Status.
-  const statusDifference = diffRecordRows(
-    {
-      rows: baseRows,
-      errors: (baseModel.decisions?.errors ?? []).filter(
-        (error) => !/declares .+ more than once/.test(error),
-      ),
-    },
-    {
-      rows,
-      errors: (headModel.decisions?.errors ?? []).filter(
-        (error) => !/declares .+ more than once/.test(error),
-      ),
-    },
-    "decisions",
-  );
-  const onlyRequestStatus =
-    statusDifference.onlyChangeRequestRows &&
-    [
-      ...statusDifference.changed.map(({ id }) => id),
-      ...statusDifference.appended.map(({ id }) => id),
-    ].every(
-      (id) =>
-        rows.filter((row) => row.id === id).length === 1 &&
-        baseRows.filter((row) => row.id === id).length <= 1,
-    );
-  // A path-authorised relocation preserves every inherited physical row occurrence.
-  const headRegisterFiles = headModel.decisionFiles.map((file) =>
-    normalizeRepoPath(path.relative(root, file)),
-  );
-  const relocated =
-    baseModel.decisionFiles.join("\n") !== headRegisterFiles.join("\n") ||
-    baseModel.decisionOccurrences.some((before, index) => {
-      const after = headModel.decisionOccurrences[index];
-      return (
-        after !== undefined &&
-        (before.origin.path !== after.origin.path ||
-          before.origin.actualRow !== after.origin.actualRow)
-      );
-    });
-  if (relocated) {
-    for (const [index, before] of baseModel.decisionOccurrences.entries()) {
-      const after = headModel.decisionOccurrences[index];
-      if (!after) {
-        issues.push(
-          issue(
-            "QFAI-STORY-010",
-            `${before.origin.path}:${before.origin.actualRow}: ${before.row.id} row removed (ID)`,
-            "error",
-            before.origin.path,
-            "storyTree.rowRewritten",
-            [before.row.id],
-          ),
-        );
-        continue;
-      }
-      const statusOnly =
-        before.row.id === after.row.id &&
-        before.row.content === after.row.content &&
-        before.row.approach === after.row.approach &&
-        classifyRecordRow(after.row).kind === "change-request" &&
-        baseRows.filter((row) => row.id === before.row.id).length === 1 &&
-        rows.filter((row) => row.id === after.row.id).length === 1;
-      if (
-        before.raw === after.raw ||
-        (statusOnly && rawWithoutStatusToken(before.raw) === rawWithoutStatusToken(after.raw))
-      )
-        continue;
-      issues.push(
-        issue(
-          "QFAI-STORY-010",
-          `${after.origin.path}:${after.origin.actualRow}: ${before.row.id} inherited raw row changed during relocation`,
-          "error",
-          after.origin.path,
-          "storyTree.rowRewritten",
-          [before.row.id],
-        ),
-      );
-    }
-  }
+  const baseQuestions = parseRecordTable(
+    withoutStatusColumn(regularFileOrNull(() => readFileAtBase(root, baseBranch, questions)) ?? ""),
+    "open-questions",
+  ).rows;
   if (profile === "drift") {
-    for (const [file, kind] of [
-      [decisions, "decisions"],
-      [questions, "open-questions"],
-    ] as const) {
-      const base = readFileAtBase(root, baseBranch, file);
-      if (base === null) continue;
-      const head = await readSafePath(path.join(root, file));
-      if (kind === "decisions") {
-        for (const [index, before] of baseModel.decisionOccurrences.entries()) {
-          const after = headModel.decisionOccurrences[index];
-          if (!after) {
-            // Relocation already diagnosed this missing occurrence under either profile.
-            if (relocated) continue;
-            issues.push(
-              issue(
-                "QFAI-STORY-010",
-                `${before.origin.path}:${before.origin.actualRow}: ${before.row.id} row removed (ID)`,
-                "error",
-                before.origin.path,
-                "storyTree.rowRewritten",
-                [before.row.id],
-              ),
-            );
-            continue;
-          }
-          for (const cell of ["id", "content", "approach"] as const) {
-            if (before.row[cell] === after.row[cell]) continue;
-            issues.push(
-              issue(
-                "QFAI-STORY-010",
-                `${after.origin.path}:${after.origin.actualRow}: ${before.row.id} ${cell} changed`,
-                "error",
-                after.origin.path,
-                "storyTree.rowRewritten",
-                [before.row.id],
-              ),
-            );
-          }
-        }
-        continue;
-      }
-      const difference = diffRecordTables(base, head, kind);
-      for (const removed of difference.removed) {
-        issues.push(
-          issue(
-            "QFAI-STORY-010",
-            `${file}: ${removed.id} row removed (ID)`,
-            "error",
-            file,
-            "storyTree.rowRewritten",
-            [removed.id],
-          ),
-        );
-      }
-      for (const changedCell of difference.rewritten) {
-        issues.push(
-          issue(
-            "QFAI-STORY-010",
-            `${file}: ${changedCell.id} ${changedCell.cell} changed`,
-            "error",
-            file,
-            "storyTree.rowRewritten",
-            [changedCell.id],
-          ),
-        );
-      }
-    }
+    const headQuestions = parseRecordTable(
+      await readSafePath(path.join(root, questions)),
+      "open-questions",
+    ).rows;
+    issues.push(
+      ...decisionRowDrift(baseModel, headModel),
+      ...questionRowDrift(questions, baseModel, headModel, baseQuestions, headQuestions),
+    );
   }
-  const registerFiles = new Set([
-    ...baseModel.decisionFiles,
-    ...headModel.decisionFiles.map((file) => normalizeRepoPath(path.relative(root, file))),
-  ]);
   const isProtected = (file: string): boolean =>
     file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
     file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
@@ -300,24 +160,16 @@ export async function validateStoryTreeDrift(
     file === decisions ||
     file.startsWith(`${path.posix.join(specs, "decisions")}/`) ||
     file === questions;
-  // A physical register file whose only change is to Change request rows needs no request.
-  const requestOnly = new Set<string>();
-  if (onlyRequestStatus) {
-    for (const file of registerFiles) {
-      if (
-        withoutChangeRequestRows(readFileAtBase(root, baseBranch, file) ?? "") ===
-        withoutChangeRequestRows(
-          file === decisions ? headRoot : await readSafePath(path.join(root, file)),
-        )
-      )
-        requestOnly.add(file);
-    }
-  }
+  const baseQuestionIds = new Set(baseQuestions.map(({ id }) => id));
   // The edits a protected file may take without a change request, against the head given.
+  // Appending to the root register or the question register is one; appending to a page is not.
   const needsNoRequest = (file: string, head: string | null): boolean => {
-    const base = regularFileOrNull(() => readFileAtBase(root, baseBranch, file));
-    if (base === null || head === null) return false;
+    const read = regularFileOrNull(() => readFileAtBase(root, baseBranch, file));
+    if (read === null || head === null) return false;
+    const base = file === decisions || file === questions ? withoutStatusColumn(read) : read;
     return (
+      (file === decisions && onlyAddsRows(base, head, baseIds, false)) ||
+      (file === questions && onlyAddsRows(base, head, baseQuestionIds, true)) ||
       (file.endsWith("/03_Example.md") && onlyAppendsExamples(base, head)) ||
       (file.startsWith(`${contracts}/`) && onlyCitesExamples(base, head)) ||
       unchangedContent(file, base, head)
@@ -325,7 +177,6 @@ export async function validateStoryTreeDrift(
   };
   for (const file of changed) {
     if (!isProtected(file) || authorised.has(file)) continue;
-    if (requestOnly.has(file)) continue;
     // The committed comparison reads the committed file, not the working tree.
     if (
       needsNoRequest(
@@ -337,7 +188,7 @@ export async function validateStoryTreeDrift(
     issues.push(
       issue(
         "QFAI-DRIFT-001",
-        `Upstream story-tree file changed without an in-force Change request row: ${file}`,
+        `Upstream story-tree file changed without a Change request row this branch adds: ${file}`,
         "error",
         file,
         "storyTree.upstreamEdit",
@@ -350,8 +201,7 @@ export async function validateStoryTreeDrift(
   // changes it further: the checks read the file as it is on disk.
   const working = uncommittedContentPaths(
     root,
-    (file) =>
-      isProtected(file) && !changed.has(file) && !authorised.has(file) && !requestOnly.has(file),
+    (file) => isProtected(file) && !changed.has(file) && !authorised.has(file),
   );
   if (working === null) {
     issues.push(notCompared("git could not list the uncommitted changes.", RERUN_ACTION));
@@ -504,32 +354,148 @@ function exampleRows(content: string): Map<string, string> {
   return rows;
 }
 
+/** A row the branch adds takes the timestamp form; a four-digit ID is one the base already held. */
+const FOUR_DIGIT_RECORD_ID = /^(?:DEC|OQ)-\d{4}$/;
+
+function rowRewritten(file: string, message: string, id: string): Issue {
+  return issue("QFAI-STORY-010", `${file}: ${message}`, "error", file, "storyTree.rowRewritten", [
+    id,
+  ]);
+}
+
 /**
- * A request the base holds at DONE records a change already applied, so it authorises nothing
- * whatever Status it now holds. Otherwise a WIP row authorises, and a DONE row only while newly
- * appended or advanced from base WIP.
+ * Every decision row the base holds is in the head with the same three cells, matched by ID
+ * across the complete register: a union merge interleaves appended rows, so the file and the place
+ * a row sits in mean nothing. A row the branch adds takes the timestamp form.
  */
-function authorisesThisBranch(status: string, statusAtBase: string | undefined): boolean {
-  if (statusAtBase === "DONE") return false;
-  return status === "WIP" || statusAtBase === undefined || statusAtBase === "WIP";
+function decisionRowDrift(baseModel: StoryTreeModel, headModel: StoryTreeModel): Issue[] {
+  const issues: Issue[] = [];
+  const head = headModel.decisionOccurrences;
+  for (const before of baseModel.decisionOccurrences) {
+    const candidates = head.filter(({ row }) => row.id === before.row.id);
+    const first = candidates[0];
+    if (!first) {
+      issues.push(
+        rowRewritten(
+          before.origin.path,
+          `${before.row.id} row removed or its ID changed (base row ${before.origin.actualRow})`,
+          before.row.id,
+        ),
+      );
+      continue;
+    }
+    const same = ({ row }: (typeof head)[number]): boolean =>
+      row.content === before.row.content && row.approach === before.row.approach;
+    if (candidates.some(same)) continue;
+    for (const cell of ["content", "approach"] as const) {
+      if (first.row[cell] === before.row[cell]) continue;
+      issues.push(
+        rowRewritten(
+          first.origin.path,
+          `${before.row.id} ${cell} changed (row ${first.origin.actualRow})`,
+          before.row.id,
+        ),
+      );
+    }
+  }
+  const baseIds = new Set(baseModel.decisionOccurrences.map(({ row }) => row.id));
+  for (const { row, origin } of head) {
+    if (baseIds.has(row.id) || !FOUR_DIGIT_RECORD_ID.test(row.id)) continue;
+    issues.push(
+      rowRewritten(
+        origin.path,
+        `${row.id} is a row this branch adds with a four-digit ID; a new row takes DEC-yyyymmddhhMMss (row ${origin.actualRow})`,
+        row.id,
+      ),
+    );
+  }
+  return issues;
 }
 
-/** A row the base holds keeps its Content and Approach, so a rewrite of either grants nothing. */
-function rewritesImmutableCell(base: RecordRow, head: RecordRow): boolean {
-  return base.content !== head.content || base.approach !== head.approach;
+/** The decision and question IDs the rows name in their Content or Approach. */
+function namedRecordIds(rows: readonly RecordRow[]): Set<string> {
+  const pattern = new RegExp(RECORD_ID_SOURCE, "g");
+  return new Set(
+    rows.flatMap((row) =>
+      [...`${row.content} ${row.approach}`.matchAll(pattern)].map(([id]) => id),
+    ),
+  );
 }
 
-/** Replace only the final Status token; padding and the stored line ending remain evidence. */
-function rawWithoutStatusToken(raw: string): string {
-  return raw.replace(/(\|[ \t]*)([^|\r\n]*?\S)([ \t]*\|(?:\r\n|\n)?$)/, "$1<Status>$3");
+/**
+ * A question row the base holds is kept with the same cells or deleted, never edited. A deleted
+ * question is named by a decision row or a question row of the head; a question a decision row of
+ * the base names does not come back; and a row the branch adds takes the timestamp form.
+ */
+function questionRowDrift(
+  file: string,
+  baseModel: StoryTreeModel,
+  headModel: StoryTreeModel,
+  base: readonly RecordRow[],
+  head: readonly RecordRow[],
+): Issue[] {
+  const issues: Issue[] = [];
+  const difference = diffRecordRows(base, head);
+  for (const { id, cell } of difference.changed) {
+    issues.push(rowRewritten(file, `${id} ${cell} changed`, id));
+  }
+  const namedInHead = namedRecordIds([...(headModel.decisions?.rows ?? []), ...head]);
+  for (const { id } of difference.removed) {
+    if (namedInHead.has(id)) continue;
+    issues.push(
+      rowRewritten(
+        file,
+        `${id} removed, and no decision row or question row of the head names it`,
+        id,
+      ),
+    );
+  }
+  const settledAtBase = namedRecordIds(baseModel.decisions?.rows ?? []);
+  for (const { id } of difference.added) {
+    if (settledAtBase.has(id)) {
+      issues.push(
+        rowRewritten(file, `${id} is back, though a decision row the base holds names it`, id),
+      );
+    }
+    if (FOUR_DIGIT_RECORD_ID.test(id)) {
+      issues.push(
+        rowRewritten(
+          file,
+          `${id} is a row this branch adds with a four-digit ID; a new row takes OQ-yyyymmddhhMMss`,
+          id,
+        ),
+      );
+    }
+  }
+  return issues;
 }
 
-function withoutChangeRequestRows(content: string): string {
-  return content
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .filter((line) => !/^\|\s*DEC-\d{4}\s*\|\s*Change request:/i.test(line))
-    .join("\n");
+/** The ID cell of a register row, once the line is unpadded. */
+function registerRowId(line: string): string | undefined {
+  return /^\|((?:DEC|OQ)-[^|]*)\|/.exec(line)?.[1];
+}
+
+/**
+ * Whether the register file differs from its base only by rows whose IDs the base does not hold,
+ * wherever they sit, and, where `deletable`, by deleted rows. Table padding is ignored.
+ */
+function onlyAddsRows(
+  base: string,
+  head: string,
+  baseIds: ReadonlySet<string>,
+  deletable: boolean,
+): boolean {
+  const headLines = unpadded(head);
+  const headIds = new Set(headLines.map(registerRowId));
+  const kept = headLines.filter((line) => {
+    const id = registerRowId(line);
+    return id === undefined || baseIds.has(id);
+  });
+  const expected = unpadded(base).filter((line) => {
+    const id = registerRowId(line);
+    return !deletable || id === undefined || headIds.has(id);
+  });
+  return kept.join("\n") === expected.join("\n");
 }
 
 const EXAMPLE_ROW = /^\|\s*EX-\d{4}-\d{4}-\d{2}\s*\|/;
@@ -711,6 +677,25 @@ function markdownBlocks(content: string): string[] {
     hardBreak = / {2}$|\\$/.test(raw);
   }
   return blocks;
+}
+
+const STATUS_HEADER = /^\|\s*ID\s*\|\s*Content\s*\|\s*Approach\s*\|\s*Status\s*\|?\s*$/m;
+
+/**
+ * A base written before the registers lost their Status column, read without that fourth cell, so
+ * the commit that drops the column compares row by row. Remove once no supported base can still
+ * hold a four-column register.
+ */
+function withoutStatusColumn(text: string): string {
+  if (!STATUS_HEADER.test(text)) return text;
+  return text
+    .split("\n")
+    .map((line) => {
+      if (!line.startsWith("|")) return line;
+      const cells = line.split(/(?<!\\)\|/);
+      return [...cells.slice(0, 4), ...cells.slice(5)].join("|");
+    })
+    .join("\n");
 }
 
 /** A symlink or a submodule at the path has no text to compare, so it reads as a change. */

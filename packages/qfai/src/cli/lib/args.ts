@@ -1,6 +1,27 @@
 import { STORY_TREE_ID_KINDS, type StoryTreeIdKind } from "../../core/storyTree/ids.js";
 
 const NEXT_ID_USAGE = "qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>";
+/** Decision and question rows take the UTC time they are written as their ID, never a counted number. */
+const TIMESTAMPED_ROWS: ReadonlyMap<string, string> = new Map([
+  ["DEC", "decision"],
+  ["OQ", "question"],
+]);
+const NEXT_ID_KINDS = STORY_TREE_ID_KINDS.filter((kind) => !TIMESTAMPED_ROWS.has(kind));
+
+/** The kind `qfai sdd next-id` counts, or why the token is refused. */
+function readNextIdKind(token: string): { kind: StoryTreeIdKind } | { reason: string } {
+  const row = TIMESTAMPED_ROWS.get(token);
+  if (row !== undefined)
+    return {
+      reason: `qfai sdd next-id: ${token} takes no number; a ${row} row takes the UTC time it is written, as ${token}-yyyymmddhhMMss. Expected one of ${NEXT_ID_KINDS.join("|")}.`,
+    };
+  const kind = NEXT_ID_KINDS.find((value) => value === token);
+  return kind
+    ? { kind }
+    : {
+        reason: `qfai sdd next-id: unknown ID kind "${token}". Expected: ${NEXT_ID_KINDS.join("|")}`,
+      };
+}
 
 export type ParsedArgs = {
   command: string | null;
@@ -78,15 +99,12 @@ export type ParsedArgs = {
     /** Positional `<id>` for `qfai discussion use <id>`. */
     discussionId?: string;
     /** Subcommand for `qfai sdd`. */
-    sddAction?: "preflight" | "renumber-decision" | "next-id" | "merge-docs";
+    sddAction?: "preflight" | "next-id" | "merge-docs";
     /** Positional `<kind>` for `qfai sdd next-id`. */
     sddIdKind?: StoryTreeIdKind;
     /** Positional `<parent-ID>` for `qfai sdd next-id`: the BF of a US, the US of an AC or EX, the contract of a BR. */
     sddIdParent?: string;
-    sddFrom?: string;
-    sddTo?: string;
     sddBase?: string;
-    sddApply?: boolean;
     /** --format <text|json> for `qfai sdd preflight`. */
     sddFormat?: "text" | "json";
     /** Repeatable `--assume <text>` for `qfai sdd preflight` (carry-over open questions). */
@@ -255,12 +273,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "sdd") {
     const candidate = args[0];
     if (isSubcommandToken(candidate)) {
-      if (
-        candidate === "preflight" ||
-        candidate === "renumber-decision" ||
-        candidate === "next-id" ||
-        candidate === "merge-docs"
-      ) {
+      if (candidate === "preflight" || candidate === "next-id" || candidate === "merge-docs") {
         options.sddAction = candidate;
       } else {
         markInvalid(subcommandReason("sdd", candidate));
@@ -268,13 +281,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       args.shift();
     }
     if (options.sddAction === "next-id" && isPositionalToken(args[0])) {
-      const kind = args.shift() ?? "";
-      const known = STORY_TREE_ID_KINDS.find((value) => value === kind);
-      if (known) options.sddIdKind = known;
-      else
-        markInvalid(
-          `qfai sdd next-id: unknown ID kind "${kind}". Expected: ${STORY_TREE_ID_KINDS.join("|")}`,
-        );
+      const read = readNextIdKind(args.shift() ?? "");
+      if ("kind" in read) options.sddIdKind = read.kind;
+      else markInvalid(read.reason);
       const parent = args[0];
       if (isPositionalToken(parent)) {
         options.sddIdParent = parent;
@@ -362,32 +371,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       continue;
     }
     switch (arg) {
-      case "--from":
-      case "--to":
       case "--base": {
         const next = consumeOptionValue();
         if (next === null) {
           markInvalid(missingValue(arg));
           break;
         }
-        const reads =
-          command === "sdd" &&
-          (options.sddAction === "renumber-decision" ||
-            (options.sddAction === "next-id" && arg === "--base"));
-        if (!reads) {
-          markInvalid(notValidHere(arg));
-          break;
-        }
-        if (arg === "--base") options.sddBase = next;
-        else if (!/^DEC-\d{4}$/.test(next)) markInvalid(badValue(arg, next, "DEC-NNNN"));
-        else if (arg === "--from") options.sddFrom = next;
-        else options.sddTo = next;
+        if (command === "sdd" && options.sddAction === "next-id") options.sddBase = next;
+        else markInvalid(notValidHere(arg));
         break;
       }
-      case "--apply":
-        if (command === "sdd" && options.sddAction === "renumber-decision") options.sddApply = true;
-        else markInvalid(notValidHere("--apply"));
-        break;
       case "--root":
         {
           const next = consumeOptionValue();
@@ -795,8 +788,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(`qfai: unknown option: ${arg}`);
         } else if (command === "sdd" && options.sddAction === "next-id" && arg !== undefined) {
           // The kind, then the parent, may also follow the options.
-          const known = STORY_TREE_ID_KINDS.find((value) => value === arg);
-          if (!options.sddIdKind && known) options.sddIdKind = known;
+          const read = readNextIdKind(arg);
+          if (!options.sddIdKind && "kind" in read) options.sddIdKind = read.kind;
+          else if (!options.sddIdKind && TIMESTAMPED_ROWS.has(arg) && "reason" in read)
+            markInvalid(read.reason);
           else if (options.sddIdKind && options.sddIdParent === undefined)
             options.sddIdParent = arg;
           else
@@ -804,9 +799,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
               `qfai sdd next-id: unexpected argument: ${arg}. Expected: ${NEXT_ID_USAGE}`,
             );
         } else if (
-          (command === "workflow" ||
-            (command === "sdd" &&
-              (options.sddAction === "renumber-decision" || options.sddAction === "merge-docs"))) &&
+          (command === "workflow" || (command === "sdd" && options.sddAction === "merge-docs")) &&
           arg !== undefined
         ) {
           // These subcommands take no positional arguments.
@@ -837,26 +830,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "sdd" && !options.help && !options.sddAction) {
     markInvalid(subcommandReason("sdd", null));
   }
-  if (
-    command === "sdd" &&
-    options.sddAction === "renumber-decision" &&
-    !options.help &&
-    !options.version
-  ) {
-    for (const [flag, value] of [
-      ["--from", options.sddFrom],
-      ["--to", options.sddTo],
-      ["--base", options.sddBase],
-    ] as const) {
-      if (!value) markInvalid(missingValue(flag));
-    }
-    if (options.sddFrom === options.sddTo)
-      markInvalid("qfai sdd: --from and --to must name different DEC IDs.");
-  }
   if (command === "sdd" && options.sddAction === "next-id" && !options.help && !options.version) {
     if (!options.sddIdKind)
       markInvalid(
-        `qfai sdd next-id: the ID kind is missing; it comes right after next-id, one of ${STORY_TREE_ID_KINDS.join("|")}. Expected: ${NEXT_ID_USAGE}`,
+        `qfai sdd next-id: the ID kind is missing; it comes right after next-id, one of ${NEXT_ID_KINDS.join("|")}. Expected: ${NEXT_ID_USAGE}`,
       );
     if (!options.sddBase) markInvalid(missingValue("--base"));
   }
@@ -874,7 +851,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["discussion", "list|use"],
   ["atdd", "scaffold"],
-  ["sdd", "preflight|renumber-decision|next-id|merge-docs"],
+  ["sdd", "preflight|next-id|merge-docs"],
   ["workflow", WORKFLOW_OPERATIONS.join("|")],
 ]);
 

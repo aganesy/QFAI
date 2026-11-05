@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a maintainer, I want the seven ID shapes defined on the story tree, with where each ID is declared, how a child ID carries its parent's number and how the next ID is chosen, so that no two items share an ID and every ID shows where it belongs.
+As a maintainer, I want the seven kinds of ID defined on the story tree, with the shape of each, where each ID is declared, how a child ID carries its parent's number and how the next ID is chosen, so that no two items share an ID and every ID shows where it belongs.
 
 ## Non-goals
 

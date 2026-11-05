@@ -28,7 +28,7 @@ function register(title: string, columns: string[], rows: string[] = []): string
   return `# ${title}\n\n## ${title}\n\n${head}${rows.join("\n")}${rows.length > 0 ? "\n" : ""}`;
 }
 
-const COLUMNS = ["ID", "Content", "Approach", "Status"];
+const COLUMNS = ["ID", "Content", "Approach"];
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
@@ -159,9 +159,9 @@ describe("story-tree validation acceptance", () => {
       changed({
         [`${story}/02_Acceptance-Criteria.md`]: criterion("AC-0001-0001-001"),
         [`${story}/03_Example.md`]: examples(["EX-0001-0001-1", "AC-0001-0001-001"]),
-        [`${specs}/decisions.md`]: register("Decisions", COLUMNS, ["| DEC-1 | A | B | DONE |"]),
+        [`${specs}/decisions.md`]: register("Decisions", COLUMNS, ["| DEC-1 | A | B |"]),
         [`${specs}/open-questions.md`]: register("Open Questions", COLUMNS, [
-          "| OQ-12345 | A | B | DONE |",
+          "| OQ-12345 | A | B |",
         ]),
       }),
     );
@@ -247,53 +247,13 @@ describe("story-tree validation acceptance", () => {
     expect(only(clean.issues, "QFAI-STORY-002")).toEqual([]);
   });
 
-  // QFAI:AC-0001-0053-02
-  it("names the row of a Status outside the vocabulary of its table", async () => {
-    const { issues } = await validateTree(
-      changed({
-        [`${specs}/decisions.md`]: register("Decisions", COLUMNS, [
-          "| DEC-0001 | A | B | SUPERSEDED |",
-          "| DEC-0002 | A | B | DEFERRED |",
-          "| DEC-0003 | A | B | Done |",
-          "| DEC-0004 | A | B | TODO |",
-          "| DEC-0005 | A | B | WIP |",
-          "| DEC-0006 | A | B | REJECTED |",
-          "| DEC-0007 | A | B | SUPERSEDED (by DEC-0004) |",
-          "| DEC-0008 | A | B | PARTLY SUPERSEDED (by DEC-0004) |",
-        ]),
-        [`${specs}/open-questions.md`]: register("Open Questions", COLUMNS, [
-          "| OQ-0001 | A | B | REJECTED |",
-          "| OQ-0002 | A | B | DEFERRED |",
-          "| OQ-0003 | A | B | PARTLY SUPERSEDED (by DEC-0004) |",
-          "| OQ-0004 | A | B | DONE |",
-        ]),
-      }),
-    );
-
-    const invalid = only(issues, "QFAI-STORY-003")
-      .filter((found) => found.message.includes("has an invalid Status"))
-      .map((found) => ({
-        severity: found.severity,
-        file: path.basename(found.file ?? ""),
-        row: /row (\S+) has an invalid Status/.exec(found.message)?.[1],
-      }))
-      .sort((left, right) => (left.row ?? "").localeCompare(right.row ?? ""));
-    expect(invalid).toEqual([
-      { severity: "error", file: "decisions.md", row: "DEC-0001" },
-      { severity: "error", file: "decisions.md", row: "DEC-0002" },
-      { severity: "error", file: "decisions.md", row: "DEC-0003" },
-      { severity: "error", file: "open-questions.md", row: "OQ-0001" },
-      { severity: "error", file: "open-questions.md", row: "OQ-0003" },
-    ]);
-  });
-
   // QFAI:AC-0001-0053-03
   it("names a row whose ID has the shape of the other table", async () => {
     const { issues } = await validateTree(
       changed({
-        [`${specs}/decisions.md`]: register("Decisions", COLUMNS, ["| OQ-0001 | A | B | DONE |"]),
+        [`${specs}/decisions.md`]: register("Decisions", COLUMNS, ["| OQ-0001 | A | B |"]),
         [`${specs}/open-questions.md`]: register("Open Questions", COLUMNS, [
-          "| DEC-0001 | A | B | DONE |",
+          "| DEC-0001 | A | B |",
         ]),
       }),
     );
@@ -313,16 +273,15 @@ describe("story-tree validation acceptance", () => {
   });
 
   // QFAI:AC-0001-0053-05
-  it("raises an error for an open Unadjudicated question and none once it is closed", async () => {
-    const question = (id: string, status: string): string =>
-      `| ${id} | Unadjudicated: the user was asked and never answered | Ask again | ${status} |`;
+  it("raises an error for each Unadjudicated question row and none for another row", async () => {
+    const question = (id: string): string =>
+      `| ${id} | Unadjudicated: the user was asked and never answered | Ask again |`;
     const { root, issues } = await validateTree(
       changed({
         [`${specs}/open-questions.md`]: register("Open Questions", COLUMNS, [
-          question("OQ-0001", "TODO"),
-          question("OQ-0002", "WIP"),
-          question("OQ-0003", "DONE"),
-          question("OQ-0004", "DEFERRED"),
+          question("OQ-0001"),
+          question("OQ-20261105093000"),
+          "| OQ-0004 | Which layout | Ask the owner |",
         ]),
       }),
     );
@@ -330,7 +289,7 @@ describe("story-tree validation acceptance", () => {
     const open = only(issues, "QFAI-SPACK-102");
     expect(open.map((found) => [found.severity, found.refs])).toEqual([
       ["error", ["OQ-0001"]],
-      ["error", ["OQ-0002"]],
+      ["error", ["OQ-20261105093000"]],
     ]);
     expect(open.map((found) => posix(found.file))).toEqual([
       posix(path.join(root, specs, "open-questions.md")),

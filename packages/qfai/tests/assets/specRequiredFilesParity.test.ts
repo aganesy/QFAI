@@ -31,7 +31,6 @@ describe.each(trees)("%s story-tree required files", (tree) => {
       expect(content).toContain("ID");
       expect(content).toContain("Content");
       expect(content).toContain("Approach");
-      expect(content).toContain("Status");
     }
   });
 

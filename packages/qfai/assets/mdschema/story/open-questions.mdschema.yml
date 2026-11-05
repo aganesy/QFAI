@@ -6,7 +6,7 @@ structure:
   - heading:
       pattern: "^# Open Questions$"
       regex: true
-    description: An append-only register; only a row's Status changes after it is added.
+    description: A row exists while its question is open; it is never edited, and is deleted when a decision settles it or a new row replaces it.
     allow_additional: false
     forbidden_text:
       - pattern: '\A\s*[^#\s]'
@@ -20,13 +20,13 @@ structure:
         tables:
           - min: 1
             max: 1
-            required_headers: [ID, Content, Approach, Status]
+            required_headers: [ID, Content, Approach]
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
           - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
             regex: true
-          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){4}[ \t]*:?-'
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
             regex: true
           - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
             regex: true

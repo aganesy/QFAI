@@ -236,7 +236,7 @@ export const FACT_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
     await writeAt(
       root,
       `${SPEC}/decisions.md`,
-      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | ------- | -------- | ------ |\n| DEC-0001 | SUPERSEDE US-0001-0001 | Approved by the owner | DONE |\n",
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | ------- | -------- |\n| DEC-0001 | SUPERSEDE US-0001-0001 | Approved by the owner |\n",
     );
   },
   activeSuccessorKnown: stated,
@@ -256,7 +256,7 @@ export const FACT_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
     writeAt(
       root,
       `${SPEC}/open-questions.md`,
-      "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach | Status |\n| --- | ------- | -------- | ------ |\n| OQ-0001 | Whether a deleted customer's addresses are kept | Ask the owner | TODO |\n",
+      "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach |\n| --- | ------- | -------- |\n| OQ-0001 | Whether a deleted customer's addresses are kept | Ask the owner |\n",
     ),
   structuralOptimization: stated,
   scopeClear: stated,

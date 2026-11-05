@@ -171,7 +171,7 @@ export function validateStoryTreeObligationsModel(
   for (const { row, origin } of model.decisionOccurrences) {
     if (!model.decisionRegisterComplete || (model.decisions?.errors.length ?? 0) > 0) break;
     const classified = classifyRecordRow(row);
-    if (classified.kind !== "test-exception" || !classified.inForce) continue;
+    if (classified.kind !== "test-exception") continue;
     for (const id of classified.refs) {
       if (known.BF.has(id) || known.AC.has(id) || known.EX.has(id)) {
         exceptions.set(id, { decision: row.id, file: origin.path });

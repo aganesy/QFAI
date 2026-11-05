@@ -5,6 +5,7 @@ import { resolveFlowScope } from "../../../src/core/flowScope.js";
 import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
 import {
   isStoryTreeId,
+  isTimestampRecordId,
   nextId,
   parseStoryTestAnnotations,
   storyIdMatchesFlow,
@@ -127,7 +128,8 @@ describe("story-tree core", () => {
     expect(nextId("AC", ["AC-0001-0001-01", "AC-0001-0001-03"], "US-0001-0001")).toBe(
       "AC-0001-0001-04",
     );
-    expect(nextId("DEC", ["DEC-0001", "DEC-0003"])).toBe("DEC-0004");
+    expect(() => nextId("DEC", ["DEC-0001", "DEC-0003"])).toThrow(TypeError);
+    expect(() => nextId("OQ", [])).toThrow(/OQ-yyyymmddhhMMss/u);
     expect(nextId("US", ["US-0001-0001", "US-0001-0003"], "BF-0001")).toBe("US-0001-0004");
     expect(
       nextId("US", ["US-0001-0001", "US-0001-0002", "US-0001-0003", "US-0001-0004"], "BF-0001"),
@@ -155,9 +157,6 @@ describe("story-tree core", () => {
       expect(nextId(kind, [`${kind}-0001-0001-98`], "US-0001-0001")).toBe(`${kind}-0001-0001-99`);
       expect(() => nextId(kind, [`${kind}-0001-0001-99`], "US-0001-0001")).toThrow(RangeError);
     }
-    expect(() => nextId("DEC", ["DEC-9999"])).toThrow(
-      new RangeError("DEC ID space is exhausted under the tree"),
-    );
   });
 
   // QFAI:EX-0001-0008-25
@@ -165,7 +164,7 @@ describe("story-tree core", () => {
     const files = new Map(storyFiles);
     files.set(
       ".qfai/spec/decisions.md",
-      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Retired EX-0001-0001-99 | Keep the original case's ID reserved | DONE |\n",
+      "| ID | Content | Approach |\n| --- | --- | --- |\n| DEC-0001 | Retired EX-0001-0001-99 | Keep the original case's ID reserved |\n",
     );
     const model = buildStoryTreeModel(files);
     expect(model.examples.map(({ id }) => id)).toEqual(["EX-0001-0001-01"]);
@@ -190,14 +189,15 @@ describe("story-tree core", () => {
   });
 
   // QFAI:EX-0001-0008-04
-  it("reserves IDs named by decision rows when allocating a story ID", () => {
+  it("reserves IDs named by decision rows of either ID form when allocating a story ID", () => {
     const files = new Map(storyFiles);
     files.set(
       ".qfai/spec/decisions.md",
-      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | Retired US-0001-0004 | Keep its ID reserved | DONE |\n",
+      "| ID | Content | Approach |\n| --- | --- | --- |\n| DEC-0001 | Retired US-0001-0004 | Keep its ID reserved |\n| DEC-20261105093000 | Retired US-0001-0007 | Keep its ID reserved |\n",
     );
     const tree = buildStoryTreeModel(files);
-    expect(nextStoryTreeId(tree, "US", "BF-0001")).toBe("US-0001-0005");
+    expect(nextStoryTreeId(tree, "US", "BF-0001")).toBe("US-0001-0008");
+    expect(() => nextStoryTreeId(tree, "DEC")).toThrow(TypeError);
   });
 
   it("reads every declaration from the declaring file, not index citations", () => {
@@ -276,37 +276,80 @@ describe("story-tree core", () => {
   });
 
   // QFAI:EX-0001-0007-11
-  it("reports a row inserted above an existing row as that row's ID cell rewritten", () => {
-    const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
-    const base = `${header}| DEC-0001 | First | Keep | TODO |\n`;
-    const head = `${header}| DEC-0002 | Inserted | Keep | TODO |\n| DEC-0001 | First | Keep | TODO |\n`;
-    expect(diffRecordTables(base, head, "decisions").rewritten).toContainEqual(
-      expect.objectContaining({ id: "DEC-0001", cell: "id" }),
-    );
+  it("matches a base row by its ID when a new row sits above it", () => {
+    const header = "| ID | Content | Approach |\n| --- | --- | --- |\n";
+    const base = `${header}| DEC-0001 | First | Keep |\n`;
+    const head = `${header}| DEC-20261105093000 | Inserted | Keep |\n| DEC-0001 | First | Keep |\n`;
+    expect(diffRecordTables(base, head, "decisions")).toMatchObject({
+      removed: [],
+      changed: [],
+      added: [{ id: "DEC-20261105093000" }],
+    });
   });
 
   // QFAI:EX-0001-0147-06
-  it("lets only the Status cell move when a decision is superseded and a question deferred", () => {
-    const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
-    const decisionBase = `${header}| DEC-0001 | Choice | Reason | DONE |\n`;
-    const decisionHead = `${header}| DEC-0001 | Choice | Reason | SUPERSEDED (by DEC-0002) |\n| DEC-0002 | Newer choice | Reason | DONE |\n`;
+  it("keeps a replaced decision and replaces a deferred question by appending new rows", () => {
+    const header = "| ID | Content | Approach |\n| --- | --- | --- |\n";
+    const decisionBase = `${header}| DEC-0007 | Choice | Reason |\n`;
+    const decisionHead = `${decisionBase}| DEC-20261105093000 | Newer choice | Supersedes DEC-0007 |\n`;
     const decisions = diffRecordTables(decisionBase, decisionHead, "decisions");
-    expect(decisions.rewritten).toEqual([]);
+    expect(decisions.changed).toEqual([]);
     expect(decisions.removed).toEqual([]);
-    expect(decisions.changed).toEqual([
-      { id: "DEC-0001", cell: "status", before: "DONE", after: "SUPERSEDED (by DEC-0002)" },
-    ]);
-    expect(decisions.appended.map((row) => row.id)).toEqual(["DEC-0002"]);
+    expect(decisions.added.map((row) => row.id)).toEqual(["DEC-20261105093000"]);
     expect(parseRecordTable(decisionHead, "decisions").errors).toEqual([]);
 
-    const questionBase = `${header}| OQ-0001 | Which layout | Pending | TODO |\n`;
-    const questionHead = `${header}| OQ-0001 | Which layout | Pending | DEFERRED |\n`;
+    const questionBase = `${header}| OQ-0012 | Which layout | Pending |\n`;
+    const questionHead = `${header}| OQ-20261105093000 | Which layout | Replaces OQ-0012; next release |\n`;
     const questions = diffRecordTables(questionBase, questionHead, "open-questions");
-    expect(questions.rewritten).toEqual([]);
-    expect(questions.changed).toEqual([
-      { id: "OQ-0001", cell: "status", before: "TODO", after: "DEFERRED" },
-    ]);
+    expect(questions.changed).toEqual([]);
+    expect(questions.removed.map((row) => row.id)).toEqual(["OQ-0012"]);
+    expect(questions.added.map((row) => row.id)).toEqual(["OQ-20261105093000"]);
     expect(parseRecordTable(questionHead, "open-questions").errors).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0007-03
+  it("accepts both record ID forms in each table", () => {
+    const header = "| ID | Content | Approach |\n| --- | --- | --- |\n";
+    expect(
+      parseRecordTable(
+        `${header}| DEC-0007 | A | B |\n| DEC-20261105093000 | C | D |\n`,
+        "decisions",
+      ).errors,
+    ).toEqual([]);
+    expect(
+      parseRecordTable(
+        `${header}| OQ-0012 | A | B |\n| OQ-20261105093000 | C | D |\n`,
+        "open-questions",
+      ).errors,
+    ).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0007-29
+  it("rejects a timestamp ID with no real calendar time or the wrong digit count", () => {
+    const header = "| ID | Content | Approach |\n| --- | --- | --- |\n";
+    const parsed = parseRecordTable(
+      `${header}| DEC-20261305093000 | A | B |\n| DEC-2026110509300 | C | D |\n`,
+      "decisions",
+    );
+    expect(parsed.errors).toEqual([
+      "decisions row 1 has an invalid ID: DEC-20261305093000",
+      "decisions row 2 has an invalid ID: DEC-2026110509300",
+    ]);
+    for (const valid of ["DEC-20280229093000", "DEC-20261105235959", "OQ-0001"]) {
+      expect(isStoryTreeId(valid, valid.startsWith("DEC") ? "DEC" : "OQ")).toBe(true);
+    }
+    for (const invalid of [
+      "DEC-20260230093000",
+      "DEC-20261105243000",
+      "DEC-20261105096000",
+      "DEC-20261105093060",
+      "DEC-20270229093000",
+      "DEC-202611050930001",
+    ]) {
+      expect(isStoryTreeId(invalid, "DEC")).toBe(false);
+    }
+    expect(isTimestampRecordId("OQ-20261105093000")).toBe(true);
+    expect(isTimestampRecordId("OQ-0001")).toBe(false);
   });
 
   // QFAI:EX-0001-0147-08
@@ -321,75 +364,50 @@ describe("story-tree core", () => {
     expect(nextId("EX", [], "US-0001-0001")).toBe("EX-0001-0001-01");
   });
 
-  it("checks table shape, status vocabulary, keyword force, and append-only diff", () => {
-    const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
-    const base = `${header}| DEC-0001 | First | Keep | TODO |\n`;
-    const head = `${header}| DEC-0001 | First | Keep | DONE |\n| DEC-0002 | Change request: 01_policy/glossary.md | Re-run owner | TODO |\n`;
+  it("checks table shape, row kinds, and the by-ID diff", () => {
+    const header = "| ID | Content | Approach |\n| --- | --- | --- |\n";
+    const base = `${header}| DEC-0001 | First | Keep |\n`;
+    const head = `${header}| DEC-0001 | First | Keep |\n| DEC-20261105093000 | Change request: 01_policy/glossary.md | Re-run owner |\n`;
     expect(parseRecordTable(header, "decisions").errors).toEqual([]);
     expect(diffRecordTables(base, head, "decisions")).toMatchObject({
       removed: [],
-      rewritten: [],
-      appended: [{ id: "DEC-0002" }],
-      onlyChangeRequestRows: false,
+      changed: [],
+      added: [{ id: "DEC-20261105093000" }],
     });
-    expect(
-      diffRecordTables(
-        header,
-        `${header}| DEC-0002 | Change request: 01_policy/glossary.md | Re-run owner | TODO |\n`,
-        "decisions",
-      ).onlyChangeRequestRows,
-    ).toBe(true);
-    const request = "| DEC-0002 | Change request: 01_policy/glossary.md | Re-run owner |";
-    expect(
-      diffRecordTables(`${header}${request} TODO |\n`, `${header}${request} WIP |\n`, "decisions")
-        .onlyChangeRequestRows,
-    ).toBe(true);
-    expect(diffRecordTables(header, "no table", "decisions").onlyChangeRequestRows).toBe(false);
     expect(
       classifyRecordRow(
-        parseRecordTable(head, "decisions").rows[1] ?? {
-          id: "",
-          content: "",
-          approach: "",
-          status: "",
-        },
+        parseRecordTable(head, "decisions").rows[1] ?? { id: "", content: "", approach: "" },
       ),
-    ).toMatchObject({
-      kind: "change-request",
-      inForce: false,
-      refs: ["01_policy/glossary.md"],
-    });
+    ).toMatchObject({ kind: "change-request", refs: ["01_policy/glossary.md"] });
     expect(
-      classifyRecordRow({
-        id: "DEC-0003",
-        content: "Test exception: BF-0001, AC-0001-0001-01",
-        approach: "Temporary",
-        status: "DONE",
-      }),
-    ).toMatchObject({
+      diffRecordTables(base, `${header}| DEC-0001 | Rewritten | Keep |\n`, "decisions").changed,
+    ).toMatchObject([{ id: "DEC-0001", cell: "content", before: "First", after: "Rewritten" }]);
+    expect(diffRecordTables(base, header, "decisions").removed).toMatchObject([{ id: "DEC-0001" }]);
+  });
+
+  // QFAI:EX-0001-0053-04
+  it("reads each row kind from its Content keyword alone", () => {
+    const row = { id: "DEC-0001", approach: "Reason" };
+    expect(
+      classifyRecordRow({ ...row, content: "Test exception: EX-0001-0001-01, AC-0001-0001-01" }),
+    ).toEqual({
       kind: "test-exception",
-      refs: ["BF-0001", "AC-0001-0001-01"],
-      inForce: true,
+      refs: ["EX-0001-0001-01", "AC-0001-0001-01"],
+      row: { ...row, content: "Test exception: EX-0001-0001-01, AC-0001-0001-01" },
     });
     expect(
-      classifyRecordRow({
-        id: "OQ-0001",
-        content: "Unadjudicated: Which path?",
-        approach: "Discuss",
-        status: "WIP",
-      }).inForce,
-    ).toBe(true);
+      classifyRecordRow({ ...row, content: "Change request: 02_business-flow/business-flows.md" }),
+    ).toMatchObject({ kind: "change-request", refs: ["02_business-flow/business-flows.md"] });
     expect(
-      parseRecordTable(`${header}| DEC-0001 | Wrong | - | DEFERRED |\n`, "decisions").errors,
-    ).not.toEqual([]);
+      classifyRecordRow({ ...row, content: "Declined change request: 01_policy/principle.md" }),
+    ).toMatchObject({ kind: "declined-change-request", refs: ["01_policy/principle.md"] });
+    expect(classifyRecordRow({ ...row, content: "An ordinary decision" })).toMatchObject({
+      kind: "other",
+      refs: [],
+    });
     expect(
-      parseRecordTable(`${header}| DEC-0001 | Old | - | SUPERSEDED (by DEC-0002) |\n`, "decisions")
-        .errors,
-    ).toEqual([]);
-    expect(
-      diffRecordTables(base, `${header}| DEC-0001 | Rewritten | Keep | TODO |\n`, "decisions")
-        .rewritten,
-    ).toMatchObject([{ id: "DEC-0001", cell: "content" }]);
+      classifyRecordRow({ id: "OQ-0001", content: "Unadjudicated: Which path?", approach: "" }),
+    ).toMatchObject({ kind: "unadjudicated", refs: [] });
   });
 
   it("scopes a flow to its stories, examples, and citing rules", () => {
@@ -426,171 +444,35 @@ describe("story-tree core", () => {
 });
 
 describe.each([
-  {
-    kind: "decisions" as const,
-    id: "DEC-0001",
-    allowed: [
-      "TODO",
-      "WIP",
-      "DONE",
-      "REJECTED",
-      "SUPERSEDED (by DEC-NNNN)",
-      "PARTLY SUPERSEDED (by DEC-NNNN)",
-    ],
-    wrongKindStatus: "DEFERRED",
-  },
-  {
-    kind: "open-questions" as const,
-    id: "OQ-0001",
-    allowed: ["TODO", "WIP", "DONE", "DONE (by DEC-NNNN)", "DEFERRED", "SUPERSEDED (by DEC-NNNN)"],
-    wrongKindStatus: "REJECTED",
-  },
-])("$kind row diagnostics", ({ kind, id, allowed, wrongKindStatus }) => {
-  const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
-  const table = (status: string): string => `${header}| ${id} | Choice | Reason | ${status} |\n`;
-  const diagnostic = (preview: string): string =>
-    `${kind} row ${id} has an invalid Status: "${preview}"; allowed: ${allowed.join(", ")}`;
+  { kind: "decisions" as const, id: "DEC-0001" },
+  { kind: "open-questions" as const, id: "OQ-0001" },
+])("$kind row diagnostics", ({ kind, id }) => {
+  const header = "| ID | Content | Approach |\n| --- | --- | --- |\n";
 
   // QFAI:EX-0001-0053-13
-  it.each([3, 5])("reports expected four and actual %i cells", (count) => {
-    const cells = [id, "Choice", "Reason", "TODO", "Extra"].slice(0, count);
+  it.each([2, 4])("reports expected three and actual %i cells", (count) => {
+    const cells = [id, "Choice", "Reason", "Extra"].slice(0, count);
     const parsed = parseRecordTable(`${header}| ${cells.join(" | ")} |\n`, kind);
-    const error = parsed.errors.find((message) => /(?:cells|columns)/i.test(message)) ?? "";
-    expect(error).toContain(`${kind} row 1`);
-    expect(error).toMatch(/expected\s+4\b/i);
-    expect(error).toMatch(new RegExp(`(?:actual|got|found)\\s+${count}\\b`, "i"));
+    expect(parsed.errors).toEqual([
+      `${kind} row 1 has the wrong number of cells: expected 3, actual ${count}`,
+    ]);
   });
 
-  // QFAI:EX-0001-0053-14
-  it.each(["WAITING", "", wrongKindStatus])(
-    "lists only this kind's allowed values for Status %j",
-    (status) => {
-      const parsed = parseRecordTable(table(status), kind);
-      expect(parsed.errors).toEqual([diagnostic(status)]);
-      expect(parsed.rows[0]?.status).toBe(status);
-    },
-  );
-
-  // QFAI:EX-0001-0053-15
-  it.each([39, 40, 41])(
-    "bounds the preview at forty Unicode characters for a %i-character value",
-    (length) => {
-      const status = "\u{1f680}".repeat(length);
-      const preview = "\u{1f680}".repeat(Math.min(length, 40)) + (length > 40 ? "..." : "");
-      const parsed = parseRecordTable(table(status), kind);
-      expect(parsed.errors).toEqual([diagnostic(preview)]);
-      expect(parsed.rows[0]?.status).toBe(status);
-    },
-  );
-
-  // QFAI:EX-0001-0053-15
-  it("sanitizes control and format runs and Unicode breaks only in the one-line diagnostic", () => {
-    const status = '\u202e\0First  "quoted"\t\u0085\u200dSecond\u2028Third\u2029Fourth\rLast\u2066';
-    const parsed = parseRecordTable(table(status), kind);
-    expect(parsed.errors).toEqual([diagnostic('First  "quoted" Second Third Fourth Last')]);
-    expect(parsed.errors.join("")).not.toMatch(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u);
-    expect(parsed.rows[0]?.status).toBe(status);
+  // QFAI:EX-0001-0007-04
+  it("reports a Status column as an unexpected column", () => {
+    const parsed = parseRecordTable(
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| ${id} | Choice | Reason | DONE |\n`,
+      kind,
+    );
+    expect(parsed.errors).toContain(`${kind} has the unexpected column Status`);
+    expect(parsed.errors).toContain(
+      `${kind} row 1 has the wrong number of cells: expected 3, actual 4`,
+    );
   });
-
-  // QFAI:EX-0001-0053-15
-  it("applies the forty-character limit after sanitizing rather than to the raw value", () => {
-    const status = "A".repeat(20) + "\t\0\u202e\u2028\u2029" + "B".repeat(19);
-    const parsed = parseRecordTable(table(status), kind);
-    expect(parsed.errors).toEqual([diagnostic("A".repeat(20) + " " + "B".repeat(19))]);
-    expect(parsed.rows[0]?.status).toBe(status);
-  });
-
-  // QFAI:EX-0001-0053-02
-  it("continues accepting every existing status without changing its returned value", () => {
-    for (const pattern of allowed) {
-      const status = pattern.replace("DEC-NNNN", "DEC-0042");
-      const parsed = parseRecordTable(table(status), kind);
-      expect(parsed.errors).toEqual([]);
-      expect(parsed.rows[0]?.status).toBe(status);
-    }
-  });
-});
-
-describe.each([
-  ["TODO", false, false],
-  ["WIP", false, true],
-  ["DONE", true, true],
-  ["REJECTED", false, false],
-  ["SUPERSEDED (by DEC-0002)", false, false],
-  ["PARTLY SUPERSEDED (by DEC-0002)", false, true],
-] as const)("decision keyword force at %s", (status, exceptionInForce, changeInForce) => {
-  // QFAI:EX-0001-0056-06
-  it("keeps a test exception in force only at DONE", () => {
-    expect(
-      classifyRecordRow({
-        id: "DEC-0001",
-        content: "Test exception: BF-0001, AC-0001-0001-01, EX-0001-0001-01",
-        approach: "No test environment",
-        status,
-      }),
-    ).toMatchObject({
-      kind: "test-exception",
-      refs: ["BF-0001", "AC-0001-0001-01", "EX-0001-0001-01"],
-      inForce: exceptionInForce,
-    });
-  });
-
-  it("preserves change-request force and leaves ordinary rows inactive", () => {
-    const row = { id: "DEC-0001", approach: "Reason", status };
-    expect(
-      classifyRecordRow({ ...row, content: "Change request: 01_policy/glossary.md" }),
-    ).toMatchObject({
-      kind: "change-request",
-      refs: ["01_policy/glossary.md"],
-      inForce: changeInForce,
-    });
-    expect(classifyRecordRow({ ...row, content: "An ordinary decision" })).toMatchObject({
-      kind: "other",
-      refs: [],
-      inForce: false,
-    });
-  });
-});
-
-// QFAI:EX-0001-0053-32
-it("accepts an open-question Status that names its deciding row only in the exact form", () => {
-  const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
-  const parsed = parseRecordTable(
-    `${header}| OQ-0001 | Q | A | DONE (by DEC-0042) |\n| OQ-0002 | Q | A | SUPERSEDED (by DEC-0042) |\n| OQ-0003 | Q | A | DONE by DEC-0042 |\n| OQ-0004 | Q | A | PARTLY SUPERSEDED (by DEC-0042) |\n| OQ-0005 | Q | A | DONE (by DEC-042) |\n`,
-    "open-questions",
-  );
-  expect(parsed.rows.map((row) => row.status)).toEqual([
-    "DONE (by DEC-0042)",
-    "SUPERSEDED (by DEC-0042)",
-    "DONE by DEC-0042",
-    "PARTLY SUPERSEDED (by DEC-0042)",
-    "DONE (by DEC-042)",
-  ]);
-  expect(parsed.errors.map((error) => error.split(":")[0])).toEqual([
-    "open-questions row OQ-0003 has an invalid Status",
-    "open-questions row OQ-0004 has an invalid Status",
-    "open-questions row OQ-0005 has an invalid Status",
-  ]);
-});
-
-it.each([
-  ["TODO", true],
-  ["WIP", true],
-  ["DONE", false],
-  ["DEFERRED", false],
-] as const)("preserves Unadjudicated force at %s", (status, inForce) => {
-  expect(
-    classifyRecordRow({
-      id: "OQ-0001",
-      content: "Unadjudicated: Which path?",
-      approach: "Discuss",
-      status,
-    }),
-  ).toMatchObject({ kind: "unadjudicated", refs: [], inForce });
 });
 
 describe("ordered decision pages in the existing story model", () => {
-  const table = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+  const table = "| ID | Content | Approach |\n| --- | --- | --- |\n";
   const page = "# Decisions\n\n## Decisions\n\n" + table;
   // QFAI:EX-0001-0008-27
   it("reserves all historical page row and retired IDs before the root tail", () => {
@@ -599,16 +481,12 @@ describe("ordered decision pages in the existing story model", () => {
         "docs/spec/decisions.md",
         "# Decisions\n\n## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions\n\n" +
           table +
-          "| DEC-0002 | Tail | Keep | WIP |\n",
+          "| DEC-20261105093000 | Tail | Keep |\n",
       ],
-      [
-        "docs/spec/decisions/page-0001.md",
-        page + "| DEC-0042 | Retired US-0001-0009 | Keep | DONE |\n",
-      ],
+      ["docs/spec/decisions/page-0001.md", page + "| DEC-0042 | Retired US-0001-0009 | Keep |\n"],
     ]);
     const model = buildStoryTreeModel(files, { specsDir: "docs/spec" });
-    expect(model.decisions?.rows.map(({ id }) => id)).toEqual(["DEC-0042", "DEC-0002"]);
-    expect(nextStoryTreeId(model, "DEC")).toBe("DEC-0043");
+    expect(model.decisions?.rows.map(({ id }) => id)).toEqual(["DEC-0042", "DEC-20261105093000"]);
     expect(nextStoryTreeId(model, "US", "BF-0001")).toBe("US-0001-0010");
     expect(model).toMatchObject({
       decisionFiles: ["docs/spec/decisions/page-0001.md", "docs/spec/decisions.md"],
@@ -625,14 +503,14 @@ it.each([".", "./", ""])(
   "normalizes configured root %j and refuses orphan page history",
   (specsDir) => {
     const header =
-      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
     const page = "decisions/page-0001.md";
-    const history = header + "| DEC-0001 | Historical choice | Keep | DONE |\n";
+    const history = header + "| DEC-0001 | Historical choice | Keep |\n";
     const tail =
       header.replace(
         "## Decisions",
         "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
-      ) + "| DEC-0002 | Append tail | Keep | WIP |\n";
+      ) + "| DEC-0002 | Append tail | Keep |\n";
     const valid = buildModel(
       new Map([
         ["decisions.md", tail],
@@ -643,14 +521,14 @@ it.each([".", "./", ""])(
     expect(valid.decisionRegisterComplete).toBe(true);
     expect(valid.decisionFile).toBe("decisions.md");
     expect(valid.decisionOccurrences.map(({ row }) => row.id)).toEqual(["DEC-0001", "DEC-0002"]);
-    expect(nextStoryTreeId(valid, "DEC")).toBe("DEC-0003");
+    expect(nextStoryTreeId(valid, "BF")).toBe("BF-0001");
     const orphan = buildModel(new Map([[page, history]]), { specsDir });
     expect(orphan.decisionRegisterComplete).toBe(false);
     expect(orphan.decisionRegisterErrors).toContainEqual({
       file: "decisions.md",
       message: "Missing decisions root",
     });
-    expect(nextStoryTreeId.bind(null, orphan, "DEC")).toThrow(
+    expect(nextStoryTreeId.bind(null, orphan, "BF")).toThrow(
       /complete decision register.*unavailable/i,
     );
   },

@@ -21,8 +21,7 @@ The last step of a change route. It records the run's work as a local commit.
 
 - One commit on the current branch holding the run's changes.
 - In the final report: the commit, and the files it holds. In the
-  `resolve-conflicts` route, also each renumber commit the run made, including
-  one left after `git reset --merge ORIG_HEAD`.
+  `resolve-conflicts` route, also each renumber the merge holds, as old → new.
 
 A local commit records work; it does not establish formal verification. Push,
 pull request creation and merge each need a user instruction or project policy
@@ -88,8 +87,7 @@ When the delegated check reports, `verify-repo-gate`'s `## After CI` updates the
 
 - The commit exists and holds exactly the tracked deliverables the run wrote,
   or, in the `resolve-conflicts` route, the merge the run concluded. The final
-  report names each renumber commit the run made, including one left after
-  `git reset --merge ORIG_HEAD`.
+  report names each renumber the merge holds.
 - Pending CI is named in the report with the target, current head, run ID or URL
   when available, check, observed outcome and counts, blocker and resume condition.
   If no run exists, say so; invent no run ID or result.

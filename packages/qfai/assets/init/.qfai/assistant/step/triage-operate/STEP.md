@@ -32,14 +32,21 @@ operation. This step runs it and reports what happened.
    a new pull request starts when the user asked to see them pass. Poll no
    faster than the checks change. A failing check that a rerun does not clear
    stops the operation as a tracked change it needs, as below.
-4. Run the operation, and observe its result: the merge commit, the deploy
+4. Never enable a host's auto-merge. Before a merge, merge the base branch into
+   the pull request's branch locally (`git merge origin/<base>`), push, and
+   wait for the checks that push starts; only then merge. A conflict the host
+   shows only in `decisions.md`, its pages or `open-questions.md` is resolved
+   the same way: the union merge completes it. Edit no register row, renumber
+   no ID, and ask for no new review of that merge. A conflict in any other file
+   stops the operation as a tracked change it needs.
+5. Run the operation, and observe its result: the merge commit, the deploy
    status, the closed item.
-5. After a merge, check the merged result: the target branch holds the merge
+6. After a merge, check the merged result: the target branch holds the merge
    commit, and, when the user asked to see them pass or the project's policy
    requires it, the checks the project runs on that branch pass. A failure
    there is reported as `needs-change`, naming the merge commit, since the
    merge itself stands.
-6. Report the result as observed, including a failure.
+7. Report the result as observed, including a failure.
 
 Before creating an issue, search the tracker for a matching open issue with the
 forge CLI's issue search and key terms from the title. When one request files
@@ -52,8 +59,8 @@ rate limit, report that and leave creating the issue to the user, unless the
 instruction allows creating it without the search. The report names the issue
 matched or created.
 
-An operation that needs a tracked file to change, such as a conflict to resolve
-or a failing check to fix, stops here: report the outcome `needs-change` with an
+An operation that needs a tracked file to change, such as a conflict outside the
+registers to resolve or a failing check to fix, stops here: report the outcome `needs-change` with an
 extraction of the request as the change it needs, naming the artifacts that
 change, so the decision rules route it again. Change nothing to make the
 operation pass. List each follow-up in the final report, since no close step
@@ -61,9 +68,10 @@ follows.
 
 For a request to take one base change into several branches, first check each
 branch with `git merge-tree --write-tree <branch> <base>`, which writes
-nothing. A branch that merges cleanly is a branch update the user asked for:
-update it here as an operation, merged and pushed only as the instruction
-names. A branch with conflicts is not an operation: report `needs-change` with
+nothing. A branch that merges cleanly, or whose only conflicts lie in
+`decisions.md`, its pages or `open-questions.md`, is a branch update the user
+asked for: update it here as an operation, merged and pushed only as the
+instruction names. A branch with any other conflict is not an operation: report `needs-change` with
 one extraction for each such branch,
 `{ intent: order, qualifiers: [meaning-preserving] }` naming the artifacts of
 its conflicting paths, so the decision rules plan `resolve-conflicts` for
@@ -113,12 +121,13 @@ request, or the version edit alone.
 
 ## What it writes
 
-- No file git tracks.
+- No file git tracks, apart from the base changes a merge of the base brings
+  in.
 - The operation, its result and any `needs-change` outcome, in the report.
 
 ## Gate
 
 The stage worker confirms the operation was one the user named, its result is
-recorded as observed, and no tracked file changed. For a release, it also
+recorded as observed, and no tracked file changed beyond a merge of the base. For a release, it also
 confirms the delegation is quoted with its source, and that no tag, publication
 or publication approval came from the agent.

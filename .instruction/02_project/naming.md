@@ -57,10 +57,13 @@ one kind of content each section holds. `qfai validate` reports a violation as
 - acceptance criterion: `AC-0001-0001-01` under its story
 - example: `EX-0001-0001-01` with one `AC-Ref`
 - business rule: `BR-0001` in a contract, citing its examples
-- decision and open question: `DEC-0001`, `OQ-0001`
+- decision and open question: `DEC-yyyymmddhhMMss`, `OQ-yyyymmddhhMMss`, the UTC
+  time the row is written; a second already taken moves to the next free one.
+  Legacy `DEC-0001` and `OQ-0001` rows keep their IDs.
 
-A new ID comes from `node scripts/story-ids.mjs next <scope>...`, for example
-`next DEC EX-0001-0054`. It is a candidate, not a reservation. The command
+A decision or question ID takes no candidate. Every other new ID comes from
+`node scripts/story-ids.mjs next <scope>...`, for example
+`next EX-0001-0054`. It is a candidate, not a reservation. The command
 counts a snapshot of main, the latest 100 updated open pull requests and the
 working tree. It does not guarantee unique allocation for unpublished branches
 or simultaneous checks followed by pushes.
@@ -72,6 +75,9 @@ with a fresh `next` candidate, commit them, then check again. After any change o
 merge, check again before pushing.
 
 A collision returns 1 and names the ID and published branch that also adds it.
+For a DEC or OQ ID, two rows were written in the same second: delete this
+branch's own row and append it again under a new timestamp ID, updating the
+citations this branch added. A row another branch holds is never renumbered.
 An unfinished merge returns 2 without comparing IDs. Finish the merge, then
 check again; this refusal is not a successful collision check.
 

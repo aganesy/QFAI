@@ -49,10 +49,10 @@ describe("qfai-sdd story-tree templates", () => {
       );
     });
 
-    it(`${root}: decision tables use four cells and reserve status changes`, async () => {
+    it(`${root}: decision tables use three cells`, async () => {
       for (const file of ["decisions.md", "open-questions.md"]) {
         const template = await read(root, file);
-        expect(template).toMatch(/^\| ID\s*\| Content\s*\| Approach\s*\| Status\s*\|$/m);
+        expect(template).toMatch(/^\| ID\s*\| Content\s*\| Approach\s*\|$/m);
       }
     });
   }

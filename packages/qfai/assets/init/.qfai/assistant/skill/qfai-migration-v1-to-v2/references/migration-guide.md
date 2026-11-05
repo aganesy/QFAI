@@ -200,13 +200,12 @@ Finish each kind of item that a step leaves as follows:
   when step 8 rewrote the old annotations to the example level. Finish each
   with the test, or with a `decisions.md` row whose Content is `Test exception:`
   followed by the ID of the example or criterion, whose Approach holds the
-  reason and whose Status is DONE.
+  reason.
 - **A test-case annotation in an E2E file.** Step 8 leaves it unchanged,
   because an example annotation there is an error, and lists its file, line,
   annotation and example. Settle it with a test outside the E2E layer annotated
   with that example, or with a `decisions.md` row whose Content is
-  `Test exception: <EX>`, whose Approach holds the reason and whose Status is
-  DONE. Then delete the old annotation, because step 8 lists it on each run
+  `Test exception: <EX>`, whose Approach holds the reason. Then delete the old annotation, because step 8 lists it on each run
   until it is deleted.
 - **An annotation of an unplaced example.** Step 8 keeps it as written and lists
   its file and line. Edit an annotation by hand only for an example step 4 left

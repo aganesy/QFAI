@@ -18,8 +18,10 @@ describe("Implementation evidence ownership", () => {
     const drift = await asset("rule/drift-protocol.md");
     const skill = await asset("step/implement-tdd/STEP.md");
     expect(drift).toContain("A downstream skill does not edit an approved specification");
-    expect(drift).toContain("A new change-request row in decisions.md is permitted");
-    expect(drift).toContain("TODO is not authorization");
+    expect(drift).toContain(
+      "Appending a row to decisions.md or open-questions.md needs no change request",
+    );
+    expect(drift).toContain("A row the base already holds authorizes nothing");
     expect(skill).toContain("A changed upstream obligation follows");
     expect(skill).toContain("rule/drift-protocol.md");
   });
@@ -34,11 +36,6 @@ describe("Implementation evidence ownership", () => {
     const drift = await asset("rule/drift-protocol.md");
     expect(drift).toContain("Rerun the owner skill against the affected artifact");
     expect(drift).toContain("Recheck every dependent BF, AC, and EX test obligation");
-    expect(drift).toContain(
-      "Complete the decision row by changing Status from WIP to DONE only after",
-    );
-    const rule = drift.replaceAll("`", "").replace(/\s+/g, " ");
-    expect(rule).toMatch(/DONE claims every action[^.!?]*Approach/);
-    expect(rule).toMatch(/deferred[^.!?]*keep the row at WIP/i);
+    expect(drift).toContain("No step edits the row afterwards.");
   });
 });

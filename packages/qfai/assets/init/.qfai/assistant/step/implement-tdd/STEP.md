@@ -126,8 +126,8 @@ Work the examples in this order:
 3. Otherwise the flow's EX IDs that no test annotates, in EX ID order. A test
    annotating an example is what says the example is done.
 
-An EX that a `decisions.md` row opening `Test exception:` names, with Status
-DONE, is exempt and is not selected.
+An EX that a `decisions.md` row opening `Test exception:` names is exempt while
+that row exists, and is not selected.
 
 See `.qfai/assistant/skill/qfai-implement/references/cross-spec-ownership.md`
 for changes that touch another flow and

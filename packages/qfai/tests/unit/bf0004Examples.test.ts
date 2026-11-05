@@ -4,11 +4,12 @@ import { cp, mkdtemp, mkdir, readFile, readdir, realpath, rm, writeFile } from "
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { parseRecordTable } from "../../src/core/storyTree/tables.js";
+import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
+import { classifyRecordRow } from "../../src/core/storyTree/tables.js";
 import { validateProject } from "../../src/core/validate.js";
 import { runInit } from "../helpers/legacyInit.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
@@ -27,6 +28,7 @@ import { step08 } from "../../src/migration/specToStory/step08RewriteAnnotations
 const roots: string[] = [];
 
 afterEach(async () => {
+  vi.useRealTimers();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
@@ -48,6 +50,24 @@ async function fixture(
     contractsDir: path.join(root, settings.paths.contractsDir),
     config: settings,
   };
+}
+
+type RegisterRow = { id: string; content: string; approach: string };
+
+/** The rows of a register's ID, Content and Approach table, failing on any other shape. */
+function registerRows(text: string): RegisterRow[] {
+  const table = parseAllMarkdownTables(text).find((candidate) => candidate.headers[0] === "ID");
+  expect(table?.headers).toEqual(["ID", "Content", "Approach"]);
+  return (table?.rows ?? []).map((cells) => {
+    expect(cells).toHaveLength(3);
+    return { id: cells[0] ?? "", content: cells[1] ?? "", approach: cells[2] ?? "" };
+  });
+}
+
+/** Step 2 takes its first timestamp ID from the clock; only Date is faked. */
+function runStartsAt(iso: string): void {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(iso));
 }
 
 async function put(root: string, relative: string, content: string): Promise<void> {
@@ -345,13 +365,8 @@ describe("BF-0004 migration examples", () => {
     await put(context.root, ".qfai/spec/spec-0001/07_Decisions.md", decisions);
     await put(context.root, ".qfai/spec/spec-0001/08_Open-questions.md", questions);
     expect((await run(step02, context)).code).toBe(0);
-    expect(
-      parseRecordTable(await read(context.root, ".qfai/spec/decisions.md"), "decisions").rows,
-    ).toHaveLength(1);
-    expect(
-      parseRecordTable(await read(context.root, ".qfai/spec/open-questions.md"), "open-questions")
-        .rows,
-    ).toHaveLength(1);
+    expect(registerRows(await read(context.root, ".qfai/spec/decisions.md"))).toHaveLength(1);
+    expect(registerRows(await read(context.root, ".qfai/spec/open-questions.md"))).toHaveLength(1);
     await expect(read(context.root, ".qfai/spec/spec-0001/07_Decisions.md")).rejects.toMatchObject({
       code: "ENOENT",
     });
@@ -445,15 +460,14 @@ describe("BF-0004 migration examples", () => {
   });
 
   // QFAI:EX-0004-0005-01
-  // QFAI:EX-0004-0005-02
-  it("merges all six decision origins into consecutive four-cell records", async () => {
+  it("merges all six decision origins into three-cell rows under consecutive timestamp IDs", async () => {
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
     await put(
       context.root,
       ".qfai/spec/spec-0001/07_Decisions.md",
-      "# Decisions\n\n### DR-0001: First\n\n- Status: accepted\n\n### DR-0002: Second\n\n- Status: proposed\n",
+      "# Decisions\n\n### DR-0001: First\n\n- Status: accepted\n\n### DR-0002: Second\n\n- Status: accepted\n",
     );
     await put(
       context.root,
@@ -468,51 +482,84 @@ describe("BF-0004 migration examples", () => {
     await put(
       context.root,
       ".qfai/decisions/CR-20260101-0001.md",
-      "# Request\n\n- ID: CR-20260101-0001\n- Title: Change paths\n- Status: accepted\n\n## Impact scope\n\n`src/a.ts` and `docs/b.md`\n",
+      "# Request\n\n- ID: CR-20260101-0001\n- Title: Change paths\n- Status: approved\n\n## Impact scope\n\n`src/a.ts` and `docs/b.md`\n",
     );
+    runStartsAt("2026-11-05T12:00:00.400Z");
     const result = await run(step02, context);
     expect(result.code).toBe(0);
-    const decisions = parseRecordTable(
-      await read(context.root, ".qfai/spec/decisions.md"),
-      "decisions",
-    );
-    expect(decisions.errors).toEqual([]);
-    expect(decisions.rows).toHaveLength(6);
-    expect(decisions.rows.map((row) => row.id)).toEqual([
-      "DEC-0001",
-      "DEC-0002",
-      "DEC-0003",
-      "DEC-0004",
-      "DEC-0005",
-      "DEC-0006",
+    const rows = registerRows(await read(context.root, ".qfai/spec/decisions.md"));
+    expect(rows.map((row) => row.id)).toEqual([
+      "DEC-20261105120000",
+      "DEC-20261105120001",
+      "DEC-20261105120002",
+      "DEC-20261105120003",
+      "DEC-20261105120004",
+      "DEC-20261105120005",
     ]);
-    for (const row of decisions.rows.slice(0, 5))
-      expect(row.content).toMatch(/^\.qfai\/spec\/.*#(?:DR-|DL-|Triage-)/);
-    const request = decisions.rows[5];
-    expect(request?.content).toContain("Change request: src/a.ts, docs/b.md");
-    expect(request?.approach).toMatch(/^\.qfai\/decisions\/CR-20260101-0001\.md:/);
+    expect(rows.slice(0, 5).map((row) => row.content.split(": ")[0])).toEqual([
+      ".qfai/spec/spec-0001/07_Decisions.md#DR-0001",
+      ".qfai/spec/spec-0001/07_Decisions.md#DR-0002",
+      ".qfai/spec/spec-0001/09_delta.md#DL-0001",
+      ".qfai/spec/spec-0001/09_delta.md#Triage-0001",
+      ".qfai/spec/_policies/08_Decisions.md#DR-0003",
+    ]);
+    expect(rows[5]?.content).toBe("Change request: src/a.ts, docs/b.md");
+    expect(rows[5] && classifyRecordRow(rows[5]).refs).toEqual(["src/a.ts", "docs/b.md"]);
+    expect(
+      rows[5]?.approach.startsWith(".qfai/decisions/CR-20260101-0001.md#CR-20260101-0001: "),
+    ).toBe(true);
+  });
+
+  // QFAI:EX-0004-0005-02
+  it("writes an approved change request as a change request and a rejected one as declined", async () => {
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    const request = (id: string, status: string): string =>
+      `# Request\n\n- ID: ${id}\n- Title: ${id} title\n- Status: ${status}\n\n## Impact scope\n\n\`src/a.ts\` and \`docs/b.md\`\n`;
+    await put(context.root, ".qfai/decisions/CR-20260101-0001.md", request("CR-1", "approved"));
+    await put(context.root, ".qfai/decisions/CR-20260101-0002.md", request("CR-2", "rejected"));
+    expect((await run(step02, context)).code).toBe(0);
+    const rows = registerRows(await read(context.root, ".qfai/spec/decisions.md"));
+    expect(rows.map((row) => row.content)).toEqual([
+      "Change request: src/a.ts, docs/b.md",
+      "Declined change request: src/a.ts, docs/b.md",
+    ]);
+    expect(rows.map((row) => classifyRecordRow(row))).toMatchObject([
+      { kind: "change-request", refs: ["src/a.ts", "docs/b.md"] },
+      { kind: "declined-change-request", refs: ["src/a.ts", "docs/b.md"] },
+    ]);
+    expect(rows[0]?.approach.startsWith(".qfai/decisions/CR-20260101-0001.md#CR-1: ")).toBe(true);
+    expect(rows[1]?.approach.startsWith(".qfai/decisions/CR-20260101-0002.md#CR-2: ")).toBe(true);
+    await expect(read(context.root, ".qfai/spec/open-questions.md")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
   });
 
   // QFAI:EX-0004-0005-09
-  it("appends after the rows decisions.md already holds without changing them", async () => {
+  it("continues after the highest timestamp ID the register holds and keeps its rows byte-identical", async () => {
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
     const existing =
-      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | First kept decision | Kept | DONE |\n| DEC-0002 | Second kept decision | Kept | TODO |\n";
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n| DEC-0001 | First kept decision | Kept |\n| DEC-20261105130000 | Second kept decision | Kept |\n";
     await put(context.root, ".qfai/spec/decisions.md", existing);
     await put(
       context.root,
       ".qfai/spec/spec-0001/07_Decisions.md",
       "# Decisions\n\n### DR-0001: Choose A\n\n- Status: accepted\n",
     );
+    runStartsAt("2026-11-05T12:00:00Z");
     expect((await run(step02, context)).code).toBe(0);
     const text = await read(context.root, ".qfai/spec/decisions.md");
-    const rows = parseRecordTable(text, "decisions").rows;
-    expect(rows.map((row) => row.id)).toEqual(["DEC-0001", "DEC-0002", "DEC-0003"]);
+    expect(text.startsWith(existing)).toBe(true);
+    const rows = registerRows(text);
+    expect(rows.map((row) => row.id)).toEqual([
+      "DEC-0001",
+      "DEC-20261105130000",
+      "DEC-20261105130001",
+    ]);
     expect(rows[2]?.content).toContain("DR-0001");
-    for (const line of existing.split("\n").filter((entry) => entry.startsWith("| DEC-")))
-      expect(text).toContain(line);
   });
 
   it("records a retired pack without placing it in a new flow", async () => {
@@ -526,12 +573,9 @@ describe("BF-0004 migration examples", () => {
     );
     const result = await run(step02, context);
     expect(result.code).toBe(0);
-    const rows = parseRecordTable(
-      await read(context.root, ".qfai/spec/decisions.md"),
-      "decisions",
-    ).rows;
+    const rows = registerRows(await read(context.root, ".qfai/spec/decisions.md"));
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ status: "DONE" });
+    expect(rows[0]?.id).toMatch(/^DEC-\d{14}$/);
     expect(rows[0]?.content).toContain("spec-0001 is superseded by spec-0002");
     await expect(
       readdir(path.join(context.root, ".qfai/spec/02_business-flow")),
@@ -539,33 +583,37 @@ describe("BF-0004 migration examples", () => {
   });
 
   // QFAI:EX-0004-0005-06
-  it("maps question statuses while omitting the no-question row", async () => {
+  it("keeps open questions, records a resolved one as a decision and omits the no-question row", async () => {
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
+    const source = ".qfai/spec/spec-0001/08_Open-questions.md";
     await put(
       context.root,
-      ".qfai/spec/spec-0001/08_Open-questions.md",
-      "# Questions\n\n## Open Questions\n\n| OQ-ID | Question | Status | Notes |\n| --- | --- | --- | --- |\n| OQ-0001-0001 | First? | open | A |\n| OQ-0001-0002 | Second? | deferred | B |\n| OQ-0001-0003 | Third? | resolved | C |\n| OQ-0001-0004 | Fourth? | parked | D |\n| none | No questions | — | — |\n",
+      source,
+      "# Questions\n\n## Open Questions\n\n| OQ-ID | Question | Status | Notes |\n| --- | --- | --- | --- |\n| OQ-0001-0001 | First? | open | A |\n| OQ-0001-0002 | Second? | deferred | Revisit at the beta review |\n| OQ-0001-0003 | Third? | resolved | Use C |\n| OQ-0001-0004 | Fourth? | parked | D |\n| none | No questions | — | — |\n",
     );
+    runStartsAt("2026-11-05T12:00:00Z");
     expect((await run(step02, context)).code).toBe(0);
-    const rows = parseRecordTable(
-      await read(context.root, ".qfai/spec/open-questions.md"),
-      "open-questions",
-    ).rows;
-    expect(rows.map((row) => [row.id, row.status])).toEqual([
-      ["OQ-0001", "TODO"],
-      ["OQ-0002", "DEFERRED"],
-      ["OQ-0003", "DONE"],
-      ["OQ-0004", "TODO"],
+    const questions = registerRows(await read(context.root, ".qfai/spec/open-questions.md"));
+    expect(questions.map((row) => [row.id, row.content.split(": ")[0]])).toEqual([
+      ["OQ-20261105120000", `${source}#OQ-0001-0001`],
+      ["OQ-20261105120001", `${source}#OQ-0001-0002`],
+      ["OQ-20261105120002", `${source}#OQ-0001-0004`],
     ]);
-    expect(
-      rows.every((row) => row.content.startsWith(".qfai/spec/spec-0001/08_Open-questions.md#")),
-    ).toBe(true);
+    expect(questions[1]?.approach).toContain("Revisit at the beta review");
+    expect(questions[1]?.approach).toMatch(/next decision point/i);
+    const decisions = registerRows(await read(context.root, ".qfai/spec/decisions.md"));
+    expect(decisions).toHaveLength(1);
+    expect(decisions[0]?.id).toBe("DEC-20261105120000");
+    expect(decisions[0]?.content.startsWith(`${source}#OQ-0001-0003`)).toBe(true);
+    expect(decisions[0]?.content).toContain("Third?");
+    expect(decisions[0]?.content).toContain("Use C");
+    expect(JSON.stringify([...questions, ...decisions])).not.toContain("No questions");
   });
 
   // QFAI:EX-0004-0005-07
-  it("preserves an unadjudicated question as TODO with an origin", async () => {
+  it("keeps an unadjudicated question as a question row with its origin in Approach", async () => {
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -575,11 +623,8 @@ describe("BF-0004 migration examples", () => {
       "# Questions\n\n## Open Questions\n\n| OQ-ID | Question | Status | Notes |\n| --- | --- | --- | --- |\n| OQ-0001-0001 | Choose a path? | unadjudicated | Needs review |\n",
     );
     expect((await run(step02, context)).code).toBe(0);
-    const row = parseRecordTable(
-      await read(context.root, ".qfai/spec/open-questions.md"),
-      "open-questions",
-    ).rows[0];
-    expect(row).toMatchObject({ status: "TODO" });
+    const row = registerRows(await read(context.root, ".qfai/spec/open-questions.md"))[0];
+    expect(row?.id).toMatch(/^OQ-\d{14}$/);
     expect(row?.content).toBe("Unadjudicated: Choose a path?");
     expect(row?.approach).toMatch(/^\.qfai\/spec\/spec-0001\/08_Open-questions\.md/);
     expect(row?.approach).toContain("Needs review");
@@ -597,13 +642,15 @@ describe("BF-0004 migration examples", () => {
     );
     const result = await run(step02, context);
     expect(result.code).toBe(3);
-    expect(result.output).toContain("DR-0001 has no migrated successor");
-    expect(result.output).toContain("DR-0002 has no migrated successor");
-    const rows = parseRecordTable(
-      await read(context.root, ".qfai/spec/decisions.md"),
-      "decisions",
-    ).rows;
-    expect(rows.map((row) => row.status)).toEqual(["TODO", "TODO"]);
+    expect(result.output).toContain(
+      ".qfai/spec/spec-0001/07_Decisions.md: DR-0001 has no migrated successor",
+    );
+    expect(result.output).toContain(
+      ".qfai/spec/spec-0001/07_Decisions.md: DR-0002 has no migrated successor",
+    );
+    const rows = registerRows(await read(context.root, ".qfai/spec/decisions.md"));
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => /^DEC-\d{14}$/.test(row.id))).toBe(true);
   });
 
   // QFAI:EX-0004-0010-01

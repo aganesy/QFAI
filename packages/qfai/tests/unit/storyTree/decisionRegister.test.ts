@@ -8,12 +8,11 @@ const specs = "docs/spec";
 const rootFile = `${specs}/decisions.md`;
 const firstPage = `${specs}/decisions/page-0001.md`;
 const secondPage = `${specs}/decisions/page-0002.md`;
-const header =
-  "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+const header = "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n";
 const approach =
   "- Evidence: file:docs/source.md - Grounds: approved scope - Residual risk: bounded - Rollback: restore original bytes";
-const row = (id: string, content = "Choice", status = "DONE", reason = "Keep"): string =>
-  `| ${id} | ${content} | ${reason} | ${status} |\n`;
+const row = (id: string, content = "Choice", reason = "Keep"): string =>
+  `| ${id} | ${content} | ${reason} |\n`;
 
 function index(pages: string[], tail = ""): string {
   return (
@@ -36,7 +35,7 @@ function recordFindings(tree: ReturnType<typeof model>) {
 
 describe("the complete decision register", () => {
   // QFAI:EX-0001-0053-24
-  it("reads every legacy root row without rewriting an oversized document", () => {
+  it("reads every root row of an oversized root and raises no size finding for it", () => {
     const raw =
       header +
       Array.from({ length: 496 }, (_, n) => row(`DEC-${String(n + 1).padStart(4, "0")}`)).join("");
@@ -45,40 +44,23 @@ describe("the complete decision register", () => {
     expect(tree.decisions?.rows).toHaveLength(496);
     expect(tree.decisions?.rows.at(-1)?.id).toBe("DEC-0496");
     expect(files.get(rootFile)).toBe(raw);
-    expect(tree).toMatchObject({
-      decisionRegisterErrors: [
-        expect.objectContaining({
-          file: rootFile,
-          message: expect.stringMatching(/500|501|502/),
-        }),
-      ],
-    });
+    expect(tree).toMatchObject({ decisionRegisterErrors: [], decisionRegisterComplete: true });
   });
 
   // QFAI:EX-0001-0053-25
-  it("keeps listed page order, root tail, four cells and physical raw origins", () => {
-    const a = row("DEC-0002", "Test exception: AC-0001-0053-01", "DONE");
-    const b = row("DEC-0001", "Test exception: EX-0001-0053-01", "WIP").replace(/\n$/, "\r\n");
-    const c = row("DEC-0003", "Successor", "DONE");
+  it("keeps listed page order, root tail, three cells and physical raw origins", () => {
+    const a = row("DEC-0002", "Test exception: AC-0001-0053-01");
+    const b = row("DEC-0001", "Test exception: EX-0001-0053-01").replace(/\n$/, "\r\n");
+    const c = row("DEC-20261105093000", "Successor", "Supersedes DEC-0002");
     const tree = model([
       [firstPage, header + b],
       [secondPage, header + a],
       [rootFile, index(["decisions/page-0002.md", "decisions/page-0001.md"], c)],
     ]);
     expect(tree.decisions?.rows).toEqual([
-      {
-        id: "DEC-0002",
-        content: "Test exception: AC-0001-0053-01",
-        approach: "Keep",
-        status: "DONE",
-      },
-      {
-        id: "DEC-0001",
-        content: "Test exception: EX-0001-0053-01",
-        approach: "Keep",
-        status: "WIP",
-      },
-      { id: "DEC-0003", content: "Successor", approach: "Keep", status: "DONE" },
+      { id: "DEC-0002", content: "Test exception: AC-0001-0053-01", approach: "Keep" },
+      { id: "DEC-0001", content: "Test exception: EX-0001-0053-01", approach: "Keep" },
+      { id: "DEC-20261105093000", content: "Successor", approach: "Supersedes DEC-0002" },
     ]);
     expect(tree).toMatchObject({
       decisionFile: rootFile,
@@ -133,7 +115,9 @@ describe("the complete decision register", () => {
       ],
     });
     expect(tree.decisions?.rows ?? []).toEqual([]);
-    expect(() => nextStoryTreeId(tree, "DEC")).toThrow(/page-0002|incomplete|register|read/i);
+    expect(() => nextStoryTreeId(tree, "US", "BF-0001")).toThrow(
+      /page-0002|incomplete|register|read/i,
+    );
   });
 
   // QFAI:EX-0001-0053-28
@@ -186,38 +170,34 @@ describe("the complete decision register", () => {
   });
 
   // QFAI:EX-0001-0053-30
-  it.each([499, 500, 501])(
-    "counts %i physical lines including headings, blanks and comments",
-    (lines) => {
-      const raw = header + row("DEC-0001") + "<!-- retained comment -->\n" + "\n".repeat(lines - 8);
-      for (const paged of [false, true]) {
-        const file = paged ? firstPage : rootFile;
-        const tree = model(
-          paged
-            ? [
-                [rootFile, index(["decisions/page-0001.md"])],
-                [file, raw],
-              ]
-            : [[file, raw]],
-        );
-        expect(tree.decisions?.rows).toHaveLength(1);
-        if (lines <= 500) expect(tree).toMatchObject({ decisionRegisterErrors: [] });
-        else
-          expect(tree).toMatchObject({
-            decisionRegisterErrors: expect.arrayContaining([
-              expect.objectContaining({ file, message: expect.stringMatching(/501|500/) }),
-            ]),
-          });
-      }
-    },
-  );
+  it.each([499, 500, 501])("counts %i physical lines of a page, and none of the root", (lines) => {
+    const raw = header + row("DEC-0001") + "<!-- retained comment -->\n" + "\n".repeat(lines - 8);
+    for (const paged of [false, true]) {
+      const file = paged ? firstPage : rootFile;
+      const tree = model(
+        paged
+          ? [
+              [rootFile, index(["decisions/page-0001.md"])],
+              [file, raw],
+            ]
+          : [[file, raw]],
+      );
+      expect(tree.decisions?.rows).toHaveLength(1);
+      if (lines <= 500 || !paged) expect(tree).toMatchObject({ decisionRegisterErrors: [] });
+      else
+        expect(tree).toMatchObject({
+          decisionRegisterErrors: expect.arrayContaining([
+            expect.objectContaining({ file, message: expect.stringMatching(/501|500/) }),
+          ]),
+        });
+    }
+  });
 
   // QFAI:EX-0001-0053-31
   it.each([
-    ["fifth cell", "| DEC-0001 | Choice | Keep | DONE | extra |\n", /cells|column/i],
-    ["invalid Status", row("DEC-0001", "Choice", "ACCEPTED"), /Status/],
-    ["malformed Approach", row("DEC-2099", "Choice", "DONE", "Keep"), /Evidence|Grounds/],
-    ["missing successor", row("DEC-0001", "Choice", "SUPERSEDED (by DEC-0002)"), /DEC-0002/],
+    ["fourth cell", "| DEC-0001 | Choice | Keep | extra |\n", /cells|column/i],
+    ["malformed Approach", row("DEC-2099", "Choice", "Keep"), /Evidence|Grounds/],
+    ["missing superseded decision", row("DEC-0001", "Choice", "Supersedes DEC-0002"), /DEC-0002/],
   ])("keeps the %s finding at its physical page", (_name, raw, problem) => {
     const tree = model([
       [rootFile, index(["decisions/page-0001.md"])],
@@ -244,13 +224,14 @@ describe("the complete decision register", () => {
       [rootFile, index(["decisions/page-0001.md"], row("DEC-0001"))],
       [
         firstPage,
-        header + row("DEC-0090", "Retired AC-0001-0001-98 and EX-0001-0001-99", "DONE", approach),
+        header + row("DEC-0090", "Retired AC-0001-0001-97 and EX-0001-0001-99", approach),
       ],
     ]);
-    expect(nextStoryTreeId(tree, "DEC")).toBe("DEC-0091");
-    expect(nextStoryTreeId(tree, "AC", "US-0001-0001")).toBe("AC-0001-0001-99");
+    expect(nextStoryTreeId(tree, "AC", "US-0001-0001")).toBe("AC-0001-0001-98");
     expect(() => nextStoryTreeId(tree, "EX", "US-0001-0001")).toThrow(/exhausted.*US-0001-0001/i);
-    const claims = [nextStoryTreeId(tree, "DEC"), "DEC-0095"];
-    expect(nextId("DEC", [...tree.declarations.map(({ id }) => id), ...claims])).toBe("DEC-0096");
+    const claims = [nextStoryTreeId(tree, "AC", "US-0001-0001"), "AC-0001-0001-98"];
+    expect(
+      nextId("AC", [...tree.declarations.map(({ id }) => id), ...claims], "US-0001-0001"),
+    ).toBe("AC-0001-0001-99");
   });
 });

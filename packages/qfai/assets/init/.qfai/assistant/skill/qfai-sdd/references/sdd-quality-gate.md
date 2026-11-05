@@ -9,7 +9,7 @@ The gate checks the story-tree files against their shipped templates, the docume
 - 02_business-flow/business-flows.md indexes real BF directories. Each business-flow.md has exactly one Mermaid flowchart or sequenceDiagram, in `## Flow`.
 - Each story directory holds exactly 01_User-story.md, 02_Acceptance-Criteria.md, and 03_Example.md.
 - The story tree was written from its paired templates under ../templates/spec/ and holds no heading, section, content kind or history they do not show, as the `Document shapes` section of the spec traceability rules sets out.
-- decisions.md and open-questions.md have four cells per row: ID, Content, Approach, Status. Existing rows changed only in Status.
+- decisions.md and open-questions.md have three cells per row: ID, Content, Approach. No existing decision row changed, and no existing question row was edited.
 - Each change the user approved, retirement included, has its `Change request:` decision row recording who approved it, when, and the option chosen. No row records a decision the agent took. Unanswered critical decisions have open-question rows and prevent completion.
 
 ## Traceability and contracts

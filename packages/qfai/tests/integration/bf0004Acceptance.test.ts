@@ -1193,15 +1193,16 @@ describe("BF-0004 acceptance criteria", () => {
   // QFAI:AC-0004-0005-01
   it("merges old decisions with a new ID and a link to the old record", async () => {
     const decisions = await readFile(path.join(journey.root, ".qfai/spec/decisions.md"), "utf8");
-    const row = decisions.split(/\r?\n/).find((line) => line.includes("CR-0001.md#CR-0001"));
-    if (!row) throw new Error("Change-request decision row is absent");
+    const row = decisions
+      .split(/\r?\n/)
+      .find((line) => line.includes("07_Decisions.md#DR-0001-0001"));
+    if (!row) throw new Error("Accepted-record decision row is absent");
     const cells = row
       .split("|")
       .slice(1, -1)
       .map((cell) => cell.trim());
-    expect(cells).toHaveLength(4);
-    expect(cells[0]).toMatch(/^DEC-\d{4}$/);
-    expect(cells[3]).toMatch(/^(?:TODO|DONE|DEFERRED|WIP)$/);
+    expect(cells).toHaveLength(3);
+    expect(cells[0]).toMatch(/^DEC-\d{14}$/);
   });
 
   // QFAI:EX-0004-0005-05
@@ -1217,7 +1218,7 @@ describe("BF-0004 acceptance criteria", () => {
     const retiredRow = decisions
       .split(/\r?\n/)
       .find((line) => line.includes("spec-0002 is superseded by spec-0001"));
-    expect(retiredRow).toContain("| DONE |");
+    expect(retiredRow).toMatch(/^\| DEC-\d{14} \|/);
     expect(step(root, 4).status).toBe(3);
     const map = JSON.parse(
       await readFile(path.join(root, "tmp/qfai-migration/id-map.json"), "utf8"),
@@ -1289,7 +1290,7 @@ describe("BF-0004 acceptance criteria", () => {
     const retiredRow = decisions
       .split(/\r?\n/)
       .find((line) => line.includes("spec-0002") && line.includes("deprecated"));
-    expect(retiredRow).toContain("| DONE |");
+    expect(retiredRow).toMatch(/^\| DEC-\d{14} \|/);
     expect(step(root, 4).status).toBe(3);
     const map = JSON.parse(
       await readFile(path.join(root, "tmp/qfai-migration/id-map.json"), "utf8"),
@@ -1306,8 +1307,11 @@ describe("BF-0004 acceptance criteria", () => {
       path.join(journey.root, ".qfai/spec/open-questions.md"),
       "utf8",
     );
-    expect(questions).toContain("OQ-0001-0001");
-    expect(questions).toMatch(/\| OQ-\d{4} \|/);
+    const decisions = await readFile(path.join(journey.root, ".qfai/spec/decisions.md"), "utf8");
+    // The resolved question is a decision row; the proposed change request is a question row.
+    expect(decisions).toContain("08_Open-questions.md#OQ-0001-0001");
+    expect(questions).not.toContain("OQ-0001-0001");
+    expect(questions).toMatch(/\| OQ-\d{14} \| [^|]*CR-0001\.md#CR-0001/);
   });
 
   // QFAI:AC-0004-0006-01
@@ -2179,7 +2183,6 @@ describe("BF-0004 acceptance criteria", () => {
     expect(item).toMatch(/decisions\.md/);
     expect(item).toMatch(new RegExp(`Test exception: (?:<EX>|${example})`));
     expect(item).toMatch(/Approach/);
-    expect(item).toMatch(/\bDONE\b/);
     expect(item).toMatch(/delet/i);
     // The old form is not an example annotation, so validation has no misplaced EX to report.
     const validated = await validateProject(root, undefined, { profile: "tdd" });
@@ -2571,8 +2574,8 @@ describe("BF-0004 acceptance criteria", () => {
         sentenceWith(/test-case annotation/i, "E2E", /\b(?:unchanged|stays|kept|keeps|leaves)\b/),
       ],
       [
-        "a DONE Test exception row in decisions.md settles an annotation no test can carry",
-        sentenceWith("`Test exception:", "`decisions.md`", "Approach", "DONE"),
+        "a Test exception row in decisions.md settles an annotation no test can carry",
+        sentenceWith("`Test exception:", "`decisions.md`", "Approach"),
       ],
       [
         "the old annotation is deleted once the test or the row exists",

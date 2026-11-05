@@ -4,6 +4,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The decision and question registers no longer collide across parallel
+  pull requests.** A new row takes the UTC time it is written as its ID
+  (`DEC-yyyymmddhhMMss`, `OQ-yyyymmddhhMMss`), so two branches never pick the
+  same number. A row is never edited after it is written: `decisions.md`
+  records decisions only, with the columns ID, Content and Approach, and
+  `open-questions.md` holds only open questions, whose row is deleted when a
+  decision settles it. Drift compares rows by ID, so the order a union merge
+  leaves them in does not matter, and a conflict confined to the registers is
+  resolved by merging the base branch locally and pushing, with no renumbering.
+  A rejected option opens `Declined:` or `Declined change request:`, and a
+  decision that replaces another says `Supersedes DEC-…` in its Approach.
+  `sdd-triage` also says where a decision's result belongs and how much of it
+  to write. A project with four-column registers fails `qfai validate` until
+  its agent drops the Status cell from every row. A settled question row may then
+  be deleted once a decision row names its ID; until one does, the row stays.
+
+### Removed
+
+- **`qfai sdd renumber-decision` and `qfai sdd next-id DEC|OQ`.** Timestamp
+  IDs need no allocation or renumbering. The page relocation, published-prefix
+  recovery and surplus-copy recovery procedures are gone with them, and so are
+  `QFAI-STORY-018` and `QFAI-STORY-019`, which checked register Status values.
+
 ### Fixed
 
 - **The Claude Code install check judges the checkout the session works in.**

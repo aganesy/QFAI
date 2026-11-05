@@ -282,8 +282,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-015",
     "QFAI-STORY-016",
     "QFAI-STORY-017",
-    "QFAI-STORY-018",
-    "QFAI-STORY-019",
     "QFAI-SPACK-102",
   ],
   "story-contract-index": ["QFAI-CONTRACT-034"],
@@ -1134,7 +1132,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-001": "Every required story-tree policy and contract file exists.",
   "QFAI-STORY-002": "Story-tree IDs are well formed, unique, and consistent with their paths.",
   "QFAI-STORY-003":
-    "The decisions and open-questions tables have valid records, and every decision or question a contract rule, a superseded row or an open-question Status names is declared by a row.",
+    "The decisions and open-questions tables have valid records, and every decision or question a contract rule cites, and every decision a decision row names after Supersedes, Narrows or Reopens, is declared by a row.",
   "QFAI-STORY-004": "Each story has acceptance criteria and examples with valid references.",
   "QFAI-STORY-005":
     "Every business rule and contract reference resolves, and a rule numbered BR-NNNN-NNNN carries the number of the contract that declares it.",
@@ -1145,9 +1143,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-008":
     "The selected profile's BF, AC, or EX test annotations name declared story-tree IDs.",
   "QFAI-STORY-009":
-    "Each test exception cites a declared BF, AC, or EX ID and a decision row in force.",
+    "Each test exception cites a declared BF, AC, or EX ID in a Test exception: decision row.",
   "QFAI-STORY-010":
-    "Protected story-tree files change through an in-force change request, and decision rows remain append-only.",
+    "Decision rows the base holds stay unchanged, question rows the base holds are kept unchanged or deleted once a row names them, and a row the branch adds takes a timestamp ID.",
   "QFAI-STORY-011":
     "The one Mermaid block in each business-flow file's `## Flow` section is a flowchart or sequence diagram.",
   "QFAI-STORY-012":
@@ -1159,11 +1157,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-016":
     "No spec document states a term `validation.staleTerms` lists, apart from the decision and open-question registers.",
   "QFAI-STORY-017":
-    "A decisions.md row recorded after the Approach form began to be checked holds Evidence, Grounds, Residual risk and Rollback in that order, none empty, with every Evidence entry a file: or command: item.",
-  "QFAI-STORY-018":
-    "An open-questions.md row that is DONE names the decision that answered it, as DONE (by DEC-NNNN).",
-  "QFAI-STORY-019":
-    "A decisions row at SUPERSEDED (by DEC-NNNN) or PARTLY SUPERSEDED (by DEC-NNNN) names a successor with a higher number than its own.",
+    "A four-digit decisions.md row recorded after the Approach form began to be checked holds Evidence, Grounds, Residual risk and Rollback in that order, none empty, with every Evidence entry a file: or command: item.",
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
@@ -1476,7 +1470,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-034":
     "Correct the named contract's ID, file name or index row, give a contract that shares a number the next free one, or remove a row that names no contract file, then rerun validate.",
   "QFAI-DRIFT-001":
-    "Restore the protected file, or record an in-force change request that names it before the change is committed: an uncommitted edit is not compared.",
+    "Restore the protected file, or append a Change request: row naming it on this branch before the change is committed: an uncommitted edit is not compared.",
   "QFAI-DRIFT-004":
     "Commit the change together with the change request row that names it, then rerun validate.",
   "QFAI-DRIFT-002":
@@ -1489,7 +1483,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-SCAN-002":
     "Fix the unreadable test path or reduce the configured test globs so the selected tests can all be scanned.",
   "QFAI-SPACK-102":
-    "Record the user's decision in the open-question row, or leave it open until the decision is made.",
+    "Once the user decides, append the decision row naming the question and delete the question row; until then leave it open.",
   "QFAI-STORY-001": "Create the required policy or contract file named in the finding.",
   "QFAI-STORY-002": "Correct the named story-tree ID or directory so the ID and path agree.",
   "QFAI-STORY-003":
@@ -1504,7 +1498,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-008":
     "Correct the annotation to a declared BF, AC, or EX ID, or remove a stale annotation.",
   "QFAI-STORY-010":
-    "Restore the protected row or record an in-force change request for the named file change.",
+    "Restore the named row as the base holds it, name a deleted question in the decision row that settles it, or give a row the branch adds a DEC-yyyymmddhhMMss or OQ-yyyymmddhhMMss ID.",
   "QFAI-STORY-011":
     "Make the `## Flow` section of the named business-flow file exactly one Mermaid flowchart or sequence diagram.",
   "QFAI-STORY-012":
@@ -1517,10 +1511,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Rewrite the named line to match the decision that replaced the term, or remove the term from `validation.staleTerms` if the line is right.",
   "QFAI-STORY-017":
     "Rewrite the named row's Approach cell in the form the qfai-sdd decisions template shows.",
-  "QFAI-STORY-018":
-    "Set the named row's Status to DONE (by DEC-NNNN), naming the decisions row that answered the question.",
-  "QFAI-STORY-019":
-    "Name the later decision that replaced the row, which has a higher number than the row's own ID, or set the row back to DONE if no later decision replaced it.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":

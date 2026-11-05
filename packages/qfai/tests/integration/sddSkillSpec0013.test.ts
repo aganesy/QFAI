@@ -110,19 +110,17 @@ describe("shipped qfai-sdd story-tree contract", () => {
     );
   });
 
-  it("uses four-column records with immutable content and no recycled IDs", async () => {
+  it("uses three-column records that are never rewritten, and no recycled IDs", async () => {
     const content = await skill();
-    expect(content).toContain("ID | Content | Approach | Status");
-    expect(content).toContain("Append rows only; afterwards change only Status");
+    expect(content).toContain("Every row has exactly `ID | Content | Approach`");
+    expect(content).toContain("`DEC-yyyymmddhhMMss` or `OQ-yyyymmddhhMMss`");
     expect(content).toContain(
-      "When a later decision replaces a row, change that row's Status to `SUPERSEDED (by DEC-NNNN)`, naming the later row, or to `PARTLY SUPERSEDED (by DEC-NNNN)` when it replaces only part of it.",
+      "A decisions.md row is appended once and never edited, moved or removed.",
     );
     expect(content).toContain(
-      "When a decision answers an open question, change that row's Status to `DONE (by DEC-NNNN)`; when a decision makes what the row states wrong before the question is answered, change it to `SUPERSEDED (by DEC-NNNN)` and append a new row for the question that remains.",
+      "When a decision settles an open question, the same change appends the decision row, naming the OQ ID, and deletes the question row.",
     );
-    expect((await reference("sdd-triage.md")).replace(/\s+/g, " ")).toContain(
-      "the `sdd-triage` step says when its Status becomes `DONE (by DEC-NNNN)` or `SUPERSEDED (by DEC-NNNN)`.",
-    );
+    expect(content).not.toMatch(/\bSUPERSEDED \(by DEC-/);
     expect(content).toContain("including retired IDs named in decisions rows");
     expect(content).toContain("A change request Content begins `Change request:`");
   });

@@ -83,10 +83,10 @@ describe("validateExternalReferences", () => {
     await inProject(
       {
         [decisions]:
-          "| DEC-0001 | Note | - Evidence: file:x - Grounds: `src/core/c.ts` now owns it - Residual risk: none — kept - Rollback: none — kept | DONE |\n",
+          "| DEC-0001 | Note | - Evidence: file:x - Grounds: `src/core/c.ts` now owns it - Residual risk: none — kept - Rollback: none — kept |\n",
         ".qfai/spec/decisions/page-0001.md":
-          "| DEC-0002 | Note | - Evidence: file:x - Residual risk: [the guide](docs/guide.md) may move | DONE |\n",
-        ".qfai/spec/open-questions.md": "| OQ-0001 | Does `src/i.ts` stay? | - | TODO |\n",
+          "| DEC-0002 | Note | - Evidence: file:x - Residual risk: [the guide](docs/guide.md) may move |\n",
+        ".qfai/spec/open-questions.md": "| OQ-0001 | Does `src/i.ts` stay? | - |\n",
         ".qfai/spec/notes.md": "Cites `src/x.ts`.\n",
         [policy]: "Read `docs/need.md`.\n",
       },

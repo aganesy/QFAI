@@ -71,11 +71,12 @@ Feature: Safe branch catch-up with CI pin resealing
 
   # AC-0002-0025-07
   Scenario: A register ID the union merge duplicated stops before commit and push
-    Given `decisions.md` and `open-questions.md` merge with the union merge driver
+    Given `decisions.md`, its pages and `open-questions.md` merge with the union merge driver, and two branches may each write a row in the same second
     When a merge leaves one register ID on two rows
     Then the register check fails, naming the ID, the register and both lines
     And the pull request lint lane runs that check, so the lint job fails rather than only the build job's full validation
     And the helper stops after staging its outputs and before its commit, retaining the merge, committing nothing and pushing nothing
+    And no row the base holds is renumbered: a branch whose own unmerged row collides deletes that row and appends it again under a new timestamp ID, updating the citations of it the branch added
 
   # AC-0002-0025-08
   Scenario: A changelog conflict inside Unreleased keeps both sides' entries
