@@ -152,13 +152,14 @@ export async function validateStoryTreeDrift(
       ...questionRowDrift(questions, baseModel, headModel, baseQuestions, headQuestions),
     );
   }
+  const decisionPages = `${path.posix.join(specs, "decisions")}/`;
   const isProtected = (file: string): boolean =>
     file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
     file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
     contracts === "" ||
     file.startsWith(`${contracts}/`) ||
     file === decisions ||
-    file.startsWith(`${path.posix.join(specs, "decisions")}/`) ||
+    file.startsWith(decisionPages) ||
     file === questions;
   const baseQuestionIds = new Set(baseQuestions.map(({ id }) => id));
   // The edits a protected file may take without a change request, against the head given.
@@ -166,7 +167,8 @@ export async function validateStoryTreeDrift(
   const needsNoRequest = (file: string, head: string | null): boolean => {
     const read = regularFileOrNull(() => readFileAtBase(root, baseBranch, file));
     if (read === null || head === null) return false;
-    const base = file === decisions || file === questions ? withoutStatusColumn(read) : read;
+    const register = file === decisions || file === questions || file.startsWith(decisionPages);
+    const base = register ? withoutStatusColumn(read) : read;
     return (
       (file === decisions && onlyAddsRows(base, head, baseIds, false)) ||
       (file === questions && onlyAddsRows(base, head, baseQuestionIds, true)) ||

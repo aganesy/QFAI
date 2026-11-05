@@ -1328,7 +1328,7 @@ describe("qfai-maintain", () => {
     expect(resolving).toContain("Fetch the base (`git fetch`).");
     expect(resolving).toContain("Start or resume the merge with `git merge --no-commit <base>`.");
     expect(resolving).toContain(
-      "The union merge resolves `decisions.md`, its pages and `open-questions.md` by keeping both sides' rows. Edit, move and renumber no register row.",
+      "The union merge resolves `decisions.md`, its pages and `open-questions.md` by keeping both sides' rows. Edit, move and renumber no register row, except that",
     );
     expect(resolving).toContain(
       "The base's item keeps its ID; never rename it. A story-tree item the branch added whose ID collides takes the next free ID of its scope, with every citation of it.",
@@ -1375,6 +1375,14 @@ describe("qfai-maintain", () => {
     );
     expect(commit).toContain(
       "except concluding the merge in progress of the `resolve-conflicts` route",
+    );
+  });
+
+  // QFAI:EX-0001-0220-63
+  it("deletes again a question row the union merge kept although one side deleted it", async () => {
+    const resolving = flat(sectionOf(await readShipped(MAINTAIN_EDIT), "## Resolving conflicts"));
+    expect(resolving).toContain(
+      "Edit, move and renumber no register row, except that a question row the union merge kept although one side deleted it is deleted again, since that deletion settled the question.",
     );
   });
 
