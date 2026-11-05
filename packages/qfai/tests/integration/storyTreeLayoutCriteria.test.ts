@@ -365,7 +365,7 @@ describe("records of triage, change requests and retired stories", () => {
   it("records them as decision rows and writes no decision directory or retired-story file", async () => {
     const root = await initializedRoot();
     const decisions = await readFile(path.join(root, SPECS, "decisions.md"), "utf8");
-    expect(decisions).toMatch(/\| ID\s+\| Content\s+\| Approach\s+\| Status\s+\|/);
+    expect(decisions).toMatch(/^\| ID\s+\| Content\s+\| Approach\s+\|\s*$/m);
     const entries = (await readdir(root, { recursive: true })).map((entry) =>
       entry.split(path.sep).join("/"),
     );
