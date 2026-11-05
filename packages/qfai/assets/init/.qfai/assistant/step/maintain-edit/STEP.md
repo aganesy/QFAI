@@ -45,7 +45,9 @@ branch and keeps every record's meaning. `verify-commit` concludes the merge.
 1. Fetch the base (`git fetch`).
 2. Start or resume the merge with `git merge --no-commit <base>`. The union
    merge resolves `decisions.md`, its pages and `open-questions.md` by keeping
-   both sides' rows. Edit, move and renumber no register row.
+   both sides' rows. Edit, move and renumber no register row, except that a
+   question row the union merge kept although one side deleted it is deleted
+   again, since that deletion settled the question.
 3. Resolve each other conflict. The base's item keeps its ID; never rename it.
    A story-tree item the branch added whose ID collides takes the next free ID
    of its scope, with every citation of it. Every other edit only keeps what

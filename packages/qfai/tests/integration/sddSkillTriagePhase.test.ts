@@ -70,7 +70,9 @@ describe("qfai-sdd triage surface", () => {
     const conflicts = flat(sectionOf(await triage(), "### Register conflicts"));
     expect(conflicts).toContain("`git merge origin/<base>`");
     expect(conflicts).toContain("the union merge keeps both sides' rows. Push the merge.");
-    expect(conflicts).toContain("Renumber no row, and edit or move none.");
+    expect(conflicts).toContain(
+      "Renumber no row, and edit or move none, except to delete again a question row the union merge kept although one side deleted it",
+    );
     expect(conflicts).toMatch(/The row the base holds keeps it/);
     expect(conflicts).toMatch(
       /deletes its own row.*appends it again under a new timestamp ID.*citations of it that the branch added/,

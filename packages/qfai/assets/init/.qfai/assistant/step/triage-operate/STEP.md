@@ -36,8 +36,10 @@ operation. This step runs it and reports what happened.
    the pull request's branch locally (`git merge origin/<base>`), push, and
    wait for the checks that push starts; only then merge. A conflict the host
    shows only in `decisions.md`, its pages or `open-questions.md` is resolved
-   the same way: the union merge completes it. Edit no register row, renumber
-   no ID, and ask for no new review of that merge. A conflict in any other file
+   the same way: the union merge completes it. Edit no register row except to
+   delete again a question row the union merge kept although one side deleted
+   it, committing that deletion before the push. Renumber no ID, and ask for no
+   new review of that merge. A conflict in any other file
    stops the operation as a tracked change it needs.
 5. Run the operation, and observe its result: the merge commit, the deploy
    status, the closed item.

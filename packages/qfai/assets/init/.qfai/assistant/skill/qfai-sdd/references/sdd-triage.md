@@ -189,7 +189,8 @@ The shipped `.gitattributes` merges `decisions.md`, its pages and
 `open-questions.md` with `merge=union`. A forge may still show a conflict in
 them. Resolve it by merging the fetched base locally, `git merge origin/<base>`:
 the union merge keeps both sides' rows. Push the merge. Renumber no row, and
-edit or move none.
+edit or move none, except to delete again a question row the union merge kept
+although one side deleted it, since that deletion settled the question.
 
 Two rows left with one ID come only from two rows written in the same second,
 and the duplicate-ID check names that ID. The row the base holds keeps it. The

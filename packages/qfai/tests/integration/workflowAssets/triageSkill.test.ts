@@ -295,7 +295,7 @@ describe("a question answered without a change", () => {
       /A conflict the host shows only in `decisions\.md`, its pages or `open-questions\.md` is resolved the same way: the union merge completes it/,
     );
     expect(procedure).toMatch(
-      /Edit no register row, renumber no ID, and ask for no new review of that merge/,
+      /Edit no register row except to delete again a question row the union merge kept although one side deleted it, committing that deletion before the push. Renumber no ID, and ask for no new review of that merge/,
     );
     expect(procedure).toMatch(
       /A conflict in any other file stops the operation as a tracked change it needs/,

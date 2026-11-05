@@ -14,12 +14,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `open-questions.md` holds only open questions, whose row is deleted when a
   decision settles it. Drift compares rows by ID, so the order a union merge
   leaves them in does not matter, and a conflict confined to the registers is
-  resolved by merging the base branch locally and pushing, with no renumbering.
-  A rejected option opens `Declined:` or `Declined change request:`, and a
+  resolved by merging the base branch locally and pushing, with no renumbering;
+  a question row the merge kept although one side deleted it is deleted again. A rejected option opens `Declined:` or `Declined change request:`, and a
   decision that replaces another says `Supersedes DEC-…` in its Approach.
   `sdd-triage` also says where a decision's result belongs and how much of it
   to write. A project with four-column registers fails `qfai validate` until
-  its agent drops the Status cell from every row. A settled question row may then
+  its agent drops the Status cell from every row, decision pages included; drift
+  reads a base that still holds the column without it, so that change needs no
+  change request. A settled question row may then
   be deleted once a decision row names its ID; until one does, the row stays.
 
 ### Removed

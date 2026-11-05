@@ -786,6 +786,41 @@ describe("story-tree drift", () => {
     expect(rewritten(items)).toEqual([]);
   });
 
+  // QFAI:EX-0001-0054-30
+  it("reads a decision page base that still holds a Status column without that column", async () => {
+    const page = `${specs}/decisions/page-0001.md`;
+    const listedRoot = table.replace(
+      "## Decisions",
+      "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+    );
+    const legacyPage = table
+      .replace("| ID | Content | Approach |", "| ID | Content | Approach | Status |")
+      .replace("| --- | --- | --- |", "| --- | --- | --- | --- |");
+    await branch(
+      { [decisions]: listedRoot, [page]: `${legacyPage}| DEC-0001 | Paged | Reason | DONE |\n` },
+      { [page]: `${table}| DEC-0001 | Paged | Reason |\n` },
+    );
+    const items = await findings("drift");
+    expect(upstream(items)).toEqual([]);
+    expect(rewritten(items)).toEqual([]);
+  });
+
+  it("still reports a page whose Status column is dropped together with an edited cell", async () => {
+    const page = `${specs}/decisions/page-0001.md`;
+    const listedRoot = table.replace(
+      "## Decisions",
+      "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
+    );
+    const legacyPage = table
+      .replace("| ID | Content | Approach |", "| ID | Content | Approach | Status |")
+      .replace("| --- | --- | --- |", "| --- | --- | --- | --- |");
+    await branch(
+      { [decisions]: listedRoot, [page]: `${legacyPage}| DEC-0001 | Paged | Reason | DONE |\n` },
+      { [page]: `${table}| DEC-0001 | Paged again | Reason |\n` },
+    );
+    expect(upstream(await findings("drift"))).toEqual([page]);
+  });
+
   describe("an edit that is not committed", () => {
     const contractFile = `${specs}/03_contract/cli/command.md`;
     const uncommitted = (findings: readonly { code: string }[]) =>
