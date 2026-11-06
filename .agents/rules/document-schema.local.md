@@ -69,7 +69,7 @@ Renovate groups both manifests and runs the same command in its repin job before
 the guard-byte and verification-body resealers. Install-script permissions stay
 unchanged; synchronization runs no install, build or test.
 
-## Writing a schema for mdschema 0.15.5
+## Writing a schema for mdschema 0.15.6
 
 | Fact                                                                           | Consequence                                          |
 | ------------------------------------------------------------------------------ | ---------------------------------------------------- |
