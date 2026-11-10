@@ -18,6 +18,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A grilling round asks the costly decisions first.** Within one round, a
+  decision that is hard to reverse, or that later decisions depend on, now
+  comes before one that is cheap to revise. The cheap decisions share one
+  question listing each recommendation and its reason: the user accepts them
+  all in one answer, or names the items to decide separately. The user still
+  decides every decision in a user session, and each accepted item is recorded
+  as theirs. A critical decision, a fact and a decision a document requires the
+  user to record are never grouped.
+
 - **The decision and question registers no longer collide across parallel
   pull requests.** A new row takes the UTC time it is written as its ID
   (`DEC-yyyymmddhhMMss`, `OQ-yyyymmddhhMMss`), so two branches never pick the

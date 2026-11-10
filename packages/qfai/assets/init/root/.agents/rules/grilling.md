@@ -217,6 +217,14 @@ One round is one frontier: asked in full, answered in full.
   of what is being decided together.
 - The next round is recomputed from the answers, never written ahead of them.
 
+**Upstream first: order the round by the cost of a wrong answer.** Dependency
+decides which round a question belongs to; cost decides its place within the
+round. A decision that is hard to reverse, or that later decisions hang on,
+comes first. Every other decision is cheap to revise; those come after the
+costly ones, and their recommendations share one grouped question (§ The shape
+of a question). The agent proposes which decisions are cheap; the user may move
+any of them out.
+
 Count rounds, not questions. Forty questions across four rounds is an ordinary
 session; the same forty asked one at a time is a worse one.
 
@@ -269,6 +277,19 @@ disagrees with the third names the third.
 Without a recommendation the user has to reconstruct the reasoning before they
 can disagree with it, and most rounds are long enough that they will stop
 reading instead.
+
+**Cheap decisions share one grouped question.** It lists each decision with its
+recommended answer and a one-line reason, and is answered once: accept every
+recommendation, or name the items to decide separately. The items are numbered
+in the question, and its two options are accepting all and deciding some
+separately, whose answer gives the item numbers. So the group stays one choose
+(`reply-forms.md` § 1) on the round's one carrier, however many items it holds.
+A named item is asked as its own question in the next round, with the rest of
+that round's frontier. Grouping is not delegation: in a user session the user
+still decides every decision, and an accepted group records each item as the
+user's decision. A critical decision, a fact, and a decision some document
+requires the user to record are never grouped. Grouping shapes only a question
+put to the user; a delegated session's rounds keep their own rules.
 
 **A question asking for a fact carries no recommended answer.** There is nothing
 to recommend: the agent does not hold the value, a guessed one is the corruption
