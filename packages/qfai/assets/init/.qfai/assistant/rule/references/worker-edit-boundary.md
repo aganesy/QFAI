@@ -18,7 +18,7 @@ This does not forbid shell authoring where the host already permits it.
 The session agent checks the diff against the current files in its own permitted
 checkout before applying it. If that edit is refused too, leave the application
 pending and continue only independent work. Follow the existing worktree or
-shared-index mode in `.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory`
+shared-index mode in `.qfai/assistant/rule/workflow.md#concurrency-every-stage`
 when assigning writers and integrating their paths.
 
 ## Work order template

@@ -9,7 +9,7 @@ requires: []
 
 The calling step names the gate and the scope. This step resolves the command,
 runs it and records what happened. Where a command comes from is
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands-mandatory`,
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands`,
 and how a failure is handled is
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 Neither is restated here.
@@ -24,7 +24,7 @@ Neither is restated here.
 - `qfai.config.yaml` for `paths.contractsDir`, `paths.outDir` and the test
   globs.
 - The launcher the preflight established, for a qfai command
-  (`.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`).
+  (`.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher`).
 - `.agents/rules/temporary-files.md`, when this step writes captured output or a script to a
   file.
 - `.agents/rules/api-budget.md`, when this step reads CI state or the project's items through

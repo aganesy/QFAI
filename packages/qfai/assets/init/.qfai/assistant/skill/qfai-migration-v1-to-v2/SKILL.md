@@ -7,8 +7,6 @@ allowed-tools: [Read, Glob, Write, Edit, Bash]
 
 ## /qfai-migration-v1-to-v2
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 ## User Questions (AskUserQuestion Protocol)
 
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`

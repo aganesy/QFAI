@@ -96,7 +96,7 @@ technical obstacle stops the work under Article IX of
 Before any gate runs, check that each gate in scope has an entry in
 `.qfai/spec/03_contract/tech.md#standard-commands-copy-paste`, the section
 `common-gate-run` reads. Discover and record a missing one as
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands-mandatory`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands`
 says. A gate still without an entry is UNRUN, and no PASS is claimed over it.
 
 ## For the rest of the run

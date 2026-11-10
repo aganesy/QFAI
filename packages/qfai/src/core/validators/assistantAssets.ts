@@ -20,7 +20,6 @@ import { issue } from "./utils.js";
 /** `TODO`, `FIXME`, `XXX`, `TBD`, `<placeholder>`, or whitespace only. */
 const TODO_PLACEHOLDER_RE = /^(?:\s*(?:TODO|FIXME|XXX|TBD|<placeholder>)\s*|\s*)$/i;
 
-const DRIFT_PROTOCOL_MARKER = "[DRIFT-PROTOCOL:REQUIRED]";
 const REVIEWER_GATE_BASELINE_HEADING_PATTERN = /^##\s+Reviewer Gate Baseline\s*$/m;
 const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
 
@@ -204,11 +203,9 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
 
   // The crawl reads the skill tree once, here, and every later check works from
   // the map it returns. A document is read a second time by nothing: the
-  // per-`SKILL.md` checks below and the reference graph share these bytes, so
-  // they can never disagree about a file's contents, and an unreadable
-  // `SKILL.md` is reported as `QFAI-SKILLS-014` rather than rejecting the whole
-  // validator before the rule could speak about it — which is what an unguarded
-  // `readFile` in the loop below would do, running first.
+  // checks below and the reference graph share these bytes, so they can never
+  // disagree about a file's contents, and an unreadable `SKILL.md` is reported
+  // as `QFAI-SKILLS-014` rather than rejecting the whole validator.
   //
   // **The crawl is not the whole graph.** It skips a hidden directory and the
   // trees excluded by default, because a document there is a document only where
@@ -222,26 +219,6 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   const { documents, unreadable, unreadableDirectories } = await readSkillDocuments(skillsDir);
 
   const skillFiles = await collectSkillFiles([skillsDir]);
-  for (const skillFile of skillFiles) {
-    const content = documents.get(skillFile);
-    if (content === undefined) {
-      // Unreadable, and already reported as `QFAI-SKILLS-014` above. The
-      // marker check has no bytes to judge.
-      continue;
-    }
-
-    if (!content.includes(DRIFT_PROTOCOL_MARKER)) {
-      issues.push(
-        issue(
-          "QFAI-SKILLS-010",
-          "SKILL.md is missing the required marker [DRIFT-PROTOCOL:REQUIRED].",
-          "error",
-          skillFile,
-          "skills.driftProtocolMarker",
-        ),
-      );
-    }
-  }
 
   // Every skill inherits the reviewer gate the delegation baseline states, so
   // the obligation is checked there once rather than restated in each skill.
@@ -844,7 +821,7 @@ async function collectSkillEntryPoints(skillsDir: string): Promise<string[]> {
 async function collectSkillFiles(dirs: string[]): Promise<string[]> {
   const files = await Promise.all(
     dirs.map((dir) =>
-      // The marker checks keep the default pruning: a `SKILL.md` inside a
+      // The skill walk keeps the default pruning: a `SKILL.md` inside a
       // vendored or built tree is not a document the skill's author wrote.
       collectFiles(dir, {
         ignoreDirs: [...DEFAULT_IGNORE_DIRS],
@@ -865,7 +842,7 @@ async function collectSkillFiles(dirs: string[]): Promise<string[]> {
  * dot-prefixed one directly under the skills root.
  *
  * A draft parked as `.draft/` is a skill nothing registers, so it has no entry
- * point to check and no `SKILL.md` the marker checks read. Those walks skip the
+ * point to check and no `SKILL.md` the skill walk reads. Those walks skip the
  * directory rather than drop its files afterwards, which would leave a
  * directory this process may not traverse failing the run over a skill the
  * host never loads. The document crawl skips it as well. A registered skill can

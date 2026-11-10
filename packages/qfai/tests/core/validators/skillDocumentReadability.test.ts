@@ -46,14 +46,7 @@ async function writeSkillFixture(root: string): Promise<string> {
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
     path.join(skillDir, "SKILL.md"),
-    [
-      "# demo-skill",
-      "",
-      "[DRIFT-PROTOCOL:REQUIRED]",
-      "",
-      `Follow \`references/${UNREADABLE_BASENAME}\`.`,
-      "",
-    ].join("\n"),
+    ["# demo-skill", "", `Follow \`references/${UNREADABLE_BASENAME}\`.`, ""].join("\n"),
     "utf-8",
   );
   await writeFile(path.join(referencesDir, UNREADABLE_BASENAME), "# Unreadable\n", "utf-8");
@@ -65,7 +58,7 @@ async function writeUnreadableSkillFixture(root: string): Promise<string> {
   const skillDir = path.join(root, ".qfai", "assistant", "skill", UNREADABLE_SKILL_DIR);
   await mkdir(skillDir, { recursive: true });
   const skillFile = path.join(skillDir, "SKILL.md");
-  await writeFile(skillFile, "# unreadable-skill\n\n[DRIFT-PROTOCOL:REQUIRED]\n", "utf-8");
+  await writeFile(skillFile, "# unreadable-skill\n", "utf-8");
   return skillFile;
 }
 

@@ -42,7 +42,7 @@ describe("every shipped skill and step runs under the AskUserQuestion protocol",
     for (const relativePath of COMMUNICATION_PATHS) {
       const content = await readFile(path.join(repoRoot, relativePath), "utf-8");
       expect(content).toContain(`\`.qfai/assistant/rule/${BASELINE_ANCHOR}\``);
-      expect(content).toContain("Every SKILL.md MUST cite that anchor");
+      expect(content).toContain("Every SKILL.md cites that anchor");
     }
   });
 
@@ -90,7 +90,7 @@ describe("every shipped skill and step runs under the AskUserQuestion protocol",
 
 describe("stage completion asks only when its next action requires an answer", () => {
   const STAGES: ReadonlyArray<readonly [string, string]> = [
-    ["qfai-discussion", "## Completion Message & Next Actions (MUST)"],
+    ["qfai-discussion", "## Completion Message & Next Actions"],
     ["qfai-sdd", "## Completion"],
     ["qfai-prototyping", "## Completion"],
     ["qfai-implement", "## Completion"],

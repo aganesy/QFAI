@@ -13,10 +13,8 @@ mode: approval-gated
 
 ## /qfai-sdd
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 Run the entry check of
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`
 first.
 
 Turn a requirement into a checkable story tree: BF → US → AC → EX, with each BR

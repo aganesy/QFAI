@@ -57,6 +57,7 @@ import { validateDiscussionCitations } from "./validators/discussionCitations.js
 import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
+import { validateInstructionAudit } from "./validators/instructionAudit.js";
 import { STEP_DIR_REL, validateStepTree } from "./validators/stepTree.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
@@ -275,17 +276,14 @@ export async function validateProject(
     options.platform,
     storyModel,
   );
-  const findings = explainVersionMismatch(
-    [
-      ...versionIssues,
-      ...configIssues,
-      ...securityIssues,
-      ...scopeIssues,
-      ...renderedIssues,
-      ...profileRun.issues,
-    ],
-    versionDifferenceNotes(olderThanDeclared, assistantMismatch),
-  );
+  const findings = [
+    ...versionIssues,
+    ...configIssues,
+    ...securityIssues,
+    ...scopeIssues,
+    ...renderedIssues,
+    ...profileRun.issues,
+  ];
   const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));
   const { issues, waivers } = await applyWaivers(root, scopedFindings);
 
@@ -564,57 +562,6 @@ function buildAssistantVersionIssues(mismatch: AssistantVersionMismatch | null):
   ];
 }
 
-/** What a generated-file finding gains from one version difference. */
-type VersionDifferenceNote = { readonly note: string; readonly action: string };
-
-function versionDifferenceNotes(
-  older: InstalledOlderThanDeclared | null,
-  assistant: AssistantVersionMismatch | null,
-): VersionDifferenceNote[] {
-  const notes: VersionDifferenceNote[] = [];
-  if (older !== null) {
-    notes.push({
-      note:
-        `The installed qfai ${older.installed} is older than the ` +
-        `${older.declaredLowest} this project declares, so this may be a version ` +
-        `difference and not a fault in the file (QFAI-TOOL-003).`,
-      action:
-        "Run the install command (`npm ci` / `pnpm install`) so the installed qfai " +
-        `satisfies ${older.declaredRange}, and run again before editing this file.`,
-    });
-  }
-  if (assistant !== null) {
-    notes.push({
-      note:
-        `${describeAssistantVersionMismatch(assistant)} This may be a version difference ` +
-        `and not a fault in the file (QFAI-TOOL-004).`,
-      action: assistantVersionRepair(assistant),
-    });
-  }
-  return notes;
-}
-
-/**
- * Rules whose input is a file `qfai init` generated. Under a version
- * difference each is reported as the difference it may be, with its repair,
- * instead of as a fault in the file that invites an edit to files nobody
- * touched.
- */
-const GENERATED_FILE_RULES: ReadonlySet<string> = new Set(["QFAI-SKILLS-010"]);
-
-function explainVersionMismatch(issues: Issue[], notes: readonly VersionDifferenceNote[]): Issue[] {
-  if (notes.length === 0) return issues;
-  return issues.map((entry) =>
-    GENERATED_FILE_RULES.has(entry.code)
-      ? {
-          ...entry,
-          message: [entry.message, ...notes.map((item) => item.note)].join(" "),
-          suggested_action: notes.map((item) => item.action).join(" "),
-        }
-      : entry,
-  );
-}
-
 function buildUnusedPlatformIssues(
   profile: ValidationProfile,
   platformOption: string | undefined,
@@ -817,6 +764,9 @@ async function runStoryProfileValidators(
           ...(await timed(timings, "step-tree", () => validateStepTree(root, config))),
           ...(await timed(timings, "assistant-assets", () =>
             validateAssistantAssets(root, config),
+          )),
+          ...(await timed(timings, "instruction-audit", () =>
+            validateInstructionAudit(root, config),
           )),
           // The prototyping group below runs the research summary, the
           // canonical UIX checks and the root DESIGN.md readiness gate, so the

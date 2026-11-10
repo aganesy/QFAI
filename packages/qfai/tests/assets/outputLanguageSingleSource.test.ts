@@ -51,8 +51,7 @@ const AGENT_SELECTION = `${CONSTITUTION_DIR}/agent-selection.md`;
 const CONSTITUTION = `${CONSTITUTION_DIR}/constitution.md`;
 const WORKFLOW = `${CONSTITUTION_DIR}/workflow.md`;
 
-const ABSOLUTE_RULE =
-  "**All outputs MUST be written in the user’s working language for this session.**";
+const ABSOLUTE_RULE = "**Write all outputs in the user’s working language for this session.**";
 
 /**
  * The documents an agent reads before anything else in this repository. None
@@ -104,7 +103,7 @@ describe("output language is stated in one place only", () => {
     it(`${tree}: agent selection contains no competing output-language rule`, async () => {
       const text = await read(tree, AGENT_SELECTION);
       expect(text).not.toContain("Absolute Rule — Output Language");
-      expect(text).not.toContain("All outputs MUST");
+      expect(text).not.toContain("Write all outputs");
     });
 
     it(`${tree}: the Absolute Rule itself still ships`, async () => {

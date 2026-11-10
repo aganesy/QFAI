@@ -15,7 +15,7 @@ copy of its definition.
 
 QFAI delegates by context, never by role. The session agent does every piece of
 work itself and starts a sub-agent only for one of the two reasons
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md#sub-agent-delegation-mandatory`
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#sub-agent-delegation`
 states. Each card serves one of them:
 
 | Card                       | Kind     | Briefed for                                                                                                          |

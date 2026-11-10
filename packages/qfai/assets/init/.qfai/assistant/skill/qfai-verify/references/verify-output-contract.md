@@ -10,7 +10,7 @@
 
 ## Verdict file
 
-`/qfai-verify` MUST write `.qfai/report/verify.json` at the end of the run. This file is the machine-readable verdict; the stage report is the human-readable account. No `qfai` command reads it, so an absent `verify.json` does not fail `npx qfai validate`.
+`/qfai-verify` writes `.qfai/report/verify.json` at the end of the run. This file is the machine-readable verdict; the stage report is the human-readable account. No `qfai` command reads it, so an absent `verify.json` does not fail `npx qfai validate`.
 
 Canonical path: `.qfai/report/verify.json`. Create the `.qfai/report/` directory if absent — it is the same directory `validate.json` is written to.
 

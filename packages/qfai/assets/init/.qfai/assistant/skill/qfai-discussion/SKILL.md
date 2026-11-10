@@ -11,10 +11,8 @@ mode: interactive-by-default
 
 ## /qfai-discussion - Exploration Planner
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 Run the entry check of
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`
 first.
 
 Produces the nine-file discussion pack at
@@ -104,7 +102,7 @@ The full logic, including the UI-bearing conditions, is
   `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 - Every finding of the one review is fixed or answered.
 
-## Completion Message & Next Actions (MUST)
+## Completion Message & Next Actions
 
 End the turn with a question listing the next actions, `/qfai-sdd` recommended, as `.agents/rules/user-questions.md` § 6 sets out. Under a no-question mode, list them in the report instead.
 

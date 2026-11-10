@@ -45,9 +45,7 @@ describe("E2E: parallel dispatch rules", () => {
     expect(policy).toMatch(
       /separate worktrees when.*host supports editing.*otherwise.*shared-index mode/,
     );
-    expect(policy).toContain(
-      ".qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory",
-    );
+    expect(policy).toContain(".qfai/assistant/rule/workflow.md#concurrency-every-stage");
     expect(policy).toMatch(/Creating a worktree does not grant edit permission/);
     expect(policy).toMatch(
       /refused edit.*shared-skill-delegation-baseline\.md#worker-edit-boundary/,
