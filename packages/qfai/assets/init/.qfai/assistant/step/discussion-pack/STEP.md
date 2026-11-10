@@ -135,25 +135,33 @@ Before the gate, parse every Mermaid diagram the pack holds with Mermaid's own
 grammar. `npx qfai validate` checks only that a diagram is there; a diagram that
 does not parse is otherwise found by CI, after handoff.
 
-1. Read the `mermaid@` and `jsdom@` versions from the install step of
-   `node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml`, the
-   shipped copy of the installed release.
-2. Install them into a directory of their own, never into the project's
-   dependency tree. Add `qfai` to the list when the project has no
-   `node_modules/qfai`.
+1. Where the project has no `node_modules/qfai`, install the release that
+   `npx qfai --version` prints into a directory of its own, and read
+   `tmp/qfai-release/node_modules/qfai/` wherever the steps below name
+   `node_modules/qfai/`.
+
+   ```bash
+   npm install --no-save --no-audit --no-fund --ignore-scripts --prefix=tmp/qfai-release qfai@<version>
+   ```
+
+2. Read the `mermaid@` and `jsdom@` versions from the install step of
+   `node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml`, or of
+   `tmp/qfai-release/node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml`,
+   the shipped copy of the installed release.
+3. Install them into a directory of their own, never into the project's
+   dependency tree.
 
    ```bash
    npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --prefix=tmp/qfai-mermaid mermaid@<version> jsdom@<version>
    ```
 
-3. Run the parser over the pack directory. Where the project has no
-   `node_modules/qfai`, run it from `tmp/qfai-mermaid/node_modules/qfai/`.
+4. Run the parser over the pack directory, from `tmp/qfai-release/node_modules/qfai/` where step 1 installed it.
 
    ```bash
    node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <pack directory>
    ```
 
-4. Fix each diagram it rejects, and run it again until it exits 0.
+5. Fix each diagram it rejects, and run it again until it exits 0.
 
 When the install or the run fails for a reason other than a rejected diagram,
 report the syntax check as not run, never as passed, and give the reason.

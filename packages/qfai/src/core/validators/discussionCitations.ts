@@ -59,7 +59,7 @@ function citationsOnLine(raw: string, unfenced: string): Citation[] {
 /** Whether an error says only that a path is not there. */
 function isAbsent(error: unknown): boolean {
   const code = error instanceof Error && "code" in error ? error.code : undefined;
-  return code === "ENOENT" || code === "ENOTDIR";
+  return code === "ENOENT" || code === "ENOTDIR" || code === "ELOOP";
 }
 
 /** The names in each directory, read once per run. */
@@ -110,7 +110,17 @@ async function lineCount(
   const parts = relative.split(/[/\\]/).filter((part) => part !== "" && part !== ".");
   if (parts.length === 0 || parts.includes("..")) return null;
   if (!(await existsWithExactCase(root, parts, listings))) return null;
-  const target = await realpath(path.join(root, ...parts));
+  try {
+    return await countLines(root, path.join(root, ...parts));
+  } catch (error) {
+    // A symbolic link whose target is gone is listed but cannot be opened.
+    if (isAbsent(error)) return null;
+    throw error;
+  }
+}
+
+async function countLines(root: string, file: string): Promise<number | null> {
+  const target = await realpath(file);
   const fromRoot = path.relative(await realpath(root), target);
   if (fromRoot.startsWith("..") || path.isAbsolute(fromRoot)) return null;
   if (!(await stat(target)).isFile()) return null;
