@@ -23,7 +23,8 @@ answer. No command, score or check decides that the loop is done.
 - `.qfai/prototype/iter-NN/index.html` (the generator), and in a `restyle`
   loop the project's stylesheet and motion files it restyles.
 - `.qfai/prototype/iter-NN/review.json` and
-  `iter-NN/<ui-contract-id>/<screen>.review.json` (the reviewer).
+  `iter-NN/<ui-contract-id>/<screen>.review.json` (the reviewer); in an
+  iteration with variants, the same files under `iter-NN/variant-<id>/`.
 - `.qfai/prototype/progress.md` (the session agent).
 - The session rows of `.qfai/prototype/grilling.md`.
 
@@ -110,6 +111,15 @@ answer: those start with this run.
 
 With `runScope` absent, every screen is in scope and nothing here applies.
 
+## Variants
+
+Record `variants` in `progress.md` with the planning fields above, before the
+run's first iteration: `A, B` or `A, B, C` when the direction is open, else
+`none`. The iteration loop reference's First-iteration variants section says
+when it is open and where each variant's review goes. Only that first
+iteration has variants; the next one builds one prototype from the user's
+answer.
+
 ## Procedure
 
 Run these for iteration `NN`: the next index after the iterations already
@@ -122,7 +132,8 @@ under `.qfai/prototype/`, or `00` when there are none.
    `.qfai/prototype/final/index.html`, every iteration. It starts from the
    primary UI contract preflight resolved: the one the request names, else
    `prototyping.primaryUiContract`. Writes
-   `.qfai/prototype/iter-NN/index.html`.
+   `.qfai/prototype/iter-NN/index.html`, holding every variant when
+   `variants` is not `none`.
 2. **Build** (the session agent). Serves `.qfai/prototype/` at the URL
    preflight checked, starting the server on the first iteration and keeping it
    running for the loop, and hands `<url>/iter-NN/` to the reviewer.
@@ -131,10 +142,12 @@ under `.qfai/prototype/`, or `00` when there are none.
    pair, and the per-iteration summary aggregated from them, per the reviewer
    prompt: the four ordinal UX axes, a critique of at most 500 words,
    `blockingFindings`, `layoutAntiPatternsDetected[]`,
-   `designMdViolations[]` and `pivotDirective`.
+   `designMdViolations[]` and `pivotDirective`. With variants, it reviews
+   each variant and returns one summary per variant.
 4. **Session agent.** Writes each payload to
    `iter-NN/<ui-contract-id>/<screen>.review.json` and the summary to
-   `iter-NN/review.json`. Each payload is checked against the closed schema
+   `iter-NN/review.json`. Each variant's files go under `iter-NN/variant-<id>/`.
+   Each payload is checked against the closed schema
    before it is written, and one that does not conform is asked for again. A
    summary whose `layoutAntiPatternsDetected[]` is not empty scores
    `informationArchitecture` at most `acceptable`; a higher score is written as
@@ -158,6 +171,14 @@ Show the user where the prototype is, the four scores, and every blocking
 finding, layout anti-pattern and `DESIGN.md` violation the review lists. The
 review informs the answer; it does not replace it.
 
+With variants, put them to the user as one compare sheet under
+`.agents/rules/reply-forms.md`, in its carrier order and reply text: each
+variant's `?variant=<id>` address, scores, blocking findings, layout
+anti-patterns and `DESIGN.md` violations. A reply with no `pick:` whose
+`why:` turns down every variant is a rejection. Neither the agent nor a
+review's scores pick a variant. The sheet names a recommended variant only
+where the evidence makes one better, which a question of taste rarely does.
+
 Record the answer in `.qfai/prototype/grilling.md` under `## Session`,
 **replacing any row with the same `Scope` and decision rather than adding beside
 it, and removing its row from `## Escalated`** — the file is the current state
@@ -165,6 +186,10 @@ of the tree, not its history.
 
 How the session ends decides the route:
 
+- **A pick, a combination or a rejection** — the answer to an iteration with
+  variants — runs the next iteration as one prototype: the variant picked, the
+  parts combined, or a pivot carrying the rejection. An iteration with
+  variants is never confirmed as it stands, so its handoff does not run.
 - **Confirmed** — the user says the prototype is done — goes to
   `prototyping-handoff`. A blocking finding the latest review still lists does
   not stop it; the final report names it.
@@ -172,7 +197,8 @@ How the session ends decides the route:
   next iteration, carrying their answer as the pivot.
 - **A different design** — a direction this lineage does not implement — runs
   the next iteration as a pivot, carrying their answer.
-- **Closed** — `proceed` or `done` without an answer to this question — records
+- **Closed** — `proceed` or `done` without an answer to this question, or
+  without a pick — records
   every other open decision as a labelled assumption and asks this question
   again. It is what the loop exists to answer, so a closure cannot assume it.
 - **Stopped** — the user said `stop` — ends the run there and reports every
@@ -187,7 +213,9 @@ confirmation.
 - The live prototype, opened in the reviewer's own Playwright session.
 - Root `DESIGN.md` (read-only), `axisDefs`, `previousScore` and
   `designSystemChecklist`. `previousScore` and the prior reviews come from
-  this run's own iterations; the run's first iteration has none.
+  this run's own iterations; the run's first iteration has none. After an
+  iteration with variants they are read as the iteration loop reference's
+  First-iteration variants section says.
 - The prior `review.json` files and `progress.md`.
 - The layout anti-pattern registry the package ships.
 - `.qfai/prototype/grilling.md` — what the prototype is for, what counts as
@@ -199,8 +227,9 @@ confirmation.
 
 ## Critical Constraints
 
-- One lineage only — no parallel candidates, no best-of-history; the latest
-  iteration is always the one put to the user.
+- One prototype per iteration, except the variants of a run's first iteration
+  while the direction is open; no best-of-history; the latest iteration is
+  always the one put to the user.
 - Token-only colors, fonts, radii and shadows — a value `DESIGN.md` does not
   declare lands in `designMdViolations[]`.
 - No `mode / round / polish / branch / concept-fit` artifacts.

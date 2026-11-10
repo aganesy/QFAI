@@ -15,6 +15,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   otherwise. A Site in the Codex app, whose audience is not documented, is
   used where the project's agent instructions allow it. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
+- **Variants on the first prototyping iteration.** While the visual or
+  interaction direction is still open, `/qfai-prototyping` builds its first
+  iteration as two or three variants that differ in structure, on one page
+  switchable through `?variant=<id>`, each reviewed on its own. They are put to
+  the user as one comparison; the user picks one, combines parts or rejects
+  all, and the agent never picks. From the next iteration the loop builds one
+  prototype as before. A restyle, a run scoped to a confirmed prototype, or a
+  session record that settles the direction builds one prototype from the start.
 
 ### Changed
 
