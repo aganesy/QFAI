@@ -125,7 +125,7 @@ structure:
       - heading:
           pattern: '^## Standard commands \(copy-paste\)$'
           regex: true
-        description: The quality-gate commands, one labelled item each. Pack / distribution is optional.
+        description: The quality-gate commands, one labelled item each. Pack / distribution is optional, and so is Turn-end check, which names in backticks the labels of the commands run when an agent ends its turn.
         allow_additional: false
         lists:
           - min: 1
