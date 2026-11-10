@@ -81,9 +81,11 @@ const CORRECTION_WORDS_JA = [
 ] as const;
 
 const FINDING_CODE = /\bQFAI-[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\d{3}\b/g;
-/** `qfai` at command position: a line start, or after `;`, `&`, `|` or `(`, never inside quotes. */
-const QFAI_COMMAND =
-  /(?:^|[;&|(])[ \t]*(?:npx[ \t]+(?:-y[ \t]+|--yes[ \t]+)?|pnpm[ \t]+(?:exec[ \t]+)?|(?:\.\/)?node_modules\/\.bin\/)?qfai[ \t]+([a-z][a-z-]*)(?:[ \t]+([a-z][a-z-]*))?/gm;
+/** A shell segment that runs `qfai`: the command word first, through `npx`, `pnpm` or the local bin. */
+const QFAI_SEGMENT =
+  /^(?:npx[ \t]+(?:-y[ \t]+|--yes[ \t]+)?|pnpm[ \t]+(?:exec[ \t]+)?|(?:\.\/)?node_modules\/\.bin\/)?qfai[ \t]+([a-z][a-z-]*)(?:[ \t]+([a-z][a-z-]*))?/;
+/** The characters that end a shell command outside quotes. */
+const COMMAND_SEPARATORS: ReadonlySet<string> = new Set([";", "&", "|", "(", ")", "\n"]);
 const COMMANDS_WITH_SUBCOMMAND: ReadonlySet<string> = new Set([
   "atdd",
   "discussion",
@@ -92,7 +94,26 @@ const COMMANDS_WITH_SUBCOMMAND: ReadonlySet<string> = new Set([
 ]);
 
 /** Openings of text the host writes into a user message: wrappers, notices, injected instructions. */
-const HOST_TEXT_OPENINGS = ["<", "[Request interrupted", "# AGENTS.md instructions"] as const;
+const HOST_TEXT_OPENINGS = ["[Request interrupted", "# AGENTS.md instructions"] as const;
+/** The tags the hosts wrap their own text in, inside a user message. */
+const HOST_WRAPPER_TAGS: ReadonlySet<string> = new Set([
+  "bash-input",
+  "bash-stderr",
+  "bash-stdout",
+  "command-args",
+  "command-message",
+  "command-name",
+  "environment_context",
+  "ide_opened_file",
+  "ide_selection",
+  "local-command-caveat",
+  "local-command-stderr",
+  "local-command-stdout",
+  "system-reminder",
+  "task-notification",
+  "user-prompt-submit-hook",
+  "user_instructions",
+]);
 
 /** The key a hook context that names QFAI but is none of the project's reminder texts takes. */
 export const UNREGISTERED_REMINDER = "unregistered";
@@ -100,6 +121,8 @@ export const UNREGISTERED_REMINDER = "unregistered";
 /** Whether a user message's text is one the user typed, not a wrapper or a notice the host wrote. */
 export function isTypedTurn(text: string): boolean {
   const trimmed = text.trim();
+  const tag = /^<([A-Za-z][\w-]*)[\s>]/.exec(trimmed)?.[1];
+  if (tag !== undefined && HOST_WRAPPER_TAGS.has(tag)) return false;
   return trimmed !== "" && !HOST_TEXT_OPENINGS.some((opening) => trimmed.startsWith(opening));
 }
 
@@ -253,8 +276,8 @@ function countToolErrors(events: SessionEvents): ToolErrors[] {
 /** Each `qfai` command a shell command runs, as `qfai <command>` or `qfai <command> <subcommand>`. */
 export function qfaiCommandsIn(command: string): string[] {
   const found: string[] = [];
-  for (const match of slashed(command).matchAll(QFAI_COMMAND)) {
-    const [, name, sub] = match;
+  for (const segment of shellSegments(command)) {
+    const [, name, sub] = QFAI_SEGMENT.exec(slashed(segment).trim()) ?? [];
     if (name === undefined) continue;
     found.push(
       sub !== undefined && COMMANDS_WITH_SUBCOMMAND.has(name)
@@ -265,13 +288,42 @@ export function qfaiCommandsIn(command: string): string[] {
   return found;
 }
 
+/**
+ * The commands a shell line holds, split where a separator stands outside quotes. A quoted
+ * separator, as in `printf '; qfai validate'`, is text, and a backslash outside single quotes
+ * keeps the next character.
+ */
+function shellSegments(command: string): string[] {
+  const segments: string[] = [];
+  let current = "";
+  let quote: "'" | '"' | null = null;
+  for (let at = 0; at < command.length; at += 1) {
+    const char = command[at] ?? "";
+    if (quote === null && COMMAND_SEPARATORS.has(char)) {
+      segments.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+    if (char === "\\" && quote !== "'") {
+      current += command[at + 1] ?? "";
+      at += 1;
+    } else if (quote === null && (char === "'" || char === '"')) quote = char;
+    else if (char === quote) quote = null;
+  }
+  segments.push(current);
+  return segments;
+}
+
 function countQfaiCommands(events: SessionEvents): QfaiCommand[] {
   const results = resultsById(events.results);
   const commands = new Map<string, { runs: number; exits: Map<string, number> }>();
   for (const call of events.calls) {
     if (call.command === undefined) continue;
-    const exitCode = results.get(call.id)?.exitCode ?? null;
-    for (const name of qfaiCommandsIn(call.command)) {
+    const names = qfaiCommandsIn(call.command);
+    // The shell's status belongs to one command only when the call ran one.
+    const exitCode = names.length === 1 ? (results.get(call.id)?.exitCode ?? null) : null;
+    for (const name of names) {
       const entry = commands.get(name) ?? { runs: 0, exits: new Map<string, number>() };
       entry.runs += 1;
       bump(entry.exits, exitCode === null ? "unknown" : String(exitCode));

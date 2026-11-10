@@ -14,6 +14,7 @@ import {
   claudeProjectSlug,
   locateSessions,
   sameDirectory,
+  sinceInstant,
   type LocateEnvironment,
 } from "../../src/core/sessionReview/locate.js";
 import { parseClaudeTranscript } from "../../src/core/sessionReview/parseClaude.js";
@@ -22,6 +23,7 @@ import { redact } from "../../src/core/sessionReview/redact.js";
 import { renderJson, renderMarkdown } from "../../src/core/sessionReview/render.js";
 import {
   correctionWords,
+  isTypedTurn,
   pathsInCommand,
   qfaiCommandsIn,
   reminderKey,
@@ -306,6 +308,66 @@ describe("what a Codex rollout shows", () => {
 // QFAI:EX-0001-0240-09
 // QFAI:EX-0001-0240-10
 // QFAI:EX-0001-0240-14
+// QFAI:EX-0001-0240-03
+// QFAI:EX-0001-0240-06
+// QFAI:EX-0001-0240-12
+// QFAI:EX-0001-0240-14
+describe("the edges a slug, a shell line and a calendar leave open", () => {
+  it("takes a transcript in the root's own directory only when it records the root as cwd", async () => {
+    const base = await tempDir();
+    // `a-b` and `a/b` give one slug, so the directory alone cannot tell their sessions apart.
+    const root = path.join(base, "a-b");
+    const other = path.join(base, "a", "b");
+    expect(claudeProjectSlug(other)).toBe(claudeProjectSlug(root));
+    const dir = path.join(base, "claude", "projects", claudeProjectSlug(root));
+    await place(path.join(dir, "own.jsonl"), await fixtureFor(CLAUDE_FIXTURE, root));
+    await place(path.join(dir, "other.jsonl"), await fixtureFor(CLAUDE_FIXTURE, other));
+
+    const found = await locateSessions(root, ["claude"], environment(base));
+    expect(found.map((session) => session.sessionId)).toEqual(["own"]);
+  });
+
+  it("treats only the hosts' own wrapper tags as host text, not every turn that opens with <", () => {
+    expect(isTypedTurn("<system-reminder>stop</system-reminder>")).toBe(false);
+    expect(isTypedTurn("<task-notification>done</task-notification>")).toBe(false);
+    expect(isTypedTurn("<command-name>/clear</command-name>")).toBe(false);
+    expect(isTypedTurn("<b>wrong</b> heading, use the other one")).toBe(true);
+    expect(isTypedTurn("<= 3 items, not more")).toBe(true);
+  });
+
+  it("splits a shell line only where a separator stands outside quotes", () => {
+    expect(qfaiCommandsIn("printf '; qfai validate'")).toEqual([]);
+    expect(qfaiCommandsIn('echo "a && qfai doctor" | cat')).toEqual([]);
+    expect(qfaiCommandsIn("echo a\\; qfai report")).toEqual([]);
+    expect(qfaiCommandsIn("npx qfai validate; qfai report")).toEqual([
+      "qfai validate",
+      "qfai report",
+    ]);
+  });
+
+  it("gives the shell's status to a qfai command only when the call ran one", () => {
+    const events: SessionEvents = {
+      records: 2,
+      malformed: 0,
+      hookContexts: [],
+      calls: [{ id: "x", name: "Bash", command: "npx qfai validate && npx qfai report" }],
+      results: [{ id: "x", isError: true, text: "Exit code 1", exitCode: 1 }],
+      userTurns: [],
+    };
+    expect(summarise(events, FACTS).qfaiCommands).toEqual([
+      { command: "qfai report", runs: 1, exits: [{ name: "unknown", count: 1 }] },
+      { command: "qfai validate", runs: 1, exits: [{ name: "unknown", count: 1 }] },
+    ]);
+  });
+
+  it("refuses a --since date the calendar does not have", () => {
+    expect(sinceInstant("2026-02-30")).toBeNull();
+    expect(sinceInstant("2026-02-30T00:00:00Z")).toBeNull();
+    expect(sinceInstant("2026-13-01")).toBeNull();
+    expect(sinceInstant("2024-02-29")).toBe(Date.UTC(2024, 1, 29));
+  });
+});
+
 describe("the signal helpers", () => {
   it("reads a watched path named under the root in either slash style, never one a patch writes", () => {
     const facts = { root: "C:\\Work\\App", platform: "win32" as const };

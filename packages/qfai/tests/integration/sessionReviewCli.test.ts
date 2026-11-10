@@ -211,6 +211,7 @@ describe("qfai session-review chooses the sessions and the destination", () => {
       ["--since", "1"],
       ["--since", "Nov 1"],
       ["--since", "2026-11-01T00:00"],
+      ["--since", "2026-02-30"],
       ["--agent", "copilot"],
       ["--format", "text"],
     ]) {

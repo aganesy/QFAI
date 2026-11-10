@@ -42,10 +42,22 @@ const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[
  * with `Z` or an explicit offset. `null` for anything else, so no value depends on the local zone.
  */
 export function sinceInstant(value: string): number | null {
-  const text = ISO_DATE.test(value) ? `${value}T00:00:00Z` : value;
   if (!ISO_DATE.test(value) && !ISO_DATE_TIME.test(value)) return null;
-  const instant = Date.parse(text);
+  if (!isCalendarDate(value.slice(0, 10))) return null;
+  const instant = Date.parse(ISO_DATE.test(value) ? `${value}T00:00:00Z` : value);
   return Number.isNaN(instant) ? null : instant;
+}
+
+/** Whether `YYYY-MM-DD` names a day the calendar has: 2026-02-30 does not. */
+function isCalendarDate(date: string): boolean {
+  const [year, month, day] = date.split("-").map(Number);
+  if (year === undefined || month === undefined || day === undefined) return false;
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
 }
 
 /** The Claude Code project directory name for `root`: every non-alphanumeric character is `-`. */
@@ -86,18 +98,32 @@ async function locateClaude(
 ): Promise<SessionFile[]> {
   const projects = path.join(env.claudeConfigDir ?? path.join(env.home, ".claude"), "projects");
   const slug = claudeProjectSlug(root);
-  const own = await claudeSessionsIn(path.join(projects, slug), list);
+  // Two roots can share a slug (`/repo/a-b` and `/repo/a/b`), so even this directory's
+  // transcripts count only when they record the root as their cwd.
+  const own = await sessionsOfRoot(path.join(projects, slug), root, env, list);
   if (own.length > 0) return own;
   // A long root is shortened in the directory name, so the slug alone cannot always find it.
   const fold = (value: string): string => (env.platform === "win32" ? value.toLowerCase() : value);
   const prefix = fold(slug.slice(0, SLUG_PREFIX));
   const matched: SessionFile[] = [];
   for (const dir of await sortedEntries(projects, list)) {
-    if (!fold(dir).startsWith(prefix)) continue;
-    for (const session of await claudeSessionsIn(path.join(projects, dir), list)) {
-      const cwd = await firstValue(session.file, (record) => stringAt(record, "cwd"));
-      if (cwd !== undefined && sameDirectory(cwd, root, env.platform)) matched.push(session);
-    }
+    if (dir === slug || !fold(dir).startsWith(prefix)) continue;
+    matched.push(...(await sessionsOfRoot(path.join(projects, dir), root, env, list)));
+  }
+  return matched;
+}
+
+/** The transcripts in `dir` whose first recorded cwd is the root. */
+async function sessionsOfRoot(
+  dir: string,
+  root: string,
+  env: LocateEnvironment,
+  list: ListDirectory,
+): Promise<SessionFile[]> {
+  const matched: SessionFile[] = [];
+  for (const session of await claudeSessionsIn(dir, list)) {
+    const cwd = await firstValue(session.file, (record) => stringAt(record, "cwd"));
+    if (cwd !== undefined && sameDirectory(cwd, root, env.platform)) matched.push(session);
   }
   return matched;
 }
