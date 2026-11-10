@@ -360,6 +360,23 @@ describe("the edges a slug, a shell line and a calendar leave open", () => {
     ]);
   });
 
+  it("gives the shell's status to a qfai command only when it ran last", () => {
+    const events = (command: string): SessionEvents => ({
+      records: 2,
+      malformed: 0,
+      hookContexts: [],
+      calls: [{ id: "x", name: "Bash", command }],
+      results: [{ id: "x", isError: false, text: "", exitCode: 0 }],
+      userTurns: [],
+    });
+    expect(summarise(events("npx qfai validate; echo done"), FACTS).qfaiCommands).toEqual([
+      { command: "qfai validate", runs: 1, exits: [{ name: "unknown", count: 1 }] },
+    ]);
+    expect(summarise(events("cd app && npx qfai validate"), FACTS).qfaiCommands).toEqual([
+      { command: "qfai validate", runs: 1, exits: [{ name: "0", count: 1 }] },
+    ]);
+  });
+
   it("adds result bytes to a file only when the command names no other path", () => {
     const events: SessionEvents = {
       records: 4,
@@ -510,6 +527,8 @@ describe("what the report may carry", () => {
       `gh${"p"}_${"A".repeat(36)}`,
       `s${"k"}-${"b".repeat(24)}`,
       `AKI${"A"}${"C".repeat(16)}`,
+      `ASI${"A"}${"D".repeat(16)}`,
+      `github${"_"}pat_${"E".repeat(30)}`,
       `xo${"x"}b-${"1".repeat(12)}`,
       `ey${"J"}hbGciOi.eyJzdWIiOi.c2lnbmF0dXJl`,
       `Bearer ${"t".repeat(20)}`,

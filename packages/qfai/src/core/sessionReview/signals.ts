@@ -324,14 +324,25 @@ function shellSegments(command: string): string[] {
   return segments;
 }
 
+function endsWithQfai(command: string): boolean {
+  const last = shellSegments(command)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment !== "")
+    .at(-1);
+  return last !== undefined && qfaiCommandsIn(last).length === 1;
+}
+
 function countQfaiCommands(events: SessionEvents): QfaiCommand[] {
   const results = resultsById(events.results);
   const commands = new Map<string, { runs: number; exits: Map<string, number> }>();
   for (const call of events.calls) {
     if (call.command === undefined) continue;
     const names = qfaiCommandsIn(call.command);
-    // The shell's status belongs to one command only when the call ran one.
-    const exitCode = names.length === 1 ? (results.get(call.id)?.exitCode ?? null) : null;
+    // The shell's status is a qfai command's only when the call ran one and it ran last.
+    const exitCode =
+      names.length === 1 && endsWithQfai(call.command)
+        ? (results.get(call.id)?.exitCode ?? null)
+        : null;
     for (const name of names) {
       const entry = commands.get(name) ?? { runs: 0, exits: new Map<string, number>() };
       entry.runs += 1;
