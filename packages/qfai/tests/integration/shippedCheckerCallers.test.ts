@@ -104,6 +104,18 @@ describe("steps that write Mermaid diagrams", () => {
     }
   });
 
+  // QFAI:EX-0001-0242-03
+  it("installs the project's own QFAI release when node_modules has none, and reads the pins from it", async () => {
+    const pack = await step("discussion-pack");
+    expect(pack).toMatch(
+      /npm install --no-save [^\n]*--ignore-scripts [^\n]*--prefix=tmp\/qfai-release qfai@<version>/,
+    );
+    expect(pack).toContain(
+      "tmp/qfai-release/node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml",
+    );
+    expect(pack).not.toContain("Add `qfai` to the list");
+  });
+
   // QFAI:EX-0001-0242-04
   it("reports a parser that cannot run as not run, never as passed", async () => {
     for (const name of ["discussion-pack", "sdd-flow"]) {
