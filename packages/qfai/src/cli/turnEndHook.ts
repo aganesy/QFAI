@@ -22,8 +22,10 @@ async function main(): Promise<void> {
       stateDir: os.tmpdir(),
     });
     if (output !== "") process.stdout.write(output);
-  } catch {
-    // Nothing to report: the turn ends as if no check were marked.
+  } catch (error: unknown) {
+    // The turn ends as if no check were listed; one line on stderr says why, for the host's log.
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`QFAI turn-end check could not run: ${message}\n`);
   }
   process.exitCode = 0;
 }

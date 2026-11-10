@@ -1,4 +1,4 @@
-# US-0001-0241: Keep an agent's turn going while a turn-end check fails
+# US-0001-0244: Keep an agent's turn going while a turn-end check fails
 
 ## User Story
 

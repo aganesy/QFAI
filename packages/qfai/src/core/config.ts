@@ -292,7 +292,9 @@ export const STOP_GATE_MESSAGE =
  */
 export function readStopGate(document: unknown): boolean | null {
   const workflow = isRecord(document) ? document.workflow : undefined;
-  if (!isRecord(workflow) || workflow.stopGate === undefined) return true;
+  if (workflow === undefined) return true;
+  if (!isRecord(workflow)) return null;
+  if (workflow.stopGate === undefined) return true;
   return typeof workflow.stopGate === "boolean" ? workflow.stopGate : null;
 }
 

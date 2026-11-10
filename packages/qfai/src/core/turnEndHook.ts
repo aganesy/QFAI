@@ -25,6 +25,10 @@ const TAIL_LINES = 40;
 const TAIL_CHARS = 4000;
 /** Output kept while a command runs; only the tail is ever reported. */
 const KEEP_CHARS = 64 * 1024;
+/** How long output is still read after a command exits, for a child that keeps the pipes open. */
+const EXIT_GRACE_MS = 1000;
+/** Blocks in one continued turn after which the hook lets the turn end whatever the failure. */
+const MAX_CONTINUED_BLOCKS = 3;
 const COMMANDS_HEADING = /^##\s+Standard commands\b/i;
 const TURN_END_LABEL = "turn-end check";
 
@@ -73,14 +77,17 @@ interface CommandResult {
 /**
  * Stops a command and everything it started. A shell does not pass its own termination on to
  * the program it runs, so the whole tree is stopped: by process group on POSIX, by `taskkill /T`
- * on Windows.
+ * on Windows, falling back to the shell alone where neither works.
  */
 function stopTree(child: ChildProcess): void {
   const pid = child.pid;
   if (pid === undefined) return;
   try {
     if (process.platform === "win32") {
-      spawnSync("taskkill", ["/pid", String(pid), "/T", "/F"], { windowsHide: true });
+      const killed = spawnSync("taskkill", ["/pid", String(pid), "/T", "/F"], {
+        windowsHide: true,
+      });
+      if (killed.status !== 0) child.kill("SIGKILL");
     } else {
       process.kill(-pid, "SIGKILL");
     }
@@ -93,12 +100,7 @@ function runCommand(command: string, cwd: string, timeoutMs: number): Promise<Co
   return new Promise((resolve) => {
     let output = "";
     let settled = false;
-    const finish = (result: CommandResult): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(result);
-    };
+    let grace: ReturnType<typeof setTimeout> | undefined;
     const child = spawn(command, {
       cwd,
       shell: true,
@@ -106,19 +108,35 @@ function runCommand(command: string, cwd: string, timeoutMs: number): Promise<Co
       detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"],
     });
+    const finish = (result: CommandResult): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearTimeout(grace);
+      child.stdout.destroy();
+      child.stderr.destroy();
+      resolve(result);
+    };
     const collect = (chunk: Buffer): void => {
       output = (output + chunk.toString("utf8")).slice(-KEEP_CHARS);
     };
-    child.stdout?.on("data", collect);
-    child.stderr?.on("data", collect);
+    child.stdout.on("data", collect);
+    child.stderr.on("data", collect);
     const timer = setTimeout(() => {
       stopTree(child);
-      child.stdout?.destroy();
-      child.stderr?.destroy();
       finish({ code: null, output, timedOut: true });
     }, timeoutMs);
     child.on("error", (error) => {
       finish({ code: null, output: `${output}${error.message}\n`, timedOut: false });
+    });
+    // The exit code is settled when the command exits. A program it left running may still hold
+    // the pipes, so the output is read a little longer and what is left of the tree is stopped.
+    child.on("exit", (code) => {
+      clearTimeout(timer);
+      grace = setTimeout(() => {
+        stopTree(child);
+        finish({ code, output, timedOut: false });
+      }, EXIT_GRACE_MS);
     });
     child.on("close", (code) => {
       finish({ code, output, timedOut: false });
@@ -132,20 +150,6 @@ function tail(output: string): string {
   return lines.slice(-TAIL_LINES).join("\n").slice(-TAIL_CHARS);
 }
 
-function stateFile(stateDir: string, session: string, agent: string): string {
-  const name = ["qfai-turn-end", session, agent].join("-").replace(/[^\w.-]/g, "_");
-  return path.join(stateDir, name);
-}
-
-async function readState(file: string | null): Promise<string | null> {
-  if (file === null) return null;
-  try {
-    return (await readFile(file, "utf8")).trim();
-  } catch {
-    return null;
-  }
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -156,8 +160,41 @@ function stringField(event: Record<string, unknown>, key: string): string | unde
 }
 
 /**
+ * Whose turn a state file belongs to. A subagent's stop is kept apart from the main agent's even
+ * when the host sends no agent id, so a subagent's block never releases the main agent's turn.
+ */
+function agentKey(event: Record<string, unknown>): string {
+  const agent = stringField(event, "agent_id");
+  if (agent !== undefined) return agent;
+  return event.hook_event_name === "SubagentStop" ? "subagent" : "main";
+}
+
+function stateFile(stateDir: string, session: string, agent: string): string {
+  const name = ["qfai-turn-end", session, agent].join("-").replace(/[^\w.-]/g, "_");
+  return path.join(stateDir, name);
+}
+
+/** The failure the hook last blocked on for one session and agent, and the blocks in a row. */
+interface BlockState {
+  readonly digest: string;
+  readonly blocks: number;
+}
+
+async function readState(file: string | null): Promise<BlockState | null> {
+  if (file === null) return null;
+  try {
+    const value: unknown = JSON.parse(await readFile(file, "utf8"));
+    if (!isRecord(value)) return null;
+    const { digest, blocks } = value;
+    return typeof digest === "string" && typeof blocks === "number" ? { digest, blocks } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * What the turn-end hook prints for one Stop or SubagentStop event: an empty string to let the
- * turn end silently, or one JSON object that blocks the stop or releases it with a message.
+ * turn end silently, or one JSON object that blocks the stop or lets it through with a message.
  */
 export async function runTurnEndHook(input: unknown, options: TurnEndOptions): Promise<string> {
   const event = isRecord(input) ? input : {};
@@ -176,10 +213,7 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
   }
   const checks = readTurnEndChecks(techText);
   const session = stringField(event, "session_id");
-  const file =
-    session === undefined
-      ? null
-      : stateFile(options.stateDir, session, stringField(event, "agent_id") ?? "main");
+  const file = session === undefined ? null : stateFile(options.stateDir, session, agentKey(event));
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   for (const check of checks) {
@@ -192,15 +226,20 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
     const digest = createHash("sha256")
       .update([check.label, ending, shown].join("\n").replace(/\d+/g, "#"))
       .digest("hex");
-    const repeated =
-      file === null ? event.stop_hook_active === true : (await readState(file)) === digest;
-    if (repeated) {
+    const continued = event.stop_hook_active === true;
+    const last = await readState(file);
+    const blocks = continued && last !== null ? last.blocks + 1 : 1;
+    const release =
+      file === null
+        ? continued
+        : last?.digest === digest || (continued && blocks > MAX_CONTINUED_BLOCKS);
+    if (release) {
       if (file !== null) await rm(file, { force: true });
       return `${JSON.stringify({
-        systemMessage: `QFAI turn-end check: ${check.label} still fails the same way, so the hook stopped blocking. Run ${check.command} to see the failure.`,
+        systemMessage: `QFAI turn-end check: ${check.label} still fails, and the turn ended anyway. Run ${check.command} in ${found.root} to see the failure.`,
       })}\n`;
     }
-    if (file !== null) await writeFile(file, digest, "utf8");
+    if (file !== null) await writeFile(file, JSON.stringify({ digest, blocks }), "utf8");
     const reason = [
       `The turn-end check ${check.label} failed: ${check.command} ${ending}.`,
       shown === "" ? "It printed nothing." : `End of its output:\n${shown}`,

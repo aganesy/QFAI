@@ -1,3 +1,9 @@
+// QFAI:AC-0001-0244-01
+// QFAI:AC-0001-0244-02
+// QFAI:AC-0001-0244-03
+// QFAI:AC-0001-0244-04
+// QFAI:AC-0001-0244-05
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -8,9 +14,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   mergeDocumentationClarityHooks,
   serializeClaudeSettings,
-} from "../../src/core/claudeCodeHooks.js";
-import { loadConfig } from "../../src/core/config.js";
-import { readTurnEndChecks, runTurnEndHook } from "../../src/core/turnEndHook.js";
+} from "../../../src/core/claudeCodeHooks.js";
+import { loadConfig } from "../../../src/core/config.js";
+import { readTurnEndChecks, runTurnEndHook } from "../../../src/core/turnEndHook.js";
 
 let root: string;
 let stateDir: string;
@@ -61,7 +67,7 @@ function parsed(output: string): Record<string, unknown> {
 }
 
 describe("turn-end hook", () => {
-  // QFAI:EX-0001-0241-01
+  // QFAI:EX-0001-0244-01
   it("blocks a Stop event on a failing marked command", async () => {
     const fail = await script("fail.js", "type error\n", 1);
     await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"]);
@@ -75,7 +81,7 @@ describe("turn-end hook", () => {
     expect(output.reason).toContain("type error");
   });
 
-  // QFAI:EX-0001-0241-02
+  // QFAI:EX-0001-0244-02
   it("blocks a SubagentStop event the same way", async () => {
     const fail = await script("fail.js", "type error\n", 1);
     await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"]);
@@ -83,7 +89,7 @@ describe("turn-end hook", () => {
     expect(output.decision).toBe("block");
   });
 
-  // QFAI:EX-0001-0241-03
+  // QFAI:EX-0001-0244-03
   it("names only the first failing command", async () => {
     const pass = await script("pass.js", "clean\n", 0);
     const fail = await script("fail.js", "type error\n", 2);
@@ -97,7 +103,7 @@ describe("turn-end hook", () => {
     expect(reason).not.toContain("Lint");
   });
 
-  // QFAI:EX-0001-0241-04
+  // QFAI:EX-0001-0244-04
   it("stops a command that runs past its limit", async () => {
     await writeFile(path.join(root, "slow.js"), "setTimeout(() => {}, 10000);\n", "utf-8");
     await project(["- Test: `node slow.js`", "- Turn-end check: Test"]);
@@ -105,14 +111,14 @@ describe("turn-end hook", () => {
     expect(reason).toContain("did not finish within");
   });
 
-  // QFAI:EX-0001-0241-05
+  // QFAI:EX-0001-0244-05
   it("prints nothing when every marked command passes", async () => {
     const pass = await script("pass.js", "clean\n", 0);
     await project([`- Typecheck: \`${pass}\``, "- Turn-end check: Typecheck"]);
     expect(await hook({ session_id: "s1" })).toBe("");
   });
 
-  // QFAI:EX-0001-0241-06
+  // QFAI:EX-0001-0244-06
   it("runs nothing without a turn-end item or with an unknown label", async () => {
     const fail = await script("fail.js", "type error\n", 1);
     await project([`- Typecheck: \`${fail}\``]);
@@ -121,12 +127,12 @@ describe("turn-end hook", () => {
     expect(await hook({ session_id: "s1" })).toBe("");
   });
 
-  // QFAI:EX-0001-0241-07
+  // QFAI:EX-0001-0244-07
   it("prints nothing outside a QFAI project", async () => {
     expect(await hook({ session_id: "s1" })).toBe("");
   });
 
-  // QFAI:EX-0001-0241-08
+  // QFAI:EX-0001-0244-08
   it("releases the turn when the same failure comes back, digits aside", async () => {
     await writeFile(
       path.join(root, "fail.js"),
@@ -138,10 +144,10 @@ describe("turn-end hook", () => {
     const second = parsed(await hook({ session_id: "s1", stop_hook_active: true }));
     expect(second.decision).toBeUndefined();
     expect(second.systemMessage).toContain("Typecheck");
-    expect(second.systemMessage).toContain("stopped blocking");
+    expect(second.systemMessage).toContain("ended anyway");
   });
 
-  // QFAI:EX-0001-0241-09
+  // QFAI:EX-0001-0244-09
   it("blocks again when the failure changes", async () => {
     await script("fail.js", "first error\n", 1);
     await project(["- Typecheck: `node fail.js`", "- Turn-end check: Typecheck"]);
@@ -152,16 +158,44 @@ describe("turn-end hook", () => {
     expect(second.reason).toContain("another error");
   });
 
-  // QFAI:EX-0001-0241-10
+  // QFAI:EX-0001-0244-10
   it("releases a continued turn that has no session to compare", async () => {
     const fail = await script("fail.js", "type error\n", 1);
     await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"]);
     const output = parsed(await hook({ stop_hook_active: true }));
     expect(output.decision).toBeUndefined();
-    expect(output.systemMessage).toContain("stopped blocking");
+    expect(output.systemMessage).toContain("ended anyway");
   });
 
-  // QFAI:EX-0001-0241-11
+  // QFAI:EX-0001-0244-15
+  it("lets a continued turn end after three blocks in a row whatever the failure", async () => {
+    await writeFile(
+      path.join(root, "fail.js"),
+      "process.stdout.write('error ' + Math.random().toString(36) + '\\n');process.exit(1);\n",
+      "utf-8",
+    );
+    await project(["- Typecheck: `node fail.js`", "- Turn-end check: Typecheck"]);
+    expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
+    expect(parsed(await hook({ session_id: "s1", stop_hook_active: true })).decision).toBe("block");
+    expect(parsed(await hook({ session_id: "s1", stop_hook_active: true })).decision).toBe("block");
+    const fourth = parsed(await hook({ session_id: "s1", stop_hook_active: true }));
+    expect(fourth.decision).toBeUndefined();
+    expect(fourth.systemMessage).toContain("ended anyway");
+  });
+
+  // QFAI:EX-0001-0244-16
+  it("keeps a subagent's block apart from the main agent's", async () => {
+    const fail = await script("fail.js", "type error\n", 1);
+    await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"]);
+    expect(parsed(await hook({ session_id: "s1", hook_event_name: "SubagentStop" })).decision).toBe(
+      "block",
+    );
+    expect(parsed(await hook({ session_id: "s1", hook_event_name: "Stop" })).decision).toBe(
+      "block",
+    );
+  });
+
+  // QFAI:EX-0001-0244-11
   it("runs nothing when workflow.stopGate is false", async () => {
     const fail = await script("fail.js", "type error\n", 1);
     await project(
@@ -171,7 +205,7 @@ describe("turn-end hook", () => {
     expect(await hook({ session_id: "s1" })).toBe("");
   });
 
-  // QFAI:EX-0001-0241-12
+  // QFAI:EX-0001-0244-12
   it("treats a non-boolean workflow.stopGate as false and reports it", async () => {
     const fail = await script("fail.js", "type error\n", 1);
     await project(
@@ -180,14 +214,16 @@ describe("turn-end hook", () => {
     );
     expect(await hook({ session_id: "s1" })).toBe("");
     const { issues } = await loadConfig(root);
-    expect(issues.map((issue) => issue.message)).toContain(
+    expect(issues.map((issue) => [issue.code, issue.message])).toContainEqual([
+      "QFAI-CFG-002",
       "workflow.stopGate must be true or false; an absent key means true.",
-    );
+    ]);
   });
 });
 
 const assetsInit = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
+  "..",
   "..",
   "..",
   "assets",
@@ -214,7 +250,7 @@ function turnEndEntries(settings: unknown, event: string): Record<string, unknow
 }
 
 describe("the turn-end groups qfai init writes", () => {
-  // QFAI:EX-0001-0241-13
+  // QFAI:EX-0001-0244-13
   it("ships one Stop and one SubagentStop group with a plain guard in both host files", async () => {
     for (const file of HOOK_FILES) {
       const settings: unknown = JSON.parse(await readFile(file, "utf8"));
@@ -232,7 +268,54 @@ describe("the turn-end groups qfai init writes", () => {
     }
   });
 
-  // QFAI:EX-0001-0241-14
+  // QFAI:EX-0001-0244-07
+  // QFAI:EX-0001-0244-13
+  it("runs the package's hook through each shipped guard, and nothing without the package", async () => {
+    const pkg = path.join(root, "node_modules", "qfai");
+    await mkdir(path.join(pkg, "dist", "hook"), { recursive: true });
+    await writeFile(
+      path.join(pkg, "package.json"),
+      JSON.stringify({ name: "qfai", exports: { ".": { require: "./dist/index.cjs" } } }),
+      "utf-8",
+    );
+    await writeFile(path.join(pkg, "dist", "index.cjs"), "", "utf-8");
+    await writeFile(
+      path.join(pkg, "dist", "hook", "turn-end.cjs"),
+      "const s=require('fs').readFileSync(0,'utf8');process.stdout.write('reached '+s.length);\n",
+      "utf-8",
+    );
+    const empty = await mkdtemp(path.join(os.tmpdir(), "qfai-turn-end-none-"));
+    try {
+      const [claudeFile, codexFile] = HOOK_FILES;
+      const claude = turnEndEntries(JSON.parse(await readFile(claudeFile ?? "", "utf8")), "Stop");
+      const codex = turnEndEntries(JSON.parse(await readFile(codexFile ?? "", "utf8")), "Stop");
+      const args = claude[0]?.args;
+      if (!Array.isArray(args)) throw new Error("no Claude args");
+      const guard = String(args[1]);
+      for (const [base, expected] of [
+        [root, "reached 2"],
+        [empty, ""],
+      ] as const) {
+        const viaArgs = spawnSync(process.execPath, ["-e", guard, base], {
+          cwd: empty,
+          input: "{}",
+          encoding: "utf8",
+        });
+        expect([viaArgs.status, viaArgs.stdout]).toEqual([0, expected]);
+        const viaShell = spawnSync(String(codex[0]?.command), {
+          cwd: base,
+          input: "{}",
+          encoding: "utf8",
+          shell: true,
+        });
+        expect([viaShell.status, viaShell.stdout]).toEqual([0, expected]);
+      }
+    } finally {
+      await rm(empty, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0244-14
   it("keeps a project's own Stop group, appends the shipped one, and changes nothing twice", async () => {
     const template = await readFile(HOOK_FILES[0] ?? "", "utf8");
     const own = {
@@ -254,7 +337,7 @@ describe("the turn-end groups qfai init writes", () => {
 });
 
 describe("readTurnEndChecks", () => {
-  // QFAI:EX-0001-0241-06
+  // QFAI:EX-0001-0244-06
   it("pairs each listed label with its command, in list order", () => {
     const text = [
       "## Standard commands (copy-paste)",
