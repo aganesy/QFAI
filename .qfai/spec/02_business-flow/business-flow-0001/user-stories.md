@@ -49,7 +49,7 @@
 | US-0001-0051 | Story-tree layout and ID validation                                                    | `user-story-0001-0051/` |
 | US-0001-0052 | Contract index and contract-layer validation                                           | `user-story-0001-0052/` |
 | US-0001-0053 | Decision and open-question table validation                                            | `user-story-0001-0053/` |
-| US-0001-0054 | Append-only drift and change-request authorization                                     | `user-story-0001-0054/` |
+| US-0001-0054 | Append-only decision and question registers                                            | `user-story-0001-0054/` |
 | US-0001-0055 | Example, criterion, and rule links                                                     | `user-story-0001-0055/` |
 | US-0001-0056 | Layer-specific test obligations                                                        | `user-story-0001-0056/` |
 | US-0001-0057 | Business-flow scoped validation                                                        | `user-story-0001-0057/` |
@@ -177,5 +177,7 @@
 | US-0001-0242 | Parse the diagrams a step wrote                                                        | `user-story-0001-0242/` |
 | US-0001-0243 | Every shipped checker script has a caller                                              | `user-story-0001-0243/` |
 | US-0001-0245 | Check each term against the glossary while grilling                                    | `user-story-0001-0245/` |
+| US-0001-0254 | Answer the costly decisions of a grilling round first                                  | `user-story-0001-0254/` |
 | US-0001-0273 | Compare first-iteration variants before I choose a direction                           | `user-story-0001-0273/` |
+| US-0001-0293 | Correct a grilling session on its confirmation sheet                                   | `user-story-0001-0293/` |
 | US-0001-0294 | Review a finished session from its local transcript                                    | `user-story-0001-0294/` |
