@@ -45,8 +45,8 @@ export const QFAI_STATE_SCRATCH_IGNORE = `*${QFAI_STATE_SCRATCH_SUFFIX}`;
 export const ARTICLE_XI_TMP_ENTRY = "tmp/";
 
 /**
- * A file directly inside the repository-root staging area Article XI rule 2
- * names — the concrete path the `tmp/` recommendation is a claim about.
+ * A file directly inside the repository-root staging area
+ * `.agents/rules/temporary-files.md` rule 2 names — the concrete path the `tmp/` recommendation is a claim about.
  *
  * The recommendation is not "the characters `tmp/` appear somewhere"; it is
  * "scratch work in the root staging area does not reach a commit". A path is
@@ -77,9 +77,10 @@ export const QFAI_GITIGNORE_RECOMMENDED_ENTRIES: readonly string[] = [
   // The staging directories that file's atomic write uses; see
   // QFAI_STATE_SCRATCH_IGNORE.
   QFAI_STATE_SCRATCH_IGNORE,
-  // Constitution Article XI rule 3: `tmp/` is listed in `.gitignore`.
-  // Rule 2 sends every agent's scratch work there, so without the entry the
-  // first `git add .` commits exactly what rule 3 exists to prevent.
+  // `.agents/rules/temporary-files.md` rule 4: `tmp/` is ignored before anything
+  // is written into it. Rule 2 sends every agent's scratch work there, so
+  // without the entry the first `git add .` commits exactly what rule 4 exists
+  // to prevent.
   //
   // Spelled unanchored because it names the recommendation rather than a line
   // to search for: {@link missingRecommendedGitignoreEntries} decides this one
@@ -129,8 +130,8 @@ export const QFAI_GITIGNORE_BLOCK = [
   // whose `.gitignore` predates this line must not start failing validation
   // over it.
   ".qfai/state.json.lock",
-  // Article XI rule 3, the one mandated ignore that is not under `.qfai/`.
-  // Anchored: rule 2 names the repository-root staging area, and an unanchored
+  // `.agents/rules/temporary-files.md` rule 4, the one required ignore that is
+  // not under `.qfai/`. Anchored: rule 2 of that file names the repository-root staging area, and an unanchored
   // `tmp/` would also swallow a `src/**/tmp/` a project tracks on purpose.
   "/tmp/",
   // Negations last: git applies the last matching pattern, so these re-include

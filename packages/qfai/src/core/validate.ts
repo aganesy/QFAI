@@ -52,6 +52,8 @@ import { validateUiRenderedCopy } from "./validators/uiRenderedCopy.js";
 import { validateUiScreenCopy } from "./validators/uiScreenCopy.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
+import { validateDiagramBudget } from "./validators/diagramBudget.js";
+import { validateDiscussionCitations } from "./validators/discussionCitations.js";
 import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
@@ -695,6 +697,9 @@ async function runStoryProfileValidators(
     ...(await timed(timings, "story-structure", () =>
       validateStoryTreeStructure(root, config, model),
     )),
+    ...(await timed(timings, "diagram-budget", () =>
+      validateDiagramBudget(root, config, "story-tree"),
+    )),
     ...(await timed(timings, "document-schema", () => validateDocumentSchema(root, config))),
     ...(await timed(timings, "stale-terms", () => validateStaleTerms(root, config))),
     ...(await timed(timings, "story-contract-index", () =>
@@ -845,6 +850,16 @@ async function runDiscussionValidators(
     ...(await timed(timings, "discussion-mermaid", () => validateDiscussionMermaid(root))),
     ...(await timed(timings, "design-direction-proposal", () =>
       validateDesignDirectionProposal(root, config),
+    )),
+    // A pack cites code that later stages change, so only the discussion
+    // profile reads its citations: verify and full read no discussion pack fact.
+    ...(includeSharedWithUiux
+      ? await timed(timings, "discussion-citations", () =>
+          validateDiscussionCitations(root, config),
+        )
+      : []),
+    ...(await timed(timings, "diagram-budget", () =>
+      validateDiagramBudget(root, config, "discussion-pack"),
     )),
     ...(await timed(timings, "discussion-pack", () =>
       validateDiscussionPackReadiness(root, config),

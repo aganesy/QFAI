@@ -24,14 +24,23 @@ whole file.
 .qfai/prototype/iter-NN/<ui-contract-id>/<screen>.review.json
 ```
 
-One file per (UI contract × screen × iteration). `<ui-contract-id>` is the full
+In an iteration with variants, each variant's payloads are under its own
+directory, and the schema is unchanged:
+
+```text
+.qfai/prototype/iter-NN/variant-<id>/<ui-contract-id>/<screen>.review.json
+```
+
+One file per (UI contract × screen × iteration), and per variant where
+there are variants. `<ui-contract-id>` is the full
 `UI-NNNN` ID, and `<screen>` is declared in that contract's `screens[]`.
 `<screen>.review.json` is the **only**
 per-(UI contract × screen) artifact written for a review — no `.html`, no
 `.png`, no `.interaction.json`.
 
 The Reviewer's other result is the per-iteration summary
-`iter-NN/review.json` (one per iteration, a different shape, set by
+`iter-NN/review.json` (one per iteration, or one per variant under
+`iter-NN/variant-<id>/`, a different shape, set by
 the reviewer prompt). It is not a per-screen artifact and
 is never read against this schema.
 

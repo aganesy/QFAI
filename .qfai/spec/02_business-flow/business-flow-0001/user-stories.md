@@ -172,3 +172,10 @@
 | US-0001-0237 | Prepare project-local graph CLIs through init                                          | `user-story-0001-0237/` |
 | US-0001-0238 | Merge conflicted story-tree documents by sentence                                      | `user-story-0001-0238/` |
 | US-0001-0239 | Answer agent output in the reply form that fits it                                     | `user-story-0001-0239/` |
+| US-0001-0240 | Warn on an oversized Mermaid diagram                                                   | `user-story-0001-0240/` |
+| US-0001-0241 | Check that discussion-pack citations resolve                                           | `user-story-0001-0241/` |
+| US-0001-0242 | Parse the diagrams a step wrote                                                        | `user-story-0001-0242/` |
+| US-0001-0243 | Every shipped checker script has a caller                                              | `user-story-0001-0243/` |
+| US-0001-0245 | Check each term against the glossary while grilling                                    | `user-story-0001-0245/` |
+| US-0001-0273 | Compare first-iteration variants before I choose a direction                           | `user-story-0001-0273/` |
+| US-0001-0294 | Review a finished session from its local transcript                                    | `user-story-0001-0294/` |

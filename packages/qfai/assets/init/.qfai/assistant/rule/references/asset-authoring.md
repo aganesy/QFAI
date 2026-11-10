@@ -16,6 +16,7 @@ A `SKILL.md` states the contract and points at the file that carries the detail.
 
 A hard line ceiling backs this up: **500 lines per Markdown assistant asset file** and **800 lines per YAML assistant asset file**, for every `.qfai/assistant/**/*.{md,yml,yaml}` file, counted as `content.split(/\r?\n/).length` — blank lines included.
 `npx qfai doctor` measures it and reports every file over its ceiling as `assets.lineBudget`.
+The same check reports a `SKILL.md` whose body after the YAML frontmatter exceeds **20,000 characters**; a skill's reference files are not held to that limit.
 The ceiling is a backstop, not the rule: a file approaching it is a signal to move a section out, not to raise the number.
 
 The Markdown ceiling is the limit an agent can follow in one file: it follows fewer instructions as its context grows, and follows those in the middle of a long file worst. A Markdown file has a `references/` home to move detail into. A YAML asset is parsed as data and cannot be split that way (see below), which is why its ceiling is higher.

@@ -498,10 +498,7 @@ describe("explicit discussion delegation in shipped and linked root assets", () 
       ".qfai/assistant/rule/review-convergence.md",
       "Agent agreement and round exhaustion supply no authority",
     ],
-    [
-      ".qfai/assistant/rule/constitution.md",
-      "No-question mode alone cannot close a node or authorize a reserved decision",
-    ],
+    [".qfai/assistant/rule/constitution.md", ".agents/rules/grilling.md#under-a-no-question-mode"],
   ])("%s retains its bounded contract through the root link", async (relative, clause) => {
     const segments = relative.split("/");
     const source = path.join(

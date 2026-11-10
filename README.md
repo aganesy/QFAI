@@ -356,6 +356,19 @@ flowchart LR
     `--profile prototyping` adds preflight checks for the primary UI contract, design contract readiness,
     active agent-wrapper integrations, shipped role-input readiness, Playwright CLI launcher resolution and probing,
     and target URL reachability.
+- `npx qfai session-review`
+  - Counts what this project's own Claude Code and Codex transcripts show, for the session review
+    in `.agents/rules/session-feedback.md`: the QFAI reminders shown, the rule, skill and step files
+    read, the tool errors with their finding codes, the `qfai` commands with their exit status, the
+    structured questions asked, and the typed turns that match a fixed list of correction words.
+    It reads local files only, sends nothing anywhere, and prints counts and matched words, never
+    message text. With no option it reports, for each agent, the session whose transcript changed
+    last; `--agent claude|codex`, `--session <id>` and `--since <value>` choose others. `--since`
+    takes an ISO 8601 date, read as midnight UTC, or a date and time with `Z` or an offset. The report goes to standard output, or to
+    `--out <path>`; `--format json` gives JSON. `CLAUDE_CONFIG_DIR` and `CODEX_HOME` move where the
+    transcripts are looked for. Exit codes: 0 (a report, or no session found), 2 (a usage error, or
+    `--session` names no session of the project), 1 (a transcript, `.agents/rules/reminders.json`
+    or the `--out` file could not be read or written, or `reminders.json` is not a JSON object).
 - `npx qfai workflow plan`
   - The route planning behind the free-text entry. `--in <path>`, or `--in -` for standard input,
     reads a request's extraction; `--route <route>` names a route instead. It prints one JSON
@@ -417,6 +430,9 @@ validation:
   failOn: error # error | warning | never
   staleTerms: # terms the specs must no longer state, such as a rejected option
     - SMTP
+  diagramBudget: # the largest Mermaid diagram before qfai validate warns
+    nodes: 12
+    edges: 16
   traceability:
     testFileGlobs:
       - "src/**/*.test.ts"
@@ -431,6 +447,9 @@ uiux:
 Notes.
 
 - `validation.staleTerms` lists terms a project no longer wants in its specs. `qfai validate` warns on each line of a spec document that states one, apart from `decisions.md` and `open-questions.md`.
+- `validation.diagramBudget` sets the node and edge limits of one Mermaid diagram (defaults: 12 nodes, 16 edges).
+  `qfai validate` warns (`QFAI-FLOW-006`) on a flowchart, sequence, state, entity-relationship, class or mind-map
+  diagram above either limit, so its author splits it into an overview and detail diagrams.
 - `validate.json` is a **public** surface: its keys are documented in
   `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`.
   Changes to its keys follow the `@api` classification in
