@@ -96,6 +96,18 @@ states.
 8. Allocate BF IDs as
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#id-allocation`
    states, and add the new rows to the flow index.
+9. Parse the diagrams in the Markdown files this step wrote, as
+   `.qfai/assistant/step/discussion-pack/STEP.md#parse-the-diagrams` says, with
+   those files in place of the pack directory:
+
+   ```bash
+   node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>
+   ```
+
+   Install the parser into `tmp/qfai-mermaid` first, never into the project's
+   dependency tree. Fix each diagram it rejects. When the install or the run
+   fails for another reason, report the syntax check as not run, never as
+   passed.
 
 ## Passes when
 
