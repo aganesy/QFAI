@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Grilling checks terms against the glossary.** In every grilling session, at
+  every stage, a term that conflicts with the project glossary or the
+  discussion pack's glossary, or is a synonym of a term one defines, is raised
+  when it appears, with the glossary's term proposed. A term the session
+  settles is written at once: to the pack's glossary in discussion, a new term
+  to the project glossary where the stage writes the policy layer, and
+  otherwise to the stage's evidence and final report. Changing a definition the
+  project glossary already holds is a critical decision that needs an approved
+  change request.
+
 - **Reply forms for answering agent output.** A new rule,
   `.agents/rules/reply-forms.md`, has the agent put a draft as a sheet the user
   marks up passage by passage, a set of items as one sort into named columns,
