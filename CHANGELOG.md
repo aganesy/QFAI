@@ -4,6 +4,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Reply forms for answering agent output.** A new rule,
+  `.agents/rules/reply-forms.md`, has the agent put a draft as a sheet the user
+  marks up passage by passage, a set of items as one sort into named columns,
+  and a question of taste as two or three variants to compare, beside the
+  existing choice. A sheet goes on the host's private page where one can be
+  published, such as an Artifact on Claude Code, and as text in the chat
+  otherwise. A Site in the Codex app, whose audience is not documented, is
+  used where the project's agent instructions allow it. Every form comes back as text in a fixed
+  grammar. The rule reshapes questions the workflow already asks and adds none.
+
 ### Changed
 
 - **The decision and question registers no longer collide across parallel

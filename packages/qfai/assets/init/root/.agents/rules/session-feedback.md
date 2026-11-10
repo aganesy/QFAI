@@ -90,6 +90,11 @@ form `user-questions.md` sets out:
 - more than one may be chosen, and choosing none files nothing;
 - the recommendation first, with its reason.
 
+Where the drafts are more than the tool's option limit, put them as one sort
+with the columns `file` and `skip`, as `reply-forms.md` sets out. Every draft
+left in `skip` is not filed. A draft the reply does not place is not filed
+and is not put again.
+
 A requested change to a draft is made, and the question is put again. Filing is
 visible to others, so the answer covers the drafts shown and nothing wider
 (`action-reversibility.md`).

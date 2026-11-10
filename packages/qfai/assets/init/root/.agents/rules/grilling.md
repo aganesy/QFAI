@@ -248,7 +248,8 @@ fact with four supported values is a choice, and `user-questions.md` states the
 whole of that.
 Where the reason is the third one, say which question it could not carry: the
 other two are about the tool, and naming a question there would invent a cause.
-`user-questions.md` § 5 owns the rest of that fallback.
+`user-questions.md` § 5 owns the rest of that fallback, including the host page
+it tries before chat text (`reply-forms.md` § 2).
 A session is never skipped for want of a tool.
 
 **Where the tool takes fewer questions than the round holds**, deliver the round
@@ -427,8 +428,9 @@ into answerable ones. Stop grilling and build the throwaway version.
 In a delegated session such a question is one of product intent unless the
 discussion stage's design direction already answers it, so it is critical.
 
-Then put it in front of the user and ask the question again against it. The
-prototype is what makes the decision answerable; it does not transfer the
+Then put it in front of the user and ask the question again against it, as a
+comparison of two or three variants where there is more than one
+(`reply-forms.md`). The prototype is what makes the decision answerable; it does not transfer the
 decision. An agent that builds one, judges it, and carries on has settled a
 question of taste on the user's behalf, which is the thing this rule spends
 every round avoiding.
