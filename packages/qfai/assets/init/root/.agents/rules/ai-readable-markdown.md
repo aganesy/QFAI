@@ -85,7 +85,8 @@ them, and nothing says which.
 ## Held by
 
 Review, and any check a project adds for itself. `npx qfai doctor` reports a
-Markdown assistant asset over the line limit in § 1.
+Markdown assistant asset over the line limit in § 1, and a `SKILL.md` body over
+the character limit.
 
 ## Related
 

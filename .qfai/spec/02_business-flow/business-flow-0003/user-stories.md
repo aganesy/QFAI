@@ -17,3 +17,4 @@
 | US-0003-0012 | Doctor failure threshold                     | `user-story-0003-0012/` |
 | US-0003-0030 | Mutation proofs that still replay            | `user-story-0003-0030/` |
 | US-0003-0031 | Shipped assistant file checks                | `user-story-0003-0031/` |
+| US-0003-0032 | Assistant asset size checks                  | `user-story-0003-0032/` |
