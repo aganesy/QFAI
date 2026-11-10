@@ -276,7 +276,24 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   if (readAcceptedDrift(parsed) === null) {
     issues.push(configIssue(configPath, ACCEPTED_DRIFT_MESSAGE));
   }
+  if (readStopGate(parsed) === null) {
+    issues.push(configIssue(configPath, STOP_GATE_MESSAGE));
+  }
   return { config: normalized, issues, configPath, document: parsed };
+}
+
+/** The config issue an invalid `workflow.stopGate` raises. */
+export const STOP_GATE_MESSAGE =
+  "workflow.stopGate must be true or false; an absent key means true.";
+
+/**
+ * Whether the turn-end hook runs the project's turn-end checks, read from the parsed config
+ * document. `null` means the value is not a boolean, which the hook treats as `false`.
+ */
+export function readStopGate(document: unknown): boolean | null {
+  const workflow = isRecord(document) ? document.workflow : undefined;
+  if (!isRecord(workflow) || workflow.stopGate === undefined) return true;
+  return typeof workflow.stopGate === "boolean" ? workflow.stopGate : null;
 }
 
 const WORKFLOW_MODES = ["active", "shadow", "off"] as const;

@@ -4,6 +4,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A turn-end check that the host enforces.** `qfai init` now installs a
+  `Stop` and a `SubagentStop` hook for Claude Code and Codex. When an agent
+  ends its turn, the hook runs the Standard commands that the new
+  `Turn-end check:` item of `tech.md` lists. Each command runs in list order
+  and is stopped after 60 seconds. If one fails, the hook keeps the turn going
+  and passes on the command and the end of its output. If the same failure
+  comes back, the hook stops blocking and tells the user which check still
+  fails. A project that lists no command runs nothing, and
+  `workflow.stopGate: false` in `qfai.config.yaml` turns the hook off. Codex
+  runs the hook only after you trust it with `/hooks`.
+
 ### Changed
 
 - **The decision and question registers no longer collide across parallel
