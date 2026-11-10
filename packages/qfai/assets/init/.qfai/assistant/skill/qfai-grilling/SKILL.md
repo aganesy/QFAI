@@ -128,6 +128,10 @@ Two questions never share a round when one depends on the other; the dependent
 one belongs to a later round. The next round is never written ahead of the
 answers it is computed from.
 
+**Every round checks terms against the glossary**: a clash or synonym is raised
+first with the glossary's term proposed, and a settled term is written at once
+(`.agents/rules/grilling.md#terms-against-the-glossary`).
+
 **A no-question mode is read before any of this.** Agent rounds require
 explicit delegation; otherwise the section above governs. A withheld tool with questions still
 permitted uses the fallback.
@@ -153,9 +157,6 @@ host that cannot show it whole; it never makes two rounds, and
 | ---------------------------------------- | -------------- | ----------------------------------------- |
 | A fact the environment holds             | The agent      | Read it, or run reads as parallel lookups |
 | A decision about what is wanted or worth | The user       | Ask it, and wait                          |
-
-Asking the user for a fact the repository already states spends the one thing a
-round is spending, which is the user's attention.
 
 Looking a fact up does not stop the round. Only the questions downstream of a
 running lookup wait for it; the rest of the frontier is asked meanwhile.
@@ -211,7 +212,7 @@ lookup the frontier is empty while the tree still holds open nodes, and
 completing there would close the session before the lookup could raise the
 questions it was dispatched to answer.
 
-There is no question cap. A number reached does not finish a design.
+There is no question cap; a number reached does not finish a design.
 
 **A delegated session has no condition 2**, because no user is there to
 confirm. A budget bounds its rounds: two, then every decision that is not
@@ -359,8 +360,7 @@ Every decision this skill meets falls in one of three named buckets.
 Explicit delegation is not `auto-decide` or a fact or human answer.
 These user-session entries remain the default.
 
-The asking is what this skill performs, so its `ask-user` entries are its own operations
-rather than an entry added to the prototype.
+This skill's `ask-user` entries are its own operations, not prototype additions.
 
 The buckets are the method, not a tuning surface. Moving a frontier decision to
 `auto-decide` is the agent answering its own question without the rounds. A

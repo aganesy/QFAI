@@ -574,6 +574,7 @@
     "tests/integration/init/windowsParity.test.ts",
     "tests/integration/init/workflowPreconditionsNote.test.ts",
     "tests/integration/skills/qfaiPrototyping.confirmation.test.ts",
+    "tests/integration/skills/qfaiPrototyping.variants.test.ts",
     "tests/integration/prototypingReviewerCalibration.test.ts",
     "tests/integration/workflow/theModeIsValidated.test.ts",
     "tests/e2e/bf0001WorkflowPlanARouteE2E.test.ts",
@@ -589,6 +590,7 @@
     "tests/helpers/validationProfileWorker.test.ts",
     "tests/unit/storyTree/decisionRegister.test.ts",
     "tests/integration/decisionPagesAcceptance.test.ts",
-    "tests/integration/replyFormsRule.test.ts"
+    "tests/integration/replyFormsRule.test.ts",
+    "tests/integration/grillingGlossaryCheck.test.ts"
   ]
 }
