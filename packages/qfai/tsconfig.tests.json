@@ -590,6 +590,7 @@
     "tests/helpers/validationProfileWorker.test.ts",
     "tests/unit/storyTree/decisionRegister.test.ts",
     "tests/integration/decisionPagesAcceptance.test.ts",
-    "tests/integration/replyFormsRule.test.ts"
+    "tests/integration/replyFormsRule.test.ts",
+    "tests/integration/grillingGlossaryCheck.test.ts"
   ]
 }
