@@ -177,4 +177,5 @@
 | US-0001-0241 | Check that discussion-pack citations resolve                                           | `user-story-0001-0241/` |
 | US-0001-0242 | Parse the diagrams a step wrote                                                        | `user-story-0001-0242/` |
 | US-0001-0243 | Every shipped checker script has a caller                                              | `user-story-0001-0243/` |
+| US-0001-0245 | Check each term against the glossary while grilling                                    | `user-story-0001-0245/` |
 | US-0001-0273 | Compare first-iteration variants before I choose a direction                           | `user-story-0001-0273/` |

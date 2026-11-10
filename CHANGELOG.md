@@ -9,13 +9,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **A turn-end check that the host enforces.** `qfai init` now installs a
   `Stop` and a `SubagentStop` hook for Claude Code and Codex. When an agent
   ends its turn, the hook runs the Standard commands that the new
-  `Turn-end check:` item of `tech.md` lists. Each command runs in list order
+  `Turn-end check:` item of `tech.md` lists in backticks. Each command runs in list order
   and is stopped after 60 seconds. If one fails, the hook keeps the turn going
-  and passes on the command and the end of its output. If the same failure
-  comes back, the hook stops blocking and tells the user which check still
-  fails. A project that lists no command runs nothing, and
+  and passes on the command and the end of its output. When the same failure
+  comes back, or after three blocks in a row, the turn ends anyway and the user
+  is told which check still fails. A project that lists no command runs nothing, and
   `workflow.stopGate: false` in `qfai.config.yaml` turns the hook off. Codex
   runs the hook only after you trust it with `/hooks`.
+
+- **Grilling checks terms against the glossary.** In every grilling session, at
+  every stage, a term that conflicts with the project glossary or the
+  discussion pack's glossary, or is a synonym of a term one defines, is raised
+  when it appears, with the glossary's term proposed. A term the session
+  settles is written at once: to the pack's glossary in discussion, a new term
+  to the project glossary where the stage writes the policy layer, and
+  otherwise to the stage's evidence and final report. Changing a definition the
+  project glossary already holds is a critical decision that needs an approved
+  change request.
+
 - **Reply forms for answering agent output.** A new rule,
   `.agents/rules/reply-forms.md`, has the agent put a draft as a sheet the user
   marks up passage by passage, a set of items as one sort into named columns,
