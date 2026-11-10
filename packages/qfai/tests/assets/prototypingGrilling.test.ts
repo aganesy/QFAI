@@ -160,7 +160,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(loop, "removing its row from `## Escalated`**");
     expectPhrase(loop, "the current state of the tree, not its history");
     // Both consumers, named where each lists its inputs.
-    const evaluator = /## Evaluator Inputs \(Mandatory\)([\s\S]*?)^## /m.exec(loop)?.[1] ?? "";
+    const evaluator = /## Evaluator Inputs([\s\S]*?)^## /m.exec(loop)?.[1] ?? "";
     expect(unwrap(evaluator)).toContain(".qfai/prototype/grilling.md");
     expect(unwrap(loop)).toContain("Reads the contracts, `.qfai/prototype/grilling.md`");
   });
