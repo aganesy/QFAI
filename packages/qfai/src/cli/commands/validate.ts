@@ -1181,6 +1181,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No spec document states a term `validation.staleTerms` lists, apart from the decision and open-question registers.",
   "QFAI-STORY-017":
     "A four-digit decisions.md row recorded after the Approach form began to be checked holds Evidence, Grounds, Residual risk and Rollback in that order, none empty, with every Evidence entry a file: or command: item.",
+  "QFAI-STORY-018":
+    "A decision row says what was decided and why in a few short sentences, so its Content and Approach together stay within 600 characters.",
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
@@ -1538,6 +1540,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Rewrite the named line to match the decision that replaced the term, or remove the term from `validation.staleTerms` if the line is right.",
   "QFAI-STORY-017":
     "Rewrite the named row's Approach cell in the form the qfai-sdd decisions template shows.",
+  "QFAI-STORY-018":
+    "Leave the row as written, since a recorded row is never edited, and keep the next row short: the decision and its reason in one to three sentences, with the detail where it already lives.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":

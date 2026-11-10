@@ -286,6 +286,7 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   issues.push(...validateRuleContractNumbers(model));
   issues.push(...validateRecordCitations(model));
   issues.push(...validateDecisionApproaches(model));
+  issues.push(...validateDecisionLengths(model));
   return issues;
 }
 
@@ -395,7 +396,7 @@ const EVIDENCE_ENTRY = /^(?:file:\S|command:\s*\S)/;
 const NONE_WITH_REASON = /^none\s+—/;
 
 /** What is wrong with the four labelled items of one Approach cell. */
-export function approachProblems(approach: string): string[] {
+function approachProblems(approach: string): string[] {
   const marks = matchesOutsideCodeSpans(approach, APPROACH_LABEL);
   const labels = marks.map(([, label = ""]) => label);
   const missing = APPROACH_LABELS.filter((label) => !labels.includes(label));
@@ -451,6 +452,37 @@ function validateDecisionApproaches(model: StoryTreeModel): Issue[] {
         ),
       );
     }
+  }
+  return issues;
+}
+
+const DECISION_LENGTH_CODE = "QFAI-STORY-018";
+/** Content and Approach of a short decision record: the decision and its reason in 1-3 sentences. */
+const DECISION_ROW_LIMIT = 600;
+const PATH_LIST_KINDS = new Set(["change-request", "declined-change-request"]);
+
+/**
+ * Warns on a decision row, of either ID form, whose Content and Approach exceed the limit. The
+ * paths a change request names are what it authorizes, not prose, so only its keyword counts.
+ */
+function validateDecisionLengths(model: StoryTreeModel): Issue[] {
+  const issues: Issue[] = [];
+  for (const { row, origin } of model.decisionOccurrences) {
+    const content = PATH_LIST_KINDS.has(classifyRecordRow(row).kind)
+      ? row.content.slice(0, row.content.indexOf(":") + 1)
+      : row.content;
+    const length = content.length + row.approach.length;
+    if (length <= DECISION_ROW_LIMIT) continue;
+    issues.push(
+      issue(
+        DECISION_LENGTH_CODE,
+        `${origin.path}:${origin.actualRow}: ${row.id} holds ${length} characters in Content and Approach, over the limit of ${DECISION_ROW_LIMIT}`,
+        "warning",
+        origin.path,
+        "storyTree.structure",
+        [row.id],
+      ),
+    );
   }
   return issues;
 }

@@ -73,17 +73,16 @@ describe("every decision a stage records carries one form", () => {
       expect(article).toContain("## When to stop and ask");
     });
 
-    it(`${tree}: the seeded template states the four Approach labels in order`, async () => {
-      const template = await read(tree, TEMPLATE);
-      const labels = LABELS.map((label) => template.indexOf(`- ${label}`));
-      expect(labels.every((index) => index >= 0)).toBe(true);
-      expect(labels).toEqual([...labels].sort((a, b) => a - b));
-      expect(template).toContain("`file:`");
-      expect(template).toContain("`command:`");
-      expect(template).toContain("`#L<start>-L<end>`");
-      expect(template.replace(/\s+/g, " ")).toContain(
-        "No item is empty, and only the last two may take `none — <reason>`.",
-      );
+    it(`${tree}: the seeded template states the short record form`, async () => {
+      const template = (await read(tree, TEMPLATE)).replace(/\s+/g, " ");
+      expect(template).toContain("Write each row as a short decision record.");
+      expect(template).toContain("in one to three short sentences");
+      expect(template).toContain("Content and Approach together stay within 600 characters");
+      const optional = ["`Considered:`", "`Consequences:`", "`Rollback:`"];
+      const marks = optional.map((label) => template.indexOf(`- ${label}`));
+      expect(marks.every((index) => index >= 0)).toBe(true);
+      // The new form drops the four labelled items a legacy row still carries.
+      for (const label of LABELS.slice(0, 3)) expect(template).not.toContain(`- ${label}`);
       // The form sits above the table, so a row appended at the end of the
       // file stays inside the table.
       expect(template.indexOf("`Rollback:`")).toBeLessThan(template.indexOf("| ID"));

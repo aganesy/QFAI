@@ -34,6 +34,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prototype as before. A restyle, a run scoped to a confirmed prototype, a run
   under a no-question mode, or a session record or `DESIGN.md` that settles
   the layout builds one prototype from the start.
+- **Short decision records.** A `decisions.md` row now says what was decided
+  and why in one to three short sentences, pointing to where the detail lives;
+  considered options, consequences and a rollback are optional items added only
+  when they help a later reader. A new row no longer carries the four items
+  Evidence, Grounds, Residual risk and Rollback. `qfai validate` warns
+  (`QFAI-STORY-018`) on a decision row whose Content and Approach hold more than
+  600 characters, the paths a change request names not counted; the warning
+  never fails a run under `--fail-on error`.
 
 ### Changed
 

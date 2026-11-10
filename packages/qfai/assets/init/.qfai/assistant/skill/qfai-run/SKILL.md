@@ -88,7 +88,7 @@ values plan nothing.
    No agent reviews its own work; no step adds a review. Each returns PASS or REVISE.
    Fix or answer each finding once; a behaviour fix gets one re-review, as `common-review-cycle` says. Stop a step that exceeds the request.
 7. **Approvals.** Each approval of a specification change, a critical decision or a release is one `decisions.md` row: what was approved, who approved it, when, and the chosen option's label, in the `qfai-sdd` decisions template's form. A decision you took appends no row.
-   When the release change is produced outside this run (by a release workflow or bot), record its approval in the final report with the same four items and list the row as a pending follow-up;
+   When the release change is produced outside this run (by a release workflow or bot), record its approval in the final report in the same short form and list the row as a pending follow-up;
    the next change that touches `decisions.md` appends the row, and a `qfai-run` that writes `decisions.md` appends any pending approval row first.
 8. **A finding no stage serves.** Stop, and name the finding, its owner and the stage skill to invoke by name.
 9. **Commit.** `verify-commit` runs last, after any release point; never pushes. A push, pull request, merge or branch update the user asks for after the plan ends is planned next as `{ intent: order, artifacts: [] }` with `npx qfai workflow plan --order`, and its `triage-operate` delivers it.

@@ -14,7 +14,6 @@ import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
   assistantLineCeiling,
 } from "../../../src/core/doctor/assetLineBudget.js";
-import { approachProblems } from "../../../src/core/validators/storyTreeStructure.js";
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
 import { extractionFaults, isExtraction } from "../../../src/core/workflow/extractionShape.js";
 import { routingOutcome } from "../../../src/core/workflow/routeDecision.js";
@@ -1075,13 +1074,12 @@ describe("qfai-run", () => {
     expect(work).toMatch(/a decision you took appends no row/i);
     expect(work).toMatch(/, in the `qfai-sdd` decisions template's form\./i);
     expect(work).toMatch(
-      /when the release change is produced outside this run \(by a release workflow or bot\), record its approval in the final report with the same four items and list the row as a pending follow-up; the next change that touches `decisions\.md` appends the row, and a `qfai-run` that writes `decisions\.md` appends any pending approval row first/i,
+      /when the release change is produced outside this run \(by a release workflow or bot\), record its approval in the final report in the same short form and list the row as a pending follow-up; the next change that touches `decisions\.md` appends the row, and a `qfai-run` that writes `decisions\.md` appends any pending approval row first/i,
     );
-    // The template's release-approval example is a valid Approach cell as it stands.
+    // The template's release-approval example is a short record: one sentence and its rollback.
     const template = await readShipped("skill/qfai-sdd/templates/spec/decisions.md");
-    const example = template.split("\n").find((line) => line.startsWith("- Evidence:"));
-    expect(example).toBeDefined();
-    expect(approachProblems(example ?? "")).toEqual([]);
+    const example = template.split("\n").find((line) => line.startsWith("<the release checks"));
+    expect(example).toMatch(/^<the release checks[^.]*\. - Rollback: \S/);
     expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
     expect(release).toMatch(
       /record the approval as step 7 of `SKILL\.md` says: a `decisions\.md` row the run writes, or, when the release change is produced outside this run, the final report, with the row appended by the next change that touches `decisions\.md`/i,

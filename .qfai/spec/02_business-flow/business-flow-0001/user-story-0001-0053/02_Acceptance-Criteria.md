@@ -70,4 +70,12 @@ Feature: Decision and open-question table validation
     And stale-term scanning excludes the root and every page
     And a missing or unreadable listed page, a duplicate entry, an unlisted file in the decisions directory, an unsafe or linked path, traversal and a wrong page shape fail without accepting a partial register
     And an oversized page is reported without truncation or an automatic rewrite
+  # AC-0001-0053-10
+  Scenario: A decision row over the length limit is warned about
+    Given the story tree, and a row of the decision register, in the root or on a page and in either ID form, whose Content and Approach together hold more than 600 characters
+    When `qfai validate --profile sdd` runs
+    Then `QFAI-STORY-018` is raised at warning naming the file, the row and its length
+    And a row of 600 characters or fewer raises none
+    And in a change-request or declined change-request row only the keyword of Content counts, not the paths it names
+    And the warning does not fail a run under `--fail-on error`
 ```

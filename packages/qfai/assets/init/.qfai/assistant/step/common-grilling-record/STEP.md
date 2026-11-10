@@ -39,7 +39,7 @@ action. Record a rejected option as a decision row whose Content opens `Declined
 or `Declined change request:` for a change request, so it stays excluded on
 reruns.
 
-Each decision record carries the four labelled Approach items stated at the top of
+Each decision record is a short decision record in the form stated at the top of
 `.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
 
 ## One session

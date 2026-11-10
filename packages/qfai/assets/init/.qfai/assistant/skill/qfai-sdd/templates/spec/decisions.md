@@ -28,23 +28,26 @@ that refers to an earlier row opens its Approach with the earlier ID:
 The earlier row stays as written. The order of rows means nothing: a merge may
 interleave the rows two branches appended.
 
-Write each row's Approach as these four items, in this order, each written as
-`- ` followed by its label, after any opening citation above:
+Write each row as a short decision record. Content states what was
+decided; Approach says why, in one to three short sentences: the context
+that forced the choice and the reason it won, and, for an approval, who
+approved it, when and the label of the option chosen. Point to where the
+detail lives, such as a contract rule, a story or a pull request, instead of
+restating it. Add an optional item only when it tells a later reader
+something those sentences do not, each written as `- ` followed by its label,
+after any opening citation above:
 
-- `Evidence:` one or more entries, separated by `; `. A `file:` entry is a
-  repository-relative path, optionally followed by `#L<start>-L<end>`. A
-  `command:` entry is the command, then `→` and a short summary of its result.
-- `Grounds:` which evidence supports the decision, and how.
-- `Residual risk:` the risk that remains, or `none — <reason>`.
-- `Rollback:` the steps that undo the decision, or `none — <reason>`.
+- `Considered:` the options that lost, and why.
+- `Consequences:` what the decision makes easier or harder.
+- `Rollback:` the steps that undo it, when they are not obvious.
 
-No item is empty, and only the last two may take `none — <reason>`. What a
-kind of row must state in its Approach, such as a change request's approval
-(who, when and the option chosen), goes inside these items. A change request
-does not restate the edit. Write a `|` inside a cell as `\|`.
+Content and Approach together stay within 600 characters, the paths a
+change request names not counted; validation warns on a longer row. Write a
+`|` inside a cell as `\|`.
 
-Validation checks this form only on a legacy DEC-NNNN row, so a passing result
-does not prove that a timestamp-form row follows it.
+A legacy DEC-NNNN row above DEC-2097 was written in an earlier form whose
+four items, Evidence, Grounds, Residual risk and Rollback, validation still
+checks; a new row does not use that form.
 
 A release approval, with `<...>` standing for the project's values, has this
 Content cell:
@@ -53,10 +56,10 @@ Release <X.Y.Z> approved by <name> on <date>, option "<label>"
 
 and this Approach cell, written on one line and without backticks around it:
 
-- Evidence: file:CHANGELOG.md; command:<the release checks> → <result> - Grounds: <why the checks support the release> - Residual risk: none — <reason> - Rollback: <the steps that retract the release>
+<the release checks and their result, in one sentence>. - Rollback: <the steps that retract the release>
 
 A stage that does not own this file records its decisions in its own final
-report, with the same four items under the same rules.
+report, in the same short form.
 
 A root may list decision pages in an optional '## Decision pages' section
 before '## Decisions', with only unique direct '- decisions/page-NNNN.md'
