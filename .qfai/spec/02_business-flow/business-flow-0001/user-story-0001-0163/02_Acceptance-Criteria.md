@@ -43,4 +43,27 @@ Feature: Delegation Protocol
     Given a skill that owns no step and holds a review
     When its review runs
     Then the reviewer is the one its body names, and no routing entry or review profile selects it
+
+  # AC-0001-0163-10
+  Scenario: A delegated task's first actions are checked and a wrong course is interrupted early
+    Given the session agent hands a task to another agent and the user is in the session
+    When the host shows the delegated agent's progress and its first actions go off course
+    Then the session agent interrupts at once rather than waiting for the result
+    And where the host shows nothing before the result, the result is the first check
+    And for an independent judgement, off course means outside its brief or remit, a verdict the session disagrees with is never steered, and an interrupt restates only the brief's scope and remit
+
+  # AC-0001-0163-11
+  Scenario: After two corrections that do not land, the task restarts from a rewritten brief
+    Given a delegated task in a session where the user is present
+    When two corrections on that task do not land
+    Then the session agent sends no third correction, stops the task and starts it again from a rewritten brief that carries what was learned
+    And a rewritten judgement brief stays black-box, and when the rewritten brief goes off course the same way the session agent tells the user
+    And nothing of this applies to a run under `--auto` or any run where nobody is present
+
+  # AC-0001-0163-12
+  Scenario: A unit work order carries what the files do not
+    Given the session agent prepares a work order for a parallel unit
+    When it fills the work order template
+    Then the work order names the context not in the repository, such as decisions, procedures or reasons the files do not record, and the paths outside the unit the worker does not touch
+    And a judgement work order leaves both fields out, so its brief holds no author reasoning
 ```

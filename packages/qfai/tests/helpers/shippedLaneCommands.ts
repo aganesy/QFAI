@@ -1386,11 +1386,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // `fcdba5a8…` byte for byte.
     // Re-pinned for one more bullet on the rules list, naming `.agents/rules/reply-forms.md`.
     // Derived by `pnpm pins:entry`; dropping that one bullet reproduces `3eb38f37…` byte for byte.
-    // Re-pinned for the line that says to read a rule's `<name>.local.md` overlay, and the
-    // session-feedback bullet naming overlay proposals. Derived by `pnpm pins:entry`; reverting
-    // both reproduces `c6f0a6a9…` byte for byte.
+    // Re-pinned for the line that says to read a rule's `<name>.local.md` overlay, the
+    // session-feedback bullet naming overlay proposals and the corrections it proposes to the
+    // project, and one more bullet naming `.agents/rules/delegation-steering.md`. Derived by
+    // `pnpm pins:entry`; reverting all three reproduces `c6f0a6a9…` byte for byte.
     ".github/copilot-instructions.md",
-    "e0cbe5b0d966b8e137cd482375291f3617b1e5e403cd526443486d3e32a937b0",
+    "ce9391e5de0c7aa8ee435849f217c384e45b0b4b4c9d317f05d3265ad5c935b1",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1746,6 +1747,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/action-reversibility.md",
   "root/.agents/rules/ai-readable-markdown.md",
   "root/.agents/rules/api-budget.md",
+  "root/.agents/rules/delegation-steering.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",
   "root/.agents/rules/documentation-clarity.md",

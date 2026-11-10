@@ -16,6 +16,7 @@ import { removeTempTree } from "../helpers/tempTree.js";
 const ASSISTANT = path.join(getInitAssetsDir(), ".qfai", "assistant");
 const AGENTS = path.join(ASSISTANT, "agent");
 const BASELINE = path.join(ASSISTANT, "rule", "shared-skill-delegation-baseline.md");
+const WORK_ORDER = path.join(ASSISTANT, "rule", "references", "worker-edit-boundary.md");
 
 async function flatText(file: string): Promise<string> {
   return (await readFile(file, "utf-8")).replace(/\s+/g, " ");
@@ -154,5 +155,23 @@ describe("the shipped catalogue", () => {
     } finally {
       await removeTempTree(root);
     }
+  });
+});
+
+describe("a unit work order carries what the files do not record", () => {
+  // QFAI:AC-0001-0163-12
+  // QFAI:EX-0001-0163-17
+  it("names the context not in the repository and the paths to leave alone, for units only", async () => {
+    const text = await readFile(WORK_ORDER, "utf-8");
+    const template = text.split("\n## Work order template\n")[1] ?? "";
+    expect(template).toMatch(
+      /^Context not in the repository: <a few lines: decisions, procedures or reasons the files do not record>\s+# unit work orders only$/m,
+    );
+    expect(template).toMatch(
+      /^Do not touch: <paths outside the unit[^>]*>\s+# unit work orders only$/m,
+    );
+    expect(template.replace(/\s+/g, " ")).toContain(
+      "A judgement work order, such as a review, leaves both fields out: its brief stays black-box",
+    );
   });
 });

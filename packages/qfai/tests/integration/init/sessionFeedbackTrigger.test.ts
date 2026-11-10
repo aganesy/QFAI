@@ -194,7 +194,7 @@ describe("the review reads the transcript report and proposes overlay items", ()
       "the key terms the item uses, verbatim",
       "the report lines, or the session event, that support it.",
       "overrides nothing in the rule, so an item never replaces or contradicts one of the rule's.",
-      "That is the only file a proposal names.",
+      "That is the only file an overlay proposal names.",
       "A change to a shipped rule, or to any other file QFAI ships, is never made in the project: it becomes a draft",
       "A change to the spec tree is not this review's to make: it goes through `qfai-sdd` as a change request.",
     ]) {
@@ -221,7 +221,7 @@ describe("the entry points tell the agent to read a rule's overlay", () => {
         expect(text, rel).toContain(
           "When a rule has a `<name>.local.md` overlay beside it, read the overlay with the rule: it adds this project's own guidance and overrides nothing.",
         );
-        expect(text, rel).toContain("propose items for this project's rule overlays");
+        expect(text, rel).toContain("propose overlay items");
       }
     });
   });
