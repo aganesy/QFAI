@@ -4,6 +4,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Diagrams are checked where they are written.** The `discussion-pack` and
+  `sdd-flow` steps now run the shipped Mermaid parser on the files they wrote,
+  installed under `tmp/` and never into the project's dependency tree, and
+  report the check as not run when the parser cannot be installed.
+  `qfai validate` warns (`QFAI-FLOW-006`) on a Mermaid diagram with more than
+  12 nodes or 16 edges, so its author splits it into an overview and detail
+  diagrams; `validation.diagramBudget` in `qfai.config.yaml` changes both
+  limits. The discussion profile reports an error (`QFAI-DPACK-012`) for a
+  `path:line` citation in the latest discussion pack that names a missing file
+  or a line past its end.
+
 ### Changed
 
 - **The decision and question registers no longer collide across parallel

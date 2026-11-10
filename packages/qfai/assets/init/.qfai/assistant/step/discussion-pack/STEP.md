@@ -129,6 +129,35 @@ finalize the design system here. The brand direction is the exception — which
 published theme the product is built on is the user's decision, and there is no
 later stage where they are asked.
 
+## Parse the diagrams
+
+Before the gate, parse every Mermaid diagram the pack holds with Mermaid's own
+grammar. `qfai validate` checks only that a diagram is there; a diagram that
+does not parse is otherwise found by CI, after handoff.
+
+1. Read the `mermaid@` and `jsdom@` versions from the install step of
+   `node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml`, the
+   shipped copy of the installed release.
+2. Install them into a directory of their own, never into the project's
+   dependency tree. Add `qfai` to the list when the project has no
+   `node_modules/qfai`.
+
+   ```bash
+   npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --prefix=tmp/qfai-mermaid mermaid@<version> jsdom@<version>
+   ```
+
+3. Run the parser over the pack directory. Where the project has no
+   `node_modules/qfai`, run it from `tmp/qfai-mermaid/node_modules/qfai/`.
+
+   ```bash
+   node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <pack directory>
+   ```
+
+4. Fix each diagram it rejects, and run it again until it exits 0.
+
+When the install or the run fails for a reason other than a rejected diagram,
+report the syntax check as not run, never as passed, and give the reason.
+
 ## Gate
 
 The reviewer confirms:
