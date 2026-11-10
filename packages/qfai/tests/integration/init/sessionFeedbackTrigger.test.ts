@@ -127,3 +127,60 @@ describe("the end of the run triggers the review", () => {
     ]);
   });
 });
+
+// QFAI:AC-0001-0240-06
+// QFAI:EX-0001-0240-19
+// QFAI:EX-0001-0240-20
+// QFAI:EX-0001-0240-21
+describe("the review reads the transcript report and proposes changes", () => {
+  const SHIPPED_RULE = path.join(
+    repoRoot,
+    "packages",
+    "qfai",
+    "assets",
+    "init",
+    "root",
+    ".agents",
+    "rules",
+    "session-feedback.md",
+  );
+
+  async function section(heading: string): Promise<string> {
+    return flat(sectionOf(await readFile(SHIPPED_RULE, "utf-8"), heading));
+  }
+
+  it("runs the transcript report once as evidence, with the trigger unchanged", async () => {
+    const review = await section("## 2. What to review");
+    expect(review).toContain("First run `npx qfai session-review` once.");
+    expect(review).toContain("sends nothing anywhere");
+    expect(review).toContain("It holds no message text.");
+    expect(review).toContain("Treat the report as evidence");
+    expect(await section("## 1. When the review runs")).toContain("No hook triggers it");
+  });
+
+  it("makes each proposal one itemised change, applied to adopter files only after approval", async () => {
+    const proposals = await section("## 4. Proposed changes");
+    for (const part of [
+      "the target file;",
+      "the one item added or replaced, in full;",
+      "the key terms the item uses, verbatim",
+      "the report lines, or the session event, that support it.",
+      "a `*.local.md` overlay beside a rule, or a row appended to a spec record",
+      "It is applied only once the user approves it.",
+      "A change to a file QFAI ships is never made in the project: it becomes a draft",
+    ]) {
+      expect(proposals, part).toContain(part);
+    }
+    const ask = await section("## 5. Ask before filing or applying");
+    expect(ask).toContain("one option for each draft and each proposal");
+    expect(ask).toContain("Apply each approved proposal as it was shown, and nothing else.");
+    const quiet = await section("## 7. Under a no-question mode");
+    expect(quiet).toContain("No proposal is applied either.");
+    expect(quiet).toContain("the report says none was filed or applied");
+  });
+
+  it("stays within 180 lines", async () => {
+    const text = await readFile(SHIPPED_RULE, "utf-8");
+    expect(text.split("\n").length).toBeLessThanOrEqual(180);
+  });
+});

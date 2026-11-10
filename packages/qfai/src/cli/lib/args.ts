@@ -84,6 +84,14 @@ export type ParsedArgs = {
     failOn?: "never" | "warning" | "error";
     dbDriftFormat?: "text" | "json";
     dbDriftOut?: string;
+    /** `--agent <claude|codex|all>` for `qfai session-review`. */
+    sessionReviewAgent?: "claude" | "codex" | "all";
+    /** `--session <id>` for `qfai session-review`. */
+    sessionReviewSession?: string;
+    /** `--since <date>` for `qfai session-review`. */
+    sessionReviewSince?: string;
+    sessionReviewFormat?: "md" | "json";
+    sessionReviewOut?: string;
     platform?: string;
     /** `--rendered <path>` for `qfai validate`: the rendered-text file to compare with the UI contracts. */
     validateRendered?: string;
@@ -585,6 +593,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.reportOut = next;
         } else if (command === "db-drift") {
           options.dbDriftOut = next;
+        } else if (command === "session-review") {
+          options.sessionReviewOut = next;
         } else {
           markInvalid(notValidHere("--out"));
         }
@@ -743,6 +753,40 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
+      case "--agent": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--agent"));
+          break;
+        }
+        if (command !== "session-review") markInvalid(notValidHere("--agent"));
+        else if (next === "claude" || next === "codex" || next === "all")
+          options.sessionReviewAgent = next;
+        else markInvalid(badValue("--agent", next, "claude|codex|all"));
+        break;
+      }
+      case "--session": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--session"));
+          break;
+        }
+        if (command === "session-review") options.sessionReviewSession = next;
+        else markInvalid(notValidHere("--session"));
+        break;
+      }
+      case "--since": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--since"));
+          break;
+        }
+        if (command !== "session-review") markInvalid(notValidHere("--since"));
+        else if (Number.isNaN(Date.parse(next)))
+          markInvalid(badValue("--since", next, "an ISO date, such as 2026-11-01"));
+        else options.sessionReviewSince = next;
+        break;
+      }
       case "--story": {
         const next = consumeOptionValue();
         if (next === null) {
@@ -821,6 +865,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   ) {
     markInvalid(`qfai doctor: --target-url requires --profile prototyping.`);
   }
+  if (
+    command === "session-review" &&
+    options.sessionReviewSession !== undefined &&
+    options.sessionReviewSince !== undefined
+  ) {
+    markInvalid("qfai session-review: give --session or --since, not both.");
+  }
   if (command === "discussion" && !options.help && !options.discussionAction) {
     markInvalid(subcommandReason("discussion", null));
   }
@@ -875,6 +926,9 @@ function formatChoicesFor(command: string | null): string {
   }
   if (command === "doctor") {
     return "text|json";
+  }
+  if (command === "session-review") {
+    return "md|json";
   }
   return "";
 }
@@ -945,6 +999,13 @@ function applyFormatOption(
   if (command === "db-drift") {
     if (value === "text" || value === "json") {
       options.dbDriftFormat = value;
+      return true;
+    }
+    return false;
+  }
+  if (command === "session-review") {
+    if (value === "md" || value === "json") {
+      options.sessionReviewFormat = value;
       return true;
     }
     return false;

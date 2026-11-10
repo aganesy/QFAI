@@ -70,6 +70,14 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
+    label: "session-review",
+    lines: [
+      `${EXIT_CODES.ok} = a report, or no transcript of the project was found,`,
+      `${EXIT_CODES.findings} = a runtime error (a transcript or the --out file could not be read or written),`,
+      `${EXIT_CODES.inputError} = a usage error, or --session names no session of the project`,
+    ],
+  },
+  {
     label: "report",
     lines: [
       `${EXIT_CODES.ok} = success,`,

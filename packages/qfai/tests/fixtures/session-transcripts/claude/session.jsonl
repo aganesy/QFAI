@@ -1,0 +1,27 @@
+{"type":"queue-operation","operation":"enqueue","sessionId":"s1"}
+{"type":"user","cwd":"/work/app","message":{"role":"user","content":[{"type":"text","text":"<system-reminder>stop, that is wrong</system-reminder>"},{"type":"text","text":"Please add the export command."}]}}
+{"type":"attachment","cwd":"/work/app","attachment":{"type":"hook_additional_context","hookEvent":"PreToolUse","content":["QFAI API budget (.agents/rules/api-budget.md). Ask git first."]}}
+{"type":"attachment","cwd":"/work/app","attachment":{"type":"hook_additional_context","hookEvent":"PreToolUse","content":["QFAI API budget (.agents/rules/api-budget.md). Ask git first."]}}
+{"type":"attachment","cwd":"/work/app","attachment":{"type":"hook_additional_context","hookEvent":"UserPromptSubmit","content":["QFAI user questions (.agents/rules/user-questions.md): ask only when the next step needs it."]}}
+{"type":"attachment","cwd":"/work/app","attachment":{"type":"hook_additional_context","hookEvent":"PostToolUse","content":["Remember the project's own linter."]}}
+{"type":"assistant","cwd":"/work/app","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Read","input":{"file_path":"/work/app/.agents/rules/grilling.md"}}]}}
+{"type":"user","cwd":"/work/app","toolUseResult":{},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"0123456789"}]}}
+{"type":"assistant","cwd":"/work/app","message":{"role":"assistant","content":[{"type":"tool_use","id":"t2","name":"Read","input":{"file_path":"/work/app/.agents/rules/grilling.md"}},{"type":"tool_use","id":"t3","name":"Read","input":{"file_path":"/work/app/src/index.ts"}}]}}
+{"type":"user","cwd":"/work/app","toolUseResult":{},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t2","content":[{"type":"text","text":"abcde"}]},{"type":"tool_result","tool_use_id":"t3","content":"export {};"}]}}
+{"type":"assistant","cwd":"/work/app","message":{"role":"assistant","content":[{"type":"tool_use","id":"t4","name":"Bash","input":{"command":"npx qfai validate --fail-on error"}}]}}
+{"type":"user","cwd":"/work/app","toolUseResult":{},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t4","is_error":true,"content":"Exit code 1\n[error] QFAI-TRACE-002 a reference is missing\n[error] QFAI-TRACE-002 another reference is missing"}]}}
+{"type":"assistant","cwd":"/work/app","message":{"role":"assistant","content":[{"type":"tool_use","id":"t5","name":"Bash","input":{"command":"npx qfai validate"}}]}}
+{"type":"user","cwd":"/work/app","toolUseResult":{},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t5","content":"validate: 0 findings"}]}}
+{"type":"assistant","cwd":"/work/app","message":{"role":"assistant","content":[{"type":"tool_use","id":"t6","name":"Bash","input":{"command":"cat .qfai/assistant/skill/qfai-run/SKILL.md && echo qfai-run"}}]}}
+{"type":"user","cwd":"/work/app","toolUseResult":{},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t6","content":"skill body"}]}}
+{"type":"assistant","cwd":"/work/app","message":{"role":"assistant","content":[{"type":"tool_use","id":"t7","name":"Edit","input":{"file_path":"/work/app/src/index.ts"}}]}}
+{"type":"user","cwd":"/work/app","toolUseResult":{},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t7","is_error":true,"content":"String to replace not found in file."}]}}
+{"type":"assistant","cwd":"/work/app","message":{"role":"assistant","content":[{"type":"tool_use","id":"t8","name":"AskUserQuestion","input":{"questions":[{"question":"One?"},{"question":"Two?"},{"question":"Three?"}]}}]}}
+{"type":"user","cwd":"/work/app","toolUseResult":{},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t8","content":"answered"}]}}
+{"type":"user","cwd":"/work/app","message":{"role":"user","content":"No, that is wrong. Use the other file instead."}}
+{"type":"user","cwd":"/work/app","isMeta":true,"message":{"role":"user","content":"<system-reminder>wrong, stop</system-reminder>"}}
+{"type":"user","cwd":"/work/app","message":{"role":"user","content":"<task-notification>stop and revert</task-notification>"}}
+{"type":"user","cwd":"/work/app","message":{"role":"user","content":"[Request interrupted by user]"}}
+{"type":"user","cwd":"/work/app","message":{"role":"user","content":[{"type":"text","text":"\u305D\u308C\u306F\u9055\u3046"}]}}
+{not json
+plain text line

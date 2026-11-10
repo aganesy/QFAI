@@ -356,6 +356,17 @@ flowchart LR
     `--profile prototyping` adds preflight checks for the primary UI contract, design contract readiness,
     active agent-wrapper integrations, shipped role-input readiness, Playwright CLI launcher resolution and probing,
     and target URL reachability.
+- `npx qfai session-review`
+  - Counts what this project's own Claude Code and Codex transcripts show, for the session review
+    in `.agents/rules/session-feedback.md`: the QFAI reminders shown, the rule, skill and step files
+    read, the tool errors with their finding codes, the `qfai` commands with their exit status, the
+    structured questions asked, and the typed turns that match a fixed list of correction words.
+    It reads local files only, sends nothing anywhere, and prints counts and matched words, never
+    message text. With no option it reports the latest session of each agent; `--agent claude|codex`,
+    `--session <id>` and `--since <date>` choose others. The report goes to standard output, or to
+    `--out <path>`; `--format json` gives JSON. `CLAUDE_CONFIG_DIR` and `CODEX_HOME` move where the
+    transcripts are looked for. Exit codes: 0 (a report, or no transcript found), 2 (a usage error,
+    or `--session` names no session of the project), 1 (a file could not be read or written).
 - `npx qfai workflow plan`
   - The route planning behind the free-text entry. `--in <path>`, or `--in -` for standard input,
     reads a request's extraction; `--route <route>` names a route instead. It prints one JSON
