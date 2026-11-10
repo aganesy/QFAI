@@ -42,8 +42,9 @@ describe.each(TREES)("%s", (tree) => {
       "Whether writing root `DESIGN.md`, building a screen or reviewing one, follow",
     );
     expect(list).toContain(
-      "a restyle changes no displayed text, so a claim to remove or reword is reported as a change the contract needs",
+      "A restyle changes no displayed text, so there a claim to remove or reword is reported as a change the contract needs.",
     );
+    expect(list).toContain("A `prototype` iteration applies the answer to the prototype.");
     expect(list).toContain("Put each such claim to the user under the question protocol.");
     expect(list).toContain(
       "A claim the user confirms keeps its wording, or becomes specific with the facts the user gives. A claim the user rejects is removed.",

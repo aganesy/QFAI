@@ -48,8 +48,11 @@ describe.each(TREES)("%s", (tree) => {
     expect(loop).toContain(
       "Capture it twice and leave out only text that differs between the two captures",
     );
-    // The reviewer is told to expect the baseline among its mandatory inputs.
+    // The step that dispatches the reviewer hands it the baseline as a mandatory input.
     expect(loop).toContain("The reviewer of every restyle iteration compares the route with it.");
+    expect(loop).toContain(
+      "In a `restyle` iteration, each route's baseline at `.qfai/prototype/baseline/<ui-contract-id>/<screen>.txt`.",
+    );
 
     const reviewer = flat(await read(tree, REVIEWER));
     expect(reviewer).toContain(
@@ -104,6 +107,12 @@ describe.each(TREES)("%s", (tree) => {
       "when the user accepts none, the run ends there as **Stopped**, with no edit and no handoff; the route's later stages then change nothing",
     );
     expect(loop).toContain("or a restyle at `none` had no refinement accepted");
+    expect(loop).toContain("the level is taken as an assumption the report names");
+
+    const implement = flat(await read(tree, "skill/qfai-implement/references/ui-affecting.md"));
+    expect(implement).toContain(
+      "the restyle stopped with nothing to fix: implement makes no change to the screens it covered.",
+    );
     expect(loop).toContain("the `restyleLevel` field in `progress.md` is not one.");
 
     const generator = flat(await read(tree, GENERATOR));

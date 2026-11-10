@@ -300,9 +300,9 @@ pattern above: never write one.
 - With no user present, the claim stays as it is, becomes one row in
   `open-questions.md` under `paths.specsDir`, and the final report lists it.
 - Inside the prototyping loop, the claim and the user's answer go to the final
-  report instead: a restyle changes no displayed text, so a claim to remove or
-  reword is reported as a change the contract needs, and the loop writes only
-  under `.qfai/prototype/`.
+  report instead of `open-questions.md`. A `prototype` iteration applies the
+  answer to the prototype. A restyle changes no displayed text, so there a
+  claim to remove or reword is reported as a change the contract needs.
 
 ## Copy that adds no meaning
 

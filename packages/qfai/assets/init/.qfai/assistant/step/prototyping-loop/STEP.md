@@ -10,7 +10,8 @@ requires: []
 The build and review loop. Each iteration builds a prototype under root
 `DESIGN.md`, has it reviewed, and puts it to the user. The loop ends when the
 user confirms the prototype, or when a restyle with nothing to fix stops before
-iteration 00; until then it runs another iteration on the user's answer. No command, score or check decides that the loop is done.
+iteration 00; until then it runs another iteration on the user's answer. No
+command, score or check decides that the loop is done.
 
 ## Reads
 
@@ -122,9 +123,13 @@ steer it. A screen that is already good is not changed to be different: at
 `none`, iteration 00 applies only the refinements the user accepted, and
 when the user accepts none, the run ends there as **Stopped**, with no edit
 and no handoff; the route's later stages then change nothing, and the final
-report says the screens were left as they were. Under a no-question mode, the level is taken
-as an assumption the report names; at `none` nobody can accept a refinement,
-so the run stops before iteration 00.
+report says the screens were left as they were. Under a no-question mode, the
+level is taken as an assumption the report names; at `none` nobody can accept
+a refinement, so the run stops before iteration 00.
+
+The baseline is written afresh each run, replacing the files of the last one.
+It holds the live app's text, which can be real customer data: like the rest
+of `.qfai/prototype/`, it is a working file and is not committed.
 
 ## Run scope
 
@@ -242,8 +247,8 @@ How the session ends decides the route:
   every other open decision as a labelled assumption and asks this question
   again. It is what the loop exists to answer, so a closure cannot assume it.
 - **Stopped** — the user said `stop`, or a restyle at `none` had no
-  refinement accepted, as _Before a restyle edits anything_ says — ends the run there and reports every
-  open decision as open.
+  refinement accepted, as _Before a restyle edits anything_ says — ends the
+  run there and reports every open decision as open.
 
 Under a no-question mode nobody can answer, so the question is written to
 `## Escalated` and the run stops there. A reviewer's scores are not the user's
@@ -252,6 +257,8 @@ confirmation.
 ## Evaluator Inputs (Mandatory)
 
 - The live prototype, opened in the reviewer's own Playwright session.
+- In a `restyle` iteration, each route's baseline at
+  `.qfai/prototype/baseline/<ui-contract-id>/<screen>.txt`.
 - Root `DESIGN.md` (read-only), `axisDefs`, `previousScore` and
   `designSystemChecklist`. `previousScore` and the prior reviews come from
   this run's own iterations; the run's first iteration has none. After an
