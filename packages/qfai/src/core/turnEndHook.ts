@@ -70,7 +70,11 @@ export function readTurnEndChecks(techText: string): TurnEndCheck[] {
 
 interface CommandResult {
   readonly code: number | null;
+  readonly signal: NodeJS.Signals | null;
+  /** stdout and stderr in the order they arrived, as shown to the agent. */
   readonly output: string;
+  /** stdout, then stderr: the same failure gives the same text whatever the interleaving. */
+  readonly ordered: string;
   readonly timedOut: boolean;
 }
 
@@ -99,6 +103,8 @@ function stopTree(child: ChildProcess): void {
 function runCommand(command: string, cwd: string, timeoutMs: number): Promise<CommandResult> {
   return new Promise((resolve) => {
     let output = "";
+    let stdout = "";
+    let stderr = "";
     let settled = false;
     let grace: ReturnType<typeof setTimeout> | undefined;
     const child = spawn(command, {
@@ -108,40 +114,70 @@ function runCommand(command: string, cwd: string, timeoutMs: number): Promise<Co
       detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const finish = (result: CommandResult): void => {
+    const finish = (
+      code: number | null,
+      signal: NodeJS.Signals | null,
+      timedOut: boolean,
+      extra = "",
+    ): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       clearTimeout(grace);
       child.stdout.destroy();
       child.stderr.destroy();
-      resolve(result);
+      resolve({
+        code,
+        signal,
+        output: output + extra,
+        ordered: stdout + stderr + extra,
+        timedOut,
+      });
     };
-    const collect = (chunk: Buffer): void => {
-      output = (output + chunk.toString("utf8")).slice(-KEEP_CHARS);
-    };
-    child.stdout.on("data", collect);
-    child.stderr.on("data", collect);
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      output = (output + chunk).slice(-KEEP_CHARS);
+      stdout = (stdout + chunk).slice(-KEEP_CHARS);
+    });
+    child.stderr.on("data", (chunk: string) => {
+      output = (output + chunk).slice(-KEEP_CHARS);
+      stderr = (stderr + chunk).slice(-KEEP_CHARS);
+    });
     const timer = setTimeout(() => {
       stopTree(child);
-      finish({ code: null, output, timedOut: true });
+      finish(null, null, true);
     }, timeoutMs);
     child.on("error", (error) => {
-      finish({ code: null, output: `${output}${error.message}\n`, timedOut: false });
+      finish(null, null, false, `${error.message}\n`);
     });
     // The exit code is settled when the command exits. A program it left running may still hold
-    // the pipes, so the output is read a little longer and what is left of the tree is stopped.
-    child.on("exit", (code) => {
+    // the pipes, so the output is read a little longer and, on POSIX, what is left of the process
+    // group is stopped.
+    // SIMPLIFIED: on Windows the tree cannot be reached once the shell has exited: `taskkill /T`
+    // needs a live root, and the shell's pid may already be reused. The leftover program keeps
+    // running. Lift with a Job Object that holds the whole tree.
+    child.on("exit", (code, signal) => {
       clearTimeout(timer);
       grace = setTimeout(() => {
-        stopTree(child);
-        finish({ code, output, timedOut: false });
+        if (process.platform !== "win32") stopTree(child);
+        finish(code, signal, false);
       }, EXIT_GRACE_MS);
     });
-    child.on("close", (code) => {
-      finish({ code, output, timedOut: false });
+    child.on("close", (code, signal) => {
+      finish(code, signal, false);
     });
   });
+}
+
+/** How a failed command ended, in words. */
+function endingOf(result: CommandResult, timeoutMs: number): string {
+  if (result.timedOut) {
+    const seconds = Math.max(1, Math.round(timeoutMs / 1000));
+    return `did not finish within ${seconds} second${seconds === 1 ? "" : "s"}`;
+  }
+  if (result.code !== null) return `ended with exit ${result.code}`;
+  return result.signal === null ? "ended with exit unknown" : `was stopped by ${result.signal}`;
 }
 
 /** The last lines of a command's output, within both bounds. */
@@ -208,8 +244,10 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
       path.join(resolvePath(found.root, loaded.config, "contractsDir"), "tech.md"),
       "utf8",
     );
-  } catch {
-    return "";
+  } catch (error) {
+    // A project without tech.md lists no check; any other read error is reported by the caller.
+    if (isRecord(error) && error.code === "ENOENT") return "";
+    throw error;
   }
   const checks = readTurnEndChecks(techText);
   const session = stringField(event, "session_id");
@@ -220,11 +258,9 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
     const result = await runCommand(check.command, found.root, timeoutMs);
     if (!result.timedOut && result.code === 0) continue;
     const shown = tail(result.output);
-    const ending = result.timedOut
-      ? `did not finish within ${Math.round(timeoutMs / 1000)} seconds`
-      : `ended with exit ${result.code ?? "unknown"}`;
+    const ending = endingOf(result, timeoutMs);
     const digest = createHash("sha256")
-      .update([check.label, ending, shown].join("\n").replace(/\d+/g, "#"))
+      .update([check.label, ending, tail(result.ordered)].join("\n").replace(/\d+/g, "#"))
       .digest("hex");
     const continued = event.stop_hook_active === true;
     const last = await readState(file);
@@ -232,7 +268,7 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
     const release =
       file === null
         ? continued
-        : last?.digest === digest || (continued && blocks > MAX_CONTINUED_BLOCKS);
+        : continued && (last?.digest === digest || blocks > MAX_CONTINUED_BLOCKS);
     if (release) {
       if (file !== null) await rm(file, { force: true });
       return `${JSON.stringify({
@@ -243,7 +279,9 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
     const reason = [
       `The turn-end check ${check.label} failed: ${check.command} ${ending}.`,
       shown === "" ? "It printed nothing." : `End of its output:\n${shown}`,
-      "Fix the cause before ending the turn. The check is listed under Turn-end check in tech.md.",
+      event.hook_event_name === "SubagentStop"
+        ? "Fix the cause before ending the turn. If fixing it is outside your task, say so in your reply and end the turn. The check is listed under Turn-end check in tech.md."
+        : "Fix the cause before ending the turn. The check is listed under Turn-end check in tech.md.",
     ].join("\n\n");
     return `${JSON.stringify({ decision: "block", reason })}\n`;
   }

@@ -87,6 +87,7 @@ describe("turn-end hook", () => {
     await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"]);
     const output = parsed(await hook({ hook_event_name: "SubagentStop", session_id: "s1" }));
     expect(output.decision).toBe("block");
+    expect(output.reason).toContain("If fixing it is outside your task");
   });
 
   // QFAI:EX-0001-0244-03
@@ -111,6 +112,27 @@ describe("turn-end hook", () => {
     expect(reason).toContain("did not finish within");
   });
 
+  // QFAI:EX-0001-0244-04
+  it("stops what the timed-out command started as well", async () => {
+    const marker = path.join(root, "late.txt");
+    await writeFile(
+      path.join(root, "late.js"),
+      `setTimeout(() => require("fs").writeFileSync(${JSON.stringify(marker)}, "late"), 1500);\n`,
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "parent.js"),
+      'require("child_process").spawn(process.execPath, ["late.js"], { stdio: "inherit" });\n',
+      "utf-8",
+    );
+    await project(["- Test: `node parent.js`", "- Turn-end check: Test"]);
+    expect(String(parsed(await hook({ session_id: "s1" }, 500)).reason)).toContain(
+      "did not finish within",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await expect(readFile(marker, "utf-8")).rejects.toThrow();
+  });
+
   // QFAI:EX-0001-0244-05
   it("prints nothing when every marked command passes", async () => {
     const pass = await script("pass.js", "clean\n", 0);
@@ -130,6 +152,48 @@ describe("turn-end hook", () => {
   // QFAI:EX-0001-0244-07
   it("prints nothing outside a QFAI project", async () => {
     expect(await hook({ session_id: "s1" })).toBe("");
+  });
+
+  // QFAI:EX-0001-0244-08
+  it("sees the same failure whatever order stdout and stderr arrive in", async () => {
+    await writeFile(
+      path.join(root, "fail.js"),
+      [
+        'const fs = require("fs");',
+        'const first = !fs.existsSync("seen");',
+        'fs.writeFileSync("seen", "");',
+        'const out = () => fs.writeSync(1, "type error\\n");',
+        'const err = () => fs.writeSync(2, "1 error found\\n");',
+        "if (first) { out(); err(); } else { err(); out(); }",
+        "process.exitCode = 1;",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await project(["- Typecheck: `node fail.js`", "- Turn-end check: Typecheck"]);
+    expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
+    const second = parsed(await hook({ session_id: "s1", stop_hook_active: true }));
+    expect(second.decision).toBeUndefined();
+    expect(second.systemMessage).toContain("ended anyway");
+  });
+
+  // QFAI:EX-0001-0244-08
+  it("blocks a new turn on the failure the last turn ended with", async () => {
+    const fail = await script("fail.js", "type error\n", 1);
+    await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"]);
+    expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
+    expect(parsed(await hook({ session_id: "s1", stop_hook_active: false })).decision).toBe(
+      "block",
+    );
+  });
+
+  // QFAI:EX-0001-0244-07
+  it("rejects, rather than passes, when tech.md cannot be read", async () => {
+    await project(["- Turn-end check: Typecheck"]);
+    const tech = path.join(root, ".qfai", "spec", "03_contract", "tech.md");
+    await rm(tech);
+    await mkdir(tech);
+    await expect(hook({ session_id: "s1" })).rejects.toThrow();
   });
 
   // QFAI:EX-0001-0244-08

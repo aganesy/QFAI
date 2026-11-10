@@ -3,8 +3,9 @@
  *
  * A stop hook cannot see whether the user's work is done, so one that asks for the review has to
  * block every stop, and each blocked stop is one more model call. The hook files therefore carry
- * no `Stop` group but the turn-end check, which prints nothing while its checks pass, and `qfai-run`'s final report asks for the review once, when it closes the
- * user's last task and nothing waits on the user.
+ * no `Stop` group but the turn-end check, which prints nothing while its checks pass, and
+ * `qfai-run`'s final report asks for the review once, when it closes the user's last task and
+ * nothing waits on the user.
  */
 // QFAI:AC-0001-0231-01
 // QFAI:AC-0001-0231-04
