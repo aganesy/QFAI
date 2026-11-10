@@ -118,159 +118,69 @@ behavior.
 
 ## Article VI — Clarification budget (avoid endless Q&A)
 
-Every command must minimize clarifying questions. The article binds each of
-them alike: a stage does not escape it by being about discussion, and a
-discussion does not become cheap by sitting inside one. What separates a stage
-that asks a lot from one that asks little is how many of its questions are
-grilling questions, which the exemption below takes out of the count.
+Purpose: every command asks as few clarifying questions as it can, so the user's attention goes
+where an answer can change the work. The article binds every command alike, discussion included.
 
 Default policy:
 
-- Ask **at most 5 clarifying questions per invocation**. The unit is one
-  top-level skill or command invocation: every `/qfai-*` stage listed in
-  `.qfai/assistant/rule/workflow.md` → “Stages (canonical)”, and equally a non-stage command such as
-  `/qfai-configure` or `/web-research`. Each invocation spends its own budget and
-  the next one starts with a full budget. It is not per session and not per
-  conversation.
+- Ask **at most 5 clarifying questions per invocation**. The unit is one top-level skill or command
+  invocation: every `/qfai-*` stage listed in `.qfai/assistant/rule/workflow.md` → “Stages
+  (canonical)”, and equally a non-stage command such as `/qfai-configure` or `/web-research`. Each
+  invocation starts with a full budget; it is not per session and not per conversation.
 - Prioritize **blocking** questions first.
 - If user requests `--auto`, proceed with explicit assumptions (label them).
 
 ### What spends the budget
 
-- A **clarification** — a question asked to resolve ambiguity in the request,
-  the specs, or the repository — spends budget.
-- An **approval** — a question asked because a document requires a recorded
-  human decision before the work may proceed — does **not** spend budget.
-  Approvals are unbounded by construction: SDD triage requires an `Approved By`
-  on every approval-required row and puts no cap on rows. Counting them would
-  make this article impossible to satisfy in the stage that asks the most.
-- Classify **each question, not the prompt**. A prompt that carries both spends
-  one unit per clarification it contains; only its approval questions are exempt.
-  Attaching an approval to a clarification does not buy the clarification back.
+- A **clarification**, a question asked to resolve ambiguity in the request, the specs, or the
+  repository, spends budget. An **approval**, a question asked because a document requires a
+  recorded human decision before the work may proceed, does **not**.
+- Classify **each question, not the prompt**. Attaching an approval to a clarification does not buy
+  the clarification back.
 
 ### Counting unit
 
-- **Five clarifying questions per skill invocation.** The counter is owned by the
-  agent that received the invocation, starts at zero when the invocation starts,
-  and does **not** reset between stages of that invocation. A delegated subagent
-  spends its caller's budget; it does not receive one of its own.
-- **One question item is one question**, however many options it offers. An
-  AskUserQuestion call that bundles N question items spends N, not 1 — bundling
-  is a presentation choice, not a discount. The plain-text fallback uses the
-  same unit, in either shape its answer takes: one numbered choice set is one
-  question, and one plain request for an open value is one question. A question
-  the tool could not carry is still a question, and counting only the shape that
-  happens to be a list would put the whole of Article X's open-value path
-  outside the budget.
+- The counter is owned by the agent that received the invocation and does **not** reset between
+  stages of that invocation. A delegated subagent spends its caller's budget.
+- **One question item is one question**, however many options it offers. An AskUserQuestion call
+  that bundles N question items spends N. The plain-text fallback counts the same way, for a
+  numbered choice set and for a plain request for an open value alike.
 
 ### What does not count
 
-- **Grilling questions are exempt.** A question asked inside a grilling
-  session — the interview `.agents/rules/grilling.md` defines, which walks a
-  design tree in rounds until nothing is left silently assumed — is not a
-  clarification against this budget. The exemption covers the questions a
-  session puts to the user, which in a delegated session are only its critical
-  decisions and the facts only the user holds. Such questions are unbounded and
-  must still be asked after the budget is exhausted. A session ends in one of the
-  endings that rule names, and never on a count. A cap would end it on a number instead: some
-  plans need three questions and some need fifty, and a ceiling either truncates
-  the first kind or looks arbitrary on the second.
-
-  **A session is entered deliberately.** An invocation declares one and nothing
-  else starts one: meeting an unfixed design does not, and neither does an
-  ambiguity found while implementing. Outside a declared session no question is
-  a grilling question — one about an open design decision is an ordinary
-  clarification and spends budget. That is what decides the class when the
-  question is asked, rather than leaving it arguable afterwards, and it is what
-  keeps the exemption from emptying the budget. It separates grilling from
-  clarification and nothing else: the approval and `hard-required` exemptions
-  below turn on what a question is about, not on whether a session was declared,
-  so they hold in every invocation.
-
-  **The confirmation that closes a session is in this class with its
-  questions.** It is the session's own end condition, so counting it would leave
-  a session that can be neither continued nor closed.
-
-- **Approval questions are exempt.** A question whose subject is a user decision
-  the skill declares mandatory — a per-row triage approval in `/qfai-sdd`, a
-  destructive-operation confirmation — is a decision, not a clarification. Such questions are unbounded and must
-  still be asked after the budget is exhausted. Skipping a mandatory approval to
-  stay under the budget violates this article; it is not compliance with it.
-- **The next-action question is exempt.** The question that ends a turn leaving
-  the next step to the user (`.agents/rules/user-questions.md` § 6) resolves no
-  ambiguity, so it is not a clarification. It is still put after the budget is
-  exhausted.
-- **`hard-required` inputs are exempt — but only where the invocation needs
-  them.** An input a skill's `Default Autopilot Policy` lists under
-  `hard-required` has no default and must not be guessed once the budget is
-  exhausted. The exemption is **scoped to the inputs the requested work actually
-  consumes**: brand intent when the run produces brand-facing
-  output, a full `UI-NNNN` when a prototyping-scoped run cannot identify
-  its primary UI contract, or a usable story source and `BF-NNNN` when a
-  flow-scoped run cannot identify its target. An input the requested
-  path never reads must not be asked for and must not block the run — a
-  `/qfai-verify` run on a repository with no brand surface executes its quality
-  gates without ever asking for brand intent. When a **needed** input is still
-  missing, stop and name what is blocked. Assumptions cover clarifications,
-  never inputs the skill declares undefaultable **and** the run requires.
-  **An explicit `--auto` skips the asking, not the rule.** Article X rule 4 is a
-  no-question mode, so such a run does not ask for the missing input — it stops
-  and names it as the blocker. `--auto` waives the question, never the input: a
-  value the skill declares undefaultable is not something a run may invent
-  because it was told not to ask.
+- **Grilling questions are exempt** and unbounded: a question asked inside a grilling session
+  (`.agents/rules/grilling.md#scope`) spends no budget, is still asked after the budget is
+  exhausted, and the session ends on one of that rule's endings, never on a count. The confirmation
+  that closes a session is in the same class.
+- **A session is entered deliberately.** Outside a declared session no question is a grilling
+  question: one about an open design decision is an ordinary clarification and spends budget.
+- **Approval questions are exempt.** A user decision the skill declares mandatory (a per-row triage
+  approval in `/qfai-sdd`, a destructive-operation confirmation) is unbounded and still asked after
+  exhaustion. Skipping one to stay under the budget violates this article.
+- **The next-action question is exempt.** The question that ends a turn leaving the next step to
+  the user (`.agents/rules/user-questions.md` § 6) resolves no ambiguity, so it is not a
+  clarification; it is still put after the budget is exhausted.
+- **`hard-required` inputs are exempt — but only where the invocation needs them.** An input a
+  skill's `Default Autopilot Policy` lists under `hard-required` and the requested work consumes is
+  never guessed: it is asked even after the budget is exhausted, and when it is still missing, or
+  under `--auto`, the run stops and names what is blocked. An input the requested path never reads
+  is neither asked for nor a blocker.
 
 Stop conditions:
 
 - User says “stop” → abort the invocation; no further work or file changes.
-- User says “proceed / done” → clarification-exhausted mode for the rest of the
-  invocation. It waives clarifications only; it is **not** `--auto`, and the
-  mandatory approvals and needed `hard-required` inputs above must still be
-  asked.
-- Question budget is exhausted → clarification-exhausted mode for the rest of the
-  invocation.
+- User says “proceed / done” → clarification-exhausted mode for the rest of the invocation.
+- Question budget is exhausted → clarification-exhausted mode for the rest of the invocation.
 
 ### On exhaustion
 
-Exhaustion stops the questions, not the work: for the remainder of the
-invocation the agent is in **clarification-exhausted mode** — ask no further
-clarifying questions, proceed with explicit assumptions, and label every
-assumption in the outputs.
-
-The mode has **two entry conditions and one meaning**: the budget is spent, or
-the user closes it early by answering `proceed` / `done`. Such an answer waives
-the clarifying questions the agent still had, and nothing else.
-
-Clarification-exhausted mode is **not `--auto`**. `--auto` is a no-question mode
-(Article X, rule 4) that forbids AskUserQuestion and plain-text questions
-outright, and only the explicit `--auto` flag turns it on — neither a spent
-budget nor a `proceed` / `done` answer does; clarification-exhausted mode
-silences clarifications only, so the exemptions above survive it unchanged —
-mandatory approvals and needed `hard-required` inputs must still be asked, under
-either entry condition. An agent that exhausts the budget mid-invocation, or is
-told to `proceed` before an approval-required change is discovered, therefore
-never has to choose between skipping a mandatory approval and breaking the
-`--auto` rules: it is not under them.
-
-An explicit **“stop” is not exhaustion**. Do not read it as `--auto` or as
-clarification-exhausted mode. It ends the invocation: ask nothing further, do no
-further work, make no further file changes, and report what was completed and
-what remains.
-
-Do not ask a sixth clarification. Settle the remaining ambiguity the way `--auto`
-does: proceed with explicit assumptions, label them, and record them in the
-invocation's output — as Open Questions when the assumption is still unresolved.
-Exhaustion silences clarifications only. A **required approval is still asked**:
-it never spent budget, and Article X's `--auto` no-question mode is not in force
-here — only its assumption-recording behaviour is. Silently stopping is not a
-sanctioned move, and neither is asking a sixth clarification anyway.
-
-**A grilling session survives exhaustion too**, and for the same reason: its
-questions never spent budget, so there is none left to run out of. A session
-already under way continues to its own end condition, a delegated one still
-requiring actual user authority for critical decisions, and a stage reached after
-exhaustion still opens one where its work calls for it. Treating a spent budget
-as the end of a session would put the design decisions back where this article
-found them — settled quietly, on an assumption nobody was asked about.
+In **clarification-exhausted mode** the agent asks no further clarifying question, proceeds with
+explicit assumptions, labels every assumption in the outputs, and records an unresolved one as an
+Open Question. The mode silences clarifications only and is **not `--auto`**: mandatory approvals,
+needed `hard-required` inputs, the next-action question, a grilling session under way and one a
+later stage opens all survive it. An
+explicit **“stop” is not exhaustion**: it ends the invocation, and the agent reports what was
+completed and what remains.
 
 ---
 
@@ -358,86 +268,29 @@ happens.
 
 When an agent needs to ask the user a question, it must use the AskUserQuestion tool if available.
 
-**No question is exempt.** A confirmation, a yes-or-no, a "just checking" — each
-is a question and each takes this path. There is no class light enough to skip
-it, and the reason is what an exception gets used for: an agent looking for one
-is an agent that would rather not ask, and the question it skips is the one it
-was least sure of. `.agents/rules/user-questions.md` owns the form a question
-takes and states the whole of it; this article is where the obligation binds.
-
-**This is the form, not the count.** Article VI bounds how many clarifying
-questions an invocation asks; this article bounds what each of them looks like.
-Exhausting that budget changes the count and nothing here: a question that
-survives exhaustion still arrives in the form its answer shape calls for — a
-structured choice where there are choices, the tool's free-text path where the
-answer has no listable set of candidates. `qfai-configure`'s replacement glob is
-the second kind, and inventing options to narrow it would be the failure the
-rule master names.
+**No question is exempt.** A confirmation or a yes-or-no takes this path too.
+`.agents/rules/user-questions.md` owns the form a question takes; this article is where the
+obligation binds. Article VI bounds the count, and this article the form.
 
 Rules:
 
-0. **A no-question mode is read first.** Where rule 4 applies, no question is put
-   to the user, so there is nothing whose availability rules 1 to 3 could judge.
-   Actual qualifying explicit delegation may still permit agent-to-agent rounds
-   under the master; no-question mode alone does not. Read
-   the other way round, a mode that withholds the tool would make it unavailable,
-   route the question to rule 3's plain-text fallback, and hand the agent a rule
-   that says to ask beside one that says not to.
-1. **Use AskUserQuestion** when the tool is available in the current environment.
-   Availability is judged for **this question in this invocation**, not from what the
-   host supports in general: a tool a mode withholds, or one that cannot carry the
-   answer's shape, is unavailable for that question and takes rule 3. "Withholds"
-   means a mode that still permits asking and offers no structured tool; a mode
-   that permits no question at all is rule 4's, not this one's.
-2. **Prefer structured choices** (radio/multi-select) over free-text input **where the
-   question has choices** and AskUserQuestion supports them. Where the answer is open — no listable set
-   of candidates to choose from — the free-text path is the one that carries it, and narrowing it
-   into options is the failure rule 3 names. A name, a number or a sentence is usually open and is
-   not open by type: where the value has to be one of a known few, the set is what the user needs to
-   see. The preference ranks two ways of asking one question; it does not
-   turn an open answer into a choice.
-3. **Fallback**: If AskUserQuestion is unavailable for this question, present the same
-   question as a normal message, **in the shape its answer has**: explicit numbered choices where
-   there are choices, and a plain request for the value where the answer has no listable set of
-   candidates. Inventing options to make an open answer fit a numbered list is the failure the form
-   rule above names, and the fallback is not a licence for it.
-   Where there are choices the agent SHOULD preserve structured choice semantics (enumerated
-   options, selection constraints). State the reason it is unavailable.
-4. **`--auto` mode**: When `--auto` flag is active, no questions are asked.
-   Do not use AskUserQuestion or ask via plain text.
-   Proceed with explicit assumptions and record them in outputs.
-   This is not an exception to rule 1 — it is a "no-question mode".
-   The assumptions it proceeds with are the **defaultable** ones. A
-   `hard-required` input the invocation actually consumes has no default, so a
-   run missing one must stop and name it rather than invent a value: `--auto`
-   silences the question, it does not authorize the guess (Article VI).
-5. **Exhausting the Article VI budget is not `--auto`**: it enters
-   clarification-exhausted mode, which silences clarifying questions only.
-   Rule 4 does not apply to it — mandatory approvals and the `hard-required`
-   inputs that invocation actually consumes must still be asked. A user's
-   `proceed` / `done` answer enters that same mode and is likewise not `--auto`;
-   this rule is activated by the `--auto` flag alone.
-6. **A grilling session does not reach the user under `--auto`.** Its questions
-   are exempt from the Article VI budget, not from rule 4: a no-question mode
-   sends no question to the user, whatever it is for. The session still runs — it
-   settles what the repository settles, dispatches sub-agents for the facts, and
-   in a delegated session adopts the griller's recommendation for non-critical
-   decisions. A critical decision needs an actual user answer or recorded
-   applicable authorization; without it the node stays open. It opens every **node**
-   left over, including uncovered critical decisions and unavailable user-held
-   facts, **as a question in the register the stage reads**, so the
-   stage cannot complete over it. Every node, not every
-   decision: a fact only the user holds cannot be settled from evidence either,
-   and opening the decisions while dropping the facts loses exactly the nodes no
-   lookup could have reached. Where a document requires the field to hold
-   something, write the defaulted value and label it an assumption beside the
-   open question; a labelled value under an open question is not a settled
-   decision. What rule 4 does not license is the assumption **alone**, which
-   reads as settled to whoever finds it next. A fact declared undefaultable has
-   no value to write down at all: the run stops and names it. A qualifying
-   explicitly delegated session ends `adopted` only with the master's empty-tree,
-   actual-input and authority conditions met. No-question mode alone cannot
-   close a node or authorize a reserved decision.
+0. **A no-question mode is read first.** Where rule 4 applies, no question is put to the user, so
+   rules 1 to 3 have nothing to judge.
+1. **Use AskUserQuestion** when the tool is available for **this question in this invocation**; a
+   tool a mode withholds, or one that cannot carry the answer's shape, sends the question to rule 3.
+2. **Prefer structured choices** where the question has choices; an open answer takes the
+   free-text path and is never narrowed into invented options.
+3. **Fallback**: If AskUserQuestion is unavailable for this question, ask in a normal message in
+   the shape its answer has (`.agents/rules/user-questions.md` § 5) and state why it is
+   unavailable.
+4. **`--auto` mode**: no questions are asked, by the tool or in plain text; proceed with explicit
+   assumptions recorded in outputs, except a needed `hard-required` input, which stops the run
+   (Article VI).
+5. **Exhausting the Article VI budget is not `--auto`**: it enters clarification-exhausted mode
+   (Article VI, On exhaustion); only the `--auto` flag activates rule 4.
+6. **A grilling session does not reach the user under `--auto`.** It opens every node left over as
+   a question in the register the stage reads, so the stage cannot complete over it; the rest is
+   `.agents/rules/grilling.md#under-a-no-question-mode`.
 
 This article survives context compaction because `.qfai/assistant/rule/constitution.md` is a P1 reload target.
 
@@ -445,26 +298,8 @@ This article survives context compaction because `.qfai/assistant/rule/constitut
 
 ## Article XI — Temporary files go in `tmp/`
 
-Scratch files an agent creates for its own convenience — working notes, one-off
-scripts, captured command output, downloaded samples, intermediate data —
-go in the scratch directory the host names for the session, and under the
-repository-root `tmp/` directory where the host names none.
-
-Scope: this article is about files written **into the working tree**. Two kinds
-of output are outside it:
-
-- A sandbox a test creates with `mkdtemp` under the OS temporary directory. It
-  lives outside the repository, so it cannot put a file in any of the
-  directories Rule 1 protects, and the test that created it removes it.
-- Build, test and cache output the project's own toolchain emits (`dist/`,
-  `build/`, `.next/`, `target/`, coverage reports, package tarballs). Those
-  paths belong to the packaging, deploy and test contracts. Leave them where the
-  tooling puts them and never redirect them to `tmp/`.
-
-Rules:
-
-1. **Never** create a scratch file in the repository root, `src/`, `.qfai/spec/`, or any other production/artifact directory.
-2. When the host names a scratch directory for the session, use it. Otherwise use `tmp/` (repository root) as the sole staging area, with subdirectories as needed (e.g., `tmp/notes/`, `tmp/capture/`). A file the repository's own tooling must read from the working tree goes under `tmp/` whichever the host names.
-3. `tmp/` MUST be listed in `.gitignore` so temporary files are never committed.
-4. Clean up `tmp/` contents when the task that created them is complete. The host's own scratch directory is the host's to clean.
-5. If a scratch file is found outside `tmp/` **in the working tree**, treat it as a defect and move or delete it immediately. A test's `mkdtemp` sandbox and configured toolchain output are not scratch files — see Scope above.
+Purpose: a scratch file never lands in a production or artifact directory or in a commit. The rules
+are `.agents/rules/temporary-files.md`. A test's `mkdtemp` sandbox under the OS temporary directory
+is outside them: it lives outside the repository, and the test that created it removes it. The
+`tmp/` ignore entry is written by `npx qfai init`, and `QFAI-HYG-003` reports it at info when a
+QFAI-managed `.gitignore` lacks it.

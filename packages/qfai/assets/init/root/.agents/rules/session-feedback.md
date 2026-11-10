@@ -9,18 +9,21 @@ An agent in a session notices what a maintainer cannot see from outside: a rule
 that contradicted another, a gate that stopped correct work, a step that cost an
 hour for a small result. The notice ends with the session unless something
 carries it out. This rule carries it to the QFAI repository, at the moment the
-agent holds the most evidence, and only with the user's agreement.
+agent holds the most evidence, and only with the user's agreement. The same
+review can propose an item for this project's overlay of a QFAI rule, added only
+once the user approves it.
 
 ## Scope
 
-| Target                                                                    | Applies                                                             |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| The end of the turn after which no task the user gave is left             | Reviewed                                                            |
-| A pause: a question, an approval, a phase boundary, a halt, a next action | Not reviewed                                                        |
-| A defect in the adopter's own project                                     | Outside this rule                                                   |
-| A correction the user gave twice in the session                           | Proposed for the project, written on a yes                          |
-| A problem in QFAI's rules, skills, steps, commands, hooks or documents    | Reported once the user agrees                                       |
-| A run under a no-question mode                                            | Drafts and proposals go in the final report, never filed or written |
+| Target                                                                    | Applies                                                                    |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| The end of the turn after which no task the user gave is left             | Reviewed                                                                   |
+| A pause: a question, an approval, a phase boundary, a halt, a next action | Not reviewed                                                               |
+| A problem in the adopter's own code or product                            | Outside this rule                                                          |
+| A problem in QFAI's rules, skills, steps, commands, hooks or documents    | Reported once the user agrees                                              |
+| A QFAI rule that applied badly here, answered by an item in its overlay   | Proposed, added once the user approves                                     |
+| A correction the user gave twice in the session                           | Proposed for the project, written on a yes                                 |
+| A run under a no-question mode                                            | Drafts and proposals go in the final report, never filed, added or written |
 
 ## 1. When the review runs
 
@@ -42,7 +45,20 @@ work is not complete.
 
 ## 2. What to review
 
-The whole session, for these, where QFAI caused or contributed to them:
+First run `npx qfai session-review --agent <host>` once, with `claude` on
+Claude Code and `codex` on Codex. It reads this project's local transcripts of
+that host, sends nothing anywhere, and prints counts for the latest session:
+the QFAI reminders shown, the rule, skill and step files read, the tool errors
+with their finding codes, the `qfai` commands with their exit status, the
+questions asked, and the typed turns that match correction words. It holds no
+message text. Treat the report as evidence, and cite its lines.
+
+The latest session is normally this one, but a session of the same host running
+in parallel can be picked. Discard a report whose session you do not recognise.
+Where the command is missing, fails or finds no transcript, as on a host that
+keeps none, review from the session itself.
+
+Then review the whole session for these, where QFAI caused or contributed to them:
 
 - **Blockers.** A gate, check or rule that stopped correct work.
 - **Structural problems and contradictions.** Two rules, specs or skills asking
@@ -81,30 +97,50 @@ A message quoted from the session has the project's paths, IDs and names
 replaced by placeholders. Nothing else is quoted from the project's files or
 tool output.
 
-## 4. Ask before filing
+## 4. Proposed changes
 
-Put one question to the user through the host's structured question tool, in the
-form `user-questions.md` sets out:
+Where the evidence shows a QFAI rule applied badly in this project, propose an
+item for the rule's overlay. Each proposal is one item, never a rewrite:
 
-- one option for each draft, labelled by its title and described by what it
-  reports and the cost it names, with the full text of every draft shown beside
-  the question;
-- more than one may be chosen, and choosing none files nothing;
+- the target: `<name>.local.md` beside the shipped rule `<name>.md`;
+- the one item added, in full;
+- the key terms the item uses, verbatim from the rule or report it answers;
+- the report lines, or the session event, that support it.
+
+An overlay adds this project's own guidance and overrides nothing in the rule,
+so an item never replaces or contradicts one of the rule's. That is the only
+file a proposal names. A change to a shipped rule, or to any other file QFAI
+ships, is never made in the project: it becomes a draft under § 3 and is filed
+under § 6. A change to the spec tree is not this review's to make: it goes
+through `qfai-sdd` as a change request.
+
+## 5. Ask before filing or applying
+
+Put the drafts and proposals to the user through the host's structured question
+tool, in the form `user-questions.md` sets out:
+
+- one option for each draft and each proposal, labelled by its title or its
+  target and described by what it reports or changes, with the full text of
+  every draft and proposal shown beside the question;
+- more than one may be chosen, and choosing none files nothing and applies
+  nothing;
 - the recommendation first, with its reason.
 
-Where the drafts are more than the tool's option limit, put them as one sort
-with the columns `file` and `skip`, as `reply-forms.md` sets out. Every draft
-left in `skip` is not filed. A draft the reply does not place is not filed
-and is not put again.
+Where the drafts and proposals are more than the tool's option limit, put them
+as one sort with the columns `act` and `skip`, as `reply-forms.md` sets out.
+Every item left in `skip` is not filed or applied. An item the reply does not
+place is not filed or applied and is not put again.
 
-A requested change to a draft is made, and the question is put again. Filing is
-visible to others, so the answer covers the drafts shown and nothing wider
-(`action-reversibility.md`).
+A requested change to a draft or a proposal is made, and the question is put
+again. Filing is visible to others, so the answer covers the drafts shown and
+nothing wider (`action-reversibility.md`). Add each approved item as it was
+shown, and nothing else. Then list the files changed in one line and leave them
+uncommitted, so the user sees the change before it is kept.
 
-When the review finds nothing worth reporting, say so in one line and ask
-nothing.
+When the review finds nothing worth reporting or changing, say so in one line
+and ask nothing.
 
-## 5. Filing
+## 6. Filing
 
 For each approved draft, write the body to a scratch file
 (`temporary-files.md`) and file it once:
@@ -119,13 +155,14 @@ in, give the user the title and body to post at
 `https://github.com/aganesy/QFAI/issues/new`. Never ask for, read or enter a
 credential.
 
-## 6. Under a no-question mode
+## 7. Under a no-question mode
 
-Nothing is asked and nothing is filed or written. The drafts and the proposals
-of § 7 go in the final report, and the report says they were not filed or
+Nothing is asked and nothing is filed or written. No proposal is added either.
+The drafts and the proposals of § 4 and § 8 go in the final report, and the
+report says none was filed or added, and that the proposals of § 8 were not
 written.
 
-## 7. Corrections to keep in the project
+## 8. Corrections to keep in the project
 
 A second output, separate from the issues above: it concerns the adopter's own
 project and never goes to QFAI. It runs at the same moment as the review (§ 1).
@@ -146,9 +183,11 @@ each, propose one place in the project to record it:
   equivalent already exists, propose nothing for it.
 - Each proposal names the correction, the place, and the text or the setting it
   would add.
-- Write nothing without the user's yes. Ask as § 4 does, as a question of its
+- Write nothing without the user's yes. Ask as § 5 does, as a question of its
   own: one option for each proposal, more than one may be chosen, and choosing
   none writes nothing. Write only what the user chose.
+- A correction that shows a QFAI rule applied badly here is an overlay item
+  under § 4, not a proposal here.
 - When no correction qualifies, this output is left out.
 
 ## Related

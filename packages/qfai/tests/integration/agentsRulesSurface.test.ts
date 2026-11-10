@@ -1558,8 +1558,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /Write\s+nothing\s+without\s+the\s+user's\s+yes/,
         // A mode that asks nothing writes nothing either.
         /nothing\s+is\s+filed\s+or\s+written/,
-        /The\s+drafts\s+and\s+the\s+proposals\s+of\s+§\s+7\s+go\s+in\s+the\s+final\s+report/,
-        /they\s+were\s+not\s+filed\s+or\s+written/,
+        /The\s+drafts\s+and\s+the\s+proposals\s+of\s+§\s+4\s+and\s+§\s+8\s+go\s+in\s+the\s+final\s+report/,
+        /the\s+proposals\s+of\s+§\s+8\s+were\s+not\s+written/,
       ]) {
         expect(text).toMatch(clause);
       }
@@ -1953,15 +1953,13 @@ describe("the question shape has one owner", () => {
 });
 
 describe("a no-question run opens every node, on every surface that says so", () => {
-  // The master, the article, the operating rule and the shipped primitive all
-  // carry this. An agent follows whichever it reaches first, so a copy still
-  // saying "every decision" lets a user-held fact disappear while the stage
-  // completes over a tree that is not empty.
+  // The master, the operating rule and the shipped primitive all carry this.
+  // An agent follows whichever it reaches first, so a copy still saying "every
+  // decision" lets a user-held fact disappear while the stage completes over a
+  // tree that is not empty.
   it.each([
     ".agents/rules/grilling.md",
     "packages/qfai/assets/init/root/.agents/rules/grilling.md",
-    ".qfai/assistant/rule/constitution.md",
-    "packages/qfai/assets/init/.qfai/assistant/rule/constitution.md",
     ".qfai/assistant/rule/communication.md",
     "packages/qfai/assets/init/.qfai/assistant/rule/communication.md",
     ".qfai/assistant/skill/qfai-grilling/SKILL.md",
@@ -1975,30 +1973,40 @@ describe("a no-question run opens every node, on every surface that says so", ()
     );
     expect(text).not.toMatch(/(?:every|each)\s+decision\s+left\s+over/);
     expect(text).toMatch(/undefaultable/);
-    if (rel.endsWith("/constitution.md")) {
-      const rule = text
-        .split("6. **A grilling session does not reach the user under `--auto`.**")[1]
-        ?.split("\n## Article XI")[0];
-      expect(rule, "Article X's no-question grilling rule is missing").toBeDefined();
-      const flat = rule?.replace(/\s+/g, " ");
-      expect(flat).toContain(
-        "A critical decision needs an actual user answer or recorded applicable authorization; without it the node stays open",
-      );
-      expect(flat).toContain(
-        "including uncovered critical decisions and unavailable user-held facts",
-      );
-      expect(flat).toContain("stage cannot complete over it");
-      expect(flat).toContain(
-        "A qualifying explicitly delegated session ends `adopted` only with the master's empty-tree, actual-input and authority conditions met",
-      );
-      expect(flat).toContain(
-        "No-question mode alone cannot close a node or authorize a reserved decision",
-      );
-      expect(flat).toContain("a labelled value under an open question is not a settled decision");
-      expect(flat).toContain(
-        "A fact declared undefaultable has no value to write down at all: the run stops and names it",
-      );
-    }
+  });
+
+  // The master is the one home of what a no-question session does with a
+  // critical decision and with its ending.
+  it.each([
+    ".agents/rules/grilling.md",
+    "packages/qfai/assets/init/root/.agents/rules/grilling.md",
+  ])("%s keeps critical decisions open under a no-question mode", async (rel) => {
+    const flat = (await readFile(path.join(ROOT, rel), "utf-8")).replace(/\s+/g, " ");
+    expect(flat).toContain(
+      "Under a no-question mode, an uncovered critical decision is not sent to the user",
+    );
+    expect(flat).toContain("ends `adopted` only when no node remains open");
+    expect(flat).toContain(
+      "No-question mode, agent agreement and round exhaustion supply no authority",
+    );
+    expect(flat).toContain("**A fact declared undefaultable stops the run.**");
+  });
+
+  // Article X rule 6 keeps its number, which other files cite, and points at
+  // the master instead of restating it.
+  it.each([
+    ".qfai/assistant/rule/constitution.md",
+    "packages/qfai/assets/init/.qfai/assistant/rule/constitution.md",
+  ])("%s points Article X rule 6 at the master", async (rel) => {
+    const text = await readFile(path.join(ROOT, rel), "utf-8");
+    const rule = text
+      .split("6. **A grilling session does not reach the user under `--auto`.**")[1]
+      ?.split("\n## Article XI")[0];
+    expect(rule, "Article X's no-question grilling rule is missing").toBeDefined();
+    expect(rule?.replace(/\s+/g, " ")).toContain(
+      "opens every node left over as a question in the register the stage reads, so the stage cannot complete over it",
+    );
+    expect(rule).toContain(".agents/rules/grilling.md#under-a-no-question-mode");
   });
 });
 

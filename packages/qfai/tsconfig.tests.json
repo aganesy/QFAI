@@ -211,6 +211,8 @@
     "tests/cli/usageExitCodes.test.ts",
     "tests/cli/validateRunIncomplete.test.ts",
     "tests/core/assistantAnchorReferences.test.ts",
+    "tests/core/sessionReview.test.ts",
+    "tests/integration/sessionReviewCli.test.ts",
     "tests/core/sddPreflightReqCount.test.ts",
     "tests/core/designDirectionProposal.test.ts",
     "tests/core/discussionDesignMdParse.test.ts",
@@ -462,6 +464,9 @@
     "tests/integration/storyTreeContractIndex.test.ts",
     "tests/integration/storyTreeDrift.test.ts",
     "tests/integration/sddMergeDocs.test.ts",
+    "tests/integration/diagramBudget.test.ts",
+    "tests/integration/discussionCitations.test.ts",
+    "tests/integration/shippedCheckerCallers.test.ts",
     "tests/integration/storyTreePolicy.test.ts",
     "tests/integration/storyTreeValidateAcceptance.test.ts",
     "tests/integration/storyTreeValidateLayout.test.ts",
@@ -571,6 +576,7 @@
     "tests/integration/init/windowsParity.test.ts",
     "tests/integration/init/workflowPreconditionsNote.test.ts",
     "tests/integration/skills/qfaiPrototyping.confirmation.test.ts",
+    "tests/integration/skills/qfaiPrototyping.variants.test.ts",
     "tests/integration/prototypingReviewerCalibration.test.ts",
     "tests/integration/workflow/theModeIsValidated.test.ts",
     "tests/e2e/bf0001WorkflowPlanARouteE2E.test.ts",
@@ -586,6 +592,10 @@
     "tests/helpers/validationProfileWorker.test.ts",
     "tests/unit/storyTree/decisionRegister.test.ts",
     "tests/integration/decisionPagesAcceptance.test.ts",
-    "tests/integration/replyFormsRule.test.ts"
+    "tests/integration/replyFormsRule.test.ts",
+    "tests/integration/alwaysLoadedBudget.test.ts",
+    "tests/integration/doctorSkillBodyBudget.test.ts",
+    "tests/scripts/alwaysLoadedFootprint.test.ts",
+    "tests/integration/grillingGlossaryCheck.test.ts"
   ]
 }

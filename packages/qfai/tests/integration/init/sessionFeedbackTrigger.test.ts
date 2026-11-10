@@ -127,3 +127,79 @@ describe("the end of the run triggers the review", () => {
     ]);
   });
 });
+
+// QFAI:AC-0001-0294-06
+// QFAI:EX-0001-0294-19
+// QFAI:EX-0001-0294-20
+describe("the review reads the transcript report and proposes overlay items", () => {
+  const SHIPPED_RULE = path.join(
+    repoRoot,
+    "packages",
+    "qfai",
+    "assets",
+    "init",
+    "root",
+    ".agents",
+    "rules",
+    "session-feedback.md",
+  );
+
+  async function section(heading: string): Promise<string> {
+    return flat(sectionOf(await readFile(SHIPPED_RULE, "utf-8"), heading));
+  }
+
+  it("runs the report once for its own host, as evidence, and falls back to the session", async () => {
+    const review = await section("## 2. What to review");
+    for (const part of [
+      "First run `npx qfai session-review --agent <host>` once, with `claude` on Claude Code and `codex` on Codex.",
+      "sends nothing anywhere",
+      "It holds no message text.",
+      "Treat the report as evidence",
+      "a session of the same host running in parallel can be picked. Discard a report whose session you do not recognise.",
+      "Where the command is missing, fails or finds no transcript, as on a host that keeps none, review from the session itself.",
+    ]) {
+      expect(review, part).toContain(part);
+    }
+    expect(await section("## 1. When the review runs")).toContain("No hook triggers it");
+  });
+
+  it("proposes only an item added to a rule's overlay, and routes every other change elsewhere", async () => {
+    const proposals = await section("## 4. Proposed changes");
+    for (const part of [
+      "the target: `<name>.local.md` beside the shipped rule `<name>.md`;",
+      "the one item added, in full;",
+      "the key terms the item uses, verbatim",
+      "the report lines, or the session event, that support it.",
+      "overrides nothing in the rule, so an item never replaces or contradicts one of the rule's.",
+      "That is the only file a proposal names.",
+      "A change to a shipped rule, or to any other file QFAI ships, is never made in the project: it becomes a draft",
+      "A change to the spec tree is not this review's to make: it goes through `qfai-sdd` as a change request.",
+    ]) {
+      expect(proposals, part).toContain(part);
+    }
+    const ask = await section("## 5. Ask before filing or applying");
+    expect(ask).toContain("in the form `user-questions.md` sets out");
+    expect(ask).toContain("one sort with the columns `act` and `skip`");
+    expect(ask).toContain("Add each approved item as it was shown, and nothing else.");
+    expect(ask).toContain("list the files changed in one line and leave them uncommitted");
+    const quiet = await section("## 7. Under a no-question mode");
+    expect(quiet).toContain("No proposal is added either.");
+    expect(quiet).toContain("the report says none was filed or added");
+  });
+});
+
+// QFAI:EX-0001-0294-24
+describe("the entry points tell the agent to read a rule's overlay", () => {
+  it("has init write the overlay line into AGENTS.md and the Copilot instructions", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      for (const rel of ["AGENTS.md", ".github/copilot-instructions.md"]) {
+        const text = flat(await readFile(path.join(root, rel), "utf-8"));
+        expect(text, rel).toContain(
+          "When a rule has a `<name>.local.md` overlay beside it, read the overlay with the rule: it adds this project's own guidance and overrides nothing.",
+        );
+        expect(text, rel).toContain("propose items for this project's rule overlays");
+      }
+    });
+  });
+});

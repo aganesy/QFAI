@@ -25,6 +25,10 @@ node_modules
 # conflicts with every concurrent edit. Tables here use the compact style
 # (one space around each cell), which `lint:md` accepts.
 .qfai/spec/03_contract/**
+# The open-question register is one long table for the same reason: Prettier
+# pads every cell to the widest one, which grew a file of under 60 lines past
+# 400 KB. It keeps the compact style instead.
+.qfai/spec/open-questions.md
 # An archived pack is a frozen record, so reformatting one is churn on a
 # document nobody is editing — and `check-pack-locations` reads the changed
 # paths, so that churn reports the archive directory as a misplaced pack. The
