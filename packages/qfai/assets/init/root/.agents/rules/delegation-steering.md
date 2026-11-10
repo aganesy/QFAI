@@ -47,10 +47,11 @@ for. It leaves out the transcript of the failed attempt.
 
 A rewritten judgement brief stays black-box, as the delegation baseline says:
 what was learned may sharpen the scope and the remit, never add the author's
-reasoning.
+reasoning. A restarted judgement is the same one review: its work order takes
+the next replacement ordinal.
 
-When the rewritten brief goes off course the same way, tell the user instead of
-starting a third attempt.
+When the rewritten brief goes off course the same way, start no third attempt:
+put it to the user with the next actions, as `user-questions.md` sets out.
 
 ## Related
 
@@ -59,6 +60,7 @@ starting a third attempt.
 - The unit work order template:
   `.qfai/assistant/rule/references/worker-edit-boundary.md`
 - A run with nobody present: `.qfai/assistant/rule/shared-skill-operating-baseline.md`
+- The form of a question to the user: `user-questions.md`
 
 ## Scope of this file
 

@@ -1391,7 +1391,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // project, and one more bullet naming `.agents/rules/delegation-steering.md`. Derived by
     // `pnpm pins:entry`; reverting all three reproduces `c6f0a6a9…` byte for byte.
     ".github/copilot-instructions.md",
-    "d73bf5f9b04b6f8a4f49b171ef8e2222d93be802ca5ac43bfbe2f92ba55cd628",
+    "ce9391e5de0c7aa8ee435849f217c384e45b0b4b4c9d317f05d3265ad5c935b1",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it

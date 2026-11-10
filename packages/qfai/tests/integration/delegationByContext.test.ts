@@ -165,7 +165,7 @@ describe("a unit work order carries what the files do not record", () => {
     const text = await readFile(WORK_ORDER, "utf-8");
     const template = text.split("\n## Work order template\n")[1] ?? "";
     expect(template).toMatch(
-      /^Context not in the repository: <decisions, procedures or reasons the files do not record>\s+# unit work orders only$/m,
+      /^Context not in the repository: <a few lines: decisions, procedures or reasons the files do not record>\s+# unit work orders only$/m,
     );
     expect(template).toMatch(
       /^Do not touch: <paths outside the unit[^>]*>\s+# unit work orders only$/m,

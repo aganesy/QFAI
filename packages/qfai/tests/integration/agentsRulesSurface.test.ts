@@ -1556,6 +1556,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /A\s+correction\s+given\s+once\s+proposes\s+nothing,\s+and\s+neither\s+does\s+a\s+procedure\s+pasted\s+fewer\s+than\s+three\s+times/,
         /Where\s+an\s+equivalent\s+already\s+exists,\s+propose\s+nothing\s+for\s+it/,
         /Write\s+nothing\s+without\s+the\s+user's\s+yes/,
+        /Write\s+only\s+what\s+the\s+user\s+chose,\s+then\s+list\s+the\s+files\s+changed\s+in\s+one\s+line\s+and\s+leave\s+them\s+uncommitted/,
+        /Where\s+`AGENTS\.md`\s+has\s+no\s+`## Project rules`\s+heading,\s+the\s+proposal\s+adds\s+one\s+below\s+the\s+qfai\s+section/,
         // A mode that asks nothing writes nothing either.
         /nothing\s+is\s+filed\s+or\s+written/,
         /The\s+drafts\s+and\s+the\s+proposals\s+of\s+§\s+4\s+and\s+§\s+8\s+go\s+in\s+the\s+final\s+report/,
@@ -1618,7 +1620,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /A\s+verdict\s+the\s+session\s+disagrees\s+with\s+is\s+not\s+off\s+course/,
         /An\s+interrupt\s+to\s+a\s+judgement\s+restates\s+only\s+the\s+brief's\s+scope\s+and\s+remit/,
         /A\s+rewritten\s+judgement\s+brief\s+stays\s+black-box/,
-        /When\s+the\s+rewritten\s+brief\s+goes\s+off\s+course\s+the\s+same\s+way,\s+tell\s+the\s+user/,
+        /A\s+restarted\s+judgement\s+is\s+the\s+same\s+one\s+review:\s+its\s+work\s+order\s+takes\s+the\s+next\s+replacement\s+ordinal/,
+        /When\s+the\s+rewritten\s+brief\s+goes\s+off\s+course\s+the\s+same\s+way,\s+start\s+no\s+third\s+attempt:\s+put\s+it\s+to\s+the\s+user\s+with\s+the\s+next\s+actions,\s+as\s+`user-questions\.md`\s+sets\s+out/,
       ]) {
         expect(text).toMatch(clause);
       }

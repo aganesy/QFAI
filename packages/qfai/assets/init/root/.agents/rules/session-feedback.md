@@ -22,7 +22,7 @@ once the user approves it.
 | A problem in the adopter's own code or product                            | Outside this rule                                                          |
 | A problem in QFAI's rules, skills, steps, commands, hooks or documents    | Reported once the user agrees                                              |
 | A QFAI rule that applied badly here, answered by an item in its overlay   | Proposed, added once the user approves                                     |
-| A correction the user gave twice in the session                           | Proposed for the project, written on a yes                                 |
+| A correction the user gave twice, or a procedure pasted three times       | Proposed for the project, written on a yes                                 |
 | A run under a no-question mode                                            | Drafts and proposals go in the final report, never filed, added or written |
 
 ## 1. When the review runs
@@ -109,7 +109,7 @@ item for the rule's overlay. Each proposal is one item, never a rewrite:
 
 An overlay adds this project's own guidance and overrides nothing in the rule,
 so an item never replaces or contradicts one of the rule's. That is the only
-file a proposal names. A change to a shipped rule, or to any other file QFAI
+file an overlay proposal names. A change to a shipped rule, or to any other file QFAI
 ships, is never made in the project: it becomes a draft under § 3 and is filed
 under § 6. A change to the spec tree is not this review's to make: it goes
 through `qfai-sdd` as a change request.
@@ -167,9 +167,10 @@ written.
 A second output, separate from the issues above: it concerns the adopter's own
 project and never goes to QFAI. It runs at the same moment as the review (§ 1).
 
-List each correction the user gave twice in the session: a convention, a
-command or a preference the agent missed and the user had to state again. For
-each, propose one place in the project to record it:
+List each correction the user gave twice in the session, or procedure the
+user pasted three times: a convention, a command, a preference or a procedure
+the agent missed and the user had to state again. For each, propose one place
+in the project to record it:
 
 | What the user repeated                                 | Where to propose it                                                                                          |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
@@ -185,7 +186,10 @@ each, propose one place in the project to record it:
   would add.
 - Write nothing without the user's yes. Ask as § 5 does, as a question of its
   own: one option for each proposal, more than one may be chosen, and choosing
-  none writes nothing. Write only what the user chose.
+  none writes nothing. Write only what the user chose, then list the files
+  changed in one line and leave them uncommitted, as § 5 does.
+- Where `AGENTS.md` has no `## Project rules` heading, the proposal adds one
+  below the qfai section.
 - A correction that shows a QFAI rule applied badly here is an overlay item
   under § 4, not a proposal here.
 - When no correction qualifies, this output is left out.

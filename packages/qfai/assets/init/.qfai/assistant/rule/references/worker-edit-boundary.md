@@ -24,7 +24,8 @@ when assigning writers and integrating their paths.
 ## Work order template
 
 A unit work order also names what the worker cannot read from the files and the
-paths it leaves alone. A judgement work order, such as a review, leaves both
+paths it leaves alone. That context is a few lines; a unit that needs the
+conversation retold is not a unit. A judgement work order, such as a review, leaves both
 fields out: its brief stays black-box, as
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md#session-agent-protocol`
 says.
@@ -42,7 +43,7 @@ If an edit is refused: stop that target; return tool, cwd, target, refusal text,
 Inputs (refs):
 - <file/section>
 - .qfai/assistant/rule/drift-protocol.md#core-rule  <!-- the protected set, in front of the agent -->
-Context not in the repository: <decisions, procedures or reasons the files do not record>   # unit work orders only
+Context not in the repository: <a few lines: decisions, procedures or reasons the files do not record>   # unit work orders only
 Constraints:
 - must: enforce Drift Protocol
 - must: follow applicable test-layer or validation policy
