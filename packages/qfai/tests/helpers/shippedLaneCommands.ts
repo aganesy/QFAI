@@ -1384,12 +1384,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for one more bullet on the rules list, naming `.agents/rules/session-feedback.md`.
     // Derived by running `qfai init` into a temp root; dropping that one bullet reproduces
     // `fcdba5a8…` byte for byte.
+    // Re-pinned for one more bullet on the rules list, naming `.agents/rules/reply-forms.md`.
+    // Derived by `pnpm pins:entry`; dropping that one bullet reproduces `3eb38f37…` byte for byte.
     // Re-pinned for one more bullet naming `.agents/rules/delegation-steering.md`, and for the
     // session-feedback bullet, which now also names the corrections it proposes to the project.
-    // Derived by `pnpm pins:entry` from what `qfai init` writes; the previous digest was
-    // `3eb38f37…`.
+    // Derived by `pnpm pins:entry`; the previous digest was `c6f0a6a9…`.
     ".github/copilot-instructions.md",
-    "b4298289e8d1d8f9fc85031f38eaa35b281691aeab4ee470a83cc8942c4a8b84",
+    "9c95dd6b3ba297a8aec7cf726982203276342771a17a5d907c0a27c511993b06",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1750,6 +1751,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/interface-clarity.md",
   "root/.agents/rules/minimal-implementation.md",
   "root/.agents/rules/reminders.json",
+  "root/.agents/rules/reply-forms.md",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/session-feedback.md",
   "root/.agents/rules/temporary-files.md",
