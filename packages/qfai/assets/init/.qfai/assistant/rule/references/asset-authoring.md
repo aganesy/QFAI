@@ -2,7 +2,7 @@
 
 Read when you write or change a shipped asset.
 
-## Asset Authoring Shape (Mandatory)
+## Asset Authoring Shape
 
 A `SKILL.md` states the contract and points at the file that carries the detail. It is not where the detail lives.
 
@@ -63,7 +63,7 @@ So for a machine-readable asset at the ceiling the remedy is, in order:
 1. **Split it in its own format** — a sibling of the same kind that the loader or schema already reads, so every item stays parsed.
 2. **Record an exemption** where the document has to stay whole — a file generated from another asset, one the schema admits only as a single document — naming what makes the split impossible. "This file is long" is not that reason, and a prose asset may not use this step.
 
-## Citation Path Form (Mandatory)
+## Citation Path Form
 
 A pointer only resolves if the reader knows what base to resolve it against. There is one base, and it is the project root.
 

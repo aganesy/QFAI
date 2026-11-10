@@ -11,10 +11,8 @@ mode: execution-focused
 
 ## /qfai-maintain - Non-normative edits
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 Run the entry check of
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`
 first.
 
 ## Inputs
@@ -32,7 +30,7 @@ Questions to the user follow
   edit with a semantic effect.
 
 Run the steps as
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps`
 sets out: read `.qfai/assistant/step/<name>/STEP.md` for the current step only,
 run it, then the next. No step is skipped.
 

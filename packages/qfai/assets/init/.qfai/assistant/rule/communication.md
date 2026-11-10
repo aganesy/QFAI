@@ -108,7 +108,7 @@ When an agent needs to ask the user a question, the following rules apply (see a
 
 These rules bind every skill and every step through one section:
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
-Every SKILL.md MUST cite that anchor, and neither a SKILL.md nor a STEP.md
+Every SKILL.md cites that anchor, and neither a SKILL.md nor a STEP.md
 restates the rules; a step is reached only through its parent or a work order,
 and both run under that section.
 

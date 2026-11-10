@@ -8,8 +8,6 @@ mode: interactive-by-default
 
 ## qfai-grilling - interrogate a design before it is fixed
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 The one implementation of the interview method. A skill that needs a design
 interrogated invokes this rather than writing rounds of its own, so there is one
 method to review when it changes and one behaviour an operator learns.
@@ -276,7 +274,7 @@ What that artifact is belongs to the stage the session runs in: this skill
 neither chooses it nor moves the work to another stage. A sketch inside the
 current stage is the usual answer.
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`. The
 sections below add only what is specific to a session; where they and the

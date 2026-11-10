@@ -10,8 +10,6 @@ mode: interactive-by-default
 
 ## qfai-grill - the session a user asks for
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 Run a grilling session on whatever the argument names. This skill holds no
 method of its own: it directs the run to `qfai-grilling`, which is the one
 implementation. It holds a user session (`.agents/rules/grilling.md` § Two kinds
@@ -82,7 +80,7 @@ When unsure, read inputs in this order:
 - P4: whatever the subject names, as facts to read rather than decisions to
   re-open
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`. The
 primitive's delegation rules apply unchanged: one thing may be delegated,

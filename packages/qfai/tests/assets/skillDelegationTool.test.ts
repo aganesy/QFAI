@@ -8,7 +8,7 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 /** The heading a skill uses to declare that it may not do the work itself. */
-const DELEGATION_HEADING = "## Sub-agent Delegation (MANDATORY)";
+const DELEGATION_HEADING = "## Sub-agent Delegation";
 
 /** The name the current harness exposes the sub-agent delegation tool under. */
 const DELEGATION_TOOL = "Agent";

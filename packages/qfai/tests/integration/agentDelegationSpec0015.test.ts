@@ -310,7 +310,7 @@ describe("the session agent holds the work and delegates by choice", () => {
       expect(section).toMatch(/review[^.]*agent[^.]*did not author what it reviews/);
       expect(section).toContain("never judges its own work");
     }
-    for (const doors of await baselineSections("## Sub-agent Delegation (MANDATORY)")) {
+    for (const doors of await baselineSections("## Sub-agent Delegation")) {
       expect(doors).toContain("starts a sub-agent for exactly two reasons");
       expect(doors).toContain(
         "| Parallel units | Two or more story units or read-only lookups that pass the parallel-unit gate",
@@ -324,7 +324,7 @@ describe("the session agent holds the work and delegates by choice", () => {
   // QFAI:AC-0001-0163-02
   // QFAI:EX-0001-0163-02
   it("requires no delegation at stage start, and treats a chosen delegation as the capability check", async () => {
-    for (const section of await baselineSections("### Capability Probe (MUST)")) {
+    for (const section of await baselineSections("### Capability Probe")) {
       expect(section).toMatch(/No delegation attempt is required[^.]*start of a stage/);
       expect(section).toMatch(/delegates only when it chooses/);
       expect(section).toMatch(/(?:real|actual) delegation attempt is the capability check/);
@@ -337,7 +337,7 @@ describe("the session agent holds the work and delegates by choice", () => {
   // QFAI:AC-0001-0163-03
   // QFAI:EX-0001-0163-01
   it("has the session do the work itself when a delegation is unavailable, and report it", async () => {
-    for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy (MUST)")) {
+    for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy")) {
       expect(taxonomy).toMatch(/\| `unavailable` \|[^|]*\| The session agent does the work itself/);
     }
     for (const section of await baselineSections(
@@ -362,7 +362,7 @@ describe("the session agent holds the work and delegates by choice", () => {
 // pointless wait.
 describe("delegation failure taxonomy is actionable", () => {
   it("classifies a limit the user must lift as unavailable, not saturated", async () => {
-    for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy (MUST)")) {
+    for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy")) {
       expect(taxonomy).toMatch(/limit or quota[^.]*only a user can lift[^.]*`unavailable`/);
       expect(taxonomy).toMatch(/retryability is not explicit, default to `unavailable`/);
     }
@@ -370,7 +370,7 @@ describe("delegation failure taxonomy is actionable", () => {
 
   // QFAI:EX-0001-0163-06
   it("retries a saturated review delegation, then stops rather than reviewing its own work", async () => {
-    for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy (MUST)")) {
+    for (const taxonomy of await baselineSections("### Delegation Failure Taxonomy")) {
       expect(taxonomy).toContain("`agent thread limit reached`");
       expect(taxonomy).toContain("Bounded wait-and-retry of the identical delegation");
       expect(taxonomy).toMatch(

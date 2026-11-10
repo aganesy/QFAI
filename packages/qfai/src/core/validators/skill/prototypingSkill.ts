@@ -3,7 +3,7 @@ import type { Issue, IssueSeverity } from "../../types.js";
 const REQUIRED_SECTIONS = [
   "## Required References",
   "## Required Process",
-  "## Evaluator Inputs (Mandatory)",
+  "## Evaluator Inputs",
 ] as const;
 
 const ASPIRATIONAL_PATTERNS = [
