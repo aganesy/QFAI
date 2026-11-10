@@ -77,6 +77,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A grilling round asks the costly decisions first.** Within one round, a
+  decision that is hard to reverse, or that later decisions depend on, now
+  comes before one that is cheap to revise. The cheap decisions share one
+  question listing each recommendation and its reason: the user accepts them
+  all in one answer, or names the items to decide separately. The user still
+  decides every decision in a user session, and each accepted item is recorded
+  as theirs. A critical decision, a fact and a decision a document requires the
+  user to record are never grouped.
+
 - **The constitution states each rule once.** Articles VI, X and XI of
   `.qfai/assistant/rule/constitution.md` now keep each rule's purpose and
   invariants and point to the file that owns the detail:
