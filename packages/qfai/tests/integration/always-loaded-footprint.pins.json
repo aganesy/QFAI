@@ -15,7 +15,7 @@
     "reminder api-budget (PreToolUse, once per session)": 242,
     "reminders the first prompt of a session can carry (worst case)": 1172,
     "reminders each later prompt can carry (worst case)": 442,
-    "reminders per session (worst case)": 3721,
+    "every wired reminder once (worst case per session)": 3721,
     "skill listing qfai-configure (every session)": 204,
     "skill listing qfai-discussion (every session)": 141,
     "skill listing qfai-grilling (every session)": 280,

@@ -153,6 +153,35 @@ describe("always-loaded footprint", () => {
     });
   });
 
+  it("counts a reminder wired more than once at every wiring", async () => {
+    const dir = await initTree();
+    // `once` (4 code points) wired to two prompt groups and a tool event.
+    await writeFile(
+      path.join(dir, ".claude", "settings.json"),
+      JSON.stringify({
+        hooks: {
+          UserPromptSubmit: [
+            { matcher: "*", hooks: [hook("if(n===1)console.log(e)", "once")] },
+            { matcher: "*", hooks: [hook("console.log(m)", "once")] },
+          ],
+          PreToolUse: [{ matcher: "Bash", hooks: [hook("if(n===1)console.log(e)", "once")] }],
+        },
+      }),
+      "utf-8",
+    );
+
+    const footprint = computeFootprint(fsSource(dir));
+    const once = footprint.reminders.find((entry) => entry.key === "once");
+
+    expect(once?.wirings).toHaveLength(3);
+    expect(once?.event).toBe("UserPromptSubmit, PreToolUse");
+    expect(footprint.reminderTotals).toEqual({
+      firstPrompt: 4 + 4,
+      laterPrompt: 4,
+      perSession: 4 + 4 + 4,
+    });
+  });
+
   it("lists only model-invocable skills, and measures every body after its frontmatter", async () => {
     const footprint = computeFootprint(fsSource(await initTree()));
 

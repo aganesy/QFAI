@@ -129,8 +129,12 @@ export function splitFrontmatter(text) {
  * A reminder command reads `reminders.json` and the key it is given as its last two arguments.
  * The command that swaps in `briefContext` prints on every prompt; one that prints only on the
  * first firing tests `n===1`; anything else prints every time its event matches.
+ *
+ * A key can be wired more than once, to several matchers or events, and each wiring can fire, so
+ * every key maps to all of its wirings rather than to the last one read.
  */
 export function reminderWiring(hookWiring) {
+  /** @type {Map<string, { event: string, frequency: string }[]>} */
   const wired = new Map();
   for (const [event, groups] of Object.entries(hookWiring.hooks ?? {})) {
     for (const group of groups) {
@@ -143,7 +147,8 @@ export function reminderWiring(hookWiring) {
           : script.includes("n===1")
             ? FREQUENCY.once
             : FREQUENCY.every;
-        wired.set(String(args[args.length - 1]), { event, frequency });
+        const key = String(args[args.length - 1]);
+        wired.set(key, [...(wired.get(key) ?? []), { event, frequency }]);
       }
     }
   }
@@ -155,8 +160,9 @@ export function reminderWiring(hookWiring) {
  *
  * Reminder totals are worst cases: every conditional reminder is taken to fire. `firstPrompt`
  * is what the first prompt of a session can carry, `laterPrompt` what each later prompt can, and
- * `perSession` every reminder once at full length; a reminder that repeats adds `laterPrompt` on
- * each further prompt rather than another full copy.
+ * `perSession` every wiring of every reminder once at full length; a reminder that repeats adds
+ * to `laterPrompt` on each further prompt rather than another full copy. A reminder wired more
+ * than once is counted once per wiring.
  *
  * @param {{ read: (rel: string) => string, skillNames: () => string[] }} source
  */
@@ -166,21 +172,30 @@ export function computeFootprint(source) {
   const wiring = reminderWiring(JSON.parse(source.read(TREE_PATHS.hookWiring)));
 
   const reminders = Object.entries(reminderFile).map(([key, entry]) => {
-    const wired = wiring.get(key);
+    const wirings = wiring.get(key) ?? [];
     const text = String(entry?.hookSpecificOutput?.additionalContext ?? "");
+    const distinct = (values) => [...new Set(values)].join(", ");
     return {
       key,
-      event: wired?.event ?? String(entry?.hookSpecificOutput?.hookEventName ?? ""),
-      frequency: wired?.frequency ?? "not wired",
-      wired: wired !== undefined,
+      wirings,
+      event:
+        wirings.length > 0
+          ? distinct(wirings.map((wired) => wired.event))
+          : String(entry?.hookSpecificOutput?.hookEventName ?? ""),
+      frequency:
+        wirings.length > 0 ? distinct(wirings.map((wired) => wired.frequency)) : "not wired",
+      wired: wirings.length > 0,
       ...measure(text),
       ...(typeof entry?.briefContext === "string"
         ? { briefChars: measure(entry.briefContext).chars }
         : {}),
     };
   });
-  const firing = reminders.filter((reminder) => reminder.wired);
-  const onPrompt = firing.filter((reminder) => reminder.event === "UserPromptSubmit");
+  // One entry per wiring, so a reminder wired twice is counted twice.
+  const firings = reminders.flatMap((reminder) =>
+    reminder.wirings.map((wired) => ({ ...wired, reminder })),
+  );
+  const onPrompt = firings.filter((firing) => firing.event === "UserPromptSubmit");
   const sum = (values) => values.reduce((total, value) => total + value, 0);
 
   const skills = source.skillNames().map((name) => {
@@ -201,17 +216,17 @@ export function computeFootprint(source) {
     agents: { file: measure(agentsText), managed: measure(managedSection(agentsText)) },
     reminders,
     reminderTotals: {
-      firstPrompt: sum(onPrompt.map((reminder) => reminder.chars)),
+      firstPrompt: sum(onPrompt.map((firing) => firing.reminder.chars)),
       laterPrompt: sum(
-        onPrompt.map((reminder) =>
-          reminder.frequency === FREQUENCY.brief
-            ? (reminder.briefChars ?? reminder.chars)
-            : reminder.frequency === FREQUENCY.every
-              ? reminder.chars
+        onPrompt.map((firing) =>
+          firing.frequency === FREQUENCY.brief
+            ? (firing.reminder.briefChars ?? firing.reminder.chars)
+            : firing.frequency === FREQUENCY.every
+              ? firing.reminder.chars
               : 0,
         ),
       ),
-      perSession: sum(firing.map((reminder) => reminder.chars)),
+      perSession: sum(firings.map((firing) => firing.reminder.chars)),
     },
     skillListing: {
       skills: listed.map((skill) => ({ name: skill.name, chars: skill.listingChars })),
@@ -250,7 +265,7 @@ export function footprintRows(footprint) {
       chars: totals.firstPrompt,
     },
     { label: "reminders each later prompt can carry (worst case)", chars: totals.laterPrompt },
-    { label: "reminders per session (worst case)", chars: totals.perSession },
+    { label: "every wired reminder once (worst case per session)", chars: totals.perSession },
   );
   for (const skill of footprint.skillListing.skills) {
     rows.push({ label: `skill listing ${skill.name} (every session)`, chars: skill.chars });
