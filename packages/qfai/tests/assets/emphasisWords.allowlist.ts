@@ -43,13 +43,7 @@ export const KEPT_EMPHASIS: Readonly<Record<string, readonly KeptEmphasis[]>> = 
       readBy: "tests/assets/skillUserQuestionsSection.test.ts",
     },
   ],
-  ".qfai/assistant/rule/constitution.md": [
-    ABSOLUTE_RULE,
-    {
-      phrase: "`tmp/` MUST be listed in `.gitignore` so temporary files are never committed.",
-      readBy: "tests/core/gitignoreArticleXiTmp.test.ts",
-    },
-  ],
+  ".qfai/assistant/rule/constitution.md": [ABSOLUTE_RULE],
   ".qfai/assistant/rule/review-convergence.md": [
     { phrase: "## Answered demands (MUST)", readBy: ANSWERED_DEMANDS },
     { phrase: "MUST NOT be re-raised under another wording", readBy: ANSWERED_DEMANDS },
