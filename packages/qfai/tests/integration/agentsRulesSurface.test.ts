@@ -1538,6 +1538,31 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       }
     });
 
+    // QFAI:AC-0001-0231-07
+    // QFAI:EX-0001-0231-17
+    // QFAI:EX-0001-0231-18
+    it.each(MASTERS)("%s proposes a correction given twice to the project", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      for (const clause of [
+        // A second output, kept apart from the QFAI issues.
+        /A\s+second\s+output,\s+separate\s+from\s+the\s+issues\s+above/,
+        /never\s+goes\s+to\s+QFAI/,
+        /List\s+each\s+correction\s+the\s+user\s+gave\s+twice\s+in\s+the\s+session/,
+        // The three places, each with its threshold.
+        /A\s+convention,\s+corrected\s+twice\s*\|\s*The\s+`## Project rules`\s+section\s+of\s+`AGENTS\.md`,\s+or\s+a\s+rule\s+scoped\s+to\s+the\s+paths/,
+        /A\s+procedure,\s+pasted\s+three\s+times\s*\|\s*A\s+skill/,
+        /Something\s+that\s+has\s+to\s+happen\s+every\s+time,\s+with\s+no\s+lapse\s*\|\s*A\s+hook/,
+        // What it never proposes, and what it never writes alone.
+        /A\s+correction\s+given\s+once\s+proposes\s+nothing/,
+        /Where\s+an\s+equivalent\s+already\s+exists,\s+propose\s+nothing\s+for\s+it/,
+        /Write\s+nothing\s+without\s+the\s+user's\s+yes/,
+        // A mode that asks nothing writes nothing either.
+        /nothing\s+is\s+filed\s+or\s+written/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
     it("ships to adopters", async () => {
       const shipped = path.join(
         ROOT,
@@ -1556,6 +1581,57 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("session-feedback.md");
+    });
+  });
+
+  // An agent that hands work to another agent while the user watches is the one
+  // that can see a wrong start early, so the master ships, and both copies are
+  // held to the same clauses.
+  // QFAI:AC-0001-0163-10
+  // QFAI:EX-0001-0163-15
+  // QFAI:EX-0001-0163-16
+  describe("delegation-steering rule", () => {
+    const MASTERS = [
+      ".agents/rules/delegation-steering.md",
+      "packages/qfai/assets/init/root/.agents/rules/delegation-steering.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      for (const clause of [
+        // Where it applies, and the unattended run it leaves alone.
+        /a\s+session\s+where\s+the\s+user\s+is\s+present\s*\|\s*Always/,
+        /A\s+run\s+under\s+`--auto`,\s+or\s+any\s+run\s+where\s+nobody\s+is\s+present\s*\|\s*Never/,
+        /"Unattended\s+Runs:\s+Ending\s+a\s+Turn",\s+governs/,
+        // The three moves.
+        /read\s+its\s+first\s+actions\s+as\s+they\s+appear/,
+        /interrupt\s+then\s+through\s+the\s+host's\s+message\s+or\s+stop\s+mechanism/,
+        /After\s+two\s+corrections\s+on\s+one\s+task\s+that\s+do\s+not\s+land,\s+send\s+no\s+third/,
+        /The\s+rewritten\s+brief\s+carries\s+what\s+was\s+learned/,
+        // A judgement stays independent.
+        /A\s+verdict\s+the\s+session\s+disagrees\s+with\s+is\s+not\s+off\s+course/,
+        /A\s+rewritten\s+judgement\s+brief\s+stays\s+black-box/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it("ships to adopters", async () => {
+      const shipped = path.join(
+        ROOT,
+        "packages/qfai/assets/init/root/.agents/rules/delegation-steering.md",
+      );
+      expect((await lstat(shipped)).isFile()).toBe(true);
+    });
+
+    it.each([
+      "AGENTS.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("delegation-steering.md");
     });
   });
 

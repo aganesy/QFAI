@@ -4,6 +4,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The end-of-session review proposes where to keep a repeated correction.**
+  `.agents/rules/session-feedback.md` gains a second output, separate from the
+  QFAI issues: each correction the user gave twice in the session is proposed
+  for the project's own setup, as a line in the project rules of `AGENTS.md` or
+  a path-scoped rule, a skill for a procedure pasted three times, or a hook for
+  something that has to happen every time. Nothing is written without the
+  user's yes, and nothing is proposed for a one-off correction or where an
+  equivalent already exists.
+- **`.agents/rules/delegation-steering.md`.** While the user is in the session,
+  an agent that delegates a task checks its first actions, interrupts early
+  when it goes off course, and after two corrections that do not land restarts
+  it from a rewritten brief that carries what was learned. It does not apply
+  under `--auto`.
+- **Two unit work order fields.** The work order template gains
+  `Context not in the repository` and `Do not touch`, for unit work orders only;
+  a judgement brief stays black-box.
+
 ### Changed
 
 - **The decision and question registers no longer collide across parallel

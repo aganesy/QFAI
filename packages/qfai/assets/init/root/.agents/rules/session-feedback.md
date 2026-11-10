@@ -2,7 +2,8 @@
 
 What an agent does once, when every task the user gave it is complete: review
 the whole session for problems in QFAI itself, and ask the user whether to
-report them.
+report them. Separately, it proposes where the project could keep a correction
+the user had to give twice.
 
 An agent in a session notices what a maintainer cannot see from outside: a rule
 that contradicted another, a gate that stopped correct work, a step that cost an
@@ -16,7 +17,8 @@ agent holds the most evidence, and only with the user's agreement.
 | ------------------------------------------------------------------------- | ------------------------------------------ |
 | The end of the turn after which no task the user gave is left             | Reviewed                                   |
 | A pause: a question, an approval, a phase boundary, a halt, a next action | Not reviewed                               |
-| A problem in the adopter's own project                                    | Outside this rule                          |
+| A defect in the adopter's own project                                     | Outside this rule                          |
+| A correction the user gave twice in the session                           | Proposed for the project, written on a yes |
 | A problem in QFAI's rules, skills, steps, commands, hooks or documents    | Reported once the user agrees              |
 | A run under a no-question mode                                            | Drafted into the final report, never filed |
 
@@ -114,8 +116,34 @@ credential.
 
 ## 6. Under a no-question mode
 
-Nothing is asked and nothing is filed. The drafts go in the final report, and
-the report says they were not filed.
+Nothing is asked and nothing is filed or written. The drafts and the proposals
+of § 7 go in the final report, and the report says they were not filed or
+written.
+
+## 7. Corrections to keep in the project
+
+A second output, separate from the issues above: it concerns the adopter's own
+project and never goes to QFAI. It runs at the same moment as the review (§ 1).
+
+List each correction the user gave twice in the session: a convention, a
+command or a preference the agent missed and the user had to state again. For
+each, propose one place in the project to record it:
+
+| What the user repeated                                 | Where to propose it                                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| A convention, corrected twice                          | The `## Project rules` section of `AGENTS.md`, or a rule scoped to the paths it governs if the host has them |
+| A procedure, pasted three times                        | A skill                                                                                                      |
+| Something that has to happen every time, with no lapse | A hook                                                                                                       |
+
+- A correction given once proposes nothing.
+- Read the project's entry file, rules, skills and hooks first. Where an
+  equivalent already exists, propose nothing for it.
+- Each proposal names the correction, the place, and the text or the setting it
+  would add.
+- Write nothing without the user's yes. Ask as § 4 does, as a question of its
+  own: one option for each proposal, more than one may be chosen, and choosing
+  none writes nothing. Write only what the user chose.
+- When no correction qualifies, this output is left out.
 
 ## Related
 
