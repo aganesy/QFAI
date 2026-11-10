@@ -434,7 +434,9 @@ uiux:
 Notes.
 
 - `validation.staleTerms` lists terms a project no longer wants in its specs. `qfai validate` warns on each line of a spec document that states one, apart from `decisions.md` and `open-questions.md`.
-- `validation.diagramBudget` sets the node and edge limits of one Mermaid diagram. `qfai validate` warns (`QFAI-FLOW-006`) on a flowchart, sequence, state, entity-relationship, class or mind-map diagram above either limit, so its author splits it into an overview and detail diagrams. The defaults are 12 nodes and 16 edges.
+- `validation.diagramBudget` sets the node and edge limits of one Mermaid diagram (defaults: 12 nodes, 16 edges).
+  `qfai validate` warns (`QFAI-FLOW-006`) on a flowchart, sequence, state, entity-relationship, class or mind-map
+  diagram above either limit, so its author splits it into an overview and detail diagrams.
 - `validate.json` is a **public** surface: its keys are documented in
   `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`.
   Changes to its keys follow the `@api` classification in

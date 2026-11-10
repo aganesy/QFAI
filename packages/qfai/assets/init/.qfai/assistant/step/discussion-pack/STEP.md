@@ -132,7 +132,7 @@ later stage where they are asked.
 ## Parse the diagrams
 
 Before the gate, parse every Mermaid diagram the pack holds with Mermaid's own
-grammar. `qfai validate` checks only that a diagram is there; a diagram that
+grammar. `npx qfai validate` checks only that a diagram is there; a diagram that
 does not parse is otherwise found by CI, after handoff.
 
 1. Read the `mermaid@` and `jsdom@` versions from the install step of

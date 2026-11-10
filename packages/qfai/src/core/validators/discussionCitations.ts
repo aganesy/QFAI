@@ -24,7 +24,7 @@ import { issue } from "./utils.js";
 
 const CODE = "QFAI-DPACK-012";
 
-/** A file extension starts with a letter, so `127.0.0.1:8080` and `v2.1:3` are not paths. */
+/** A file extension starts with a letter, so `127.0.0.1:8080` and `1.2:3` are not paths. */
 const CITATION_RE = /^((?:[\w.$@~+-]+[/\\])*[\w.$@~+-]*\.[A-Za-z][A-Za-z0-9]*):(\d+)(?:-(\d+))?$/;
 const CODE_SPAN_RE = /`([^`\n]+)`/g;
 const LOCATOR_RE = /^\s*(?:-\s+)?locator:\s*["']?([^"'\s]+)["']?\s*$/;
