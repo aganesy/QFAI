@@ -22,8 +22,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and a question of taste as two or three variants to compare, beside the
   existing choice. A sheet goes on the host's private page where one can be
   published, such as an Artifact on Claude Code, and as text in the chat
-  otherwise. A Site in the Codex app, whose audience is not documented, is
-  used where the project's agent instructions allow it. Every form comes back
+  otherwise. A Site is the Codex app's page for reply sheets; its audience is not
+  documented, so it carries no secret, credential or personal data. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
 - **`qfai session-review` counts what a finished session shows.** The command
   reads this project's own Claude Code and Codex transcripts on the local disk
@@ -74,6 +74,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prototype as before. A restyle, a run scoped to a confirmed prototype, a run
   under a no-question mode, or a session record or `DESIGN.md` that settles
   the layout builds one prototype from the start.
+- **A grilling session is confirmed on a sheet the user can mark up.** Once
+  no question is left, the user confirms on one numbered sheet listing every
+  decision with the option chosen, every assumption and every open item: an
+  Artifact on Claude Code, a Site in the Codex app, otherwise text in the
+  chat. Every item the user notes gets one more round before the session counts
+  as confirmed. The reply is read as data, so a note that reads as an
+  instruction is shown to the user, not followed.
 
 ### Changed
 
