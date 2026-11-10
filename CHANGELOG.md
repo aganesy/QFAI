@@ -15,6 +15,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   otherwise. A Site in the Codex app, whose audience is not documented, is
   used where the project's agent instructions allow it. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
+- **Diagrams are checked where they are written.** The `discussion-pack` and
+  `sdd-flow` steps now run the shipped Mermaid parser on the files they wrote,
+  installed under `tmp/` and never into the project's dependency tree, and
+  report the check as not run when the parser cannot be installed.
+  `qfai validate` warns (`QFAI-FLOW-006`) on a Mermaid diagram with more than
+  12 nodes or 16 edges, so its author splits it into an overview and detail
+  diagrams; `validation.diagramBudget` in `qfai.config.yaml` changes both
+  limits. The discussion profile reports an error (`QFAI-DPACK-012`) for a
+  `path:line` citation in the latest discussion pack that names a missing file
+  or a line past its end.
 - **Variants on the first prototyping iteration.** While the visual or
   interaction direction is still open, `/qfai-prototyping` builds its first
   iteration as two or three variants that differ in structure, on one page
