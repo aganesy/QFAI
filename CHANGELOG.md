@@ -15,6 +15,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   otherwise. A Site is the Codex app's page for reply sheets, as an Artifact
   is Claude Code's. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
+- **Diagrams are checked where they are written.** The `discussion-pack` and
+  `sdd-flow` steps now run the shipped Mermaid parser on the files they wrote,
+  installed under `tmp/` and never into the project's dependency tree, and
+  report the check as not run when the parser cannot be installed.
+  `qfai validate` warns (`QFAI-FLOW-006`) on a Mermaid diagram with more than
+  12 nodes or 16 edges, so its author splits it into an overview and detail
+  diagrams; `validation.diagramBudget` in `qfai.config.yaml` changes both
+  limits. The discussion profile reports an error (`QFAI-DPACK-012`) for a
+  `path:line` citation in the latest discussion pack that names a missing file
+  or a line past its end.
 - **A grilling session is confirmed on a sheet the user can mark up.** Once
   no question is left, the user confirms on one numbered sheet listing every
   decision with the option chosen, every assumption and every open item: an

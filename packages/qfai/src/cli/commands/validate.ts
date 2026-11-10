@@ -259,7 +259,21 @@ export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
-  discussion: ["QFAI-DPACK-*", "QFAI-VIS-*"],
+  // Spelled out so QFAI-DPACK-012, which only the discussion profile runs, has a group of its own.
+  discussion: [
+    "QFAI-DPACK-001",
+    "QFAI-DPACK-002",
+    "QFAI-DPACK-003",
+    "QFAI-DPACK-004",
+    "QFAI-DPACK-005",
+    "QFAI-DPACK-007",
+    "QFAI-DPACK-008",
+    "QFAI-DPACK-009",
+    "QFAI-DPACK-011",
+    "QFAI-VIS-*",
+  ],
+  "diagram-budget": ["QFAI-FLOW-006"],
+  "discussion-citations": ["QFAI-DPACK-012"],
   "research-summary": ["QFAI-RESEARCH-*"],
   "canonical-uix": [
     "QFAI-THREELAYER-*",
@@ -346,6 +360,7 @@ const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
   drift: "drift",
   "saas-package-profile": "saas-package",
+  "discussion-citations": "discussion",
 };
 
 function stageOwnerOf(group: GateGroup): ValidationProfile | undefined {
@@ -372,9 +387,17 @@ const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   full: FULL_GATE_GROUPS,
   verify: FULL_GATE_GROUPS,
-  discussion: ["discussion", "research-summary", "canonical-uix", "root-design-md-parse"],
+  discussion: [
+    "discussion",
+    "discussion-citations",
+    "diagram-budget",
+    "research-summary",
+    "canonical-uix",
+    "root-design-md-parse",
+  ],
   sdd: [
     "story-structure",
+    "diagram-budget",
     "document-schema",
     "story-contract-index",
     "design-contract-readiness",
@@ -1201,6 +1224,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
   "QFAI-DPACK-011":
     "On a visual surface, every `DESIGN.md` key and archetype a discussion pack proposes is one the front-matter schema accepts.",
+  "QFAI-DPACK-012":
+    "Every file and line citation in the latest discussion pack names a file under the project root and a line it holds.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `paths.specsDir`.",
   "QFAI-HYG-003":
     "The root `.gitignore` carries every recommended QFAI ignore entry, the root `tmp/` included.",
@@ -1348,6 +1373,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-FLOW-001": "Every Mermaid state diagram in the story tree is declared `stateDiagram-v2`.",
   "QFAI-FLOW-002": "Every transition in a Mermaid state diagram carries a label.",
   "QFAI-FLOW-004": "Every Mermaid flowchart declares its direction: TD, LR, TB, RL or BT.",
+  "QFAI-FLOW-006":
+    "Every Mermaid diagram the diagram budget counts stays within its node and edge limits.",
   "QFAI-MOCK-001": "An HTML mock is well-formed HTML.",
   "QFAI-MOCK-002": "An HTML mock loads nothing from an external URL.",
   "QFAI-MOCK-003": "An HTML mock holds no script tag.",
