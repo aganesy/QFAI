@@ -178,5 +178,6 @@
 | US-0001-0243 | Every shipped checker script has a caller                                              | `user-story-0001-0243/` |
 | US-0001-0244 | Keep an agent's turn going while a turn-end check fails                                | `user-story-0001-0244/` |
 | US-0001-0245 | Check each term against the glossary while grilling                                    | `user-story-0001-0245/` |
+| US-0001-0254 | Answer the costly decisions of a grilling round first                                  | `user-story-0001-0254/` |
 | US-0001-0273 | Compare first-iteration variants before I choose a direction                           | `user-story-0001-0273/` |
 | US-0001-0294 | Review a finished session from its local transcript                                    | `user-story-0001-0294/` |

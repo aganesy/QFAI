@@ -33,7 +33,10 @@ a sheet.
   drafts. A set the structured question tool carries in one question stays a
   multi-select question. A set with more items than the tool's option limit,
   or with more than two outcomes per item, is one sort. Never split a set
-  into one question per item: the user then holds the set in their head.
+  into one question per item: the user then holds the set in their head. A
+  grilling round's grouped question is one choose (`grilling.md` § The shape
+  of a question), not a sort; the items it names are separate decisions in the
+  next round.
 - **Compare** puts two or three variants side by side: wording, structure,
   layout. It is the artifact `grilling.md` builds where talking cannot settle a
   question, and it is used where that artifact has more than one variant. A
