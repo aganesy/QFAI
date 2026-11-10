@@ -162,8 +162,9 @@ Default policy:
   clarification; it is still put after the budget is exhausted.
 - **`hard-required` inputs are exempt — but only where the invocation needs them.** An input a
   skill's `Default Autopilot Policy` lists under `hard-required` and the requested work consumes is
-  never guessed: while it is missing, stop and name what is blocked, under `--auto` too. An input
-  the requested path never reads is neither asked for nor a blocker.
+  never guessed: it is asked even after the budget is exhausted, and when it is still missing, or
+  under `--auto`, the run stops and names what is blocked. An input the requested path never reads
+  is neither asked for nor a blocker.
 
 Stop conditions:
 
@@ -176,7 +177,8 @@ Stop conditions:
 In **clarification-exhausted mode** the agent asks no further clarifying question, proceeds with
 explicit assumptions, labels every assumption in the outputs, and records an unresolved one as an
 Open Question. The mode silences clarifications only and is **not `--auto`**: mandatory approvals,
-needed `hard-required` inputs, the next-action question and grilling sessions survive it. An
+needed `hard-required` inputs, the next-action question, a grilling session under way and one a
+later stage opens all survive it. An
 explicit **“stop” is not exhaustion**: it ends the invocation, and the agent reports what was
 completed and what remains.
 
@@ -266,19 +268,29 @@ happens.
 
 When an agent needs to ask the user a question, it must use the AskUserQuestion tool if available.
 
-**No question is exempt.** A confirmation or a yes-or-no takes this path too. `.agents/rules/user-questions.md`
-owns the form a question takes; this article is where the obligation binds. Article VI bounds the
-count, and this article the form.
+**No question is exempt.** A confirmation or a yes-or-no takes this path too.
+`.agents/rules/user-questions.md` owns the form a question takes; this article is where the
+obligation binds. Article VI bounds the count, and this article the form.
 
 Rules:
 
-0. **A no-question mode is read first.** Where rule 4 applies, no question is put to the user, so rules 1 to 3 have nothing to judge.
-1. **Use AskUserQuestion** when the tool is available for **this question in this invocation**; a tool a mode withholds, or one that cannot carry the answer's shape, sends the question to rule 3.
-2. **Prefer structured choices** where the question has choices; an open answer takes the free-text path and is never narrowed into invented options.
-3. **Fallback**: If AskUserQuestion is unavailable for this question, ask in a normal message in the shape its answer has (`.agents/rules/user-questions.md` § 5) and state why it is unavailable.
-4. **`--auto` mode**: no questions are asked, by the tool or in plain text; proceed with explicit assumptions recorded in outputs, except a needed `hard-required` input, which stops the run (Article VI).
-5. **Exhausting the Article VI budget is not `--auto`**: it enters clarification-exhausted mode (Article VI, On exhaustion); only the `--auto` flag activates rule 4.
-6. **A grilling session does not reach the user under `--auto`.** What the session does instead is `.agents/rules/grilling.md#under-a-no-question-mode`.
+0. **A no-question mode is read first.** Where rule 4 applies, no question is put to the user, so
+   rules 1 to 3 have nothing to judge.
+1. **Use AskUserQuestion** when the tool is available for **this question in this invocation**; a
+   tool a mode withholds, or one that cannot carry the answer's shape, sends the question to rule 3.
+2. **Prefer structured choices** where the question has choices; an open answer takes the
+   free-text path and is never narrowed into invented options.
+3. **Fallback**: If AskUserQuestion is unavailable for this question, ask in a normal message in
+   the shape its answer has (`.agents/rules/user-questions.md` § 5) and state why it is
+   unavailable.
+4. **`--auto` mode**: no questions are asked, by the tool or in plain text; proceed with explicit
+   assumptions recorded in outputs, except a needed `hard-required` input, which stops the run
+   (Article VI).
+5. **Exhausting the Article VI budget is not `--auto`**: it enters clarification-exhausted mode
+   (Article VI, On exhaustion); only the `--auto` flag activates rule 4.
+6. **A grilling session does not reach the user under `--auto`.** It opens every node left over as
+   a question in the register the stage reads, so the stage cannot complete over it; the rest is
+   `.agents/rules/grilling.md#under-a-no-question-mode`.
 
 This article survives context compaction because `.qfai/assistant/rule/constitution.md` is a P1 reload target.
 
@@ -289,4 +301,5 @@ This article survives context compaction because `.qfai/assistant/rule/constitut
 Purpose: a scratch file never lands in a production or artifact directory or in a commit. The rules
 are `.agents/rules/temporary-files.md`. A test's `mkdtemp` sandbox under the OS temporary directory
 is outside them: it lives outside the repository, and the test that created it removes it. The
-`tmp/` ignore entry is written by `qfai init` and reported by `QFAI-HYG-003` when missing.
+`tmp/` ignore entry is written by `npx qfai init`, and `QFAI-HYG-003` reports it at info when a
+QFAI-managed `.gitignore` lacks it.

@@ -3,8 +3,8 @@
  * agent's scratch work to the repository-root `tmp/`, and require that
  * directory to be ignored so the scratch work never reaches a commit. The
  * managed block `qfai init` owns is the component that writes the entry; without
- * it the first agent that obeyed Article XI left an untracked directory for the
- * next `git add .` to stage.
+ * it, the first agent that obeyed Article XI would leave an untracked directory
+ * for the next `git add .` to stage.
  *
  * These tests pin the entry, the anchoring the block writes, and the
  * `QFAI-HYG-003` notice that nudges an older project.
@@ -44,7 +44,7 @@ const TEMPORARY_FILES_RULE = path.join(
   "packages/qfai/assets/init/root/.agents/rules/temporary-files.md",
 );
 
-describe("the managed block ships the ignore Article XI mandates", () => {
+describe("the managed block ships the `tmp/` ignore the temporary-files rule requires", () => {
   it("still states the obligation the entry discharges, and the article names who writes it", async () => {
     const rule = (await readFile(TEMPORARY_FILES_RULE, "utf-8")).replace(/\s+/g, " ");
     expect(rule).toContain(
@@ -52,7 +52,7 @@ describe("the managed block ships the ignore Article XI mandates", () => {
     );
     const constitution = (await readFile(CONSTITUTION, "utf-8")).replace(/\s+/g, " ");
     expect(constitution).toContain(
-      "The `tmp/` ignore entry is written by `qfai init` and reported by `QFAI-HYG-003` when missing.",
+      "The `tmp/` ignore entry is written by `npx qfai init`, and `QFAI-HYG-003` reports it at info when a QFAI-managed `.gitignore` lacks it.",
     );
   });
 

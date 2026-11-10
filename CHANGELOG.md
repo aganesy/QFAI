@@ -24,8 +24,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.agents/rules/grilling.md` for grilling sessions,
   `.agents/rules/user-questions.md` for the form of a question, and
   `.agents/rules/temporary-files.md` for scratch files. Every heading and every
-  numbered rule of Article X stays, so existing citations still resolve. What an
-  agent must do does not change.
+  numbered rule of Article X stays; Article XI's numbered rules now live in
+  `.agents/rules/temporary-files.md`.
 
 - **The decision and question registers no longer collide across parallel
   pull requests.** A new row takes the UTC time it is written as its ID

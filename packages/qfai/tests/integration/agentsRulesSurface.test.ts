@@ -1919,6 +1919,9 @@ describe("a no-question run opens every node, on every surface that says so", ()
       .split("6. **A grilling session does not reach the user under `--auto`.**")[1]
       ?.split("\n## Article XI")[0];
     expect(rule, "Article X's no-question grilling rule is missing").toBeDefined();
+    expect(rule?.replace(/\s+/g, " ")).toContain(
+      "opens every node left over as a question in the register the stage reads, so the stage cannot complete over it",
+    );
     expect(rule).toContain(".agents/rules/grilling.md#under-a-no-question-mode");
   });
 });
