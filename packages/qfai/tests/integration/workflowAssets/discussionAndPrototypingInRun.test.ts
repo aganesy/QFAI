@@ -9,7 +9,7 @@ import { flat, readShipped, sectionOf } from "../../helpers/shippedAssistant.js"
 
 const PROTOTYPING_SCOPE_STEP = "step/prototyping-grill/STEP.md";
 const ENTRY_CHECK =
-  "`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`";
+  "`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`";
 
 async function section(file: string, heading: string): Promise<string> {
   const text = flat(sectionOf(await readShipped(file), heading));

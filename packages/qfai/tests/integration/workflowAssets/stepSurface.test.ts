@@ -138,14 +138,12 @@ describe("the skills a workflow run's steps belong to", () => {
   // QFAI:EX-0001-0195-01
   it("runs the entry check first in every owner", async () => {
     const runFirst =
-      "Run the entry check of `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory` first.";
+      "Run the entry check of `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check` first.";
     for (const skill of PLAN_STEP_OWNERS) {
       const body = flat(await readShipped(`skill/${skill}/SKILL.md`));
       const at = body.indexOf(runFirst);
       expect(at, skill).toBeGreaterThan(-1);
-      expect(body.indexOf("## ", body.indexOf("[DRIFT-PROTOCOL:REQUIRED]")), skill).toBeGreaterThan(
-        at,
-      );
+      expect(body.indexOf("## ", body.indexOf("## /") + 3), skill).toBeGreaterThan(at);
     }
   });
 

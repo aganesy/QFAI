@@ -77,7 +77,7 @@ export const QFAI_GITIGNORE_RECOMMENDED_ENTRIES: readonly string[] = [
   // The staging directories that file's atomic write uses; see
   // QFAI_STATE_SCRATCH_IGNORE.
   QFAI_STATE_SCRATCH_IGNORE,
-  // Constitution Article XI rule 3: `tmp/` MUST be listed in `.gitignore`.
+  // Constitution Article XI rule 3: `tmp/` is listed in `.gitignore`.
   // Rule 2 sends every agent's scratch work there, so without the entry the
   // first `git add .` commits exactly what rule 3 exists to prevent.
   //

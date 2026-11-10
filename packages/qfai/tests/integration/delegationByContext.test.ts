@@ -42,7 +42,7 @@ describe("the session agent delegates for two reasons only", () => {
   // QFAI:AC-0001-0163-07
   // QFAI:EX-0001-0163-08
   it("names context size and keeping its own context small as no reason, since the host compacts", async () => {
-    const intro = section(await flatText(BASELINE), "## Sub-agent Delegation (MANDATORY)");
+    const intro = section(await flatText(BASELINE), "## Sub-agent Delegation");
     expect(intro).toContain("starts a sub-agent for exactly two reasons");
     expect(intro).toContain(
       "Nothing else is a reason. Context size is not: the host compacts a long run.",
@@ -53,7 +53,7 @@ describe("the session agent delegates for two reasons only", () => {
   // QFAI:EX-0001-0163-09
   it("holds a host's built-in agents to the same two reasons, and a single lookup is not two units", async () => {
     const text = await flatText(BASELINE);
-    expect(section(text, "## Sub-agent Delegation (MANDATORY)")).toContain(
+    expect(section(text, "## Sub-agent Delegation")).toContain(
       "A host's built-in agents follow the same two reasons.",
     );
     expect(text).toContain(
@@ -63,7 +63,7 @@ describe("the session agent delegates for two reasons only", () => {
 
   // QFAI:EX-0001-0163-10
   it("counts an agent that only stands in for a missing tool as a tool call", async () => {
-    expect(section(await flatText(BASELINE), "## Sub-agent Delegation (MANDATORY)")).toContain(
+    expect(section(await flatText(BASELINE), "## Sub-agent Delegation")).toContain(
       "An agent that only stands in for a tool the host lacks, and returns that tool's result, is a tool call, not a delegation.",
     );
   });

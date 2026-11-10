@@ -8,7 +8,7 @@ identity.
 ## Contents
 
 - Read order
-- HTML envelope (mandatory on every iter)
+- HTML envelope (every iteration)
 - Hard constraints
 - Output layout
 - The first iteration (seed)
@@ -43,7 +43,7 @@ identity.
 6. In a scoped run, every iteration: `runScope` in `progress.md` and
    `.qfai/prototype/final/index.html`.
 
-## HTML envelope (mandatory on every iter)
+## HTML envelope (every iteration)
 
 Every `iter-NN/index.html` must start with the head below; replace
 `{{...}}` with literal values read from DESIGN.md front-matter:

@@ -22,10 +22,8 @@ mode: execution-focused
 
 ## /qfai-triage - Requests that end without a tracked change
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 Run the entry check of
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`
 first.
 
 This skill answers, closes, splits or hands over a request, or carries out an

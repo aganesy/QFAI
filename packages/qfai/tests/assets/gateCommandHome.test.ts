@@ -24,7 +24,7 @@ describe("the story-tree contract owns quality-gate commands", () => {
       );
       expect(baseline).toContain("**A capability with no entry is UNRUN, not passed.**");
       expect(gateRun).toContain("`<paths.contractsDir>/tech.md#standard-commands-copy-paste`");
-      expect(gateRun).toContain("shared-skill-operating-baseline.md#standard-commands-mandatory");
+      expect(gateRun).toContain("shared-skill-operating-baseline.md#standard-commands");
       expect(quality).toContain("<paths.specsDir>/03_contract/tech.md");
       for (const content of [configure, baseline, gateRun, quality]) {
         expect(content).not.toContain(".qfai/assistant/catalog/tech.md");

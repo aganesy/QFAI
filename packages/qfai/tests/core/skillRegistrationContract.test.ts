@@ -59,8 +59,6 @@ async function projectWithSkill(frontMatter: readonly string[]): Promise<string>
       "",
       "## qfai-example",
       "",
-      "[DRIFT-PROTOCOL:REQUIRED]",
-      "",
       "### Reviewer Gate (MUST)",
       "",
       "- Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`,",
@@ -535,15 +533,9 @@ describe("the gate reads a skill as the host does", () => {
     expect(finding?.suggested_action).not.toContain("`name:` is `My Skill`");
   });
 
-  it("reports a skill that lacks the drift-protocol marker", async () => {
-    const root = await projectWithSkillDocument("# qfai-example\n\nNo marker here.\n");
-    const codes = (await validateAssistantAssets(root, defaultConfig)).map((item) => item.code);
-    expect(codes).toContain("QFAI-SKILLS-010");
-  });
-
-  it("leaves a SKILL.md in a skill's vendored tree out of the marker checks", async () => {
-    // Neither the document crawl nor the marker checks walk such a tree: the
-    // marker checks are about the documents the skill's author wrote, and a file
+  it("leaves a SKILL.md in a skill's vendored tree out of the skill checks", async () => {
+    // Neither the document crawl nor the skill walk reads such a tree: the
+    // checks are about the documents the skill's author wrote, and a file
     // there that a step names is read when the step is reached.
     const root = await projectWithSkill(['description: "Does the thing."']);
     const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
@@ -554,8 +546,7 @@ describe("the gate reads a skill as the host does", () => {
     const codes = (await validateAssistantAssets(root, defaultConfig))
       .filter((item) => item.file === vendored)
       .map((item) => item.code);
-    expect(codes).not.toContain("QFAI-SKILLS-010");
-    expect(codes).not.toContain("QFAI-SKILLS-011");
+    expect(codes).toEqual([]);
   });
 
   it("passes over a directory the host does not list", async () => {

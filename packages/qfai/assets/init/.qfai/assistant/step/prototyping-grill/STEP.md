@@ -149,7 +149,7 @@ and name it.
 and `## Escalated` for a critical decision the user has yet to settle, plus
 `## Run scope` when the run is scoped (see [Run scope](#run-scope)). The
 generator and the reviewer both take that file as an input — named in
-`prototyping-loop`'s `## Evaluator Inputs (Mandatory)` and in the generator's
+`prototyping-loop`'s `## Evaluator Inputs` and in the generator's
 contract set — because a decision the loop cannot read is one it will
 contradict on the next iteration, and the user will be asked to re-settle what they
 already settled.

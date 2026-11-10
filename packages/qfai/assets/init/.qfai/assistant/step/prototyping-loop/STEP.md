@@ -182,7 +182,7 @@ Under a no-question mode nobody can answer, so the question is written to
 `## Escalated` and the run stops there. A reviewer's scores are not the user's
 confirmation.
 
-## Evaluator Inputs (Mandatory)
+## Evaluator Inputs
 
 - The live prototype, opened in the reviewer's own Playwright session.
 - Root `DESIGN.md` (read-only), `axisDefs`, `previousScore` and

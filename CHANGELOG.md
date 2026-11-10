@@ -4,7 +4,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **`qfai validate` audits the instructions an agent reads.** In `verify` and
+  `full`, it reads the Markdown under `.qfai/assistant/`, `paths.skillsDir` and
+  `.agents/rules/`, and `AGENTS.md` and `CLAUDE.md` at the root, and warns on
+  capitalised emphasis (`MUST`, `MANDATORY`, `REQUIRED`, `CRITICAL`,
+  `IMPORTANT`, `NEVER`, `ALWAYS`) and "think hard" phrasing outside code and
+  quotations (`QFAI-INSTR-001`), a `SKILL.md` over 500 lines
+  (`QFAI-INSTR-002`), a skill whose `description` and `when_to_use` exceed
+  1,536 characters (`QFAI-INSTR-003`), and an `AGENTS.md` over 32 KiB
+  (`QFAI-INSTR-004`). A fresh `qfai init` tree raises none of them.
+
 ### Changed
+
+- **Shipped headings and rules state obligations in plain words.** Headings
+  lose their `(MANDATORY)`, `(Mandatory)`, `(mandatory)` and `(MUST)` suffixes,
+  so their anchors change, for example
+  `shared-skill-operating-baseline.md#standard-commands` and
+  `#canonical-qfai-launcher`. Run `qfai init --force` to take the new text; a
+  project file that cites an old anchor reports `QFAI-LINK-002` until it is
+  updated.
 
 - **The decision and question registers no longer collide across parallel
   pull requests.** A new row takes the UTC time it is written as its ID
@@ -25,6 +45,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   be deleted once a decision row names its ID; until one does, the row stays.
 
 ### Removed
+
+- **The `[DRIFT-PROTOCOL:REQUIRED]` skill marker and `QFAI-SKILLS-010`.** No
+  `SKILL.md` carries the marker, and `qfai validate` no longer requires it. The
+  drift protocol itself is unchanged.
 
 - **`qfai sdd renumber-decision` and `qfai sdd next-id DEC|OQ`.** Timestamp
   IDs need no allocation or renumbering. The page relocation, published-prefix

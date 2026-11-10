@@ -16,7 +16,7 @@ Inside an `npx qfai workflow` run, what authorizes the run's work and the one ta
 
 ## Absolute Rule — Output Language
 
-**All outputs MUST be written in the user’s working language for this session.**
+**Write all outputs in the user’s working language for this session.**
 
 - If the user writes in Japanese, output Japanese.
 - If the user writes in English, output English.
@@ -465,6 +465,6 @@ Rules:
 
 1. **Never** create a scratch file in the repository root, `src/`, `.qfai/spec/`, or any other production/artifact directory.
 2. When the host names a scratch directory for the session, use it. Otherwise use `tmp/` (repository root) as the sole staging area, with subdirectories as needed (e.g., `tmp/notes/`, `tmp/capture/`). A file the repository's own tooling must read from the working tree goes under `tmp/` whichever the host names.
-3. `tmp/` MUST be listed in `.gitignore` so temporary files are never committed.
+3. `tmp/` is listed in `.gitignore` so temporary files are never committed.
 4. Clean up `tmp/` contents when the task that created them is complete. The host's own scratch directory is the host's to clean.
 5. If a scratch file is found outside `tmp/` **in the working tree**, treat it as a defect and move or delete it immediately. A test's `mkdtemp` sandbox and configured toolchain output are not scratch files — see Scope above.

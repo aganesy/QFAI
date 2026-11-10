@@ -12,7 +12,7 @@ const baselinePath = "assistant/rule/shared-skill-delegation-baseline.md";
 async function readProtocol(tree: string): Promise<string> {
   const content = await readRule(path.join(repoRoot, tree, baselinePath));
   const start = content.indexOf("### Session Agent Protocol");
-  const end = content.indexOf("### Capability Probe (MUST)");
+  const end = content.indexOf("### Capability Probe");
   expect(start).toBeGreaterThanOrEqual(0);
   expect(end).toBeGreaterThan(start);
   return content.slice(start, end).replace(/\s+/g, " ");

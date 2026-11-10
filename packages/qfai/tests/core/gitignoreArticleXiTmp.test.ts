@@ -44,7 +44,7 @@ describe("the managed block ships the ignore Article XI mandates", () => {
   it("still states rule 3, the obligation the entry discharges", async () => {
     const constitution = await readFile(CONSTITUTION, "utf-8");
     expect(constitution).toContain(
-      "`tmp/` MUST be listed in `.gitignore` so temporary files are never committed.",
+      "`tmp/` is listed in `.gitignore` so temporary files are never committed.",
     );
   });
 

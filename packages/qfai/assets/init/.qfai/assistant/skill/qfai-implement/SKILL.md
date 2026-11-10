@@ -33,10 +33,8 @@ mode: approval-gated
 
 ## /qfai-implement — Implement a business flow
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 Run the entry check of
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`
 first.
 
 ## Inputs
