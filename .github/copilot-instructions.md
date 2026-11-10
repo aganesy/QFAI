@@ -52,7 +52,7 @@ Key rules to follow:
 - `.agents/rules/interface-clarity.md` — what may appear on a screen or in terminal output; text explaining how to work a control is a defect report against that control.
 - `.agents/rules/grilling.md` — interview the decision tree before a design is fixed; outside the discussion stage agents grill each other, and only a critical decision reaches the user.
 - `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.
-- `.agents/rules/reply-forms.md` — a draft, a set of items or a question of taste is answered by a mark-up, a sort or a comparison, on the host's private page where one can be published and as text in the chat otherwise.
+- `.agents/rules/reply-forms.md` — a draft is marked up, a set is sorted, a question of taste is compared; on a private host page where one exists, else as chat text.
 - `.agents/rules/shipped-ci-parity.md` — a change to this repository's CI either reaches the workflow templates the package ships or says in the diff why it does not.
 - `.agents/rules/api-budget.md` — ask git before REST and REST before GraphQL; one call for the whole set; the allowance belongs to the account and every session draws on it at once.
 - `.agents/rules/action-reversibility.md` — classify an action by how hard it is to undo before it runs; a destructive, hard-to-reverse or visible action needs the user or a standing instruction.
