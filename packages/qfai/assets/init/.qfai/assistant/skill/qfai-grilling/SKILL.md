@@ -123,6 +123,10 @@ Two questions never share a round when one depends on the other; the dependent
 one belongs to a later round. The next round is never written ahead of the
 answers it is computed from.
 
+**Every round checks terms against the glossary**: a clash or synonym is raised
+first with the glossary's term proposed, and a settled term is written at once
+(`.agents/rules/grilling.md#terms-against-the-glossary`).
+
 **A no-question mode is read before any of this.** Agent rounds require
 explicit delegation; otherwise the section above governs. A withheld tool with questions still
 permitted uses the fallback.
@@ -352,8 +356,7 @@ Every decision this skill meets falls in one of three named buckets.
 Explicit delegation is not `auto-decide` or a fact or human answer.
 These user-session entries remain the default.
 
-The asking is what this skill performs, so its `ask-user` entries are its own operations
-rather than an entry added to the prototype.
+This skill's `ask-user` entries are its own operations, not prototype additions.
 
 The buckets are the method, not a tuning surface. Moving a frontier decision to
 `auto-decide` is the agent answering its own question without the rounds. A

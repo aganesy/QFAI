@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Grilling checks terms against the glossary.** In every grilling session, at
+  every stage, a term that conflicts with the project glossary or the
+  discussion pack's glossary, or is a synonym of a term one defines, is raised
+  when it appears, with the glossary's term proposed. A term the session
+  settles is written at once: to the pack's glossary in discussion, a new term
+  to the project glossary where the stage writes the policy layer, and
+  otherwise to the stage's evidence and final report. Changing a definition the
+  project glossary already holds is a critical decision that needs an approved
+  change request.
+
 - **Reply forms for answering agent output.** A new rule,
   `.agents/rules/reply-forms.md`, has the agent put a draft as a sheet the user
   marks up passage by passage, a set of items as one sort into named columns,
@@ -15,6 +25,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   otherwise. A Site in the Codex app, whose audience is not documented, is
   used where the project's agent instructions allow it. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
+- **Diagrams are checked where they are written.** The `discussion-pack` and
+  `sdd-flow` steps now run the shipped Mermaid parser on the files they wrote,
+  installed under `tmp/` and never into the project's dependency tree, and
+  report the check as not run when the parser cannot be installed.
+  `qfai validate` warns (`QFAI-FLOW-006`) on a Mermaid diagram with more than
+  12 nodes or 16 edges, so its author splits it into an overview and detail
+  diagrams; `validation.diagramBudget` in `qfai.config.yaml` changes both
+  limits. The discussion profile reports an error (`QFAI-DPACK-012`) for a
+  `path:line` citation in the latest discussion pack that names a missing file
+  or a line past its end.
+- **Variants on the first prototyping iteration.** While the visual or
+  interaction direction is still open, `/qfai-prototyping` builds its first
+  iteration as two or three variants that differ in structure, on one page
+  switchable through `?variant=<id>`, each reviewed by its own reviewer. They are put to
+  the user as one comparison; the user picks one, combines parts or rejects
+  all, and the agent never picks. From the next iteration the loop builds one
+  prototype as before. A restyle, a run scoped to a confirmed prototype, a run
+  under a no-question mode, or a session record or `DESIGN.md` that settles
+  the layout builds one prototype from the start.
 
 ### Changed
 

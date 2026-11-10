@@ -25,10 +25,6 @@ ambiguity found while implementing that the written specification settles.
 | The question ending a turn that waits on the user | Not a clarification, and not capped; `user-questions.md` § 6       |
 | Work already specified                            | Outside this rule; the spec is the authority                       |
 
-The sixth row is what keeps the rows above it from being a way around a
-question budget. It also makes the class decidable when the question is asked
-rather than arguable afterwards.
-
 Reach for a session whenever a decision is about to be made that the repository
 cannot settle by itself: a design, an approach, a scope boundary, a trade-off
 between things that both matter. A session turns those into decisions someone
@@ -57,11 +53,6 @@ behaviour the story tree already states have no open design decision. Start no
 griller for them. Decide from what is written, write no session record, and
 list nothing for the user. A critical decision met on the way still goes to the
 user.
-
-A user asked every design question of a routine stage answers most of them by
-accepting the recommendation. Each round trip costs their time and settles
-nothing the recommendation had not. Their attention is spent where their answer
-can differ from it: the discussion stage, and the critical decisions below.
 
 **A delegated session runs the same method with a different answerer.** The
 griller builds the tree, computes the frontier and puts each round to the
@@ -220,10 +211,8 @@ One round is one frontier: asked in full, answered in full.
 **Upstream first: order the round by the cost of a wrong answer.** Dependency
 decides which round a question belongs to; cost decides its place within the
 round. A decision that is hard to reverse, or that later decisions hang on,
-comes first. Every other decision is cheap to revise; those come after the
-costly ones, and their recommendations share one grouped question (§ The shape
-of a question). The agent proposes which decisions are cheap; the user may move
-any of them out.
+comes first. Every other decision is cheap to revise and comes after, in one
+grouped question. The agent proposes which are cheap; the user may move any out.
 
 Count rounds, not questions. Forty questions across four rounds is an ordinary
 session; the same forty asked one at a time is a worse one.
@@ -278,18 +267,14 @@ Without a recommendation the user has to reconstruct the reasoning before they
 can disagree with it, and most rounds are long enough that they will stop
 reading instead.
 
-**Cheap decisions share one grouped question.** It lists each decision with its
-recommended answer and a one-line reason, and is answered once: accept every
-recommendation, or name the items to decide separately. The items are numbered
-in the question, and its two options are accepting all and deciding some
-separately, whose answer gives the item numbers. So the group stays one choose
-(`reply-forms.md` § 1) on the round's one carrier, however many items it holds.
-A named item is asked as its own question in the next round, with the rest of
-that round's frontier. Grouping is not delegation: in a user session the user
-still decides every decision, and an accepted group records each item as the
-user's decision. A critical decision, a fact, and a decision some document
-requires the user to record are never grouped. Grouping shapes only a question
-put to the user; a delegated session's rounds keep their own rules.
+**Cheap decisions share one grouped question.** It numbers each decision with
+its recommended answer and a one-line reason. Its two options are accepting all
+and deciding some separately by item number, so it stays one choose
+(`reply-forms.md` § 1) on the round's one carrier. A named item is asked as its
+own question in the next round. Grouping is not delegation: an accepted group
+records each item as the user's decision. A critical decision, a fact, and a
+decision some document requires the user to record are never grouped, and a
+delegated session's rounds keep their own rules.
 
 **A question asking for a fact carries no recommended answer.** There is nothing
 to recommend: the agent does not hold the value, a guessed one is the corruption
@@ -326,6 +311,30 @@ stopped following it.
 In a delegated session a decision takes the griller's recommendation, reached in
 rounds and recorded. The agent holding the session still never skips the rounds,
 and never takes a critical decision without the recorded user authority above.
+
+## Terms against the glossary
+
+Every session, user or delegated and at every stage, checks the terms it hears
+against `<specsDir>/01_policy/glossary.md` and, during a discussion, the pack's
+`08_Glossary.md`. A word read two ways is a decision nobody saw being made.
+
+- **A clash is raised when it appears.** A term the user or an author uses that
+  conflicts with, or is a synonym of, a term a glossary defines is raised first
+  in the round it appears in, or the next one when it appears in an answer.
+  Questions whose answer turns on its meaning wait for the next round. The
+  griller proposes the glossary's term. A plain synonym is corrected to it and
+  noted in the round, not asked; a term with two plausible meanings is a
+  decision node.
+- A matching term raises nothing. A term in neither glossary is asked about only
+  when a decision on the tree turns on its meaning.
+- **A settled term is written at once**, not at the end of the session: to the
+  pack's `08_Glossary.md` in discussion, a new term to the project glossary
+  where the stage writes the policy layer, otherwise to the stage's evidence,
+  beside its adopted decisions, with a line in its final report, and with no
+  invoking stage to the session record the user reads. A changed pack term
+  rewrites its row and adds no second one.
+- **Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only under an approved change request.
+- A definition says what the term is. A rule, a value set or a procedure belongs in the spec, not in the row.
 
 ## When a session ends
 
@@ -455,10 +464,6 @@ comparison of two or three variants where there is more than one
 does not transfer the decision. An agent that builds one, judges it, and carries on has settled a
 question of taste on the user's behalf, which is the thing this rule spends
 every round avoiding.
-
-Talking through such a question is where a session grows without bound: you keep
-rephrasing, the user keeps guessing, and the scope grows to fill the
-uncertainty.
 
 ## It is working when
 

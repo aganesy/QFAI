@@ -50,10 +50,10 @@ describe.each(MASTERS)("%s orders a round upstream first", (rel) => {
       "Dependency decides which round a question belongs to; cost decides its place within the round.",
     );
     expect(round).toContain(
-      "A decision that is hard to reverse, or that later decisions hang on, comes first. Every other decision is cheap to revise;",
+      "A decision that is hard to reverse, or that later decisions hang on, comes first. Every other decision is cheap to revise and comes after, in one grouped question.",
     );
     expect(round).toContain("Two questions never share a round when one depends on the other.");
-    expect(round).toContain("the user may move any of them out");
+    expect(round).toContain("the user may move any out");
   });
 
   // QFAI:EX-0001-0254-02
@@ -61,20 +61,19 @@ describe.each(MASTERS)("%s orders a round upstream first", (rel) => {
     const shape = section(await read(rel), "The shape of a question");
     expect(shape).toContain("**Cheap decisions share one grouped question.**");
     expect(shape).toContain(
-      "It lists each decision with its recommended answer and a one-line reason, and is answered once: accept every recommendation, or name the items to decide separately.",
+      "It numbers each decision with its recommended answer and a one-line reason. Its two options are accepting all and deciding some separately by item number",
     );
+    expect(shape).toContain("A named item is asked as its own question in the next round.");
     expect(shape).toContain(
-      "A named item is asked as its own question in the next round, with the rest of that round's frontier.",
+      "so it stays one choose (`reply-forms.md` § 1) on the round's one carrier",
     );
-    expect(shape).toContain("its two options are accepting all and deciding some separately");
-    expect(shape).toContain("So the group stays one choose (`reply-forms.md` § 1)");
   });
 
   // QFAI:EX-0001-0254-03
   it("never groups a critical decision, a fact or a document-required decision", async () => {
     const shape = section(await read(rel), "The shape of a question");
     expect(shape).toContain(
-      "A critical decision, a fact, and a decision some document requires the user to record are never grouped.",
+      "A critical decision, a fact, and a decision some document requires the user to record are never grouped",
     );
   });
 
@@ -82,7 +81,7 @@ describe.each(MASTERS)("%s orders a round upstream first", (rel) => {
   it("records an accepted group as the user's decisions, not a delegation", async () => {
     const shape = section(await read(rel), "The shape of a question");
     expect(shape).toContain(
-      "Grouping is not delegation: in a user session the user still decides every decision, and an accepted group records each item as the user's decision.",
+      "Grouping is not delegation: an accepted group records each item as the user's decision.",
     );
     expect(shape).toContain("a delegated session's rounds keep their own rules");
   });

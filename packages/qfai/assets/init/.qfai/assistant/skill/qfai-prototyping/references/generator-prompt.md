@@ -37,7 +37,9 @@ identity.
    `iter-(NN-1)/review.json` (critique, scores,
    `layoutAntiPatternsDetected`, `designMdViolations`,
    `pivotDirective`), `iter-(NN-2)/review.json` when present, and
-   `progress.md`. A review or confirmation from an earlier run is not one of
+   `progress.md`. Where one of them is an iteration with variants, read
+   the review of the variant the user picked in its place, and none after a
+   combination or a rejection. A review or confirmation from an earlier run is not one of
    them: the run's first iteration is the first after `progress.md` records
    its `runScope`, present or absent.
 6. In a scoped run, every iteration: `runScope` in `progress.md` and
@@ -304,9 +306,25 @@ change the scope needs outside those parts is reported, not made.
 
 ## The first iteration (seed)
 
-Produce one self-contained `iter-00/index.html` that satisfies the spec
+Produce one self-contained `iter-NN/index.html` for the run's first
+iteration (`iter-00` in a first run) that satisfies the spec
 under the DESIGN.md tokens. Lead with the user's primary task;
 respect `audience.do_not_look_like`.
+
+When `progress.md` records `variants` other than `none`, the file holds each
+listed variant of the in-scope screens:
+
+- Each answers the same spec with a different structure: a different
+  grouping, layout or navigation model. Variants that differ only in colour,
+  spacing or copy are one variant.
+- `?variant=<id>` selects one, and a small floating switcher changes it in
+  place. The selection survives navigation between the screen routes, so
+  every route of a variant is reachable with its `?variant=<id>`.
+- The switcher is the only element outside the screens. Brand tokens stay
+  locked in every variant.
+
+The next iteration builds one prototype: the variant the user picked, the
+parts they combined, or a pivot carrying their rejection. Drop the switcher.
 
 ## Later iterations
 
