@@ -49,6 +49,9 @@ describe.each(MASTERS)("%s picks the form from what is answered", (rel) => {
     }
     expect(master).toContain("two or three variants side by side");
     expect(master).toContain(
+      "the sheet a grilling session is confirmed on (`grilling.md`). The draft is one the existing point already shows the user.",
+    );
+    expect(master).toContain(
       "A single prototype is asked against as `grilling.md` says; this rule builds no second one.",
     );
   });
@@ -77,7 +80,7 @@ describe.each(MASTERS)("%s orders the carriers", (rel) => {
     expect(page).toBeGreaterThan(tool);
     expect(chat).toBeGreaterThan(page);
     expect(master).toContain(
-      "its page is private to the user by default, such as an Artifact on Claude Code.",
+      "its page is private to the user by default, such as an Artifact on Claude Code,",
     );
     expect(master).toContain(
       "A set presented as one, such as a grilling round, takes one carrier: the first that carries every member.",
@@ -88,8 +91,12 @@ describe.each(MASTERS)("%s orders the carriers", (rel) => {
     expect(master).toContain("no secret, credential or personal data");
   });
 
-  it("uses a page not known to be private, a Codex Site included, only under a standing instruction", async () => {
+  it("names a Codex Site as that app's publisher and holds any other unknown page to a standing instruction", async () => {
     const master = await read(rel);
+    expect(master).toContain("or where this rule names it, as it names a Site in the Codex app.");
+    expect(master).toContain(
+      "**A Site in the Codex app is that app's page publisher for reply sheets**, as an Artifact is Claude Code's. This rule is the standing instruction that covers publishing it",
+    );
     expect(master).toContain(
       "A page whose default audience is not known to be the user alone is used only where a standing instruction covers publishing it. Otherwise the sheet goes to the chat as text, and nothing is asked.",
     );
@@ -97,7 +104,7 @@ describe.each(MASTERS)("%s orders the carriers", (rel) => {
       "Where the agent cannot confirm a page is private, it treats the page as not private.",
     );
     expect(master).toContain(
-      "A Site in the Codex app is not known to be private, so it is used only under a standing instruction",
+      "A Site's default audience is not documented and may be wider than the user, so a Site sheet holds only what the user would show that audience. A project whose instructions forbid Sites puts the sheet in the chat.",
     );
   });
 });
@@ -118,6 +125,9 @@ describe.each(MASTERS)("%s fixes the reply text", (rel) => {
   it("applies a note to its passage only and puts an unplaced item again", async () => {
     const master = await read(rel);
     expect(master).toContain("A note changes the passage it names and nothing else.");
+    expect(master).toContain(
+      "`approve with notes` applies the notes and asks nothing more, unless the asking rule says otherwise, as `grilling.md` does for its confirmation sheet.",
+    );
     expect(master).toContain("Every sort has a column that declines the item");
     expect(master).toContain(
       "An item the reply neither places nor drops is put again in one sort; it is never assumed",
@@ -157,6 +167,9 @@ describe.each(MASTERS)("%s adds nothing that waits on the user", (rel) => {
   it("adds no question, step or gate, and is silent under a no-question mode", async () => {
     const master = await read(rel);
     expect(master).toContain("It adds no question, step or gate.");
+    expect(master).toContain(
+      "already puts: a grilling round, the confirmation that closes a grilling session, a decision point,",
+    );
     expect(master).toContain("Under a no-question mode nothing is published and nothing is asked.");
   });
 });

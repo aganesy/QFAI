@@ -200,7 +200,8 @@ A session **completes** on two conditions, both required.
 
 1. No node is open — the frontier is empty **and** no fact lookup is still
    running.
-2. The user confirms the understanding is shared.
+2. The user confirms the understanding is shared. The sheet that carries it:
+   `references/confirmation-sheet.md`.
 
 Condition 1 is about the whole tree. When every remaining decision waits on a
 lookup the frontier is empty while the tree still holds open nodes, and

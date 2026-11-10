@@ -49,7 +49,9 @@ one-line summary at the end of each iteration.
 The loop ends when the user confirms the prototype. Until then each answer the
 user gives runs another iteration. No score, finding count or command decides
 that the loop is done, and a blocking finding still open at the confirmation is
-named in the final report rather than holding the loop open.
+named in the final report rather than holding the loop open. A restyle whose
+audit found nothing to fix, and whose refinements the user declined, stops
+before iteration 00 with no edit.
 
 ## First-iteration variants
 
@@ -99,6 +101,8 @@ A loop whose `progress.md` records `iterationKind` `restyle` restyles the
 live app in place. Each `iter-NN/index.html` lists the live routes in scope,
 the reviewer drives those routes in the running app, and the handoff is a
 short form that names the routes and the stylesheet and motion entry points.
+Before iteration 00, the loop step saves each route's text as a baseline and
+audits the routes to set `restyleLevel`.
 
 ## Surface profile
 

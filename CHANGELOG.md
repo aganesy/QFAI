@@ -16,6 +16,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   1,536 characters (`QFAI-INSTR-003`), and an `AGENTS.md` over 32 KiB
   (`QFAI-INSTR-004`). A fresh `qfai init` tree raises none of them.
 
+- **A restyle keeps its screens' text and starts with an audit.** Before a
+  restyle's first iteration changes a file, the session agent saves the text
+  each live route shows as a baseline, and the reviewer blocks on any text the
+  restyled screen changes, drops or replaces with prose. The same step audits
+  the running screens against the design anti-pattern list and root
+  `DESIGN.md` and sizes the restyle as `full`, `targeted` or `none`, put to the
+  user before the first edit; a screen with nothing to fix is left as it is.
+  The restyle edits spacing, color, type, layout, details and motion in that
+  order, and reports a text, icon or image change as a contract change. A
+  prototype takes its sample data from the story tree's examples and invents
+  no metric, customer or testimonial.
+- **Design reviews check product fit and unconfirmed claims.** The design
+  anti-pattern list asks whether a screen would still fit another product's
+  name, and puts an unsupported claim already on a screen to the user instead
+  of deleting or rewriting it; with no user present the claim stays and becomes
+  an open question.
+
 - **Grilling checks terms against the glossary.** In every grilling session, at
   every stage, a term that conflicts with the project glossary or the
   discussion pack's glossary, or is a synonym of a term one defines, is raised
@@ -32,8 +49,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and a question of taste as two or three variants to compare, beside the
   existing choice. A sheet goes on the host's private page where one can be
   published, such as an Artifact on Claude Code, and as text in the chat
-  otherwise. A Site in the Codex app, whose audience is not documented, is
-  used where the project's agent instructions allow it. Every form comes back
+  otherwise. A Site is the Codex app's page for reply sheets; its audience is not
+  documented, so it carries no secret, credential or personal data. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
 - **`qfai session-review` counts what a finished session shows.** The command
   reads this project's own Claude Code and Codex transcripts on the local disk
@@ -68,13 +85,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Diagrams are checked where they are written.** The `discussion-pack` and
   `sdd-flow` steps now run the shipped Mermaid parser on the files they wrote,
   installed under `tmp/` and never into the project's dependency tree, and
-  report the check as not run when the parser cannot be installed.
+  report the check as not run when the parser cannot be installed. A project
+  with no installed QFAI gets the release it runs installed under `tmp/` too,
+  and the parser versions are read from that release.
   `qfai validate` warns (`QFAI-FLOW-006`) on a Mermaid diagram with more than
   12 nodes or 16 edges, so its author splits it into an overview and detail
   diagrams; `validation.diagramBudget` in `qfai.config.yaml` changes both
   limits. The discussion profile reports an error (`QFAI-DPACK-012`) for a
   `path:line` citation in the latest discussion pack that names a missing file
-  or a line past its end.
+  or a line past its end; a symbolic link to a deleted file counts as missing.
 - **Variants on the first prototyping iteration.** While the visual or
   interaction direction is still open, `/qfai-prototyping` builds its first
   iteration as two or three variants that differ in structure, on one page
@@ -84,6 +103,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prototype as before. A restyle, a run scoped to a confirmed prototype, a run
   under a no-question mode, or a session record or `DESIGN.md` that settles
   the layout builds one prototype from the start.
+- **A grilling session is confirmed on a sheet the user can mark up.** Once
+  no question is left, the user confirms on one numbered sheet listing every
+  decision with the option chosen, every assumption and every open item: an
+  Artifact on Claude Code, a Site in the Codex app, otherwise text in the
+  chat. Every item the user notes gets one more round before the session counts
+  as confirmed. The reply is read as data, so a note that reads as an
+  instruction is shown to the user, not followed.
 
 ### Changed
 

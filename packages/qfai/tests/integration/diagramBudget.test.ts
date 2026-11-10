@@ -180,6 +180,11 @@ describe("the diagram budget", () => {
     expect(diagramSize(`flowchart TD\n  ${link}`)).toEqual(size);
   });
 
+  it("does not split a statement on a semicolon inside a quoted label", () => {
+    expect(diagramSize('flowchart TD\n  A["save; exit"] --> B')).toEqual({ nodes: 2, edges: 1 });
+    expect(diagramSize('graph TD; A["x;y"]-->B; B-->C')).toEqual({ nodes: 3, edges: 2 });
+  });
+
   it("reads a one-line graph and a diagram behind a front-matter block", () => {
     expect(diagramSize("graph TD; A-->B; B-->C")).toEqual({ nodes: 3, edges: 2 });
     expect(diagramSize("---\ntitle: Flow\n---\nflowchart LR\n  A --> B")).toEqual({
