@@ -464,7 +464,7 @@
     "tests/integration/sddMergeDocs.test.ts",
     "tests/integration/diagramBudget.test.ts",
     "tests/integration/discussionCitations.test.ts",
-    "tests/scripts/shippedCheckerCallers.test.ts",
+    "tests/integration/shippedCheckerCallers.test.ts",
     "tests/integration/storyTreePolicy.test.ts",
     "tests/integration/storyTreeValidateAcceptance.test.ts",
     "tests/integration/storyTreeValidateLayout.test.ts",
