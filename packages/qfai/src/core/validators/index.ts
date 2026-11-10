@@ -2,6 +2,8 @@
 // Canonical validators — production path
 // ---------------------------------------------------------------------------
 
+export { validateDiagramBudget } from "./diagramBudget.js";
+export { validateDiscussionCitations } from "./discussionCitations.js";
 export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDiscussionVisuals } from "./discussionVisuals.js";
 export { validateDesignDirectionProposal } from "./designDirectionProposal.js";

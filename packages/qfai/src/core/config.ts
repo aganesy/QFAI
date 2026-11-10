@@ -35,6 +35,10 @@ export type QfaiForbiddenIdentifier = {
   byteLength: number;
 };
 
+export type DiagramBudget = { nodes: number; edges: number };
+
+export const DEFAULT_DIAGRAM_BUDGET: DiagramBudget = { nodes: 12, edges: 16 };
+
 export type QfaiValidationConfig = {
   failOn: FailOn;
   /**
@@ -43,6 +47,12 @@ export type QfaiValidationConfig = {
    * (QFAI-STORY-016). Unset means no term is checked.
    */
   staleTerms?: string[];
+  /**
+   * The largest node and edge counts a Mermaid diagram may have before
+   * `qfai validate` warns (QFAI-FLOW-006). A limit left unset is the default
+   * of `DEFAULT_DIAGRAM_BUDGET`.
+   */
+  diagramBudget?: Partial<DiagramBudget>;
   /** Hash-only identifiers checked against tracked names and current file bytes. */
   forbiddenIdentifiers?: QfaiForbiddenIdentifier[];
   testStrategy: {
@@ -497,9 +507,12 @@ function normalizeValidation(
     issues,
   );
 
+  const diagramBudget = readDiagramBudget(raw.diagramBudget, configPath, issues);
+
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
     ...(staleTerms.length > 0 ? { staleTerms } : {}),
+    ...(diagramBudget !== undefined ? { diagramBudget } : {}),
     ...(forbiddenIdentifiers !== undefined ? { forbiddenIdentifiers } : {}),
     testStrategy: {
       forbidTestTodoStubs: readBoolean(
@@ -846,6 +859,40 @@ function readStringArray(
     issues.push(configIssue(configPath, `${label} must be an array of strings.`));
   }
   return fallback;
+}
+
+function readDiagramBudget(
+  value: unknown,
+  configPath: string,
+  issues: Issue[],
+): Partial<DiagramBudget> | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    issues.push(configIssue(configPath, "validation.diagramBudget must be an object."));
+    return undefined;
+  }
+  for (const key of Object.keys(value)) {
+    if (key !== "nodes" && key !== "edges") {
+      issues.push(configIssue(configPath, `validation.diagramBudget.${key} is not a setting.`));
+    }
+  }
+  const budget: Partial<DiagramBudget> = {};
+  for (const key of ["nodes", "edges"] as const) {
+    const limit = value[key];
+    if (limit === undefined) {
+      continue;
+    }
+    if (typeof limit === "number" && Number.isInteger(limit) && limit >= 1) {
+      budget[key] = limit;
+    } else {
+      issues.push(
+        configIssue(configPath, `validation.diagramBudget.${key} must be an integer of 1 or more.`),
+      );
+    }
+  }
+  return budget;
 }
 
 function readBoolean(
