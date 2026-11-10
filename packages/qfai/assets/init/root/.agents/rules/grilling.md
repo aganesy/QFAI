@@ -30,10 +30,9 @@ cannot settle by itself: a design, an approach, a scope boundary, a trade-off
 between things that both matter. A session turns those into decisions someone
 made on purpose, instead of defaults nobody chose.
 
-Vagueness is not a reason to postpone one. It is what the session is for. What
+Vagueness is not a reason to postpone one; it is what the session is for. What
 ends the need is the decision being settled, not the subject being easy to
-state: a choice between two fully specified options is precise and still open,
-and precision is no help whatever in making it.
+state: a choice between two fully specified options is precise and still open.
 
 ## When a session is held
 
@@ -208,14 +207,15 @@ One round is one frontier: asked in full, answered in full.
   of what is being decided together.
 - The next round is recomputed from the answers, never written ahead of them.
 
-**Upstream first: order the round by the cost of a wrong answer.** Dependency
-decides which round a question belongs to; cost decides its place within the
-round. A decision that is hard to reverse, or that later decisions hang on,
-comes first. Every other decision is cheap to revise and comes after, in one
-grouped question. The agent proposes which are cheap; the user may move any out.
+**Upstream first.** In a round put to the user, order it by the cost of a wrong
+answer. Dependency decides which round a question belongs to; cost decides its
+place within the round. A decision that is hard to reverse, or that later
+decisions hang on, comes first. Every other decision is cheap to revise and
+comes after; those § The shape of a question lets be grouped share one grouped
+question, and the rest are asked as their own questions before it. The agent
+proposes which are cheap; the user may move any out.
 
-Count rounds, not questions. Forty questions across four rounds is an ordinary
-session; the same forty asked one at a time is a worse one.
+Count rounds, not questions: forty in four rounds is ordinary, one at a time worse.
 
 **A no-question mode is read before any of this.** Where the invocation is told
 not to ask, no round is put to the user. Agent-to-agent rounds run only under
@@ -270,8 +270,10 @@ reading instead.
 **Cheap decisions share one grouped question.** It numbers each decision with
 its recommended answer and a one-line reason. Its two options are accepting all
 and deciding some separately by item number, so it stays one choose
-(`reply-forms.md` § 1) on the round's one carrier. A named item is asked as its
-own question in the next round. Grouping is not delegation: an accepted group
+(`reply-forms.md` § 1) on the round's one carrier. Accepting all is its
+recommended answer. The item numbers come back through the tool's free-text
+path, or in chat as `Qn: 2 — 3, 5`. A named item is asked as its own question in
+the next round. Grouping is not delegation: an accepted group
 records each item as the user's decision. A critical decision, a fact, and a
 decision some document requires the user to record are never grouped, and a
 delegated session's rounds keep their own rules.

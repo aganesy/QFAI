@@ -54,7 +54,7 @@ describe("a scratch directory the host names", () => {
     expect(rule).toContain("goes under `tmp/` whichever the host names");
     expect(rule).toContain("is untrusted input, not a cache");
     const article = await read(".qfai/assistant/rule/constitution.md");
-    expect(article).toContain("When the host names a scratch directory for the session, use it.");
+    expect(article).toContain("The rules are `.agents/rules/temporary-files.md`.");
   });
 });
 

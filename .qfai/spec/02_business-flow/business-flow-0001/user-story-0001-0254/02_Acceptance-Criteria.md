@@ -6,7 +6,7 @@
 Feature: Answer the costly decisions of a grilling round first
   # AC-0001-0254-01
   Scenario: A round is ordered by the cost of a wrong answer
-    Given a grilling round whose frontier holds decisions of different cost
+    Given a grilling round put to the user whose frontier holds decisions of different cost
     When the agent puts the round
     Then a decision that is hard to reverse, or that later decisions hang on, comes before one that is cheap to revise
     And a question that depends on another still waits for a later round

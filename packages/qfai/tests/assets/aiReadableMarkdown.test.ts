@@ -26,6 +26,10 @@ import { fileURLToPath } from "node:url";
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
+import {
+  SKILL_BODY_MAX_CHARS,
+  skillBodyCharacters,
+} from "../../src/core/doctor/assetLineBudget.js";
 import { countLines } from "../helpers/skillBudget.js";
 
 const initRoot = path.resolve(
@@ -38,7 +42,6 @@ const initRoot = path.resolve(
 const ASSISTANT_PREFIX = ".qfai/assistant/";
 
 const MAX_LINES = 500;
-const MAX_SKILL_BODY_CHARS = 20_000;
 const CONTENTS_FROM_LINES = 100;
 
 /**
@@ -138,9 +141,6 @@ function outline(text: string): Outline {
   return { headings, contents };
 }
 
-/** The text after the front matter, which is what the character limit counts. */
-const skillBody = (text: string): string => text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "");
-
 /** Every other reference a reference names by a path that resolves to one. */
 function referencesNamedBy(file: Shipped, references: ReadonlySet<string>): string[] {
   const named = new Set<string>();
@@ -184,12 +184,12 @@ describe("the shipped Markdown is sized and split for an agent that reads it", (
     expect(stale, "a backlog entry names a file that is not shipped").toEqual([]);
   });
 
-  it(`keeps every SKILL.md body within ${MAX_SKILL_BODY_CHARS} characters`, async () => {
+  it(`keeps every SKILL.md body within ${SKILL_BODY_MAX_CHARS} characters`, async () => {
     const over: string[] = [];
     for (const file of await shippedMarkdown()) {
       if (path.posix.basename(file.rel) !== "SKILL.md") continue;
-      const chars = [...skillBody(file.text)].length;
-      if (chars > MAX_SKILL_BODY_CHARS) over.push(`${short(file.rel)}: ${chars} characters`);
+      const chars = skillBodyCharacters(file.text);
+      if (chars > SKILL_BODY_MAX_CHARS) over.push(`${short(file.rel)}: ${chars} characters`);
     }
     expect(over, "move a section out into the skill's references").toEqual([]);
   });

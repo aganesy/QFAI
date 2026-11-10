@@ -45,12 +45,14 @@ describe.each(MASTERS)("%s orders a round upstream first", (rel) => {
   // QFAI:EX-0001-0254-01
   it("puts a costly decision before a cheap one, and leaves the round to dependency", async () => {
     const round = section(await read(rel), "A round");
-    expect(round).toContain("**Upstream first: order the round by the cost of a wrong answer.**");
+    expect(round).toContain(
+      "**Upstream first.** In a round put to the user, order it by the cost of a wrong answer.",
+    );
     expect(round).toContain(
       "Dependency decides which round a question belongs to; cost decides its place within the round.",
     );
     expect(round).toContain(
-      "A decision that is hard to reverse, or that later decisions hang on, comes first. Every other decision is cheap to revise and comes after, in one grouped question.",
+      "A decision that is hard to reverse, or that later decisions hang on, comes first. Every other decision is cheap to revise and comes after; those § The shape of a question lets be grouped share one grouped question, and the rest are asked as their own questions before it.",
     );
     expect(round).toContain("Two questions never share a round when one depends on the other.");
     expect(round).toContain("the user may move any out");
@@ -64,6 +66,14 @@ describe.each(MASTERS)("%s orders a round upstream first", (rel) => {
       "It numbers each decision with its recommended answer and a one-line reason. Its two options are accepting all and deciding some separately by item number",
     );
     expect(shape).toContain("A named item is asked as its own question in the next round.");
+    expect(shape).toContain("Accepting all is its recommended answer.");
+    const replyForms = await read("packages/qfai/assets/init/root/.agents/rules/reply-forms.md");
+    expect(replyForms).toContain(
+      "A grilling round's grouped question is one choose (`grilling.md` § The shape of a question), not a sort;",
+    );
+    expect(shape).toContain(
+      "The item numbers come back through the tool's free-text path, or in chat as `Qn: 2 — 3, 5`.",
+    );
     expect(shape).toContain(
       "so it stays one choose (`reply-forms.md` § 1) on the round's one carrier",
     );
@@ -91,7 +101,10 @@ describe.each(SKILLS)("%s carries the round order", (rel) => {
   // QFAI:EX-0001-0254-05
   it("orders upstream first and groups cheap decisions, pointing to the master", async () => {
     const skill = await read(rel);
-    expect(skill).toContain("Order it upstream first");
+    expect(skill).toContain("Order a round put to the user upstream first");
+    expect(skill).toContain(
+      "Never group a critical decision, a fact or a document-required decision",
+    );
     expect(skill).toContain("(`.agents/rules/grilling.md` § A round)");
     expect(skill).toContain("Decisions cheap to revise share one grouped question");
     expect(skill).toContain("grouping is not delegation");

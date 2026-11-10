@@ -114,9 +114,9 @@ empties and the session cannot complete.
 2. Dispatch the fact lookups the remaining decisions wait on. Do not block the
    round on them.
 3. Put the whole frontier at once to the session's answerer: the user by
-   default, or authors in a qualifying delegated session. Order it upstream
-   first: a decision hard to reverse, or that others hang on, before one cheap
-   to revise (`.agents/rules/grilling.md` § A round).
+   default, or authors in a qualifying delegated session. Order a round put to
+   the user upstream first: a decision hard to reverse, or that others hang on,
+   before one cheap to revise (`.agents/rules/grilling.md` § A round).
 4. Read the answers, then return to step 1.
 
 Two questions never share a round when one depends on the other; the dependent
@@ -211,19 +211,12 @@ questions it was dispatched to answer.
 
 There is no question cap.
 
-**A delegated session has no condition 2**, because no user is there to
-confirm. A budget bounds its rounds: two, then every decision that is not
-critical takes the griller's recommendation — the ones the agents agreed on and
-the ones still open alike. An uncovered critical decision goes to the user
-when asking is permitted, without spending a round
-(`.qfai/assistant/rule/review-convergence.md`). It ends `adopted` once
-the master's conditions hold: no open node or lookup, required inputs present,
-and actual authority for critical decisions. Record agent choices as agents'.
-
-**The budget ends the rounds, not the session.** While a critical decision
-lacks an actual answer or applicable recorded authorization, it stays open: the user answers it, or ends the session
-another way — or, under a no-question mode, the register write ends it
-`no-question`. How many went is a count a record carries, never an ending.
+**A delegated session ends by its own conditions**, because no user is there
+to confirm condition 2. Read `references/delegated-session.md` (§ When a
+delegated session ends) when the session is delegated, or is a no-question
+session that meets the master's explicit-delegation conditions. It holds the
+round budget, when the griller's recommendation is taken, and when the session
+ends `adopted`. A session with a user does not need it.
 
 **Only a no-question session meeting the master's explicit-delegation
 conditions ends `adopted`.**
