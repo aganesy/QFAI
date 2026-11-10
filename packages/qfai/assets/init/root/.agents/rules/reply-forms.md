@@ -6,8 +6,9 @@ and the text it comes back as.
 `user-questions.md` decides when a question is asked and the parts it carries.
 This rule decides which of four reply forms the answer takes. It adds no
 question, step or gate. A form reshapes a question that an existing point
-already puts: a grilling round, a decision point, a release approval, a
-question asked against a prototype, the session-feedback filing question.
+already puts: a grilling round, the confirmation that closes a grilling
+session, a decision point, a release approval, a question asked against a
+prototype, the session-feedback filing question.
 
 The reason is the cost of a correction. An answer written as free prose, away
 from what it answers, leaves the agent to guess which passage or item was
@@ -27,8 +28,9 @@ a sheet.
 
 - **Choose** is `user-questions.md` as it stands.
 - **Mark up** answers a draft: a plan, a specification change, a discussion
-  pack, an issue or pull request body, a long answer. The draft is one the
-  existing point already shows the user.
+  pack, an issue or pull request body, a long answer, the sheet a grilling
+  session is confirmed on (`grilling.md`). The draft is one the existing point
+  already shows the user.
 - **Sort** answers a set such as review findings, open questions or feedback
   drafts. A set the structured question tool carries in one question stays a
   multi-select question. A set with more items than the tool's option limit,
@@ -62,7 +64,8 @@ Take the first carrier that can carry the form in this invocation:
 1. **The structured question tool**, where it carries the form: a choose, and a
    sort small enough for one multi-select question.
 2. **The host's page publisher**, where it is callable and its page is private
-   to the user by default, such as an Artifact on Claude Code. Use it for mark
+   to the user by default, such as an Artifact on Claude Code, or where this
+   rule names it, as it names a Site in the Codex app. Use it for mark
    up, sort and compare, and for a choose whose options need a picture. Where
    it is callable, every mark up, sort and compare goes on it, not in the chat.
 3. **Text in the chat**, in the grammar of § 3, numbered so each line can be
@@ -73,9 +76,12 @@ where a standing instruction covers publishing it. Otherwise the sheet goes to
 the chat as text, and nothing is asked. Publishing is an action others can see
 (`action-reversibility.md`), and asking for it would add a question this rule
 does not add. Where the agent cannot confirm a page is private, it treats the
-page as not private. A Site in the Codex app is not known to be private, so it
-is used only under a standing instruction, such as a line in the project's
-agent instructions that allows reply sheets as Sites.
+page as not private.
+
+**A Site in the Codex app is that app's page publisher for reply sheets**, as
+an Artifact is Claude Code's. This rule is the standing instruction that covers
+publishing it, so no other instruction is needed. Every other page not known to
+be private still needs one.
 
 A set presented as one, such as a grilling round, takes one carrier: the first
 that carries every member. The structured question tool carries a set it
@@ -144,7 +150,9 @@ Reading a reply:
 - A note changes the passage it names and nothing else. A line that names no
   passage or item is a comment on the whole.
 - `revise` puts the revised draft again as a new sheet, with the settled notes
-  struck through. `approve with notes` applies the notes and asks nothing more.
+  struck through. `approve with notes` applies the notes and asks nothing
+  more, unless the asking rule says otherwise, as `grilling.md` does for its
+  confirmation sheet.
   `approve` lets the work go on.
 - An item the reply neither places nor drops is put again in one sort; it is
   never assumed, unless the asking rule says what an unplaced item means. A

@@ -203,16 +203,15 @@ A session **completes** on two conditions, both required.
 
 1. No node is open — the frontier is empty **and** no fact lookup is still
    running.
-2. The user confirms the understanding is shared.
+2. The user confirms the understanding is shared. The sheet that carries it:
+   `references/confirmation-sheet.md`.
 
 Condition 1 is about the whole tree. When every remaining decision waits on a
 lookup the frontier is empty while the tree still holds open nodes, and
 completing there would close the session before the lookup could raise the
 questions it was dispatched to answer.
 
-There is no question cap. A design is not finished being interrogated because a
-number was reached, and a short session is not evidence that the design was
-simple.
+There is no question cap. A number reached does not finish a design.
 
 **A delegated session has no condition 2**, because no user is there to
 confirm. A budget bounds its rounds: two, then every decision that is not
