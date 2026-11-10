@@ -75,7 +75,7 @@ them; it is the procedure that applies them.
 1. **Build the request.** Name the scope, the target files and the review
    focus. Put the answers an earlier stage recorded on the same artifact into
    this review's request before dispatching reviewers, under
-   `.qfai/assistant/rule/review-convergence.md#answered-demands-must`.
+   `.qfai/assistant/rule/review-convergence.md#answered-demands`.
    For the code review, name each test the run recorded `red: ci-deferred`:
    the reviewer reads it against the code before the fix and confirms that
    its assertion fails there

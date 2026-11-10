@@ -16,7 +16,7 @@ Inside an `npx qfai workflow` run, what authorizes the run's work and the one ta
 
 ## Absolute Rule — Output Language
 
-**All outputs MUST be written in the user’s working language for this session.**
+**Write all outputs in the user’s working language for this session.**
 
 - If the user writes in Japanese, output Japanese.
 - If the user writes in English, output English.

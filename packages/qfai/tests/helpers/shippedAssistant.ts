@@ -39,7 +39,7 @@ export function readDefault(relativePath: string): Promise<string> {
 /**
  * The section a heading opens, subsections included, up to the next heading of the same or a
  * higher level. `heading` matches the start of the heading line, so `## Policy` finds
- * `## Policy check (mandatory)`. Headings inside a fence are not headings.
+ * `## Policy check`. Headings inside a fence are not headings.
  */
 export function sectionOf(text: string, heading: string): string {
   const level = headingLevel(heading);

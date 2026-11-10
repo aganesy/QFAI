@@ -42,8 +42,8 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
     expect(skill).toContain("rule/shared-skill-operating-baseline.md");
     expect(skill).toContain("rule/shared-skill-delegation-baseline.md");
     expect(skill).toContain("rule/drift-protocol.md");
-    expect(workflow).toContain("### Policy check (mandatory)");
-    expect(baseline).toContain("## Policy check (mandatory)");
+    expect(workflow).toContain("### Policy check");
+    expect(baseline).toContain("## Policy check");
   });
 });
 

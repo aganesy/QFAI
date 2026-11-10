@@ -15,8 +15,6 @@ QFAI Skill Body (SSOT)
 
 ## /web-research — Web Research Pipeline
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 ## User Questions (AskUserQuestion Protocol)
 
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
@@ -26,7 +24,7 @@ Skill-specific examples:
 - HITL gate confirmation
 - research scope and depth decisions
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 The sections below add only pipeline-specific detail; where they and the

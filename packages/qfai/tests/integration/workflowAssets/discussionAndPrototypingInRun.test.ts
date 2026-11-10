@@ -9,7 +9,7 @@ import { flat, readShipped, sectionOf } from "../../helpers/shippedAssistant.js"
 
 const PROTOTYPING_SCOPE_STEP = "step/prototyping-grill/STEP.md";
 const ENTRY_CHECK =
-  "`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`";
+  "`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`";
 
 async function section(file: string, heading: string): Promise<string> {
   const text = flat(sectionOf(await readShipped(file), heading));
@@ -22,7 +22,9 @@ describe("qfai-prototyping in a workflow run", () => {
     const body = await readShipped("skill/qfai-prototyping/SKILL.md");
     const citing = body
       .split("\n")
-      .filter((line) => line.includes("workflow-run-entry-check-mandatory"));
+      .filter((line) =>
+        line.includes("shared-skill-operating-baseline.md#workflow-run-entry-check"),
+      );
     expect(citing).toHaveLength(1);
     expect(flat(body)).toContain(`Run the entry check of ${ENTRY_CHECK} first.`);
   });

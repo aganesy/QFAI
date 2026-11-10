@@ -259,6 +259,7 @@ export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
+  "instruction-audit": ["QFAI-INSTR-*"],
   // Spelled out so QFAI-DPACK-012, which only the discussion profile runs, has a group of its own.
   discussion: [
     "QFAI-DPACK-001",
@@ -1405,10 +1406,15 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-RESEARCH-009": "Every reflection entry has an `action` of apply, reject or defer.",
   "QFAI-RESEARCH-010": "Every reflection entry has a non-empty `reason`.",
   "QFAI-RESEARCH-011": "A Research Summary has a non-empty `reflection` list.",
-  "QFAI-SKILLS-010": "Every SKILL.md carries the `[DRIFT-PROTOCOL:REQUIRED]` marker.",
   "QFAI-SKILLS-011":
     "The shared delegation baseline has a `## Reviewer Gate Baseline` section, so every skill inherits a reviewer gate.",
   "QFAI-SKILLS-012": "The Reviewer Gate Baseline states every obligation a skill inherits.",
+  "QFAI-INSTR-001":
+    "Instructions an agent reads state each obligation in plain words, with no capitalised emphasis (MUST, MANDATORY, REQUIRED, CRITICAL, IMPORTANT, NEVER, ALWAYS) and no plea to think hard outside code and quotations.",
+  "QFAI-INSTR-002": "A SKILL.md holds at most 500 lines.",
+  "QFAI-INSTR-003":
+    "A skill's `description` and `when_to_use` hold at most 1,536 characters together, the text a host lists.",
+  "QFAI-INSTR-004": "AGENTS.md holds at most 32 KiB, the size a host reads.",
   "QFAI-TEST-002":
     "The stub scan reads every test file the configured globs select, so a clean result shows that no stub exists.",
   "QFAI-VALIDATE-017":

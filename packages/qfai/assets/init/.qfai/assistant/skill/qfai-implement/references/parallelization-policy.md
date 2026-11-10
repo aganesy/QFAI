@@ -48,7 +48,7 @@ conversation: the step files to run, the story-tree IDs, the exact owned-path
 list (empty for a lookup), the checks to run and the shape of its answer.
 Give each a checkout assigned by the host. Use separate worktrees when the host
 supports editing them; otherwise use the existing shared-index mode in
-`.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory`.
+`.qfai/assistant/rule/workflow.md#concurrency-every-stage`.
 Creating a worktree does not grant edit permission. For a refused edit, follow
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md#worker-edit-boundary`.
 Workers do not change another worker's files or the story tree.

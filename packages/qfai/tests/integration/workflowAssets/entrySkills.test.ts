@@ -213,10 +213,8 @@ describe("qfai-run", () => {
     const loop = flat(
       sectionOf(run, "## The work").split("**Run the stages.**")[1]?.split("**Review.**")[0] ?? "",
     );
-    expect(baseline).toContain("## Running Steps (Mandatory)");
-    expect(loop).toContain(
-      ".qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory",
-    );
+    expect(baseline).toContain("## Running Steps");
+    expect(loop).toContain(".qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps");
     expect(loop).toMatch(
       /\b(?:if|when|as needed)\b.*operator-screens\.md|operator-screens\.md.*\b(?:if|when|as needed)\b/i,
     );
@@ -246,7 +244,7 @@ describe("qfai-run", () => {
     const launcherInstructions = flat(`${intro} ${extract ?? ""}`);
 
     expect(launcherInstructions).toContain(
-      ".qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory",
+      ".qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher",
     );
     expect(launcherInstructions).toMatch(
       /\bpreflight\b.*\bbefore\b.*\bplan(?:ning)?\b|\bbefore\b.*\bplan(?:ning)?\b.*\bpreflight\b/i,

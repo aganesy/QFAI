@@ -30,7 +30,7 @@ describe("a reviewer's demand for more work is bounded by the artifact", () => {
       // The whole row, both columns. A reviewer who can ask for another
       // business rule without limit is what makes a review cycle grow.
       const content = await read(tree, DELEGATION);
-      expect(content).toContain("### What a reviewer may demand more of (MUST)");
+      expect(content).toContain("### What a reviewer may demand more of");
       expect(content).toMatch(
         /\|\s*business flows, user stories, acceptance criteria, examples, test cases\s*\|\s*business rules, non-functional requirements, policies and decisions, architecture\s*\|/,
       );
