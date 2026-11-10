@@ -58,13 +58,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Diagrams are checked where they are written.** The `discussion-pack` and
   `sdd-flow` steps now run the shipped Mermaid parser on the files they wrote,
   installed under `tmp/` and never into the project's dependency tree, and
-  report the check as not run when the parser cannot be installed.
+  report the check as not run when the parser cannot be installed. A project
+  with no installed QFAI gets the release it runs installed under `tmp/` too,
+  and the parser versions are read from that release.
   `qfai validate` warns (`QFAI-FLOW-006`) on a Mermaid diagram with more than
   12 nodes or 16 edges, so its author splits it into an overview and detail
   diagrams; `validation.diagramBudget` in `qfai.config.yaml` changes both
   limits. The discussion profile reports an error (`QFAI-DPACK-012`) for a
   `path:line` citation in the latest discussion pack that names a missing file
-  or a line past its end.
+  or a line past its end; a symbolic link to a deleted file counts as missing.
 - **Variants on the first prototyping iteration.** While the visual or
   interaction direction is still open, `/qfai-prototyping` builds its first
   iteration as two or three variants that differ in structure, on one page
