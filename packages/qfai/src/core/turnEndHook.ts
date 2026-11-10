@@ -156,7 +156,9 @@ function runCommand(command: string, cwd: string, timeoutMs: number): Promise<Co
     // group is stopped.
     // SIMPLIFIED: on Windows the tree cannot be reached once the shell has exited: `taskkill /T`
     // needs a live root, and the shell's pid may already be reused. The leftover program keeps
-    // running. Lift with a Job Object that holds the whole tree.
+    // running.
+    // Lift when: a check is seen leaving a program running on Windows; then hold the tree in a
+    // Job Object.
     child.on("exit", (code, signal) => {
       clearTimeout(timer);
       grace = setTimeout(() => {
