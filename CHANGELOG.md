@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A turn-end check that the host enforces.** `qfai init` now installs a
+  `Stop` and a `SubagentStop` hook for Claude Code and Codex. When an agent
+  ends its turn, the hook runs the Standard commands that the new
+  `Turn-end check:` item of `tech.md` lists in backticks. Each command runs in list order
+  and is stopped after 60 seconds. If one fails, the hook keeps the turn going
+  and passes on the command and the end of its output. When the same failure
+  comes back, or after three blocks in a row, the turn ends anyway and the user
+  is told which check still fails. A project that lists no command runs nothing, and
+  `workflow.stopGate: false` in `qfai.config.yaml` turns the hook off. Codex
+  runs the hook only after you trust it with `/hooks`.
+
 - **`qfai validate` audits the instructions an agent reads.** In `verify` and
   `full`, it reads the Markdown under `.qfai/assistant/`, `paths.skillsDir` and
   `.agents/rules/`, and `AGENTS.md` and `CLAUDE.md` at the root, and warns on

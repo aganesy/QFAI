@@ -117,6 +117,30 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI turn-end check",
+            "command": "node -e \"try{const p=require('path');const m=require.resolve('qfai',{paths:[process.cwd()]});require(p.join(p.dirname(m),'hook','turn-end.cjs'))}catch{}\"",
+            "timeout": 600
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "QFAI turn-end check",
+            "command": "node -e \"try{const p=require('path');const m=require.resolve('qfai',{paths:[process.cwd()]});require(p.join(p.dirname(m),'hook','turn-end.cjs'))}catch{}\"",
+            "timeout": 600
+          }
+        ]
+      }
     ]
   }
 }
