@@ -18,6 +18,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The constitution states each rule once.** Articles VI, X and XI of
+  `.qfai/assistant/rule/constitution.md` now keep each rule's purpose and
+  invariants and point to the file that owns the detail:
+  `.agents/rules/grilling.md` for grilling sessions,
+  `.agents/rules/user-questions.md` for the form of a question, and
+  `.agents/rules/temporary-files.md` for scratch files. Every heading and every
+  numbered rule of Article X stays, so existing citations still resolve. What an
+  agent must do does not change.
+
 - **The decision and question registers no longer collide across parallel
   pull requests.** A new row takes the UTC time it is written as its ID
   (`DEC-yyyymmddhhMMss`, `OQ-yyyymmddhhMMss`), so two branches never pick the
