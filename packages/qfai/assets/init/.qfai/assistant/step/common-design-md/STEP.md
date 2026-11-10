@@ -43,18 +43,18 @@ any existing file unchanged; skip this step for it.
    of a missing file, a pack that records no design direction leaves the brand
    unchosen. Brand intent is `hard-required`: ask for it, and under `--auto`
    stop and name it. Never adopt the sample design. For an existing valid file,
-   validation and authorized repairs that preserve its brand and tokens
+   validation and triaged repairs that preserve its brand and tokens
    require no new brand selection. A brand or token change needs the
-   authorization and source values in step 2.
+   triaged change and source values in step 2.
 2. **Bound an existing-file repair.** Write a missing file from the recorded
    direction. For an existing file, SDD triage must name its exact path and the
-   requested change; that names the authorized change. Apply
-   only the authorized change; preserve existing brand and tokens unless the
+   requested change; that names the triaged change. Apply
+   only the triaged change; preserve existing brand and tokens unless the
    user decided their change and it is supported by recorded direction or named
-   theme values. Stop without writing unsupported values. Without that
-   authorization, validate the existing file without an overwrite. An
+   theme values. Stop without writing unsupported values. Without a triaged
+   change, validate the existing file without an overwrite. An
    unreplaced sample is refused.
-3. **Author a missing file or the authorized fields of an existing file**,
+3. **Author a missing file or the triaged fields of an existing file**,
    following
    `.qfai/assistant/skill/qfai-sdd/references/design-md-authoring.md#output-mapping`:
    the intent fields first, then the archetype, then `brand.theme`, then the

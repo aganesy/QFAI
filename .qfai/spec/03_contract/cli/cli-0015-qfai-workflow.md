@@ -11,8 +11,8 @@ two reviews of a change route, how an approval is recorded, and how a stage skil
 
 The plan files and the shipped schemas are decided by the workflow files
 contract (CLI-0020). What `qfai init` installs for this command is decided by
-the `qfai init` contract (CLI-0009), the drift gate that reads `Change
-request:` rows by the `qfai validate` contract (CLI-0014), and how a
+the `qfai init` contract (CLI-0009), the decision and question register drift checks
+by the `qfai validate` contract (CLI-0014), and how a
 story-authoring stage records what the user approved by the story-tree
 authoring contract (CLI-0019).
 

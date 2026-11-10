@@ -301,8 +301,8 @@ describe("story-tree drift", () => {
 
   const rewritten = (items: readonly { code: string; message: string }[]) =>
     items.filter(({ code }) => code === "QFAI-STORY-010").map(({ message }) => message);
-  const upstream = (items: readonly { code: string; file?: string }[]) =>
-    items.filter(({ code }) => code === "QFAI-DRIFT-001").map(({ file }) => file);
+  const errors = (items: readonly { code: string; severity: string }[]) =>
+    items.filter(({ severity }) => severity === "error").map(({ code }) => code);
 
   // QFAI:AC-0001-0007-02
   // QFAI:AC-0001-0054-01
@@ -468,7 +468,7 @@ describe("story-tree drift", () => {
     );
     const items = await findings("drift");
     expect(rewritten(items)).toEqual([]);
-    expect(upstream(items)).toEqual([]);
+    expect(errors(items)).toEqual([]);
   });
 
   // QFAI:EX-0001-0054-26
@@ -523,7 +523,7 @@ describe("story-tree drift", () => {
     );
     const items = await findings("drift");
     expect(rewritten(items)).toEqual([]);
-    expect(upstream(items)).toEqual([]);
+    expect(errors(items)).toEqual([]);
   });
 
   // QFAI:EX-0001-0007-30
@@ -541,7 +541,7 @@ describe("story-tree drift", () => {
     );
     const items = await findings("drift");
     expect(rewritten(items)).toEqual([]);
-    expect(upstream(items)).toEqual([]);
+    expect(errors(items)).toEqual([]);
   });
 
   // QFAI:EX-0001-0054-19
@@ -559,7 +559,7 @@ describe("story-tree drift", () => {
       },
     );
     const items = await findings("drift");
-    expect(upstream(items)).toEqual([]);
+    expect(errors(items)).toEqual(["QFAI-STORY-010"]);
     expect(rewritten(items)).toEqual([
       expect.stringContaining(`${page}: DEC-0001 content changed`),
     ]);
@@ -580,7 +580,7 @@ describe("story-tree drift", () => {
       { [page]: `${table}| DEC-0001 | Paged | Reason |\n` },
     );
     const items = await findings("drift");
-    expect(upstream(items)).toEqual([]);
+    expect(errors(items)).toEqual([]);
     expect(rewritten(items)).toEqual([]);
   });
 
@@ -825,7 +825,7 @@ describe("story-tree drift", () => {
 it("rejects a resolvable root-configured base with orphan page history before any comparison", async () => {
   const rootDecision = "decisions.md";
   const page = "decisions/page-0001.md";
-  const request = `| DEC-0002 | Change request: ${rootDecision}, ${page} | - Date: 2026-10-12 |\n`;
+  const request = "| DEC-0002 | Valid head root | Keep |\n";
   await put(page, table + "| DEC-0001 | Historical choice | Keep |\n");
   git("add", ".");
   git("commit", "-m", "resolvable base has page history but no root");
@@ -836,11 +836,11 @@ it("rejects a resolvable root-configured base with orphan page history before an
       request,
   );
   git("add", ".");
-  git("commit", "-m", "valid head root and in-force request cannot waive unreadable base layout");
+  git("commit", "-m", "a valid head root cannot waive an unreadable base layout");
   const rootConfig = config();
   rootConfig.paths.specsDir = ".";
   rootConfig.paths.contractsDir = "03_contract";
-  const findings = await validateStoryTreeDrift(root, rootConfig, "tdd");
+  const findings = await validateStoryTreeDrift(root, rootConfig, "drift");
   expect(findings).toHaveLength(1);
   expect(findings).toContainEqual(
     expect.objectContaining({

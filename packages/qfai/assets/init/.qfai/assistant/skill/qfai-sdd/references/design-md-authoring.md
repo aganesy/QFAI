@@ -128,7 +128,7 @@ leave unrelated content unchanged. Stop without writing a value neither source
 supplies. Without such a triaged change, validate the existing file without an
 overwrite. An unreplaced sample is refused.
 
-For an existing valid file, validation and authorized repairs that preserve
+For an existing valid file, validation and triaged repairs that preserve
 its brand and tokens require no new brand selection. An authorized brand or
 token change still needs recorded direction or named theme values for each
 changed value; without either source, stop without writing the change.

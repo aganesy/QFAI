@@ -17,6 +17,9 @@ The opening of Content gives a row its kind:
 - `Declined: <option>` is an option the user rejected. Its Approach records
   who declined it and when.
 - `Test exception: <BF, AC or EX>` exempts that item while the row exists.
+- `Retired: <ID>, <ID>…` names the story-tree IDs a change retired, so none
+  is issued again. It approves nothing and is written whatever the recording
+  test above says.
 - Any other Content is a decision the user made.
 
 A declined row is a rejected option and authorizes nothing. A legacy row

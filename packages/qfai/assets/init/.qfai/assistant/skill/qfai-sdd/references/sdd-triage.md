@@ -54,8 +54,8 @@ Anything not decided yet is an open-questions.md row.
 
 A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form. Validation checks that form only on a legacy `DEC-NNNN` row.
 
-An option the user rejects is a row whose Content opens `Declined:`, recording in Approach who declined it and
-when; it authorizes nothing. Retiring a story removes its directory, with no separate retired-story file. A legacy
+An option the user rejects is a row whose Content opens `Declined:`, whatever the recording test says,
+recording in Approach who declined it and when; it authorizes nothing. Retiring a story removes its directory, with no separate retired-story file. A legacy
 row opening `Change request:` or `Declined change request:` is history and authorizes nothing.
 
 An open-questions.md row exists exactly while its question is open, and is never edited. When a decision settles
@@ -137,7 +137,7 @@ A decisions.md row present before the stage started is never edited, moved or re
 
 A retirement touches every place the ID is written. Do all of them in one change:
 
-1. Put the UPDATE:REMOVE to the user as a critical decision, and name every retired ID in the stage report and the commit message.
+1. Put the UPDATE:REMOVE to the user as a critical decision, and add one `Retired: <ID>, <ID>…` row to `decisions.md` naming every retired ID.
 2. Delete the EX row from 03_Example.md, the AC scenario from 02_Acceptance-Criteria.md, or the BR row from its contract.
 3. Remove a retired EX from the Examples cell of every BR that cites it. A BR left with no example gets another example or is retired in the same row.
 4. Remove each QFAI:EX annotation of a retired EX from the tests, or point it at the example the test now proves.
@@ -149,7 +149,7 @@ A retirement touches every place the ID is written. Do all of them in one change
 
 ## ID allocation
 
-Read all IDs of the kind in the relevant scope, including IDs named by decision rows and by the commits that retired them. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US.
+Read all IDs of the kind in the relevant scope, including IDs named by decision rows, `Retired:` rows among them. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US.
 A contract number spans every contract kind, and a BR is numbered inside its contract.
 Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a change was declined.
 Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` right before writing it: a US names its BF, an AC or EX its US, and a BR its contract.
@@ -225,7 +225,7 @@ complete one-to-one map of:
 Check both scopes' retired-inclusive capacity. Each destination EX needs one
 existing destination AC; each AC needs an EX. Preserve every moved EX's
 owning BR link and counted test obligation. An ID change alone proves no
-coverage. Name the old moved IDs as retired in the stage report and the commit message, and never refill them.
+coverage. Name the old moved IDs in a `Retired:` row, and never refill them.
 Inherited published DEC ID, Content and Approach cells and their old-ID
 references remain historical and unchanged; update only the active
 references the move covers.
@@ -252,7 +252,7 @@ No register row is renumbered; [Register conflicts](#register-conflicts) covers 
 An ID that two merged records already share is not renumbered:
 ask the user, as a critical decision, which record each citation meant.
 
-A move to another BF changes the story's US ID and all child AC and EX IDs. It is a critical decision, not the same-BF capacity exception. Apply the complete map above to the active citations and name the old IDs as retired in the stage report and the commit message; inherited DEC cells and their historical references stay unchanged.
+A move to another BF changes the story's US ID and all child AC and EX IDs. It is a critical decision, not the same-BF capacity exception. Apply the complete map above to the active citations and name the old IDs in a `Retired:` row; inherited DEC cells and their historical references stay unchanged.
 
 ## Conflicted story-tree documents
 

@@ -61,7 +61,8 @@ describes:
    The approval is a `decisions.md` row only when it meets the recording test
    of the `qfai-sdd` decisions template.
 
-On a decline, leave the contract as it is and report the finding as
+On a decline, leave the contract as it is, append a `Declined:` row naming the
+contract change and who declined it and when, and report the finding as
 unresolved, with no branch. When the operator cannot be asked, report the
 change as the decision still needed.
 

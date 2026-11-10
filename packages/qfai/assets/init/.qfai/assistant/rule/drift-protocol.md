@@ -50,7 +50,8 @@ Both classes use the same decision and owner-rerun path.
    user and wait for the answer. The owner takes any other change itself and lists it with its reason in its
    report. A decision becomes a decisions.md row only when it is hard to reverse, would surprise a reader
    without context, and was the result of a real trade-off; the row takes the short form of the `qfai-sdd`
-   decisions template, and an option the user rejects is a `Declined:` row. Otherwise the stage report states it.
+   decisions template. Otherwise the stage report states it. An option the user rejects is a row whose
+   Content opens `Declined:`, whatever the recording test says, so it stays excluded on reruns.
 
    When the user cannot be asked, write no row to either table: report the proposed change as the decision still
    needed and keep the affected items stopped.

@@ -159,7 +159,7 @@ describe("qfai-sdd writes the story tree", () => {
   it("allocates the highest number in a scope plus one, and reissues no retired ID", async () => {
     const allocation = await section(TRIAGE, "## ID allocation");
     expect(allocation).toContain(
-      "Read all IDs of the kind in the relevant scope, including IDs named by decision rows and by the commits that retired them. The next ID is the highest plus one.",
+      "Read all IDs of the kind in the relevant scope, including IDs named by decision rows, `Retired:` rows among them. The next ID is the highest plus one.",
     );
     expect(allocation).toContain(
       "Empty numeric scopes begin at 0001, and AC/EX tails begin at 01.",
@@ -178,7 +178,7 @@ describe("qfai-sdd writes the story tree", () => {
     );
     const scopes = flat(await readShipped(TRACEABILITY));
     expect(scopes).toContain(
-      "Count IDs named in decision rows and in the commits that retired them, so deletion never frees an ID.",
+      "Count IDs named in decision rows, `Retired:` rows among them, so deletion never frees an ID.",
     );
     expect(scopes).toContain("Directory names match their BF and US IDs.");
   });
@@ -425,9 +425,7 @@ describe("capacity-safe story authoring guidance", () => {
     expect(moves).toMatch(/destination EX needs one existing destination AC.*each AC needs an EX/u);
     expect(moves).toMatch(/owning BR link and counted test obligation/u);
     expect(moves).toMatch(/ID change alone proves no coverage/u);
-    expect(moves).toMatch(
-      /Name the old moved IDs as retired in the stage report and the commit message, and never refill them/u,
-    );
+    expect(moves).toMatch(/Name the old moved IDs in a `Retired:` row, and never refill them/u);
     expect(moves).toMatch(
       /Inherited published DEC ID, Content and Approach cells.*old-ID references remain historical and unchanged/u,
     );

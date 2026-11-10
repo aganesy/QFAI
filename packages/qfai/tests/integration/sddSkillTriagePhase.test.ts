@@ -133,9 +133,7 @@ describe("qfai-sdd triage surface", () => {
   it("does not reuse retired IDs", async () => {
     const content = await triage();
     expect(content).toContain("highest plus one");
-    expect(content).toContain(
-      "including IDs named by decision rows and by the commits that retired them",
-    );
+    expect(content).toContain("including IDs named by decision rows, `Retired:` rows among them");
     expect(content).toContain("Do not reuse an ID");
   });
 

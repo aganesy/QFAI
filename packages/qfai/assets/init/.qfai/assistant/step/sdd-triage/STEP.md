@@ -150,7 +150,10 @@ wired or retired:
 ## Settled mode
 
 A work order step with `mode: settled` applies a decision already recorded and
-approved: the one the work order's `settled` field or the request cites.
+approved: the one the work order's `settled` field or the request cites. The
+record is a `decisions.md` row, or the output of the step that branched here,
+such as `branch: { outcome: contract-finding }`, which names the change, who
+approved it and when.
 
 - Read that record and the part of the story tree it names. Do not reopen,
   grill again or widen what it settles.
@@ -159,8 +162,9 @@ approved: the one the work order's `settled` field or the request cites.
   changed criterion, a behaviour the record never mentions — stops the step.
   Write nothing, and report `branch: { outcome: outside-record }`, which moves
   the work to `decide-design`.
-- A citation that resolves to no `decisions.md` row stops the step: put the missing
-  record to the operator as a question, and write nothing.
+- A citation that resolves to neither a `decisions.md` row nor that branch output
+  stops the step: put the missing record to the operator as a question, and
+  write nothing.
 
 ## At a decision point
 

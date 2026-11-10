@@ -53,11 +53,52 @@ export async function validateStoryTreeDrift(
     path.relative(root, path.resolve(root, config.paths.contractsDir)),
   ).replace(/\/$/, "");
   const decisions = path.posix.join(specs, "decisions.md");
-  const questions = path.posix.join(specs, "open-questions.md");
   const issues: Issue[] = [];
   const baseDecisions = readFileAtBase(root, baseBranch, decisions);
   // Read first: a failure that is not a missing file stops the run instead of being compared.
   await readSafePath(path.join(root, decisions));
+  if (profile === "drift") {
+    const registers = await registerDrift(
+      root,
+      config,
+      comparison,
+      specs,
+      contracts,
+      baseDecisions,
+    );
+    if (registers === null) return [];
+    if (registers.stop) return registers.issues;
+    issues.push(...registers.issues);
+  } else if (baseDecisions === null) {
+    // A base without decisions.md is a project before its story tree. A base that has it and
+    // could not be read is not, and passing on it is the failure this warning exists for.
+    return comparison.kind === "resolved" && existsAtRevision(root, comparison.mergeBase, decisions)
+      ? [notCompared(`${decisions} at "${baseBranch}" could not be read.`, RERUN_ACTION)]
+      : [];
+  }
+  issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
+  if (profile === "drift" && comparison.kind === "resolved") {
+    issues.push(comparedAgainst(baseBranch, comparison, changed.size));
+  }
+  return issues;
+}
+
+/**
+ * The `drift` profile's register checks: decision rows the base holds stay unchanged, and a
+ * question row is deleted only when a row names it. `null` turns the gate off for a base that
+ * predates the story tree; `stop` ends the run with the issues given.
+ */
+async function registerDrift(
+  root: string,
+  config: QfaiConfig,
+  comparison: BaseComparison,
+  specs: string,
+  contracts: string,
+  baseDecisions: string | null,
+): Promise<{ issues: Issue[]; stop: boolean } | null> {
+  const baseBranch = config.baseBranch ?? "origin/main";
+  const decisions = path.posix.join(specs, "decisions.md");
+  const questions = path.posix.join(specs, "open-questions.md");
   let baseModel: StoryTreeModel;
   let headModel: StoryTreeModel;
   try {
@@ -83,10 +124,15 @@ export async function validateStoryTreeDrift(
       // could not be read is not, and passing on it is the failure this warning exists for.
       return comparison.kind === "resolved" &&
         existsAtRevision(root, comparison.mergeBase, decisions)
-        ? [notCompared(`${decisions} at "${baseBranch}" could not be read.`, RERUN_ACTION)]
-        : [];
+        ? {
+            issues: [
+              notCompared(`${decisions} at "${baseBranch}" could not be read.`, RERUN_ACTION),
+            ],
+            stop: true,
+          }
+        : null;
     }
-    if (!files.has(decisions) && !hasPages) return [];
+    if (!files.has(decisions) && !hasPages) return null;
     baseModel = buildStoryTreeModel(files, { specsDir: specs, contractsDir: contracts });
     headModel = await readStoryTreeModel(root, config);
     const problems = [baseModel, headModel].flatMap((model) => [
@@ -106,38 +152,35 @@ export async function validateStoryTreeDrift(
         `The complete decision register could not be read safely: ${problems.join("; ")}`,
       );
   } catch (error) {
-    return [
-      issue(
-        "QFAI-DRIFT-001",
-        `Decision-register comparison failed: ${error instanceof Error ? error.message : String(error)}`,
-        "error",
-        decisions,
-        "storyTree.registerNotCompared",
-        [decisions],
-      ),
-    ];
+    return {
+      stop: true,
+      issues: [
+        issue(
+          "QFAI-DRIFT-001",
+          `Decision-register comparison failed: ${error instanceof Error ? error.message : String(error)}`,
+          "error",
+          decisions,
+          "storyTree.registerNotCompared",
+          [decisions],
+        ),
+      ],
+    };
   }
-  if (profile === "drift") {
-    const baseQuestions = parseRecordTable(
-      withoutStatusColumn(
-        regularFileOrNull(() => readFileAtBase(root, baseBranch, questions)) ?? "",
-      ),
-      "open-questions",
-    ).rows;
-    const headQuestions = parseRecordTable(
-      await readSafePath(path.join(root, questions)),
-      "open-questions",
-    ).rows;
-    issues.push(
+  const baseQuestions = parseRecordTable(
+    withoutStatusColumn(regularFileOrNull(() => readFileAtBase(root, baseBranch, questions)) ?? ""),
+    "open-questions",
+  ).rows;
+  const headQuestions = parseRecordTable(
+    await readSafePath(path.join(root, questions)),
+    "open-questions",
+  ).rows;
+  return {
+    stop: false,
+    issues: [
       ...decisionRowDrift(baseModel, headModel),
       ...questionRowDrift(questions, baseModel, headModel, baseQuestions, headQuestions),
-    );
-  }
-  issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
-  if (profile === "drift" && comparison.kind === "resolved") {
-    issues.push(comparedAgainst(baseBranch, comparison, changed.size));
-  }
-  return issues;
+    ],
+  };
 }
 
 const RERUN_ACTION =

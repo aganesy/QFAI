@@ -188,7 +188,8 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   cli-only packs omit it, and non-ui discussion packs typically omit it.
 - **qfai-sdd**: Triage requirements against the existing story tree. Write
   policy, business flows, stories with AC and EX, then enforcing contracts with
-  BR. Record decisions that meet the recording test and unresolved questions in
+  BR. Record decisions that meet the recording test (hard to reverse,
+  surprising without context, a real trade-off) and unresolved questions in
   the two root tables. The discussion pack is input; the story tree is the execution SSOT.
 - **qfai-prototyping**: Build and review every UI-bearing contract and its
   screens with the user, one iteration at a time, until the user confirms the

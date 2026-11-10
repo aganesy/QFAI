@@ -135,15 +135,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Removed
 
-- **The specification-change approval.** No `Change request:` or
-  `Declined change request:` row is required any more, and an `sdd` stage no
-  longer asks approval before changing an existing story-tree item: a change
-  that contradicts a specification, a contract or a recorded decision is put
-  to the user as a critical decision, and any other change is listed in the
-  report. The drift gate no longer raises `QFAI-DRIFT-001` for a changed
-  story-tree file or `QFAI-DRIFT-004` for an uncommitted one; it keeps the
-  decision and question row checks, `QFAI-DRIFT-002` and `QFAI-DRIFT-003`, and
-  raises `QFAI-DRIFT-001` only when the decision register cannot be compared.
+- **The specification-change approval row.** A change to the story tree no
+  longer needs a `Change request:` row. A change to an existing story-tree
+  item is put to the user as a critical decision, and the approval is a row
+  only when it passes the recording test. A rejected option is still always a
+  `Declined:` row, and a retirement appends a `Retired: <IDs>` row so no
+  retired ID is issued again. The drift gate no longer raises `QFAI-DRIFT-001`
+  for a changed story-tree file or `QFAI-DRIFT-004` for an uncommitted one; it
+  keeps the decision and question row checks, `QFAI-DRIFT-002` and
+  `QFAI-DRIFT-003`, and in `drift` raises `QFAI-DRIFT-001` only when the
+  decision register cannot be compared.
   The route catalog no longer needs a change-request row per route, the
   `qfai-sdd` change-request template is gone, and the extraction signal
   `decide-by-change-request` is removed. Existing rows stay as history.

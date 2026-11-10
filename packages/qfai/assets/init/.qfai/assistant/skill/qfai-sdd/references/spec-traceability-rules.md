@@ -88,7 +88,7 @@ The table holds no rule. A behaviour a layer must show is a BR in the contract t
 | Open question        | OQ-yyyymmddhhMMss  | open-questions.md                                     |
 
 Use highest existing number plus one in the scope. A decision or question row instead takes the UTC time it is written; a legacy `DEC-NNNN` or `OQ-NNNN` row keeps its ID.
-Count IDs named in decision rows and in the commits that retired them, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Take the number from `npx qfai sdd next-id`, which reads the working tree and a fetched base and reserves no ID.
+Count IDs named in decision rows, `Retired:` rows among them, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Take the number from `npx qfai sdd next-id`, which reads the working tree and a fetched base and reserves no ID.
 
 AC/EX tails remain two digits with upper bound 99. Before planned additions,
 compare requested additions with the retired-inclusive remaining 99-H. Stop an

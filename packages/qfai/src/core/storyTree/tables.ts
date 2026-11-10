@@ -22,7 +22,7 @@ export type DecisionRegister = {
   complete: boolean;
 };
 /** What a row does follows from its Content keyword and its presence. */
-export type RecordRowKind = "test-exception" | "unadjudicated" | "other";
+export type RecordRowKind = "test-exception" | "retired" | "unadjudicated" | "other";
 export type ClassifiedRecordRow = { kind: RecordRowKind; refs: string[]; row: RecordRow };
 export type ChangedRecordCell = {
   id: string;
@@ -218,9 +218,11 @@ export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRec
   return { rows, errors };
 }
 
-const ROW_KEYWORD = /^(Test exception|Unadjudicated):\s*(.*)$/i;
+const ROW_KEYWORD = /^(Test exception|Retired|Unadjudicated):\s*(.*)$/i;
 const KIND_BY_KEYWORD: Record<string, RecordRowKind> = {
   "test exception": "test-exception",
+  // The story-tree IDs a change retired; allocation counts them so none is issued again.
+  retired: "retired",
   unadjudicated: "unadjudicated",
 };
 

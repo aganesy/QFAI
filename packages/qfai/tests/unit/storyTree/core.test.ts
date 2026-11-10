@@ -200,6 +200,25 @@ describe("story-tree core", () => {
     expect(() => nextStoryTreeId(tree, "DEC")).toThrow(TypeError);
   });
 
+  // QFAI:EX-0001-0008-32
+  it("reads a Retired row as the IDs a change retired, and never reissues them", () => {
+    const files = new Map(storyFiles);
+    const content = "Retired: AC-0001-0001-03, EX-0001-0001-05";
+    files.set(
+      ".qfai/spec/decisions.md",
+      `| ID | Content | Approach |\n| --- | --- | --- |\n| DEC-20261111000000 | ${content} | Removed with the feature. |\n`,
+    );
+    const tree = buildStoryTreeModel(files);
+    expect(nextStoryTreeId(tree, "AC", "US-0001-0001")).toBe("AC-0001-0001-04");
+    expect(nextStoryTreeId(tree, "EX", "US-0001-0001")).toBe("EX-0001-0001-06");
+    const row = { id: "DEC-20261111000000", content, approach: "Removed with the feature." };
+    expect(classifyRecordRow(row)).toEqual({
+      kind: "retired",
+      refs: ["AC-0001-0001-03", "EX-0001-0001-05"],
+      row,
+    });
+  });
+
   it("reads every declaration from the declaring file, not index citations", () => {
     const model = buildStoryTreeModel(storyFiles);
     expect(model.flows.map((flow) => flow.id)).toEqual(["BF-0001"]);

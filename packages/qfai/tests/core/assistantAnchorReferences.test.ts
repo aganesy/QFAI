@@ -252,8 +252,8 @@ describe("validateAssistantAnchorReferences", () => {
           "## Drift classes",
           "",
         ].join("\n"),
-        ".qfai/assistant/skill/qfai-sdd/templates/change-request.md": [
-          "# Change request",
+        ".qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md": [
+          "# Decisions",
           "",
           "Classify per `.qfai/assistant/rule/drift-protocol.md#drift-classes`.",
           "Then per `rule/drift-protocol.md#drift-classes`.",
