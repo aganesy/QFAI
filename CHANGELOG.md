@@ -28,11 +28,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Variants on the first prototyping iteration.** While the visual or
   interaction direction is still open, `/qfai-prototyping` builds its first
   iteration as two or three variants that differ in structure, on one page
-  switchable through `?variant=<id>`, each reviewed on its own. They are put to
+  switchable through `?variant=<id>`, each reviewed by its own reviewer. They are put to
   the user as one comparison; the user picks one, combines parts or rejects
   all, and the agent never picks. From the next iteration the loop builds one
-  prototype as before. A restyle, a run scoped to a confirmed prototype, or a
-  session record that settles the direction builds one prototype from the start.
+  prototype as before. A restyle, a run scoped to a confirmed prototype, a run
+  under a no-question mode, or a session record or `DESIGN.md` that settles
+  the layout builds one prototype from the start.
 
 ### Changed
 

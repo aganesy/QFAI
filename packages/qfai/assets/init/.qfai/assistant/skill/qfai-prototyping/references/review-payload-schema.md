@@ -31,7 +31,8 @@ directory, and the schema is unchanged:
 .qfai/prototype/iter-NN/variant-<id>/<ui-contract-id>/<screen>.review.json
 ```
 
-One file per (UI contract × screen × iteration), and per variant where there are variants. `<ui-contract-id>` is the full
+One file per (UI contract × screen × iteration), and per variant where
+there are variants. `<ui-contract-id>` is the full
 `UI-NNNN` ID, and `<screen>` is declared in that contract's `screens[]`.
 `<screen>.review.json` is the **only**
 per-(UI contract × screen) artifact written for a review — no `.html`, no

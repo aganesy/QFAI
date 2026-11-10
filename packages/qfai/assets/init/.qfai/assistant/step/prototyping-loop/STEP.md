@@ -117,8 +117,8 @@ Record `variants` in `progress.md` with the planning fields above, before the
 run's first iteration: `A, B` or `A, B, C` when the direction is open, else
 `none`. The iteration loop reference's First-iteration variants section says
 when it is open and where each variant's review goes. Only that first
-iteration has variants; the next one builds one prototype from the user's
-answer.
+iteration has variants: set `variants` to `none` before the next iteration,
+which builds one prototype from the user's answer.
 
 ## Procedure
 
@@ -132,18 +132,20 @@ under `.qfai/prototype/`, or `00` when there are none.
    `.qfai/prototype/final/index.html`, every iteration. It starts from the
    primary UI contract preflight resolved: the one the request names, else
    `prototyping.primaryUiContract`. Writes
-   `.qfai/prototype/iter-NN/index.html`, holding every variant when
-   `variants` is not `none`.
+   `.qfai/prototype/iter-NN/index.html`, holding every variant when this is
+   the run's first iteration and `variants` is not `none`.
 2. **Build** (the session agent). Serves `.qfai/prototype/` at the URL
    preflight checked, starting the server on the first iteration and keeping it
-   running for the loop, and hands `<url>/iter-NN/` to the reviewer.
+   running for the loop, and hands `<url>/iter-NN/` to the reviewer. In an
+   iteration with variants it starts one fresh reviewer per variant and hands
+   each only `<url>/iter-NN/?variant=<id>`.
 3. **Reviewer** (product-surface-reviewer). Opens that URL, operates
    Playwright live and returns the payload for each UI contract and screen
    pair, and the per-iteration summary aggregated from them, per the reviewer
    prompt: the four ordinal UX axes, a critique of at most 500 words,
    `blockingFindings`, `layoutAntiPatternsDetected[]`,
-   `designMdViolations[]` and `pivotDirective`. With variants, it reviews
-   each variant and returns one summary per variant.
+   `designMdViolations[]` and `pivotDirective`. A variant's reviewer reviews
+   that variant alone and never opens another.
 4. **Session agent.** Writes each payload to
    `iter-NN/<ui-contract-id>/<screen>.review.json` and the summary to
    `iter-NN/review.json`. Each variant's files go under `iter-NN/variant-<id>/`.
@@ -171,13 +173,14 @@ Show the user where the prototype is, the four scores, and every blocking
 finding, layout anti-pattern and `DESIGN.md` violation the review lists. The
 review informs the answer; it does not replace it.
 
-With variants, put them to the user as one compare sheet under
-`.agents/rules/reply-forms.md`, in its carrier order and reply text: each
-variant's `?variant=<id>` address, scores, blocking findings, layout
-anti-patterns and `DESIGN.md` violations. A reply with no `pick:` whose
-`why:` turns down every variant is a rejection. Neither the agent nor a
-review's scores pick a variant. The sheet names a recommended variant only
-where the evidence makes one better, which a question of taste rarely does.
+With variants, the reaction is put as one compare sheet, not through
+`AskUserQuestion`: the sheet follows `.agents/rules/reply-forms.md`, in its
+carrier order and reply text, and shows each variant's `?variant=<id>`
+address, scores, blocking findings, layout anti-patterns and `DESIGN.md`
+violations. A reply whose `keep from` line names another variant is a
+combination. A reply with no `pick:` whose `why:` turns down every variant is
+a rejection. Neither the agent nor a review's scores pick a variant. The sheet
+recommends only as `.agents/rules/reply-forms.md` § 1 permits.
 
 Record the answer in `.qfai/prototype/grilling.md` under `## Session`,
 **replacing any row with the same `Scope` and decision rather than adding beside
@@ -197,8 +200,7 @@ How the session ends decides the route:
   next iteration, carrying their answer as the pivot.
 - **A different design** — a direction this lineage does not implement — runs
   the next iteration as a pivot, carrying their answer.
-- **Closed** — `proceed` or `done` without an answer to this question, or
-  without a pick — records
+- **Closed** — `proceed` or `done` without an answer to this question — records
   every other open decision as a labelled assumption and asks this question
   again. It is what the loop exists to answer, so a closure cannot assume it.
 - **Stopped** — the user said `stop` — ends the run there and reports every

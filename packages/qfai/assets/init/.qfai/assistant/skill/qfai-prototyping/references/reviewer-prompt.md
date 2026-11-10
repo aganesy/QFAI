@@ -51,11 +51,12 @@ transition-pass percentages as a substitute for the qualitative review.
   When the scope names components only, the render-check screens are the
   whole review, and the summary's four scores rate the component as those
   screens render it.
-- When `progress.md` records `variants` other than `none`, open each variant
-  at its `?variant=<id>` address and review each variant as if it were the
-  only one: its own payloads, summary and `pivotDirective`, written under
-  `iter-NN/variant-<id>/`. Do not rank the variants or name a preferred one;
-  the user chooses between them. The variant switcher is not part of any
+- When the URL you are given carries `?variant=<id>`, the iteration has
+  variants and you review that variant alone. Review it as if it were the
+  only one, keep `?variant=<id>` on every route, and never open another
+  variant: its own payloads, summary and `pivotDirective` are written under
+  `iter-NN/variant-<id>/`. Do not rank it against others or call it
+  preferred; the user chooses between the variants. The variant switcher is not part of any
   screen: do not review, count or report it.
 - A screenshot or HTML snapshot, only when one was taken. Name any mandatory
   input you did not receive in a finding.
@@ -88,7 +89,8 @@ below and are relative to the project root.
 1. **Per-contract / per-screen payload** —
    `.qfai/prototype/iter-NN/<ui-contract-id>/<screen>.review.json`,
    or `iter-NN/variant-<id>/<ui-contract-id>/<screen>.review.json` in an
-   iteration with variants, one per screen. `<ui-contract-id>` is the full `UI-NNNN` ID. The
+   iteration with variants, one per screen. `<ui-contract-id>` is the full
+   `UI-NNNN` ID. The
    per-UI-contract subdirectory is mandatory for every run that declares UI
    screens, including a run with one contract. Its schema is closed
    (11 required top-level fields, unknown keys rejected) and lives in

@@ -43,9 +43,11 @@ describe.each(TREES)("%s", (tree) => {
     const loop = await read(tree, "skill/qfai-prototyping/references/iteration-loop.md");
     const variants = section(loop, "First-iteration variants");
     expect(variants).toContain(
-      "settles neither how the in-scope screens should feel nor which layout carries their task",
+      "has an open direction when neither `.qfai/prototype/grilling.md` `## Session` nor the root `DESIGN.md` settles which layout carries the in-scope screens' task.",
     );
-    expect(variants).toContain("An `## Escalated` row settles nothing.");
+    expect(variants).toContain(
+      "An `## Escalated` row settles nothing, and a feel left open alone does not open it",
+    );
     expect(variants).toContain("two or three variants, `A`, `B` and optionally `C`");
     expect(variants).toContain("differ in grouping, layout or navigation, not only in style");
     expect(variants).toContain("switchable in place through `?variant=<id>`");
@@ -56,6 +58,16 @@ describe.each(TREES)("%s", (tree) => {
 
     const step = flat(await read(tree, "step/prototyping-loop/STEP.md"));
     expect(step).toContain("Record `variants` in `progress.md`");
+    // One fresh reviewer per variant, handed that variant's address only.
+    expect(step).toContain(
+      "In an iteration with variants it starts one fresh reviewer per variant and hands each only `<url>/iter-NN/?variant=<id>`.",
+    );
+    expect(step).toContain(
+      "A variant's reviewer reviews that variant alone and never opens another.",
+    );
+    expect(variants).toContain(
+      "by a reviewer started fresh for it at `<url>/iter-NN/?variant=<id>`",
+    );
 
     const generator = await read(tree, "skill/qfai-prototyping/references/generator-prompt.md");
     const seed = section(generator, "The first iteration (seed)");
@@ -64,7 +76,10 @@ describe.each(TREES)("%s", (tree) => {
     expect(seed).toContain("Brand tokens stay locked in every variant.");
 
     const reviewer = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
-    expect(reviewer).toContain("review each variant as if it were the only one");
+    expect(reviewer).toContain(
+      "When the URL you are given carries `?variant=<id>`, the iteration has variants and you review that variant alone.",
+    );
+    expect(reviewer).toContain("never open another variant");
     expect(reviewer).toContain(
       "The variant switcher is not part of any screen: do not review, count or report it.",
     );
@@ -85,8 +100,12 @@ describe.each(TREES)("%s", (tree) => {
     const step = await read(tree, "step/prototyping-loop/STEP.md");
     const ask = flat(step.slice(step.indexOf("### Putting the prototype to the user")));
     expect(ask).toContain(
-      "put them to the user as one compare sheet under `.agents/rules/reply-forms.md`",
+      "With variants, the reaction is put as one compare sheet, not through `AskUserQuestion`: the sheet follows `.agents/rules/reply-forms.md`",
     );
+    expect(ask).toContain(
+      "The sheet recommends only as `.agents/rules/reply-forms.md` § 1 permits.",
+    );
+    expect(ask).toContain("A reply whose `keep from` line names another variant is a combination.");
     expect(ask).toContain("Neither the agent nor a review's scores pick a variant.");
     expect(ask).toContain(
       "**A pick, a combination or a rejection** — the answer to an iteration with variants — runs the next iteration as one prototype",
@@ -95,12 +114,9 @@ describe.each(TREES)("%s", (tree) => {
     expect(ask).toContain(
       "A reply with no `pick:` whose `why:` turns down every variant is a rejection.",
     );
-    // A closure without a pick re-asks; a no-question mode escalates and stops.
+    // A closure without a pick, combination or rejection asks the comparison again.
     expect(ask).toContain(
-      "**Closed** — `proceed` or `done` without an answer to this question, or without a pick —",
-    );
-    expect(ask).toContain(
-      "Under a no-question mode nobody can answer, so the question is written to `## Escalated` and the run stops there.",
+      "**Closed** — `proceed` or `done` without an answer to this question — records every other open decision as a labelled assumption and asks this question again.",
     );
 
     const loop = await read(tree, "skill/qfai-prototyping/references/iteration-loop.md");
@@ -109,6 +125,23 @@ describe.each(TREES)("%s", (tree) => {
       "Its prior review is the picked variant's summary, or none after a combination or a rejection.",
     );
     expect(variants).toContain("Every later iteration builds one prototype.");
+    expect(variants).toContain(
+      "A compare reply whose `keep from` line names another variant is a combination, not a pick.",
+    );
+    // Later iterations ignore the variants: the record is reset after the first.
+    expect(variants).toContain("and sets `variants` to `none` before the next one.");
+    const flatStep = flat(step);
+    expect(flatStep).toContain(
+      "Only that first iteration has variants: set `variants` to `none` before the next iteration",
+    );
+    expect(flatStep).toContain(
+      "holding every variant when this is the run's first iteration and `variants` is not `none`.",
+    );
+
+    const handoff = flat(await read(tree, "skill/qfai-prototyping/references/handoff.md"));
+    expect(handoff).toContain(
+      "It is never an iteration with variants: the user's answer to one runs a further iteration.",
+    );
     expect(section(loop, "Best-of-history is gone")).toContain(
       "The latest iteration is always the one put to the user.",
     );
@@ -123,11 +156,12 @@ describe.each(TREES)("%s", (tree) => {
   // QFAI:EX-0001-0273-05
   // QFAI:EX-0001-0273-07
   // QFAI:EX-0001-0273-08
-  it("records no variants for a restyle, a scoped run or a settled direction", async () => {
+  // QFAI:EX-0001-0273-09
+  it("records no variants for a restyle, a scoped run, a settled layout or a no-question mode", async () => {
     const loop = await read(tree, "skill/qfai-prototyping/references/iteration-loop.md");
     const variants = section(loop, "First-iteration variants");
     expect(variants).toContain(
-      "A `restyle` loop, a run with a `runScope`, and a run whose `## Session` settles the direction record `variants` `none`",
+      "A `restyle` loop, a run with a `runScope`, a run whose `## Session` or `DESIGN.md` settles the layout, and a run under a no-question mode, where nobody can pick, record `variants` `none` and build one prototype.",
     );
 
     const step = flat(await read(tree, "step/prototyping-loop/STEP.md"));

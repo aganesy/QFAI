@@ -53,19 +53,24 @@ named in the final report rather than holding the loop open.
 
 ## First-iteration variants
 
-A `prototype` run whose `.qfai/prototype/grilling.md` `## Session` settles
-neither how the in-scope screens should feel nor which layout carries their
-task has an open direction. An `## Escalated` row settles nothing. The run's
-first iteration then builds two or three variants, `A`, `B` and optionally
-`C`, of the in-scope screens. They differ in grouping, layout or navigation,
-not only in style, all under the root `DESIGN.md` tokens, on one
-`iter-NN/index.html`, switchable in place through `?variant=<id>`. The
-session agent records the IDs as `variants` in `progress.md` before the
-iteration is built. A `restyle` loop, a run with a `runScope`, and a run whose
-`## Session` settles the direction record `variants` `none` and build one
-prototype.
+A `prototype` run has an open direction when neither
+`.qfai/prototype/grilling.md` `## Session` nor the root `DESIGN.md` settles
+which layout carries the in-scope screens' task. An `## Escalated` row settles
+nothing, and a feel left open alone does not open it: variants differ in
+structure. The run's first iteration then builds two or three variants, `A`,
+`B` and optionally `C`, of the in-scope screens. They differ in grouping,
+layout or navigation, not only in style, all under the root `DESIGN.md`
+tokens, on one `iter-NN/index.html`, switchable in place through
+`?variant=<id>`. The session agent records the IDs as `variants` in
+`progress.md` before the iteration is built, and sets `variants` to `none`
+before the next one.
 
-Each variant is reviewed on its own, by a reviewer started fresh for it, and its files take the place of the
+A `restyle` loop, a run with a `runScope`, a run whose `## Session` or
+`DESIGN.md` settles the layout, and a run under a no-question mode, where
+nobody can pick, record `variants` `none` and build one prototype.
+
+Each variant is reviewed on its own, by a reviewer started fresh for it at
+`<url>/iter-NN/?variant=<id>`, and its files take the place of the
 iteration's:
 
 ```text
@@ -75,7 +80,8 @@ iteration's:
 
 The variants exist to make the choice answerable; they do not make it. The
 user picks one, combines parts or rejects all, and the next iteration builds
-one prototype from that answer. Its prior review is the picked variant's
+one prototype from that answer. A compare reply whose `keep from` line names
+another variant is a combination, not a pick. Its prior review is the picked variant's
 summary, or none after a combination or a rejection. Every later read of the
 variant iteration's review, as the review before the prior one or as
 `previousScore`, reads the same. Every later iteration builds one prototype.
