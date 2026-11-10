@@ -11,8 +11,8 @@
  * | The skill listing     | Every session: name and description of each model-invocable skill |
  * | Each `SKILL.md` body  | Only when that skill is invoked                                |
  *
- * Characters are code points after CRLF is read as LF, so the figures are the same on every
- * checkout. Bytes are the UTF-8 size of the same text. The token figure is an estimate,
+ * Characters are code points with no `\r` and no leading byte order mark counted, the way
+ * `qfai doctor` counts a skill body, so the figures are the same on every checkout. Bytes are the UTF-8 size of the same text. The token figure is an estimate,
  * characters divided by four, and is labelled as one wherever it is printed.
  *
  * Usage:
@@ -21,17 +21,20 @@
  * `--tree` names the init tree, `packages/qfai/assets/init` by default. `--base` reads the same
  * paths from `<ref>` through `git show` and prints a before, after and delta table to paste into a
  * pull request. Exit codes: 0 printed; 2 the arguments or a read failed.
+ *
+ * Reminder frequencies come from the Claude Code wiring init writes. Codex reads the same reminder
+ * texts from `reminders.json`, so the per-text figures hold for it too; its own wiring is not read.
  */
 import { Buffer } from "node:buffer";
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, URL } from "node:url";
 
-const require = createRequire(import.meta.url);
-/** The parser the package itself uses, out of the workspace that depends on it. */
-const { parse: parseYaml } = require("../../packages/qfai/node_modules/yaml");
+/** The parser the package itself uses, resolved from the package that depends on it. */
+const require = createRequire(new URL("../../packages/qfai/package.json", import.meta.url));
+const { parse: parseYaml } = require("yaml");
 
 export const DEFAULT_TREE = "packages/qfai/assets/init";
 
@@ -68,7 +71,7 @@ export function fsSource(treeDir) {
 /** Reads the same init tree as `ref` holds it, through `git show` and `git ls-tree`. */
 export function gitSource(repoRoot, ref, treeRel) {
   const git = (args) => execFileSync("git", args, { cwd: repoRoot, encoding: "utf-8" });
-  const treePath = (rel) => `${treeRel.replaceAll("\\", "/")}/${rel}`;
+  const treePath = (rel) => `${treeRel}/${rel}`;
   return {
     read: (rel) => git(["show", `${ref}:${treePath(rel)}`]),
     skillNames: () =>
@@ -80,8 +83,11 @@ export function gitSource(repoRoot, ref, treeRel) {
   };
 }
 
-/** The text as the host reads it on every checkout: CRLF read as LF. */
-const normalize = (text) => text.replace(/\r\n/g, "\n");
+/**
+ * The text as it is counted: no `\r` and no byte order mark at the start. The same definition
+ * `qfai doctor` applies to a skill body, so a CRLF checkout and an LF one give one figure.
+ */
+const normalize = (text) => text.replace(/\r/g, "").replace(/^\uFEFF/, "");
 
 /** Code points, bytes and lines of a piece of text. */
 export function measure(text) {
@@ -102,11 +108,19 @@ export function managedSection(agentsText) {
   return text.slice(start, end + MANAGED_END.length);
 }
 
-/** A file's YAML frontmatter and its body; a frontmatter that never closes is body. */
-function splitFrontmatter(text) {
-  const match = /^---\n([\s\S]*?)\n---(?:\n|$)/.exec(normalize(text));
-  if (match === null) return { frontmatter: {}, body: normalize(text) };
-  return { frontmatter: parseYaml(match[1]) ?? {}, body: normalize(text).slice(match[0].length) };
+/**
+ * A file's YAML frontmatter and its body, split the way `qfai doctor` splits a skill body: a
+ * first line of exactly `---` closed by a later line of exactly `---`, an empty frontmatter
+ * included. A frontmatter that never closes is not one, and the whole file is body.
+ */
+export function splitFrontmatter(text) {
+  const lines = normalize(text).split("\n");
+  const close = lines[0] === "---" ? lines.indexOf("---", 1) : -1;
+  if (close === -1) return { frontmatter: {}, body: lines.join("\n") };
+  return {
+    frontmatter: parseYaml(lines.slice(1, close).join("\n")) ?? {},
+    body: lines.slice(close + 1).join("\n"),
+  };
 }
 
 /**
@@ -207,10 +221,16 @@ export function computeFootprint(source) {
   };
 }
 
-/** One row per measured item, in a stable order: what the tables and the pin are made of. */
+/**
+ * One row per measured item, in a stable order: what the tables and the pin are made of.
+ *
+ * `pinned` marks what loads in every session because init installed it: the managed section, the
+ * reminders and the skill listing. The whole `AGENTS.md` is the project's as much as init's, and a
+ * skill body loads only when its skill is invoked, so those rows appear in the tables only.
+ */
 export function footprintRows(footprint) {
   const rows = [
-    { label: "AGENTS.md, whole file (every session)", ...footprint.agents.file },
+    { label: "AGENTS.md, whole file (every session)", ...footprint.agents.file, pinned: false },
     { label: "AGENTS.md, managed section (every session)", ...footprint.agents.managed },
   ];
   for (const reminder of footprint.reminders) {
@@ -225,28 +245,35 @@ export function footprintRows(footprint) {
   }
   const totals = footprint.reminderTotals;
   rows.push(
-    { label: "reminders, first prompt (worst case)", chars: totals.firstPrompt },
-    { label: "reminders, each later prompt (worst case)", chars: totals.laterPrompt },
-    { label: "reminders, per session (worst case)", chars: totals.perSession },
+    {
+      label: "reminders the first prompt of a session can carry (worst case)",
+      chars: totals.firstPrompt,
+    },
+    { label: "reminders each later prompt can carry (worst case)", chars: totals.laterPrompt },
+    { label: "reminders per session (worst case)", chars: totals.perSession },
   );
   for (const skill of footprint.skillListing.skills) {
     rows.push({ label: `skill listing ${skill.name} (every session)`, chars: skill.chars });
   }
   rows.push({ label: "skill listing, total (every session)", chars: footprint.skillListing.total });
   for (const skill of footprint.skillBodies) {
-    rows.push({ label: `SKILL.md body ${skill.name} (when invoked)`, ...skill });
+    rows.push({ label: `SKILL.md body ${skill.name} (when invoked)`, ...skill, pinned: false });
   }
-  return rows.map(({ label, chars, bytes, lines }) => ({ label, chars, bytes, lines }));
+  return rows.map(({ label, chars, bytes, lines, pinned }) => ({
+    label,
+    chars,
+    bytes,
+    lines,
+    pinned: pinned ?? true,
+  }));
 }
 
-/** The figures the pin file holds: characters for every row, lines for `AGENTS.md`. */
+/** The figures the pin holds: what loads every session, and the managed section's lines. */
 export function pinView(footprint) {
+  const pinned = footprintRows(footprint).filter((row) => row.pinned);
   return {
-    characters: Object.fromEntries(footprintRows(footprint).map((row) => [row.label, row.chars])),
-    lines: {
-      "AGENTS.md, whole file": footprint.agents.file.lines,
-      "AGENTS.md, managed section": footprint.agents.managed.lines,
-    },
+    characters: Object.fromEntries(pinned.map((row) => [row.label, row.chars])),
+    lines: { "AGENTS.md, managed section": footprint.agents.managed.lines },
   };
 }
 

@@ -82,7 +82,8 @@ describe.each(TREES)("%s — the execution stages stop on detection", (tree) => 
     // authorized session may end adopted only after the master's conditions.
     const primitive = await read("assistant/skill/qfai-grilling/SKILL.md");
     // How a delegated session ends sits in the reference the skill points a
-    // delegated session at; the no-question ending stays in the skill.
+    // delegated session at; the no-question endings stay in the skill, where a
+    // session that does not read the reference still meets them.
     const delegated = await read("assistant/skill/qfai-grilling/references/delegated-session.md");
     expectPhrase(
       primitive,
@@ -93,7 +94,7 @@ describe.each(TREES)("%s — the execution stages stop on detection", (tree) => 
       "or is a no-question session that meets the master's explicit-delegation conditions",
     );
     expectPhrase(
-      delegated,
+      primitive,
       "**Only a no-question session meeting the master's explicit-delegation conditions ends `adopted`.**",
     );
     expectPhrase(primitive, "No-question alone is not delegation");

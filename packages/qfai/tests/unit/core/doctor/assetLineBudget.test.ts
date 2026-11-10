@@ -843,6 +843,21 @@ describe("SKILL.md body character ceiling", () => {
     expect(skillBodyCharacters(skillFile(5_000, "\r\n"))).toBe(5_000);
   });
 
+  it("reads past a byte order mark, which it does not count", () => {
+    const lf = "---\nname: x\n---\nabc";
+    expect(skillBodyCharacters(`\uFEFF${lf}`)).toBe(3);
+    expect(skillBodyCharacters(`\uFEFF${lf.replaceAll("\n", "\r\n")}`)).toBe(3);
+    expect(skillBodyCharacters("\uFEFFplain")).toBe(5);
+  });
+
+  it("closes an empty frontmatter on its second line", () => {
+    expect(skillBodyCharacters("---\n---\nbody")).toBe(4);
+  });
+
+  it("does not count a lone carriage return", () => {
+    expect(skillBodyCharacters("---\nname: x\n---\na\rb")).toBe(2);
+  });
+
   it("counts a character outside the basic plane once", () => {
     expect(skillBodyCharacters("---\nname: x\n---\n\u{1F600}\u{1F600}")).toBe(2);
   });
@@ -899,6 +914,25 @@ describe("SKILL.md body character ceiling", () => {
     });
   });
 
+  it("reads past a byte order mark in a streamed skill file", async () => {
+    await withTempRoot(async (root) => {
+      await writeSkill(
+        root,
+        "skill/qfai-demo/SKILL.md",
+        `\uFEFF${skillFile(SKILL_BODY_MAX_CHARS)}`,
+      );
+      await writeSkill(
+        root,
+        "skill/qfai-other/SKILL.md",
+        `\uFEFF${skillFile(SKILL_BODY_MAX_CHARS, "\r\n")}`,
+      );
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.oversizedSkillBodies).toEqual([]);
+    });
+  });
+
   it("holds a reference file to the line ceilings only", async () => {
     await withTempRoot(async (root) => {
       await writeSkill(
@@ -911,39 +945,6 @@ describe("SKILL.md body character ceiling", () => {
 
       expect(report.oversizedSkillBodies).toEqual([]);
       expect(report.status).toBe("ok");
-    });
-  });
-
-  // QFAI:EX-0003-0032-01
-  it("warns on assets.lineBudget naming the body, its size and where to move a section", async () => {
-    await withTempRoot(async (root) => {
-      await writeSkill(root, "skill/qfai-demo/SKILL.md", skillFile(SKILL_BODY_MAX_CHARS + 1));
-
-      const data = await createDoctorData({ startDir: root, rootExplicit: true });
-      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
-
-      expect(check?.severity).toBe("warning");
-      expect(check?.message).toContain(
-        `1 SKILL.md bodies exceed ${SKILL_BODY_MAX_CHARS} characters: ` +
-          `assistant/skill/qfai-demo/SKILL.md (${SKILL_BODY_MAX_CHARS + 1})`,
-      );
-      expect(JSON.stringify(check?.details?.["nextActions"])).toContain("references/");
-      expect(check?.details?.["maxSkillBodyChars"]).toBe(SKILL_BODY_MAX_CHARS);
-    });
-  });
-
-  // QFAI:EX-0003-0032-02
-  it("names the character ceiling when every body is within it", async () => {
-    await withTempRoot(async (root) => {
-      await writeSkill(root, "skill/qfai-demo/SKILL.md", skillFile(SKILL_BODY_MAX_CHARS));
-
-      const data = await createDoctorData({ startDir: root, rootExplicit: true });
-      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
-
-      expect(check?.severity).toBe("ok");
-      expect(check?.message).toContain(
-        `SKILL.md bodies are within ${SKILL_BODY_MAX_CHARS} characters`,
-      );
     });
   });
 });

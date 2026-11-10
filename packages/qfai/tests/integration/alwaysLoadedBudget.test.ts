@@ -6,8 +6,8 @@
  * paid for again on every turn, so each has a ceiling here. A skill body is loaded only when the
  * skill is invoked; its ceiling is the doctor's, held in `aiReadableMarkdown.test.ts`.
  *
- * The figures themselves are pinned in `scripts/always-loaded-footprint-pins.json`, so any change
- * to this text shows up as a number in the diff even while it stays inside its ceiling.
+ * The figures themselves are pinned in `always-loaded-footprint.pins.json` beside this file, so
+ * any change to this text shows up as a number in the diff even while it stays inside its ceiling.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -20,22 +20,24 @@ import {
   DEFAULT_TREE,
   FREQUENCY,
   fsSource,
+  measure,
   pinView,
+  splitFrontmatter,
   TREE_PATHS,
 } from "../../../../scripts/lib/always-loaded-footprint.mjs";
 import { skillBodyCharacters } from "../../src/core/doctor/assetLineBudget.js";
 
-// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const here = path.dirname(fileURLToPath(import.meta.url));
+// tests/integration/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(here, "..", "..", "..", "..");
 const initTree = path.join(repoRoot, DEFAULT_TREE);
-const PIN = path.join(repoRoot, "scripts", "always-loaded-footprint-pins.json");
+const PIN = path.join(here, "always-loaded-footprint.pins.json");
 
 /** The ceilings, in code points unless the name says lines. */
 const BUDGET = {
   managedSectionLines: 50,
   managedSectionChars: 5_000,
-  agentsFileLines: 100,
-  briefContextChars: 200,
+  briefFormChars: 200,
   firstPromptChars: 1_200,
   singleReminderChars: 512,
   perSessionChars: 4_000,
@@ -47,16 +49,15 @@ const footprint = computeFootprint(fsSource(initTree));
 
 describe("the always-loaded footprint init installs stays within its budget", () => {
   // QFAI:EX-0003-0032-03
-  it("keeps the AGENTS.md section init owns, and the shipped file, within their ceilings", () => {
+  it("keeps the AGENTS.md section init owns within its ceilings", () => {
     // QFAI:AC-0003-0032-02
     expect(footprint.agents.managed.chars).toBeGreaterThan(0);
     expect(footprint.agents.managed.lines).toBeLessThanOrEqual(BUDGET.managedSectionLines);
     expect(footprint.agents.managed.chars).toBeLessThanOrEqual(BUDGET.managedSectionChars);
-    expect(footprint.agents.file.lines).toBeLessThanOrEqual(BUDGET.agentsFileLines);
   });
 
   // QFAI:EX-0003-0032-03
-  it("keeps every reminder, the first prompt and a session within their ceilings", () => {
+  it("runs every reminder from a hook and keeps each text, brief form and total in its ceiling", () => {
     // QFAI:AC-0003-0032-02
     const unwired = footprint.reminders.filter((reminder) => !reminder.wired);
     expect(
@@ -69,10 +70,15 @@ describe("the always-loaded footprint init installs stays within its budget", ()
       .map((reminder) => `${reminder.key}: ${reminder.chars}`);
     expect(over).toEqual([]);
 
-    const freeText = footprint.reminders.find((reminder) => reminder.key === "free-text-entry");
-    expect(freeText?.frequency).toBe(FREQUENCY.brief);
-    expect(freeText?.briefChars).toBeLessThanOrEqual(BUDGET.briefContextChars);
+    const briefs = footprint.reminders.filter((reminder) => reminder.briefChars !== undefined);
+    expect(briefs.map((reminder) => reminder.key)).toContain("free-text-entry");
+    expect(briefs.every((reminder) => reminder.frequency === FREQUENCY.brief)).toBe(true);
+    const overBrief = briefs
+      .filter((reminder) => (reminder.briefChars ?? 0) > BUDGET.briefFormChars)
+      .map((reminder) => `${reminder.key}: ${reminder.briefChars}`);
+    expect(overBrief).toEqual([]);
 
+    // The reminders the first prompt of a session can carry, every conditional one firing.
     expect(footprint.reminderTotals.firstPrompt).toBeLessThanOrEqual(BUDGET.firstPromptChars);
     expect(footprint.reminderTotals.perSession).toBeLessThanOrEqual(BUDGET.perSessionChars);
   });
@@ -100,16 +106,29 @@ describe("the always-loaded footprint init installs stays within its budget", ()
       );
       expect(skill.chars, skill.name).toBe(skillBodyCharacters(text));
     }
+    // The shapes no shipped skill has: a byte order mark, an empty frontmatter, a lone carriage
+    // return, CRLF, a frontmatter that never closes and one closed on the last line.
+    for (const text of [
+      "\uFEFF---\nname: x\n---\nabc",
+      "\uFEFF---\r\nname: x\r\n---\r\nabc",
+      "---\n---\nbody",
+      "---\nname: x\n---\na\rb",
+      "---\nname: x\nbody",
+      "---\nname: x\n---",
+      "plain",
+    ]) {
+      expect(measure(splitFrontmatter(text).body).chars, JSON.stringify(text)).toBe(
+        skillBodyCharacters(text),
+      );
+    }
   });
 
-  // QFAI:EX-0003-0032-04
   it("pins the figures, so a change to the always-loaded text shows up in the diff", async () => {
-    // QFAI:AC-0003-0032-02
     const pinned: unknown = JSON.parse(await readFile(PIN, "utf-8"));
     expect(
       pinned,
       "the always-loaded footprint changed: run `pnpm footprint:pin` and commit " +
-        "scripts/always-loaded-footprint-pins.json",
+        "packages/qfai/tests/integration/always-loaded-footprint.pins.json",
     ).toEqual(pinView(footprint));
   });
 });

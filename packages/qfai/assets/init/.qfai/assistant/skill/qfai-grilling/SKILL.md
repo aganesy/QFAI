@@ -215,11 +215,14 @@ number was reached, and a short session is not evidence that the design was
 simple.
 
 **A delegated session ends by its own conditions**, because no user is there
-to confirm condition 2. Read `references/delegated-session.md` § When a
-delegated session ends when the session is delegated, or is a no-question
+to confirm condition 2. Read `references/delegated-session.md` (§ When a
+delegated session ends) when the session is delegated, or is a no-question
 session that meets the master's explicit-delegation conditions. It holds the
 round budget, when the griller's recommendation is taken, and when the session
 ends `adopted`. A session with a user does not need it.
+
+**Only a no-question session meeting the master's explicit-delegation
+conditions ends `adopted`.**
 
 **Any other session under a no-question mode cannot reach condition 2
 either**, because the mode forbids asking the user. It ends when nothing on the

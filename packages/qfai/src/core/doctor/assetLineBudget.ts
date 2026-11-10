@@ -80,6 +80,9 @@ export const ASSISTANT_ASSET_MAX_LINE_CHARS = 400;
  */
 export const SKILL_BODY_MAX_CHARS = 20_000;
 
+/** The byte order mark an editor may write at the start of a UTF-8 file. */
+const BYTE_ORDER_MARK = "\uFEFF";
+
 /** The file name the character ceiling applies to; a reference is not held to it. */
 const SKILL_ENTRY_FILE = "SKILL.md";
 
@@ -89,7 +92,9 @@ const SKILL_ENTRY_FILE = "SKILL.md";
  *
  * Frontmatter is a first line of exactly `---` closed by a later line of exactly
  * `---`. A frontmatter that is never closed is not frontmatter, so the whole file
- * counts. A `\r` is never counted, so a CRLF file measures as its LF twin.
+ * counts. A `\r` is never counted, so a CRLF file measures as its LF twin, and a
+ * byte order mark at the start of the file is neither counted nor read as part
+ * of the first line.
  */
 class SkillBodyCounter {
   private total = 0;
@@ -98,11 +103,16 @@ class SkillBodyCounter {
 
   /** Offers one line: its text (at least its first characters) and its width. */
   line(text: string, width: number, terminated: boolean): void {
-    this.total += width + (terminated ? 1 : 0);
     if (this.state === "first") {
-      this.state = text === "---" ? "frontmatter" : "body";
+      // A byte order mark is an encoding marker, not content: editors on
+      // Windows write one, and the host still reads the frontmatter after it.
+      const marked = text.startsWith(BYTE_ORDER_MARK);
+      const first = marked ? text.slice(BYTE_ORDER_MARK.length) : text;
+      this.total += (marked ? width - 1 : width) + (terminated ? 1 : 0);
+      this.state = first === "---" ? "frontmatter" : "body";
       return;
     }
+    this.total += width + (terminated ? 1 : 0);
     if (this.state === "frontmatter" && text === "---") {
       this.state = "body";
       this.bodyStart = this.total;
@@ -117,8 +127,8 @@ class SkillBodyCounter {
 
 /**
  * The size of a `SKILL.md` body in code points: everything after the YAML
- * frontmatter, with `\r` not counted. A file whose frontmatter never closes
- * counts whole.
+ * frontmatter, with `\r` and a leading byte order mark not counted. A file
+ * whose frontmatter never closes counts whole.
  */
 export function skillBodyCharacters(content: string): number {
   const counter = new SkillBodyCounter();

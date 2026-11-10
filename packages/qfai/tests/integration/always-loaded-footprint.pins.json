@@ -1,6 +1,5 @@
 {
   "characters": {
-    "AGENTS.md, whole file (every session)": 5471,
     "AGENTS.md, managed section (every session)": 4572,
     "reminder structured-question (UserPromptSubmit, once per session)": 397,
     "reminder free-text-entry (UserPromptSubmit, full once, then brief on every later prompt)": 495,
@@ -14,9 +13,9 @@
     "reminder documentation-clarity-after-edit (PostToolUse, once per session)": 325,
     "reminder minimal-implementation (PostToolUse, once per session)": 369,
     "reminder api-budget (PreToolUse, once per session)": 242,
-    "reminders, first prompt (worst case)": 1172,
-    "reminders, each later prompt (worst case)": 442,
-    "reminders, per session (worst case)": 3721,
+    "reminders the first prompt of a session can carry (worst case)": 1172,
+    "reminders each later prompt can carry (worst case)": 442,
+    "reminders per session (worst case)": 3721,
     "skill listing qfai-configure (every session)": 204,
     "skill listing qfai-discussion (every session)": 141,
     "skill listing qfai-grilling (every session)": 280,
@@ -29,20 +28,7 @@
     "skill listing qfai-triage (every session)": 349,
     "skill listing qfai-verify (every session)": 107,
     "skill listing web-research (every session)": 187,
-    "skill listing, total (every session)": 2471,
-    "SKILL.md body qfai-configure (when invoked)": 19105,
-    "SKILL.md body qfai-discussion (when invoked)": 6850,
-    "SKILL.md body qfai-grill (when invoked)": 9268,
-    "SKILL.md body qfai-grilling (when invoked)": 19396,
-    "SKILL.md body qfai-implement (when invoked)": 8478,
-    "SKILL.md body qfai-maintain (when invoked)": 2227,
-    "SKILL.md body qfai-migration-v1-to-v2 (when invoked)": 11882,
-    "SKILL.md body qfai-prototyping (when invoked)": 5051,
-    "SKILL.md body qfai-run (when invoked)": 10140,
-    "SKILL.md body qfai-sdd (when invoked)": 4521,
-    "SKILL.md body qfai-triage (when invoked)": 5654,
-    "SKILL.md body qfai-verify (when invoked)": 5635,
-    "SKILL.md body web-research (when invoked)": 15134
+    "skill listing, total (every session)": 2471
   },
-  "lines": { "AGENTS.md, whole file": 51, "AGENTS.md, managed section": 35 }
+  "lines": { "AGENTS.md, managed section": 35 }
 }

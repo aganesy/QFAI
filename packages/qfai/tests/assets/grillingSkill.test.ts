@@ -285,7 +285,7 @@ describe("the primitive carries the master's clauses", () => {
       // end condition makes the session uncompletable. The skill points a
       // delegated session at the reference that carries its ending.
       expect(flat(await readSkill(tree, SKILL))).toMatch(
-        /Read `references\/delegated-session\.md` § When a delegated session ends when the session is delegated/,
+        /Read `references\/delegated-session\.md` \(§ When a delegated session ends\) when the session is delegated/,
       );
       const text = flat(await readSkill(tree, DELEGATED_SESSION));
       expect(text).toMatch(/## When a delegated session ends/);

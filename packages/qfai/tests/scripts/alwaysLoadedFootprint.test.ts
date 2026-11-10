@@ -4,7 +4,7 @@
  *
  * The cases build a small init tree, so each figure can be checked against text written here.
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   computeFootprint,
+  DEFAULT_TREE,
   FREQUENCY,
   fsSource,
   main,
@@ -22,7 +23,9 @@ import {
   pinView,
   renderDelta,
   renderReport,
+  splitFrontmatter,
 } from "../../../../scripts/lib/always-loaded-footprint.mjs";
+import { PIN_REL, pinFootprint } from "../../../../scripts/pin-always-loaded-footprint.mjs";
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -107,6 +110,19 @@ describe("always-loaded footprint", () => {
     expect(measure("a\r\nb\u{1F600}")).toEqual({ lines: 2, chars: 4, bytes: 7 });
   });
 
+  it("counts neither a lone carriage return nor a leading byte order mark", () => {
+    expect(measure("\uFEFFa\rb")).toEqual({ lines: 1, chars: 2, bytes: 2 });
+  });
+
+  it("closes an empty frontmatter, and reads a never-closed one as body", () => {
+    expect(splitFrontmatter("---\n---\nbody")).toEqual({ frontmatter: {}, body: "body" });
+    expect(splitFrontmatter("---\nname: x\nbody").body).toBe("---\nname: x\nbody");
+    expect(splitFrontmatter("\uFEFF---\r\nname: x\r\n---\r\nabc")).toEqual({
+      frontmatter: { name: "x" },
+      body: "abc",
+    });
+  });
+
   it("takes the section between the qfai markers, markers included", () => {
     expect(managedSection(AGENTS).split("\n")).toHaveLength(3);
     expect(managedSection("# no markers")).toBe("");
@@ -154,6 +170,34 @@ describe("always-loaded footprint", () => {
     const lf = pinView(computeFootprint(fsSource(await initTree())));
     const crlf = pinView(computeFootprint(fsSource(await initTree("\r\n"))));
     expect(crlf).toEqual(lf);
+  });
+
+  it("pins what loads every session, and leaves skill bodies and the whole file to the tables", async () => {
+    const pin = pinView(computeFootprint(fsSource(await initTree())));
+    const labels = Object.keys(pin.characters);
+
+    expect(labels).toContain("AGENTS.md, managed section (every session)");
+    expect(labels).toContain("skill listing, total (every session)");
+    expect(labels.some((label) => label.startsWith("SKILL.md body"))).toBe(false);
+    expect(labels.some((label) => label.startsWith("AGENTS.md, whole file"))).toBe(false);
+    expect(pin.lines).toEqual({ "AGENTS.md, managed section": 3 });
+  });
+
+  it("writes the pin of the default init tree, formatted", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-footprint-pin-"));
+    tempDirs.push(root);
+    const tree = path.join(root, ...DEFAULT_TREE.split("/"));
+    await mkdir(path.dirname(tree), { recursive: true });
+    await rename(await initTree(), tree);
+    await mkdir(path.dirname(path.join(root, ...PIN_REL.split("/"))), { recursive: true });
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await pinFootprint(root);
+
+    const written = await readFile(path.join(root, ...PIN_REL.split("/")), "utf-8");
+    expect(JSON.parse(written)).toEqual(pinView(computeFootprint(fsSource(tree))));
+    expect(written.endsWith("}\n")).toBe(true);
+    expect(written).toContain('\n  "characters": {\n');
   });
 
   it("labels the token figure as an estimate", async () => {

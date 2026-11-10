@@ -523,7 +523,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
         `line ceiling are within it (${lineCeilingText(report)}), and all ${report.scanned} are ` +
         `within the line width each is held to (${report.maxLineChars} unless the shipped ` +
         `file carries a recorded width), and all SKILL.md bodies are within ` +
-        `${report.maxSkillBodyChars} characters${exemptNote}`,
+        `${report.maxSkillBodyChars} code points${exemptNote}`,
       details,
     };
   }
@@ -572,8 +572,8 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       : []),
     ...(report.oversizedSkillBodies.length > 0
       ? [
-          `${report.oversizedSkillBodies.length} SKILL.md bodies exceed ` +
-            `${report.maxSkillBodyChars} characters: ` +
+          `${report.oversizedSkillBodies.length} exceed the SKILL.md body ceiling ` +
+            `(${report.maxSkillBodyChars} code points): ` +
             formatOversizedSkillBodies(report.oversizedSkillBodies),
         ]
       : []),

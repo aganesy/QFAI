@@ -74,6 +74,3 @@ lacks an actual answer or applicable recorded authorization, it stays open: the
 user answers it, or ends the session another way — or, under a no-question
 mode, the register write ends it `no-question`. How many went is a count a
 record carries, never an ending.
-
-**Only a no-question session meeting the master's explicit-delegation
-conditions ends `adopted`.**
