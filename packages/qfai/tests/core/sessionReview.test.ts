@@ -95,10 +95,10 @@ function environment(base: string): LocateEnvironment {
   };
 }
 
-// QFAI:EX-0001-0240-01
-// QFAI:EX-0001-0240-02
-// QFAI:EX-0001-0240-03
-// QFAI:EX-0001-0240-04
+// QFAI:EX-0001-0294-01
+// QFAI:EX-0001-0294-02
+// QFAI:EX-0001-0294-03
+// QFAI:EX-0001-0294-04
 describe("where the transcripts are", () => {
   it("names the Claude Code project directory after the absolute root on Windows and POSIX", () => {
     expect(claudeProjectSlug("C:\\Work\\My App", path.win32)).toBe("C--Work-My-App");
@@ -187,13 +187,13 @@ describe("where the transcripts are", () => {
   });
 });
 
-// QFAI:EX-0001-0240-09
-// QFAI:EX-0001-0240-10
-// QFAI:EX-0001-0240-11
-// QFAI:EX-0001-0240-12
-// QFAI:EX-0001-0240-13
-// QFAI:EX-0001-0240-14
-// QFAI:EX-0001-0240-15
+// QFAI:EX-0001-0294-09
+// QFAI:EX-0001-0294-10
+// QFAI:EX-0001-0294-11
+// QFAI:EX-0001-0294-12
+// QFAI:EX-0001-0294-13
+// QFAI:EX-0001-0294-14
+// QFAI:EX-0001-0294-15
 describe("what a Claude Code transcript shows", () => {
   async function claudeSignals(): Promise<ReturnType<typeof summarise>> {
     return summarise(await parseClaudeTranscript(CLAUDE_FIXTURE), FACTS);
@@ -278,9 +278,9 @@ describe("what a Claude Code transcript shows", () => {
   });
 });
 
-// QFAI:EX-0001-0240-11
-// QFAI:EX-0001-0240-12
-// QFAI:EX-0001-0240-14
+// QFAI:EX-0001-0294-11
+// QFAI:EX-0001-0294-12
+// QFAI:EX-0001-0294-14
 describe("what a Codex rollout shows", () => {
   it("counts the hook context, the shell-named rule file, the failed call and the questions", async () => {
     const signals = summarise(await parseCodexTranscript(CODEX_FIXTURE), FACTS);
@@ -305,13 +305,13 @@ describe("what a Codex rollout shows", () => {
   });
 });
 
-// QFAI:EX-0001-0240-09
-// QFAI:EX-0001-0240-10
-// QFAI:EX-0001-0240-14
-// QFAI:EX-0001-0240-03
-// QFAI:EX-0001-0240-06
-// QFAI:EX-0001-0240-12
-// QFAI:EX-0001-0240-14
+// QFAI:EX-0001-0294-09
+// QFAI:EX-0001-0294-10
+// QFAI:EX-0001-0294-14
+// QFAI:EX-0001-0294-03
+// QFAI:EX-0001-0294-06
+// QFAI:EX-0001-0294-12
+// QFAI:EX-0001-0294-14
 describe("the edges a slug, a shell line and a calendar leave open", () => {
   it("takes a transcript in the root's own directory only when it records the root as cwd", async () => {
     const base = await tempDir();
@@ -456,7 +456,7 @@ describe("the signal helpers", () => {
   });
 });
 
-// QFAI:EX-0001-0240-16
+// QFAI:EX-0001-0294-16
 describe("what the report may carry", () => {
   const context = { root: "/home/dev/app", home: "/home/dev", platform: "linux" as const };
 
@@ -548,7 +548,7 @@ describe("what the report may carry", () => {
   });
 });
 
-// QFAI:EX-0001-0240-18
+// QFAI:EX-0001-0294-18
 describe("the same transcripts give the same bytes", () => {
   it("reports byte-identically whatever order the directories are listed in", async () => {
     const base = await tempDir();

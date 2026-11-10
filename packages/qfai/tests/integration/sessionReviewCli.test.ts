@@ -2,11 +2,11 @@
  * `qfai session-review` from the command line: which sessions it picks, where the report goes,
  * and how it exits. The hosts' homes point at a temporary directory, so no real transcript is read.
  */
-// QFAI:AC-0001-0240-01
-// QFAI:AC-0001-0240-02
-// QFAI:AC-0001-0240-03
-// QFAI:AC-0001-0240-04
-// QFAI:AC-0001-0240-05
+// QFAI:AC-0001-0294-01
+// QFAI:AC-0001-0294-02
+// QFAI:AC-0001-0294-03
+// QFAI:AC-0001-0294-04
+// QFAI:AC-0001-0294-05
 
 import { mkdir, mkdtemp, readdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -138,10 +138,10 @@ afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-// QFAI:EX-0001-0240-05
-// QFAI:EX-0001-0240-06
-// QFAI:EX-0001-0240-07
-// QFAI:EX-0001-0240-08
+// QFAI:EX-0001-0294-05
+// QFAI:EX-0001-0294-06
+// QFAI:EX-0001-0294-07
+// QFAI:EX-0001-0294-08
 describe("qfai session-review chooses the sessions and the destination", () => {
   it("reports the latest session of each agent by default, and one agent with --agent", async () => {
     const setup = await project();
@@ -249,7 +249,7 @@ describe("qfai session-review chooses the sessions and the destination", () => {
   });
 });
 
-// QFAI:EX-0001-0240-23
+// QFAI:EX-0001-0294-23
 describe("qfai session-review exits 1 when a file is there but cannot be used", () => {
   it("exits 1 with no report when --out cannot be written, naming no local path", async () => {
     const setup = await project();
@@ -276,9 +276,9 @@ describe("qfai session-review exits 1 when a file is there but cannot be used", 
   });
 });
 
-// QFAI:EX-0001-0240-09
-// QFAI:EX-0001-0240-12
-// QFAI:EX-0001-0240-22
+// QFAI:EX-0001-0294-09
+// QFAI:EX-0001-0294-12
+// QFAI:EX-0001-0294-22
 describe("qfai session-review counts what the sessions show", () => {
   it("keys a reminder by the project's reminders.json and gives the JSON shape", async () => {
     const setup = await project();
@@ -372,9 +372,9 @@ async function importGraph(entry: string): Promise<string[]> {
   return [...seen].sort();
 }
 
-// QFAI:EX-0001-0240-16
-// QFAI:EX-0001-0240-17
-// QFAI:EX-0001-0240-18
+// QFAI:EX-0001-0294-16
+// QFAI:EX-0001-0294-17
+// QFAI:EX-0001-0294-18
 describe("qfai session-review keeps the transcript on this machine", () => {
   it("runs with fetch and the network modules throwing, and prints no message text or local path", async () => {
     const setup = await project();

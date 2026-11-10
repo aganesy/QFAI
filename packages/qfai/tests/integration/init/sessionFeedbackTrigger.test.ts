@@ -128,9 +128,9 @@ describe("the end of the run triggers the review", () => {
   });
 });
 
-// QFAI:AC-0001-0240-06
-// QFAI:EX-0001-0240-19
-// QFAI:EX-0001-0240-20
+// QFAI:AC-0001-0294-06
+// QFAI:EX-0001-0294-19
+// QFAI:EX-0001-0294-20
 describe("the review reads the transcript report and proposes overlay items", () => {
   const SHIPPED_RULE = path.join(
     repoRoot,
@@ -188,7 +188,7 @@ describe("the review reads the transcript report and proposes overlay items", ()
   });
 });
 
-// QFAI:EX-0001-0240-24
+// QFAI:EX-0001-0294-24
 describe("the entry points tell the agent to read a rule's overlay", () => {
   it("has init write the overlay line into AGENTS.md and the Copilot instructions", async () => {
     await withEmptyRepo(async (root) => {

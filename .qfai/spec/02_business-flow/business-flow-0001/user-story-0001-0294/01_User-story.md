@@ -1,4 +1,4 @@
-# US-0001-0240: Review a finished session from its local transcript
+# US-0001-0294: Review a finished session from its local transcript
 
 ## User Story
 
