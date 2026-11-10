@@ -3,7 +3,7 @@
  * emphasis and "think hard" phrasing, a long SKILL.md, a skill listing a host
  * truncates and an AGENTS.md a host stops reading.
  */
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,11 +50,15 @@ type Seen = {
   severity: string;
 };
 
+/** The words a `QFAI-INSTR-001` message names; the finding's refs carry none. */
+const namedWords = (message: string): string[] | undefined =>
+  /reads badly: ([^.]+)\./.exec(message)?.[1]?.split(", ");
+
 const shape = (found: Issue): Seen => ({
   code: found.code,
   file: found.file,
   line: found.loc?.line,
-  words: found.refs,
+  words: namedWords(found.message),
   severity: found.severity,
 });
 
@@ -127,6 +131,100 @@ describe("instruction audit", () => {
   });
 
   // QFAI:EX-0001-0039-25
+  it("names the words in the message and puts none in the refs", async () => {
+    const found = await validateInstructionAudit(await project(EMPHASIS_TREE), defaultConfig);
+    expect(found.map((one) => one.refs)).toEqual(found.map(() => undefined));
+  });
+
+  // QFAI:EX-0001-0039-30
+  it("reads a fence, a quote, an indented line and an ID as CommonMark text", async () => {
+    expect(
+      await findings({
+        ".agents/rules/edges.md": [
+          "```not`a-fence",
+          "You MUST read it.",
+          'A 5" screen MUST fit, as "NEVER" says.',
+          "    Indented MUST is read as prose.",
+          "The code QFAI-MUST-001 is an ID.",
+          "",
+        ].join("\n"),
+      }),
+    ).toEqual(
+      [2, 3, 4, 5].map((line) => ({
+        code: "QFAI-INSTR-001",
+        file: ".agents/rules/edges.md",
+        line,
+        words: ["MUST"],
+        severity: "warning",
+      })),
+    );
+  });
+
+  // QFAI:EX-0001-0039-31
+  it("tells the reader of a generated file to update qfai and run qfai init --force", async () => {
+    const listing = "d".repeat(SKILL_LISTING_MAX_CHARS + 1);
+    const skill = `---\ndescription: ${listing}\n---\n\nYou MUST.\n${"line\n".repeat(500)}`;
+    const found = await validateInstructionAudit(
+      await project({
+        ".qfai/assistant/skill/long/SKILL.md": skill,
+        ".agents/rules/sample.md": "You MUST.\n",
+      }),
+      defaultConfig,
+    );
+    const generated =
+      "It is written by `qfai init`: update qfai and run `qfai init --force` instead of editing it.";
+    expect(found.map((one) => [one.code, one.file, one.message.endsWith(generated)])).toEqual([
+      ["QFAI-INSTR-001", ".agents/rules/sample.md", false],
+      ["QFAI-INSTR-001", ".qfai/assistant/skill/long/SKILL.md", true],
+      ["QFAI-INSTR-002", ".qfai/assistant/skill/long/SKILL.md", true],
+      ["QFAI-INSTR-003", ".qfai/assistant/skill/long/SKILL.md", true],
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-32
+  it("skips a dot-prefixed directory directly under the skills directory", async () => {
+    expect(
+      (
+        await findings({
+          ".qfai/assistant/skill/.draft/SKILL.md": "You MUST.\n",
+          ".qfai/assistant/skill/real/SKILL.md": "You MUST.\n",
+          ".qfai/assistant/skill/real/.notes/a.md": "You MUST.\n",
+        })
+      ).map((found) => found.file),
+    ).toEqual([".qfai/assistant/skill/real/.notes/a.md", ".qfai/assistant/skill/real/SKILL.md"]);
+  });
+
+  // QFAI:EX-0001-0039-33
+  it("skips an entry it cannot stat or read and keeps the other findings", async () => {
+    const root = await project({
+      ".qfai/assistant/rule/sample.md": "You MUST read it.\n",
+      ".agents/rules/folder.md/inner.md": "NEVER skip it.\n",
+      "AGENTS.md/inner.md": "ALWAYS.\n",
+    });
+    const expected = [".agents/rules/folder.md/inner.md", ".qfai/assistant/rule/sample.md"];
+    try {
+      await symlink("loop.md", path.join(root, ".qfai", "assistant", "rule", "loop.md"), "file");
+    } catch {
+      // The platform refuses an unprivileged symbolic link; the other entries still run.
+    }
+    const locked = path.join(root, ".agents", "rules", "locked.md");
+    await writeFile(locked, "You MUST.\n", "utf-8");
+    await chmod(locked, 0o000);
+    // Windows and a root user read a file whatever its mode, so it is audited there.
+    const readable = await readFile(locked).then(
+      () => true,
+      () => false,
+    );
+    if (readable) expected.push(".agents/rules/locked.md");
+
+    const audited = (await validateProject(root, undefined, { profile: "verify" })).issues
+      .filter((found) => found.code.startsWith("QFAI-INSTR-"))
+      .map((found) => found.file);
+    await chmod(locked, 0o644);
+    expect(audited).toEqual(expected.sort());
+  });
+
+  // QFAI:EX-0001-0039-25
   it("runs in verify and full and not in sdd", async () => {
     const root = await project(EMPHASIS_TREE);
     const audited = async (profile: "verify" | "full" | "sdd") =>
@@ -158,23 +256,25 @@ describe("instruction audit", () => {
   });
 
   // QFAI:EX-0001-0039-26
-  it("reports a SKILL.md over 500 lines and not one at 500", async () => {
+  it("reports a SKILL.md over 500 lines, counted as the asset line budget counts", async () => {
     const lines = (count: number) =>
-      Array.from({ length: count }, (_, index) => `line ${index}`).join("\n") + "\n";
+      Array.from({ length: count }, (_, index) => `line ${index}`).join("\n");
 
     expect(
       await findings({
         ".qfai/assistant/skill/long/SKILL.md": lines(501),
         ".qfai/assistant/skill/full/SKILL.md": lines(500),
+        ".qfai/assistant/skill/ended/SKILL.md": lines(500) + "\n",
       }),
-    ).toEqual([
-      {
+    ).toEqual(
+      ["ended", "long"].map((name) => ({
         code: "QFAI-INSTR-002",
-        file: ".qfai/assistant/skill/long/SKILL.md",
+        file: `.qfai/assistant/skill/${name}/SKILL.md`,
         line: undefined,
+        words: undefined,
         severity: "warning",
-      },
-    ]);
+      })),
+    );
   });
 
   // QFAI:EX-0001-0039-27
@@ -200,20 +300,22 @@ describe("instruction audit", () => {
         code: "QFAI-INSTR-003",
         file: ".qfai/assistant/skill/over/SKILL.md",
         line: undefined,
+        words: undefined,
         severity: "warning",
       },
     ]);
   });
 
   // QFAI:EX-0001-0039-28
-  it("reports an AGENTS.md over 32 KiB and not one at 32 KiB", () => {
-    expect(auditInstructionFile("AGENTS.md", "a".repeat(AGENTS_MD_MAX_BYTES))).toEqual([]);
+  it("reports an AGENTS.md over 32 KiB and not one at 32 KiB, counting its stored bytes", () => {
+    const bytes = (count: number, fill = 0x61) => Buffer.alloc(count, fill);
+    expect(auditInstructionFile("AGENTS.md", bytes(AGENTS_MD_MAX_BYTES))).toEqual([]);
+    // Bytes that do not decode as UTF-8 count as stored, not as the decoded text.
+    expect(auditInstructionFile("AGENTS.md", bytes(AGENTS_MD_MAX_BYTES, 0xff))).toEqual([]);
     expect(
-      auditInstructionFile("AGENTS.md", "a".repeat(AGENTS_MD_MAX_BYTES + 1)).map(
-        (found) => found.code,
-      ),
+      auditInstructionFile("AGENTS.md", bytes(AGENTS_MD_MAX_BYTES + 1)).map((found) => found.code),
     ).toEqual(["QFAI-INSTR-004"]);
-    expect(auditInstructionFile("CLAUDE.md", "a".repeat(AGENTS_MD_MAX_BYTES + 1))).toEqual([]);
+    expect(auditInstructionFile("CLAUDE.md", bytes(AGENTS_MD_MAX_BYTES + 1))).toEqual([]);
   });
 
   // QFAI:EX-0001-0039-29
@@ -230,7 +332,7 @@ describe("instruction audit", () => {
 
     const reported: string[] = [];
     for (const relative of shipped.sort()) {
-      const content = await readFile(path.join(initRoot, relative), "utf-8");
+      const content = await readFile(path.join(initRoot, relative));
       const installedAt = relative.replace(/^root\//, "");
       for (const found of auditInstructionFile(installedAt, content)) {
         reported.push(`${found.code} ${found.message}`);

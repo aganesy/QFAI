@@ -135,7 +135,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The `[DRIFT-PROTOCOL:REQUIRED]` skill marker and `QFAI-SKILLS-010`.** No
   `SKILL.md` carries the marker, and `qfai validate` no longer requires it. The
-  drift protocol itself is unchanged.
+  drift protocol itself is unchanged. Remove the `[DRIFT-PROTOCOL:...]` marker
+  line from your own skills: the instruction audit now reports its capitalised
+  word as `QFAI-INSTR-001`.
 
 - **`qfai sdd renumber-decision` and `qfai sdd next-id DEC|OQ`.** Timestamp
   IDs need no allocation or renumbering. The page relocation, published-prefix
