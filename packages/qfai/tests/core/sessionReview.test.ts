@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { SessionEvents } from "../../src/core/sessionReview/events.js";
+import { emptyEvents, type SessionEvents } from "../../src/core/sessionReview/events.js";
 import {
   claudeProjectSlug,
   locateSessions,
@@ -18,7 +18,7 @@ import {
   type LocateEnvironment,
 } from "../../src/core/sessionReview/locate.js";
 import { parseClaudeTranscript } from "../../src/core/sessionReview/parseClaude.js";
-import { parseCodexTranscript } from "../../src/core/sessionReview/parseCodex.js";
+import { parseCodexTranscript, readCodexRecord } from "../../src/core/sessionReview/parseCodex.js";
 import { redact } from "../../src/core/sessionReview/redact.js";
 import { renderJson, renderMarkdown } from "../../src/core/sessionReview/render.js";
 import {
@@ -357,6 +357,56 @@ describe("the edges a slug, a shell line and a calendar leave open", () => {
     expect(summarise(events, FACTS).qfaiCommands).toEqual([
       { command: "qfai report", runs: 1, exits: [{ name: "unknown", count: 1 }] },
       { command: "qfai validate", runs: 1, exits: [{ name: "unknown", count: 1 }] },
+    ]);
+  });
+
+  it("adds result bytes to a file only when the command names no other path", () => {
+    const events: SessionEvents = {
+      records: 4,
+      malformed: 0,
+      hookContexts: [],
+      calls: [
+        { id: "a", name: "Bash", command: "cat .agents/rules/a.md src/x.ts" },
+        { id: "b", name: "Bash", command: "cat .agents/rules/a.md" },
+      ],
+      results: [
+        { id: "a", isError: false, text: "1234567890", exitCode: 0 },
+        { id: "b", isError: false, text: "12345", exitCode: 0 },
+      ],
+      userTurns: [],
+    };
+    expect(summarise(events, FACTS).reads).toEqual([
+      { path: ".agents/rules/a.md", reads: 2, repeats: 1, bytes: 5 },
+    ]);
+  });
+
+  it("reads a Codex exit status from the call's own result, not from an exit_code its output prints", () => {
+    const events = emptyEvents();
+    readCodexRecord(
+      {
+        type: "response_item",
+        payload: {
+          type: "function_call",
+          name: "exec_command",
+          call_id: "c",
+          arguments: JSON.stringify({ cmd: "npx qfai validate" }),
+        },
+      },
+      events,
+    );
+    readCodexRecord(
+      {
+        type: "response_item",
+        payload: {
+          type: "function_call_output",
+          call_id: "c",
+          output: JSON.stringify({ exit_code: 0, output: JSON.stringify({ exit_code: 1 }) }),
+        },
+      },
+      events,
+    );
+    expect(events.results).toEqual([
+      expect.objectContaining({ id: "c", isError: false, exitCode: 0 }),
     ]);
   });
 

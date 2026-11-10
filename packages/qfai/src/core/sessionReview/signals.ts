@@ -244,7 +244,9 @@ function countReads(events: SessionEvents, facts: ProjectFacts): FileRead[] {
     }
     if (call.command !== undefined) {
       const files = pathsInCommand(call.command, facts);
-      for (const file of files) add(file, files.length === 1 ? resultBytes : 0);
+      // The output is one file's only when the command names no other path, watched or not.
+      const alone = files.length === 1 && pathArguments(call.command) === 1;
+      for (const file of files) add(file, alone ? resultBytes : 0);
     }
   }
   return [...reads]
@@ -255,6 +257,13 @@ function countReads(events: SessionEvents, facts: ProjectFacts): FileRead[] {
       bytes: entry.bytes,
     }))
     .sort((a, b) => compareText(a.path, b.path));
+}
+
+/** How many words of a shell line look like a path: holding a slash, or ending in an extension. */
+function pathArguments(command: string): number {
+  return command
+    .split(/[\s'"`;|&()]+/)
+    .filter((word) => /[\\/]/.test(word) || /\.[A-Za-z0-9]+$/.test(word)).length;
 }
 
 function countToolErrors(events: SessionEvents): ToolErrors[] {

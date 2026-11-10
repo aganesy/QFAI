@@ -32,8 +32,11 @@ const QUESTION_CALLS: ReadonlySet<string> = new Set([
   "request_user_input_async",
 ]);
 
-/** A command's structured exit status, a JSON `exit_code` field, escaped or not. */
-const EXIT_FIELD = /\\?"exit_code\\?"\s*:\s*(-?\d+)/g;
+/**
+ * A command's structured exit status: an `exit_code` field of the call's own JSON result. The
+ * same field inside the command's output is escaped there (`\"exit_code\"`), so it is not matched.
+ */
+const EXIT_FIELD = /(?<!\\)"exit_code"\s*:\s*(-?\d+)/g;
 /** The status line a shell output ends its header or its body with. */
 const EXIT_LINE = /^(?:Exit code:?|Process exited with code) (-?\d+)\s*$/m;
 /** A shell command inside an `exec` script: the string given as `cmd`. */
