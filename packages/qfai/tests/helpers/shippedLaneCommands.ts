@@ -1386,8 +1386,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // `fcdba5a8…` byte for byte.
     // Re-pinned for one more bullet on the rules list, naming `.agents/rules/reply-forms.md`.
     // Derived by `pnpm pins:entry`; dropping that one bullet reproduces `3eb38f37…` byte for byte.
+    // Re-pinned for the line that says to read a rule's `<name>.local.md` overlay, and the
+    // session-feedback bullet naming overlay proposals. Derived by `pnpm pins:entry`; reverting
+    // both reproduces `c6f0a6a9…` byte for byte.
     ".github/copilot-instructions.md",
-    "c6f0a6a96dcf8b902abbf16d9e22dddaac3c3616e3b9448b5ee0718e44076677",
+    "e0cbe5b0d966b8e137cd482375291f3617b1e5e403cd526443486d3e32a937b0",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it

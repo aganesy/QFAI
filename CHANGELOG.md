@@ -15,6 +15,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   otherwise. A Site in the Codex app, whose audience is not documented, is
   used where the project's agent instructions allow it. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
+- **`qfai session-review` counts what a finished session shows.** The command
+  reads this project's own Claude Code and Codex transcripts on the local disk
+  and reports, per session, the QFAI hook reminders shown, the rule, skill and
+  step files read with their repeats and result bytes, the tool errors with
+  their finding codes, the `qfai` commands with their exit status, the
+  structured questions asked, and the typed turns that match a fixed list of
+  correction words. It sends nothing anywhere and prints counts and matched
+  words only, never message text, with secrets, the home directory and the
+  project root redacted. The report goes to standard output, or to `--out`;
+  `--agent`, `--session` and `--since` choose the sessions, and `--format json`
+  gives JSON. The session review in `.agents/rules/session-feedback.md` runs it
+  once for its own host as evidence and now proposes items for a rule's
+  `<name>.local.md` overlay, added only after the user approves them; a change
+  to a file QFAI ships becomes an issue draft. The `AGENTS.md` and Copilot
+  instructions `qfai init` writes now say to read a rule's overlay with the
+  rule.
 
 - **`qfai doctor` enforces the `SKILL.md` body limit.** The `assets.lineBudget`
   check now warns for each `SKILL.md` under `.qfai/assistant/` whose body after
