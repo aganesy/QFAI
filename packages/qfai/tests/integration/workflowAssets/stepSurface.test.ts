@@ -143,7 +143,9 @@ describe("the skills a workflow run's steps belong to", () => {
       const body = flat(await readShipped(`skill/${skill}/SKILL.md`));
       const at = body.indexOf(runFirst);
       expect(at, skill).toBeGreaterThan(-1);
-      expect(body.indexOf("## ", body.indexOf("## /") + 3), skill).toBeGreaterThan(at);
+      const title = body.indexOf("## /");
+      expect(title, skill).toBeGreaterThan(-1);
+      expect(body.indexOf("## ", title + 3), skill).toBeGreaterThan(at);
     }
   });
 

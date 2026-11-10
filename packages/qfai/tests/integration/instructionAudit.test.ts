@@ -3,7 +3,7 @@
  * emphasis and "think hard" phrasing, a long SKILL.md, a skill listing a host
  * truncates and an AGENTS.md a host stops reading.
  */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,8 @@ import fg from "fast-glob";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import type { Issue } from "../../src/core/types.js";
+import { validateProject } from "../../src/core/validate.js";
 import {
   AGENTS_MD_MAX_BYTES,
   auditInstructionFile,
@@ -40,57 +42,119 @@ async function project(files: Record<string, string>): Promise<string> {
   return root;
 }
 
-const findings = async (files: Record<string, string>) =>
-  (await validateInstructionAudit(await project(files), defaultConfig)).map((found) => ({
-    code: found.code,
-    file: found.file,
-    line: found.loc?.line,
-    severity: found.severity,
-  }));
+type Seen = {
+  code: string;
+  file: string | undefined;
+  line: number | undefined;
+  words: string[] | undefined;
+  severity: string;
+};
+
+const shape = (found: Issue): Seen => ({
+  code: found.code,
+  file: found.file,
+  line: found.loc?.line,
+  words: found.refs,
+  severity: found.severity,
+});
+
+const findings = async (files: Record<string, string>): Promise<Seen[]> =>
+  (await validateInstructionAudit(await project(files), defaultConfig)).map(shape);
+
+const EMPHASIS_TREE: Record<string, string> = {
+  ".qfai/assistant/rule/sample.md": [
+    "# Rule",
+    "",
+    "You MUST read the plan.",
+    "Think harder before you answer.",
+    "The word `NEVER` is cited in a code span.",
+    'A rule may quote "ALWAYS" to forbid it.',
+    "> IMPORTANT: a quotation is not an instruction.",
+    "```text",
+    "CRITICAL inside a fence",
+    "```js",
+    "MANDATORY after a line that only looks like a fence",
+    "```",
+    "- A list item:",
+    "  ```",
+    "  NEVER inside an indented fence",
+    "  ```",
+    "You must read it, in plain words.",
+    "",
+  ].join("\n"),
+  ".agents/rules/sample.md": "Do it. NEVER skip it.\n",
+  "AGENTS.md": "# Agents\n\nThis is REQUIRED.\n",
+  "CLAUDE.md": "@AGENTS.md\n\nthink hard about it.\n",
+};
+
+const EMPHASIS_FOUND: Seen[] = [
+  {
+    code: "QFAI-INSTR-001",
+    file: ".agents/rules/sample.md",
+    line: 1,
+    words: ["NEVER"],
+    severity: "warning",
+  },
+  {
+    code: "QFAI-INSTR-001",
+    file: ".qfai/assistant/rule/sample.md",
+    line: 3,
+    words: ["MUST"],
+    severity: "warning",
+  },
+  {
+    code: "QFAI-INSTR-001",
+    file: ".qfai/assistant/rule/sample.md",
+    line: 4,
+    words: ["Think harder"],
+    severity: "warning",
+  },
+  { code: "QFAI-INSTR-001", file: "AGENTS.md", line: 3, words: ["REQUIRED"], severity: "warning" },
+  {
+    code: "QFAI-INSTR-001",
+    file: "CLAUDE.md",
+    line: 3,
+    words: ["think hard"],
+    severity: "warning",
+  },
+];
 
 describe("instruction audit", () => {
   // QFAI:AC-0001-0039-03
   // QFAI:EX-0001-0039-25
   it("reports capitalised emphasis and think-hard phrasing outside code and quotations", async () => {
-    const rule = [
-      "# Rule",
-      "",
-      "You MUST read the plan.",
-      "Think harder before you answer.",
-      "The word `NEVER` is cited in a code span.",
-      'A rule may quote "ALWAYS" to forbid it.',
-      "> IMPORTANT: a quotation is not an instruction.",
-      "```text",
-      "CRITICAL inside a fence",
-      "```",
-      "You must read it, in plain words.",
-      "",
-    ].join("\n");
+    expect(await findings(EMPHASIS_TREE)).toEqual(EMPHASIS_FOUND);
+  });
+
+  // QFAI:EX-0001-0039-25
+  it("runs in verify and full and not in sdd", async () => {
+    const root = await project(EMPHASIS_TREE);
+    const audited = async (profile: "verify" | "full" | "sdd") =>
+      (await validateProject(root, undefined, { profile })).issues
+        .filter((found) => found.code.startsWith("QFAI-INSTR-"))
+        .map(shape);
+
+    expect(await audited("verify")).toEqual(EMPHASIS_FOUND);
+    expect(await audited("full")).toEqual(EMPHASIS_FOUND);
+    expect(await audited("sdd")).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0039-25
+  it("reads a linked directory once, by the path under the project", async () => {
+    const shared = await project({ "rule/linked.md": "You MUST read it.\n" });
+    const root = await project({});
+    await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
+    await symlink(
+      path.join(shared, "rule"),
+      path.join(root, ".qfai", "assistant", "rule"),
+      "junction",
+    );
+    await mkdir(path.join(root, ".agents"), { recursive: true });
+    await symlink(path.join(shared, "rule"), path.join(root, ".agents", "rules"), "junction");
 
     expect(
-      await findings({
-        ".qfai/assistant/rule/sample.md": rule,
-        ".agents/rules/sample.md": "Do it. NEVER skip it.\n",
-        "AGENTS.md": "# Agents\n\nThis is REQUIRED.\n",
-        "CLAUDE.md": "@AGENTS.md\n\nthink hard about it.\n",
-      }),
-    ).toEqual([
-      { code: "QFAI-INSTR-001", file: ".agents/rules/sample.md", line: 1, severity: "warning" },
-      {
-        code: "QFAI-INSTR-001",
-        file: ".qfai/assistant/rule/sample.md",
-        line: 3,
-        severity: "warning",
-      },
-      {
-        code: "QFAI-INSTR-001",
-        file: ".qfai/assistant/rule/sample.md",
-        line: 4,
-        severity: "warning",
-      },
-      { code: "QFAI-INSTR-001", file: "AGENTS.md", line: 3, severity: "warning" },
-      { code: "QFAI-INSTR-001", file: "CLAUDE.md", line: 3, severity: "warning" },
-    ]);
+      (await validateInstructionAudit(root, defaultConfig)).map((found) => found.file),
+    ).toEqual([".qfai/assistant/rule/linked.md"]);
   });
 
   // QFAI:EX-0001-0039-26
