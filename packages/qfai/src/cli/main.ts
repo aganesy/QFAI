@@ -7,6 +7,7 @@ import { runReport } from "./commands/report.js";
 import { runSddMergeDocsCommand } from "./commands/sddMergeDocs.js";
 import { runSddNextIdCommand } from "./commands/sddNextId.js";
 import { runSddPreflightCommand } from "./commands/sddPreflight.js";
+import { runSessionReview } from "./commands/sessionReview.js";
 import { runValidate } from "./commands/validate.js";
 import { emitPlanDocument, runWorkflowPlan, WORKFLOW_HELP } from "./commands/workflow.js";
 import type { ParsedArgs } from "./lib/args.js";
@@ -48,6 +49,7 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "report",
   "doctor",
   "db-drift",
+  "session-review",
   "sdd",
   "atdd",
   "discussion",
@@ -250,6 +252,27 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         });
       }
       return;
+    case "session-review":
+      {
+        const resolvedRoot = await resolveRoot(options, true);
+        process.exitCode = await runSessionReview({
+          root: resolvedRoot,
+          ...(options.sessionReviewAgent !== undefined
+            ? { agent: options.sessionReviewAgent }
+            : {}),
+          ...(options.sessionReviewSession !== undefined
+            ? { sessionId: options.sessionReviewSession }
+            : {}),
+          ...(options.sessionReviewSince !== undefined
+            ? { since: options.sessionReviewSince }
+            : {}),
+          ...(options.sessionReviewFormat !== undefined
+            ? { format: options.sessionReviewFormat }
+            : {}),
+          ...(options.sessionReviewOut !== undefined ? { outPath: options.sessionReviewOut } : {}),
+        });
+      }
+      return;
     case "sdd":
       {
         if (!options.sddAction) {
@@ -407,6 +430,7 @@ Commands:
   report                       Emit validation results and aggregates
   doctor                       Diagnose config, paths and output preconditions
   db-drift                     Compare the DB contracts with the migrations as schemas (needs paths.migrationsDir)
+  session-review               Count what this project's local Claude Code and Codex transcripts show; reads local files only and prints counts, never message text
   discussion list              List the discussion packs (the active pointer's pack is marked with *)
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
   discussion use <id>          Set the active discussion session pointer
@@ -430,6 +454,10 @@ Options:
   --format <text|github>       validate: output format
   --format <md|json>           report: output format
   --format <text|json>         doctor / discussion list: output format
+  --format <md|json>           session-review: output format (md by default)
+  --agent <claude|codex|all>   session-review: whose transcripts to read (all by default)
+  --session <id>               session-review: the session to report, instead of the latest of each agent
+  --since <date>               session-review: every session whose transcript changed at or after this ISO 8601 date (midnight UTC) or date and time with Z or an offset
   --active                     discussion list: show the active session pointer instead of listing packs
   --strict                     validate/report: exit 1 on warning or worse
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full|drift>  validate/report: select the validation profile
@@ -441,7 +469,7 @@ Options:
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
   --rendered <path>             validate: compare a JSON file of the texts each screen rendered with its UI contract's copy (a relative path is resolved against --root)
   --timings                     validate: print the time each finding family took, slowest first
-  --out <path>                  report/doctor: output path (a relative path is resolved against --root)
+  --out <path>                  report/doctor/session-review: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)
   --run-validate                report: run validate first, then generate the report
   --base-url <url>              report: base URL

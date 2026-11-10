@@ -81,9 +81,17 @@ describe.each(TREES)("%s — the execution stages stop on detection", (tree) => 
     // No-question mode supplies no delegation or confirmation. A separately
     // authorized session may end adopted only after the master's conditions.
     const primitive = await read("assistant/skill/qfai-grilling/SKILL.md");
+    // How a delegated session ends sits in the reference the skill points a
+    // delegated session at; the no-question endings stay in the skill, where a
+    // session that does not read the reference still meets them.
+    const delegated = await read("assistant/skill/qfai-grilling/references/delegated-session.md");
     expectPhrase(
       primitive,
       "**Any other session under a no-question mode cannot reach condition 2 either**",
+    );
+    expectPhrase(
+      primitive,
+      "or is a no-question session that meets the master's explicit-delegation conditions",
     );
     expectPhrase(
       primitive,
@@ -91,12 +99,12 @@ describe.each(TREES)("%s — the execution stages stop on detection", (tree) => 
     );
     expectPhrase(primitive, "No-question alone is not delegation");
     expectPhrase(
-      primitive,
+      delegated,
       "no open node or lookup, required inputs present, and actual authority for critical decisions",
     );
-    expectPhrase(primitive, "Record agent choices as agents'.");
+    expectPhrase(delegated, "Record agent choices as agents'.");
     expectPhrase(
-      primitive,
+      delegated,
       "While a critical decision lacks an actual answer or applicable recorded authorization, it stays open",
     );
     expectPhrase(primitive, "The user confirms the understanding is shared.");
