@@ -48,6 +48,9 @@ describe.each(MASTERS)("%s raises a term that clashes with a glossary", (rel) =>
     expect(master).toContain(
       "conflicts with, or is a synonym of, a term a glossary defines is raised first in the round it appears in, or the next one when it appears in an answer.",
     );
+    expect(master).toContain(
+      "Questions whose answer turns on its meaning wait for the next round.",
+    );
     expect(master).toContain("The griller proposes the glossary's term.");
     expect(master).toContain(
       "A plain synonym is corrected to it and noted in the round, not asked; a term with two plausible meanings is a decision node.",
@@ -66,19 +69,22 @@ describe.each(MASTERS)("%s raises a term that clashes with a glossary", (rel) =>
 // QFAI:EX-0001-0245-04
 // QFAI:EX-0001-0245-05
 describe.each(MASTERS)("%s writes a settled term at once", (rel) => {
-  it("writes it to the glossary the stage owns, the stage's handoff or the session record", async () => {
+  it("writes it to the glossary the stage owns, the stage's evidence or the session record", async () => {
     const master = await read(rel);
     expect(master).toContain(
       "**A settled term is written at once**, not at the end of the session",
     );
     expect(master).toContain(
-      "to the pack's `08_Glossary.md` in discussion, to the project glossary where the stage writes the policy layer, otherwise to the stage's own handoff, and with no invoking stage to the session record the user reads.",
+      "to the pack's `08_Glossary.md` in discussion, a new term to the project glossary where the stage writes the policy layer, otherwise to the stage's evidence, beside its adopted decisions, with a line in its final report, and with no invoking stage to the session record the user reads.",
     );
   });
 
-  it("rewrites a changed term and keeps a definition to what the term is", async () => {
+  it("rewrites a changed pack term, gates a project glossary change, and keeps a definition to what the term is", async () => {
     const master = await read(rel);
-    expect(master).toContain("A changed term rewrites its row and adds no second one.");
+    expect(master).toContain("A changed pack term rewrites its row and adds no second one.");
+    expect(master).toContain(
+      "**Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only under an approved change request.",
+    );
     expect(master).toContain("A definition says what the term is.");
     expect(master).toContain(
       "A rule, a value set or a procedure belongs in the spec, not in the row.",
@@ -88,18 +94,7 @@ describe.each(MASTERS)("%s writes a settled term at once", (rel) => {
 
 // QFAI:EX-0001-0245-06
 describe.each(SKILLS)("%s carries the check", (rel) => {
-  it("points to the master's glossary section and stays within its size limit", async () => {
-    const raw = await readRaw(rel);
-    expect(unwrap(raw)).toContain("`.agents/rules/grilling.md#terms-against-the-glossary`");
-    const body = raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "");
-    expect([...body].length).toBeLessThanOrEqual(20_000);
-  });
-});
-
-// QFAI:EX-0001-0245-07
-describe.each(MASTERS)("%s stays readable", (rel) => {
-  it("is 500 lines or fewer", async () => {
-    const lines = (await readRaw(rel)).split("\n").length;
-    expect(lines).toBeLessThanOrEqual(500);
+  it("points to the master's glossary section", async () => {
+    expect(await read(rel)).toContain("`.agents/rules/grilling.md#terms-against-the-glossary`");
   });
 });

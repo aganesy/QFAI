@@ -310,24 +310,25 @@ and never takes a critical decision without the recorded user authority above.
 
 Every session, user or delegated and at every stage, checks the terms it hears
 against `<specsDir>/01_policy/glossary.md` and, during a discussion, the pack's
-`08_Glossary.md`. A word that means one thing to the user and another to the
-spec and code is a decision nobody saw being made.
+`08_Glossary.md`. A word read two ways is a decision nobody saw being made.
 
 - **A clash is raised when it appears.** A term the user or an author uses that
   conflicts with, or is a synonym of, a term a glossary defines is raised first
-  in the round it appears in, or the next one when it appears in an answer. The
+  in the round it appears in, or the next one when it appears in an answer.
+  Questions whose answer turns on its meaning wait for the next round. The
   griller proposes the glossary's term. A plain synonym is corrected to it and
   noted in the round, not asked; a term with two plausible meanings is a
   decision node.
 - A matching term raises nothing. A term in neither glossary is asked about only
   when a decision on the tree turns on its meaning.
 - **A settled term is written at once**, not at the end of the session: to the
-  pack's `08_Glossary.md` in discussion, to the project glossary where the stage
-  writes the policy layer, otherwise to the stage's own handoff, and with no
-  invoking stage to the session record the user reads. A changed term rewrites
-  its row and adds no second one.
-- A definition says what the term is. A rule, a value set or a procedure belongs
-  in the spec, not in the row.
+  pack's `08_Glossary.md` in discussion, a new term to the project glossary
+  where the stage writes the policy layer, otherwise to the stage's evidence,
+  beside its adopted decisions, with a line in its final report, and with no
+  invoking stage to the session record the user reads. A changed pack term
+  rewrites its row and adds no second one.
+- **Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only under an approved change request.
+- A definition says what the term is. A rule, a value set or a procedure belongs in the spec, not in the row.
 
 ## When a session ends
 
