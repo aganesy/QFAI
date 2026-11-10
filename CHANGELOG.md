@@ -55,6 +55,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   limits. The discussion profile reports an error (`QFAI-DPACK-012`) for a
   `path:line` citation in the latest discussion pack that names a missing file
   or a line past its end.
+- **Variants on the first prototyping iteration.** While the visual or
+  interaction direction is still open, `/qfai-prototyping` builds its first
+  iteration as two or three variants that differ in structure, on one page
+  switchable through `?variant=<id>`, each reviewed by its own reviewer. They are put to
+  the user as one comparison; the user picks one, combines parts or rejects
+  all, and the agent never picks. From the next iteration the loop builds one
+  prototype as before. A restyle, a run scoped to a confirmed prototype, a run
+  under a no-question mode, or a session record or `DESIGN.md` that settles
+  the layout builds one prototype from the start.
 
 ### Changed
 

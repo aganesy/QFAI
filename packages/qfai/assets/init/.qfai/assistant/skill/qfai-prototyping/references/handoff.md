@@ -12,7 +12,8 @@
 
 `.qfai/prototype/iter-<final>/index.html` — the iteration the user
 confirmed. It is one self-contained file with one client-side route per
-declared screen, written by the generator.
+declared screen, written by the generator. It is never an iteration with
+variants: the user's answer to one runs a further iteration.
 A `restyle` loop has no such file: its iterations restyled the live app
 in place, and its handoff is the short form under Restyle handoff below.
 A scoped run also reads the `final/index.html` and `final/handoff.json` an
