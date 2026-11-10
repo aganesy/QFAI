@@ -7,8 +7,9 @@ reply grammar apply, except that every note reopens its item (step 3).
 
 ## When it is put
 
-Once condition 1 holds: no node is open and no lookup is running. A delegated
-session and a no-question mode put none.
+Once condition 1 holds: no node is open and no lookup is running. A decision
+the user left open on purpose is registered as an open question and listed
+under Open items. A delegated session and a no-question mode put none.
 
 ## What it lists
 
