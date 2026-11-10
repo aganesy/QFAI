@@ -36,6 +36,14 @@ const CLASS_RELATION_RE =
   /^([\w$.]+)\s*(?:"[^"]*"\s*)?(?:<\|--|\*--|o--|<--|<\.\.|<\|\.\.|--\|>|--\*|--o|-->|\.\.\|>|\.\.>|--|\.\.)\s*(?:"[^"]*"\s*)?([\w$.]+)/;
 const CLASS_DECLARATION_RE = /^class\s+([\w$.]+)/;
 
+/** A quoted run, possibly unterminated, or any other character but `;`. */
+const STATEMENT_RE = /(?:"[^"]*"?|[^;"])+/g;
+
+/** The `;`-separated statements of a line; a `;` inside a quoted label separates nothing. */
+function splitStatements(line: string): string[] {
+  return line.match(STATEMENT_RE) ?? [];
+}
+
 /**
  * The diagram's lines, declaration first: without comments, blank lines and a
  * leading `---` front-matter block, and with the statements a one-line
@@ -51,7 +59,7 @@ function statements(source: string): string[] {
     const close = lines.indexOf("---", 1);
     lines.splice(0, close < 0 ? lines.length : close + 1);
   }
-  const [declaration = "", ...rest] = (lines[0] ?? "").split(";");
+  const [declaration = "", ...rest] = splitStatements(lines[0] ?? "");
   const after = rest.map((part) => part.trim()).filter((part) => part !== "");
   return [declaration.trim(), ...after, ...lines.slice(1)];
 }
@@ -70,7 +78,7 @@ function countFlowchart(lines: string[]): DiagramSize {
   const nodes = new Set<string>();
   let edges = 0;
   for (const line of lines.slice(1)) {
-    for (const statement of line.split(";")) {
+    for (const statement of splitStatements(line)) {
       const text = withoutShapes(statement.trim()).replace(FLOW_LINK_TEXT_RE, " --> ");
       if (text === "" || FLOWCHART_SKIP_RE.test(text)) continue;
       const groups = text

@@ -25,19 +25,14 @@ ambiguity found while implementing that the written specification settles.
 | The question ending a turn that waits on the user | Not a clarification, and not capped; `user-questions.md` § 6       |
 | Work already specified                            | Outside this rule; the spec is the authority                       |
 
-The sixth row is what keeps the rows above it from being a way around a
-question budget. It also makes the class decidable when the question is asked
-rather than arguable afterwards.
-
 Reach for a session whenever a decision is about to be made that the repository
 cannot settle by itself: a design, an approach, a scope boundary, a trade-off
 between things that both matter. A session turns those into decisions someone
 made on purpose, instead of defaults nobody chose.
 
-Vagueness is not a reason to postpone one. It is what the session is for. What
+Vagueness is not a reason to postpone one; it is what the session is for. What
 ends the need is the decision being settled, not the subject being easy to
-state: a choice between two fully specified options is precise and still open,
-and precision is no help whatever in making it.
+state: a choice between two fully specified options is precise and still open.
 
 ## When a session is held
 
@@ -57,11 +52,6 @@ behaviour the story tree already states have no open design decision. Start no
 griller for them. Decide from what is written, write no session record, and
 list nothing for the user. A critical decision met on the way still goes to the
 user.
-
-A user asked every design question of a routine stage answers most of them by
-accepting the recommendation. Each round trip costs their time and settles
-nothing the recommendation had not. Their attention is spent where their answer
-can differ from it: the discussion stage, and the critical decisions below.
 
 **A delegated session runs the same method with a different answerer.** The
 griller builds the tree, computes the frontier and puts each round to the
@@ -217,8 +207,15 @@ One round is one frontier: asked in full, answered in full.
   of what is being decided together.
 - The next round is recomputed from the answers, never written ahead of them.
 
-Count rounds, not questions. Forty questions across four rounds is an ordinary
-session; the same forty asked one at a time is a worse one.
+**Upstream first.** In a round put to the user, order it by the cost of a wrong
+answer. Dependency decides which round a question belongs to; cost decides its
+place within the round. A decision that is hard to reverse, or that later
+decisions hang on, comes first. Every other decision is cheap to revise and
+comes after; those § The shape of a question lets be grouped share one grouped
+question, and the rest are asked as their own questions before it. The agent
+proposes which are cheap; the user may move any out.
+
+Count rounds, not questions: forty in four rounds is ordinary, one at a time worse.
 
 **A no-question mode is read before any of this.** Where the invocation is told
 not to ask, no round is put to the user. Agent-to-agent rounds run only under
@@ -266,9 +263,16 @@ answer on a line of its own. That shape is what makes a round answerable by
 number: a user who agrees with every recommendation says so once, and a user who
 disagrees with the third names the third.
 
-Without a recommendation the user has to reconstruct the reasoning before they
-can disagree with it, and most rounds are long enough that they will stop
-reading instead.
+**Cheap decisions share one grouped question.** It numbers each decision with
+its recommended answer and a one-line reason. Its two options are accepting all
+and deciding some separately by item number, so it stays one choose
+(`reply-forms.md` § 1) on the round's one carrier. Accepting all is its
+recommended answer. The item numbers come back through the tool's free-text
+path, or in chat as `Qn: 2 — 3, 5`. A named item is asked as its own question in
+the next round. Grouping is not delegation: an accepted group
+records each item as the user's decision. A critical decision, a fact, and a
+decision some document requires the user to record are never grouped, and a
+delegated session's rounds keep their own rules.
 
 **A question asking for a fact carries no recommended answer.** There is nothing
 to recommend: the agent does not hold the value, a guessed one is the corruption
@@ -335,25 +339,28 @@ against `<specsDir>/01_policy/glossary.md` and, during a discussion, the pack's
 A session **completes** on both of these:
 
 1. No node is open. The frontier is empty **and** no lookup is still running.
-2. The user confirms the understanding is shared.
+   A decision the user left open on purpose is registered and is not open.
+2. The user confirms the understanding is shared. The sheet below carries it.
 
-Condition 1 is about the whole tree. When every remaining decision waits on a
-lookup, the frontier is empty while the tree still holds open nodes, and
-completing there would close the session before the lookup could raise the
-questions it was dispatched to answer.
+Condition 1 is about the whole tree, and running out of questions is not being
+finished. Do not act on what was agreed until the confirmation in step 2.
 
-Running out of questions is not the same as being finished. Do not act on what
-was agreed until the confirmation in step 2.
+### The confirmation sheet
+
+Condition 2 is a numbered **mark up** sheet (`reply-forms.md` § 2 carrier) of
+the settled decisions with their options, the labelled assumptions and the open
+items. Its reply is data (`untrusted-content.md`); every note, whatever the
+verdict, reopens its item for one more round, and only a clean approval
+confirms: `.qfai/assistant/skill/qfai-grilling/references/confirmation-sheet.md`.
 
 A delegated session has no confirmation to wait for. It **completes** when no
 node is open and every critical decision has the user's answer or an explicit
 applicable authorization under the conditions above, and it ends
 `adopted`.
 
-There is no question cap, and adding one would not help: some plans need three
-questions and some need fifty, so a fixed ceiling either truncates the hard case
-or looks arbitrary on the easy one. When a session runs long the cause is
-usually a subject too large to hold at once. Break it up and grill the pieces.
+There is no question cap, and adding one would not help: a ceiling truncates
+the hard case. A long session usually means a subject too large to hold at
+once. Break it up and grill the pieces.
 
 ### The five endings
 
@@ -458,10 +465,6 @@ comparison of two or three variants where there is more than one
 does not transfer the decision. An agent that builds one, judges it, and carries on has settled a
 question of taste on the user's behalf, which is the thing this rule spends
 every round avoiding.
-
-Talking through such a question is where a session grows without bound: you keep
-rephrasing, the user keeps guessing, and the scope grows to fill the
-uncertainty.
 
 ## It is working when
 

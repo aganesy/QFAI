@@ -94,10 +94,8 @@ answers it: a fact with a known few possible values is asked as a choice among
 them, and one with no such set as a plain request. Asking which of four
 supported regions is active as free text loses the four.
 
-All three are prerequisites, so a decision waiting on a fact is on the tree as
-exactly that. The tree is not written once: each answer changes what the
-remaining nodes are, so it is the current state of what is settled, not a plan
-made at the start.
+The tree is not written once: each answer changes what the remaining nodes are,
+so it is the current state of what is settled, not a plan made at the start.
 
 ## The frontier
 
@@ -110,18 +108,15 @@ A user-held fact belongs there because nothing else can put it there. Left off,
 the decision below it waits on a node no round ever asks, so the frontier never
 empties and the session cannot complete.
 
-Those are the only questions that can honestly be asked yet. A question whose
-answer depends on an unanswered one cannot be answered, only guessed at, and a
-guess recorded as an answer is worse than an open question because nothing later
-re-opens it.
-
 ## One round
 
 1. Recompute the frontier from what is now settled.
 2. Dispatch the fact lookups the remaining decisions wait on. Do not block the
    round on them.
 3. Put the whole frontier at once to the session's answerer: the user by
-   default, or authors in a qualifying delegated session.
+   default, or authors in a qualifying delegated session. Order a round put to
+   the user upstream first: a decision hard to reverse, or that others hang on,
+   before one cheap to revise (`.agents/rules/grilling.md` § A round).
 4. Read the answers, then return to step 1.
 
 Two questions never share a round when one depends on the other; the dependent
@@ -158,9 +153,6 @@ host that cannot show it whole; it never makes two rounds, and
 | A fact the environment holds             | The agent      | Read it, or run reads as parallel lookups |
 | A decision about what is wanted or worth | The user       | Ask it, and wait                          |
 
-Looking a fact up does not stop the round. Only the questions downstream of a
-running lookup wait for it; the rest of the frontier is asked meanwhile.
-
 ## User Questions (AskUserQuestion Protocol)
 
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
@@ -187,6 +179,12 @@ line of its own. That shape is what makes a round answerable by number: a user
 who agrees with every recommendation says so once, and a user who disagrees with
 the third names the third.
 
+Decisions cheap to revise share one grouped question, put after the costly
+ones: accept every recommendation, or name the items to decide separately. An
+accepted group records each item as the user's decision; grouping is not
+delegation. Never group a critical decision, a fact or a document-required
+decision (`.agents/rules/grilling.md` § The shape of a question).
+
 ## The budget does not end a session
 
 A grilling question spends no clarification budget, and exhausting the budget
@@ -204,14 +202,15 @@ A session **completes** on two conditions, both required.
 
 1. No node is open — the frontier is empty **and** no fact lookup is still
    running.
-2. The user confirms the understanding is shared.
+2. The user confirms the understanding is shared. The sheet that carries it:
+   `references/confirmation-sheet.md`.
 
 Condition 1 is about the whole tree. When every remaining decision waits on a
 lookup the frontier is empty while the tree still holds open nodes, and
 completing there would close the session before the lookup could raise the
 questions it was dispatched to answer.
 
-There is no question cap; a number reached does not finish a design.
+There is no question cap.
 
 **A delegated session ends by its own conditions**, because no user is there
 to confirm condition 2. Read `references/delegated-session.md` (§ When a
@@ -273,10 +272,9 @@ An agent that builds a sketch, judges it and carries on has settled a question o
 taste on the user's behalf, which is the thing every round of this method spends
 its effort avoiding.
 
-What that artifact is belongs to the stage the session is running in. This skill
-does not choose it and does not move the work to another stage: a sketch inside
-the current stage is the usual answer, and reaching for a later stage's artifact
-is that stage's own decision, under its own preconditions.
+What that artifact is belongs to the stage the session runs in: this skill
+neither chooses it nor moves the work to another stage. A sketch inside the
+current stage is the usual answer.
 
 ## Sub-agent Delegation (MANDATORY)
 

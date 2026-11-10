@@ -15,8 +15,8 @@ Feature: Answer agent output in the reply form that fits it
   Scenario: The host's page publisher carries a sheet where it is private to the user
     Given a mark-up, sort or comparison sheet to put
     When the structured question tool cannot carry it
-    Then it is published on the host's page publisher, such as an Artifact on Claude Code, where that publisher is callable and its page is private to the user by default
-    And a page whose default audience is not known to be the user alone is used only under a standing instruction that covers publishing it, and otherwise the sheet is put as text in the chat with nothing asked
+    Then it is published on the host's page publisher where that publisher is callable and its page is private to the user by default, such as an Artifact on Claude Code, or where the rule names it, as it names a Site in the Codex app
+    And any other page whose default audience is not known to be the user alone is used only under a standing instruction that covers publishing it, and otherwise the sheet is put as text in the chat with nothing asked
     And a set presented as one takes the one carrier that carries every member
 
   # AC-0001-0239-03

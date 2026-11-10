@@ -38,8 +38,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and a question of taste as two or three variants to compare, beside the
   existing choice. A sheet goes on the host's private page where one can be
   published, such as an Artifact on Claude Code, and as text in the chat
-  otherwise. A Site in the Codex app, whose audience is not documented, is
-  used where the project's agent instructions allow it. Every form comes back
+  otherwise. A Site is the Codex app's page for reply sheets; its audience is not
+  documented, so it carries no secret, credential or personal data. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
 - **`qfai session-review` counts what a finished session shows.** The command
   reads this project's own Claude Code and Codex transcripts on the local disk
@@ -74,13 +74,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Diagrams are checked where they are written.** The `discussion-pack` and
   `sdd-flow` steps now run the shipped Mermaid parser on the files they wrote,
   installed under `tmp/` and never into the project's dependency tree, and
-  report the check as not run when the parser cannot be installed.
+  report the check as not run when the parser cannot be installed. A project
+  with no installed QFAI gets the release it runs installed under `tmp/` too,
+  and the parser versions are read from that release.
   `qfai validate` warns (`QFAI-FLOW-006`) on a Mermaid diagram with more than
   12 nodes or 16 edges, so its author splits it into an overview and detail
   diagrams; `validation.diagramBudget` in `qfai.config.yaml` changes both
   limits. The discussion profile reports an error (`QFAI-DPACK-012`) for a
   `path:line` citation in the latest discussion pack that names a missing file
-  or a line past its end.
+  or a line past its end; a symbolic link to a deleted file counts as missing.
 - **Variants on the first prototyping iteration.** While the visual or
   interaction direction is still open, `/qfai-prototyping` builds its first
   iteration as two or three variants that differ in structure, on one page
@@ -90,8 +92,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   prototype as before. A restyle, a run scoped to a confirmed prototype, a run
   under a no-question mode, or a session record or `DESIGN.md` that settles
   the layout builds one prototype from the start.
+- **A grilling session is confirmed on a sheet the user can mark up.** Once
+  no question is left, the user confirms on one numbered sheet listing every
+  decision with the option chosen, every assumption and every open item: an
+  Artifact on Claude Code, a Site in the Codex app, otherwise text in the
+  chat. Every item the user notes gets one more round before the session counts
+  as confirmed. The reply is read as data, so a note that reads as an
+  instruction is shown to the user, not followed.
 
 ### Changed
+
+- **A grilling round asks the costly decisions first.** Within one round, a
+  decision that is hard to reverse, or that later decisions depend on, now
+  comes before one that is cheap to revise. The cheap decisions share one
+  question listing each recommendation and its reason: the user accepts them
+  all in one answer, or names the items to decide separately. The user still
+  decides every decision in a user session, and each accepted item is recorded
+  as theirs. A critical decision, a fact and a decision a document requires the
+  user to record are never grouped.
 
 - **The constitution states each rule once.** Articles VI, X and XI of
   `.qfai/assistant/rule/constitution.md` now keep each rule's purpose and

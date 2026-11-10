@@ -8,4 +8,4 @@ As an adopter answering an agent, I want each output put to me in the reply form
 
 - A new question, step or gate that waits on me.
 - A QFAI command or a shipped page template that builds the pages.
-- A page anyone but me can open without my approval.
+- A page anyone but me can open without my approval, a Site in the Codex app excepted, which the rule itself names as that app's reply-sheet publisher.
