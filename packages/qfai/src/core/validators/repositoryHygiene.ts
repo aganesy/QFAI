@@ -100,7 +100,7 @@ function toPosix(value: string): string {
  * lacks, read across the whole file.
  *
  * `qfai init` never re-adds a recommended entry to an existing block, so a
- * project whose block predates one — the root `tmp/` that Article XI requires
+ * project whose block predates one — the root `tmp/` that `.agents/rules/temporary-files.md` requires
  * is the case that matters — learns of it only here.
  */
 async function recommendedGitignoreIssues(root: string): Promise<Issue[]> {

@@ -1,10 +1,10 @@
 /**
- * Constitution Article XI rule 2 sends every agent's scratch work to the
- * repository-root `tmp/`, and rule 3 requires that directory to be in
- * `.gitignore` so the scratch work never reaches a commit. The managed block
- * `qfai init` owns is the only component that can satisfy rule 3, and it did
- * not carry the entry — so the first agent that obeyed Article XI left an
- * untracked directory for the next `git add .` to stage.
+ * Constitution Article XI and the temporary-files rule it points at send every
+ * agent's scratch work to the repository-root `tmp/`, and require that
+ * directory to be ignored so the scratch work never reaches a commit. The
+ * managed block `qfai init` owns is the component that writes the entry; without
+ * it, the first agent that obeyed Article XI would leave an untracked directory
+ * for the next `git add .` to stage.
  *
  * These tests pin the entry, the anchoring the block writes, and the
  * `QFAI-HYG-003` notice that nudges an older project.
@@ -39,12 +39,20 @@ const CONSTITUTION = path.join(
   repoRoot,
   "packages/qfai/assets/init/.qfai/assistant/rule/constitution.md",
 );
+const TEMPORARY_FILES_RULE = path.join(
+  repoRoot,
+  "packages/qfai/assets/init/root/.agents/rules/temporary-files.md",
+);
 
-describe("the managed block ships the ignore Article XI mandates", () => {
-  it("still states rule 3, the obligation the entry discharges", async () => {
-    const constitution = await readFile(CONSTITUTION, "utf-8");
+describe("the managed block ships the `tmp/` ignore the temporary-files rule requires", () => {
+  it("still states the obligation the entry discharges, and the article names who writes it", async () => {
+    const rule = (await readFile(TEMPORARY_FILES_RULE, "utf-8")).replace(/\s+/g, " ");
+    expect(rule).toContain(
+      "Make sure `tmp/` is ignored by version control before writing into it.",
+    );
+    const constitution = (await readFile(CONSTITUTION, "utf-8")).replace(/\s+/g, " ");
     expect(constitution).toContain(
-      "`tmp/` MUST be listed in `.gitignore` so temporary files are never committed.",
+      "The `tmp/` ignore entry is written by `npx qfai init`, and `QFAI-HYG-003` reports it at info when a QFAI-managed `.gitignore` lacks it.",
     );
   });
 

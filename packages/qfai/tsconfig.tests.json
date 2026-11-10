@@ -211,6 +211,8 @@
     "tests/cli/usageExitCodes.test.ts",
     "tests/cli/validateRunIncomplete.test.ts",
     "tests/core/assistantAnchorReferences.test.ts",
+    "tests/core/sessionReview.test.ts",
+    "tests/integration/sessionReviewCli.test.ts",
     "tests/core/sddPreflightReqCount.test.ts",
     "tests/core/designDirectionProposal.test.ts",
     "tests/core/discussionDesignMdParse.test.ts",
@@ -591,6 +593,10 @@
     "tests/unit/storyTree/decisionRegister.test.ts",
     "tests/integration/decisionPagesAcceptance.test.ts",
     "tests/integration/replyFormsRule.test.ts",
+    "tests/integration/grillingConfirmationSheet.test.ts",
+    "tests/integration/alwaysLoadedBudget.test.ts",
+    "tests/integration/doctorSkillBodyBudget.test.ts",
+    "tests/scripts/alwaysLoadedFootprint.test.ts",
     "tests/integration/grillingGlossaryCheck.test.ts"
   ]
 }

@@ -179,3 +179,4 @@
 | US-0001-0245 | Check each term against the glossary while grilling                                    | `user-story-0001-0245/` |
 | US-0001-0273 | Compare first-iteration variants before I choose a direction                           | `user-story-0001-0273/` |
 | US-0001-0293 | Correct a grilling session on its confirmation sheet                                   | `user-story-0001-0293/` |
+| US-0001-0294 | Review a finished session from its local transcript                                    | `user-story-0001-0294/` |

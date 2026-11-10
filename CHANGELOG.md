@@ -25,6 +25,36 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   otherwise. A Site is the Codex app's page for reply sheets; its audience is not
   documented, so it carries no secret, credential or personal data. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
+- **`qfai session-review` counts what a finished session shows.** The command
+  reads this project's own Claude Code and Codex transcripts on the local disk
+  and reports, per session, the QFAI hook reminders shown, the rule, skill and
+  step files read with their repeats and result bytes, the tool errors with
+  their finding codes, the `qfai` commands with their exit status, the
+  structured questions asked, and the typed turns that match a fixed list of
+  correction words. It sends nothing anywhere and prints counts and matched
+  words only, never message text, with secrets, the home directory and the
+  project root redacted. The report goes to standard output, or to `--out`;
+  `--agent`, `--session` and `--since` choose the sessions, and `--format json`
+  gives JSON. The session review in `.agents/rules/session-feedback.md` runs it
+  once for its own host as evidence and now proposes items for a rule's
+  `<name>.local.md` overlay, added only after the user approves them; a change
+  to a file QFAI ships becomes an issue draft. The `AGENTS.md` and Copilot
+  instructions `qfai init` writes now say to read a rule's overlay with the
+  rule.
+
+- **`qfai doctor` enforces the `SKILL.md` body limit.** The `assets.lineBudget`
+  check now warns for each `SKILL.md` under `.qfai/assistant/` whose body after
+  the YAML frontmatter exceeds 20,000 characters, the limit
+  `.agents/rules/ai-readable-markdown.md` states. The message names each file
+  and its size and says to move a self-contained section into the skill's
+  `references/`. Reference files are not held to it. The `qfai-grilling` skill
+  moved how a delegated session ends into its delegated-session reference to
+  stay under the limit.
+- **A fixed budget for what `qfai init` makes an agent load every session.**
+  The section init owns in `AGENTS.md`, each reminder, the reminders per prompt
+  and per session, and the listing of model-invocable skills each have a
+  character ceiling the package's tests hold. No installed text changed to meet
+  it.
 - **Diagrams are checked where they are written.** The `discussion-pack` and
   `sdd-flow` steps now run the shipped Mermaid parser on the files they wrote,
   installed under `tmp/` and never into the project's dependency tree, and
@@ -53,6 +83,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   instruction is shown to the user, not followed.
 
 ### Changed
+
+- **The constitution states each rule once.** Articles VI, X and XI of
+  `.qfai/assistant/rule/constitution.md` now keep each rule's purpose and
+  invariants and point to the file that owns the detail:
+  `.agents/rules/grilling.md` for grilling sessions,
+  `.agents/rules/user-questions.md` for the form of a question, and
+  `.agents/rules/temporary-files.md` for scratch files. Every heading and every
+  numbered rule of Article X stays; Article XI's numbered rules now live in
+  `.agents/rules/temporary-files.md`.
 
 - **The decision and question registers no longer collide across parallel
   pull requests.** A new row takes the UTC time it is written as its ID

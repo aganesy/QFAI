@@ -33,6 +33,7 @@
     "branch:catchup": "node scripts/branch-catchup.mjs",
     "pins:reseal": "node ./scripts/pin-guard-bytes.mjs && node ./scripts/pin-verification-bodies.mjs",
     "pins:entry": "node ./scripts/regen-shipped-entry.mjs",
+    "footprint:pin": "node ./scripts/pin-always-loaded-footprint.mjs",
     "lint": "eslint . --max-warnings 0",
     "lint:md": "markdownlint-cli2 \"**/*.md\"",
     "lint:mermaid": "node ./scripts/check-mermaid.mjs",
