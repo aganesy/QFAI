@@ -6,6 +6,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A restyle keeps its screens' text and starts with an audit.** Before a
+  restyle's first iteration changes a file, the session agent saves the text
+  each live route shows as a baseline, and the reviewer blocks on any text the
+  restyled screen changes, drops or replaces with prose. The same step audits
+  the running screens against the design anti-pattern list and root
+  `DESIGN.md` and sizes the restyle as `full`, `polish` or `none`, put to the
+  user before the first edit; a screen with nothing to fix is left as it is.
+  The restyle edits spacing, color, type, layout, details and motion in that
+  order, and reports a text, icon or image change as a contract change. A
+  prototype takes its sample data from the story tree's examples and invents
+  no metric, customer or testimonial.
+- **Design reviews check product fit and unconfirmed claims.** The design
+  anti-pattern list asks whether a screen would still fit another product's
+  name, and puts an unsupported claim already on a screen to the user instead
+  of deleting or rewriting it; with no user present the claim stays and becomes
+  an open question.
+
 - **Grilling checks terms against the glossary.** In every grilling session, at
   every stage, a term that conflicts with the project glossary or the
   discussion pack's glossary, or is a synonym of a term one defines, is raised

@@ -41,7 +41,9 @@ transition-pass percentages as a substitute for the qualitative review.
   scope: open each listed route in the running app and review it there.
   The list page is not a screen, and the screens are the project's own.
   Read the edited stylesheet and motion files as well when filling
-  `designMdViolations[]`.
+  `designMdViolations[]`. Compare each route with its baseline,
+  `.qfai/prototype/baseline/<ui-contract-id>/<screen>.txt`, as
+  [What blocks](#what-blocks) says.
   When `progress.md` records a `runScope`, review its in-scope screens in
   full. On each render-check screen, check only that the in-scope component
   renders there: one that does not render, or that breaks the screen around
@@ -325,6 +327,14 @@ A finding blocks when the iteration cannot ship with it. Unreachable
 content, a task that cannot be completed, a state the spec requires and
 the screen does not show, a control whose effect is unknowable until it
 is pressed.
+
+In a `restyle` iteration, text the screen showed before the restyle and no
+longer shows unchanged also blocks: a figure, a proper name, a field value or
+any other text in the route's baseline that the screen now changes, drops or
+replaces with prose. The finding names the screen, the baseline text and what
+the screen shows instead. A restyle keeps the screens, fields and behaviour it
+found, so this needs no other authority. A missing baseline is a missing
+mandatory input.
 
 An observation that something could be better is not a finding. It goes
 in `proseCritique`, where it informs the next iteration. Whether the

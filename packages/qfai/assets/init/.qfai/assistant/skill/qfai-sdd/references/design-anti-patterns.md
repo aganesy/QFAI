@@ -39,6 +39,16 @@ naming the pattern is what works.
 - **Replacing a pattern.** Its usual substitute is in
   [Displacement](#displacement). Moving from one to the other is the same
   defect.
+- **Checking product fit.** Where the design direction, root `DESIGN.md` or a
+  screen is reviewed, ask one more question: if another product's name
+  replaced this one, would the screen still fit? A yes is a finding that names
+  where the direction should become specific to this product: the copy, the
+  one distinctive element, or the visual. It is a reviewer's judgement, not a
+  detection, and it adds no `lap-*` entry.
+- **A claim nobody has confirmed.** Whether writing root `DESIGN.md`, building
+  a screen or reviewing one, follow
+  [Claims nobody has confirmed](#claims-nobody-has-confirmed) before deleting
+  or rewriting one.
 - Within each aspect, the pattern named most often comes first.
 
 ## Where the list stops
@@ -59,6 +69,9 @@ naming the pattern is what works.
   through the criterion on explanatory text, because those patterns are about
   what the text tells the user, not about a brand. No entry here is a `lap-*`
   detection.
+- The audit that opens a restyle applies every section, identity included: it
+  reads screens the project already runs, which root `DESIGN.md` did not
+  produce.
 
 ## Color and background
 
@@ -271,6 +284,25 @@ naming the pattern is what works.
 - Button labels mix two languages.
 - The screen shows technical detail nobody asked for, such as GPU status or
   average generation time.
+
+### Claims nobody has confirmed
+
+A metric, a customer count, a testimonial or a "trusted by" row that is
+already on the screen, or in material the user supplied, and that the
+project's documents do not support is not deleted and not rewritten into
+something more specific: deleting it can lose a real fact, and rewriting it
+invents one. A claim an agent writes itself stays the _invented proof_
+pattern above: never write one.
+
+- Put each such claim to the user under the question protocol.
+- A claim the user confirms keeps its wording, or becomes specific with the
+  facts the user gives. A claim the user rejects is removed.
+- With no user present, the claim stays as it is, becomes one row in
+  `open-questions.md` under `paths.specsDir`, and the final report lists it.
+- Inside the prototyping loop, the claim and the user's answer go to the final
+  report instead: a restyle changes no displayed text, so a claim to remove or
+  reword is reported as a change the contract needs, and the loop writes only
+  under `.qfai/prototype/`.
 
 ## Copy that adds no meaning
 

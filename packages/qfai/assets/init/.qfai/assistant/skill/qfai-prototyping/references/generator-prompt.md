@@ -292,6 +292,26 @@ envelope, the one self-contained file, the `<link rel="stylesheet">` ban and
 - The seed and pivot rules below do not apply as written. The first restyle
   iteration restyles the screens as they are, and a restyle `pivot` rethinks
   only the visual treatment: screens, fields and behaviour stay.
+- Change only what the `restyleLevel` in `progress.md` allows: at `polish`,
+  only what the audit found, keeping the palette, type and layout; at `none`,
+  only the refinements the user accepted, as `progress.md` lists them.
+- Keep every text the screens show: figures, proper names, field values and
+  copy. Changing displayed text, an icon or an image is not a restyle; report
+  it as a change the contract needs.
+
+Edit the aspects a stylesheet and motion reach in this order, and finish each
+across every screen in scope before starting the next: spacing, color, type,
+layout, details such as radius, borders, shadows and states, then motion.
+Layout means only what the stylesheet arranges; new markup is a contract
+change. The order follows what depends on what:
+
+- Spacing comes first, because once the rhythm is right every other element
+  reads differently.
+- Type comes before layout, because a heading's size decides where it sits.
+- Motion comes last, because it fits a screen that already works without it.
+
+When nearly every rule changes, plan the aspects in this order and write the
+result in one pass, as long as each aspect is applied.
 
 ### Scoped runs
 
@@ -310,6 +330,13 @@ Produce one self-contained `iter-NN/index.html` for the run's first
 iteration (`iter-00` in a first run) that satisfies the spec
 under the DESIGN.md tokens. Lead with the user's primary task;
 respect `audience.do_not_look_like`.
+
+Take the sample data from the examples that the in-scope UI contract's rules
+cite: their figures, names and values. Where no example gives a value the
+screen needs, write a neutral one, use it the same way on every screen, and
+list it in `progress.md` as sample data no example supplies. A neutral value
+is never a claim: invent no metric, customer count, customer name or
+testimonial, which the design anti-pattern list names as invented proof.
 
 When `progress.md` records `variants` other than `none`, the file holds each
 listed variant of the in-scope screens:
