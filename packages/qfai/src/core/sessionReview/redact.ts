@@ -39,18 +39,24 @@ export function redact(text: string, context: RedactContext): string {
   return out;
 }
 
-/** Replace `dir` in either slash style, and on Windows in any letter case. */
+/**
+ * Replace `dir` where it ends at a path-segment boundary, in either slash style. On Windows it is
+ * matched in any letter case and in the Git Bash form too, `/c/...` for `C:\...`.
+ */
 function replacePath(
   text: string,
   dir: string,
   placeholder: string,
   platform: NodeJS.Platform,
 ): string {
-  const trimmed = dir.replace(/[\\/]+$/, "");
-  if (trimmed === "") return text;
-  const pattern = trimmed
-    .split(/[\\/]+/)
-    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-    .join("[\\\\/]+");
+  const parts = dir.replace(/[\\/]+$/, "").split(/[\\/]+/);
+  if (parts.join("") === "") return text;
+  const escape = (part: string): string => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const forms = [parts.map(escape).join("[\\\\/]+")];
+  const drive = /^([A-Za-z]):$/.exec(parts[0] ?? "");
+  if (platform === "win32" && drive !== null) {
+    forms.push(["", (drive[1] ?? "").toLowerCase(), ...parts.slice(1)].map(escape).join("/"));
+  }
+  const pattern = `(?:${forms.join("|")})(?![A-Za-z0-9._-])`;
   return text.replace(new RegExp(pattern, platform === "win32" ? "gi" : "g"), placeholder);
 }

@@ -9,7 +9,7 @@ import type { Count, SessionSignals } from "./signals.js";
 
 export type ReviewedSession = { agent: Agent; sessionId: string; signals: SessionSignals };
 
-/** The heading a session takes, and the base name a saved report of it would take. */
+/** The heading a session takes. */
 export function sessionName(session: Pick<ReviewedSession, "agent" | "sessionId">): string {
   return `${session.agent}-${session.sessionId}`;
 }
@@ -58,7 +58,7 @@ export function renderMarkdown(
   const lines = ["# Session review", ""];
   for (const session of sessions) {
     const s = session.signals;
-    lines.push(`## ${clean(sessionName(session))}`, "");
+    lines.push(`## ${inline(clean(sessionName(session)))}`, "");
     lines.push(
       `- Records: ${s.records}; lines that are not JSON records: ${s.malformed}`,
       `- Typed user turns: ${s.typedTurns}`,
@@ -128,9 +128,14 @@ function section(
   lines.push("");
 }
 
-/** A table cell: a pipe would end it early. */
+/** Text on one Markdown line: a line break would end the line, so it becomes a space. */
+function inline(text: string): string {
+  return text.replace(/[\r\n]+/g, " ");
+}
+
+/** A table cell: on one line, and a pipe would end it early. */
 function cell(text: string): string {
-  return text.replace(/\|/g, "\\|");
+  return inline(text).replace(/\|/g, "\\|");
 }
 
 function countList(counts: readonly Count[], clean: (text: string) => string): string {

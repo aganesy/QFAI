@@ -1,3 +1,4 @@
+import { sinceInstant } from "../../core/sessionReview/locate.js";
 import { STORY_TREE_ID_KINDS, type StoryTreeIdKind } from "../../core/storyTree/ids.js";
 
 const NEXT_ID_USAGE = "qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>";
@@ -782,8 +783,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           break;
         }
         if (command !== "session-review") markInvalid(notValidHere("--since"));
-        else if (Number.isNaN(Date.parse(next)))
-          markInvalid(badValue("--since", next, "an ISO date, such as 2026-11-01"));
+        else if (sinceInstant(next) === null)
+          markInvalid(
+            badValue(
+              "--since",
+              next,
+              "an ISO 8601 date (midnight UTC), such as 2026-11-01, or a date and time with Z or an offset",
+            ),
+          );
         else options.sessionReviewSince = next;
         break;
       }

@@ -14,10 +14,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { isFileSystemError } from "../../core/fs.js";
 import { error, info } from "../../core/logger.js";
-import { isRecord, stringAt } from "../../core/sessionReview/events.js";
+import { isMissing, isRecord, stringAt } from "../../core/sessionReview/events.js";
 import {
   locateSessions,
+  sinceInstant,
   type Agent,
   type LocateEnvironment,
   type SessionFile,
@@ -48,19 +50,50 @@ export type SessionReviewOptions = {
 export async function runSessionReview(options: SessionReviewOptions): Promise<number> {
   const root = path.resolve(options.root);
   const env = options.env ?? environmentFromProcess();
+  const clean = (text: string): string =>
+    redact(text, { root, home: env.home, platform: env.platform });
+  try {
+    return await review(root, env, options, clean);
+  } catch (cause) {
+    // A transcript, the reminder file or the --out file that is there but cannot be read or
+    // written ends the run; the message names its path only as the report would.
+    if (!(cause instanceof Error)) throw cause;
+    if (!(cause instanceof ReminderFileError) && !isFileSystemError(cause)) throw cause;
+    error(`qfai session-review: ${clean(cause.message)}`);
+    return EXIT_CODES.findings;
+  }
+}
+
+/** The project file that maps each reminder text to its key. */
+const REMINDERS = ".agents/rules/reminders.json";
+
+/** A `.agents/rules/reminders.json` that is there but is not a JSON object. */
+class ReminderFileError extends Error {}
+
+async function review(
+  root: string,
+  env: LocateEnvironment,
+  options: SessionReviewOptions,
+  clean: (text: string) => string,
+): Promise<number> {
   const agents: Agent[] =
     options.agent === undefined || options.agent === "all" ? ["claude", "codex"] : [options.agent];
-
   const located = await locateSessions(root, agents, env);
   const chosen = choose(located, options);
   if (chosen === null) {
     error(
-      `qfai session-review: no transcript of session ${options.sessionId ?? ""} belongs to this project.`,
+      clean(
+        `qfai session-review: no transcript of session ${options.sessionId ?? ""} belongs to this project.`,
+      ),
     );
     return EXIT_CODES.inputError;
   }
   if (chosen.length === 0) {
-    info("qfai session-review: no session transcript of this project was found.");
+    info(
+      options.since !== undefined && located.length > 0
+        ? `qfai session-review: no session of this project changed at or after ${options.since}.`
+        : "qfai session-review: no session transcript of this project was found.",
+    );
     return EXIT_CODES.ok;
   }
 
@@ -78,8 +111,6 @@ export async function runSessionReview(options: SessionReviewOptions): Promise<n
     });
   }
 
-  const clean = (text: string): string =>
-    redact(text, { root, home: env.home, platform: env.platform });
   const rendered =
     options.format === "json" ? renderJson(sessions, clean) : renderMarkdown(sessions, clean);
   if (options.outPath === undefined) {
@@ -94,8 +125,9 @@ export async function runSessionReview(options: SessionReviewOptions): Promise<n
 }
 
 /**
- * The sessions the options select: the named one, those since the date, or the latest of each
- * agent. `null` when a named session is not among them.
+ * The sessions the options select: the named one, those whose transcript changed at or after the
+ * date, or the one of each agent whose transcript changed last. `null` when a named session is
+ * not among them.
  */
 function choose(
   located: readonly SessionFile[],
@@ -106,7 +138,7 @@ function choose(
     return named.length > 0 ? named : null;
   }
   if (options.since !== undefined) {
-    const since = Date.parse(options.since);
+    const since = sinceInstant(options.since) ?? Number.POSITIVE_INFINITY;
     return located.filter((session) => session.mtimeMs >= since);
   }
   const latest = new Map<Agent, SessionFile>();
@@ -117,18 +149,28 @@ function choose(
   return located.filter((session) => latest.get(session.agent) === session);
 }
 
-/** Each reminder text in the project's `.agents/rules/reminders.json`, mapped to its key. */
+/**
+ * Each reminder text in the project's `.agents/rules/reminders.json`, mapped to its key. A project
+ * without the file has none; a file that is not a JSON object fails the run, since every key
+ * would otherwise change without a word.
+ */
 async function reminderTexts(root: string): Promise<Map<string, string>> {
   const texts = new Map<string, string>();
+  const file = path.join(root, ...REMINDERS.split("/"));
+  let raw: string;
+  try {
+    raw = await readFile(file, "utf-8");
+  } catch (cause) {
+    if (isMissing(cause)) return texts;
+    throw cause;
+  }
   let parsed: unknown;
   try {
-    parsed = JSON.parse(
-      await readFile(path.join(root, ".agents", "rules", "reminders.json"), "utf-8"),
-    );
-  } catch {
-    return texts;
+    parsed = JSON.parse(raw);
+  } catch (cause) {
+    throw new ReminderFileError(`${REMINDERS} is not valid JSON`, { cause });
   }
-  if (!isRecord(parsed)) return texts;
+  if (!isRecord(parsed)) throw new ReminderFileError(`${REMINDERS} is not a JSON object`);
   for (const [key, entry] of Object.entries(parsed)) {
     const full = stringAt(
       isRecord(entry) ? entry.hookSpecificOutput : undefined,

@@ -26,9 +26,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   project root redacted. The report goes to standard output, or to `--out`;
   `--agent`, `--session` and `--since` choose the sessions, and `--format json`
   gives JSON. The session review in `.agents/rules/session-feedback.md` runs it
-  once as evidence and now proposes itemised changes: one to the adopter's own
-  `*.local.md` overlays or spec records is applied only after the user approves
-  it, and one to a file QFAI ships becomes an issue draft.
+  once for its own host as evidence and now proposes items for a rule's
+  `<name>.local.md` overlay, added only after the user approves them; a change
+  to a file QFAI ships becomes an issue draft. The `AGENTS.md` and Copilot
+  instructions `qfai init` writes now say to read a rule's overlay with the
+  rule.
 
 ### Changed
 

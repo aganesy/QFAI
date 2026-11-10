@@ -25,3 +25,12 @@
 {"type":"user","cwd":"/work/app","message":{"role":"user","content":[{"type":"text","text":"\u305D\u308C\u306F\u9055\u3046"}]}}
 {not json
 plain text line
+{"type":"attachment","cwd":"/work/app","attachment":{"type":"hook_additional_context","hookEvent":"UserPromptSubmit","content":["QFAI free-text entry: for each new request, invoke the qfai-run skill first."]}}
+{"type":"attachment","cwd":"/work/app","attachment":{"type":"hook_additional_context","hookEvent":"UserPromptSubmit","content":["For new requests the user wrote, use qfai-run to plan."]}}
+{"type":"attachment","cwd":"/work/app","attachment":{"type":"hook_additional_context","hookEvent":"UserPromptSubmit","content":["QFAI grilling (.agents/rules/grilling.md): a wording this project does not list."]}}
+{"type":"assistant","cwd":"/work/app","message":{"role":"assistant","content":[{"type":"tool_use","id":"t9","name":"Bash","input":{"command":"npx qfai validate","run_in_background":true}}]}}
+{"type":"user","cwd":"/work/app","toolUseResult":{},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t9","content":"Command running in background with ID: b1. Output is being written to: out.txt"}]}}
+{"type":"assistant","cwd":"/work/app","message":{"role":"assistant","content":[{"type":"tool_use","id":"t10","name":"Bash","input":{"command":"git commit -m \"make qfai validate faster\" && echo \"qfai is ready\""}}]}}
+{"type":"user","cwd":"/work/app","toolUseResult":{},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t10","content":"committed"}]}}
+{"type":"assistant","cwd":"/work/app","message":{"role":"assistant","content":[{"type":"tool_use","id":"t11","name":"Bash","input":{"command":"cat /c/work/app/.agents/rules/../../src/secret.ts"}}]}}
+{"type":"user","cwd":"/work/app","toolUseResult":{},"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t11","content":"secret"}]}}

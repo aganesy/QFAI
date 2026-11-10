@@ -12,3 +12,9 @@
 {"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Stop, revert that."}],"internal_chat_message_metadata_passthrough":{"content_item_kinds":["user.text"]}}}
 {"type":"event_msg","payload":{"type":"token_count"}}
 not json at all
+{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"# AGENTS.md instructions for /work/app\n<INSTRUCTIONS>do not stop</INSTRUCTIONS>"}],"internal_chat_message_metadata_passthrough":{"content_item_kinds":["user.text"]}}}
+{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"An unmarked message: wrong, stop."}]}}
+{"type":"response_item","payload":{"type":"function_call","name":"read_file","call_id":"c4","arguments":"{\"path\":\"log.txt\"}"}}
+{"type":"response_item","payload":{"type":"function_call_output","call_id":"c4","output":"Exit code: 1\nfrom an old log"}}
+{"type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"c5","arguments":"{\"cmd\":\"npx qfai doctor\"}"}}
+{"type":"response_item","payload":{"type":"function_call_output","call_id":"c5","output":"{\"exit_code\":0,\"output\":\"a test log line: Exit code: 1\"}"}}

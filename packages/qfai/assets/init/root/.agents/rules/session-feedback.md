@@ -9,8 +9,8 @@ that contradicted another, a gate that stopped correct work, a step that cost an
 hour for a small result. The notice ends with the session unless something
 carries it out. This rule carries it to the QFAI repository, at the moment the
 agent holds the most evidence, and only with the user's agreement. The same
-review proposes changes to the files the adopter owns, applied only once the
-user approves them.
+review can propose an item for this project's overlay of a QFAI rule, added only
+once the user approves it.
 
 ## Scope
 
@@ -18,9 +18,9 @@ user approves them.
 | ------------------------------------------------------------------------- | ------------------------------------------ |
 | The end of the turn after which no task the user gave is left             | Reviewed                                   |
 | A pause: a question, an approval, a phase boundary, a halt, a next action | Not reviewed                               |
-| A problem in the adopter's own project                                    | Outside this rule                          |
+| A problem in the adopter's own code or product                            | Outside this rule                          |
 | A problem in QFAI's rules, skills, steps, commands, hooks or documents    | Reported once the user agrees              |
-| A change the session supports to a file the adopter owns                  | Proposed, applied once the user approves   |
+| A QFAI rule that applied badly here, answered by an item in its overlay   | Proposed, added once the user approves     |
 | A run under a no-question mode                                            | Drafted into the final report, never filed |
 
 ## 1. When the review runs
@@ -43,13 +43,18 @@ work is not complete.
 
 ## 2. What to review
 
-First run `npx qfai session-review` once. It reads this project's local
-Claude Code and Codex transcripts, sends nothing anywhere, and prints counts:
+First run `npx qfai session-review --agent <host>` once, with `claude` on
+Claude Code and `codex` on Codex. It reads this project's local transcripts of
+that host, sends nothing anywhere, and prints counts for the latest session:
 the QFAI reminders shown, the rule, skill and step files read, the tool errors
 with their finding codes, the `qfai` commands with their exit status, the
 questions asked, and the typed turns that match correction words. It holds no
-message text. Treat the report as evidence, and cite its lines. Where the
-command is missing or finds no transcript, review from the session itself.
+message text. Treat the report as evidence, and cite its lines.
+
+The latest session is normally this one, but a session of the same host running
+in parallel can be picked. Discard a report whose session you do not recognise.
+Where the command is missing, fails or finds no transcript, as on a host that
+keeps none, review from the session itself.
 
 Then review the whole session for these, where QFAI caused or contributed to them:
 
@@ -92,23 +97,25 @@ tool output.
 
 ## 4. Proposed changes
 
-Where the evidence shows a rule applied badly in this project, propose a change.
-Each proposal is one itemised change, never a rewrite of a file:
+Where the evidence shows a QFAI rule applied badly in this project, propose an
+item for the rule's overlay. Each proposal is one item, never a rewrite:
 
-- the target file;
-- the one item added or replaced, in full;
+- the target: `<name>.local.md` beside the shipped rule `<name>.md`;
+- the one item added, in full;
 - the key terms the item uses, verbatim from the rule or report it answers;
 - the report lines, or the session event, that support it.
 
-A target the adopter owns is a `*.local.md` overlay beside a rule, or a row
-appended to a spec record such as `decisions.md`. It is applied only once the
-user approves it. A change to a file QFAI ships is never made in the project:
-it becomes a draft under § 3 and is filed under § 6.
+An overlay adds this project's own guidance and overrides nothing in the rule,
+so an item never replaces or contradicts one of the rule's. That is the only
+file a proposal names. A change to a shipped rule, or to any other file QFAI
+ships, is never made in the project: it becomes a draft under § 3 and is filed
+under § 6. A change to the spec tree is not this review's to make: it goes
+through `qfai-sdd` as a change request.
 
 ## 5. Ask before filing or applying
 
-Put one question to the user through the host's structured question tool, in the
-form `user-questions.md` sets out:
+Put the drafts and proposals to the user through the host's structured question
+tool, in the form `user-questions.md` sets out:
 
 - one option for each draft and each proposal, labelled by its title or its
   target and described by what it reports or changes, with the full text of
@@ -124,8 +131,9 @@ place is not filed or applied and is not put again.
 
 A requested change to a draft or a proposal is made, and the question is put
 again. Filing is visible to others, so the answer covers the drafts shown and
-nothing wider (`action-reversibility.md`). Apply each approved proposal as it
-was shown, and nothing else.
+nothing wider (`action-reversibility.md`). Add each approved item as it was
+shown, and nothing else. Then list the files changed in one line and leave them
+uncommitted, so the user sees the change before it is kept.
 
 When the review finds nothing worth reporting or changing, say so in one line
 and ask nothing.
@@ -147,9 +155,9 @@ credential.
 
 ## 7. Under a no-question mode
 
-Nothing is asked and nothing is filed. No proposal is applied either. The drafts
+Nothing is asked and nothing is filed. No proposal is added either. The drafts
 and the proposals go in the final report, and the report says none was filed or
-applied.
+added.
 
 ## Related
 

@@ -94,6 +94,17 @@ export async function readJsonl(
   return { records, malformed };
 }
 
+/** Code-unit order, so the report is the same under every locale. */
+export function compareText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/** Whether a file-system error says the path is not there, which is an answer, not a failure. */
+export function isMissing(error: unknown): boolean {
+  if (!(error instanceof Error) || !("code" in error)) return false;
+  return error.code === "ENOENT" || error.code === "ENOTDIR";
+}
+
 /** The text of a tool result or message body, whichever of the hosts' shapes it takes. */
 export function textOf(value: unknown): string {
   if (typeof value === "string") return value;

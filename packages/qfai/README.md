@@ -362,11 +362,13 @@ flowchart LR
     read, the tool errors with their finding codes, the `qfai` commands with their exit status, the
     structured questions asked, and the typed turns that match a fixed list of correction words.
     It reads local files only, sends nothing anywhere, and prints counts and matched words, never
-    message text. With no option it reports the latest session of each agent; `--agent claude|codex`,
-    `--session <id>` and `--since <date>` choose others. The report goes to standard output, or to
+    message text. With no option it reports, for each agent, the session whose transcript changed
+    last; `--agent claude|codex`, `--session <id>` and `--since <value>` choose others. `--since`
+    takes an ISO 8601 date, read as midnight UTC, or a date and time with `Z` or an offset. The report goes to standard output, or to
     `--out <path>`; `--format json` gives JSON. `CLAUDE_CONFIG_DIR` and `CODEX_HOME` move where the
-    transcripts are looked for. Exit codes: 0 (a report, or no transcript found), 2 (a usage error,
-    or `--session` names no session of the project), 1 (a file could not be read or written).
+    transcripts are looked for. Exit codes: 0 (a report, or no session found), 2 (a usage error, or
+    `--session` names no session of the project), 1 (a transcript, `.agents/rules/reminders.json`
+    or the `--out` file could not be read or written, or `reminders.json` is not a JSON object).
 - `npx qfai workflow plan`
   - The route planning behind the free-text entry. `--in <path>`, or `--in -` for standard input,
     reads a request's extraction; `--route <route>` names a route instead. It prints one JSON

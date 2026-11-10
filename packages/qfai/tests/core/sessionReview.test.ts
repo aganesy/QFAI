@@ -24,7 +24,9 @@ import {
   correctionWords,
   pathsInCommand,
   qfaiCommandsIn,
+  reminderKey,
   summarise,
+  watchedPath,
   type ProjectFacts,
 } from "../../src/core/sessionReview/signals.js";
 
@@ -38,13 +40,17 @@ const FIXTURE_ROOT = "/work/app";
 
 /** The key `.agents/rules/reminders.json` gives each reminder text, as the project ships it. */
 const REMINDER_TEXTS: ReadonlyMap<string, string> = new Map([
-  ["QFAI API budget (.agents/rules/api-budget.md): ask git first, then REST.", "api-budget"],
+  ["QFAI API budget (.agents/rules/api-budget.md). Ask git first.", "api-budget"],
   [
-    "QFAI user questions (.agents/rules/user-questions.md): ask only when needed.",
+    "QFAI user questions (.agents/rules/user-questions.md): ask only when the next step needs it.",
     "structured-question",
   ],
-  ["QFAI grilling (.agents/rules/grilling.md): one.", "grilling-plan"],
-  ["QFAI grilling (.agents/rules/grilling.md): two.", "grilling-delegation"],
+  [
+    "QFAI free-text entry: for each new request, invoke the qfai-run skill first.",
+    "free-text-entry",
+  ],
+  // A brief text does not start with "QFAI", and is still the reminder's.
+  ["For new requests the user wrote, use qfai-run to plan.", "free-text-entry"],
 ]);
 
 const FACTS: ProjectFacts = {
@@ -116,30 +122,38 @@ describe("where the transcripts are", () => {
     expect(found.map((session) => session.sessionId)).toEqual(["chosen"]);
   });
 
-  it("falls back to the transcript whose recorded cwd is the root when no directory has its name", async () => {
+  it("falls back to a directory sharing the slug's start whose transcript records the root as cwd", async () => {
     const base = await tempDir();
     const root = path.join(base, "project");
     const env = environment(base);
+    const slug = claudeProjectSlug(root);
+    const projects = path.join(base, "claude", "projects");
+    const own = await fixtureFor(CLAUDE_FIXTURE, root);
+    await place(path.join(projects, `${slug}-shortened`, "found.jsonl"), own);
     await place(
-      path.join(base, "claude", "projects", "shortened-name", "found.jsonl"),
-      await fixtureFor(CLAUDE_FIXTURE, root),
-    );
-    await place(
-      path.join(base, "claude", "projects", "another", "elsewhere.jsonl"),
+      path.join(projects, `${slug}-other`, "elsewhere.jsonl"),
       await fixtureFor(CLAUDE_FIXTURE, path.join(base, "elsewhere")),
     );
+    // A directory that does not share the slug's start is never opened.
+    await place(path.join(projects, "unrelated", "unread.jsonl"), own);
 
     const found = await locateSessions(root, ["claude"], env);
     expect(found.map((session) => session.sessionId)).toEqual(["found"]);
   });
 
-  it("matches the recorded cwd with other letter case and slashes on Windows", async () => {
+  it("matches the directory and the recorded cwd with other letter case and slashes on Windows", async () => {
     const base = await tempDir();
     const root = path.join(base, "Project");
     const env = { ...environment(base), platform: "win32" as const };
     const recorded = root.toLowerCase().replace(/\\/g, "/");
     await place(
-      path.join(base, "claude", "projects", "other-name", "cased.jsonl"),
+      path.join(
+        base,
+        "claude",
+        "projects",
+        `${claudeProjectSlug(root).toLowerCase()}-x`,
+        "cased.jsonl",
+      ),
       await fixtureFor(CLAUDE_FIXTURE, recorded),
     );
 
@@ -183,10 +197,13 @@ describe("what a Claude Code transcript shows", () => {
     return summarise(await parseClaudeTranscript(CLAUDE_FIXTURE), FACTS);
   }
 
-  it("counts each QFAI reminder under its key and leaves the project's own hook context out", async () => {
+  it("counts each reminder under its key, a brief text too, and leaves the project's own context out", async () => {
     expect((await claudeSignals()).reminders).toEqual([
       { name: "api-budget", count: 2 },
+      { name: "free-text-entry", count: 2 },
       { name: "structured-question", count: 1 },
+      // A QFAI wording the project's file does not list is counted, and its text is not shown.
+      { name: "unregistered", count: 1 },
     ]);
   });
 
@@ -204,16 +221,23 @@ describe("what a Claude Code transcript shows", () => {
     ]);
   });
 
-  it("lists each qfai command with its exit status, and a skill name is no command", async () => {
+  it("lists each qfai command with its exit status; quoted text and a skill name are no command", async () => {
     expect((await claudeSignals()).qfaiCommands).toEqual([
       {
         command: "qfai validate",
-        runs: 2,
+        runs: 3,
         exits: [
           { name: "0", count: 1 },
           { name: "1", count: 1 },
+          // A command sent to the background has no exit status yet.
+          { name: "unknown", count: 1 },
         ],
       },
+    ]);
+    expect(qfaiCommandsIn('git commit -m "make qfai validate faster"')).toEqual([]);
+    expect(qfaiCommandsIn("cd app && npx qfai report\nqfai workflow plan --order")).toEqual([
+      "qfai report",
+      "qfai workflow plan",
     ]);
     expect(qfaiCommandsIn("echo qfai-run && npx qfai sdd next-id US BF-0001")).toEqual([
       "qfai sdd next-id",
@@ -252,10 +276,13 @@ describe("what a Claude Code transcript shows", () => {
   });
 });
 
+// QFAI:EX-0001-0240-11
+// QFAI:EX-0001-0240-12
+// QFAI:EX-0001-0240-14
 describe("what a Codex rollout shows", () => {
   it("counts the hook context, the shell-named rule file, the failed call and the questions", async () => {
     const signals = summarise(await parseCodexTranscript(CODEX_FIXTURE), FACTS);
-    expect(signals.records).toBe(13);
+    expect(signals.records).toBe(19);
     expect(signals.malformed).toBe(1);
     expect(signals.reminders).toEqual([{ name: "api-budget", count: 1 }]);
     expect(signals.reads.map((read) => [read.path, read.reads])).toEqual([
@@ -264,15 +291,21 @@ describe("what a Codex rollout shows", () => {
     expect(signals.toolErrors).toEqual([
       { tool: "exec_command", count: 1, codes: [{ name: "QFAI-SCAN-002", count: 1 }] },
     ]);
+    // The status a command's own output prints, and a status in a non-shell output, are not the call's.
     expect(signals.qfaiCommands).toEqual([
+      { command: "qfai doctor", runs: 1, exits: [{ name: "0", count: 1 }] },
       { command: "qfai validate", runs: 1, exits: [{ name: "1", count: 1 }] },
     ]);
     expect(signals.questions).toEqual({ calls: 1, items: 2 });
+    // Injected AGENTS.md instructions and an unmarked message are not typed turns.
     expect(signals.typedTurns).toBe(2);
     expect(signals.corrections).toEqual([{ turn: 2, words: ["revert", "stop"] }]);
   });
 });
 
+// QFAI:EX-0001-0240-09
+// QFAI:EX-0001-0240-10
+// QFAI:EX-0001-0240-14
 describe("the signal helpers", () => {
   it("reads a watched path named under the root in either slash style, never one a patch writes", () => {
     const facts = { root: "C:\\Work\\App", platform: "win32" as const };
@@ -281,6 +314,28 @@ describe("the signal helpers", () => {
     ]);
     expect(pathsInCommand("cat ./.agents/rules/*.md .agents/rules/", facts)).toEqual([]);
     expect(pathsInCommand("apply_patch .agents/rules/a.md", facts)).toEqual([]);
+  });
+
+  it("reads the Git Bash form of a Windows root, and resolves .. before judging a path", () => {
+    const facts = { root: "C:\\Work\\App", platform: "win32" as const };
+    expect(pathsInCommand("cat /c/Work/App/.agents/rules/grilling.md", facts)).toEqual([
+      ".agents/rules/grilling.md",
+    ]);
+    expect(pathsInCommand("cat .agents/rules/../../src/secret.ts", facts)).toEqual([]);
+    expect(watchedPath("C:/Work/App/.qfai/assistant/./rule/a.md", facts)).toBe(
+      ".qfai/assistant/rule/a.md",
+    );
+    expect(watchedPath("C:/Work/App/.agents/rules/../../src/a.ts", facts)).toBeNull();
+  });
+
+  it("keys a hook context by exact text first, else unregistered when it names QFAI", () => {
+    expect(
+      reminderKey("For new requests the user wrote, use qfai-run to plan.", REMINDER_TEXTS),
+    ).toBe("free-text-entry");
+    expect(reminderKey("QFAI token for user alice is wrong, see note", REMINDER_TEXTS)).toBe(
+      "unregistered",
+    );
+    expect(reminderKey("The project's own reminder.", REMINDER_TEXTS)).toBeNull();
   });
 
   it("matches English correction words whole, so a longer word is not one", () => {
@@ -304,6 +359,37 @@ describe("what the report may carry", () => {
         platform: "win32",
       }),
     ).toBe("<root>\\x");
+  });
+
+  it("replaces the root and home only at a path-segment boundary, and the Git Bash form on Windows", () => {
+    expect(redact("/home/dev/app2/x and /home/developer/y", context)).toBe(
+      "~/app2/x and /home/developer/y",
+    );
+    expect(
+      redact("cat /c/Users/Dev/App/x", {
+        root: "C:\\Users\\Dev\\App",
+        home: "C:\\Users\\Dev",
+        platform: "win32",
+      }),
+    ).toBe("cat <root>/x");
+  });
+
+  it("keeps a heading and a table cell on one line whatever a transcript string holds", () => {
+    const events: SessionEvents = {
+      records: 1,
+      malformed: 0,
+      hookContexts: [],
+      calls: [{ id: "x", name: "tool\n## injected | cell" }],
+      results: [{ id: "x", isError: true, text: "", exitCode: null }],
+      userTurns: [],
+    };
+    const rendered = renderMarkdown(
+      [{ agent: "codex", sessionId: "id\n# also", signals: summarise(events, FACTS) }],
+      (text) => text,
+    );
+    expect(rendered).toContain("## codex-id # also\n");
+    expect(rendered).toContain("| tool ## injected \\| cell | 1 | - |");
+    expect(rendered).not.toMatch(/^## injected/m);
   });
 
   it("blanks every secret shape in the fixed set", () => {

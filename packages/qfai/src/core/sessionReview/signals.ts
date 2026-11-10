@@ -5,7 +5,9 @@
  * Nothing a message says leaves this module except a word from the fixed correction list, so the
  * report cannot carry a sentence the user or the agent wrote.
  */
-import type { SessionEvents, ToolCall, ToolResult } from "./events.js";
+import path from "node:path";
+
+import { compareText, type SessionEvents, type ToolCall, type ToolResult } from "./events.js";
 
 export type Count = { name: string; count: number };
 
@@ -79,8 +81,9 @@ const CORRECTION_WORDS_JA = [
 ] as const;
 
 const FINDING_CODE = /\bQFAI-[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\d{3}\b/g;
+/** `qfai` at command position: a line start, or after `;`, `&`, `|` or `(`, never inside quotes. */
 const QFAI_COMMAND =
-  /(?:^|[\s;&|("'`])(?:npx\s+(?:-y\s+|--yes\s+)?|pnpm\s+(?:exec\s+)?|(?:\.\/)?node_modules\/\.bin\/)?qfai\s+([a-z][a-z-]*)(?:\s+([a-z][a-z-]*))?/g;
+  /(?:^|[;&|(])[ \t]*(?:npx[ \t]+(?:-y[ \t]+|--yes[ \t]+)?|pnpm[ \t]+(?:exec[ \t]+)?|(?:\.\/)?node_modules\/\.bin\/)?qfai[ \t]+([a-z][a-z-]*)(?:[ \t]+([a-z][a-z-]*))?/gm;
 const COMMANDS_WITH_SUBCOMMAND: ReadonlySet<string> = new Set([
   "atdd",
   "discussion",
@@ -88,10 +91,16 @@ const COMMANDS_WITH_SUBCOMMAND: ReadonlySet<string> = new Set([
   "workflow",
 ]);
 
+/** Openings of text the host writes into a user message: wrappers, notices, injected instructions. */
+const HOST_TEXT_OPENINGS = ["<", "[Request interrupted", "# AGENTS.md instructions"] as const;
+
+/** The key a hook context that names QFAI but is none of the project's reminder texts takes. */
+export const UNREGISTERED_REMINDER = "unregistered";
+
 /** Whether a user message's text is one the user typed, not a wrapper or a notice the host wrote. */
 export function isTypedTurn(text: string): boolean {
   const trimmed = text.trim();
-  return trimmed !== "" && !trimmed.startsWith("<") && !trimmed.startsWith("[Request interrupted");
+  return trimmed !== "" && !HOST_TEXT_OPENINGS.some((opening) => trimmed.startsWith(opening));
 }
 
 export function summarise(events: SessionEvents, facts: ProjectFacts): SessionSignals {
@@ -108,26 +117,19 @@ export function summarise(events: SessionEvents, facts: ProjectFacts): SessionSi
   };
 }
 
-/** The key a QFAI hook context is counted under, or `null` for a context QFAI did not print. */
+/**
+ * The key a hook context is counted under: its key in the project's reminder texts, a fixed key
+ * for any other context that names QFAI, so no hook text reaches the report, or `null` for a
+ * context of the project's own.
+ */
 export function reminderKey(
   text: string,
   reminderTexts: ReadonlyMap<string, string>,
 ): string | null {
   const trimmed = text.trim();
-  if (!trimmed.startsWith("QFAI ")) return null;
   const exact = reminderTexts.get(trimmed);
   if (exact !== undefined) return exact;
-  const label = reminderLabel(trimmed);
-  const keys = new Set<string>();
-  for (const [known, key] of reminderTexts) if (reminderLabel(known) === label) keys.add(key);
-  const [only] = keys;
-  return keys.size === 1 && only !== undefined ? only : label;
-}
-
-/** The words after `QFAI` that name a reminder, up to its first bracket, colon or full stop. */
-function reminderLabel(text: string): string {
-  const words = /^QFAI\s+(.+?)\s*(?:[(:]|\.(?:\s|$)|$)/.exec(text)?.[1] ?? "";
-  return words.toLowerCase().replace(/\s+/g, "-");
+  return trimmed.startsWith("QFAI ") ? UNREGISTERED_REMINDER : null;
 }
 
 function countReminders(
@@ -152,15 +154,32 @@ export function watchedPath(
   file: string,
   facts: Pick<ProjectFacts, "root" | "platform">,
 ): string | null {
-  const relative = relativeToRoot(slashed(file), facts);
-  return WATCHED_PREFIXES.some((prefix) => relative.startsWith(prefix)) ? relative : null;
+  return watchedOnly(relativeToRoot(slashed(file), facts));
+}
+
+/** A relative path with `.` and `..` resolved, when it stays under a watched directory. */
+function watchedOnly(relative: string): string | null {
+  const normal = path.posix.normalize(relative);
+  return WATCHED_PREFIXES.some((prefix) => normal.startsWith(prefix)) ? normal : null;
+}
+
+/**
+ * The ways a shell on this platform writes the root, with forward slashes: as given, and on
+ * Windows also in the Git Bash form, `/c/...` for `C:/...`.
+ */
+function rootForms(facts: Pick<ProjectFacts, "root" | "platform">): string[] {
+  const root = slashed(facts.root).replace(/\/$/, "");
+  const drive = /^([A-Za-z]):\/(.*)$/.exec(root);
+  if (facts.platform !== "win32" || drive === null) return [root];
+  return [root, `/${(drive[1] ?? "").toLowerCase()}/${drive[2] ?? ""}`];
 }
 
 function relativeToRoot(file: string, facts: Pick<ProjectFacts, "root" | "platform">): string {
-  const root = `${slashed(facts.root).replace(/\/$/, "")}/`;
   const fold = (value: string): string =>
     facts.platform === "win32" ? value.toLowerCase() : value;
-  if (fold(file).startsWith(fold(root))) return file.slice(root.length);
+  for (const form of rootForms(facts)) {
+    if (fold(file).startsWith(fold(`${form}/`))) return file.slice(form.length + 1);
+  }
   return file.replace(/^\.\//, "");
 }
 
@@ -170,16 +189,18 @@ export function pathsInCommand(
   facts: Pick<ProjectFacts, "root" | "platform">,
 ): string[] {
   if (command.includes("apply_patch")) return [];
-  const root = slashed(facts.root).replace(/\/$/, "");
-  const escaped = root.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const text = slashed(command).replace(
-    new RegExp(`${escaped}/`, facts.platform === "win32" ? "gi" : "g"),
-    " ",
-  );
+  let text = slashed(command);
+  for (const form of rootForms(facts)) {
+    const escaped = form.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    text = text.replace(new RegExp(`${escaped}/`, facts.platform === "win32" ? "gi" : "g"), " ");
+  }
   const found: string[] = [];
   const pattern =
     /(?:^|[^A-Za-z0-9_.\-/])(?:\.\/)?((?:\.agents\/(?:rules|skills)|\.qfai\/assistant|\.claude\/(?:rules|skills))\/[A-Za-z0-9_.\-/]*[A-Za-z0-9_-])/g;
-  for (const match of text.matchAll(pattern)) if (match[1] !== undefined) found.push(match[1]);
+  for (const match of text.matchAll(pattern)) {
+    const file = match[1] === undefined ? null : watchedOnly(match[1]);
+    if (file !== null) found.push(file);
+  }
   return [...new Set(found)];
 }
 
@@ -210,7 +231,7 @@ function countReads(events: SessionEvents, facts: ProjectFacts): FileRead[] {
       repeats: entry.reads - 1,
       bytes: entry.bytes,
     }))
-    .sort((a, b) => compare(a.path, b.path));
+    .sort((a, b) => compareText(a.path, b.path));
 }
 
 function countToolErrors(events: SessionEvents): ToolErrors[] {
@@ -226,7 +247,7 @@ function countToolErrors(events: SessionEvents): ToolErrors[] {
   }
   return [...errors]
     .map(([tool, entry]) => ({ tool, count: entry.count, codes: sortedCounts(entry.codes) }))
-    .sort((a, b) => compare(a.tool, b.tool));
+    .sort((a, b) => compareText(a.tool, b.tool));
 }
 
 /** Each `qfai` command a shell command runs, as `qfai <command>` or `qfai <command> <subcommand>`. */
@@ -259,7 +280,7 @@ function countQfaiCommands(events: SessionEvents): QfaiCommand[] {
   }
   return [...commands]
     .map(([command, entry]) => ({ command, runs: entry.runs, exits: sortedCounts(entry.exits) }))
-    .sort((a, b) => compare(a.command, b.command));
+    .sort((a, b) => compareText(a.command, b.command));
 }
 
 function countQuestions(calls: readonly ToolCall[]): { calls: number; items: number } {
@@ -282,7 +303,7 @@ export function correctionWords(text: string): string[] {
     if (new RegExp(`(?<![a-z'])${escaped}(?![a-z'])`).test(lower)) words.push(word);
   }
   for (const word of CORRECTION_WORDS_JA) if (text.includes(word)) words.push(word);
-  return words.sort(compare);
+  return words.sort(compareText);
 }
 
 function findCorrections(turns: readonly string[]): Correction[] {
@@ -305,10 +326,5 @@ function bump(counts: Map<string, number>, key: string): void {
 function sortedCounts(counts: ReadonlyMap<string, number>): Count[] {
   return [...counts]
     .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => compare(a.name, b.name));
-}
-
-/** Code-unit order, so the report is the same under every locale. */
-function compare(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
+    .sort((a, b) => compareText(a.name, b.name));
 }

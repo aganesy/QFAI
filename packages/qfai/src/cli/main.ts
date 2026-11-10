@@ -457,7 +457,7 @@ Options:
   --format <md|json>           session-review: output format (md by default)
   --agent <claude|codex|all>   session-review: whose transcripts to read (all by default)
   --session <id>               session-review: the session to report, instead of the latest of each agent
-  --since <date>               session-review: every session whose transcript changed at or after this ISO date
+  --since <date>               session-review: every session whose transcript changed at or after this ISO 8601 date (midnight UTC) or date and time with Z or an offset
   --active                     discussion list: show the active session pointer instead of listing packs
   --strict                     validate/report: exit 1 on warning or worse
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full|drift>  validate/report: select the validation profile

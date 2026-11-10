@@ -15,15 +15,16 @@ Feature: Review a finished session from its local transcript
   Scenario: The user chooses the session and where the report goes
     Given transcripts of several sessions
     When the command runs with no selection, with `--agent`, with `--session` or with `--since`
-    Then it reports the latest session of each chosen agent, the named session, or every session since the date
-    And the report goes to standard output unless `--out` names a file, and the command writes nothing else
-    And a named session no transcript holds, or `--session` with `--since`, is a usage error, while finding no transcript at all is a notice that exits 0
+    Then it reports the session of each chosen agent whose transcript changed last, the named session, or every session whose transcript changed since the instant given
+    And the report goes to standard output as Markdown, or as JSON with `--format json`, unless `--out` names a file, and the command writes nothing else
+    And a named session no transcript holds, `--session` with `--since`, or a `--since` that is not an ISO 8601 date or zoned date and time is a usage error, while finding no session is a notice that exits 0
+    And a transcript, the project's reminder file or the `--out` file that is there but cannot be read or written ends the run with exit 1
 
   # AC-0001-0240-03
   Scenario: The report counts what the session shows
     Given a transcript of a session that used QFAI
     When the command reports it
-    Then it counts the QFAI hook reminders shown, per reminder; the QFAI rule, skill and step files read, with repeats and result bytes; the tool errors per tool, with the QFAI finding codes they carry; the `qfai` commands run, with their exit status; and the structured-question items asked
+    Then it counts the QFAI hook reminders shown, per reminder; the files read under the agent rule and skill directories and `.qfai/assistant/`, with repeats and result bytes; the tool errors per tool, with the QFAI finding codes they carry; the `qfai` commands run, with their exit status; and the structured-question items asked
     And it lists each typed user turn that matches a fixed word list, by turn number and matched word
     And a line that is not a JSON record is skipped and counted
 
@@ -45,8 +46,11 @@ Feature: Review a finished session from its local transcript
   Scenario: The session review turns the report into proposals the user approves
     Given the agent follows `.agents/rules/session-feedback.md` at the end of the run
     When it reviews the session
-    Then it runs `npx qfai session-review` once and treats the report as evidence
-    And each proposal is one itemised change naming its target file, the one item added or replaced, its key terms verbatim and the report lines that support it
-    And a change to a file the adopter owns is applied only after the user approves it in one multi-select question, while a change to a file QFAI ships becomes an issue draft
-    And under a no-question mode the proposals are listed in the final report and none is applied
+    Then it runs `npx qfai session-review --agent <host>` once for the host it runs on and treats the report as evidence, discarding a report of a session it does not recognise
+    And where the command is missing, fails or finds no transcript, it reviews the session itself
+    And each proposal is one item added to the `<name>.local.md` overlay beside a shipped rule, naming that file, the item, its key terms verbatim and the report lines that support it, and no proposal replaces a rule's item or names any other file of the project
+    And a change to a file QFAI ships becomes an issue draft, and a change to the spec tree is left to `qfai-sdd`
+    And an item is added only after the user approves it, asked as `user-questions.md` sets out, and the files changed are listed in one line and left uncommitted
+    And under a no-question mode the proposals are listed in the final report and none is added
+    And the entry points `qfai init` writes tell the agent to read a rule's overlay with the rule
 ```

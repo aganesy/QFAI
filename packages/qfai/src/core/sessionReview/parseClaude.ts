@@ -94,11 +94,11 @@ function readToolResult(block: unknown, events: SessionEvents): void {
   if (!isRecord(block) || block.type !== "tool_result") return;
   const isError = block.is_error === true;
   const text = textOf(block.content);
-  const stated = /Exit code (-?\d+)/.exec(text)?.[1];
-  events.results.push({
-    id: stringAt(block, "tool_use_id") ?? "",
-    isError,
-    text,
-    exitCode: isError ? (stated === undefined ? null : Number(stated)) : 0,
-  });
+  const stated = /^(?:<error>)?Exit code (-?\d+)/.exec(text)?.[1];
+  // A command sent to the background has not finished, so its exit status is not known.
+  const background = text.startsWith("Command running in background");
+  let exitCode: number | null = 0;
+  if (isError) exitCode = stated === undefined ? null : Number(stated);
+  else if (background) exitCode = null;
+  events.results.push({ id: stringAt(block, "tool_use_id") ?? "", isError, text, exitCode });
 }
