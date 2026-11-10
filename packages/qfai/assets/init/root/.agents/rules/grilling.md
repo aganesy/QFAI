@@ -306,6 +306,29 @@ In a delegated session a decision takes the griller's recommendation, reached in
 rounds and recorded. The agent holding the session still never skips the rounds,
 and never takes a critical decision without the recorded user authority above.
 
+## Terms against the glossary
+
+Every session, user or delegated and at every stage, checks the terms it hears
+against `<specsDir>/01_policy/glossary.md` and, during a discussion, the pack's
+`08_Glossary.md`. A word that means one thing to the user and another to the
+spec and code is a decision nobody saw being made.
+
+- **A clash is raised when it appears.** A term the user or an author uses that
+  conflicts with, or is a synonym of, a term a glossary defines is raised first
+  in the round it appears in, or the next one when it appears in an answer. The
+  griller proposes the glossary's term. A plain synonym is corrected to it and
+  noted in the round, not asked; a term with two plausible meanings is a
+  decision node.
+- A matching term raises nothing. A term in neither glossary is asked about only
+  when a decision on the tree turns on its meaning.
+- **A settled term is written at once**, not at the end of the session: to the
+  pack's `08_Glossary.md` in discussion, to the project glossary where the stage
+  writes the policy layer, otherwise to the stage's own handoff, and with no
+  invoking stage to the session record the user reads. A changed term rewrites
+  its row and adds no second one.
+- A definition says what the term is. A rule, a value set or a procedure belongs
+  in the spec, not in the row.
+
 ## When a session ends
 
 A session **completes** on both of these:

@@ -172,3 +172,4 @@
 | US-0001-0237 | Prepare project-local graph CLIs through init                                          | `user-story-0001-0237/` |
 | US-0001-0238 | Merge conflicted story-tree documents by sentence                                      | `user-story-0001-0238/` |
 | US-0001-0239 | Answer agent output in the reply form that fits it                                     | `user-story-0001-0239/` |
+| US-0001-0245 | Check each term against the glossary while grilling                                    | `user-story-0001-0245/` |
