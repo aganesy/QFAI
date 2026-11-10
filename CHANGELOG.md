@@ -11,7 +11,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   each live route shows as a baseline, and the reviewer blocks on any text the
   restyled screen changes, drops or replaces with prose. The same step audits
   the running screens against the design anti-pattern list and root
-  `DESIGN.md` and sizes the restyle as `full`, `polish` or `none`, put to the
+  `DESIGN.md` and sizes the restyle as `full`, `targeted` or `none`, put to the
   user before the first edit; a screen with nothing to fix is left as it is.
   The restyle edits spacing, color, type, layout, details and motion in that
   order, and reports a text, icon or image change as a contract change. A

@@ -23,6 +23,7 @@ naming the pattern is what works.
 - Motion and transitions
 - Copy in the UI
 - Copy that adds no meaning
+- Claims nobody has confirmed
 - Information architecture and flow
 - States and accessibility
 - Implementation defaults
@@ -285,25 +286,6 @@ naming the pattern is what works.
 - The screen shows technical detail nobody asked for, such as GPU status or
   average generation time.
 
-### Claims nobody has confirmed
-
-A metric, a customer count, a testimonial or a "trusted by" row that is
-already on the screen, or in material the user supplied, and that the
-project's documents do not support is not deleted and not rewritten into
-something more specific: deleting it can lose a real fact, and rewriting it
-invents one. A claim an agent writes itself stays the _invented proof_
-pattern above: never write one.
-
-- Put each such claim to the user under the question protocol.
-- A claim the user confirms keeps its wording, or becomes specific with the
-  facts the user gives. A claim the user rejects is removed.
-- With no user present, the claim stays as it is, becomes one row in
-  `open-questions.md` under `paths.specsDir`, and the final report lists it.
-- Inside the prototyping loop, the claim and the user's answer go to the final
-  report instead of `open-questions.md`. A `prototype` iteration applies the
-  answer to the prototype. A restyle changes no displayed text, so there a
-  claim to remove or reword is reported as a change the contract needs.
-
 ## Copy that adds no meaning
 
 These patterns are judged against the screen's tasks and the `supplements` its UI
@@ -318,6 +300,25 @@ judge where it sits and what it lets the user do, not the word.
   the decision being made.
 - Production copy carries a development instruction, implementation commentary,
   or a demo note repeated on screen after screen.
+
+## Claims nobody has confirmed
+
+A metric, a customer count, a testimonial or a "trusted by" row that is
+already on the screen, or in material the user supplied, and that the
+project's documents do not support is not deleted and not rewritten into
+something more specific: deleting it can lose a real fact, and rewriting it
+invents one. A claim an agent writes itself stays the _invented proof_
+pattern in _Copy in the UI_: never write one.
+
+- Put each such claim to the user under the question protocol.
+- A claim the user confirms keeps its wording, or becomes specific with the
+  facts the user gives. A claim the user rejects is removed.
+- With no user present, the claim stays as it is, becomes one row in
+  `open-questions.md` under `paths.specsDir`, and the final report lists it.
+- Inside the prototyping loop, the claim and the user's answer go to the final
+  report instead of `open-questions.md`. A `prototype` iteration applies the
+  answer to the prototype. A restyle changes no displayed text, so there a
+  claim to remove or reword is reported as a change the contract needs.
 
 ## Information architecture and flow
 

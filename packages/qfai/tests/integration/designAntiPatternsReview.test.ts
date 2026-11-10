@@ -37,7 +37,7 @@ describe.each(TREES)("%s", (tree) => {
   // QFAI:EX-0001-0296-06
   it("puts an unsupported claim already on the screen to the user", async () => {
     const list = await read(tree);
-    expect(list).toContain("### Claims nobody has confirmed");
+    expect(list).toContain("## Claims nobody has confirmed");
     expect(list).toContain(
       "Whether writing root `DESIGN.md`, building a screen or reviewing one, follow",
     );
@@ -50,7 +50,7 @@ describe.each(TREES)("%s", (tree) => {
       "A claim the user confirms keeps its wording, or becomes specific with the facts the user gives. A claim the user rejects is removed.",
     );
     expect(list).toContain(
-      "A claim an agent writes itself stays the _invented proof_ pattern above",
+      "A claim an agent writes itself stays the _invented proof_ pattern in _Copy in the UI_",
     );
   });
 

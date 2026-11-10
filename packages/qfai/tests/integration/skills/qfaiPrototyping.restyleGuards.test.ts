@@ -84,7 +84,7 @@ describe.each(TREES)("%s", (tree) => {
   it("audits a restyle and records its level before the first edit, within DESIGN.md tokens", async () => {
     const loop = flat(await read(tree, LOOP));
     expect(loop).toContain("Record `restyleLevel` in `progress.md` beside `iterationKind`");
-    for (const level of ["`full`", "`polish`", "`none`"]) {
+    for (const level of ["`full`", "`targeted`", "`none`"]) {
       expect(loop).toContain(`| ${level}`);
     }
     expect(loop).toContain("Every level stays within the root `DESIGN.md` tokens");
@@ -106,14 +106,13 @@ describe.each(TREES)("%s", (tree) => {
     expect(loop).toContain(
       "when the user accepts none, the run ends there as **Stopped**, with no edit and no handoff; the route's later stages then change nothing",
     );
-    expect(loop).toContain("or a restyle at `none` had no refinement accepted");
+    expect(loop).toContain("A restyle at `none` with no refinement accepted ends the same way");
     expect(loop).toContain("the level is taken as an assumption the report names");
 
     const implement = flat(await read(tree, "skill/qfai-implement/references/ui-affecting.md"));
     expect(implement).toContain(
       "the restyle stopped with nothing to fix: implement makes no change to the screens it covered.",
     );
-    expect(loop).toContain("the `restyleLevel` field in `progress.md` is not one.");
 
     const generator = flat(await read(tree, GENERATOR));
     expect(generator).toContain(

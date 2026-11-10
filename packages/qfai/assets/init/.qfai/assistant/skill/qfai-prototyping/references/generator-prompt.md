@@ -292,7 +292,7 @@ envelope, the one self-contained file, the `<link rel="stylesheet">` ban and
 - The seed and pivot rules below do not apply as written. The first restyle
   iteration restyles the screens as they are, and a restyle `pivot` rethinks
   only the visual treatment: screens, fields and behaviour stay.
-- Change only what the `restyleLevel` in `progress.md` allows: at `polish`,
+- Change only what the `restyleLevel` in `progress.md` allows: at `targeted`,
   only what the audit found, keeping the palette, type and layout; at `none`,
   only the refinements the user accepted, as `progress.md` lists them.
 - Keep every text the screens show: figures, proper names, field values and

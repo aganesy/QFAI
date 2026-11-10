@@ -22,7 +22,7 @@ Feature: Restyle my running screens without losing their data or what already wo
   Scenario: An audit sizes the restyle before any edit
     Given a `restyle` loop before iteration 00
     When the session agent audits the rendered live routes against the design anti-pattern list and root `DESIGN.md`
-    Then it records `restyleLevel` as `full`, `polish` or `none` in `progress.md` and puts the audit and the level to the user before the first edit
+    Then it records `restyleLevel` as `full`, `targeted` or `none` in `progress.md` and puts the audit and the level to the user before the first edit
     And every level stays within the root `DESIGN.md` tokens
 
   # AC-0001-0295-04

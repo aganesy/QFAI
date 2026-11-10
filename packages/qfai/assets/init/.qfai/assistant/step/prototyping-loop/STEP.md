@@ -108,11 +108,11 @@ The session agent does two things before iteration 00 changes a file:
    the audit lines under it. The level is the session agent's judgement of
    those lines:
 
-   | Level    | When                                                    | What the restyle changes                                                                                       |
-   | -------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-   | `full`   | Many patterns across several aspects                    | Every aspect the stylesheet and motion reach                                                                   |
-   | `polish` | A few patterns on screens that are otherwise deliberate | Only what the audit found; the palette, type and layout stay, and larger ideas go to the report as suggestions |
-   | `none`   | No pattern                                              | At most three refinements, each with exact values; only those the user accepts, listed in `progress.md`        |
+   | Level      | When                                                    | What the restyle changes                                                                                       |
+   | ---------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+   | `full`     | Many patterns across several aspects                    | Every aspect the stylesheet and motion reach                                                                   |
+   | `targeted` | A few patterns on screens that are otherwise deliberate | Only what the audit found; the palette, type and layout stay, and larger ideas go to the report as suggestions |
+   | `none`     | No pattern                                              | At most three refinements, each with exact values; only those the user accepts, listed in `progress.md`        |
 
    Every level stays within the root `DESIGN.md` tokens: a fix that needs a
    value `DESIGN.md` does not declare is reported as a `DESIGN.md` change, not
@@ -246,9 +246,9 @@ How the session ends decides the route:
 - **Closed** — `proceed` or `done` without an answer to this question — records
   every other open decision as a labelled assumption and asks this question
   again. It is what the loop exists to answer, so a closure cannot assume it.
-- **Stopped** — the user said `stop`, or a restyle at `none` had no
-  refinement accepted, as _Before a restyle edits anything_ says — ends the
-  run there and reports every open decision as open.
+- **Stopped** — the user said `stop` — ends the run there and reports every
+  open decision as open. A restyle at `none` with no refinement accepted ends
+  the same way, as _Before a restyle edits anything_ says.
 
 Under a no-question mode nobody can answer, so the question is written to
 `## Escalated` and the run stops there. A reviewer's scores are not the user's
@@ -280,8 +280,7 @@ confirmation.
   always the one put to the user.
 - Token-only colors, fonts, radii and shadows — a value `DESIGN.md` does not
   declare lands in `designMdViolations[]`.
-- No separate `mode / round / polish / branch / concept-fit` files; the
-  `restyleLevel` field in `progress.md` is not one.
+- No `mode / round / polish / branch / concept-fit` artifacts.
 
 ## Autopilot
 
