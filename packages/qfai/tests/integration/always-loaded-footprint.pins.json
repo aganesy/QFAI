@@ -1,6 +1,6 @@
 {
   "characters": {
-    "AGENTS.md, managed section (every session)": 4572,
+    "AGENTS.md, managed section (every session)": 4767,
     "reminder structured-question (UserPromptSubmit, once per session)": 397,
     "reminder free-text-entry (UserPromptSubmit, full once, then brief on every later prompt)": 495,
     "reminder free-text-entry, brief form": 162,
