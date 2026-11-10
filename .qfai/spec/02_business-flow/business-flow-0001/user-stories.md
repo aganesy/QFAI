@@ -171,3 +171,4 @@
 | US-0001-0236 | Reuse completed analysis safely across worktrees                                       | `user-story-0001-0236/` |
 | US-0001-0237 | Prepare project-local graph CLIs through init                                          | `user-story-0001-0237/` |
 | US-0001-0238 | Merge conflicted story-tree documents by sentence                                      | `user-story-0001-0238/` |
+| US-0001-0239 | Answer agent output in the reply form that fits it                                     | `user-story-0001-0239/` |
