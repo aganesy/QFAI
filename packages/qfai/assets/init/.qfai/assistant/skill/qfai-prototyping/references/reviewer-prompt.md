@@ -51,12 +51,21 @@ transition-pass percentages as a substitute for the qualitative review.
   When the scope names components only, the render-check screens are the
   whole review, and the summary's four scores rate the component as those
   screens render it.
+- When the URL you are given carries `?variant=<id>`, the iteration has
+  variants and you review that variant alone. Review it as if it were the
+  only one, keep `?variant=<id>` on every route, and never open another
+  variant: its own payloads, summary and `pivotDirective` are written under
+  `iter-NN/variant-<id>/`. Do not rank it against others or call it
+  preferred; the user chooses between the variants. The variant switcher is not part of any
+  screen: do not review, count or report it.
 - A screenshot or HTML snapshot, only when one was taken. Name any mandatory
   input you did not receive in a finding.
 - The layout anti-pattern registry the package ships.
 - Prior reviews: `iter-(NN-1)/review.json`, `iter-(NN-2)/review.json`
   (when present), from this run only: the run's first iteration, the first
-  after `progress.md` records its `runScope`, has none.
+  after `progress.md` records its `runScope`, has none. Where one of them is
+  an iteration with variants, read the picked variant's summary in its
+  place, or none after a combination or a rejection.
 - Progress log: `.qfai/prototype/progress.md`
 - Root `DESIGN.md` (read-only context: `# Brand Philosophy`,
   `audience.emotion`, `audience.do_not_look_like`).
@@ -79,14 +88,17 @@ below and are relative to the project root.
 
 1. **Per-contract / per-screen payload** —
    `.qfai/prototype/iter-NN/<ui-contract-id>/<screen>.review.json`,
-   one per screen. `<ui-contract-id>` is the full `UI-NNNN` ID. The
+   or `iter-NN/variant-<id>/<ui-contract-id>/<screen>.review.json` in an
+   iteration with variants, one per screen. `<ui-contract-id>` is the full
+   `UI-NNNN` ID. The
    per-UI-contract subdirectory is mandatory for every run that declares UI
    screens, including a run with one contract. Its schema is closed
    (11 required top-level fields, unknown keys rejected) and lives in
    the payload schema reference. Build it from that
    reference, not from the block below.
 2. **Per-iteration summary** —
-   `.qfai/prototype/iter-NN/review.json`, one per iteration. Its shape is
+   `.qfai/prototype/iter-NN/review.json`, one per iteration, or one per
+   variant under `iter-NN/variant-<id>/`. Its shape is
    the block below.
 
 The two share `blockingFindings`, `layoutAntiPatternsDetected` and
