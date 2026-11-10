@@ -27,18 +27,17 @@ describe("reopening a rejected option", () => {
       const baseline = await readFile(path.join(repoRoot, tree, BASELINE), "utf-8");
       const triage = await readFile(path.join(repoRoot, tree, TRIAGE), "utf-8");
       expect(baseline).toContain("Leave the declined row intact");
-      expect(baseline).toContain("Content begins `Change request:`");
-      expect(baseline).toContain("Its Approach opens `Reopens DEC-…`");
-      expect(baseline).toContain("approval provenance");
+      expect(baseline).toContain("row whose Approach opens `Reopens DEC-…`");
+      expect(baseline).toContain("who approved it, when, and the option chosen");
       expect(triage).toContain("a decision row whose Approach opens `Reopens DEC-…` is appended");
     }
   });
 
   it("keeps the declined row unchanged and adds the reopening request as a new row", () => {
     const declined =
-      "| DEC-0001 | Declined change request: 02_business-flow/business-flow-0001/business-flow.md | Declined by the operator |";
+      "| DEC-0001 | Declined: rewrite 02_business-flow/business-flow-0001/business-flow.md | Declined by the operator |";
     const request =
-      "| DEC-0002 | Change request: 02_business-flow/business-flow-0001/business-flow.md | Reopens DEC-0001 - New evidence and operator approval |";
+      "| DEC-0002 | Rewrite 02_business-flow/business-flow-0001/business-flow.md | Reopens DEC-0001 - New evidence and the operator's answer |";
     const diff = diffRecordTables(
       decisions([declined]),
       decisions([declined, request]),
@@ -50,6 +49,6 @@ describe("reopening a rejected option", () => {
     const newRow = diff.added[0];
     expect(newRow).toBeDefined();
     if (!newRow) return;
-    expect(classifyRecordRow(newRow).kind).toBe("change-request");
+    expect(classifyRecordRow(newRow).kind).toBe("other");
   });
 });

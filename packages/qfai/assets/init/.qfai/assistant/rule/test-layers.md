@@ -152,7 +152,7 @@ read.
 - Do not let a helper script or a workaround stand in for the standard tools
   the task calls for.
 - Where the task cannot be done as specified, or a test case is itself wrong,
-  stop and report it. The route is a Change Request against the specification
+  stop and report it. The route is a specification change through its owner
   (`.qfai/assistant/rule/drift-protocol.md`), never an edit that makes the
   wrong case pass.
 

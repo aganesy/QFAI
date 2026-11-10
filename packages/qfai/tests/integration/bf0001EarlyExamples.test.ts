@@ -106,9 +106,9 @@ describe("BF-0001 project records", () => {
     ]);
     expect(
       classify("decisions", "Change request: 01_policy/glossary.md, 01_policy/constraint.md"),
-    ).toEqual([["change-request", ["01_policy/glossary.md", "01_policy/constraint.md"]]]);
+    ).toEqual([["other", []]]);
     expect(classify("decisions", "Declined change request: 01_policy/glossary.md")).toEqual([
-      ["declined-change-request", ["01_policy/glossary.md"]],
+      ["other", []],
     ]);
     expect(classify("decisions", "Declined: 01_policy/glossary.md")).toEqual([["other", []]]);
     expect(classify("open-questions", "Unadjudicated: choose a layout")).toEqual([

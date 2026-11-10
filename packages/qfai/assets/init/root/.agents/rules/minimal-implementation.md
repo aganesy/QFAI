@@ -3,7 +3,7 @@
 How much code implements a behaviour, once the behaviour is agreed.
 
 This rule does not decide what to build. The spec does that, and an objection
-to a requirement goes through a Change Request. What it decides is the amount
+to a requirement goes to the spec's owner. What it decides is the amount
 of code that answers a requirement already accepted.
 
 ## Scope
@@ -31,17 +31,17 @@ Try these in order and stop at the first that holds.
 7. **Only then**: the least code that works.
 
 Rung 1 belongs to requirements and design. Once a spec row is agreed, asking
-whether it should exist is a Change Request, not a choice made later in the
+whether it should exist is a specification change, not a choice made later in the
 implementation.
 
 ### A sourcing decision reaches rungs 2 to 5
 
 **Whether a capability should exist** and **where it comes from** are different
-questions, and only the first is a Change Request. The second is what rungs 2 to
+questions, and only the first is a specification change. The second is what rungs 2 to
 5 answer, and a design stage is where it is decided: a contract is written
 before any source exists, so a contract that mandates a shape has already
 settled the source. By the time a source file is written, reopening it
-costs a Change Request.
+costs a specification change.
 
 So a decision that selects where a capability or a body of reference data comes
 from — a holiday calendar, a currency table, a locale list, a timezone database,
@@ -55,7 +55,7 @@ already has and picks among them.
 
 This widens nothing else. A decision about how much code answers a behaviour
 already agreed is still the implementation's, and an objection to the behaviour
-is still a Change Request.
+is still a specification change.
 
 ## 2. What the ladder never removes
 

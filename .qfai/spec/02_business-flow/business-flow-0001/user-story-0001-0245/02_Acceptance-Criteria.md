@@ -19,7 +19,7 @@ Feature: Check each term against the glossary while grilling
     When the round that settled it ends
     Then the term is written right away, not at the end of the session: to the pack's glossary in discussion, a new term to the project glossary where the stage writes the policy layer, otherwise to the stage's evidence beside its adopted decisions with a line in its final report, and with no invoking stage to the session record
     And a changed pack term rewrites its row, and its definition says what the term is, never a rule, a value set or a procedure
-    And a change to what the project glossary already defines is a critical decision, and its row is rewritten only under an approved change request
+    And a change to what the project glossary already defines is a critical decision, and its row is rewritten only after the user approves it
 
   # AC-0001-0245-03
   Scenario: The grilling skill carries the check

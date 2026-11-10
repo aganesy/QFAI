@@ -48,13 +48,12 @@ any existing file unchanged; skip this step for it.
    authorization and source values in step 2.
 2. **Bound an existing-file repair.** Write a missing file from the recorded
    direction. For an existing file, SDD triage must name its exact path and the
-   requested change, and a `Change request:` row this branch adds must authorize
-   both. Apply
-   only the authorized change; preserve existing brand and tokens unless their
-   change is authorized and supported by recorded direction or named theme
-   values. Stop without writing unsupported values. Without that authorization,
-   validate the existing file without an overwrite; a change request the base
-   already holds authorizes no new change. An unreplaced sample is refused.
+   requested change; that names the authorized change. Apply
+   only the authorized change; preserve existing brand and tokens unless the
+   user decided their change and it is supported by recorded direction or named
+   theme values. Stop without writing unsupported values. Without that
+   authorization, validate the existing file without an overwrite. An
+   unreplaced sample is refused.
 3. **Author a missing file or the authorized fields of an existing file**,
    following
    `.qfai/assistant/skill/qfai-sdd/references/design-md-authoring.md#output-mapping`:

@@ -1,8 +1,8 @@
-# US-0001-0217: Change the route catalog only with a recorded approval
+# US-0001-0217: Keep the route catalog and the shipped plans together
 
 ## User Story
 
-As a maintainer, I want every route added, removed or changed to cite a change request a person approved, and CI to fail when a shipped route and its contract row disagree, so that the catalog can grow without a ceiling and never drift without a decision.
+As a maintainer, I want CI to fail when a shipped route and its contract row disagree, so that the catalog can grow without a ceiling and the plans never drift from it.
 
 ## Non-goals
 

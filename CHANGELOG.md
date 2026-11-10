@@ -79,9 +79,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   considered options, consequences and a rollback are optional items added only
   when they help a later reader. A new row no longer carries the four items
   Evidence, Grounds, Residual risk and Rollback. `qfai validate` warns
-  (`QFAI-STORY-018`) on a decision row whose Content and Approach hold more than
-  600 characters, the paths a change request names not counted; the warning
-  never fails a run under `--fail-on error`.
+  (`QFAI-STORY-020`) on a decision row whose Content and Approach hold more than
+  600 characters; the warning never fails a run under `--fail-on error`. A
+  decision, an approval of a critical decision or of a release included,
+  becomes a row only when it is hard to reverse, would surprise a reader
+  without context and was the result of a real trade-off; otherwise the stage
+  or final report states it.
 
 ### Changed
 
@@ -114,6 +117,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Removed
 
+- **The specification-change approval.** No `Change request:` or
+  `Declined change request:` row is required any more, and an `sdd` stage no
+  longer asks approval before changing an existing story-tree item: a change
+  that contradicts a specification, a contract or a recorded decision is put
+  to the user as a critical decision, and any other change is listed in the
+  report. The drift gate no longer raises `QFAI-DRIFT-001` for a changed
+  story-tree file or `QFAI-DRIFT-004` for an uncommitted one; it keeps the
+  decision and question row checks, `QFAI-DRIFT-002` and `QFAI-DRIFT-003`, and
+  raises `QFAI-DRIFT-001` only when the decision register cannot be compared.
+  The route catalog no longer needs a change-request row per route, the
+  `qfai-sdd` change-request template is gone, and the extraction signal
+  `decide-by-change-request` is removed. Existing rows stay as history.
 - **`qfai sdd renumber-decision` and `qfai sdd next-id DEC|OQ`.** Timestamp
   IDs need no allocation or renumbering. The page relocation, published-prefix
   recovery and surplus-copy recovery procedures are gone with them, and so are

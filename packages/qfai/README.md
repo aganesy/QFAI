@@ -188,8 +188,8 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   cli-only packs omit it, and non-ui discussion packs typically omit it.
 - **qfai-sdd**: Triage requirements against the existing story tree. Write
   policy, business flows, stories with AC and EX, then enforcing contracts with
-  BR. Record triage, change requests and unresolved questions in the two root
-  tables. The discussion pack is input; the story tree is the execution SSOT.
+  BR. Record decisions that meet the recording test and unresolved questions in
+  the two root tables. The discussion pack is input; the story tree is the execution SSOT.
 - **qfai-prototyping**: Build and review every UI-bearing contract and its
   screens with the user, one iteration at a time, until the user confirms the
   prototype. No command certifies it. The loop's files stay under
@@ -250,7 +250,7 @@ Notes on the skills.
 - Except `qfai-discussion`, each skill reads the project context (architecture, tech stack, test framework, repo structure) before it writes artifacts or code.
 - The agent you talk to does the work itself: research, design, the specification, code, tests and documentation.
   It starts a sub-agent only for an independent judgement, such as a review, or for two or more parallel units that pass the parallel-unit gate.
-- Triage decisions and change requests live in `.qfai/spec/decisions.md`;
+- Decisions worth recording live in `.qfai/spec/decisions.md`;
   unresolved questions live in `.qfai/spec/open-questions.md`.
 - Agent cards under `.qfai/assistant/agent/` define the four reviewers and the one `fullstack-engineer` worker a parallel unit runs on.
 

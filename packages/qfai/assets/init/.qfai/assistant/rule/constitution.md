@@ -200,14 +200,14 @@ instructions in other constitution documents.
 
 The floor's specification clause preserves Article IV. The ladder's first rung
 belongs here while scope is open. Once a spec row is agreed, asking whether it
-should exist is a Change Request.
+should exist is a specification change, which goes to its owner.
 
 ### Prototyping exception (scope floor)
 
 For `/qfai-prototyping`, the confirmed prototype in `.qfai/prototype/final/`
 covers every declared UI contract and screen in the configured story tree.
-Shrinking what it covers is prohibited unless a documented Change Request
-approves it. A run scoped per `prototyping-grill` § Run scope rebuilds part of
+Shrinking what it covers is prohibited unless the user approves it as a
+critical decision. A run scoped per `prototyping-grill` § Run scope rebuilds part of
 a confirmed `final/` and merges it back, so it does not shrink the floor.
 
 ---
@@ -251,14 +251,14 @@ critical. Nothing is recorded beyond the stage's final report.
 
 | The stop concludes                                                                       | What follows                                                                                                                                        |
 | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Settled input must change                                                                | `.qfai/assistant/rule/drift-protocol.md`: stop dependent work, raise the Change Request, record actual applicable user authority before changing it |
-| The obstacle is this run's to solve — an unavailable dependency, an approach that failed | The run solves it. Nothing upstream changes, so there is nothing to approve                                                                         |
+| Settled input must change                                                                | `.qfai/assistant/rule/drift-protocol.md`: stop dependent work, send the change to its owner, put a critical decision to the user before changing it |
+| The obstacle is this run's to solve — an unavailable dependency, an approach that failed | The run solves it. Nothing upstream changes, so there is nothing to decide                                                                          |
 
 Stopping does not change settled input and is not a second way to. What it
-contributes to a Change Request is what that protocol asks of the class: for
-intent drift, the options and the recommendation its `Approved option` is chosen
-from; for defect drift, the single correct repair, which that protocol records
-with `Approved option: -` and which options would only dress as a choice.
+contributes to that change is what that protocol asks of the class: for
+intent drift, the options and the recommendation the decision is taken from;
+for defect drift, the single correct repair, which options would only dress as
+a choice.
 The agents settle what the change should be; the protocol decides whether it
 happens.
 

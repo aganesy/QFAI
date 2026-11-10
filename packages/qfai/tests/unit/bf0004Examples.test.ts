@@ -9,7 +9,6 @@ import { parse as parseYaml } from "yaml";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
-import { classifyRecordRow } from "../../src/core/storyTree/tables.js";
 import { validateProject } from "../../src/core/validate.js";
 import { runInit } from "../helpers/legacyInit.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
@@ -496,22 +495,18 @@ describe("BF-0004 migration examples", () => {
       "DEC-20261105120004",
       "DEC-20261105120005",
     ]);
-    expect(rows.slice(0, 5).map((row) => row.content.split(": ")[0])).toEqual([
+    expect(rows.map((row) => row.content.split(": ")[0])).toEqual([
       ".qfai/spec/spec-0001/07_Decisions.md#DR-0001",
       ".qfai/spec/spec-0001/07_Decisions.md#DR-0002",
       ".qfai/spec/spec-0001/09_delta.md#DL-0001",
       ".qfai/spec/spec-0001/09_delta.md#Triage-0001",
       ".qfai/spec/_policies/08_Decisions.md#DR-0003",
+      ".qfai/decisions/CR-20260101-0001.md#CR-20260101-0001",
     ]);
-    expect(rows[5]?.content).toBe("Change request: src/a.ts, docs/b.md");
-    expect(rows[5] && classifyRecordRow(rows[5]).refs).toEqual(["src/a.ts", "docs/b.md"]);
-    expect(
-      rows[5]?.approach.startsWith(".qfai/decisions/CR-20260101-0001.md#CR-20260101-0001: "),
-    ).toBe(true);
   });
 
   // QFAI:EX-0004-0005-02
-  it("writes an approved change request as a change request and a rejected one as declined", async () => {
+  it("writes an approved change request as a decision and a rejected one as declined", async () => {
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
     );
@@ -522,14 +517,9 @@ describe("BF-0004 migration examples", () => {
     expect((await run(step02, context)).code).toBe(0);
     const rows = registerRows(await read(context.root, ".qfai/spec/decisions.md"));
     expect(rows.map((row) => row.content)).toEqual([
-      "Change request: src/a.ts, docs/b.md",
-      "Declined change request: src/a.ts, docs/b.md",
+      ".qfai/decisions/CR-20260101-0001.md#CR-1: src/a.ts, docs/b.md",
+      "Declined: src/a.ts, docs/b.md",
     ]);
-    expect(rows.map((row) => classifyRecordRow(row))).toMatchObject([
-      { kind: "change-request", refs: ["src/a.ts", "docs/b.md"] },
-      { kind: "declined-change-request", refs: ["src/a.ts", "docs/b.md"] },
-    ]);
-    expect(rows[0]?.approach.startsWith(".qfai/decisions/CR-20260101-0001.md#CR-1: ")).toBe(true);
     expect(rows[1]?.approach.startsWith(".qfai/decisions/CR-20260101-0002.md#CR-2: ")).toBe(true);
     await expect(read(context.root, ".qfai/spec/open-questions.md")).rejects.toMatchObject({
       code: "ENOENT",

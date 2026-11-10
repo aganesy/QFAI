@@ -42,7 +42,7 @@ describe("an example is not met by code written for its test", () => {
     );
     expect(body).toContain("Where the task cannot be done as specified");
     expect(body).toContain("a test case is itself wrong, stop and report it");
-    expect(body).toContain("Change Request");
+    expect(body).toContain("specification change");
     expect(body).toContain("rule/drift-protocol.md");
     expect(body).toContain("Article V");
   });
@@ -67,7 +67,7 @@ describe("an example is not met by code written for its test", () => {
       expect(body, place.join("/")).toContain(CHECK);
       expect(body, place.join("/")).toContain("no branch written only for the test");
       expect(body, place.join("/")).toContain(
-        "a wrong test or infeasible task raised as a Change Request, not worked around",
+        "a wrong test or infeasible task raised as a specification change, not worked around",
       );
       expect(body, place.join("/")).toContain(ANCHOR);
     }

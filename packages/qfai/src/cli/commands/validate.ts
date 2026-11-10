@@ -1181,7 +1181,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No spec document states a term `validation.staleTerms` lists, apart from the decision and open-question registers.",
   "QFAI-STORY-017":
     "A four-digit decisions.md row recorded after the Approach form began to be checked holds Evidence, Grounds, Residual risk and Rollback in that order, none empty, with every Evidence entry a file: or command: item.",
-  "QFAI-STORY-018":
+  "QFAI-STORY-020":
     "A decision row says what was decided and why in a few short sentences, so its Content and Approach together stay within 600 characters.",
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
@@ -1302,11 +1302,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-SAAS-002":
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
-    "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+    "The complete decision register reads safely at HEAD and at the base, so the register drift checks compare row by row.",
   "QFAI-DRIFT-002":
     "An example whose row changed since the base branch has a test annotating it that changed too.",
-  "QFAI-DRIFT-004":
-    "A protected story-tree file is committed before the drift checks run on it; an uncommitted edit is not compared with the base branch.",
   "QFAI-DRIFT-003":
     "The base branch resolves to a merge base with HEAD, so the drift checks compare against it; the drift profile names the commit it compared with.",
   "QFAI-RESEARCH-013":
@@ -1499,9 +1497,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-034":
     "Correct the named contract's ID, file name or index row, give a contract that shares a number the next free one, or remove a row that names no contract file, then rerun validate.",
   "QFAI-DRIFT-001":
-    "Restore the protected file, or append a Change request: row naming it on this branch before the change is committed: an uncommitted edit is not compared.",
-  "QFAI-DRIFT-004":
-    "Commit the change together with the change request row that names it, then rerun validate.",
+    "Repair the decision register the finding names, so each listed page and the root table read at HEAD and at the base, then rerun validate.",
   "QFAI-DRIFT-002":
     "Update the tests annotating the named example to its new row, or confirm they already assert it.",
   "QFAI-DRIFT-003":
@@ -1540,7 +1536,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Rewrite the named line to match the decision that replaced the term, or remove the term from `validation.staleTerms` if the line is right.",
   "QFAI-STORY-017":
     "Rewrite the named row's Approach cell in the form the qfai-sdd decisions template shows.",
-  "QFAI-STORY-018":
+  "QFAI-STORY-020":
     "Leave the row as written, since a recorded row is never edited, and keep the next row short: the decision and its reason in one to three sentences, with the detail where it already lives.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",

@@ -184,19 +184,16 @@ describe("story-tree validators in the validate pipeline", () => {
     git("init", "-b", "main");
     git("config", "user.email", "test@example.test");
     git("config", "user.name", "Test");
-    const glossary = `${specs}/01_policy/glossary.md`;
-    await put(
-      root,
-      `${specs}/decisions.md`,
-      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n",
-    );
-    await put(root, glossary, "# Terms\n");
+    const decisions = `${specs}/decisions.md`;
+    const register = (cell: string) =>
+      `# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n| DEC-0001 | ${cell} | Reason |\n`;
+    await put(root, decisions, register("Choice A"));
     git("add", ".");
     git("commit", "-m", "base");
     git("checkout", "-b", "topic");
-    await put(root, glossary, "# Terms\nChanged\n");
+    await put(root, decisions, register("Choice B"));
     git("add", ".");
-    git("commit", "-m", "edit the glossary");
+    git("commit", "-m", "rewrite the decision row");
 
     const config = structuredClone(defaultConfig);
     config.baseBranch = "main";
@@ -207,8 +204,8 @@ describe("story-tree validators in the validate pipeline", () => {
     );
     expect(
       result.issues
-        .filter((found) => found.code === "QFAI-DRIFT-001")
+        .filter((found) => found.code === "QFAI-STORY-010")
         .map((found) => [found.severity, found.file]),
-    ).toEqual([["error", glossary]]);
+    ).toEqual([["error", decisions]]);
   });
 });

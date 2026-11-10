@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../../../src/core/config.js";
 import { parseAllMarkdownTables } from "../../../../src/core/specPackParsers.js";
-import { classifyRecordRow } from "../../../../src/core/storyTree/tables.js";
 import {
   executePlannedStep,
   type MigrationContext,
@@ -107,7 +106,7 @@ describe("migration decision table merge", () => {
   });
 
   // QFAI:EX-0004-0005-11
-  it("writes every approved change request as a change request whatever its Applied at", async () => {
+  it("writes every approved change request as a decision row whatever its Applied at", async () => {
     const context = await fixture();
     const requests = path.join(context.root, ".qfai", "decisions");
     await mkdir(requests, { recursive: true });
@@ -125,23 +124,9 @@ describe("migration decision table merge", () => {
     expect((await run(context)).code).toBe(0);
     const rows = registerRows(await readFile(path.join(context.specsDir, "decisions.md"), "utf8"));
     expect(rows.map((row) => row.content)).toEqual([
-      "Change request: docs/CR-20260101-0001.md",
-      "Change request: docs/CR-20260101-0002.md",
+      ".qfai/decisions/CR-20260101-0001-unapplied.md#CR-20260101-0001: docs/CR-20260101-0001.md",
+      ".qfai/decisions/CR-20260101-0002-applied.md#CR-20260101-0002: docs/CR-20260101-0002.md",
     ]);
-    expect(rows.map((row) => classifyRecordRow(row).refs)).toEqual([
-      ["docs/CR-20260101-0001.md"],
-      ["docs/CR-20260101-0002.md"],
-    ]);
-    expect(
-      rows[0]?.approach.startsWith(
-        ".qfai/decisions/CR-20260101-0001-unapplied.md#CR-20260101-0001: ",
-      ),
-    ).toBe(true);
-    expect(
-      rows[1]?.approach.startsWith(
-        ".qfai/decisions/CR-20260101-0002-applied.md#CR-20260101-0002: ",
-      ),
-    ).toBe(true);
   });
 
   // QFAI:EX-0004-0005-14
@@ -166,18 +151,9 @@ describe("migration decision table merge", () => {
       await readFile(path.join(context.specsDir, "decisions.md"), "utf8"),
     );
     expect(decisions.map((row) => row.content)).toEqual([
-      "Change request: docs/b.md, src/c.ts",
-      "Declined change request: docs/d.md",
+      ".qfai/decisions/CR-20260101-0002-approved.md#CR-20260101-0002: docs/b.md, src/c.ts",
+      "Declined: docs/d.md",
     ]);
-    expect(decisions.map((row) => classifyRecordRow(row))).toMatchObject([
-      { kind: "change-request", refs: ["docs/b.md", "src/c.ts"] },
-      { kind: "declined-change-request", refs: ["docs/d.md"] },
-    ]);
-    expect(
-      decisions[0]?.approach.startsWith(
-        ".qfai/decisions/CR-20260101-0002-approved.md#CR-20260101-0002: ",
-      ),
-    ).toBe(true);
     expect(
       decisions[1]?.approach.startsWith(
         ".qfai/decisions/CR-20260101-0003-rejected.md#CR-20260101-0003: ",

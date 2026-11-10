@@ -272,7 +272,7 @@ describe("decision pages through supported consumers", () => {
   // QFAI:AC-0001-0054-09
   // QFAI:EX-0001-0054-19
   it.each(["id", "content", "approach"])(
-    "does not let a root change request excuse a page's %s rewrite",
+    "reports a page's %s rewrite whatever row the root appends",
     async (cell) => {
       gitRepo();
       const original = row("DEC-0001", "Original");
@@ -290,9 +290,6 @@ describe("decision pages through supported consumers", () => {
       commit("root-only authority cannot repair page history");
       const findings = await validateStoryTreeDrift(root, config(), "drift");
       expect(findings).toContainEqual(
-        expect.objectContaining({ code: "QFAI-DRIFT-001", file: page }),
-      );
-      expect(findings).toContainEqual(
         expect.objectContaining({
           code: "QFAI-STORY-010",
           message: expect.stringMatching(new RegExp(`DEC-0001.*${cell}`, "i")),
@@ -300,30 +297,6 @@ describe("decision pages through supported consumers", () => {
       );
     },
   );
-
-  // QFAI:EX-0001-0054-19
-  it("reports an edit of the root's Decision pages list as an upstream edit of decisions.md", async () => {
-    gitRepo();
-    await put(ledger, paged());
-    await put(page, header + row("DEC-0001"));
-    commit("base list");
-    git("checkout", "-b", "topic");
-    const second = `${specs}/decisions/page-0002.md`;
-    await put(
-      ledger,
-      paged().replace(
-        "- decisions/page-0001.md",
-        "- decisions/page-0001.md\n- decisions/page-0002.md",
-      ),
-    );
-    await put(second, header + row("DEC-20261105093000"));
-    commit("list a new page");
-    const findings = await validateStoryTreeDrift(root, config(), "drift");
-    expect(
-      findings.filter(({ code }) => code === "QFAI-DRIFT-001").map(({ file }) => file),
-    ).toEqual(expect.arrayContaining([ledger, second]));
-    expect(findings.filter(({ code }) => code === "QFAI-STORY-010")).toEqual([]);
-  });
 
   // QFAI:EX-0001-0054-20
   it.each([

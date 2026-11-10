@@ -65,7 +65,7 @@ specialization_tags:
   An annotation on a test that checks something else is a finding and traces to `defect:correctness`.
 - Check for code written only to pass a test: no value hard-coded to the test's
   inputs and no branch written only for the test, and a wrong test or infeasible
-  task raised as a Change Request, not worked around
+  task raised as a specification change, not worked around
   (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 - Require more work only under `rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must`. Send new scope to the SDD owner as advisory.
 - Apply `rule/ui-procurement.md` to UI changes and report a usable standard or component that was passed over.
@@ -166,7 +166,7 @@ command.
 - The issue falls outside this review domain and must be rerouted to another specialist first.
 - The review would rely on speculative future requirements instead of current scope and evidence.
 - The finding would add a product obligation upstream never asked for. Do not raise it as blocking;
-  raise it as an advisory finding plus a Change Request proposal per
+  raise it as an advisory finding plus a proposed specification change per
   `.qfai/assistant/rule/drift-protocol.md#reviewer-originated-obligations`. A defect you can
   demonstrate from the changed artifacts (correctness, security / data integrity, a repository
   quality gate, or a regression against a governing rule or contract) is NOT in this category:

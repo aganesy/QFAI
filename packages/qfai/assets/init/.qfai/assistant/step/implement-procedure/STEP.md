@@ -93,4 +93,4 @@ no checker covers the changed files, the stage report records "no applicable
 checker", which neither passes nor blocks the gate.
 A changed named script passes its existing tests and checks, with coverage
 added where the repository has tests for it.
-Protected edits and uncovered actions were stopped before writing or acting.
+Edits to upstream artifacts and uncovered actions were stopped before writing or acting.

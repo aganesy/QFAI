@@ -3,22 +3,25 @@ Each row records one decision the user made. It is appended once the decision
 is made, and is never edited, moved or removed afterwards. The register holds
 decisions only; a question not yet decided goes to open-questions.md.
 
+A decision, an approval of a critical decision or a release included, becomes
+a row only when it is hard to reverse, would surprise a reader without
+context, and was the result of a real trade-off. The stage report states
+every other decision.
+
 A new row's ID is DEC-yyyymmddhhMMss: the UTC time the row is written, as 14
 digits. When a row of this register already holds that second, take the next
 second no row holds. A legacy DEC-NNNN row keeps its ID.
 
 The opening of Content gives a row its kind:
 
-- `Change request: <paths>` is an approved change. It authorizes edits to the
-  repository-relative paths it names, and only on the branch that adds it. A
-  change request the base already holds authorizes nothing.
-- `Declined change request: <paths>` is a change request the user declined.
-  Its Approach records who declined it and when.
-- `Declined: <option>` is any other option the user rejected.
+- `Declined: <option>` is an option the user rejected. Its Approach records
+  who declined it and when.
 - `Test exception: <BF, AC or EX>` exempts that item while the row exists.
 - Any other Content is a decision the user made.
 
-A declined row is a rejected option and authorizes nothing. A later decision
+A declined row is a rejected option and authorizes nothing. A legacy row
+opening `Change request:` or `Declined change request:` is history and
+authorizes nothing. A later decision
 that refers to an earlier row opens its Approach with the earlier ID:
 
 - `Supersedes DEC-…` replaces the earlier decision.
@@ -41,16 +44,15 @@ after any opening citation above:
 - `Consequences:` what the decision makes easier or harder.
 - `Rollback:` the steps that undo it, when they are not obvious.
 
-Content and Approach together stay within 600 characters, the paths a
-change request names not counted; validation warns on a longer row. Write a
-`|` inside a cell as `\|`.
+Content and Approach together stay within 600 characters; validation warns
+on a longer row. Write a `|` inside a cell as `\|`.
 
 A legacy DEC-NNNN row above DEC-2097 was written in an earlier form whose
 four items, Evidence, Grounds, Residual risk and Rollback, validation still
 checks; a new row does not use that form.
 
-A release approval, with `<...>` standing for the project's values, has this
-Content cell:
+A release approval that passes the recording test, with `<...>` standing for
+the project's values, has this Content cell:
 
 Release <X.Y.Z> approved by <name> on <date>, option "<label>"
 
@@ -65,8 +67,8 @@ A root may list decision pages in an optional '## Decision pages' section
 before '## Decisions', with only unique direct '- decisions/page-NNNN.md'
 entries in read order. Each page uses the same closed three-column table and
 has no page index. Read listed pages before this root table. Append new rows
-only to this root, which has no line limit; appending to a page is a protected
-edit. No row moves between files.
+only to this root, which has no line limit; never append to a page. No row
+moves between files.
 
 -->
 

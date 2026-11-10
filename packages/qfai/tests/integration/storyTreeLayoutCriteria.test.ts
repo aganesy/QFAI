@@ -360,7 +360,7 @@ describe("the policy and contract layers of an initialized project", () => {
   });
 });
 
-describe("records of triage, change requests and retired stories", () => {
+describe("records of triage, decisions and retired stories", () => {
   // QFAI:AC-0001-0007-03
   it("records them as decision rows and writes no decision directory or retired-story file", async () => {
     const root = await initializedRoot();
@@ -374,10 +374,10 @@ describe("records of triage, change requests and retired stories", () => {
 
     const step = await text("step", "sdd-triage", "STEP.md");
     expect(step).toContain(
-      "Record in `<paths.specsDir>/decisions.md` only what the user decided: each change request the user approved or declined",
+      "Record in `<paths.specsDir>/decisions.md` only the decisions the user made, approvals included, that pass the recording test",
     );
     expect(step).toContain(
-      "A change request Content begins `Change request:` and names the affected repository-relative paths; its Approach names the operation, the affected BF or US",
+      "An option the user rejects is a row whose Content opens `Declined:`, recording who declined it and when.",
     );
     expect(step).toContain(
       "Do not write a second decision-record directory or a retired story file",
@@ -385,13 +385,10 @@ describe("records of triage, change requests and retired stories", () => {
 
     const triage = await text("skill", "qfai-sdd", "references", "sdd-triage.md");
     expect(triage).toContain(
-      "A change request is a decision row whose Content begins Change request: and names the repository-relative paths it changes",
+      "Retiring a story removes its directory, with no separate retired-story file.",
     );
     expect(triage).toContain(
-      "Retiring a story removes its directory under the change request that names it, with no separate retired-story file.",
-    );
-    expect(triage).toContain(
-      "Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE.",
+      "Use the shared user-question protocol for each critical decision: CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and",
     );
   });
 });

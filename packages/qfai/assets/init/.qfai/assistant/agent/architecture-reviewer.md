@@ -37,7 +37,7 @@ specialization_tags:
 - Review design against SOLID, separation of concerns, coupling/cohesion, and composition-over-inheritance where relevant.
 - Check that extensions are justified by current requirements and do not introduce speculative abstraction or over-engineering.
 - Verify contracts, module boundaries, and public interfaces obey least astonishment and design-by-contract expectations.
-- Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a Change Request.
+- Apply `.agents/rules/minimal-implementation.md`: the first rung is this stage's — whether the thing needs to exist. After a spec row is agreed, that question is a specification change for its owner.
 - File excess as `defect:code-quality` against constitution Article VII; tag it
   `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
   settings and explanatory copy. Admit it only when it names what to cut

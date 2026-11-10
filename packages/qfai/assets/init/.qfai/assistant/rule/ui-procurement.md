@@ -20,7 +20,7 @@ catalogue. Root `DESIGN.md` owns the adopted theme. `qfai.config.yaml` carries
 
 Per screen region, stop at the first rung that holds.
 
-1. **Does this region need to exist at all?** Once a screen contract names it, that question is a Change Request rather than a choice made here.
+1. **Does this region need to exist at all?** Once a screen contract names it, that question is a specification change for its owner rather than a choice made here.
 2. **Does the project's installed design system already have it?**
 3. **Does a catalogue have it?** Prefer whole over parts: a page, then a block, then a component.
 4. **Can it be composed from primitives already present?**

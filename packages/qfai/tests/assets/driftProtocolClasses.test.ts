@@ -17,10 +17,10 @@ describe.each(trees)("drift classification in %s", (tree) => {
     expect(rule).toContain("Defect drift means an artifact contradicts itself");
     expect(rule).toContain("Record a reproduction:");
     expect(rule).toContain("without invented alternatives");
-    expect(rule).toContain("Both classes use the same approval and owner-rerun path.");
+    expect(rule).toContain("Both classes use the same decision and owner-rerun path.");
     expect(rule).toContain("A page row follows the same rules as a root row.");
     expect(rule.replace(/\s+/g, " ")).toContain(
-      "appending a row to a page is a protected edit, and no row moves between files",
+      "New rows are appended only to the root table, which has no line limit, and no row moves between files",
     );
   });
 

@@ -34,12 +34,12 @@ Edit method: <host-permitted tool; worktree creation does not grant access>
 If an edit is refused: stop that target; return tool, cwd, target, refusal text, owned paths and a reviewable diff
 Inputs (refs):
 - <file/section>
-- .qfai/assistant/rule/drift-protocol.md#core-rule  <!-- the protected set, in front of the agent -->
+- .qfai/assistant/rule/drift-protocol.md#core-rule  <!-- the upstream set, in front of the agent -->
 Constraints:
 - must: enforce Drift Protocol
 - must: follow applicable test-layer or validation policy
 - must_not: patch upstream artifacts directly; every upstream change requires
-  STOP + Change Request + owner rerun per .qfai/assistant/rule/drift-protocol.md
+  STOP + proposed change to the owner + owner rerun per .qfai/assistant/rule/drift-protocol.md
 Output format:
 - <headings / bullet schema>
 Time budget: none | <seconds>   # advisory: nothing stops at it. See .qfai/assistant/rule/stage-cost.md

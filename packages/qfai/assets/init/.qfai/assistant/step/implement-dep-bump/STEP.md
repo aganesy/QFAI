@@ -49,31 +49,28 @@ finding that names a spec contract moves the work as the next section says.
 When `validate`, or another check the update runs, reports a finding that
 names a spec contract to change, leave the contract unchanged. Finish every
 other part of the update first, so the contract finding is the only open item.
-Then get the change approved as `.qfai/assistant/rule/drift-protocol.md`
+Then put the change to the operator as `.qfai/assistant/rule/drift-protocol.md`
 describes:
 
 1. Put the finding, the contract it names and the fix it states to the
    operator as a critical decision: return `awaiting_input` and change nothing
    more. The attempt holding the answer carries on.
-2. On approval, append one `Change request:` row to `decisions.md` under
-   `paths.specsDir`. Its Content names the contract's path, and its Approach
-   records the finding, the fix, who approved it and when.
-3. Report `branch: { outcome: contract-finding }` citing that row's DEC ID.
-   The work moves to `apply-settled`, whose `spec` stage edits the contract
-   under its change request. Its settled triage applies the cited row.
+2. On approval, report `branch: { outcome: contract-finding }` naming the
+   contract's path, the finding, the fix, who approved it and when. The work
+   moves to `apply-settled`, whose `spec` stage edits the contract as approved.
+   The approval is a `decisions.md` row only when it meets the recording test
+   of the `qfai-sdd` decisions template.
 
-On a decline, append a `Declined change request:` row naming the same path,
-recording who declined it and when, leave the contract as it is and
-report the finding as unresolved, with no branch. When the operator cannot be
-asked, write no row and report the change as the decision still needed.
+On a decline, leave the contract as it is and report the finding as
+unresolved, with no branch. When the operator cannot be asked, report the
+change as the decision still needed.
 
 ## What it writes
 
 - The actual changed paths for the manifest, lockfile and any adapted call,
   listed in the stage report. When the dependency is `qfai` itself, they also
   include a new key in `qfai.config.yaml`.
-- On a contract finding the operator answered, the change request row in
-  `decisions.md`, and its DEC ID in the stage report.
+- On a contract finding the operator answered, the answer in the stage report.
 - A record of the versions, the breaking changes read and how each was met, in the stage report.
 
 ## Gate

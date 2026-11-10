@@ -61,7 +61,7 @@ describe("a grilling session between agents has an end", () => {
         content,
         "The stage reports every adopted\ndecision at its end without waiting for an answer",
       );
-      expectPhrase(content, "overturns one through a change request or a rerun");
+      expectPhrase(content, "overturns one through a specification change or a rerun");
     });
 
     it(`${tree}: keeps an uncovered critical decision open without spending a round`, async () => {

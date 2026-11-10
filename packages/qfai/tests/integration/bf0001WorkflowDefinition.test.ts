@@ -161,30 +161,9 @@ describe("BF-0001 workflow definition", () => {
     expect(constitution).toMatch(/non.negotiable operating rules/i);
   });
 
-  // QFAI:EX-0001-0002-01
-  // QFAI:EX-0001-0002-02
-  // QFAI:EX-0001-0002-03
-  it("defines the protected edits, change-request path, and evidence allowance", async () => {
-    const drift = await readFile(rule("drift-protocol.md"), "utf8");
-    expect(drift).toContain("A downstream skill does not edit an approved specification");
-    expect(drift).toContain("1. Stop work on the affected obligation");
-    expect(drift).toContain("2. Prepare the change request for the SDD owner");
-    expect(drift).toContain("3. Obtain the user's explicit answer");
-    expect(drift).toContain("on the branch that makes the change");
-    expect(drift).toContain("Approved: Content starts with `Change request:`");
-    expect(drift).toContain("4. Rerun the owner skill");
-    expect(drift).toContain("5. Recheck every dependent BF, AC, and EX test obligation");
-    expect(drift).not.toMatch(/^6\. /m);
-    expect(drift).toContain("No step edits the row afterwards.");
-    expect(drift).toContain("A project may add a local overlay beside a shipped rule");
-    expect(drift).toContain(
-      "An owner skill may change its own upstream artifact after the required approval",
-    );
-  });
-
   // QFAI:EX-0001-0007-09
   // QFAI:EX-0001-0007-10
-  it("records an approved change request, retirement included, as one decision row", async () => {
+  it("records a decision that passes the recording test as one row, and retires a story by removing it", async () => {
     const sdd = await readSdd();
     const triage = (
       await readFile(
@@ -192,12 +171,14 @@ describe("BF-0001 workflow definition", () => {
         "utf8",
       )
     ).replace(/\s+/g, " ");
-    expect(sdd).toContain("Record in `<paths.specsDir>/decisions.md` only what the user decided");
+    expect(sdd).toContain(
+      "Record in `<paths.specsDir>/decisions.md` only the decisions the user made, approvals included, that pass the recording test",
+    );
     expect(sdd).toContain(
       "Do not write a second decision-record directory or a retired story file",
     );
     expect(triage).toContain(
-      "Retiring a story removes its directory under the change request that names it, with no separate retired-story file",
+      "Retiring a story removes its directory, with no separate retired-story file",
     );
   });
 

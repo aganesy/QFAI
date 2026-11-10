@@ -38,8 +38,8 @@ number is never reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares
 its ID once: in the H1 of a Markdown contract (`# CLI-0001: <title>`), or on a
 `QFAI-CONTRACT-ID: API-0002` line in YAML or SQL.
 
-Write only what the user approved, as
-`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
+Write only the triaged scope, as
+`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#critical-decisions-and-no-question-mode`
 states.
 
 ## Procedure
@@ -92,14 +92,15 @@ the run.
 1. Scope the work to the named contract, its paired contracts, and the existing
    flows whose AC, EX, or BR depend on them.
 2. Read every affected flow's existing AC and EX and the paired contracts, then
-   repair only the contract scope approved by the change request. No previous
-   triage approval can substitute for approval of a new change-request row.
+   repair only the triaged contract scope. A repair outside it that is a
+   critical decision goes to the user first; an earlier answer covers only the
+   change it described.
 3. Recompute affected flows after each contract change until no new flow or
    contract write is found. Gather the newly exposed decisions and grill again
    before the next mutation.
-4. Do not silently rewrite a story in this mode; ask for a wider change request
-   when only the story can move.
-5. A `confirm-only` change request stays read-only and stops on a mismatch.
+4. Do not silently rewrite a story in this mode; put the story change to the
+   user as a critical decision when only the story can move.
+5. A `confirm-only` request stays read-only and stops on a mismatch.
 6. An activated API contract without an owning flow remains planned until an
    owner is established.
 

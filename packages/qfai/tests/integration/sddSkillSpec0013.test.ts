@@ -122,7 +122,9 @@ describe("shipped qfai-sdd story-tree contract", () => {
     );
     expect(content).not.toMatch(/\bSUPERSEDED \(by DEC-/);
     expect(content).toContain("including retired IDs named in decisions rows");
-    expect(content).toContain("A change request Content begins `Change request:`");
+    expect(content).toContain(
+      "An option the user rejects is a row whose Content opens `Declined:`",
+    );
   });
 
   it("gates each changed flow and reports it", async () => {

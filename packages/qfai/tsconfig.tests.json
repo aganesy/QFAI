@@ -292,7 +292,6 @@
     "tests/integration/doctorWorkflowParse.test.ts",
     "tests/integration/doctorWorkflowPreconditions.test.ts",
     "tests/integration/documentSchemaValidation.test.ts",
-    "tests/integration/driftProtocolAcceptance.test.ts",
     "tests/integration/initDistributionAcceptance.test.ts",
     "tests/integration/initSeedGitignoreSymlink.test.ts",
     "tests/integration/scripts/checkPackLocations.deletion.test.ts",

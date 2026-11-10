@@ -15,9 +15,9 @@ describe("clarification and approval remain separate", () => {
       const constitution = await read(tree, "assistant/rule/constitution.md");
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
       expect(constitution).toContain("Article VI — Clarification budget");
-      expect(triage).toContain("Approval questions are decisions");
+      expect(triage).toContain("Critical-decision questions are decisions");
       expect(triage).toContain("do not consume that clarification budget");
-      expect(triage).toContain("A pre-triage answer to continue is not approval");
+      expect(triage).toContain("A pre-triage answer to continue is not an answer");
     });
 
     it(`${tree}: the next-action question does not consume clarification budget`, async () => {

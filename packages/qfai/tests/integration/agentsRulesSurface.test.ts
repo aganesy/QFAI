@@ -211,7 +211,7 @@ describe("reviewer stop conditions distinguish named-rule defects from new produ
     const stop = text.split("## Stop conditions")[1]?.split(/^## /m)[0]?.replace(/\s+/g, " ");
     expect(stop).toBeDefined();
     expect(stop).toContain("The finding would add a product obligation upstream never asked for.");
-    expect(stop).toContain("raise it as an advisory finding plus a Change Request proposal");
+    expect(stop).toContain("raise it as an advisory finding plus a proposed specification change");
     expect(stop).toContain("a regression against a governing rule or contract");
     expect(stop).toContain("it stays blocking and traces to its `defect:*` class");
   });
@@ -724,7 +724,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain("Rung 1, and rungs 2 to 5 for a sourcing decision");
       expect(text).toContain("### A sourcing decision reaches rungs 2 to 5");
       // And the restriction the widening must not dissolve.
-      expect(text).toMatch(/objection to the behaviour\s+is still a Change Request/);
+      expect(text).toMatch(/objection to the behaviour\s+is still a specification change/);
     });
 
     it("keeps the operating and shipped minimal-implementation rules byte-identical", async () => {
@@ -770,7 +770,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /Lift when:/,
         /reported as a\s+follow-up/,
         /most directly support/,
-        /Change Request/i,
+        /specification change/i,
       ]) {
         expect(text).toMatch(clause);
       }

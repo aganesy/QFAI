@@ -1,8 +1,5 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { isDeepStrictEqual } from "node:util";
-
-import { Lexer, parseDocument } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
@@ -16,24 +13,17 @@ import {
   NotRegularFileError,
   readDecisionFilesAtRevision,
   readFileAtBase,
-  readFileAtRevision,
-  uncommittedContentPaths,
   type BaseComparison,
 } from "../gitChanges.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { parseCountedExampleAnnotations, RECORD_ID_SOURCE } from "../storyTree/ids.js";
-import {
-  classifyRecordRow,
-  diffRecordRows,
-  parseRecordTable,
-  type RecordRow,
-} from "../storyTree/tables.js";
+import { diffRecordRows, parseRecordTable, type RecordRow } from "../storyTree/tables.js";
 import { buildStoryTreeModel, readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
 import type { Issue } from "../types.js";
 import { countsForExample, readStoryTests, storyTestScanIssue } from "./storyTreeObligations.js";
 import { issue } from "./utils.js";
 
-/** Story-tree protected files, and register rows compared with the base by ID. */
+/** Register rows compared with the base by ID, and examples changed without a test change. */
 export async function validateStoryTreeDrift(
   root: string,
   config: QfaiConfig,
@@ -122,27 +112,18 @@ export async function validateStoryTreeDrift(
         `Decision-register comparison failed: ${error instanceof Error ? error.message : String(error)}`,
         "error",
         decisions,
-        "storyTree.upstreamEdit",
+        "storyTree.registerNotCompared",
         [decisions],
       ),
     ];
   }
-  const rows = headModel.decisions?.rows ?? [];
-  const baseIds = new Set((baseModel.decisions?.rows ?? []).map(({ id }) => id));
-  // A change request authorises its paths only on the branch that adds it.
-  const authorised = new Map<string, string>();
-  for (const row of rows) {
-    if (baseIds.has(row.id) || rows.filter((candidate) => candidate.id === row.id).length !== 1)
-      continue;
-    const classified = classifyRecordRow(row);
-    if (classified.kind !== "change-request") continue;
-    for (const file of classified.refs) authorised.set(normalizeRepoPath(file), row.id);
-  }
-  const baseQuestions = parseRecordTable(
-    withoutStatusColumn(regularFileOrNull(() => readFileAtBase(root, baseBranch, questions)) ?? ""),
-    "open-questions",
-  ).rows;
   if (profile === "drift") {
+    const baseQuestions = parseRecordTable(
+      withoutStatusColumn(
+        regularFileOrNull(() => readFileAtBase(root, baseBranch, questions)) ?? "",
+      ),
+      "open-questions",
+    ).rows;
     const headQuestions = parseRecordTable(
       await readSafePath(path.join(root, questions)),
       "open-questions",
@@ -152,96 +133,11 @@ export async function validateStoryTreeDrift(
       ...questionRowDrift(questions, baseModel, headModel, baseQuestions, headQuestions),
     );
   }
-  const decisionPages = `${path.posix.join(specs, "decisions")}/`;
-  const isProtected = (file: string): boolean =>
-    file.startsWith(`${path.posix.join(specs, "01_policy")}/`) ||
-    file.startsWith(`${path.posix.join(specs, "02_business-flow")}/`) ||
-    contracts === "" ||
-    file.startsWith(`${contracts}/`) ||
-    file === decisions ||
-    file.startsWith(decisionPages) ||
-    file === questions;
-  const baseQuestionIds = new Set(baseQuestions.map(({ id }) => id));
-  // The edits a protected file may take without a change request, against the head given.
-  // Appending to the root register or the question register is one; appending to a page is not.
-  const needsNoRequest = (file: string, head: string | null): boolean => {
-    const read = regularFileOrNull(() => readFileAtBase(root, baseBranch, file));
-    if (read === null || head === null) return false;
-    const register = file === decisions || file === questions || file.startsWith(decisionPages);
-    const base = register ? withoutStatusColumn(read) : read;
-    return (
-      (file === decisions && onlyAddsRows(base, head, baseIds, false)) ||
-      (file === questions && onlyAddsRows(base, head, baseQuestionIds, true)) ||
-      (file.endsWith("/03_Example.md") && onlyAppendsExamples(base, head)) ||
-      (file.startsWith(`${contracts}/`) && onlyCitesExamples(base, head)) ||
-      unchangedContent(file, base, head)
-    );
-  };
-  for (const file of changed) {
-    if (!isProtected(file) || authorised.has(file)) continue;
-    // The committed comparison reads the committed file, not the working tree.
-    if (
-      needsNoRequest(
-        file,
-        regularFileOrNull(() => readFileAtRevision(root, "HEAD", file)),
-      )
-    )
-      continue;
-    issues.push(
-      issue(
-        "QFAI-DRIFT-001",
-        `Upstream story-tree file changed without a Change request row this branch adds: ${file}`,
-        "error",
-        file,
-        "storyTree.upstreamEdit",
-        [file],
-      ),
-    );
-  }
   issues.push(...(await examplesWithoutTestChange(root, config, changed, specs, baseBranch)));
-  // A path already in the committed comparison is not named again, even when the working tree
-  // changes it further: the checks read the file as it is on disk.
-  const working = uncommittedContentPaths(
-    root,
-    (file) => isProtected(file) && !changed.has(file) && !authorised.has(file),
-  );
-  if (working === null) {
-    issues.push(notCompared("git could not list the uncommitted changes.", RERUN_ACTION));
-  } else {
-    // The edits a commit would pass without a change request pass uncommitted too.
-    const uncommitted: string[] = [];
-    for (const file of working) {
-      if (!needsNoRequest(file, await readWorkingFile(root, file))) uncommitted.push(file);
-    }
-    if (uncommitted.length > 0) issues.push(uncommittedNotCompared(uncommitted));
-  }
   if (profile === "drift" && comparison.kind === "resolved") {
     issues.push(comparedAgainst(baseBranch, comparison, changed.size));
   }
   return issues;
-}
-
-/** The most uncommitted paths the finding names; the count says how many there are. */
-const UNCOMMITTED_LISTED = 5;
-
-/**
- * The comparison is `<base>...HEAD`, so an edit that is not committed yet is not in it and the
- * checks pass on it. Said once, so a green run is not read as covering the working tree.
- */
-function uncommittedNotCompared(uncommitted: readonly string[]): Issue {
-  const listed = uncommitted.slice(0, UNCOMMITTED_LISTED);
-  const rest = uncommitted.length - listed.length;
-  const single = uncommitted.length === 1;
-  return issue(
-    "QFAI-DRIFT-004",
-    `${uncommitted.length} uncommitted ${single ? "change" : "changes"} to protected story-tree ${single ? "file is" : "files are"} not compared with the base: ${listed.join(", ")}${rest > 0 ? ` and ${rest} more` : ""}.`,
-    "warning",
-    undefined,
-    "storyTree.uncommittedNotCompared",
-    listed,
-    "canonical",
-    "Commit the change together with the change request row that names it, then rerun validate.",
-  );
 }
 
 const RERUN_ACTION =
@@ -472,215 +368,6 @@ function questionRowDrift(
   return issues;
 }
 
-/** The ID cell of a register row, once the line is unpadded. */
-function registerRowId(line: string): string | undefined {
-  return /^\|((?:DEC|OQ)-[^|]*)\|/.exec(line)?.[1];
-}
-
-/**
- * Whether the register file differs from its base only by rows whose IDs the base does not hold,
- * wherever they sit, and, where `deletable`, by deleted rows. Table padding is ignored.
- */
-function onlyAddsRows(
-  base: string,
-  head: string,
-  baseIds: ReadonlySet<string>,
-  deletable: boolean,
-): boolean {
-  const headLines = unpadded(head);
-  const headIds = new Set(headLines.map(registerRowId));
-  const kept = headLines.filter((line) => {
-    const id = registerRowId(line);
-    return id === undefined || baseIds.has(id);
-  });
-  const expected = unpadded(base).filter((line) => {
-    const id = registerRowId(line);
-    return !deletable || id === undefined || headIds.has(id);
-  });
-  return kept.join("\n") === expected.join("\n");
-}
-
-const EXAMPLE_ROW = /^\|\s*EX-\d{4}-\d{4}-\d{2}\s*\|/;
-
-/**
- * Whether the file differs from its base only by appended example rows. Table padding is
- * ignored, because a wider appended row makes the formatter re-pad every row.
- */
-function onlyAppendsExamples(base: string, head: string): boolean {
-  const baseLines = unpadded(base);
-  const kept = new Set(baseLines);
-  const headLines = unpadded(head);
-  const remaining = headLines.filter((line) => kept.has(line) || !EXAMPLE_ROW.test(line));
-  return remaining.join("\n") === baseLines.join("\n");
-}
-
-const EXAMPLE_ID = /^EX-\d{4}-\d{4}-\d{2}$/;
-
-/**
- * Whether the contract differs from its base only by EX IDs added to the Examples cell, the
- * last cell, of business-rule rows it already holds. Table padding is ignored.
- */
-function onlyCitesExamples(base: string, head: string): boolean {
-  const baseLines = unpadded(base);
-  const headLines = unpadded(head);
-  if (baseLines.length !== headLines.length) return false;
-  return baseLines.every(
-    (line, index) => line === headLines[index] || onlyAddsExampleIds(line, headLines[index] ?? ""),
-  );
-}
-
-function onlyAddsExampleIds(baseRow: string, headRow: string): boolean {
-  const before = baseRow.split(/(?<!\\)\|/).map((cell) => cell.trim());
-  const after = headRow.split(/(?<!\\)\|/).map((cell) => cell.trim());
-  const last = before.length - 2;
-  if (!/^BR-\d{4}-\d{4}$/.test(before[1] ?? "") || last < 2 || after.length !== before.length)
-    return false;
-  if (before.some((cell, index) => index !== last && cell !== after[index])) return false;
-  const cited = (cell: string | undefined) => (cell ?? "").split(/,\s*/).filter(Boolean);
-  const kept = cited(before[last]);
-  const now = cited(after[last]);
-  return (
-    kept.every((id) => now.includes(id)) &&
-    now.every((id) => kept.includes(id) || EXAMPLE_ID.test(id))
-  );
-}
-
-/** Each line with a table row's cell padding and separator dash widths removed, nothing else. */
-function unpadded(content: string): string[] {
-  return content
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => (line.startsWith("|") ? unpaddedRow(line) : line));
-}
-
-function unpaddedRow(line: string): string {
-  return line
-    .split(/(?<!\\)\|/)
-    .map((cell) => cell.replace(/^[ \t]+|[ \t]+$/g, "").replace(/^(:?)-{3,}(:?)$/, "$1---$2"))
-    .join("|");
-}
-
-/**
- * Whether the file reads the same as at the base once differences that cannot change its meaning
- * are set aside: a YAML file whose two sides both parse cleanly to deep-equal values and hold the
- * same comments, or a Markdown file with the same blocks. Any other file is a change.
- */
-function unchangedContent(file: string, base: string, head: string): boolean {
-  if (/\.ya?ml$/i.test(file)) return sameYaml(base, head);
-  if (/\.md$/i.test(file)) return isDeepStrictEqual(markdownBlocks(base), markdownBlocks(head));
-  return false;
-}
-
-/**
- * Comments carry identity, such as a contract's ID comment, so they must match in order. The
- * values must match read as YAML 1.2 and as YAML 1.1, where `017` and `yes` read differently.
- */
-function sameYaml(base: string, head: string): boolean {
-  if (!isDeepStrictEqual(yamlComments(base), yamlComments(head))) return false;
-  return (["1.2", "1.1"] as const).every((version) => {
-    const before = yamlValue(base, version);
-    const after = yamlValue(head, version);
-    return before !== null && after !== null && isDeepStrictEqual(before.value, after.value);
-  });
-}
-
-function yamlComments(content: string): string[] {
-  return [...new Lexer().lex(content)]
-    .filter((token) => token.startsWith("#"))
-    .map((token) => token.trim());
-}
-
-/** The parsed value, or null when the parser reports any error or warning, such as an unknown tag. */
-function yamlValue(content: string, version: "1.1" | "1.2"): { value: unknown } | null {
-  try {
-    // BigInt keeps a large integer exact, and a Map keeps key types and complex keys.
-    const document = parseDocument(content, { version, intAsBigInt: true });
-    if (document.errors.length > 0 || document.warnings.length > 0) return null;
-    return { value: document.toJS({ mapAsMap: true }) };
-  } catch {
-    // A document the parser cannot turn into a value has none to compare.
-    return null;
-  }
-}
-
-/** A line that opens a block of its own, so a line break before it is never a re-wrap. */
-const OPENS_BLOCK =
-  /^(?:[ \t]*$| {4}|\t| {0,3}(?:#|>|<|\[[^\]]+\]:|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$)|=+[ \t]*$|-+[ \t]*$|([-*_])(?:[ \t]*\1){2,}[ \t]*$))|(?<!\\)\|/;
-
-/**
- * A block the next line never continues: a heading, a list item, a quote, HTML, a link reference
- * definition, a rule or a setext underline, an indented line or a table row.
- */
-const CLOSED_BLOCK =
-  /^(?: {4}|\t| {0,3}(?:#|>|<|[-*+](?:[ \t]|$)|\d{1,9}[.)](?:[ \t]|$)|\[[^\]]+\]:|=+[ \t]*$|-+[ \t]*$|([-*_])(?:[ \t]*\1){2,}[ \t]*$))|(?<!\\)\|/;
-
-const BLANK = /^[ \t]*$/;
-
-/** A comment or a `pre`, `script`, `style` or `textarea` element, which may hold blank lines. */
-const RAW_HTML = /^ {0,3}<(?:(!--)|(pre|script|style|textarea)(?=[\s>]|$))/i;
-
-/**
- * The Markdown as blocks, with only these differences removed: a leading byte order mark, line
- * endings, trailing spaces and tabs, table cell padding, and the line break and indentation
- * between two lines of one paragraph. Case, punctuation, inner spacing and the order of lines,
- * rows and items are kept, a line break that is a hard break is kept, and a fenced block, front
- * matter, a comment or raw element up to its close, or another HTML block up to the next blank
- * line, is kept line for line.
- */
-function markdownBlocks(content: string): string[] {
-  const text = content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
-  const blocks: string[] = [];
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  // Front matter closes on its own `---` line, a fence on a fence of its kind at least as long,
-  // and a comment or raw element on the line holding its close.
-  let closer: RegExp | null = /^---[ \t]*$/.test(lines[0] ?? "") ? /^---[ \t]*$/ : null;
-  let html = false;
-  let continues = false;
-  let hardBreak = false;
-  for (const [index, raw] of lines.entries()) {
-    if (closer) {
-      blocks.push(raw);
-      if (index > 0 && closer.test(raw)) closer = null;
-      continue;
-    }
-    if (html && !BLANK.test(raw)) {
-      blocks.push(raw);
-      continue;
-    }
-    html = false;
-    const fence = /^ {0,3}(`{3,}|~{3,})/.exec(raw)?.[1];
-    if (fence) {
-      blocks.push(raw);
-      closer = new RegExp(`^ {0,3}${fence[0] === "`" ? "`" : "~"}{${fence.length},}[ \\t]*$`);
-      continues = false;
-      continue;
-    }
-    const verbatim = RAW_HTML.exec(raw);
-    if (verbatim) {
-      blocks.push(raw);
-      const closing = verbatim[1] ? /-->/ : new RegExp(`</${verbatim[2] ?? ""}>`, "i");
-      if (!closing.test(raw.slice(verbatim[0].length))) closer = closing;
-      continues = false;
-      continue;
-    }
-    if (/^ {0,3}</.test(raw)) {
-      blocks.push(raw);
-      html = true;
-      continues = false;
-      continue;
-    }
-    const line = raw.replace(/[ \t]+$/, "");
-    if (continues && !OPENS_BLOCK.test(line)) {
-      blocks.push(`${blocks.pop() ?? ""}${hardBreak ? "\n" : " "}${line.replace(/^[ \t]+/, "")}`);
-    } else {
-      blocks.push(line.startsWith("|") ? unpaddedRow(line) : line);
-      continues = line !== "" && !CLOSED_BLOCK.test(line);
-    }
-    hardBreak = / {2}$|\\$/.test(raw);
-  }
-  return blocks;
-}
-
 const STATUS_HEADER = /^\|\s*ID\s*\|\s*Content\s*\|\s*Approach\s*\|\s*Status\s*\|?\s*$/m;
 
 /**
@@ -706,16 +393,6 @@ function regularFileOrNull(read: () => string | null): string | null {
     return read();
   } catch (error) {
     if (error instanceof NotRegularFileError) return null;
-    throw error;
-  }
-}
-
-/** The file in the working tree, or null when it is missing. */
-async function readWorkingFile(root: string, file: string): Promise<string | null> {
-  try {
-    return await readFile(path.join(root, file), "utf8");
-  } catch (error) {
-    if (isEnoent(error)) return null;
     throw error;
   }
 }

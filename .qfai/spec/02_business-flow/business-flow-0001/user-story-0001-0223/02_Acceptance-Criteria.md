@@ -28,10 +28,11 @@ Feature: Answer only the critical decisions, and approve each release
     And the approval authorizes no push, merge, tag or publication
 
   # AC-0001-0223-04
-  Scenario: An approval is one decisions row
-    Given the user approves a specification change, a critical decision or a release
+  Scenario: An approval is a decisions row only when it meets the recording test
+    Given the user approves a critical decision or a release
     When the approval is recorded
-    Then `decisions.md` gains one row naming what was approved, who approved it, when, and the option chosen
+    Then `decisions.md` gains one row naming what was approved, who approved it, when, and the option chosen, only when the approval is hard to reverse, would surprise a reader without context, and was the result of a real trade-off
+    And otherwise the final report states the approval with the same items
     And no row records a decision the agent took
 
   # AC-0001-0223-05

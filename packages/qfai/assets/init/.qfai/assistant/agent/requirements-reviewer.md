@@ -51,7 +51,7 @@ specialization_tags:
   each cites and the EXs the invocation wrote or changed, and raise findings of
   the five kinds it lists. A finding names its kind and target IDs and changes
   no file. Do not raise again a finding already decided, rejected, or answered
-  by a pending or declined change request, and do not decide your own findings.
+  by a declined option, and do not decide your own findings.
 - Briefed as a griller, follow `.agents/rules/grilling.md` and
   `skill/qfai-grilling/SKILL.md`: put each round to the session agent with a
   recommendation, and never review an artifact whose decision you recommended.

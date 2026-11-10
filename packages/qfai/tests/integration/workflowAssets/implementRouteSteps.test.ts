@@ -116,13 +116,10 @@ describe("the steps the routes add to qfai-implement", () => {
     expect(bump).toMatch(/`init --force`, the retired files the release notes list/i);
     expect(bump).toMatch(/names a spec contract to change, leave the contract unchanged/i);
     expect(bump).toMatch(/to the operator as a critical decision: return `awaiting_input`/i);
-    expect(bump).toMatch(/on approval, append one `Change request:` row to `decisions\.md`/i);
     expect(bump).toMatch(
-      /report `branch: \{ outcome: contract-finding \}` citing that row's DEC ID/i,
+      /on approval, report `branch: \{ outcome: contract-finding \}` naming the contract's path, the finding, the fix, who approved it and when/i,
     );
-    expect(bump).toMatch(
-      /`apply-settled`, whose `spec` stage edits the contract under its change request/i,
-    );
+    expect(bump).toMatch(/`apply-settled`, whose `spec` stage edits the contract as approved/i);
     expect(bump).toMatch(
       /when every other part of the update is met and recorded and the only finding left is the contract one, which it reports as `contract-finding`/i,
     );
@@ -339,7 +336,7 @@ describe("the route-only procedure writer", () => {
   // QFAI:AC-0001-0224-13
   // QFAI:EX-0001-0224-48
   // QFAI:EX-0001-0224-45
-  it("stops protected edits before writing and preserves maintenance's semantic refusal", async () => {
+  it("stops upstream edits before writing and preserves maintenance's semantic refusal", async () => {
     const text = await procedureText();
     const boundary = flat(sectionOf(text, "## Before writing"));
     for (const term of ["policy", "story", "contract", "assistant"])

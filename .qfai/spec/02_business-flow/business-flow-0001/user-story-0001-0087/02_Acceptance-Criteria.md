@@ -19,18 +19,17 @@ Feature: Design Direction Handoff
     And when the pack records no brand direction, it asks for one rather than choosing a brand itself
 
   # AC-0001-0087-03
-  Scenario: SDD repairs only the authorized part of an existing design
+  Scenario: SDD repairs only the triaged part of an existing design
     Given a visual flow with an existing root `DESIGN.md`
     And SDD triage names that path and the requested change
-    And a change-request row the branch adds authorizes that path and change
     When the SDD design-authoring step runs
     Then it applies only that change and validates the result
-    And it preserves the existing brand and tokens unless their change is authorized and supported by recorded direction or named theme values
+    And it preserves the existing brand and tokens unless the user decided their change and it is supported by recorded direction or named theme values
 
   # AC-0001-0087-04
-  Scenario: An existing design without an authorized change is preserved
+  Scenario: An existing design without a triaged change is preserved
     Given a visual flow with an existing root `DESIGN.md`
-    And no change-request row the branch adds authorizes the triaged change to that path
+    And SDD triage names no change to that path
     When the SDD design-authoring step runs
     Then it writes nothing to that file and validates it as it stands
     And an unreplaced sample is refused

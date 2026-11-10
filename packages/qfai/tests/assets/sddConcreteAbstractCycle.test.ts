@@ -145,18 +145,15 @@ describe("how an adopted finding changes the tree", () => {
   });
 
   // QFAI:EX-0001-0147-18
-  it("puts the removal of an approved example to the user and leaves it until approval", async () => {
+  it("puts the removal of an existing example to the user and leaves it until the answer", async () => {
     const text = await applying();
     const existing = rowOf(text, "existed when the invocation started");
-    expect(existing).toMatch(/only under a `Change request:` row this branch adds/i);
-    expect(existing).toMatch(/approved change covers this change/i);
-    const uncovered = rowOf(text, "no row that covers the change");
-    expect(uncovered).toMatch(/put to the user/i);
-    expect(uncovered).toMatch(/item stays unchanged until the user approves it/i);
+    expect(existing).toMatch(/put to the user as a critical decision/i);
+    expect(existing).toMatch(/item stays unchanged until the user answers/i);
     expectSentence(
       text,
-      "one change request on approval",
-      /approved change is written with one `Change request:` row naming the files it changes/i,
+      "recorded only when it passes the test",
+      /decision\s+is recorded only when it passes the recording test/i,
     );
   });
 
@@ -168,20 +165,20 @@ describe("how an adopted finding changes the tree", () => {
   });
 
   // QFAI:EX-0001-0147-20
-  it("under --contract asks for a wider change request and leaves the story file unchanged", async () => {
+  it("under --contract puts the story change to the user and leaves the story file unchanged", async () => {
     const text = await applying();
     expectSentence(
       text,
       "a story-only answer",
       /`--contract`/,
       /only a story change answers/i,
-      /wider change request naming the story file/i,
+      /put to the\s+user as a critical decision naming the story file/i,
     );
     expectSentence(
       text,
-      "nothing outside the approved scope",
+      "nothing outside the triaged scope",
       /story file stays byte for byte unchanged/i,
-      /repaired only within the scope already approved/i,
+      /repaired only\s+within the triaged scope/i,
     );
   });
 
@@ -195,21 +192,17 @@ describe("how an adopted finding changes the tree", () => {
   });
 
   // QFAI:EX-0001-0147-32
-  it("does not let a change request cover a change it did not describe", async () => {
+  it("does not let an answer cover a change it did not describe", async () => {
     const text = await applying();
-    expectSentence(
-      text,
-      "coverage",
-      /row naming the file does not cover a change it did not describe/i,
-    );
-    expect(rowOf(text, "no row that covers the change")).toMatch(/put to the user/i);
+    expectSentence(text, "coverage", /answer covers only the change it described/i);
+    expect(rowOf(text, "existed when the invocation started")).toMatch(/put to the user/i);
   });
 
   // QFAI:EX-0001-0147-39
-  it("applies a change the branch's change request describes, with no new row", async () => {
+  it("applies a change the user's request names, asking nothing more", async () => {
     const covered = rowOf(await applying(), "existed when the invocation started");
     expect(covered).toMatch(
-      /Changed directly only under a `Change request:` row this branch adds whose approved change covers this change/i,
+      /Changed directly when the user's request in this session names that change/i,
     );
   });
 });
@@ -243,11 +236,6 @@ describe("how many cycles run", () => {
       /would go to the user becomes that row in the cycle that raised it/i,
     );
     expectSentence(text, "the gate", /per-flow gate reports that row as `QFAI-SPACK-102`/i);
-    expectSentence(
-      text,
-      "appending the row needs no change request",
-      /Appending the row needs no change request/i,
-    );
   });
 
   // QFAI:EX-0001-0147-34
@@ -285,29 +273,21 @@ describe("a decided finding is not raised again", () => {
   });
 
   // QFAI:EX-0001-0147-37
-  it("treats a declined change request as the user's decision until a reopening lifts it", async () => {
+  it("treats a declined change as the user's decision until a reopening lifts it", async () => {
     const text = await notAgain();
-    expectSentence(
-      text,
-      "a declined change request",
-      /proposed change of a change request the user declined already answers/i,
-    );
+    expectSentence(text, "a declined change", /change the user declined already answers/i);
     expectSentence(
       text,
       "the user decided",
-      /declined change request is the user deciding that finding/i,
+      /declined change is the user\s+deciding that finding/i,
     );
     expectSentence(text, "wording", /Matching never goes by wording/i);
     expectSentence(text, "reopening", /Approach opens `Reopens DEC-…`[\s\S]*lifts it/i);
-    expectSentence(
-      text,
-      "its row",
-      /its\s+`Declined change request:` row in `decisions\.md` bars the finding/i,
-    );
+    expectSentence(text, "its row", /its\s+`Declined:` row in `decisions\.md` bars the\s+finding/i);
     expectSentence(
       await section(TRIAGE, "## Decision and question rows"),
       "a declined change is a declined row",
-      /declined change request is a row whose Content opens `Declined change request:`/i,
+      /option the user rejects is a row whose Content opens `Declined:`/i,
     );
   });
 });

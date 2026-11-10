@@ -23,10 +23,10 @@ Feature: Decision and open-question tables
     And a decision that replaces or narrows an earlier one is a new row whose Approach cites the earlier ID, and that ID is a row of the register
 
   # AC-0001-0007-03
-  Scenario: Triage records, change requests and retired stories are decision rows
+  Scenario: Triage records and decisions the user made are decision rows
     Given a project on the story tree
-    When a triage operation, a change request or a story retirement is recorded
-    Then it is recorded as a row of `decisions.md`
+    When a triage operation or a decision the user made that passes the recording test is recorded, or a story is retired
+    Then a recorded decision is a row of `decisions.md`, and a retired story's directory is removed
     And no file is written under `.qfai/decisions/` and no `01_Spec-retired.md` file exists
 
   # AC-0001-0007-06

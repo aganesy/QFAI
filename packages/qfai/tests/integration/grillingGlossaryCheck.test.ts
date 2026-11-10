@@ -83,7 +83,7 @@ describe.each(MASTERS)("%s writes a settled term at once", (rel) => {
     const master = await read(rel);
     expect(master).toContain("A changed pack term rewrites its row and adds no second one.");
     expect(master).toContain(
-      "**Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only under an approved change request.",
+      "**Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only after the user approves it.",
     );
     expect(master).toContain("A definition says what the term is.");
     expect(master).toContain(

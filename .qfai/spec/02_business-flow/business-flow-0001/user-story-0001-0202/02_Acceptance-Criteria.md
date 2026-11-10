@@ -10,5 +10,4 @@ Feature: Fix a regression an existing correct test catches, leaving the covered 
     When /qfai-implement runs implement-regression-fix
     Then it changes production code only, and no test, story or contract file
     And the EX is still annotated by that test
-    And no change request row is appended
 ```

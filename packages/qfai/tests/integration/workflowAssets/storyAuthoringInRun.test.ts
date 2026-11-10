@@ -73,7 +73,7 @@ describe("defect example seeding", () => {
     const text = await section(STORY_STEP, SEEDING);
     expect(text).toMatch(/the step asks the user nothing/i);
     expect(text).toMatch(
-      /append no `decisions\.md` row: the drift gate needs no `Change request:` row for appended example rows/i,
+      /append no `decisions\.md` row for the appended example row and the new EX ID/i,
     );
     expect(text).toMatch(/list the EX\b.*\bin the run's final report/i);
   });
@@ -82,19 +82,19 @@ describe("defect example seeding", () => {
 describe("qfai-sdd changes the story tree", () => {
   // QFAI:AC-0001-0147-03
   // QFAI:EX-0001-0147-05
-  it("records in decisions.md only what the user decided, with who, when and the option", async () => {
+  it("records in decisions.md only the user's decisions that pass the recording test", async () => {
     const text = await section(TRIAGE, "## Decision and question rows");
-    expect(text).toMatch(/decisions\.md records only what the user decided/i);
-    expect(text).toMatch(/a row is appended once the user has decided what it records/i);
-    expect(text).toMatch(/who approved it, when, and the option chosen/i);
     expect(text).toMatch(
-      /a declined change request is a row whose Content opens `Declined change request:`/i,
+      /decisions\.md records only decisions the user made, approvals of critical decisions and releases included, that pass the recording test/i,
     );
+    expect(text).toMatch(
+      /hard to reverse, surprising to a reader without context, and the result of a real trade-off/i,
+    );
+    expect(text).toMatch(/a row is appended once the user has decided what it records/i);
+    expect(text).toMatch(/an option the user rejects is a row whose Content opens `Declined:`/i);
     expect(text).toMatch(/who declined it and when/i);
     expect(text).toMatch(/a new open-questions\.md row `OQ-yyyymmddhhMMss`/i);
-    expect(flat(await readShipped(CHECKLISTS))).toMatch(
-      /a declined change request is a `Declined change request:` row/i,
-    );
+    expect(flat(await readShipped(CHECKLISTS))).toMatch(/a rejected option is a `Declined:` row/i);
   });
 
   // QFAI:AC-0001-0207-02
@@ -108,27 +108,20 @@ describe("qfai-sdd changes the story tree", () => {
   // QFAI:AC-0001-0207-06
   // QFAI:EX-0001-0207-06
   // QFAI:EX-0001-0207-07
-  it("changes the story tree only on the user's approval, recording who approved it, when and what", async () => {
-    const text = await section(TRIAGE, "### A change to the story tree");
-    expect(text).toMatch(/changes only on the user's approval/i);
+  it("puts a critical change of the story tree to the user, and makes any other change itself", async () => {
+    const text = await section(TRIAGE, "## Critical decisions and no-question mode");
     expect(text).toMatch(
-      /show the user the files the stage would change and the proposed change, and change nothing until the user answers/i,
+      /an UPDATE:MODIFY that changes what an item existing before the stage states/i,
     );
     expect(text).toMatch(
-      /a request from the user in the session that names the change and its effect is that answer: the stage lists the files in its announcement, asks no second question, and records the request as the option chosen/i,
+      /a request from the user in the session that names the operation and its effect is the answer, and no second question is asked/i,
     );
     expect(text).toMatch(
-      /on approval, write the change and append one `decisions\.md` row whose Content opens `Change request:`/i,
+      /any other story-tree or contract change, such as an appended AC, EX or BR, the stage makes itself and lists in its report/i,
     );
-    expect(text).toMatch(/names every story-tree and contract file it changed/i);
-    expect(text).toMatch(
-      /its Approach records who approved it, when, and the label of the option chosen/i,
-    );
-    expect(text).toMatch(
-      /appending a row to `decisions\.md` or `open-questions\.md` needs no change request/i,
-    );
-    const step = await section(TRIAGE_STEP, "## A change to the story tree");
-    expect(step).toMatch(/sdd-triage\.md#a-change-to-the-story-tree/);
+    const step = await section(TRIAGE_STEP, "## Stage 1: triage and records");
+    expect(step).toMatch(/put each critical decision to the user before anything depends on it/i);
+    expect(step).toMatch(/make every other story-tree or contract change yourself/i);
   });
 });
 
@@ -166,13 +159,13 @@ describe("qfai-sdd writes the story tree", () => {
   it("allocates the highest number in a scope plus one, and reissues no retired ID", async () => {
     const allocation = await section(TRIAGE, "## ID allocation");
     expect(allocation).toContain(
-      "Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one.",
+      "Read all IDs of the kind in the relevant scope, including IDs named by decision rows and by the commits that retired them. The next ID is the highest plus one.",
     );
     expect(allocation).toContain(
       "Empty numeric scopes begin at 0001, and AC/EX tails begin at 01.",
     );
     expect(allocation).toContain(
-      "Do not reuse an ID because its file was removed or a change request was declined.",
+      "Do not reuse an ID because its file was removed or a change was declined.",
     );
     expect(allocation).toContain(
       "Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` right before writing it",
@@ -185,7 +178,7 @@ describe("qfai-sdd writes the story tree", () => {
     );
     const scopes = flat(await readShipped(TRACEABILITY));
     expect(scopes).toContain(
-      "Count IDs named in retired-item decisions, so deletion never frees an ID.",
+      "Count IDs named in decision rows and in the commits that retired them, so deletion never frees an ID.",
     );
     expect(scopes).toContain("Directory names match their BF and US IDs.");
   });
@@ -216,9 +209,6 @@ describe("qfai-sdd writes the story tree", () => {
     );
     expect(reference).toContain(
       "A decisions.md or open-questions.md row takes its timestamp ID from the time it is written instead; no count and no other branch decides it.",
-    );
-    expect(flat(await readShipped("skill/qfai-sdd/templates/change-request.md"))).toContain(
-      "The ID is the UTC time the row is written, `DEC-yyyymmddhhMMss`.",
     );
   });
 
@@ -324,7 +314,7 @@ describe("capacity-safe story authoring guidance", () => {
     expect(preWrite).toMatch(/stop an over-capacity batch before any dependent declaration/u);
     const scopes = await section(TRACEABILITY, "## Identifier scopes");
     expect(scopes).toMatch(
-      /For an approved capacity-only sibling or actual move.*owning stage.s capacity preflight and complete map before writing/u,
+      /For a capacity-only sibling or actual move the user decided.*owning stage.s capacity preflight and complete map before writing/u,
     );
     expect(scopes).toMatch(/retired-inclusive remaining 99-H/u);
     expect(scopes).toMatch(/Stop an over-capacity batch before partial declarations/u);
@@ -353,7 +343,7 @@ describe("capacity-safe story authoring guidance", () => {
   // QFAI:AC-0001-0147-16
   // QFAI:EX-0001-0147-41
   // QFAI:EX-0001-0147-43
-  it("limits a same-goal sibling to approved cohesive incoming overflow and rejects fitting additions", async () => {
+  it("limits a same-goal sibling to decided cohesive incoming overflow and rejects fitting additions", async () => {
     const partition = await section(TRIAGE, "### Capacity partition");
     expect(partition).toMatch(
       /Only additions exceeding an actual AC or EX scope.s remaining 99-H qualify/u,
@@ -364,23 +354,23 @@ describe("capacity-safe story authoring guidance", () => {
       /cohesive incoming group.*capacity-checked sibling.*same BF and actual actor goal/u,
     );
     expect(partition).toMatch(
-      /owning change request this branch adds.*explicitly approve.*partition.*affected paths before writing/u,
+      /partition is a critical decision: the user answers it, with its affected paths, before writing/u,
     );
     expect(partition).toMatch(/truthful cohesive scope.*each criterion.s owner/u);
     expect(partition).toMatch(
       /do not invent a new product outcome, duplicate an obligation or weaken it/u,
     );
     expect(partition).toMatch(
-      /different actor, goal, flow or intended behavior.*existing owning approval path/u,
+      /different actor, goal, flow or intended behavior is its own critical decision/u,
     );
     expect(partition).toMatch(/Additions that fit the original scope do not qualify/u);
     expect(partition).toMatch(
-      /Missing authority, insufficient destination capacity or no truthful partition stops the dependent write/u,
+      /A missing decision, insufficient destination capacity or no truthful partition stops the dependent write/u,
     );
     expect(partition).toMatch(
       /prospective split places new overflow cases.*existing case.*complete map/u,
     );
-    expect(partition).toMatch(/approve no future specific creation, move or split/u);
+    expect(partition).toMatch(/decide no future specific creation, move or split/u);
     const moves =
       (await section(TRIAGE, "### Actual moves and incoming collisions")).split(
         "Two branches can take",
@@ -396,28 +386,28 @@ describe("capacity-safe story authoring guidance", () => {
     expect(decomposition).toMatch(
       /same actual actor goal.*same BF.*requested AC or EX additions exceed.*remaining capacity/u,
     );
-    expect(decomposition).toMatch(/only new, cohesive incoming cases.*covering change request/u);
     expect(decomposition).toMatch(
-      /Confirm retired-inclusive capacity and the owning approval before writing/u,
+      /only new, cohesive incoming cases there, once the user has decided the partition/u,
     );
+    expect(decomposition).toMatch(/Confirm retired-inclusive capacity before writing/u);
     expect(await section("step/sdd-story/STEP.md", "## Procedure")).toContain(
       "sdd-triage.md#capacity-partition",
     );
     expect(decomposition).toMatch(
-      /invents no new product outcome.*grants no future creation or move permission/u,
+      /invents no new product outcome and decides no future creation or move/u,
     );
   });
 
   // QFAI:AC-0001-0147-16
   // QFAI:EX-0001-0147-42
   // QFAI:EX-0001-0147-44
-  it("requires a complete approved source-bound move map and preserves historical decision references", async () => {
+  it("requires a complete source-bound move map the user decided and preserves historical decision references", async () => {
     const moves =
       (await section(TRIAGE, "### Actual moves and incoming collisions")).split(
         "Two branches can take",
       )[0] ?? "";
     expect(moves).toMatch(
-      /approved actual AC\/EX move or incoming collision repair.*complete one-to-one map/u,
+      /actual AC\/EX move the user decided or incoming collision repair.*complete one-to-one map/u,
     );
     for (const term of [
       "fixed source commit and declaration path",
@@ -435,11 +425,13 @@ describe("capacity-safe story authoring guidance", () => {
     expect(moves).toMatch(/destination EX needs one existing destination AC.*each AC needs an EX/u);
     expect(moves).toMatch(/owning BR link and counted test obligation/u);
     expect(moves).toMatch(/ID change alone proves no coverage/u);
-    expect(moves).toMatch(/Retire old moved IDs in a new approved record and never refill them/u);
+    expect(moves).toMatch(
+      /Name the old moved IDs as retired in the stage report and the commit message, and never refill them/u,
+    );
     expect(moves).toMatch(
       /Inherited published DEC ID, Content and Approach cells.*old-ID references remain historical and unchanged/u,
     );
-    expect(moves).toMatch(/update only approved active references/u);
+    expect(moves).toMatch(/update only the active references the move covers/u);
     expect(moves).toMatch(
       /fixed provenance and meaning.*only the provably incoming item.*without blanket replacement/u,
     );
@@ -447,11 +439,11 @@ describe("capacity-safe story authoring guidance", () => {
       /Unknown ownership, ambiguous collisions.*incomplete map stops the move without a completion claim/u,
     );
     expect(moves).toMatch(
-      /manual approval and mapping procedure, not a move executor or mapping schema/u,
+      /manual decision and mapping procedure, not a move executor or mapping schema/u,
     );
     const scopes = await section(TRACEABILITY, "## Identifier scopes");
     expect(scopes).toMatch(
-      /complete fixed-source map.*approved active indexes, contract citations and counted test references/u,
+      /complete fixed-source map.*update the active indexes, contract citations and counted test references/u,
     );
     expect(scopes).toMatch(
       /Inherited DEC ID, Content and Approach cells.*historical and unchanged/u,

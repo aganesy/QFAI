@@ -11,7 +11,7 @@ Stage 3 of the story tree: stories and examples.
 
 ## Reads
 
-- The triage decisions `sdd-triage` made and the scope the user approved, and
+- The triage decisions `sdd-triage` made and the scope it triaged, and
   the flows `sdd-flow` wrote.
 - The paired templates under
   `.qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flow-NNNN/`.
@@ -32,8 +32,8 @@ Stage 3 of the story tree: stories and examples.
 - The `// QFAI:EX-NNNN-NNNN-NN` annotation line that maps an example to an
   existing test, as procedure item 9 states, and nothing else in a test file.
 
-Write only what the user approved, as
-`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
+Write only the triaged scope, as
+`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#critical-decisions-and-no-question-mode`
 states.
 
 ## Procedure
@@ -45,7 +45,7 @@ states.
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#capacity-before-writing`.
    Report the retired-inclusive remaining capacity and requested count, and
    stop an over-capacity batch before any dependent declaration.
-   For an approved capacity-only sibling or actual move, read
+   For a capacity-only sibling or actual move the user decided, read
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#capacity-partition`
    and its following complete-map procedure before the affected write.
 2. Write the story index and the three files of each affected story, each in
@@ -69,8 +69,8 @@ states.
    AC/API or Integration, and EX/other test obligations. Do not author
    acceptance tests in this step. Item 9's annotation line is not test
    authoring.
-7. Retire a story by removing its directory under the change request that names
-   it, and never recycle its IDs.
+7. Retire a story, once the user has decided it, by removing its directory, and
+   never recycle its IDs.
 8. Where a decision replaced a claim, such as an input, a threshold or a
    count, search the whole story tree and the contracts for the old claim
    before finishing. List each hit in the stage report, with what it now

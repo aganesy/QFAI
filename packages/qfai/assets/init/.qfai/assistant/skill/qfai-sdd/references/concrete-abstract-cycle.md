@@ -68,24 +68,23 @@ no EX is appended for it, and no row is written.
 
 The age of the target decides the route.
 
-| Target                                              | Route                                                                                                                                       |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| An AC, EX or BR this invocation wrote               | Changed directly, with no approval. An AC it wrote is split the same way, with no approval, and each EX re-cites the criterion it exercises |
-| An item that existed when the invocation started    | Changed directly only under a `Change request:` row this branch adds whose approved change covers this change                               |
-| The same item, with no row that covers the change   | The change is put to the user, and the item stays unchanged until the user approves it                                                      |
-| Creating, splitting, merging or retiring a BF or US | Put to the user, even when this invocation wrote the item                                                                                   |
+| Target                                              | Route                                                                                                                                                                             |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| An AC, EX or BR this invocation wrote               | Changed directly, with no approval. An AC it wrote is split the same way, with no approval, and each EX re-cites the criterion it exercises                                       |
+| An item that existed when the invocation started    | Changed directly when the user's request in this session names that change; otherwise put to the user as a critical decision, and the item stays unchanged until the user answers |
+| Creating, splitting, merging or retiring a BF or US | Put to the user, even when this invocation wrote the item                                                                                                                         |
 
-A row naming the file does not cover a change it did not describe. The drift
-protocol approves a proposed change and its affected set as written
-(`.qfai/assistant/rule/drift-protocol.md#when-drift-is-detected`). An approved
-change is written with one `Change request:` row naming the files it changes,
-as
-`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
+An answer covers only the change it described. The drift protocol decides a
+proposed change and its affected set as written
+(`.qfai/assistant/rule/drift-protocol.md#when-drift-is-detected`). The decision
+is recorded only when it passes the recording test, as
+`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#critical-decisions-and-no-question-mode`
 sets out.
 
-Under `--contract`, a finding that only a story change answers asks the user for
-a wider change request naming the story file. The story file stays byte for byte
-unchanged, and the contract is repaired only within the scope already approved.
+Under `--contract`, a finding that only a story change answers is put to the
+user as a critical decision naming the story file. Until the user answers, the
+story file stays byte for byte unchanged, and the contract is repaired only
+within the triaged scope.
 
 After the cycle's changes are applied, rewrite each BR they affect from its
 updated EXs.
@@ -104,8 +103,8 @@ exists.
 Under `--auto` nothing is asked. A finding that would go to the user becomes
 that row in the cycle that raised it.
 
-Appending the row needs no change request. While it exists the per-flow gate
-holds the flow, so no later stage builds on it.
+While the row exists the per-flow gate holds the flow, so no later stage builds
+on it.
 
 No other record is written. A finding the session decided, and one it dropped,
 append no row.
@@ -116,9 +115,9 @@ Within a session, the finder does not raise a finding again when either holds:
 
 - It has the kind and target IDs of a finding the session already decided, and
   its case is equal to that case, includes it, or is included in it.
-- The proposed change of a change request the user declined already answers
-  it. A declined change request is the user deciding that finding, and its
-  `Declined change request:` row in `decisions.md` bars the finding it answers.
+- A change the user declined already answers it. A declined change is the user
+  deciding that finding, and its `Declined:` row in `decisions.md` bars the
+  finding it answers.
 
 Matching never goes by wording. A declined change for `BR-0006-0001` and
 `EX-0002-0003-02` whose case is "an order of 20 000 in euros" also bars "an order

@@ -91,7 +91,7 @@ When declaring DONE, include:
 - any gap left open, stated rather than hidden.
 
 Open questions that place a **new obligation on the product** are routed to
-the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per
+the owner phase (`/qfai-sdd`) as an advisory / proposed specification change per
 `.qfai/assistant/rule/drift-protocol.md#reviewer-originated-obligations`.
 Questions about this skill's own inputs or settings stay in its own output for
 the user to answer. This skill does not write `open-questions.md`.

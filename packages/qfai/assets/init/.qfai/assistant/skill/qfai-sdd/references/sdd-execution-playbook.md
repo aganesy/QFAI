@@ -37,9 +37,9 @@ Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ 
 ## Stage 1: triage and decisions
 
 Follow the triage reference. Classify each requirement against existing policy, flow, story, example, and contract content.
-Identify every affected flow. Put each approval-required operation to the user through the shared user-question
-protocol before a dependent write, and append its change request row to decisions.md once approved; record unresolved
-questions in open-questions.md. In --auto, ask nothing and stop dependent work. A declined change request is appended as a `Declined change request:` row.
+Identify every affected flow. Put each critical decision to the user through the shared user-question
+protocol before a dependent write, and append a decisions.md row only when the decision passes the recording test;
+record unresolved questions in open-questions.md. In --auto, ask nothing and stop dependent work.
 
 ## Stage 2: policy and flow
 
@@ -82,9 +82,9 @@ For a contract-scoped change, apply the same gate to every existing BF whose obl
 
 The --contract selector accepts an existing contract ID or a repository-relative path under <paths.contractsDir>. Stop
 on an unknown target. Read the named contract, its paired contracts, and the AC and EX of every flow that cites them.
-Reconcile those existing obligations with the changed contract. After each authorized contract write, expand the
+Reconcile those existing obligations with the changed contract. After each contract write, expand the
 affected-flow set and repeat until no new flow or contract write appears. Do not edit a story to make a contract-only
-change appear valid; widen the approved change request first. A confirm-only request checks without repair. If an
+change appear valid; put the story change to the user first. A confirm-only request checks without repair. If an
 activated API contract still has no owning flow, leave it planned and report the gap.
 
 ## Parallel work

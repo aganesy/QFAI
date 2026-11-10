@@ -456,22 +456,15 @@ function validateDecisionApproaches(model: StoryTreeModel): Issue[] {
   return issues;
 }
 
-const DECISION_LENGTH_CODE = "QFAI-STORY-018";
+const DECISION_LENGTH_CODE = "QFAI-STORY-020";
 /** Content and Approach of a short decision record: the decision and its reason in 1-3 sentences. */
 const DECISION_ROW_LIMIT = 600;
-const PATH_LIST_KINDS = new Set(["change-request", "declined-change-request"]);
 
-/**
- * Warns on a decision row, of either ID form, whose Content and Approach exceed the limit. The
- * paths a change request names are what it authorizes, not prose, so only its keyword counts.
- */
+/** Warns on a decision row, of either ID form, whose Content and Approach exceed the limit. */
 function validateDecisionLengths(model: StoryTreeModel): Issue[] {
   const issues: Issue[] = [];
   for (const { row, origin } of model.decisionOccurrences) {
-    const content = PATH_LIST_KINDS.has(classifyRecordRow(row).kind)
-      ? row.content.slice(0, row.content.indexOf(":") + 1)
-      : row.content;
-    const length = content.length + row.approach.length;
+    const length = row.content.length + row.approach.length;
     if (length <= DECISION_ROW_LIMIT) continue;
     issues.push(
       issue(

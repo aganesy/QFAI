@@ -378,7 +378,7 @@ describe("story-tree core", () => {
       classifyRecordRow(
         parseRecordTable(head, "decisions").rows[1] ?? { id: "", content: "", approach: "" },
       ),
-    ).toMatchObject({ kind: "change-request", refs: ["01_policy/glossary.md"] });
+    ).toMatchObject({ kind: "other", refs: [] });
     expect(
       diffRecordTables(base, `${header}| DEC-0001 | Rewritten | Keep |\n`, "decisions").changed,
     ).toMatchObject([{ id: "DEC-0001", cell: "content", before: "First", after: "Rewritten" }]);
@@ -397,10 +397,10 @@ describe("story-tree core", () => {
     });
     expect(
       classifyRecordRow({ ...row, content: "Change request: 02_business-flow/business-flows.md" }),
-    ).toMatchObject({ kind: "change-request", refs: ["02_business-flow/business-flows.md"] });
+    ).toMatchObject({ kind: "other", refs: [] });
     expect(
       classifyRecordRow({ ...row, content: "Declined change request: 01_policy/principle.md" }),
-    ).toMatchObject({ kind: "declined-change-request", refs: ["01_policy/principle.md"] });
+    ).toMatchObject({ kind: "other", refs: [] });
     expect(classifyRecordRow({ ...row, content: "An ordinary decision" })).toMatchObject({
       kind: "other",
       refs: [],

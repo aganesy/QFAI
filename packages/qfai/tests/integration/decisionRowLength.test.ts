@@ -40,7 +40,7 @@ async function lengthFindings() {
     { config, issues: [], configPath: path.join(root, "qfai.config.yaml") },
     { profile: "sdd" },
   );
-  return result.issues.filter((item) => item.code === "QFAI-STORY-018");
+  return result.issues.filter((item) => item.code === "QFAI-STORY-020");
 }
 
 describe("a decision row over the length limit", () => {
@@ -69,29 +69,6 @@ describe("a decision row over the length limit", () => {
     expect(findings[0]?.message).toContain("601 characters");
     expect(findings[0]?.message).toContain("600");
     expect(findings[0]?.file).toBe(path.posix.join(specs, "decisions.md"));
-  });
-
-  // QFAI:AC-0001-0053-10
-  // QFAI:EX-0001-0053-39
-  it("does not count the paths a change request names", async () => {
-    const paths = Array.from({ length: 20 }, (_, n) => `.qfai/spec/03_contract/cli/c-${n}.md`);
-    const approach = "a".repeat(550);
-    await put(
-      `${specs}/decisions.md`,
-      [
-        "# Decisions",
-        "",
-        "## Decisions",
-        "",
-        ...header,
-        `| DEC-20261110120000 | Change request: ${paths.join(", ")} | ${approach} |`,
-        `| DEC-20261110120001 | Declined change request: ${paths.join(", ")} | ${approach} |`,
-        `| DEC-20261110120002 | Change request: a.md | ${"a".repeat(590)} |`,
-        "",
-      ].join("\n"),
-    );
-    const findings = await lengthFindings();
-    expect(findings.map((item) => item.refs)).toEqual([["DEC-20261110120002"]]);
   });
 
   // QFAI:AC-0001-0053-10

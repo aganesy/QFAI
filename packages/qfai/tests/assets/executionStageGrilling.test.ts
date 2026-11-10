@@ -59,22 +59,22 @@ describe.each(TREES)("%s — the execution stages stop on detection", (tree) => 
     expectPhrase(text, "Settled input must change");
     expectPhrase(
       text,
-      "stop dependent work, raise the Change Request, record actual applicable user authority before changing it",
+      "stop dependent work, send the change to its owner, put a critical decision to the user before changing it",
     );
     expectPhrase(
       text,
-      "The run solves it. Nothing upstream changes, so there is nothing to approve",
+      "The run solves it. Nothing upstream changes, so there is nothing to decide",
     );
   });
 
   it("gives each drift class what that class asks for", async () => {
     // Intent drift takes options and a recommendation. Defect drift has one
-    // correct repair and the protocol records `Approved option: -`, so options
-    // there would be invented alternatives dressed as a choice.
+    // correct repair, so options there would be invented alternatives dressed
+    // as a choice.
     const text = await article();
     expectPhrase(text, "for\nintent drift, the options and the recommendation");
     expectPhrase(text, "for defect drift, the single correct repair");
-    expectPhrase(text, "`Approved option: -`");
+    expectPhrase(text, "which options would only dress as\na choice");
   });
 
   it("ends an undelegated no-question session on the register write", async () => {

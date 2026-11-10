@@ -27,7 +27,9 @@ describe("story-tree identifiers are allocated without reuse", () => {
         expect(rules).toContain(shape);
       }
       expect(rules).toContain("Use highest existing number plus one in the scope");
-      expect(rules).toContain("Count IDs named in retired-item decisions");
+      expect(rules).toContain(
+        "Count IDs named in decision rows and in the commits that retired them",
+      );
       expect(rules).toContain(
         "Take the number from `npx qfai sdd next-id`, which reads the working tree and a fetched base and reserves no ID.",
       );
@@ -41,7 +43,7 @@ describe("story-tree identifiers are allocated without reuse", () => {
       expect(rules).toContain(
         "Moving a story to another flow changes its US ID and every child AC and EX ID",
       );
-      expect(rules).toContain("Record the old IDs as retired");
+      expect(rules).toContain("Name the old IDs as retired");
     });
   }
 });

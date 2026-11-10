@@ -110,7 +110,7 @@ so an item never replaces or contradicts one of the rule's. That is the only
 file a proposal names. A change to a shipped rule, or to any other file QFAI
 ships, is never made in the project: it becomes a draft under § 3 and is filed
 under § 6. A change to the spec tree is not this review's to make: it goes
-through `qfai-sdd` as a change request.
+through `qfai-sdd` as a specification change.
 
 ## 5. Ask before filing or applying
 

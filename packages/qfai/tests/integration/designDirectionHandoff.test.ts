@@ -86,7 +86,6 @@ it("The installed design step bounds an authorized repair and keeps the source o
 
   for (const instructions of [step, authoring]) {
     expect(instructions).toMatch(/triage.*path.*change/i);
-    expect(instructions).toMatch(/`Change request:` row this branch adds (?:must )?authorize/i);
     expect(instructions).toMatch(/preserve.*brand.*tokens/i);
   }
   expect(step).toMatch(/only[^.]*authorized change|repair[^.]*within[^.]*change/i);
@@ -101,7 +100,6 @@ it("The installed design step preserves an existing file without new authorizati
   const step = await installed(".qfai/assistant/step/common-design-md/STEP.md");
 
   expect(step).toMatch(/without.*authoriz.*validat.*without an overwrite/i);
-  expect(step).toMatch(/a change request the base already holds authorizes no new change/i);
   expect(step).toMatch(/unreplaced sample is refused/i);
   expect(step).toMatch(/Never adopt the sample design/i);
   expect(step).toMatch(/Once a prototyping loop has started, `DESIGN\.md` is read-only for it/i);

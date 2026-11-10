@@ -42,7 +42,7 @@ least beyond the request.
 ## Non-goals
 
 - **Not a substitute for a specification.** Work already specified is governed
-  by the spec, and a disagreement with a requirement is a Change Request.
+  by the spec, and a disagreement with a requirement is a specification change.
 - **Not a question budget.** How many questions are worth asking is Article VI's
   subject. This decides which are asked, in what order, and when asking stops.
 - **Not a stage.** It runs inside whatever stage invoked it and produces no
