@@ -34,7 +34,8 @@ and what the brief meant.
 
 For an independent judgement, such as a review or a griller, off course means
 outside its brief or its remit. A verdict the session disagrees with is not off
-course, and nobody steers it.
+course, and nobody steers it. An interrupt to a judgement restates only the
+brief's scope and remit, never the author's reasoning or view.
 
 ## 3. Restart after two corrections that do not land
 

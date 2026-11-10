@@ -1553,11 +1553,13 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /A\s+procedure,\s+pasted\s+three\s+times\s*\|\s*A\s+skill/,
         /Something\s+that\s+has\s+to\s+happen\s+every\s+time,\s+with\s+no\s+lapse\s*\|\s*A\s+hook/,
         // What it never proposes, and what it never writes alone.
-        /A\s+correction\s+given\s+once\s+proposes\s+nothing/,
+        /A\s+correction\s+given\s+once\s+proposes\s+nothing,\s+and\s+neither\s+does\s+a\s+procedure\s+pasted\s+fewer\s+than\s+three\s+times/,
         /Where\s+an\s+equivalent\s+already\s+exists,\s+propose\s+nothing\s+for\s+it/,
         /Write\s+nothing\s+without\s+the\s+user's\s+yes/,
         // A mode that asks nothing writes nothing either.
         /nothing\s+is\s+filed\s+or\s+written/,
+        /The\s+drafts\s+and\s+the\s+proposals\s+of\s+§\s+7\s+go\s+in\s+the\s+final\s+report/,
+        /they\s+were\s+not\s+filed\s+or\s+written/,
       ]) {
         expect(text).toMatch(clause);
       }
@@ -1588,8 +1590,11 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
   // that can see a wrong start early, so the master ships, and both copies are
   // held to the same clauses.
   // QFAI:AC-0001-0163-10
+  // QFAI:AC-0001-0163-11
   // QFAI:EX-0001-0163-15
   // QFAI:EX-0001-0163-16
+  // QFAI:EX-0001-0163-18
+  // QFAI:EX-0001-0163-19
   describe("delegation-steering rule", () => {
     const MASTERS = [
       ".agents/rules/delegation-steering.md",
@@ -1605,12 +1610,15 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /"Unattended\s+Runs:\s+Ending\s+a\s+Turn",\s+governs/,
         // The three moves.
         /read\s+its\s+first\s+actions\s+as\s+they\s+appear/,
+        /Where\s+the\s+host\s+shows\s+nothing\s+before\s+the\s+result,\s+the\s+result\s+is\s+the\s+first\s+check/,
         /interrupt\s+then\s+through\s+the\s+host's\s+message\s+or\s+stop\s+mechanism/,
         /After\s+two\s+corrections\s+on\s+one\s+task\s+that\s+do\s+not\s+land,\s+send\s+no\s+third/,
         /The\s+rewritten\s+brief\s+carries\s+what\s+was\s+learned/,
         // A judgement stays independent.
         /A\s+verdict\s+the\s+session\s+disagrees\s+with\s+is\s+not\s+off\s+course/,
+        /An\s+interrupt\s+to\s+a\s+judgement\s+restates\s+only\s+the\s+brief's\s+scope\s+and\s+remit/,
         /A\s+rewritten\s+judgement\s+brief\s+stays\s+black-box/,
+        /When\s+the\s+rewritten\s+brief\s+goes\s+off\s+course\s+the\s+same\s+way,\s+tell\s+the\s+user/,
       ]) {
         expect(text).toMatch(clause);
       }

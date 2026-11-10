@@ -44,7 +44,9 @@ Feature: Send session feedback to QFAI when the work is complete
   # AC-0001-0231-07
   Scenario: A correction the user gave twice is proposed for the project, apart from the QFAI issues
     Given the agent follows `.agents/rules/session-feedback.md` at the end of the session
-    When the user gave the same correction twice in the session and no equivalent rule, skill or hook exists in the project
+    When the user gave the same correction twice in the session
     Then the agent proposes where the project could record it: the project rules of `AGENTS.md` or a path-scoped rule for a convention, a skill for a procedure pasted three times, a hook for something that has to happen every time
-    And it writes nothing until the user says yes, proposes nothing for a correction given once, and files none of it with QFAI
+    And it proposes nothing where an equivalent rule, skill or hook already exists, for a correction given once, or for a procedure pasted fewer than three times
+    And it writes nothing until the user says yes, and files none of it with QFAI
+    And under a no-question mode it writes nothing and puts the proposals in the final report
 ```

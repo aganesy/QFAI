@@ -45,14 +45,22 @@ Feature: Delegation Protocol
     Then the reviewer is the one its body names, and no routing entry or review profile selects it
 
   # AC-0001-0163-10
-  Scenario: A delegated task is steered early while the user is in the session
+  Scenario: A delegated task's first actions are checked and a wrong course is interrupted early
     Given the session agent hands a task to another agent and the user is in the session
-    When the delegated agent's first actions go off course, or two corrections do not land
-    Then the session agent interrupts at the first actions rather than waiting for the result
-    And after two corrections that do not land it stops the task and starts it again from a rewritten brief that carries what was learned, never a third correction
-    And a rewritten judgement brief stays black-box, and nothing of this applies to a run under `--auto`
+    When the host shows the delegated agent's progress and its first actions go off course
+    Then the session agent interrupts at once rather than waiting for the result
+    And where the host shows nothing before the result, the result is the first check
+    And for an independent judgement, off course means outside its brief or remit, a verdict the session disagrees with is never steered, and an interrupt restates only the brief's scope and remit
 
   # AC-0001-0163-11
+  Scenario: After two corrections that do not land, the task restarts from a rewritten brief
+    Given a delegated task in a session where the user is present
+    When two corrections on that task do not land
+    Then the session agent sends no third correction, stops the task and starts it again from a rewritten brief that carries what was learned
+    And a rewritten judgement brief stays black-box, and when the rewritten brief goes off course the same way the session agent tells the user
+    And nothing of this applies to a run under `--auto` or any run where nobody is present
+
+  # AC-0001-0163-12
   Scenario: A unit work order carries what the files do not
     Given the session agent prepares a work order for a parallel unit
     When it fills the work order template

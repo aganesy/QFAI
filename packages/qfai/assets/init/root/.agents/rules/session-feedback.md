@@ -13,14 +13,14 @@ agent holds the most evidence, and only with the user's agreement.
 
 ## Scope
 
-| Target                                                                    | Applies                                    |
-| ------------------------------------------------------------------------- | ------------------------------------------ |
-| The end of the turn after which no task the user gave is left             | Reviewed                                   |
-| A pause: a question, an approval, a phase boundary, a halt, a next action | Not reviewed                               |
-| A defect in the adopter's own project                                     | Outside this rule                          |
-| A correction the user gave twice in the session                           | Proposed for the project, written on a yes |
-| A problem in QFAI's rules, skills, steps, commands, hooks or documents    | Reported once the user agrees              |
-| A run under a no-question mode                                            | Drafted into the final report, never filed |
+| Target                                                                    | Applies                                                             |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| The end of the turn after which no task the user gave is left             | Reviewed                                                            |
+| A pause: a question, an approval, a phase boundary, a halt, a next action | Not reviewed                                                        |
+| A defect in the adopter's own project                                     | Outside this rule                                                   |
+| A correction the user gave twice in the session                           | Proposed for the project, written on a yes                          |
+| A problem in QFAI's rules, skills, steps, commands, hooks or documents    | Reported once the user agrees                                       |
+| A run under a no-question mode                                            | Drafts and proposals go in the final report, never filed or written |
 
 ## 1. When the review runs
 
@@ -135,7 +135,8 @@ each, propose one place in the project to record it:
 | A procedure, pasted three times                        | A skill                                                                                                      |
 | Something that has to happen every time, with no lapse | A hook                                                                                                       |
 
-- A correction given once proposes nothing.
+- A correction given once proposes nothing, and neither does a procedure pasted
+  fewer than three times.
 - Read the project's entry file, rules, skills and hooks first. Where an
   equivalent already exists, propose nothing for it.
 - Each proposal names the correction, the place, and the text or the setting it
