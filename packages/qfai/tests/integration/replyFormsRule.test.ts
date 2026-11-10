@@ -10,11 +10,14 @@
 // QFAI:AC-0001-0239-04
 // QFAI:AC-0001-0239-05
 
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { runInit } from "../helpers/legacyInit.js";
 
 // tests/integration/<this file> -> tests -> packages/qfai -> packages -> repo root
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -45,6 +48,9 @@ describe.each(MASTERS)("%s picks the form from what is answered", (rel) => {
       expect(master).toContain(row);
     }
     expect(master).toContain("two or three variants side by side");
+    expect(master).toContain(
+      "A single prototype is asked against as `grilling.md` says; this rule builds no second one.",
+    );
   });
 
   it("keeps a set the tool carries as one question, sorts a larger one, and never splits a set", async () => {
@@ -75,6 +81,9 @@ describe.each(MASTERS)("%s orders the carriers", (rel) => {
     );
     expect(master).toContain(
       "A set presented as one, such as a grilling round, takes one carrier: the first that carries every member.",
+    );
+    expect(master).toContain(
+      "The structured question tool carries a set it delivers in host-sized batches (`user-questions.md` § 4), so such a set stays in the tool.",
     );
     expect(master).toContain("no secret, credential or personal data");
   });
@@ -158,13 +167,31 @@ describe("the entry points cite the rule", () => {
     expect(await read("AGENTS.md")).toContain("| `reply-forms.md` |");
   });
 
+  it("this repository's Copilot instructions cite the rule master", async () => {
+    expect(await read(".github/copilot-instructions.md")).toContain(
+      "`.agents/rules/reply-forms.md`",
+    );
+  });
+
   it.each([
-    ".github/copilot-instructions.md",
-    "packages/qfai/assets/init/root/AGENTS.md",
-    // The list `qfai init` adds to a project that already has an entry point.
-    "packages/qfai/src/cli/commands/init.ts",
-  ])("%s cites the rule master", async (rel) => {
-    expect(await read(rel)).toContain("`.agents/rules/reply-forms.md`");
+    ["a new project", false],
+    ["a project that already has an entry point", true],
+  ])("qfai init writes the rule and cites it in %s", async (_label, existing) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reply-forms-"));
+    try {
+      if (existing) await writeFile(path.join(root, "AGENTS.md"), "# Our house rules\n", "utf-8");
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      expect(await readFile(path.join(root, ".agents", "rules", "reply-forms.md"), "utf-8")).toBe(
+        await readFile(path.join(ROOT, MASTERS[1] ?? ""), "utf-8"),
+      );
+      for (const entry of ["AGENTS.md", path.join(".github", "copilot-instructions.md")]) {
+        expect(unwrap(await readFile(path.join(root, entry), "utf-8")), entry).toContain(
+          "`.agents/rules/reply-forms.md`",
+        );
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
 

@@ -430,8 +430,8 @@ discussion stage's design direction already answers it, so it is critical.
 
 Then put it in front of the user and ask the question again against it, as a
 comparison of two or three variants where there is more than one
-(`reply-forms.md`). The prototype is what makes the decision answerable; it does not transfer the
-decision. An agent that builds one, judges it, and carries on has settled a
+(`reply-forms.md`). The prototype is what makes the decision answerable; it
+does not transfer the decision. An agent that builds one, judges it, and carries on has settled a
 question of taste on the user's behalf, which is the thing this rule spends
 every round avoiding.
 

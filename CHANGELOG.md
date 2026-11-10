@@ -13,8 +13,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   existing choice. A sheet goes on the host's private page where one can be
   published, such as an Artifact on Claude Code, and as text in the chat
   otherwise. A Site in the Codex app, whose audience is not documented, is
-  used where the project's agent instructions allow it. Every form comes back as text in a fixed
-  grammar. The rule reshapes questions the workflow already asks and adds none.
+  used where the project's agent instructions allow it. Every form comes back
+  as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
 
 ### Changed
 

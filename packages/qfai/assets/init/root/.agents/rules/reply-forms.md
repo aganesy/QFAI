@@ -36,8 +36,10 @@ a sheet.
   into one question per item: the user then holds the set in their head.
 - **Compare** puts two or three variants side by side: wording, structure,
   layout. It is the artifact `grilling.md` builds where talking cannot settle a
-  question. Never one variant with a rating: a comparison recovers a preference
-  faster and more reliably than a score.
+  question, and it is used where that artifact has more than one variant. A
+  single prototype is asked against as `grilling.md` says; this rule builds no
+  second one. Never one variant with a rating: a comparison recovers a
+  preference faster and more reliably than a score.
 
 **Recommend where § 3 permits it, and show what stands against it.** Where
 `user-questions.md` § 3 permits a recommendation, a sort places each item in its
@@ -61,9 +63,8 @@ Take the first carrier that can carry the form in this invocation:
    sort small enough for one multi-select question.
 2. **The host's page publisher**, where it is callable and its page is private
    to the user by default, such as an Artifact on Claude Code. Use it for mark
-   up, sort and compare, and for a choose whose options need a picture. Use it
-   whenever it is there: a draft longer than one screen, or a set past the
-   tool's option limit, goes on a page, not in the chat.
+   up, sort and compare, and for a choose whose options need a picture. Where
+   it is callable, every mark up, sort and compare goes on it, not in the chat.
 3. **Text in the chat**, in the grammar of § 3, numbered so each line can be
    answered by its number.
 
@@ -77,8 +78,10 @@ is used only under a standing instruction, such as a line in the project's
 agent instructions that allows reply sheets as Sites.
 
 A set presented as one, such as a grilling round, takes one carrier: the first
-that carries every member. Split across two carriers, the set no longer shows
-what is decided together.
+that carries every member. The structured question tool carries a set it
+delivers in host-sized batches (`user-questions.md` § 4), so such a set stays
+in the tool. Split across two carriers, the set no longer shows what is decided
+together.
 
 A page carries what the draft needs and nothing more: no secret, credential or
 personal data. It shows the items or the draft with each passage numbered, the
@@ -150,8 +153,9 @@ Reading a reply:
   requires the user to record is still put, and nothing else is put again.
 - A note that changes a decision some document requires the user to record is
   that decision. It is recorded as the user's answer, not as an edit.
-- A reply whose meaning is unclear is confirmed in one line before it is acted
-  on. A reply to a sheet already applied is not applied again.
+- A reply whose meaning is unclear is confirmed before it is acted on, as
+  `user-questions.md` § 5 confirms a fallback answer. A reply to a sheet
+  already applied is not applied again.
 
 ## 4. What this rule is not
 
@@ -162,8 +166,9 @@ Reading a reply:
 - Not a page template. The agent builds each sheet with the host's own
   publisher, or writes the text form.
 
-Under a no-question mode nothing is published and nothing is asked. The run
-records what it would have put, in its report.
+Under a no-question mode nothing is published and nothing is asked. What would
+have been put stays open, recorded as the asking rule records an unasked
+question.
 
 ## Related
 

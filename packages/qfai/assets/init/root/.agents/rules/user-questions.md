@@ -161,7 +161,8 @@ respect.
 ## 5. When the tool is not callable
 
 The question goes on a page where `reply-forms.md` § 2 sends it. The page
-carries every part listed here, and its reply is the text form below. Otherwise,
+carries every part listed here, and its reply is the text form `reply-forms.md`
+§ 3 gives. Otherwise,
 fall back to plain text **in the shape the answer has**.
 
 Where there are choices, that is a numbered list keeping every part the tool
