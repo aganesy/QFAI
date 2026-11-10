@@ -16,6 +16,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   used where the project's agent instructions allow it. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
 
+- **`qfai doctor` enforces the `SKILL.md` body limit.** The `assets.lineBudget`
+  check now warns for each `SKILL.md` under `.qfai/assistant/` whose body after
+  the YAML frontmatter exceeds 20,000 characters, the limit
+  `.agents/rules/ai-readable-markdown.md` states. The message names each file
+  and its size and says to move a self-contained section into the skill's
+  `references/`. Reference files are not held to it. The `qfai-grilling` skill
+  moved how a delegated session ends into its delegated-session reference to
+  stay under the limit.
+- **A fixed budget for what `qfai init` makes an agent load every session.**
+  The section init owns in `AGENTS.md`, each reminder, the reminders per prompt
+  and per session, and the listing of model-invocable skills each have a
+  character ceiling the package's tests hold. No installed text changed to meet
+  it.
+
 ### Changed
 
 - **The constitution states each rule once.** Articles VI, X and XI of
