@@ -12,8 +12,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and a question of taste as two or three variants to compare, beside the
   existing choice. A sheet goes on the host's private page where one can be
   published, such as an Artifact on Claude Code, and as text in the chat
-  otherwise. A Site is the Codex app's page for reply sheets, as an Artifact
-  is Claude Code's. Every form comes back
+  otherwise. A Site is the Codex app's page for reply sheets; its audience is not
+  documented, so it carries no secret, credential or personal data. Every form comes back
   as text in a fixed grammar. The rule reshapes questions the workflow already asks and adds none.
 - **Diagrams are checked where they are written.** The `discussion-pack` and
   `sdd-flow` steps now run the shipped Mermaid parser on the files they wrote,

@@ -103,6 +103,9 @@ describe.each(MASTERS)("%s orders the carriers", (rel) => {
     expect(master).toContain(
       "Where the agent cannot confirm a page is private, it treats the page as not private.",
     );
+    expect(master).toContain(
+      "A Site's default audience is not documented and may be wider than the user, so a Site sheet holds only what the user would show that audience. A project whose instructions forbid Sites puts the sheet in the chat.",
+    );
   });
 });
 

@@ -81,7 +81,10 @@ page as not private.
 **A Site in the Codex app is that app's page publisher for reply sheets**, as
 an Artifact is Claude Code's. This rule is the standing instruction that covers
 publishing it, so no other instruction is needed. Every other page not known to
-be private still needs one.
+be private still needs one. A Site's default audience is not documented and may
+be wider than the user, so a Site sheet holds only what the user would show
+that audience. A project whose instructions forbid Sites puts the sheet in the
+chat.
 
 A set presented as one, such as a grilling round, takes one carrier: the first
 that carries every member. The structured question tool carries a set it

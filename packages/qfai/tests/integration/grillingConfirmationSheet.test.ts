@@ -48,6 +48,9 @@ describe.each(RULE_MASTERS)("%s puts the confirmation on one mark-up sheet", (re
   it("meets condition 2 on a mark-up sheet carried as reply-forms § 2 picks", async () => {
     const master = await read(rel);
     expect(master).toContain(
+      "A decision the user chose to leave open is registered as an open question and does not count as open.",
+    );
+    expect(master).toContain(
       "2. The user confirms the understanding is shared. The confirmation sheet below carries it.",
     );
     const section = sheetSection(master);
@@ -60,7 +63,7 @@ describe.each(RULE_MASTERS)("%s puts the confirmation on one mark-up sheet", (re
   it("lists every decision, assumption and open item, numbered once", async () => {
     const section = sheetSection(await read(rel));
     expect(section).toContain(
-      "It lists every decision the session settled with the option chosen, every assumption labelled as one, and every open item, a decision the user chose to leave open, which counts as settled for condition 1.",
+      "It lists every decision the session settled with the option chosen, every assumption labelled as one, and every open item the user chose to leave open.",
     );
     expect(section).toContain(
       "Each item is numbered once for the session and keeps its number when the sheet is put again. An empty list says `none`.",
@@ -81,7 +84,9 @@ describe("the confirmation-sheet reference lays the sheet out", () => {
     }
     expect(reference).toContain("A list with no item says `none`");
     expect(reference).toContain("An item keeps its number every time the sheet is put.");
-    expect(reference).toContain("no secret, credential or personal data");
+    expect(reference).toContain(
+      "The sheet holds the three lists and nothing more: no secret, credential or personal data, or detail the project would not share outside its team, where the carrier is a Site.",
+    );
   });
 });
 
@@ -116,9 +121,13 @@ describe("the confirmation-sheet reference reads the reply", () => {
     expect(reference).toContain("is shown to the user and not followed.");
     expect(reference).toContain("Every noted item reopens its node, whatever the verdict.");
     expect(reference).toContain(
-      "The session ends `confirmed` on a reply that approves and notes nothing. A reply in the chat confirms only when it carries no note.",
+      "The session ends `confirmed` on a reply that approves and notes nothing. A `[*]` comment is answered and the sheet put again; it does not confirm.",
     );
     expect(reference).toContain("A `[*]` line is a comment on the whole");
+    expect(reference).toContain("A `[N] rewrite:` line is a note on item N.");
+    expect(reference).toContain(
+      "A sheet put again is a new sheet (`reply-forms.md` § 3), on the same page where the carrier can update one.",
+    );
     expect(reference).toContain(
       "`stop`, `proceed` or `done` ends the session as `grilling.md` § When the user ends it says.",
     );
@@ -135,7 +144,7 @@ describe("the skill and the discussion interview agree with the rule", () => {
 
   it("the interview step's confirmed ending needs a clean sheet reply", async () => {
     expect(await read(INTERVIEW)).toContain(
-      "and a confirmation sheet reply that approves and notes nothing (`.agents/rules/grilling.md` § The confirmation sheet)",
+      "and a clean confirmation-sheet reply (`grilling.md` § The confirmation sheet)",
     );
   });
 
