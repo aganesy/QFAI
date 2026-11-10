@@ -15,6 +15,7 @@ a report that only states completion do not require a question.
 | The tool is not callable in this invocation | The fallback below, carrying the same parts |
 | The next step requires the user's answer    | Ask in the answer's shape — see § 6         |
 | How many questions to ask                   | Outside this rule — see § 7                 |
+| Which reply form, and the page carrier      | `reply-forms.md`                            |
 
 **Callable, not present.** A host may carry a structured-question capability
 that this invocation cannot use — a mode that offers no structured tool, a
@@ -159,7 +160,10 @@ respect.
 
 ## 5. When the tool is not callable
 
-Fall back to plain text **in the shape the answer has**.
+The question goes on a page where `reply-forms.md` § 2 sends it. The page
+carries every part listed here, and its reply is the text form `reply-forms.md`
+§ 3 gives. Otherwise,
+fall back to plain text **in the shape the answer has**.
 
 Where there are choices, that is a numbered list keeping every part the tool
 would have carried: the label, the description of what each choice means, the
@@ -303,3 +307,4 @@ in another language is where replies drift out of the user's. The rest is here.
 
 - Which questions to ask, and in what order: `grilling.md`
 - Writing standard for the labels and descriptions: `documentation-clarity.md`
+- Marking up a draft, sorting a set, comparing variants, and the page carrier: `reply-forms.md`
