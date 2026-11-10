@@ -177,7 +177,9 @@
 | US-0001-0242 | Parse the diagrams a step wrote                                                        | `user-story-0001-0242/` |
 | US-0001-0243 | Every shipped checker script has a caller                                              | `user-story-0001-0243/` |
 | US-0001-0245 | Check each term against the glossary while grilling                                    | `user-story-0001-0245/` |
+| US-0001-0254 | Answer the costly decisions of a grilling round first                                  | `user-story-0001-0254/` |
 | US-0001-0273 | Compare first-iteration variants before I choose a direction                           | `user-story-0001-0273/` |
+| US-0001-0293 | Correct a grilling session on its confirmation sheet                                   | `user-story-0001-0293/` |
 | US-0001-0294 | Review a finished session from its local transcript                                    | `user-story-0001-0294/` |
 | US-0001-0295 | Restyle my running screens without losing their data or what already works             | `user-story-0001-0295/` |
 | US-0001-0296 | Check a design for product fit and claims nobody has confirmed                         | `user-story-0001-0296/` |

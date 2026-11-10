@@ -2,7 +2,7 @@
 // QFAI:AC-0001-0241-02
 // QFAI:AC-0001-0241-03
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -139,6 +139,27 @@ describe("discussion-pack citations", () => {
         .filter((code) => code === "QFAI-DPACK-012");
     expect(await codes("discussion")).toEqual(["QFAI-DPACK-012"]);
     expect(await codes("verify")).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0241-01
+  it("reports a citation of a symbolic link whose target is gone, and keeps validating", async (context) => {
+    try {
+      await symlink(
+        path.join(root, "src", "deleted.ts"),
+        path.join(root, "src", "link.ts"),
+        "file",
+      );
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "EPERM") {
+        context.skip("this account cannot create symbolic links");
+      }
+      throw error;
+    }
+    const findings = await citationErrors("See `src/link.ts:1` and `src/missing.ts:2`.\n");
+    expect(findings.map((found) => found.message)).toEqual([
+      "Line 1 cites src/link.ts:1, which names no file under the project root.",
+      "Line 1 cites src/missing.ts:2, which names no file under the project root.",
+    ]);
   });
 
   it("raises nothing without a discussion pack", async () => {
