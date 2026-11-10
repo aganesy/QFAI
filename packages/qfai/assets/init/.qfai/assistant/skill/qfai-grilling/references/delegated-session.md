@@ -1,7 +1,7 @@
 # Delegated session
 
 How the session agent runs a round between agents: who is asked, how the
-answers are held, and which agent puts the round.
+answers are held, which agent puts the round, and when the session ends.
 
 ## The author
 
@@ -57,3 +57,23 @@ decision, started from a fresh context and a black-box brief.
   under `.agents/rules/grilling.md#explicit-delegation-for-a-discussion` settles
   it. Record that authority separately from the agents' positions. Agreement
   alone does not settle it, and an unknown user-held fact still stays open.
+
+## When a delegated session ends
+
+**A delegated session has no condition 2**, because no user is there to
+confirm. A budget bounds its rounds: two, then every decision that is not
+critical takes the griller's recommendation — the ones the agents agreed on and
+the ones still open alike. An uncovered critical decision goes to the user
+when asking is permitted, without spending a round
+(`.qfai/assistant/rule/review-convergence.md`). It ends `adopted` once
+the master's conditions hold: no open node or lookup, required inputs present,
+and actual authority for critical decisions. Record agent choices as agents'.
+
+**The budget ends the rounds, not the session.** While a critical decision
+lacks an actual answer or applicable recorded authorization, it stays open: the
+user answers it, or ends the session another way — or, under a no-question
+mode, the register write ends it `no-question`. How many went is a count a
+record carries, never an ending.
+
+**Only a no-question session meeting the master's explicit-delegation
+conditions ends `adopted`.**

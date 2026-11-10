@@ -20,6 +20,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skill/qfai-grilling/SKILL.md";
 const ENTRY = "assistant/skill/qfai-grill/SKILL.md";
+const DELEGATED_SESSION = "assistant/skill/qfai-grilling/references/delegated-session.md";
 
 const readSkill = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -281,8 +282,13 @@ describe("the primitive carries the master's clauses", () => {
 
     it(`${tree}: a session between agents has an end`, async () => {
       // No user is present to satisfy the second condition, so an unconditional
-      // end condition makes the session uncompletable.
-      const text = flat(await readSkill(tree, SKILL));
+      // end condition makes the session uncompletable. The skill points a
+      // delegated session at the reference that carries its ending.
+      expect(flat(await readSkill(tree, SKILL))).toMatch(
+        /Read `references\/delegated-session\.md` § When a delegated session ends when the session is delegated/,
+      );
+      const text = flat(await readSkill(tree, DELEGATED_SESSION));
+      expect(text).toMatch(/## When a delegated session ends/);
       expect(text).toMatch(/A delegated session has no condition 2/);
       // After the budget, a non-critical decision takes the griller's
       // recommendation, agreed or not; a critical one goes to the user without

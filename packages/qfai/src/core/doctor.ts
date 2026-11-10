@@ -51,6 +51,7 @@ import {
   type AssistantAssetBudgetReport,
   type ExemptAssistantAsset,
   type OversizedAssistantAsset,
+  type OversizedSkillBody,
   type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
 import { checkAssistantDrift } from "./doctor/assistantDrift.js";
@@ -480,9 +481,11 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     maxMarkdownLines: report.maxMarkdownLines,
     maxDataLines: report.maxDataLines,
     maxLineChars: report.maxLineChars,
+    maxSkillBodyChars: report.maxSkillBodyChars,
     scanned: report.scanned,
     oversized: report.oversized,
     wideLines: report.wideLines,
+    oversizedSkillBodies: report.oversizedSkillBodies,
     // The baseline promises the exemption is visible to the reader, not just to
     // the implementation: each exempt path is listed with the reason it was not
     // measured, and the same pair is rendered into the message for text readers.
@@ -519,7 +522,8 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
         `all ${String(report.scanned - report.exempt.length)} assistant assets held to the ` +
         `line ceiling are within it (${lineCeilingText(report)}), and all ${report.scanned} are ` +
         `within the line width each is held to (${report.maxLineChars} unless the shipped ` +
-        `file carries a recorded width)${exemptNote}`,
+        `file carries a recorded width), and all SKILL.md bodies are within ` +
+        `${report.maxSkillBodyChars} characters${exemptNote}`,
       details,
     };
   }
@@ -549,9 +553,13 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     unmeasured > 0
       ? ` (a further ${unmeasured} could not be read and were not checked: ${formatMessagePaths(unmeasuredPaths)})`
       : "";
-  const nextActions = assetLineBudgetNextActions(report.oversized, report.wideLines);
-  // Both halves in one message. A file can fail either ceiling, and reporting
-  // only the count would leave the width failure with no line of its own.
+  const nextActions = assetLineBudgetNextActions(
+    report.oversized,
+    report.wideLines,
+    report.oversizedSkillBodies,
+  );
+  // Every ceiling in one message. A file can fail any of them, and reporting
+  // only the count would leave the other failures with no line of their own.
   const overruns = [
     ...(report.oversized.length > 0
       ? [
@@ -561,6 +569,13 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       : []),
     ...(report.wideLines.length > 0
       ? [`${report.wideLines.length} carry a line too wide: ` + formatWideAssets(report.wideLines)]
+      : []),
+    ...(report.oversizedSkillBodies.length > 0
+      ? [
+          `${report.oversizedSkillBodies.length} SKILL.md bodies exceed ` +
+            `${report.maxSkillBodyChars} characters: ` +
+            formatOversizedSkillBodies(report.oversizedSkillBodies),
+        ]
       : []),
   ].join("; ");
   return {
@@ -692,6 +707,11 @@ function formatOversizedAssets(oversized: ReadonlyArray<OversizedAssistantAsset>
     .join(", ");
 }
 
+/** Renders each oversized skill body as its path and its size in code points. */
+function formatOversizedSkillBodies(bodies: ReadonlyArray<OversizedSkillBody>): string {
+  return bodies.map((entry) => `${escapeForMessage(entry.path)} (${entry.chars})`).join(", ");
+}
+
 /**
  * Names the width each file was held to, not only the width it has.
  *
@@ -742,6 +762,7 @@ function formatNextActionHint(actions: ReadonlyArray<string>): string {
 function assetLineBudgetNextActions(
   oversized: ReadonlyArray<{ path: string }>,
   wide: ReadonlyArray<{ path: string }>,
+  skillBodies: ReadonlyArray<{ path: string }>,
 ): string[] {
   const actions: string[] = [];
   const paths = [...new Set(oversized.map((entry) => entry.path))];
@@ -762,6 +783,13 @@ function assetLineBudgetNextActions(
   if (wide.length > 0) {
     actions.push(
       "wrap the over-wide prose — a list item, an ordered item or a paragraph — at the width ceiling; a table row and a fenced block are not measured",
+    );
+  }
+  // Wrapping does not shrink a body, and the host loads the body whole on every
+  // invocation, so the remedy is the move the rule names: out, behind a pointer.
+  if (skillBodies.length > 0) {
+    actions.push(
+      "move a self-contained section of the oversized SKILL.md body into that skill's references/, and leave a pointer saying when to read it",
     );
   }
   return actions;

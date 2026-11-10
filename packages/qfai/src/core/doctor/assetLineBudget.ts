@@ -68,6 +68,67 @@ export function assistantLineCeiling(filePath: string): number {
  */
 export const ASSISTANT_ASSET_MAX_LINE_CHARS = 400;
 
+/**
+ * Character ceiling for the body of a `SKILL.md`, the limit
+ * `ai-readable-markdown.md` sets.
+ *
+ * A skill body is what the host loads whole when the skill is invoked, so its
+ * size is paid on every invocation. The line and width ceilings bound it only
+ * loosely: 500 lines of 400 characters is ten times this figure. The body is
+ * counted in code points after the YAML frontmatter, which the host reads as
+ * metadata rather than as the instructions.
+ */
+export const SKILL_BODY_MAX_CHARS = 20_000;
+
+/** The file name the character ceiling applies to; a reference is not held to it. */
+const SKILL_ENTRY_FILE = "SKILL.md";
+
+/**
+ * Counts a skill body line by line, so the streamed and the in-memory readers
+ * share one definition of where the frontmatter ends.
+ *
+ * Frontmatter is a first line of exactly `---` closed by a later line of exactly
+ * `---`. A frontmatter that is never closed is not frontmatter, so the whole file
+ * counts. A `\r` is never counted, so a CRLF file measures as its LF twin.
+ */
+class SkillBodyCounter {
+  private total = 0;
+  private state: "first" | "frontmatter" | "body" = "first";
+  private bodyStart = 0;
+
+  /** Offers one line: its text (at least its first characters) and its width. */
+  line(text: string, width: number, terminated: boolean): void {
+    this.total += width + (terminated ? 1 : 0);
+    if (this.state === "first") {
+      this.state = text === "---" ? "frontmatter" : "body";
+      return;
+    }
+    if (this.state === "frontmatter" && text === "---") {
+      this.state = "body";
+      this.bodyStart = this.total;
+    }
+  }
+
+  /** The body's size in code points. */
+  finish(): number {
+    return this.state === "frontmatter" ? this.total : this.total - this.bodyStart;
+  }
+}
+
+/**
+ * The size of a `SKILL.md` body in code points: everything after the YAML
+ * frontmatter, with `\r` not counted. A file whose frontmatter never closes
+ * counts whole.
+ */
+export function skillBodyCharacters(content: string): number {
+  const counter = new SkillBodyCounter();
+  const lines = content.replace(/\r/g, "").split("\n");
+  lines.forEach((line, index) => {
+    counter.line(line, countCharacters(line), index < lines.length - 1);
+  });
+  return counter.finish();
+}
+
 /** File extensions that count as an authored assistant asset. */
 export const ASSISTANT_ASSET_EXTENSIONS: readonly string[] = [".md", ".yml", ".yaml"];
 
@@ -431,7 +492,12 @@ export function widestMeasurableLine(content: string): number {
   return scanner.finish();
 }
 
-type AssetMeasurement = { lines: number; widest: number };
+type AssetMeasurement = {
+  lines: number;
+  widest: number;
+  /** The body's size in code points, measured for a `SKILL.md` only. */
+  skillBodyChars: number | undefined;
+};
 
 /**
  * Measures a file without holding it in memory.
@@ -445,10 +511,14 @@ type AssetMeasurement = { lines: number; widest: number };
  * Decoded as text rather than scanned as bytes, because the width is a count of
  * characters. These files carry em dashes and Japanese, and a byte count would
  * report a compliant line as three times its width.
+ *
+ * A file named `SKILL.md` is also measured for its body size, in the same pass.
  */
 async function measureFile(absolute: string): Promise<AssetMeasurement> {
   const stream = createReadStream(absolute, { encoding: "utf-8" });
   const scanner = new WidthScanner();
+  const skillBody =
+    path.basename(absolute) === SKILL_ENTRY_FILE ? new SkillBodyCounter() : undefined;
   let lines = 1;
   let head = "";
   let width = 0;
@@ -461,6 +531,7 @@ async function measureFile(absolute: string): Promise<AssetMeasurement> {
           if (character === "\n") {
             lines += 1;
             scanner.push(head, width);
+            skillBody?.line(head, width, true);
             head = "";
             width = 0;
             continue;
@@ -484,10 +555,14 @@ async function measureFile(absolute: string): Promise<AssetMeasurement> {
     stream.destroy();
   }
   scanner.push(head, width);
-  return { lines, widest: scanner.finish() };
+  skillBody?.line(head, width, false);
+  return { lines, widest: scanner.finish(), skillBodyChars: skillBody?.finish() };
 }
 
 export type OversizedAssistantAsset = { path: string; lines: number };
+
+/** A `SKILL.md` whose body exceeds {@link SKILL_BODY_MAX_CHARS}. */
+export type OversizedSkillBody = { path: string; chars: number };
 
 /**
  * An asset whose widest line exceeds what it is allowed.
@@ -512,11 +587,15 @@ export type AssistantAssetBudgetReport = {
   /** Ceiling for every other asset, in lines. */
   maxDataLines: number;
   maxLineChars: number;
+  /** Ceiling for a `SKILL.md` body, in code points. */
+  maxSkillBodyChars: number;
   /** Number of asset files measured (unreadable files excluded). */
   scanned: number;
   oversized: OversizedAssistantAsset[];
   /** Assets whose widest measurable line exceeds the ceiling that applies to them. */
   wideLines: WideLineAssistantAsset[];
+  /** `SKILL.md` files whose body exceeds {@link SKILL_BODY_MAX_CHARS}. */
+  oversizedSkillBodies: OversizedSkillBody[];
   /**
    * Paths excused from the LINE ceiling, each with the reason from
    * {@link LINE_BUDGET_EXEMPT}. They are still measured for width: the reason an
@@ -693,9 +772,11 @@ export async function checkAssistantAssetLineBudget(
     maxMarkdownLines: ASSISTANT_MARKDOWN_MAX_LINES,
     maxDataLines: ASSISTANT_DATA_MAX_LINES,
     maxLineChars: ASSISTANT_ASSET_MAX_LINE_CHARS,
+    maxSkillBodyChars: SKILL_BODY_MAX_CHARS,
     scanned: 0,
     oversized: [],
     wideLines: [],
+    oversizedSkillBodies: [],
     exempt: [],
     unreadable: [],
   };
@@ -720,6 +801,7 @@ export async function checkAssistantAssetLineBudget(
 
   const oversized: OversizedAssistantAsset[] = [];
   const wideLines: WideLineAssistantAsset[] = [];
+  const oversizedSkillBodies: OversizedSkillBody[] = [];
   const exempt: ExemptAssistantAsset[] = [];
   const unreadable: string[] = [];
   let scanned = 0;
@@ -751,10 +833,14 @@ export async function checkAssistantAssetLineBudget(
     if (measured.widest > allowed) {
       wideLines.push({ path: relPath, widest: measured.widest, allowed });
     }
+    if (measured.skillBodyChars !== undefined && measured.skillBodyChars > SKILL_BODY_MAX_CHARS) {
+      oversizedSkillBodies.push({ path: relPath, chars: measured.skillBodyChars });
+    }
   }
 
   const incomplete = unreadable.length > 0 || scan.unscannable.length > 0;
-  const overBudget = oversized.length > 0 || wideLines.length > 0;
+  const overBudget =
+    oversized.length > 0 || wideLines.length > 0 || oversizedSkillBodies.length > 0;
   const status: AssistantAssetBudgetStatus = overBudget
     ? "over_budget"
     : incomplete
@@ -767,9 +853,11 @@ export async function checkAssistantAssetLineBudget(
     maxMarkdownLines: ASSISTANT_MARKDOWN_MAX_LINES,
     maxDataLines: ASSISTANT_DATA_MAX_LINES,
     maxLineChars: ASSISTANT_ASSET_MAX_LINE_CHARS,
+    maxSkillBodyChars: SKILL_BODY_MAX_CHARS,
     scanned,
     oversized,
     wideLines,
+    oversizedSkillBodies,
     exempt,
     unreadable,
     unscannable: scan.unscannable,

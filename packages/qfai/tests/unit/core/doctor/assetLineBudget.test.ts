@@ -127,6 +127,8 @@ import {
   assistantLineCeiling,
   checkAssistantAssetLineBudget,
   countLines,
+  SKILL_BODY_MAX_CHARS,
+  skillBodyCharacters,
   widestMeasurableLine,
 } from "../../../../src/core/doctor/assetLineBudget.js";
 
@@ -797,6 +799,151 @@ describe("assets.lineBudget width ceiling", () => {
       // tell a reader the opposite of what was checked.
       expect(check?.message).toContain("within the line width each is held to");
       expect(check?.message).toContain(String(ASSISTANT_ASSET_MAX_LINE_CHARS));
+    });
+  });
+});
+
+/**
+ * A skill file whose body is `chars` code points under a short frontmatter.
+ *
+ * Every hundredth character is a newline, so no line fails the width ceiling,
+ * and a newline counts as one character of the body.
+ */
+function skillFile(chars: number, eol = "\n"): string {
+  const body = Array.from({ length: chars }, (_, i) => (i % 100 === 99 ? eol : "s")).join("");
+  return ["---", "name: qfai-demo", "description: demo", "---", ""].join(eol) + body;
+}
+
+async function writeSkill(root: string, relPath: string, content: string): Promise<void> {
+  const abs = path.join(root, ".qfai", "assistant", relPath);
+  await mkdir(path.dirname(abs), { recursive: true });
+  await writeFile(abs, content, "utf-8");
+}
+
+describe("SKILL.md body character ceiling", () => {
+  it("states the ceiling the AI-readable Markdown rule sets", () => {
+    expect(SKILL_BODY_MAX_CHARS).toBe(20_000);
+  });
+
+  it("counts the body after the frontmatter, in code points", () => {
+    expect(skillBodyCharacters("---\nname: x\n---\nabc")).toBe(3);
+    expect(skillBodyCharacters(skillFile(SKILL_BODY_MAX_CHARS))).toBe(SKILL_BODY_MAX_CHARS);
+  });
+
+  it("counts a file whose frontmatter is never closed whole", () => {
+    const text = "---\nname: x\nbody";
+    expect(skillBodyCharacters(text)).toBe(text.length);
+  });
+
+  it("counts a file without frontmatter whole", () => {
+    expect(skillBodyCharacters("plain body")).toBe(10);
+  });
+
+  it("reads a CRLF file the same as its LF twin", () => {
+    expect(skillBodyCharacters(skillFile(5_000, "\r\n"))).toBe(5_000);
+  });
+
+  it("counts a character outside the basic plane once", () => {
+    expect(skillBodyCharacters("---\nname: x\n---\n\u{1F600}\u{1F600}")).toBe(2);
+  });
+
+  it("passes a body of exactly the ceiling", async () => {
+    await withTempRoot(async (root) => {
+      await writeSkill(root, "skill/qfai-demo/SKILL.md", skillFile(SKILL_BODY_MAX_CHARS));
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.oversizedSkillBodies).toEqual([]);
+      expect(report.maxSkillBodyChars).toBe(SKILL_BODY_MAX_CHARS);
+      expect(report.status).toBe("ok");
+    });
+  });
+
+  it("reports a body one character over the ceiling", async () => {
+    await withTempRoot(async (root) => {
+      await writeSkill(root, "skill/qfai-demo/SKILL.md", skillFile(SKILL_BODY_MAX_CHARS + 1));
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.status).toBe("over_budget");
+      expect(report.oversizedSkillBodies).toEqual([
+        { path: "assistant/skill/qfai-demo/SKILL.md", chars: SKILL_BODY_MAX_CHARS + 1 },
+      ]);
+      expect(report.oversized).toEqual([]);
+      expect(report.wideLines).toEqual([]);
+    });
+  });
+
+  it("reads a CRLF skill file the same as its LF twin", async () => {
+    await withTempRoot(async (root) => {
+      await writeSkill(root, "skill/qfai-demo/SKILL.md", skillFile(SKILL_BODY_MAX_CHARS, "\r\n"));
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.oversizedSkillBodies).toEqual([]);
+    });
+  });
+
+  it("counts a file whose frontmatter is never closed whole", async () => {
+    await withTempRoot(async (root) => {
+      // The first `\n---\n` is the closing marker: the opening one starts the file.
+      const unclosed = skillFile(SKILL_BODY_MAX_CHARS - 30).replace("\n---\n", "\n");
+      await writeSkill(root, "skill/qfai-demo/SKILL.md", unclosed);
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(skillBodyCharacters(unclosed)).toBe(unclosed.length);
+      expect(report.oversizedSkillBodies).toEqual([
+        { path: "assistant/skill/qfai-demo/SKILL.md", chars: unclosed.length },
+      ]);
+    });
+  });
+
+  it("holds a reference file to the line ceilings only", async () => {
+    await withTempRoot(async (root) => {
+      await writeSkill(
+        root,
+        "skill/qfai-demo/references/long.md",
+        skillFile(SKILL_BODY_MAX_CHARS * 2),
+      );
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.oversizedSkillBodies).toEqual([]);
+      expect(report.status).toBe("ok");
+    });
+  });
+
+  // QFAI:EX-0003-0032-01
+  it("warns on assets.lineBudget naming the body, its size and where to move a section", async () => {
+    await withTempRoot(async (root) => {
+      await writeSkill(root, "skill/qfai-demo/SKILL.md", skillFile(SKILL_BODY_MAX_CHARS + 1));
+
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
+
+      expect(check?.severity).toBe("warning");
+      expect(check?.message).toContain(
+        `1 SKILL.md bodies exceed ${SKILL_BODY_MAX_CHARS} characters: ` +
+          `assistant/skill/qfai-demo/SKILL.md (${SKILL_BODY_MAX_CHARS + 1})`,
+      );
+      expect(JSON.stringify(check?.details?.["nextActions"])).toContain("references/");
+      expect(check?.details?.["maxSkillBodyChars"]).toBe(SKILL_BODY_MAX_CHARS);
+    });
+  });
+
+  // QFAI:EX-0003-0032-02
+  it("names the character ceiling when every body is within it", async () => {
+    await withTempRoot(async (root) => {
+      await writeSkill(root, "skill/qfai-demo/SKILL.md", skillFile(SKILL_BODY_MAX_CHARS));
+
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
+
+      expect(check?.severity).toBe("ok");
+      expect(check?.message).toContain(
+        `SKILL.md bodies are within ${SKILL_BODY_MAX_CHARS} characters`,
+      );
     });
   });
 });

@@ -214,22 +214,12 @@ There is no question cap. A design is not finished being interrogated because a
 number was reached, and a short session is not evidence that the design was
 simple.
 
-**A delegated session has no condition 2**, because no user is there to
-confirm. A budget bounds its rounds: two, then every decision that is not
-critical takes the griller's recommendation — the ones the agents agreed on and
-the ones still open alike. An uncovered critical decision goes to the user
-when asking is permitted, without spending a round
-(`.qfai/assistant/rule/review-convergence.md`). It ends `adopted` once
-the master's conditions hold: no open node or lookup, required inputs present,
-and actual authority for critical decisions. Record agent choices as agents'.
-
-**The budget ends the rounds, not the session.** While a critical decision
-lacks an actual answer or applicable recorded authorization, it stays open: the user answers it, or ends the session
-another way — or, under a no-question mode, the register write ends it
-`no-question`. How many went is a count a record carries, never an ending.
-
-**Only a no-question session meeting the master's explicit-delegation
-conditions ends `adopted`.**
+**A delegated session ends by its own conditions**, because no user is there
+to confirm condition 2. Read `references/delegated-session.md` § When a
+delegated session ends when the session is delegated, or is a no-question
+session that meets the master's explicit-delegation conditions. It holds the
+round budget, when the griller's recommendation is taken, and when the session
+ends `adopted`. A session with a user does not need it.
 
 **Any other session under a no-question mode cannot reach condition 2
 either**, because the mode forbids asking the user. It ends when nothing on the
