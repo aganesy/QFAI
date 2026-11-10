@@ -334,6 +334,7 @@
     "tests/integration/spec0017TuningChangeScope.test.ts",
     "tests/integration/staleTerms.test.ts",
     "tests/integration/decisionApproaches.test.ts",
+    "tests/integration/decisionRowLength.test.ts",
     "tests/integration/validators/stepTree.test.ts",
     "tests/integration/delegationByContext.test.ts",
     "tests/integration/init/stepDistribution.test.ts",

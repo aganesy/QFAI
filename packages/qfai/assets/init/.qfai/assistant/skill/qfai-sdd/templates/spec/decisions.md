@@ -47,9 +47,9 @@ after any opening citation above:
 Content and Approach together stay within 600 characters; validation warns
 on a longer row. Write a `|` inside a cell as `\|`.
 
-A legacy DEC-NNNN row above DEC-2097 was written in an earlier form whose
-four items, Evidence, Grounds, Residual risk and Rollback, validation still
-checks; a new row does not use that form.
+Some legacy DEC-NNNN rows were written in an earlier form of four items,
+Evidence, Grounds, Residual risk and Rollback, which validation still checks
+on them; a new row does not use that form.
 
 A release approval that passes the recording test, with `<...>` standing for
 the project's values, has this Content cell:

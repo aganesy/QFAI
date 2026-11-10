@@ -296,6 +296,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-015",
     "QFAI-STORY-016",
     "QFAI-STORY-017",
+    "QFAI-STORY-020",
     "QFAI-SPACK-102",
   ],
   "story-contract-index": ["QFAI-CONTRACT-034"],
