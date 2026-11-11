@@ -155,10 +155,16 @@ does not parse is otherwise found by CI, after handoff.
    npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --prefix=tmp/qfai-mermaid mermaid@<version> jsdom@<version>
    ```
 
-4. Run the parser over the pack directory, from `tmp/qfai-release/node_modules/qfai/` where step 1 installed it.
+4. Run the parser over the pack directory.
 
    ```bash
    node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <pack directory>
+   ```
+
+   Where step 1 installed the release, run its checker instead:
+
+   ```bash
+   node tmp/qfai-release/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <pack directory>
    ```
 
 5. Fix each diagram it rejects, and run it again until it exits 0.
