@@ -58,7 +58,7 @@ const VALID_SKILL_CONTENT = [
   "Run qfai doctor --profile prototyping --target-url <url>.",
   "Prefer npx --no-install playwright whenever PATH reachability is not guaranteed.",
   "",
-  "## Evaluator Inputs (Mandatory)",
+  "## Evaluator Inputs",
   "screenshots, HTML snapshots, axisDefs, previousScore, designSystemChecklist",
   "",
   "## Delegation Scope Table",
@@ -73,7 +73,7 @@ describe("prototyping skill validator", () => {
     expect(result.present).toEqual([
       "## Required References",
       "## Required Process",
-      "## Evaluator Inputs (Mandatory)",
+      "## Evaluator Inputs",
     ]);
     expect(result.missing).toHaveLength(0);
   });

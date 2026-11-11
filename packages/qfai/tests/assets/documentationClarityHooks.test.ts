@@ -130,6 +130,8 @@ function readHooks(text: string): ReadonlyMap<string, readonly HookGroup[]> {
   }
   const byEvent = new Map<string, readonly HookGroup[]>();
   for (const [event, groups] of Object.entries(hooks)) {
+    // The turn-end check events take no matcher and carry no reminder; their own test reads them.
+    if (event === "Stop" || event === "SubagentStop") continue;
     if (!Array.isArray(groups)) throw new Error(`${event} is not an array`);
     byEvent.set(event, groups.map(toGroup));
   }

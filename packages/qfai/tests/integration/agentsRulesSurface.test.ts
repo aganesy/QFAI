@@ -1538,6 +1538,35 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       }
     });
 
+    // QFAI:AC-0001-0231-07
+    // QFAI:EX-0001-0231-17
+    // QFAI:EX-0001-0231-18
+    it.each(MASTERS)("%s proposes a correction given twice to the project", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      for (const clause of [
+        // A second output, kept apart from the QFAI issues.
+        /A\s+second\s+output,\s+separate\s+from\s+the\s+issues\s+above/,
+        /never\s+goes\s+to\s+QFAI/,
+        /List\s+each\s+correction\s+the\s+user\s+gave\s+twice\s+in\s+the\s+session/,
+        // The three places, each with its threshold.
+        /A\s+convention,\s+corrected\s+twice\s*\|\s*The\s+`## Project rules`\s+section\s+of\s+`AGENTS\.md`,\s+or\s+a\s+rule\s+scoped\s+to\s+the\s+paths/,
+        /A\s+procedure,\s+pasted\s+three\s+times\s*\|\s*A\s+skill/,
+        /Something\s+that\s+has\s+to\s+happen\s+every\s+time,\s+with\s+no\s+lapse\s*\|\s*A\s+hook/,
+        // What it never proposes, and what it never writes alone.
+        /A\s+correction\s+given\s+once\s+proposes\s+nothing,\s+and\s+neither\s+does\s+a\s+procedure\s+pasted\s+fewer\s+than\s+three\s+times/,
+        /Where\s+an\s+equivalent\s+already\s+exists,\s+propose\s+nothing\s+for\s+it/,
+        /Write\s+nothing\s+without\s+the\s+user's\s+yes/,
+        /Write\s+only\s+what\s+the\s+user\s+chose,\s+then\s+list\s+the\s+files\s+changed\s+in\s+one\s+line\s+and\s+leave\s+them\s+uncommitted/,
+        /Where\s+`AGENTS\.md`\s+has\s+no\s+`## Project rules`\s+heading,\s+the\s+proposal\s+adds\s+one\s+below\s+the\s+qfai\s+section/,
+        // A mode that asks nothing writes nothing either.
+        /nothing\s+is\s+filed\s+or\s+written/,
+        /The\s+drafts\s+and\s+the\s+proposals\s+of\s+§\s+4\s+and\s+§\s+8\s+go\s+in\s+the\s+final\s+report/,
+        /the\s+proposals\s+of\s+§\s+8\s+were\s+not\s+written/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
     it("ships to adopters", async () => {
       const shipped = path.join(
         ROOT,
@@ -1556,6 +1585,64 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("session-feedback.md");
+    });
+  });
+
+  // An agent that hands work to another agent while the user watches is the one
+  // that can see a wrong start early, so the master ships, and both copies are
+  // held to the same clauses.
+  // QFAI:AC-0001-0163-10
+  // QFAI:AC-0001-0163-11
+  // QFAI:EX-0001-0163-15
+  // QFAI:EX-0001-0163-16
+  // QFAI:EX-0001-0163-18
+  // QFAI:EX-0001-0163-19
+  describe("delegation-steering rule", () => {
+    const MASTERS = [
+      ".agents/rules/delegation-steering.md",
+      "packages/qfai/assets/init/root/.agents/rules/delegation-steering.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      for (const clause of [
+        // Where it applies, and the unattended run it leaves alone.
+        /a\s+session\s+where\s+the\s+user\s+is\s+present\s*\|\s*Always/,
+        /A\s+run\s+under\s+`--auto`,\s+or\s+any\s+run\s+where\s+nobody\s+is\s+present\s*\|\s*Never/,
+        /"Unattended\s+Runs:\s+Ending\s+a\s+Turn",\s+governs/,
+        // The three moves.
+        /read\s+its\s+first\s+actions\s+as\s+they\s+appear/,
+        /Where\s+the\s+host\s+shows\s+nothing\s+before\s+the\s+result,\s+the\s+result\s+is\s+the\s+first\s+check/,
+        /interrupt\s+then\s+through\s+the\s+host's\s+message\s+or\s+stop\s+mechanism/,
+        /After\s+two\s+corrections\s+on\s+one\s+task\s+that\s+do\s+not\s+land,\s+send\s+no\s+third/,
+        /The\s+rewritten\s+brief\s+carries\s+what\s+was\s+learned/,
+        // A judgement stays independent.
+        /A\s+verdict\s+the\s+session\s+disagrees\s+with\s+is\s+not\s+off\s+course/,
+        /An\s+interrupt\s+to\s+a\s+judgement\s+restates\s+only\s+the\s+brief's\s+scope\s+and\s+remit/,
+        /A\s+rewritten\s+judgement\s+brief\s+stays\s+black-box/,
+        /A\s+restarted\s+judgement\s+is\s+the\s+same\s+one\s+review:\s+its\s+work\s+order\s+takes\s+the\s+next\s+replacement\s+ordinal/,
+        /When\s+the\s+rewritten\s+brief\s+goes\s+off\s+course\s+the\s+same\s+way,\s+start\s+no\s+third\s+attempt:\s+put\s+it\s+to\s+the\s+user\s+with\s+the\s+next\s+actions,\s+as\s+`user-questions\.md`\s+sets\s+out/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it("ships to adopters", async () => {
+      const shipped = path.join(
+        ROOT,
+        "packages/qfai/assets/init/root/.agents/rules/delegation-steering.md",
+      );
+      expect((await lstat(shipped)).isFile()).toBe(true);
+    });
+
+    it.each([
+      "AGENTS.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("delegation-steering.md");
     });
   });
 

@@ -11,10 +11,8 @@ mode: execution-focused
 
 ## /qfai-prototyping
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 Run the entry check of
-`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`
 first.
 
 The loop is static-first and file-based by default. Supported surfaces: web,

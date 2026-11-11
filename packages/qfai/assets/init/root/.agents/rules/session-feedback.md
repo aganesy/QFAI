@@ -2,7 +2,8 @@
 
 What an agent does once, when every task the user gave it is complete: review
 the whole session for problems in QFAI itself, and ask the user whether to
-report them.
+report them. Separately, it proposes where the project could keep a correction
+the user had to give twice.
 
 An agent in a session notices what a maintainer cannot see from outside: a rule
 that contradicted another, a gate that stopped correct work, a step that cost an
@@ -14,14 +15,15 @@ once the user approves it.
 
 ## Scope
 
-| Target                                                                    | Applies                                    |
-| ------------------------------------------------------------------------- | ------------------------------------------ |
-| The end of the turn after which no task the user gave is left             | Reviewed                                   |
-| A pause: a question, an approval, a phase boundary, a halt, a next action | Not reviewed                               |
-| A problem in the adopter's own code or product                            | Outside this rule                          |
-| A problem in QFAI's rules, skills, steps, commands, hooks or documents    | Reported once the user agrees              |
-| A QFAI rule that applied badly here, answered by an item in its overlay   | Proposed, added once the user approves     |
-| A run under a no-question mode                                            | Drafted into the final report, never filed |
+| Target                                                                    | Applies                                                                    |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| The end of the turn after which no task the user gave is left             | Reviewed                                                                   |
+| A pause: a question, an approval, a phase boundary, a halt, a next action | Not reviewed                                                               |
+| A problem in the adopter's own code or product                            | Outside this rule                                                          |
+| A problem in QFAI's rules, skills, steps, commands, hooks or documents    | Reported once the user agrees                                              |
+| A QFAI rule that applied badly here, answered by an item in its overlay   | Proposed, added once the user approves                                     |
+| A correction the user gave twice, or a procedure pasted three times       | Proposed for the project, written on a yes                                 |
+| A run under a no-question mode                                            | Drafts and proposals go in the final report, never filed, added or written |
 
 ## 1. When the review runs
 
@@ -107,7 +109,7 @@ item for the rule's overlay. Each proposal is one item, never a rewrite:
 
 An overlay adds this project's own guidance and overrides nothing in the rule,
 so an item never replaces or contradicts one of the rule's. That is the only
-file a proposal names. A change to a shipped rule, or to any other file QFAI
+file an overlay proposal names. A change to a shipped rule, or to any other file QFAI
 ships, is never made in the project: it becomes a draft under § 3 and is filed
 under § 6. A change to the spec tree is not this review's to make: it goes
 through `qfai-sdd` as a specification change.
@@ -155,9 +157,42 @@ credential.
 
 ## 7. Under a no-question mode
 
-Nothing is asked and nothing is filed. No proposal is added either. The drafts
-and the proposals go in the final report, and the report says none was filed or
-added.
+Nothing is asked and nothing is filed or written. No proposal is added either.
+The drafts and the proposals of § 4 and § 8 go in the final report, and the
+report says none was filed or added, and that the proposals of § 8 were not
+written.
+
+## 8. Corrections to keep in the project
+
+A second output, separate from the issues above: it concerns the adopter's own
+project and never goes to QFAI. It runs at the same moment as the review (§ 1).
+
+List each correction the user gave twice in the session, or procedure the
+user pasted three times: a convention, a command, a preference or a procedure
+the agent missed and the user had to state again. For each, propose one place
+in the project to record it:
+
+| What the user repeated                                 | Where to propose it                                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| A convention, corrected twice                          | The `## Project rules` section of `AGENTS.md`, or a rule scoped to the paths it governs if the host has them |
+| A procedure, pasted three times                        | A skill                                                                                                      |
+| Something that has to happen every time, with no lapse | A hook                                                                                                       |
+
+- A correction given once proposes nothing, and neither does a procedure pasted
+  fewer than three times.
+- Read the project's entry file, rules, skills and hooks first. Where an
+  equivalent already exists, propose nothing for it.
+- Each proposal names the correction, the place, and the text or the setting it
+  would add.
+- Write nothing without the user's yes. Ask as § 5 does, as a question of its
+  own: one option for each proposal, more than one may be chosen, and choosing
+  none writes nothing. Write only what the user chose, then list the files
+  changed in one line and leave them uncommitted, as § 5 does.
+- Where `AGENTS.md` has no `## Project rules` heading, the proposal adds one
+  below the qfai section.
+- A correction that shows a QFAI rule applied badly here is an overlay item
+  under § 4, not a proposal here.
+- When no correction qualifies, this output is left out.
 
 ## Related
 

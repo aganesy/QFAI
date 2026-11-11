@@ -43,7 +43,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   it("names the canonical path as the contract's canonical path", async () => {
     const contract = await read(tree, CONTRACT);
     expect(contract).toContain(`# Verify Output Contract — \`${VERIFY_JSON_REL}\``);
-    expect(contract).toContain(`\`/qfai-verify\` MUST write \`${VERIFY_JSON_REL}\``);
+    expect(contract).toContain(`\`/qfai-verify\` writes \`${VERIFY_JSON_REL}\``);
     expect(contract).toContain(`Canonical path: \`${VERIFY_JSON_REL}\``);
   });
 

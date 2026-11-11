@@ -275,7 +275,7 @@ describe("assets guardrails", () => {
     );
     const baseline = await readFile(baselinePath, "utf-8");
     const start = baseline.indexOf("### Session Agent Protocol");
-    const end = baseline.indexOf("### Capability Probe (MUST)");
+    const end = baseline.indexOf("### Capability Probe");
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
     const protocol = baseline.slice(start, end).replace(/\s+/g, " ");
@@ -442,17 +442,7 @@ describe("assets guardrails", () => {
     expect(content).toContain("the next actions");
   });
 
-  it("ensures qfai-prototyping v2.0 SKILL.md preserves drift protocol and 4 references", async () => {
-    const skillPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-prototyping",
-      "SKILL.md",
-    );
-    // Drift protocol marker (anti-improvisation guardrail) survives v2.0.
-    expect(await readFile(skillPath, "utf-8")).toContain("[DRIFT-PROTOCOL:REQUIRED]");
-
+  it("ensures the qfai-prototyping steps cite its 4 references", async () => {
     // The 4 v2.0 references must all be cited by the steps that use them.
     const content = await readPrototypingProcedure();
     expect(content).toContain("references/iteration-loop.md");
@@ -1233,7 +1223,7 @@ describe("assets guardrails", () => {
     );
     const content = await readFile(discussPromptPath, "utf-8");
 
-    expect(content).toContain("## Completion Message & Next Actions (MUST)");
+    expect(content).toContain("## Completion Message & Next Actions");
     expect(content).toContain(
       "End the turn with a question listing the next actions, `/qfai-sdd` recommended",
     );

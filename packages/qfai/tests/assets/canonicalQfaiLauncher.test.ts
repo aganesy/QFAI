@@ -123,7 +123,7 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
   it("the shared baseline gates on a local binary, not on an npx flag", async () => {
     for (const baseline of BASELINE_PATHS) {
       const content = await readFile(path.join(repoRoot, baseline), "utf-8");
-      expect(content).toContain("## Canonical qfai Launcher (Mandatory)");
+      expect(content).toContain("## Canonical qfai Launcher");
       expect(content).toContain("Launcher preflight");
       expect(content).toContain("`node_modules/.bin/qfai`");
       expect(content).toContain("UNRUN");

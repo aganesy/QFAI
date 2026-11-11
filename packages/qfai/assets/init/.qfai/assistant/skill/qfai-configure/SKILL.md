@@ -15,8 +15,6 @@ QFAI Skill Body (SSOT)
 
 ## /qfai-configure - Configure QFAI for this repository
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 ## User Questions (AskUserQuestion Protocol)
 
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
@@ -37,9 +35,9 @@ skill declares — Step 5's zero-match glob, and an ambiguous tooling choice or
 runnable path — are `hard-required` inputs, not clarifications to assume, so
 both outlive an exhausted budget.
 
-## FORMAT SSOT (Mandatory)
+## FORMAT SSOT
 
-- Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#format-ssot-mandatory`.
+- Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#format-ssot`.
 
 - Before writing or editing any `.qfai/**` artifact, read the relevant skill-local reference or template:
   - `.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md`
@@ -55,7 +53,7 @@ When unsure, read inputs in this order:
 - P3: `.qfai/spec/decisions.md` (Decision Records; if no decision exists, state "not applicable").
 - P4: the business flows, stories, contracts, tests, and evidence relevant to the configuration.
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
@@ -92,15 +90,15 @@ Use the shared template.
 
 - Required field: `Status (PASS/REVISE/PENDING)`. `PENDING` marks a gate that could not be run (see the baseline's reviewer-budget branch); it never counts as `PASS`.
 
-## Policy check (mandatory)
+## Policy check
 
-Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#policy-check-mandatory`.
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#policy-check`.
 
 - Fill policy from verifiable repository evidence first; when evidence is missing, mark the field `TBD` and name the gap in the final report.
 
-## Rejected Option Guard (Mandatory)
+## Rejected Option Guard
 
-Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#rejected-option-guard-mandatory`.
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#rejected-option-guard`.
 
 ## Hard Constraints (Read First)
 
@@ -185,13 +183,13 @@ The session agent analyzes the repository and writes the configuration itself.
 The one sub-agent is `implementation-reviewer`, which reviews what the session
 wrote; the delegation baseline says how it is briefed.
 
-## Completion Separation (mandatory)
+## Completion Separation
 
 - The session agent's configuration change and its approval are separate: the
   reviewer approves, never the session agent.
 - The reviewer confirms the evidence sampling before approval.
 
-## Context Refresh (mandatory for long tasks)
+## Context Refresh (long tasks)
 
 Every 5 major actions, pause and restate:
 
@@ -229,7 +227,7 @@ Every 5 major actions, pause and restate:
 
 4. Inspect project-owned policy and contract files for placeholders.
 
-## Step 0 - Project Analysis (mandatory)
+## Step 0 - Project Analysis
 
 Before editing config, **thoroughly analyze the current project**:
 
@@ -314,7 +312,7 @@ Provide:
 
 Suggest next step: `/qfai-discussion` (or rerun `/qfai-configure` if configuration is not ready).
 
-## DONE Declaration (Mandatory Output)
+## DONE Declaration
 
 When you declare DONE, include:
 

@@ -11,15 +11,13 @@ mode: execution-focused
 
 ## /qfai-run - Change request entry
 
-[DRIFT-PROTOCOL:REQUIRED]
-
 In a git worktree, read and follow the worktree's own `.qfai/assistant/skill/qfai-run/SKILL.md`, whatever copy the host loaded. Follow the CLI plan's steps in order. Read no reference up front; each line says when.
 
 - `references/extraction.md`: for an extraction step 1 does not give.
 - `references/plan.md`: for a plan field this file does not name, or a refused plan.
 - `references/operator-screens.md`: when a line below or a step names it, such as to ask or report.
 - `references/stage-points.md`: at a step the plan marks with a point.
-- Run preflight before planning, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory` says.
+- Run preflight before planning, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher` says.
   If the launcher is missing or preflight fails, read `references/operator-screens.md` for recovery.
 - Read `references/codex-cloud-install.md` before configuring an environment-owned Install script or Start skill, or preparing dependencies for a fresh checkout. Use the reviewed target's successful preparation and canonical proof before planning.
 
@@ -73,7 +71,7 @@ values plan nothing.
    plan's one step is `triage-answer` or `triage-operate`. On a route that changes no file, one that
    closes, answers or asks, it reads and reports and writes nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in
-   order, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory` says.
+   order, as `.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps` says.
    Note each step's status for the final report; when a step is short or passes without edits, read `references/operator-screens.md`.
    Do the work and write every artifact yourself. Start a sub-agent only for the two reasons the delegation baseline states: an independent judgement, or parallel units that pass the parallel-unit gate. A worker starts no finder, griller or reviewer: run each step that starts one yourself, as the delegation baseline's Session Agent Protocol says.
    At a step the plan marks with a point, follow `references/stage-points.md`:
@@ -115,7 +113,7 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-a
 - P3: the story tree under `<paths.specsDir>` and the contracts under `<paths.contractsDir>`
 - P4: the user's request
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 

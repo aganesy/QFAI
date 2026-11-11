@@ -26,7 +26,7 @@ describe("a grilling session between agents has an end", () => {
       // no user answers a session between agents. These rules supply what ends
       // its rounds and what settles each decision when they run out.
       const content = await read(path.join(tree, CONVERGENCE));
-      expectPhrase(content, "## Agent-to-agent grilling (MUST)");
+      expectPhrase(content, "## Agent-to-agent grilling");
       expectPhrase(content, "A grilling session between agents is a **delegated session**");
       expectPhrase(
         content,

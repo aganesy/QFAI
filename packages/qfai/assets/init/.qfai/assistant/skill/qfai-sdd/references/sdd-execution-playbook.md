@@ -5,7 +5,7 @@ Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ 
 ## Stage 0: source inventory
 
 1. Use the launcher established by
-   `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
+   `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher`.
    Record its resolved package path and version in the SDD report. Check that
    the installed Stage 0 instructions support the procedure being used.
 2. Run `npx qfai sdd preflight` and read its `selectedInputPath` and `source`.

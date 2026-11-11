@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an adopter maintainer, I want the agent to review its whole session once every task I gave it is complete, and to ask me whether to file what it found against QFAI, so that the problems QFAI caused reach its maintainers without my having to remember or write them up.
+As an adopter maintainer, I want the agent to review its whole session once every task I gave it is complete, and to ask me whether to file what it found against QFAI, so that the problems QFAI caused reach its maintainers without my having to remember or write them up, and so that a correction I had to give twice can be kept in my own project.
 
 ## Non-goals
 

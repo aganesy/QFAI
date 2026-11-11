@@ -2,7 +2,7 @@
 
 Skills cite this baseline and add only stage or gate overrides.
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 This section binds every skill and step. A skill or step repeats none of it
 and adds no placeholder for a subsection it does not change. State only an
@@ -77,7 +77,7 @@ classified by the taxonomy below before any response.
 Before assigning write paths or handling a refused edit, read
 `.qfai/assistant/rule/references/worker-edit-boundary.md`.
 
-### Capability Probe (MUST)
+### Capability Probe
 
 1. No delegation attempt is required at the start of a stage. The session agent
    delegates only when it chooses to.
@@ -88,7 +88,7 @@ Before assigning write paths or handling a refused edit, read
    `Delegation Failure Taxonomy`), then apply the response for that class.
    Never simulate an agent.
 
-### Delegation Failure Taxonomy (MUST)
+### Delegation Failure Taxonomy
 
 Every delegation failure belongs to exactly one of two classes.
 
@@ -146,7 +146,7 @@ is `unavailable` or `saturated (retry budget exhausted)`.
 - A delegated agent stages only the paths it declared as deliverables in its work order: `git add <path> …`.
 - `git add -A`, `git add .` and `git commit -a` are forbidden for delegated agents, in both isolation modes. In degraded / shared-index mode the concurrent agents share one index, so a sweeping stage command commits a sibling agent's in-flight files and misattributes work in the audit trail. Under worktree separation the command still stages whatever else is loose in that agent's own worktree.
 - When the agent's deliverable paths are not known up front, it hands back an unstaged diff and the session agent commits — under the same rule. The session agent commits one handed-back diff at a time, stages that agent's declared paths only, and is equally forbidden from `git add -A` / `git add .` / `git commit -a` while a parallel stage is in flight. Being the committer does not exempt it.
-- Isolation requirements for concurrent stages are defined once in `.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory`.
+- Isolation requirements for concurrent stages are defined once in `.qfai/assistant/rule/workflow.md#concurrency-every-stage`.
 
 ### Host backstops above the declared shape
 
@@ -173,7 +173,7 @@ signals-not-gates bullets below, and the `PASS` / `REVISE` vocabulary, are not
 restated. A skill with no check of its own carries no reviewer gate section. A
 stage that runs several steps is reviewed once, after its last step, by the one
 review its parent names
-(`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps-mandatory`).
+(`.qfai/assistant/rule/shared-skill-operating-baseline.md#running-steps`).
 
 - Final completion gate must be delegated to an independent reviewer, except where the skill runs no review: `qfai-triage` invoked by name, and a `qfai-verify` run that wrote nothing.
 - Each reviewer records an explicit PASS or REVISE for the reviewed revision.
@@ -221,7 +221,7 @@ Read `.qfai/assistant/rule/references/reviewer-remit.md` when you brief a review
 
 Read `.qfai/assistant/rule/references/reviewer-findings.md` when you write or judge a reviewer finding: where it comes from, and what a reviewer may demand more of. Not needed when no review runs.
 
-### What a reviewer may demand more of (MUST)
+### What a reviewer may demand more of
 
 What a reviewer may demand is in `.qfai/assistant/rule/references/reviewer-findings.md`, read under the condition above.
 

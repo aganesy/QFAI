@@ -14,8 +14,8 @@ describe("answered review demands are carried into the next existing request", (
     it(`${tree}: the common rule bounds demands, not reports`, async () => {
       const text = await read(tree, "assistant/rule/review-convergence.md");
       for (const clause of [
-        "## Answered demands (MUST)",
-        "MUST NOT be re-raised under another wording",
+        "## Answered demands",
+        "is not raised again under another wording",
         "Close a repeat by citing its recorded answer",
         "what a reviewer may require, not what a reviewer may report",
         "they never start a second review in the same stage",
@@ -25,7 +25,7 @@ describe("answered review demands are carried into the next existing request", (
       ]) {
         expect(text.includes(clause), clause).toBe(true);
       }
-      const answered = text.split("## Answered demands (MUST)")[1]?.split("## ")[0];
+      const answered = text.split("## Answered demands")[1]?.split("## ")[0];
       expect(answered, "the answered-demand section is missing").toBeDefined();
       expect(answered).toContain(
         "A critical decision in it still requires actual applicable user authority",
@@ -35,7 +35,7 @@ describe("answered review demands are carried into the next existing request", (
 
     it(`${tree}: the review step carries answers before reviewer dispatch`, async () => {
       const text = await read(tree, "assistant/step/common-review-cycle/STEP.md");
-      expect(text).toContain("review-convergence.md#answered-demands-must");
+      expect(text).toContain("review-convergence.md#answered-demands");
       expect(text).toContain("Put the answers an earlier stage recorded on the same artifact");
       expect(text).toContain("request before dispatching reviewers");
     });

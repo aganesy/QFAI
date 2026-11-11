@@ -52,7 +52,7 @@ as [A diagnosed missing example](#a-diagnosed-missing-example) states.
    `.qfai/assistant/rule/drift-protocol.md` before dependent work resumes.
 2. Read the **Standard commands** section of
    `<paths.contractsDir>/tech.md`, as
-   `.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands-mandatory`
+   `.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands`
    states. Obtain the Test command only from that section. Lint, Typecheck
    and Build run once, in the verify stage. Read its
    `## Architecture` table too: place each new module in one layer, and

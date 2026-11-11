@@ -10,7 +10,7 @@ This file defines the canonical stages and delegation expectations.
 
 ## Absolute Rule — Output Language
 
-**All outputs MUST be written in the user’s working language for this session.**
+**Write all outputs in the user’s working language for this session.**
 
 ---
 
@@ -54,14 +54,14 @@ writes nothing; the session runs the plan.
 
 ---
 
-## Drift Protocol (Mandatory)
+## Drift Protocol
 
 - Read and enforce `.qfai/assistant/rule/drift-protocol.md`.
 - Downstream phases must not edit upstream SSOT artifacts; the owner skill changes them.
 - If drift is required, send the proposed change to the owner skill, put a critical decision to the user, and rerun the owner skill. A defect with one sound repair does not need invented alternatives.
 - The STOP is scoped: it halts the affected upstream artifact and every downstream item that depends on it, which the proposed change enumerates. Unaffected items continue, and more than one change may be open at once — see `.qfai/assistant/rule/drift-protocol.md#multiple-open-changes`.
 
-## Test-layer policy (Mandatory)
+## Test-layer policy
 
 - Read and enforce `.qfai/assistant/rule/test-layers.md`.
 - Treat floors/ratios as signals, not completion gates.
@@ -97,11 +97,11 @@ Implementation stage:
 - A collection, import, syntax, or fixture failure is not an admissible RED. When existing behavior already satisfies the EX, record falsifiability evidence under the rule in `references/red-not-observable.md`. Never weaken a correct test to manufacture RED.
 - While implementing, run only the test being written. Lint, typecheck, build, the full suite and `npx qfai validate` run once, in the verify stage. Parallel execution is only for the units the parallel-unit gate admits, which the session agent decides.
 
-### Concurrency (stage-independent, mandatory)
+### Concurrency (every stage)
 
 This subsection binds **every** stage that delegates in parallel, including
 `/qfai-sdd` no-argument batch runs and `/qfai-implement` slice execution. It is
-a real heading so `.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory` resolves
+a real heading so `.qfai/assistant/rule/workflow.md#concurrency-every-stage` resolves
 from the skills and baselines that cite it.
 
 - Worktree separation is required whenever two or more delegated agents write
@@ -129,7 +129,7 @@ from the skills and baselines that cite it.
   the shared worktree. A diff whose paths it cannot enumerate is not
   committable — ask the agent for its path list first.
 
-### Policy check (mandatory)
+### Policy check
 
 Once per run, at the start, before the first stage. A stage invoked by name on
 its own is a run of its own. The ultra-light routes `answer-in-session` and

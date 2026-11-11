@@ -6,6 +6,61 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The end-of-session review proposes where to keep a repeated correction.**
+  `.agents/rules/session-feedback.md` gains a second output, separate from the
+  QFAI issues: each correction the user gave twice in the session is proposed
+  for the project's own setup, as a line in the project rules of `AGENTS.md` or
+  a path-scoped rule, a skill for a procedure pasted three times, or a hook for
+  something that has to happen every time. Nothing is written without the
+  user's yes, and nothing is proposed for a one-off correction or where an
+  equivalent already exists.
+- **`.agents/rules/delegation-steering.md`.** While the user is in the session,
+  an agent that delegates a task checks its first actions, interrupts early
+  when it goes off course, and after two corrections that do not land restarts
+  it from a rewritten brief that carries what was learned. It does not apply
+  under `--auto`.
+- **Two unit work order fields.** The work order template gains
+  `Context not in the repository` and `Do not touch`, for unit work orders only;
+  a judgement brief stays black-box.
+
+- **A turn-end check that the host enforces.** `qfai init` now installs a
+  `Stop` and a `SubagentStop` hook for Claude Code and Codex. When an agent
+  ends its turn, the hook runs the Standard commands that the new
+  `Turn-end check:` item of `tech.md` lists in backticks. Each command runs in list order
+  and is stopped after 60 seconds. If one fails, the hook keeps the turn going
+  and passes on the command and the end of its output. When the same failure
+  comes back, or after three blocks in a row, the turn ends anyway and the user
+  is told which check still fails. A project that lists no command runs nothing, and
+  `workflow.stopGate: false` in `qfai.config.yaml` turns the hook off. Codex
+  runs the hook only after you trust it with `/hooks`.
+
+- **`qfai validate` audits the instructions an agent reads.** In `verify` and
+  `full`, it reads the Markdown under `.qfai/assistant/`, `paths.skillsDir` and
+  `.agents/rules/`, and `AGENTS.md` and `CLAUDE.md` at the root, and warns on
+  capitalised emphasis (`MUST`, `MANDATORY`, `REQUIRED`, `CRITICAL`,
+  `IMPORTANT`, `NEVER`, `ALWAYS`) and "think hard" phrasing outside code and
+  quotations (`QFAI-INSTR-001`), a `SKILL.md` over 500 lines
+  (`QFAI-INSTR-002`), a skill whose `description` and `when_to_use` exceed
+  1,536 characters (`QFAI-INSTR-003`), and an `AGENTS.md` over 32 KiB
+  (`QFAI-INSTR-004`). A fresh `qfai init` tree raises none of them.
+
+- **A restyle keeps its screens' text and starts with an audit.** Before a
+  restyle's first iteration changes a file, the session agent saves the text
+  each live route shows as a baseline, and the reviewer blocks on any text the
+  restyled screen changes, drops or replaces with prose. The same step audits
+  the running screens against the design anti-pattern list and root
+  `DESIGN.md` and sizes the restyle as `full`, `targeted` or `none`, put to the
+  user before the first edit; a screen with nothing to fix is left as it is.
+  The restyle edits spacing, color, type, layout, details and motion in that
+  order, and reports a text, icon or image change as a contract change. A
+  prototype takes its sample data from the story tree's examples and invents
+  no metric, customer or testimonial.
+- **Design reviews check product fit and unconfirmed claims.** The design
+  anti-pattern list asks whether a screen would still fit another product's
+  name, and puts an unsupported claim already on a screen to the user instead
+  of deleting or rewriting it; with no user present the claim stays and becomes
+  an open question.
+
 - **Grilling checks terms against the glossary.** In every grilling session, at
   every stage, a term that conflicts with the project glossary or the
   discussion pack's glossary, or is a synonym of a term one defines, is raised
@@ -97,6 +152,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Shipped headings and rules state obligations in plain words.** Headings
+  lose their `(MANDATORY)`, `(Mandatory)`, `(mandatory)` and `(MUST)` suffixes,
+  so their anchors change, for example
+  `shared-skill-operating-baseline.md#standard-commands` and
+  `#canonical-qfai-launcher`. Run `qfai init --force` to take the new text; a
+  project file that cites an old anchor reports `QFAI-LINK-002` until it is
+  updated.
+
 - **A grilling round asks the costly decisions first.** Within one round, a
   decision that is hard to reverse, or that later decisions depend on, now
   comes before one that is cheap to revise. The cheap decisions share one
@@ -148,6 +211,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The route catalog no longer needs a change-request row per route, the
   `qfai-sdd` change-request template is gone, and the extraction signal
   `decide-by-change-request` is removed. Existing rows stay as history.
+- **The `[DRIFT-PROTOCOL:REQUIRED]` skill marker and `QFAI-SKILLS-010`.** No
+  `SKILL.md` carries the marker, and `qfai validate` no longer requires it. The
+  drift protocol itself is unchanged. Remove the `[DRIFT-PROTOCOL:...]` marker
+  line from your own skills: the instruction audit now reports its capitalised
+  word as `QFAI-INSTR-001`.
+
 - **`qfai sdd renumber-decision` and `qfai sdd next-id DEC|OQ`.** Timestamp
   IDs need no allocation or renumbering. The page relocation, published-prefix
   recovery and surplus-copy recovery procedures are gone with them, and so are

@@ -67,7 +67,7 @@ specialization_tags:
   inputs and no branch written only for the test, and a wrong test or infeasible
   task raised as a specification change, not worked around
   (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
-- Require more work only under `rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must`. Send new scope to the SDD owner as advisory.
+- Require more work only under `rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of`. Send new scope to the SDD owner as advisory.
 - Apply `rule/ui-procurement.md` to UI changes and report a usable standard or component that was passed over.
 
 ## Coverage gate

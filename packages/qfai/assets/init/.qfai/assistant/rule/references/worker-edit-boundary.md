@@ -18,10 +18,17 @@ This does not forbid shell authoring where the host already permits it.
 The session agent checks the diff against the current files in its own permitted
 checkout before applying it. If that edit is refused too, leave the application
 pending and continue only independent work. Follow the existing worktree or
-shared-index mode in `.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory`
+shared-index mode in `.qfai/assistant/rule/workflow.md#concurrency-every-stage`
 when assigning writers and integrating their paths.
 
 ## Work order template
+
+A unit work order also names what the worker cannot read from the files and the
+paths it leaves alone. That context is a few lines; a unit that needs the
+conversation retold is not a unit. A judgement work order, such as a review, leaves both
+fields out: its brief stays black-box, as
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#session-agent-protocol`
+says.
 
 ```text
 Task title: <short>
@@ -30,11 +37,13 @@ Review series: <reviewed artifact> + <reviewer card> + <replacement ordinal>   #
 Goal: <what to decide/produce>
 Checkout: <absolute checkout assigned to this task by the host>
 Write paths: <exact owned paths, or none for a read-only task>
+Do not touch: <paths outside the unit that the worker leaves as they are>   # unit work orders only
 Edit method: <host-permitted tool; worktree creation does not grant access>
 If an edit is refused: stop that target; return tool, cwd, target, refusal text, owned paths and a reviewable diff
 Inputs (refs):
 - <file/section>
 - .qfai/assistant/rule/drift-protocol.md#core-rule  <!-- the upstream set, in front of the agent -->
+Context not in the repository: <a few lines: decisions, procedures or reasons the files do not record>   # unit work orders only
 Constraints:
 - must: enforce Drift Protocol
 - must: follow applicable test-layer or validation policy

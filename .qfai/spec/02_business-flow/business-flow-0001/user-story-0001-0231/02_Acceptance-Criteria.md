@@ -5,10 +5,10 @@
 ```gherkin
 Feature: Send session feedback to QFAI when the work is complete
   # AC-0001-0231-01
-  Scenario: Init installs no stop-time group, so an ordinary turn end costs nothing
+  Scenario: Init installs no stop-time group but the turn-end check, so an ordinary turn end costs nothing
     Given a fresh project, or a project whose hook files already hold its own `Stop` groups
     When `qfai init` runs
-    Then neither `.claude/settings.json` nor `.codex/hooks.json` receives a `Stop` group from QFAI
+    Then neither `.claude/settings.json` nor `.codex/hooks.json` receives a `Stop` group from QFAI other than the turn-end check group
     And the project's own `Stop` groups stay as they were, and nothing the project wrote is reordered or removed
 
   # AC-0001-0231-03
@@ -40,4 +40,13 @@ Feature: Send session feedback to QFAI when the work is complete
     When the report closes the user's last task and nothing waits on the user
     Then the agent follows `.agents/rules/session-feedback.md` once, after the report
     And a report at a chosen scope, at a halt, with a gate failing or CI pending, or with a question is a pause that runs no review
+
+  # AC-0001-0231-07
+  Scenario: A correction the user gave twice is proposed for the project, apart from the QFAI issues
+    Given the agent follows `.agents/rules/session-feedback.md` at the end of the session
+    When the user gave the same correction twice in the session
+    Then the agent proposes where the project could record it: the project rules of `AGENTS.md` or a path-scoped rule for a convention, a skill for a procedure pasted three times, a hook for something that has to happen every time
+    And it proposes nothing where an equivalent rule, skill or hook already exists, for a correction given once, or for a procedure pasted fewer than three times
+    And it writes nothing until the user says yes, and files none of it with QFAI
+    And under a no-question mode it writes nothing and puts the proposals in the final report
 ```

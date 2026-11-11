@@ -1,9 +1,9 @@
 /**
  * An installed qfai older than the one the tree was written for.
  *
- * The files `qfai init` writes carry no version, so a checkout whose lockfile
- * moved after the last install ran an older qfai over newer files and was told,
- * thirteen times, that a skill lacked a marker it had. The only record of the
+ * A checkout whose lockfile moved after the last install runs an older qfai
+ * over newer files, and a check that reads a generated file then reports the
+ * file as wrong when the checker is. The only record of the
  * version the tree expects is the project's own dependency declaration, so the
  * run compares the two and says so once, first.
  */
@@ -27,8 +27,8 @@ import { recordAssistantVersion } from "../helpers/assistantVersion.js";
  * The project sits under the operating system's temporary directory, not under
  * this repository: a tree below the repository would inherit the repository
  * root's own `package.json`, which declares qfai, and the case that declares
- * nothing would not be tested. The project holds one skill that lacks the
- * drift-protocol marker, and a `package.json` declaring qfai as `declared`, or
+ * nothing would not be tested. The project holds one skill, and a
+ * `package.json` declaring qfai as `declared`, or
  * declaring nothing when `declared` is `null`. `oldLayout` adds a spec-pack
  * directory, which ends the run before the profile's validators. `recorded`
  * is what `.qfai/assistant/VERSION` holds: the running version by default, and
@@ -86,7 +86,7 @@ async function findings(root: string) {
 
 describe("the installed qfai is older than the declared one", () => {
   // QFAI:EX-0001-0039-17
-  it("raises QFAI-TOOL-003 first and explains the skill-marker error as a version difference", async () => {
+  it("raises QFAI-TOOL-003 first", async () => {
     await withProject("^9.0.0", async (root) => {
       const issues = await findings(root);
 
@@ -96,13 +96,6 @@ describe("the installed qfai is older than the declared one", () => {
       expect(first?.severity).toBe("warning");
       expect(first?.message).toContain("9.0.0");
       expect(first?.suggested_action).toContain("npm ci");
-
-      const marker = issues.filter((found) => found.code === "QFAI-SKILLS-010");
-      expect(marker).toHaveLength(1);
-      expect(marker[0]?.severity).toBe("error");
-      expect(marker[0]?.message).toContain("QFAI-TOOL-003");
-      expect(marker[0]?.suggested_action).toContain("^9.0.0");
-      expect(marker[0]?.suggested_action).toContain("before editing this file");
     });
   });
 
@@ -126,11 +119,6 @@ describe("the installed qfai is older than the declared one", () => {
         const issues = await findings(root);
 
         expect(issues.some((found) => found.code === "QFAI-TOOL-003")).toBe(false);
-        const marker = issues.find((found) => found.code === "QFAI-SKILLS-010");
-        expect(marker?.message).toBe(
-          "SKILL.md is missing the required marker [DRIFT-PROTOCOL:REQUIRED].",
-        );
-        expect(marker?.suggested_action).toBeUndefined();
       });
     },
   );
@@ -138,7 +126,7 @@ describe("the installed qfai is older than the declared one", () => {
 
 describe("the running qfai is not the release that wrote the assistant tree", () => {
   // QFAI:EX-0001-0039-21
-  it("raises QFAI-TOOL-004 first and explains the skill-marker error as a version difference", async () => {
+  it("raises QFAI-TOOL-004 first", async () => {
     await withProject(
       null,
       async (root) => {
@@ -151,12 +139,6 @@ describe("the running qfai is not the release that wrote the assistant tree", ()
         expect(first?.message).toContain(await resolveToolVersion());
         expect(first?.suggested_action).toContain("npm ci");
         expect(first?.suggested_action).toContain("qfai init --force");
-
-        const marker = issues.filter((found) => found.code === "QFAI-SKILLS-010");
-        expect(marker).toHaveLength(1);
-        expect(marker[0]?.severity).toBe("error");
-        expect(marker[0]?.message).toContain("QFAI-TOOL-004");
-        expect(marker[0]?.suggested_action).toContain("npm ci");
       },
       false,
       "0.0.1",

@@ -26,6 +26,12 @@ The body excludes YAML frontmatter; a character is one Unicode code point.
 A file near a limit is a signal to move a section out, not to pack more onto
 each line.
 
+`qfai validate --profile verify` warns on a `SKILL.md` over 500 lines, on a
+skill whose `description` and `when_to_use` exceed 1,536 characters, which a
+host truncates, and on an `AGENTS.md` over 32 KiB, which a host stops reading.
+It also warns on emphasis in capitals, such as `MUST` or `NEVER`, outside code
+and quotations.
+
 ## 2. Budget what a task loads
 
 Splitting helps only when the pieces are loaded on demand. A piece that is

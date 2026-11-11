@@ -26,7 +26,7 @@ which owns the delegation rules these sit beside.
   names a concrete security defect, data loss or corruption, or a correctness
   defect that would break a released contract; it is never only reported.
 
-## Answered demands (MUST)
+## Answered demands
 
 Within a stage there is one review, so no demand comes back in it. The rules
 below are for a later, separate stage whose own one review reads an artifact an
@@ -41,7 +41,7 @@ Evidence cells. When a later stage reviews the same artifact, its
 finding source, demand, response and evidence. When there are none, write
 `None`.
 
-In that later review an answered demand MUST NOT be re-raised under another wording.
+In that later review an answered demand is not raised again under another wording.
 Close a repeat by citing its recorded answer. This bounds what a reviewer may
 require, not what a reviewer may report.
 
@@ -100,7 +100,7 @@ Wrong repository facts, missing decision traceability, scope contradictions and
 defects in the pack's own safety obligations remain in remit. Non-normative
 status is not permission to pass those.
 
-## Agent-to-agent grilling (MUST)
+## Agent-to-agent grilling
 
 A grilling session between agents is a **delegated session**
 (`.agents/rules/grilling.md`): a griller interviews the session agent, and the user is

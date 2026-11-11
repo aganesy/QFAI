@@ -446,6 +446,8 @@ describe("qfai init and the reminder hooks", () => {
       const entries = entriesOf(JSON.parse(reminderSettings(text, "claude")));
       expect(entries.length).toBeGreaterThan(0);
       for (const { entry } of entries) {
+        // The turn-end check runs the package's hook, not a reminder (`turnEndHook.test.ts`).
+        if (entry.statusMessage === "QFAI turn-end check") continue;
         const args: unknown = entry.args;
         if (!Array.isArray(args)) throw new Error("entry has no args");
         expect(args[2]).toBe("${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json");

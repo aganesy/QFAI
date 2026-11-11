@@ -119,7 +119,7 @@ describe("reviewer finding provenance", () => {
     expect(drift).toMatch(
       /classify a finding as a record defect only when its completion contract names a queue and requires it to be\s+drained/,
     );
-    expect(baseline).toMatch(/record:\*.*none.*MUST be recorded as .advisory./);
+    expect(baseline).toMatch(/record:\*.*none.*are recorded as .advisory./);
     expect(baseline).toMatch(/today .\/qfai-implement. alone/);
     expect(drift).toMatch(/Completion waits for the queue to drain/);
     expect(skill).toMatch(

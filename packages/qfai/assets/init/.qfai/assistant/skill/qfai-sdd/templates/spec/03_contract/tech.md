@@ -43,3 +43,4 @@ flowchart TD
 - Skeleton: `<smallest command that proves the application entrypoint starts>`
 - Validate: `<qfai validate command>`
 - Pack / distribution: `<package or artifact check command, or remove this line>`
+- Turn-end check: `<labels of the commands above, comma-separated, fast enough to run whenever an agent ends its turn, or remove this line>`

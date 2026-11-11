@@ -26,7 +26,7 @@ surrender. Blocked is a status, not a verdict on the run.
 
 A gate whose answer varies on identical inputs is a finding in its own right, not a run to discard. The protocol classifies it as `environment/tooling`; what follows is what that class obliges.
 
-**When a gate fails and a rerun with no intervening change passes**, all of the following are REQUIRED. A clean rerun on its own is not evidence for that gate.
+**When a gate fails and a rerun with no intervening change passes**, all of the following are required. A clean rerun on its own is not evidence for that gate.
 
 - **Record it as an `environment/tooling` finding.** Not as a pass, and not as a code/test defect — nothing was fixed between the two runs.
 - **Disclose every run.** Report the results of all runs of that gate, in order, with their commands. Reporting only the run that passed is [selective reporting](#selective-reporting-is-invented-evidence) and is forbidden: the evidence rules are satisfied by a clean run's command and output, so nothing else stops it.

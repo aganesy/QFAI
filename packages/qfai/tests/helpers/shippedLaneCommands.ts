@@ -1386,11 +1386,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // `fcdba5a8…` byte for byte.
     // Re-pinned for one more bullet on the rules list, naming `.agents/rules/reply-forms.md`.
     // Derived by `pnpm pins:entry`; dropping that one bullet reproduces `3eb38f37…` byte for byte.
-    // Re-pinned for the line that says to read a rule's `<name>.local.md` overlay, and the
-    // session-feedback bullet naming overlay proposals. Derived by `pnpm pins:entry`; reverting
-    // both reproduces `c6f0a6a9…` byte for byte.
+    // Re-pinned for the line that says to read a rule's `<name>.local.md` overlay, the
+    // session-feedback bullet naming overlay proposals and the corrections it proposes to the
+    // project, and one more bullet naming `.agents/rules/delegation-steering.md`. Derived by
+    // `pnpm pins:entry`; reverting all three reproduces `c6f0a6a9…` byte for byte.
     ".github/copilot-instructions.md",
-    "e0cbe5b0d966b8e137cd482375291f3617b1e5e403cd526443486d3e32a937b0",
+    "ce9391e5de0c7aa8ee435849f217c384e45b0b4b4c9d317f05d3265ad5c935b1",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1527,7 +1528,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // printing for a network client or the API host. Restoring the nine groups reproduces `3cbebe52…`.
   // Re-pinned when the install check started from the hook input's `cwd`. Restoring the program
   // reproduces `680a0162…`.
-  [".claude/settings.json", "583f94485d9021d910d292d6af5b06835cd79e3f5c22cf69cad29680bff5824d"],
+  // Re-pinned for the `Stop` and `SubagentStop` turn-end check groups appended after the
+  // template's other events. Removing both groups reproduces `583f9448…`.
+  [".claude/settings.json", "9da3dc8004cb86338084cfe3c8290fe4cae18346e4781f4eff8667c04d57daa6"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1578,7 +1581,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // question-form reminder and the reminder before a post once per session, and the API-budget
   // reminder for a network client or the API host. Restoring the eight groups reproduces
   // `a3cb9f3f…`.
-  [".codex/hooks.json", "939d69695cde4e2d2b2bef8b5da5713606f454f87c6a6df5be9bbe347e1c2e87"],
+  // Re-pinned for the same turn-end check groups as `.claude/settings.json`, one line each with
+  // no character a hook shell expands. Removing both groups reproduces `939d6969…`.
+  [".codex/hooks.json", "9fedc6167f58ac3b77d69b83bda33f3b2ea436c20ba5acc39d527f03df5479df"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`
@@ -1742,6 +1747,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/action-reversibility.md",
   "root/.agents/rules/ai-readable-markdown.md",
   "root/.agents/rules/api-budget.md",
+  "root/.agents/rules/delegation-steering.md",
   "root/.agents/rules/distributed-surface.md",
   "root/.agents/rules/document-schema.md",
   "root/.agents/rules/documentation-clarity.md",

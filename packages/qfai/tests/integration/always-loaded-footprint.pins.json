@@ -1,6 +1,6 @@
 {
   "characters": {
-    "AGENTS.md, managed section (every session)": 4767,
+    "AGENTS.md, managed section (every session)": 4987,
     "reminder structured-question (UserPromptSubmit, once per session)": 397,
     "reminder free-text-entry (UserPromptSubmit, full once, then brief on every later prompt)": 495,
     "reminder free-text-entry, brief form": 162,
@@ -30,5 +30,5 @@
     "skill listing web-research (every session)": 187,
     "skill listing, total (every session)": 2471
   },
-  "lines": { "AGENTS.md, managed section": 35 }
+  "lines": { "AGENTS.md, managed section": 36 }
 }

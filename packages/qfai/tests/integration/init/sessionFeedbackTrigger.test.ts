@@ -3,8 +3,9 @@
  *
  * A stop hook cannot see whether the user's work is done, so one that asks for the review has to
  * block every stop, and each blocked stop is one more model call. The hook files therefore carry
- * no `Stop` group, and `qfai-run`'s final report asks for the review once, when it closes the
- * user's last task and nothing waits on the user.
+ * no `Stop` group but the turn-end check, which prints nothing while its checks pass, and
+ * `qfai-run`'s final report asks for the review once, when it closes the user's last task and
+ * nothing waits on the user.
  */
 // QFAI:AC-0001-0231-01
 // QFAI:AC-0001-0231-04
@@ -34,6 +35,20 @@ const SCREENS = "skill/qfai-run/references/operator-screens.md";
 const RUN_SKILL = "skill/qfai-run/SKILL.md";
 const RULE = "`.agents/rules/session-feedback.md`";
 
+/** The status messages of the entries under one event, in order. */
+function markersOf(hooks: Record<string, unknown>, event: string): string[] {
+  const groups = hooks[event];
+  if (!Array.isArray(groups)) return [];
+  return groups.flatMap((group: unknown) => {
+    const entries: unknown = Reflect.get(Object(group), "hooks");
+    return Array.isArray(entries)
+      ? entries.map((entry: unknown) => String(Reflect.get(Object(entry), "statusMessage")))
+      : [];
+  });
+}
+
+const TURN_END = "QFAI turn-end check";
+
 /** The `hooks` table of a hook file, refusing any other shape. */
 function hooksOf(text: string, what: string): Record<string, unknown> {
   const parsed: unknown = JSON.parse(text);
@@ -53,35 +68,43 @@ describe("init and the stop event", () => {
     process.exitCode = undefined;
   });
 
-  it.each(HOOK_FILES)("the shipped %s carries no Stop group", async (rel) => {
-    const shipped = path.join(repoRoot, "packages", "qfai", "assets", "init", rel);
-    expect(Object.keys(hooksOf(await readFile(shipped, "utf-8"), rel))).not.toContain("Stop");
-  });
+  it.each(HOOK_FILES)(
+    "the shipped %s carries no Stop group but the turn-end check",
+    async (rel) => {
+      const shipped = path.join(repoRoot, "packages", "qfai", "assets", "init", rel);
+      expect(markersOf(hooksOf(await readFile(shipped, "utf-8"), rel), "Stop")).toEqual([TURN_END]);
+    },
+  );
 
-  it("writes no Stop group on a fresh project", async () => {
+  it("writes no Stop group but the turn-end check on a fresh project", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
       for (const rel of HOOK_FILES) {
         const written = await readFile(path.join(root, rel), "utf-8");
-        expect(Object.keys(hooksOf(written, rel)), rel).not.toContain("Stop");
+        expect(markersOf(hooksOf(written, rel), "Stop"), rel).toEqual([TURN_END]);
       }
     });
   });
 
-  it.each(HOOK_FILES)("leaves the project's own Stop group in %s as the only one", async (rel) => {
-    await withEmptyRepo(async (root) => {
-      const own = { hooks: [{ type: "command", command: "./own-stop.sh" }] };
-      await mkdir(path.dirname(path.join(root, rel)), { recursive: true });
-      await writeFile(path.join(root, rel), JSON.stringify({ hooks: { Stop: [own] } }), "utf-8");
+  it.each(HOOK_FILES)(
+    "leaves the project's own Stop group in %s beside the turn-end check",
+    async (rel) => {
+      await withEmptyRepo(async (root) => {
+        const own = { hooks: [{ type: "command", command: "./own-stop.sh" }] };
+        await mkdir(path.dirname(path.join(root, rel)), { recursive: true });
+        await writeFile(path.join(root, rel), JSON.stringify({ hooks: { Stop: [own] } }), "utf-8");
 
-      await initQuietly(root);
-      const merged = await readFile(path.join(root, rel), "utf-8");
-      expect(hooksOf(merged, rel).Stop, rel).toEqual([own]);
+        await initQuietly(root);
+        const merged = await readFile(path.join(root, rel), "utf-8");
+        const stop = hooksOf(merged, rel).Stop;
+        expect(Array.isArray(stop) ? stop[0] : undefined, rel).toEqual(own);
+        expect(markersOf(hooksOf(merged, rel), "Stop").slice(1), rel).toEqual([TURN_END]);
 
-      await initQuietly(root);
-      expect(await readFile(path.join(root, rel), "utf-8"), rel).toBe(merged);
-    });
-  });
+        await initQuietly(root);
+        expect(await readFile(path.join(root, rel), "utf-8"), rel).toBe(merged);
+      });
+    },
+  );
 });
 
 // QFAI:EX-0001-0231-11
@@ -171,7 +194,7 @@ describe("the review reads the transcript report and proposes overlay items", ()
       "the key terms the item uses, verbatim",
       "the report lines, or the session event, that support it.",
       "overrides nothing in the rule, so an item never replaces or contradicts one of the rule's.",
-      "That is the only file a proposal names.",
+      "That is the only file an overlay proposal names.",
       "A change to a shipped rule, or to any other file QFAI ships, is never made in the project: it becomes a draft",
       "A change to the spec tree is not this review's to make: it goes through `qfai-sdd` as a specification change.",
     ]) {
@@ -198,7 +221,7 @@ describe("the entry points tell the agent to read a rule's overlay", () => {
         expect(text, rel).toContain(
           "When a rule has a `<name>.local.md` overlay beside it, read the overlay with the rule: it adds this project's own guidance and overrides nothing.",
         );
-        expect(text, rel).toContain("propose items for this project's rule overlays");
+        expect(text, rel).toContain("propose overlay items");
       }
     });
   });

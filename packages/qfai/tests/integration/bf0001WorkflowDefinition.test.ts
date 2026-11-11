@@ -186,13 +186,11 @@ describe("BF-0001 workflow definition", () => {
   // QFAI:EX-0001-0012-04
   it("keeps shared drift rules under rule and implement-only guidance under its references", async () => {
     const drift = await readFile(rule("drift-protocol.md"), "utf8");
-    const implement = await readFile(skill("qfai-implement"), "utf8");
     const credentials = await readFile(
       path.join(assistant, "skill", "qfai-implement", "references", "credential-reuse.md"),
       "utf8",
     );
     expect(drift).toContain("# Drift Protocol");
-    expect(implement).toContain("[DRIFT-PROTOCOL:REQUIRED]");
     expect(credentials.length).toBeGreaterThan(0);
   });
 });
