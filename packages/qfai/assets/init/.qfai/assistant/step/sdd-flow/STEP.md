@@ -99,23 +99,24 @@ states.
 9. Parse the diagrams in the Markdown files this step wrote, as
    `.qfai/assistant/step/discussion-pack/STEP.md#parse-the-diagrams` says, with
    those files in place of the pack directory:
+   - First do steps 1 to 3 there. Where the project has no `node_modules/qfai`,
+     they install the release and read the parser versions from it. They
+     install the parser into `tmp/qfai-mermaid`, never into the project's
+     dependency tree.
+   - Then run the checker:
 
-   ```bash
-   node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>
-   ```
+     ```bash
+     node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>
+     ```
 
-   Where the project has no `node_modules/qfai`, first install the release as
-   step 1 of `discussion-pack/STEP.md#parse-the-diagrams` says, and run the
-   checker it holds:
+     Where step 1 installed the release, run its checker instead:
 
-   ```bash
-   node tmp/qfai-release/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>
-   ```
+     ```bash
+     node tmp/qfai-release/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>
+     ```
 
-   Then install the parser into `tmp/qfai-mermaid`, never into the project's
-   dependency tree. Fix each diagram it rejects. When the install or the run
-   fails for another reason, report the syntax check as not run, never as
-   passed.
+   - Fix each diagram it rejects. When the install or the run fails for
+     another reason, report the syntax check as not run, never as passed.
 
 ## Passes when
 
