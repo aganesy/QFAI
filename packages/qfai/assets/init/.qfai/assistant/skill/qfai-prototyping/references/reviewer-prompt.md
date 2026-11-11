@@ -254,12 +254,21 @@ Hint text survives only where a need was demonstrated, the control was
 improved first and the need remained, and it is one sentence at most. Longer
 means the question needs clarifying or splitting.
 
-Compare the rendered text with the screen's UI contract in both directions. The
-screen shows its `title`, the group headings of its `structure`, its labels and
-the `supplements` it declares. A text shown that none of them declares is excess,
-and a declared supplement that is not shown is an unmet need. The finding names
-the screen, the task or state, the meaning that is duplicated or the need that is
-unmet, and the text to remove or the control or structure to repair. Apply the
+`npx qfai validate` checks only that every plain text in the prototype source has a
+well-formed `qfai-text` reason comment. Whether the reason is strong is yours to
+judge:
+
+- Reject a generic reason ("helps the user", "for clarity") and a reason that
+  restates the text.
+- A text that could be deleted, replaced by another component (an icon with an
+  accessible name, a disabled state, a badge) or moved into a label, heading,
+  button wording or empty state is excess even with a reason.
+- Judge whether the copy the UI contract describes (`supplements`, group
+  headings) is needed at all.
+
+These are review findings, not validate findings. The finding names the screen,
+the task or state, the meaning that is duplicated or the need that is unmet, and
+the text to remove or the control or structure to repair. Apply the
 patterns of the section on copy that adds no meaning, which the loop step names; the
 rest of the design anti-patterns list stays with the direction review.
 

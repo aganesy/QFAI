@@ -72,8 +72,8 @@ screens:
     # structure (optional): the groups the screen is read in, in reading order.
     # `tasks` are primary_tasks ids, `members` are elements/actions ids, and
     # `heading` is the displayed heading of the group; leave it out for a group
-    # that shows none. Without `structure` the screen shows no heading beyond
-    # its title. An id belongs to one group.
+    # that shows none. An id belongs to one group. This key describes the
+    # screen; validate does not check it.
     structure:
       - id: g_customer
         heading: Customer
@@ -86,17 +86,18 @@ screens:
       - id: g_commit
         tasks: [t1, t3, t4]
         members: [submit_order, save_draft, discard_draft]
-    # supplements (required): every text the screen shows beyond its title,
-    # group headings and labels. Field validation messages are the exception;
-    # they belong to the element's `validations`. `[]` says the screen shows
-    # none. `near` is an elements/actions/structure id, `when` is one of
+    # supplements (optional): text the screen shows beyond its title, group
+    # headings and labels. Field validation messages belong to the element's
+    # `validations`. This key describes the copy; validate does not check it.
+    # Validate checks the UI source instead: every plain text there carries a
+    # `qfai-text` reason comment. `near` is an elements/actions/structure id, `when` is one of
     # default, empty, loading, error, success, and `why` says what the user
     # could not know or do without the text, and why a label or the structure
     # cannot carry it.
     #
     # There is no supplement that restates what "Save draft" does: the label
     # says it. What the label cannot say is where the draft went and what a
-    # failed save means, so those two are declared.
+    # failed save means, so those two are described.
     supplements:
       - id: sp_draft_saved
         near: save_draft

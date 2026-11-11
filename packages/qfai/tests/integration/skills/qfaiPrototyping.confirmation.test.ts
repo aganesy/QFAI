@@ -144,7 +144,7 @@ describe.each(TREES)("%s", (tree) => {
       "A `restyle` loop also edits the project's stylesheet and motion entry points its handoff names.",
     );
     expect(skill).toContain(
-      "except the stylesheet and motion entry points a `restyle` loop edits; a `qfai` command reads only `final/handoff.json`.",
+      "except the stylesheet and motion entry points a `restyle` loop edits; a `qfai` command reads only `final/handoff.json` and the plain text of the current `index.html` pages.",
     );
     expect(loop).toContain(
       "A restyle's edits are product code. The route's implement stage carries them: there they are change-noted, gated, tested and committed.",

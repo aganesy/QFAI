@@ -41,6 +41,10 @@ flowchart TD
   - Finds the files every scan walks.
 - `jsdom`
   - Gives the diagram lane a DOM to render Mermaid in, to check each diagram parses.
+  - Parses the HTML, Vue and Svelte UI source the plain-text check reads.
+- `typescript`
+  - Optional and the adopter's own: qfai does not install it.
+  - Parses the `.tsx` and `.jsx` UI source the plain-text check reads. It is resolved from the project root and loaded only when such a file is selected, so it runs code from the adopter's `node_modules`.
 
 ## Standard commands (copy-paste)
 

@@ -6,6 +6,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai validate` fails every plain text in UI source that has no reason.**
+  In the `prototyping`, `saas-package`, `verify` and `full` profiles it reads
+  `.qfai/prototype/final/index.html`, the latest `iter-NN/index.html`, and the
+  `.html`, `.tsx`, `.jsx`, `.vue` and `.svelte` files `uiux.surfacePaths`
+  selects, leaving out test, spec and story files. A literal text outside a
+  heading, label, button, link, legend, table header, caption, option, summary,
+  title, script, style or `role="alert"`/`role="status"` element needs a
+  comment directly before it or its parent element:
+  `<!-- qfai-text: why=<why it must exist>; without=<what goes wrong without it> -->`,
+  or `{/* qfai-text: ... */}` in JSX. Sample data in a static prototype counts.
+  A missing reason is `QFAI-UITEXT-001`, a malformed one `QFAI-UITEXT-002`, and
+  `.tsx` or `.jsx` files with no `typescript` installed in the project
+  `QFAI-UITEXT-003`; all three are errors. The prototyping and implementation
+  guidance tell agents to delete the text, replace it with another component or
+  move its job to an existing element before writing a reason.
+
 - **The end-of-session review proposes where to keep a repeated correction.**
   `.agents/rules/session-feedback.md` gains a second output, separate from the
   QFAI issues: each correction the user gave twice in the session is proposed
@@ -203,6 +219,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   This repository's own register is rewritten in the short form.
 
 ### Removed
+
+- **`qfai validate` no longer checks the copy a UI contract describes.**
+  `QFAI-CONTRACT-043` to `QFAI-CONTRACT-048` and the `--rendered <file>` option
+  are gone. `supplements` and `structure` stay allowed on a screen as
+  description that reviewers read. Migration: drop `--rendered` from scripts
+  and CI, and list the screen source in `uiux.surfacePaths` so the plain-text
+  check reads it.
 
 - **`QFAI-STORY-017`, the four-item Approach check on legacy decision rows.**
   Legacy `DEC-NNNN` rows above `DEC-2097` no longer need the items Evidence,

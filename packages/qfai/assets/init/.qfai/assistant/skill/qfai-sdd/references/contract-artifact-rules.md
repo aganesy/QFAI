@@ -37,13 +37,12 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   the validate lane, under `QFAI-AUD-001`. The shipped `ui-contract.sample.yaml`
   carries filled entries; replace them with the screen's own rather than
   emptying the list.
-- Every screen also declares `supplements` (`[]` when it shows no text beyond
-  its title, group headings and labels), and `structure` when it shows a heading
-  beyond its title. Check each proposed text against the screen's tasks and the
-  information the user needs there, and write the ones that stay into the
-  contract with the reason. A text that only repeats a heading, an action or a
-  condition the user already has is left out. Discussion sidecars inform these
-  keys; they do not replace them.
+- A screen may describe its copy in the optional `supplements` and `structure`.
+  Check each proposed text against the screen's tasks and the information the
+  user needs there. A text that only repeats a heading, an action or a
+  condition the user already has is left out. Validate does not check these
+  keys; it checks that every plain text in the UI source carries a `qfai-text`
+  reason comment.
 - UI contracts must be mockable for prototypes: define stable `elements` and
   `actions` with enough inspection-target text for Playwright evidence.
 - **The `prototype` mapping is optional, and what it declares is checked.** A
@@ -65,7 +64,6 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   not only where the attribute is written out — a framework that builds the
   attribute from a variable still writes the marker somewhere.
 - **Every entry under `screens` is a screen, once.** Each UI-bearing contract declares one full `UI-NNNN` ID and a nonempty `screens[]` list. Each screen has an ID and route, unique within its contract. The prototyping cycle covers all declared UI-bearing contract IDs; filenames do not select a legacy spec tier. `QFAI-CONTRACT-042` names malformed screen entries.
-- **Every screen states the text it shows.** A screen declares `supplements` (`[]` when it shows none) and may declare `structure`. `QFAI-CONTRACT-043` names a key that is absent or malformed, `QFAI-CONTRACT-044` an id the screen does not declare, and `QFAI-CONTRACT-045` a text shown twice; and, with `--rendered`, `QFAI-CONTRACT-046` to `QFAI-CONTRACT-048` compare rendered text with the lists.
 - **A contract's ID comes from its directory.** `api/` holds `API` contracts,
   `db/` `DB` and `ui/` `UI`; the QFAI repository's own `cli/` holds `CLI`
   contracts. The ID is `<KIND>-NNNN`.

@@ -48,8 +48,7 @@ import {
   type AssistantVersionMismatch,
 } from "./assistantVersion.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
-import { validateUiRenderedCopy } from "./validators/uiRenderedCopy.js";
-import { validateUiScreenCopy } from "./validators/uiScreenCopy.js";
+import { validateUiPlainText } from "./validators/uiPlainText.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
 import { validateDiagramBudget } from "./validators/diagramBudget.js";
@@ -177,8 +176,6 @@ export type ValidationOptions = {
   profile?: ValidationProfile;
   platform?: string;
   flowIds?: readonly string[];
-  /** A rendered-text file the caller wrote (`--rendered`), compared with the UI contracts in every profile. */
-  renderedPath?: string;
   /** Add the time of each finding family to the result (`--timings`). */
   familyTimings?: boolean;
 };
@@ -261,13 +258,6 @@ export async function validateProject(
       ),
     ) ?? [];
 
-  const renderedPath = options.renderedPath;
-  const renderedIssues = renderedPath
-    ? await timed(timingsSink, "ui-rendered-copy", () =>
-        validateUiRenderedCopy(root, config, renderedPath),
-      )
-    : [];
-
   const profileRun = await runProfileValidators(
     root,
     config,
@@ -281,7 +271,6 @@ export async function validateProject(
     ...configIssues,
     ...securityIssues,
     ...scopeIssues,
-    ...renderedIssues,
     ...profileRun.issues,
   ];
   const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));
@@ -890,6 +879,7 @@ async function runPrototypingValidators(
     ...(await timed(timings, "config-reference-integrity", () =>
       validateConfigReferenceIntegrity(root, config),
     )),
+    ...(await timed(timings, "ui-plain-text", () => validateUiPlainText(root, config))),
   ];
 }
 
@@ -909,7 +899,6 @@ async function runPrototypingProfileValidators(
     // contract that does not parse. Kept out of `runPrototypingValidators`:
     // `full` also runs `validateContracts`, which reports both already.
     ...(await timed(timings, "ui-screen-entries", () => validateUiScreenEntries(root, config))),
-    ...(await timed(timings, "ui-screen-copy", () => validateUiScreenCopy(root, config))),
     ...(await timed(timings, "contract-parse", () => validateUiContractParse(root, config))),
   ];
 }

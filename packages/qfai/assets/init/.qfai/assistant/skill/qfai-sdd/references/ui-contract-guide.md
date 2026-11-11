@@ -146,18 +146,19 @@ author and whoever reviews the prototype. Follow the shape
 
 ## Purposeful copy: `supplements` and `structure`
 
-A screen states the words it shows, so that implementation adds none the contract
-did not ask for and review can compare the rendered screen with what was agreed.
-The words are the screen `title` (its one heading), the labels of `elements` and
-`actions`, the group headings, and the supplements below. Two keys carry them,
-beside `primary_tasks`, `elements` and `actions`, which stay as they are.
+Two optional keys, beside `primary_tasks`, `elements` and `actions`, describe the
+words a screen shows beyond its `title` and the labels of its `elements` and
+`actions`. They are description for the author and the reviewer. `npx qfai
+validate` does not check them: what it checks is the UI source, where every plain
+text carries a `qfai-text` reason comment
+(`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`).
 
-### `supplements` (required)
+### `supplements` (optional)
 
-Every text the screen shows beyond its `title`, group headings and labels: a
-sentence under a field, a notice, an empty-state message, a disclosure, the result
-of a save or a send, the instruction after a failure, the consequence of an action
-that cannot be undone. Each is an entry with exactly these keys, all non-empty:
+Text the screen shows beyond its `title`, group headings and labels: a sentence
+under a field, a notice, an empty-state message, a disclosure, the result of a
+save or a send, the instruction after a failure, the consequence of an action
+that cannot be undone. Each entry uses these keys:
 
 | Key    | Holds                                                                                     |
 | ------ | ----------------------------------------------------------------------------------------- |
@@ -167,29 +168,19 @@ that cannot be undone. Each is an entry with exactly these keys, all non-empty:
 | `text` | the words as displayed                                                                    |
 | `why`  | what the user could not know or do without it, and why a label or structure is not enough |
 
-A text shown in several states is listed once per state it shows in, each entry
-with its own `id`.
-
-`supplements: []` says the screen shows none. Most screens need few, and a screen
-need not have any. Two kinds of text are not supplements: the message of a field
-rule is owned by the `validations` of its element, and data the product shows or
-the user types is not copy the contract authors. A field message that says more
-than its rule does is a supplement with `when: error`.
-
-The list is the whole inventory in both directions. Text the screen shows that is
-not listed is excess. A listed text the screen does not show is an unmet need, so
-a necessary condition, cost, destination, result, recovery step or consequence
-that is written here cannot be dropped by a later tidy-up; removing it is a
-change to the contract, which goes back to `/qfai-sdd`.
+Most screens need few, and a screen need not have any. The message of a field
+rule belongs to the `validations` of its element, and data the product shows or
+the user types is not copy the contract authors.
 
 Write `why` for the point of decision. "Explains the Save button" is a reason to
 delete the text. "After the click the user cannot see where the draft went" is a
-reason to keep it.
+reason to keep it. The same reason, in the same strength, goes into the
+`qfai-text` comment in the source.
 
 ### `structure` (optional)
 
-The groups the screen is read in, in reading order. Each is an entry with exactly
-`id`, `tasks`, `members` and, when the group shows a heading, `heading`:
+The groups the screen is read in, in reading order. Each entry uses `id`,
+`tasks`, `members` and, when the group shows a heading, `heading`:
 
 | Key       | Holds                                                              |
 | --------- | ------------------------------------------------------------------ |
@@ -198,50 +189,15 @@ The groups the screen is read in, in reading order. Each is an entry with exactl
 | `members` | the `elements[].id` and `actions[].id` values it holds, in order   |
 | `heading` | the displayed heading; leave the key out when the group shows none |
 
-An id belongs to one group, and an element or action may be left out of every
-group. `structure` is optional only for a screen that shows no heading beyond its
-`title`. A screen that shows any other heading, at any level, has one group with a
-`heading` for each, so a screen with several `h2` headings writes `structure`.
-Leaving the key out says the screen shows no such heading; it never says the
-screen may show one without a group. A group needs a task and a member, so the
-heading must head something the user reads or acts on: declare the table or list
-that shows data as an element, and the group holds it. A heading over prose or
-supplements alone has neither a task nor a member, and does not belong on the
-screen. `npx qfai validate` does not check this, so the
-reviewer compares the rendered headings with the groups. A group heading is
-not the screen title: a second heading above or beside the real one repeats it.
-A group that serves no task does not belong on the screen; name the task it
-enables, or leave the heading and the group out.
-
-### Which key holds which text
-
-Every text the screen shows has one home. The table applies the definitions above
-to the text authors and reviewers most often disagree about:
-
-| Rendered text                                              | Home                                                                                            |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| The one page heading (`h1`)                                | `title`                                                                                         |
-| A heading over a group of elements or actions (`h2`, `h3`) | `structure[].heading` of that group                                                             |
-| A small line above or beside a heading (eyebrow, kicker)   | a supplement with `near` set to the group; it is not a heading and not a label                  |
-| The text of a field, button or other control               | `label` of that element or action                                                               |
-| Link text                                                  | `label` of a `navigate` action                                                                  |
-| A table column header                                      | recommended: `label` of an element declared for that column, as elements are the display fields |
-| A figure caption                                           | a supplement with `near` set to the element it describes                                        |
-| An item of a list the product writes (a fixed checklist)   | a supplement                                                                                    |
-| An item of a list made of data the product shows           | outside the contract: data is not copy the contract authors                                     |
-| Product or site-identity text (a name, a tagline)          | `label` when it is a link or control, otherwise a supplement                                    |
-| The message of a field rule                                | `validations` of that element                                                                   |
-
-Nothing is outside the contract merely because it repeats across screens. Text that
-repeats on every screen is listed on each, and when no `why` that names a decision
-can be written for it, the text is a candidate for removal from the screen rather
-than a reason to leave it unlisted.
+A group heading must head something the user reads or acts on, and a group that
+serves no task does not belong on the screen. A group heading is not the screen
+title: a second heading above or beside the real one repeats it.
 
 ### A worked example
 
 The sample at `templates/contracts/ui-contract.sample.yaml` shows a complete
 screen. Its draft action reads "Save draft", and no paragraph says what Save draft
-does. What the label cannot say is declared instead: `Saved to Drafts` after the
+does. What the label cannot say is described instead: `Saved to Drafts` after the
 click, and `Not saved. Your entries are still here. Try again.` after a failure.
 The user learns where the draft went and what a failure means, and nothing is
 written twice.
@@ -258,44 +214,8 @@ Subtraction removes text that adds no meaning. It never removes:
 
 Moving such text into a tooltip or a placeholder does not keep it. A word or
 character count never approves or rejects a screen; a count is an observation
-a finding may cite.
-
-### What validate checks
-
-`QFAI-CONTRACT-043` reports `supplements` absent, a key that is not a list, an
-entry that is not a mapping, a missing, empty or extra key, a `when` outside the
-five states, and a repeated `id`; the same for `structure` when it is written.
-`QFAI-CONTRACT-044` reports a `members`, `tasks` or `near` that names an id
-the screen does not declare, and an element or action in two groups.
-`QFAI-CONTRACT-045` warns when a group heading is the screen title, or a
-supplement's text is the title, a group heading, the label of what it sits near, or
-another supplement's text near the same target in the same state; case, spacing and
-closing punctuation do not make a text different. Whether a sentence is needed is
-judged against the task by the reviewer; validate compares ids and exact wording
-only.
-
-`npx qfai validate --rendered <file>` compares what the screens rendered with
-these lists. Your own browser run writes the file, and QFAI renders nothing:
-`{ "screens": [{ "contract": "UI-0001", "screen": "order_create", "when": "default", "texts": ["..."] }] }`,
-one entry per screen and state, holding the texts the screen showed. Leave out
-data the product shows, text the user typed and the message of a field rule.
-`QFAI-CONTRACT-047` names a rendered text that is no title, group heading, label
-or supplement of that state, and `QFAI-CONTRACT-048` a supplement of that state
-the screen did not render; `QFAI-CONTRACT-046` names a file or an entry out of
-shape. A supplement counts only for its own `when`, so a text shown in several
-states needs its entry for each. Only the screens and states the file holds are
-compared, so a render of
-the default state alone checks the default state.
-
-A contract written before these keys was valid without them. Add
-`supplements` to each screen, listing each text it shows beyond its title, group
-headings and labels; `supplements: []` is only for a screen that shows no such
-text. Keep `structure` out while the screen
-shows no heading beyond its title; the first such heading needs its group.
-
-Two contracts that state the same screen `id` each hold their own `supplements`
-and `structure`; the project-wide screen list compares `title`, `route` and
-`primary_tasks` only.
+a finding may cite. Whether a described text is needed is the reviewer's
+judgement, not a validate finding.
 
 ## Screen contract rules
 
@@ -339,14 +259,6 @@ Render the element with that marker, or remove the marker from the contract.
 **A label does not match.** Update the contract label, then the rendered text or
 marker mapping. Updating one side leaves the two out of step.
 
-**`QFAI-CONTRACT-043` names a screen with no `supplements`.** List each text the
-screen shows beyond its title, group headings and labels, one entry with `id`,
-`near`, `when`, `text` and `why`; write `supplements: []` only if it shows no
-such text.
-
-**`QFAI-CONTRACT-045` warns that a supplement repeats a label.** Delete the supplement,
-or word it so it tells the user something the label does not.
-
 **The discussion pack already has screen contracts, so this looks redundant.**
 It is not. A discussion pack is discovery output and is non-normative; the
 downstream skills and every validate lane read `<paths.contractsDir>/ui/*.yaml`.
@@ -369,6 +281,5 @@ For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by 
 - [ ] Every UI-bearing contract has one full declared ID, at least one screen, and a matching `contracts.md` row.
 - [ ] Screen IDs, routes, primary tasks, labels, markers, and actions are stable and testable.
 - [ ] Every declared action has an observable effect, including relevant failure states.
-- [ ] Every screen declares `supplements` (`[]` when none), each with the reason the text is needed, and its `structure` names every heading beyond the title.
 - [ ] No supplement restates a label, heading or action the screen already shows, and none is development commentary.
 - [ ] Prototyping coverage uses full contract IDs and the current cycle-0 fields.

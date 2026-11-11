@@ -39,8 +39,6 @@ export type ValidateOptions = {
   platform?: string;
   /** Restrict a story-tree run to the named business flows (`--flow`, repeatable). */
   flowIds?: readonly string[];
-  /** A rendered-text file to compare with the UI contracts (`--rendered`); a relative path resolves against the root. */
-  renderedPath?: string;
   /** Print the time each finding family took (`--timings`) and write it to `validate.json#familyTimings`. */
   timings?: boolean;
   /**
@@ -81,7 +79,6 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       ...(options.profile ? { profile: options.profile } : {}),
       ...(options.platform ? { platform: options.platform } : {}),
       ...(options.flowIds && options.flowIds.length > 0 ? { flowIds: options.flowIds } : {}),
-      ...(options.renderedPath ? { renderedPath: options.renderedPath } : {}),
       ...(options.timings ? { familyTimings: true } : {}),
     });
   } catch (error: unknown) {
@@ -327,12 +324,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-041",
     "QFAI-DB-*",
   ],
-  "ui-screen-entries": [
-    "QFAI-CONTRACT-042",
-    "QFAI-CONTRACT-043",
-    "QFAI-CONTRACT-044",
-    "QFAI-CONTRACT-045",
-  ],
+  "ui-screen-entries": ["QFAI-CONTRACT-042"],
   "contract-parse": ["QFAI-CONTRACT-021"],
   "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-034"],
   "root-design-md-parse": ["QFAI-DCON-033"],
@@ -348,6 +340,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-AUD-*",
     "QFAI-PLATFORM-*",
     "QFAI-CFG-LINK-*",
+    "QFAI-UITEXT-*",
   ],
   "prototyping-skill": ["QFAI-PROTOSKILL-*"],
   "test-stubs": ["QFAI-TEST-*"],
@@ -1268,18 +1261,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
-  "QFAI-CONTRACT-043":
-    "Every screen of a UI contract lists its `supplements` (`[]` when it shows no text beyond its title, group headings and labels), and each entry of `supplements` and of the optional `structure` is a mapping with exactly the keys its shape names.",
-  "QFAI-CONTRACT-044":
-    "Every id a screen's `structure` or `supplements` names is one the screen declares: a group member is an element or action, a group task is a primary task, a supplement sits near an element, action or group, and no element or action is a member of two groups.",
-  "QFAI-CONTRACT-045":
-    "No text of a screen is shown twice by wording alone: a group heading is not the screen title, and a supplement is not the title, a heading, the label of what it sits near, or another supplement near the same target in the same state.",
-  "QFAI-CONTRACT-046":
-    "The rendered-text file passed with `--rendered` reads as JSON and holds only a `screens` list, each entry with exactly `contract`, `screen`, `when` and `texts`, naming a declared screen and state once.",
-  "QFAI-CONTRACT-047":
-    "Every text a screen rendered in a state is its title, a group heading, a label or one of its supplements of that state.",
-  "QFAI-CONTRACT-048":
-    "Every supplement of a screen in a state the rendered-text file covers is a text the screen rendered in that state.",
+  "QFAI-UITEXT-001":
+    "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert or the like) or has a `qfai-text` comment with `why` and `without` directly before it or before its parent element.",
+  "QFAI-UITEXT-002":
+    "Every `qfai-text` comment before a plain text holds exactly a non-empty `why` and a non-empty `without` that say different things.",
+  "QFAI-UITEXT-003":
+    "When `uiux.surfacePaths` selects `.tsx` or `.jsx` files, the project installs `typescript` so the plain-text check can read them.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —

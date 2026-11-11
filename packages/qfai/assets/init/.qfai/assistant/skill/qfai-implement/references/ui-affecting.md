@@ -6,7 +6,39 @@ Read the UI surface paths `uiux.surfacePaths` declares in qfai.config.yaml, and 
 When a prototyping loop ran in this checkout, read its handoff at .qfai/prototype/final/handoff.json: the final prototype, its procurement and the implementation notes, or, for a restyle, its live routes, its stylesheet and motion entry points and the implementation notes.
 When `.qfai/prototype/progress.md` records `iterationKind` `restyle` with `restyleLevel` `none` and no handoff was written, the restyle stopped with nothing to fix: implement makes no change to the screens it covered.
 Read the flow, story, acceptance criterion, and example that the implementation changes.
-For each screen the change renders, read its `supplements` and `structure` in the UI contract before adding text: the screen shows its title, group headings, labels and declared supplements, and no other text.
+
+## Plain text in UI source
+
+`npx qfai validate` reads `.qfai/prototype/final/index.html`, the `index.html` of the latest `iter-NN/`, and the
+`.html`, `.tsx`, `.jsx`, `.vue` and `.svelte` files `uiux.surfacePaths` selects, except test, spec and story
+files. A plain text there is a literal text node, non-empty after trimming and sample data included, outside
+`h1`-`h6`, `label`, `button`, `a` (and `Link`, `RouterLink`, `NuxtLink`), `legend`, `th`, `caption`, `option`,
+`summary`, `title`, `script`, `style` and an element with `role="alert"` or `role="status"`. Attribute values
+and expressions are never plain text; a string literal that is a whole JSX child is.
+
+Each plain text needs a reason comment directly before it, or before its parent element, with only whitespace
+between. A missing reason is `QFAI-UITEXT-001` and a malformed one `QFAI-UITEXT-002`; `QFAI-UITEXT-003` means a `.tsx` or `.jsx` file is selected but `typescript` cannot be resolved from the project root. All three are errors and cannot be waived.
+
+For a text you cannot justify, try these in order:
+
+1. Delete it.
+2. Replace it with another component: an icon with an accessible name, a disabled state, a badge.
+3. Move its job to an element already there: a label, a heading, the button wording, the empty state.
+4. Only then write the reason.
+
+```html
+<!-- qfai-text: why=the fee is charged only on this step; without=users pay a fee they never saw -->
+<p>A 2% fee applies to card payments.</p>
+```
+
+```tsx
+<section>
+  {/* qfai-text: why=the fee is charged only on this step; without=users pay a fee they never saw */}
+  <p>A 2% fee applies to card payments.</p>
+</section>
+```
+
+Vue and Svelte use the HTML form. Both keys are required and non-empty, no other key is allowed, and `why` and `without` must say different things. The reason names the specific failure the text prevents; "helps the user" is not a reason.
 
 ## Routing
 
@@ -25,4 +57,4 @@ For a UI affecting example, report the screen state, action, expected and observ
 
 A fix made for a finding of that review refreshes the capture it changes, and a fix that changes behaviour gets its one focused re-review (`.qfai/assistant/rule/review-convergence.md#one-review`). A passing code test cannot substitute for the visual and interaction evidence that the acceptance criterion requires.
 
-Capture each declared task at a desktop width and a narrow width, in the normal state and in every declared empty, error, loading and success state the screen has. A text the contract declares that the capture lacks, or a text the capture shows that the contract does not declare, is a finding.
+Capture each declared task at a desktop width and a narrow width, in the normal state and in every declared empty, error, loading and success state the screen has.

@@ -288,9 +288,9 @@ naming the pattern is what works.
 
 ## Copy that adds no meaning
 
-These patterns are judged against the screen's tasks and the `supplements` its UI
-contract declares, in SDD, in implementation and in every surface review. A chosen
-visual direction does not exempt them. A disclosure about demo data, cost, storage
+These patterns are judged against the screen's tasks, in SDD, in implementation
+and in every surface review; in UI source, also against the `qfai-text` reason
+each plain text carries. A chosen visual direction does not exempt them. A disclosure about demo data, cost, storage
 or transmission that is true and shown where the user decides is not one of them:
 judge where it sits and what it lets the user do, not the word.
 

@@ -43,7 +43,7 @@ import * as testTodoStubs from "../../src/core/validators/testTodoStubs.js";
 import * as uiDefinitionConsistency from "../../src/core/validators/uiDefinitionConsistency.js";
 import * as uiMarkerPresence from "../../src/core/validators/uiMarkerPresence.js";
 import * as uiPrototypeMode from "../../src/core/validators/uiPrototypeMode.js";
-import * as uiScreenCopy from "../../src/core/validators/uiScreenCopy.js";
+import * as uiPlainText from "../../src/core/validators/uiPlainText.js";
 import * as uiScreenEntries from "../../src/core/validators/uiScreenEntries.js";
 import * as canonical from "../../src/core/validators/uix/canonical.js";
 import * as classification from "../../src/core/validators/uix/classification.js";
@@ -384,9 +384,9 @@ export function measureValidators() {
       (call) => vi.spyOn(uiPrototypeMode, "validateUiPrototypeMode").mockImplementation(call),
     );
     register(
-      "core/validators/uiScreenCopy:validateUiScreenCopy",
-      uiScreenCopy.validateUiScreenCopy,
-      (call) => vi.spyOn(uiScreenCopy, "validateUiScreenCopy").mockImplementation(call),
+      "core/validators/uiPlainText:validateUiPlainText",
+      uiPlainText.validateUiPlainText,
+      (call) => vi.spyOn(uiPlainText, "validateUiPlainText").mockImplementation(call),
     );
     register(
       "core/validators/uiScreenEntries:validateUiScreenEntries",

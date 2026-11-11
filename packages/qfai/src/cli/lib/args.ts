@@ -94,8 +94,6 @@ export type ParsedArgs = {
     sessionReviewFormat?: "md" | "json";
     sessionReviewOut?: string;
     platform?: string;
-    /** `--rendered <path>` for `qfai validate`: the rendered-text file to compare with the UI contracts. */
-    validateRendered?: string;
     /** `--timings` for `qfai validate`: print the time each finding family took. */
     validateTimings?: boolean;
     prototypingTargetUrl?: string;
@@ -674,22 +672,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           options.platform = next;
         } else {
           markInvalid(notValidHere("--platform"));
-        }
-        break;
-      }
-      case "--rendered": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--rendered"));
-          break;
-        }
-        if (command === "validate") {
-          if (options.validateRendered !== undefined) {
-            markInvalid(`${refusedOption("--rendered")}: --rendered is given twice.`);
-          }
-          options.validateRendered = next;
-        } else {
-          markInvalid(notValidHere("--rendered"));
         }
         break;
       }
