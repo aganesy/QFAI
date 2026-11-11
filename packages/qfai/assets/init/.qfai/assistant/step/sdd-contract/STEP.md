@@ -74,14 +74,14 @@ surface also needs the root `DESIGN.md`, which `common-design-md` writes and
 validates after this step. A CLI-only surface does not require one. Do not
 adopt a sample design.
 
-Each screen records its copy decisions in the contract: `supplements` and, for any
-heading beyond the title, `structure`. Check every text element the discussion or
-the story proposes against the screen's tasks and the information the user needs at
-that point. A text that repeats a heading, an action, or a condition the user already
-has is left out; one that carries a condition, cost, destination, result, recovery
-step or consequence stays, with its reason. Fix a control that needs explaining
-before adding text for it. The discussion sidecar stays an input; the contract is
-the one place the decision is written.
+Check every text element the discussion or the story proposes against the
+screen's tasks and the information the user needs at that point. A text that
+repeats a heading, an action, or a condition the user already has is left out;
+one that carries a condition, cost, destination, result, recovery step or
+consequence stays, with its reason. Fix a control that needs explaining before
+adding text for it. A screen may describe the copy that stays in its optional
+`supplements` and `structure`; `npx qfai validate` does not check them, and the
+reason that counts is the `qfai-text` comment written in the UI source.
 
 ## A named contract
 

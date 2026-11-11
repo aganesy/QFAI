@@ -3,9 +3,7 @@ import path from "node:path";
 import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
-import { declaredContractId } from "../contractsDecl.js";
 import { readSafe } from "../validators/utils.js";
-import { analyzeScreenCopy, isMapping, type ScreenCopyFinding } from "./screenCopy.js";
 
 export type CanonicalScreenContract = {
   name: string;
@@ -311,82 +309,6 @@ export async function findUnreadUiScreenEntries(
     });
   }
   return unread;
-}
-
-export type UiScreenCopyFinding = ScreenCopyFinding & {
-  /** The contract file, repository-relative. */
-  file: string;
-  /** The entry's index in that file's `screens` list, from 0. */
-  index: number;
-  screenId: string;
-};
-
-/**
- * What each screen of every UI contract states wrongly about its `supplements`
- * and `structure`.
- *
- * It covers the entries the screen reader reads: those with an `id` and a
- * `route`, and the first entry for an `id` in its contract scope. The others
- * are reported once, by `findUnreadUiScreenEntries`, and not again here.
- */
-export async function findUiScreenCopyFindings(
-  root: string,
-  contractsDirRelative = ".qfai/contracts",
-): Promise<UiScreenCopyFinding[]> {
-  const found: UiScreenCopyFinding[] = [];
-  for (const { file, index, screenId, entry, firstInScope } of await readUiContractScreens(
-    root,
-    contractsDirRelative,
-  )) {
-    if (!firstInScope) continue;
-    for (const finding of analyzeScreenCopy(entry)) {
-      found.push({ ...finding, file, index, screenId });
-    }
-  }
-  return found;
-}
-
-/** One `screens[]` entry the screen reader reads, with the contract that holds it. */
-export type UiContractScreenEntry = {
-  /** The `UI-NNNN` the file declares, or `null` when it declares none. */
-  contractId: string | null;
-  /** The contract file, repository-relative. */
-  file: string;
-  /** The entry's index in that file's `screens` list, from 0. */
-  index: number;
-  screenId: string;
-  entry: Record<string, unknown>;
-  /** Whether it is the first entry for its `id` in its contract scope, the one the screen reader reads. */
-  firstInScope: boolean;
-};
-
-/**
- * The `screens[]` entries with an `id` and a `route`, in walk order, each
- * marked with whether it is the first for its `id` in its contract scope.
- */
-export async function readUiContractScreens(
-  root: string,
-  contractsDirRelative: string,
-): Promise<UiContractScreenEntry[]> {
-  const uiDir = path.resolve(root, contractsDirRelative, "ui");
-  const entries: UiContractScreenEntry[] = [];
-  const seen = new Set<string>();
-  for (const { relativePath, raw, parsed } of await readUiContractDocuments(uiDir, root)) {
-    if (!isMapping(parsed) || !Array.isArray(parsed.screens)) continue;
-    const scope = specScopeOf(toPosix(path.relative(uiDir, path.resolve(root, relativePath))));
-    const contractId = declaredContractId(relativePath, raw);
-    parsed.screens.forEach((entry: unknown, index) => {
-      if (!isMapping(entry)) return;
-      const screenId = typeof entry.id === "string" ? entry.id.trim() : "";
-      const route = typeof entry.route === "string" ? entry.route.trim() : "";
-      const key = JSON.stringify([scope, screenId]);
-      if (!screenId || !route) return;
-      const firstInScope = !seen.has(key);
-      seen.add(key);
-      entries.push({ contractId, file: relativePath, index, screenId, entry, firstInScope });
-    });
-  }
-  return entries;
 }
 
 /**

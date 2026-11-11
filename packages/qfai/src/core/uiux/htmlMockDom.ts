@@ -12,7 +12,7 @@
  * spawns one.
  *
  * Its neighbours in the old module (`extractTokenComments`, `collectVarUsages`) are pure string
- * work, so they stay where they were and stay statically importable. The only caller of this file
+ * work, so they stay where they were and stay statically importable. Each caller of this file
  * loads it with a dynamic `import()` from inside an already-async validator; keep it that way, and
  * do not re-export this from `htmlMockParser.ts` — a static edge from there would restore the cost
  * while leaving this comment in place to say it had not.

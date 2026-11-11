@@ -162,7 +162,6 @@
 | US-0001-0226 | Write the bodies of empty acceptance tests in a quality phase                          | `user-story-0001-0226/` |
 | US-0001-0228 | Finish prototyping when I confirm the prototype                                        | `user-story-0001-0228/` |
 | US-0001-0229 | Choose how far the work on a request goes before it starts                             | `user-story-0001-0229/` |
-| US-0001-0230 | Purposeful copy in a screen's UI contract                                              | `user-story-0001-0230/` |
 | US-0001-0231 | Send session feedback to QFAI when the work is complete                                | `user-story-0001-0231/` |
 | US-0001-0232 | Find forbidden identifiers in the tracked worktree                                     | `user-story-0001-0232/` |
 | US-0001-0233 | Report acceptance scaffold evidence and follow-up                                      | `user-story-0001-0233/` |
@@ -184,3 +183,4 @@
 | US-0001-0294 | Review a finished session from its local transcript                                    | `user-story-0001-0294/` |
 | US-0001-0295 | Restyle my running screens without losing their data or what already works             | `user-story-0001-0295/` |
 | US-0001-0296 | Check a design for product fit and claims nobody has confirmed                         | `user-story-0001-0296/` |
+| US-0001-0297 | Every plain text on a screen states why it is there                                    | `user-story-0001-0297/` |

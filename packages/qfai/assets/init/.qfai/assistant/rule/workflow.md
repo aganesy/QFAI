@@ -88,7 +88,7 @@ Stage 3 (`/qfai-sdd`) target policy:
 Prototyping stage policy:
 
 - `/qfai-prototyping` scope is governed by Article VII § Prototyping exception (scope floor) in `.qfai/assistant/rule/constitution.md` — the single home for both the scope floor and the user-approved exception to it. Do not restate the floor here; on any overlap between this file and the constitution, the constitution wins.
-- Prototyping completes when the user confirms the prototype. No command or check certifies it. The one file a `qfai` command reads under `.qfai/prototype/` is `final/handoff.json`, which `npx qfai validate --profile saas-package` checks.
+- Prototyping completes when the user confirms the prototype. No command or check certifies it. A `qfai` command reads two kinds of file under `.qfai/prototype/`: `final/handoff.json`, which `npx qfai validate --profile saas-package` checks, and the current pages (`final/index.html` and the latest `iter-NN/index.html`) whose plain text `npx qfai validate` checks.
 - Coverage gaps (missing BF or AC obligations, unresolved declared checks, API 404) are blocking.
 
 Implementation stage:

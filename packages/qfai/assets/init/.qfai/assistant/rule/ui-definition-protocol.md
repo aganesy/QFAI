@@ -27,8 +27,8 @@ A downstream skill reads the UI definition in this order.
    - primary tasks
    - states
    - actions
-   - supplements (the text shown beyond title, group headings and labels, each with
-     its reason) and, when written, structure (the groups and headings, in order)
+   - supplements and structure, when written: a description of the copy and the
+     groups the screen is read in
 
 3. **Brand SSOT**
    - root `DESIGN.md` (front-matter + `# Brand Philosophy` body), the only
@@ -39,9 +39,9 @@ A downstream skill reads the UI definition in this order.
    notes, or, for a `restyle` handoff, its `liveRoutes` (compare in the running
    app) and `entryPoints`
 
-The supplements and structure are required input: implementation adds no text the
-contract does not declare, and surface review compares the rendered text with them.
-A screen that lacks them is returned to `/qfai-sdd`.
+The supplements and structure describe copy; `npx qfai validate` does not check them.
+What it checks is the UI source: every plain text there carries a `qfai-text`
+reason comment (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`).
 
 The paths that render a user-visible surface are declared by `uiux.surfacePaths`
 in `qfai.config.yaml`, and nowhere else.

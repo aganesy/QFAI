@@ -144,7 +144,7 @@ describe.each(TREES)("%s", (tree) => {
       "A `restyle` loop also edits the project's stylesheet and motion entry points its handoff names.",
     );
     expect(skill).toContain(
-      "except the stylesheet and motion entry points a `restyle` loop edits; a `qfai` command reads only `final/handoff.json`.",
+      "except the stylesheet and motion entry points a `restyle` loop edits; a `qfai` command reads only `final/handoff.json` and the plain text of the current `index.html` pages.",
     );
     expect(loop).toContain(
       "A restyle's edits are product code. The route's implement stage carries them: there they are change-noted, gated, tested and committed.",
@@ -296,7 +296,7 @@ describe.each(TREES)("%s", (tree) => {
     const skill = flat(await read(tree, "skill/qfai-prototyping/SKILL.md"));
     expect(skill).toContain("Every file the loop writes stays under `.qfai/prototype/`");
     expect(skill).toContain(
-      "No `qfai` command writes any of these files. The one file a command reads is the handoff record `.qfai/prototype/final/handoff.json`, which `npx qfai validate --profile saas-package` checks against the CLI-HANDOFF schema.",
+      "No `qfai` command writes any of these files. A command reads the handoff record `.qfai/prototype/final/handoff.json`, which `npx qfai validate --profile saas-package` checks against the CLI-HANDOFF schema, and the plain text of the current `index.html` pages, which `npx qfai validate` checks.",
     );
 
     for (const step of ["prototyping-grill", "prototyping-loop", "prototyping-handoff"]) {

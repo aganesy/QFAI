@@ -263,6 +263,32 @@ The generator must express every styled surface as one of:
   entry in `designMdViolations[]`. Fix the value once and the finding clears —
   do not expect the count to track the number of places it appears.
 
+### Plain text needs a reason
+
+`npx qfai validate` reads `final/index.html` and the latest `iter-NN/index.html`
+under `.qfai/prototype/` and reports, as an error, a plain text with no reason
+comment directly before it or before its parent element. Sample data in a
+static page is plain text too. Plain text is a literal text node outside a heading, `label`,
+`button`, `a`, `legend`, `th`, `caption`, `option`, `summary`, `title`,
+`script`, `style` and `role="alert"` or `role="status"`. For a text you cannot
+justify, in this order:
+
+1. Delete it.
+2. Replace it with another component: an icon with an accessible name, a
+   disabled state, a badge.
+3. Move its job to an element already there: a label, a heading, the button
+   wording, the empty state.
+4. Only then write the reason.
+
+```html
+<!-- qfai-text: why=the fee is charged only on this step; without=users pay a fee they never saw -->
+<p>A 2% fee applies to card payments.</p>
+```
+
+Both keys are required, no other key is allowed, and `why` and `without` say
+different things. "Helps the user" is not a reason; the reviewer rejects a
+generic one.
+
 ## Output layout
 
 Write `.qfai/prototype/iter-NN/index.html` and nothing else. The reviewer
