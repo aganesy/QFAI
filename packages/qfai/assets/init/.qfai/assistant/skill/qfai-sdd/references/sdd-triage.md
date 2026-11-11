@@ -52,11 +52,10 @@ context, and the result of a real trade-off. A row is appended once the user has
 the agent took, a decision that fails the test and a finding it dropped append no row; the final report states them.
 Anything not decided yet is an open-questions.md row.
 
-A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form. Validation checks that form only on a legacy `DEC-NNNN` row.
+A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form.
 
 An option the user rejects is a row whose Content opens `Declined:`, whatever the recording test says,
-recording in Approach who declined it and when; it authorizes nothing. Retiring a story removes its directory, with no separate retired-story file. A legacy
-row opening `Change request:` or `Declined change request:` is history and authorizes nothing.
+recording in Approach who declined it and when; it authorizes nothing. Retiring a story removes its directory, with no separate retired-story file.
 
 An open-questions.md row exists exactly while its question is open, and is never edited. When a decision settles
 a question, the same change appends the decision row, which names the OQ ID, and deletes the question row. To

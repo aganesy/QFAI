@@ -136,8 +136,7 @@ decisions.md records only the decisions the user made, approvals included, that 
 of templates/spec/decisions.md. Open questions are rows of open-questions.md. Both tables have
 ID, Content and Approach. A decision row keeps its ID and is never removed; only its wording may be restated. A question row is never edited. A
 declined option (`Declined:`) stays rejected unless a later decision row whose Approach opens
-`Reopens DEC-…` reopens it. A legacy row opening `Change request:` or `Declined change request:` is history and
-authorizes nothing.
+`Reopens DEC-…` reopens it.
 
 A decisions.md row's Approach takes the form stated at the top of templates/spec/decisions.md.
 

@@ -62,7 +62,7 @@ Both classes use the same decision and owner-rerun path.
 5. Recheck every dependent BF, AC, and EX test obligation and every affected contract reference. Rewrite tests where their former expectation is invalid. Report any uncovered obligation. No execution ledger, TC row, or status reset substitutes for this check.
    Cite the DEC ID, when a row was written, in the stage report. A second open change on the same artifact waits for the first outcome and is restated if its premise changed.
 
-No step edits a decision row afterwards. The decision table has no Status or Applied at field, and no standalone change file exists. A decision alone does not certify a change as applied.
+No step removes or renumbers a decision row afterwards; its wording may be restated. The decision table has no Status or Applied at field, and no standalone change file exists. A decision alone does not certify a change as applied.
 
 ### Multiple open changes
 

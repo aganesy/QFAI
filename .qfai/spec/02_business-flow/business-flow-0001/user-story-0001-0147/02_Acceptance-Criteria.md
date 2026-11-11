@@ -20,7 +20,7 @@ Feature: Unified SDD Workflow
   Scenario: Records Go To The Two Tables
     Given the story tree,
     When `/qfai-sdd` records a decision the user made that passes the recording test, a rejected option or an open question,
-    Then each of the first two is a row of `decisions.md` and the open question is a row of `open-questions.md`. Every row carries exactly the cells ID, Content and Approach, and a rejected option is a row whose Content opens `Declined:`, which authorizes nothing. Nothing is written under `.qfai/decisions/`, no `01_Spec-retired` file is written, and a row the register holds is never edited.
+    Then each of the first two is a row of `decisions.md` and the open question is a row of `open-questions.md`. Every row carries exactly the cells ID, Content and Approach, and a rejected option is a row whose Content opens `Declined:`, which authorizes nothing. Nothing is written under `.qfai/decisions/`, no `01_Spec-retired` file is written, and a row the register holds keeps its ID and is never removed; its wording may be restated.
     And a decision that replaces or narrows an earlier one is a new row whose Approach cites the earlier ID, and the earlier row stays as written.
     And a question deferred after its row was written is deleted, and a new question row is appended whose Approach names the next decision point and says `Replaces OQ-…` with the deleted ID.
 
@@ -105,7 +105,7 @@ Feature: Unified SDD Workflow
     And a different actor, goal, flow or intended behavior is its own critical decision, and no truthful partition or insufficient destination capacity stops the dependent write
     And an actual move or incoming collision repair has a complete one-to-one map binding fixed source commit and paths and original identity and meaning to destination story and AC and EX identity and paths, active BR citations and every counted adjacent test declaration, with unchanged cases identified
     And case inputs, expected outcomes and executable assertions are preserved, destination links and counted test obligations remain complete, and both scopes' retired-inclusive capacity is checked
-    And moved old IDs are named as retired in the stage report and the commit message and never reissued, while inherited published decision ID and Content and Approach cells and their historical references stay unchanged
+    And moved old IDs are named as retired in the stage report and the commit message and never reissued, while inherited published decision IDs and their historical references stay unchanged, the wording of a row free to be restated
     And only the active references the map covers and provably incoming collision items change, without blanket replacement or claiming completion from an ID change
     And an incomplete map, ambiguous ownership or collision, missing counted link, uncovered declaration or changed assertion stops the move, with no new executor or schema
 

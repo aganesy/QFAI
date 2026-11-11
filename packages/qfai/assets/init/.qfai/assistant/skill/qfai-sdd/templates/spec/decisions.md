@@ -23,9 +23,7 @@ The opening of Content gives a row its kind:
   test above says.
 - Any other Content is a decision the user made.
 
-A declined row is a rejected option and authorizes nothing. A legacy row
-opening `Change request:` or `Declined change request:` is history and
-authorizes nothing. A later decision
+A declined row is a rejected option and authorizes nothing. A later decision
 that refers to an earlier row opens its Approach with the earlier ID:
 
 - `Supersedes DEC-…` replaces the earlier decision.
