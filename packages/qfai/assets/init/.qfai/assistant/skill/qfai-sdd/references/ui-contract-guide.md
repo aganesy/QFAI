@@ -150,8 +150,7 @@ Two optional keys, beside `primary_tasks`, `elements` and `actions`, describe th
 words a screen shows beyond its `title` and the labels of its `elements` and
 `actions`. They are description for the author and the reviewer. `npx qfai
 validate` does not check them: what it checks is the UI source, where every plain
-text carries a `qfai-text` reason comment
-(`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`).
+text carries a `qfai-text` reason comment.
 
 ### `supplements` (optional)
 
