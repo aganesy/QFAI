@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-11-11
+
 ### Added
 
 - **`qfai validate` fails every plain text in UI source that has no reason.**
