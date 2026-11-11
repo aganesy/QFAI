@@ -2,7 +2,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { extractH2Sections, matchesOutsideCodeSpans } from "../parse/markdown.js";
+import { extractH2Sections } from "../parse/markdown.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { architectureProblems, MERMAID_FENCE } from "../storyTree/architecture.js";
 import {
@@ -285,7 +285,6 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   }
   issues.push(...validateRuleContractNumbers(model));
   issues.push(...validateRecordCitations(model));
-  issues.push(...validateDecisionApproaches(model));
   issues.push(...validateDecisionLengths(model));
   return issues;
 }
@@ -379,76 +378,6 @@ function validateRecordCitations(model: StoryTreeModel): Issue[] {
           `${row.id} names ${earlier} after ${word}, which no decisions row declares, in ${origin.path}`,
           origin.path,
           [row.id, earlier],
-        ),
-      );
-    }
-  }
-  return issues;
-}
-
-// SIMPLIFIED: four-digit rows up to this number are not read, because they were written before
-// the form was checked, and a timestamp row is not read either: adopters owe the form nothing.
-// Lift when: those rows are rewritten in the form; then delete this constant.
-const APPROACH_CHECKED_AFTER = 2097;
-const APPROACH_LABELS = ["Evidence", "Grounds", "Residual risk", "Rollback"];
-const APPROACH_LABEL = /(?:^|\s)- (Evidence|Grounds|Residual risk|Rollback):/g;
-const EVIDENCE_ENTRY = /^(?:file:\S|command:\s*\S)/;
-const NONE_WITH_REASON = /^none\s+—/;
-
-/** What is wrong with the four labelled items of one Approach cell. */
-function approachProblems(approach: string): string[] {
-  const marks = matchesOutsideCodeSpans(approach, APPROACH_LABEL);
-  const labels = marks.map(([, label = ""]) => label);
-  const missing = APPROACH_LABELS.filter((label) => !labels.includes(label));
-  if (missing.length > 0) return [`lacks the item ${missing.join(", ")}`];
-  if (labels.join() !== APPROACH_LABELS.join()) {
-    return ["holds its items out of order or more than once"];
-  }
-  const problems: string[] = [];
-  for (const [index, mark] of marks.entries()) {
-    const label = mark[1] ?? "";
-    const start = mark.index + mark[0].length;
-    const text = approach.slice(start, marks[index + 1]?.index ?? approach.length).trim();
-    if (text === "") {
-      problems.push(`has an empty ${label} item`);
-      continue;
-    }
-    const mayBeNone = label === "Residual risk" || label === "Rollback";
-    if (!mayBeNone && NONE_WITH_REASON.test(text)) {
-      problems.push(
-        `has "none —" in its ${label} item, which only Residual risk and Rollback take`,
-      );
-    }
-    if (label !== "Evidence") continue;
-    for (const entry of text.split("; ")) {
-      if (!EVIDENCE_ENTRY.test(entry.trim())) {
-        problems.push(
-          `has an Evidence entry that is neither file: nor command: (${entry.trim().slice(0, 40)})`,
-        );
-      }
-    }
-  }
-  return problems;
-}
-
-/**
- * A four-digit `decisions.md` row above the checked ID holds, in its Approach cell, the items
- * Evidence, Grounds, Residual risk and Rollback in that order, none empty, with every
- * Evidence entry a `file:` or `command:` item.
- */
-function validateDecisionApproaches(model: StoryTreeModel): Issue[] {
-  const issues: Issue[] = [];
-  for (const { row, origin } of model.decisionOccurrences) {
-    const file = origin.path;
-    const number = /^DEC-(\d{4})$/.exec(row.id)?.[1];
-    if (number === undefined || Number(number) <= APPROACH_CHECKED_AFTER) continue;
-    for (const problem of approachProblems(row.approach)) {
-      issues.push(
-        finding(
-          "QFAI-STORY-017",
-          `${file}:${origin.actualRow}: ${row.id} Approach ${problem}`,
-          file,
-          [row.id],
         ),
       );
     }

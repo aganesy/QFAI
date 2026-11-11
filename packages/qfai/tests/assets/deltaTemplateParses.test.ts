@@ -17,8 +17,8 @@ describe("story-tree decision records replace the per-spec delta", () => {
         "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
       );
       expect(template).toContain("| ID  | Content | Approach |");
-      expect(template).toContain("is never edited, moved or removed afterwards");
-      expect(rules).toContain("A decision row is never edited, moved or removed");
+      expect(template).toContain("keeps its ID and is never removed or renumbered");
+      expect(rules).toContain("A decision row keeps its ID and is never removed");
       expect(rules).toContain("`Declined:`");
       expect(rules).toContain("pass the recording test");
     });

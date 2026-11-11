@@ -115,7 +115,7 @@ describe("shipped qfai-sdd story-tree contract", () => {
     expect(content).toContain("Every row has exactly `ID | Content | Approach`");
     expect(content).toContain("`DEC-yyyymmddhhMMss` or `OQ-yyyymmddhhMMss`");
     expect(content).toContain(
-      "A decisions.md row is appended once and never edited, moved or removed.",
+      "A decisions.md row is appended once, keeps its ID and is never removed or renumbered; only its wording may be restated.",
     );
     expect(content).toContain(
       "When a decision settles an open question, the same change appends the decision row, naming the OQ ID, and deletes the question row.",

@@ -19,8 +19,8 @@ open-questions.md, and every file under paths.contractsDir. Production code and 
 obligation may change in a later task, but the change must preserve that obligation or change it through its owner.
 QFAI-owned files under .qfai/assistant/rule/ are updated through the package, then synchronized by init.
 
-A decisions.md row is never edited, moved or removed: a changed obligation needs a
-new row, even when an older row discusses the same topic. An open-questions.md
+A decisions.md row keeps its ID and is never removed; its wording may be restated,
+but a changed obligation needs a new row, even when an older row discusses the same topic. An open-questions.md
 row is never edited; it is deleted when a decision settles it, or replaced by a
 new row when it is deferred.
 
@@ -113,6 +113,6 @@ copy of a locked file before deciding its lock is wrong.
 
 - Downstream stages do not patch upstream artifacts: the owner changes them as When drift is detected says.
   QFAI-DRIFT-003 is a warning that nothing was compared, because baseBranch does not resolve.
-- An existing decisions.md row is never edited, moved or removed, and an existing open-questions.md row is never edited; new content is appended as a new row. The drift profile compares the base and the branch by row ID, on the three cells, so the order of rows means nothing.
+- An existing decisions.md row keeps its ID and is never removed, though its wording may be restated, and an existing open-questions.md row is never edited; a changed decision is appended as a new row. The drift profile compares the base and the branch by row ID, so the order of rows means nothing.
 - Vendored assistant rules are changed in the package and synchronized into projects by `npx qfai init --force`, which overwrites a local edit. A project rule lives in a `*.local.md` overlay beside the vendored one.
 - When a critical decision cannot be put to the user, keep the affected items stopped and report the decision needed. Continue unrelated work.

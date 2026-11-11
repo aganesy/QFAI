@@ -1,6 +1,7 @@
 <!--
 Each row records one decision the user made. It is appended once the decision
-is made, and is never edited, moved or removed afterwards. The register holds
+is made, and afterwards keeps its ID and is never removed or renumbered;
+only its wording may be restated. The register holds
 decisions only; a question not yet decided goes to open-questions.md.
 
 A decision, an approval of a critical decision or a release included, becomes
@@ -49,10 +50,6 @@ after any opening citation above:
 
 Content and Approach together stay within 600 characters; validation warns
 on a longer row. Write a `|` inside a cell as `\|`.
-
-Some legacy DEC-NNNN rows were written in an earlier form of four items,
-Evidence, Grounds, Residual risk and Rollback, which validation still checks
-on them; a new row does not use that form.
 
 A release approval that passes the recording test, with `<...>` standing for
 the project's values, has this Content cell:

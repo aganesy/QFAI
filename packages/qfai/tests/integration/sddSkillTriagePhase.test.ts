@@ -53,7 +53,7 @@ describe("qfai-sdd triage surface", () => {
     );
     expect(content).toContain("it authorizes nothing");
     expect(content).toContain(
-      "A decisions.md row is appended once the decision is made and is never edited, moved or removed afterwards",
+      "A decisions.md row is appended once the decision is made and afterwards keeps its ID and is never removed or renumbered",
     );
   });
 

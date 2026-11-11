@@ -308,7 +308,7 @@ describe("story-tree drift", () => {
   // QFAI:AC-0001-0054-01
   // QFAI:EX-0001-0007-07
   // QFAI:EX-0001-0054-02
-  it("reports a rewritten row in drift", async () => {
+  it("reports a removed or renumbered row and an edited question, not a rewritten decision", async () => {
     await branch(
       {
         [decisions]: `${table}| DEC-0001 | Choice A | Reason |\n| DEC-0002 | Choice X | Reason |\n`,
@@ -321,7 +321,6 @@ describe("story-tree drift", () => {
     );
     const messages = rewritten(await findings("drift"));
     expect(messages).toEqual([
-      expect.stringContaining(`${decisions}: DEC-0001 content changed`),
       expect.stringContaining(`${decisions}: DEC-0002 row removed or its ID changed`),
       `${questions}: OQ-0001 approach changed`,
     ]);
@@ -545,23 +544,23 @@ describe("story-tree drift", () => {
   });
 
   // QFAI:EX-0001-0054-19
-  it("reports an edited decision page row, and nothing for a row appended to a page", async () => {
+  it("reports a renumbered decision page row, and nothing for a rewritten or appended one", async () => {
     const page = `${specs}/decisions/page-0001.md`;
     const listedRoot = table.replace(
       "## Decisions",
       "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
     );
-    const pageText = `${table}| DEC-0001 | Paged | Reason |\n`;
+    const pageText = `${table}| DEC-0001 | Paged | Reason |\n| DEC-0002 | Kept | Reason |\n`;
     await branch(
       { [decisions]: listedRoot, [page]: pageText },
       {
-        [page]: `${table}| DEC-0001 | Paged again | Reason |\n| DEC-20261105093000 | Appended | Reason |\n`,
+        [page]: `${table}| DEC-0001 | Paged again | Restated reason |\n| DEC-20261105093001 | Kept | Reason |\n| DEC-20261105093000 | Appended | Reason |\n`,
       },
     );
     const items = await findings("drift");
     expect(errors(items)).toEqual(["QFAI-STORY-010"]);
     expect(rewritten(items)).toEqual([
-      expect.stringContaining(`${page}: DEC-0001 content changed`),
+      expect.stringContaining(`${page}: DEC-0002 row removed or its ID changed`),
     ]);
   });
 
@@ -582,24 +581,6 @@ describe("story-tree drift", () => {
     const items = await findings("drift");
     expect(errors(items)).toEqual([]);
     expect(rewritten(items)).toEqual([]);
-  });
-
-  it("still reports a page whose Status column is dropped together with an edited cell", async () => {
-    const page = `${specs}/decisions/page-0001.md`;
-    const listedRoot = table.replace(
-      "## Decisions",
-      "## Decision pages\n\n- decisions/page-0001.md\n\n## Decisions",
-    );
-    const legacyPage = table
-      .replace("| ID | Content | Approach |", "| ID | Content | Approach | Status |")
-      .replace("| --- | --- | --- |", "| --- | --- | --- | --- |");
-    await branch(
-      { [decisions]: listedRoot, [page]: `${legacyPage}| DEC-0001 | Paged | Reason | DONE |\n` },
-      { [page]: `${table}| DEC-0001 | Paged again | Reason |\n` },
-    );
-    expect(rewritten(await findings("drift"))).toEqual([
-      expect.stringContaining(`${page}: DEC-0001 content changed`),
-    ]);
   });
 
   it("does not accuse the migration branch when the base has no story tree", async () => {
@@ -635,9 +616,9 @@ describe("story-tree drift", () => {
     git("checkout", "main");
     git("merge", "--ff-only", "topic");
     git("checkout", "-b", "next");
-    await put(decisions, `${table}| DEC-0001 | Choice B | Reason |\n`);
+    await put(decisions, table);
     git("add", ".");
-    git("commit", "-m", "rewrite the decision row");
+    git("commit", "-m", "remove the decision row");
     const nonInfo = async (profile: "tdd" | "drift") =>
       (await validateStoryTreeDrift(root, config(), profile))
         .filter(({ severity }) => severity !== "info")
@@ -754,9 +735,9 @@ describe("story-tree drift", () => {
       git("add", ".");
       git("commit", "-m", "base with a large ledger");
       git("checkout", "-b", "topic");
-      await put(decisions, `${table}| DEC-0001 | ${large} | Another reason |\n`);
+      await put(decisions, table);
       git("add", ".");
-      git("commit", "-m", "rewrite the large row");
+      git("commit", "-m", "remove the large row");
       const findings = await validateStoryTreeDrift(root, config(), "drift");
       expect(findings).toContainEqual(
         expect.objectContaining({ code: "QFAI-STORY-010", refs: ["DEC-0001"] }),

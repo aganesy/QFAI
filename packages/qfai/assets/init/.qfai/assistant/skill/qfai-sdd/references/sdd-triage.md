@@ -40,7 +40,7 @@ A new decisions.md row takes `DEC-yyyymmddhhMMss` and a new open-questions.md ro
 time the row is written, as 14 digits. When a row of the same register already holds that second, take the next
 second no row holds. A legacy `DEC-NNNN` or `OQ-NNNN` row keeps its ID; a row the branch adds never takes that form.
 
-A decisions.md row is appended once the decision is made and is never edited, moved or removed afterwards. A
+A decisions.md row is appended once the decision is made and afterwards keeps its ID and is never removed or renumbered; only its wording may be restated. A
 later decision that refers to an earlier row is a new row whose Approach opens with the earlier ID:
 `Supersedes DEC-…` when it replaces it, `Narrows DEC-…` when it replaces part of it, and `Reopens DEC-…` when it
 reopens a declined option. The earlier row stays as written. The order of rows in the file means nothing: a merge
@@ -131,7 +131,7 @@ Other changes may proceed only if they do not depend on a pending operation.
 
 Clarifications follow the constitution's question budget. Critical-decision questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not an answer for an operation not yet classified.
 
-A decisions.md row present before the stage started is never edited, moved or removed, and an open-questions.md row is never edited.
+A decisions.md row present before the stage started keeps its ID and its decision and is never removed, and an open-questions.md row is never edited.
 
 ## Retiring an EX, AC or BR
 

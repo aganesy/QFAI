@@ -14,10 +14,10 @@ Feature: Decision and open-question tables
     And a row written in a UTC second that a row of its register already took takes the next second no row of that register holds
 
   # AC-0001-0007-02
-  Scenario: A decision row is never edited, moved or removed
+  Scenario: A decision row is never removed or renumbered
     Given a row that the base's decision register holds
     When the branch changes the register
-    Then the head's register holds a row with the same ID, Content and Approach cells, matched by its ID wherever it sits
+    Then the head's register holds a row with the same ID, matched by its ID wherever it sits, whose Content and Approach may be restated
     And a row the head adds may sit anywhere among the base's rows, as a union merge of two branches leaves them
     And a new decision is appended to the root Decisions table, and a new question to `open-questions.md`
     And a decision that replaces or narrows an earlier one is a new row whose Approach cites the earlier ID, and that ID is a row of the register
