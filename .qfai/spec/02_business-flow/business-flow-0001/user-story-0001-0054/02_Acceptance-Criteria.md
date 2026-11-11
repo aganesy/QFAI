@@ -5,10 +5,11 @@
 ```gherkin
 Feature: Append-only decision and question registers
   # AC-0001-0054-01
-  Scenario: A removed or rewritten row is reported
+  Scenario: A removed or renumbered decision row, or an edited question row, is reported
     Given the story tree, a base `qfai validate` can resolve, and the complete decision register and `open-questions.md` the base holds
-    When a decision row the base holds is removed, or its ID, Content or Approach cell changes, or a question row the base holds is edited, and `qfai validate --profile drift` runs
-    Then an error names the file, the row ID and the changed cell
+    When a decision row the base holds is removed or its ID changes, or a question row the base holds is edited, and `qfai validate --profile drift` runs
+    Then an error names the file, the row ID and, for a question row, the changed cell
+    And a decision row whose Content or Approach is restated under the same ID raises no such error
     And rows are matched by ID, so a base row the head keeps unchanged at another place, and a row the head adds anywhere, raise no such error
     And a question row the base holds may be deleted when any decision row or question row of the head register names its ID, and a deleted question that no such row names is reported
     And a question row the head holds that the base lacks, while a decision row of the base register names its ID, is reported as a settled question brought back

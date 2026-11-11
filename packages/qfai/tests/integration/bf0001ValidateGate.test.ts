@@ -191,9 +191,9 @@ describe("story-tree validators in the validate pipeline", () => {
     git("add", ".");
     git("commit", "-m", "base");
     git("checkout", "-b", "topic");
-    await put(root, decisions, register("Choice B"));
+    await put(root, decisions, register("Choice A").replace("DEC-0001", "DEC-20261105093000"));
     git("add", ".");
-    git("commit", "-m", "rewrite the decision row");
+    git("commit", "-m", "renumber the decision row");
 
     const config = structuredClone(defaultConfig);
     config.baseBranch = "main";

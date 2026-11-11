@@ -47,17 +47,6 @@ Feature: Decision and open-question table validation
     Then `QFAI-STORY-016` is raised at warning naming the file, the line and the term
     And `decisions.md` and `open-questions.md` are not read
     And with no term listed, nothing is checked
-  # AC-0001-0053-08
-  Scenario: A decision row whose Approach cell breaks the four-item form is reported
-    Given the story tree, and a legacy `decisions.md` row with a four-digit ID above `DEC-2097` whose Approach cell lacks, empties, duplicates or reorders `Evidence:`, `Grounds:`, `Residual risk:` or `Rollback:`, takes `none — <reason>` outside the last two, or holds an Evidence entry that is neither `file:` nor `command:`
-    When `qfai validate --profile sdd` runs
-    Then `QFAI-STORY-017` is raised at error naming the file, the row ID and the breach
-    And labels whose hyphens lie inside closed equal-length backtick spans are literal content, not structural items
-    And outside code an odd backslash count escapes only the first backtick, leaving a remaining run available, while an even count leaves the whole run available
-    And inside code backslashes are literal, only a complete same-length raw run closes the span, and unmatched openers do not hide later balanced spans
-    And original item values remain intact, code-only content is nonempty, quoted labels do not supply missing items, and Evidence prefix checks still apply
-    And a row with a timestamp ID is not read for the four items
-    And a row up to `DEC-2097` is not read
   # AC-0001-0053-09
   Scenario: Validators read one decision register across its pages
     Given a configured specs directory with a root-only decision register, or a root whose Decision pages list names pages
@@ -66,7 +55,7 @@ Feature: Decision and open-question table validation
     And the root optionally holds one closed Decision pages list of unique direct `- decisions/page-NNNN.md` entries before Decisions
     And each page holds exactly the Decisions heading and one three-column Decisions table, with no nested index
     And every page has at most 500 lines, including comments, headings, list items, blank lines and table lines, while the root has no line ceiling
-    And the column, cell-count, ID, keyword, Approach, citation and duplicate-ID checks cover every row with its file and row number
+    And the column, cell-count, ID, keyword, citation and duplicate-ID checks cover every row with its file and row number
     And stale-term scanning excludes the root and every page
     And a missing or unreadable listed page, a duplicate entry, an unlisted file in the decisions directory, an unsafe or linked path, traversal and a wrong page shape fail without accepting a partial register
     And an oversized page is reported without truncation or an automatic rewrite

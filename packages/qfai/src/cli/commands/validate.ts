@@ -296,7 +296,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-013",
     "QFAI-STORY-015",
     "QFAI-STORY-016",
-    "QFAI-STORY-017",
     "QFAI-STORY-020",
     "QFAI-SPACK-102",
   ],
@@ -1181,8 +1180,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Policy, business-flow and contract documents name no file outside `.qfai` by a repository path, so a spec does not depend on a file that changes without a spec review.",
   "QFAI-STORY-016":
     "No spec document states a term `validation.staleTerms` lists, apart from the decision and open-question registers.",
-  "QFAI-STORY-017":
-    "A four-digit decisions.md row recorded after the Approach form began to be checked holds Evidence, Grounds, Residual risk and Rollback in that order, none empty, with every Evidence entry a file: or command: item.",
   "QFAI-STORY-020":
     "A decision row says what was decided and why in a few short sentences, so its Content and Approach together stay within 600 characters.",
   "QFAI-DOCSCHEMA-001":
@@ -1541,10 +1538,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "State the fact in the document in words, or cite a document under `.qfai` instead of the outside file.",
   "QFAI-STORY-016":
     "Rewrite the named line to match the decision that replaced the term, or remove the term from `validation.staleTerms` if the line is right.",
-  "QFAI-STORY-017":
-    "Rewrite the named row's Approach cell in the form the qfai-sdd decisions template shows.",
   "QFAI-STORY-020":
-    "Leave the row as written, since a recorded row is never edited, and keep the next row short: the decision and its reason in one to three sentences, with the detail where it already lives.",
+    "Rewrite the row under its ID in the short form: the decision and its reason in one to three sentences, with the detail where it already lives.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DOCSCHEMA-002":

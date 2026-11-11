@@ -32,6 +32,6 @@ describe("Implementation evidence ownership", () => {
     const drift = await asset("rule/drift-protocol.md");
     expect(drift).toContain("Rerun the owner skill against the affected artifact");
     expect(drift).toContain("Recheck every dependent BF, AC, and EX test obligation");
-    expect(drift).toContain("No step edits a decision row afterwards.");
+    expect(drift).toContain("No step removes or renumbers a decision row afterwards");
   });
 });

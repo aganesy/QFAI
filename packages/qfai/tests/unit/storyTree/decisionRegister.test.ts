@@ -29,7 +29,7 @@ function model(entries: [string, string][]) {
 
 function recordFindings(tree: ReturnType<typeof model>) {
   return validateStoryTreeStructureModel(tree).filter((finding) =>
-    ["QFAI-STORY-002", "QFAI-STORY-003", "QFAI-STORY-017"].includes(finding.code),
+    ["QFAI-STORY-002", "QFAI-STORY-003"].includes(finding.code),
   );
 }
 
@@ -196,7 +196,6 @@ describe("the complete decision register", () => {
   // QFAI:EX-0001-0053-31
   it.each([
     ["fourth cell", "| DEC-0001 | Choice | Keep | extra |\n", /cells|column/i],
-    ["malformed Approach", row("DEC-2099", "Choice", "Keep"), /Evidence|Grounds/],
     ["missing superseded decision", row("DEC-0001", "Choice", "Supersedes DEC-0002"), /DEC-0002/],
   ])("keeps the %s finding at its physical page", (_name, raw, problem) => {
     const tree = model([

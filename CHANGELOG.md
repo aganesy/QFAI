@@ -195,8 +195,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reads a base that still holds the column without it, so that change needs no
   change request. A settled question row may then
   be deleted once a decision row names its ID; until one does, the row stays.
+- **A decision row may be restated under its ID.** The `drift` profile of
+  `qfai validate` now reports only a decision row the base holds that the
+  branch removes or renumbers (`QFAI-STORY-010`); a row whose Content or
+  Approach is rewritten under the same ID passes, so an over-long row can be
+  shortened to clear `QFAI-STORY-020`. A changed decision is still a new row.
+  This repository's own register is rewritten in the short form.
 
 ### Removed
+
+- **`QFAI-STORY-017`, the four-item Approach check on legacy decision rows.**
+  Legacy `DEC-NNNN` rows above `DEC-2097` no longer need the items Evidence,
+  Grounds, Residual risk and Rollback, so they can be restated in the short
+  form.
 
 - **The specification-change approval row.** A change to the story tree no
   longer needs a `Change request:` row. A change to an existing story-tree

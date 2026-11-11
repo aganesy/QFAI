@@ -6,7 +6,7 @@ structure:
   - heading:
       pattern: "^# Decisions$"
       regex: true
-    description: An append-only register; a row is never edited, moved or removed after it is added.
+    description: An append-only register; a row keeps its ID and is never removed after it is added, though its wording may be restated.
     allow_additional: false
     forbidden_text:
       - pattern: '\A\s*[^#\s]'
