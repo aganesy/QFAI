@@ -116,6 +116,20 @@ describe("steps that write Mermaid diagrams", () => {
     expect(pack).not.toContain("Add `qfai` to the list");
   });
 
+  // QFAI:EX-0001-0242-03
+  it("sdd-flow runs the checker from the release install when node_modules has no qfai", async () => {
+    const flow = await step("sdd-flow");
+    expect(flow.replace(/\s+/g, " ")).toMatch(
+      /no `node_modules\/qfai`, first install the release[^`]*`discussion-pack\/STEP\.md#parse-the-diagrams`/,
+    );
+    expect(flow).toContain(
+      "node tmp/qfai-release/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>",
+    );
+    expect(await step("discussion-pack")).toContain(
+      "node tmp/qfai-release/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <pack directory>",
+    );
+  });
+
   // QFAI:EX-0001-0242-04
   it("reports a parser that cannot run as not run, never as passed", async () => {
     for (const name of ["discussion-pack", "sdd-flow"]) {

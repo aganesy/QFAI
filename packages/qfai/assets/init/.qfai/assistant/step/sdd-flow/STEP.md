@@ -104,7 +104,15 @@ states.
    node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>
    ```
 
-   Install the parser into `tmp/qfai-mermaid` first, never into the project's
+   Where the project has no `node_modules/qfai`, first install the release as
+   step 1 of `discussion-pack/STEP.md#parse-the-diagrams` says, and run the
+   checker it holds:
+
+   ```bash
+   node tmp/qfai-release/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>
+   ```
+
+   Then install the parser into `tmp/qfai-mermaid`, never into the project's
    dependency tree. Fix each diagram it rejects. When the install or the run
    fails for another reason, report the syntax check as not run, never as
    passed.

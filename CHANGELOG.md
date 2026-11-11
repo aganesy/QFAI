@@ -114,8 +114,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `sdd-flow` steps now run the shipped Mermaid parser on the files they wrote,
   installed under `tmp/` and never into the project's dependency tree, and
   report the check as not run when the parser cannot be installed. A project
-  with no installed QFAI gets the release it runs installed under `tmp/` too,
-  and the parser versions are read from that release.
+  with no installed QFAI gets the release `npx qfai` resolves installed under
+  `tmp/` too, and the parser versions are read from that release.
   `qfai validate` warns (`QFAI-FLOW-006`) on a Mermaid diagram with more than
   12 nodes or 16 edges, so its author splits it into an overview and detail
   diagrams; `validation.diagramBudget` in `qfai.config.yaml` changes both
