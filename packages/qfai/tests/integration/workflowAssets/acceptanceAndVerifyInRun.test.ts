@@ -71,7 +71,7 @@ describe("qfai-verify loads its inputs from the shipped assistant tree", () => {
     );
     const guard = await section(OPERATING, "## Rejected Option Guard");
     expect(guard).toContain(
-      "Do not reintroduce an option whose row in `<paths.specsDir>/decisions.md` has Content opening `Declined change request:` or `Declined:`.",
+      "Do not reintroduce an option whose row in `<paths.specsDir>/decisions.md` has Content opening `Declined:`, or `Declined change request:` in a row written before change requests were retired.",
     );
     expect(guard).toContain("append a new `DEC-yyyymmddhhMMss` row");
     for (const file of await verifyAssets()) {

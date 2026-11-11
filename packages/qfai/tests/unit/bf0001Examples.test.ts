@@ -552,7 +552,7 @@ describe("BF-0001 decision and question examples", () => {
   });
 
   // QFAI:EX-0001-0053-04
-  it("classifies test exceptions, change requests and declined requests by their keyword", () => {
+  it("classifies a test exception by its keyword, and old change-request rows as ordinary rows", () => {
     const rows = parseRecordTable(
       table([
         "| DEC-0001 | Test exception: EX-0001-0001-01, AC-0001-0001-01 | Reason |",
@@ -564,8 +564,8 @@ describe("BF-0001 decision and question examples", () => {
     expect(rows.map((row) => classifyRecordRow(row)).map(({ kind, refs }) => [kind, refs])).toEqual(
       [
         ["test-exception", ["EX-0001-0001-01", "AC-0001-0001-01"]],
-        ["change-request", ["01_policy/glossary.md"]],
-        ["declined-change-request", ["01_policy/principle.md"]],
+        ["other", []],
+        ["other", []],
       ],
     );
   });

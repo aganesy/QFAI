@@ -49,7 +49,7 @@
 | US-0001-0051 | Story-tree layout and ID validation                                                    | `user-story-0001-0051/` |
 | US-0001-0052 | Contract index and contract-layer validation                                           | `user-story-0001-0052/` |
 | US-0001-0053 | Decision and open-question table validation                                            | `user-story-0001-0053/` |
-| US-0001-0054 | Append-only drift and change-request authorization                                     | `user-story-0001-0054/` |
+| US-0001-0054 | Append-only decision and question registers                                            | `user-story-0001-0054/` |
 | US-0001-0055 | Example, criterion, and rule links                                                     | `user-story-0001-0055/` |
 | US-0001-0056 | Layer-specific test obligations                                                        | `user-story-0001-0056/` |
 | US-0001-0057 | Business-flow scoped validation                                                        | `user-story-0001-0057/` |
@@ -151,7 +151,7 @@
 | US-0001-0214 | Close, answer or hand back a request without a change                                  | `user-story-0001-0214/` |
 | US-0001-0215 | Re-route when diagnosis shows the work is on the wrong route                           | `user-story-0001-0215/` |
 | US-0001-0216 | Pass a step that has nothing to write                                                  | `user-story-0001-0216/` |
-| US-0001-0217 | Change the route catalog only with a recorded approval                                 | `user-story-0001-0217/` |
+| US-0001-0217 | Keep the route catalog and the shipped plans together                                  | `user-story-0001-0217/` |
 | US-0001-0218 | Refuse a route catalog a session cannot use                                            | `user-story-0001-0218/` |
 | US-0001-0220 | Get one fixed plan for every kind of request                                           | `user-story-0001-0220/` |
 | US-0001-0221 | Judge the router against labelled requests before a release                            | `user-story-0001-0221/` |

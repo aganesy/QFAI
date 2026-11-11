@@ -55,12 +55,6 @@ function place(record: OldRecord): Placed {
   });
   // A keyword row's Content holds only its keyword and option, so its origin begins the Approach.
   const originFirst = `${from}: ${record.approach}`;
-  if (record.kind === "change-request") {
-    if (status === "approved") return decision(`Change request: ${record.summary}`, originFirst);
-    if (status === "rejected")
-      return decision(`Declined change request: ${record.summary}`, originFirst);
-    return question(`${from}: Change request: ${record.summary}`, record.approach);
-  }
   if (record.kind === "question") {
     if (status === "resolved" || status === "superseded")
       return decision(
@@ -78,8 +72,12 @@ function place(record: OldRecord): Placed {
   }
   if (status === "rejected") return decision(`Declined: ${record.summary}`, originFirst);
   const content = `${from}: ${record.summary}`;
-  if (status === undefined || status === "accepted" || status === "superseded")
-    return decision(content, record.approach);
+  // An old change request is a decision like any other once approved; otherwise still open.
+  const decided =
+    record.kind === "change-request"
+      ? status === "approved"
+      : status === undefined || status === "accepted" || status === "superseded";
+  if (decided) return decision(content, record.approach);
   return question(content, record.approach);
 }
 

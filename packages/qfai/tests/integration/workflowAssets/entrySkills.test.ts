@@ -14,7 +14,6 @@ import {
   ASSISTANT_ASSET_MAX_LINE_CHARS,
   assistantLineCeiling,
 } from "../../../src/core/doctor/assetLineBudget.js";
-import { approachProblems } from "../../../src/core/validators/storyTreeStructure.js";
 import type { WorkflowExtraction } from "../../../src/core/workflow/extraction.js";
 import { extractionFaults, isExtraction } from "../../../src/core/workflow/extractionShape.js";
 import { routingOutcome } from "../../../src/core/workflow/routeDecision.js";
@@ -119,7 +118,6 @@ const EXTRACTION_VOCABULARIES: Record<string, string[]> = {
   signals: [
     "approved-record-task",
     "grilling-required",
-    "decide-by-change-request",
     "disabled-test",
     "flaky-label",
     "backport",
@@ -1064,25 +1062,25 @@ describe("qfai-run", () => {
   // QFAI:AC-0001-0223-04
   // QFAI:EX-0001-0223-06
   // QFAI:EX-0001-0223-08
-  it("records each approval as one decisions row, and no row for a decision taken without the user", async () => {
+  it("records an approval as a decisions row only when it meets the recording test, and no row for a decision taken without the user", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
     const release = flat(sectionOf(await readShipped(STAGE_POINTS), "## Release point"));
     expect(work).toMatch(
-      /each approval of a specification change, a critical decision or a release is one `decisions\.md` row: what was approved, who approved it, when, and the chosen option's label/i,
+      /an approval of a critical decision or a release is one `decisions\.md` row only when it is hard to reverse, would surprise a reader without context, and was the result of a real trade-off: what was approved, who approved it, when, and the chosen option's label/i,
     );
     expect(work).toMatch(/a decision you took appends no row/i);
-    expect(work).toMatch(/, in the `qfai-sdd` decisions template's form\./i);
+    expect(work).toMatch(/, in the `qfai-sdd` decisions template's short form\./i);
+    expect(work).toMatch(/otherwise the final report states the approval with the same items/i);
     expect(work).toMatch(
-      /when the release change is produced outside this run \(by a release workflow or bot\), record its approval in the final report with the same four items and list the row as a pending follow-up; the next change that touches `decisions\.md` appends the row, and a `qfai-run` that writes `decisions\.md` appends any pending approval row first/i,
+      /when the release change is produced outside this run \(by a release workflow or bot\), record its approval in the final report in the same short form, and, when it is to be a row, list the row as a pending follow-up; the next change that touches `decisions\.md` appends the row, and a `qfai-run` that writes `decisions\.md` appends any pending approval row first/i,
     );
-    // The template's release-approval example is a valid Approach cell as it stands.
+    // The template's release-approval example is a short record: one sentence and its rollback.
     const template = await readShipped("skill/qfai-sdd/templates/spec/decisions.md");
-    const example = template.split("\n").find((line) => line.startsWith("- Evidence:"));
-    expect(example).toBeDefined();
-    expect(approachProblems(example ?? "")).toEqual([]);
+    const example = template.split("\n").find((line) => line.startsWith("<the release checks"));
+    expect(example).toMatch(/^<the release checks[^.]*\. - Rollback: \S/);
     expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
     expect(release).toMatch(
-      /record the approval as step 7 of `SKILL\.md` says: a `decisions\.md` row the run writes, or, when the release change is produced outside this run, the final report, with the row appended by the next change that touches `decisions\.md`/i,
+      /record the approval as step 7 of `SKILL\.md` says: a `decisions\.md` row the run writes when the approval meets the recording test, the final report otherwise, or, when the release change is produced outside this run, the final report, with any row appended by the next change that touches `decisions\.md`/i,
     );
     expect(release).toMatch(
       /after approval at a handoff release point, `qfai-run` records the approval as step 7 says before `triage-handoff` runs/i,

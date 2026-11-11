@@ -21,9 +21,9 @@ describe("discussion IDs remain provenance, not story-tree IDs", () => {
         "provenance and design input, not a normative SSOT",
       );
       expect(skill).toContain("do not edit the");
-      expect(decomposition).toContain("Put a create, update, or retirement operation to the user");
+      expect(decomposition).toContain("Put an operation that is a critical decision to the user");
       expect(decomposition.replace(/\s+/g, " ")).toContain(
-        "record the approved one as a `Change request:` row of `<paths.specsDir>/decisions.md` naming the affected BF or US and `discussion-<id>#REQ-NNNN`",
+        "record the decision in `<paths.specsDir>/decisions.md` only when it passes the recording test",
       );
     });
 
@@ -35,7 +35,7 @@ describe("discussion IDs remain provenance, not story-tree IDs", () => {
       expect(workshop).toContain("DUS-");
       expect(workshop).toContain("DAC-");
       expect(workshop).toContain("US-0001-0001");
-      expect(workshop.replace(/\s+/g, " ")).toContain("approved `Change request:` row");
+      expect(workshop.replace(/\s+/g, " ")).toContain("names the discussion REQ and the BF or US");
     });
   }
 });

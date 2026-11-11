@@ -77,7 +77,6 @@ export const QUALIFIERS = [
 export const SIGNALS = [
   "approved-record-task",
   "grilling-required",
-  "decide-by-change-request",
   "disabled-test",
   "flaky-label",
   "backport",

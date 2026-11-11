@@ -53,7 +53,7 @@ describe("Gate Failure Autorepair Protocol routes every class it names", () => {
 
       expect(baseline).toContain("**upstream spec/contract findings: never repair.**");
       expect(baseline).toContain(".qfai/assistant/rule/drift-protocol.md");
-      expect(baseline).toContain("Change Request + owner-skill rerun");
+      expect(baseline).toContain("proposed change to the owner + owner-skill rerun");
     });
 
     it(`${tree}: "local and non-destructive" cannot be borrowed for upstream`, async () => {

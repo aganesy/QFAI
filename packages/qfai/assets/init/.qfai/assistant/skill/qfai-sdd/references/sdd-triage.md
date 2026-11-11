@@ -8,7 +8,7 @@ Triage selects the smallest story-tree change that answers each incoming require
 - Operation choice
 - Decision and question rows
 - Where a decision's result lives
-- Approval and no-question mode
+- Critical decisions and no-question mode
 - Retiring an EX, AC or BR
 - ID allocation
 - Conflicted story-tree documents
@@ -19,7 +19,7 @@ Triage selects the smallest story-tree change that answers each incoming require
 - The selected source and its requirement IDs, if present.
 - Existing 01_policy/, 02_business-flow/, 03_contract/, decisions.md, and open-questions.md.
 - .qfai/assistant/rule/change-classification.md for Primary and Tags.
-- .qfai/assistant/rule/drift-protocol.md for rejected options and approved change requests.
+- .qfai/assistant/rule/drift-protocol.md for rejected options and critical decisions.
 
 Read the flow and story indexes plus concrete files. A subject match alone is insufficient: verify that the existing flow's purpose and observable outcomes can express the requirement.
 
@@ -27,8 +27,8 @@ Read the flow and story indexes plus concrete files. A subject match alone is in
 
 Choose one primary operation for each affected BF or US. UPDATE is the default when the existing item keeps its identity
 and purpose. Its sub-operation is written UPDATE:APPEND, UPDATE:MODIFY, or UPDATE:REMOVE. CREATE is used when no existing item represents the new
-outcome. DELETE, SPLIT, MERGE, and SUPERSEDE change identity or scope and require explicit approval. UPDATE:REMOVE also
-requires approval. A supporting contract update is named in the same decision's Approach or in a linked row; it is not a
+outcome. DELETE, SPLIT, MERGE, and SUPERSEDE change identity or scope, and UPDATE:MODIFY and UPDATE:REMOVE change what
+an existing item states: each is a critical decision, as Critical decisions and no-question mode says. A supporting contract update is named in the same decision's Approach or in a linked row; it is not a
 second fictional flow.
 
 Inspect the impact cascade: policy → BF → US → AC → EX → enforcing contract, then every other flow or contract that cites the changed item. Record companion changes. A shared BR remains in its authoritative contract, and no other contract cites it.
@@ -46,23 +46,17 @@ later decision that refers to an earlier row is a new row whose Approach opens w
 reopens a declined option. The earlier row stays as written. The order of rows in the file means nothing: a merge
 may interleave the rows two branches appended. The base and the head are compared by row ID, on the three cells.
 
-decisions.md records only what the user decided: each change request the user approved or declined,
-and each critical decision the user made. A row is appended once the user has decided what it records.
-A decision the agent took, an approval-free change and a finding it dropped append no row; the final report lists the
-decisions the agent took. Anything not decided yet is an open-questions.md row.
+decisions.md records only decisions the user made, approvals of critical decisions and releases included, that
+pass the recording test at the top of `templates/spec/decisions.md`: hard to reverse, surprising to a reader without
+context, and the result of a real trade-off. A row is appended once the user has decided what it records. A decision
+the agent took, a decision that fails the test and a finding it dropped append no row; the final report states them.
+Anything not decided yet is an open-questions.md row.
 
 A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form. Validation checks that form only on a legacy `DEC-NNNN` row.
 
-A change request is a decision row whose Content begins Change request: and names the
-repository-relative paths it changes; an ID there authorizes nothing. Its Approach names the operation and target BF or US, the source as
-discussion-<id>#REQ-NNNN when there is one or the actual source path or user requirement otherwise,
-the change classification Primary and Tags, and who approved it, when, and the option chosen. It does not restate
-the edit. It authorizes edits to the paths it names only on the branch that adds it; a change request the base
-already holds authorizes nothing, and later work appends a new one. A declined change request is a row whose
-Content opens `Declined change request:`, recording in Approach who declined it and when. Any other option the user
-rejects is a row whose Content opens `Declined:`. Both are rejected options and authorize nothing.
-Retiring a story removes its directory under the change request that names it, with no
-separate retired-story file.
+An option the user rejects is a row whose Content opens `Declined:`, whatever the recording test says,
+recording in Approach who declined it and when; it authorizes nothing. Retiring a story removes its directory, with no separate retired-story file. A legacy
+row opening `Change request:` or `Declined change request:` is history and authorizes nothing.
 
 An open-questions.md row exists exactly while its question is open, and is never edited. When a decision settles
 a question, the same change appends the decision row, which names the OQ ID, and deletes the question row. To
@@ -70,16 +64,12 @@ defer a question already written, delete its row and append a new question row w
 decision point and says `Replaces OQ-…` with the deleted ID. An unanswered critical product decision is an
 open-questions.md row whose Content opens Unadjudicated:, pending while the row exists.
 
-Appending a row to either register, or deleting a settled question row, needs no change request.
-
 A justified test exception opens a decision Content with Test exception:, names the exact BF, AC, or EX it
 exempts, and puts the reason in Approach. It holds while the row exists, and a decision row is never removed; it never
 exempts descendant items.
 
-A test annotation may remain pending only when authority to change the
-specification covers that state and the test deferral is approved. Record the
-specification change in its own `Change request:` row. Record the deferral as a
-`Test exception:` decision naming the exact AC. Its Approach states
+A test annotation may remain pending only when the user approved the test
+deferral. Record the deferral as a `Test exception:` decision naming the exact AC. Its Approach states
 the reason, untested scope, owner, next decision date and condition for restoring
 the annotation.
 
@@ -87,11 +77,11 @@ The row records the exception decision; it does not mean test completion.
 The existing info finding names the exempted AC and its decision without
 claiming test execution or coverage. The exception never exempts descendant EX
 obligations or authorizes changes to EX or BR scope. Do not silently substitute
-an EX or prose rewrite for an approved specification change. Use the next
+an EX or prose rewrite for the specification change. Use the next
 decision date for manual review; there is no automatic expiry and no automatic
 warning.
 
-When specification changes are forbidden or either authority is missing, first
+When specification changes are forbidden or the deferral is not approved, first
 append an `Unadjudicated:` question row. Name the affected IDs, expected versus
 actual behavior, implementation-change evidence, owner and required permission.
 Stop dependent AC, EX and BR edits; independent authorized work may continue.
@@ -107,9 +97,9 @@ It has no page index or other section. The root retains its own three-column tab
 
 Read pages in list order, followed by the root table. This is one
 register: ID uniqueness, retirement references and the base-to-head comparison
-include every row. Append new rows only to the root table, which has no line limit; appending a row to a page is
-a protected edit. Never move a row between files. A root without a page list is read in full.
-Read errors or an incomplete inventory stop permission and allocation decisions.
+include every row. Append new rows only to the root table, which has no line limit; never append a row to a
+page. Never move a row between files. A root without a page list is read in full.
+Read errors or an incomplete inventory stop allocation decisions.
 
 Every entry in the decisions directory must be a listed direct page. Register
 paths must be regular directories and files, without symbolic or hard links.
@@ -120,39 +110,26 @@ A formatter exclusion preserves reviewed bytes; it does not waive validation.
 Where a decision's result lives, write the current state only, and rewrite it in
 place when the decision changes:
 
-- No date, approver, quoted request or history: the decision row holds those.
+- No date, approver, quoted request or history: a decision row or the stage report holds those.
 - One statement per concept, with at most one sentence of reason.
 - `01_policy/` holds a result only when it binds more than one flow or the whole
   product.
 - A non-functional requirement is a contract BR with a measurable threshold and
   an example. Only a product-wide one goes to `constraint.md`.
-- A trivial edit adds no policy or constraint entry and no decision row beyond
-  its change request.
-- A `Change request:` row names the paths and the approval (who, when and the
-  option chosen), and does not restate the edit.
+- A trivial edit adds no policy or constraint entry and no decision row.
 
-## Approval and no-question mode
+## Critical decisions and no-question mode
 
-Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. A request from the user in the session that names the operation and its effect is the approval, and no second question is asked.
+Use the shared user-question protocol for each critical decision: CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE,
+an UPDATE:MODIFY that changes what an item existing before the stage states, and any other decision
+`.qfai/assistant/rule/drift-protocol.md` calls critical. Present the target and rationale. Do not self-approve. A
+request from the user in the session that names the operation and its effect is the answer, and no second question is
+asked. Any other story-tree or contract change, such as an appended AC, EX or BR, the stage makes itself and lists in
+its report.
 In --auto, ask no question: append one `open-questions.md` row per pending operation naming it and its target, with its Content opening Unadjudicated:; stop before the dependent writes, and report every pending operation with its target as open.
-Approval-free changes may proceed only if they do not depend on a pending operation.
+Other changes may proceed only if they do not depend on a pending operation.
 
-Clarifications follow the constitution's question budget. Approval questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not approval for an operation not yet classified.
-
-### A change to the story tree
-
-A story-tree or contract file changes only on the user's approval:
-
-1. Show the user the files the stage would change and the proposed change, and
-   change nothing until the user answers. A request from the user in the
-   session that names the change and its effect is that answer: the stage lists
-   the files in its announcement, asks no second question, and records the
-   request as the option chosen.
-2. On approval, write the change and append one `decisions.md` row whose Content
-   opens `Change request:` and names every story-tree and contract file it
-   changed. Its Approach records who approved it, when, and the label of the
-   option chosen. Appending a row to `decisions.md` or `open-questions.md`
-   needs no change request.
+Clarifications follow the constitution's question budget. Critical-decision questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not an answer for an operation not yet classified.
 
 A decisions.md row present before the stage started is never edited, moved or removed, and an open-questions.md row is never edited.
 
@@ -160,21 +137,21 @@ A decisions.md row present before the stage started is never edited, moved or re
 
 A retirement touches every place the ID is written. Do all of them in one change:
 
-1. Get the user's approval of the UPDATE:REMOVE and append its `Change request:` decision row, whose Content names every retired ID.
+1. Put the UPDATE:REMOVE to the user as a critical decision, and add one `Retired: <ID>, <ID>…` row to `decisions.md` naming every retired ID.
 2. Delete the EX row from 03_Example.md, the AC scenario from 02_Acceptance-Criteria.md, or the BR row from its contract.
 3. Remove a retired EX from the Examples cell of every BR that cites it. A BR left with no example gets another example or is retired in the same row.
 4. Remove each QFAI:EX annotation of a retired EX from the tests, or point it at the example the test now proves.
 5. An AC left with no example gets one or is retired in the same row.
 6. Retiring an AC also retires each EX whose AC-Ref names it, or moves that EX to another AC of the story by changing its AC-Ref, then applies steps 3 and 4 to each EX retired. Remove each QFAI:AC annotation of the retired AC from the tests, or point it at the AC the test now proves.
-7. Never reuse a retired ID. The decision row keeps it counted.
+7. Never reuse a retired ID.
 
 `npx qfai validate` reports what steps 3 to 6 left behind: a BR citing an unknown example (`QFAI-STORY-005`), a test annotation naming an undeclared ID (`QFAI-STORY-008`), and an AC with no example or an EX with an invalid AC-Ref (`QFAI-STORY-004`).
 
 ## ID allocation
 
-Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US.
+Read all IDs of the kind in the relevant scope, including IDs named by decision rows, `Retired:` rows among them. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US.
 A contract number spans every contract kind, and a BR is numbered inside its contract.
-Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a change request was declined.
+Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a change was declined.
 Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` right before writing it: a US names its BF, an AC or EX its US, and a BR its contract.
 It reads the working tree and the base ref's commit, a fetched ref such as `origin/main`, and prints the number after the highest of both, wherever a row sits. It writes nothing and does not see open pull requests.
 A decisions.md or open-questions.md row takes its timestamp ID from the time it is written instead; no count and no other branch decides it.
@@ -221,21 +198,21 @@ Only additions exceeding an actual AC or EX scope's remaining 99-H qualify for
 a capacity-only story partition. Record the source story, affected kind, H,
 remainder and requested count first. Prefer leaving every published case and ID
 in place and putting a cohesive incoming group in a capacity-checked sibling
-under the same BF and actual actor goal. An owning change request this branch adds must
-explicitly approve this partition and its affected paths before writing.
+under the same BF and actual actor goal. The partition is a critical decision: the user
+answers it, with its affected paths, before writing.
 
 State the sibling's truthful cohesive scope and settle each criterion's owner;
 do not invent a new product outcome, duplicate an obligation or weaken it.
-A different actor, goal, flow or intended behavior needs its existing owning
-approval path. Additions that fit the original scope do not qualify. Missing
-authority, insufficient destination capacity or no truthful partition stops
+A different actor, goal, flow or intended behavior is its own critical
+decision. Additions that fit the original scope do not qualify. A missing
+decision, insufficient destination capacity or no truthful partition stops
 the dependent write. This prospective split places new overflow cases; moving
-an existing case also needs the complete map below. These instructions approve
+an existing case also needs the complete map below. These instructions decide
 no future specific creation, move or split.
 
 ### Actual moves and incoming collisions
 
-Before an approved actual AC/EX move or incoming collision repair, make a
+Before an actual AC/EX move the user decided or incoming collision repair, make a
 complete one-to-one map of:
 
 - the fixed source commit and declaration path;
@@ -248,17 +225,17 @@ complete one-to-one map of:
 Check both scopes' retired-inclusive capacity. Each destination EX needs one
 existing destination AC; each AC needs an EX. Preserve every moved EX's
 owning BR link and counted test obligation. An ID change alone proves no
-coverage. Retire old moved IDs in a new approved record and never refill them.
+coverage. Name the old moved IDs in a `Retired:` row, and never refill them.
 Inherited published DEC ID, Content and Approach cells and their old-ID
-references remain historical and unchanged; update only approved active
-references.
+references remain historical and unchanged; update only the active
+references the move covers.
 
 Keep unaffected published cases and IDs. Identify same-number branch cases by
 fixed provenance and meaning, and change only the provably incoming item,
 without blanket replacement. Unknown ownership, ambiguous collisions,
 uncovered declarations, missing counted test links, changed assertions or an
 incomplete map stops the move without a completion claim. This is a manual
-approval and mapping procedure, not a move executor or mapping schema.
+decision and mapping procedure, not a move executor or mapping schema.
 
 Two branches can take the same next ID. When a merge leaves one ID on two items:
 
@@ -273,9 +250,9 @@ Two branches can take the same next ID. When a merge leaves one ID on two items:
 A `decisions.md` or `open-questions.md` row already on the target keeps its ID, Content and Approach.
 No register row is renumbered; [Register conflicts](#register-conflicts) covers them.
 An ID that two merged records already share is not renumbered:
-ask the user for a change request row that states which record each citation meant.
+ask the user, as a critical decision, which record each citation meant.
 
-A move to another BF changes the story's US ID and all child AC and EX IDs. It follows the existing approval path, not the same-BF capacity exception. Apply the complete map above to approved active citations and retire old IDs in a new approved record; inherited DEC cells and their historical references stay unchanged.
+A move to another BF changes the story's US ID and all child AC and EX IDs. It is a critical decision, not the same-BF capacity exception. Apply the complete map above to the active citations and name the old IDs in a `Retired:` row; inherited DEC cells and their historical references stay unchanged.
 
 ## Conflicted story-tree documents
 
@@ -289,7 +266,7 @@ Review the result and stage it with `git add`; it stages nothing itself.
 
 ## Completion of triage
 
-Every requirement has a target, an approved or approval-free operation, and a recorded impact path. Every product ambiguity has an OQ. The next stage may write only the approved scope. A rejected option stays excluded until a decision row whose Approach opens `Reopens DEC-…` is appended.
+Every requirement has a target, an operation the user decided or the agent took, and a recorded impact path. Every product ambiguity has an OQ. The next stage may write only the triaged scope. A rejected option stays excluded until a decision row whose Approach opens `Reopens DEC-…` is appended.
 
 The one exception: a change to shipped seed or sample data whose values no
 story, BR or contract sets changes no story-tree file. Triage states that in one

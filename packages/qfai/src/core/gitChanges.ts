@@ -173,15 +173,12 @@ function differsIgnoringEol(root: string, baseBranch: string, file: string): boo
  * **Three-dot, deliberately.** `<base>..HEAD` answers "how do these two trees
  * differ", which includes everything `<base>` gained after the branch left it —
  * so a file changed on `origin/main` and never touched here was reported as
- * "modified on this branch", and `QFAI-DRIFT-001`'s error count grew as main
- * advanced, on a branch whose review cycle the gate itself makes slow. Gate
- * item 12's step 4 is `qfai validate --fail-on error`, so the gate became a
- * function of wall-clock time rather than of the tree.
+ * "modified on this branch", and the diff-gated findings grew as main advanced,
+ * so the gate became a function of wall-clock time rather than of the tree.
  *
  * `<base>...HEAD` is the merge-base comparison, which is what both callers
- * mean: `upstreamSsotGuard` asks whether a downstream phase edited a protected
- * artifact, and `traceabilityIntegrity` asks which spec packs this branch
- * changed. Neither question is about what happened on `base`.
+ * mean: `upstreamSsotGuard` asks which examples this branch changed, and
+ * `traceabilityIntegrity` asks which spec packs this branch changed. Neither question is about what happened on `base`.
  *
  * Returns `null` — not an empty set — when git is unavailable, the base branch
  * cannot be resolved, or the directory is not a repository. "git could not
@@ -195,9 +192,7 @@ function differsIgnoringEol(root: string, baseBranch: string, file: string): boo
  * CRLF rewrite on Windows changes every byte of a protected artifact without
  * changing a single line of its content, and the drift protocol tells the
  * reviewer to read exactly such a diff as "not evidence of drift". Listing the
- * path anyway would leave the operator owing a Change Request for a change that
- * carries no content — with no edit that could ever satisfy it short of
- * reverting the line endings.
+ * path anyway would report a change that carries no content.
  *
  * The listing is taken from `--numstat` rather than `--name-only` because only
  * the line counts are derived from the diff itself. Whether `--name-only`
@@ -319,57 +314,5 @@ export function changedFilesSince(
     // worktree or a pathspec git rejects. Reporting it as unchanged would be
     // the collapse this function exists to avoid.
     return { kind: "unresolvable" };
-  }
-}
-
-/**
- * The paths the working tree holds uncommitted that `include` accepts: tracked changes, staged or
- * not, and untracked files git does not ignore. `null` when git cannot list them.
- *
- * A tracked file whose only difference from HEAD is a line ending is left out, as
- * {@link getChangedFilesAgainstBase} drops it from the committed comparison: such an edit carries
- * no content, so it must not be warned about now and then never reported once committed.
- * `include` runs first, so only the paths a caller cares about cost a `git diff`.
- *
- * `-z` keeps a path with a space or a non-ASCII name as git wrote it, and `--no-renames` makes a
- * move report both of its paths.
- */
-export function uncommittedContentPaths(
-  root: string,
-  include: (file: string) => boolean,
-): string[] | null {
-  const output = gitStdout(root, [
-    "status",
-    "--porcelain=v1",
-    "-z",
-    "--untracked-files=all",
-    "--no-renames",
-  ]);
-  if (output === null) return null;
-  const paths: string[] = [];
-  for (const entry of output.split("\0")) {
-    if (entry.length <= 3) continue;
-    const file = normalizeRepoPath(entry.slice(3));
-    if (!include(file)) continue;
-    const code = entry.slice(0, 2);
-    const modifiedInPlace = !code.includes("?") && !code.includes("D") && !code.includes("A");
-    if (modifiedInPlace && !differsFromHeadIgnoringEol(root, file)) continue;
-    paths.push(file);
-  }
-  return paths.sort();
-}
-
-/** Whether `file` differs from HEAD, in the index or the working tree, beyond line endings. */
-function differsFromHeadIgnoringEol(root: string, file: string): boolean {
-  try {
-    execFileSync(
-      "git",
-      ["diff", "--ignore-cr-at-eol", "--quiet", "HEAD", "--", `:(literal)${file}`],
-      { cwd: root, encoding: "utf-8", stdio: ["ignore", "ignore", "ignore"] },
-    );
-    return false;
-  } catch {
-    // A git failure is read as "changed", as in `differsIgnoringEol`.
-    return true;
   }
 }

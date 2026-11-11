@@ -59,7 +59,7 @@ describe("decision row identity", () => {
       expect(triage, tree).toContain("--base <local-ref>");
       expect(triage, tree).toContain("the renamed record's subject or path in the commit message");
       expect(triage, tree).toContain(
-        "ask the user for a change request row that states which record each citation meant",
+        "ask the user, as a critical decision, which record each citation meant",
       );
     }
   });

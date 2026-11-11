@@ -19,8 +19,8 @@ Feature: Unified SDD Workflow
   # AC-0001-0147-03
   Scenario: Records Go To The Two Tables
     Given the story tree,
-    When `/qfai-sdd` records a triage decision, a change request, a retired story, a rejected option or an open question,
-    Then each of the first four is a row of `decisions.md` and the open question is a row of `open-questions.md`. Every row carries exactly the cells ID, Content and Approach, and a rejected option is a row whose Content opens `Declined:`, or `Declined change request:` when it is a change request the user declined; either authorizes nothing. Nothing is written under `.qfai/decisions/`, no `01_Spec-retired` file is written, and a row the register holds is never edited.
+    When `/qfai-sdd` records a decision the user made that passes the recording test, a rejected option or an open question,
+    Then each of the first two is a row of `decisions.md` and the open question is a row of `open-questions.md`. Every row carries exactly the cells ID, Content and Approach, and a rejected option is a row whose Content opens `Declined:`, which authorizes nothing. Nothing is written under `.qfai/decisions/`, no `01_Spec-retired` file is written, and a row the register holds is never edited.
     And a decision that replaces or narrows an earlier one is a new row whose Approach cites the earlier ID, and the earlier row stays as written.
     And a question deferred after its row was written is deleted, and a new question row is appended whose Approach names the next decision point and says `Replaces OQ-…` with the deleted ID.
 
@@ -67,9 +67,9 @@ Feature: Unified SDD Workflow
   Scenario: Adopted Findings Change The Tree By The Existing Routes
     Given a finding the cycle adopted,
     When its change is applied,
-    Then an AC or EX this invocation wrote is changed directly, an item that existed when the invocation started changes only under a `Change request:` row this branch adds whose approved change covers it, and creating, splitting, merging or retiring a BF or US is put to the user however recently the item was written.
-    And under `--contract` a finding that only a story change answers asks for a wider change request and leaves the story unchanged, and after the changes the BRs are rewritten from the updated EXs.
-    And a capacity-only story partition instead requires an owning change request this branch adds, explicitly covering its paths, requested AC or EX additions exceeding the source story's retired-inclusive remaining 99-H at its actual observed high-water H, and a truthful cohesive scope under the same BF and actual actor goal without inventing a product outcome; it grants no wider semantic change or flow operation
+    Then an AC or EX this invocation wrote is changed directly, an item that existed when the invocation started changes directly only when the user's request in the session names that change and is otherwise put to the user, and creating, splitting, merging or retiring a BF or US is put to the user however recently the item was written.
+    And under `--contract` a finding that only a story change answers is put to the user and leaves the story unchanged until the user answers, and after the changes the BRs are rewritten from the updated EXs.
+    And a capacity-only story partition instead requires the user's decision, covering its paths, requested AC or EX additions exceeding the source story's retired-inclusive remaining 99-H at its actual observed high-water H, and a truthful cohesive scope under the same BF and actual actor goal without inventing a product outcome; it decides no wider semantic change or flow operation
 
   # AC-0001-0147-12
   Scenario: At Most Two Cycles
@@ -82,9 +82,9 @@ Feature: Unified SDD Workflow
   Scenario: A Decided Finding Is Not Raised Again
     Given a finding the session already decided, or a change the user declined,
     When a later cycle of the session looks for findings,
-    Then the finder raises no finding that has the kind and target IDs of a finding the session already decided and a case equal to, including or included in that finding's case, and no finding that the proposed change of a change request the user declined already answers.
+    Then the finder raises no finding that has the kind and target IDs of a finding the session already decided and a case equal to, including or included in that finding's case, and no finding that a change the user declined already answers.
     And a decided or dropped finding appends no row; only a finding still undecided when the session ends becomes an `open-questions.md` row.
-    And matching never goes by wording, and a decision row whose Approach opens `Reopens DEC-…` with the ID of a declined change request the register holds lifts that row.
+    And matching never goes by wording, and a decision row whose Approach opens `Reopens DEC-…` with the ID of a `Declined:` row the register holds lifts that row.
 
   # AC-0001-0147-15
   Scenario: A Pre-draft Grilling Checkpoint Precedes Each Design Write
@@ -100,13 +100,13 @@ Feature: Unified SDD Workflow
     When the owner considers a capacity-only partition or an actual case move
     Then it records the kind, source story, observed H, remainder and requested count, and additions that fit the original scope do not qualify for this exception
     And it first preserves existing published cases and IDs and prefers a cohesive incoming group in a capacity-checked sibling story within the same BF
-    And only an owning change request this branch adds, explicitly approving the partition and affected paths permits that narrow creation exception under the same actual actor goal without inventing a new product outcome
+    And only the user's decision of the partition and its affected paths permits that narrow creation exception under the same actual actor goal without inventing a new product outcome
     And truthful cohesive scope and criterion ownership are settled before writing, without silently duplicating or weakening obligations
-    And a different actor, goal, flow or intended behavior returns to its existing owning approval path, and no truthful partition or insufficient destination capacity stops the dependent write
+    And a different actor, goal, flow or intended behavior is its own critical decision, and no truthful partition or insufficient destination capacity stops the dependent write
     And an actual move or incoming collision repair has a complete one-to-one map binding fixed source commit and paths and original identity and meaning to destination story and AC and EX identity and paths, active BR citations and every counted adjacent test declaration, with unchanged cases identified
     And case inputs, expected outcomes and executable assertions are preserved, destination links and counted test obligations remain complete, and both scopes' retired-inclusive capacity is checked
-    And moved old IDs are retired through a new approved record and never reissued, while inherited published decision ID and Content and Approach cells and their historical references stay unchanged
-    And only approved active references and provably incoming collision items change, without blanket replacement or claiming completion from an ID change
+    And moved old IDs are named as retired in the stage report and the commit message and never reissued, while inherited published decision ID and Content and Approach cells and their historical references stay unchanged
+    And only the active references the map covers and provably incoming collision items change, without blanket replacement or claiming completion from an ID change
     And an incomplete map, ambiguous ownership or collision, missing counted link, uncovered declaration or changed assertion stops the move, with no new executor or schema
 
   # AC-0001-0147-17
@@ -122,6 +122,5 @@ Feature: Unified SDD Workflow
     When `/qfai-sdd` writes its result,
     Then the result is written in place where it lives, as the current state: one statement per concept with at most one sentence of reason, and no date, approver, quoted request or history.
     And it goes to `01_policy/` only when it binds more than one flow or the whole product; a non-functional requirement is a contract BR with a measurable threshold and an example, and only a product-wide one goes to `constraint.md`.
-    And the `Change request:` row names the paths and the approval, who, when and the option chosen, without restating the edit.
-    And a trivial edit adds no policy or constraint entry and no decision row beyond its change request.
+    And a trivial edit adds no policy or constraint entry and no decision row.
 ```

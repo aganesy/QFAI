@@ -54,7 +54,7 @@ contract IDs are not coverage annotations.
    mutation.
 4. A test that fails because the product is wrong is not repaired here: report
    it as a defect for `implement-tdd` or a fix route. A test that cannot be
-   written because the story or contract is wrong is a change request under
+   written because the story or contract is wrong is a specification change under
    `.qfai/assistant/rule/drift-protocol.md`.
 
 ## Gate

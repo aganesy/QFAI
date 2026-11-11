@@ -88,22 +88,22 @@ The table holds no rule. A behaviour a layer must show is a BR in the contract t
 | Open question        | OQ-yyyymmddhhMMss  | open-questions.md                                     |
 
 Use highest existing number plus one in the scope. A decision or question row instead takes the UTC time it is written; a legacy `DEC-NNNN` or `OQ-NNNN` row keeps its ID.
-Count IDs named in retired-item decisions, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Take the number from `npx qfai sdd next-id`, which reads the working tree and a fetched base and reserves no ID.
+Count IDs named in decision rows, `Retired:` rows among them, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Take the number from `npx qfai sdd next-id`, which reads the working tree and a fetched base and reserves no ID.
 
 AC/EX tails remain two digits with upper bound 99. Before planned additions,
 compare requested additions with the retired-inclusive remaining 99-H. Stop an
-over-capacity batch before partial declarations. For an approved capacity-only
-sibling or actual move, apply the owning stage's capacity preflight and complete
+over-capacity batch before partial declarations. For a capacity-only sibling or
+actual move the user decided, apply the owning stage's capacity preflight and complete
 map before writing; no larger ID or new product outcome is a substitute for the
 required scope.
 
 Constraint IDs are the exception. `TC-NN`, `OC-NN` and `BC-NN` in constraint.md are positional: each section numbers its rows from 01 in table order. No other document cites one, so a removed row closes the gap and the rows after it are renumbered. `npx qfai validate` reports a constraint ID that is not its row's place.
 
 Moving a story to another flow changes its US ID and every child AC and EX ID
-under its existing approval path. Preserve case meanings and assertions through
-the complete fixed-source map, update approved active indexes, contract citations
-and counted test references. Record the old IDs as retired in a new approved
-record so they cannot be issued again. Inherited DEC ID, Content and Approach
+as a critical decision the user answers. Preserve case meanings and assertions
+through the complete fixed-source map, update the active indexes, contract
+citations and counted test references. Name the old IDs as retired in the stage
+report and the commit message so they are not issued again. Inherited DEC ID, Content and Approach
 cells and their old-ID references stay historical and unchanged.
 
 ## Edge rules
@@ -132,12 +132,12 @@ A justified exception is a decisions.md row whose Content opens Test exception: 
 
 ## Decision provenance and drift
 
-decisions.md records only what the user decided: each change request the user approved or declined,
-retired stories included, and each critical decision the user made. Open questions are rows of open-questions.md. Both tables have
-ID, Content and Approach. A decision row is never edited, moved or removed; a question row is never edited. The
-change request's Content begins Change request: and names its allowed repository-relative paths. A declined option
-(`Declined change request:` or `Declined:`) stays rejected unless a later decision row whose Approach opens
-`Reopens DEC-…` reopens it.
+decisions.md records only the decisions the user made, approvals included, that pass the recording test at the top
+of templates/spec/decisions.md. Open questions are rows of open-questions.md. Both tables have
+ID, Content and Approach. A decision row is never edited, moved or removed; a question row is never edited. A
+declined option (`Declined:`) stays rejected unless a later decision row whose Approach opens
+`Reopens DEC-…` reopens it. A legacy row opening `Change request:` or `Declined change request:` is history and
+authorizes nothing.
 
 A decisions.md row's Approach takes the form stated at the top of templates/spec/decisions.md.
 

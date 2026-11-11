@@ -591,7 +591,7 @@ describe("this repository's own Codex profiles", () => {
       "utf-8",
     );
     expect(rule).toContain("Once a spec row is agreed, asking");
-    expect(rule).toContain("a Change Request");
+    expect(rule).toContain("a specification change");
     expect(rule).toContain("Is it already in this codebase?");
     expect(rule).toContain("Does the standard library do it?");
     expect(rule).toContain("Does a native platform feature cover it?");

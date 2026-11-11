@@ -43,7 +43,7 @@ describe("contract obligations are reconciled after concrete examples", () => {
         expect(flat(rules)).toContain(
           "recheck every obligation in it until a pass writes nothing and adds no flow",
         );
-        expect(flat(rules)).toContain("write scope stays within the approved change-request row");
+        expect(flat(rules)).toContain("write scope stays within the triaged scope");
         expect(flat(rules)).toContain("A confirm-only review is read-only");
       },
     );

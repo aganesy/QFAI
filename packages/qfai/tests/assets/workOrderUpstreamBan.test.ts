@@ -62,31 +62,29 @@ describe("the work order template bans upstream patching unconditionally", () =>
       const block = flat(await workOrderBlock(tree));
 
       expect(block).toContain(
-        "every upstream change requires STOP + Change Request + owner rerun per .qfai/assistant/rule/drift-protocol.md",
+        "every upstream change requires STOP + proposed change to the owner + owner rerun per .qfai/assistant/rule/drift-protocol.md",
       );
     });
 
-    it(`${tree}: the protected set is an input the sub-agent receives`, async () => {
-      // A delegated agent should not have to recall the protected set from
+    it(`${tree}: the upstream set is an input the sub-agent receives`, async () => {
+      // A delegated agent should not have to recall the upstream set from
       // memory; the work order hands it the list.
       const block = await workOrderBlock(tree);
 
       expect(block).toContain(".qfai/assistant/rule/drift-protocol.md#core-rule");
     });
 
-    it(`${tree}: the drift protocol defines the protected set and owner path`, async () => {
+    it(`${tree}: the drift protocol defines the upstream set and owner path`, async () => {
       const drift = flat(await read(tree, DRIFT));
       expect(drift).toContain("A downstream skill does not edit an approved specification");
-      expect(drift).toContain(
-        "Protected project artifacts include the policy and business-flow trees",
-      );
-      expect(drift).toContain("Obtain the user's explicit answer");
+      expect(drift).toContain("Upstream artifacts include the policy and business-flow trees");
+      expect(drift).toContain("put it to the user and wait for the answer");
       expect(drift).toContain("Rerun the owner skill against the affected artifact");
     });
 
     it(`${tree}: the two files still reject downstream self-authorization`, async () => {
       const drift = await read(tree, DRIFT);
-      expect(drift).toContain("Downstream stages do not patch protected upstream artifacts");
+      expect(drift).toContain("Downstream stages do not patch upstream artifacts");
     });
   }
 });

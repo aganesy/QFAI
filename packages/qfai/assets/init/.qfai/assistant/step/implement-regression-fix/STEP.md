@@ -32,8 +32,8 @@ The route's code review judges the fix. A fix that changes a screen, as
 to that review. The full suite and the
 project gates run once, in the verify stage.
 
-The example stays annotated by the same test. No `Change request:` row is
-appended and no evidence entry is removed. A contradiction or obstacle found
+The example stays annotated by the same test. No story or contract changes,
+and no evidence entry is removed. A contradiction or obstacle found
 here stops the work under Article IX of
 `.qfai/assistant/rule/constitution.md`.
 

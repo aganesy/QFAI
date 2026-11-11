@@ -1,43 +1,29 @@
 #!/usr/bin/env node
 /**
- * Hold the route catalog, the plans the package ships and the approvals behind them together.
+ * Hold the route catalog and the plans the package ships together.
  *
- * The workflow contract's route rows are the catalog. Each row states a route's plan and cites the
- * `Change request:` row in `decisions.md` that approved it, and the package ships one plan file per
- * row. Nothing else notices when the three drift apart, and a route changed without a person's
- * approval is the failure this lane exists for: an agent never approves a route change.
+ * The workflow contract's route rows are the catalog. Each row states a route's plan, and the
+ * package ships one plan file per row. Nothing else notices when the two drift apart.
  *
  * ## What fails the run
  *
- *   - a row citing a decision the table does not hold, one that is not an in-force change request
- *     naming the workflow contract, or one whose Approach does not name the route and record who
- *     approved it and when;
  *   - a plan file with no row, a row with no plan file, or a plan that states something its row
  *     does not: its family, its stages, their steps, reviews and served artifacts, or its
- *     decision, release or branch points;
- *   - against the base of the change, a route row added or changed that does not cite a change
- *     request this change appended, or a route row removed with no appended change request naming
- *     the route.
- *
- * The base is resolved the way `check-shipped-ci-parity.mjs` resolves it. An unresolvable base warns
- * and skips only the comparison with the base; the rest still runs.
+ *     decision, release or branch points.
  *
  * Exit codes: 0 clean / 1 a fault / 2 an unknown argument.
  */
 import { readdirSync, readFileSync } from "node:fs";
-import { createRequire, register } from "node:module";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { argv, cwd, exit, stderr, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
-
-import { resolveRange } from "./check-shipped-ci-parity.mjs";
 
 // `yaml` is installed under the package workspace only; see `check-workflow-hygiene.mjs`.
 const require = createRequire(import.meta.url);
 const { parse: parseYaml } = require("./../packages/qfai/node_modules/yaml");
 
 export const CONTRACT = ".qfai/spec/03_contract/cli/cli-0015-qfai-workflow.md";
-export const DECISIONS = ".qfai/spec/decisions.md";
 export const PLANS_DIR = "packages/qfai/assets/defaults/workflows";
 
 /** The cells of one Markdown table row, a `\|` inside a cell kept as a pipe. */
@@ -94,56 +80,9 @@ export function routeRowsOf(contractText) {
       decisionPoints: listAfter(statement, "Decision points"),
       releasePoint: releasePointOf(statement),
       branchPoints: branchStepsOf(statement),
-      approvedBy: /Approved by (DEC-(?:\d{14}|\d{4}))\b/.exec(statement)?.[1],
     });
   }
   return routes;
-}
-
-/**
- * Each row of the decisions table, by ID: the ID, Content and Approach cells of every line that
- * starts with a DEC ID, whatever cells follow.
- */
-export function decisionRowsOf(decisionsText) {
-  if (Array.isArray(decisionsText)) return new Map(decisionsText.map((row) => [row.id, row]));
-  const rows = new Map();
-  for (const line of decisionsText.split(/\r?\n/)) {
-    if (!line.startsWith("| DEC-")) continue;
-    const [id, content = "", approach = ""] = cellsOf(line);
-    rows.set(id, { id, content, approach });
-  }
-  return rows;
-}
-
-function namesRoute(text, route) {
-  return new RegExp(`(^|[^a-z-])${route}([^a-z-]|$)`).test(text);
-}
-
-// What is wrong with the change request a route row cites, or nothing.
-function citationFault(route, row, decisions) {
-  const cited = row.approvedBy;
-  if (!cited) return `${route}: the row cites no change request`;
-  const decision = decisions.get(cited);
-  if (!decision) return `${route}: the row cites ${cited}, which decisions.md does not hold`;
-  // A change request row exists once the change is approved; a declined one opens
-  // `Declined change request:` and approves nothing.
-  const request = /^Change request:/.test(decision.content) && decision.content.includes(CONTRACT);
-  if (!request) return `${route}: ${cited} is not a change request naming ${CONTRACT}`;
-  const approach = decision.approach;
-  const recorded = /\b\d{4}-\d{2}-\d{2}\b/.test(approach) && /approv/i.test(approach);
-  if (!namesRoute(approach, route) || !recorded) {
-    return `${route}: ${cited} does not name the route and record who approved it, and when`;
-  }
-  return undefined;
-}
-
-/** Each route row whose cited change request does not approve it. */
-export function citationFaults(contractText, decisionsText) {
-  const decisions = decisionRowsOf(decisionsText);
-  return [...routeRowsOf(contractText)].flatMap(([route, row]) => {
-    const fault = citationFault(route, row, decisions);
-    return fault ? [fault] : [];
-  });
 }
 
 function stepText(entry) {
@@ -198,36 +137,6 @@ export function planFaults(contractText, plans) {
   return faults;
 }
 
-// The route rows a change added, changed and removed.
-function changedRoutes(baseContract, headContract) {
-  const base = routeRowsOf(baseContract);
-  const head = routeRowsOf(headContract);
-  const touched = [...head].filter(([route, row]) => base.get(route)?.statement !== row.statement);
-  const removed = [...base.keys()].filter((route) => !head.has(route));
-  return { touched, removed };
-}
-
-/** Each route row a change moved without citing a change request it appended. */
-export function changeFaults(base, head) {
-  const { touched, removed } = changedRoutes(base.contract, head.contract);
-  const before = decisionRowsOf(base.decisions);
-  const appended = [...decisionRowsOf(head.decisions).values()].filter(
-    (row) => !before.has(row.id) && /^Change request:/.test(row.content),
-  );
-  const appendedFor = (route) => appended.filter((row) => namesRoute(row.approach, route));
-  const faults = touched.flatMap(([route, row]) =>
-    appendedFor(route).some((each) => each.id === row.approvedBy)
-      ? []
-      : [`${route}: the route row changed, and cites no change request this change appended`],
-  );
-  for (const route of removed) {
-    if (appendedFor(route).length === 0) {
-      faults.push(`${route}: the route row was removed, and no appended change request names it`);
-    }
-  }
-  return faults;
-}
-
 export function readPlans(root) {
   const dir = path.join(root, PLANS_DIR);
   const plans = new Map();
@@ -239,71 +148,27 @@ export function readPlans(root) {
   return plans;
 }
 
-async function baseFaults(head, root) {
-  const range = resolveRange(undefined);
-  if (range.unresolvable) {
-    stderr.write(
-      `check-route-catalog: warning: ${range.unresolvable}; the base is not compared.\n`,
-    );
-    return [];
-  }
-  const { readFileAtRevision, readDecisionFilesAtRevision } =
-    await import("../packages/qfai/src/core/gitChanges.ts");
-  const contract = readFileAtRevision(root, range.baseRev, CONTRACT);
-  const texts = readDecisionFilesAtRevision(root, range.baseRev, ".qfai/spec");
-  if (contract === null) return [];
-  if (
-    !texts.has(DECISIONS) &&
-    ![...texts.keys()].some((file) => file.startsWith(".qfai/spec/decisions/"))
-  )
-    return [];
-  // Only the IDs the base holds matter here, and an open change may predate a register layout, so
-  // the base is read by the ID cell of each row rather than by the parser.
-  return changeFaults({ contract, decisions: [...texts.values()].join("\n") }, head);
-}
-
 async function main() {
   if (argv.length > 2) {
     stderr.write("check-route-catalog: takes no argument.\n");
     return 2;
   }
   const root = cwd();
-  const { defaultConfig } = await import("../packages/qfai/src/core/config.ts");
-  const { readStoryTreeModel } = await import("../packages/qfai/src/core/storyTree/tree.ts");
-  const model = await readStoryTreeModel(root, defaultConfig);
-  if (!model.decisionRegisterComplete || (model.decisions?.errors.length ?? 0) > 0) {
-    const problems = [
-      ...model.decisionRegisterErrors.map(({ file, message }) => `${file}: ${message}`),
-      ...(model.decisions?.errors ?? []),
-    ];
-    throw new Error(
-      `The complete current decision register could not be read safely: ${problems.join("; ")}`,
-    );
-  }
-  const head = {
-    contract: readFileSync(path.join(root, CONTRACT), "utf8"),
-    decisions: model.decisions?.rows ?? [],
-  };
-  const faults = [
-    ...citationFaults(head.contract, head.decisions),
-    ...planFaults(head.contract, readPlans(root)),
-    ...(await baseFaults(head, root)),
-  ];
+  const contract = readFileSync(path.join(root, CONTRACT), "utf8");
+  const faults = planFaults(contract, readPlans(root));
   if (faults.length === 0) {
-    const count = routeRowsOf(head.contract).size;
-    stdout.write(`check-route-catalog: ${count} routes, each approved and shipped as stated.\n`);
+    const count = routeRowsOf(contract).size;
+    stdout.write(`check-route-catalog: ${count} routes, each shipped as stated.\n`);
     return 0;
   }
   for (const fault of faults) stderr.write(`${fault}\n`);
   stderr.write(
-    "\ncheck-route-catalog: a route is added, removed or changed only with a person's approval, " +
-      "recorded as a new `Change request:` row that the route row cites.\n",
+    "\ncheck-route-catalog: each route row and its shipped plan state the same route.\n",
   );
   return 1;
 }
 
 if (argv[1] !== undefined && import.meta.url === pathToFileURL(argv[1]).href) {
-  register("./lib/ts-specifier-hook.mjs", import.meta.url);
   try {
     exit(await main());
   } catch (error) {

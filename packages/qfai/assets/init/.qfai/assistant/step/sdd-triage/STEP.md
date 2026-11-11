@@ -1,7 +1,7 @@
 ---
 name: sdd-triage
 owner: qfai-sdd
-purpose: "Select the requirement source, classify each requirement against the story tree, and record the decisions, questions and approvals the later writes depend on."
+purpose: "Select the requirement source, classify each requirement against the story tree, and settle the decisions and questions the later writes depend on."
 requires: []
 ---
 
@@ -14,7 +14,7 @@ changes, and record that decision before anything depends on it.
 
 - The applicable `.qfai/assistant/rule/` files.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md`: the operation set,
-  the approval boundary and the decision-row format.
+  the critical decisions and the decision-row format.
 - `.qfai/assistant/skill/qfai-sdd/references/requirements-decomposition.md` and
   `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md`.
 - `.qfai/assistant/rule/change-classification.md`, the classification
@@ -69,21 +69,19 @@ reference before allocating IDs or relying on a decision. Append new rows only
 to the root table, and never move a row between files; an unreadable or
 incomplete register stops this stage.
 
-Record in `<paths.specsDir>/decisions.md` only what the user decided: each
-change request the user approved or declined, and each critical decision the
-user made. Record unresolved questions in `<paths.specsDir>/open-questions.md`.
+Record in `<paths.specsDir>/decisions.md` only the decisions the user made,
+approvals included, that pass the recording test at the top of the
+`qfai-sdd` decisions template: hard to reverse, surprising to a reader without
+context, and the result of a real trade-off. The stage report states every
+other decision. Record unresolved questions in `<paths.specsDir>/open-questions.md`.
 Every row has exactly `ID | Content | Approach`. A new row's ID is
 `DEC-yyyymmddhhMMss` or `OQ-yyyymmddhhMMss`, the UTC time it is written.
 
 - A decisions.md row is appended once and never edited, moved or removed.
-- A change request Content begins `Change request:` and names the affected
-  repository-relative paths; its Approach names the operation, the affected BF
-  or US, its source as `discussion-<id>#REQ-NNNN` when that source exists, and
-  who approved it, when, and the option chosen. It authorizes those paths only
-  on the branch that adds it.
-- A declined change request is a row whose Content opens
-  `Declined change request:`, recording who declined it and when. Any other
-  option the user rejects opens `Declined:`. Neither authorizes anything.
+- An option the user rejects is a row whose Content opens `Declined:`,
+  recording who declined it and when. It authorizes nothing.
+- Name each requirement's source as `discussion-<id>#REQ-NNNN` when that
+  source exists, in the stage report and in any row the decision writes.
 - A decision that refers to an earlier row is a new row whose Approach opens
   with the earlier ID: `Supersedes DEC-…`, `Narrows DEC-…`, or `Reopens DEC-…`
   for a declined option.
@@ -98,11 +96,13 @@ the same register, not a second decision home. Write each decision's result
 where it lives as the triage reference's "Where a decision's result lives"
 section says: the current state only, one statement per concept.
 
-Put each approval-required operation to the user before anything depends on
-it. A request from the user in the session that names the operation and its
-effect is that approval: list the files in the announcement and ask nothing
-more. `--auto` asks no questions and never supplies its own approval; stop
-before the dependent write and report pending approvals.
+Put each critical decision to the user before anything depends on it, as the
+triage reference's "Critical decisions and no-question mode" section lists
+them. A request from the user in the session that names the operation and its
+effect is that answer: list the files in the announcement and ask nothing
+more. Make every other story-tree or contract change yourself and list it in
+the stage report. `--auto` asks no questions and never supplies its own
+answer; stop before the dependent write and report pending decisions.
 
 ### UI-bearing flows
 
@@ -150,7 +150,10 @@ wired or retired:
 ## Settled mode
 
 A work order step with `mode: settled` applies a decision already recorded and
-approved: the one the work order's `settled` field or the request cites.
+approved: the one the work order's `settled` field or the request cites. The
+record is a `decisions.md` row, or the output of the step that branched here,
+such as `branch: { outcome: contract-finding }`, which names the change, who
+approved it and when.
 
 - Read that record and the part of the story tree it names. Do not reopen,
   grill again or widen what it settles.
@@ -159,8 +162,9 @@ approved: the one the work order's `settled` field or the request cites.
   changed criterion, a behaviour the record never mentions — stops the step.
   Write nothing, and report `branch: { outcome: outside-record }`, which moves
   the work to `decide-design`.
-- A citation that resolves to no `decisions.md` row stops the step: put the missing
-  record to the operator as a question, and write nothing.
+- A citation that resolves to neither a `decisions.md` row nor that branch output
+  stops the step: put the missing record to the operator as a question, and
+  write nothing.
 
 ## At a decision point
 
@@ -220,16 +224,10 @@ decision it holds to the user, and list each decision it adopted in the final
 report. Each later design-writing step runs its own checkpoint the
 same way.
 
-## A change to the story tree
-
-A story-tree or contract file changes only on the user's approval, as
-`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
-sets out. Every later step of the stage writes under that rule.
-
 ## Gate
 
-The affected-flow scope and approval state are recorded before any drafting
-step starts. Every requirement has a target, an approved or
-approval-free operation and a recorded impact path, as
+The affected-flow scope and the answers to its critical decisions are recorded
+before any drafting step starts. Every requirement has a target, an operation
+the user decided or the agent took, and a recorded impact path, as
 `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#completion-of-triage`
 states.

@@ -43,15 +43,15 @@ Run the steps in this order, as
 states: read `.qfai/assistant/step/<id>/STEP.md` for the current step only, run
 it, then move to the next.
 
-| Step               | What it does                                                   | Skipped when                                               |
-| ------------------ | -------------------------------------------------------------- | ---------------------------------------------------------- |
-| `sdd-triage`       | Source, preflight, triage, approvals and ID allocation         | Never                                                      |
-| `sdd-flow`         | Policy, `tech.md` and business flows                           | Triage changed no policy fact and no flow                  |
-| `sdd-story`        | Stories, Gherkin AC and EX                                     | Never                                                      |
-| `sdd-contract`     | Contracts and the BRs they enforce, or the `--contract` repair | Triage changed no BR and no contract                       |
-| `common-design-md` | Root `DESIGN.md`                                               | The flow is not UI-bearing, or its surface is CLI-only     |
-| `sdd-cycle`        | The concrete-abstract cycle between BRs and EXs                | `sdd-contract` wrote or changed no BR Statement or Example |
-| `sdd-gate`         | Per-flow `validate --profile sdd` and the flow report          | Never                                                      |
+| Step               | What it does                                                    | Skipped when                                               |
+| ------------------ | --------------------------------------------------------------- | ---------------------------------------------------------- |
+| `sdd-triage`       | Source, preflight, triage, critical decisions and ID allocation | Never                                                      |
+| `sdd-flow`         | Policy, `tech.md` and business flows                            | Triage changed no policy fact and no flow                  |
+| `sdd-story`        | Stories, Gherkin AC and EX                                      | Never                                                      |
+| `sdd-contract`     | Contracts and the BRs they enforce, or the `--contract` repair  | Triage changed no BR and no contract                       |
+| `common-design-md` | Root `DESIGN.md`                                                | The flow is not UI-bearing, or its surface is CLI-only     |
+| `sdd-cycle`        | The concrete-abstract cycle between BRs and EXs                 | `sdd-contract` wrote or changed no BR Statement or Example |
+| `sdd-gate`         | Per-flow `validate --profile sdd` and the flow report           | Never                                                      |
 
 `sdd-triage` records whether each affected flow is UI-bearing. A step that
 changes an input an earlier step consumed reruns that step's authors and

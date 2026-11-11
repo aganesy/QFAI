@@ -36,9 +36,9 @@ Green and Refactor cycle. The pass names the examples and their tests.
 ## Scope
 
 Send a decision, a question for the user or an out-of-scope discovery to
-`/qfai-sdd` as a change request. An out-of-scope discovery does not stop the
+`/qfai-sdd` as a specification change. An out-of-scope discovery does not stop the
 current flow. A diagnosed missing test on behaviour an existing AC states is
-the one scope gap that raises no change request: an EX that states the case is
+the one scope gap that goes to no specification change: an EX that states the case is
 worked as an EX no test annotates, and where none does, this step appends it,
 as [A diagnosed missing example](#a-diagnosed-missing-example) states.
 
@@ -104,9 +104,8 @@ requires, so the step asks the user nothing:
 - Add the new EX ID to the selected rule's Examples cell. Its Statement is
   unchanged. This choice of equivalent rules asks no extra question.
 - Change no story, AC, rule statement or existing EX.
-- Append no `decisions.md` row: the drift gate needs no `Change request:` row
-  for appended example rows and the new EX ID in the citing rule's Examples
-  cell.
+- Append no `decisions.md` row for the appended example row and the new EX ID
+  in the citing rule's Examples cell.
 - List the EX, chosen BR and the reason for choosing it in the run's final
   report.
 - No concrete-abstract cycle runs.

@@ -19,8 +19,8 @@ describe("story-tree decision records replace the per-spec delta", () => {
       expect(template).toContain("| ID  | Content | Approach |");
       expect(template).toContain("is never edited, moved or removed afterwards");
       expect(rules).toContain("A decision row is never edited, moved or removed");
-      expect(rules).toContain("Change request:");
-      expect(rules).toContain("`Declined change request:`");
+      expect(rules).toContain("`Declined:`");
+      expect(rules).toContain("pass the recording test");
     });
 
     it(tree + ": keeps questions in a separate three-column register", async () => {

@@ -27,17 +27,16 @@ rules against their examples. Follow
 - **Scope.** A proposed EX must be implied by an existing BR, an existing AC or
   the request; otherwise the session drops it.
 - **Applying.** An item this invocation wrote changes directly. An item that
-  existed before changes only under a `Change request:` row this branch adds whose
-  approved change covers the change, or on the user's approval. A BF or US
-  split, merge, creation or retirement is put to the user. Under `--contract`,
-  a story change asks for a wider change request. Rewrite the affected BRs
-  afterwards.
+  existed before changes directly when the user's request names the change, and
+  otherwise is put to the user as a critical decision. A BF or US split, merge,
+  creation or retirement is put to the user. Under `--contract`, a story change
+  is put to the user. Rewrite the affected BRs afterwards.
 - **Stop.** At most two cycles; a cycle that adopts nothing ends the loop. A
   finding still undecided at the end becomes one `open-questions.md` row
   whose Content opens `Unadjudicated:`. No other record is written.
 - **Not raised again.** A finding matching one the session decided, by kind,
   target IDs and an equal, including or included case, is not raised again,
-  nor one a declined change request already answers.
+  nor one a declined change already answers.
 
 ## Passes when
 

@@ -286,6 +286,7 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   issues.push(...validateRuleContractNumbers(model));
   issues.push(...validateRecordCitations(model));
   issues.push(...validateDecisionApproaches(model));
+  issues.push(...validateDecisionLengths(model));
   return issues;
 }
 
@@ -395,7 +396,7 @@ const EVIDENCE_ENTRY = /^(?:file:\S|command:\s*\S)/;
 const NONE_WITH_REASON = /^none\s+—/;
 
 /** What is wrong with the four labelled items of one Approach cell. */
-export function approachProblems(approach: string): string[] {
+function approachProblems(approach: string): string[] {
   const marks = matchesOutsideCodeSpans(approach, APPROACH_LABEL);
   const labels = marks.map(([, label = ""]) => label);
   const missing = APPROACH_LABELS.filter((label) => !labels.includes(label));
@@ -451,6 +452,30 @@ function validateDecisionApproaches(model: StoryTreeModel): Issue[] {
         ),
       );
     }
+  }
+  return issues;
+}
+
+const DECISION_LENGTH_CODE = "QFAI-STORY-020";
+/** Content and Approach of a short decision record: the decision and its reason in 1-3 sentences. */
+const DECISION_ROW_LIMIT = 600;
+
+/** Warns on a decision row, of either ID form, whose Content and Approach exceed the limit. */
+function validateDecisionLengths(model: StoryTreeModel): Issue[] {
+  const issues: Issue[] = [];
+  for (const { row, origin } of model.decisionOccurrences) {
+    const length = row.content.length + row.approach.length;
+    if (length <= DECISION_ROW_LIMIT) continue;
+    issues.push(
+      issue(
+        DECISION_LENGTH_CODE,
+        `${origin.path}:${origin.actualRow}: ${row.id} holds ${length} characters in Content and Approach, over the limit of ${DECISION_ROW_LIMIT}`,
+        "warning",
+        origin.path,
+        "storyTree.structure",
+        [row.id],
+      ),
+    );
   }
   return issues;
 }

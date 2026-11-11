@@ -13,11 +13,11 @@ Feature: Diagnose a reported defect without changing product code
     And the reproduction, the cause candidates and the impact are in the record it names
 
   # AC-0001-0201-03
-  Scenario: A diagnosed missing test raises no change request from implement
+  Scenario: A diagnosed missing test goes to no specification change from implement
     Given diagnosis found a missing test on behaviour an existing AC states
     When /qfai-implement handles that scope gap
-    Then it appends no change request row to decisions.md
+    Then it sends nothing to /qfai-sdd
     And where no EX states the case, implement-tdd appends one under that AC
-    And the skill's statement of what goes to /qfai-sdd as a change request states that carve-out
-    And any other scope gap still goes to /qfai-sdd as a change request
+    And the statement of what goes to /qfai-sdd as a specification change states that carve-out
+    And any other scope gap still goes to /qfai-sdd as a specification change
 ```

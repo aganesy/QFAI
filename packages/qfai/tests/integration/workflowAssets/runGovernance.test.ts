@@ -181,14 +181,13 @@ describe("governance inside a run", () => {
 
   // QFAI:AC-0001-0002-02
   // QFAI:EX-0001-0002-07
-  it("appends no change request for a bugfix that changes no protected file", async () => {
+  it("routes an upstream defect a bugfix finds to its owner", async () => {
     const drift = flat(await readShipped("rule/drift-protocol.md"));
     expect(drift).toMatch(
-      /a bugfix whose diff changes no file under `01_policy\/`, `02_business-flow\/` or paths\.contractsDir appends no `Change request:` row/i,
+      /a downstream skill does not edit an approved specification, policy, contract, or QFAI-owned rule on its own authority\. It records the discrepancy and returns the affected artifact to its owner/i,
     );
-    expect(drift).toMatch(
-      /a row naming a story file the bugfix did not touch would state an upstream change that did not happen/i,
-    );
+    expect(drift).toMatch(/a project may add a local overlay beside a shipped rule/i);
+    expect(drift).toMatch(/an owner skill may change its own upstream artifact/i);
   });
 });
 

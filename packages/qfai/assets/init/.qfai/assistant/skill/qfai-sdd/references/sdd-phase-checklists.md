@@ -7,10 +7,10 @@ Use these checkpoints with the ordered stages of the SDD steps. A checked item r
 - The selected source is the preflight result's selectedInputPath, or an explicit user requirement named in the SDD report.
 - The selected discussion pack and applicable completed reviews were read and dispositioned. A disagreement was resolved in an SDD-owned artifact.
 - Every requirement has an affected policy, BF, US, EX, or contract path, or an open question that prevents a dependent write.
-- Only an approved change request, a declined change request, a critical decision the user made, and a justified `Test exception:` row are decision rows; a declined change request is a `Declined change request:` row and any other rejected option a `Declined:` row. Open questions are open-questions.md rows.
+- Only a decision the user made that passes the recording test, approvals included, and a justified `Test exception:` row are decision rows; a rejected option is a `Declined:` row. Open questions are open-questions.md rows.
 - Both tables have exactly ID, Content, Approach. New rows take timestamp IDs; existing decision rows are unchanged, and a question row was only deleted when a decision or a replacing question names it.
-- Approval-required rows have the user's decision before any dependent write. Under --auto, pending approvals stopped the run without an invented approval.
-- New IDs use highest-in-scope plus one, including retired IDs in decision rows and the IDs open pull requests add.
+- Critical decisions have the user's answer before any dependent write. Under --auto, pending decisions stopped the run without an invented answer.
+- New IDs use highest-in-scope plus one, including retired IDs and the IDs open pull requests add.
 
 ## Policy and business flow
 
@@ -49,7 +49,7 @@ Follow the cycle the `sdd-cycle` step sets out.
 - A finding resting on product intent nothing written states went to the user. A proposed EX that no existing BR, existing AC or the request implies was dropped.
 - Each adopted change took the route its target's age allows, and the affected BRs were rewritten from their updated EXs.
 - No more than two cycles ran, and a cycle that adopted nothing ended the loop. A finding still undecided at the end is one `Unadjudicated:` open-question row, and no other record was written.
-- No decided finding, and none a declined change request answers, was raised again.
+- No decided finding, and none a declined change answers, was raised again.
 
 ## Validation and review
 

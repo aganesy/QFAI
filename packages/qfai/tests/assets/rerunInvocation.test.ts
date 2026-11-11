@@ -8,12 +8,12 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 describe.each(trees)("owner rerun in %s", (tree) => {
-  it("names approval, the owner input revision, and affected test obligations", async () => {
+  it("names the decision, the owner input revision, and affected test obligations", async () => {
     const rule = await readFile(
       path.join(repoRoot, tree, "assistant/rule/drift-protocol.md"),
       "utf-8",
     );
-    expect(rule).toContain("The owner names the approved decision row, the input revision");
+    expect(rule).toContain("The owner names the decision, the input revision");
     expect(rule).toContain("Recheck every dependent BF, AC, and EX test obligation");
     expect(rule).toContain("Report any uncovered obligation");
   });

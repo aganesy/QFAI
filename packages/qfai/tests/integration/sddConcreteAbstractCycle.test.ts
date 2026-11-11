@@ -153,7 +153,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
   });
 
   // QFAI:AC-0001-0147-10
-  it("changes an existing item only by the drift protocol's approval and the user's answer", async () => {
+  it("changes an existing item only by the drift protocol and the user's answer", async () => {
     const text = await section(CYCLE, "## Applying an adopted finding");
     await expectResolvedCitation(
       CYCLE,
@@ -163,18 +163,22 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     await expectResolvedCitation(
       CYCLE,
       text,
-      ".qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree",
+      ".qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#critical-decisions-and-no-question-mode",
     );
     const triage = flat(await readShipped(TRIAGE));
     for (const operation of ["SPLIT", "MERGE", "UPDATE:REMOVE"]) {
-      expect(triage, `${TRIAGE} makes ${operation} approval-required`).toMatch(
-        new RegExp(`Use the shared user-question protocol for [^.]*${operation}`),
+      expect(triage, `${TRIAGE} makes ${operation} a critical decision`).toMatch(
+        new RegExp(
+          `Use the shared user-question protocol for each critical decision[^.]*${operation}`,
+        ),
       );
     }
     expectSentence(text, "a split or merge", /splitting, merging/i, /Put to the user/i);
     const contractMode = flat(await section(CONTRACT_STEP, "## A named contract"));
-    expect(contractMode).toMatch(/ask for a\s+wider change request when only the story can move/i);
-    expectSentence(text, "the same route here", /`--contract`/, /wider change request/i);
+    expect(contractMode).toMatch(
+      /put the story change to the\s+user as a critical decision when only the story can move/i,
+    );
+    expectSentence(text, "the same route here", /`--contract`/, /put to the\s+user/i);
   });
 
   // QFAI:AC-0001-0147-12
@@ -216,7 +220,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
   });
 
   // QFAI:AC-0001-0147-13
-  it("raises no decided finding again, and reads a declined change request the register accepts", async () => {
+  it("raises no decided finding again, and reads a declined row the register accepts", async () => {
     const text = await section(CYCLE, "## A decided finding is not raised again");
     expectSentence(text, "decided findings", /does not raise a finding again/i);
     expectSentence(text, "wording", /Matching never goes by wording/i);
@@ -230,7 +234,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     const register = (rows: string): string =>
       `# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
     const declined =
-      "| DEC-0001 | Declined change request: user-story-0001-0001/03_Example.md; an order of 20 000 in euros | Declined by the user |";
+      "| DEC-0001 | Declined: user-story-0001-0001/03_Example.md; an order of 20 000 in euros | Declined by the user |";
     const decisionsIssues = (rows: string) =>
       validateStoryTreeStructureModel(storyTree({ decisions: register(rows) })).filter(
         (issue) => issue.file?.endsWith("decisions.md") ?? false,

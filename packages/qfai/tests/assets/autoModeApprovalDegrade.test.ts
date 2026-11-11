@@ -23,7 +23,7 @@ describe("qfai-sdd approval in no-question mode", () => {
       expect(triage).toContain("stop before the dependent writes");
       expect(triage).toContain("report every pending operation with its target");
       expect(triage).toContain(
-        "Approval-free changes may proceed only if they do not depend on a pending operation",
+        "Other changes may proceed only if they do not depend on a pending operation",
       );
     });
   }

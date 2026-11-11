@@ -21,11 +21,11 @@ Feature: Decision and open-question table validation
 
   # AC-0001-0053-04
   Scenario: A keyword row acts by its keyword and its presence
-    Given the story tree, and a table row whose Content cell opens with `Test exception:`, `Change request:`, `Declined change request:` or `Unadjudicated:`
+    Given the story tree, and a table row whose Content cell opens with `Test exception:` or `Unadjudicated:`
     When a validator that reads that keyword runs
-    Then it reads the IDs or paths after the colon, separated by commas, as the row's references
+    Then it reads the IDs after the colon, separated by commas, as the row's references
     And a `Test exception:` row exempts while it exists, and an `Unadjudicated:` row is pending while it exists
-    And a `Change request:` row authorizes its paths only on the branch that adds it, and a `Declined change request:` row authorizes nothing
+    And a row opening any other word, an old `Change request:` row included, is an ordinary decision row
 
   # AC-0001-0053-05
   Scenario: An open Unadjudicated question raises QFAI-SPACK-102
@@ -70,4 +70,11 @@ Feature: Decision and open-question table validation
     And stale-term scanning excludes the root and every page
     And a missing or unreadable listed page, a duplicate entry, an unlisted file in the decisions directory, an unsafe or linked path, traversal and a wrong page shape fail without accepting a partial register
     And an oversized page is reported without truncation or an automatic rewrite
+  # AC-0001-0053-10
+  Scenario: A decision row over the length limit is warned about
+    Given the story tree, and a row of the decision register, in the root or on a page and in either ID form, whose Content and Approach together hold more than 600 characters
+    When `qfai validate --profile sdd` runs
+    Then `QFAI-STORY-020` is raised at warning naming the file, the row and its length
+    And a row of 600 characters or fewer raises none
+    And the warning does not fail a run under `--fail-on error`
 ```

@@ -21,12 +21,8 @@ export type DecisionRegister = {
   /** A size finding still reads the complete register. */
   complete: boolean;
 };
-/**
- * What a row does follows from its Content keyword and its presence. Whether a change request
- * authorises anything also depends on whether the base holds the row, which the caller reads.
- */
-export type RecordRowKind =
-  "test-exception" | "change-request" | "declined-change-request" | "unadjudicated" | "other";
+/** What a row does follows from its Content keyword and its presence. */
+export type RecordRowKind = "test-exception" | "retired" | "unadjudicated" | "other";
 export type ClassifiedRecordRow = { kind: RecordRowKind; refs: string[]; row: RecordRow };
 export type ChangedRecordCell = {
   id: string;
@@ -222,12 +218,11 @@ export function parseRecordTable(text: string, kind: RecordTableKind): ParsedRec
   return { rows, errors };
 }
 
-const ROW_KEYWORD =
-  /^(Declined change request|Test exception|Change request|Unadjudicated):\s*(.*)$/i;
+const ROW_KEYWORD = /^(Test exception|Retired|Unadjudicated):\s*(.*)$/i;
 const KIND_BY_KEYWORD: Record<string, RecordRowKind> = {
-  "declined change request": "declined-change-request",
   "test exception": "test-exception",
-  "change request": "change-request",
+  // The story-tree IDs a change retired; allocation counts them so none is issued again.
+  retired: "retired",
   unadjudicated: "unadjudicated",
 };
 

@@ -7,5 +7,5 @@ As an operator whose correct existing test for an example now fails, I want `/qf
 ## Non-goals
 
 - Rewriting the test
-- Filing a change request
+- Changing a story or contract
 - Adding an example

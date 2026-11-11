@@ -86,10 +86,10 @@ it("The installed design step bounds an authorized repair and keeps the source o
 
   for (const instructions of [step, authoring]) {
     expect(instructions).toMatch(/triage.*path.*change/i);
-    expect(instructions).toMatch(/`Change request:` row this branch adds (?:must )?authorize/i);
     expect(instructions).toMatch(/preserve.*brand.*tokens/i);
   }
-  expect(step).toMatch(/only[^.]*authorized change|repair[^.]*within[^.]*change/i);
+  expect(step).toMatch(/only[^.]*triaged change|repair[^.]*within[^.]*change/i);
+  expect(step).toMatch(/unless the\s+user decided their change/);
   expect(step).toMatch(/recorded direction or (?:the )?named theme/i);
   expect(step).toMatch(
     /no value was written that the recorded direction or the named theme does not supply/i,
@@ -100,8 +100,7 @@ it("The installed design step bounds an authorized repair and keeps the source o
 it("The installed design step preserves an existing file without new authorization and refuses the sample", async () => {
   const step = await installed(".qfai/assistant/step/common-design-md/STEP.md");
 
-  expect(step).toMatch(/without.*authoriz.*validat.*without an overwrite/i);
-  expect(step).toMatch(/a change request the base already holds authorizes no new change/i);
+  expect(step).toMatch(/without a triaged change.*validat.*without an overwrite/i);
   expect(step).toMatch(/unreplaced sample is refused/i);
   expect(step).toMatch(/Never adopt the sample design/i);
   expect(step).toMatch(/Once a prototyping loop has started, `DESIGN\.md` is read-only for it/i);
@@ -125,7 +124,7 @@ it("The installed instructions keep an established brand for validation and auth
   for (const instructions of [step, authoring]) {
     const existingFile = instructions.match(/For an existing valid file,[^.]*\./i)?.[0];
     expect(existingFile).toMatch(/validat/i);
-    expect(existingFile).toMatch(/authorized repairs/i);
+    expect(existingFile).toMatch(/triaged repairs/i);
     expect(existingFile).toMatch(/preserve[^.]*brand[^.]*tokens/i);
     expect(existingFile).toMatch(/require no new brand selection/i);
   }

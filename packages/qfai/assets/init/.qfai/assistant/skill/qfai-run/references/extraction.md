@@ -210,7 +210,7 @@ Each flag is followed by what the request does when it is set, then, where one a
 - `fix`: proposes a concrete fix: a patch, a linked change, a specific edit. Not when the author only offers to implement.
 - `expect`: states what should happen, directly or by reference to documents, a specification, an earlier version or another implementation. Not when it only says "it does not work".
 - `decision`: shows the work cannot start until someone chooses: options listed, "should we", which side wins left open. On `feature`, `behaviour-change`, `design` or `deprecation`, set it unless acceptance is shown; on a `behaviour-change` that explicitly asks to change the prototype, only when a choice is left open. Not when the fix is obvious and the request names the right side.
-- `upstream`: cites a decision already made elsewhere: an approved change request, a parent item with a settled design, a documented lifting condition. Not when the parent is itself undecided.
+- `upstream`: cites a decision already made elsewhere: an approved decision, a parent item with a settled design, a documented lifting condition. Not when the parent is itself undecided.
 - `bundle`: holds two or more independent findings, each fixable alone. Not when the parts are steps of one fix.
 - `vague`: gives too little to act on: no version, no steps, no expected result, empty template fields, "it stopped working". Not when the text is only short.
 - `last-good`: names a version, commit or change where it worked, a version pair or a bisect result. Not when it only says "recently".
@@ -283,7 +283,6 @@ Each signal is followed by what the request does.
 
 - `approved-record-task`: Cites an approved record and carries a task section and a done-when block.
 - `grilling-required`: States that a decision session is needed before work.
-- `decide-by-change-request`: States that a change request decides it.
 - `disabled-test`: Names a test in the form `DISABLED test_…`.
 - `flaky-label`: Carries a flaky label.
 - `backport`: Asks for a backport or a cherry-pick to a release branch.
@@ -371,7 +370,7 @@ refuses it. `flows` and `alternatives` stay absent when unused: `plan` refuses a
 - "We only handle one kind of engagement now: remove its form field and list filter, and every mention of the other kind." → `{ intent: behaviour-change, qualifiers: [removal-requested], artifacts: [spec, contract, ui, code, tests, docs], confidence: high }`
 - "Rename workspace to project everywhere: the specification, the code, the screens and the tests." → `{ intent: behaviour-change, qualifiers: [rename-requested], artifacts: [spec, contract, ui, code, tests, docs], confidence: high }`
 - "Remove the configuration key nothing reads." → `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`
-- An approved change request cited with a task section and a done-when block → `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`
+- An approved decision cited with a task section and a done-when block → `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`
 - "The import fails and the `catch` logs nothing, so the cause cannot be read; log the error there." → `{ intent: defect, entryFlags: [cause, fix, expect], artifacts: [code, tests], confidence: high }`
 - "Merging main left conflicts in our story files; give our colliding story the next free ID and keep both sides." → `{ intent: stale-record, qualifiers: [meaning-preserving], artifacts: [spec], confidence: high }`
 - "Take main's shared fix into the branches feature-a and feature-b, keeping what each side means.", read once for each named branch and run one after another → `{ intent: order, qualifiers: [meaning-preserving], artifacts: [spec, docs], confidence: high }`

@@ -111,7 +111,7 @@ its work order names the flow; this file adds nothing.
 
 After the last step, run one review through `common-review-cycle`: the code
 review, by `implementation-reviewer`. The review also checks for code
-written only to pass a test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around
+written only to pass a test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a specification change, not worked around
 (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 
 The review also checks that the

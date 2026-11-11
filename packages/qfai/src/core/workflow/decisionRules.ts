@@ -60,10 +60,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   ),
   rule(
     3,
-    clause(
-      (input) => signalled(input, "grilling-required", "decide-by-change-request"),
-      "decide-design",
-    ),
+    clause((input) => signalled(input, "grilling-required"), "decide-design"),
   ),
   rule(
     4,

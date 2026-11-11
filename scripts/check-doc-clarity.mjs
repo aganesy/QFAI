@@ -40,7 +40,7 @@ const ROOT = process.cwd();
 
 /**
  * Whole trees excluded because their tracked content is a historical
- * record — a Change Request decision, a discussion-pack transcript, or
+ * record — a decision record, a discussion-pack transcript, or
  * run evidence. Citing a real review or issue inside a record of what
  * happened is outside this rule. `CHANGELOG.md` is the same case by
  * name: the writing rule itself says PR and issue numbers belong there.
@@ -96,7 +96,7 @@ const EXCLUDE_BASENAME_RE = /_delta\.md$/;
  * ordered pages `.qfai/spec/decisions/page-0001.md` to `page-9999.md`.
  *
  * Its rows are immutable historical records, the successor of the legacy
- * `.qfai/decisions/` tree excluded above, and a row cites the change request it
+ * `.qfai/decisions/` tree excluded above, and a row cites the pull request it
  * came from. Matched as exact paths rather than by prefix, so a lookalike such as
  * `decisions-extra.md`, a nested folder or a `page-0000.md` is ordinary prose.
  */

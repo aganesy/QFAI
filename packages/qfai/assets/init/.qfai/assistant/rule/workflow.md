@@ -57,9 +57,9 @@ writes nothing; the session runs the plan.
 ## Drift Protocol
 
 - Read and enforce `.qfai/assistant/rule/drift-protocol.md`.
-- Downstream phases must not edit upstream SSOT artifacts without explicit user approval.
-- If drift is required, append a `Change request:` row in `<paths.specsDir>/decisions.md`, obtain approval, and rerun the owner skill. A defect with one sound repair does not need invented alternatives.
-- The STOP is scoped: it halts the affected upstream artifact and every downstream item that depends on it, which the Change Request enumerates. Unaffected items continue, and more than one Change Request may be open at once — see `.qfai/assistant/rule/drift-protocol.md#multiple-open-change-requests`.
+- Downstream phases must not edit upstream SSOT artifacts; the owner skill changes them.
+- If drift is required, send the proposed change to the owner skill, put a critical decision to the user, and rerun the owner skill. A defect with one sound repair does not need invented alternatives.
+- The STOP is scoped: it halts the affected upstream artifact and every downstream item that depends on it, which the proposed change enumerates. Unaffected items continue, and more than one change may be open at once — see `.qfai/assistant/rule/drift-protocol.md#multiple-open-changes`.
 
 ## Test-layer policy
 
@@ -82,12 +82,12 @@ Stage 3 (`/qfai-sdd`) target policy:
 
 - With a BF argument, scope requested work to that flow and its shared dependencies.
 - Without an argument, triage the incoming requirements and update the flows they affect.
-- Record approval-required operations in `decisions.md`; only a `Change request:` row the branch adds authorizes a protected change.
+- Record a decision in `decisions.md` only when it is hard to reverse, would surprise a reader without context, and was the result of a real trade-off; the stage report states every other one.
 - Write policy and flows before stories, AC, EX, and enforcing contracts. Validate every affected BF.
 
 Prototyping stage policy:
 
-- `/qfai-prototyping` scope is governed by Article VII § Prototyping exception (scope floor) in `.qfai/assistant/rule/constitution.md` — the single home for both the scope floor and the Change Request exception to it. Do not restate the floor here; on any overlap between this file and the constitution, the constitution wins.
+- `/qfai-prototyping` scope is governed by Article VII § Prototyping exception (scope floor) in `.qfai/assistant/rule/constitution.md` — the single home for both the scope floor and the user-approved exception to it. Do not restate the floor here; on any overlap between this file and the constitution, the constitution wins.
 - Prototyping completes when the user confirms the prototype. No command or check certifies it. The one file a `qfai` command reads under `.qfai/prototype/` is `final/handoff.json`, which `npx qfai validate --profile saas-package` checks.
 - Coverage gaps (missing BF or AC obligations, unresolved declared checks, API 404) are blocking.
 

@@ -424,7 +424,7 @@ describe("story-tree structure", () => {
     const declared = validateStoryTreeStructureModel(
       model({
         [`${specs}/decisions.md`]: register(
-          `${reopen}\n| DEC-0009 | Declined change request: docs/a.md | Declined |`,
+          `${reopen}\n| DEC-0009 | Declined: docs/a.md | Declined |`,
         ),
       }),
     ).filter((item) => item.code === "QFAI-STORY-003");

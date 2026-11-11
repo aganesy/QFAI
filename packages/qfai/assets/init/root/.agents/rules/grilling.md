@@ -104,11 +104,11 @@ A decision is critical, and requires the user's authority in every session, when
 it is one of these. Without an applicable authorization recorded under the
 explicit-delegation conditions, put it to the user when asking is permitted.
 
-| Class                                                                                                                                                    | Why agents cannot take it                                           |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| It contradicts a spec, a contract or a recorded decision                                                                                                 | Changing settled input is a change request, which the user approves |
-| Its effect cannot be taken back: a security exposure, lost or corrupted data, a broken released contract, spending, a legal commitment, a public release | A wrong recommendation here is not repaired by the next run         |
-| It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated                             | The agents would be inventing what the user wants                   |
+| Class                                                                                                                                                    | Why agents cannot take it                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| It contradicts a spec, a contract or a recorded decision                                                                                                 | Changing settled input is the user's decision               |
+| Its effect cannot be taken back: a security exposure, lost or corrupted data, a broken released contract, spending, a legal commitment, a public release | A wrong recommendation here is not repaired by the next run |
+| It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated                             | The agents would be inventing what the user wants           |
 
 Two more nodes reach the user in every session, and neither is a decision the
 agents could recommend: a decision some document requires the user to make and
@@ -125,8 +125,8 @@ rounds are where the agents weigh it, and the record lets the user overturn it.
   the user sees all of them without being stopped for any.
 
 The report does not wait for an answer. A user who disagrees overturns the
-decision the ordinary way: a change request, or a rerun with the decision
-stated.
+decision the ordinary way: a specification change, or a rerun with the
+decision stated.
 
 ## The request bounds the tree
 
@@ -331,7 +331,7 @@ against `<specsDir>/01_policy/glossary.md` and, during a discussion, the pack's
   beside its adopted decisions, with a line in its final report, and with no
   invoking stage to the session record the user reads. A changed pack term
   rewrites its row and adds no second one.
-- **Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only under an approved change request.
+- **Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only after the user approves it.
 - A definition says what the term is. A rule, a value set or a procedure belongs in the spec, not in the row.
 
 ## When a session ends

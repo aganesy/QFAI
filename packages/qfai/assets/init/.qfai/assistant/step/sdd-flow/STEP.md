@@ -11,7 +11,7 @@ Stage 2 of the story tree: policy and business flows.
 
 ## Reads
 
-- The triage decisions `sdd-triage` made, and the scope the user approved.
+- The triage decisions `sdd-triage` made, and the scope it triaged.
   Write only that scope.
 - The paired templates under
   `.qfai/assistant/skill/qfai-sdd/templates/spec/01_policy/`,
@@ -32,8 +32,8 @@ Stage 2 of the story tree: policy and business flows.
 - `02_business-flow/business-flows.md` and each affected
   `business-flow-NNNN/business-flow.md`.
 
-Use the paired template for every file. Write only what the user approved, as
-`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#a-change-to-the-story-tree`
+Use the paired template for every file. Write only the triaged scope, as
+`.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#critical-decisions-and-no-question-mode`
 states.
 
 ## Procedure
@@ -111,6 +111,6 @@ states.
 
 ## Passes when
 
-Read first: the triage decisions and the scope the user approved. The step passes when
+Read first: the triage decisions and the triaged scope. The step passes when
 that scope changes no policy fact, no `tech.md` entry and no flow document. The
 pass names the triage decisions it read.

@@ -10,7 +10,7 @@ The gate checks the story-tree files against their shipped templates, the docume
 - Each story directory holds exactly 01_User-story.md, 02_Acceptance-Criteria.md, and 03_Example.md.
 - The story tree was written from its paired templates under ../templates/spec/ and holds no heading, section, content kind or history they do not show, as the `Document shapes` section of the spec traceability rules sets out.
 - decisions.md and open-questions.md have three cells per row: ID, Content, Approach. No existing decision row changed, and no existing question row was edited.
-- Each change the user approved, retirement included, has its `Change request:` decision row recording who approved it, when, and the option chosen. No row records a decision the agent took. Unanswered critical decisions have open-question rows and prevent completion.
+- A decision row records a decision the user made that passes the recording test, with who decided it, when, and the option chosen. No row records a decision the agent took. Unanswered critical decisions have open-question rows and prevent completion.
 
 ## Traceability and contracts
 
@@ -42,4 +42,4 @@ Do not use a sibling's in-flight findings to hold or clear the current flow. Rec
 - The final report lists each decision a checkpoint adopted, with its reason.
 - Reviewers are independent of authors, and every finding of the one review is fixed or answered under `.qfai/assistant/rule/review-convergence.md`.
 - Evidence records the source, changed IDs and files, contract executability, commands, reviewer verdicts, rejected options excluded, and remaining risks.
-- No approval-required operation is treated as approved from silence, --auto, or a generic instruction to continue.
+- No critical decision is treated as answered from silence, --auto, or a generic instruction to continue.

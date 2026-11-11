@@ -49,11 +49,11 @@ it("An approved record with a task applies the settled design, whatever its arti
 });
 
 // QFAI:EX-0001-0211-06
-it("A stated need for grilling or a change request decides the design", async () => {
+it("A stated need for grilling decides the design", async () => {
   expect(
     await routes(
       { intent: "feature", signals: ["grilling-required"] },
-      { intent: "surface-contradiction", signals: ["decide-by-change-request"] },
+      { intent: "surface-contradiction", signals: ["grilling-required"] },
     ),
   ).toEqual(["decide-design", "decide-design"]);
 });

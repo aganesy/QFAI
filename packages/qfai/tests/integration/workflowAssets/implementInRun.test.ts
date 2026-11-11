@@ -57,13 +57,13 @@ describe("qfai-implement in a workflow run", () => {
   // QFAI:AC-0001-0201-03
   // QFAI:EX-0001-0201-03
   // QFAI:EX-0001-0201-04
-  it("raises no change request for a diagnosed missing test, and one for every other scope gap", async () => {
+  it("sends no specification change for a diagnosed missing test, and one for every other scope gap", async () => {
     const text = await step(TDD);
     expect(text).toMatch(
-      /send a decision, a question for the user or an out-of-scope discovery to `\/qfai-sdd` as a change request/i,
+      /send a decision, a question for the user or an out-of-scope discovery to `\/qfai-sdd` as a specification change/i,
     );
     expect(text).toMatch(
-      /a diagnosed missing test on behaviour an existing AC states is the one scope gap that raises no change request/i,
+      /a diagnosed missing test on behaviour an existing AC states is the one scope gap that goes to no specification change/i,
     );
     expect(text).toMatch(/an EX that states the case is worked as an EX no test annotates/i);
     expect(text).toMatch(/where none does, this step appends it/i);
@@ -77,7 +77,7 @@ describe("qfai-implement in a workflow run", () => {
       /the fix changes production code only\. no test, story or contract file changes/i,
     );
     expect(text).toMatch(/the example stays annotated by the same test/i);
-    expect(text).toMatch(/no `Change request:` row is appended and no evidence entry is removed/i);
+    expect(text).toMatch(/no story or contract changes, and no evidence entry is removed/i);
   });
 
   // QFAI:AC-0001-0203-01

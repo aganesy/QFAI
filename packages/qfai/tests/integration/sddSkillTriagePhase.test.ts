@@ -48,8 +48,10 @@ describe("qfai-sdd triage surface", () => {
     expect(content).toContain("<paths.specsDir>/open-questions.md");
     expect(content).toContain("each with exactly ID, Content and Approach");
     expect(content).toContain("retired-story file");
-    expect(content).toContain("Content opens `Declined change request:`");
-    expect(content).toContain("Both are rejected options and authorize nothing");
+    expect(content).toContain(
+      "An option the user rejects is a row whose Content opens `Declined:`",
+    );
+    expect(content).toContain("it authorizes nothing");
     expect(content).toContain(
       "A decisions.md row is appended once the decision is made and is never edited, moved or removed afterwards",
     );
@@ -97,9 +99,8 @@ describe("qfai-sdd triage surface", () => {
       "A non-functional requirement is a contract BR with a measurable threshold and an example. Only a product-wide one goes to `constraint.md`.",
     );
     expect(lives).toContain(
-      "A trivial edit adds no policy or constraint entry and no decision row beyond its change request.",
+      "A trivial edit adds no policy or constraint entry and no decision row.",
     );
-    expect(lives).toContain("and does not restate the edit");
   });
 
   // QFAI:EX-0001-0147-06
@@ -112,7 +113,7 @@ describe("qfai-sdd triage surface", () => {
     );
   });
 
-  it("stops approval-dependent writes in no-question mode", async () => {
+  it("stops writes that depend on a critical decision in no-question mode", async () => {
     const content = await triage();
     for (const operation of ["CREATE", "DELETE", "SPLIT", "MERGE", "SUPERSEDE", "UPDATE:REMOVE"]) {
       expect(content).toContain(operation);
@@ -132,7 +133,7 @@ describe("qfai-sdd triage surface", () => {
   it("does not reuse retired IDs", async () => {
     const content = await triage();
     expect(content).toContain("highest plus one");
-    expect(content).toContain("including IDs named by retirement rows");
+    expect(content).toContain("including IDs named by decision rows, `Retired:` rows among them");
     expect(content).toContain("Do not reuse an ID");
   });
 

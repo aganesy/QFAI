@@ -121,15 +121,14 @@ to touch a colour has nothing to be consistent with.
 skill template. A root file that exists was authored by `common-design-md` or
 copied from that template on purpose, and a project may have authored its own.
 Write a missing file from the recorded direction. Repair an existing file only when SDD triage names its exact path
-and the requested change, and a `Change request:` row this branch adds authorizes both. Apply
-only the authorized change; preserve existing brand and tokens unless their
-change is authorized and supported by recorded direction or named theme
-values. Record the source of each changed value and leave unrelated content
-unchanged. Stop without writing a value neither source supplies. Without that
-authorization, validate the existing file without an overwrite; a change request
-the base already holds authorizes no new change. An unreplaced sample is refused.
+and the requested change. Apply only that change; preserve existing brand and
+tokens unless the user decided their change and it is supported by recorded
+direction or named theme values. Record the source of each changed value and
+leave unrelated content unchanged. Stop without writing a value neither source
+supplies. Without such a triaged change, validate the existing file without an
+overwrite. An unreplaced sample is refused.
 
-For an existing valid file, validation and authorized repairs that preserve
+For an existing valid file, validation and triaged repairs that preserve
 its brand and tokens require no new brand selection. An authorized brand or
 token change still needs recorded direction or named theme values for each
 changed value; without either source, stop without writing the change.
