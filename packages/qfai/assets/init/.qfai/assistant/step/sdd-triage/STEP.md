@@ -77,7 +77,7 @@ other decision. Record unresolved questions in `<paths.specsDir>/open-questions.
 Every row has exactly `ID | Content | Approach`. A new row's ID is
 `DEC-yyyymmddhhMMss` or `OQ-yyyymmddhhMMss`, the UTC time it is written.
 
-- A decisions.md row is appended once and never edited, moved or removed.
+- A decisions.md row is appended once, keeps its ID and is never removed or renumbered; only its wording may be restated.
 - An option the user rejects is a row whose Content opens `Declined:`,
   recording who declined it and when. It authorizes nothing.
 - Name each requirement's source as `discussion-<id>#REQ-NNNN` when that

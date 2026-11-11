@@ -44,7 +44,7 @@ A table the template shows with no rows is complete with no rows. The rules belo
 | glossary.md                     | One `## Terms` table: a term and its definition. No finding code, file name, configuration key, value set, rule text, retired term or history; the definition links the contract that defines the thing. A distinction goes in the definition.                                                                                                            |
 | constraint.md                   | All three sections stay, each one table of ID, Constraint and Rationale, which may have no rows. A row states the limit and its reason in plain words: no file name, command or configuration key, and no BR, EX, AC or contract ID. A constraint a contract enforces is written there as a BR; a layer boundary is a row of tech.md's `## Architecture`. |
 | tech.md                         | `## Architecture` is one `mermaid` flowchart TD of the layers, then one table with a row per layer from the uppermost down: its responsibility, and the layers below it that it uses, or `-`. A layer is named, never located: no path, file name or command. See [Architecture](#architecture).                                                          |
-| decisions.md, open-questions.md | Exactly one table and nothing else. Rows are appended and never edited; a settled question row is deleted.                                                                                                                                                                                                                                                |
+| decisions.md, open-questions.md | Exactly one table and nothing else. Rows are appended; a decision row keeps its ID, and a settled question row is deleted.                                                                                                                                                                                                                                |
 | business-flows.md               | `Flow` is the title in the flow's H1, after its ID, and `Path` is `` `business-flow-NNNN/` ``. Rows are in ID order.                                                                                                                                                                                                                                      |
 | business-flow.md                | `## Purpose` is prose only. `## Flow` is one `mermaid` block, a flowchart or sequenceDiagram, and nothing else. `## Alternate and exception paths` is one list of at least one item.                                                                                                                                                                      |
 | user-stories.md                 | `Story` is the title in the story's H1, after its ID, word for word, and `Path` is `` `user-story-NNNN-NNNN/` ``. Rows are in ID order.                                                                                                                                                                                                                   |
@@ -134,10 +134,9 @@ A justified exception is a decisions.md row whose Content opens Test exception: 
 
 decisions.md records only the decisions the user made, approvals included, that pass the recording test at the top
 of templates/spec/decisions.md. Open questions are rows of open-questions.md. Both tables have
-ID, Content and Approach. A decision row is never edited, moved or removed; a question row is never edited. A
+ID, Content and Approach. A decision row keeps its ID and is never removed; only its wording may be restated. A question row is never edited. A
 declined option (`Declined:`) stays rejected unless a later decision row whose Approach opens
-`Reopens DEC-…` reopens it. A legacy row opening `Change request:` or `Declined change request:` is history and
-authorizes nothing.
+`Reopens DEC-…` reopens it.
 
 A decisions.md row's Approach takes the form stated at the top of templates/spec/decisions.md.
 

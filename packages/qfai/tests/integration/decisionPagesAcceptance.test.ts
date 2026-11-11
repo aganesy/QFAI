@@ -271,30 +271,42 @@ describe("decision pages through supported consumers", () => {
 
   // QFAI:AC-0001-0054-09
   // QFAI:EX-0001-0054-19
-  it.each(["id", "content", "approach"])(
-    "reports a page's %s rewrite whatever row the root appends",
+  it("reports a page row whose ID changes whatever row the root appends", async () => {
+    gitRepo();
+    const original = row("DEC-0001", "Original");
+    await put(ledger, header + original);
+    commit("base row");
+    git("checkout", "-b", "topic");
+    await put(ledger, paged(row("DEC-20261105093000", "Appended")));
+    await put(page, header + original.replace("DEC-0001", "DEC-20261105093001"));
+    commit("renumber the page row");
+    const findings = await validateStoryTreeDrift(root, config(), "drift");
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        code: "QFAI-STORY-010",
+        message: expect.stringContaining("DEC-0001 row removed or its ID changed"),
+      }),
+    );
+  });
+
+  // QFAI:EX-0001-0054-19
+  it.each(["content", "approach"])(
+    "accepts a page row whose %s is rewritten under its ID",
     async (cell) => {
       gitRepo();
       const original = row("DEC-0001", "Original");
       await put(ledger, header + original);
       commit("base row");
       git("checkout", "-b", "topic");
-      await put(ledger, paged(row("DEC-20261105093000", `Change request: ${ledger}`)));
+      await put(ledger, paged(row("DEC-20261105093000", "Appended")));
       const rewritten =
-        cell === "id"
-          ? original.replace("DEC-0001", "DEC-20261105093001")
-          : cell === "content"
-            ? original.replace("Original", "Rewritten")
-            : original.replace("Keep", "Rewritten approach");
+        cell === "content"
+          ? original.replace("Original", "Rewritten")
+          : original.replace("Keep", "Rewritten approach");
       await put(page, header + rewritten);
-      commit("root-only authority cannot repair page history");
+      commit("rewrite the page row");
       const findings = await validateStoryTreeDrift(root, config(), "drift");
-      expect(findings).toContainEqual(
-        expect.objectContaining({
-          code: "QFAI-STORY-010",
-          message: expect.stringMatching(new RegExp(`DEC-0001.*${cell}`, "i")),
-        }),
-      );
+      expect(findings.filter(({ code }) => code === "QFAI-STORY-010")).toEqual([]);
     },
   );
 

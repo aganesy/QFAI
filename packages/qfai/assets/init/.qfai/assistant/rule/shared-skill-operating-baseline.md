@@ -293,7 +293,7 @@ can resolve stops at preflight.
 - Do not reintroduce an option whose row in `<paths.specsDir>/decisions.md` has Content opening `Declined:`, or `Declined change request:` in a row written before change requests were retired.
 - To reconsider it, ask the user. Only on approval append a new `DEC-yyyymmddhhMMss` row whose Approach opens `Reopens DEC-…` with the declined row's full ID, then states the changed evidence and who approved it, when, and the option chosen. Leave the declined row intact.
 - A PR description or completion report alone does not reopen the option.
-- The reviewer checks the new row and approval provenance before accepting a formerly rejected option. `npx qfai validate` checks the three-column decision-table shape and that no existing row changed; it does not infer that two differently worded options are the same.
+- The reviewer checks the new row and approval provenance before accepting a formerly rejected option. `npx qfai validate` checks the three-column decision-table shape and that no existing row was removed or renumbered; it does not infer that two differently worded options are the same.
 
 ## Gate Failure Autorepair Protocol
 

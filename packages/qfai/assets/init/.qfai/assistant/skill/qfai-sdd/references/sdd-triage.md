@@ -40,7 +40,7 @@ A new decisions.md row takes `DEC-yyyymmddhhMMss` and a new open-questions.md ro
 time the row is written, as 14 digits. When a row of the same register already holds that second, take the next
 second no row holds. A legacy `DEC-NNNN` or `OQ-NNNN` row keeps its ID; a row the branch adds never takes that form.
 
-A decisions.md row is appended once the decision is made and is never edited, moved or removed afterwards. A
+A decisions.md row is appended once the decision is made and afterwards keeps its ID and is never removed or renumbered; only its wording may be restated. A
 later decision that refers to an earlier row is a new row whose Approach opens with the earlier ID:
 `Supersedes DEC-…` when it replaces it, `Narrows DEC-…` when it replaces part of it, and `Reopens DEC-…` when it
 reopens a declined option. The earlier row stays as written. The order of rows in the file means nothing: a merge
@@ -52,11 +52,10 @@ context, and the result of a real trade-off. A row is appended once the user has
 the agent took, a decision that fails the test and a finding it dropped append no row; the final report states them.
 Anything not decided yet is an open-questions.md row.
 
-A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form. Validation checks that form only on a legacy `DEC-NNNN` row.
+A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form.
 
 An option the user rejects is a row whose Content opens `Declined:`, whatever the recording test says,
-recording in Approach who declined it and when; it authorizes nothing. Retiring a story removes its directory, with no separate retired-story file. A legacy
-row opening `Change request:` or `Declined change request:` is history and authorizes nothing.
+recording in Approach who declined it and when; it authorizes nothing. Retiring a story removes its directory, with no separate retired-story file.
 
 An open-questions.md row exists exactly while its question is open, and is never edited. When a decision settles
 a question, the same change appends the decision row, which names the OQ ID, and deletes the question row. To
@@ -131,7 +130,7 @@ Other changes may proceed only if they do not depend on a pending operation.
 
 Clarifications follow the constitution's question budget. Critical-decision questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not an answer for an operation not yet classified.
 
-A decisions.md row present before the stage started is never edited, moved or removed, and an open-questions.md row is never edited.
+A decisions.md row present before the stage started keeps its ID and its decision and is never removed, and an open-questions.md row is never edited.
 
 ## Retiring an EX, AC or BR
 

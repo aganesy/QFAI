@@ -36,4 +36,5 @@ Allocate each ID as the highest ID of its kind in its defined scope plus one, co
 
 ## Ambiguity
 
-Leave unresolved choices in `open-questions.md` with an owner and a next action in Approach. Append decisions and questions once and never edit them; delete a question row when a decision settles it. Do not silently turn discussion alternatives into requirements or duplicate a fact across policy, story, and contract files.
+Leave unresolved choices in `open-questions.md` with an owner and a next action in Approach. Append decisions and questions once; a decision row keeps its ID and is never removed, though its wording may be restated, and a question row is never edited; delete a question row when a decision settles it.
+Do not silently turn discussion alternatives into requirements or duplicate a fact across policy, story, and contract files.

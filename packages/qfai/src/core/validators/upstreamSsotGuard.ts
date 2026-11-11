@@ -84,7 +84,7 @@ export async function validateStoryTreeDrift(
 }
 
 /**
- * The `drift` profile's register checks: decision rows the base holds stay unchanged, and a
+ * The `drift` profile's register checks: decision rows the base holds keep their IDs, and a
  * question row is deleted only when a row names it. `null` turns the gate off for a base that
  * predates the story tree; `stop` ends the run with the issues given.
  */
@@ -305,39 +305,23 @@ function rowRewritten(file: string, message: string, id: string): Issue {
 }
 
 /**
- * Every decision row the base holds is in the head with the same three cells, matched by ID
- * across the complete register: a union merge interleaves appended rows, so the file and the place
- * a row sits in mean nothing. A row the branch adds takes the timestamp form.
+ * Every decision row the base holds is in the head under the same ID, matched across the complete
+ * register: a union merge interleaves appended rows, so the file and the place a row sits in mean
+ * nothing. Its Content and Approach may be rewritten. A row the branch adds takes the timestamp form.
  */
 function decisionRowDrift(baseModel: StoryTreeModel, headModel: StoryTreeModel): Issue[] {
   const issues: Issue[] = [];
   const head = headModel.decisionOccurrences;
+  const headIds = new Set(head.map(({ row }) => row.id));
   for (const before of baseModel.decisionOccurrences) {
-    const candidates = head.filter(({ row }) => row.id === before.row.id);
-    const first = candidates[0];
-    if (!first) {
-      issues.push(
-        rowRewritten(
-          before.origin.path,
-          `${before.row.id} row removed or its ID changed (base row ${before.origin.actualRow})`,
-          before.row.id,
-        ),
-      );
-      continue;
-    }
-    const same = ({ row }: (typeof head)[number]): boolean =>
-      row.content === before.row.content && row.approach === before.row.approach;
-    if (candidates.some(same)) continue;
-    for (const cell of ["content", "approach"] as const) {
-      if (first.row[cell] === before.row[cell]) continue;
-      issues.push(
-        rowRewritten(
-          first.origin.path,
-          `${before.row.id} ${cell} changed (row ${first.origin.actualRow})`,
-          before.row.id,
-        ),
-      );
-    }
+    if (headIds.has(before.row.id)) continue;
+    issues.push(
+      rowRewritten(
+        before.origin.path,
+        `${before.row.id} row removed or its ID changed (base row ${before.origin.actualRow})`,
+        before.row.id,
+      ),
+    );
   }
   const baseIds = new Set(baseModel.decisionOccurrences.map(({ row }) => row.id));
   for (const { row, origin } of head) {
