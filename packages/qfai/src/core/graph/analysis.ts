@@ -147,6 +147,9 @@ export function excludedGraphInput(relative: string): boolean {
   return (
     parts.some((part) => excludedDirectories.has(part.toLowerCase())) ||
     /^\.qfai\/(?:tools|report|evidence|review|discussion)(?:\/|$)/i.test(relative) ||
+    // Ceiling: the default `paths.deliberationDir` only, as `.qfai/report` stands for `outDir`;
+    // pass the loaded config in here once a project moves its records elsewhere.
+    /^\.qfai\/deliberation(?:\/|$)/i.test(relative) ||
     relative.toLowerCase() === ".qfai/graph-processing.json" ||
     /^(?:\.npmrc|\.pypirc|\.netrc|\.git-credentials)$/i.test(name) ||
     /^\.env(?:\.|$)/i.test(name) ||

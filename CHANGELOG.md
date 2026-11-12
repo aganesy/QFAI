@@ -4,6 +4,61 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking: a per-run deliberation record replaces the discussion pack.** A
+  run that asks the user a question or takes a decision no specification,
+  contract, rule or convention settles writes one Markdown memo under
+  `paths.deliberationDir` (default `.qfai/deliberation/`), named
+  `<YYYYMMDDhhmmss>-<slug>.md`. It holds a `## Subject` and, under a
+  subheading per stage, an Interview table and an Agent decisions table with
+  the columns Background, Option 1 to 3, Option 4 (other) and Chosen option
+  number. The record is tracked in git, has no ID, cites none and nothing cites
+  it; once committed only its table layout may be repaired. `verify-commit`
+  commits it with the change, and a stage skill run by name commits locally
+  only the record and its `open-questions.md` rows at its last step. The
+  story tree, `decisions.md` and `open-questions.md` stay the current state.
+
+  - The discussion pack (`.qfai/discussion/discussion-<timestamp>/`), its
+    templates, `prototyping.yaml` and the `uiux/` sidecars are removed. The
+    discussion stage keeps `discussion-research` and `discussion-interview`,
+    and writes only the record and `open-questions.md` rows;
+    `discussion-pack`, `discussion-oq` and `discussion-uiux` are removed.
+  - `qfai sdd preflight` takes `--record <path>` to name the record
+    `/qfai-sdd` consumes, or `--import <path>` for an imported specification,
+    and never picks a record itself: with neither, it is `blocked` and lists
+    the records it finds. It no longer reads a pack or counts `REQ-*` entries.
+    Its JSON `source` is `deliberation-record`, `import-lite` or `null`;
+    `importedReqCount` and `packGaps` are gone.
+  - `qfai validate` reports `QFAI-DELIB-001` for a record that lacks its
+    Interview or Agent decisions section, or whose tables lack the six template
+    columns in order or six cells per row. It checks only the layout.
+  - The policy layer gains the sections the interview fills: `## Risks` in
+    `initiative.md`, and `## Quality targets` (`QT-NN`) and
+    `## Legal and Compliance Constraints` (`LC-NN`) in `constraint.md`. Each
+    holds one table, which may have no rows. The `tech.md` component table
+    gains a required `Surface` row holding one of `web`, `mobile`, `desktop`,
+    `mixed`, `cli` or `non-ui`.
+  - `qfai discussion list` and `qfai discussion use`, the active-pack pointer,
+    `paths.discussionDir`, the managed `.qfai/discussion/*` ignore line and the
+    `QFAI-DPACK-*` and `QFAI-VIS-*` findings are removed.
+  - The Graphify document corpus leaves out `.qfai/deliberation/`, so no
+    documents query returns a record.
+
+  Migration:
+
+  1. Run `qfai init --force` to take the new assistant tree, record template
+     and `paths.deliberationDir` in `qfai.config.yaml`.
+  2. Remove `paths.discussionDir` from `qfai.config.yaml`.
+  3. Move anything a pack still settles into the story tree, `decisions.md`
+     or `open-questions.md`, then delete `.qfai/discussion/`.
+  4. Add `## Risks` to `initiative.md`, `## Quality targets` and
+     `## Legal and Compliance Constraints` to `constraint.md`, each with its
+     table, and a `Surface` row to the `tech.md` component table.
+  5. Replace `qfai discussion use` and the pack path in scripts with
+     `qfai sdd preflight --record <path>`, and read `source` from the new
+     values.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added
