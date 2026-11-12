@@ -24,7 +24,7 @@ export interface DesignSeed extends RoutingSeed {
     // case: a value taken from the token source, or a brand field the change had to preserve.
     fields?: Readonly<Record<string, string>>;
     // The other fixture files the run must leave byte-identical, as `/`-separated paths from the
-    // fixture root: the token source, the discussion pack and the shipped sample.
+    // fixture root: the token source, the deliberation record and the shipped sample.
     preserved: readonly string[];
   };
   rationale: string;
@@ -205,7 +205,7 @@ export function designRunOf(
     ...host,
   };
 }
-const PACK = path.join(".qfai", "discussion", "discussion-20261019000000000");
+const RECORD = path.join(".qfai", "deliberation", "20261019000000-customer-portal.md");
 const SAMPLE = path.join(
   ".qfai",
   "assistant",
@@ -239,29 +239,35 @@ const THEME_CSS = [
   "",
 ].join("\n");
 
-const DIRECTION = [
-  "## Design Direction",
-  "",
-  `- adopted_theme: Harbor, published in \`${THEME}\``,
-  "- brand_accent: the Harbor teal primary, with Inter for text",
-  "- conventions_kept: ordinary forms, tables and navigation",
-  "- chosen_by: user",
-  "",
-].join("\n");
+const RECORD_HEAD = [
+  "| Background | Option 1 | Option 2 | Option 3 | Option 4 (other) | Chosen option number |",
+  "| ---------- | -------- | -------- | -------- | ---------------- | -------------------- |",
+];
 
-// The discussion pack's context: its surface classification and, when recorded, its direction.
-function context(surface: "web" | "cli", direction: boolean): string {
+const DIRECTION_ROW = `| Which brand direction does the customer portal adopt? | Adopt the published Harbor theme (\`${THEME}\`): the Harbor teal primary, Inter for text, ordinary forms, tables and navigation | A bespoke palette | The shipped sample's defaults | - | 1 |`;
+
+// The deliberation record SDD consumes: the surface the user chose and, when recorded, the brand
+// direction.
+function record(surface: "web" | "cli", direction: boolean): string {
   return [
-    "# 01 Context",
+    "# Deliberation record: the customer portal",
     "",
-    "## UI-bearing Classification",
+    "## Subject",
     "",
-    "- ui_bearing: true",
-    `- primary_surface: ${surface}`,
-    "- secondary_surfaces:",
-    `- classification_rationale: The customer portal is used through ${surface === "web" ? "a browser" : "a terminal"}.`,
+    "Settle how the customer portal is used and how it looks.",
     "",
-    ...(direction ? [DIRECTION] : []),
+    "## discussion",
+    "",
+    "### Interview",
+    "",
+    ...RECORD_HEAD,
+    `| How is the customer portal used? | web: in a browser | cli: in a terminal | mobile: as an app | - | ${surface === "web" ? 1 : 2} |`,
+    ...(direction ? [DIRECTION_ROW] : []),
+    "",
+    "### Agent decisions",
+    "",
+    ...RECORD_HEAD,
+    "",
   ].join("\n");
 }
 
@@ -278,12 +284,8 @@ const DECISIONS_HEAD =
 
 export const DESIGN_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
   // `web` with the direction recorded, `web-no-direction` with no brand chosen, or `cli`.
-  discussionPack: async (root, value) =>
-    writeAt(
-      root,
-      path.join(PACK, "01_Context.md"),
-      context(value === "cli" ? "cli" : "web", value === "web"),
-    ),
+  deliberationRecord: async (root, value) =>
+    writeAt(root, RECORD, record(value === "cli" ? "cli" : "web", value === "web")),
   themeTokens: async (root) => writeAt(root, THEME, THEME_CSS),
   // `authored` for a valid file this project wrote, `sample` for the unreplaced sample.
   designMd: async (root, value) => {

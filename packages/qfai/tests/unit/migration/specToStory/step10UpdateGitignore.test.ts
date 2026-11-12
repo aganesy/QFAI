@@ -4,6 +4,10 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import {
+  QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+  QFAI_GITIGNORE_MARKER,
+} from "../../../../src/core/gitignore.js";
 import { runStep } from "../../../../src/migration/specToStory/harness.js";
 import type { MigrationContext } from "../../../../src/migration/specToStory/harness.js";
 import { step10 } from "../../../../src/migration/specToStory/step10UpdateGitignore.js";
@@ -100,5 +104,40 @@ describe("migration managed gitignore update", () => {
     expect(updated).not.toContain("!.qfai/evidence/");
     expect((await step10.plan(context)).operations).toEqual([]);
     expect(await readFile(gitignore, "utf8")).toBe(updated);
+  });
+
+  it("drops the state-file lines an earlier managed block carried", async () => {
+    // QFAI:EX-0004-0011-02
+    const root = await mkdtemp(path.join(tmpdir(), "qfai-migration-gitignore-"));
+    roots.push(root);
+    const context: MigrationContext = {
+      root,
+      specsDir: path.join(root, ".qfai", "spec"),
+      contractsDir: path.join(root, ".qfai", "spec", "03_contract"),
+      config: {} as MigrationContext["config"],
+    };
+    const gitignore = path.join(root, ".gitignore");
+    const stateLines = [".qfai/state.json", "*.qfai-state.tmp", ".qfai/state.json.lock"];
+    await writeFile(
+      gitignore,
+      [
+        QFAI_GITIGNORE_MARKER,
+        ".qfai/report/*",
+        ".qfai/evidence/*",
+        ".qfai/review/*",
+        ...stateLines,
+        ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const operation = (await step10.plan(context)).operations[0];
+    if (operation?.kind !== "delegate") throw new Error("Expected a delegated operation.");
+    await operation.apply();
+
+    const lines = (await readFile(gitignore, "utf8")).split("\n");
+    for (const line of stateLines) expect(lines).not.toContain(line);
+    expect((await step10.plan(context)).operations).toEqual([]);
   });
 });

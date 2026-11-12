@@ -228,24 +228,24 @@ describe("a duplicated managed block keeps every ignore line it carries", () => 
     // A past duplicate-append bug left some projects with two managed blocks.
     // `removeManagedBlock` strips all of them but `extractManagedBlock` read
     // only the first, so a line living exclusively in the later block was
-    // deleted and never rebuilt — `.qfai/state.json` came back tracked and
-    // local run state could be committed.
+    // deleted and never rebuilt — `.qfai/review/*` came back tracked and
+    // local review records could be committed.
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const first = await readGitignore(root);
-      expect(first).toContain(".qfai/state.json");
+      expect(first).toContain(".qfai/review/*");
 
       const lines = first.split(NL);
       const start = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
       const block = lines.slice(start).filter((line) => line.trim().length > 0);
       // Both blocks lack one governance negation, so the freshness check
-      // fails and the file is rewritten. Block 1 also lacks `.qfai/state.json`;
+      // fails and the file is rewritten. Block 1 also lacks `.qfai/review/*`;
       // block 2 carries it.
       const withoutNegation = block.filter(
         (line) => line !== QFAI_GITIGNORE_GOVERNANCE_NEGATIONS[1],
       );
-      const stale = withoutNegation.filter((line) => line !== ".qfai/state.json");
+      const stale = withoutNegation.filter((line) => line !== ".qfai/review/*");
       await writeFile(
         path.join(root, ".gitignore"),
         // A project line separates the two blocks. Without something unknown
@@ -258,7 +258,7 @@ describe("a duplicated managed block keeps every ignore line it carries", () => 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const rebuilt = await readGitignore(root);
-      expect(rebuilt).toContain(".qfai/state.json");
+      expect(rebuilt).toContain(".qfai/review/*");
       // The duplicate is collapsed to exactly one block.
       expect(rebuilt.split(QFAI_GITIGNORE_MARKER).length - 1).toBe(1);
       for (const entry of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
@@ -514,7 +514,7 @@ describe("the managed block does not repeat a line the project already has", () 
     await withProject(async (root) => {
       await writeFile(
         path.join(root, ".gitignore"),
-        `.qfai/state.json${NL}.qfai/report/*${NL}`,
+        `.qfai/review/*${NL}.qfai/report/*${NL}`,
         "utf-8",
       );
 
@@ -523,7 +523,7 @@ describe("the managed block does not repeat a line the project already has", () 
       });
 
       const lines = (await readGitignore(root)).split(NL);
-      expect(lines.filter((line) => line === ".qfai/state.json")).toHaveLength(2);
+      expect(lines.filter((line) => line === ".qfai/review/*")).toHaveLength(2);
       expect(lines.filter((line) => line === ".qfai/report/*")).toHaveLength(2);
       expect(output).not.toContain("left out of the QFAI entries");
     });

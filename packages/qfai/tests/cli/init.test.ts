@@ -2028,7 +2028,6 @@ describe("qfai init", () => {
         ".qfai/report/*",
         ".qfai/evidence/*",
         ".qfai/review/*",
-        ".qfai/state.json",
         "",
       ].join("\n");
       await writeFile(path.join(root, ".gitignore"), preNegationBlock, "utf-8");
@@ -2061,7 +2060,6 @@ describe("qfai init", () => {
         ".qfai/report/*",
         ".qfai/evidence/*",
         ".qfai/review/*",
-        ".qfai/state.json",
         "",
       ].join("\n");
       await writeFile(path.join(root, ".gitignore"), misordered, "utf-8");
@@ -2087,7 +2085,6 @@ describe("qfai init", () => {
         QFAI_GITIGNORE_MARKER,
         ".qfai/report/*",
         ".qfai/review/*",
-        ".qfai/state.json",
         ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
         "",
       ].join("\n");
@@ -2119,7 +2116,6 @@ describe("qfai init", () => {
         ".qfai/report/*",
         existingIgnore,
         ".qfai/review/*",
-        ".qfai/state.json",
         "",
       ].join("\n");
       await writeFile(path.join(root, ".gitignore"), block, "utf-8");
@@ -2145,13 +2141,7 @@ describe("qfai init", () => {
       // The audit-trail case again, from the other side: a project that removed
       // every ignore over the evidence tree is tracking what is in it, and a
       // re-ignore added here would hide the captures it chose to keep.
-      const block = [
-        QFAI_GITIGNORE_MARKER,
-        ".qfai/report/*",
-        ".qfai/review/*",
-        ".qfai/state.json",
-        "",
-      ].join("\n");
+      const block = [QFAI_GITIGNORE_MARKER, ".qfai/report/*", ".qfai/review/*", ""].join("\n");
       await writeFile(path.join(root, ".gitignore"), block, "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });

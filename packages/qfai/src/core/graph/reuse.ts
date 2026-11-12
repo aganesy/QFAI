@@ -22,6 +22,7 @@ import {
 } from "./layout.js";
 import {
   excludedGraphInput,
+  graphDeliberationDir,
   inspectCodeAnalysisAt,
   nativeCodeAnalysisCurrent,
 } from "./analysis.js";
@@ -69,6 +70,7 @@ export async function restoreCompletedCodeAnalysis(
     if (isEnoent(cause)) return "cold";
     throw cause;
   }
+  const deliberationDir = await graphDeliberationDir(root);
   for (const entry of candidates) {
     if (!entry.isDirectory() || entry.isSymbolicLink() || entry.name.startsWith(".")) continue;
     const candidate = path.join(location.directory, entry.name);
@@ -87,7 +89,7 @@ export async function restoreCompletedCodeAnalysis(
       !sameEnvironment(metadata.environment, environment)
     )
       continue;
-    if (!(await safeCompletedCorpus(path.join(candidate, "analysis")))) continue;
+    if (!(await safeCompletedCorpus(path.join(candidate, "analysis"), deliberationDir))) continue;
     if (!(await safeCodegraphInputs(root, path.join(candidate, "analysis"), run))) continue;
     const current = graphAnalysisRoot(root, "codegraph");
     const staged = path.join(path.dirname(current), `.restoring-codegraph-${randomUUID()}`);
@@ -143,7 +145,11 @@ export async function publishCompletedCodeAnalysis(
     if (!cache) return "unavailable";
     await ensureCacheDirectory(cache.repository, cache.directory);
     const analysis = graphAnalysisRoot(root, "codegraph");
-    if (!(await safeCompletedCorpus(analysis)) || !(await safeCodegraphInputs(root, analysis, run)))
+    const deliberationDir = await graphDeliberationDir(root);
+    if (
+      !(await safeCompletedCorpus(analysis, deliberationDir)) ||
+      !(await safeCodegraphInputs(root, analysis, run))
+    )
       return "unavailable";
     const identity = randomUUID();
     staged = path.join(cache.directory, `.publishing-${identity}`);
@@ -151,7 +157,7 @@ export async function publishCompletedCodeAnalysis(
     await cp(analysis, path.join(staged, "analysis"), { recursive: true, dereference: false });
     await assertIndependentAnalysis(path.join(staged, "analysis"));
     if (
-      !(await safeCompletedCorpus(path.join(staged, "analysis"))) ||
+      !(await safeCompletedCorpus(path.join(staged, "analysis"), deliberationDir)) ||
       !(await safeCodegraphInputs(root, path.join(staged, "analysis"), run))
     )
       return "unavailable";
@@ -236,6 +242,7 @@ export function sameEnvironment(value: unknown, environment: GraphReuseEnvironme
 
 export async function safeCompletedCorpus(
   directory: string,
+  deliberationDir: string,
   relative = "",
   engineDirectory = ".codegraph",
 ): Promise<boolean> {
@@ -248,13 +255,16 @@ export async function safeCompletedCorpus(
         ? next.slice(engineDirectory.length + 1)
         : next;
       if (
-        (next !== engineDirectory && excludedGraphInput(input)) ||
+        (next !== engineDirectory && excludedGraphInput(input, deliberationDir)) ||
         /\.(?:pid|lock)$/i.test(entry.name)
       )
         return false;
       const stats = await lstat(path.join(directory, ...next.split("/")));
       if (stats.isSymbolicLink() || (stats.isFile() && stats.nlink !== 1)) return false;
-      if (stats.isDirectory() && !(await safeCompletedCorpus(directory, next, engineDirectory)))
+      if (
+        stats.isDirectory() &&
+        !(await safeCompletedCorpus(directory, deliberationDir, next, engineDirectory))
+      )
         return false;
       if (!stats.isDirectory() && !stats.isFile()) return false;
     }
@@ -286,6 +296,7 @@ async function safeCodegraphInputs(
     { cwd: analysis, env: codegraphEnvironment(root) },
   );
   if (result.exitCode !== 0) return false;
+  const deliberationDir = await graphDeliberationDir(root);
   try {
     const inventory: unknown = JSON.parse(result.stdout);
     if (!object(inventory) || !Array.isArray(inventory.files)) return false;
@@ -301,7 +312,7 @@ async function safeCodegraphInputs(
       const parts = normalized.split("/");
       if (
         parts.some((part) => !part || part === "." || part === "..") ||
-        excludedGraphInput(normalized)
+        excludedGraphInput(normalized, deliberationDir)
       )
         return false;
       const stats = await lstat(path.join(analysis, ...parts));

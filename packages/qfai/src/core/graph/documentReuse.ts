@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { cp, lstat, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { excludedGraphInput } from "./analysis.js";
+import { excludedGraphInput, graphDeliberationDir } from "./analysis.js";
 import { GRAPH_VERSIONS, graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
 import {
   GRAPH_PYTHON_FLAGS,
@@ -137,7 +137,8 @@ export async function safeDocumentCopy(
   analysis: string,
   run: GraphProcess,
 ): Promise<boolean> {
-  if (!(await safeCompletedCorpus(analysis, "", "graphify-out"))) return false;
+  const deliberationDir = await graphDeliberationDir(root);
+  if (!(await safeCompletedCorpus(analysis, deliberationDir, "", "graphify-out"))) return false;
   const result = await run(
     graphRuntimePaths(root).python,
     [
@@ -165,7 +166,7 @@ export async function safeDocumentCopy(
       const parts = file.replaceAll("\\", "/").split("/");
       if (
         parts.some((part) => !part || part === "." || part === "..") ||
-        excludedGraphInput(parts.join("/"))
+        excludedGraphInput(parts.join("/"), deliberationDir)
       )
         return false;
       const stats = await lstat(path.join(analysis, ...parts));

@@ -43,6 +43,9 @@ export const EARLIER_BLOCK_LINES: ReadonlyMap<string, string | null> = new Map([
   ["!.qfai/evidence/skeleton.md", null],
   ["!.qfai/install-provenance.json", null],
   ["!.qfai/assistant/.assets.lock.json", null],
+  [".qfai/state.json", null],
+  ["*.qfai-state.tmp", null],
+  [".qfai/state.json.lock", null],
 ]);
 
 /**
