@@ -225,7 +225,7 @@
         "scripts/check-simplification-ledger.mjs": "e891758c0d379cb9bf2f11346330ab131a3ab1dbea8e800249a51ae8ac9a1a67",
         "scripts/check-toolchain-action.sh": "2118bc0d10c060bbe25fd4d34785ec024ed46a57e7840252d42519f5bc3b44c9",
         "scripts/check-tracked-readmes.mjs": "236bd086eb503a37747b00a6d0e98bdd7818bec054a78527e27ca20a873aa449",
-        "scripts/check-tracked-scratch.mjs": "ce54a235103c6201ae57e0b7778232b992349d3a218f0527f33831b5246dd6b6",
+        "scripts/check-tracked-scratch.mjs": "8d66202189857e2648436686b28bc5a7a846072a7721187d6c5b05e04a6e42b8",
         "scripts/check-tracked-symlinks.mjs": "1769fe9351bb11fa3c2a1e11a45e665cf46fec970cb6b5abebd63519ba2136b2",
         "scripts/check-tsc-compiler.mjs": "14811d9aa79ca3988a07f3ee51aeac3a4ee825e793e77af69ff05cf55e39e1f1",
         "scripts/check-types-future.mjs": "21ac82e9a3c97fe245aa2dc9aa39488fe181d9d35c698bf787bb7424a392ec10",
@@ -261,7 +261,7 @@
         "scripts/story-ids.mjs": "fef603865696c4da73f52bdb473f705e66ca5c0eaa5e4c5fdbde477a6ed5de5f",
         "scripts/sync-init-to-root.mjs": "fd2599d784c18907587da63bac4c270f488371a750219f3244971e0ba7f8af64",
         "scripts/sync-mdschema-version.mjs": "c7fe3bcd7d3f645c3bea0431ff06a5ebf786092bb62bb41ad18c7bb2abe5023d",
-        "scripts/verify-pack.mjs": "a279b27c20e62621b31e9d20effd3b05a9711545e1e5de7e21adea5b5f1522fe"
+        "scripts/verify-pack.mjs": "5bb41d010268ba5577c0e37c650a602a08b48c1f09a5aa0000096e22cd6530f2"
       },
       "pinnedBytesNote": [
         "The bytes of every local composite action and every guard program, pinned by path.",
@@ -409,15 +409,15 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "7bd5ba9df767883b",
+        "Verify the toolchain action before running it": "e5ebe74a76ddcd24",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
-        "Run build & pack verification": "405e2ce62b746c44",
+        "Run build & pack verification": "9c45eddf700085e9",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "bdf80b626fab1660",
         "QFAI self-validate this repo (dogfooding — TDD gates)": "22dbe28ade157e78",
         "QFAI self-validate this repo (dogfooding — SDD gates)": "a6335bcba3f91550",
         "QFAI self-validate this repo (dogfooding — full profile)": "96caa9705555e971",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "da5f441d973d0a19",
+        "Run lint gate": "565900092cdb3c4b",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "55db3b7f97fd7fad",
         "Run the package test suite on the floor (${{ matrix.slice }})": "a931991b300a31e2",
