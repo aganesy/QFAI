@@ -17,11 +17,9 @@ describe("optional discussion prototyping recommendation", () => {
         tree,
         "assistant/skill/qfai-sdd/references/sdd-execution-playbook.md",
       );
-      const discussion = await read(tree, "assistant/skill/qfai-discussion/SKILL.md");
       expect(skill).toContain("selectedInputPath");
       expect(playbook).toContain("Respect an explicitly selected discussion pack");
       expect(playbook).not.toContain("missing valid `prototyping.yaml`");
-      expect(discussion).toContain("prototyping.yaml");
     });
   }
 });

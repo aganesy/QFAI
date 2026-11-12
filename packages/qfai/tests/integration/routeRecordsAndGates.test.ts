@@ -16,6 +16,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const assistant = path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant");
 const read = (relative: string): Promise<string> => readRule(path.join(assistant, relative));
 const flat = (text: string): string => text.replace(/\s+/g, " ");
+const GRILLING_RULE = "packages/qfai/assets/init/root/.agents/rules/grilling.md";
 
 async function stepNames(): Promise<string[]> {
   return (await readdir(path.join(assistant, "step"), { withFileTypes: true }))
@@ -23,20 +24,27 @@ async function stepNames(): Promise<string[]> {
     .map((entry) => entry.name);
 }
 
-describe("a route outside the discussion stage writes no grilling record", () => {
+describe("no stage writes a grilling record beside the deliberation record", () => {
   // QFAI:AC-0001-0223-02
   // QFAI:EX-0001-0223-09
-  it("keeps the record to the discussion stage and the choice to the final report", async () => {
+  it("keeps a session's results to rows of the run's deliberation record", async () => {
     const record = flat(await read("step/common-grilling-record/STEP.md"));
-    expect(record).toContain("Only the discussion stage writes this record.");
-    expect(record).toContain("reports what it settled in its final report");
+    expect(record).toContain(
+      "Apart from those rows, no stage writes a grilling record, a session table or a marker saying that no session was held.",
+    );
+    expect(record).toContain(
+      "No row for a step that held no session: nothing is written to say none was held.",
+    );
 
     for (const step of await stepNames()) {
-      if (step.startsWith("discussion-") || step === "common-grilling-record") continue;
       const text = await read(`step/${step}/STEP.md`);
-      expect(text, step).not.toContain("common-grilling-record");
       expect(text, step).not.toContain("## Grilling Session");
+      if (step.startsWith("discussion-") || step === "common-grilling-record") continue;
+      expect(text, step).not.toContain("common-grilling-record");
     }
+    expect(flat(await readFile(path.join(repoRoot, GRILLING_RULE), "utf-8"))).toContain(
+      "**The record's path in the final report**",
+    );
 
     const baseline = flat(await read("rule/shared-skill-delegation-baseline.md"));
     expect(baseline).not.toContain("grilling(-/none): none");
@@ -160,6 +168,9 @@ describe("a step with no open design decision starts no griller", () => {
       /\| Delegated +\| Any other stage, when it meets a design decision the request needs and the repository cannot settle +\| The session agent, interviewed by a griller +\| Critical decisions only +\|/,
     );
     expect(text).toContain("A critical decision met on the way still goes to the user.");
+    expect(text).toContain(
+      "**An Agent decisions row** of the run's deliberation record: at least three options, the recommendation taken",
+    );
     // `sdd-triage` names no kind of session, so the default decides it.
     expect(text).toContain("**Delegated is the default where a session is held.**");
     expect(flat(await read("skill/qfai-grilling/SKILL.md"))).toContain(

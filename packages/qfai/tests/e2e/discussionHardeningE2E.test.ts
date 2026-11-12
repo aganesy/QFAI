@@ -18,16 +18,6 @@ const skillPath = path.join(
 );
 
 describe("discussion hardening E2E guidance", () => {
-  it("SKILL.md describes the UI-bearing artifact family (DESIGN.md + sidecars)", async () => {
-    const content = await readFile(skillPath, "utf-8");
-
-    // Brand SSOT lives in root DESIGN.md; only screen-level sidecars
-    // remain in uiux/.
-    expect(content).toMatch(/DESIGN\.md/);
-    expect(content).toMatch(/40_screen_contracts\.md/);
-    expect(content).toMatch(/50_review_input_bundle\.md/);
-  });
-
   it("SKILL.md centres on the planner / brand SSOT ahead of the selected direction", async () => {
     const content = await readFile(skillPath, "utf-8");
 

@@ -228,10 +228,10 @@ runs only from its parent or from the plan `qfai-run` follows.
    gate. Run a `common-*` step it `requires` at the point the step calls it.
    Then move to the next step.
 5. After the last step, run the one review the parent names, through
-   `common-review-cycle`: the specification review for `qfai-sdd` and
-   `qfai-discussion`, the code review for a parent that changed code, tests or
-   a change note, and none for `qfai-triage` or for a `qfai-verify` run that
-   wrote nothing.
+   `common-review-cycle`: the specification review for `qfai-sdd`, the code
+   review for a parent that changed code, tests or a change note, and none for
+   `qfai-discussion`, whose output is a memo, for `qfai-triage` or for a
+   `qfai-verify` run that wrote nothing.
 6. Complete as the parent's completion section says, reporting what each step
    produced.
 

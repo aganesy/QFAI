@@ -14,15 +14,11 @@ const TEMPLATE = "assistant/skill/qfai-sdd/templates/spec/decisions.md";
 const LABELS = ["`Evidence:`", "`Grounds:`", "`Residual risk:`", "`Rollback:`"];
 const TEMPLATE_CITATION = "templates/spec/decisions.md";
 const SDD_GUIDANCE = [
-  "assistant/step/common-grilling-record/STEP.md",
   "assistant/skill/qfai-sdd/references/sdd-triage.md",
   "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
   "assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
 ];
-const EVIDENCE_GUIDANCE = [
-  "assistant/step/common-grilling-record/STEP.md",
-  "assistant/skill/qfai-implement/references/parallelization-policy.md",
-];
+const EVIDENCE_GUIDANCE = ["assistant/skill/qfai-implement/references/parallelization-policy.md"];
 
 const read = (tree: string, file: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, file), "utf-8");

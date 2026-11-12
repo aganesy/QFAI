@@ -17,4 +17,4 @@ Use this file when checking whether `/qfai-discussion` covered the required topi
 
 ## Completion Rule
 
-- Missing topics must become explicit OQ or deferred items.
+- A topic the session did not cover becomes an `open-questions.md` row.

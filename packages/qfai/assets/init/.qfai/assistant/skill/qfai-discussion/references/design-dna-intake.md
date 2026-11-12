@@ -1,6 +1,7 @@
 # Design DNA Intake
 
-Use this reference only for UI-bearing discussion packs.
+Use this reference only in a discussion whose target has a `web`, `mobile`,
+`desktop` or `mixed` surface.
 
 ## Interview Targets
 
@@ -67,21 +68,17 @@ Then ask what departs from the theme. Keep it to the primary hue and the
 typeface pairing unless the user asks for more; everything else stays as the
 theme shipped it, which is how a screen keeps looking like one thing.
 
-With no user present, take the most conventional candidate, record it as
-`chosen_by: assumption`, and open it in `11_OQ-Register.md`. Do not block.
+With no user present, take the most conventional candidate as an Agent
+decisions row labelled an assumption, and write the theme as an
+`open-questions.md` row. Do not block.
 
 ## Where the answers go
 
-The interview is recorded, not rendered. Its answers go into the pack:
-the classification and the chosen direction into `01_Context.md`, both
-reference registries into `04_Sources.md`, and the screen-level decisions
-into `uiux/`.
+The interview is recorded, not rendered. Each answer is an Interview row of
+the run's deliberation record: the chosen theme, what departs from it, and
+each reference with what is adopted from it and what is rejected. A reference's
+URL goes into the row's Background.
 
-Root `DESIGN.md` is written later, by `/qfai-sdd`'s `common-design-md` step, which reads
-those records. The mapping from answer to field is
+Root `DESIGN.md` is written later, by `/qfai-sdd`'s `common-design-md` step.
+The mapping from answer to field is
 `qfai-sdd/references/design-md-authoring.md`.
-
-Where the direction names a `DESIGN.md` key or an archetype — in a code span,
-a `yaml` block or an `archetype:` item — `npx qfai validate --profile
-discussion` reads it against the front-matter schema and reports one the
-schema lacks as `QFAI-DPACK-011`, while the choice is still cheap to change.

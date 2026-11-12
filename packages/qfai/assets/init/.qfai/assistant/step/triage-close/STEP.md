@@ -61,8 +61,12 @@ Any other route closes here.
 
 ## What it writes
 
-- No file git tracks. Name any ignored record's location in the stage
+- No file git tracks, except the run's deliberation record and its
+  `open-questions.md` rows. Name any ignored record's location in the stage
   report, separately from tracked changes.
+- As the route's last step, commit locally only the run's deliberation record
+  and the `open-questions.md` rows the run wrote, and push nothing. A run that
+  wrote neither commits nothing.
 - The stage report states the outcome and each follow-up's goal and reason.
   When the release change is produced outside this run (by a release workflow
   or bot), the stage report records the release approval with what was
@@ -81,6 +85,7 @@ no follow-up was routed or started, and no tracked file was changed by any
 triage step. The report never says a tracked change is done. The `cleaned`
 outcome confirms only the temporary cleanup's completed gate.
 
-Outside triage steps, the only tracked-file changes allowed are the records
-the route's discussion stage names and the approval row, if any, that
+The only tracked-file changes allowed are the run's deliberation record, the
+`open-questions.md` rows the run wrote, and the approval row, if any, that
 `qfai-run` writes in `decisions.md` under its step 7 before `triage-handoff` runs.
+The local commit holds only the record and those rows, and nothing was pushed.

@@ -124,12 +124,16 @@ request, or the version edit alone.
 ## What it writes
 
 - No file git tracks, apart from the base changes a merge of the base brings
-  in.
+  in, the run's deliberation record and its `open-questions.md` rows.
+- As the route's last step, after the operation, commit locally only the run's deliberation record
+  and the `open-questions.md` rows the run wrote, and push nothing. A run that
+  wrote neither commits nothing.
 - The operation, its result and any `needs-change` outcome, in the report.
 
 ## Gate
 
 The stage worker confirms the operation was one the user named, its result is
-recorded as observed, and no tracked file changed beyond a merge of the base. For a release, it also
+recorded as observed, and no tracked file changed beyond a merge of the base,
+the run's deliberation record and its `open-questions.md` rows. For a release, it also
 confirms the delegation is quoted with its source, and that no tag, publication
 or publication approval came from the agent.

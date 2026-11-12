@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -511,34 +511,6 @@ describe("uiux validators", () => {
     const issues = await validateResearchSummary(root, defaultConfig);
 
     expect(issues.map((item) => item.code)).not.toContain("QFAI-RESEARCH-012");
-  });
-
-  it("ships a 04_Sources.md template that already satisfies the Research Summary presence rule", async () => {
-    const root = await newTempDir();
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
-    await mkdir(packDir, { recursive: true });
-    const template = await readFile(
-      path.resolve(
-        process.cwd(),
-        "assets/init/.qfai/assistant/skill/qfai-discussion/templates/04_Sources.md",
-      ),
-      "utf-8",
-    );
-    await writeFile(path.join(packDir, "04_Sources.md"), template, "utf-8");
-
-    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
-
-    expect(codes).not.toContain("QFAI-RESEARCH-012");
-    expect(codes).not.toContain("QFAI-RESEARCH-001");
-    expect(codes).not.toContain("QFAI-RESEARCH-007");
-    expect(codes).not.toContain("QFAI-RESEARCH-008");
-    expect(codes).not.toContain("QFAI-RESEARCH-011");
-    // …but an untouched scaffold must not pass as recorded research: every
-    // required value is still a bracketed placeholder.
-    expect(codes).toContain("QFAI-RESEARCH-004");
-    expect(codes).toContain("QFAI-RESEARCH-005");
-    expect(codes).toContain("QFAI-RESEARCH-006");
-    expect(codes).toContain("QFAI-RESEARCH-010");
   });
 
   it("rejects template placeholders left in required Research Summary values", async () => {

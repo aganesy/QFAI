@@ -5,30 +5,14 @@
  * sidecar was retired — so this validator stays in the canonical set and keeps
  * its pass / fail / non-UI fixtures here.
  */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
 import { validateTrendScan } from "../../../src/core/validators/uix/trendScan.js";
-
-// Anchored to this file, not to `process.cwd()`: Vitest may be launched from
-// the repository root or from `packages/qfai`.
-const repoRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-);
-const SHIPPED_SOURCES_TEMPLATE = path.join(
-  repoRoot,
-  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-discussion/templates/04_Sources.md",
-);
 
 const tempDirs: string[] = [];
 
@@ -288,22 +272,6 @@ describe("validateTrendScan guideline coverage", () => {
 });
 
 describe("validateTrendScan against the shipped 04_Sources.md template", () => {
-  it("rejects the untouched template: every bracketed slot counts as unfilled", async () => {
-    const root = await newTempDir();
-    await createClassifiedPack(root, true);
-    const template = await readFile(SHIPPED_SOURCES_TEMPLATE, "utf-8");
-    await writeFile(path.join(root, "04_Sources.md"), template, "utf-8");
-
-    const issues = await validateTrendScan(root, defaultConfig);
-    const fieldMissing = issues.filter((issue) => issue.code === "QFAI-TREND-003");
-
-    // 4 required categories x 5 required fields, all seeded with `[...]`.
-    expect(fieldMissing).toHaveLength(20);
-    // The template's `rule_refs` list item is bracketed too, so the guideline
-    // entry does not count as concrete.
-    expect(issues.some((issue) => issue.code === "QFAI-TREND-005")).toBe(true);
-  });
-
   it("reads a template-shaped multi-line rule_refs list as a concrete value", async () => {
     const root = await newTempDir();
     await createClassifiedPack(root, true);

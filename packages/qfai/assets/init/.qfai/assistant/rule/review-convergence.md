@@ -129,11 +129,11 @@ a round. Agent agreement and round exhaustion supply no authority.
 | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | It contradicts a spec, a contract or a recorded decision                                                                                      | Changing settled input is the user's decision, not a design round           |
 | Its effect cannot be taken back: security, lost or corrupted data, a broken released contract, spending, a legal commitment, a public release | A wrong recommendation here is not repaired by the next run                 |
-| It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated                  | Two agents reasoning past the evidence converge on the more fluent argument |
+| It rests on product or business intent that the request, the specs and the contracts all leave unstated                                       | Two agents reasoning past the evidence converge on the more fluent argument |
 
-A discussion pack answers product intent for this test. It is non-normative for
-the Drift Protocol, but it is where the user already answered these questions in
-a user session, and asking them again spends that session twice.
+Product intent the user already settled is read from the story tree and
+`decisions.md`, never from a deliberation record. Asking it again spends that
+session twice.
 
 Each uncovered critical decision goes to the user with every position and a
 recommendation when asking is permitted. The work stays where it is while the

@@ -40,7 +40,6 @@ const REQUIRED: Readonly<Record<string, readonly string[]>> = {
   "verify-external": ["untrusted-content"],
   "maintain-edit": ["documentation-clarity"],
   "discussion-research": ["untrusted-content"],
-  "discussion-pack": ["documentation-clarity"],
   "implement-benchmark": ["temporary-files"],
   "implement-dep-bump": ["untrusted-content"],
   "implement-diagnose": ["untrusted-content"],

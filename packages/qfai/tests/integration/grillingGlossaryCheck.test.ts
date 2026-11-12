@@ -1,6 +1,7 @@
 /**
  * The glossary check every grilling session runs: a term that clashes with a glossary is raised
- * when it appears, and a term the session settles is written at once to the glossary its stage owns.
+ * when it appears, and a term the session settles is written at once to the project glossary or to an
+ * open question.
  */
 // QFAI:AC-0001-0245-01
 // QFAI:AC-0001-0245-02
@@ -35,18 +36,18 @@ const read = async (rel: string): Promise<string> => unwrap(await readRaw(rel));
 // QFAI:EX-0001-0245-02
 // QFAI:EX-0001-0245-03
 describe.each(MASTERS)("%s raises a term that clashes with a glossary", (rel) => {
-  it("checks both glossaries in every session", async () => {
+  it("checks only the project glossary in every session", async () => {
     const master = await read(rel);
     expect(master).toContain("## Terms against the glossary");
     expect(master).toContain(
-      "Every session, user or delegated and at every stage, checks the terms it hears against `<specsDir>/01_policy/glossary.md` and, during a discussion, the pack's `08_Glossary.md`.",
+      "Every session, user or delegated and at every stage, checks the terms it hears against `<specsDir>/01_policy/glossary.md`.",
     );
   });
 
   it("raises a clash first in the round and proposes the glossary's term", async () => {
     const master = await read(rel);
     expect(master).toContain(
-      "conflicts with, or is a synonym of, a term a glossary defines is raised first in the round it appears in, or the next one when it appears in an answer.",
+      "conflicts with, or is a synonym of, a term the glossary defines is raised first in the round it appears in, or the next one when it appears in an answer.",
     );
     expect(master).toContain(
       "Questions whose answer turns on its meaning wait for the next round.",
@@ -61,7 +62,7 @@ describe.each(MASTERS)("%s raises a term that clashes with a glossary", (rel) =>
     const master = await read(rel);
     expect(master).toContain("A matching term raises nothing.");
     expect(master).toContain(
-      "A term in neither glossary is asked about only when a decision on the tree turns on its meaning.",
+      "A term the glossary does not hold is asked about only when a decision on the tree turns on its meaning.",
     );
   });
 });
@@ -69,19 +70,18 @@ describe.each(MASTERS)("%s raises a term that clashes with a glossary", (rel) =>
 // QFAI:EX-0001-0245-04
 // QFAI:EX-0001-0245-05
 describe.each(MASTERS)("%s writes a settled term at once", (rel) => {
-  it("writes it to the glossary the stage owns, the stage's evidence or the session record", async () => {
+  it("writes it to the project glossary in a policy stage, and otherwise as an open question", async () => {
     const master = await read(rel);
     expect(master).toContain(
       "**A settled term is written at once**, not at the end of the session",
     );
     expect(master).toContain(
-      "to the pack's `08_Glossary.md` in discussion, a new term to the project glossary where the stage writes the policy layer, otherwise to the stage's evidence, beside its adopted decisions, with a line in its final report, and with no invoking stage to the session record the user reads.",
+      "to the project glossary in a stage that writes the policy layer, and otherwise as an `open-questions.md` row naming the term and its definition, which `/qfai-sdd` writes into the glossary.",
     );
   });
 
-  it("rewrites a changed pack term, gates a project glossary change, and keeps a definition to what the term is", async () => {
+  it("gates a project glossary change, and keeps a definition to what the term is", async () => {
     const master = await read(rel);
-    expect(master).toContain("A changed pack term rewrites its row and adds no second one.");
     expect(master).toContain(
       "**Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only after the user approves it.",
     );

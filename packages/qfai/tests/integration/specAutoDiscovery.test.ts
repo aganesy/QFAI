@@ -55,26 +55,6 @@ describe("vocabulary pass scan", () => {
   });
 });
 
-describe("fixture alignment — exploration-first model", () => {
-  it("discussion SKILL.md references exploration brief and rubric artifacts", async () => {
-    const repoRoot = path.resolve(process.cwd(), "..", "..");
-    const skillPath = path.join(
-      repoRoot,
-      "packages",
-      "qfai",
-      "assets",
-      "init",
-      ".qfai",
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "SKILL.md",
-    );
-    const content = await readFile(skillPath, "utf-8");
-    expect(content).toMatch(/exploration brief|exploration-first|exploration rubric/i);
-  });
-});
-
 describe("fixture 4-axis reject", () => {
   it("discussion SKILL.md completion conditions do not use 4-axis model keyword", async () => {
     const repoRoot = path.resolve(process.cwd(), "..", "..");

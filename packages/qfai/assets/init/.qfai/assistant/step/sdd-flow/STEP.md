@@ -100,20 +100,33 @@ states.
 8. Allocate BF IDs as
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#id-allocation`
    states, and add the new rows to the flow index.
-9. Parse the diagrams in the Markdown files this step wrote, as
-   `.qfai/assistant/step/discussion-pack/STEP.md#parse-the-diagrams` says, with
-   those files in place of the pack directory:
-   - First do steps 1 to 3 there. Where the project has no `node_modules/qfai`,
-     they install the release and read the parser versions from it. They
-     install the parser into `tmp/qfai-mermaid`, never into the project's
-     dependency tree.
+9. Parse the diagrams in the Markdown files this step wrote with Mermaid's own
+   grammar. `npx qfai validate` checks only that a diagram is there.
+   - Where the project has no `node_modules/qfai`, install the release that
+     `npx qfai --version` prints into a directory of its own, and read
+     `tmp/qfai-release/node_modules/qfai/` wherever the steps below name
+     `node_modules/qfai/`:
+
+     ```bash
+     npm install --no-save --no-audit --no-fund --ignore-scripts --prefix=tmp/qfai-release qfai@<version>
+     ```
+
+   - Read the `mermaid@` and `jsdom@` versions from the install step of
+     `node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml`, the
+     shipped copy of the installed release, and install them into
+     `tmp/qfai-mermaid`, never into the project's dependency tree:
+
+     ```bash
+     npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --prefix=tmp/qfai-mermaid mermaid@<version> jsdom@<version>
+     ```
+
    - Then run the checker:
 
      ```bash
      node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>
      ```
 
-     Where step 1 installed the release, run its checker instead:
+     Where the release was installed, run its checker instead:
 
      ```bash
      node tmp/qfai-release/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>

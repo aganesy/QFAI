@@ -6,9 +6,9 @@
  * Nothing downstream asks: `/qfai-sdd` Phase 0 authors tokens from whatever the
  * pack records, so an unasked question becomes an invented brand.
  *
- * Three things have to hold together, and each is prose an agent reads:
- * discussion asks, the pack has a field to record the answer in, and Phase 0
- * reads that field rather than scoring prose.
+ * Two things have to hold together, and each is prose an agent reads:
+ * discussion asks and records the answer as an Interview row, and Phase 0 reads
+ * the recorded choice rather than scoring prose.
  */
 
 import { readFile } from "node:fs/promises";
@@ -17,16 +17,12 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { readDiscussionSkill } from "../helpers/discussionSteps.js";
-
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const SKILLS = "assistant/skill";
 const INTAKE = `${SKILLS}/qfai-discussion/references/design-dna-intake.md`;
-const MATRIX = `${SKILLS}/qfai-discussion/references/discussion-completion-matrix.md`;
-const CONTEXT_TEMPLATE = `${SKILLS}/qfai-discussion/templates/01_Context.md`;
 const AUTHORING = `${SKILLS}/qfai-sdd/references/design-md-authoring.md`;
 
 const read = (tree: string, rel: string): Promise<string> =>
@@ -37,22 +33,6 @@ const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
 describe("the design direction is the user's decision", () => {
   for (const tree of QFAI_TREES) {
-    // QFAI:EX-0001-0087-01
-    it(`${tree}: the pack has a place to record the choice`, async () => {
-      const template = await read(tree, CONTEXT_TEMPLATE);
-      const skill = flat(await readDiscussionSkill(path.join(repoRoot, tree, "assistant")));
-
-      // The record is the handoff; the brand file is not discussion's to write.
-      expect(skill).toContain("Root DESIGN.md is not a discussion output");
-
-      expect(template).toContain("## Design Direction");
-      for (const field of ["adopted_theme:", "brand_accent:", "conventions_kept:", "chosen_by:"]) {
-        expect(template).toContain(field);
-      }
-      // A theme resolves to tokens; an adjective does not.
-      expect(flat(template)).toContain("Name a theme, not an adjective.");
-    });
-
     it(`${tree}: the interview offers candidates rather than asking for adjectives`, async () => {
       const intake = flat(await read(tree, INTAKE));
 
@@ -71,32 +51,13 @@ describe("the design direction is the user's decision", () => {
       expect(intake).toContain("The cap binds every command alike");
     });
 
-    it(`${tree}: an unattended run records an assumption instead of blocking`, async () => {
+    it(`${tree}: an unattended run records an assumption and an open question instead of blocking`, async () => {
       const intake = flat(await read(tree, INTAKE));
 
-      expect(intake).toContain("`chosen_by: assumption`");
-      expect(intake).toContain("11_OQ-Register.md");
+      expect(intake).toContain(
+        "take the most conventional candidate as an Agent decisions row labelled an assumption, and write the theme as an `open-questions.md` row.",
+      );
       expect(intake).toContain("Do not block.");
-    });
-
-    // The planner-first rule used to forbid selecting any visual winner, which
-    // is the opposite of asking the user to choose a theme. It still holds for
-    // the screen explorations, which the prototype loop ranks by iterating.
-    it(`${tree}: planner-first is scoped to the screen explorations`, async () => {
-      const skill = flat(await readDiscussionSkill(path.join(repoRoot, tree, "assistant")));
-      const matrix = flat(await read(tree, MATRIX));
-
-      expect(skill).toContain("carry the screen explorations unranked");
-      expect(skill).toContain("The brand direction is the exception");
-      expect(matrix).toContain("no single screen exploration is selected");
-      expect(matrix).toContain("`01_Context.md#Design Direction` names an adopted theme");
-    });
-
-    it(`${tree}: a surface that renders no tokens is asked for no direction`, async () => {
-      const matrix = flat(await read(tree, MATRIX));
-
-      expect(matrix).toContain("conditions 1 and 5 above do not apply to it");
-      expect(matrix).toContain("nothing downstream reads a theme for a surface that renders");
     });
 
     // QFAI:EX-0001-0087-02
@@ -108,37 +69,6 @@ describe("the design direction is the user's decision", () => {
       // Scoring survives only as the fallback, and is named as the assistant's answer.
       expect(authoring).toContain("Map the theme the pack records to the archetype");
       expect(authoring).toContain("is the fallback for a pack whose direction names no theme");
-    });
-  }
-});
-
-describe("a pack may inherit the current DESIGN.md", () => {
-  for (const tree of QFAI_TREES) {
-    it(`${tree}: the classification block offers the declaration and says when it is refused`, async () => {
-      const template = flat(await read(tree, CONTEXT_TEMPLATE));
-      const playbook = flat(
-        await read(tree, `${SKILLS}/qfai-discussion/references/ui-bearing-playbook.md`),
-      );
-
-      expect(template).toContain("- design_direction: [new|inherit]");
-      expect(template).toContain(
-        "owes no Trend Scan, no minimum count of competitive or catalogue references",
-      );
-      expect(playbook).toContain("### Inheriting the current DESIGN.md");
-      expect(playbook).toContain(
-        "The declaration waives nothing in the Research Summary of `04_Sources.md`: the research-first protocol runs for every pack.",
-      );
-      const matrix = flat(await read(tree, MATRIX));
-      expect(matrix).toContain("## Inheriting Packs");
-      expect(matrix).toContain("UI-bearing items 1 and 5 do not apply");
-      const packStep = flat(await read(tree, "assistant/step/discussion-pack/STEP.md"));
-      expect(packStep).toContain(
-        "A pack whose classification declares `design_direction: inherit` records no direction and skips the registries and the 40/50 sidecars",
-      );
-      expect(packStep).toContain("ui-bearing-playbook.md#inheriting-the-current-designmd");
-      expect(playbook).toContain(
-        "The declaration is not allowed when the pack adds a screen or changes the design direction.",
-      );
     });
   }
 });

@@ -125,16 +125,6 @@ describe("shipped skill reference reachability", () => {
     expect(unrouted).toEqual([]);
   });
 
-  it("qfai-discussion routes the UI-bearing classification rule", async () => {
-    // The mandatory output set branches on "UI-bearing" in a dozen places and
-    // the only written surface mapping lives in the playbook. Losing the
-    // naming line makes the predicate depend on the agent happening to list
-    // `references/`.
-    const skillMd = path.join(assistantRoot, "skill", "qfai-discussion", "SKILL.md");
-    const text = await readFile(skillMd, "utf-8");
-    expect(text).toContain("references/ui-bearing-playbook.md");
-  });
-
   it("a same-named reference in another skill is not counted as reached", () => {
     const tree = new Map([
       ["skill/alpha/SKILL.md", "Follow `references/shared.md`."],

@@ -108,8 +108,9 @@ describe("the traceability chain and the skill order", () => {
     expect(stages.get(6)).toContain("Verify: run quality gates and provide evidence");
 
     const discussion = await readDiscussionSkill(ASSISTANT);
-    expect(discussion).toContain("nine-file discussion pack");
-    expect(discussion).toContain("Capture scope, REQ, NFR");
+    expect(discussion.replace(/\s+/g, " ")).toContain(
+      "keeps what was asked and answered in the run's deliberation record, so `/qfai-sdd` can write the story tree from it.",
+    );
 
     const constitution = (
       await readFile(path.join(ASSISTANT, "rule", "constitution.md"), "utf8")

@@ -1,77 +1,42 @@
 ---
 name: common-grilling-record
 owner: common
-purpose: "Write the record of the discussion stage's grilling session in the stage report, so a session that ran and one that was skipped can be told apart."
+purpose: "Write what a grilling session asked and decided as rows of the run's deliberation record."
 requires: []
 ---
 
 # common-grilling-record
 
 The method is `.agents/rules/grilling.md`, and this step does not restate it.
-This step is the record: the method writes no artifact of its own, so without
-it a stage that grilled and one that skipped the session leave the same tree.
+This step is where a session's results go: rows of the run's deliberation
+record, written as `.qfai/assistant/rule/references/deliberation-record.md`
+says. Apart from those rows, no stage writes a grilling record, a session
+table or a marker saying that no session was held.
 
-Only the discussion stage writes this record. Every other stage stops on a
-contradiction under Article IX of `.qfai/assistant/rule/constitution.md`, and
-reports what it settled in its final report.
+## Rows the session writes
 
-## Rules the record keeps
+| What the session did                                        | Row                                                                                                |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Put a question to the user                                  | One Interview row, under the stage's subheading, written when the answer arrives                   |
+| Took a decision in a delegated session                      | One Agent decisions row with at least three options, the griller's recommendation chosen           |
+| Took an assumption on a closure or under a no-question mode | One Agent decisions row whose Background says it is an assumption                                  |
+| Overturned an earlier row of the same record                | A new row whose Background says which row it overturns; the earlier row stays                      |
+| Left a question open                                        | No record row of its own: one `<paths.specsDir>/open-questions.md` row, in the register's own form |
 
-- **The end time is written before work resumes.** A row holding only the final
-  state reads the same whether the session ran first, ran after or never ran.
-  Writing the end before the next write makes the order a record. It still
-  cannot prove a session happened; the agent writes its own record.
-- **`Ended` is one of the five endings** `.agents/rules/grilling.md` names:
-  `confirmed`, `user-closed`, `adopted`, `no-question`, `stopped`. Only the first
-  four let the work go on.
-- **A stopped session is reported, not written.** The user ended it, and a row
-  is a file change. The stage names the stopped session and its open nodes in
-  its output and resumes no work.
-- **A free-form cell is one line, with `|` written `\|`.** A pipe or a line
-  break adds cells and moves counts under the wrong headings.
+**A free-form cell is one line, with `|` written `\|`.** A pipe or a line
+break adds cells and moves values under the wrong headings, which
+`npx qfai validate` reports as `QFAI-DELIB-001`.
 
-## Decisions
+## What a session does not write
 
-A settled decision is written where the story tree keeps it. Adopt a supported
-recommendation in the appropriate `decisions.md` row or in the authored
-artifact. Record an unresolved choice in `open-questions.md` with its next
-action. Record a rejected option as a decision row whose Content opens `Declined:`, so
-it stays excluded on reruns.
-
-Each decision record is a short decision record in the form stated at the top of
-`.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
-
-## One session
-
-The stage holds one session per run, except a reopened node, below. The row
-goes in the stage report, under `## Grilling Session`, and is written before
-the first authored file:
-
-```text
-| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |
-| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |
-| confirmed | <ISO8601> | <ISO8601> | empty | none in flight | <n> | <n> |
-```
-
-The authoring endings are `confirmed`, `user-closed`, `no-question`, and
-conditionally `adopted`. For `adopted`, verify
-`.agents/rules/grilling.md#explicit-delegation-for-a-discussion`: actual user
-delegation with source, scope and authority; actual griller-to-author rounds
-with reasons and dissent; no open node or running lookup; all consumed required
-inputs present; and actual human authority for every reserved decision.
-Record these in the stage evidence, not as a fictional human option answer.
-`Ended at` and `Authoring began` are actual timestamps, with authoring later.
-A missing hard-required consumed input authorizes no authoring ending.
-Allowing authoring is not a completion or validation receipt.
+- No row for a step that held no session: nothing is written to say none was held.
+- No timestamp, ending or count of its own. The ending is reported in the
+  stage report, and a `stopped` session writes nothing more.
+- No row of `decisions.md` and no other story-tree file, except where the
+  invoking stage itself writes the policy layer.
 
 ## A reopened node
 
-A critical decision found while authoring reopens the session for that node
-only, for one round to the user. Append one row for that round under the same
-header, with its own `Ended`, `Ended at` and `Authoring began`, before authoring
-resumes. The earlier rows stay as written. A stopped round is reported, not written.
-
-The round runs until no node it opened is left open, or until what is still
-open is recorded as labelled assumptions or `11_OQ-Register.md` entries. Under
-a no-question mode the row's `Ended` is `no-question`, and the decision is
-registered in `11_OQ-Register.md`.
+A critical decision found later in the same run reopens the session for that
+node only, for one round to the user. Its question is a new Interview row under
+the stage that met it. The rows already written stay as written.
