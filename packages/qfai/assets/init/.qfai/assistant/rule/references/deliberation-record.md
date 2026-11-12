@@ -10,7 +10,7 @@ A run keeps a memo of the questions it put to the user and the decisions its age
 - **When.** A run writes one only when it asks the user a question or takes an Agent decisions row. Each stage of the run writes under a subheading of its own in the same file.
 - **Interview.** One row per question put to the user. Quote a free answer word for word in `Option 4 (other)`. A question with no candidate values leaves Options 1 to 3 empty, holds the answer in Option 4 and chooses `4`. A source the options rest on goes into Background as a URL.
 - **Agent decisions.** One row per choice that no specification, contract, rule or convention settles and whose answer changes an artifact's meaning, behaviour, structure or policy, and one per decision settled between agents. Consider at least three options for each row. A choice a convention settles, a formatting choice and a choice with one possible answer are not rows.
-- **A memo.** A record has no ID, cites no ID, and nothing cites it. Once committed it is never edited: a correction is a new record. A later row that overturns an earlier row of the same record says so in its Background, and the earlier row stays.
+- **A memo.** A record has no ID, cites no ID, and nothing cites it. Once committed, it may be edited only to repair its table layout (a table's columns and a row's cell count), never its content: a correction is a new record. A later row that overturns an earlier row of the same record says so in its Background, and the earlier row stays.
 - **Language.** The language the project states it keeps its documents in, otherwise the language the user works in.
 
 `npx qfai validate` checks only the layout (`QFAI-DELIB-001`): both sections exist, and every table in them has the six template columns in order and six cells per row.
@@ -19,5 +19,5 @@ A run keeps a memo of the questions it put to the user and the decisions its age
 
 - The current specification, the settled decisions and the open questions come from the story tree, `decisions.md` and `open-questions.md`, never from a record. Where a record disagrees with them, they win and the record stays unchanged.
 - `/qfai-sdd` reads the record of its own run, or the one its work order names.
-- Outside an implement or verify stage, before you take a decision yourself, search the option cells of the records, with the `Declined:` rows of `decisions.md`, for the option you are about to choose. Read only the rows that match. An option the user turned down before goes back to the user.
-- An implement or verify stage reads no record.
+- Outside an implement, verify or prototyping stage, before you take a decision yourself, search the option cells of the records, with the `Declined:` rows of `decisions.md`, for the option you are about to choose. Read only the rows that match. An option the user turned down before goes back to the user.
+- An implement, verify or prototyping stage reads no record.

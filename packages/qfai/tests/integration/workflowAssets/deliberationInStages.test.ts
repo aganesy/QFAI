@@ -90,6 +90,13 @@ describe("an agent decision is a row of the run's deliberation record", () => {
     }
   });
 
+  // QFAI:EX-0001-0298-16
+  it("lets a committed record be repaired in its table layout only", async () => {
+    expect(await section("rule/references/deliberation-record.md", "## Writing a record")).toMatch(
+      /once committed, it may be edited only to repair its table layout.*never its content/i,
+    );
+  });
+
   // QFAI:EX-0001-0301-04
   it("commits the run's record in the commit verify-commit makes", async () => {
     expect(await section("step/verify-commit/STEP.md", "## Writes")).toMatch(
@@ -122,6 +129,9 @@ describe("where each stage reads deliberation records", () => {
   it("opens no record in an implement or a verify stage", async () => {
     expect(await section("skill/qfai-implement/SKILL.md", "## Inputs")).toMatch(NO_RECORD);
     expect(await section("skill/qfai-verify/SKILL.md", "## Inputs")).toMatch(NO_RECORD);
+    expect(await section("rule/references/deliberation-record.md", "## Reading a record")).toMatch(
+      /an implement, verify or prototyping stage reads no record/i,
+    );
     expect(flat(await readShipped("step/verify-context/STEP.md"))).toMatch(
       /it opens no deliberation record: no file under `paths\.deliberationDir` is read/i,
     );
