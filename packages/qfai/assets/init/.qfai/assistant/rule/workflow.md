@@ -73,7 +73,7 @@ writes nothing; the session runs the plan.
 ## Stages (canonical)
 
 1. Discussion (optional): clarify idea → requirement seed
-2. Requirements: discussion pack in `.qfai/discussion/`
+2. Requirements: the story tree, `decisions.md` and `open-questions.md`
 3. Specification (SDD): preflight, triage, policy, business flows, stories with AC and EX, and enforcing contracts
 4. Prototyping (optional): contract-aligned implementation skeleton
 5. Implementation: `/qfai-implement` writes the BF E2E test and the AC integration tests with empty bodies, then implements one EX at a time through Red, Green, Refactor; the acceptance test bodies are written once the system's shape has settled

@@ -79,11 +79,12 @@ describe("BF-0001 workflow definition", () => {
   });
 
   // QFAI:EX-0001-0001-02
-  it("hands a nine-file discussion pack with REQ and NFR seeds to SDD", async () => {
+  it("hands the run's deliberation record to SDD", async () => {
     const discussion = await readDiscussionSkill(assistant);
     const sdd = await readSdd();
-    expect(discussion).toContain("nine-file discussion pack");
-    expect(discussion).toContain("Capture scope, REQ, NFR");
+    expect(discussion.replace(/\s+/g, " ")).toContain(
+      "keeps what was asked and answered in the run's deliberation record, so `/qfai-sdd` can write the story tree from it.",
+    );
     expect(sdd).toContain("Read every table of that record, the completed reviews");
   });
 

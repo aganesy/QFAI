@@ -17,13 +17,11 @@ describe("optional discussion prototyping recommendation", () => {
         tree,
         "assistant/skill/qfai-sdd/references/sdd-execution-playbook.md",
       );
-      const discussion = await read(tree, "assistant/skill/qfai-discussion/SKILL.md");
       expect(skill).toContain("selectedInputPath");
       expect(playbook.replace(/\s+/g, " ")).toContain(
         "A record that leaves a question open or contradicts itself does not block SDD.",
       );
       expect(playbook).not.toContain("missing valid `prototyping.yaml`");
-      expect(discussion).toContain("prototyping.yaml");
     });
   }
 });

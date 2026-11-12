@@ -17,8 +17,6 @@ const PASS_THROUGH = [
   "sdd-cycle",
   "sdd-story",
   "common-design-md",
-  "discussion-pack",
-  "discussion-uiux",
   "triage-investigate",
   "implement-bisect",
   "implement-minimize",

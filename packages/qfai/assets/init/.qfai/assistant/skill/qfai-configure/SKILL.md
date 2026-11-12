@@ -40,7 +40,6 @@ both outlive an exhausted budget.
 - Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#format-ssot`.
 
 - Before writing or editing any `.qfai/**` artifact, read the relevant skill-local reference or template:
-  - `.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md`
   - `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md`
   - `.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`
 

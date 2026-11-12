@@ -26,16 +26,5 @@ describe("discussion IDs remain provenance, not story-tree IDs", () => {
         "record the decision in `<paths.specsDir>/decisions.md` only when it passes the recording test",
       );
     });
-
-    it(tree + ": workshop IDs cannot be mistaken for assigned US and AC IDs", async () => {
-      const workshop = await read(
-        tree,
-        "assistant/skill/qfai-discussion/templates/03_Story-Workshop.md",
-      );
-      expect(workshop).toContain("DUS-");
-      expect(workshop).toContain("DAC-");
-      expect(workshop).toContain("US-0001-0001");
-      expect(workshop.replace(/\s+/g, " ")).toContain("names the discussion REQ and the BF or US");
-    });
   }
 });

@@ -17,8 +17,9 @@ describe("brand catalog ownership", () => {
     const discussion = (await readDiscussionSkill(path.dirname(skills))).replace(/\s+/g, " ");
     const authoring = await read("qfai-sdd/references/design-md-authoring.md");
     const sdd = await readStep("sdd-contract");
-    expect(discussion).toContain("root `DESIGN.md` — is authored");
-    expect(discussion).toContain("/qfai-sdd");
+    expect(discussion).toContain(
+      "`/qfai-sdd`'s `common-design-md` step writes `DESIGN.md` from it later.",
+    );
     expect(authoring).toContain("How `/qfai-sdd` writes the root `DESIGN.md`");
     expect(sdd).toContain("root `DESIGN.md`, which `common-design-md`");
   });
@@ -26,11 +27,16 @@ describe("brand catalog ownership", () => {
   // QFAI:EX-0001-0087-02
   it("uses the brand direction an Interview row records as the brand input", async () => {
     const authoring = await read("qfai-sdd/references/design-md-authoring.md");
-    const discussion = await read("qfai-discussion/references/discussion-completion-matrix.md");
+    const discussion = (await read("qfai-discussion/references/design-dna-intake.md")).replace(
+      /\s+/g,
+      " ",
+    );
     expect(authoring).toContain(
       "The brand comes from the Interview row in which the user chose it.",
     );
-    expect(discussion).toContain("common-design-md` step authors root `DESIGN.md`");
+    expect(discussion).toContain(
+      "Root `DESIGN.md` is written later, by `/qfai-sdd`'s `common-design-md` step.",
+    );
   });
 
   it("does not invent a visual brand for a CLI-only target", async () => {
@@ -158,16 +164,9 @@ describe("generated-design anti-patterns", () => {
     }
   });
 
-  it("is what the catalog, the review bundle and the comparison review point at", async () => {
+  it("is what the catalog and the comparison review point at", async () => {
     const catalog = await read("qfai-sdd/references/design-md-brand-catalog.md");
     expect(sectionOf(catalog, "Patterns to avoid")).toContain("design anti-patterns reference");
-
-    const bundle = await read("qfai-discussion/templates/uiux/50_review_input_bundle.md");
-    expect(bundle).not.toMatch(/AI slop/i);
-    const item = sectionOf(bundle, "Trend-derived review focus").replace(/\s+/g, " ");
-    expect(item).toContain(
-      `- Neither a reference adopted in \`04_Sources.md\` nor the prototype carries a pattern listed in \`${antiPatternsInstallPath}\` unless the recorded brand direction asks for it. Fail this item on any such pattern, and name the pattern.`,
-    );
 
     const comparison = await readFile(
       path.join(root, "packages/qfai/assets/uix-rev/comparison-review.md"),

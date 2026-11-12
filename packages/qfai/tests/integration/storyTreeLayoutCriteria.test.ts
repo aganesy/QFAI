@@ -93,7 +93,7 @@ describe("the traceability chain and the skill order", () => {
     expect([...stages.keys()]).toEqual([1, 2, 3, 4, 5, 6]);
 
     expect(stages.get(1)).toContain("Discussion (optional): clarify idea \u2192 requirement seed");
-    expect(stages.get(2)).toContain("discussion pack in `.qfai/discussion/`");
+    expect(stages.get(2)).toContain("the story tree, `decisions.md` and `open-questions.md`");
     expect(stages.get(3)).toContain(
       "Specification (SDD): preflight, triage, policy, business flows, stories with AC and EX, and enforcing contracts",
     );
@@ -108,8 +108,9 @@ describe("the traceability chain and the skill order", () => {
     expect(stages.get(6)).toContain("Verify: run quality gates and provide evidence");
 
     const discussion = await readDiscussionSkill(ASSISTANT);
-    expect(discussion).toContain("nine-file discussion pack");
-    expect(discussion).toContain("Capture scope, REQ, NFR");
+    expect(discussion.replace(/\s+/g, " ")).toContain(
+      "keeps what was asked and answered in the run's deliberation record, so `/qfai-sdd` can write the story tree from it.",
+    );
 
     const constitution = (
       await readFile(path.join(ASSISTANT, "rule", "constitution.md"), "utf8")

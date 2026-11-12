@@ -12,7 +12,7 @@ of the register; a partial register settles nothing.
 
 ## Core rule
 
-A downstream skill does not edit an approved specification, policy, contract, or QFAI-owned rule on its own authority. It records the discrepancy and returns the affected artifact to its owner. A discussion pack is discovery material; the story tree and contracts are the current specification.
+A downstream skill does not edit an approved specification, policy, contract, or QFAI-owned rule on its own authority. It records the discrepancy and returns the affected artifact to its owner. A deliberation record is history; the story tree and contracts are the current specification.
 
 Upstream artifacts include the policy and business-flow trees under paths.specsDir, decisions.md,
 open-questions.md, and every file under paths.contractsDir. Production code and tests that implement an approved

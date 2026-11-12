@@ -219,23 +219,13 @@ describe("the skills a workflow run's steps belong to", () => {
 
   // QFAI:AC-0001-0199-03
   // QFAI:EX-0001-0199-03
-  it("runs only qfai-discussion's steps in the decide plans, and the UI sidecars step may pass", async () => {
+  it("runs only qfai-discussion's two steps in the decide plans, neither of them pass-through", async () => {
     const owned = await skillSteps("qfai-discussion");
-    expect(owned).toEqual([
-      "discussion-research",
-      "discussion-interview",
-      "discussion-pack",
-      "discussion-oq",
-      "discussion-uiux",
-    ]);
+    expect(owned).toEqual(["discussion-research", "discussion-interview"]);
+    expect(await stageNames("decide-design", "discussion")).toEqual([owned]);
     const discussion = await kindSteps(["discussion"]);
-    expect(discussion.names.filter((step) => !owned.includes(step))).toEqual([]);
-    expect(discussion.passThrough).toEqual(["discussion-pack", "discussion-uiux"]);
-    const uiux = await readShipped("step/discussion-uiux/STEP.md");
-    expect(sectionOf(uiux, "## Skipped when")).toBe("");
-    expect(flat(sectionOf(uiux, "## Passes when"))).toMatch(
-      /the step passes when the target is not UI-bearing/i,
-    );
+    expect(discussion.names).toEqual(owned);
+    expect(discussion.passThrough).toEqual([]);
   });
 
   // QFAI:AC-0001-0204-02
@@ -261,7 +251,9 @@ describe("a parent skill invoked by name", () => {
     );
     for (const skill of PLAN_STEP_OWNERS) {
       const front = frontMatterOf(await readShipped(`skill/${skill}/SKILL.md`));
-      if (skill !== "qfai-triage") expect(front.requires, skill).toContain("common-review-cycle");
+      if (skill !== "qfai-triage" && skill !== "qfai-discussion") {
+        expect(front.requires, skill).toContain("common-review-cycle");
+      }
     }
     const byName = flat(sectionOf(baseline, "### A parent skill invoked by name"));
     expect(byName).toMatch(/take the steps from the parent's `steps:` list, in that order/i);
@@ -270,7 +262,7 @@ describe("a parent skill invoked by name", () => {
       /after the last step, run the one review the parent names, through `common-review-cycle`/i,
     );
     expect(byName).toMatch(
-      /the specification review for `qfai-sdd` and `qfai-discussion`, the code review for a parent that changed code, tests or a change note, and none for `qfai-triage` or for a `qfai-verify` run that wrote nothing/i,
+      /the specification review for `qfai-sdd`, the code review for a parent that changed code, tests or a change note, and none for `qfai-discussion`, whose output is a memo, for `qfai-triage` or for a `qfai-verify` run that wrote nothing/i,
     );
     expect(byName).not.toMatch(/union of the reviewers/i);
   });

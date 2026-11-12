@@ -78,12 +78,14 @@ describe("a grilling session between agents has an end", () => {
       expectPhrase(content, "Its effect cannot be taken back");
       expectPhrase(
         content,
-        "It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated",
+        "It rests on product or business intent that the request, the specs and the contracts all leave unstated",
       );
       expectPhrase(content, "converge on the more fluent argument");
-      // The discussion pack counts as an answer here: it is where the user
-      // already answered product intent in a user session.
-      expectPhrase(content, "A discussion pack answers product intent for this test.");
+      // Settled product intent is read from the story tree, never from a record.
+      expectPhrase(
+        content,
+        "Product intent the user already settled is read from the story tree and `decisions.md`, never from a deliberation record.",
+      );
       expectPhrase(
         content,
         "Each uncovered critical decision goes to the user with every position",

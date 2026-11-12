@@ -96,7 +96,9 @@ describe("qfai init distributes the step layer", () => {
         const front = skillFrontmatterMapping(doc);
         if (!Array.isArray(front?.steps)) continue;
         parents.push(skill);
-        if (skill !== "qfai-triage")
+        // qfai-triage and qfai-discussion run no review: triage changes nothing, and
+        // discussion writes only the deliberation record, a memo.
+        if (skill !== "qfai-triage" && skill !== "qfai-discussion")
           expect(front?.requires, skill).toContain("common-review-cycle");
       }
       expect(parents.length).toBeGreaterThan(0);

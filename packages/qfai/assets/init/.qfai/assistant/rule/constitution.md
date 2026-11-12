@@ -59,7 +59,7 @@ Before producing deliverables, read **project memory**:
    `owned_artifacts`, `tool_profile`, `permission_profile`, and
    `specialization_tags`. Read applicable project policy and contracts under
    `.qfai/spec/` when they bear on the task.
-3. discussion pack in `.qfai/discussion/` (if present)
+3. the story tree, `.qfai/spec/decisions.md` and `.qfai/spec/open-questions.md`
 4. the relevant business flows and stories under `.qfai/spec/02_business-flow/`
 5. repository config (package.json, CI, scripts)
 

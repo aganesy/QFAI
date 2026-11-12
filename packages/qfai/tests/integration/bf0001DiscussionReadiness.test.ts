@@ -65,8 +65,6 @@ function namesOq(findings: Issue[], code: string): boolean {
   return findings.some((finding) => finding.code === code && finding.refs?.includes("OQ-0001"));
 }
 
-// QFAI:AC-0001-0013-01
-// QFAI:EX-0001-0013-01
 it("accepts a complete nine-file pack", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
   try {
@@ -95,10 +93,6 @@ it("accepts a complete nine-file pack", async () => {
   }
 });
 
-// QFAI:AC-0001-0014-01
-// QFAI:EX-0001-0014-01
-// QFAI:EX-0001-0014-02
-// QFAI:EX-0001-0014-03
 it("blocks an open question and a deferred one that names no reopening point", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
   try {
@@ -127,7 +121,6 @@ it("blocks an open question and a deferred one that names no reopening point", a
   }
 });
 
-// QFAI:EX-0001-0014-02
 it.each([
   ["a dash as its reopening point", oqRegister("deferred", "-")],
   ["an em dash as its reopening point", oqRegister("deferred", "—")],
@@ -195,27 +188,6 @@ it.each([
   }
 });
 
-// QFAI:EX-0001-0014-02
-it("blocks the shipped register template's sample deferred row until it is filled in", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
-  try {
-    const pack = await writeCompletePack(root);
-    const template = await readFile(
-      path.join(
-        import.meta.dirname,
-        "../../assets/init/.qfai/assistant/skill/qfai-discussion/templates/11_OQ-Register.md",
-      ),
-      "utf8",
-    );
-    await writeFile(path.join(pack, "11_OQ-Register.md"), template, "utf8");
-    const findings = await validateDiscussionPackReadiness(root, defaultConfig);
-    expect(namesOq(findings, "QFAI-DPACK-007")).toBe(true);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-// QFAI:EX-0001-0014-03
 it("accepts a complete heading-form deferred entry", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
   try {
@@ -242,7 +214,6 @@ it("accepts a complete heading-form deferred entry", async () => {
   }
 });
 
-// QFAI:EX-0001-0013-03
 it.each([
   ["01_Context.md", "## Inception Deck", "## Notes"],
   ["09_Constraints.md", "## Operational Policy", "## Notes"],
@@ -263,7 +234,6 @@ it.each([
   }
 });
 
-// QFAI:EX-0001-0013-02
 it("blocks readiness when one of the nine required files is missing", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
   try {

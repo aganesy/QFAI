@@ -111,13 +111,7 @@ describe("reviewer convergence", () => {
       expectPhrase(content, "### Reviewer remit (in scope per stage)");
       // Every skill that references this baseline needs a row, or the same
       // finding is blocking in one run and deferred in the next.
-      for (const stage of [
-        "/qfai-discussion",
-        "/qfai-sdd",
-        "/qfai-implement",
-        "/qfai-configure",
-        "/qfai-verify",
-      ]) {
+      for (const stage of ["/qfai-sdd", "/qfai-implement", "/qfai-configure", "/qfai-verify"]) {
         expectPhrase(content, `| \`${stage}\``);
       }
       expectPhrase(content, "Out of scope (record and defer)");
