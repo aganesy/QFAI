@@ -13,11 +13,22 @@ A run keeps a memo of the questions it put to the user and the decisions its age
 - **A memo.** A record has no ID, cites no ID, and nothing cites it. Once committed, it may be edited only to repair its table layout (a table's columns and a row's cell count), never its content: a correction is a new record. A later row that overturns an earlier row of the same record says so in its Background, and the earlier row stays.
 - **Language.** The language the project states it keeps its documents in, otherwise the language the user works in.
 
+## What the reports keep
+
+- An agent decision is an Agent decisions row of the record, never a line of the stage report or the final report.
+- The stage report keeps the evidence: gate results, CI receipts, review skips and quoted delegation instructions.
+- An assumption a no-question mode takes is a row too, and the final report also lists it.
+
+## Committing a record
+
+- `verify-commit` commits the record with the change.
+- A stage skill invoked by name, outside a `qfai-run` plan and with no `verify-commit` step, makes its record final at its last step. That step commits locally only the record and the `open-questions.md` rows the run wrote, and pushes nothing.
+
 `npx qfai validate` checks only the layout (`QFAI-DELIB-001`): both sections exist, and every table in them has the six template columns in order and six cells per row.
 
 ## Reading a record
 
 - The current specification, the settled decisions and the open questions come from the story tree, `decisions.md` and `open-questions.md`, never from a record. Where a record disagrees with them, they win and the record stays unchanged.
 - `/qfai-sdd` reads the record of its own run, or the one its work order names.
-- Outside an implement, verify or prototyping stage, before you take a decision yourself, search the option cells of the records, with the `Declined:` rows of `decisions.md`, for the option you are about to choose. Read only the rows that match. An option the user turned down before goes back to the user.
+- Outside an implement, verify or prototyping stage, before you take a decision yourself, search the option cells of the records, with the `Declined:` rows of `decisions.md`, for the option you are about to choose. Read only the rows that match. An option the user turned down before goes back to the user, or is registered as an open question under a no-question mode.
 - An implement, verify or prototyping stage reads no record.

@@ -20,12 +20,8 @@ first.
 - The text or comment to change, and the write scope the request or the work
   order gives.
 - `.qfai/assistant/rule/*`.
-- Before you take an agent decision, search the option cells of the deliberation
-  records and the `Declined:` rows of `decisions.md` for the option you are about
-  to choose, as `.qfai/assistant/rule/references/deliberation-record.md`
-  says. Read only the rows that match. A choice whose option was turned down
-  before goes to the user, or is registered as an open question under a
-  no-question mode.
+- Before an agent decision, search the records for a turned-down option, as
+  `.qfai/assistant/rule/references/deliberation-record.md` says.
 
 Questions to the user follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.

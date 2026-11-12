@@ -45,8 +45,7 @@ first.
   configured `paths.specsDir` and `paths.contractsDir`.
 - For UI work, root `DESIGN.md` and the flow's UI contracts. The rendered
   surface is reviewed, not only the source.
-- No deliberation record. This stage opens no file under `paths.deliberationDir`;
-  the story tree, `decisions.md` and `open-questions.md` hold the current state.
+- No deliberation record: this stage opens no file under `paths.deliberationDir`.
 
 Every step follows `.qfai/assistant/rule/shared-skill-operating-baseline.md`,
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md` and

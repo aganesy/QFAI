@@ -10,11 +10,12 @@ import { flat, readShipped, sectionOf } from "../../helpers/shippedAssistant.js"
 
 const OPERATING = "rule/shared-skill-operating-baseline.md";
 const RECORD_SECTION = "## Deliberation Record";
+const REFERENCE = "rule/references/deliberation-record.md";
 const STAGE_POINTS = "skill/qfai-run/references/stage-points.md";
 const SCREENS = "skill/qfai-run/references/operator-screens.md";
 const NO_RECORD = /opens no file under `paths\.deliberationDir`/i;
 const SEARCH =
-  /before you take an agent decision, search the option cells of the deliberation records and the `Declined:` rows of `decisions\.md` for the option you are about to choose/i;
+  /before an agent decision, search the records for a turned-down option, as `\.qfai\/assistant\/rule\/references\/deliberation-record\.md` says/i;
 
 async function section(file: string, heading: string): Promise<string> {
   const text = flat(sectionOf(await readShipped(file), heading));
@@ -52,7 +53,8 @@ describe("an agent decision is a row of the run's deliberation record", () => {
 
   // QFAI:EX-0001-0301-08
   it("keeps gate verdicts, receipts, review skips and quoted delegation in the stage report, and decisions in the record", async () => {
-    const record = await section(OPERATING, RECORD_SECTION);
+    expect(await section(OPERATING, RECORD_SECTION)).toMatch(/what it and the reports hold/i);
+    const record = await section(REFERENCE, "## What the reports keep");
     expect(record).toMatch(
       /an agent decision is an Agent decisions row of the record, never a line of the stage report or the final report/i,
     );
@@ -106,7 +108,7 @@ describe("an agent decision is a row of the run's deliberation record", () => {
 
   // QFAI:EX-0001-0301-10
   it("commits a stage skill's record at its last step when it runs by name without verify-commit", async () => {
-    expect(await section(OPERATING, RECORD_SECTION)).toMatch(
+    expect(await section(REFERENCE, "## Committing a record")).toMatch(
       /a stage skill invoked by name, outside a `qfai-run` plan and with no `verify-commit` step, makes its record final at its last step\. that step commits locally only the record and the `open-questions\.md` rows the run wrote, and pushes nothing/i,
     );
   });
@@ -120,9 +122,6 @@ describe("where each stage reads deliberation records", () => {
       /current specification, the settled decisions and the open questions come from the story tree, `decisions\.md` and `open-questions\.md`, never from a record/i,
     );
     expect(reading).toMatch(/they win and the record stays unchanged/i);
-    expect(await section("skill/qfai-implement/SKILL.md", "## Inputs")).toMatch(
-      /the story tree, `decisions\.md` and `open-questions\.md` hold the current state/i,
-    );
   });
 
   // QFAI:EX-0001-0299-02
@@ -150,13 +149,15 @@ describe("where each stage reads deliberation records", () => {
       ["skill/qfai-triage/SKILL.md", "## Inputs"],
       ["skill/qfai-configure/SKILL.md", "## Inputs Priority (Preflight)"],
     ] as const) {
-      const inputs = await section(file, heading);
-      expect(inputs, file).toMatch(SEARCH);
-      expect(inputs, file).toMatch(/read only the rows that match/i);
-      expect(inputs, file).toMatch(
-        /a choice whose option was turned down before goes to the user, or is registered as an open question under a no-question mode/i,
-      );
+      expect(await section(file, heading), file).toMatch(SEARCH);
     }
+    const reading = await section(REFERENCE, "## Reading a record");
+    expect(reading).toMatch(
+      /search the option cells of the records, with the `Declined:` rows of `decisions\.md`, for the option you are about to choose\. read only the rows that match/i,
+    );
+    expect(reading).toMatch(
+      /goes back to the user, or is registered as an open question under a no-question mode/i,
+    );
   });
 
   // QFAI:EX-0001-0301-09

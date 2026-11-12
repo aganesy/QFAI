@@ -39,12 +39,8 @@ person's reported result.
 - The request, as it was reported, and any item it names.
 - The project's documents, code and history, read only.
 - `.qfai/assistant/rule/*`.
-- Before you take an agent decision, search the option cells of the deliberation
-  records and the `Declined:` rows of `decisions.md` for the option you are about
-  to choose, as `.qfai/assistant/rule/references/deliberation-record.md`
-  says. Read only the rows that match. A choice whose option was turned down
-  before goes to the user, or is registered as an open question under a
-  no-question mode.
+- Before an agent decision, search the records for a turned-down option, as
+  `.qfai/assistant/rule/references/deliberation-record.md` says.
 
 Every step follows `.qfai/assistant/rule/shared-skill-operating-baseline.md`
 and `.qfai/assistant/rule/shared-skill-delegation-baseline.md`. Questions to

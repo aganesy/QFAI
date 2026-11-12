@@ -33,8 +33,7 @@ first.
 - The scope: `full` by default, or `prototyping` for the prototyping profile
   alone. `verify-context` fixes it.
 - The change, and the story tree, contracts, tests and evidence it touches.
-- No deliberation record. This stage opens no file under `paths.deliberationDir`;
-  the story tree, `decisions.md` and `open-questions.md` hold the current state.
+- No deliberation record: this stage opens no file under `paths.deliberationDir`.
 
 The run is reported in the stage report, and its verdict is
 `.qfai/report/verify.json`.

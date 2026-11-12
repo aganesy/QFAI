@@ -53,12 +53,8 @@ When unsure, read inputs in this order:
 - P3: `.qfai/spec/decisions.md` (Decision Records; if no decision exists, state "not applicable").
 - P4: the business flows, stories, contracts, tests, and evidence relevant to the configuration.
 
-- Before you take an agent decision, search the option cells of the deliberation
-  records and the `Declined:` rows of `decisions.md` for the option you are about
-  to choose, as `.qfai/assistant/rule/references/deliberation-record.md`
-  says. Read only the rows that match. A choice whose option was turned down
-  before goes to the user, or is registered as an open question under a
-  no-question mode.
+- Before an agent decision, search the records for a turned-down option, as
+  `.qfai/assistant/rule/references/deliberation-record.md` says.
 
 ## Sub-agent Delegation
 
