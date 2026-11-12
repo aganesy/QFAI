@@ -4303,7 +4303,6 @@ describe("the optional exact-file diagnostic", () => {
     ["unit", "unit"],
     ["validators", "validators"],
     ["integration", "integration"],
-    ["integration", "detection"],
     ["integration", "skill"],
     ["integration", "codex"],
     ["e2e", "e2e"],

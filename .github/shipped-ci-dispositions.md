@@ -62,4 +62,4 @@ the next one against.
 - SHIPPED-CI: not-applicable for package.json
   Because: the guard this change removes held this repository's review-profile catalogue to its plans; the package ships no review profiles any more, and the shipped templates never ran it.
 - SHIPPED-CI: not-applicable for package.json
-  Because: the `check-pack-locations` lane this change removes held discussion packs in this repository to their directories; the package ships no discussion pack any more, and the shipped templates never ran this repository-only lane.
+  Because: the removed `check-pack-locations` lane checked this repository's own discussion packs; no pack ships now, and shipped templates never ran it.
