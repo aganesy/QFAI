@@ -11,7 +11,7 @@ const read = (tree: string, relative: string): Promise<string> =>
 
 describe("optional discussion prototyping recommendation", () => {
   for (const tree of trees) {
-    it(`${tree}: SDD reads the selected pack without requiring a recommendation artifact`, async () => {
+    it(`${tree}: SDD reads the named record without requiring a recommendation artifact`, async () => {
       const skill = await read(tree, "assistant/step/sdd-triage/STEP.md");
       const playbook = await read(
         tree,
@@ -19,7 +19,9 @@ describe("optional discussion prototyping recommendation", () => {
       );
       const discussion = await read(tree, "assistant/skill/qfai-discussion/SKILL.md");
       expect(skill).toContain("selectedInputPath");
-      expect(playbook).toContain("Respect an explicitly selected discussion pack");
+      expect(playbook.replace(/\s+/g, " ")).toContain(
+        "A record that leaves a question open or contradicts itself does not block SDD.",
+      );
       expect(playbook).not.toContain("missing valid `prototyping.yaml`");
       expect(discussion).toContain("prototyping.yaml");
     });

@@ -14,7 +14,7 @@ describe("SDD instructions agree with flow evidence and UI routing", () => {
       const skill = (await read(tree, "assistant/step/sdd-triage/STEP.md")).replace(/\s+/g, " ");
       expect(skill).toContain("UI-bearing is a property of the affected flow");
       expect(skill).toContain(
-        "source's surface classification and the UI contracts linked to that flow",
+        "Resolve it from the surfaces the record settles, the `tech.md` `Surface` row and the UI contracts linked to that flow",
       );
       expect(skill).toContain("the session agent designs the screens of a UI-bearing flow itself");
       expect(skill).toContain("product-surface-reviewer");

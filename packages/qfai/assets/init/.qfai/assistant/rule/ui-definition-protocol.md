@@ -4,9 +4,9 @@ How a downstream skill reads a UI definition, and what it may not read.
 
 ## Boundary
 
-`/qfai-sdd` alone reads the discussion sidecar artifacts (`discussion-*/uiux/`) and normalizes them into the specs and contracts that downstream execution runs against.
+`/qfai-sdd` alone reads the screens, the brand direction and the design inputs from the deliberation record it consumes, and writes them into the specs, the UI contracts and root `DESIGN.md` that downstream execution runs against.
 
-`/qfai-prototyping`, `/qfai-implement` and `/qfai-verify` do not read a discussion pack. They read the UI and UX definition from the story tree, contracts and evidence.
+`/qfai-prototyping`, `/qfai-implement` and `/qfai-verify` do not read a deliberation record for the UI definition. They read the UI and UX definition from the story tree, contracts and evidence.
 
 ## Reading Order
 
@@ -53,10 +53,10 @@ in `qfai.config.yaml`, and nowhere else.
 | UI contract                                    | Stop UI-bearing downstream execution                      |
 | Root `DESIGN.md`                               | Return to `/qfai-sdd`, whose `common-design-md` writes it |
 | Prototype handoff, when a prototyping loop ran | Return to `/qfai-prototyping` and record the handoff      |
-| Discussion sidecar in downstream               | Do not read it; normalize through `/qfai-sdd`             |
+| Deliberation record in downstream              | Do not read it; normalize through `/qfai-sdd`             |
 
 ## Forbidden Fallbacks
 
-- Do not infer downstream UI behavior from discussion-pack sidecars.
+- Do not infer downstream UI behavior from a deliberation record.
 - Do not use HTML mock sections as downstream source of truth.
 - Do not treat a competitor reference as a selected design direction.

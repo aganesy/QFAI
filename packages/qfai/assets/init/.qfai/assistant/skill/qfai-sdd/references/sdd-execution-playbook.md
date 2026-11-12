@@ -8,28 +8,34 @@ Use this sequence for /qfai-sdd. The shipped templates under ../templates/spec/ 
    `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher`.
    Record its resolved package path and version in the SDD report. Check that
    the installed Stage 0 instructions support the procedure being used.
-2. Run `npx qfai sdd preflight` and read its `selectedInputPath` and `source`.
-   Respect an explicitly selected discussion pack, including one older than the
-   newest pack.
-3. Read the selected pack, completed reviews that target it, explicit user
-   requirements, and the existing story tree. A pack is reference and provenance
-   material. Disposition its applicable review advice in the SDD report, a decision
-   row, or an open question. A pack discrepancy does not itself block SDD. For
-   the current request, read the existing purpose in
-   `<paths.specsDir>/01_policy/objective.md` and inspect related flows and stories.
-4. A missing discussion pack does not mean that specifications are missing. If
-   an existing readable specification is authoritative for this request, run
-   `npx qfai sdd preflight --import <path>` with that file. The fallback does
-   not replace a selected pack or bypass unsafe pack names, unreadable files,
-   invalid active pointers, config errors, or a mismatched tool.
+2. Name the deliberation record SDD consumes, in this order: the run's own
+   record, or the one the work order names; invoked by name with no work order,
+   the one the user names. When the user names none, ask which record under
+   `paths.deliberationDir` to use before anything is written. Run
+   `npx qfai sdd preflight --record <path>` and read its `selectedInputPath` and
+   `source`.
+3. Read every table of the record, completed reviews, explicit user
+   requirements, and the existing story tree. The record is history: where it
+   disagrees with the story tree, `decisions.md` or `open-questions.md`, they
+   win. State a discrepancy in the SDD report or as an open question, and never
+   edit the record. A record that leaves a question open or contradicts itself
+   does not block SDD. For the current request, read the existing purpose in
+   `<paths.specsDir>/01_policy/objective.md` and inspect related flows and
+   stories.
+4. No record does not mean that specifications are missing. If an existing
+   readable specification is authoritative for this request, run
+   `npx qfai sdd preflight --import <path>` with that file. A named record comes
+   first: the import never replaces it, and it does not bypass an unreadable
+   file, config errors, or a mismatched tool.
 5. Use an explicit user requirement as supplied and name it in the SDD report.
    Do not invent an import file from conversation. Without a file, CLI preflight
    can remain blocked while SDD assesses that explicit requirement.
-6. Use `/qfai-discussion` only when no usable source exists; stop SDD until one
-   is available. Stop on an unresolved product decision that cannot safely be
-   inferred; record the question in `open-questions.md`. Do not manufacture or
-   regenerate a past discussion pack, or regenerate the existing purpose,
-   merely to clear preflight.
+6. Use `/qfai-discussion` only when no usable source exists: no record of the
+   run or named for it, no import-lite input and no explicit user requirement.
+   Stop SDD until one is available. Stop on an unresolved product decision that
+   cannot safely be inferred; record the question in `open-questions.md`. Do
+   not write or edit a record, or regenerate the existing purpose, merely to
+   clear preflight.
 7. Import-lite readiness identifies the input source. It does not establish
    complete requirements or a validation PASS. Keep the existing purpose and
    current request while updating only affected flow and story content.
@@ -43,9 +49,10 @@ record unresolved questions in open-questions.md. In --auto, ask nothing and sto
 
 ## Stage 2: policy and flow
 
-1. Write affected 01_policy/ files from their paired templates. Each fact has one home among objective.md, initiative.md, principle.md, glossary.md, constraint.md, and tech.md. Policy states criteria; a definition or a business rule belongs to the contract that owns it.
+1. Write affected 01_policy/ files from their paired templates. Each answer of the record goes to the one file that owns it, as `.qfai/assistant/skill/qfai-sdd/references/requirements-decomposition.md#where-each-answer-goes` maps it.
+   Each fact has one home among objective.md, initiative.md, principle.md, glossary.md, constraint.md, and tech.md. Policy states criteria; a definition or a business rule belongs to the contract that owns it.
    A constraint is a limit in plain words; its ID is its place in its section, so removing a row renumbers the rows after it.
-   A layer boundary is a row of tech.md `## Architecture`, written from the technical decisions the pack records and, in an existing codebase, its module layout and import directions: what each layer does and the layers below it that it may import from.
+   A layer boundary is a row of tech.md `## Architecture`, written from the technical decisions the record settles and, in an existing codebase, its module layout and import directions: what each layer does and the layers below it that it may import from.
    A layer is a group of modules whose dependencies point one way: down. The section draws the layers as one `flowchart TD`, then lists them in the table from the uppermost down, and the two name the same layers and edges.
    Implementation places new code by that table and reviewers judge a change against it, as the `Architecture` section of the spec traceability rules states.
 2. Write 02_business-flow/business-flows.md and the affected business-flow-NNNN/business-flow.md files. Each flow's `## Flow` section is exactly one Mermaid flowchart or sequenceDiagram.

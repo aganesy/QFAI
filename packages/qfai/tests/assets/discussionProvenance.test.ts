@@ -10,17 +10,17 @@ const read = (tree: string, file: string): Promise<string> =>
 
 describe("discussion IDs remain provenance, not story-tree IDs", () => {
   for (const tree of trees) {
-    it(tree + ": SDD records selected source and disposition in its own records", async () => {
+    // QFAI:EX-0001-0017-01
+    it(tree + ": SDD reads the record with the reviews and never edits the record", async () => {
       const skill = (await read(tree, "assistant/step/sdd-triage/STEP.md")).replace(/\s+/g, " ");
       const decomposition = await read(
         tree,
         "assistant/skill/qfai-sdd/references/requirements-decomposition.md",
       );
-      expect(skill).toContain("discussion-<id>#REQ-NNNN");
-      expect(skill.replace(/\s+/g, " ")).toContain(
-        "provenance and design input, not a normative SSOT",
-      );
-      expect(skill).toContain("do not edit the");
+      expect(skill).toContain("Read every table of that record, the completed reviews");
+      expect(skill).toContain("The record is history, not the current state");
+      expect(skill).toContain("State a discrepancy in the SDD report or as an open question.");
+      expect(skill).toContain("Never edit the record");
       expect(decomposition).toContain("Put an operation that is a critical decision to the user");
       expect(decomposition.replace(/\s+/g, " ")).toContain(
         "record the decision in `<paths.specsDir>/decisions.md` only when it passes the recording test",

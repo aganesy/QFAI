@@ -1,13 +1,10 @@
-import { mkdir, open, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { inspectLatestDiscussionPack } from "../discussionPack.js";
 import { allocateRunDir, hasNewerRunDir } from "../runLog.js";
-import { containsMermaidBlock } from "../validators/discussionPack.js";
 
-const REQ_ID_RE = /\bREQ-\d{4}\b/g;
 const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
 /**
  * Preflight runs get their own parent directory instead of sharing
@@ -21,40 +18,34 @@ const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
 const PREFLIGHT_RUN_ROOT = "preflight";
 
 /**
- * The input source preflight selected: the discussion pack, or an imported
- * specification the caller names with `importPath`. An explicit user
- * requirement is not a file, so a project with neither reports `blocked` and
- * SDD decides whether the user gave one.
+ * The input source preflight selected: the deliberation record the caller
+ * names with `recordPath`, or an imported specification it names with
+ * `importPath`. An explicit user requirement is not a file, so a project with
+ * neither reports `blocked` and SDD decides whether the user gave one.
  */
-export type SddPreflightSource = "discussion-pack" | "import-lite";
+export type SddPreflightSource = "deliberation-record" | "import-lite";
 export type SddPreflightStatus = "ready" | "blocked";
 
 export type RunSddPreflightOptions = {
   assumptions?: string[];
   /**
-   * Pack to judge. Defaults to the newest pack under the discussion root;
-   * callers that honor `.qfai/state.json#discussion.currentId` pass the
-   * pointed-at pack so an explicitly pinned (older) pack is the one gated.
+   * The deliberation record SDD consumes: the run's own, the one the work
+   * order names, or the one the user names. Read against the project root,
+   * then against `paths.deliberationDir`. Preflight never picks one itself.
    */
-  packDir?: string;
-  /** An imported specification to use when no discussion pack is usable. */
+  recordPath?: string;
+  /** An imported specification to use when no record is named. */
   importPath?: string;
   startedAt?: Date;
 };
 
 export type SddPreflightResult = {
   status: SddPreflightStatus;
-  source: SddPreflightSource;
+  /** `null` when preflight selected no input. */
+  source: SddPreflightSource | null;
   selectedInputPath: string | null;
-  importedReqCount: number | null;
   openQuestions: string[];
   blockers: string[];
-  /**
-   * What the selected pack lacks or contradicts. Listed, never a stop: the pack
-   * is non-normative reference material, so SDD states each gap in its final
-   * report and carries on.
-   */
-  packGaps: string[];
   nextCommands: string[];
   /** Run id of this preflight, in `run-<17-digit local timestamp>` form. */
   runId: string;
@@ -72,101 +63,129 @@ type PreflightRun = {
   runRoot: string;
 };
 
+/**
+ * Select the source of `/qfai-sdd` in the order its contract sets: the named
+ * deliberation record, else an imported specification, else nothing — an
+ * explicit user requirement is SDD's to judge. A named record that cannot be
+ * read stops the run rather than falling through to the import. Preflight
+ * reads no record content: a record that leaves a question open or
+ * contradicts itself is still a usable source.
+ */
 export async function runSddPreflight(
   root: string,
   config: QfaiConfig,
   options: RunSddPreflightOptions = {},
 ): Promise<SddPreflightResult> {
-  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const deliberationRoot = resolvePath(root, config, "deliberationDir");
   const reportRoot = resolvePath(root, config, "outDir");
   const run = await allocatePreflightRun(reportRoot, options.startedAt ?? new Date());
+  const openQuestions = normalizeTextList(options.assumptions);
 
-  const readiness = await inspectLatestDiscussionPack(
-    discussionRoot,
-    options.packDir === undefined ? {} : { selectedPackDir: options.packDir },
-  );
-  const nextCommands = ["/qfai-discussion"];
-  const carryOverOpenQuestions = normalizeTextList(options.assumptions);
-  const blockers = resolvePreflightBlockers(readiness);
-  const packGaps = [
-    ...resolvePackGaps(readiness),
-    ...(await resolveStoryWorkshopGaps(readiness.latestPackDir)),
-  ];
-
-  if (blockers.length > 0) {
-    // An imported specification stands in for a missing pack, never for a
-    // misnamed one.
-    if (options.importPath !== undefined) {
-      const readable = await isReadableFile(options.importPath);
-      if (readable && readiness.dangerousPackNames.length === 0) {
-        return await completeReadyPreflight({
-          source: "import-lite",
-          selectedInputPath: options.importPath,
-          // An imported specification carries no `REQ-*` index, so the count is
-          // unknown rather than a confident zero.
-          importedReqCount: null,
-          run,
-          openQuestions: carryOverOpenQuestions,
-          packGaps: [],
-          nextCommands: ["/qfai-sdd"],
-        });
-      }
-      if (!readable) {
-        blockers.push(`The imported specification ${options.importPath} is not a readable file.`);
-      }
+  if (options.recordPath !== undefined) {
+    const record = await resolveNamedRecord(root, deliberationRoot, options.recordPath);
+    if (record !== null) {
+      return await completeReadyPreflight({
+        source: "deliberation-record",
+        selectedInputPath: record,
+        run,
+        openQuestions,
+      });
     }
-    await publishPreflightSummary(
+    return await completeBlockedPreflight({
       run,
-      buildBlockedPreflightSummary({
-        runId: run.runId,
-        selectedDiscussionPack: readiness.latestPackDir,
-        blockers,
-        openQuestions: carryOverOpenQuestions,
-        nextCommands,
-      }),
-    );
-
-    return {
-      status: "blocked",
-      source: "discussion-pack",
-      selectedInputPath: readiness.latestPackDir,
-      importedReqCount: null,
-      openQuestions: carryOverOpenQuestions,
-      blockers,
-      packGaps,
-      nextCommands,
-      ...toSummaryPaths(run),
-    };
+      openQuestions,
+      blockers: [`The deliberation record ${options.recordPath} is not a readable file.`],
+    });
   }
 
-  const selectedInputPath = readiness.latestPackDir;
-  const reqPath = selectedInputPath === null ? null : path.join(selectedInputPath, "06_REQ.md");
+  if (options.importPath !== undefined) {
+    if (await isReadableFile(options.importPath)) {
+      return await completeReadyPreflight({
+        source: "import-lite",
+        selectedInputPath: options.importPath,
+        run,
+        openQuestions,
+      });
+    }
+    return await completeBlockedPreflight({
+      run,
+      openQuestions,
+      blockers: [`The imported specification ${options.importPath} is not a readable file.`],
+    });
+  }
 
-  return await completeReadyPreflight({
-    source: "discussion-pack",
-    selectedInputPath,
-    importedReqCount: countReqIds(reqPath === null ? "" : await readSafe(reqPath)),
+  return await completeBlockedPreflight({
     run,
-    openQuestions: carryOverOpenQuestions,
-    packGaps,
-    nextCommands,
+    openQuestions,
+    blockers: [describeMissingSource(await listRecords(deliberationRoot))],
   });
 }
 
 /**
+ * Why no source was selected. Records that exist are listed, never chosen:
+ * which one SDD consumes is the run's, the work order's or the user's to say.
+ */
+function describeMissingSource(records: string[]): string {
+  const recovery = [
+    "Read `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory` for source selection.",
+    "If a readable existing specification is authoritative, run `qfai sdd preflight --import <path>`.",
+    "Use `/qfai-discussion` only when no deliberation record, imported specification, or explicit user requirement exists.",
+  ];
+  if (records.length === 0) {
+    return [
+      "No deliberation record of the run or named in the work order exists, and no imported specification was given.",
+      ...recovery,
+    ].join(" ");
+  }
+  return [
+    "No deliberation record was named. Name the run's record, the one the work order names or the one the user names with `qfai sdd preflight --record <path>`; when the user names none, ask which one.",
+    `Records found: ${records.join(", ")}.`,
+    ...recovery,
+  ].join(" ");
+}
+
+/** The `*.md` files directly under the deliberation directory, sorted. */
+async function listRecords(deliberationRoot: string): Promise<string[]> {
+  try {
+    const entries = await readdir(deliberationRoot, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+      .map((entry) => entry.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * A record named by path is read against the project root first; a bare
+ * record name, as a user gives it, is read against the deliberation directory.
+ */
+async function resolveNamedRecord(
+  root: string,
+  deliberationRoot: string,
+  recordPath: string,
+): Promise<string | null> {
+  for (const candidate of [
+    path.resolve(root, recordPath),
+    path.resolve(deliberationRoot, recordPath),
+  ]) {
+    if (await isReadableFile(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+/**
  * Write the ready summary and return the result, so `preflight_summary.md`
- * and the returned record cannot drift apart. `importedReqCount: null` means
- * "not countable from this input source" and renders as `unknown` rather than
- * a confident zero.
+ * and the returned record cannot drift apart.
  */
 async function completeReadyPreflight(input: {
   source: SddPreflightSource;
-  selectedInputPath: string | null;
-  importedReqCount: number | null;
+  selectedInputPath: string;
   run: PreflightRun;
   openQuestions: string[];
-  packGaps: string[];
-  nextCommands: string[];
 }): Promise<SddPreflightResult> {
   await publishPreflightSummary(
     input.run,
@@ -174,9 +193,7 @@ async function completeReadyPreflight(input: {
       runId: input.run.runId,
       source: input.source,
       selectedInputPath: input.selectedInputPath,
-      importedReqCount: input.importedReqCount,
       openQuestions: input.openQuestions,
-      packGaps: input.packGaps,
     }),
   );
 
@@ -184,11 +201,36 @@ async function completeReadyPreflight(input: {
     status: "ready",
     source: input.source,
     selectedInputPath: input.selectedInputPath,
-    importedReqCount: input.importedReqCount,
     openQuestions: input.openQuestions,
     blockers: [],
-    packGaps: input.packGaps,
-    nextCommands: input.nextCommands,
+    nextCommands: ["/qfai-sdd"],
+    ...toSummaryPaths(input.run),
+  };
+}
+
+async function completeBlockedPreflight(input: {
+  run: PreflightRun;
+  openQuestions: string[];
+  blockers: string[];
+}): Promise<SddPreflightResult> {
+  const nextCommands = ["/qfai-discussion"];
+  await publishPreflightSummary(
+    input.run,
+    buildBlockedPreflightSummary({
+      runId: input.run.runId,
+      blockers: input.blockers,
+      openQuestions: input.openQuestions,
+      nextCommands,
+    }),
+  );
+
+  return {
+    status: "blocked",
+    source: null,
+    selectedInputPath: null,
+    openQuestions: input.openQuestions,
+    blockers: input.blockers,
+    nextCommands,
     ...toSummaryPaths(input.run),
   };
 }
@@ -260,117 +302,6 @@ async function publishPreflightSummary(run: PreflightRun, body: string): Promise
   await writeFile(run.latestSummaryPath, contents, "utf-8");
 }
 
-type PackReadiness = {
-  latestPackDir: string | null;
-  dangerousPackNames: string[];
-  missingFiles: string[];
-  missingSideArtifacts: string[];
-  incompleteFiles: string[];
-  blockingOqIds: string[];
-  incompleteDeferredOqIds: string[];
-  prototypingRequired: boolean;
-};
-
-/**
- * What stops Stage 0: no usable source at all, or a pack name that cannot be
- * read as one. Everything else a pack can get wrong is a gap, not a stop.
- */
-function resolvePreflightBlockers(readiness: PackReadiness): string[] {
-  const blockers: string[] = [];
-
-  if (!readiness.latestPackDir) {
-    blockers.push(
-      [
-        "The latest discussion-pack was not found. Existing specifications may still provide usable input.",
-        "Read `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory` for source selection.",
-        "If a readable existing specification is authoritative, run `qfai sdd preflight --import <path>`.",
-        "Use `/qfai-discussion` only when no usable discussion pack, imported specification, or explicit user requirement exists.",
-      ].join(" "),
-    );
-  }
-
-  if (readiness.dangerousPackNames.length > 0) {
-    blockers.push(
-      `Directories named discussion-* with an invalid name exist under the discussion directory: ${readiness.dangerousPackNames.join(", ")}`,
-    );
-  }
-
-  return blockers;
-}
-
-/**
- * What a present pack lacks or contradicts.
- *
- * The pack is non-normative reference material
- * (`constitution/drift-protocol.md#core-rule`), so an incomplete one, a
- * contradictory one or one carrying a blocking OQ does not stop SDD: each gap is
- * listed in the summary and in the SDD final report, and the
- * correction lands in the spec rather than in the pack.
- */
-function resolvePackGaps(readiness: PackReadiness): string[] {
-  const gaps: string[] = [];
-
-  if (readiness.missingFiles.length > 0 || readiness.missingSideArtifacts.length > 0) {
-    const fileMissing = [...readiness.missingFiles];
-    const sideArtifactMissing = [...readiness.missingSideArtifacts];
-
-    if (fileMissing.length > 0) {
-      gaps.push(`Missing required files: ${fileMissing.join(", ")}`);
-    }
-    if (sideArtifactMissing.length > 0) {
-      const message = readiness.prototypingRequired
-        ? `The UI-bearing discussion pack is missing required side artifacts: ${sideArtifactMissing.join(", ")}`
-        : `Missing required side artifacts: ${sideArtifactMissing.join(", ")}`;
-      gaps.push(message);
-    }
-  }
-
-  if (readiness.incompleteFiles.length > 0) {
-    gaps.push(
-      `Files that do not meet the minimum content: ${readiness.incompleteFiles.join(", ")}`,
-    );
-  }
-
-  if (readiness.blockingOqIds.length > 0) {
-    gaps.push(`Blocking OQ (Disposition=open): ${readiness.blockingOqIds.join(", ")}`);
-  }
-
-  // The preflight side of `QFAI-DPACK-007`. `validate --profile sdd` does not
-  // run the discussion validator, so an incomplete deferral would
-  // reach Stage 1 unnamed unless it is listed here.
-  if (readiness.incompleteDeferredOqIds.length > 0) {
-    gaps.push(
-      `Deferred entries in 11_OQ-Register.md lack a Resolution or a Next-Decision-Point: ${readiness.incompleteDeferredOqIds.join(", ")}`,
-    );
-  }
-
-  return gaps;
-}
-
-/**
- * The preflight side of `QFAI-DPACK-008`.
- *
- * `03_Story-Workshop.md` owes a mermaid diagram, and the discussion validator
- * reports its absence at `error`. `validate --profile sdd` does not run that
- * validator, so a pack with no flow would reach Stage 1 unnamed unless it is
- * listed here. Read by the same predicate as the validator, so the two cannot
- * drift into two readings of "has a diagram".
- */
-async function resolveStoryWorkshopGaps(packDir: string | null): Promise<string[]> {
-  if (packDir === null) {
-    // No pack at all is already a blocker, and there is nothing to read.
-    return [];
-  }
-  const text = await readSafe(path.join(packDir, "03_Story-Workshop.md"));
-  // An absent, unreadable or empty file is the missing-files / incomplete-files
-  // gap already — `readSafe` here returns `""` for all three. Reporting it
-  // again would name one defect twice.
-  if (text.length === 0 || containsMermaidBlock(text)) {
-    return [];
-  }
-  return ["No Mermaid diagram was found in 03_Story-Workshop.md."];
-}
-
 /**
  * A blocked run keeps the carry-over section too. The summary is the Stage 0
  * SSOT, so `--assume` findings (and carry-over read back from an earlier
@@ -379,7 +310,6 @@ async function resolveStoryWorkshopGaps(packDir: string | null): Promise<string[
  */
 function buildBlockedPreflightSummary(input: {
   runId: string;
-  selectedDiscussionPack: string | null;
   blockers: string[];
   openQuestions: string[];
   nextCommands: string[];
@@ -391,7 +321,7 @@ function buildBlockedPreflightSummary(input: {
     "",
     "- status: blocked",
     `- run id: ${input.runId}`,
-    `- latest discussion-pack: ${input.selectedDiscussionPack ?? "(not found)"}`,
+    "- selected input: (none)",
     "",
     "## Blockers",
     "",
@@ -414,14 +344,9 @@ function renderCarryOver(openQuestions: string[]): string[] {
 function buildReadyPreflightSummary(input: {
   runId: string;
   source: SddPreflightSource;
-  selectedInputPath: string | null;
-  importedReqCount: number | null;
+  selectedInputPath: string;
   openQuestions: string[];
-  packGaps: string[];
 }): string {
-  const openQuestions = renderCarryOver(input.openQuestions);
-  const inputLabel = `selected ${input.source}`;
-
   return [
     "# Preflight Summary",
     "",
@@ -430,105 +355,16 @@ function buildReadyPreflightSummary(input: {
     "- status: ready",
     `- run id: ${input.runId}`,
     `- source: ${input.source}`,
-    `- ${inputLabel}: ${input.selectedInputPath ?? "(unknown)"}`,
-    "",
-    "## Requirement Intake",
-    "",
-    `- Imported REQ count: ${input.importedReqCount ?? "unknown"}`,
-    "",
-    "## Pack Gaps",
-    "",
-    ...(input.packGaps.length > 0 ? input.packGaps.map((gap) => `- ${gap}`) : ["- none"]),
+    `- selected ${input.source}: ${input.selectedInputPath}`,
     "",
     "## Open Questions (Carry-over)",
     "",
-    ...openQuestions,
+    ...renderCarryOver(input.openQuestions),
   ].join("\n");
 }
 
 function normalizeTextList(values: string[] | undefined): string[] {
   return (values ?? []).map((value) => value.trim()).filter((value) => value.length > 0);
-}
-
-/**
- * The requirement intake: how many requirements `06_REQ.md` declares, not how
- * often a `REQ-NNNN` token appears. A description citing a sibling requirement
- * would otherwise inflate the count Stage 1 reconciles against.
- *
- * With a `REQ-ID` column, only that column's declarations count. A column that
- * holds none — a different ID scheme, a renamed cell — makes the count unknown
- * (`null`) rather than a scan of the prose, which counts mentions: a sentence
- * naming a requirement ID only to say the pack does not use it counted as one
- * requirement. Only a
- * file with no `REQ-ID` column at all falls back to distinct IDs in the text.
- */
-function countReqIds(text: string): number | null {
-  const table = collectTableReqIds(text);
-  if (table.hasColumn) {
-    return table.ids.size > 0 ? table.ids.size : null;
-  }
-  return collectDistinctReqIds(text).size;
-}
-
-function collectTableReqIds(text: string): { hasColumn: boolean; ids: Set<string> } {
-  const ids = new Set<string>();
-  let hasColumn = false;
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-
-  for (let index = 0; index + 1 < lines.length; index += 1) {
-    const headers = parseTableCells(lines[index] ?? "");
-    const column = headers.findIndex((cell) => {
-      const normalized = cell.toLowerCase().replace(/[^a-z0-9-]/g, "");
-      return normalized === "req-id" || normalized === "reqid";
-    });
-    if (column < 0 || !isTableSeparator(lines[index + 1] ?? "", headers.length)) {
-      continue;
-    }
-    hasColumn = true;
-
-    for (let row = index + 2; row < lines.length; row += 1) {
-      const cells = parseTableCells(lines[row] ?? "");
-      if (cells.length === 0) {
-        break;
-      }
-      const id = new RegExp(REQ_ID_RE.source).exec(cells[column] ?? "")?.[0];
-      if (id !== undefined) {
-        ids.add(id);
-      }
-    }
-  }
-
-  return { hasColumn, ids };
-}
-
-function collectDistinctReqIds(text: string): Set<string> {
-  const matcher = new RegExp(REQ_ID_RE.source, REQ_ID_RE.flags);
-  return new Set(Array.from(text.matchAll(matcher), (match) => match[0]));
-}
-
-function parseTableCells(line: string): string[] {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("|")) {
-    return [];
-  }
-  return trimmed
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split("|")
-    .map((cell) => cell.trim());
-}
-
-function isTableSeparator(line: string, columnCount: number): boolean {
-  const cells = parseTableCells(line);
-  return cells.length === columnCount && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
-}
-
-async function readSafe(filePath: string): Promise<string> {
-  try {
-    return await readFile(filePath, "utf-8");
-  } catch {
-    return "";
-  }
 }
 
 /** Whether `filePath` names a regular file this process can read. */

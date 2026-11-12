@@ -21,6 +21,9 @@ changes, and record that decision before anything depends on it.
   authority.
 - The existing story tree: `01_policy/`, `02_business-flow/`, `03_contract/`,
   `decisions.md`, every page it lists in order, and `open-questions.md` under `<paths.specsDir>`; read decision pages before the root tail.
+- The deliberation record this run consumes, as
+  `.qfai/assistant/rule/references/deliberation-record.md#reading-a-record`
+  says.
 
 ## Scope of the request
 
@@ -38,23 +41,30 @@ no-argument batch, and its gate runs with `--flow BF-NNNN` for that flow.
    `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher`.
    Record its resolved package path and version in the SDD report. Check that
    the installed Stage 0 instructions support the procedure being used.
-2. Run `npx qfai sdd preflight` and use its `selectedInputPath`; a selected
-   discussion pack may be older than the newest pack.
-3. Read the pack, its completed reviews, explicit user requirements, and the
-   existing story tree. A discussion pack is provenance and design input, not a
-   normative SSOT. Record a discrepancy in an SDD-owned row or the SDD report; do not
-   edit the pack to clear this stage. For the current request, read the existing
-   purpose in `<paths.specsDir>/01_policy/objective.md` and inspect related flows
-   and stories. Do not regenerate the existing purpose or a past pack merely
-   because discussion provenance is absent.
-4. A missing-pack diagnosis does not mean that specifications are absent. For
-   conditional source selection, read
+2. Name the deliberation record this run consumes: the run's own record, or
+   the one the work order names. Invoked by name with no work order, it is the
+   record the user names; when the user names none, ask which record under
+   `paths.deliberationDir` to use before anything is written. Run
+   `npx qfai sdd preflight --record <path>` and use its `selectedInputPath`.
+3. Read every table of that record, the completed reviews, explicit user
+   requirements, and the existing story tree. The record is history, not the
+   current state: where it disagrees with the story tree, `decisions.md` or
+   `open-questions.md`, they win. State a discrepancy in the SDD report or as an
+   open question. Never edit the record, to clear this stage or for any other
+   reason. An Interview row the user left unanswered becomes an
+   `open-questions.md` row, and SDD carries on. For the current request, read
+   the existing purpose in `<paths.specsDir>/01_policy/objective.md` and inspect
+   related flows and stories. Do not regenerate the existing purpose merely
+   because no record exists.
+4. No record does not mean that specifications are absent. For conditional
+   source selection, read
    `.qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory`.
    Use an existing readable authoritative specification with `--import <path>`;
    use an explicit user requirement as supplied, without inventing an import
-   file. Stop if no usable source exists or a product decision cannot be
-   inferred safely. Import-lite readiness does not establish complete
-   requirements or a validation PASS.
+   file. Stop if no usable source exists: no record of the run or named for it,
+   no import-lite input and no explicit user requirement. Stop as well when a
+   product decision cannot be inferred safely. Import-lite readiness does not
+   establish complete requirements or a validation PASS.
 
 ## Stage 1: triage and records
 
@@ -69,19 +79,22 @@ reference before allocating IDs or relying on a decision. Append new rows only
 to the root table, and never move a row between files; an unreadable or
 incomplete register stops this stage.
 
+Write each answer of the record into the one story-tree file that owns it, as
+`.qfai/assistant/skill/qfai-sdd/references/requirements-decomposition.md#where-each-answer-goes`
+maps it.
+
 Record in `<paths.specsDir>/decisions.md` only the decisions the user made,
 approvals included, that pass the recording test at the top of the
 `qfai-sdd` decisions template: hard to reverse, surprising to a reader without
-context, and the result of a real trade-off. The stage report states every
-other decision. Record unresolved questions in `<paths.specsDir>/open-questions.md`.
+context, and the result of a real trade-off. Every other decision an agent
+took that the deliberation-record rule counts is an Agent decisions row of the
+run's deliberation record. Record unresolved questions in `<paths.specsDir>/open-questions.md`.
 Every row has exactly `ID | Content | Approach`. A new row's ID is
 `DEC-yyyymmddhhMMss` or `OQ-yyyymmddhhMMss`, the UTC time it is written.
 
 - A decisions.md row is appended once, keeps its ID and is never removed or renumbered; only its wording may be restated.
 - An option the user rejects is a row whose Content opens `Declined:`,
   recording who declined it and when. It authorizes nothing.
-- Name each requirement's source as `discussion-<id>#REQ-NNNN` when that
-  source exists, in the stage report and in any row the decision writes.
 - A decision that refers to an earlier row is a new row whose Approach opens
   with the earlier ID: `Supersedes DEC-…`, `Narrows DEC-…`, or `Reopens DEC-…`
   for a declined option.
@@ -90,7 +103,7 @@ Every row has exactly `ID | Content | Approach`. A new row's ID is
 - To defer a question already written, delete its row and append a new one
   whose Approach names the next decision point and says `Replaces OQ-…`.
 
-A decision the agent took appends no row. Do not write a second
+A decision the agent took appends no `decisions.md` row. Do not write a second
 decision-record directory or a retired story file. Listed pages are members of
 the same register, not a second decision home. Write each decision's result
 where it lives as the triage reference's "Where a decision's result lives"
@@ -107,8 +120,8 @@ answer; stop before the dependent write and report pending decisions.
 ### UI-bearing flows
 
 UI-bearing is a property of the affected flow, not of the files this run
-happened to edit. Resolve it from the source's surface classification and the UI
-contracts linked to that flow, and record it for each affected flow; the
+happened to edit. Resolve it from the surfaces the record settles, the `tech.md`
+`Surface` row and the UI contracts linked to that flow, and record it for each affected flow; the
 session agent designs the screens of a UI-bearing flow itself.
 `product-surface-reviewer` joins a review in a route
 only for a screen change, as `common-review-cycle`'s reviewer set says;
@@ -220,9 +233,9 @@ Parallel branches pick the same next ID unless each reads the others first:
 Before this step's first mutation, run the checkpoint for `Triage and records`
 in `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md`. The
 session agent starts the griller, never a stage worker. Put each critical
-decision it holds to the user, and list each decision it adopted in the final
-report. Each later design-writing step runs its own checkpoint the
-same way.
+decision it holds to the user, and write each decision it adopted as an Agent
+decisions row of the run's deliberation record. Each later design-writing step
+runs its own checkpoint the same way.
 
 ## Gate
 

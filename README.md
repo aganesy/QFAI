@@ -378,19 +378,19 @@ flowchart LR
     Exit codes: 0 (a plan or candidates), 2 (input refused), 1 (the `--in` file cannot be read, or a
     shipped plan does not load).
 - `npx qfai sdd preflight`
-  - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
-    resolves the blockers, and writes the summary run-scoped at
-    `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md`
+  - Runs the Stage 0 gate of `/qfai-sdd`: selects the source, resolves the blockers, and writes the summary
+    run-scoped at `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md`
     (`.qfai/report/preflight/run-<timestamp>/preflight_summary.md` by default; the run reports the path it wrote),
     then refreshes `<paths.outDir>/preflight_summary.md` as the latest-run pointer. Exits 1 when the result is
     `blocked` (use `--fail-on never` to report without failing); `--format json` emits the machine-readable
     result on stdout.
-  - Only a missing or misnamed pack blocks. What a present pack lacks or contradicts is listed under the
-    summary's `## Pack Gaps` (`packGaps` in the JSON result), and the result stays `ready`: the pack is
-    reference material, so the gap is recorded in the SDD artifacts rather than stopping the stage.
-  - The pack is the one `npx qfai discussion use <id>` pinned (`.qfai/state.json#discussion.currentId`); the
-    newest pack is used only when no pointer is set. A pointer that matches no pack on disk stops the run with
-    the candidate list instead of silently gating a different pack.
+  - The source is the deliberation record `--record <path>` names: the run's own record, the one the work
+    order names, or the one the user names. A path is read against the project root, and a bare record name
+    against `paths.deliberationDir`. Without `--record`, the source is the imported specification
+    `--import <path>` names.
+  - With neither, the result is `blocked`, and the blocker lists the records under `paths.deliberationDir`
+    without choosing one. A named file that cannot be read also blocks. A record that leaves a question open
+    or contradicts itself is still `ready`: SDD states each gap in its report.
   - `--assume <text>` (repeatable) records carry-over open questions / assumptions in the summary. Without it
     the carry-over list already present in the `<paths.outDir>/preflight_summary.md` pointer is preserved, not
     overwritten.

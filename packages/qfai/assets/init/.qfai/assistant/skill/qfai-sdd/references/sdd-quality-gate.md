@@ -39,7 +39,7 @@ Do not use a sibling's in-flight findings to hold or clear the current flow. Rec
 ## Review and evidence
 
 - A pre-draft grilling checkpoint ran before the first write of every design-writing stage entered. It held a grilling session only where it found a decision the repository cannot settle, and each critical decision it held was put to the user.
-- The final report lists each decision a checkpoint adopted, with its reason.
+- Each decision a checkpoint adopted is an Agent decisions row of the run's deliberation record, with its reason.
 - Reviewers are independent of authors, and every finding of the one review is fixed or answered under `.qfai/assistant/rule/review-convergence.md`.
 - Evidence records the source, changed IDs and files, contract executability, commands, reviewer verdicts, rejected options excluded, and remaining risks.
 - No critical decision is treated as answered from silence, --auto, or a generic instruction to continue.

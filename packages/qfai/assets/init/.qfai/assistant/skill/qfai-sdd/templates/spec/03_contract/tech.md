@@ -2,19 +2,19 @@
 
 ## Stack
 
-| Component           | Choice                                     |
-| ------------------- | ------------------------------------------ |
-| Runtime             | `<language runtime and supported version>` |
-| Platform            | `<supported operating systems>`            |
-| Surface             | `<surfaces the product targets>`           |
-| CI                  | `<CI service>`                             |
-| Language            | `<language and version>`                   |
-| Package manager     | `<package manager and version>`            |
-| Build tool          | `<build tool>`                             |
-| Test runner         | `<test runner>`                            |
-| Lint / format       | `<linter and formatter>`                   |
-| CSS framework       | `<CSS framework, or none>`                 |
-| Component catalogue | `<primary component catalogue, or none>`   |
+| Component           | Choice                                         |
+| ------------------- | ---------------------------------------------- |
+| Runtime             | `<language runtime and supported version>`     |
+| Platform            | `<supported operating systems>`                |
+| Surface             | `<web, mobile, desktop, mixed, cli or non-ui>` |
+| CI                  | `<CI service>`                                 |
+| Language            | `<language and version>`                       |
+| Package manager     | `<package manager and version>`                |
+| Build tool          | `<build tool>`                                 |
+| Test runner         | `<test runner>`                                |
+| Lint / format       | `<linter and formatter>`                       |
+| CSS framework       | `<CSS framework, or none>`                     |
+| Component catalogue | `<primary component catalogue, or none>`       |
 
 ## Architecture
 

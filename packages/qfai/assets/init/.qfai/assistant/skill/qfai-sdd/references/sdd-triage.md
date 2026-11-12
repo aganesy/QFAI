@@ -1,6 +1,6 @@
 # SDD Triage
 
-Triage selects the smallest story-tree change that answers each incoming requirement. The source may be the discussion pack selected by preflight, an imported specification, or the user's explicit requirement. Treat the pack as reference material and resolve a conflict in an SDD-owned artifact.
+Triage selects the smallest story-tree change that answers each incoming requirement. The source may be the deliberation record of the run or the one named for it, an imported specification, or the user's explicit requirement. The record is history: resolve a conflict in an SDD-owned artifact and leave the record unchanged.
 
 ## Contents
 

@@ -118,6 +118,8 @@ export type ParsedArgs = {
     sddAssumptions: string[];
     /** `--import <path>` for `qfai sdd preflight`: an imported specification to use as the source. */
     sddImport?: string;
+    /** `--record <path>` for `qfai sdd preflight`: the deliberation record SDD consumes. */
+    sddRecord?: string;
     /** Subcommand for `qfai atdd <scaffold>`. */
     atddAction?: "scaffold";
     atddStoryId?: string;
@@ -794,6 +796,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (sddPreflight()) options.sddImport = next;
         else markInvalid(notValidHere("--import"));
+        break;
+      }
+      case "--record": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--record"));
+          break;
+        }
+        if (sddPreflight()) options.sddRecord = next;
+        else markInvalid(notValidHere("--record"));
         break;
       }
       case "--assume": {

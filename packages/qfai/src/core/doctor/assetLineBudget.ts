@@ -188,7 +188,7 @@ export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map();
 export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
   ["assistant/skill/qfai-configure/SKILL.md", 671],
   ["assistant/skill/qfai-discussion/templates/01_Context.md", 405],
-  ["assistant/skill/qfai-sdd/references/design-md-brand-catalog.md", 533],
+  ["assistant/skill/qfai-sdd/references/design-md-brand-catalog.md", 529],
 ]);
 
 /**

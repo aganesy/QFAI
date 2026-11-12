@@ -35,11 +35,21 @@ describe("qfai-sdd pre-draft grilling", () => {
       }
       expect(loop).toContain("It asks the user each critical decision the frontier holds.");
       expect(loop).toContain(
-        "final report lists each decision a checkpoint adopted, with its reason",
+        "Each decision a checkpoint adopted is an Agent decisions row of the run's deliberation record",
       );
       expect(gate).toContain(
-        "The final report lists each decision a checkpoint adopted, with its reason.",
+        "Each decision a checkpoint adopted is an Agent decisions row of the run's deliberation record, with its reason.",
       );
+      const register = (
+        await read(tree, "assistant/skill/qfai-sdd/templates/spec/decisions.md")
+      ).replace(/\s+/g, " ");
+      expect(register).toContain("a decision an agent took is an Agent decisions row");
+      for (const step of ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract"]) {
+        const text = (await read(tree, `assistant/step/${step}/STEP.md`)).replace(/\s+/g, " ");
+        expect(text, step).toContain(
+          "write each decision it adopted as an Agent decisions row of the run's deliberation record",
+        );
+      }
     });
 
     // QFAI:AC-0001-0147-15
@@ -58,7 +68,7 @@ describe("qfai-sdd pre-draft grilling", () => {
         "When the request, the story tree, the contracts and the recorded decisions already settle every decision of the stage, the frontier is empty. Then no session is held and no griller starts.",
       );
       expect(loop).toContain(
-        "The stage writes what is settled, and its final report lists no adopted decision for the checkpoint.",
+        "The stage writes what is settled, and the run's deliberation record holds no Agent decisions row for the checkpoint.",
       );
       expect(gate).toContain(
         "It held a grilling session only where it found a decision the repository cannot settle",

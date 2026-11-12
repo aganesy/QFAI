@@ -212,6 +212,27 @@ describe("migration catalog move", () => {
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
   });
 
+  // QFAI:EX-0004-0006-09
+  it("moves a 1.x Risks table to the Risks section of initiative.md", async () => {
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/02_Initiative.md",
+      "# 02 Initiative\n\n## Risks\n\n| Risk | Mitigation |\n| --- | --- |\n| The payment API changes | Pin its version |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(0);
+    const initiative = await readFile(
+      path.join(context.specsDir, "01_policy", "initiative.md"),
+      "utf8",
+    );
+    expect(initiative).toContain(
+      "## Risks\n\n| Risk | Mitigation |\n| --- | --- |\n| The payment API changes | Pin its version |\n",
+    );
+    expect(initiative.match(/The payment API changes/g)).toHaveLength(1);
+    expect(conformance(context.specsDir, "initiative")).toContain("No violations");
+  });
+
   // QFAI:EX-0004-0006-28
   it("numbers each constraint section from 01 and names every ID it changed", async () => {
     const context = await fixture();
