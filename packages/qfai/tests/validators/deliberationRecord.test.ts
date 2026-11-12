@@ -204,13 +204,18 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
     expect(await findings()).toEqual([]);
   });
 
+  // The cells carry Japanese text, built from code points because this repository stores English.
   // QFAI:EX-0001-0302-11
   it("accepts any file name and any cell content, and the document schema skips the record", async () => {
+    // "Monthly", "Yearly" and "Plan" in Japanese.
+    const monthly = String.fromCodePoint(0x6708, 0x984d);
+    const yearly = String.fromCodePoint(0x5e74, 0x984d);
+    const plan = String.fromCodePoint(0x6848);
     await put(
       ".qfai/deliberation/notes.md",
       record(
-        table(HEADER, "| | https://example.com/pricing | 月額 | 年額 | | 2 |"),
-        table(HEADER, "| See https://example.com | 案A | 案B | 案C | | 3 |"),
+        table(HEADER, `| | https://example.com/pricing | ${monthly} | ${yearly} | | 2 |`),
+        table(HEADER, `| See https://example.com | ${plan}A | ${plan}B | ${plan}C | | 3 |`),
       ),
     );
     const { issues } = await validateProject(root, undefined, { profile: "sdd" });

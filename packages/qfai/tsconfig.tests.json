@@ -434,6 +434,7 @@
     "tests/unit/core/validators/upstreamSsotGuardReadFailure.test.ts",
     "tests/validators/configReferenceIntegrity.test.ts",
     "tests/validators/dbContractApplyOrder.test.ts",
+    "tests/validators/deliberationRecord.test.ts",
     "tests/helpers/typescriptSourceScan.ts",
     "tests/unit/runtimeMessageLauncher.test.ts",
     "tests/e2e/spec0017WindowsParityE2E.test.ts",
