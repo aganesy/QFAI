@@ -3,25 +3,18 @@
 ## Criteria
 
 ```gherkin
-Feature: Discussion-Pack Preflight
+Feature: Preflight needs a usable source
   # AC-0001-0148-01
   Scenario: No usable source stops SDD
-    Given no discussion pack, import-lite input, or explicit user requirement is usable
+    Given no deliberation record of the run or named in the work order, no import-lite input and no explicit user requirement is usable
     When SDD starts
     Then it stops and guides the operator to /qfai-discussion
 
-  # AC-0001-0148-02
-  Scenario: Validation does not require a pack where SDD would not stop
-    Given a story-tree project with no discussion pack of any name
-    When `qfai validate` runs
-    Then it reports no missing discussion pack, because SDD may start from an explicit user requirement
-    And a misnamed pack still reports its naming finding and the missing pack
-
   # AC-0001-0148-03
-  Scenario: An incomplete discussion pack remains provenance
-    Given a discussion pack exists but is incomplete, contradictory, or carries a blocking open question
+  Scenario: A record with open or contradictory answers remains provenance
+    Given a deliberation record that leaves questions open or contradicts itself
     When SDD starts
-    Then it continues using that pack as non-normative reference material
+    Then it continues using that record as non-normative reference material
     And it states the discrepancy in its final report or as an open question
-    And it does not edit the discussion pack to clear the discrepancy
+    And it does not edit the record to clear the discrepancy
 ```

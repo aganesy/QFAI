@@ -9,5 +9,5 @@ Feature: Stop only for my decision or a fact only I hold
     Given a route blocked by one missing value
     When the session asks for it
     Then exactly one question is put and the route is planned afterwards
-    And no discussion pack is created
+    And no discussion stage is added
 ```

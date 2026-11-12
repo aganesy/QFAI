@@ -40,7 +40,8 @@ states.
 
 1. Run the pre-draft grilling checkpoint for `Stories and examples` in
    `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
-   the first write, and list each decision it adopted in the final report.
+   the first write, and write each decision it adopted as an Agent decisions
+   row of the run's deliberation record.
    Before planned AC/EX additions, read
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#capacity-before-writing`.
    Report the retired-inclusive remaining capacity and requested count, and

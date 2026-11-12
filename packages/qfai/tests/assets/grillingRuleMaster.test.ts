@@ -111,7 +111,7 @@ describe.each(TREES)("%s", (rel) => {
     expectPhrase(master, "Its effect cannot be taken back");
     expectPhrase(
       master,
-      "It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated",
+      "It rests on product or business intent that the request, the specs and the contracts all leave unstated",
     );
     expectPhrase(master, "Nothing else is critical.");
     expectPhrase(
@@ -124,7 +124,7 @@ describe.each(TREES)("%s", (rel) => {
     const master = await read(rel);
     // An adopted decision the user cannot see is one they cannot overturn.
     expectPhrase(master, "### What an adopted decision owes");
-    expectPhrase(master, "A position that disagreed stays beside it.");
+    expectPhrase(master, "A position that disagreed stays in its Background.");
     expectPhrase(master, "The report does not wait for an answer.");
   });
 

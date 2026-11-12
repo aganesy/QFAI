@@ -29,6 +29,8 @@ of public view.
 
 Setting the severity is this step's decision point. Where the run stops there
 for the operator, put the severity and its reason to them before recording it.
+The severity and its reason stay in the private report: they are never a row
+of the deliberation record, which git tracks.
 
 ## What it writes
 

@@ -12,7 +12,7 @@ of the register; a partial register settles nothing.
 
 ## Core rule
 
-A downstream skill does not edit an approved specification, policy, contract, or QFAI-owned rule on its own authority. It records the discrepancy and returns the affected artifact to its owner. A discussion pack is discovery material; the story tree and contracts are the current specification.
+A downstream skill does not edit an approved specification, policy, contract, or QFAI-owned rule on its own authority. It records the discrepancy and returns the affected artifact to its owner. A deliberation record is history; the story tree and contracts are the current specification.
 
 Upstream artifacts include the policy and business-flow trees under paths.specsDir, decisions.md,
 open-questions.md, and every file under paths.contractsDir. Production code and tests that implement an approved
@@ -47,10 +47,10 @@ Both classes use the same decision and owner-rerun path.
    the evidence or reproduction, the proposed change, the impacted items, and the owner rerun.
 3. Decide the change. A change that contradicts a specification, a contract or a recorded decision, that cannot
    be taken back, or that rests on product intent nothing written states is a critical decision: put it to the
-   user and wait for the answer. The owner takes any other change itself and lists it with its reason in its
-   report. A decision becomes a decisions.md row only when it is hard to reverse, would surprise a reader
-   without context, and was the result of a real trade-off; the row takes the short form of the `qfai-sdd`
-   decisions template. Otherwise the stage report states it. An option the user rejects is a row whose
+   user and wait for the answer. The owner takes any other change itself and writes it, with its reason, as
+   an Agent decisions row of the run's deliberation record. A decision becomes a decisions.md row only when it
+   is hard to reverse, would surprise a reader without context, and was the result of a real trade-off; the row
+   takes the short form of the `qfai-sdd` decisions template. An option the user rejects is a row whose
    Content opens `Declined:`, whatever the recording test says, so it stays excluded on reruns.
 
    When the user cannot be asked, write no row to either table: report the proposed change as the decision still

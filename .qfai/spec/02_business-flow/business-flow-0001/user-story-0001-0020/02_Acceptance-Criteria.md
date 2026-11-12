@@ -9,7 +9,7 @@ Feature: Workspace initialization
     Given an empty project directory
     When `qfai init` runs
     Then `.qfai/assistant/` is created
-    And none of `specs/`, `contracts/`, `discussion/`, `evidence/`, `review/` and `report/` exists under `.qfai/`
+    And none of `specs/`, `contracts/`, `deliberation/`, `evidence/`, `review/` and `report/` exists under `.qfai/`
     And `qfai.config.yaml` is created at the project root
     And where init lays out the story tree, `.qfai/spec/` is created as well
 ```

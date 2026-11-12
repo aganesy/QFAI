@@ -289,8 +289,9 @@ grants no push or pull request authority: each remote action needs its own cover
 instruction or policy. Waiting alone never authorizes a commit or skipped gate.
 
 Use standing delegation only for the targets and actions it actually covers.
-Report routine choices as the agent's decisions under that authority, never
-as the user's individual option approval. A request to ask nothing supplies
+Name a routine action under that authority in the stage report. Write routine
+choices as the agent's decisions under that authority, Agent decisions rows of
+the run's deliberation record, never as the user's individual option approval. A request to ask nothing supplies
 no uncovered approval. If a critical decision or release approval is missing,
 stop that target before dependent work and follow the existing question or
 no-question rules. Other authorized independent work may continue. A stop of
@@ -312,7 +313,7 @@ reset, a stash, a branch switch or a worktree removal.
 
 | The work ended                        | The report                                                                                                                                                                  |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Every stage ran and every gate passed | Done: the paths changed, each gate's verdict, and every decision taken without the user, with its reason                                                                    |
+| Every stage ran and every gate passed | Done: the paths changed and each gate's verdict                                                                                                                             |
 | At the chosen scope                   | The chosen stages complete, the stages not chosen, and a verdict for each gate that ran, never that a change is done                                                        |
 | At a closing step                     | The closure outcome and each follow-up request, never that a change is done                                                                                                 |
 | With a gate failing                   | Each failing gate marked pre-existing or new, with its owner. Nothing reads as complete                                                                                     |
@@ -325,6 +326,9 @@ reset, a stash, a branch switch or a worktree removal.
 - Report repository outcome separately from external publication. A local commit
   is not a push or pull request, and passing repository checks do not prove a
   deployment, package publication or other external effect occurred.
+- Name the path of the run's deliberation record, or say that the run wrote
+  none. List no agent decision: each is a row of that record. List each
+  assumption a no-question mode took.
 - Name `common-policy-check` and its outcome, or that it did not run and why.
 - Give a step-status table: one row per plan step in plan order, and one per
   planned review, each with its status and, for every status but `ran`, the

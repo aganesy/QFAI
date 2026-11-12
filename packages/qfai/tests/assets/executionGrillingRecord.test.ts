@@ -9,18 +9,18 @@ const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const RECORD = "assistant/step/common-grilling-record/STEP.md";
 const read = (tree: string, relative: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, relative), "utf-8");
-const flatten = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
+const flatten = (markdown: string): string => markdown.replace(/\s+/g, " ");
 
 describe.each(trees)("%s — the grilling record", (tree) => {
-  it("is written by the discussion stage alone", async () => {
+  it("is rows of the run's deliberation record", async () => {
     const body = flatten(await read(tree, RECORD));
-    expect(body).toContain("Only the discussion stage writes this record.");
-    expect(body).toContain("## One session");
+    expect(body).toContain("## Rows the session writes");
     expect(body).toContain(
-      "`Ended at` and `Authoring began` are actual timestamps, with authoring later.",
+      "| Put a question to the user | One Interview row, under the stage's subheading, written when the answer arrives |",
     );
-    expect(body).not.toContain("Work Orders Summary");
-    expect(body).not.toContain("Run blocks");
+    expect(body).toContain(
+      "| Took a decision in a delegated session | One Agent decisions row with at least three options, the griller's recommendation chosen |",
+    );
   });
 
   it("keeps the five endings in the rule master", async () => {
@@ -34,7 +34,8 @@ describe.each(trees)("%s — the grilling record", (tree) => {
 
   it("records a stopped session without resuming work or writing the stopped artifact", async () => {
     const body = flatten(await read(tree, RECORD));
-    expect(body).toContain("A stopped session is reported, not written");
-    expect(body).toMatch(/resumes no work/);
+    expect(body).toContain(
+      "The ending is reported in the stage report, and a `stopped` session writes nothing more.",
+    );
   });
 });

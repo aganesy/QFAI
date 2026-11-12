@@ -57,7 +57,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const VALIDATORS_ROOT = path.resolve(__dirname, "../../src/core/validators");
-const UIX_VALIDATORS_DIR = path.resolve(VALIDATORS_ROOT, "uix");
+const SKILL_VALIDATORS_DIR = path.resolve(VALIDATORS_ROOT, "skill");
 const VALIDATORS_INDEX = path.resolve(VALIDATORS_ROOT, "index.ts");
 const VALIDATE_TS = path.resolve(__dirname, "../../src/core/validate.ts");
 const SRC_ROOT = path.resolve(__dirname, "../../src");
@@ -134,12 +134,12 @@ const reachableNames = (): Promise<ReadonlySet<string>> => {
  * declare them: they identify dead-code regressions this meta-test was
  * written to prevent, and every one of these functions has since been deleted.
  *
- * `validateTasteInterview` and `validateStrategyStrong` join the first two by
- * the same rule: the reachability commentary below cites them as rules that
+ * `validateTasteInterview`, `validateStrategyStrong` and `validateTrendScan` join
+ * the first two by the same rule: the reachability commentary below cites them as rules that
  * once read as live while sitting outside every production call path, and
- * neither is declared under `src/` any more. They are still named in
+ * none is declared under `src/` any more. They are still named in
  * `KNOWN_UNWIRED_BARREL_EXPORTS`, where they are inert — the barrel does not
- * export either name — so pruning that list is a separate change.
+ * export any of them — so pruning that list is a separate change.
  *
  * `validateExecutionPlanIssues` is the QFAI-PROT-310 producer. The guard below
  * asserts it is absent from the reachable graph, so the name has to be
@@ -152,6 +152,7 @@ const HISTORICAL_REFERENCES: ReadonlySet<string> = new Set<string>([
   "validateDelegationMapIssues",
   "validateTasteInterview",
   "validateStrategyStrong",
+  "validateTrendScan",
 ]);
 
 /**
@@ -218,14 +219,6 @@ function collectDocumentedValidatorNames(guardSource: string): Set<string> {
  */
 const PENDING_WIRING: ReadonlyMap<string, string> = new Map<string, string>([
   ["validateIntegrationSurface", "2026-08-22 — validators/integrationSurface.ts, see #670"],
-  [
-    "validateCanonicalSidecarFamilyCompleteness",
-    "2026-08-22 — validators/uix/threeLayer.ts, unused `export const` alias, see #670",
-  ],
-  [
-    "validateOptionComparison",
-    "2026-08-22 — validators/uix/comparisonValidator.ts, `export { … as … }` alias nothing calls, see #670",
-  ],
 ]);
 
 /**
@@ -568,7 +561,7 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     const reachable = await collectReachableModules(await collectBarrelExports());
 
     // A module validate.ts pulls in through the barrel, two hops down.
-    expect(reachable.has(path.resolve(SRC_ROOT, "core/validators/uix/canonical.ts"))).toBe(true);
+    expect(reachable.has(path.resolve(SRC_ROOT, "core/validators/htmlMockBlocks.ts"))).toBe(true);
     // A src/ module only the library entry loads. Its references must not count
     // as wiring, or a validator dropped from the production graph goes unseen.
     expect(reachable.has(path.resolve(SRC_ROOT, "migration/specToStory/index.ts"))).toBe(false);
@@ -612,11 +605,6 @@ const BARREL_EXPORT_EXEMPT: ReadonlySet<string> = new Set<string>([
   "validateAssistantAssets",
   "validateContractConsistency",
   "validateContracts",
-  "validateDiscussionMermaid",
-  "validateClassification",
-  "validateExplorationArtifacts",
-  "validateSidecarMissing",
-  "validateOqClosure",
 ]);
 
 /**
@@ -677,13 +665,16 @@ describe("meta-test: validators are wired into the pipeline", () => {
 
   it("the guard scans the whole validators tree, not one subdirectory", async () => {
     const all = await publicValidators();
-    const uixOnly = await collectPublicValidators(UIX_VALIDATORS_DIR, DEPRECATED_LEGACY_VALIDATORS);
+    const skillOnly = await collectPublicValidators(
+      SKILL_VALIDATORS_DIR,
+      DEPRECATED_LEGACY_VALIDATORS,
+    );
 
     // Any scope regression that re-narrows the collector trips here.
-    expect(all.length).toBeGreaterThan(uixOnly.length);
+    expect(all.length).toBeGreaterThan(skillOnly.length);
     const dirs = new Set(all.map((v) => path.relative(VALIDATORS_ROOT, path.dirname(v.file))));
     expect(dirs.has("")).toBe(true);
-    expect(dirs.has("uix")).toBe(true);
+    expect(dirs.has("skill")).toBe(true);
   });
 
   it("collects validators published through an export clause, not just declarations", async () => {
@@ -707,12 +698,6 @@ describe("meta-test: validators are wired into the pipeline", () => {
     expect(names).toContain("validateAssigned");
     expect(names).not.toContain("validateReExported");
     expect(names).not.toContain("validateInternal");
-
-    const declared = await publicValidators();
-    const optionComparison = declared.find((v) => v.name === "validateOptionComparison");
-    expect(optionComparison?.file).toBe(
-      path.resolve(VALIDATORS_ROOT, "uix/comparisonValidator.ts"),
-    );
   });
 
   it("counts only identifiers in value position — prose, strings and imports are not wiring", () => {

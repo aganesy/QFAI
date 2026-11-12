@@ -1,7 +1,7 @@
 ---
 name: discussion-interview
 owner: qfai-discussion
-purpose: "Interview the user as a grilling session and record how and when it ended."
+purpose: "Interview the user as a grilling session, and write each question to the run's deliberation record and each question left open to open-questions.md."
 requires: [common-grilling-record]
 ---
 
@@ -16,18 +16,20 @@ An interview with no method is the agent deciding and reporting.
 ## Reads
 
 - `.qfai/assistant/skill/qfai-grilling/SKILL.md` and `.agents/rules/grilling.md`.
+- `.qfai/assistant/rule/references/deliberation-record.md`.
 - `.qfai/assistant/skill/qfai-discussion/references/discussion-coverage-checklist.md`.
 - `.qfai/assistant/skill/qfai-discussion/references/design-dna-intake.md`, where
-  any classified surface is `web`, `mobile`, `desktop` or `mixed`.
+  any surface of the target is `web`, `mobile`, `desktop` or `mixed`.
 - The research summary `discussion-research` reported.
 
 ## Writes
 
-- The `## Grilling Session` row, in the stage report.
+- The run's deliberation record, under this stage's subheading, as
+  `.qfai/assistant/step/common-grilling-record/STEP.md` says.
+- One `<paths.specsDir>/open-questions.md` row for each question the stage
+  left open.
 
-The records the session's ending produces — register rows and labelled
-assumptions — are written by `discussion-oq` and `discussion-pack` once the row
-is in place.
+No other story-tree file, no policy file, no contract and no root `DESIGN.md`.
 
 ## Procedure
 
@@ -40,118 +42,66 @@ is in place.
    method is `.agents/rules/grilling.md` and this step does not restate it.
 2. Cover every topic in
    `.qfai/assistant/skill/qfai-discussion/references/discussion-coverage-checklist.md`.
-3. Where any classified surface is `web`, `mobile`, `desktop` or `mixed`, cover
-   the design-direction decisions in
+3. Where any surface of the target is `web`, `mobile`, `desktop` or `mixed`,
+   cover the design-direction decisions in
    `.qfai/assistant/skill/qfai-discussion/references/design-dna-intake.md` in
-   the same session. Not every UI-bearing target: a cli-only pack is UI-bearing
-   and the brand questions do not apply to it, because nothing downstream reads
-   a `visual.*` token tree for one. The design direction belongs in this session
-   because `discussion-pack` records it after the pack is authored, and a
-   user-owned visual choice asked there is asked after the thing it governs is
-   written. Skip the design-DNA questions when the classification declares
-   `design_direction: inherit`, under the conditions of
-   `.qfai/assistant/skill/qfai-discussion/references/ui-bearing-playbook.md#inheriting-the-current-designmd`.
+   the same session. A `cli` target skips the brand questions, and so does a
+   project whose root `DESIGN.md` already sets the direction the request keeps.
 4. The research findings are inputs to the session's tree, not a later fill-in:
    a decision settled before the research that bears on it is settled against
    evidence nobody had, and the method reads a fact rather than asking about it.
-5. Write the `## Grilling Session` row as the session ends, before any pack
-   file (see [The record](#the-record)).
+5. Write each question as an Interview row of the record when its answer
+   arrives, not at the end of the session.
+6. Write one `open-questions.md` row for each question the session left open,
+   in the form the register's header comment states. A term the session settled
+   is such a row too, naming the term and its definition, as
+   `.agents/rules/grilling.md#terms-against-the-glossary` says.
+7. Invoked by name, this step is the run's last step: commit locally only the
+   run's deliberation record and the `open-questions.md` rows the run wrote,
+   and push nothing. In a route, the route's last step commits them.
 
 Inside a workflow run, what the work order's `settled` field records is not
 asked again
 (`.qfai/assistant/rule/shared-skill-operating-baseline.md#a-plans-steps`),
 and the interview covers only the product scope it leaves unresolved.
 
-## Writes that are not authoring
-
-**Authoring the pack** — the nine mandatory files and the UI sidecars, as the
-artifacts a reader takes the design from — does not start until the session has
-ended. Three writes are not that authoring, and happen when the process reaches
-them:
-
-| Write                                                                       | When                | Why it is not authoring                                                                                                                                                                                     |
-| --------------------------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The research summary in this run's stage report                             | Before the session  | The session reads it. Held back, the decisions are settled against evidence nobody had. It is not in the pack: no pack directory exists yet, and one opened here is what a cancelled run would leave behind |
-| A register entry or a labelled assumption the session's own ending produces | As the session ends | It records what the session did. Withheld, a no-question run cannot write the open questions that block its completion                                                                                      |
-| A throwaway artifact built to make a question answerable                    | Mid-session         | The method calls for it where talking cannot settle the question. It is not the pack, and it is not kept                                                                                                    |
-
-Where each outcome is recorded is
-`.qfai/assistant/skill/qfai-discussion/references/oq-and-deferred-rules.md#where-a-grilling-sessions-outcome-goes`.
-
 ## How the session ends
 
 The default user session reaches four of the five endings. An explicitly
 delegated discussion may also end `adopted` under the master's conditions:
 
-| Ended         | What the user did                                                                                                                                                                                | Authoring                                                                                                                                                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `confirmed`   | Confirmed on the session's own condition: no node open — the frontier empty **and** no fact lookup still running — and a clean confirmation-sheet reply (`grilling.md` § The confirmation sheet) | Starts                                                                                                                                                                     |
-| `user-closed` | Said `proceed`, `done`, or words to that effect                                                                                                                                                  | Starts. Lookups already running are finished and each decision still open becomes a labelled assumption, except one a document requires the user to make and record        |
-| `adopted`     | Explicitly delegated judgment for this scope                                                                                                                                                     | Starts only after the recorded delegation conditions are met; no open node, lookup or unsupported human decision remains                                                   |
-| `no-question` | Nothing — `--auto` reached nobody                                                                                                                                                                | Starts. Every node still open is registered — a decision, and a fact only the user holds, which nothing else can supply, and the open count is then what blocks completion |
-| `stopped`     | Said `stop`                                                                                                                                                                                      | **Does not start.** Report every open decision as open and end the run                                                                                                     |
+| Ended         | What the user did                                                                                                                                                                                | What the stage writes                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `confirmed`   | Confirmed on the session's own condition: no node open — the frontier empty **and** no fact lookup still running — and a clean confirmation-sheet reply (`grilling.md` § The confirmation sheet) | The rows of every question asked                                                                                                    |
+| `user-closed` | Said `proceed`, `done`, or words to that effect                                                                                                                                                  | Each decision still open becomes an Agent decisions row labelled an assumption, except one a document requires the user to make     |
+| `adopted`     | Explicitly delegated judgment for this scope                                                                                                                                                     | Each decision of the delegated rounds as an Agent decisions row, once the recorded delegation conditions are met                    |
+| `no-question` | Nothing — `--auto` reached nobody                                                                                                                                                                | Each node still open as an `open-questions.md` row, with the most conventional candidate as an Agent decisions row labelled assumed |
+| `stopped`     | Said `stop`                                                                                                                                                                                      | **Nothing more.** The rows already written stay uncommitted, every open decision is reported as open, and the run ends              |
 
-**No ending authorizes authoring while a `hard-required` input this invocation
-consumes is missing.** Those are excluded from both assumption paths: an
-interactive closure still asks for them, and a no-question run stops and names
-them. Registering an open question does not make an input defaultable — the
-value is what the run needs, and a question about it is not one.
+**No ending lets the stage go on while a `hard-required` input this invocation
+consumes is missing.** An interactive closure still asks for it, and a
+no-question run stops and names it. Registering an open question does not make
+an input defaultable.
 
 **An interactive closure does not assume a decision some document requires the
 user to make and record.** `proceed` and `done` end the asking while the user is
 still there, so a decision they own is put again rather than assumed. The
-`hard-required` bound above does not reach it: that one is about an input the
-run consumes, and this is a decision the run is not permitted to take. The
-visual direction is the case here —
+visual direction is the case here:
 `.qfai/assistant/skill/qfai-discussion/references/design-dna-intake.md` says
-only the user may choose a theme by default. Only an actual specifically
-applicable user instruction can override that request under the master's
-authority conditions; the agents' choice is never labelled `chosen_by: user`.
-The rule states the same bound from its side:
-closing the questions waives the agent's own uncertainty, never an
-authorization the user has not given.
-
-**`--auto` without qualifying explicit delegation is the other case.** Nobody is
-there to put the question to, so the documented path holds: take the most
-conventional candidate, record it `chosen_by: assumption`, open it in
-`11_OQ-Register.md`, and author — the open count is what blocks completion.
-That is the rule's own shape for a no-question mode, the defaulted value written
-down **and** labelled beside the open question. What is forbidden is the
-assumption on its own, and a bar on authoring here would produce neither: no
-pack, and so nowhere to register the question that was supposed to block it.
+only the user may choose a theme by default, and a theme nobody chose stays an
+`open-questions.md` row.
 
 `stopped` is the one the vocabulary must keep separate. The rule says a stop
-ends the session immediately and no further work follows it, so a closure that
-authorizes proceeding and a cancellation cannot share a value — a pack drafted
-after `stop` is the run doing exactly what the user told it not to.
-
-## The record
-
-Write the stage report's `## Grilling Session` row in the shape
-`.qfai/assistant/step/common-grilling-record/STEP.md#one-session` sets out, and
-write `Ended at` before the first pack file. The reviewer reads the session condition
-off that row. Without it a skipped session and a completed one present the same
-pack — nine files, every topic covered, every open question registered — so
-the reviewer would have to block every run or accept a claim it cannot check.
-
-The agent that holds the session writes the row, `Ended at` included. Where
-another agent authors the pack, write the row before delegating, and pass the
-row to the pack author, who copies it unchanged into the stage report it
-writes and does not reconstruct it.
-
-A `stopped` session writes no row: the ending is reported, and no later step
-runs.
+ends the session immediately and no further work follows it.
 
 ## Gate
 
-The reviewer confirms:
+The stage worker confirms:
 
-- every row of the stage report's `## Grilling Session` table has its
-  `Ended at` before its own `Authoring began` (for a reopened row, when
-  authoring resumed), with `Ended` one of `confirmed`, `user-closed`,
-  `no-question`, or `adopted` with the recorded explicit-delegation conditions
-  verified;
-- every decision the session settled is recorded where
-  `.qfai/assistant/skill/qfai-discussion/references/oq-and-deferred-rules.md`
-  says;
-- every required topic in the coverage checklist was put to the session.
+- every question put to the user is an Interview row of the run's record, with
+  a free answer quoted word for word in `Option 4 (other)`;
+- every question left open is an `open-questions.md` row;
+- every required topic in the coverage checklist was put to the session, or is
+  an `open-questions.md` row;
+- no tracked file changed except the run's deliberation record and its
+  `open-questions.md` rows.

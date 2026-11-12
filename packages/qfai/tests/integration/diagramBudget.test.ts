@@ -14,7 +14,6 @@ import { validateDiagramBudget } from "../../src/core/validators/diagramBudget.j
 import { diagramSize } from "../../src/core/validators/mermaidDiagramSize.js";
 
 const FLOW = ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md";
-const PACK = ".qfai/discussion/discussion-20260101000000000/03_Story-Workshop.md";
 
 let root: string;
 
@@ -38,10 +37,8 @@ function chain(count: number): string {
   return `flowchart TD\n  ${nodes.join(" --> ")}`;
 }
 
-const budgetFindings = async (config: QfaiConfig = defaultConfig) => [
-  ...(await validateDiagramBudget(root, config, "story-tree")),
-  ...(await validateDiagramBudget(root, config, "discussion-pack")),
-];
+const budgetFindings = async (config: QfaiConfig = defaultConfig) =>
+  validateDiagramBudget(root, config);
 
 describe("the diagram budget", () => {
   // QFAI:EX-0001-0240-01
@@ -67,31 +64,30 @@ describe("the diagram budget", () => {
   });
 
   // QFAI:EX-0001-0240-03
-  it("warns on a sequence diagram with 13 participants in the latest discussion pack", async () => {
+  it("warns on a sequence diagram with 13 participants in a business-flow.md, run in sdd", async () => {
     const messages = Array.from(
       { length: 12 },
       (_, index) => `  P${index} ->> P${index + 1}: hello`,
     );
-    await write(PACK, `sequenceDiagram\n${messages.join("\n")}`);
-    const findings = (
-      await validateProject(root, undefined, { profile: "discussion" })
-    ).issues.filter((found) => found.code === "QFAI-FLOW-006");
+    await write(FLOW, `sequenceDiagram\n${messages.join("\n")}`);
+    const findings = (await validateProject(root, undefined, { profile: "sdd" })).issues.filter(
+      (found) => found.code === "QFAI-FLOW-006",
+    );
     expect(findings).toHaveLength(1);
-    expect(findings[0]?.file).toBe(PACK);
+    expect(findings[0]?.file).toBe(FLOW);
     expect(findings[0]?.message).toContain("13 nodes");
   });
 
   it("raises one warning per diagram in sdd, full and verify, and none in prototyping", async () => {
     await write(FLOW, chain(13));
-    await write(PACK, chain(14));
     const flow006 = async (profile: "sdd" | "full" | "verify" | "prototyping") =>
       (await validateProject(root, undefined, { profile })).issues
         .filter((found) => found.code === "QFAI-FLOW-006")
         .map((found) => found.file)
         .sort();
     expect(await flow006("sdd")).toEqual([FLOW]);
-    expect(await flow006("full")).toEqual([PACK, FLOW].sort());
-    expect(await flow006("verify")).toEqual([PACK, FLOW].sort());
+    expect(await flow006("full")).toEqual([FLOW]);
+    expect(await flow006("verify")).toEqual([FLOW]);
     expect(await flow006("prototyping")).toEqual([]);
   });
 

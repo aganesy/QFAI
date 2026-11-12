@@ -97,14 +97,6 @@ export type ParsedArgs = {
     /** `--timings` for `qfai validate`: print the time each finding family took. */
     validateTimings?: boolean;
     prototypingTargetUrl?: string;
-    /** Subcommand for `qfai discussion <list|use>`. */
-    discussionAction?: "list" | "use";
-    /** --active for `qfai discussion list`. */
-    discussionActive?: boolean;
-    /** --format <text|json> for `qfai discussion list [--active]`. */
-    discussionFormat?: "text" | "json";
-    /** Positional `<id>` for `qfai discussion use <id>`. */
-    discussionId?: string;
     /** Subcommand for `qfai sdd`. */
     sddAction?: "preflight" | "next-id" | "merge-docs";
     /** Positional `<kind>` for `qfai sdd next-id`. */
@@ -118,6 +110,8 @@ export type ParsedArgs = {
     sddAssumptions: string[];
     /** `--import <path>` for `qfai sdd preflight`: an imported specification to use as the source. */
     sddImport?: string;
+    /** `--record <path>` for `qfai sdd preflight`: the deliberation record SDD consumes. */
+    sddRecord?: string;
     /** Subcommand for `qfai atdd <scaffold>`. */
     atddAction?: "scaffold";
     atddStoryId?: string;
@@ -329,27 +323,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
-  // `qfai discussion <subcommand> [<id>]` pulls the subcommand token (and the
-  // positional <id> for `use`) before the flag loop.
-  if (command === "discussion") {
-    const candidate = args[0];
-    if (isSubcommandToken(candidate)) {
-      if (candidate === "list" || candidate === "use") {
-        options.discussionAction = candidate;
-      } else {
-        markInvalid(subcommandReason("discussion", candidate));
-      }
-      args.shift();
-      if (options.discussionAction === "use") {
-        const idCandidate = args[0];
-        if (isPositionalToken(idCandidate)) {
-          options.discussionId = idCandidate;
-          args.shift();
-        }
-      }
-    }
-  }
-
   /**
    * Value-token consumption for every value-taking flag arm below.
    * The cursor advances the moment a value token exists — before the arm
@@ -458,14 +431,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--format"));
           break;
         }
-        if (command === "discussion") {
-          if (next === "text" || next === "json") {
-            options.discussionFormat = next;
-          } else {
-            markInvalid(badValue("--format", next, "text|json"));
-          }
-          break;
-        }
         if (sddPreflight()) {
           if (next === "text" || next === "json") {
             options.sddFormat = next;
@@ -479,15 +444,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
-      case "--active":
-        // Per usage(): only `discussion list --active`. `discussion use <id>`
-        // reads no value, so --active given there is a mistake.
-        if (command === "discussion" && options.discussionAction === "list") {
-          options.discussionActive = true;
-        } else {
-          markInvalid(notValidHere("--active"));
-        }
-        break;
       case "--timings":
         if (command === "validate") {
           options.validateTimings = true;
@@ -796,6 +752,16 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         else markInvalid(notValidHere("--import"));
         break;
       }
+      case "--record": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--record"));
+          break;
+        }
+        if (sddPreflight()) options.sddRecord = next;
+        else markInvalid(notValidHere("--record"));
+        break;
+      }
       case "--assume": {
         const next = consumeOptionValue();
         if (next === null) {
@@ -813,8 +779,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       }
       default:
         // Only a token starting with `--` is read as an unknown flag and
-        // marked invalid. A positional such as the `<id>` of
-        // `discussion use` must stay out of it, so the test is the `--`
+        // marked invalid. A positional such as the `<kind>` of
+        // `sdd next-id` must stay out of it, so the test is the `--`
         // prefix rather than "matched no case above".
         if (arg?.startsWith("--")) {
           options.unknownFlags.push(arg);
@@ -861,9 +827,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   ) {
     markInvalid("qfai session-review: give --session or --since, not both.");
   }
-  if (command === "discussion" && !options.help && !options.discussionAction) {
-    markInvalid(subcommandReason("discussion", null));
-  }
   if (command === "atdd" && !options.help && !options.atddAction) {
     markInvalid(subcommandReason("atdd", null));
   }
@@ -889,7 +852,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
 /** The set of subcommands accepted by `qfai <command> <subcommand>`. */
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
-  ["discussion", "list|use"],
   ["atdd", "scaffold"],
   ["sdd", "preflight|next-id|merge-docs"],
   ["workflow", WORKFLOW_OPERATIONS.join("|")],
@@ -926,7 +888,7 @@ function formatChoicesFor(command: string | null): string {
  * Whether a token can be the subcommand name in `qfai <command> <subcommand>`.
  *
  * The scan that pulls it runs *before* the flag loop, so testing only for a
- * `--` prefix let the short forms through as candidates: `qfai discussion -V`
+ * `--` prefix let the short forms through as candidates: `qfai atdd -V`
  * had `-V` taken as an unknown action and shifted away, which both raised a
  * usage error and stopped the flag loop from ever setting `options.version`,
  * while the long `--version` was skipped here and worked. A subcommand name is
@@ -939,7 +901,7 @@ function isSubcommandToken(token: string | undefined): token is string {
 
 /**
  * Whether a token can be the positional value after a subcommand, such as the
- * `<id>` of `discussion use`.
+ * `<kind>` of `sdd next-id`.
  *
  * A positional is caller data rather than a closed set, and it may legitimately
  * begin with a single `-`. So this position excludes only the spellings the

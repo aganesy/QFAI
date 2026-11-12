@@ -1,7 +1,7 @@
 ---
 name: triage-close
 owner: qfai-triage
-purpose: "Record how a request ended and every follow-up request it found, and close it without changing any tracked file."
+purpose: "Record how a request ended and every follow-up request it found, and close it without changing any tracked file except the run's deliberation record and the `open-questions.md` rows the run wrote."
 requires: []
 ---
 
@@ -55,14 +55,19 @@ Two routes let this step send the request on instead of closing it:
   `info-received` with a new extraction of the request that includes them, so
   the decision rules route it again.
 - After a decision to accept a proposal: report the outcome `adopted`, naming
-  the route that builds it.
+  the route that builds it. The run that route starts writes a record of
+  its own; this run's record stays as this step committed it.
 
 Any other route closes here.
 
 ## What it writes
 
-- No file git tracks. Name any ignored record's location in the stage
+- No file git tracks, except the run's deliberation record and its
+  `open-questions.md` rows. Name any ignored record's location in the stage
   report, separately from tracked changes.
+- As the route's last step, commit locally only the run's deliberation record
+  and the `open-questions.md` rows the run wrote, and push nothing. A run that
+  wrote neither commits nothing.
 - The stage report states the outcome and each follow-up's goal and reason.
   When the release change is produced outside this run (by a release workflow
   or bot), the stage report records the release approval with what was
@@ -78,9 +83,10 @@ Any other route closes here.
 The reviewer, or the stage worker where the work order names none, confirms one outcome is recorded with the evidence behind it,
 every follow-up the earlier steps found is listed with its goal and reason,
 no follow-up was routed or started, and no tracked file was changed by any
-triage step. The report never says a tracked change is done. The `cleaned`
+triage step except the run's deliberation record and the `open-questions.md` rows the run wrote. The report never says a tracked change is done. The `cleaned`
 outcome confirms only the temporary cleanup's completed gate.
 
-Outside triage steps, the only tracked-file changes allowed are the records
-the route's discussion stage names and the approval row, if any, that
+The only tracked-file changes allowed are the run's deliberation record, the
+`open-questions.md` rows the run wrote, and the approval row, if any, that
 `qfai-run` writes in `decisions.md` under its step 7 before `triage-handoff` runs.
+The local commit holds only the record and those rows, and nothing was pushed.

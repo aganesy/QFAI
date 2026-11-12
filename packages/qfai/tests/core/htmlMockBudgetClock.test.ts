@@ -77,7 +77,7 @@ afterEach(async () => {
  */
 function config(): QfaiConfig {
   return {
-    paths: { discussionDir: ".qfai/discussion", specsDir: ".qfai/specs" },
+    paths: { specsDir: ".qfai/specs" },
   } as unknown as QfaiConfig;
 }
 
@@ -92,7 +92,7 @@ async function parseMsFor(root: string): Promise<number> {
 async function treeWithOneMock(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-mock-budget-"));
   dirs.push(root);
-  const dir = path.join(root, ".qfai", "discussion", "discussion-20260826000000000");
+  const dir = path.join(root, ".qfai", "specs");
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, "mock.md"),

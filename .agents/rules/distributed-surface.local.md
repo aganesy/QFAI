@@ -132,7 +132,7 @@ already covers at a different grain.
 
 ## Where internal IDs are fine
 
-- `.qfai/spec/`, `.qfai/discussion/`, `.qfai/evidence/`
+- `.qfai/spec/`, `.qfai/deliberation/`, `.qfai/evidence/`
 - `CHANGELOG.md`
 - `packages/qfai/docs/`
 - Commit messages, and pull request and issue bodies

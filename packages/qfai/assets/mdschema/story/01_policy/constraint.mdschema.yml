@@ -4,8 +4,8 @@
 # words. A file name, a command or a configuration key is concrete, so a
 # backtick is refused, and so is a business rule, example, acceptance criterion
 # or contract ID: policy is read by the documents below it and cites none of
-# them. Each section's IDs run from 01 in table order; `qfai validate` checks
-# that, since this schema cannot count rows.
+# them. Each section's IDs (TC, OC, BC, QT and LC) run from 01 in table
+# order; `qfai validate` checks that, since this schema cannot count rows.
 heading_rules:
   no_skip_levels: true
   max_depth: 2
@@ -69,6 +69,50 @@ structure:
           pattern: "^## Business Constraints$"
           regex: true
         description: Business and contractual limits. One row per constraint, ID BC-NN from BC-01 in table order; the table may have no rows.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [ID, Constraint, Rationale]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+          - pattern: "`"
+            regex: true
+          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
+            regex: true
+      - heading:
+          pattern: "^## Quality targets$"
+          regex: true
+        description: Product-wide quality targets, such as response time or availability. One row per target, ID QT-NN from QT-01 in table order; the table may have no rows.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [ID, Constraint, Rationale]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
+          - pattern: "`"
+            regex: true
+          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
+            regex: true
+      - heading:
+          pattern: "^## Legal and Compliance Constraints$"
+          regex: true
+        description: Legal, regulatory and compliance limits. One row per constraint, ID LC-NN from LC-01 in table order; the table may have no rows.
         allow_additional: false
         tables:
           - min: 1

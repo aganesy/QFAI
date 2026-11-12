@@ -40,19 +40,22 @@ states.
 
 1. Run the pre-draft grilling checkpoint for `Policy and flows` in
    `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
-   the first write, and list each decision it adopted in the final report.
+   the first write, and write each decision it adopted as an Agent decisions
+   row of the run's deliberation record.
 2. Write each fact once across `01_policy/objective.md`, `initiative.md`,
    `principle.md` and `03_contract/tech.md`.
-3. Write `tech.md` from its template: the stack in `## Stack`, Runtime and
-   Platform rows included; the layers in `## Architecture`; each runtime
+3. Write `tech.md` from its template: the stack in `## Stack`, Runtime,
+   Platform and Surface rows included, Surface holding the one surface the
+   product targets, `web`, `mobile`, `desktop`, `cli` or `non-ui`, or `mixed`
+   when it targets several; the layers in `## Architecture`; each runtime
    dependency with its reason in `## Dependencies`; and the quality-gate
    commands, one labelled item each, only in the Standard commands section of
    `tech.md`. Other documents point there. `tech.md` holds no rules and no
    constraints: a rule goes to the contract that enforces it, a constraint to
    `01_policy/constraint.md`.
 
-   Write `## Architecture` from the technical decisions the discussion pack
-   records and, in an existing codebase, from its module layout and import
+   Write `## Architecture` from the technical decisions the deliberation record
+   settles and, in an existing codebase, from its module layout and import
    directions. A layer is a group of modules with a dependency direction: an
    upper layer may use the layers below it, and a lower layer never knows an
    upper one. Draw the layers first, as one `mermaid` `flowchart TD` with a
@@ -70,20 +73,18 @@ states.
    `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`
    states: policy holds criteria rather than definitions, and no section
    records history.
-5. Carry the selected discussion pack into policy:
-
-   | Discussion pack                                        | Story tree                                     |
-   | ------------------------------------------------------ | ---------------------------------------------- |
-   | `05_Scope.md` success criteria                         | `objective.md` `## Success criteria` rows      |
-   | `05_Scope.md` out of scope                             | `objective.md` `## Non-goals`                  |
-   | `08_Glossary.md` terms and abbreviations               | `glossary.md` `## Terms` rows                  |
-   | `09_Constraints.md` technical and operational          | `constraint.md` technical and operational rows |
-   | `09_Constraints.md` legal, budget and timeline entries | `constraint.md` `## Business Constraints` rows |
-   | A technical constraint that is a layer boundary        | `tech.md` `## Architecture` rows               |
-
-   A row takes the next ID of its section, which is its place in the table,
-   not the pack's ID. It keeps only the columns its template has, in plain
-   words: a file name, a command or a rule ID stays out of policy.
+5. Write each answer of the deliberation record that policy or `tech.md` owns
+   into its file, as
+   `.qfai/assistant/skill/qfai-sdd/references/requirements-decomposition.md#where-each-answer-goes`
+   maps it: risks to `initiative.md` `## Risks`, trade-off priorities to the
+   Decision priorities of `principle.md`, terms to `glossary.md`, product-wide
+   quality targets to `constraint.md` `## Quality targets`, legal and
+   compliance limits to its `## Legal and Compliance Constraints`, and the
+   target surfaces to the `tech.md` `Surface` row. A technical constraint that
+   is a layer boundary is a `tech.md` `## Architecture` row. A row takes the
+   next ID of its section, which is its place in the table. It keeps only the
+   columns its template has, in plain words: a file name, a command or a rule
+   ID stays out of policy.
 
 6. Create or update `02_business-flow/business-flows.md` and each affected
    `business-flow-NNNN/business-flow.md`. The index holds one row per flow —
@@ -96,20 +97,33 @@ states.
 8. Allocate BF IDs as
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#id-allocation`
    states, and add the new rows to the flow index.
-9. Parse the diagrams in the Markdown files this step wrote, as
-   `.qfai/assistant/step/discussion-pack/STEP.md#parse-the-diagrams` says, with
-   those files in place of the pack directory:
-   - First do steps 1 to 3 there. Where the project has no `node_modules/qfai`,
-     they install the release and read the parser versions from it. They
-     install the parser into `tmp/qfai-mermaid`, never into the project's
-     dependency tree.
+9. Parse the diagrams in the Markdown files this step wrote with Mermaid's own
+   grammar. `npx qfai validate` checks only that a diagram is there.
+   - Where the project has no `node_modules/qfai`, install the release that
+     `npx qfai --version` prints into a directory of its own, and read
+     `tmp/qfai-release/node_modules/qfai/` wherever the steps below name
+     `node_modules/qfai/`:
+
+     ```bash
+     npm install --no-save --no-audit --no-fund --ignore-scripts --prefix=tmp/qfai-release qfai@<version>
+     ```
+
+   - Read the `mermaid@` and `jsdom@` versions from the install step of
+     `node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml`, the
+     shipped copy of the installed release, and install them into
+     `tmp/qfai-mermaid`, never into the project's dependency tree:
+
+     ```bash
+     npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --prefix=tmp/qfai-mermaid mermaid@<version> jsdom@<version>
+     ```
+
    - Then run the checker:
 
      ```bash
      node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>
      ```
 
-     Where step 1 installed the release, run its checker instead:
+     Where the release was installed, run its checker instead:
 
      ```bash
      node tmp/qfai-release/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>

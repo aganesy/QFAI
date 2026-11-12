@@ -1,6 +1,5 @@
 /**
- * What `qfai validate` reports about a project's discussion packs, assistant
- * tree, skills and root `DESIGN.md`, read from the findings of the profile that
+ * What `qfai validate` reports about a project's assistant tree, skills and root `DESIGN.md`, read from the findings of the profile that
  * owns each check.
  */
 
@@ -10,12 +9,10 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runInit } from "../helpers/legacyInit.js";
 import { loadConfig } from "../../src/core/config.js";
 import type { Issue } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
-import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 import { recordAssistantVersion } from "../helpers/assistantVersion.js";
 
@@ -27,21 +24,11 @@ async function newRoot(): Promise<string> {
   return root;
 }
 
-async function initializedRoot(): Promise<string> {
-  const root = await newRoot();
-  await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
-  return root;
-}
-
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
-async function findings(
-  root: string,
-  profile: "sdd" | "discussion" | "full",
-  prefix: string,
-): Promise<Issue[]> {
+async function findings(root: string, profile: "sdd" | "full", prefix: string): Promise<Issue[]> {
   const result = await validateProject(root, await loadConfig(root), { profile });
   return result.issues.filter((found) => found.code.startsWith(prefix));
 }
@@ -51,24 +38,6 @@ async function put(root: string, file: string, content: string): Promise<void> {
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, content, "utf-8");
 }
-
-describe("discussion pack presence on the story tree", () => {
-  // QFAI:AC-0001-0148-02
-  it("asks for no pack where none exists, and still names a misnamed one", async () => {
-    const root = await initializedRoot();
-    expect(await findings(root, "discussion", "QFAI-DPACK-")).toEqual([]);
-
-    await mkdir(path.join(root, ".qfai", "discussion", "discussion-latest"), { recursive: true });
-    const misnamed = await findings(root, "discussion", "QFAI-DPACK-");
-    expect(misnamed.map((found) => found.code).sort()).toEqual([
-      "QFAI-DPACK-001",
-      "QFAI-DPACK-005",
-    ]);
-    expect(misnamed.find((found) => found.code === "QFAI-DPACK-005")?.refs).toEqual([
-      "discussion-latest",
-    ]);
-  });
-});
 
 describe("assistant tree findings", () => {
   const LAYERS = ["rule", "skill", "step", "agent", "prompt"];

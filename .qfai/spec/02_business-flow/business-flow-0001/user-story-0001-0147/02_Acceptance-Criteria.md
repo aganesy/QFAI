@@ -61,7 +61,7 @@ Feature: Unified SDD Workflow
     Given the findings a cycle raised,
     When they are decided,
     Then the session agent, which holds the cycle, decides each finding that is not critical itself.
-    And a finding that rests on product intent that no BR, no AC, the request nor the discussion states goes to the user, and a proposed EX that no existing BR, AC or the request implies is dropped, with no EX appended and no row written.
+    And a finding that rests on product intent that no BR, no AC, the request nor the consumed deliberation record states goes to the user, and a proposed EX that no existing BR, AC or the request implies is dropped, with no EX appended and no row written.
 
   # AC-0001-0147-10
   Scenario: Adopted Findings Change The Tree By The Existing Routes
@@ -92,7 +92,7 @@ Feature: Unified SDD Workflow
     When the stage makes its first story-tree write,
     Then a grilling checkpoint has gathered that stage's open decisions, and a delegated session has settled each one the repository cannot settle, a critical one by the user's answer.
     And a checkpoint that finds no open decision holds no session and starts no griller.
-    And the final report lists each decision the checkpoint adopted, with its reason.
+    And each decision the checkpoint adopted is an Agent decisions row of the run's deliberation record.
 
   # AC-0001-0147-16
   Scenario: A capacity partition preserves truthful scope and case identity

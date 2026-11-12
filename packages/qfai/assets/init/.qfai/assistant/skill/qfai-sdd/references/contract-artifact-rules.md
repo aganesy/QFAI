@@ -27,7 +27,7 @@ project adds. No other directory under `<paths.contractsDir>` holds a contract,
 and `QFAI-CONTRACT-034` reports a file in one. Evaluator axes are not a contract
 either: the review validation the QFAI CLI applies fixes them.
 
-Discussion UI/UX files are **non-normative** discovery / reference artifacts — not upstream SSOT (`.qfai/assistant/rule/drift-protocol.md#core-rule`). `/qfai-sdd` normalizes approved decisions into `<paths.contractsDir>/**`; downstream skills read contracts, not discussion UI/UX files. A contradiction between a pack and a contract is resolved in the contract, not by amending the pack.
+A deliberation record is **non-normative** history — not upstream SSOT (`.qfai/assistant/rule/drift-protocol.md#core-rule`). `/qfai-sdd` normalizes approved decisions into `<paths.contractsDir>/**`; downstream skills read contracts, not records. A contradiction between a record and a contract is resolved in the contract, never by amending the record.
 
 ## Rules
 

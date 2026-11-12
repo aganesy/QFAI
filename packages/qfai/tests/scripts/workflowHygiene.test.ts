@@ -3218,8 +3218,7 @@ describe("TC-0017-0049 (TDD-0049): hygiene findings use the bare lint namespace"
           .map((m) => m[1]),
       );
 
-      // `BR-0016-0040` is a NAMESPACE decision and nothing more: the bare `R-` form, matching
-      // the `check-pack-locations` precedent.
+      // `BR-0016-0040` is a NAMESPACE decision and nothing more: the bare `R-` form.
       expect
         .soft([...codes].sort(), `findings must use one bare-R code (rule ${rule})`)
         .toEqual(["R-WORKFLOW-HYGIENE-DRIFT"]);

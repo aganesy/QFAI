@@ -132,12 +132,8 @@ guidance later stages follow (`.agents/rules/untrusted-content.md`).
 
 ## Storage
 
-- `research_summary` goes to the invoking stage's own report when it is
-  produced, and is carried into the artifact that consumes it when that artifact
-  is authored. For `/qfai-discussion` that artifact is the pack's
-  `04_Sources.md`, under its `## Research Summary` section.
-- The report first, because a stage may hold authoring until something
-  authorizes it. Writing the summary straight into the artifact creates the
-  artifact, and a run cancelled before that authorization leaves it behind as
-  the newest of its kind — which is what every later reader then picks up.
+- `research_summary` goes to the invoking stage's own report. For
+  `/qfai-discussion` it stays there: the interview reads it, and a source an
+  option rests on goes into that option's row of the deliberation record as a
+  URL.
 - Not persisted globally. The report belongs to the run that produced it.

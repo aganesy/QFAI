@@ -15,15 +15,15 @@ export type HtmlMockBlock = {
 };
 
 /**
- * The globs that find every Markdown file an HTML mock can sit in.
+ * The globs that find every Markdown file an HTML mock can sit in: those under `paths.specsDir`.
  *
- * A backslash in a glob escapes the next character, so each directory is
+ * A backslash in a glob escapes the next character, so the directory is
  * written with `/` before it joins the pattern, as the root already is.
  */
 export function mockMarkdownGlobs(root: string, config: QfaiConfig): string[] {
-  return [config.paths.discussionDir, config.paths.specsDir].map((dir) =>
-    path.posix.join(root.replace(/\\/g, "/"), dir.replace(/\\/g, "/"), "**/*.md"),
-  );
+  return [
+    path.posix.join(root.replace(/\\/g, "/"), config.paths.specsDir.replace(/\\/g, "/"), "**/*.md"),
+  ];
 }
 
 export function collectHtmlMockBlocks(content: string): HtmlMockBlock[] {

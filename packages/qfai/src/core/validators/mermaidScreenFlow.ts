@@ -5,7 +5,6 @@ import fg from "fast-glob";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue } from "../types.js";
 import { extractFencedCodeBlocks, containsMermaidSyntax } from "./mermaidUtils.js";
 import { issue } from "./utils.js";
@@ -32,14 +31,9 @@ export async function validateMermaidScreenFlow(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const specsRoot = resolvePath(root, config, "specsDir");
-  const discussionRoot = resolvePath(root, config, "discussionDir");
-  const latestDiscussionPackDir = await findLatestDiscussionPackDir(discussionRoot);
-  const patterns = [path.posix.join(specsRoot.replace(/\\/g, "/"), "**/*.md")];
-  if (latestDiscussionPackDir) {
-    patterns.push(path.posix.join(latestDiscussionPackDir.replace(/\\/g, "/"), "**/*.md"));
-  }
+  const pattern = path.posix.join(specsRoot.replace(/\\/g, "/"), "**/*.md");
 
-  const files = await fg(patterns, { absolute: true });
+  const files = await fg(pattern, { absolute: true });
 
   for (const filePath of files) {
     let content: string;

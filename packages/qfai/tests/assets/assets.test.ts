@@ -10,7 +10,7 @@ import { runInit } from "../helpers/legacyInit.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { CANONICAL_PROTOTYPING_SURFACES } from "../../src/core/domain/surface.js";
+
 import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
 import { readImplementFlowSteps } from "../helpers/implementSteps.js";
 import { findTableArityMismatches } from "../helpers/markdownTableArity.js";
@@ -37,7 +37,7 @@ import {
   WIDTH_BUDGET_BACKLOG,
   widestMeasurableLine,
 } from "../helpers/skillBudget.js";
-import { readDiscussionSkill } from "../helpers/discussionSteps.js";
+
 import { readRule } from "../helpers/ruleWithReferences.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -59,57 +59,6 @@ async function prototypingProcedureFiles(): Promise<string[]> {
 async function readPrototypingProcedure(): Promise<string> {
   const files = await prototypingProcedureFiles();
   return (await Promise.all(files.map((file) => readFile(file, "utf-8")))).join("\n");
-}
-
-// --- shipped iteration-budget vocabulary -----------------------------------
-// `qfai-discussion` owns no iteration budget and may not print a number for
-// one at all.
-const BUDGET_NOUN = String.raw`(?:cycles?|iterations?)`;
-const BUDGET_CAP = String.raw`(?:cap(?:ped|s)?|budget|limit(?:ed|s)?|max(?:imum)?|total|at\s+most|up\s+to)`;
-// Gaps stay inside one clause (no `.`, `;` or newline) so
-// `Iteration count cap is 10; ... reaching cycle 9 ...` yields 10, not 9.
-const BUDGET_GAP = String.raw`[^.;\n]{0,24}?`;
-
-type BudgetLiteralPattern = {
-  readonly label: string;
-  readonly re: RegExp;
-};
-
-const BUDGET_LITERAL_PATTERNS: readonly BudgetLiteralPattern[] = [
-  {
-    label: "terminal index",
-    re: /(?:cycles?\s+1\.\.|\bC1\.\.|index\s*===\s*)(\d+)/gi,
-  },
-  {
-    label: "count before the noun",
-    re: /\b(\d+)(?:\s+(?:cycles|iterations)|-(?:cycle|iteration))\b/gi,
-  },
-  {
-    // `Iteration count cap is 10`, `cycle limit: 10`, `max-iterations: 10`.
-    // A cap word is required: without it every `--cycle 0` would be flagged.
-    label: "count after the noun",
-    re: new RegExp(
-      String.raw`\b(?:${BUDGET_NOUN}${BUDGET_GAP}${BUDGET_CAP}|${BUDGET_CAP}${BUDGET_GAP}${BUDGET_NOUN})${BUDGET_GAP}\b(\d+)\b`,
-      "gi",
-    ),
-  },
-];
-
-// No number near the noun at all, cap word or not.
-const BUDGET_RESTATEMENT_PATTERNS: readonly { readonly label: string; readonly re: RegExp }[] = [
-  ...BUDGET_LITERAL_PATTERNS.map(({ label, re }) => ({ label, re })),
-  {
-    label: "bare count adjacent to the noun",
-    re: new RegExp(String.raw`\b${BUDGET_NOUN}\b[^.\n]{0,40}?\b\d+\b`, "gi"),
-  },
-  { label: "loose range", re: /\b(?:C|cycles?|iterations?)\s*\d+\s*\.\.\s*\d+/gi },
-];
-
-/** Any numeric restatement of the budget, for surfaces that must only point at it. */
-function findBudgetRestatements(content: string): string[] {
-  return BUDGET_RESTATEMENT_PATTERNS.flatMap(({ label, re }) =>
-    [...content.matchAll(re)].map((match) => `${match[0]} [${label}]`),
-  );
 }
 
 // --- hard-coded versions in shipped documents ------------------------------
@@ -336,7 +285,6 @@ describe("assets guardrails", () => {
 
   it("ensures gate-running QFAI skills reference the autorepair protocol", async () => {
     const requiredBySkill = new Map([
-      ["qfai-discussion", "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol"],
       ["qfai-sdd", "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol"],
       ["qfai-implement", "rule/shared-skill-operating-baseline.md"],
       ["qfai-verify", "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol"],
@@ -581,51 +529,6 @@ describe("assets guardrails", () => {
     expect(content).toMatch(/review\.json/);
     expect(content).toMatch(/the loop ends when the user confirms the prototype/i);
     expect(content).toMatch(/best-of-history is gone/i);
-  });
-
-  it("keeps the prototyping iteration budget out of qfai-discussion surfaces", async () => {
-    const discussionDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-discussion");
-    const files = [
-      path.join(discussionDir, "references", "discussion-artifact-rules.md"),
-      path.join(discussionDir, "templates", "prototyping.yaml"),
-    ];
-
-    // qfai-discussion neither owns nor enforces the prototyping budget;
-    // restating it there is what produced a third value. Matching the exact
-    // sentence that was deleted would only forbid one spelling: `15
-    // iterations`, `fixed 15-cycle budget` and `cycles 1..15` all say the same
-    // thing and would all have passed. BUDGET_RESTATEMENT_PATTERNS rejects a
-    // number *anywhere near* a cycle/iteration word instead — in these two
-    // files there is no legitimate reason for one, since the budget is stated
-    // by pointer.
-    for (const filePath of files) {
-      const content = await readFile(filePath, "utf-8");
-      const rel = path.relative(repoRoot, filePath);
-      expect(findBudgetRestatements(content), `${rel} restates the budget`).toEqual([]);
-      expect(content).toContain(".qfai/assistant/step/prototyping-loop/STEP.md");
-    }
-
-    // The matcher itself is the deliverable here, so pin what it rejects:
-    // a guard that only ever sees clean files proves nothing about its reach.
-    for (const restated of [
-      "up to 15 iterations",
-      "a fixed 15-cycle budget",
-      "cycles 1..15",
-      "C1..15",
-      "iteration count is capped globally to 15",
-      "Iteration count cap is 15",
-      "max-iterations: 15",
-      "the loop runs 10 cycles",
-    ]) {
-      expect(findBudgetRestatements(restated), `must reject: ${restated}`).not.toEqual([]);
-    }
-    // …and what it must not reject: the pointer form these files actually use.
-    for (const allowed of [
-      "The single-thread evolution loop owns its iteration budget; see the skill.",
-      "# budget is owned by `.qfai/assistant/step/prototyping-loop/STEP.md`.",
-    ]) {
-      expect(findBudgetRestatements(allowed), `must allow: ${allowed}`).toEqual([]);
-    }
   });
 
   // TC-0003 (static) — workflow template exists in init tree
@@ -1169,50 +1072,6 @@ describe("assets guardrails", () => {
     expect(stepContent).toContain("references/contract-artifact-rules.md");
   });
 
-  it("ensures qfai-discussion skill contains required coverage topics", async () => {
-    const content = await readDiscussionSkill(assistantDir);
-
-    expect(content).toMatch(/concept, scope, stakeholders, and constraints/i);
-    expect(content).toMatch(/REQ, NFR, glossary, constraints, and policies/i);
-    expect(content).toMatch(/exploration-first sidecar family/i);
-    expect(content).toContain("01_Context.md#Inception Deck");
-    expect(content).toMatch(/HTML\+CSS/i);
-    expect(content).toContain(".qfai/discussion/discussion-");
-
-    // W-5: canonical discussion pack wording guardrail
-    expect(content).toContain("nine-file discussion pack");
-    expect(content).toContain("prototyping.yaml");
-  });
-
-  it("ensures qfai-discussion skill and artifact rules use canonical pack wording", async () => {
-    const skillPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "SKILL.md",
-    );
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-
-    const [skill, rules] = await Promise.all([
-      readFile(skillPath, "utf-8"),
-      readFile(rulesPath, "utf-8"),
-    ]);
-
-    // Both must express the canonical completion contract wording
-    const canonicalPhrase =
-      "Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it.";
-    expect(rules).toContain(canonicalPhrase);
-    expect(skill).toContain(canonicalPhrase);
-  });
-
   it("ensures qfai-discussion hands off to /qfai-sdd through the next-action question", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
@@ -1229,39 +1088,10 @@ describe("assets guardrails", () => {
     );
   });
 
-  it("ensures qfai-discussion template packs exist", async () => {
-    const discussionTemplatesDir = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "templates",
-    );
-
-    const discussionTemplates = await fg(["*.md"], {
-      cwd: discussionTemplatesDir,
-      absolute: false,
-    });
-
-    expect(discussionTemplates.sort()).toEqual(
-      [
-        "01_Context.md",
-        "03_Story-Workshop.md",
-        "04_Sources.md",
-        "05_Scope.md",
-        "06_REQ.md",
-        "07_NFR.md",
-        "08_Glossary.md",
-        "09_Constraints.md",
-        "11_OQ-Register.md",
-      ].sort(),
-    );
-  });
-
   it("keeps discussion handoff references on the story tree", async () => {
     const discussionDir = path.join(assistantDir, "skill", "qfai-discussion");
     const documents = await fg(["**/*.md"], { cwd: discussionDir, absolute: true });
-    expect(documents.length).toBeGreaterThan(15);
+    expect(documents.length).toBeGreaterThan(2);
     for (const file of documents) {
       const content = await readFile(file, "utf-8");
       expect(content, file).not.toMatch(/\.qfai\/(?:specs|contracts)\//);
@@ -1270,78 +1100,6 @@ describe("assets guardrails", () => {
     const skill = await readFile(path.join(discussionDir, "SKILL.md"), "utf-8");
     expect(skill).toContain("<paths.specsDir>/02_business-flow/**");
     expect(skill).toContain("<paths.contractsDir>/**");
-  });
-
-  it("keeps 01_Context.md prototyping-surface guidance aligned with the execution surface set", async () => {
-    const contextTemplatePath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "templates",
-      "01_Context.md",
-    );
-    const content = await readFile(contextTemplatePath, "utf-8");
-
-    const noteLine = content
-      .split(/\r?\n/)
-      .find((line) => line.includes("prototyping.yaml") && line.includes("|"));
-    expect(noteLine).toBeDefined();
-
-    // Every pipe-separated surface enumeration attributed to `prototyping.yaml`
-    // must be the execution set, never the wider classification set.
-    // Narrowed rather than asserted: `noUncheckedIndexedAccess` makes a capture group
-    // `string | undefined`, and the group is optional to the type system even though this
-    // pattern always fills it. A `!` or an `as string` would type-check by claiming
-    // something the regex engine does not promise.
-    const enumerations = [...(noteLine ?? "").matchAll(/`([a-z-]+(?:\|[a-z-]+)+)`/g)]
-      .map((match) => match[1])
-      .filter((value): value is string => value !== undefined);
-    expect(enumerations).toContain(
-      CANONICAL_PROTOTYPING_SURFACES.filter((surface) => surface !== "cli").join("|"),
-    );
-    for (const enumeration of enumerations) {
-      expect(enumeration.split("|")).not.toContain("cli");
-      expect(enumeration.split("|")).not.toContain("non-ui");
-    }
-
-    expect(content).toContain(
-      "`cli` and `non-ui` are classification-only values and never appear in `prototyping.yaml`.",
-    );
-
-    // The classification bullet keeps `cli` as a UI-bearing classification value.
-    expect(content).toContain("`cli` is a UI-bearing surface");
-    expect(content).toContain(
-      "`primary_surface` is a classification field. Valid values: `web|mobile|desktop|cli|mixed|non-ui`.",
-    );
-  });
-
-  it("ensures qfai-discussion templates include visuals guidance", async () => {
-    const inceptionTemplatePath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "templates",
-      "01_Context.md",
-    );
-    const storyTemplatePath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "templates",
-      "03_Story-Workshop.md",
-    );
-    const [inceptionTemplate, storyTemplate] = await Promise.all([
-      readFile(inceptionTemplatePath, "utf-8"),
-      readFile(storyTemplatePath, "utf-8"),
-    ]);
-
-    expect(inceptionTemplate).toContain("```mermaid");
-    expect(storyTemplate).toMatch(/Screen Mock.*Optional Fallback.*HTML\+CSS/i);
-    expect(storyTemplate).toContain("```html");
-    expect(storyTemplate).toContain("```css");
   });
 
   it("keeps discussion and SDD review templates at their skill paths", async () => {
@@ -1380,7 +1138,7 @@ describe("assets guardrails", () => {
     }
   });
 
-  it("ensures qfai-sdd templates include discussion-pack preflight summary", async () => {
+  it("ensures qfai-sdd templates include the preflight summary", async () => {
     for (const skillId of ["qfai-sdd"]) {
       const reportTemplatePath = path.join(
         templateQfaiDir,
@@ -1401,7 +1159,9 @@ describe("assets guardrails", () => {
       path.join(templateQfaiDir, "assistant", "step", "sdd-triage", "STEP.md"),
       "utf-8",
     );
-    expect(sddTriage).toContain("`npx qfai sdd preflight` and use its `selectedInputPath`");
+    expect(sddTriage).toContain(
+      "`npx qfai sdd preflight --record <path>` and use its `selectedInputPath`",
+    );
 
     const businessFlowTemplatePath = path.join(
       templateQfaiDir,
@@ -1709,231 +1469,6 @@ describe("assets guardrails", () => {
     }
   });
 
-  // W5: SSOT alignment tests
-  it("discussion artifact rules declare prototyping.yaml as classification-aware", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-    const content = await readFile(rulesPath, "utf-8");
-
-    expect(content).toMatch(
-      /discussion packs with a visual prototyping surface \(`web`, `mobile`, `desktop`, `mixed`\) may include `prototyping\.yaml`/i,
-    );
-    expect(content).toMatch(/cli-only packs omit it/i);
-    expect(content).toMatch(/ui_bearing:\s*false[\s\S]*typically omit `prototyping\.yaml`/i);
-    expect(content).toContain("prototyping.yaml");
-  });
-
-  it("discussion artifact rules include prototyping.yaml", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-    const content = await readFile(rulesPath, "utf-8");
-
-    expect(content).toContain("prototyping.yaml");
-  });
-
-  it("discussion artifact rules and SKILL.md use consistent OQ Gate enum", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-    const skillPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "SKILL.md",
-    );
-
-    const [readmeContent, skillContent] = await Promise.all([
-      readFile(rulesPath, "utf-8"),
-      readFile(skillPath, "utf-8"),
-    ]);
-
-    const canonicalGates = ["discussion", "sdd", "atdd", "tdd", "ops"];
-
-    expect(skillContent).toContain("11_OQ-Register.md");
-    expect(skillContent).toContain("open count is zero");
-
-    expect(readmeContent).not.toMatch(/`discuss`.*`require`.*`sdd`/);
-    for (const gate of canonicalGates) {
-      expect(readmeContent).toContain(gate);
-    }
-  });
-
-  it("discussion README and SKILL.md agree on prototyping.yaml optionality", async () => {
-    const skillPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "SKILL.md",
-    );
-    const content = await readFile(skillPath, "utf-8");
-
-    expect(content).toContain("prototyping.yaml");
-    expect(content).toMatch(
-      /discussion packs with a visual prototyping surface \(`web`, `mobile`, `desktop`, `mixed`\) may include `prototyping\.yaml`/i,
-    );
-    expect(content).toMatch(/non-ui discussion packs typically omit it/i);
-  });
-
-  it("discussion artifact rules contain prototyping: namespaced example", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-    const content = await readFile(rulesPath, "utf-8");
-
-    // v2.0 (spec-0012 v2.0 absorbed): mode/recommended_mode/allowed_modes removed.
-    expect(content).toContain("prototyping:");
-    expect(content).toContain("surface:");
-  });
-
-  it("discussion artifact rules say namespaced schema applies when present", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-    const content = await readFile(rulesPath, "utf-8");
-
-    expect(content).toMatch(/when `prototyping\.yaml` is present/i);
-  });
-
-  it("discussion artifact rules do not contain legacy-permissive wording", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-    const content = await readFile(rulesPath, "utf-8");
-
-    expect(content).not.toContain("legacy keys ignored");
-    expect(content).not.toContain("legacy keys may be ignored");
-    expect(content).not.toContain("accepted with warning");
-  });
-
-  it("discussion artifact rules enforce current-only posture for prototyping.yaml", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-    const content = await readFile(rulesPath, "utf-8");
-
-    // Must express optional artifact / planner-first posture
-    expect(content).toMatch(/optional recommendation artifact/i);
-    expect(content).toMatch(/planner-first|exploration-first/i);
-    expect(content).toMatch(
-      /must not choose a single winner|must not choose a single visual winner/i,
-    );
-
-    // Forbidden wording (compatibility context)
-    expect(content).not.toContain("backward compatible");
-  });
-
-  it("SKILL.md does not contain legacy-permissive wording", async () => {
-    const content = await readDiscussionSkill(assistantDir);
-
-    expect(content).not.toContain("legacy keys ignored");
-    expect(content).not.toContain("legacy keys may be ignored");
-    expect(content).not.toContain("accepted with warning");
-    expect(content).not.toMatch(/\bone option\b/i);
-    expect(content).not.toContain("backward compatible");
-
-    expect(content).toMatch(/planner-first|exploration-first/i);
-    // Planner-first governs the screen explorations, which the prototype loop
-    // ranks by iterating. It never governed the brand direction: the user picks
-    // the theme here because no later stage asks them, and a rule reading "no
-    // visual winner" without that carve-out forbids the one ask that exists.
-    expect(content).toMatch(/carry the screen explorations unranked/i);
-    expect(content).toMatch(/brand direction is the exception/i);
-  });
-
-  // QFAI:EX-0001-0015-01
-  it("artifact rules and SKILL.md share namespaced-only semantics for prototyping.yaml", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-    const skillPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "SKILL.md",
-    );
-
-    const [readme, skill] = await Promise.all([
-      readFile(rulesPath, "utf-8"),
-      readFile(skillPath, "utf-8"),
-    ]);
-
-    // Both must mention planner-first / exploration-first semantics
-    expect(readme).toMatch(/planner-first|exploration-first/i);
-    expect(skill).toMatch(/planner-first|exploration-first/i);
-
-    // README owns the canonical schema fields; SKILL owns optional artifact semantics and planner guidance.
-    // v2.0 (spec-0012 v2.0 absorbed): recommended_mode field removed.
-    expect(readme).toContain("prototyping.yaml");
-    expect(skill).toContain("prototyping.yaml");
-
-    expect(readme).toMatch(
-      /ui-bearing.*may include.*prototyping\.yaml|optional recommendation artifact/i,
-    );
-    expect(skill).toMatch(
-      /discussion packs with a visual prototyping surface \(`web`, `mobile`, `desktop`, `mixed`\) may include `prototyping\.yaml`/i,
-    );
-  });
-
-  it("discussion artifact rules declare current non-blocking behavior for prototyping.yaml", async () => {
-    const rulesPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skill",
-      "qfai-discussion",
-      "references",
-      "discussion-artifact-rules.md",
-    );
-    const content = await readFile(rulesPath, "utf-8");
-
-    expect(content).toMatch(/does not block on missing `prototyping\.yaml`/i);
-    expect(content).toMatch(/when `prototyping\.yaml` is present/i);
-  });
-
   it("pins the hard-required autopilot bucket to exactly the entries a shipped asset consumes", async () => {
     // `hard-required` is defined as "no default possible; must be supplied
     // before proceeding", so every entry costs a guaranteed prompt out of the
@@ -2118,13 +1653,6 @@ function shouldSkipReference(ref: string): boolean {
   // THEIR tree. Whether it exists here depends only on whether this checkout
   // has been installed, so the walk does not judge it.
   if (ref.startsWith("node_modules/")) {
-    return true;
-  }
-  // Same carve-out, same reason: `.qfai/state.json` is written by
-  // `qfai discussion use` at runtime and is `.gitignore`d, so it is never in a
-  // checkout for this walk to find. Documenting the pointer a command reads is
-  // not a broken path reference.
-  if (ref === ".qfai/state.json") {
     return true;
   }
   if (!ref.includes("/") && !ref.includes("\\")) {

@@ -8,7 +8,7 @@ import { formatTimingOverruns, runValidate } from "../../src/cli/commands/valida
 import { validateProject } from "../../src/core/validate.js";
 
 const MOCK_DOC = [
-  "# discussion",
+  "# mock",
   "",
   "```html",
   '<div style="width: 48px; height: 48px">box</div>',
@@ -19,8 +19,8 @@ const MOCK_DOC = [
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-timings-"));
   try {
-    await mkdir(path.join(root, ".qfai", "discussion"), { recursive: true });
-    await writeFile(path.join(root, ".qfai", "discussion", "pack.md"), MOCK_DOC, "utf-8");
+    await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "spec", "mock.md"), MOCK_DOC, "utf-8");
     // A budget small enough that any real run overshoots it, so the
     // over-budget branch is exercised without depending on machine speed.
     await writeFile(
@@ -53,7 +53,7 @@ describe("validation timings", () => {
       expect(timings.htmlMockMs).toBeGreaterThan(timings.htmlMockBudgetMs);
       expect(timings.uiuxMs).toBeGreaterThanOrEqual(timings.htmlMockMs);
       const parts = timings.uiuxParts.map((part) => part.ms);
-      expect(parts).toHaveLength(8);
+      expect(parts).toHaveLength(6);
       expect(parts).toEqual([...parts].sort((left, right) => right - left));
     });
   });

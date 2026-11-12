@@ -64,8 +64,7 @@ an integrated PASS.
 On an integration failure, assign the defect to the owning story when the
 dependency is known. When the combination itself causes the failure, stop the
 fan-out and repair serially. Record the gate's result and the integration
-results in the stage report. The decision's record is a short decision record in
-the form stated at the top of
-`.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
+results in the stage report. The decision to repair serially is an Agent
+decisions row of the run's deliberation record.
 
 Host limits above this policy: `.qfai/assistant/rule/shared-skill-delegation-baseline.md#host-backstops-above-the-declared-shape`.

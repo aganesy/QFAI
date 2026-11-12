@@ -79,13 +79,6 @@ describe("steps that write Mermaid diagrams", () => {
   const step = (name: string) =>
     readFile(path.join(INIT, ".qfai", "assistant", "step", name, "STEP.md"), "utf-8");
 
-  // QFAI:EX-0001-0242-01
-  it("discussion-pack runs the parser with --tools over the pack directory", async () => {
-    expect(await step("discussion-pack")).toContain(
-      "node node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <pack directory>",
-    );
-  });
-
   // QFAI:EX-0001-0242-02
   it("sdd-flow runs the parser with --tools over the files it wrote", async () => {
     expect(await step("sdd-flow")).toContain(
@@ -95,48 +88,31 @@ describe("steps that write Mermaid diagrams", () => {
 
   // QFAI:EX-0001-0242-03
   it("installs the parser under tmp/ and never into the project's dependency tree", async () => {
-    const pack = await step("discussion-pack");
-    expect(pack).toMatch(
+    const flow = await step("sdd-flow");
+    expect(flow).toMatch(
       /npm install --no-save [^\n]*--ignore-scripts [^\n]*--prefix=tmp\/qfai-mermaid/,
     );
-    for (const text of [pack, await step("sdd-flow")]) {
-      expect(text).toContain("never into the project's");
-    }
+    expect(flow.replace(/\s+/g, " ")).toContain("never into the project's dependency tree");
   });
 
   // QFAI:EX-0001-0242-03
-  it("installs the project's own QFAI release when node_modules has none, and reads the pins from it", async () => {
-    const pack = await step("discussion-pack");
-    expect(pack).toMatch(
+  it("installs the project's own QFAI release when node_modules has none, and runs its checker", async () => {
+    const flow = await step("sdd-flow");
+    const install = flow.search(
       /npm install --no-save [^\n]*--ignore-scripts [^\n]*--prefix=tmp\/qfai-release qfai@<version>/,
     );
-    expect(pack).toContain(
-      "tmp/qfai-release/node_modules/qfai/assets/init/root/.github/workflows/qfai-docs.yml",
-    );
-    expect(pack).not.toContain("Add `qfai` to the list");
-  });
-
-  // QFAI:EX-0001-0242-03
-  it("sdd-flow runs the checker from the release install when node_modules has no qfai", async () => {
-    const flow = await step("sdd-flow");
-    const prepare = flow.indexOf("First do steps 1 to 3 there");
     const release = flow.indexOf(
       "node tmp/qfai-release/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <files written>",
     );
-    expect(prepare).toBeGreaterThan(-1);
-    expect(release).toBeGreaterThan(prepare);
+    expect(install).toBeGreaterThan(-1);
+    expect(release).toBeGreaterThan(install);
     expect(flow.replace(/\s+/g, " ")).toContain(
-      "Where the project has no `node_modules/qfai`, they install the release and read the parser versions from it.",
-    );
-    expect(await step("discussion-pack")).toContain(
-      "node tmp/qfai-release/node_modules/qfai/assets/scripts/check-mermaid.mjs --tools tmp/qfai-mermaid <pack directory>",
+      "Where the project has no `node_modules/qfai`, install the release that `npx qfai --version` prints",
     );
   });
 
   // QFAI:EX-0001-0242-04
   it("reports a parser that cannot run as not run, never as passed", async () => {
-    for (const name of ["discussion-pack", "sdd-flow"]) {
-      expect((await step(name)).replace(/\s+/g, " ")).toMatch(/as not run[^.]*never as passed/);
-    }
+    expect((await step("sdd-flow")).replace(/\s+/g, " ")).toMatch(/as not run[^.]*never as passed/);
   });
 });

@@ -26,7 +26,6 @@ async function seedConfig(): Promise<void> {
       "paths:",
       "  contractsDir: .qfai/spec/03_contract",
       "  specsDir: .qfai/spec",
-      "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/report",
       "  skillsDir: .qfai/assistant/skills",
       "  promptsDir: .qfai/assistant/skills",

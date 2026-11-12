@@ -1,7 +1,7 @@
 dist
 node_modules
 # Scope prettier ignore to the runtime-generated outputs under .qfai so SSOT
-# sources (.qfai/specs, .qfai/assistant, .qfai/contracts, .qfai/discussion)
+# sources (.qfai/specs, .qfai/assistant, .qfai/contracts)
 # stay formatted. Negate only the authored files that should remain
 # auto-formatted. Historical evidence markdown stays ignored so frozen records
 # do not churn under auto-formatting. The parent directory is also explicitly
@@ -30,10 +30,7 @@ node_modules
 # 400 KB. It keeps the compact style instead.
 .qfai/spec/open-questions.md
 # An archived pack is a frozen record, so reformatting one is churn on a
-# document nobody is editing — and `check-pack-locations` reads the changed
-# paths, so that churn reports the archive directory as a misplaced pack. The
-# markdownlint globs already skip both archives for the same reason.
-.qfai/discussion_archive/**
+# document nobody is editing. The markdownlint globs skip it for the same reason.
 .qfai/review_archive/**
 pnpm-lock.yaml
 tmp

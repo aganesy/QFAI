@@ -6,6 +6,7 @@
 | --- | --- |
 | Runtime | Node.js `>=20.19.0` (`packages/qfai/package.json#engines`) |
 | Platform | Linux and Windows; CI runs the suite on Linux and a Windows parity subset |
+| Surface | `cli` |
 | CI | GitHub Actions (`.github/workflows/`) |
 | Language | TypeScript 6 (`^6.0.3`), compiled to ESM and CommonJS |
 | Package manager | pnpm (root `package.json#packageManager`) |

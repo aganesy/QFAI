@@ -10,5 +10,5 @@ Feature: Exploration Rubric
     When a product-surface-reviewer completes a prototyping cycle
     Then the cycle summary reports informationArchitecture, navigationFlow, usability, and functionality using weak, acceptable, strong, or exceptional
     And each screen payload records its six required bounded impressions and blocking findings without an extra rating field
-    And no discussion-pack rubric or calibration sidecar defines the axes
+    And no calibration sidecar defines the axes
 ```

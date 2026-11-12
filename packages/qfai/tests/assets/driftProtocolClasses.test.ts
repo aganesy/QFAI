@@ -29,7 +29,7 @@ describe.each(trees)("drift classification in %s", (tree) => {
       path.join(repoRoot, tree, "assistant/rule/drift-protocol.md"),
       "utf-8",
     );
-    expect(rule).toContain("A discussion pack is discovery material");
+    expect(rule).toContain("A deliberation record is history");
     expect(rule).toContain("the story tree and contracts are the current specification");
     expect(rule).toContain("A downstream skill does not edit an approved specification");
   });

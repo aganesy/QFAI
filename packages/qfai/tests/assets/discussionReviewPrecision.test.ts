@@ -11,7 +11,7 @@ const read = (tree: string, relative: string): Promise<string> =>
 
 describe("SDD selected-source review precision", () => {
   for (const tree of trees) {
-    it(`${tree}: reads completed reviews for the selected pack`, async () => {
+    it(`${tree}: reads completed reviews with the named record`, async () => {
       const skill = await read(tree, "assistant/step/sdd-triage/STEP.md");
       const playbook = await read(
         tree,
@@ -19,7 +19,9 @@ describe("SDD selected-source review precision", () => {
       );
       expect(skill).toContain("selectedInputPath");
       expect(skill).toContain("completed reviews");
-      expect(playbook).toContain("completed reviews that target it");
+      expect(playbook.replace(/\s+/g, " ")).toContain(
+        "Read every table of the record, completed reviews",
+      );
     });
   }
 });

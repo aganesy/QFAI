@@ -1,7 +1,6 @@
 paths:
   specsDir: .qfai/spec
   contractsDir: .qfai/spec/03_contract
-  discussionDir: .qfai/discussion
   outDir: .qfai/report
   skillsDir: .qfai/assistant/skill
   srcDir: src

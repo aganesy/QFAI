@@ -1297,7 +1297,9 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * into an adopter's `git add .`. The added line is the whole delta — `*.qfai-state.tmp`, one entry
  * after `.qfai/state.json` — and re-pinning it here is what makes that one line reviewed content
  * rather than drift. It moved a second time when the workflow's run state arrived: `.qfai/run/`
- * joined the ignore lines, and that line is the whole delta.
+ * joined the ignore lines, and that line is the whole delta. It moved a third time when the
+ * discussion pack was removed: `.qfai/discussion/*` left the ignore lines, and that line is the
+ * whole delta.
  *
  * `AGENTS.md` is the entry point Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
@@ -1417,7 +1419,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "cd15bf81c504f2391e219775f2cbbf903fa8c15c24254e905d5da1d43eb17cde"],
+  [".gitignore", "d136ce57f450e4e91084dde9b218462093d59fddfa9aba2eb1b6227ae8174fda"],
   // Independent golden files pin the reviewed entry instructions. Update them only after
   // independent review, preserving exact bytes without trimming or newline normalization.
   [
@@ -1636,7 +1638,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the removal of `prototyping.calibration`, which nothing reads: prototyping
   // keeps no calibration pack. Restoring the two lines `calibration:` and
   // `packPath: .qfai/evidence/calibration.yaml` reproduces `c1f4c390…` byte for byte.
-  ["qfai.config.yaml", "e9129574dd758cb14b57a20b310b7e5836e6de417b2af86292ba5887d2241ac8"],
+  //
+  // Re-pinned for `paths.deliberationDir: .qfai/deliberation`, which states where the run's
+  // deliberation records go. The value is the default the loader already applies, so behaviour
+  // is unchanged; deleting that one line reproduces `e9129574…` byte for byte.
+  ["qfai.config.yaml", "9a9855d21422fc4d7adafaf6f919d4372faafcc493baf08e2fd15b33f4cba6b3"],
 ]);
 
 /**

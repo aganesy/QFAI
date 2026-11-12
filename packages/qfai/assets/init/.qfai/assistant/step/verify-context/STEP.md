@@ -26,8 +26,8 @@ The file-by-file list is
 principles every run keeps are
 `.qfai/assistant/skill/qfai-verify/references/articles.md`.
 
-A discussion pack is not a verification input. Verify reads normalized specs,
-contracts and evidence only.
+Verify reads normalized specs, contracts and evidence only. It opens no deliberation record: no file under
+`paths.deliberationDir` is read.
 
 ## Writes
 
@@ -109,7 +109,7 @@ and still missing.
 
 The step is done when:
 
-- the inputs are read and the discussion pack is not among them;
+- the inputs are read and no deliberation record is among them;
 - the scope is fixed, matches its profile and is stated in the stage
   report;
 - every input the scope needs is resolved;

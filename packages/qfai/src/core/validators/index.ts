@@ -2,11 +2,8 @@
 // Canonical validators — production path
 // ---------------------------------------------------------------------------
 
+export { validateDeliberationRecords } from "./deliberationRecord.js";
 export { validateDiagramBudget } from "./diagramBudget.js";
-export { validateDiscussionCitations } from "./discussionCitations.js";
-export { validateDiscussionPackReadiness } from "./discussionPack.js";
-export { validateDiscussionVisuals } from "./discussionVisuals.js";
-export { validateDesignDirectionProposal } from "./designDirectionProposal.js";
 export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 export { validateStoryPolicyPlaceholders } from "./assistantAssets.js";
 export { validateStoryTreeContractReferences } from "./contractReferences.js";
@@ -40,7 +37,6 @@ export { validateUiScreenEntries } from "./uiScreenEntries.js";
 export { validateUiContractParse } from "./contracts.js";
 export { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
-export { validateResearchSummary } from "./researchSummary.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateStepTree } from "./stepTree.js";
 export { validateDesignAudit } from "./designAudit.js";
@@ -51,12 +47,6 @@ export {
   validateRootDesignMdParse,
   validateRootDesignMdParseOutsideReadiness,
 } from "./designContractReadiness.js";
-export { isUiBearingSpec } from "./uixDetection.js";
-export { validateThreeLayerFamilyCompleteness } from "./uix/threeLayer.js";
-export { validateTrendScan } from "./uix/trendScan.js";
-export { validateScreenContractSchema } from "./uix/screenContract.js";
-export { runCanonicalUixValidators } from "./uix/canonical.js";
-export { validateCompetitiveReferences } from "./uix/competitiveRefs.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
 export {
   STUB_SOURCE_FILE_PATTERN,
@@ -66,7 +56,6 @@ export {
 export { validateAssistantTreeMigration } from "./assistantTreeMigration.js";
 export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.js";
 export { validateSkillDocReferences } from "./skillDocReferences.js";
-export { detectMockHrefDrift } from "./reviewerGate.js";
 export { detectSkillManifestDrift } from "./skillManifestDrift.js";
 export type { SkillManifestPair } from "./skillManifestPairs.js";
 export {

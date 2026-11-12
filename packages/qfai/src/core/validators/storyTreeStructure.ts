@@ -507,6 +507,8 @@ const CONSTRAINT_PREFIXES: ReadonlyMap<string, string> = new Map([
   ["Technical Constraints", "TC"],
   ["Operational Constraints", "OC"],
   ["Business Constraints", "BC"],
+  ["Quality targets", "QT"],
+  ["Legal and Compliance Constraints", "LC"],
 ]);
 
 /**

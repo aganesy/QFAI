@@ -61,9 +61,9 @@ export async function validationInputManifest(root: string) {
   );
   const surfaces = (
     await fg(
-      (
-        ["specsDir", "contractsDir", "discussionDir", "skillsDir", "srcDir", "testsDir"] as const
-      ).map((key) => path.posix.join(resolvePath(root, config, key).replace(/\\/g, "/"), "**/*")),
+      (["specsDir", "contractsDir", "skillsDir", "srcDir", "testsDir"] as const).map((key) =>
+        path.posix.join(resolvePath(root, config, key).replace(/\\/g, "/"), "**/*"),
+      ),
       { absolute: true, dot: true },
     )
   ).map((file) => path.resolve(file));

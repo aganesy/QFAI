@@ -2,6 +2,6 @@
 
 ## Examples
 
-| EX-ID           | AC-Ref          | Input                                                                                 | Expected                                                                                                                                                       |
-| --------------- | --------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EX-0001-0081-01 | AC-0001-0081-01 | A UI-bearing discussion cites a competing dashboard, when `04_Sources.md` is reviewed | Its competitive reference row names the useful navigation pattern, the dense layout it rejects, and how the adopted pattern is translated to the local product |
+| EX-ID           | AC-Ref          | Input                                                                                                             | Expected                                                                                                                                                             |
+| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0081-01 | AC-0001-0081-01 | A deliberation record that settles a competing dashboard as a reference, when `/qfai-sdd` writes root `DESIGN.md` | **Do** names the useful navigation pattern and how it is translated to the local product; **Don't** and `audience.do_not_look_like` name the dense layout it rejects |

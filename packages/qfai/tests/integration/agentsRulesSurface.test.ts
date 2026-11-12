@@ -2126,15 +2126,6 @@ describe("an open fact survives the surfaces that report a session", () => {
     expect(text).toMatch(/every\s+node\s+left\s+open/);
     expect(text).not.toMatch(/every\s+decision\s+left\s+open/);
   });
-
-  it.each([
-    ".qfai/assistant/skill/qfai-discussion/templates/11_OQ-Register.md",
-    "packages/qfai/assets/init/.qfai/assistant/skill/qfai-discussion/templates/11_OQ-Register.md",
-  ])("%s has a row shape for a question asking for a fact", async (rel) => {
-    const text = await readFile(path.join(ROOT, rel), "utf-8");
-    expect(text).toMatch(/A\s+question\s+asking\s+for\s+a\s+fact\s+is\s+the\s+exception/);
-    expect(text).toMatch(/where\s+one\s+is\s+permitted/);
-  });
 });
 
 describe("trust boundaries depend on the caller's control", () => {

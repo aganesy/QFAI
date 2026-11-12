@@ -132,7 +132,6 @@ The current directories below are relative to the repository root.
 | `packages/qfai/tests/e2e`         | `e2e`          | `e2e`         |
 | `packages/qfai/tests/assets`      | `e2e`          | Unclassified  |
 | `packages/qfai/tests/integration` | `integration`  | `integration` |
-| `packages/qfai/tests/detection`   | `integration`  | Unclassified  |
 | `packages/qfai/tests/skill`       | `integration`  | Unclassified  |
 | `packages/qfai/tests/codex`       | `integration`  | Unclassified  |
 | `packages/qfai/tests/core`        | `core`         | Unclassified  |

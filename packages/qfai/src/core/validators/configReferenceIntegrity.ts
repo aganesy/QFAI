@@ -46,17 +46,12 @@ async function isAbsent(absolutePath: string): Promise<boolean> {
 const VERIFIED_PATH_KEYS: ReadonlyArray<ConfigPathKey> = [
   "specsDir",
   "contractsDir",
-  "discussionDir",
   "skillsDir",
   "srcDir",
   "testsDir",
 ];
 
-const DEFAULT_SKILL_CREATED_PATH_KEYS = new Set<ConfigPathKey>([
-  "specsDir",
-  "contractsDir",
-  "discussionDir",
-]);
+const DEFAULT_SKILL_CREATED_PATH_KEYS = new Set<ConfigPathKey>(["specsDir", "contractsDir"]);
 
 function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean {
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];

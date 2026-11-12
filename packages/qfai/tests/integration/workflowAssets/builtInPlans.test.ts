@@ -82,13 +82,7 @@ const VOCABULARY: Record<string, string[]> = {
     "verify-manual",
     "verify-release-notes",
   ],
-  discussion: [
-    "discussion-research",
-    "discussion-interview",
-    "discussion-pack",
-    "discussion-oq",
-    "discussion-uiux",
-  ],
+  discussion: ["discussion-research", "discussion-interview"],
 };
 
 /** The steps a plan may mark pass-through. */
@@ -98,8 +92,6 @@ const PASS_THROUGH = [
   "sdd-cycle",
   "sdd-story",
   "common-design-md",
-  "discussion-pack",
-  "discussion-uiux",
   "triage-investigate",
   "implement-scaffold",
   "implement-tdd",

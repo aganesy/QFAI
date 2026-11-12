@@ -3,7 +3,6 @@ import path from "node:path";
 
 import type { FailOn, QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
-import { findLatestPack } from "./packLocator.js";
 import { toRelativePath } from "./paths.js";
 import type { Issue, ValidationResult } from "./types.js";
 
@@ -48,10 +47,6 @@ export async function writeValidateRunLog(input: {
   const { runId, reportDir } = await allocateRunReportDir(outDir, input.startedAt);
 
   const relativeSpecsRoot = toRelativePath(root, resolvePath(root, input.config, "specsDir"));
-  const latestDiscussion = await findLatestPack(
-    resolvePath(root, input.config, "discussionDir"),
-    "discussion",
-  );
 
   const status = resolveStatus(input.result, input.status);
   const errors = toRunLogIssues(root, input.result.issues, "error");
@@ -65,7 +60,6 @@ export async function writeValidateRunLog(input: {
     command: input.command ?? "/qfai-validate",
     repo_root: ".",
     inputs: {
-      discussion_pack: latestDiscussion ? toRelativePath(root, latestDiscussion.path) : null,
       specs_root: relativeSpecsRoot,
     },
     outputs: {

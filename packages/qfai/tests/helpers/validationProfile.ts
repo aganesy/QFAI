@@ -15,11 +15,7 @@ import * as contracts from "../../src/core/validators/contracts.js";
 import * as dbContractApplyOrder from "../../src/core/validators/dbContractApplyOrder.js";
 import * as designAudit from "../../src/core/validators/designAudit.js";
 import * as designContractReadiness from "../../src/core/validators/designContractReadiness.js";
-import * as designDirectionProposal from "../../src/core/validators/designDirectionProposal.js";
 import * as designToken from "../../src/core/validators/designToken.js";
-import * as discussMermaid from "../../src/core/validators/discussMermaid.js";
-import * as discussionPack from "../../src/core/validators/discussionPack.js";
-import * as discussionVisuals from "../../src/core/validators/discussionVisuals.js";
 import * as documentSchema from "../../src/core/validators/documentSchema.js";
 import * as externalReferences from "../../src/core/validators/externalReferences.js";
 import * as forbiddenIdentifiers from "../../src/core/validators/forbiddenIdentifiers.js";
@@ -30,8 +26,6 @@ import * as mermaidScreenFlow from "../../src/core/validators/mermaidScreenFlow.
 import * as packageSelfGovernance from "../../src/core/validators/packageSelfGovernance.js";
 import * as platformDetection from "../../src/core/validators/platformDetection.js";
 import * as repositoryHygiene from "../../src/core/validators/repositoryHygiene.js";
-import * as researchSummary from "../../src/core/validators/researchSummary.js";
-import * as reviewerGate from "../../src/core/validators/reviewerGate.js";
 import * as prototypingSkill from "../../src/core/validators/skill/prototypingSkill.js";
 import * as skillDocReferences from "../../src/core/validators/skillDocReferences.js";
 import * as skillManifestDrift from "../../src/core/validators/skillManifestDrift.js";
@@ -45,15 +39,6 @@ import * as uiMarkerPresence from "../../src/core/validators/uiMarkerPresence.js
 import * as uiPrototypeMode from "../../src/core/validators/uiPrototypeMode.js";
 import * as uiPlainText from "../../src/core/validators/uiPlainText.js";
 import * as uiScreenEntries from "../../src/core/validators/uiScreenEntries.js";
-import * as canonical from "../../src/core/validators/uix/canonical.js";
-import * as classification from "../../src/core/validators/uix/classification.js";
-import * as comparisonValidator from "../../src/core/validators/uix/comparisonValidator.js";
-import * as competitiveRefs from "../../src/core/validators/uix/competitiveRefs.js";
-import * as foundation from "../../src/core/validators/uix/foundation.js";
-import * as oqClosure from "../../src/core/validators/uix/oqClosure.js";
-import * as screenContract from "../../src/core/validators/uix/screenContract.js";
-import * as threeLayer from "../../src/core/validators/uix/threeLayer.js";
-import * as trendScan from "../../src/core/validators/uix/trendScan.js";
 import * as upstreamSsotGuard from "../../src/core/validators/upstreamSsotGuard.js";
 import * as configuration from "../../src/core/config.js";
 import * as storyModel from "../../src/core/storyTree/tree.js";
@@ -196,33 +181,9 @@ export function measureValidators() {
           .mockImplementation(call),
     );
     register(
-      "core/validators/designDirectionProposal:validateDesignDirectionProposal",
-      designDirectionProposal.validateDesignDirectionProposal,
-      (call) =>
-        vi
-          .spyOn(designDirectionProposal, "validateDesignDirectionProposal")
-          .mockImplementation(call),
-    );
-    register(
       "core/validators/designToken:validateDesignToken",
       designToken.validateDesignToken,
       (call) => vi.spyOn(designToken, "validateDesignToken").mockImplementation(call),
-    );
-    register(
-      "core/validators/discussMermaid:validateDiscussionMermaid",
-      discussMermaid.validateDiscussionMermaid,
-      (call) => vi.spyOn(discussMermaid, "validateDiscussionMermaid").mockImplementation(call),
-    );
-    register(
-      "core/validators/discussionPack:validateDiscussionPackReadiness",
-      discussionPack.validateDiscussionPackReadiness,
-      (call) =>
-        vi.spyOn(discussionPack, "validateDiscussionPackReadiness").mockImplementation(call),
-    );
-    register(
-      "core/validators/discussionVisuals:validateDiscussionVisuals",
-      discussionVisuals.validateDiscussionVisuals,
-      (call) => vi.spyOn(discussionVisuals, "validateDiscussionVisuals").mockImplementation(call),
     );
     register(
       "core/validators/documentSchema:validateDocumentSchema",
@@ -280,16 +241,6 @@ export function measureValidators() {
       "core/validators/repositoryHygiene:validateRepositoryHygiene",
       repositoryHygiene.validateRepositoryHygiene,
       (call) => vi.spyOn(repositoryHygiene, "validateRepositoryHygiene").mockImplementation(call),
-    );
-    register(
-      "core/validators/researchSummary:validateResearchSummary",
-      researchSummary.validateResearchSummary,
-      (call) => vi.spyOn(researchSummary, "validateResearchSummary").mockImplementation(call),
-    );
-    register(
-      "core/validators/reviewerGate:detectMockHrefDrift",
-      reviewerGate.detectMockHrefDrift,
-      (call) => vi.spyOn(reviewerGate, "detectMockHrefDrift").mockImplementation(call),
     );
     register(
       "core/validators/skill/prototypingSkill:detectAspirationalClaims",
@@ -392,53 +343,6 @@ export function measureValidators() {
       "core/validators/uiScreenEntries:validateUiScreenEntries",
       uiScreenEntries.validateUiScreenEntries,
       (call) => vi.spyOn(uiScreenEntries, "validateUiScreenEntries").mockImplementation(call),
-    );
-    register(
-      "core/validators/uix/canonical:runCanonicalUixValidators",
-      canonical.runCanonicalUixValidators,
-      (call) => vi.spyOn(canonical, "runCanonicalUixValidators").mockImplementation(call),
-    );
-    register(
-      "core/validators/uix/classification:validateClassification",
-      classification.validateClassification,
-      (call) => vi.spyOn(classification, "validateClassification").mockImplementation(call),
-    );
-    register(
-      "core/validators/uix/comparisonValidator:validateExplorationArtifacts",
-      comparisonValidator.validateExplorationArtifacts,
-      (call) =>
-        vi.spyOn(comparisonValidator, "validateExplorationArtifacts").mockImplementation(call),
-    );
-    register(
-      "core/validators/uix/competitiveRefs:validateCompetitiveReferences",
-      competitiveRefs.validateCompetitiveReferences,
-      (call) => vi.spyOn(competitiveRefs, "validateCompetitiveReferences").mockImplementation(call),
-    );
-    register(
-      "core/validators/uix/foundation:validateSidecarMissing",
-      foundation.validateSidecarMissing,
-      (call) => vi.spyOn(foundation, "validateSidecarMissing").mockImplementation(call),
-    );
-    register(
-      "core/validators/uix/oqClosure:validateOqClosure",
-      oqClosure.validateOqClosure,
-      (call) => vi.spyOn(oqClosure, "validateOqClosure").mockImplementation(call),
-    );
-    register(
-      "core/validators/uix/screenContract:validateScreenContractSchema",
-      screenContract.validateScreenContractSchema,
-      (call) => vi.spyOn(screenContract, "validateScreenContractSchema").mockImplementation(call),
-    );
-    register(
-      "core/validators/uix/threeLayer:validateThreeLayerFamilyCompleteness",
-      threeLayer.validateThreeLayerFamilyCompleteness,
-      (call) =>
-        vi.spyOn(threeLayer, "validateThreeLayerFamilyCompleteness").mockImplementation(call),
-    );
-    register(
-      "core/validators/uix/trendScan:validateTrendScan",
-      trendScan.validateTrendScan,
-      (call) => vi.spyOn(trendScan, "validateTrendScan").mockImplementation(call),
     );
     register(
       "core/validators/upstreamSsotGuard:validateStoryTreeDrift",

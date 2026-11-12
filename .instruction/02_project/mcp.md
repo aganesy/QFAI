@@ -47,12 +47,12 @@ This guide lists where MCP helps speed up QFAI documentation, implementation and
 
 ## Typical Recipes
 
-### Recipe A: requirements material to a discussion pack
+### Recipe A: requirements material to a deliberation record
 
 1. For a text PDF, convert it to Markdown with `markitdown`
 2. For a scanned PDF, transcribe it with `vibe-pdf-read` then `ocr`
-3. Save it under `.qfai/discussion/` as a source of the pack, and use the pack
-   as the input to the spec.
+3. Cite it from the run's deliberation record, and use the record as the input
+   to the spec.
 
 ### Recipe B: start an impact investigation with Serena
 

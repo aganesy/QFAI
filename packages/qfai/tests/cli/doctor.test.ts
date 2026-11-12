@@ -111,15 +111,7 @@ describe("doctor", () => {
         expect(index).toBeGreaterThanOrEqual(0);
         return index;
       };
-      const pathKeys = [
-        "specsDir",
-        "contractsDir",
-        "discussionDir",
-        "outDir",
-        "srcDir",
-        "testsDir",
-        "skillsDir",
-      ];
+      const pathKeys = ["specsDir", "contractsDir", "outDir", "srcDir", "testsDir", "skillsDir"];
       const pathIndices = pathKeys.map((key) => indexOf(`paths.${key}`));
 
       const configSearch = indexOf("config.search");
@@ -164,7 +156,6 @@ describe("doctor", () => {
           "paths:",
           "  specsDir: .qfai/spec",
           "  contractsDir: .qfai/spec/03_contract",
-          "  discussionDir: .qfai/discussion",
           "  outDir: .qfai/report",
           "  skillsDir: .qfai/assistant/skill",
           "  srcDir: src",
@@ -755,7 +746,6 @@ async function writeTestGlobsConfig(root: string, globs: string[]): Promise<void
       "paths:",
       "  specsDir: .qfai/spec",
       "  contractsDir: .qfai/spec/03_contract",
-      "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/report",
       "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",
@@ -804,7 +794,6 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
       "paths:",
       "  specsDir: .qfai/spec",
       "  contractsDir: .qfai/spec/03_contract",
-      "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/report",
       "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",

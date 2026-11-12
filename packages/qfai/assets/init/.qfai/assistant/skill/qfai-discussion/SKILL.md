@@ -4,8 +4,8 @@ title: QFAI Discussion (Exploration Planner)
 description: "Use when invoked by name or handed a QFAI work order. Its subject is a product idea or problem whose scope is not settled yet."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
-steps: [discussion-research, discussion-interview, discussion-pack, discussion-oq, discussion-uiux]
-requires: [common-review-cycle, common-gate-run]
+steps: [discussion-research, discussion-interview]
+requires: []
 mode: interactive-by-default
 ---
 
@@ -15,12 +15,10 @@ Run the entry check of
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`
 first.
 
-Produces the nine-file discussion pack at
-`.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`, plus the exploration-first UI
-sidecars, so `/qfai-sdd` and `/qfai-prototyping` can work without an early
-visual direction decision.
-
-Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it.
+Interviews the user about a product idea or problem and keeps what was asked
+and answered in the run's deliberation record, so `/qfai-sdd` can write the
+story tree from it. The record is a memo, written as
+`.qfai/assistant/rule/references/deliberation-record.md` says.
 
 ## User Questions (AskUserQuestion Protocol)
 
@@ -32,8 +30,7 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/rule/*`, and `.qfai/assistant/skill/qfai-grilling/SKILL.md` before the interview
 - P2: `.qfai/assistant/rule/agent-selection.md`, the cards under `.qfai/assistant/agent/`, and project context under `<paths.specsDir>/01_policy/**` and `<paths.specsDir>/03_contract/**`
-- P3: the pack under work — `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/**`
-- P4: what the project already settled (`qfai.config.yaml`, `<paths.specsDir>/01_policy/**`, `<paths.specsDir>/02_business-flow/**`, and `<paths.contractsDir>/**`)
+- P3: what the project already settled (`qfai.config.yaml`, `<paths.specsDir>/decisions.md`, `<paths.specsDir>/open-questions.md`, `<paths.specsDir>/02_business-flow/**`, and `<paths.contractsDir>/**`)
 
 ## Steps
 
@@ -48,59 +45,29 @@ states.
 | ---------------------- | --------------------------------------------------- | ----------------------------------------------------- |
 | `discussion-research`  | `.qfai/assistant/step/discussion-research/STEP.md`  | Always, first                                         |
 | `discussion-interview` | `.qfai/assistant/step/discussion-interview/STEP.md` | Always: concept, scope, stakeholders, and constraints |
-| `discussion-pack`      | `.qfai/assistant/step/discussion-pack/STEP.md`      | Once the interview ends with an ending that allows it |
-| `discussion-oq`        | `.qfai/assistant/step/discussion-oq/STEP.md`        | After `discussion-pack`                               |
-| `discussion-uiux`      | `.qfai/assistant/step/discussion-uiux/STEP.md`      | Only for a UI-bearing target                          |
 
 An interview that ends `stopped` ends the run: no later step runs, and every
-open decision is reported as open. Integrate a delegated output only after
-checking pack completeness.
+open decision is reported as open.
 
-## UI-bearing Canonical Sidecar Family
+## What the stage writes
 
-Decide whether the target is UI-bearing with `references/ui-bearing-playbook.md`
-before running `discussion-uiux`.
-
-Every UI-bearing pack carries `uiux/00_index.md`, `uiux/40_screen_contracts.md`
-and `uiux/50_review_input_bundle.md`. That is the whole family, on every
-UI-bearing surface including `cli`. A pack that keeps the current root
-`DESIGN.md` may declare `design_direction: inherit` instead
-(`references/ui-bearing-playbook.md#inheriting-the-current-designmd`).
-
-A **cli-only** pack (`primary_surface: cli`, no visual `secondary_surfaces`
-entry) keeps all three sidecars, but the brand questions do not apply to it:
-`/qfai-prototyping` rejects `cli`, so nothing downstream reads a `visual.*`
-token tree, and `/qfai-sdd`'s `common-design-md` step writes no `DESIGN.md`. The test is
-the whole classified surface set — `primary_surface` **and** every
-`secondary_surfaces` entry.
+The run's deliberation record, and one `<paths.specsDir>/open-questions.md`
+row for each question the stage left open. Nothing else: no other story-tree
+file, no policy file, no contract and no root `DESIGN.md`. A brand theme the
+user chose is an Interview row of the record; `/qfai-sdd`'s `common-design-md`
+step writes `DESIGN.md` from it later.
 
 ## Review
 
-After the last step, run one review of the pack under work with
-`.qfai/assistant/step/common-review-cycle/STEP.md`: the specification review,
-by `requirements-reviewer`, joined by `product-surface-reviewer` when
-`discussion-uiux` ran and by `architecture-reviewer` when the pack records an
-architecture-affecting decision. Roles are selected under
-`.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
-
-### Reviewer Gate
-
-The reviewers check each `## Gate` section of the steps that ran.
+None. The output is a memo, so the skill runs no review after its last step,
+invoked by name or in a route.
 
 ## Completion
 
-The full logic, including the UI-bearing conditions, is
-`references/discussion-completion-matrix.md`. Completion requires all of these:
-
-- All nine mandatory pack files exist and are populated, and the UI sidecar family
-  is complete when the target is UI-bearing.
-- The open count is zero: no `Disposition: open` row is left in
-  `11_OQ-Register.md`.
-- `npx qfai validate --profile discussion --fail-on error`, run and recorded
-  with `.qfai/assistant/step/common-gate-run/STEP.md`, passes with no
-  discussion-owned finding. Repair a failure under
-  `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
-- Every finding of the one review is fixed or answered.
+Invoked by name, the skill ends after `discussion-interview`: that step
+commits locally only the run's deliberation record and the `open-questions.md`
+rows the run wrote, and pushes nothing. The report names the record's path, or
+says the run wrote no record.
 
 ## Completion Message & Next Actions
 
@@ -123,7 +90,6 @@ inputs and uncovered human decisions retain their ordinary blocking behavior.
 
 project_memory:
 
-- The nine-file mandatory output set is fixed; the UI-bearing sidecar family (00_index.md + 40_screen_contracts.md + 50_review_input_bundle.md) is required whenever the target is UI-bearing, cli included, except that a pack declaring `design_direction: inherit` may omit 40/50 and the registries under the conditions of `references/ui-bearing-playbook.md#inheriting-the-current-designmd`.
-- Root DESIGN.md is not a discussion output: `/qfai-sdd`'s `common-design-md` step authors it from this pack.
+- The stage writes the run's deliberation record and its `open-questions.md` rows, and nothing else.
+- Root DESIGN.md is not a discussion output: `/qfai-sdd`'s `common-design-md` step authors it.
 - Discussion is planner-first: never pick a single visual winner; carry exploration references as deviate-from inputs, not imitate-this.
-- Completion requires Disposition: open count = 0 in 11_OQ-Register.md; each deferred row there records its Resolution and names the next point at which it is decided.

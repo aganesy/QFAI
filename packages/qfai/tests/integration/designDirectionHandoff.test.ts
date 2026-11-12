@@ -1,10 +1,9 @@
 import { legacyInitArguments } from "../helpers/legacyInitArguments.js";
-// QFAI:AC-0001-0087-01
 // QFAI:AC-0001-0087-02
 
 /**
- * The design direction reaches `/qfai-sdd` through the pack, in the tree `qfai init` installs:
- * discussion records the chosen theme and who chose it and writes no `DESIGN.md`, and the
+ * The design direction reaches `/qfai-sdd` through the deliberation record, in the tree `qfai init`
+ * installs: discussion records the chosen theme as an Interview row and writes no `DESIGN.md`, and the
  * `DESIGN.md` authoring step reads that record and asks when there is none.
  */
 import { spawnSync } from "node:child_process";
@@ -44,37 +43,30 @@ async function installed(rel: string): Promise<string> {
   return (await readFile(path.join(root, rel), "utf8")).replace(/\s*\r?\n\s*/g, " ");
 }
 
-it("Discussion records the adopted theme and who chose it, and leaves root DESIGN.md to /qfai-sdd", async () => {
-  const context = await installed(`${SKILLS}/qfai-discussion/templates/01_Context.md`);
+// QFAI:EX-0001-0300-02
+it("Discussion records the chosen theme as an Interview row, and leaves root DESIGN.md to /qfai-sdd", async () => {
   const skill = await installed(`${SKILLS}/qfai-discussion/SKILL.md`);
-  const matrix = await installed(
-    `${SKILLS}/qfai-discussion/references/discussion-completion-matrix.md`,
-  );
+  const intake = await installed(`${SKILLS}/qfai-discussion/references/design-dna-intake.md`);
 
   expect({
-    section: context.includes("## Design Direction"),
-    fields: ["adopted_theme:", "chosen_by:"].filter((key) => !context.includes(key)),
-    notAnOutput: skill.includes("Root DESIGN.md is not a discussion output"),
-    completion: matrix.includes("`01_Context.md#Design Direction` names an adopted theme"),
+    themeRow: skill.includes("A brand theme the user chose is an Interview row of the record;"),
+    answersAreRows: intake.includes(
+      "Each answer is an Interview row of the run's deliberation record: the chosen theme,",
+    ),
+    noDesignMd: skill.includes("no contract and no root `DESIGN.md`."),
     rootDesign: existsSync(path.join(root, "DESIGN.md")),
-  }).toEqual({
-    section: true,
-    fields: [],
-    notAnOutput: true,
-    completion: true,
-    rootDesign: false,
-  });
+  }).toEqual({ themeRow: true, answersAreRows: true, noDesignMd: true, rootDesign: false });
 });
 
-it("/qfai-sdd authors root DESIGN.md from the recorded direction, and asks when the pack records none", async () => {
+it("/qfai-sdd authors root DESIGN.md from the recorded direction, and asks when the record holds none", async () => {
   const authoring = await installed(`${SKILLS}/qfai-sdd/references/design-md-authoring.md`);
   const intake = await installed(`${SKILLS}/qfai-discussion/references/design-dna-intake.md`);
 
   expect({
-    reads: authoring.includes("`01_Context.md#Design Direction` is the decision the user made"),
+    reads: authoring.includes("The brand comes from the Interview row in which the user chose it."),
     asks: authoring.includes("stop and ask rather than pick one"),
     writtenBySdd: intake.includes(
-      "Root `DESIGN.md` is written later, by `/qfai-sdd`'s `common-design-md` step, which reads those records",
+      "Root `DESIGN.md` is written later, by `/qfai-sdd`'s `common-design-md` step.",
     ),
   }).toEqual({ reads: true, asks: true, writtenBySdd: true });
 });
@@ -113,7 +105,9 @@ it("The installed instructions scope missing brand direction to initial authorin
 
   for (const instructions of [step, authoring]) {
     const initialAuthoring = instructions.match(/For initial authoring[^.]*\./i)?.[0];
-    expect(initialAuthoring).toMatch(/pack[^.]*no[^.]*direction[^.]*brand unchosen/i);
+    expect(initialAuthoring).toMatch(
+      /record[^.]*no[^.]*row on the brand direction[^.]*brand unchosen/i,
+    );
   }
 });
 
@@ -136,6 +130,8 @@ it("The installed design step leaves CLI-only files unchanged and stops on an un
   expect(step).toMatch(/cli-only[^.]*writes no[^.]*`DESIGN\.md`/i);
   expect(step).toMatch(/existing file[^.]*unchanged/i);
   expect(step).toMatch(/names `web`, `mobile`, `desktop` or `mixed`/);
-  expect(step).toMatch(/pack that records no design direction leaves the brand unchosen/i);
+  expect(step).toMatch(
+    /record that has no Interview row on the brand direction leaves the brand unchosen/i,
+  );
   expect(step).toMatch(/under `--auto` stop and name it/i);
 });
