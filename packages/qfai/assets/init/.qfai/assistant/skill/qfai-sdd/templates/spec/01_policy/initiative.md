@@ -16,3 +16,8 @@
 
 | Milestone | Description |
 | --------- | ----------- |
+
+## Risks
+
+| Risk | Mitigation |
+| ---- | ---------- |

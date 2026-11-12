@@ -28,3 +28,13 @@
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | BC-01 | A breaking change ships with release notes that say what breaks and how an adopter migrates.                                                             | Adopters upgrade from the published package and learn of a break only from its release notes. |
 | BC-02 | The lighter workflow ships as release 2.1.0, which the user chose knowing it breaks earlier behaviour, and its release notes list every breaking change. | The user decided the version; the release notes are how an adopter learns what broke.         |
+
+## Quality targets
+
+| ID  | Constraint | Rationale |
+| --- | ---------- | --------- |
+
+## Legal and Compliance Constraints
+
+| ID  | Constraint | Rationale |
+| --- | ---------- | --------- |

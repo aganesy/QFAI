@@ -19,3 +19,8 @@ executable coverage, and validation and independent review check the result.
 - Runtime and build requirements are defined in `packages/qfai/package.json` and `.qfai/spec/03_contract/tech.md`.
 - Story and contract authoring follows `.qfai/assistant/skill/qfai-sdd/SKILL.md` and the paired templates.
 - Test-layer obligations follow `.qfai/assistant/rule/test-layers.md`.
+
+## Risks
+
+| Risk | Mitigation |
+| ---- | ---------- |

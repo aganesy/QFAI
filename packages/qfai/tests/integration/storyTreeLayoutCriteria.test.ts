@@ -193,9 +193,15 @@ describe("the traceability chain and the skill order", () => {
 });
 
 describe("the policy and contract layers of an initialized project", () => {
-  const constraints = (technical: string, operational = "", business = ""): string => {
+  const constraints = (
+    technical: string,
+    operational = "",
+    business = "",
+    quality = "",
+    legal = "",
+  ): string => {
     const table = "| ID | Constraint | Rationale |\n| --- | --- | --- |\n";
-    return `# Constraints\n\n## Technical Constraints\n\n${table}${technical}\n## Operational Constraints\n\n${table}${operational}\n## Business Constraints\n\n${table}${business}`;
+    return `# Constraints\n\n## Technical Constraints\n\n${table}${technical}\n## Operational Constraints\n\n${table}${operational}\n## Business Constraints\n\n${table}${business}\n## Quality targets\n\n${table}${quality}\n## Legal and Compliance Constraints\n\n${table}${legal}`;
   };
 
   // QFAI:AC-0001-0006-01
@@ -223,6 +229,8 @@ describe("the policy and contract layers of an initialized project", () => {
         "| TC-01 | Runs on Linux and Windows | Adopters use both |\n| TC-02 | Needs no network | Builds run offline |\n",
         "| OC-01 | Releases need a reviewer | A second pair of eyes |\n",
         "| BC-01 | Data stays in the region | A contract with customers |\n",
+        "| QT-01 | Every screen answers within two seconds | Users wait |\n",
+        "| LC-01 | Personal data is kept no longer than a year | A retention law |\n",
       ),
     );
     expect(await findings(root, "QFAI-DOCSCHEMA-")).toEqual([]);

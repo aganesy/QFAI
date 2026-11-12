@@ -40,6 +40,8 @@ const CONSTRAINT_SECTIONS: Readonly<Record<string, string>> = {
   TC: "Technical Constraints",
   OC: "Operational Constraints",
   BC: "Business Constraints",
+  QT: "Quality targets",
+  LC: "Legal and Compliance Constraints",
 };
 
 /**
@@ -84,12 +86,14 @@ const RULES: Readonly<Record<PolicyDocument, PolicyRules>> = {
       Assumptions: { kind: "list" },
       Dependencies: { kind: "list" },
       Milestones: { kind: "table", columns: ["Milestone", "Description"] },
+      Risks: { kind: "table", columns: ["Risk", "Mitigation"] },
     },
     routes: {
       initiative: "Initiative",
       assumptions: "Assumptions",
       dependencies: "Dependencies",
       milestones: "Milestones",
+      risks: "Risks",
     },
   },
   "principle.md": {
@@ -119,6 +123,8 @@ const RULES: Readonly<Record<PolicyDocument, PolicyRules>> = {
       "Technical Constraints": { kind: "table", columns: CONSTRAINT_COLUMNS },
       "Operational Constraints": { kind: "table", columns: CONSTRAINT_COLUMNS },
       "Business Constraints": { kind: "table", columns: CONSTRAINT_COLUMNS },
+      "Quality targets": { kind: "table", columns: CONSTRAINT_COLUMNS },
+      "Legal and Compliance Constraints": { kind: "table", columns: CONSTRAINT_COLUMNS },
     },
     routes: {},
   },
@@ -337,7 +343,7 @@ function moveConstraintSection(draft: PolicyDraft, section: PolicySection): stri
     const into = CONSTRAINT_SECTIONS[/^([A-Z]{2})-/.exec(row[0] ?? "")?.[1] ?? ""];
     if (into === undefined) {
       person.push(
-        `${draft.target}: place ${row[0] || "a row with no ID"} of "## ${section.heading}" in ${section.source} under the section its kind belongs to, with a TC-, OC- or BC- ID`,
+        `${draft.target}: place ${row[0] || "a row with no ID"} of "## ${section.heading}" in ${section.source} under the section its kind belongs to, with a TC-, OC-, BC-, QT- or LC- ID`,
       );
       continue;
     }
