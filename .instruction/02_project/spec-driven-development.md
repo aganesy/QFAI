@@ -39,7 +39,7 @@ qfai report → .qfai/report/report.md
 
 ### Phase 0: Importing requirements
 
-- A deliberation record under `.qfai/deliberation/` is the usual input, and it is
+- A deliberation record under `paths.deliberationDir` is the usual input, and it is
   optional. A spec set taken in without one is recorded as import-lite evidence
   instead.
 

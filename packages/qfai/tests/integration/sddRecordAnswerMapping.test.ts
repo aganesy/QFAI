@@ -25,6 +25,7 @@ function mappedTo(table: string, answer: string): string | undefined {
 
 describe("each answer of the record has one story-tree home", () => {
   for (const tree of trees) {
+    // QFAI:AC-0001-0300-02
     // QFAI:EX-0001-0300-03
     it(`${tree}: risks, quality targets, legal limits and surfaces go to policy and tech.md`, async () => {
       const decomposition = await flat(tree, DECOMPOSITION);
@@ -69,6 +70,7 @@ describe("each answer of the record has one story-tree home", () => {
       );
     });
 
+    // QFAI:AC-0001-0080-01
     // QFAI:EX-0001-0080-01
     it(`${tree}: the Brand Philosophy body holds the settled intent and names no winner`, async () => {
       const authoring = await flat(tree, AUTHORING);
@@ -80,6 +82,7 @@ describe("each answer of the record has one story-tree home", () => {
       expect(step).toContain("as exploration constraints, and select no visual winner");
     });
 
+    // QFAI:AC-0001-0081-01
     // QFAI:EX-0001-0081-01
     it(`${tree}: a settled reference splits into Do, Don't and do_not_look_like`, async () => {
       const authoring = await flat(tree, AUTHORING);
@@ -91,6 +94,7 @@ describe("each answer of the record has one story-tree home", () => {
       );
     });
 
+    // QFAI:AC-0001-0082-01
     // QFAI:EX-0001-0082-01
     it(`${tree}: a rejected direction is a Don't anti-goal with its reason and a review cue`, async () => {
       const authoring = await flat(tree, AUTHORING);

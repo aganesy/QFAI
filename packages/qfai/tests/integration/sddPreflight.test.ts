@@ -51,6 +51,7 @@ async function seedRecord(root: string, name = RECORD_NAME, text = RECORD_WITH_O
 }
 
 describe("runSddPreflight", () => {
+  // QFAI:AC-0001-0151-02
   // QFAI:EX-0001-0151-02
   it("passes a named record that leaves questions open to SDD unchanged", async () => {
     await withRoot(async (root) => {

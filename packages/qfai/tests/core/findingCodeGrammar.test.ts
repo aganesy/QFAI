@@ -44,16 +44,7 @@ const SHARED_ISSUE_FACTORY = "issue";
  * {@link collectIssueFactories} from seeing one fails loudly instead of
  * quietly shrinking the scanned surface.
  */
-const KNOWN_LOCAL_FACTORIES: readonly string[] = [
-  "canonicalIssue",
-  "classificationIssue",
-  "competitiveIssue",
-  "contractIssue",
-  "finding",
-  "skillIssue",
-  "threeLayerIssue",
-  "trendIssue",
-];
+const KNOWN_LOCAL_FACTORIES: readonly string[] = ["finding", "skillIssue"];
 
 /**
  * Codes outside the canonical grammar. Frozen: the guards below fail both when a
@@ -103,13 +94,13 @@ function unwrapExpression(node: ts.Expression | undefined): ts.Expression | unde
  * Every function that turns a code into an `Issue`.
  *
  * A regex over `issue("…")` saw only the shared helper: `\bissue\(` does not
- * match `classificationIssue(`, so the codes raised through the nine
+ * match `skillIssue(`, so the codes raised through the
  * local factories reached no guard at all — the legacy registry was
  * missing them, and a new non-conforming code added through the same call
  * passed silently, which is the bypass this file exists to close.
  *
  * A factory is a declaration whose return type names `Issue` and whose first
- * parameter is the code. That is this repository's convention for all nine;
+ * parameter is the code. That is this repository's convention for all of them;
  * {@link KNOWN_LOCAL_FACTORIES} pins it so a drift away from it is visible.
  */
 function collectIssueFactories(sources: readonly ts.SourceFile[]): Set<string> {

@@ -51,6 +51,7 @@ describe("an agent decision is a row of the run's deliberation record", () => {
     );
   });
 
+  // QFAI:AC-0001-0301-04
   // QFAI:EX-0001-0301-08
   it("keeps gate verdicts, receipts, review skips and quoted delegation in the stage report, and decisions in the record", async () => {
     expect(await section(OPERATING, RECORD_SECTION)).toMatch(/what it and the reports hold/i);
@@ -99,6 +100,7 @@ describe("an agent decision is a row of the run's deliberation record", () => {
     );
   });
 
+  // QFAI:AC-0001-0301-02
   // QFAI:EX-0001-0301-04
   it("commits the run's record in the commit verify-commit makes", async () => {
     expect(await section("step/verify-commit/STEP.md", "## Writes")).toMatch(
@@ -115,6 +117,7 @@ describe("an agent decision is a row of the run's deliberation record", () => {
 });
 
 describe("where each stage reads deliberation records", () => {
+  // QFAI:AC-0001-0299-01
   // QFAI:EX-0001-0299-01
   it("takes the current state from the registers, which win over a record", async () => {
     const reading = await section("rule/references/deliberation-record.md", "## Reading a record");
@@ -142,6 +145,7 @@ describe("where each stage reads deliberation records", () => {
     );
   });
 
+  // QFAI:AC-0001-0299-02
   // QFAI:EX-0001-0299-03
   it("searches the records for a turned-down option before an agent decision, and puts a match to the user", async () => {
     for (const [file, heading] of [
@@ -160,6 +164,7 @@ describe("where each stage reads deliberation records", () => {
     );
   });
 
+  // QFAI:AC-0001-0301-05
   // QFAI:EX-0001-0301-09
   it("takes the prototype's direction from DESIGN.md and the UI contracts and opens no record", async () => {
     const inputs = await section("skill/qfai-prototyping/SKILL.md", "## Inputs Priority");

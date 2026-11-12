@@ -61,3 +61,5 @@ the next one against.
   Because: the lane this entry adds holds this repository's own `.qfai/assistant/VERSION` to the package version; in an adopter's project `qfai validate` checks it.
 - SHIPPED-CI: not-applicable for package.json
   Because: the guard this change removes held this repository's review-profile catalogue to its plans; the package ships no review profiles any more, and the shipped templates never ran it.
+- SHIPPED-CI: not-applicable for package.json
+  Because: the `check-pack-locations` lane this change removes held discussion packs in this repository to their directories; the package ships no discussion pack any more, and the shipped templates never ran this repository-only lane.
