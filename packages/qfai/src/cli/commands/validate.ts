@@ -271,6 +271,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-VIS-*",
   ],
   "diagram-budget": ["QFAI-FLOW-006"],
+  "deliberation-record": ["QFAI-DELIB-001"],
   "discussion-citations": ["QFAI-DPACK-012"],
   "research-summary": ["QFAI-RESEARCH-*"],
   "canonical-uix": [
@@ -383,6 +384,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   verify: FULL_GATE_GROUPS,
   discussion: [
     "discussion",
+    "deliberation-record",
     "discussion-citations",
     "diagram-budget",
     "research-summary",
@@ -393,6 +395,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "story-structure",
     "diagram-budget",
     "document-schema",
+    "deliberation-record",
     "story-contract-index",
     "design-contract-readiness",
     "sdd",
@@ -1178,6 +1181,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
+  "QFAI-DELIB-001":
+    "Each deliberation record directly under `paths.deliberationDir` holds an `Interview` and an `Agent decisions` section, and each table in them has the columns Background, Option 1, Option 2, Option 3, Option 4 (other) and Chosen option number, in that order, with six cells per row.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
@@ -1529,6 +1534,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Rewrite the row under its ID in the short form: the decision and its reason in one to three sentences, with the detail where it already lives.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
+  "QFAI-DELIB-001":
+    "Add the missing section, or rewrite the named table header or row in the six-column shape the deliberation record template shows. A record is never edited after it is committed: fix it in the run that wrote it.",
   "QFAI-DOCSCHEMA-002":
     "Install the qfai package with its dependencies, so @jackchuka/mdschema is present, then rerun validate.",
   // The finding already names the offending key and the release the window

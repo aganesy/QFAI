@@ -2,6 +2,7 @@
 // Canonical validators — production path
 // ---------------------------------------------------------------------------
 
+export { validateDeliberationRecords } from "./deliberationRecord.js";
 export { validateDiagramBudget } from "./diagramBudget.js";
 export { validateDiscussionCitations } from "./discussionCitations.js";
 export { validateDiscussionPackReadiness } from "./discussionPack.js";

@@ -318,6 +318,27 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0033-11
+  it("leaves a deliberation record trackable after init on a repository with no .gitignore", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await execFile("git", ["init"], { cwd: root });
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const relativePath = ".qfai/deliberation/20261112043225-example.md";
+      await mkdir(path.join(root, ".qfai", "deliberation"), { recursive: true });
+      await writeFile(path.join(root, relativePath), "# Record\n");
+
+      const result = spawnSync("git", ["check-ignore", "--", relativePath], {
+        cwd: root,
+        encoding: "utf-8",
+      });
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe("");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("does not duplicate QFAI entries on repeated init", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

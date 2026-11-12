@@ -14,6 +14,8 @@ export type QfaiPaths = {
   contractsDir: string;
   specsDir: string;
   discussionDir: string;
+  /** Where the per-run deliberation records live, read with `\` taken as `/`. */
+  deliberationDir: string;
   outDir: string;
   skillsDir: string;
   srcDir: string;
@@ -207,6 +209,7 @@ export const defaultConfig: QfaiConfig = {
     contractsDir: ".qfai/spec/03_contract",
     specsDir: ".qfai/spec",
     discussionDir: ".qfai/discussion",
+    deliberationDir: ".qfai/deliberation",
     outDir: ".qfai/report",
     skillsDir: ".qfai/assistant/skill",
     srcDir: "src",
@@ -447,6 +450,13 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
       raw.discussionDir,
       base.discussionDir,
       "paths.discussionDir",
+      configPath,
+      issues,
+    ),
+    deliberationDir: readTreeDirString(
+      raw.deliberationDir,
+      base.deliberationDir,
+      "paths.deliberationDir",
       configPath,
       issues,
     ),

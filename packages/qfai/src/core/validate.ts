@@ -53,6 +53,7 @@ import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
 import { validateDiagramBudget } from "./validators/diagramBudget.js";
 import { validateDiscussionCitations } from "./validators/discussionCitations.js";
+import { validateDeliberationRecords } from "./validators/deliberationRecord.js";
 import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
@@ -694,6 +695,10 @@ async function runStoryProfileValidators(
     ...(await timed(timings, "story-contract-index", () =>
       validateStoryTreeContractReferences(root, config, model),
     )),
+    // `verify` and `full` get the record-layout check from the discussion set.
+    ...(standalone
+      ? await timed(timings, "deliberation-record", () => validateDeliberationRecords(root, config))
+      : []),
     ...(standalone
       ? await timed(timings, "policy-placeholders", () =>
           validateStoryPolicyPlaceholders(root, config),
@@ -836,6 +841,9 @@ async function runDiscussionValidators(
       : await timed(timings, "root-design-md-parse", () =>
           validateRootDesignMdParseOutsideReadiness(root, config),
         )),
+    ...(await timed(timings, "deliberation-record", () =>
+      validateDeliberationRecords(root, config),
+    )),
     ...(await timed(timings, "discussion-mermaid", () => validateDiscussionMermaid(root))),
     ...(await timed(timings, "design-direction-proposal", () =>
       validateDesignDirectionProposal(root, config),
