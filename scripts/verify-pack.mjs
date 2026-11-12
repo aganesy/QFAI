@@ -721,6 +721,9 @@ for (const policyFile of policyFiles) {
     return fixtureValues.get(placeholder);
   };
   const after = before
+    // The Surface row takes one value from a closed set, so it is filled with
+    // a member of that set rather than with free text.
+    .replace(/^(\|[ \t]*Surface[ \t]*\|[ \t]*`)<[^<>\n]+>`/m, "$1cli`")
     .replace(/<(?!\/|!)[^<>\n]+>/g, fixtureValue)
     .replace(/\b(?:TODO|TBD)\b/g, () => fixtureValue("TODO"));
   if (after === before) {
