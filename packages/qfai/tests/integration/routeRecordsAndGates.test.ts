@@ -26,7 +26,7 @@ async function stepNames(): Promise<string[]> {
 describe("a route outside the discussion stage writes no grilling record", () => {
   // QFAI:AC-0001-0223-02
   // QFAI:EX-0001-0223-09
-  it("keeps the record to the discussion stage and the choice to the final report", async () => {
+  it("keeps the grilling record to the discussion stage and the choice to the deliberation record", async () => {
     const record = flat(await read("step/common-grilling-record/STEP.md"));
     expect(record).toContain("Only the discussion stage writes this record.");
     expect(record).toContain("reports what it settled in its final report");
@@ -43,12 +43,14 @@ describe("a route outside the discussion stage writes no grilling record", () =>
     expect(baseline).toContain(
       "A stage that fans work out to agents in parallel records the fan-out in this table",
     );
-    expect(baseline).toContain("**The stage's final report is the record.**");
+    expect(baseline).toContain("**The run's deliberation record is the record.**");
 
     const article = flat(await read("rule/constitution.md"))
       .split("## Article IX")[1]
       ?.split("## Article X")[0];
-    expect(article).toContain("Nothing is recorded beyond the stage's final report.");
+    expect(article).toContain(
+      "A decision the agents take is an Agent decisions row of the run's deliberation record, and no report lists it.",
+    );
   });
 });
 

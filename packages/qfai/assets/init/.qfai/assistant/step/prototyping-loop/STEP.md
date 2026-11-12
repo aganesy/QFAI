@@ -228,7 +228,9 @@ recommends only as `.agents/rules/reply-forms.md` § 1 permits.
 Record the answer in `.qfai/prototype/grilling.md` under `## Session`,
 **replacing any row with the same `Scope` and decision rather than adding beside
 it, and removing its row from `## Escalated`** — the file is the current state
-of the tree, not its history.
+of the tree, not its history. The history is the run's deliberation record:
+the question and its answer are one Interview row there, and each decision the
+resumed session adopts is an Agent decisions row.
 
 How the session ends decides the route:
 

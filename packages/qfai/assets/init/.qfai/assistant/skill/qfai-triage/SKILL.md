@@ -39,11 +39,18 @@ person's reported result.
 - The request, as it was reported, and any item it names.
 - The project's documents, code and history, read only.
 - `.qfai/assistant/rule/*`.
+- Before you take an agent decision, search the option cells of the deliberation
+  records and the `Declined:` rows of `decisions.md` for the option you are about
+  to choose, as `.qfai/assistant/rule/references/deliberation-record.md` says. Read only the rows that
+  match. A choice whose option was turned down before goes to the user, or is
+  registered as an open question under a no-question mode.
 
 Every step follows `.qfai/assistant/rule/shared-skill-operating-baseline.md`
 and `.qfai/assistant/rule/shared-skill-delegation-baseline.md`. Questions to
 the user follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+A step whose `What it writes` says "No file git tracks" still writes the run's
+deliberation record when it asks the user a question or takes an agent decision.
 
 ## Steps
 

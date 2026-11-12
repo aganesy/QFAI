@@ -27,7 +27,8 @@ principles every run keeps are
 `.qfai/assistant/skill/qfai-verify/references/articles.md`.
 
 A discussion pack is not a verification input. Verify reads normalized specs,
-contracts and evidence only.
+contracts and evidence only. It opens no deliberation record: no file under
+`paths.deliberationDir` is read.
 
 ## Writes
 

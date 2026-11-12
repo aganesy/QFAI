@@ -22,6 +22,7 @@
    - `<paths.specsDir>/decisions.md`
 
    Do not use discussion-pack artifacts as verification inputs. Verify reads normalized specs, contracts, tests and code only.
+   Open no file under `paths.deliberationDir`: a deliberation record is not an input.
 
 4. Inspect repo conventions:
    - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions

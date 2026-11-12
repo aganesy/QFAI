@@ -10,7 +10,7 @@ Feature: Agents read deliberation records only where they must
     When an agent needs the current specification, a settled decision or an open question
     Then it reads the story tree and the two registers, and no record
     And where a record disagrees with them, the registers win and the record is left unchanged
-    And an implement or verify stage reads no record
+    And an implement, verify or prototyping stage reads no record
 
   # AC-0001-0299-02
   Scenario: A turned-down option is looked up before an agent decides

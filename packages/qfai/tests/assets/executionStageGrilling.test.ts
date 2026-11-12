@@ -35,7 +35,7 @@ describe.each(TREES)("%s — the execution stages stop on detection", (tree) => 
     return section?.[1] ?? "";
   };
 
-  it("stops rather than deciding alone, and records nothing beyond the report", async () => {
+  it("stops rather than deciding alone, and records its decisions only in the deliberation record", async () => {
     const text = await article();
     expectPhrase(text, "**Stop on detection.**");
     expectPhrase(text, "stop rather than deciding alone");
@@ -46,7 +46,10 @@ describe.each(TREES)("%s — the execution stages stop on detection", (tree) => 
     );
     expectPhrase(text, ".agents/rules/grilling.md#explicit-delegation-for-a-discussion");
     expectPhrase(text, "without it, ask when permitted or register it open");
-    expectPhrase(text, "Nothing is recorded beyond the stage's final report.");
+    expectPhrase(
+      text,
+      "A decision the agents take is an Agent decisions row of the run's deliberation record, and no report lists it.",
+    );
     expect(unwrap(text)).not.toContain("grilling session");
   });
 

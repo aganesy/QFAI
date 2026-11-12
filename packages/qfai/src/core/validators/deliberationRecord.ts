@@ -129,14 +129,12 @@ function collectTables(lines: Line[]): Table[] {
 }
 
 function checkTable(file: string, section: string, table: Table): Issue[] {
-  const header = table.header;
-  const headerDefect = describeHeaderDefect(header);
-  if (headerDefect !== null) {
-    // A wrong header makes every row's cell count follow it, so only the
-    // header is reported: one fix, one finding.
-    return [defect(file, `${file}: the \`${section}\` table header ${headerDefect}.`)];
-  }
-  return table.rows
+  const headerDefect = describeHeaderDefect(table.header);
+  const headerIssues =
+    headerDefect === null
+      ? []
+      : [defect(file, `${file}: the \`${section}\` table header ${headerDefect}.`)];
+  const rowIssues = table.rows
     .filter((row) => row.cells.length !== DELIBERATION_COLUMNS.length)
     .map((row) =>
       defect(
@@ -144,6 +142,7 @@ function checkTable(file: string, section: string, table: Table): Issue[] {
         `${file}: the \`${section}\` table row at line ${row.number} has ${row.cells.length} cells; it needs ${DELIBERATION_COLUMNS.length}.`,
       ),
     );
+  return [...headerIssues, ...rowIssues];
 }
 
 function describeHeaderDefect(header: string[]): string | null {
@@ -179,15 +178,7 @@ function splitCells(text: string): string[] {
   return body.split(/(?<!\\)\|/).map((cell) => cell.trim());
 }
 
+/** Its fix text is the `QFAI-DELIB-001` entry of the validate fix catalogue. */
 function defect(file: string, message: string): Issue {
-  return issue(
-    CODE,
-    message,
-    "error",
-    file,
-    RULE,
-    undefined,
-    "canonical",
-    `Give the record an \`Interview\` and an \`Agent decisions\` section, and give each table in them exactly the columns ${DELIBERATION_COLUMNS.map((column) => `\`${column}\``).join(", ")}, in that order, with six cells in every row.`,
-  );
+  return issue(CODE, message, "error", file, RULE);
 }

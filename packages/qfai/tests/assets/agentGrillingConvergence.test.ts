@@ -51,15 +51,15 @@ describe("a grilling session between agents has an end", () => {
       );
       expectPhrase(content, "the ones\nthe agents agreed on and the ones still open alike");
       expectPhrase(content, "A third round is never\nstarted");
-      // A disagreement is kept, not averaged, and the user sees every adopted
-      // decision without being stopped for any.
+      // A disagreement is kept, not averaged, and every adopted decision is
+      // recorded without the user being stopped for any.
       expectPhrase(
         content,
         "the recommendation is still taken, and each\nposition is recorded beside it with whose it is",
       );
       expectPhrase(
         content,
-        "The stage reports every adopted\ndecision at its end without waiting for an answer",
+        "Every adopted decision is an Agent decisions row of the run's deliberation record, written without waiting for an answer, and no report lists it.",
       );
       expectPhrase(content, "overturns one through a specification change or a rerun");
     });

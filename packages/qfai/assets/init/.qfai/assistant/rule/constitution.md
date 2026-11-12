@@ -245,7 +245,8 @@ Settle it between the agents. A critical decision needs an actual user answer
 or recorded applicable authorization under
 `.agents/rules/grilling.md#explicit-delegation-for-a-discussion`; without it,
 ask when permitted or register it open. A contradiction with the spec is
-critical. Nothing is recorded beyond the stage's final report.
+critical. A decision the agents take is an Agent decisions row of the run's
+deliberation record, and no report lists it.
 
 **Only one outcome is the Drift Protocol's.**
 

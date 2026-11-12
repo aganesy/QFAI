@@ -46,8 +46,9 @@ The completion report names:
 
 - every blocking finding, layout anti-pattern and `DESIGN.md` violation the
   latest review still lists;
-- every decision a session adopted, from the `## Session` rows of
-  `.qfai/prototype/grilling.md`, with why each was taken;
 - in a scoped run, the scope the user confirmed.
+
+It lists no decision a session adopted: each is an Agent decisions row of the
+run's deliberation record.
 
 It does not wait for an answer.

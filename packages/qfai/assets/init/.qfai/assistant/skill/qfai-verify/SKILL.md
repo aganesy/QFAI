@@ -33,6 +33,8 @@ first.
 - The scope: `full` by default, or `prototyping` for the prototyping profile
   alone. `verify-context` fixes it.
 - The change, and the story tree, contracts, tests and evidence it touches.
+- No deliberation record. This stage opens no file under `paths.deliberationDir`;
+  the story tree, `decisions.md` and `open-questions.md` hold the current state.
 
 The run is reported in the stage report, and its verdict is
 `.qfai/report/verify.json`.
@@ -94,8 +96,9 @@ the owner phase (`/qfai-sdd`) as an advisory / proposed specification change per
 Questions about this skill's own inputs or settings stay in its own output for
 the user to answer. This skill does not write `open-questions.md`.
 
-The completion message lists each decision the agents adopted, with its
-reason and any disagreeing position. None of them is put as a question. Ask for
+Each decision the agents adopted is an Agent decisions row of the run's
+deliberation record, with its reason and any disagreeing position. The
+completion message does not list them. None of them is put as a question. Ask for
 the next action only when proceeding requires the user's answer, as
 `.agents/rules/user-questions.md` § 6 sets out. A completion-only report needs
 no question. Under a no-question mode, list any remaining actions instead.

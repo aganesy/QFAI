@@ -22,7 +22,9 @@ decision to the user through the structured question tool before
 changing anything that depends on it. A decision is critical when it contradicts a
 specification, a contract or a recorded decision, cannot be taken back, or
 rests on product intent nothing written states. Take every other decision
-yourself, ask nothing, and list it with its reason in the final report.
+yourself and ask nothing. Write each agent decision, with its reason, as an
+Agent decisions row of the run's deliberation record; the final report does
+not list it.
 
 ## Branch point
 
