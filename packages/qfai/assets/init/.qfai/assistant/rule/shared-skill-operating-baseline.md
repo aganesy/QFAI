@@ -288,6 +288,12 @@ work order's target names the flow, so the skill does not ask for it. With no
 binding, the flow stays `hard-required`: a direct invocation with no flow it
 can resolve stops at preflight.
 
+## Deliberation Record
+
+Read `.qfai/assistant/rule/references/deliberation-record.md` when the run asks the user a question, takes a decision that no rule or convention settles, or, outside an implement or verify stage, is about to take a decision itself.
+It holds where the record goes, its rows, and when a record is read. An implement or verify stage reads no record.
+Start a record from `.qfai/assistant/rule/references/deliberation-record-template.md`.
+
 ## Rejected Option Guard
 
 - Do not reintroduce an option whose row in `<paths.specsDir>/decisions.md` has Content opening `Declined:`, or `Declined change request:` in a row written before change requests were retired.

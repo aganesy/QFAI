@@ -29,6 +29,7 @@ function config(primaryUiContract?: string): QfaiConfig {
       contractsDir: ".qfai/spec/03_contract",
       specsDir: ".qfai/spec",
       discussionDir: ".qfai/discussion",
+      deliberationDir: ".qfai/deliberation",
       outDir: ".qfai/out",
       skillsDir: ".qfai/assistant/skill",
       srcDir: "src",
