@@ -181,8 +181,10 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
   and adjust `qfai.config.yaml` accordingly (especially `testFileGlobs`).
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
-- **qfai-discussion**: Run a structured discussion that settles scope and open questions, and record
-  its outcome in a tracked deliberation record under `paths.deliberationDir` (`.qfai/deliberation/`).
+- **qfai-discussion**: Research and interview the user to settle the scope of an idea. It writes the
+  questions, answers and agent decisions to the run's deliberation record under
+  `paths.deliberationDir` (`.qfai/deliberation/` by default), a tracked memo nothing cites, and the
+  questions it leaves open to `open-questions.md`.
 - **qfai-sdd**: Triage requirements against the existing story tree. Write
   policy, business flows, stories with AC and EX, then enforcing contracts with
   BR. Record decisions that meet the recording test (hard to reverse,

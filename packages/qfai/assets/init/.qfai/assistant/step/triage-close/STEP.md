@@ -55,7 +55,8 @@ Two routes let this step send the request on instead of closing it:
   `info-received` with a new extraction of the request that includes them, so
   the decision rules route it again.
 - After a decision to accept a proposal: report the outcome `adopted`, naming
-  the route that builds it.
+  the route that builds it. The run that route starts writes a record of
+  its own; this run's record stays as this step committed it.
 
 Any other route closes here.
 
