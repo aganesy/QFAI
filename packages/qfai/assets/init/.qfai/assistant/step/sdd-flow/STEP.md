@@ -43,8 +43,9 @@ states.
    the first write, and list each decision it adopted in the final report.
 2. Write each fact once across `01_policy/objective.md`, `initiative.md`,
    `principle.md` and `03_contract/tech.md`.
-3. Write `tech.md` from its template: the stack in `## Stack`, Runtime and
-   Platform rows included; the layers in `## Architecture`; each runtime
+3. Write `tech.md` from its template: the stack in `## Stack`, Runtime,
+   Platform and Surface rows included, Surface naming the surfaces the product
+   targets from `web`, `mobile`, `desktop`, `mixed`, `cli` and `non-ui`; the layers in `## Architecture`; each runtime
    dependency with its reason in `## Dependencies`; and the quality-gate
    commands, one labelled item each, only in the Standard commands section of
    `tech.md`. Other documents point there. `tech.md` holds no rules and no
@@ -72,14 +73,17 @@ states.
    records history.
 5. Carry the selected discussion pack into policy:
 
-   | Discussion pack                                        | Story tree                                     |
-   | ------------------------------------------------------ | ---------------------------------------------- |
-   | `05_Scope.md` success criteria                         | `objective.md` `## Success criteria` rows      |
-   | `05_Scope.md` out of scope                             | `objective.md` `## Non-goals`                  |
-   | `08_Glossary.md` terms and abbreviations               | `glossary.md` `## Terms` rows                  |
-   | `09_Constraints.md` technical and operational          | `constraint.md` technical and operational rows |
-   | `09_Constraints.md` legal, budget and timeline entries | `constraint.md` `## Business Constraints` rows |
-   | A technical constraint that is a layer boundary        | `tech.md` `## Architecture` rows               |
+   | Discussion pack                                  | Story tree                                                 |
+   | ------------------------------------------------ | ---------------------------------------------------------- |
+   | `05_Scope.md` success criteria                   | `objective.md` `## Success criteria` rows                  |
+   | `05_Scope.md` out of scope                       | `objective.md` `## Non-goals`                              |
+   | `08_Glossary.md` terms and abbreviations         | `glossary.md` `## Terms` rows                              |
+   | `09_Constraints.md` technical and operational    | `constraint.md` technical and operational rows             |
+   | `09_Constraints.md` budget and timeline entries  | `constraint.md` `## Business Constraints` rows             |
+   | `09_Constraints.md` legal and compliance entries | `constraint.md` `## Legal and Compliance Constraints` rows |
+   | `07_NFR.md` product-wide quality targets         | `constraint.md` `## Quality targets` rows                  |
+   | `01_Context.md` risks                            | `initiative.md` `## Risks` rows                            |
+   | A technical constraint that is a layer boundary  | `tech.md` `## Architecture` rows                           |
 
    A row takes the next ID of its section, which is its place in the table,
    not the pack's ID. It keeps only the columns its template has, in plain

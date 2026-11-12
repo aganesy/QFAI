@@ -15,7 +15,7 @@ structure:
       - heading:
           pattern: "^## Stack$"
           regex: true
-        description: One row per component. Runtime and Platform are required.
+        description: One row per component. Runtime, Platform and Surface are required; Surface names the surfaces the product targets, from web, mobile, desktop, mixed, cli and non-ui.
         allow_additional: false
         tables:
           - min: 1
@@ -25,6 +25,8 @@ structure:
           - pattern: '(?m)^\|[ \t]*Runtime[ \t]*\|'
             regex: true
           - pattern: '(?m)^\|[ \t]*Platform[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^\|[ \t]*Surface[ \t]*\|'
             regex: true
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'

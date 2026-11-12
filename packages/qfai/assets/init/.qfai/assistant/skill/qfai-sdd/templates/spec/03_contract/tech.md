@@ -6,6 +6,7 @@
 | ------------------- | ------------------------------------------ |
 | Runtime             | `<language runtime and supported version>` |
 | Platform            | `<supported operating systems>`            |
+| Surface             | `<surfaces the product targets>`           |
 | CI                  | `<CI service>`                             |
 | Language            | `<language and version>`                   |
 | Package manager     | `<package manager and version>`            |

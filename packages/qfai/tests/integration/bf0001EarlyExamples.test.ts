@@ -138,6 +138,16 @@ describe("BF-0001 init preserves project content", () => {
           "constraint.md",
         ]),
       );
+      const policy = (name: string): Promise<string> =>
+        readFile(path.join(spec, "01_policy", name), "utf8");
+      expect(await policy("initiative.md")).toMatch(/^## Risks$/m);
+      expect((await policy("constraint.md")).match(/^## .*$/gm)).toEqual([
+        "## Technical Constraints",
+        "## Operational Constraints",
+        "## Business Constraints",
+        "## Quality targets",
+        "## Legal and Compliance Constraints",
+      ]);
       expect(await readdir(path.join(spec, "03_contract"))).toEqual(
         expect.arrayContaining(["contracts.md", "tech.md", "api", "db", "ui", "cli"]),
       );
