@@ -26,6 +26,7 @@ async function writing(): Promise<string> {
 }
 
 describe("when and where a run writes its record", () => {
+  // QFAI:AC-0001-0298-01
   // QFAI:EX-0001-0298-01
   it("writes one timestamped, slugged file under the default deliberation directory when the run asks a question", async () => {
     expect(defaultConfig.paths.deliberationDir).toBe(".qfai/deliberation");
@@ -61,6 +62,7 @@ describe("when and where a run writes its record", () => {
     expect(template).toMatch(/^### Agent decisions$/m);
   });
 
+  // QFAI:AC-0001-0301-01
   // QFAI:EX-0001-0301-01
   it("holds a question and agent decisions of the specification and implement stages in one file", async () => {
     const text = await writing();
@@ -75,6 +77,7 @@ describe("when and where a run writes its record", () => {
 });
 
 describe("what an Interview row holds", () => {
+  // QFAI:AC-0001-0298-03
   // QFAI:EX-0001-0298-05
   it("puts the offered options in Options 1 to 3 and the picked one's number in the chosen cell", async () => {
     expect(await writing()).toMatch(
@@ -104,6 +107,7 @@ describe("what an Interview row holds", () => {
 });
 
 describe("what an Agent decisions row holds", () => {
+  // QFAI:AC-0001-0298-04
   // QFAI:EX-0001-0298-09
   it("writes a row with at least three options for a choice no contract settles", async () => {
     const text = await writing();
@@ -136,6 +140,7 @@ describe("what an Agent decisions row holds", () => {
 });
 
 describe("a record is a memo", () => {
+  // QFAI:AC-0001-0298-05
   // QFAI:EX-0001-0298-12
   it("cites no ID, and nothing cites it", async () => {
     expect(await writing()).toMatch(/a record has no ID, cites no ID, and nothing cites it/i);
@@ -161,6 +166,7 @@ describe("a record is a memo", () => {
     );
   });
 
+  // QFAI:AC-0001-0298-06
   // QFAI:EX-0001-0298-15
   it("is written in the project's stated document language, otherwise in the user's", async () => {
     expect(await writing()).toMatch(

@@ -27,6 +27,7 @@ async function put(root: string, file: string, content: string): Promise<void> {
 }
 
 describe("the Graphify document corpus", () => {
+  // QFAI:AC-0001-0234-08
   // QFAI:EX-0001-0234-19
   it("holds no file under the deliberation directory, so no query result can name one", async () => {
     const fixture = await documentAnalysisFixture();
@@ -78,6 +79,7 @@ describe("an unparseable root DESIGN.md", () => {
     return root;
   }
 
+  // QFAI:AC-0001-0042-14
   // QFAI:EX-0001-0042-16
   it("is reported once by verify and by full, with or without a UI contract", async () => {
     for (const withScreen of [true, false]) {

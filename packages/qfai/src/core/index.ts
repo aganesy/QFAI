@@ -8,15 +8,6 @@ export * from "./validate.js";
 export * from "./version.js";
 export * from "./validators/contracts.js";
 
-// Canonical surface type detection (shared truth)
-export {
-  DISCUSSION_UI_BEARING_SURFACES,
-  DISCUSSION_NON_UI_SURFACES,
-  VISUAL_BROWSER_SURFACES,
-  isDiscussionUiBearingSurfaceType,
-  isNonUiDiscussionSurface,
-  requiresVisualBrowserEvidence,
-} from "./detection/surfaceType.js";
 // DESIGN.md brand SSOT primitives, exposed on the public `qfai` entry so
 // consumer projects can parse and check root `DESIGN.md` without reaching
 // into the monorepo source layout.

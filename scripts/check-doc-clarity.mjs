@@ -51,8 +51,6 @@ const EXCLUDE_PREFIX = [
   "packages/qfai/node_modules/",
   ".qfai/review/",
   ".qfai/report/",
-  ".qfai/discussion/",
-  ".qfai/discussion_archive/",
   ".qfai/decisions/",
   ".qfai/evidence/",
   // Generated mirrors: a finding here would point at the wrong file to

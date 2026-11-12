@@ -95,7 +95,7 @@ describe("the timings line of a UI/UX group over its budget", () => {
       );
       const result = await validateProject(root, undefined, { profile: "prototyping" });
       const parts = (result.timings?.uiuxParts ?? []).map((part) => part.ms);
-      expect(parts).toHaveLength(8);
+      expect(parts).toHaveLength(6);
       expect(parts).toEqual([...parts].sort((left, right) => right - left));
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -183,7 +183,7 @@ describe("the --timings line of each finding family", () => {
       const overlapping = (asked.familyTimings?.overlapping ?? []).map((entry) => entry.family);
       expect(sequential).toContain("uiux");
       expect(sequential).toContain("integration-surface");
-      expect(overlapping).toHaveLength(8);
+      expect(overlapping).toHaveLength(6);
       expect(overlapping).toContain("DT");
       expect(overlapping).toContain("html mock");
       const ms = (asked.familyTimings?.sequential ?? []).map((entry) => entry.ms);

@@ -68,6 +68,7 @@ async function findings(): Promise<Issue[]> {
 }
 
 describe("QFAI-DELIB-001 accepts a record of the stated layout", () => {
+  // QFAI:AC-0001-0302-01
   // QFAI:EX-0001-0302-01
   it("raises nothing on a record with both sections and six-column tables", async () => {
     await put(RECORD, VALID);
@@ -119,6 +120,7 @@ describe("QFAI-DELIB-001 accepts a record of the stated layout", () => {
 });
 
 describe("QFAI-DELIB-001 reports each layout defect", () => {
+  // QFAI:AC-0001-0302-02
   // QFAI:EX-0001-0302-05
   it("names the file, Interview and the missing Option 4 (other)", async () => {
     await put(RECORD, LACKS_OPTION_4);
@@ -241,6 +243,7 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
     expect(await findings()).toEqual([]);
   });
 
+  // QFAI:AC-0001-0302-03
   // QFAI:EX-0001-0302-10
   it("raises nothing with no directory and with a directory of no Markdown file", async () => {
     expect(await findings()).toEqual([]);
@@ -272,6 +275,7 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
 });
 
 describe("QFAI-DELIB-001 runs in the stated profiles", () => {
+  // QFAI:AC-0001-0302-04
   // QFAI:EX-0001-0302-12
   it("is reported once in discussion, sdd, full and verify, and not in the other five", async () => {
     await put(RECORD, LACKS_OPTION_4);
@@ -287,6 +291,7 @@ describe("QFAI-DELIB-001 runs in the stated profiles", () => {
     }
   });
 
+  // QFAI:AC-0001-0302-05
   // QFAI:EX-0001-0302-13
   it("reads the directory paths.deliberationDir names, with a backslash taken as a separator", async () => {
     await put(path.join("docs", "delib", "r.md"), LACKS_OPTION_4);
@@ -330,6 +335,7 @@ describe("the shipped deliberation record template", () => {
     "deliberation-record-template.md",
   );
 
+  // QFAI:AC-0001-0298-02
   // QFAI:EX-0001-0298-04
   it("holds Subject, Interview and Agent decisions, and a record written from it passes the layout check", async () => {
     const text = await readFile(template, "utf-8");
@@ -341,6 +347,7 @@ describe("the shipped deliberation record template", () => {
     expect(await findings()).toEqual([]);
   });
 
+  // QFAI:AC-0001-0299-03
   // QFAI:EX-0001-0299-04
   it("opens with a note that the record is history, keeps twists, is not the current state and is not read end to end", async () => {
     const text = await readFile(template, "utf-8");

@@ -49,7 +49,6 @@ export default [
       name: "integration",
       include: [
         "tests/integration/**/*.test.ts",
-        "tests/detection/**/*.test.ts",
         "tests/skill/**/*.test.ts",
         "tests/codex/**/*.test.ts",
       ],

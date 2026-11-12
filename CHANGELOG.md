@@ -39,9 +39,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     holds one table, which may have no rows. The `tech.md` component table
     gains a required `Surface` row holding one of `web`, `mobile`, `desktop`,
     `mixed`, `cli` or `non-ui`.
-  - `qfai discussion list` and `qfai discussion use`, the active-pack pointer,
-    `paths.discussionDir`, the managed `.qfai/discussion/*` ignore line and the
-    `QFAI-DPACK-*` and `QFAI-VIS-*` findings are removed.
+  - `qfai discussion list` and `qfai discussion use`, the active-pack pointer
+    (`.qfai/state.json`), `paths.discussionDir`, the pack-only
+    `uiux.requireResearchSummary`, `uiux.competitive_refs_min` and
+    `uiux.catalogue_refs_min` keys, the managed `.qfai/discussion/*` ignore line
+    and the `QFAI-DPACK-*`, `QFAI-VIS-*`, `QFAI-RESEARCH-*`, `QFAI-TREND-*`,
+    `QFAI-CLASSIFICATION-*`, `QFAI-THREELAYER-*`, `QFAI-SCREEN-*`,
+    `QFAI-SIDECAR-*`, `QFAI-DIRECTION-*`, `QFAI-OQ-*`, `QFAI-MOCKHREF-*` and
+    `R-PACK-LOCATION-DRIFT` findings are removed. The discussion-surface
+    classification exports leave the `qfai` entry, and validate run logs no
+    longer carry `inputs.discussion_pack`. Mermaid, HTML mock and diagram-budget
+    checks read only `paths.specsDir`.
   - The Graphify document corpus leaves out `.qfai/deliberation/`, so no
     documents query returns a record.
 

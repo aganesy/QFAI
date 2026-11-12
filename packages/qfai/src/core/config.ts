@@ -13,7 +13,6 @@ export type OutputFormat = "text" | "github";
 export type QfaiPaths = {
   contractsDir: string;
   specsDir: string;
-  discussionDir: string;
   /** Where the per-run deliberation records live, read with `\` taken as `/`. */
   deliberationDir: string;
   outDir: string;
@@ -100,14 +99,6 @@ export type QfaiUiuxConfig = {
   designTokensDir?: string;
   htmlMockTimeout?: number;
   qualityProfile?: "strict" | "high" | "default";
-  requireResearchSummary?: boolean;
-  competitive_refs_min?: number;
-  /**
-   * Minimum complete component-catalogue references a UI-bearing pack must
-   * register. Absent means the count is not gated; entries that are
-   * registered are still held to the same three fields.
-   */
-  catalogue_refs_min?: number;
   /**
    * Repository-relative POSIX globs of the paths that render a user-visible
    * surface. An empty list states that the project renders none; an absent
@@ -191,7 +182,7 @@ export type ConfigLoadResult = {
    * so it cannot answer "was the value I depend on honoured, or silently
    * replaced by its default?". Normalization is per-key and independent,
    * so an unrelated rejection (a bad `baseBranch`, say) says nothing
-   * about `paths.discussionDir`. A caller whose correctness hinges on one
+   * about `paths.specsDir`. A caller whose correctness hinges on one
    * key reads it here and checks that key alone, rather than treating any
    * issue anywhere in the file as a reason to distrust the whole config.
    */
@@ -208,7 +199,6 @@ export const defaultConfig: QfaiConfig = {
   paths: {
     contractsDir: ".qfai/spec/03_contract",
     specsDir: ".qfai/spec",
-    discussionDir: ".qfai/discussion",
     deliberationDir: ".qfai/deliberation",
     outDir: ".qfai/report",
     skillsDir: ".qfai/assistant/skill",
@@ -446,13 +436,6 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
       issues,
     ),
     specsDir: readTreeDirString(raw.specsDir, base.specsDir, "paths.specsDir", configPath, issues),
-    discussionDir: readDirString(
-      raw.discussionDir,
-      base.discussionDir,
-      "paths.discussionDir",
-      configPath,
-      issues,
-    ),
     deliberationDir: readTreeDirString(
       raw.deliberationDir,
       base.deliberationDir,
@@ -1014,47 +997,6 @@ function normalizeUiux(
     } else {
       issues.push(
         configIssue(configPath, "uiux.qualityProfile must be one of strict|high|default."),
-      );
-    }
-  }
-  if (raw.requireResearchSummary !== undefined) {
-    if (typeof raw.requireResearchSummary === "boolean") {
-      result.requireResearchSummary = raw.requireResearchSummary;
-    } else {
-      issues.push(configIssue(configPath, "uiux.requireResearchSummary must be a boolean."));
-    }
-  }
-  if (raw.competitive_refs_min !== undefined) {
-    // Integers only. A count of references is discrete, and now that the knob
-    // is a blocking gate a fractional bound is silently rounded up by the
-    // comparison while the finding still reports the fraction — `2.5` demands
-    // three references and says "at least 2.5".
-    if (
-      typeof raw.competitive_refs_min === "number" &&
-      Number.isInteger(raw.competitive_refs_min) &&
-      raw.competitive_refs_min >= 0
-    ) {
-      result.competitive_refs_min = raw.competitive_refs_min;
-    } else {
-      issues.push(
-        configIssue(
-          configPath,
-          "uiux.competitive_refs_min must be an integer greater than or equal to 0.",
-        ),
-      );
-    }
-  }
-
-  if (raw.catalogue_refs_min !== undefined) {
-    if (
-      typeof raw.catalogue_refs_min === "number" &&
-      Number.isInteger(raw.catalogue_refs_min) &&
-      raw.catalogue_refs_min >= 0
-    ) {
-      result.catalogue_refs_min = raw.catalogue_refs_min;
-    } else {
-      issues.push(
-        configIssue(configPath, "uiux.catalogue_refs_min must be an integer of 0 or more."),
       );
     }
   }

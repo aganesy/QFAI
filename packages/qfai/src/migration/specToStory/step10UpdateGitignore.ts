@@ -1,20 +1,21 @@
 import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js";
-import { CANONICAL_TIMESTAMP_GLOB } from "../../core/packLocator.js";
 import type { MigrationContext, MigrationStep, StepPlan } from "./harness.js";
 
 const BLOCK_UPDATE = "reset the managed QFAI block";
 
+/** The 17-digit `YYYYMMDDhhmmssSSS` timestamp a 1.x record name carried, as a glob. */
+const TIMESTAMP_GLOB = "[0-9]".repeat(17);
+
 /**
  * The lines a 1.x managed block carries that the installed block does not. Every one is dropped
- * from the block. The discussion ignore line was renamed rather than dropped, so a block that
- * holds it and not its successor keeps an ignore for the discussion directory.
+ * from the block.
  */
 export const EARLIER_BLOCK_LINES: ReadonlyMap<string, string | null> = new Map([
   ["!.qfai/report/README.md", null],
   ["!.qfai/evidence/README.md", null],
   ["!.qfai/discussion/README.md", null],
   ["!.qfai/review/README.md", null],
-  [".qfai/discussion/discussion-*/", ".qfai/discussion/*"],
+  [".qfai/discussion/discussion-*/", null],
   ["!.qfai/review/review-*/", null],
   ["!.qfai/review/review-*/**", null],
   ["!.qfai/review/.legacy-packs", null],
@@ -34,10 +35,10 @@ export const EARLIER_BLOCK_LINES: ReadonlyMap<string, string | null> = new Map([
   ["!.qfai/evidence/decision-*.md", null],
   ["!.qfai/evidence/implement-*.md", null],
   ["!.qfai/evidence/sdd-*.md", null],
-  [`!.qfai/evidence/discussion-${CANONICAL_TIMESTAMP_GLOB}.md`, null],
+  [`!.qfai/evidence/discussion-${TIMESTAMP_GLOB}.md`, null],
   ["!.qfai/evidence/atdd-*.md", null],
   ["!.qfai/evidence/import-lite.md", null],
-  [`!.qfai/evidence/import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`, null],
+  [`!.qfai/evidence/import-lite-${TIMESTAMP_GLOB}.md`, null],
   ["!.qfai/evidence/coverage-depth-*.md", null],
   ["!.qfai/evidence/skeleton.md", null],
   ["!.qfai/install-provenance.json", null],

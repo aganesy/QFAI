@@ -117,6 +117,7 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     },
   );
 
+  // QFAI:AC-0002-0023-01
   // QFAI:EX-0002-0023-01
   it("lists the timestamp shapes beside the shapes the table already held", async () => {
     const rule = await readFile(

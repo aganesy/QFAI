@@ -288,7 +288,7 @@ describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted convention
   /**
    * Spawns the committed guard script with cwd inside the fixture so its
    * auto-ROOT detection falls through to ROOT="." (the proven pattern from
-   * tests/scripts/checkNoInternalVersionLeakage.test.ts).
+   * tests/integration/checkNoInternalVersionLeakage.test.ts).
    */
   function runGuard(cwd: string): GuardRun {
     const child = spawnSync("bash", [GUARD_SCRIPT_PATH], { cwd, encoding: "utf-8" });
