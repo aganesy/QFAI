@@ -88,11 +88,9 @@ A rerun that dropped it would lose the advice of every reviewer who found
 nothing blocking.
 
 **Where it goes.** The advice stays in the cycle's findings, which the next
-stage reads at its start as non-normative reference material, like the
-discussion pack. That stage gives each
-item a disposition in its own artifacts — a plan step, a spec row, an open
-question, or a line in its report saying it was read and not adopted — and
-nothing is back-propagated into the pack. What it may not do is leave an item
+stage reads at its start as non-normative reference material. That stage gives
+each item a disposition in its own artifacts — a plan step, a spec row, an open
+question, or a line in its report saying it was read and not adopted. What it may not do is leave an item
 unmentioned: a decision nobody wrote down cannot be told from an item nobody
 read.
 

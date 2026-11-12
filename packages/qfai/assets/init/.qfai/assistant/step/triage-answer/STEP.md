@@ -1,7 +1,7 @@
 ---
 name: triage-answer
 owner: qfai-triage
-purpose: "Answer the request's question, citing the documents, code or diagnosis evidence that shows the answer, without changing any tracked file."
+purpose: "Answer the request's question, citing the documents, code or diagnosis evidence that shows the answer, without changing any tracked file except the run's deliberation record and the `open-questions.md` rows the run wrote."
 requires: []
 ---
 

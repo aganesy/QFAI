@@ -123,3 +123,68 @@ describe("a route that ends without verify-commit commits only the record", () =
     );
   });
 });
+
+describe("the discussion interview runs as a grilling session", () => {
+  const interview = async (): Promise<string> =>
+    flat(await readShipped("step/discussion-interview/STEP.md"));
+  const skill = (): Promise<string> => readShipped("skill/qfai-discussion/SKILL.md");
+
+  it("reads the grilling skill as a file and cites the method rather than restating it", async () => {
+    const text = await interview();
+    expect(text).toContain(
+      "Read `.qfai/assistant/skill/qfai-grilling/SKILL.md`, then run the interview as a grilling session through that skill.",
+    );
+    expect(text).toContain("**Read the file, do not work from the name.**");
+    expect(text).toContain(
+      "If the file is absent, stop and report that `npx qfai init` installs it.",
+    );
+    expect(text).toContain(
+      "The method is `.agents/rules/grilling.md` and this step does not restate it.",
+    );
+  });
+
+  it("researches before it interviews", async () => {
+    expect(await interview()).toContain(
+      "The research findings are inputs to the session's tree, not a later fill-in",
+    );
+    expect(flat(await readShipped("step/discussion-research/STEP.md"))).toContain(
+      "before the interview starts",
+    );
+  });
+
+  it("asks the design direction inside the session, and skips the brand questions for a cli target", async () => {
+    const text = await interview();
+    expect(text).toContain(
+      "cover the design-direction decisions in `.qfai/assistant/skill/qfai-discussion/references/design-dna-intake.md` in the same session.",
+    );
+    expect(text).toContain("A `cli` target skips the brand questions");
+  });
+
+  it("puts the frontier and the closing confirmation in ask-user", async () => {
+    const policy = sectionOf(await skill(), "## Default Autopilot Policy");
+    const askUser = flat(policy.split("- ask-user:")[1]?.split("- hard-required:")[0] ?? "");
+    expect(askUser).toContain("every decision the interview puts on the frontier");
+    expect(askUser).toContain("the confirmation that closes the session");
+  });
+
+  it("lets no ending pass a missing hard-required input or assume a user-reserved decision", async () => {
+    const text = await interview();
+    expect(text).toContain(
+      "**No ending lets the stage go on while a `hard-required` input this invocation consumes is missing.**",
+    );
+    expect(text).toContain(
+      "**An interactive closure does not assume a decision some document requires the user to make and record.**",
+    );
+  });
+
+  it("covers concept, scope, stakeholders and constraints", async () => {
+    const text = await interview();
+    expect(text).toContain("The core interview for concept, scope, stakeholders and constraints.");
+    expect(text).toContain(
+      "Cover every topic in `.qfai/assistant/skill/qfai-discussion/references/discussion-coverage-checklist.md`.",
+    );
+    expect(await skill()).toMatch(
+      /\| `discussion-interview` \| [^|]+ \| Always: concept, scope, stakeholders, and constraints \|/,
+    );
+  });
+});

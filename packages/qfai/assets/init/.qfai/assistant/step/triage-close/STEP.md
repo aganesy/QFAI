@@ -1,7 +1,7 @@
 ---
 name: triage-close
 owner: qfai-triage
-purpose: "Record how a request ended and every follow-up request it found, and close it without changing any tracked file."
+purpose: "Record how a request ended and every follow-up request it found, and close it without changing any tracked file except the run's deliberation record and the `open-questions.md` rows the run wrote."
 requires: []
 ---
 
@@ -82,7 +82,7 @@ Any other route closes here.
 The reviewer, or the stage worker where the work order names none, confirms one outcome is recorded with the evidence behind it,
 every follow-up the earlier steps found is listed with its goal and reason,
 no follow-up was routed or started, and no tracked file was changed by any
-triage step. The report never says a tracked change is done. The `cleaned`
+triage step except the run's deliberation record and the `open-questions.md` rows the run wrote. The report never says a tracked change is done. The `cleaned`
 outcome confirms only the temporary cleanup's completed gate.
 
 The only tracked-file changes allowed are the run's deliberation record, the

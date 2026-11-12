@@ -1,7 +1,7 @@
 ---
 name: triage-operate
 owner: qfai-triage
-purpose: "Carry out an operation the user named on work that is already done, observe its result, and change no tracked file."
+purpose: "Carry out an operation the user named on work that is already done, observe its result, and change no tracked file except the run's deliberation record and the `open-questions.md` rows the run wrote."
 requires: []
 ---
 
