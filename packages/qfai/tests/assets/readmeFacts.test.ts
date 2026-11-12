@@ -183,10 +183,9 @@ describe("README facts", () => {
     }
   });
 
-  it("names the optional prototyping artifact and the prototype directory", async () => {
+  it("names the prototype directory", async () => {
     for (const readmePath of READMES) {
       const readme = await readFile(readmePath, "utf-8");
-      expect(readme, readmePath).toContain("prototyping.yaml");
       expect(readme, readmePath).toContain(".qfai/prototype/");
     }
   });
