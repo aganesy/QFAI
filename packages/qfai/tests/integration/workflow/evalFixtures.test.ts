@@ -689,7 +689,7 @@ it("The design-authoring seeds cover each file outcome case and build from the q
     changeRequests: seeds.map((each) =>
       Reflect.get(Object(facts(each.id).changeRequest), "status"),
     ),
-    packs: seeds.map((each) => facts(each.id).discussionPack),
+    records: seeds.map((each) => facts(each.id).deliberationRecord),
     absent,
   }).toEqual({
     ids: [
@@ -712,7 +712,7 @@ it("The design-authoring seeds cover each file outcome case and build from the q
       "DESIGN-007": "authored",
     },
     changeRequests: ["WIP", "WIP", "DONE", undefined, undefined, undefined, undefined],
-    packs: ["web", "web", "web", "web", "web-no-direction", "cli", "web"],
+    records: ["web", "web", "web", "web", "web-no-direction", "cli", "web"],
     absent: [],
   });
 }, 300_000);

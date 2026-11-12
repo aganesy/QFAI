@@ -375,8 +375,8 @@ function managedBlockEnd(
  * **Every block, not the first.** A past duplicate-append bug left some
  * projects with two managed blocks, and `removeManagedBlock` strips all of
  * them. Reading only the first meant an ignore line that lived exclusively in
- * a later block — `.qfai/state.json`, say — was deleted with that block and
- * never rebuilt, exposing local run state to the next commit. The blocks are
+ * a later block — `.qfai/review/*`, say — was deleted with that block and
+ * never rebuilt, exposing local review records to the next commit. The blocks are
  * merged in document order: the first block's ordering is preserved (which is
  * what `negationsOutrankLaterIgnores` and the last-pattern-wins semantics
  * depend on) and any line only a later block carries is appended.

@@ -42,15 +42,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - `qfai discussion list` and `qfai discussion use`, the active-pack pointer
     (`.qfai/state.json`), `paths.discussionDir`, the pack-only
     `uiux.requireResearchSummary`, `uiux.competitive_refs_min` and
-    `uiux.catalogue_refs_min` keys, the managed `.qfai/discussion/*` ignore line
-    and the `QFAI-DPACK-*`, `QFAI-VIS-*`, `QFAI-RESEARCH-*`, `QFAI-TREND-*`,
+    `uiux.catalogue_refs_min` keys, the managed `.qfai/discussion/*`,
+    `.qfai/state.json`, `*.qfai-state.tmp` and `.qfai/state.json.lock` ignore
+    lines and the `QFAI-DPACK-*`, `QFAI-VIS-*`, `QFAI-RESEARCH-*`, `QFAI-TREND-*`,
     `QFAI-CLASSIFICATION-*`, `QFAI-THREELAYER-*`, `QFAI-SCREEN-*`,
     `QFAI-SIDECAR-*`, `QFAI-DIRECTION-*`, `QFAI-OQ-*`, `QFAI-MOCKHREF-*` and
     `R-PACK-LOCATION-DRIFT` findings are removed. The discussion-surface
     classification exports leave the `qfai` entry, and validate run logs no
     longer carry `inputs.discussion_pack`. Mermaid, HTML mock and diagram-budget
     checks read only `paths.specsDir`.
-  - The Graphify document corpus leaves out `.qfai/deliberation/`, so no
+  - The Graphify document corpus leaves out `paths.deliberationDir`, so no
     documents query returns a record.
 
   Migration:
@@ -59,11 +60,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
      and `paths.deliberationDir` in `qfai.config.yaml`.
   2. Remove `paths.discussionDir` from `qfai.config.yaml`.
   3. Move anything a pack still settles into the story tree, `decisions.md`
-     or `open-questions.md`, then delete `.qfai/discussion/`.
-  4. Add `## Risks` to `initiative.md`, `## Quality targets` and
+     or `open-questions.md`.
+  4. Delete a leftover `.qfai/discussion/` directory: until it is deleted, the
+     Graphify document corpus indexes it.
+  5. Add `## Risks` to `initiative.md`, `## Quality targets` and
      `## Legal and Compliance Constraints` to `constraint.md`, each with its
      table, and a `Surface` row to the `tech.md` component table.
-  5. Replace `qfai discussion use` and the pack path in scripts with
+  6. Replace `qfai discussion use` and the pack path in scripts with
      `qfai sdd preflight --record <path>`, and read `source` from the new
      values.
 

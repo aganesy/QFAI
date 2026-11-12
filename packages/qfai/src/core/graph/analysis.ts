@@ -1,6 +1,7 @@
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { copyFile, lstat, mkdir, readdir, rm } from "node:fs/promises";
+import { loadConfig, resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import { GRAPH_VERSIONS, graphRuntimePaths, graphAnalysisRoot } from "./layout.js";
 import type { GraphProcess } from "./process.js";
@@ -141,16 +142,26 @@ const excludedDirectories = new Set([
   ".azure",
 ]);
 
-export function excludedGraphInput(relative: string): boolean {
+/** The configured `paths.deliberationDir`, relative to `root` and written with `/`. */
+export async function graphDeliberationDir(root: string): Promise<string> {
+  const { config } = await loadConfig(root);
+  return path
+    .relative(root, resolvePath(root, config, "deliberationDir"))
+    .split(path.sep)
+    .join("/");
+}
+
+export function excludedGraphInput(relative: string, deliberationDir: string): boolean {
   const parts = relative.split("/");
   const name = parts.at(-1) ?? "";
+  const lowered = relative.toLowerCase();
+  const deliberation = deliberationDir.toLowerCase();
   return (
     parts.some((part) => excludedDirectories.has(part.toLowerCase())) ||
     /^\.qfai\/(?:tools|report|evidence|review)(?:\/|$)/i.test(relative) ||
-    // Ceiling: the default `paths.deliberationDir` only, as `.qfai/report` stands for `outDir`;
-    // pass the loaded config in here once a project moves its records elsewhere.
-    /^\.qfai\/deliberation(?:\/|$)/i.test(relative) ||
-    relative.toLowerCase() === ".qfai/graph-processing.json" ||
+    lowered === deliberation ||
+    lowered.startsWith(`${deliberation}/`) ||
+    lowered === ".qfai/graph-processing.json" ||
     /^(?:\.npmrc|\.pypirc|\.netrc|\.git-credentials)$/i.test(name) ||
     /^\.env(?:\.|$)/i.test(name) ||
     /\.(?:pem|key|p12|pfx|keystore)$/i.test(name) ||
@@ -168,6 +179,7 @@ export async function mirrorGraphCorpus(
   await assertGraphStoragePath(root, destination);
   await assertIndependentAnalysis(destination);
   const files = new Set<string>();
+  const deliberationDir = await graphDeliberationDir(root);
   await visit("");
   await removeAbsent("");
 
@@ -176,7 +188,7 @@ export async function mirrorGraphCorpus(
       withFileTypes: true,
     })) {
       const next = relative ? `${relative}/${entry.name}` : entry.name;
-      if (excludedGraphInput(next) || entry.isSymbolicLink()) continue;
+      if (excludedGraphInput(next, deliberationDir) || entry.isSymbolicLink()) continue;
       if (
         scope &&
         !scope.some(

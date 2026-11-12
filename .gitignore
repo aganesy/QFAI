@@ -60,9 +60,6 @@ coverage/
 .qfai/report/*
 .qfai/evidence/*
 .qfai/review/*
-.qfai/state.json
-*.qfai-state.tmp
-.qfai/state.json.lock
 !.qfai/
 !.qfai/assistant/
 !.qfai/assistant/**

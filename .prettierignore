@@ -29,7 +29,7 @@ node_modules
 # pads every cell to the widest one, which grew a file of under 60 lines past
 # 400 KB. It keeps the compact style instead.
 .qfai/spec/open-questions.md
-# An archived pack is a frozen record, so reformatting one is churn on a
+# An archived review record is frozen, so reformatting one is churn on a
 # document nobody is editing. The markdownlint globs skip it for the same reason.
 .qfai/review_archive/**
 pnpm-lock.yaml
