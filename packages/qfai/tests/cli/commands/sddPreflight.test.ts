@@ -184,7 +184,7 @@ describe("qfai sdd preflight", () => {
       status: "blocked",
       source: null,
       selectedInputPath: null,
-      nextCommands: ["/qfai-discussion"],
+      nextCommands: ["qfai sdd preflight --record <path>"],
     });
     const stdout = sinks.out.join("\n");
     expect(stdout).toContain("ask which one");

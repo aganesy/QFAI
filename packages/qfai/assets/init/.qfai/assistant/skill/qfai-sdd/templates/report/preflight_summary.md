@@ -28,4 +28,4 @@ command does not compute can still live here.
 
 ## Next Commands
 
-- /qfai-discussion
+- <blocked only: `qfai sdd preflight --record <path>` when records exist, `qfai sdd preflight --import <path>` for an unreadable import, /qfai-discussion otherwise>

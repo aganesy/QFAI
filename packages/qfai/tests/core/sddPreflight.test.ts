@@ -86,6 +86,53 @@ describe("runSddPreflight", () => {
     });
   });
 
+  it("reads a bare record name against the deliberation directory before the root", async () => {
+    await withRoot(async (root) => {
+      const recordPath = await seedRecord(root);
+      await writeFile(path.join(root, RECORD_NAME), "# A file at the root\n", "utf-8");
+
+      const result = await runSddPreflight(root, defaultConfig, { recordPath: RECORD_NAME });
+
+      expect(result.selectedInputPath).toBe(recordPath);
+    });
+  });
+
+  it("falls back to the root for a bare name the deliberation directory lacks", async () => {
+    await withRoot(async (root) => {
+      const atRoot = path.join(root, RECORD_NAME);
+      await writeFile(atRoot, RECORD_WITH_OPEN_ROWS, "utf-8");
+
+      const result = await runSddPreflight(root, defaultConfig, { recordPath: RECORD_NAME });
+
+      expect(result.selectedInputPath).toBe(atRoot);
+    });
+  });
+
+  it("reads a name with a path separator against the root only", async () => {
+    await withRoot(async (root) => {
+      await seedRecord(root, path.join("sub", RECORD_NAME));
+
+      const result = await runSddPreflight(root, defaultConfig, {
+        recordPath: path.join("sub", RECORD_NAME),
+      });
+
+      expect(result.status).toBe("blocked");
+      expect(result.nextCommands).toEqual(["qfai sdd preflight --record <path>"]);
+    });
+  });
+
+  it("raises a deliberation directory read error other than a missing directory", async () => {
+    await withRoot(async (root) => {
+      // A file where the directory belongs: readdir fails with ENOTDIR.
+      await mkdir(path.join(root, ".qfai"), { recursive: true });
+      await writeFile(path.join(root, ".qfai", "deliberation"), "not a directory\n", "utf-8");
+
+      await expect(runSddPreflight(root, defaultConfig)).rejects.toMatchObject({
+        code: "ENOTDIR",
+      });
+    });
+  });
+
   it("reads the record from the configured deliberation directory", async () => {
     await withRoot(async (root) => {
       const recordPath = path.join(root, "notes", "records", RECORD_NAME);
@@ -135,6 +182,7 @@ describe("runSddPreflight", () => {
       expect(result.blockers).toEqual([
         "The deliberation record 20261112093000-missing.md is not a readable file.",
       ]);
+      expect(result.nextCommands).toEqual(["qfai sdd preflight --record <path>"]);
     });
   });
 
@@ -183,6 +231,7 @@ describe("runSddPreflight", () => {
       expect(result.blockers[0]).toContain(
         "Records found: 20261110080000-billing.md, 20261112093000-task-dashboard.md.",
       );
+      expect(result.nextCommands).toEqual(["qfai sdd preflight --record <path>"]);
     });
   });
 

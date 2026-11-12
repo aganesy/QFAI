@@ -385,11 +385,12 @@ flowchart LR
     `blocked` (use `--fail-on never` to report without failing); `--format json` emits the machine-readable
     result on stdout.
   - The source is the deliberation record `--record <path>` names: the run's own record, the one the work
-    order names, or the one the user names. A path is read against the project root, and a bare record name
-    against `paths.deliberationDir`. Without `--record`, the source is the imported specification
-    `--import <path>` names.
+    order names, or the one the user names. A bare record name is read against `paths.deliberationDir` first,
+    then the project root; a name with a path separator is read against the project root. Without
+    `--record`, the source is the imported specification `--import <path>` names.
   - With neither, the result is `blocked`, and the blocker lists the records under `paths.deliberationDir`
-    without choosing one. A named file that cannot be read also blocks. A record that leaves a question open
+    without choosing one. A named file that cannot be read also blocks. The next command is
+    `qfai sdd preflight --record <path>` when records exist, and `/qfai-discussion` when there are none. A record that leaves a question open
     or contradicts itself is still `ready`: SDD states each gap in its report.
   - `--assume <text>` (repeatable) records carry-over open questions / assumptions in the summary. Without it
     the carry-over list already present in the `<paths.outDir>/preflight_summary.md` pointer is preserved, not

@@ -16,6 +16,8 @@ const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
  * answer both questions with a run that never validated anything.
  */
 const PREFLIGHT_RUN_ROOT = "preflight";
+/** The recovery when records exist but no readable one was named. */
+const NAME_A_RECORD = "qfai sdd preflight --record <path>";
 
 /**
  * The input source preflight selected: the deliberation record the caller
@@ -95,6 +97,7 @@ export async function runSddPreflight(
       run,
       openQuestions,
       blockers: [`The deliberation record ${options.recordPath} is not a readable file.`],
+      nextCommands: [NAME_A_RECORD],
     });
   }
 
@@ -111,13 +114,18 @@ export async function runSddPreflight(
       run,
       openQuestions,
       blockers: [`The imported specification ${options.importPath} is not a readable file.`],
+      nextCommands: ["qfai sdd preflight --import <path>"],
     });
   }
 
+  const records = await listRecords(deliberationRoot);
   return await completeBlockedPreflight({
     run,
     openQuestions,
-    blockers: [describeMissingSource(await listRecords(deliberationRoot))],
+    blockers: [describeMissingSource(records)],
+    // With records on disk the recovery is naming one; with none, a
+    // discussion has to write one first.
+    nextCommands: records.length > 0 ? [NAME_A_RECORD] : ["/qfai-discussion"],
   });
 }
 
@@ -144,32 +152,41 @@ function describeMissingSource(records: string[]): string {
   ].join(" ");
 }
 
-/** The `*.md` files directly under the deliberation directory, sorted. */
+/**
+ * The `*.md` files directly under the deliberation directory, sorted. A
+ * directory that does not exist holds no record; any other read error is
+ * raised, so an unreadable directory is never reported as an empty one.
+ */
 async function listRecords(deliberationRoot: string): Promise<string[]> {
+  let entries;
   try {
-    const entries = await readdir(deliberationRoot, { withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-      .map((entry) => entry.name)
-      .sort();
-  } catch {
-    return [];
+    entries = await readdir(deliberationRoot, { withFileTypes: true });
+  } catch (error: unknown) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
   }
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .map((entry) => entry.name)
+    .sort();
 }
 
 /**
- * A record named by path is read against the project root first; a bare
- * record name, as a user gives it, is read against the deliberation directory.
+ * A bare record name, as a user gives it, is read against the deliberation
+ * directory first and then the project root. A name with a path separator is
+ * read against the project root.
  */
 async function resolveNamedRecord(
   root: string,
   deliberationRoot: string,
   recordPath: string,
 ): Promise<string | null> {
-  for (const candidate of [
-    path.resolve(root, recordPath),
-    path.resolve(deliberationRoot, recordPath),
-  ]) {
+  const candidates = /[\\/]/.test(recordPath)
+    ? [path.resolve(root, recordPath)]
+    : [path.resolve(deliberationRoot, recordPath), path.resolve(root, recordPath)];
+  for (const candidate of candidates) {
     if (await isReadableFile(candidate)) {
       return candidate;
     }
@@ -212,8 +229,9 @@ async function completeBlockedPreflight(input: {
   run: PreflightRun;
   openQuestions: string[];
   blockers: string[];
+  nextCommands: string[];
 }): Promise<SddPreflightResult> {
-  const nextCommands = ["/qfai-discussion"];
+  const { nextCommands } = input;
   await publishPreflightSummary(
     input.run,
     buildBlockedPreflightSummary({
