@@ -1,18 +1,16 @@
 /**
  * `qfai sdd preflight`: run the /qfai-sdd Stage 0 gate.
  *
- * Delegates the discussion-pack selection, the count of imported `REQ-*`
- * entries and blocker resolution to `runSddPreflight`, which also writes the
- * result to `<outDir>/preflight_summary.md`. If the skill filled the template
- * by hand, `status: ready` would be self-reported and prove nothing about a
- * pack having actually been found. This command moves that decision back to
- * the tool.
+ * Delegates the source selection and blocker resolution to
+ * `runSddPreflight`, which also writes the result to
+ * `<outDir>/preflight_summary.md`. If the skill filled the template by hand,
+ * `status: ready` would be self-reported and prove nothing about a source
+ * having actually been found. This command moves that decision back to the
+ * tool.
  *
- * The pack to judge is the one the runtime-state pointer
- * (`.qfai/state.json#discussion.currentId`) names. If that pack cannot be
- * found, it stops, shows the candidates and the recovery command, and leaves
- * the existing summary untouched. Only when no pointer is set does it fall
- * back to the latest pack.
+ * The source is the deliberation record `--record <path>` names, else the
+ * imported specification `--import <path>` names. The command never picks a
+ * record itself: with none named, it lists the records it finds as a blocker.
  *
  * It stops before writing anything when the project declares qfai and the
  * running copy is a different one, the case `qfai validate` reports as
@@ -28,17 +26,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig, resolvePath, type QfaiConfig } from "../../core/config.js";
-import {
-  ResolveActiveDiscussionPackError,
-  resolveActiveDiscussionPack,
-} from "../../core/discussionPack.js";
 import { runSddPreflight, type SddPreflightResult } from "../../core/preflight/sddPreflight.js";
-import { readDiscussionCurrentId } from "../../core/state.js";
 import { locateToolAgainstProject } from "../../core/version.js";
 import { error as logError, info as logInfo } from "../../core/logger.js";
 
 export type SddPreflightCommandOptions = {
-  /** Project root (`.qfai/discussion` / `.qfai/report` resolve underneath). */
+  /** Project root (`.qfai/deliberation` / `.qfai/report` resolve underneath). */
   root: string;
   /** Output format. Defaults to `text`. */
   format?: "text" | "json";
@@ -51,6 +44,8 @@ export type SddPreflightCommandOptions = {
    * overwriting it with `- none`.
    */
   assumptions?: string[];
+  /** `--record <path>`: the deliberation record SDD consumes. */
+  recordPath?: string;
   /** `--import <path>`: an imported specification, resolved against `root`. */
   importPath?: string;
   /** Output sink. Defaults to the CLI logger (stdout). */
@@ -68,20 +63,13 @@ function toRelative(root: string, target: string): string {
 
 function renderText(root: string, result: SddPreflightResult): string {
   const lines = [
-    `qfai sdd preflight: status: ${result.status} (source: ${result.source})`,
-    `  selected ${result.source}: ${result.selectedInputPath === null ? "(not found)" : toRelative(root, result.selectedInputPath)}`,
-    `  imported REQ count: ${result.importedReqCount === null ? "(n/a)" : String(result.importedReqCount)}`,
+    `qfai sdd preflight: status: ${result.status} (source: ${result.source ?? "none"})`,
+    `  selected ${result.source ?? "input"}: ${result.selectedInputPath === null ? "(none)" : toRelative(root, result.selectedInputPath)}`,
   ];
   if (result.blockers.length > 0) {
     lines.push("  blockers:");
     for (const blocker of result.blockers) {
       lines.push(`    - ${blocker}`);
-    }
-  }
-  if (result.packGaps.length > 0) {
-    lines.push("  pack gaps (recorded, not blocking):");
-    for (const gap of result.packGaps) {
-      lines.push(`    - ${gap}`);
     }
   }
   if (result.openQuestions.length > 0) {
@@ -98,20 +86,6 @@ function renderText(root: string, result: SddPreflightResult): string {
   }
   lines.push(`  summary: ${toRelative(root, result.preflightSummaryPath)}`);
   return lines.join("\n");
-}
-
-/**
- * Which pack Stage 0 must judge. The runtime-state pointer wins when it is
- * set, so `npx qfai discussion use <older-id>` is honored. With no pointer the
- * newest pack stays the default: nothing in the shipped skill set writes the
- * pointer, so requiring it would block Stage 0 for every default project.
- */
-async function resolveSelectedPackDir(root: string): Promise<string | undefined> {
-  const currentId = await readDiscussionCurrentId(root);
-  if (currentId === null) {
-    return undefined;
-  }
-  return await resolveActiveDiscussionPack(root);
 }
 
 /**
@@ -183,8 +157,8 @@ export async function runSddPreflightCommand(options: SddPreflightCommandOptions
   try {
     const { config, issues, configPath } = await loadConfig(options.root);
     // `loadConfig` never throws on a broken YAML / invalid `paths.*`: it falls
-    // back to defaultConfig and records the problem. Judging a pack under the
-    // default discussion directory — and writing a summary to the default
+    // back to defaultConfig and records the problem. Reading a record under the
+    // default deliberation directory — and writing a summary to the default
     // report directory — would answer a question the operator did not ask.
     const configErrors = issues.filter((issue) => issue.severity === "error");
     if (configErrors.length > 0) {
@@ -197,10 +171,9 @@ export async function runSddPreflightCommand(options: SddPreflightCommandOptions
       return 1;
     }
 
-    const packDir = await resolveSelectedPackDir(options.root);
     const assumptions = await resolveCarryOver(options.root, config, options.assumptions);
     result = await runSddPreflight(options.root, config, {
-      ...(packDir === undefined ? {} : { packDir }),
+      ...(options.recordPath === undefined ? {} : { recordPath: options.recordPath }),
       ...(assumptions.length > 0 ? { assumptions } : {}),
       ...(options.importPath === undefined
         ? {}
@@ -208,17 +181,12 @@ export async function runSddPreflightCommand(options: SddPreflightCommandOptions
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    if (err instanceof ResolveActiveDiscussionPackError) {
-      writeErr(`qfai sdd preflight: cannot resolve the active discussion-pack: ${message}`);
-      return 1;
-    }
     writeErr(`qfai sdd preflight: preflight failed: ${message}`);
     return 1;
   }
 
-  // `nextCommands` are the recovery steps for a blocker. Left on a ready
-  // result, they would send a user who should move on to Stage 1 back to
-  // /qfai-discussion.
+  // `nextCommands` are the recovery steps for a blocker. A ready result has
+  // none: the user moves on to Stage 1.
   const emitted: SddPreflightResult =
     result.status === "blocked" ? result : { ...result, nextCommands: [] };
 

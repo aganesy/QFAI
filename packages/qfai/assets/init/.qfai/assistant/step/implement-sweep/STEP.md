@@ -49,9 +49,9 @@ The choice between fix and baseline is this step's decision point.
 - Under `gate:user`, put the list of findings, each with the recommended
   choice, to the operator as one question, return `awaiting_input` and change
   nothing. The attempt that holds the answer carries it out.
-- Otherwise take the decision and record the finding, choice and reason in
-  the session report. Identify it as the agent's decision, not an operator
-  answer.
+- Otherwise take the decision and write the finding, choice and reason as an
+  Agent decisions row of the run's deliberation record. It is the agent's
+  decision, not an operator answer.
 
 ## What it writes
 

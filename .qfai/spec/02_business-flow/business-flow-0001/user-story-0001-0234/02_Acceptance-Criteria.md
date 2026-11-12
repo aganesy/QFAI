@@ -49,7 +49,7 @@ Feature: Choose the graph CLI that answers the exploration question
 
   # AC-0001-0234-08
   Scenario: Leave deliberation records out of the document corpus
-    Given a project with deliberation records under `.qfai/deliberation/`
+    Given a project with deliberation records under `paths.deliberationDir`
     When graph integration prepares document analysis or answers a documents query
-    Then no file under `.qfai/deliberation/` enters the Graphify corpus or a query result
+    Then no file under `paths.deliberationDir` enters the Graphify corpus or a query result
 ```

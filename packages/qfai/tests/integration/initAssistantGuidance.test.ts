@@ -25,12 +25,14 @@ const instructionsDir = path.join(
   "rule",
 );
 describe("init assistant guidance: exploration-first alignment", () => {
-  it("routes discussion sidecars through SDD before downstream UI work", async () => {
+  it("routes the record's UI answers through SDD before downstream UI work", async () => {
     const content = await readFile(
       path.join(instructionsDir, "ui-definition-protocol.md"),
       "utf-8",
     );
-    expect(content).toContain("`/qfai-sdd` alone reads the discussion sidecar artifacts");
+    expect(content).toContain(
+      "`/qfai-sdd` alone reads the screens, the brand direction and the design inputs from the deliberation record it consumes",
+    );
     expect(content).toContain(
       "They read the UI and UX definition from the story tree, contracts and evidence",
     );

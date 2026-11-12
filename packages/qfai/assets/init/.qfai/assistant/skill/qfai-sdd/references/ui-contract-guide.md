@@ -258,8 +258,8 @@ Render the element with that marker, or remove the marker from the contract.
 **A label does not match.** Update the contract label, then the rendered text or
 marker mapping. Updating one side leaves the two out of step.
 
-**The discussion pack already has screen contracts, so this looks redundant.**
-It is not. A discussion pack is discovery output and is non-normative; the
+**The deliberation record already settles the screens, so this looks redundant.**
+It is not. A record is history and is non-normative; the
 downstream skills and every validate lane read `<paths.contractsDir>/ui/*.yaml`.
 `/qfai-sdd` is what keeps the two in step.
 

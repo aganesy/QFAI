@@ -20,6 +20,8 @@ first.
 - The text or comment to change, and the write scope the request or the work
   order gives.
 - `.qfai/assistant/rule/*`.
+- Before an agent decision, search the records for a turned-down option, as
+  `.qfai/assistant/rule/references/deliberation-record.md` says.
 
 Questions to the user follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.

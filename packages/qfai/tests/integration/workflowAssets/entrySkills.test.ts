@@ -1028,15 +1028,11 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0223-02
-  // QFAI:EX-0001-0223-03
   // QFAI:EX-0001-0196-57
-  it("takes every other decision itself and lists it with its reason in the final report", async () => {
+  it("takes every other decision itself without a question, and asks after the report only when needed", async () => {
     const work = flat(sectionOf(await readShipped(STAGE_POINTS), "## Decision point"));
-    expect(work).toMatch(
-      /take every other decision yourself, ask nothing, and list it with its reason in the final report/i,
-    );
+    expect(work).toMatch(/take every other decision yourself and ask nothing/i);
     const report = flat(sectionOf(await readShipped(SCREENS), "## Final report"));
-    expect(report).toMatch(/every decision taken without the user, with its reason/i);
     expect(report).toMatch(
       /ask for the next action only when proceeding requires the user's answer/i,
     );

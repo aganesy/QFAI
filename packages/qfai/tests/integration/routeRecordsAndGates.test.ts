@@ -51,12 +51,16 @@ describe("no stage writes a grilling record beside the deliberation record", () 
     expect(baseline).toContain(
       "A stage that fans work out to agents in parallel records the fan-out in this table",
     );
-    expect(baseline).toContain("**The stage's final report is the record.**");
+    expect(baseline).toContain(
+      "**A reviewer reads a recommendation from the session, never from a record.**",
+    );
 
     const article = flat(await read("rule/constitution.md"))
       .split("## Article IX")[1]
       ?.split("## Article X")[0];
-    expect(article).toContain("Nothing is recorded beyond the stage's final report.");
+    expect(article).toContain(
+      "A decision the agents take is an Agent decisions row of the run's deliberation record, and no report lists it.",
+    );
   });
 });
 

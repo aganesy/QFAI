@@ -1636,7 +1636,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the removal of `prototyping.calibration`, which nothing reads: prototyping
   // keeps no calibration pack. Restoring the two lines `calibration:` and
   // `packPath: .qfai/evidence/calibration.yaml` reproduces `c1f4c390…` byte for byte.
-  ["qfai.config.yaml", "e9129574dd758cb14b57a20b310b7e5836e6de417b2af86292ba5887d2241ac8"],
+  //
+  // Re-pinned for `paths.deliberationDir: .qfai/deliberation`, which states where the run's
+  // deliberation records go. The value is the default the loader already applies, so behaviour
+  // is unchanged; deleting that one line reproduces `e9129574…` byte for byte.
+  ["qfai.config.yaml", "3230c867cc104fdc04a7c170a1898a44022bc0560584477deffc41c3537581b1"],
 ]);
 
 /**

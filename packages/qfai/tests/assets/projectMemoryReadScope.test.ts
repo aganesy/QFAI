@@ -10,7 +10,7 @@ const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(root, tree, rel), "utf-8");
 
 describe.each(trees)("%s project memory scope", (tree) => {
-  it("reads the story tree, discussion pack and role cards", async () => {
+  it("reads the story tree, its registers and role cards", async () => {
     const constitution = await read(tree, "assistant/rule/constitution.md");
     const article = constitution.split("## Article III")[1]?.split("## Article IV")[0];
     expect(article).toBeDefined();
@@ -19,7 +19,7 @@ describe.each(trees)("%s project memory scope", (tree) => {
     );
     expect(article).not.toContain(".qfai/assistant/rule/*");
     expect(article).toContain(".qfai/assistant/agent/");
-    expect(article).toContain(".qfai/discussion/");
+    expect(article).toContain(".qfai/spec/open-questions.md");
     expect(article).toContain(".qfai/spec/02_business-flow/");
     expect(article).toContain(".qfai/spec/");
     expect(article).not.toContain(".qfai/assistant/manifest/");

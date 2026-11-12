@@ -839,6 +839,21 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
     expect(parsed.options.failOn).toBe("error");
   });
 
+  it("reads --record for sdd preflight and refuses it elsewhere", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd", "preflight", "--record", "20261112093000-a.md"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.sddRecord).toBe("20261112093000-a.md");
+
+    const missing = parseArgs(["sdd", "preflight", "--record"], cwd);
+    expect(missing.invalid).toBe(true);
+    expect(missing.invalidReason).toContain("--record");
+
+    const elsewhere = parseArgs(["sdd", "merge-docs", "--record", "a.md"], cwd);
+    expect(elsewhere.invalid).toBe(true);
+    expect(elsewhere.invalidReason).toContain("--record");
+  });
+
   it("rejects an unknown sdd subcommand", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["sdd", "triage"], cwd);

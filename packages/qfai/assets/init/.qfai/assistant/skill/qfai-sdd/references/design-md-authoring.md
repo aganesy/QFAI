@@ -15,25 +15,37 @@ Applies only to a UI-bearing target — one whose classified surface set names
 
 ## Where the answers come from
 
-The interview is `/qfai-discussion`'s, and its record is the discussion pack
-this flow's provenance names:
+The interview is `/qfai-discussion`'s. Its answers are the Interview rows of
+the deliberation record SDD consumes:
 
-| Source                                            | Carries                                       |
-| ------------------------------------------------- | --------------------------------------------- |
-| `01_Context.md`                                   | the surface classification, and the direction |
-| `04_Sources.md`                                   | both reference registries                     |
-| `uiux/00_index.md`, `uiux/40_screen_contracts.md` | the screen-level sidecars                     |
+| An Interview row on                  | Carries                                                          |
+| ------------------------------------ | ---------------------------------------------------------------- |
+| the target surfaces                  | whether the flow is UI-bearing, as the `tech.md` `Surface` row   |
+| the brand direction                  | the adopted theme, what departs from it, and what stays ordinary |
+| a competitive or component reference | its adopted points, its rejected points, its local translation   |
+| a design direction the user rejected | the anti-goal and the reason the user gave                       |
+| a trend finding                      | the conclusion the user accepted                                 |
 
-`01_Context.md#Design Direction` is the decision the user made: the adopted
-theme, what departs from it, and what stays ordinary. For initial authoring of
-a missing file, a UI-bearing pack that records no design direction leaves the
-brand unchosen — stop and ask rather than pick one, which is the same rule an
-imported specification gets.
+The brand comes from the Interview row in which the user chose it. For initial
+authoring of a missing file, a UI-bearing record with no row on the brand
+direction leaves the brand unchosen — stop and ask rather than pick one, which
+is the same rule an imported specification gets.
 
-Each registry entry carries what was adopted, what was rejected, and how it
-was translated. The competitor registry feeds brand and tokens; the component
-catalogue registry feeds screen structure, which is the contracts' business,
-not this file's.
+What the record settles becomes exploration constraints, never a chosen
+design. `/qfai-sdd` selects no visual winner; `/qfai-prototyping` explores
+under the constraints.
+
+- **`# Brand Philosophy` body.** The product intent, the interactions that
+  must survive exploration, the brand signals, how the product differs from
+  the generic version of itself, and the trend conclusions the record settles.
+- **A reference.** Each competitive or component reference the record settles:
+  its adopted points and their local translation under **Do**, its rejected
+  points under **Don't** and in `audience.do_not_look_like`. A competitive
+  reference is an input to deliberate deviation, not a template to copy
+  unchanged.
+- **A rejected direction.** Each design direction the user rejected goes under
+  **Don't** as an anti-goal, with its reason and a concrete cue a downstream
+  reviewer uses to stop it recurring.
 
 The questions behind those answers are in the design DNA intake reference.
 
@@ -49,16 +61,19 @@ three intent fields, so those come first.
 - Brand personality → `brand.voice` (1..N short trait words) and the
   `# Brand Philosophy` body.
 - Audience emotion → `audience.emotion`.
-- Rejected competitor references → `audience.do_not_look_like` and the
+- Rejected reference points → `audience.do_not_look_like` and the
   **Don't** subsection of the `# Brand Philosophy` body. This field names
   identities to avoid, not conventions.
-- Adopted reference points → the **Do** subsection of `# Brand Philosophy`.
+- Rejected directions → the **Don't** subsection, each with its reason and
+  its review cue.
+- Adopted reference points, with their local translation → the **Do**
+  subsection of `# Brand Philosophy`.
 - Brand archetype → `brand.archetype`. Allowed values are the 8-archetype
   catalog in the brand catalog
   (`minimal | bold | corporate | playful | organic | tech | elegant | casual`).
-  Map the theme the pack records to the archetype that describes it; the
-  Selection Guide's scoring is the fallback for a pack whose direction names
-  no theme, and an answer arrived at that way is the assistant's, not the
+  Map the theme the Interview row records to the archetype that describes it;
+  the Selection Guide's scoring is the fallback for a brand direction that
+  names no theme, and an answer arrived at that way is the assistant's, not the
   user's. The archetype's `interaction` default seeds `accessibility.motion`,
   which no theme publishes. Its `color_tendency` / `typography` / `spacing`
   defaults seed `visual.*` only for a file with no `brand.theme`: where a theme

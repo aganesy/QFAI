@@ -189,34 +189,47 @@ describe("SDD preflight stops only when no usable source exists", () => {
     }
   });
 
-  it("continues with a selected discussion pack even when it is incomplete", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));
-    roots.push(root);
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260924000000000");
-    await mkdir(packDir, { recursive: true });
-    await writeFile(
-      path.join(packDir, "06_REQ.md"),
-      "# Requirements\n\n- REQ-0001: Save a draft.\n",
-    );
-
-    const result = await runSddPreflight(root, defaultConfig, { packDir });
-    expect(result.status).toBe("ready");
-    expect(result.selectedInputPath).toBe(packDir);
-    expect(result.packGaps.length).toBeGreaterThan(0);
-  });
-
   // QFAI:AC-0001-0148-03
   // QFAI:EX-0001-0148-01
-  it("continues when the selected pack has no 06_REQ.md and records it as a gap", async () => {
+  it("continues on a record with an unanswered Interview row beside existing specs", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));
     roots.push(root);
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260924000000000");
-    await mkdir(packDir, { recursive: true });
-    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\nSave drafts.\n");
+    const objective = path.join(root, ".qfai", "spec", "01_policy", "objective.md");
+    await mkdir(path.dirname(objective), { recursive: true });
+    await writeFile(objective, "# Objective\n\nSave drafts.\n");
+    const record = path.join(root, ".qfai", "deliberation", "20261112093000-drafts.md");
+    await mkdir(path.dirname(record), { recursive: true });
+    await writeFile(
+      record,
+      [
+        "# Deliberation record: drafts",
+        "",
+        "## discussion",
+        "",
+        "### Interview",
+        "",
+        "| Background | Option 1 | Option 2 | Option 3 | Option 4 (other) | Chosen option number |",
+        "| ---------- | -------- | -------- | -------- | ---------------- | -------------------- |",
+        "| How long is a draft kept? | 7 days | 30 days | | | |",
+        "",
+        "### Agent decisions",
+        "",
+        "| Background | Option 1 | Option 2 | Option 3 | Option 4 (other) | Chosen option number |",
+        "| ---------- | -------- | -------- | -------- | ---------------- | -------------------- |",
+        "",
+      ].join("\n"),
+    );
 
-    const result = await runSddPreflight(root, defaultConfig, { packDir });
+    const result = await runSddPreflight(root, defaultConfig, { recordPath: record });
     expect(result.status).toBe("ready");
-    expect(result.packGaps.some((gap) => gap.includes("06_REQ.md"))).toBe(true);
+    expect(result.selectedInputPath).toBe(record);
+
+    const triage = (
+      await readFile(path.join(skillRoot, "..", "..", "step", "sdd-triage", "STEP.md"), "utf-8")
+    ).replace(/\s+/g, " ");
+    expect(triage).toContain(
+      "An Interview row the user left unanswered becomes an `open-questions.md` row, and SDD carries on.",
+    );
   });
 
   // QFAI:AC-0001-0151-01

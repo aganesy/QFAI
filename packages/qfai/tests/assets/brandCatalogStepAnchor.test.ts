@@ -24,14 +24,16 @@ describe("brand catalog ownership", () => {
     expect(sdd).toContain("root `DESIGN.md`, which `common-design-md`");
   });
 
-  it("uses the adopted discussion direction as the brand input", async () => {
+  // QFAI:EX-0001-0087-02
+  it("uses the brand direction an Interview row records as the brand input", async () => {
     const authoring = await read("qfai-sdd/references/design-md-authoring.md");
     const discussion = (await read("qfai-discussion/references/design-dna-intake.md")).replace(
       /\s+/g,
       " ",
     );
-    expect(authoring).toContain("01_Context.md#Design Direction");
-    expect(authoring).toContain("04_Sources.md");
+    expect(authoring).toContain(
+      "The brand comes from the Interview row in which the user chose it.",
+    );
     expect(discussion).toContain(
       "Root `DESIGN.md` is written later, by `/qfai-sdd`'s `common-design-md` step.",
     );

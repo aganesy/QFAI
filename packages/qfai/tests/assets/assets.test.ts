@@ -1138,7 +1138,7 @@ describe("assets guardrails", () => {
     }
   });
 
-  it("ensures qfai-sdd templates include discussion-pack preflight summary", async () => {
+  it("ensures qfai-sdd templates include the preflight summary", async () => {
     for (const skillId of ["qfai-sdd"]) {
       const reportTemplatePath = path.join(
         templateQfaiDir,
@@ -1159,7 +1159,9 @@ describe("assets guardrails", () => {
       path.join(templateQfaiDir, "assistant", "step", "sdd-triage", "STEP.md"),
       "utf-8",
     );
-    expect(sddTriage).toContain("`npx qfai sdd preflight` and use its `selectedInputPath`");
+    expect(sddTriage).toContain(
+      "`npx qfai sdd preflight --record <path>` and use its `selectedInputPath`",
+    );
 
     const businessFlowTemplatePath = path.join(
       templateQfaiDir,

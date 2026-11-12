@@ -5,7 +5,7 @@ Use these checkpoints with the ordered stages of the SDD steps. A checked item r
 ## Source and triage
 
 - The selected source is the preflight result's selectedInputPath, or an explicit user requirement named in the SDD report.
-- The selected discussion pack and applicable completed reviews were read and dispositioned. A disagreement was resolved in an SDD-owned artifact.
+- The deliberation record SDD consumes and applicable completed reviews were read and dispositioned, and the record was left unchanged. A disagreement was resolved in an SDD-owned artifact.
 - Every requirement has an affected policy, BF, US, EX, or contract path, or an open question that prevents a dependent write.
 - Only a decision the user made that passes the recording test, approvals included, and a justified `Test exception:` row are decision rows; a rejected option is a `Declined:` row. Open questions are open-questions.md rows.
 - Both tables have exactly ID, Content, Approach. New rows take timestamp IDs; existing decision rows keep their IDs and are never removed, though their wording may be restated, and a question row was only deleted when a decision or a replacing question names it.
@@ -56,7 +56,7 @@ Follow the cycle the `sdd-cycle` step sets out.
 - Every affected BF passed npx qfai validate --profile sdd --fail-on error --flow BF-NNNN with error=0.
 - Every document written passes its document schema. A failure was fixed by reshaping the document, not by adding to it.
 - The log path and result for each BF are in the SDD report.
-- Each entered design-writing stage has a pre-draft grilling checkpoint before its first mutation. A checkpoint that finds no open decision holds no session. The final report lists each decision a checkpoint adopted; unanswered critical decisions remain open and block completion.
+- Each entered design-writing stage has a pre-draft grilling checkpoint before its first mutation. A checkpoint that finds no open decision holds no session. Each decision a checkpoint adopted is an Agent decisions row of the run's deliberation record; unanswered critical decisions remain open and block completion.
 - Reviewers are independent of the authors, and every finding of the one review is fixed or answered.
 - Rejected options remain excluded, or a documented reopening decision exists.
 - Remaining risks and next actions are explicit in the SDD report.

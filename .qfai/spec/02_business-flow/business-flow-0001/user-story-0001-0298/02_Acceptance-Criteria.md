@@ -40,7 +40,7 @@ Feature: Each run keeps one deliberation record
     Given a deliberation record
     When the story tree, the decision register and the contracts are read
     Then no row, story, contract or business rule cites the record, and the record cites no ID
-    And the record is final once the run commits it, and a correction is a new record
+    And once the run commits it, the record is edited only to repair its table layout, never its content, and a correction is a new record
     And a later row that overturns an earlier row of the same record says so in its Background
 
   # AC-0001-0298-06
