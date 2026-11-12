@@ -12,12 +12,12 @@ Feature: Answer only the critical decisions, and approve each release
     And the step changes nothing until the user answers
 
   # AC-0001-0223-02
-  Scenario: Any other decision is taken and reported
+  Scenario: Any other decision is taken and recorded
     Given a decision point that reaches a decision that is not critical
     When the step decides it
     Then nothing is asked
-    And the final report lists the decision and its reason
-    And outside the discussion stage no grilling record is written
+    And the run's deliberation record holds the decision as an Agent decisions row that considers at least three options
+    And no stage writes a grilling record, a session table or a marker saying no session was held
 
   # AC-0001-0223-03
   Scenario: A release point always asks

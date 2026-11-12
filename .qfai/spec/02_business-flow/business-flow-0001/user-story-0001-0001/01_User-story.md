@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a maintainer, I want the five-stage chain discussion → specs → tests → code → verification defined, with the outputs of each stage and the trace edges between stages, so that every artifact can be traced from the discussion that motivated it to the evidence that verifies it.
+As a maintainer, I want the four-stage chain specs → tests → code → verification defined, with the outputs of each stage and the trace edges between stages, so that every artifact can be traced from the specification that states it to the evidence that verifies it.
 
 ## Non-goals
 

@@ -2,4 +2,4 @@
 
 ## User Story
 
-As a QFAI user, I want a single `/qfai-sdd` command to write, from a discussion pack, the policy, business-flow, story and contract layers of the story tree, so that downstream execution skills have complete specifications.
+As a QFAI user, I want a single `/qfai-sdd` command to write, from a deliberation record or a user requirement, the policy, business-flow, story and contract layers of the story tree, so that downstream execution skills have complete specifications.

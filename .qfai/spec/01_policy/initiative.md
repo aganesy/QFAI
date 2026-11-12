@@ -3,8 +3,9 @@
 ## Initiative
 
 Keep one path from a product need to an observed completion claim. The
-discussion pack records the source. SDD writes the policy, business flows,
-stories, examples and enforcing contracts. ATDD and implementation provide
+discussion stage writes its questions and choices into a deliberation record.
+SDD writes the policy, business flows, stories, examples and enforcing
+contracts. ATDD and implementation provide
 executable coverage, and validation and independent review check the result.
 
 ## Assumptions

@@ -1,0 +1,20 @@
+# CLI-0007: Deliberation record
+
+## Ownership boundary
+
+This contract decides the deliberation record: where a run writes it, what it holds, what it is not, and who reads it. It also decides what the discussion stage writes.
+
+Where a run starts and ends across branch moves, which stage creates the file and when it is committed is decided by the `qfai workflow` contract (CLI-0015). How `/qfai-sdd` turns a record into the story tree is decided by the story-tree authoring contract (CLI-0019). The check of a record's table layout is decided by the `qfai validate` contract (CLI-0014).
+
+## Business rules
+
+| BR-ID | Statement | Examples |
+| --- | --- | --- |
+| BR-0007-0020 | A record holds the headings Subject, Interview and Agent decisions. Each table under Interview or Agent decisions has exactly the columns Background, Option 1, Option 2, Option 3, Option 4 (other) and Chosen option number, in that order. | EX-0001-0298-04 |
+| BR-0007-0021 | Each question the run put to the user is one Interview row. A free answer is quoted word for word in Option 4. A question with no candidate values leaves Options 1 to 3 empty, holds the answer in Option 4 and chooses 4. A source the options rest on is a URL in the row's Background. | EX-0001-0298-05, EX-0001-0298-06, EX-0001-0298-07, EX-0001-0298-08 |
+| BR-0007-0022 | Each choice the agent takes that no specification, contract, rule or convention settles, and whose answer changes an artifact's meaning, behaviour, structure or policy, is one Agent decisions row; so is each decision of a session between agents. The agent considers at least three options for each such row. A choice a convention settles, a formatting choice and a choice with one possible answer are not rows. | EX-0001-0298-09, EX-0001-0298-10, EX-0001-0298-11 |
+| BR-0007-0023 | A record is a memo. It has no ID and no place in the traceability chain: no register row, story, contract or business rule cites it, and it cites no ID. It is final once the run commits it and is never edited afterwards; a correction is a new record, and the register is corrected by its own rows. A later row that overturns an earlier row of the same record says so in its Background, and the earlier row stays. | EX-0001-0298-12, EX-0001-0298-13, EX-0001-0298-14, EX-0001-0301-05 |
+| BR-0007-0024 | A record is written in the language the project states it keeps its documents in, and otherwise in the language the user works in. | EX-0001-0298-15 |
+| BR-0007-0025 | The current specification, the settled decisions and the open questions are read from the story tree, `decisions.md` and `open-questions.md`, never from a record. Where a record disagrees with them, they win and the record is left unchanged. A record is read in two cases only: `/qfai-sdd` consumes the record of its run, or the one the work order names, and an agent outside an implement or verify stage, about to take a decision itself, searches the option cells of the records, with the `Declined:` rows of `decisions.md`, for an option turned down before and reads only the rows that match. An implement or verify stage reads no record. The shipped record template opens with a note that says the record is history, keeps twists, is not the current state and is not read end to end. | EX-0001-0299-01, EX-0001-0299-02, EX-0001-0299-03, EX-0001-0299-04 |
+| BR-0007-0026 | A run's deliberation record is one Markdown file directly under `paths.deliberationDir`, named `<YYYYMMDDhhmmss>-<slug>.md` with the time in UTC and a slug naming the subject, and tracked in git. A run that puts a question to the user or takes a decision that is an Agent decisions row writes one, and each of its stages writes under a subheading of its own; a run that does neither writes none. | EX-0001-0298-01, EX-0001-0298-02, EX-0001-0298-03, EX-0001-0301-01, EX-0001-0301-02 |
+| BR-0007-0027 | The discussion stage writes the run's deliberation record and one `open-questions.md` row for each question it left open, and no other story-tree file and no root `DESIGN.md`. A brand theme the user chose is an Interview row of the record. | EX-0001-0300-01, EX-0001-0300-02 |

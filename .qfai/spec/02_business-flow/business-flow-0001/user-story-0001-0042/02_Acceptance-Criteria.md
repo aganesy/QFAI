@@ -27,4 +27,11 @@ Feature: Prototyping skill validation
     Given root `DESIGN.md` is missing or its front matter does not parse
     When `qfai validate` runs
     Then a missing `DESIGN.md` emits `QFAI-DCON-030` at error severity, and an unparseable one emits `QFAI-DCON-033` at error severity.
+
+  # AC-0001-0042-14
+  Scenario: A composed profile reports an unparseable DESIGN.md once
+    Given root `DESIGN.md` whose front matter does not parse
+    When `qfai validate --profile verify` or `--profile full` runs
+    Then `QFAI-DCON-033` appears once, whether or not a UI contract declares a screen
+    And no two findings of the run share the same code, file and message
 ```

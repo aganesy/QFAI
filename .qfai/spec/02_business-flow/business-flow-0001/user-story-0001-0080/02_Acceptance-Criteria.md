@@ -5,9 +5,9 @@
 ```gherkin
 Feature: Exploration Brief Authoring
   # AC-0001-0080-01
-  Scenario: UI-bearing discussion records exploration inputs
-    Given a UI-bearing discussion pack is ready for downstream prototyping
-    When its `04_Sources.md` is finalized
-    Then it records the product intent, must-keep interactions, brand signals, and differentiation targets as explicit exploration constraints
+  Scenario: SDD writes the exploration inputs into DESIGN.md
+    Given a deliberation record for a UI-bearing flow that settles its exploration inputs
+    When `/qfai-sdd` writes root `DESIGN.md`
+    Then its `# Brand Philosophy` body records the product intent, must-keep interactions, brand signals, and differentiation targets as explicit exploration constraints
     And it does not select a winning visual direction or finalize a design system
 ```

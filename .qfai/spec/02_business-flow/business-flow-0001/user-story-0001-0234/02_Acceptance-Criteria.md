@@ -46,4 +46,10 @@ Feature: Choose the graph CLI that answers the exploration question
     Given requested code or document analysis and credentials for an explicitly selected backend
     When graph integration prepares analysis or reports its outcome
     Then secret files are excluded from corpus and storage and credentials are not written to tracked settings, logs or reusable snapshots
+
+  # AC-0001-0234-08
+  Scenario: Leave deliberation records out of the document corpus
+    Given a project with deliberation records under `.qfai/deliberation/`
+    When graph integration prepares document analysis or answers a documents query
+    Then no file under `.qfai/deliberation/` enters the Graphify corpus or a query result
 ```

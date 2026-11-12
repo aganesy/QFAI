@@ -9,6 +9,7 @@ Feature: Policy and contract layers
     Given a project on the story tree
     When `01_policy/` is listed
     Then it holds `objective.md`, `initiative.md`, `principle.md`, `glossary.md` and `constraint.md`
+    And `initiative.md` holds a `## Risks` section, and `constraint.md` holds `## Quality targets` and `## Legal and Compliance Constraints` after its three constraint sections
     And none of them states a concrete definition that belongs to a flow, a story or a contract
     And `constraint.md` states each limit in plain words, under IDs that run from 01 in each section
 

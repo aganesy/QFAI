@@ -55,6 +55,6 @@ Feature: Story-tree layout and ID validation
     Given the story tree, and Markdown documents that name a file by a repository path that does not start with `.qfai/`
     When `qfai validate --profile sdd` runs
     Then one warning for each of the policy, business-flow and contract trees counts its lines and its files
-    And a path under `.qfai`, a URL, and a discussion pack raise nothing
+    And a path under `.qfai` and a URL raise nothing
     And the decision and open-question trees, which record history and cite files by design, raise nothing
 ```
