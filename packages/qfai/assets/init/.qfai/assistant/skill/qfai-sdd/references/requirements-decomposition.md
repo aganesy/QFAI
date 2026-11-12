@@ -21,21 +21,21 @@ Use the answers of the deliberation record SDD consumes to write one connected, 
 
 Write each answer of the record into the one story-tree file that owns it:
 
-| The record settles                                                      | Written to                                                                     |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Purpose, background, users and success                                  | `01_policy/objective.md`                                                       |
-| Assumptions, dependencies, milestones, size and what the work takes     | `01_policy/initiative.md`                                                      |
-| Risks                                                                   | `01_policy/initiative.md` `## Risks` rows                                      |
-| Trade-off priorities                                                    | `01_policy/principle.md` Decision priorities                                   |
-| Terms                                                                   | `01_policy/glossary.md`                                                        |
-| Technical, operational and business limits                              | the constraint sections of `01_policy/constraint.md`                           |
-| Product-wide quality targets                                            | `01_policy/constraint.md` `## Quality targets` rows                            |
-| Legal and compliance limits                                             | `01_policy/constraint.md` `## Legal and Compliance Constraints` rows           |
-| The target surfaces                                                     | the `03_contract/tech.md` `Surface` row                                        |
-| Flows and examples                                                      | the business flows, their stories and the EX rows of those stories             |
-| Screens and their behaviour obligations                                 | the UI contracts under `<paths.contractsDir>/ui/`                              |
-| The brand direction, references, rejected directions and trend findings | root `DESIGN.md`, as `design-md-authoring.md#where-the-answers-come-from` says |
-| A question still open                                                   | `<paths.specsDir>/open-questions.md`                                           |
+| The record settles                                                      | Written to                                                           |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Purpose, background, users and success                                  | `01_policy/objective.md`                                             |
+| Assumptions, dependencies, milestones, size and what the work takes     | `01_policy/initiative.md`                                            |
+| Risks                                                                   | `01_policy/initiative.md` `## Risks` rows                            |
+| Trade-off priorities                                                    | `01_policy/principle.md` Decision priorities                         |
+| Terms                                                                   | `01_policy/glossary.md`                                              |
+| Technical, operational and business limits                              | the constraint sections of `01_policy/constraint.md`                 |
+| Product-wide quality targets                                            | `01_policy/constraint.md` `## Quality targets` rows                  |
+| Legal and compliance limits                                             | `01_policy/constraint.md` `## Legal and Compliance Constraints` rows |
+| The target surfaces                                                     | the `03_contract/tech.md` `Surface` row                              |
+| Flows and examples                                                      | the business flows, their stories and the EX rows of those stories   |
+| Screens and their behaviour obligations                                 | the UI contracts under `<paths.contractsDir>/ui/`                    |
+| The brand direction, references, rejected directions and trend findings | root `DESIGN.md`                                                     |
+| A question still open                                                   | `<paths.specsDir>/open-questions.md`                                 |
 
 A row takes the next ID of its section, which is its place in the table. It
 keeps only the columns its template has, in plain words. Each answer has one

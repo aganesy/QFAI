@@ -49,7 +49,7 @@ record unresolved questions in open-questions.md. In --auto, ask nothing and sto
 
 ## Stage 2: policy and flow
 
-1. Write affected 01_policy/ files from their paired templates. Each answer of the record goes to the one file that owns it, as `.qfai/assistant/skill/qfai-sdd/references/requirements-decomposition.md#where-each-answer-goes` maps it.
+1. Write affected 01_policy/ files from their paired templates. Each answer of the record goes to the one file that owns it.
    Each fact has one home among objective.md, initiative.md, principle.md, glossary.md, constraint.md, and tech.md. Policy states criteria; a definition or a business rule belongs to the contract that owns it.
    A constraint is a limit in plain words; its ID is its place in its section, so removing a row renumbers the rows after it.
    A layer boundary is a row of tech.md `## Architecture`, written from the technical decisions the record settles and, in an existing codebase, its module layout and import directions: what each layer does and the layers below it that it may import from.

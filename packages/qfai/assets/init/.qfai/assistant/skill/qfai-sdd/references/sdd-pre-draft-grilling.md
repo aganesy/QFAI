@@ -23,7 +23,7 @@ The checkpoint occurs before this invocation's first design mutation in that sta
 - Read existing policy, decisions, open questions, the deliberation record SDD consumes, and current contracts before asking. Do not ask the user for facts already recorded there.
 - The session identifies options and failure cases and gives an evidence-based recommendation. A critical product decision goes to the user; an agent's preference cannot supply the user's answer.
 - Settle a critical question before the affected author writes.
-- Each decision a checkpoint adopted is an Agent decisions row of the run's deliberation record, its reason in the row's Background, as `.qfai/assistant/rule/references/deliberation-record.md` states. A skipped checkpoint fails the gate; it is not an implicit answer.
+- Each decision a checkpoint adopted is an Agent decisions row of the run's deliberation record, its reason in the row's Background. A skipped checkpoint fails the gate; it is not an implicit answer.
 
 A decision the user made that passes the recording test is a `decisions.md` row, in the form stated at the top of
 `.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
