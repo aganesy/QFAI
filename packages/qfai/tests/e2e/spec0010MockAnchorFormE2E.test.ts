@@ -28,18 +28,17 @@ afterEach(async () => {
 function config(): QfaiConfig {
   return {
     paths: {
-      discussionDir: ".qfai/discussion",
       specsDir: ".qfai/spec",
     },
     uiux: { htmlMockTimeout: 5000 },
   } as unknown as QfaiConfig;
 }
 
-/** Writes one discussion pack holding `markdown`, and returns the root. */
+/** Writes one spec file holding `markdown`, and returns the root. */
 async function packHolding(markdown: string): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-mock-"));
   roots.push(root);
-  const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+  const packDir = path.join(root, ".qfai", "spec");
   await mkdir(packDir, { recursive: true });
   await writeFile(path.join(packDir, "03_Story-Workshop.md"), markdown, "utf-8");
   return root;

@@ -189,11 +189,7 @@ function normalizeGlobs(values: string[]): string[] {
   return values.map((glob) => glob.trim()).filter((glob) => glob.length > 0);
 }
 
-const DEFAULT_SKILL_CREATED_PATH_KEYS = new Set<ConfigPathKey>([
-  "specsDir",
-  "contractsDir",
-  "discussionDir",
-]);
+const DEFAULT_SKILL_CREATED_PATH_KEYS = new Set<ConfigPathKey>(["specsDir", "contractsDir"]);
 
 function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean {
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
@@ -280,7 +276,6 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   const pathKeys = [
     "specsDir",
     "contractsDir",
-    "discussionDir",
     "outDir",
     "srcDir",
     "testsDir",

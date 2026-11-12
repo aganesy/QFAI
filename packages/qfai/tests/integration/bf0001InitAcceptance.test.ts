@@ -75,7 +75,7 @@ const gitignoreLines = async (dir: string): Promise<string[]> =>
 const countOf = (lines: readonly string[], line: string): number =>
   lines.filter((candidate) => candidate === line).length;
 
-const IGNORE_LINES = [".qfai/report/*", ".qfai/evidence/*", ".qfai/discussion/*", ".qfai/review/*"];
+const IGNORE_LINES = [".qfai/report/*", ".qfai/evidence/*", ".qfai/review/*"];
 
 describe("BF-0001 init rerun, preview and links", () => {
   // QFAI:AC-0001-0021-01

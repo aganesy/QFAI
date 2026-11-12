@@ -1,10 +1,5 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-
 import { describe, expect, it } from "vitest";
 
-import { validateDiscussionVisuals } from "../../src/core/validators/discussionVisuals.js";
 import {
   collectHtmlMockBlocks,
   collectScreenMockLabels,
@@ -19,44 +14,6 @@ import {
 const FULL_WIDTH_COLON = "\uFF1A";
 // U+753B U+9762 is the Japanese word for "screen".
 const SCREEN_WORD = "\u753B\u9762";
-// The screen word followed by the katakana for "mock" is the Japanese phrase for "screen mock".
-const SCREEN_MOCK_PHRASE = "\u753B\u9762\u30E2\u30C3\u30AF";
-// U+30E2 U+30C3 U+30AF is the Japanese word for "mock", used here after "HTML/CSS" and "HTML+CSS".
-const MOCK_WORD = "\u30E2\u30C3\u30AF";
-
-describe("a discussion pack written in Japanese is still checked for its mock fallback", () => {
-  async function storyWorkshopIssues(storyText: string) {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-japanese-visuals-"));
-    try {
-      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260303101010101");
-      await mkdir(packDir, { recursive: true });
-      await writeFile(
-        path.join(packDir, "01_Context.md"),
-        ["# 01 Context", "", "```mermaid", "flowchart TD", "  A --> B", "```", ""].join("\n"),
-        "utf-8",
-      );
-      await writeFile(path.join(packDir, "03_Story-Workshop.md"), storyText, "utf-8");
-      return await validateDiscussionVisuals(root);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  }
-
-  it.each([
-    ["screen mock", SCREEN_MOCK_PHRASE],
-    ["HTML/CSS mock", `HTML/CSS${MOCK_WORD}`],
-    ["HTML+CSS mock", `HTML+CSS${MOCK_WORD}`],
-  ])(
-    "reports QFAI-VIS-002 for the Japanese spelling of %s with no fallback artifact",
-    async (_name, phrase) => {
-      const issues = await storyWorkshopIssues(
-        ["# 03 Story Workshop", "", `The order page uses the ${phrase} direction.`, ""].join("\n"),
-      );
-
-      expect(issues.find((item) => item.code === "QFAI-VIS-002")?.severity).toBe("info");
-    },
-  );
-});
 
 describe("an HTML mock label written in Japanese is still collected", () => {
   it("reads a heading that uses the Japanese word for screen and a full-width colon", () => {

@@ -181,16 +181,13 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
   and adjust `qfai.config.yaml` accordingly (especially `testFileGlobs`).
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
-- **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
-  as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
-  Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`)
-  may include `prototyping.yaml` as an optional recommendation artifact;
-  cli-only packs omit it, and non-ui discussion packs typically omit it.
+- **qfai-discussion**: Run a structured discussion that settles scope and open questions, and record
+  its outcome in a tracked deliberation record under `paths.deliberationDir` (`.qfai/deliberation/`).
 - **qfai-sdd**: Triage requirements against the existing story tree. Write
   policy, business flows, stories with AC and EX, then enforcing contracts with
   BR. Record decisions that meet the recording test (hard to reverse,
   surprising without context, a real trade-off) and unresolved questions in
-  the two root tables. The discussion pack is input; the story tree is the execution SSOT.
+  the two root tables. The deliberation record is input; the story tree is the execution SSOT.
 - **qfai-prototyping**: Build and review every UI-bearing contract and its
   screens with the user, one iteration at a time, until the user confirms the
   prototype. No command certifies it. The loop's files stay under
@@ -423,7 +420,7 @@ Example: override paths and traceability globs.
 paths:
   contractsDir: .qfai/spec/03_contract
   specsDir: .qfai/spec
-  discussionDir: .qfai/discussion
+  deliberationDir: .qfai/deliberation
   outDir: .qfai/report
   skillsDir: .qfai/assistant/skill
   srcDir: src

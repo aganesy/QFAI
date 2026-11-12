@@ -1,7 +1,7 @@
 /**
  * Layout anti-pattern registry.
  *
- * Patterns are applied to iteration HTML, not to discussion-pack markdown.
+ * Patterns are applied to iteration HTML, not to Markdown.
  * Each entry is either:
  *
  *   - `scope: "layout"` — the regex is matched against the HTML string;

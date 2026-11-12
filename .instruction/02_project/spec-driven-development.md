@@ -22,7 +22,7 @@ examples in the business flows.
 ## Overall Flow (by artifact)
 
 ```text
-.qfai/discussion (upstream input when available)
+.qfai/deliberation (upstream input when available)
         ↓
 .qfai/spec/01_policy
         ↓
@@ -39,7 +39,7 @@ qfai report → .qfai/report/report.md
 
 ### Phase 0: Importing requirements
 
-- A discussion pack under `.qfai/discussion/` is the usual input, and it is
+- A deliberation record under `.qfai/deliberation/` is the usual input, and it is
   optional. A spec set taken in without one is recorded as import-lite evidence
   instead.
 

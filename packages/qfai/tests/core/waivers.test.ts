@@ -711,8 +711,8 @@ describe("applyWaivers", () => {
   // waivable — one emitted only at `error` is refused for that reason instead,
   // which the error-only case below covers.
   it.each([
-    ["QFAI-DPACK-011", "a code the emitter names through a constant"],
-    ["QFAI-DIRECTION-001", "a code with a single-word area"],
+    ["QFAI-STORY-016", "a code the emitter names through a constant"],
+    ["QFAI-FLOW-006", "a code with a single-word area"],
   ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
     const root = await createRoot();
     try {

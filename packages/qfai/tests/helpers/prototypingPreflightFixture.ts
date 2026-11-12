@@ -77,7 +77,6 @@ export async function seedPrototypingPreflightFixture(
       "paths:",
       "  specsDir: .qfai/specs",
       "  contractsDir: .qfai/contracts",
-      "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/report",
       "  skillsDir: .qfai/assistant/skills",
       "  srcDir: src",

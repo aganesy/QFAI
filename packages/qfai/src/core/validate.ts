@@ -50,12 +50,9 @@ import {
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiPlainText } from "./validators/uiPlainText.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
-import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
 import { validateDiagramBudget } from "./validators/diagramBudget.js";
-import { validateDiscussionCitations } from "./validators/discussionCitations.js";
 import { validateDeliberationRecords } from "./validators/deliberationRecord.js";
 import { validateDesignContractReadiness } from "./validators/designContractReadiness.js";
-import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateInstructionAudit } from "./validators/instructionAudit.js";
 import { STEP_DIR_REL, validateStepTree } from "./validators/stepTree.js";
@@ -65,23 +62,18 @@ import {
   detectPlatform,
   validateAgentDefinition,
   validateDesignToken,
-  validateDiscussionPackReadiness,
-  validateDiscussionVisuals,
   validateHtmlMock,
   validateMermaidScreenFlow,
   validateConfigReferenceIntegrity,
-  validateResearchSummary,
   validateRepositoryHygiene,
   validateUiDefinitionConsistency,
   validateDesignAudit,
   validateRootDesignMdParse,
   validateRootDesignMdParseOutsideReadiness,
   validatePrototypingSkillContent,
-  runCanonicalUixValidators,
   validateTestTodoStubs,
   validateAssistantTreeMigration,
   validateSkillDocReferences,
-  detectMockHrefDrift,
   validateAutopilotPolicy,
   runPackageSelfGovernanceValidators,
   stubSourceFilePattern,
@@ -687,9 +679,7 @@ async function runStoryProfileValidators(
     ...(await timed(timings, "story-structure", () =>
       validateStoryTreeStructure(root, config, model),
     )),
-    ...(await timed(timings, "diagram-budget", () =>
-      validateDiagramBudget(root, config, "story-tree"),
-    )),
+    ...(await timed(timings, "diagram-budget", () => validateDiagramBudget(root, config))),
     ...(await timed(timings, "document-schema", () => validateDocumentSchema(root, config))),
     ...(await timed(timings, "stale-terms", () => validateStaleTerms(root, config))),
     ...(await timed(timings, "story-contract-index", () =>
@@ -762,9 +752,8 @@ async function runStoryProfileValidators(
           ...(await timed(timings, "instruction-audit", () =>
             validateInstructionAudit(root, config),
           )),
-          // The prototyping group below runs the research summary, the
-          // canonical UIX checks and the root DESIGN.md readiness gate, so the
-          // discussion and sdd sets leave them to it.
+          // The prototyping group below runs the root DESIGN.md readiness
+          // gate, so the discussion and sdd sets leave it to it.
           ...(await runDiscussionValidators(root, config, timings, false)),
           ...(await sdd(false)),
           ...(await runPrototypingValidators(root, config, timings, platformOption)),
@@ -818,25 +807,21 @@ async function runSaasPackage(
 }
 
 /**
- * The discussion issue set. `includeSharedWithUiux` is false where the
- * prototyping group runs in the same profile: that group also runs the
- * research summary, the canonical UIX checks and the root DESIGN.md readiness
- * gate, and running them here too reported each of their findings twice.
+ * The discussion issue set: the root `DESIGN.md` parse and the deliberation-record layout.
+ * `standalone` is false where the prototyping group runs in the same profile and owns the root
+ * `DESIGN.md` readiness gate, so only the parse outside that gate runs here.
  */
 async function runDiscussionValidators(
   root: string,
   config: ConfigLoadResult["config"],
   timings: TimingsSink,
-  includeSharedWithUiux = true,
+  standalone = true,
 ): Promise<Issue[]> {
   return [
-    // A project reaching this profile may already carry a root DESIGN.md —
-    // from `npx qfai init`, from a hand-edit, or from an earlier pass of the
-    // pipeline — and this is the earliest gate that can see whether it parses.
-    // Catching it here means a malformed file surfaces before `/qfai-sdd`
-    // builds on it. Only the parse half — the UI-contract checks belong to
-    // later stages.
-    ...(includeSharedWithUiux
+    // A project reaching this profile may already carry a root DESIGN.md, and this is the
+    // earliest gate that can see whether it parses. Only the parse half: the UI-contract checks
+    // belong to later stages.
+    ...(standalone
       ? await timed(timings, "root-design-md-parse", () => validateRootDesignMdParse(root))
       : await timed(timings, "root-design-md-parse", () =>
           validateRootDesignMdParseOutsideReadiness(root, config),
@@ -844,30 +829,6 @@ async function runDiscussionValidators(
     ...(await timed(timings, "deliberation-record", () =>
       validateDeliberationRecords(root, config),
     )),
-    ...(await timed(timings, "discussion-mermaid", () => validateDiscussionMermaid(root))),
-    ...(await timed(timings, "design-direction-proposal", () =>
-      validateDesignDirectionProposal(root, config),
-    )),
-    // A pack cites code that later stages change, so only the discussion
-    // profile reads its citations: verify and full read no discussion pack fact.
-    ...(includeSharedWithUiux
-      ? await timed(timings, "discussion-citations", () =>
-          validateDiscussionCitations(root, config),
-        )
-      : []),
-    ...(await timed(timings, "diagram-budget", () =>
-      validateDiagramBudget(root, config, "discussion-pack"),
-    )),
-    ...(await timed(timings, "discussion-pack", () =>
-      validateDiscussionPackReadiness(root, config),
-    )),
-    ...(await timed(timings, "discussion-visuals", () => validateDiscussionVisuals(root))),
-    ...(includeSharedWithUiux
-      ? await timed(timings, "research-summary", () => validateResearchSummary(root, config))
-      : []),
-    ...(includeSharedWithUiux
-      ? await timed(timings, "canonical-uix", () => runCanonicalUixValidators(root, config))
-      : []),
   ];
 }
 
@@ -880,7 +841,6 @@ async function runPrototypingValidators(
 ): Promise<Issue[]> {
   return [
     ...(await runUiuxValidators(root, config, timings, platformOption)),
-    ...(await timed(timings, "mock-href", () => detectMockHrefDrift(root))),
     ...(await timed(timings, "design-contract-readiness", () =>
       validateDesignContractReadiness(root, config),
     )),
@@ -1017,10 +977,8 @@ async function runUiuxValidators(
     ["html mock", () => validateHtmlMock(root, platform, config, htmlMockTiming)],
     ["mermaid screen flow", () => validateMermaidScreenFlow(root, config)],
     ["UI definition consistency", () => validateUiDefinitionConsistency(root, config)],
-    ["research summary", () => validateResearchSummary(root, config)],
     ["agent definition", () => validateAgentDefinition(root)],
     ["design audit", () => validateDesignAudit(root, config)],
-    ["canonical UIX", () => runCanonicalUixValidators(root, config)],
   ];
   const uiuxParts: { name: string; ms: number }[] = [];
   const partIssues = new Map<string, Issue[]>();

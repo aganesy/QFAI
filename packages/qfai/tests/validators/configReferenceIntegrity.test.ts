@@ -36,7 +36,6 @@ function makeConfig(overrides: { primaryUiContract?: string } = {}): QfaiConfig 
     paths: {
       contractsDir: ".qfai/spec/03_contract",
       specsDir: ".qfai/spec",
-      discussionDir: ".qfai/discussion",
       deliberationDir: ".qfai/deliberation",
       outDir: ".qfai/out",
       skillsDir: ".qfai/assistant/skill",
@@ -74,7 +73,6 @@ describe("validateConfigReferenceIntegrity", () => {
     await seedDirs(root, [
       ".qfai/spec",
       ".qfai/spec/03_contract/ui",
-      ".qfai/discussion",
       ".qfai/assistant/skill",
       "src",
       "tests",
@@ -96,7 +94,6 @@ describe("validateConfigReferenceIntegrity", () => {
     await seedDirs(root, [
       ".qfai/spec",
       ".qfai/spec/03_contract",
-      ".qfai/discussion",
       ".qfai/assistant/skill",
       "src",
       "tests",
@@ -114,7 +111,7 @@ describe("validateConfigReferenceIntegrity", () => {
   // QFAI:EX-0003-0003-03
   it("emits QFAI-CFG-LINK-002 (warning) for missing non-default paths", async () => {
     const root = await newTempDir();
-    // specs/contracts/discussion use default skill-created paths, so their
+    // specs/contracts use default skill-created paths, so their
     // absence is no longer a config-reference warning after clean init.
     const config = makeConfig();
     config.paths.srcDir = "lib";
@@ -191,7 +188,6 @@ describe("validateConfigReferenceIntegrity", () => {
     await seedDirs(root, [
       ".qfai/spec",
       ".qfai/spec/03_contract",
-      ".qfai/discussion",
       ".qfai/assistant/skill",
       "src",
       "tests",

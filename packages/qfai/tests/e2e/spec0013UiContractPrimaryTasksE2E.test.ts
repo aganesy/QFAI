@@ -59,7 +59,6 @@ async function seedWorkspace(root: string, uiContract: string): Promise<void> {
       "paths:",
       "  contractsDir: .qfai/spec/03_contract",
       "  specsDir: .qfai/spec",
-      "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/report",
       "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",

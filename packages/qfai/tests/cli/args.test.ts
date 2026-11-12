@@ -213,7 +213,7 @@ describe("parseArgs", () => {
       expect(parsed.options.dryRun).toBe(true);
     });
 
-    it.each([["validate"], ["report"], ["atdd"], ["discussion"]])(
+    it.each([["validate"], ["report"], ["atdd"]])(
       "marks --dry-run invalid on %s and leaves dryRun off",
       (command) => {
         const parsed = parseArgs([command, "--dry-run"], process.cwd());
@@ -264,9 +264,6 @@ describe("parseArgs", () => {
       expect(parseArgs(["atdd"], cwd).invalidReason).toBe(
         "qfai atdd: unknown or missing subcommand. Expected: scaffold",
       );
-      expect(parseArgs(["discussion"], cwd).invalidReason).toBe(
-        "qfai discussion: unknown or missing subcommand. Expected: list|use",
-      );
       expect(parseArgs(["sdd"], cwd).invalidReason).toBe(
         "qfai sdd: unknown or missing subcommand. Expected: preflight|next-id|merge-docs",
       );
@@ -302,7 +299,7 @@ describe("parseArgs", () => {
     // The usage-error code is one number for every command. Asserted over a
     // spread of commands rather than one, because a single case cannot tell a
     // default from a special case.
-    it.each(["init", "validate", "report", "doctor", "atdd", "discussion"])(
+    it.each(["init", "validate", "report", "doctor", "atdd"])(
       "reserves the same usage-error code on %s",
       (command) => {
         const parsed = parseArgs([command, "--bogus-flag"], process.cwd());
@@ -339,10 +336,9 @@ describe("parseArgs", () => {
 
     it("keeps positional subcommand arguments exempt", () => {
       const cwd = process.cwd();
-      const use = parseArgs(["discussion", "use", "disc-0001"], cwd);
-      expect(use.invalid).toBe(false);
-      expect(use.options.discussionId).toBe("disc-0001");
-      expect(use.options.unknownFlags).toEqual([]);
+      const nextId = parseArgs(["sdd", "next-id", "EX", "US-0001-0001", "--base", "main"], cwd);
+      expect(nextId.invalid).toBe(false);
+      expect(nextId.options.unknownFlags).toEqual([]);
     });
 
     it("routes a missing flag value to exit 2 as well", () => {
@@ -474,7 +470,6 @@ describe("parseArgs", () => {
 
     const booleanCases: { flag: string; untouched: (options: Options) => void }[] = [
       { flag: "--run-validate", untouched: (o) => expect(o.reportRunValidate).toBe(false) },
-      { flag: "--active", untouched: (o) => expect(o.discussionActive).toBeUndefined() },
       { flag: "--clean", untouched: (o) => expect(o.doctorClean).toBeUndefined() },
       { flag: "--autoremediate", untouched: (o) => expect(o.doctorAutoremediate).toBeUndefined() },
     ];
@@ -490,14 +485,6 @@ describe("parseArgs", () => {
         untouched(parsed.options);
       },
     );
-
-    it("accepts --active only on `discussion list`", () => {
-      const cwd = process.cwd();
-      const parsed = parseArgs(["discussion", "use", "discussion-1", "--active"], cwd);
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.discussionActive).toBeUndefined();
-      expect(parsed.options.discussionId).toBe("discussion-1");
-    });
 
     it("accepts doctor --target-url only with the built-in prototyping profile", () => {
       const cwd = process.cwd();
@@ -572,10 +559,6 @@ describe("parseArgs", () => {
       expect(doctor.invalid).toBe(false);
       expect(doctor.options.prototypingTargetUrl).toBe("https://x/");
       expect(doctor.options.doctorClean).toBe(true);
-
-      const discussion = parseArgs(["discussion", "list", "--active"], cwd);
-      expect(discussion.invalid).toBe(false);
-      expect(discussion.options.discussionActive).toBe(true);
 
       const validate = parseArgs(["validate", "--platform", "web"], cwd);
       expect(validate.invalid).toBe(false);
@@ -696,7 +679,7 @@ describe("parseArgs --version", () => {
   // The subcommand scan runs before the flag loop and only skipped `--`
   // tokens, so a short flag was shifted away as an unknown action: the long
   // form worked on these commands and the short one printed help.
-  for (const command of ["atdd", "discussion", "sdd"] as const) {
+  for (const command of ["atdd", "sdd"] as const) {
     for (const flag of ["--version", "-V"] as const) {
       it(`sets version for \`qfai ${command} ${flag}\``, () => {
         const parsed = parseArgs([command, flag], process.cwd());
@@ -704,13 +687,6 @@ describe("parseArgs --version", () => {
       });
     }
   }
-
-  it("does not read a short flag as the discussion use id", () => {
-    const parsed = parseArgs(["discussion", "use", "-V"], process.cwd());
-    expect(parsed.options.discussionAction).toBe("use");
-    expect(parsed.options.discussionId).toBeUndefined();
-    expect(parsed.options.version).toBe(true);
-  });
 
   it("still rejects an unknown subcommand name", () => {
     // Skipping dash-prefixed tokens must not skip a real typo: the post-loop
@@ -722,49 +698,6 @@ describe("parseArgs --version", () => {
 
   it("still requires a subcommand when only flags follow", () => {
     const parsed = parseArgs(["atdd", "--root", "."], process.cwd());
-    expect(parsed.invalid).toBe(true);
-  });
-});
-
-describe("parseArgs dash-leading positionals", () => {
-  // A subcommand name is a closed set and never starts with `-`, but the
-  // positional after it is caller data and may legitimately begin with a
-  // single `-`.
-  it("accepts a discussion id that starts with a dash", () => {
-    const parsed = parseArgs(["discussion", "use", "-discussion-0001"], process.cwd());
-    expect(parsed.options.discussionAction).toBe("use");
-    expect(parsed.options.discussionId).toBe("-discussion-0001");
-    expect(parsed.invalid).toBe(false);
-  });
-
-  it("accepts a dash-leading discussion id alongside a trailing flag", () => {
-    const parsed = parseArgs(
-      ["discussion", "use", "-discussion-0001", "--root", "/tmp/example"],
-      process.cwd(),
-    );
-    expect(parsed.options.discussionId).toBe("-discussion-0001");
-    expect(parsed.options.root).toBe("/tmp/example");
-    expect(parsed.invalid).toBe(false);
-  });
-
-  // Over-correction pins: relaxing the positional must not re-admit the two
-  // short flags the parser reserves, nor any long flag.
-  it("keeps a long flag out of the discussion use id", () => {
-    const parsed = parseArgs(["discussion", "use", "--root", "/tmp/example"], process.cwd());
-    expect(parsed.options.discussionId).toBeUndefined();
-    expect(parsed.options.root).toBe("/tmp/example");
-  });
-
-  it("keeps -h out of the discussion use id", () => {
-    const parsed = parseArgs(["discussion", "use", "-h"], process.cwd());
-    expect(parsed.options.discussionId).toBeUndefined();
-    expect(parsed.options.help).toBe(true);
-  });
-
-  it("still refuses a dash-leading token in the subcommand position", () => {
-    const parsed = parseArgs(["discussion", "-discussion-0001"], process.cwd());
-    expect(parsed.options.discussionAction).toBeUndefined();
-    expect(parsed.options.discussionId).toBeUndefined();
     expect(parsed.invalid).toBe(true);
   });
 });

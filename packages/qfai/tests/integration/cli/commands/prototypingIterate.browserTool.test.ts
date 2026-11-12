@@ -35,7 +35,6 @@ async function writeConfigWithBrowserTool(root: string, browserTool: string): Pr
       "paths:",
       "  contractsDir: .qfai/contracts",
       "  specsDir: .qfai/specs",
-      "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/out",
       "  skillsDir: .qfai/assistant/skills",
       "  srcDir: src",

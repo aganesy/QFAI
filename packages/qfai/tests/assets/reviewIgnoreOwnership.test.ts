@@ -1,7 +1,7 @@
 /**
  * The directories that hold one worker's local records stay out of the index.
  *
- * Discussion packs, their archive, run reports and review packs record one
+ * Run reports and review packs record one
  * checkout's work. None of them is part of the codebase, so none is tracked,
  * and git ignores a new file in any of them.
  *
@@ -25,11 +25,6 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 /** Each untracked directory, with a representative path a run writes inside it. */
 const LOCAL_RECORD_DIRECTORIES: ReadonlyArray<readonly [directory: string, sample: string]> = [
-  [".qfai/discussion", ".qfai/discussion/discussion-20260101000000000/01_Context.md"],
-  [
-    ".qfai/discussion_archive",
-    ".qfai/discussion_archive/discussion-20260101000000000/01_Context.md",
-  ],
   [".qfai/report", ".qfai/report/validate.json"],
   [".qfai/review", ".qfai/review/review-20260101000000000/summary.json"],
 ];

@@ -337,7 +337,6 @@ describe("E2E: internal module workflow documentation", () => {
     expect(validateSrc).toContain("validateStoryTreeStructure");
     expect(validateSrc).toContain("validateStoryTreeContractReferences");
     expect(validateSrc).toContain("validateStoryTreeObligations");
-    expect(validateSrc).toContain("validateDiscussionPackReadiness");
   });
 });
 
@@ -375,7 +374,6 @@ describe("E2E: gitignore managed block auto-append (US-0003-0015)", () => {
       expect(content).toContain(".qfai/report/*");
       expect(content).toContain(".qfai/evidence/*");
       expect(content).toContain(".qfai/review/*");
-      expect(content).toContain(".qfai/discussion/*");
     } finally {
       await cleanupTempDir(tmpDir);
     }

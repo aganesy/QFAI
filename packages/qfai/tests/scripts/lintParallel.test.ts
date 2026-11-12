@@ -76,7 +76,6 @@ const LINT_PROFILE: Profile = {
     "node ./scripts/check-changelog-entries.mjs",
     "node ./scripts/check-doc-clarity.mjs",
     "node ./scripts/check-simplification-ledger.mjs",
-    "node ./packages/qfai/scripts/check-pack-locations.mjs",
     "node ./packages/qfai/scripts/check-markdownlint-config.mjs",
   ],
   groups: [
@@ -109,7 +108,6 @@ const LINT_PROFILE: Profile = {
       "node ./scripts/check-changelog-entries.mjs",
       "node ./scripts/check-doc-clarity.mjs",
       "node ./scripts/check-simplification-ledger.mjs",
-      "node ./packages/qfai/scripts/check-pack-locations.mjs",
       "node ./packages/qfai/scripts/check-markdownlint-config.mjs",
     ],
   ],

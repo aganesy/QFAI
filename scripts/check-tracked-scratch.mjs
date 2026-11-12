@@ -48,12 +48,7 @@ const SCRATCH_PATHSPEC = "tmp";
  * Each one is ignored whole by a `.qfai/<dir>/*` line of the managed
  * `.gitignore` block; `trackedScratch.test.ts` holds the two lists together.
  */
-export const GENERATED_DIRS = [
-  ".qfai/report",
-  ".qfai/evidence",
-  ".qfai/review",
-  ".qfai/discussion",
-];
+export const GENERATED_DIRS = [".qfai/report", ".qfai/evidence", ".qfai/review"];
 
 /**
  * Tracked paths under the given pathspecs, or `null` when git cannot answer.
