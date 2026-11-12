@@ -1,25 +1,18 @@
 /**
  * verify semantics audit tests — spec-0014 migration / compatibility alignment
  */
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runValidate } from "../../src/cli/commands/validate.js";
-import { defaultConfig } from "../../src/core/config.js";
-import { validateProject } from "../../src/core/validate.js";
-import { runCanonicalUixValidators } from "../../src/core/validators/uix/canonical.js";
 import { captureStdout } from "../helpers/stdout.js";
 
-const tempDirs: string[] = [];
+const repoRoot = path.resolve(process.cwd(), "..", "..");
 
-async function newTempDir(): Promise<string> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-verify-semantics-"));
-  tempDirs.push(dir);
-  return dir;
-}
+const tempDirs: string[] = [];
 
 afterEach(async () => {
   while (tempDirs.length > 0) {
@@ -28,133 +21,27 @@ afterEach(async () => {
   }
 });
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
-
-// QFAI:AC-0001-0156-03
-// QFAI:EX-0001-0157-01
-// QFAI:EX-0001-0156-03
-describe("TC-0014-0018: canonical UIX in verify path", () => {
-  it("validate.ts imports the canonical group and no retired one", async () => {
-    // Source text, and only about which symbols are named. Whether the group
-    // is reached is the case below: an import line satisfies every assertion
-    // here with both call sites deleted.
-    const validateSrc = await readFile(
-      path.join(repoRoot, "packages", "qfai", "src", "core", "validate.ts"),
+describe("TC-0014-0018: a validation error keeps verify from passing", () => {
+  // QFAI:AC-0001-0156-02
+  it("a verify run that reports an error exits non-zero and names the finding", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-verify-semantics-"));
+    tempDirs.push(root);
+    // A deliberation record without its Interview and Agent decisions sections
+    // is a layout error the verify profile reports.
+    await mkdir(path.join(root, ".qfai", "deliberation"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "deliberation", "20260101000000-broken.md"),
+      "# Deliberation record\n\n## Subject\n\nA broken record.\n",
       "utf-8",
     );
-
-    expect(validateSrc).toContain("runCanonicalUixValidators");
-    expect(validateSrc).toContain('from "./validators/index.js"');
-    expect(validateSrc).not.toMatch(/runLegacyUixCompatibilityValidators|runAllUixValidators/);
-  });
-
-  it("a verify run surfaces a canonical group finding", async () => {
-    // The obligation is that full-scan verify DEPENDS on the canonical groups,
-    // and a dependency is observable only by running the thing that depends.
-    // Reading the source for a symbol name does not see it, and calling the
-    // group directly measures the group's own rule instead of the wiring.
-    //
-    // The falsifying change is deleting the two `runCanonicalUixValidators`
-    // call sites in `src/core/validate.ts` while keeping the import. That
-    // leaves the case above green and reddens this one.
-    const root = await newTempDir();
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
-    await mkdir(path.join(packDir, "uiux"), { recursive: true });
-    // The pack holds none of the required sidecars — the same input the
-    // direct-call case uses, so the two differ only in how the validator is
-    // reached.
-    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
-
-    const result = await validateProject(root, undefined, { profile: "verify" });
-
-    expect(
-      result.issues.map((issue) => issue.code),
-      "the verify profile must carry the canonical UIX group's findings",
-    ).toContain("QFAI-THREELAYER-002");
-  });
-
-  // QFAI:AC-0001-0156-02
-  // QFAI:EX-0001-0156-01
-  it("a verify run that reports a canonical error does not pass", async () => {
-    const root = await newTempDir();
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
-    await mkdir(path.join(packDir, "uiux"), { recursive: true });
-    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
-
-    const result = await validateProject(root, undefined, { profile: "verify" });
-    const errors = result.issues.filter(
-      (issue) => issue.code === "QFAI-THREELAYER-002" && issue.severity === "error",
-    );
-    expect(errors.length).toBeGreaterThan(0);
 
     let exit = -1;
     const output = await captureStdout(async () => {
       exit = await runValidate({ root, strict: false, failOn: "error", profile: "verify" });
     });
+
     expect(exit).toBe(1);
-    expect(output).toContain("QFAI-THREELAYER-002");
-  });
-
-  it("runCanonicalUixValidators reaches the latest pack from a repo root", async () => {
-    const root = await newTempDir();
-    await mkdir(path.join(root, ".qfai", "discussion", "discussion-20260101000000000", "uiux"), {
-      recursive: true,
-    });
-    await writeFile(
-      path.join(root, ".qfai", "discussion", "discussion-20260101000000000", "01_Context.md"),
-      "# Context\n\n- surface: web\n",
-      "utf-8",
-    );
-
-    // The pack holds none of the required sidecars, so the group reports them.
-    const issues = await runCanonicalUixValidators(root, defaultConfig);
-    expect(issues.find((issue) => issue.code === "QFAI-THREELAYER-002")).toBeDefined();
-  });
-});
-
-describe("UI-bearing discussion sidecars in project validation", () => {
-  // QFAI:EX-0001-0019-01
-  it("reports the missing screen contracts file while the review bundle exists", async () => {
-    const root = await newTempDir();
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
-    await mkdir(path.join(packDir, "uiux"), { recursive: true });
-    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
-    await writeFile(path.join(packDir, "uiux", "00_index.md"), "# UI index\n", "utf-8");
-    await writeFile(path.join(packDir, "uiux", "50_review_input_bundle.md"), "# Review\n", "utf-8");
-
-    const result = await validateProject(root, undefined, { profile: "verify" });
-    expect(result.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "QFAI-THREELAYER-002",
-          file: "uiux/40_screen_contracts.md",
-        }),
-      ]),
-    );
-  });
-
-  // QFAI:EX-0001-0019-01
-  it("reports the missing review bundle while the screen contracts file exists", async () => {
-    const root = await newTempDir();
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
-    await mkdir(path.join(packDir, "uiux"), { recursive: true });
-    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
-    await writeFile(path.join(packDir, "uiux", "00_index.md"), "# UI index\n", "utf-8");
-    await writeFile(
-      path.join(packDir, "uiux", "40_screen_contracts.md"),
-      "# Screen Contracts\n",
-      "utf-8",
-    );
-
-    const result = await validateProject(root, undefined, { profile: "verify" });
-    expect(result.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "QFAI-THREELAYER-002",
-          file: "uiux/50_review_input_bundle.md",
-        }),
-      ]),
-    );
+    expect(output).toContain("QFAI-DELIB-001");
   });
 });
 
@@ -174,234 +61,5 @@ describe("TC-0014-0019: removed compatibility surface", () => {
     expect(validatorsIndexSrc).not.toContain("runLegacyUixCompatibilityValidators");
     expect(typesSrc).toMatch(/type\s+IssueCategory\s*=\s*"canonical"\s*\|\s*"change"/);
     expect(typesSrc).not.toContain('"compatibility"');
-  });
-});
-
-// QFAI:AC-0001-0019-02
-describe("a UI-bearing pack that inherits the current DESIGN.md", () => {
-  const RESEARCH_CODES = ["QFAI-THREELAYER-002", "QFAI-TREND-004", "QFAI-RESEARCH-013"];
-
-  /** A project with one UI contract declaring `SCR-001`, and one web pack holding `uiux/00_index.md` only. */
-  async function createProject(contextLines: string[]): Promise<{ root: string; packDir: string }> {
-    const root = await newTempDir();
-    await writeFile(path.join(root, "qfai.config.yaml"), "workflow:\n  mode: active\n", "utf-8");
-    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
-    await mkdir(uiDir, { recursive: true });
-    await writeFile(
-      path.join(uiDir, "ui-0001-login.yaml"),
-      ["screens:", "  - id: SCR-001", "    route: /login", ""].join("\n"),
-      "utf-8",
-    );
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
-    await mkdir(path.join(packDir, "uiux"), { recursive: true });
-    await writeFile(path.join(packDir, "uiux", "00_index.md"), "# UI index\n", "utf-8");
-    await writeFile(path.join(packDir, "04_Sources.md"), "# 04 Sources\n", "utf-8");
-    await writeFile(
-      path.join(packDir, "01_Context.md"),
-      [
-        "# Context",
-        "",
-        "## UI-bearing Classification",
-        "",
-        "- ui_bearing: true",
-        "- primary_surface: web",
-        "- secondary_surfaces:",
-        "- classification_rationale: Adds a login section to existing screens.",
-        ...contextLines,
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    return { root, packDir };
-  }
-
-  async function codesOf(root: string): Promise<string[]> {
-    const result = await validateProject(root, undefined, { profile: "verify" });
-    return result.issues.filter((issue) => issue.severity === "error").map((issue) => issue.code);
-  }
-
-  // QFAI:EX-0001-0019-03
-  it("owes no screen contracts, review bundle, Trend Scan or reference count", async () => {
-    const inheriting = await createProject(["- design_direction: inherit"]);
-    const declaring = await createProject([]);
-
-    const inheritingCodes = await codesOf(inheriting.root);
-    const declaringCodes = await codesOf(declaring.root);
-
-    for (const code of RESEARCH_CODES) {
-      expect(inheritingCodes, `${code} with the declaration`).not.toContain(code);
-      expect(declaringCodes, `${code} without the declaration`).toContain(code);
-    }
-  });
-
-  // QFAI:EX-0001-0019-04
-  it("refuses the declaration on a pack that adds a screen or records its own direction", async () => {
-    const addsScreen = await createProject(["- design_direction: inherit"]);
-    await writeFile(
-      path.join(addsScreen.packDir, "uiux", "40_screen_contracts.md"),
-      "# Screen Contracts\n\n### Screen: New\n\n- screen_id: SCR-NEW\n",
-      "utf-8",
-    );
-    const ownDirection = await createProject([
-      "- design_direction: inherit",
-      "",
-      "## Design Direction",
-      "",
-      "- adopted_theme: Material 3",
-    ]);
-    await writeFile(
-      path.join(ownDirection.packDir, "uiux", "40_screen_contracts.md"),
-      "# Screen Contracts\n\n### Screen: Login\n\n- screen_id: SCR-001\n",
-      "utf-8",
-    );
-    const clean = await createProject(["- design_direction: inherit"]);
-    await writeFile(
-      path.join(clean.packDir, "uiux", "40_screen_contracts.md"),
-      "# Screen Contracts\n\n### Screen: Login\n\n- screen_id: SCR-001\n",
-      "utf-8",
-    );
-
-    const refusalOf = async (root: string) =>
-      (await validateProject(root, undefined, { profile: "verify" })).issues.filter(
-        (issue) => issue.code === "QFAI-CLASSIFICATION-011",
-      );
-
-    const [screen] = await refusalOf(addsScreen.root);
-    expect(screen?.severity).toBe("error");
-    expect(screen?.message).toContain("SCR-NEW");
-    const [direction] = await refusalOf(ownDirection.root);
-    expect(direction?.severity).toBe("error");
-    expect(direction?.message).toContain("adopted_theme");
-    await expect(refusalOf(clean.root)).resolves.toEqual([]);
-  });
-});
-
-// QFAI:AC-0001-0019-02
-// QFAI:AC-0001-0019-03
-describe("a UI-bearing pack copied from the shipped templates", () => {
-  const TEMPLATES = path.join(
-    repoRoot,
-    "packages",
-    "qfai",
-    "assets",
-    "init",
-    ".qfai",
-    "assistant",
-    "skill",
-    "qfai-discussion",
-    "templates",
-  );
-  /** The new-direction research an inheriting pack does not owe. */
-  const WAIVED = ["QFAI-TREND-003", "QFAI-TREND-005", "QFAI-RESEARCH-013", "QFAI-RESEARCH-014"];
-  /** The Research Summary the research-first protocol asks of every pack. */
-  const KEPT = [
-    "QFAI-RESEARCH-004",
-    "QFAI-RESEARCH-005",
-    "QFAI-RESEARCH-006",
-    "QFAI-RESEARCH-010",
-    "QFAI-RESEARCH-018",
-    "QFAI-RESEARCH-019",
-    "QFAI-RESEARCH-021",
-  ];
-
-  /**
-   * A project whose UI contract declares `SCR-001`, the screen the template's
-   * screen contracts name, and one web pack holding every shipped template as
-   * written, with the classification filled in.
-   */
-  async function createTemplateProject(
-    direction: string,
-  ): Promise<{ root: string; packDir: string }> {
-    const root = await newTempDir();
-    await writeFile(path.join(root, "qfai.config.yaml"), "workflow:\n  mode: active\n", "utf-8");
-    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
-    await mkdir(uiDir, { recursive: true });
-    await writeFile(
-      path.join(uiDir, "ui-0001-login.yaml"),
-      ["# QFAI-CONTRACT-ID: UI-0001", "screens:", "  - id: SCR-001", "    route: /login", ""].join(
-        "\n",
-      ),
-      "utf-8",
-    );
-    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
-    await cp(TEMPLATES, packDir, { recursive: true });
-    const contextPath = path.join(packDir, "01_Context.md");
-    const context = (await readFile(contextPath, "utf-8"))
-      .replace("- ui_bearing: [true|false]", "- ui_bearing: true")
-      .replace("- primary_surface: [web|mobile|desktop|cli|mixed|non-ui]", "- primary_surface: web")
-      .replace(/- secondary_surfaces:\r?\n\s*- \[optional\]/, "- secondary_surfaces: []")
-      .replace(
-        "- classification_rationale: [Why this classification was chosen]",
-        "- classification_rationale: Changes an existing screen.",
-      )
-      .replace("- design_direction: [new|inherit]", `- design_direction: ${direction}`);
-    await writeFile(contextPath, context, "utf-8");
-    return { root, packDir };
-  }
-
-  async function codesOf(root: string, profile: "verify" | "full" = "verify"): Promise<string[]> {
-    const result = await validateProject(root, undefined, { profile });
-    return result.issues.map((issue) => issue.code);
-  }
-
-  // QFAI:EX-0001-0019-05
-  it("waives the new-direction research for an inheriting pack and keeps the Research Summary", async () => {
-    const inheriting = await createTemplateProject("inherit");
-    const declaring = await createTemplateProject("new");
-
-    const inheritingCodes = await codesOf(inheriting.root);
-    const declaringCodes = await codesOf(declaring.root);
-
-    for (const code of WAIVED) {
-      expect(inheritingCodes, `${code} with design_direction: inherit`).not.toContain(code);
-      expect(declaringCodes, `${code} with design_direction: new`).toContain(code);
-    }
-    for (const code of KEPT) {
-      expect(inheritingCodes, `${code} with design_direction: inherit`).toContain(code);
-      expect(declaringCodes, `${code} with design_direction: new`).toContain(code);
-    }
-    expect(inheritingCodes).not.toContain("QFAI-CLASSIFICATION-011");
-  });
-
-  // QFAI:EX-0001-0019-06
-  it("reports each discussion-pack finding once in verify and full", async () => {
-    const { root, packDir } = await createTemplateProject("inherit");
-    await writeFile(
-      path.join(packDir, "uiux", "40_screen_contracts.md"),
-      "# Screen Contracts\n\n### Screen: New\n\n- screen_id: SCR-NEW\n",
-      "utf-8",
-    );
-
-    // A root DESIGN.md that does not parse, read by the discussion parse check
-    // and by the readiness gate.
-    await writeFile(path.join(root, "DESIGN.md"), "no front matter here\n", "utf-8");
-    // The same file in a project whose UI contracts declare no screen, where
-    // only the discussion parse check reports it.
-    const noScreens = await newTempDir();
-    await writeFile(
-      path.join(noScreens, "qfai.config.yaml"),
-      "workflow:\n  mode: active\n",
-      "utf-8",
-    );
-    await writeFile(path.join(noScreens, "DESIGN.md"), "no front matter here\n", "utf-8");
-
-    for (const profile of ["verify", "full"] as const) {
-      const issues = (await validateProject(root, undefined, { profile })).issues;
-      const count = (code: string) => issues.filter((entry) => entry.code === code).length;
-      expect(count("QFAI-CLASSIFICATION-011"), `QFAI-CLASSIFICATION-011 in ${profile}`).toBe(1);
-      expect(count("QFAI-RESEARCH-021"), `QFAI-RESEARCH-021 in ${profile}`).toBe(1);
-      expect(count("QFAI-DCON-033"), `QFAI-DCON-033 in ${profile}`).toBe(1);
-      const keys = issues.map((entry) =>
-        [entry.code, entry.file ?? "", entry.message].join("\u0000"),
-      );
-      const repeated = keys.filter((key, index) => keys.indexOf(key) !== index);
-      expect(repeated, `findings repeated in ${profile}`).toEqual([]);
-
-      const noScreenIssues = (await validateProject(noScreens, undefined, { profile })).issues;
-      expect(
-        noScreenIssues.filter((entry) => entry.code === "QFAI-DCON-033"),
-        `QFAI-DCON-033 without UI screens in ${profile}`,
-      ).toHaveLength(1);
-    }
   });
 });

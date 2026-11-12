@@ -257,31 +257,8 @@ export const GATE_GROUP_FAMILIES = {
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
   "instruction-audit": ["QFAI-INSTR-*"],
-  // Spelled out so QFAI-DPACK-012, which only the discussion profile runs, has a group of its own.
-  discussion: [
-    "QFAI-DPACK-001",
-    "QFAI-DPACK-002",
-    "QFAI-DPACK-003",
-    "QFAI-DPACK-004",
-    "QFAI-DPACK-005",
-    "QFAI-DPACK-007",
-    "QFAI-DPACK-008",
-    "QFAI-DPACK-009",
-    "QFAI-DPACK-011",
-    "QFAI-VIS-*",
-  ],
   "diagram-budget": ["QFAI-FLOW-006"],
-  "discussion-citations": ["QFAI-DPACK-012"],
-  "research-summary": ["QFAI-RESEARCH-*"],
-  "canonical-uix": [
-    "QFAI-THREELAYER-*",
-    "QFAI-CLASSIFICATION-*",
-    "QFAI-DIRECTION-*",
-    "QFAI-OQ-*",
-    "QFAI-SCREEN-*",
-    "QFAI-SIDECAR-*",
-    "QFAI-TREND-*",
-  ],
+  "deliberation-record": ["QFAI-DELIB-001"],
   "story-structure": [
     "QFAI-STORY-001",
     "QFAI-STORY-002",
@@ -307,7 +284,6 @@ export const GATE_GROUP_FAMILIES = {
   "story-test-scan": ["QFAI-SCAN-002"],
   sdd: ["QFAI-AUTOPILOT-*", "QFAI-ASSISTANT-001", "QFAI-SKILLDOC-001", "QFAI-ASSISTANT-002"],
   "reviewer-gate-sdd": ["QFAI-POLICY-*"],
-  "reviewer-gate-shared": ["QFAI-MOCKHREF-001"],
   contracts: [
     "QFAI-CONTRACT-000",
     "QFAI-CONTRACT-010",
@@ -354,7 +330,6 @@ const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
   drift: "drift",
   "saas-package-profile": "saas-package",
-  "discussion-citations": "discussion",
 };
 
 function stageOwnerOf(group: GateGroup): ValidationProfile | undefined {
@@ -371,28 +346,19 @@ const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
   "prototyping",
   "ui-screen-entries",
   "contract-parse",
-  "reviewer-gate-shared",
   "design-contract-readiness",
   "root-design-md-parse",
-  "research-summary",
-  "canonical-uix",
 ];
 
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   full: FULL_GATE_GROUPS,
   verify: FULL_GATE_GROUPS,
-  discussion: [
-    "discussion",
-    "discussion-citations",
-    "diagram-budget",
-    "research-summary",
-    "canonical-uix",
-    "root-design-md-parse",
-  ],
+  discussion: ["deliberation-record", "root-design-md-parse"],
   sdd: [
     "story-structure",
     "diagram-budget",
     "document-schema",
+    "deliberation-record",
     "story-contract-index",
     "design-contract-readiness",
     "sdd",
@@ -1178,6 +1144,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DOCSCHEMA-001":
     "Exactly one shipped schema covers each story-tree Markdown file, and the file has the sections, order and content that schema declares and carries no opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
+  "QFAI-DELIB-001":
+    "Each deliberation record directly under `paths.deliberationDir` holds an `Interview` and an `Agent decisions` section, and each table in them has the columns Background, Option 1, Option 2, Option 3, Option 4 (other) and Chosen option number, in that order, with six cells per row.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
@@ -1202,30 +1170,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",
   "QFAI-LINK-002":
     "Every `file.md#anchor` citation inside .qfai/assistant/** names a document that is there, and a heading that is in it.",
-  "QFAI-DPACK-001":
-    "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
-  "QFAI-DPACK-002":
-    "The latest discussion-pack contains the required markdown files; no prototyping sidecar artifact is required.",
-  "QFAI-DPACK-003": "The latest discussion-pack files contain minimum substantive content.",
-  "QFAI-DPACK-004":
-    "No open OQ remains in `11_OQ-Register.md` (`Disposition: open` blocks discussion completion).",
-  "QFAI-DPACK-005":
-    "Discussion pack naming must use `discussion-YYYYMMDDhhmmssSSS` for canonical outputs.",
-  "QFAI-DPACK-007":
-    "Every deferred OQ row in `11_OQ-Register.md` records its `Resolution` and a `Next-Decision-Point` naming the next point at which it is decided.",
-  "QFAI-DPACK-008": "`03_Story-Workshop.md` must include at least one Mermaid block.",
-  "QFAI-DPACK-009":
-    "`03_Story-Workshop.md` Mermaid content should include `flowchart` or `sequenceDiagram`.",
-  "QFAI-DPACK-011":
-    "On a visual surface, every `DESIGN.md` key and archetype a discussion pack proposes is one the front-matter schema accepts.",
-  "QFAI-DPACK-012":
-    "Every file and line citation in the latest discussion pack names a file under the project root and a line it holds.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `paths.specsDir`.",
   "QFAI-HYG-003":
     "The root `.gitignore` carries every recommended QFAI ignore entry, the root `tmp/` included.",
-  "QFAI-VIS-001": "`01_Context.md` should include at least one Mermaid diagram.",
-  "QFAI-VIS-002":
-    "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
   "QFAI-CFG-LINK-001":
     "qfai.config.yaml: prototyping.primaryUiContract names a UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
   "QFAI-CFG-LINK-002":
@@ -1236,8 +1183,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Root DESIGN.md exists but failed to parse per design-md-spec (front-matter is malformed).",
   "QFAI-DCON-034":
     "Root DESIGN.md must be the project's own brand SSOT, not the unreplaced qfai sample seeded by `qfai init`.",
-  "QFAI-RESEARCH-012":
-    "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
   // The apply-order family. Each of these reads a column or a declaration that
   // nothing read before them, so a project meeting one of them for the first
   // time has a backlog to work through rather than a single edit.
@@ -1293,22 +1238,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "An example whose row changed since the base branch has a test annotating it that changed too.",
   "QFAI-DRIFT-003":
     "The base branch resolves to a merge base with HEAD, so the drift checks compare against it; the drift profile names the commit it compared with.",
-  "QFAI-RESEARCH-013":
-    "A UI-bearing discussion pack registers at least `uiux.competitive_refs_min` complete competitive references (default 3) in `04_Sources.md`.",
-  "QFAI-RESEARCH-014":
-    "Every registered competitive reference populates `adopted_points`, `rejected_points` and `local_translation` with real content rather than a placeholder.",
-  "QFAI-RESEARCH-015":
-    "Every `source_id` in the Research Summary resolves to an `id` in the same `sources[]` list.",
-  "QFAI-RESEARCH-016":
-    "The current discussion pack's `04_Sources.md` holds the `## Research Summary` slot, so the stored protocol output is in the file that owns it.",
-  "QFAI-RESEARCH-017": "Every `sources[]` entry declares its `id`.",
-  "QFAI-RESEARCH-018":
-    "Every `best_practices[]` / `anti_patterns[]` entry declares `id`, `category`, `title`, `description` and `source_id`.",
-  "QFAI-RESEARCH-019": "Every `reflection[]` entry declares `source_id` and `finding`.",
-  "QFAI-RESEARCH-020":
-    "`.qfai/state.json#discussion.currentId` resolves to a discussion pack on disk, so the Research Summary is read from the pack the operator selected.",
-  "QFAI-RESEARCH-021":
-    "No required Research Summary value is still the shipped `[...]` template placeholder.",
   "QFAI-AUTOPILOT-001":
     "Every `qfai-*` SKILL.md keeps its hard-required bucket to the common entries plus the ones it declares for itself, and names no retired entry. A skill may carry fewer — one it never reads costs a prompt and buys nothing — and never more.",
   "QFAI-ASSISTANT-001": "Every directory under `.qfai/assistant/` is one of the canonical layers.",
@@ -1378,19 +1307,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "The platform named on the command line or in qfai.config.yaml is one the platform rules know, so the platform-specific rules apply.",
   "QFAI-PLATFORM-002":
     "A project is detected as a single platform; a cross-platform one such as Electron gets the cross-platform rules.",
-  "QFAI-RESEARCH-001": "A Research Summary lists at least one source.",
-  "QFAI-RESEARCH-002":
-    "At least 80% of a Research Summary's sources are no more than two years old.",
-  "QFAI-RESEARCH-003":
-    "A Research Summary with reflection entries has at least one entry whose action is `apply`.",
-  "QFAI-RESEARCH-004": "Every Research Summary source has a `title`.",
-  "QFAI-RESEARCH-005": "Every Research Summary source has a `url`.",
-  "QFAI-RESEARCH-006": "Every Research Summary source has a `published` date written YYYY-MM-DD.",
-  "QFAI-RESEARCH-007": "A Research Summary has a non-empty `best_practices` list.",
-  "QFAI-RESEARCH-008": "A Research Summary has a non-empty `anti_patterns` list.",
-  "QFAI-RESEARCH-009": "Every reflection entry has an `action` of apply, reject or defer.",
-  "QFAI-RESEARCH-010": "Every reflection entry has a non-empty `reason`.",
-  "QFAI-RESEARCH-011": "A Research Summary has a non-empty `reflection` list.",
   "QFAI-SKILLS-011":
     "The shared delegation baseline has a `## Reviewer Gate Baseline` section, so every skill inherits a reviewer gate.",
   "QFAI-SKILLS-012": "The Reviewer Gate Baseline states every obligation a skill inherits.",
@@ -1415,37 +1331,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-POLICY-002": "No skill's auto-decide bucket lists an entry outside the shared allowed set.",
   "QFAI-HANDOFF-001":
     "The handoff schema's field list and each file that writes a handoff name the same fields.",
-  "QFAI-MOCKHREF-001":
-    "The HTML mock template and the validator rule for mock links agree on which hrefs are allowed.",
   "QFAI-MANIFEST-001":
     "The skill manifest schema and the probe that reads it name the same tokens.",
-  "QFAI-THREELAYER-002": "The `uiux/` directory holds every file of the canonical sidecar family.",
-  "QFAI-CLASSIFICATION-001":
-    "The `ui_bearing`, `primary_surface` and `secondary_surfaces` fields of a classification agree with each other.",
-  "QFAI-CLASSIFICATION-002": "`secondary_surfaces` lists no surface twice.",
-  "QFAI-CLASSIFICATION-003": "`ui_bearing` is `true` or `false`.",
-  "QFAI-CLASSIFICATION-004":
-    "Every `secondary_surfaces` value is a surface the classification accepts.",
-  "QFAI-CLASSIFICATION-005": "`primary_surface` is a surface the classification accepts.",
-  "QFAI-CLASSIFICATION-006": "`01_Context.md` has the UI-bearing classification block.",
-  "QFAI-CLASSIFICATION-007":
-    "`classification_rationale` holds project-specific reasoning, not placeholder text.",
-  "QFAI-CLASSIFICATION-008":
-    "The classification block has `ui_bearing`, `primary_surface`, `secondary_surfaces` and `classification_rationale`.",
-  "QFAI-CLASSIFICATION-009":
-    "`secondary_surfaces` is present, as a list or an explicit empty list.",
-  "QFAI-CLASSIFICATION-010": "`secondary_surfaces` does not repeat the `primary_surface`.",
-  "QFAI-CLASSIFICATION-011":
-    "`design_direction` is `new` or `inherit`, and a pack that declares `inherit` adds no screen and records no design direction of its own.",
-  "QFAI-DIRECTION-001":
-    "`50_review_input_bundle.md` states that the latest iteration is the accepted one and no earlier iteration is restored.",
-  "QFAI-OQ-001": "No critical open question remains open in the OQ register.",
-  "QFAI-SCREEN-001": "Every screen in the screen contract has a unique `screen_id`.",
-  "QFAI-SCREEN-002":
-    "Every screen in the screen contract writes its nested fields as nested canonical bullets.",
-  "QFAI-SCREEN-003": "Every screen in the screen contract has all the required fields.",
-  "QFAI-SCREEN-004": "Every screen's `required_states` includes the mandatory states.",
-  "QFAI-SIDECAR-001": "A spec that is UI-bearing has a `uiux/` sidecar directory.",
   "QFAI-PROTOSKILL-001": "The prototyping skill claims no capability that is not implemented.",
   "QFAI-PROTOSKILL-003":
     "The prototyping skill documents the supported UI surfaces: web, mobile, desktop and mixed.",
@@ -1463,13 +1350,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROTOSKILL-010": "The prototyping skill states the static-first, file-based default.",
   "QFAI-PROTOSKILL-011":
     "The prototyping skill limits execution to UI contracts that have a full UI ID and a non-empty `screens[]`.",
-  "QFAI-TREND-005":
-    "A UI-bearing pack's `04_Sources.md` has at least one concrete `design_guideline_research` entry before trend-derived axes are fixed.",
-  "QFAI-TREND-001": "The `## Trend Scan` section has every required category.",
-  "QFAI-TREND-002": "Every trend-scan category has at least one complete entry.",
-  "QFAI-TREND-003":
-    "Every trend-scan entry fills each required field with project-specific content.",
-  "QFAI-TREND-004": "A UI-bearing pack has `04_Sources.md` with a `## Trend Scan` section.",
   "QFAI-SAAS-003":
     "Every gate the SaaS-package profile skips is named, so a pass on that profile is not read as a full DONE.",
 };
@@ -1529,6 +1409,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Rewrite the row under its ID in the short form: the decision and its reason in one to three sentences, with the detail where it already lives.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
+  "QFAI-DELIB-001":
+    "Add the missing section, or rewrite the named table header or row in the six-column shape the deliberation record template shows. A committed record may be edited to repair its table layout only, never its content: restore a column or a missing cell, and leave every option and answer as it was written.",
   "QFAI-DOCSCHEMA-002":
     "Install the qfai package with its dependencies, so @jackchuka/mdschema is present, then rerun validate.",
   // The finding already names the offending key and the release the window
@@ -1542,22 +1424,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // make each row name exactly one directory that no other row names.
   "QFAI-SKILLS-016":
     "Run `qfai init --force` to restore the shipped step tree. For a step of the project's own, fix the `STEP.md` or the skill's `steps:` or `requires:` the message names: rename a `SKILL.md` under the step layer to `STEP.md`, match `name:` to the directory, set `owner:` to `common` or to the skill that lists the step, keep a step's or a skill's `requires:` to a list of installed `common-*` steps, and list a common step a skill's body runs in that skill's `requires:`.",
-  // The orphan-prohibition emitter passes no `suggested_action` on any path, so
-  // every rung of the ladder depends on this catalog for its `fix:` line. The
-  // even codes are repaired by writing a `Parent`, the odd ones by pointing an
-  // existing `Parent` at something the level above actually defines.
-  "QFAI-RESEARCH-015":
-    "Point `source_id` at an `id` that the same Research Summary's `sources[]` declares, or add the missing source entry.",
-  "QFAI-RESEARCH-016":
-    "Add a `## Research Summary` section to the current pack's `04_Sources.md` and record the research-first protocol output under it.",
-  "QFAI-RESEARCH-017": "Give the `sources[]` entry an `id` (`SRC-NNNN`).",
-  "QFAI-RESEARCH-018":
-    "Fill the entry's missing `id` / `category` / `title` / `description` / `source_id` fields.",
-  "QFAI-RESEARCH-019": "Fill the reflection entry's missing `source_id` / `finding` fields.",
-  "QFAI-RESEARCH-020":
-    "Run `qfai discussion use <id>` to point `.qfai/state.json#discussion.currentId` at a pack that exists.",
-  "QFAI-RESEARCH-021":
-    "Replace every `[...]` placeholder the message names with the actual research-first protocol output.",
   "QFAI-AUTOPILOT-001":
     "Drop the entries the message names from the SKILL.md hard-required bucket, or declare one this skill really consumes for that skill. `qfai init --force` regenerates the shipped wording.",
 };

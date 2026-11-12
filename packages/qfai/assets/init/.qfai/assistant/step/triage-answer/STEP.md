@@ -1,7 +1,7 @@
 ---
 name: triage-answer
 owner: qfai-triage
-purpose: "Answer the request's question, citing the documents, code or diagnosis evidence that shows the answer, without changing any tracked file."
+purpose: "Answer the request's question, citing the documents, code or diagnosis evidence that shows the answer, without changing any tracked file except the run's deliberation record and the `open-questions.md` rows the run wrote."
 requires: []
 ---
 
@@ -28,11 +28,16 @@ Answers a question about the project from what the project already says.
 
 ## What it writes
 
-- No file git tracks. Name any ignored record's location in the stage
+- No file git tracks, except the run's deliberation record and its
+  `open-questions.md` rows. Name any ignored record's location in the stage
   report, separately from tracked changes.
+- Where no `triage-close` follows, this step is the route's last step: commit
+  locally only the run's deliberation record and the `open-questions.md` rows
+  the run wrote, and push nothing. A run that wrote neither commits nothing.
 - The answer with its citations, and each follow-up found, in the stage report.
 
 ## Gate
 
 The reviewer, or the stage worker where the work order names none, confirms every claim in the answer has a citation that says it,
-each gap found is listed as a follow-up, and no tracked file changed.
+each gap found is listed as a follow-up, and no tracked file changed except the
+run's deliberation record and its `open-questions.md` rows.

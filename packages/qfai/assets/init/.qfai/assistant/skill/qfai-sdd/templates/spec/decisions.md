@@ -6,8 +6,9 @@ decisions only; a question not yet decided goes to open-questions.md.
 
 A decision, an approval of a critical decision or a release included, becomes
 a row only when it is hard to reverse, would surprise a reader without
-context, and was the result of a real trade-off. The stage report states
-every other decision.
+context, and was the result of a real trade-off. Every other decision a stage
+records is a row of the run's deliberation record: an answer the user gave is
+an Interview row, and a decision an agent took is an Agent decisions row.
 
 A new row's ID is DEC-yyyymmddhhMMss: the UTC time the row is written, as 14
 digits. When a row of this register already holds that second, take the next

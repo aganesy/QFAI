@@ -7,7 +7,7 @@ Feature: Warn on an oversized Mermaid diagram
 
   # AC-0001-0240-01
   Scenario: Warn on a diagram over the budget
-    Given a Mermaid diagram in the story tree or the latest discussion pack with more nodes or more edges than the budget
+    Given a Mermaid diagram in the story tree with more nodes or more edges than the budget
     When I run qfai validate
     Then a warning names the file, the line of the diagram's opening fence, both counts and both limits, and tells the author to split the diagram
 

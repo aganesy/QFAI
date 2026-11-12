@@ -59,7 +59,7 @@ Before producing deliverables, read **project memory**:
    `owned_artifacts`, `tool_profile`, `permission_profile`, and
    `specialization_tags`. Read applicable project policy and contracts under
    `.qfai/spec/` when they bear on the task.
-3. discussion pack in `.qfai/discussion/` (if present)
+3. the story tree, `.qfai/spec/decisions.md` and `.qfai/spec/open-questions.md`
 4. the relevant business flows and stories under `.qfai/spec/02_business-flow/`
 5. repository config (package.json, CI, scripts)
 
@@ -245,7 +245,8 @@ Settle it between the agents. A critical decision needs an actual user answer
 or recorded applicable authorization under
 `.agents/rules/grilling.md#explicit-delegation-for-a-discussion`; without it,
 ask when permitted or register it open. A contradiction with the spec is
-critical. Nothing is recorded beyond the stage's final report.
+critical. A decision the agents take is an Agent decisions row of the run's
+deliberation record, and no report lists it.
 
 **Only one outcome is the Drift Protocol's.**
 

@@ -143,13 +143,8 @@ describe("QFAI-PROFILE-001's skip-set accounts for every code that can be emitte
     // still reported exactly once — by whichever group is missing. Misreporting
     // needs a profile that runs the narrow group WITHOUT the wildcard one.
     //
-    // No profile does today. `canonical-uix` holds an enumeration rather
-    // than `["QFAI-*"]`, so it no longer swallows the twelve
-    // `QFAI-PROTOSKILL-*` codes that `prototyping-skill` owns — and even a
-    // wildcard there would not misreport, since `prototyping-skill` is
-    // reachable only from `runFullValidators`, which runs `canonical-uix`
-    // too. This case is asserted for the divergence that has not happened
-    // yet.
+    // No profile does today. This case is asserted for the divergence that
+    // has not happened yet.
     //
     // It is worth asserting because it has happened twice on other prefixes,
     // and both repairs are in the table as comments: `QFAI-CONTRACT-*` "would

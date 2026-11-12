@@ -9,7 +9,7 @@ Feature: Close, answer or hand back a request without a change
     Given a route that ends at `triage-close`
     When it ends
     Then no verify stage and no review have run
-    And no tracked file changed except its discussion records and a required approval row that `qfai-run` wrote in `decisions.md` before the triage step
+    And no tracked file changed except the run's deliberation record, the `open-questions.md` rows the run wrote and a required approval row that `qfai-run` wrote in `decisions.md` before the triage step
     And every triage step changed no tracked file
     And no handed-off operation ran on the user's behalf
     And the final report states the closure outcome and never that a change is done

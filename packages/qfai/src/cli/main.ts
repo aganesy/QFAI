@@ -1,5 +1,4 @@
 import { runAtddScaffold } from "./commands/atddScaffold.js";
-import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
 import { runInit } from "./commands/init.js";
@@ -52,7 +51,6 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "session-review",
   "sdd",
   "atdd",
-  "discussion",
   "workflow",
 ]);
 
@@ -308,6 +306,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.sddAssumptions.length > 0 ? { assumptions: options.sddAssumptions } : {}),
           ...(options.sddImport !== undefined ? { importPath: options.sddImport } : {}),
+          ...(options.sddRecord !== undefined ? { recordPath: options.sddRecord } : {}),
         });
       }
       return;
@@ -319,29 +318,6 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           root: resolvedRoot,
           ...(options.atddStoryId !== undefined ? { storyId: options.atddStoryId } : {}),
           ...(options.atddFlowId !== undefined ? { flowId: options.atddFlowId } : {}),
-        });
-      }
-      return;
-    case "discussion":
-      {
-        // parseArgs already rejected a missing or invalid subcommand
-        // (invalidReason). It is read here only to narrow the required
-        // `action`.
-        const discussionAction = options.discussionAction;
-        if (!discussionAction) {
-          return;
-        }
-        // `discussion... --format json` writes its whole payload to
-        // stdout, so the defaultConfig notice has to go to stderr there —
-        // otherwise stdout is JSON-plus-a-Japanese-warning and no
-        // `JSON.parse` (or downstream jq) can read it.
-        const resolvedRoot = await resolveRoot(options, options.discussionFormat === "json");
-        process.exitCode = await runDiscussion({
-          root: resolvedRoot,
-          action: discussionAction,
-          ...(options.discussionActive ? { active: true } : {}),
-          ...(options.discussionFormat ? { format: options.discussionFormat } : {}),
-          ...(options.discussionId !== undefined ? { id: options.discussionId } : {}),
         });
       }
       return;
@@ -428,11 +404,8 @@ Commands:
   doctor                       Diagnose config, paths and output preconditions
   db-drift                     Compare the DB contracts with the migrations as schemas (needs paths.migrationsDir)
   session-review               Count what this project's local Claude Code and Codex transcripts show; reads local files only and prints counts, never message text
-  discussion list              List the discussion packs (the active pointer's pack is marked with *)
-  discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
-  discussion use <id>          Set the active discussion session pointer
-  sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
-  sdd preflight --import <path> Use an imported specification as the source when no discussion pack exists
+  sdd preflight --record <path> Run the /qfai-sdd Stage 0 gate on the named deliberation record and write .qfai/report/preflight_summary.md
+  sdd preflight --import <path> Use an imported specification as the source when no record is named
   sdd next-id <kind> [<parent-ID>] --base <local-ref>  Print the next free ID of a kind (BF|US|AC|EX|BR) across the base and the working tree; a US takes its BF, an AC or EX its US, a BR its contract
   sdd merge-docs               Merge each conflicted story-tree document from the index by table row and sentence, leave what it cannot settle between conflict markers, and check the result's document schema
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
@@ -450,12 +423,11 @@ Options:
   --verbose       init: expand the run report's skipped-path list (counts only by default)
   --format <text|github>       validate: output format
   --format <md|json>           report: output format
-  --format <text|json>         doctor / discussion list: output format
+  --format <text|json>         doctor: output format
   --format <md|json>           session-review: output format (md by default)
   --agent <claude|codex|all>   session-review: whose transcripts to read (all by default)
   --session <id>               session-review: the session to report, instead of the latest of each agent
   --since <date>               session-review: every session whose transcript changed at or after this ISO 8601 date (midnight UTC) or date and time with Z or an offset
-  --active                     discussion list: show the active session pointer instead of listing packs
   --strict                     validate/report: exit 1 on warning or worse
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full|drift>  validate/report: select the validation profile
                                 drift runs the drift guard alone: the same gate tdd carries, without the completion obligations

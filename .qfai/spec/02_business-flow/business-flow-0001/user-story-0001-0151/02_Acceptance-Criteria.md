@@ -3,18 +3,17 @@
 ## Criteria
 
 ```gherkin
-Feature: Optional Side Artifact Neutrality
+Feature: Open questions in the source do not block preflight
   # AC-0001-0151-01
   Scenario: No usable source stops SDD preflight
-    Given there is no discussion pack, import-lite input, or explicit user requirement
+    Given there is no deliberation record of the run or named in the work order, no import-lite input and no explicit user requirement
     When SDD preflight runs
     Then SDD stops because it has no usable source.
 
   # AC-0001-0151-02
-  Scenario: An incomplete but usable pack remains source material
-    Given a usable discussion pack has an incomplete markdown file, a blocking OQ, or an optional side artifact such as `prototyping.yaml` that is absent, malformed or in a legacy format
+  Scenario: A record with open questions remains source material
+    Given a deliberation record with an unanswered Interview row and a question its discussion stage registered in `open-questions.md`
     When SDD preflight runs
-    Then those defects alone do not block SDD from reading the pack as source material
-    And the optional side artifact's state alone does not change preflight readiness
-    And SDD does not edit or rerun the discussion pack to clear its own gate.
+    Then those open questions alone do not block SDD from reading the record as source material
+    And SDD does not edit the record or rerun the discussion to clear its own gate.
 ```

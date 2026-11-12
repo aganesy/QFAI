@@ -12,7 +12,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
-import { writeDiscussionCurrentId } from "../../../src/core/state.js";
 import { validateDesignContractReadiness } from "../../../src/core/validators/designContractReadiness.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
 
@@ -228,35 +227,11 @@ describe("validateDesignContractReadiness — unreplaced sample (QFAI-DCON-034)"
 
 /**
  * The story tree has no spec-level UI marker. A declared UI contract with
- * screens is the design-readiness signal. A discussion pack still guides SDD,
- * but it cannot override a live UI contract when validation runs.
+ * screens is the design-readiness signal.
  */
 describe("story-tree visual design readiness", () => {
-  async function seedDiscussionPack(root: string, primarySurface: string): Promise<void> {
-    const id = "discussion-20260101000000000";
-    const dir = path.join(root, ".qfai/discussion", id);
-    await mkdir(dir, { recursive: true });
-    await writeFile(
-      path.join(dir, "01_Context.md"),
-      [
-        "# 01 Context",
-        "",
-        "## UI-bearing Classification",
-        "",
-        "- ui_bearing: true",
-        `- primary_surface: ${primarySurface}`,
-        "- secondary_surfaces: []",
-        "- classification_rationale: fixture",
-        "",
-      ].join("\n"),
-      "utf-8",
-    );
-    await writeDiscussionCurrentId(root, id);
-  }
-
-  it("a cli-only discussion without UI contracts requires no root DESIGN.md", async () => {
+  it("a project without UI contracts requires no root DESIGN.md", async () => {
     const root = await newTempDir();
-    await seedDiscussionPack(root, "cli");
     const codes = (await validateDesignContractReadiness(root, defaultConfig)).map(
       (issue) => issue.code,
     );
@@ -265,7 +240,6 @@ describe("story-tree visual design readiness", () => {
 
   it("an unreplaced sample without a UI contract only warns", async () => {
     const root = await newTempDir();
-    await seedDiscussionPack(root, "cli");
     await writeFile(
       path.join(root, "DESIGN.md"),
       await readFile(SHIPPED_DESIGN_MD_SAMPLE, "utf-8"),
@@ -274,23 +248,6 @@ describe("story-tree visual design readiness", () => {
     expect(issues.map((issue) => [issue.code, issue.severity])).toEqual([
       ["QFAI-DCON-034", "warning"],
     ]);
-  });
-
-  it("an active cli pack cannot suppress a UI contract with screens", async () => {
-    const root = await newTempDir();
-    await seedDiscussionPack(root, "cli");
-    await seedUiBearingProject(root);
-    const codes = (await validateDesignContractReadiness(root, defaultConfig)).map(
-      (issue) => issue.code,
-    );
-    expect(codes).toContain("QFAI-DCON-030");
-  });
-
-  it("a web discussion alone does not invent a UI contract", async () => {
-    const root = await newTempDir();
-    await seedDiscussionPack(root, "web");
-    const issues = await validateDesignContractReadiness(root, defaultConfig);
-    expect(issues).toEqual([]);
   });
 
   it("a UI contract without screens does not require visual design artifacts", async () => {

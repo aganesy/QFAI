@@ -93,7 +93,7 @@ describe("the traceability chain and the skill order", () => {
     expect([...stages.keys()]).toEqual([1, 2, 3, 4, 5, 6]);
 
     expect(stages.get(1)).toContain("Discussion (optional): clarify idea \u2192 requirement seed");
-    expect(stages.get(2)).toContain("discussion pack in `.qfai/discussion/`");
+    expect(stages.get(2)).toContain("the story tree, `decisions.md` and `open-questions.md`");
     expect(stages.get(3)).toContain(
       "Specification (SDD): preflight, triage, policy, business flows, stories with AC and EX, and enforcing contracts",
     );
@@ -108,8 +108,9 @@ describe("the traceability chain and the skill order", () => {
     expect(stages.get(6)).toContain("Verify: run quality gates and provide evidence");
 
     const discussion = await readDiscussionSkill(ASSISTANT);
-    expect(discussion).toContain("nine-file discussion pack");
-    expect(discussion).toContain("Capture scope, REQ, NFR");
+    expect(discussion.replace(/\s+/g, " ")).toContain(
+      "keeps what was asked and answered in the run's deliberation record, so `/qfai-sdd` can write the story tree from it.",
+    );
 
     const constitution = (
       await readFile(path.join(ASSISTANT, "rule", "constitution.md"), "utf8")
@@ -193,9 +194,15 @@ describe("the traceability chain and the skill order", () => {
 });
 
 describe("the policy and contract layers of an initialized project", () => {
-  const constraints = (technical: string, operational = "", business = ""): string => {
+  const constraints = (
+    technical: string,
+    operational = "",
+    business = "",
+    quality = "",
+    legal = "",
+  ): string => {
     const table = "| ID | Constraint | Rationale |\n| --- | --- | --- |\n";
-    return `# Constraints\n\n## Technical Constraints\n\n${table}${technical}\n## Operational Constraints\n\n${table}${operational}\n## Business Constraints\n\n${table}${business}`;
+    return `# Constraints\n\n## Technical Constraints\n\n${table}${technical}\n## Operational Constraints\n\n${table}${operational}\n## Business Constraints\n\n${table}${business}\n## Quality targets\n\n${table}${quality}\n## Legal and Compliance Constraints\n\n${table}${legal}`;
   };
 
   // QFAI:AC-0001-0006-01
@@ -223,6 +230,8 @@ describe("the policy and contract layers of an initialized project", () => {
         "| TC-01 | Runs on Linux and Windows | Adopters use both |\n| TC-02 | Needs no network | Builds run offline |\n",
         "| OC-01 | Releases need a reviewer | A second pair of eyes |\n",
         "| BC-01 | Data stays in the region | A contract with customers |\n",
+        "| QT-01 | Every screen answers within two seconds | Users wait |\n",
+        "| LC-01 | Personal data is kept no longer than a year | A retention law |\n",
       ),
     );
     expect(await findings(root, "QFAI-DOCSCHEMA-")).toEqual([]);
@@ -532,16 +541,23 @@ describe("the assistant tree", () => {
 
 describe("the handoff from discussion to SDD", () => {
   // QFAI:AC-0001-0017-01
-  it("reads the selected pack as source material and states a discrepancy without rewriting the pack", async () => {
+  // QFAI:EX-0001-0017-01
+  // QFAI:EX-0001-0017-02
+  it("reads the named record as history and states a discrepancy without editing the record", async () => {
     const step = await text("step", "sdd-triage", "STEP.md");
-    expect(step).toContain("Run `npx qfai sdd preflight` and use its `selectedInputPath`");
     expect(step).toContain(
-      "Read the pack, its completed reviews, explicit user requirements, and the existing story tree. A discussion pack is provenance and design input, not a normative SSOT. Record a discrepancy in an SDD-owned row or the SDD report; do not edit the pack to clear this stage.",
+      "Invoked by name with no work order, it is the record the user names; when the user names none, ask which record under `paths.deliberationDir` to use before anything is written.",
+    );
+    expect(step).toContain(
+      "Run `npx qfai sdd preflight --record <path>` and use its `selectedInputPath`",
+    );
+    expect(step).toContain(
+      "Read every table of that record, the completed reviews, explicit user requirements, and the existing story tree. The record is history, not the current state: where it disagrees with the story tree, `decisions.md` or `open-questions.md`, they win. State a discrepancy in the SDD report or as an open question. Never edit the record, to clear this stage or for any other reason.",
     );
 
     const playbook = await text("skill", "qfai-sdd", "references", "sdd-execution-playbook.md");
     expect(playbook).toContain(
-      "Read the selected pack, completed reviews that target it, explicit user requirements, and the existing story tree. A pack is reference and provenance material. Disposition its applicable review advice in the SDD report, a decision row, or an open question. A pack discrepancy does not itself block SDD.",
+      "Read every table of the record, completed reviews, explicit user requirements, and the existing story tree. The record is history: where it disagrees with the story tree, `decisions.md` or `open-questions.md`, they win. State a discrepancy in the SDD report or as an open question, and never edit the record. A record that leaves a question open or contradicts itself does not block SDD.",
     );
 
     const skill = await text("skill", "qfai-sdd", "SKILL.md");

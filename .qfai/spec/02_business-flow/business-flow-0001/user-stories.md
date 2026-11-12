@@ -16,13 +16,7 @@
 | US-0001-0010 | Test annotation layers                                                                 | `user-story-0001-0010/` |
 | US-0001-0011 | Story-tree layout described by mdschema                                                | `user-story-0001-0011/` |
 | US-0001-0012 | Assistant tree                                                                         | `user-story-0001-0012/` |
-| US-0001-0013 | Nine-file discussion-pack structure                                                    | `user-story-0001-0013/` |
-| US-0001-0014 | OQ-driven completion                                                                   | `user-story-0001-0014/` |
-| US-0001-0015 | UI-bearing detection                                                                   | `user-story-0001-0015/` |
-| US-0001-0016 | planner-first design authoring                                                         | `user-story-0001-0016/` |
 | US-0001-0017 | discussion-to-SDD handoff                                                              | `user-story-0001-0017/` |
-| US-0001-0018 | non-UI safe skip                                                                       | `user-story-0001-0018/` |
-| US-0001-0019 | direct-pack validator alignment                                                        | `user-story-0001-0019/` |
 | US-0001-0020 | Workspace initialization                                                               | `user-story-0001-0020/` |
 | US-0001-0021 | Idempotent initialization                                                              | `user-story-0001-0021/` |
 | US-0001-0022 | Forced update                                                                          | `user-story-0001-0022/` |
@@ -79,11 +73,7 @@
 | US-0001-0082 | Design Anti-Goals                                                                      | `user-story-0001-0082/` |
 | US-0001-0083 | Exploration Rubric                                                                     | `user-story-0001-0083/` |
 | US-0001-0084 | Evaluator Calibration                                                                  | `user-story-0001-0084/` |
-| US-0001-0085 | Screen Contracts                                                                       | `user-story-0001-0085/` |
-| US-0001-0086 | Review Input Bundle                                                                    | `user-story-0001-0086/` |
 | US-0001-0087 | Design Direction Handoff                                                               | `user-story-0001-0087/` |
-| US-0001-0089 | Mock template emits anchor-form hrefs by default                                       | `user-story-0001-0089/` |
-| US-0001-0090 | Discussion writes the active session pointer                                           | `user-story-0001-0090/` |
 | US-0001-0091 | TDD Micro-Cycle Execution                                                              | `user-story-0001-0091/` |
 | US-0001-0093 | Parallel Slice Dispatch                                                                | `user-story-0001-0093/` |
 | US-0001-0094 | Item Completion Gate                                                                   | `user-story-0001-0094/` |
@@ -102,13 +92,12 @@
 | US-0001-0134 | UI-contract terminology in prototyping                                                 | `user-story-0001-0134/` |
 | US-0001-0138 | Canonical primary UI-contract pin                                                      | `user-story-0001-0138/` |
 | US-0001-0147 | Unified SDD Workflow                                                                   | `user-story-0001-0147/` |
-| US-0001-0148 | Discussion-Pack Preflight                                                              | `user-story-0001-0148/` |
+| US-0001-0148 | Preflight needs a usable source                                                        | `user-story-0001-0148/` |
 | US-0001-0149 | Required Edge Enforcement                                                              | `user-story-0001-0149/` |
 | US-0001-0150 | Validate Gate Integration                                                              | `user-story-0001-0150/` |
-| US-0001-0151 | Optional Side Artifact Neutrality                                                      | `user-story-0001-0151/` |
+| US-0001-0151 | Open questions in the source do not block preflight                                    | `user-story-0001-0151/` |
 | US-0001-0152 | Active Design Contract Surface Reduction                                               | `user-story-0001-0152/` |
 | US-0001-0153 | UI contract `primary_tasks` slot per screen                                            | `user-story-0001-0153/` |
-| US-0001-0154 | Resolve active discussion pack via single helper                                       | `user-story-0001-0154/` |
 | US-0001-0155 | `primary_tasks` ceiling + accepted shape documented                                    | `user-story-0001-0155/` |
 | US-0001-0156 | Canonical verification validators                                                      | `user-story-0001-0156/` |
 | US-0001-0157 | A REVISE code review blocks completion                                                 | `user-story-0001-0157/` |
@@ -172,7 +161,6 @@
 | US-0001-0238 | Merge conflicted story-tree documents by sentence                                      | `user-story-0001-0238/` |
 | US-0001-0239 | Answer agent output in the reply form that fits it                                     | `user-story-0001-0239/` |
 | US-0001-0240 | Warn on an oversized Mermaid diagram                                                   | `user-story-0001-0240/` |
-| US-0001-0241 | Check that discussion-pack citations resolve                                           | `user-story-0001-0241/` |
 | US-0001-0242 | Parse the diagrams a step wrote                                                        | `user-story-0001-0242/` |
 | US-0001-0243 | Every shipped checker script has a caller                                              | `user-story-0001-0243/` |
 | US-0001-0244 | Keep an agent's turn going while a turn-end check fails                                | `user-story-0001-0244/` |
@@ -184,3 +172,8 @@
 | US-0001-0295 | Restyle my running screens without losing their data or what already works             | `user-story-0001-0295/` |
 | US-0001-0296 | Check a design for product fit and claims nobody has confirmed                         | `user-story-0001-0296/` |
 | US-0001-0297 | Every plain text on a screen states why it is there                                    | `user-story-0001-0297/` |
+| US-0001-0298 | Each run keeps one deliberation record                                                 | `user-story-0001-0298/` |
+| US-0001-0299 | Agents read deliberation records only where they must                                  | `user-story-0001-0299/` |
+| US-0001-0300 | Discussion hands its record to qfai-sdd, which writes the story tree                   | `user-story-0001-0300/` |
+| US-0001-0301 | A run keeps and commits its deliberation record                                        | `user-story-0001-0301/` |
+| US-0001-0302 | Validate checks only the deliberation record's table layout                            | `user-story-0001-0302/` |

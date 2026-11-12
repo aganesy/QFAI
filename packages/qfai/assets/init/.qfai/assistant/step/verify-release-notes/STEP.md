@@ -20,7 +20,12 @@ Drafts what a user reads about a release. It releases nothing.
 ## Writes
 
 Only the release-notes files the work order's scope names, or, invoked by
-name, the file the request names.
+name, the file the request names, and the run's deliberation record and its
+`open-questions.md` rows.
+
+Where this step ends the route, it commits locally only the run's deliberation
+record and the `open-questions.md` rows the run wrote, and pushes nothing. The
+release-notes draft stays uncommitted for the user.
 
 ## Procedure
 
@@ -39,5 +44,8 @@ changelog's unreleased section each need the user's own instruction, as
 
 - Every change a user sees since the last release appears in the draft.
 - Every breaking change names its migration step.
-- Only the named files were written, and no tag, publication or version edit
-  was made.
+- Only the named files, the run's deliberation record and its
+  `open-questions.md` rows were written, and no tag, publication or version
+  edit was made.
+- A local commit made here holds only the record and those rows, and nothing
+  was pushed.

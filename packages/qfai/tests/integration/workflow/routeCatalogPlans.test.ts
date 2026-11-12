@@ -52,11 +52,11 @@ const CATALOG: [string, string][] = [
   ],
   [
     "decide-design",
-    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack°`, `discussion-uiux°`, `discussion-oq`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature`, `change-compatibility`, `retire-feature` or `rename-concept`",
+    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`; `close` (triage): `triage-close`; decision points `discussion-interview`; release point none; branch points `triage-close`, `adopted` to `add-feature`, `prototype-feature`, `change-compatibility`, `retire-feature` or `rename-concept`",
   ],
   [
     "decompose-epic",
-    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`, `discussion-pack`, `discussion-oq`; `split` (triage): `triage-decompose`; `close` (triage): `triage-close`; decision points `discussion-interview`, `triage-decompose`; release point none; branch points none",
+    "Stages in order — `discussion` (discussion): `discussion-research`, `discussion-interview`; `split` (triage): `triage-decompose`; `close` (triage): `triage-close`; decision points `discussion-interview`, `triage-decompose`; release point none; branch points none",
   ],
   [
     "retriage-bundle",

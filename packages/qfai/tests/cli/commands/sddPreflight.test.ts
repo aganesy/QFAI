@@ -1,34 +1,23 @@
 /**
  * `qfai sdd preflight` — the CLI entry point for the /qfai-sdd Stage 0 gate.
  *
- * `runSddPreflight` was implemented, exported and unit-tested but unreachable:
- * no command and no skill step called it, so Stage 0 was whatever the agent
- * typed into `.qfai/report/preflight_summary.md` by hand. These cases pin the
- * entry point (exit code, both output formats) and the template ↔ output
- * agreement that keeps the shipped form from drifting away from the writer.
+ * These cases pin the entry point (exit code, both output formats), the
+ * source it selects, and the template ↔ output agreement that keeps the
+ * shipped form from drifting away from the writer.
  */
 
 import { mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runSddPreflightCommand } from "../../../src/cli/commands/sddPreflight.js";
-import { writeDiscussionCurrentId } from "../../../src/core/state.js";
 import { resolveToolPackageDir } from "../../../src/core/version.js";
 
-const DISCUSSION_PACK_FILES = [
-  "01_Context.md",
-  "03_Story-Workshop.md",
-  "04_Sources.md",
-  "05_Scope.md",
-  "06_REQ.md",
-  "07_NFR.md",
-  "08_Glossary.md",
-  "09_Constraints.md",
-  "11_OQ-Register.md",
-] as const;
+const RECORD_NAME = "20261112093000-task-dashboard.md";
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../..");
 
 const tempDirs: string[] = [];
 
@@ -43,6 +32,37 @@ async function newTempRoot(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-cli-"));
   tempDirs.push(root);
   return root;
+}
+
+async function seedRecord(root: string, name = RECORD_NAME): Promise<string> {
+  const recordPath = path.join(root, ".qfai", "deliberation", name);
+  await mkdir(path.dirname(recordPath), { recursive: true });
+  await writeFile(
+    recordPath,
+    [
+      "# Deliberation record: task dashboard",
+      "",
+      "## Subject",
+      "",
+      "Settle the dashboard's first release.",
+      "",
+      "## discussion",
+      "",
+      "### Interview",
+      "",
+      "| Background | Option 1 | Option 2 | Option 3 | Option 4 (other) | Chosen option number |",
+      "| ---------- | -------- | -------- | -------- | ---------------- | -------------------- |",
+      "| Which surface first? | web | mobile | desktop | | 1 |",
+      "",
+      "### Agent decisions",
+      "",
+      "| Background | Option 1 | Option 2 | Option 3 | Option 4 (other) | Chosen option number |",
+      "| ---------- | -------- | -------- | -------- | ---------------- | -------------------- |",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  return recordPath;
 }
 
 type Sinks = {
@@ -64,7 +84,8 @@ function newSinks(): Sinks {
 }
 
 describe("qfai sdd preflight", () => {
-  it("exits 1 and writes the computed blocker set when no discussion-pack exists", async () => {
+  // QFAI:EX-0001-0148-03
+  it("exits 1, selects no input and names a blocker when no usable source exists", async () => {
     const root = await newTempRoot();
     const sinks = newSinks();
 
@@ -75,56 +96,79 @@ describe("qfai sdd preflight", () => {
     });
 
     expect(exitCode).toBe(1);
-    expect(sinks.out.join("\n")).toContain("status: blocked");
     expect(sinks.err.join("\n")).toContain("blocked");
+    const stdout = sinks.out.join("\n");
+    expect(stdout).toContain("status: blocked (source: none)");
+    expect(stdout).toContain("selected input: (none)");
+    expect(stdout).not.toMatch(/REQ/);
 
     const summary = await readFile(path.join(root, ".qfai", "report", "preflight_summary.md"), {
       encoding: "utf-8",
     });
     expect(summary).toContain("status: blocked");
-    expect(summary).toContain("latest discussion-pack");
-    const stdout = sinks.out.join("\n");
-    expect(stdout).toContain("source: discussion-pack");
-    expect(stdout).toContain("selected discussion-pack: (not found)");
-    expect(stdout).toContain("imported REQ count: (n/a)");
-    expect(stdout).toContain("pack gaps (recorded, not blocking):");
-    expect(stdout).toContain(`Missing required files: ${DISCUSSION_PACK_FILES.join(", ")}`);
     for (const guidance of [
       ".qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory",
       "--import <path>",
-      "Use `/qfai-discussion` only when no usable",
+      "Use `/qfai-discussion` only when no deliberation record",
     ]) {
       expect(stdout).toContain(guidance);
       expect(summary).toContain(guidance);
     }
-    expect(stdout).not.toContain("(create `");
   });
 
-  it("exits 0 and reports the computed REQ count when the latest pack is ready", async () => {
+  // QFAI:EX-0001-0151-02
+  it("exits 0 on the record --record names and leaves the record unchanged", async () => {
     const root = await newTempRoot();
-    await seedDiscussionPack(root, "20260216010102003");
+    const recordPath = await seedRecord(root);
+    const before = await readFile(recordPath, "utf-8");
     const sinks = newSinks();
 
     const exitCode = await runSddPreflightCommand({
       root,
+      recordPath: path.join(".qfai", "deliberation", RECORD_NAME),
       write: sinks.write,
       writeErr: sinks.writeErr,
     });
 
     expect(exitCode).toBe(0);
     const stdout = sinks.out.join("\n");
-    expect(stdout).toContain("status: ready");
-    expect(stdout).toContain("imported REQ count: 2");
+    expect(stdout).toContain("status: ready (source: deliberation-record)");
+    expect(stdout).toContain(`selected deliberation-record: .qfai/deliberation/${RECORD_NAME}`);
+    expect(stdout).not.toContain("next commands:");
     expect(sinks.err).toEqual([]);
-
-    const summary = await readFile(path.join(root, ".qfai", "report", "preflight_summary.md"), {
-      encoding: "utf-8",
-    });
-    expect(summary).toContain("Imported REQ count: 2");
+    expect(await readFile(recordPath, "utf-8")).toBe(before);
   });
 
   it("emits the machine-readable result under --format json", async () => {
     const root = await newTempRoot();
+    const recordPath = await seedRecord(root);
+    const sinks = newSinks();
+
+    const exitCode = await runSddPreflightCommand({
+      root,
+      format: "json",
+      recordPath: RECORD_NAME,
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(0);
+    const parsed: unknown = JSON.parse(sinks.out.join("\n"));
+    expect(parsed).toMatchObject({
+      status: "ready",
+      source: "deliberation-record",
+      selectedInputPath: recordPath,
+      blockers: [],
+      openQuestions: [],
+      nextCommands: [],
+    });
+  });
+
+  // QFAI:EX-0001-0017-02
+  it("lists two records and picks neither when none is named", async () => {
+    const root = await newTempRoot();
+    await seedRecord(root, "20261110080000-billing.md");
+    await seedRecord(root);
     const sinks = newSinks();
 
     const exitCode = await runSddPreflightCommand({
@@ -136,32 +180,15 @@ describe("qfai sdd preflight", () => {
 
     expect(exitCode).toBe(1);
     const parsed: unknown = JSON.parse(sinks.out.join("\n"));
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error("qfai sdd preflight --format json did not emit an object");
-    }
-    const payload: Record<string, unknown> = { ...parsed };
-    expect(payload["status"]).toBe("blocked");
-    expect(payload["source"]).toBe("discussion-pack");
-    expect(Array.isArray(payload["blockers"])).toBe(true);
-    expect(payload["nextCommands"]).toEqual(["/qfai-discussion"]);
-    expect(payload["selectedInputPath"]).toBeNull();
-    expect(payload["importedReqCount"]).toBeNull();
-    expect(payload["packGaps"]).toEqual([
-      `Missing required files: ${DISCUSSION_PACK_FILES.join(", ")}`,
-    ]);
-    expect(payload["openQuestions"]).toEqual([]);
-    const summary = await readFile(
-      path.join(root, ".qfai", "report", "preflight_summary.md"),
-      "utf-8",
-    );
-    for (const guidance of [
-      ".qfai/assistant/skill/qfai-sdd/references/sdd-execution-playbook.md#stage-0-source-inventory",
-      "--import <path>",
-      "Use `/qfai-discussion` only when no usable",
-    ]) {
-      expect(payload["blockers"]).toEqual([expect.stringContaining(guidance)]);
-      expect(summary).toContain(guidance);
-    }
+    expect(parsed).toMatchObject({
+      status: "blocked",
+      source: null,
+      selectedInputPath: null,
+      nextCommands: ["qfai sdd preflight --record <path>"],
+    });
+    const stdout = sinks.out.join("\n");
+    expect(stdout).toContain("ask which one");
+    expect(stdout).toContain(`Records found: 20261110080000-billing.md, ${RECORD_NAME}.`);
   });
 
   // AC-0001-0148-01 / EX-0001-0148-03: source selection preserves the existing purpose.
@@ -178,10 +205,6 @@ describe("qfai sdd preflight", () => {
           relative: path.join(".qfai", "spec", "02_business-flow", "existing-story.md"),
           content: "# Existing story\r\n\r\nCustomers can find an available service.\r\n",
         },
-        {
-          relative: path.join("docs", "current-request.md"),
-          content: "# Current request\n\nAdd a detail page while retaining the current purpose.\n",
-        },
       ] as const;
       for (const input of inputs) {
         const file = path.join(root, input.relative);
@@ -191,15 +214,6 @@ describe("qfai sdd preflight", () => {
       const before = await Promise.all(
         inputs.map((input) => readFile(path.join(root, input.relative))),
       );
-      const blocked = newSinks();
-      expect(
-        await runSddPreflightCommand({
-          root,
-          format,
-          write: blocked.write,
-          writeErr: blocked.writeErr,
-        }),
-      ).toBe(1);
 
       const imported = newSinks();
       expect(
@@ -218,14 +232,11 @@ describe("qfai sdd preflight", () => {
           status: "ready",
           source: "import-lite",
           selectedInputPath: path.join(root, inputs[1].relative),
-          importedReqCount: null,
           blockers: [],
-          packGaps: [],
           nextCommands: [],
         });
       } else {
         expect(imported.out.join("\n")).toContain("status: ready (source: import-lite)");
-        expect(imported.out.join("\n")).toContain("imported REQ count: (n/a)");
         expect(imported.out.join("\n")).not.toContain("next commands:");
       }
       const summary = await readFile(
@@ -233,138 +244,32 @@ describe("qfai sdd preflight", () => {
         "utf-8",
       );
       expect(summary).toContain("source: import-lite");
-      expect(summary).toContain("Imported REQ count: unknown");
       expect(
         await Promise.all(inputs.map((input) => readFile(path.join(root, input.relative)))),
       ).toEqual(before);
-      await expect(stat(path.join(root, ".qfai", "discussion"))).rejects.toThrow();
+      await expect(stat(path.join(root, ".qfai", "deliberation"))).rejects.toThrow();
     },
   );
 
-  it("does not send a ready result back to /qfai-discussion", async () => {
-    // `nextCommands` is the blocker recovery route. Emitting it on a ready
-    // result pushes an operator who should enter Stage 1 Triage back into
-    // requirement authoring — in the text render and in the JSON payload.
-    const root = await newTempRoot();
-    await seedDiscussionPack(root, "20260216010102003");
-    const sinks = newSinks();
-
-    const exitCode = await runSddPreflightCommand({
-      root,
-      format: "json",
-      write: sinks.write,
-      writeErr: sinks.writeErr,
-    });
-
-    expect(exitCode).toBe(0);
-    const parsed: unknown = JSON.parse(sinks.out.join("\n"));
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error("qfai sdd preflight --format json did not emit an object");
-    }
-    const payload: Record<string, unknown> = { ...parsed };
-    expect(payload["status"]).toBe("ready");
-    expect(payload["nextCommands"]).toEqual([]);
-
-    const textSinks = newSinks();
-    await runSddPreflightCommand({
-      root,
-      write: textSinks.write,
-      writeErr: textSinks.writeErr,
-    });
-    expect(textSinks.out.join("\n")).not.toContain("/qfai-discussion");
-  });
-
-  it("sends the downstream stages to the pack Stage 0 selected", async () => {
-    // Stage 0 honours `.qfai/state.json#discussion.currentId`, so telling the
-    // Inputs Priority to take the lexicographically largest pack gated one pack
-    // and built the spec from another: the operator's requirements checked, a
-    // different pack's requirements imported.
-    const { readFile: read } = await import("node:fs/promises");
-    const pathMod = await import("node:path");
-    const url = await import("node:url");
-    const repoRoot = pathMod.default.resolve(
-      pathMod.default.dirname(url.fileURLToPath(import.meta.url)),
-      "..",
-      "..",
-      "..",
-      "..",
-      "..",
-    );
+  it("tells the SDD steps to name the record before running preflight", async () => {
     for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
-      const step = "assistant/step/sdd-triage/STEP.md";
-      const skill = (
-        await read(pathMod.default.join(tree, step), "utf-8").catch(() =>
-          read(pathMod.default.join(repoRoot, tree, step), "utf-8"),
-        )
+      const step = (
+        await readFile(path.join(repoRoot, tree, "assistant/step/sdd-triage/STEP.md"), "utf-8")
       ).replace(/\s+/g, " ");
-      expect(skill, tree).toContain("use its `selectedInputPath`");
-      expect(skill, tree).toContain("a selected discussion pack may be older than the newest pack");
-      // The instruction that caused it must be gone.
-      expect(skill, tree).not.toContain("(lexicographically largest), validated by Stage 0");
+      expect(step, tree).toContain("`npx qfai sdd preflight --record <path>`");
+      expect(step, tree).toContain("use its `selectedInputPath`");
     }
-  });
-
-  it("gates the pack the active pointer selects, not the newest one", async () => {
-    const root = await newTempRoot();
-    await seedDiscussionPack(root, "20260216010102003");
-    // Newest pack on disk, but incomplete: only an active pointer at the
-    // older pack should keep Stage 0 green.
-    await mkdir(path.join(root, ".qfai", "discussion", "discussion-20260316010102003"), {
-      recursive: true,
-    });
-    await writeDiscussionCurrentId(root, "discussion-20260216010102003");
-    const imported = path.join(root, "existing-spec.md");
-    await writeFile(imported, "# Existing specification\n", "utf-8");
-    const before = await readFile(imported);
-
-    const sinks = newSinks();
-    const exitCode = await runSddPreflightCommand({
-      root,
-      importPath: imported,
-      write: sinks.write,
-      writeErr: sinks.writeErr,
-    });
-
-    expect(exitCode).toBe(0);
-    const stdout = sinks.out.join("\n");
-    expect(stdout).toContain("status: ready");
-    expect(stdout).toContain("source: discussion-pack");
-    expect(stdout).not.toContain("source: import-lite");
-    expect(await readFile(imported)).toEqual(before);
-    expect(stdout).toContain("discussion-20260216010102003");
-    expect(stdout).not.toContain("discussion-20260316010102003");
-  });
-
-  it("stops on an active pointer that matches no pack and keeps the summary intact", async () => {
-    const root = await newTempRoot();
-    await seedDiscussionPack(root, "20260216010102003");
-    const summaryPath = path.join(root, ".qfai", "report", "preflight_summary.md");
-    await mkdir(path.dirname(summaryPath), { recursive: true });
-    await writeFile(summaryPath, "# Preflight Summary\n\n- keep me\n", "utf-8");
-    await writeDiscussionCurrentId(root, "discussion-20990101010101001");
-
-    const sinks = newSinks();
-    const exitCode = await runSddPreflightCommand({
-      root,
-      write: sinks.write,
-      writeErr: sinks.writeErr,
-    });
-
-    expect(exitCode).toBe(1);
-    const stderr = sinks.err.join("\n");
-    expect(stderr).toContain("discussion-20990101010101001");
-    expect(stderr).toContain("qfai discussion use");
-    expect(await readFile(summaryPath, { encoding: "utf-8" })).toContain("keep me");
   });
 
   it("stops instead of falling back to defaults when qfai.config.yaml is broken", async () => {
     const root = await newTempRoot();
-    await seedDiscussionPack(root, "20260216010102003");
+    await seedRecord(root);
     await writeFile(path.join(root, "qfai.config.yaml"), "paths: [not, a, mapping\n", "utf-8");
 
     const sinks = newSinks();
     const exitCode = await runSddPreflightCommand({
       root,
+      recordPath: RECORD_NAME,
       write: sinks.write,
       writeErr: sinks.writeErr,
     });
@@ -379,13 +284,14 @@ describe("qfai sdd preflight", () => {
 
   it("records --assume carry-over and preserves it on the Stage 1 re-run", async () => {
     const root = await newTempRoot();
-    await seedDiscussionPack(root, "20260216010102003");
+    await seedRecord(root);
     const summaryPath = path.join(root, ".qfai", "report", "preflight_summary.md");
 
     const first = newSinks();
     expect(
       await runSddPreflightCommand({
         root,
+        recordPath: RECORD_NAME,
         assumptions: ["OQ-0001 carried over to the next phase"],
         write: first.write,
         writeErr: first.writeErr,
@@ -395,11 +301,16 @@ describe("qfai sdd preflight", () => {
       "- OQ-0001 carried over to the next phase",
     );
 
-    // Required Process step 3 re-runs the command with no flags; the
-    // carry-over recorded in Stage 0 must not become `- none`.
+    // The Stage 1 re-run passes no --assume; the carry-over recorded in
+    // Stage 0 must not become `- none`.
     const second = newSinks();
     expect(
-      await runSddPreflightCommand({ root, write: second.write, writeErr: second.writeErr }),
+      await runSddPreflightCommand({
+        root,
+        recordPath: RECORD_NAME,
+        write: second.write,
+        writeErr: second.writeErr,
+      }),
     ).toBe(0);
     const summary = await readFile(summaryPath, { encoding: "utf-8" });
     const carryOver = summary.slice(summary.indexOf("## Open Questions (Carry-over)"));
@@ -454,11 +365,10 @@ describe("qfai sdd preflight", () => {
   it("keeps the shipped template's sections equal to the sections it writes", async () => {
     // The drift this case exists for: the template is a form an agent fills
     // in, the command is the writer, and nothing held the two together.
-    const repoRoot = path.resolve(__dirname, "../../..");
     const template = await readFile(
       path.join(
         repoRoot,
-        "assets/init/.qfai/assistant/skill/qfai-sdd/templates/report/preflight_summary.md",
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/report/preflight_summary.md",
       ),
       { encoding: "utf-8" },
     );
@@ -476,10 +386,11 @@ describe("qfai sdd preflight", () => {
     );
 
     const readyRoot = await newTempRoot();
-    await seedDiscussionPack(readyRoot, "20260216010102003");
+    await seedRecord(readyRoot);
     const readySinks = newSinks();
     await runSddPreflightCommand({
       root: readyRoot,
+      recordPath: RECORD_NAME,
       write: readySinks.write,
       writeErr: readySinks.writeErr,
     });
@@ -536,78 +447,4 @@ function headings(markdown: string): Set<string> {
     }
   }
   return found;
-}
-
-async function seedDiscussionPack(root: string, timestamp: string): Promise<void> {
-  const discussionDir = path.join(root, ".qfai", "discussion", `discussion-${timestamp}`);
-  await mkdir(discussionDir, { recursive: true });
-
-  for (const fileName of DISCUSSION_PACK_FILES) {
-    await writeFile(
-      path.join(discussionDir, fileName),
-      `${defaultDiscussionPackContent(fileName)}\n`,
-      "utf-8",
-    );
-  }
-
-  await writeFile(
-    path.join(discussionDir, "prototyping.yaml"),
-    [
-      "prototyping:",
-      "  recommended_mode: full-harness",
-      "  rationale: UI validation is recommended.",
-      "  allowed_modes:",
-      "    - full-harness",
-      "  surface: web",
-    ].join("\n"),
-    "utf-8",
-  );
-}
-
-function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[number]): string {
-  switch (fileName) {
-    case "03_Story-Workshop.md":
-      return [
-        "# 03 Story Workshop",
-        "",
-        "```mermaid",
-        "sequenceDiagram",
-        "  participant U as User",
-        "  participant S as System",
-        "  U->>S: request",
-        "```",
-        "",
-        "Note: test data for the Story Workshop that includes a Mermaid diagram.",
-      ].join("\n");
-    case "06_REQ.md":
-      return [
-        "# 06 REQ",
-        "",
-        "- REQ-0001: The user can save a requirement set. Audit compliance is the background need.",
-        "- REQ-0002: The system can reload a saved requirement set, including an integrity check on reload.",
-        "",
-        "Note: the description is kept long enough to pass the minimum-content check.",
-      ].join("\n");
-    case "11_OQ-Register.md":
-      return [
-        "# 11 OQ Register",
-        "",
-        "### OQ-0001: contract versioning policy",
-        "- Disposition: deferred",
-        "- Gate: discussion",
-        "- Resolution: ship without contract versioning for now.",
-        "- Next-Decision-Point: the next cycle review, or the first breaking contract change.",
-        "- Reason: it does not affect the start of implementation at this stage, so it is deferred.",
-        "",
-        "Note: this does not meet the blocking condition (Disposition=open).",
-      ].join("\n");
-    default:
-      return [
-        `# ${fileName}`,
-        "",
-        "This file is dummy content for the preflight tests.",
-        "It describes the spec intent and constraints to meet the 100-character minimum.",
-        "It includes real sentences, not only template placeholders, to avoid the validator's incomplete verdict.",
-      ].join("\n");
-  }
 }

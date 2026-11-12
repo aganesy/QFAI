@@ -3,7 +3,7 @@ family: decide
 stages:
   - id: discussion
     kind: discussion
-    steps: [discussion-research, discussion-interview, discussion-pack, discussion-oq]
+    steps: [discussion-research, discussion-interview]
   - id: split
     kind: triage
     steps: [triage-decompose]

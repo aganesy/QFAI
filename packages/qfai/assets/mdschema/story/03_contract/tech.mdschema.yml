@@ -15,7 +15,7 @@ structure:
       - heading:
           pattern: "^## Stack$"
           regex: true
-        description: One row per component. Runtime and Platform are required.
+        description: One row per component. Runtime, Platform and Surface are required; Surface holds one of web, mobile, desktop, mixed, cli and non-ui, and mixed when the product targets several.
         allow_additional: false
         tables:
           - min: 1
@@ -25,6 +25,9 @@ structure:
           - pattern: '(?m)^\|[ \t]*Runtime[ \t]*\|'
             regex: true
           - pattern: '(?m)^\|[ \t]*Platform[ \t]*\|'
+            regex: true
+          # One surface, optionally in backticks, or the template's placeholder.
+          - pattern: '(?m)^\|[ \t]*Surface[ \t]*\|[ \t]*`?(?:web|mobile|desktop|mixed|cli|non-ui|<[^>|\n]*>)`?[ \t]*\|'
             regex: true
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
@@ -44,7 +47,7 @@ structure:
           dependency, then one table with a row per layer from the uppermost down:
           what the layer is responsible for, and the layers below it that it uses,
           comma-separated, or - for none. Written from the technical decisions the
-          discussion pack records and, in an existing codebase, from its module
+          deliberation record holds and, in an existing codebase, from its module
           layout and import directions. Every new module belongs to one layer and
           imports only from the layers its row lists; the implementation and review
           stages read this section to place code and to judge a change. Layers are

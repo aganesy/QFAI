@@ -14,9 +14,9 @@ describe("SDD decision and question homes", () => {
     it(`${tree}: records adopted, rejected, and unresolved grilling outcomes in story-tree rows`, async () => {
       const loop = await read(tree, "assistant/step/common-grilling-record/STEP.md");
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
-      expect(loop).toContain("appropriate `decisions.md` row");
-      expect(loop).toContain("Record an unresolved choice in `open-questions.md`");
-      expect(loop).toContain("decision row whose Content opens `Declined:`");
+      expect(loop.replace(/\s+/g, " ")).toContain(
+        "| Left a question open | No record row of its own: one `<paths.specsDir>/open-questions.md` row, in the register's own form |",
+      );
       expect(triage).toContain("each with exactly ID, Content and Approach");
     });
   }

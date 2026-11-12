@@ -181,16 +181,15 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
   and adjust `qfai.config.yaml` accordingly (especially `testFileGlobs`).
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
-- **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
-  as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
-  Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`)
-  may include `prototyping.yaml` as an optional recommendation artifact;
-  cli-only packs omit it, and non-ui discussion packs typically omit it.
+- **qfai-discussion**: Research and interview the user to settle the scope of an idea. It writes the
+  questions, answers and agent decisions to the run's deliberation record under
+  `paths.deliberationDir` (`.qfai/deliberation/` by default), a tracked memo nothing cites, and the
+  questions it leaves open to `open-questions.md`.
 - **qfai-sdd**: Triage requirements against the existing story tree. Write
   policy, business flows, stories with AC and EX, then enforcing contracts with
   BR. Record decisions that meet the recording test (hard to reverse,
   surprising without context, a real trade-off) and unresolved questions in
-  the two root tables. The discussion pack is input; the story tree is the execution SSOT.
+  the two root tables. The deliberation record is input; the story tree is the execution SSOT.
 - **qfai-prototyping**: Build and review every UI-bearing contract and its
   screens with the user, one iteration at a time, until the user confirms the
   prototype. No command certifies it. The loop's files stay under
@@ -378,19 +377,20 @@ flowchart LR
     Exit codes: 0 (a plan or candidates), 2 (input refused), 1 (the `--in` file cannot be read, or a
     shipped plan does not load).
 - `npx qfai sdd preflight`
-  - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
-    resolves the blockers, and writes the summary run-scoped at
-    `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md`
+  - Runs the Stage 0 gate of `/qfai-sdd`: selects the source, resolves the blockers, and writes the summary
+    run-scoped at `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md`
     (`.qfai/report/preflight/run-<timestamp>/preflight_summary.md` by default; the run reports the path it wrote),
     then refreshes `<paths.outDir>/preflight_summary.md` as the latest-run pointer. Exits 1 when the result is
     `blocked` (use `--fail-on never` to report without failing); `--format json` emits the machine-readable
     result on stdout.
-  - Only a missing or misnamed pack blocks. What a present pack lacks or contradicts is listed under the
-    summary's `## Pack Gaps` (`packGaps` in the JSON result), and the result stays `ready`: the pack is
-    reference material, so the gap is recorded in the SDD artifacts rather than stopping the stage.
-  - The pack is the one `npx qfai discussion use <id>` pinned (`.qfai/state.json#discussion.currentId`); the
-    newest pack is used only when no pointer is set. A pointer that matches no pack on disk stops the run with
-    the candidate list instead of silently gating a different pack.
+  - The source is the deliberation record `--record <path>` names: the run's own record, the one the work
+    order names, or the one the user names. A bare record name is read against `paths.deliberationDir` first,
+    then the project root; a name with a path separator is read against the project root. Without
+    `--record`, the source is the imported specification `--import <path>` names.
+  - With neither, the result is `blocked`, and the blocker lists the records under `paths.deliberationDir`
+    without choosing one. A named file that cannot be read also blocks. The next command is
+    `qfai sdd preflight --record <path>` when records exist, and `/qfai-discussion` when there are none. A record that leaves a question open
+    or contradicts itself is still `ready`: SDD states each gap in its report.
   - `--assume <text>` (repeatable) records carry-over open questions / assumptions in the summary. Without it
     the carry-over list already present in the `<paths.outDir>/preflight_summary.md` pointer is preserved, not
     overwritten.
@@ -422,7 +422,7 @@ Example: override paths and traceability globs.
 paths:
   contractsDir: .qfai/spec/03_contract
   specsDir: .qfai/spec
-  discussionDir: .qfai/discussion
+  deliberationDir: .qfai/deliberation
   outDir: .qfai/report
   skillsDir: .qfai/assistant/skill
   srcDir: src

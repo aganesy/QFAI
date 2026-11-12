@@ -20,11 +20,12 @@ any existing file unchanged; skip this step for it.
 
 ## Reads
 
-- The design direction the discussion recorded, as
+- The design direction the deliberation record SDD consumes settles, as
   `.qfai/assistant/skill/qfai-sdd/references/design-md-authoring.md#where-the-answers-come-from`
-  lists it: `01_Context.md#Design Direction`, the reference registries in
-  `04_Sources.md`, and the `uiux/` sidecars. For an imported tree, the surface
-  the import source names, or the user's answer.
+  lists it: the Interview row in which the user chose the brand direction, the
+  references the record settles with their adopted and rejected points, the
+  directions the user rejected, and the trend conclusions. For an imported
+  tree, the surface the import source names, or the user's answer.
 - The questions behind those answers:
   `.qfai/assistant/skill/qfai-discussion/references/design-dna-intake.md`.
 - The schema and validation rules:
@@ -40,8 +41,8 @@ any existing file unchanged; skip this step for it.
 ## Author and validate
 
 1. **Stop on an unchosen brand.** For initial authoring
-   of a missing file, a pack that records no design direction leaves the brand
-   unchosen. Brand intent is `hard-required`: ask for it, and under `--auto`
+   of a missing file, a record that has no Interview row on the brand direction
+   leaves the brand unchosen. Brand intent is `hard-required`: ask for it, and under `--auto`
    stop and name it. Never adopt the sample design. For an existing valid file,
    validation and triaged repairs that preserve its brand and tokens
    require no new brand selection. A brand or token change needs the
@@ -60,7 +61,9 @@ any existing file unchanged; skip this step for it.
    the intent fields first, then the archetype, then `brand.theme`, then the
    `visual.*` tokens taken from the named theme's published values
    (`.qfai/assistant/skill/qfai-sdd/references/design-md-authoring.md#taking-the-values-from-the-theme`).
-   Do not compose token values by taste. For a repair, record the source of each
+   Do not compose token values by taste. Write the `# Brand Philosophy` body,
+   its **Do** and **Don't** and `audience.do_not_look_like` from what the record
+   settles, as exploration constraints, and select no visual winner. For a repair, record the source of each
    changed value and leave unrelated content unchanged. Validation without an
    authorized change writes nothing and does not repeat brand selection.
 4. **Parse and validate.** `parseDesignMd(text)` must succeed; pass its `data`
@@ -70,7 +73,7 @@ any existing file unchanged; skip this step for it.
    `DESIGN.md` against every aspect of
    `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md` and its
    Displacement section. A token that prescribes a listed pattern fails unless
-   `01_Context.md#Design Direction` asks for it. Name the pattern in the
+   the brand direction the record settles asks for it. Name the pattern in the
    finding. For an existing-file repair, stop unless the authorized change
    includes its replacement. Replace the value and check the file again.
 

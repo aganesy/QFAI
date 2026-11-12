@@ -90,12 +90,12 @@ use the ordinary no-question path when asking is forbidden, and stop for a
 missing undefaultable input.
 
 Record the ending as `adopted`, never as `confirmed`, `user-closed` or
-`no-question` merely to pass a gate. Authoring permission does not waive pack,
-research, OQ, UI, schema, validation or independent-review requirements. In
-particular, a theme not actually chosen by the user remains
-`chosen_by: assumption`, never `user`. Keep its OQ open unless an actual
-specifically applicable user instruction overrides the human-choice requirement;
-record that authority and the agents' choice without changing the schema.
+`no-question` merely to pass a gate. The ending waives no research,
+open-question, schema or validation requirement. In particular, a theme the
+user did not actually choose is never recorded as the user's choice. Keep its
+`open-questions.md` row unless an actual specifically applicable user
+instruction overrides the human-choice requirement; record that authority and
+the agents' choice as an Agent decisions row.
 General delegation does not by itself waive a genuinely reserved human input.
 
 ### Critical decisions
@@ -108,7 +108,7 @@ explicit-delegation conditions, put it to the user when asking is permitted.
 | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | It contradicts a spec, a contract or a recorded decision                                                                                                 | Changing settled input is the user's decision               |
 | Its effect cannot be taken back: a security exposure, lost or corrupted data, a broken released contract, spending, a legal commitment, a public release | A wrong recommendation here is not repaired by the next run |
-| It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated                             | The agents would be inventing what the user wants           |
+| It rests on product or business intent that the request, the specs and the contracts all leave unstated                                                  | The agents would be inventing what the user wants           |
 
 Two more nodes reach the user in every session, and neither is a decision the
 agents could recommend: a decision some document requires the user to make and
@@ -119,10 +119,11 @@ rounds are where the agents weigh it, and the record lets the user overturn it.
 
 ### What an adopted decision owes
 
-- **A record** in the stage's evidence: the decision, the recommendation taken,
-  the agent that made it, and why. A position that disagreed stays beside it.
-- **A line in the stage's final report**, with every other adopted decision, so
-  the user sees all of them without being stopped for any.
+- **An Agent decisions row** of the run's deliberation record: at least three
+  options, the recommendation taken, the agent that made it, and why. A
+  position that disagreed stays in its Background.
+- **The record's path in the final report**, so the user can read every
+  adopted decision without being stopped for any.
 
 The report does not wait for an answer. A user who disagrees overturns the
 decision the ordinary way: a specification change, or a rerun with the
@@ -313,24 +314,21 @@ and never takes a critical decision without the recorded user authority above.
 ## Terms against the glossary
 
 Every session, user or delegated and at every stage, checks the terms it hears
-against `<specsDir>/01_policy/glossary.md` and, during a discussion, the pack's
-`08_Glossary.md`. A word read two ways is a decision nobody saw being made.
+against `<specsDir>/01_policy/glossary.md`. A word read two ways is a decision nobody saw being made.
 
 - **A clash is raised when it appears.** A term the user or an author uses that
-  conflicts with, or is a synonym of, a term a glossary defines is raised first
+  conflicts with, or is a synonym of, a term the glossary defines is raised first
   in the round it appears in, or the next one when it appears in an answer.
   Questions whose answer turns on its meaning wait for the next round. The
   griller proposes the glossary's term. A plain synonym is corrected to it and
   noted in the round, not asked; a term with two plausible meanings is a
   decision node.
-- A matching term raises nothing. A term in neither glossary is asked about only
+- A matching term raises nothing. A term the glossary does not hold is asked about only
   when a decision on the tree turns on its meaning.
 - **A settled term is written at once**, not at the end of the session: to the
-  pack's `08_Glossary.md` in discussion, a new term to the project glossary
-  where the stage writes the policy layer, otherwise to the stage's evidence,
-  beside its adopted decisions, with a line in its final report, and with no
-  invoking stage to the session record the user reads. A changed pack term
-  rewrites its row and adds no second one.
+  project glossary in a stage that writes the policy layer, and otherwise as an
+  `open-questions.md` row naming the term and its definition, which `/qfai-sdd`
+  writes into the glossary.
 - **Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only after the user approves it.
 - A definition says what the term is. A rule, a value set or a procedure belongs in the spec, not in the row.
 

@@ -28,7 +28,6 @@ async function withWorkspace(uiContract: string, task: (root: string) => Promise
         "paths:",
         "  contractsDir: .qfai/spec/03_contract",
         "  specsDir: .qfai/spec",
-        "  discussionDir: .qfai/discussion",
         "  outDir: .qfai/report",
         "  skillsDir: .qfai/assistant/skill",
         "  promptsDir: .qfai/assistant/skill",

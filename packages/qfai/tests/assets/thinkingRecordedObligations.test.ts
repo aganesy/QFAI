@@ -14,14 +14,9 @@ const TEMPLATE = "assistant/skill/qfai-sdd/templates/spec/decisions.md";
 const LABELS = ["`Evidence:`", "`Grounds:`", "`Residual risk:`", "`Rollback:`"];
 const TEMPLATE_CITATION = "templates/spec/decisions.md";
 const SDD_GUIDANCE = [
-  "assistant/step/common-grilling-record/STEP.md",
   "assistant/skill/qfai-sdd/references/sdd-triage.md",
   "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
   "assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
-];
-const EVIDENCE_GUIDANCE = [
-  "assistant/step/common-grilling-record/STEP.md",
-  "assistant/skill/qfai-implement/references/parallelization-policy.md",
 ];
 
 const read = (tree: string, file: string): Promise<string> =>
@@ -35,7 +30,8 @@ describe("every decision a stage records carries one form", () => {
       expect(article).toContain(
         "The stage that owns `<paths.specsDir>/decisions.md`, `qfai-sdd`, records each",
       );
-      expect(article).toContain("Every other stage records each decision in its own");
+      expect(article).toContain("Every stage writes each agent decision it takes");
+      expect(article).toContain("Agent decisions row of the run's");
       expect(article).toContain(`\`.qfai/assistant/skill/qfai-sdd/${TEMPLATE_CITATION}\``);
       // The rule points to the schema and does not copy it.
       for (const label of LABELS) expect(article).not.toContain(label);
@@ -46,14 +42,6 @@ describe("every decision a stage records carries one form", () => {
       expect(template).toContain(
         "A stage that does not own this file records its decisions in its own final",
       );
-    });
-
-    it(`${tree}: the shared evidence guidance cites the template`, async () => {
-      for (const file of EVIDENCE_GUIDANCE) {
-        const text = await read(tree, file);
-        expect(text, file).toContain(`\`.qfai/assistant/skill/qfai-sdd/${TEMPLATE_CITATION}\``);
-        for (const label of LABELS) expect(text, file).not.toContain(label);
-      }
     });
 
     it(`${tree}: the reasoning procedure is gone`, async () => {

@@ -228,10 +228,10 @@ runs only from its parent or from the plan `qfai-run` follows.
    gate. Run a `common-*` step it `requires` at the point the step calls it.
    Then move to the next step.
 5. After the last step, run the one review the parent names, through
-   `common-review-cycle`: the specification review for `qfai-sdd` and
-   `qfai-discussion`, the code review for a parent that changed code, tests or
-   a change note, and none for `qfai-triage` or for a `qfai-verify` run that
-   wrote nothing.
+   `common-review-cycle`: the specification review for `qfai-sdd`, the code
+   review for a parent that changed code, tests or a change note, and none for
+   `qfai-discussion`, whose output is a memo, for `qfai-triage` or for a
+   `qfai-verify` run that wrote nothing.
 6. Complete as the parent's completion section says, reporting what each step
    produced.
 
@@ -287,6 +287,12 @@ A business flow that a run's valid binding supplies counts as supplied: the
 work order's target names the flow, so the skill does not ask for it. With no
 binding, the flow stays `hard-required`: a direct invocation with no flow it
 can resolve stops at preflight.
+
+## Deliberation Record
+
+Read `.qfai/assistant/rule/references/deliberation-record.md` before the run asks the user a question or takes an agent decision.
+It says where the record goes, what it and the reports hold, and when it is committed or read. An implement, verify or prototyping stage reads no record.
+Start a record from `.qfai/assistant/rule/references/deliberation-record-template.md`.
 
 ## Rejected Option Guard
 

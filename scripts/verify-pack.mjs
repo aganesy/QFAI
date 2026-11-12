@@ -245,7 +245,6 @@ const requiredGitignorePatterns = [
   ".qfai/report/*",
   ".qfai/evidence/*",
   ".qfai/review/*",
-  ".qfai/discussion/*",
 ];
 const missingPatterns = requiredGitignorePatterns.filter(
   (pattern) => !rootGitignoreContent.includes(pattern),
@@ -434,183 +433,6 @@ if (!existsSync(path.join(githubAgentsDir, "fullstack-engineer.agent.md"))) {
   throw new Error("init did not generate .github/agents/fullstack-engineer.agent.md.");
 }
 
-// Empty scaffold init omits generated discussion-pack files.
-// Seed a minimal discussion-pack so pack-time validate has realistic inputs.
-const discussionDir = path.join(outputDir, ".qfai", "discussion");
-const seededDiscussionPack = "discussion-20260216000000000";
-const seededDiscussionPackDir = path.join(discussionDir, seededDiscussionPack);
-mkdirSync(seededDiscussionPackDir, { recursive: true });
-
-const seededDiscussionPackFiles = {
-  "01_Context.md": [
-    "# 01 Context",
-    "",
-    "Project context for verify-pack smoke validation.",
-    "- Context: this is a packaging validation fixture.",
-    "- Stakeholders: release automation.",
-    "- Captured at: 2026-02-16.",
-    "- Purpose: provide stable evidence for seeded discussion.",
-    "",
-    "## Classification",
-    "",
-    "- ui_bearing: false",
-    "- primary_surface: non-ui",
-    "- secondary_surfaces: []",
-    "- classification_rationale: Packaging validation fixture — no user-facing UI.",
-    "",
-    "## Inception Deck",
-    "",
-    "This seeded discussion-pack is for packaging validation only and ensures",
-    "the readiness gate has concrete non-placeholder content.",
-    "",
-    "```mermaid",
-    "flowchart TD",
-    "  Package[Packed artifact] --> Validate[Smoke validation]",
-    "```",
-    "",
-    "Elevator Pitch:",
-    "A packaging smoke test that validates the discussion pack gate.",
-    "",
-  ],
-  "03_Story-Workshop.md": [
-    "# 03 Story Workshop",
-    "",
-    "```mermaid",
-    "sequenceDiagram",
-    "  participant CI",
-    "  participant Validator",
-    "  CI->>Validator: BF-0001-S01 run validate",
-    "```",
-    "",
-    "Workshop outcomes for packaging smoke test.",
-    "",
-  ],
-  "04_Sources.md": [
-    "# 04 Sources",
-    "",
-    "Source register for verify-pack smoke validation.",
-    "- Source ID: SRC-0001",
-    "- Type: process note",
-    "- Location: verify-pack seeded fixture",
-    "- Captured at: 2026-02-16",
-    "- Owner: release automation",
-    "- Confidence: high",
-    "- Rationale: provide stable evidence for seeded discussion.",
-    "",
-    // The research-first protocol stores its output here, and the gate requires
-    // the section on the current pack: a seeded pack without it reports
-    // QFAI-RESEARCH-016 as an error and stops the `--fail-on error` run below.
-    "## Research Summary",
-    "",
-    "```yaml",
-    "research_summary:",
-    "  sources:",
-    "    - id: SRC-0001",
-    "      title: QFAI packaging smoke fixture note",
-    "      url: https://example.com/qfai/verify-pack",
-    "      published: 2026-02-16",
-    "  best_practices:",
-    "    - id: BP-0001",
-    "      category: packaging",
-    "      title: Seed a realistic discussion pack before packing",
-    "      description: Give the pack-time validate gate concrete inputs.",
-    "      source_id: SRC-0001",
-    "  anti_patterns:",
-    "    - id: AP-0001",
-    "      category: packaging",
-    "      title: Validate against an empty scaffold",
-    "      description: An empty pack lets every discussion gate pass vacuously.",
-    "      source_id: SRC-0001",
-    "  reflection:",
-    "    - source_id: SRC-0001",
-    "      finding: The smoke fixture has to carry the research storage slot.",
-    "      action: apply",
-    "      reason: Pack-time validate gates the current pack on that section.",
-    "```",
-    "",
-  ],
-  "05_Scope.md": [
-    "# 05 Scope",
-    "",
-    "In scope:",
-    "- Validate that a latest discussion-pack exists with all mandatory files.",
-    "- Keep smoke data deterministic across environments.",
-    "",
-    "Out of scope:",
-    "- Product feature behavior changes.",
-    "",
-  ],
-  "06_REQ.md": [
-    "# 06 REQ",
-    "",
-    "## REQ-0001",
-    "The packaging smoke flow shall include a complete discussion-pack so",
-    "qfai validate can execute with fail-on error in verify-pack.",
-    "",
-    "## REQ-0002",
-    "The seeded artifacts shall remain deterministic and easy to inspect.",
-    "",
-  ],
-  "07_NFR.md": [
-    "# 07 NFR",
-    "",
-    "- NFR-0001 Reliability: the seeded pack must be reproducible in CI and local.",
-    "- NFR-0002 Maintainability: file content should be concise but explicit.",
-    "- NFR-0003 Observability: failures should point to actionable file names.",
-    "",
-  ],
-  "08_Glossary.md": [
-    "# 08 Glossary",
-    "",
-    "- Discussion-pack: a timestamped set of discussion documents under `.qfai/discussion`.",
-    "- Smoke validation: lightweight end-to-end check for packed artifacts.",
-    "- Readiness gate: validation criteria that block packaging on errors.",
-    "",
-  ],
-  "09_Constraints.md": [
-    "# 09 Constraints",
-    "",
-    "- Use markdown-only fixtures to avoid runtime dependencies.",
-    "- Keep each required file longer than minimal validation thresholds.",
-    "- Avoid placeholder-only statements to satisfy content checks.",
-    "- Keep naming aligned with the nine-file discussion pack structure.",
-    "",
-    "## Security Policy",
-    "",
-    "- The seeded pack holds no secret or credential.",
-    "",
-    "## Compliance Policy",
-    "",
-    "- No regulated data enters the smoke fixture.",
-    "",
-    "## Development Policy",
-    "",
-    "- Policy-0001: verify-pack must fail when required artifacts are absent.",
-    "- Policy-0002: seeded files are test inputs and not product commitments.",
-    "- Policy-0003: content should remain stable unless gate rules change.",
-    "",
-    "## Operational Policy",
-    "",
-    "- The seeded pack is written fresh for each verify-pack run.",
-    "",
-  ],
-  "11_OQ-Register.md": [
-    "# 11 OQ Register",
-    "",
-    "| OQ-ID   | Title                                      | Gate    | Disposition | Owner  | Rationale                                         | Options                                           | Recommendation | Resolution | Next-Decision-Point      | Due        | Evidence         |",
-    "| ------- | ------------------------------------------ | ------- | ----------- | ------ | ------------------------------------------------- | ------------------------------------------------- | -------------- | ---------- | ------------------------ | ---------- | ---------------- |",
-    "| OQ-0001 | Should smoke data mirror full production templates? | discuss | deferred    | CI     | minimal deterministic content is currently sufficient | Option A: keep minimal / Option B: mirror full     | Option A       | keep the minimal seed for now | before release candidate | 2026-06-01 | Conversation log |",
-    "",
-  ],
-};
-
-// prototyping.yaml is only required for UI-bearing packs (v1.7.14).
-// This fixture is ui_bearing: false / primary_surface: non-ui, so omit it.
-
-for (const [fileName, lines] of Object.entries(seededDiscussionPackFiles)) {
-  writeFileSync(path.join(seededDiscussionPackDir, fileName), lines.join("\n"));
-}
-
 const seededReviewPackName = "review-20260216000000000";
 const seededReviewPackDir = path.join(outputDir, ".qfai", "review", seededReviewPackName);
 mkdirSync(seededReviewPackDir, { recursive: true });
@@ -644,13 +466,9 @@ function headCommit() {
 const seededRevision = headCommit();
 writeFileSync(
   path.join(seededReviewPackDir, "review_request.md"),
-  [
-    "# Review Request",
-    "",
-    `Target: .qfai/discussion/${seededDiscussionPack}`,
-    "Purpose: verify-pack smoke validation.",
-    "",
-  ].join("\n"),
+  ["# Review Request", "", "Target: .qfai/spec", "Purpose: verify-pack smoke validation.", ""].join(
+    "\n",
+  ),
 );
 writeFileSync(
   path.join(seededReviewPackDir, "R01_implementation-reviewer.md"),
@@ -675,8 +493,8 @@ writeFileSync(
       revision: seededRevision,
       created_at: "2026-02-16T00:00:00.000Z",
       target: {
-        kind: "discussion",
-        path: `.qfai/discussion/${seededDiscussionPack}`,
+        kind: "sdd",
+        path: ".qfai/spec",
       },
       reviewers: [{ reviewer: "implementation-reviewer", status: "PASS", feedback_count: 0 }],
       conditional_reviewers: [],
@@ -721,6 +539,9 @@ for (const policyFile of policyFiles) {
     return fixtureValues.get(placeholder);
   };
   const after = before
+    // The Surface row takes one value from a closed set, so it is filled with
+    // a member of that set rather than with free text.
+    .replace(/^(\|[ \t]*Surface[ \t]*\|[ \t]*`)<[^<>\n]+>`/m, "$1cli`")
     .replace(/<(?!\/|!)[^<>\n]+>/g, fixtureValue)
     .replace(/\b(?:TODO|TBD)\b/g, () => fixtureValue("TODO"));
   if (after === before) {

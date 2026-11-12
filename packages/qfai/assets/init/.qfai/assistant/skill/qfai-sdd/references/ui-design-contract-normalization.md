@@ -1,6 +1,7 @@
 # UI Design Contract Normalization
 
-`/qfai-sdd` reads discussion-pack UI/UX sidecars to author contracts.
+`/qfai-sdd` reads the screens and their behaviour obligations from the
+deliberation record it consumes and writes them into the UI contracts.
 Downstream skills read the story tree, contracts, and evidence.
 
 ## DESIGN.md SSOT
@@ -15,11 +16,10 @@ A cli-only target has no root `DESIGN.md`; it still normalizes
 `/qfai-prototyping` records its handoff in
 `.qfai/prototype/final/handoff.json`. SDD does not author it.
 
-## Sidecar mapping
+## Record mapping
 
-The remaining UI-bearing sidecar maps to its contract as follows:
-
-- `40_screen_contracts.md` → `<paths.contractsDir>/ui/*.yaml`
+Each screen the record settles, with its behaviour obligations, maps to
+`<paths.contractsDir>/ui/*.yaml`.
 
 Project-specific anti-pattern notes live in `audience.do_not_look_like`
 of `DESIGN.md`. Evaluator axes are fixed by the review validation the
@@ -27,8 +27,7 @@ QFAI CLI applies.
 
 ## Normalization Rules
 
-- Preserve source IDs where available.
-- Normalize the sidecar's notes on displayed text into the screen's optional
+- Normalize the record's notes on displayed text into the screen's optional
   `supplements` and `structure`, as the UI contract guide shapes them. Notes for the author or
   the reviewer are not displayed text and are not copied into either key.
 - Convert prose into machine-readable arrays or objects.

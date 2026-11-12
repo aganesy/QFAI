@@ -100,13 +100,7 @@ const KINDS: Record<string, string[]> = {
     "triage-owned-cleanup",
     "triage-operate",
   ],
-  discussion: [
-    "discussion-research",
-    "discussion-interview",
-    "discussion-pack",
-    "discussion-oq",
-    "discussion-uiux",
-  ],
+  discussion: ["discussion-research", "discussion-interview"],
   diagnose: ["implement-diagnose", "implement-bisect", "implement-minimize", "implement-benchmark"],
   sdd: [
     "sdd-triage",
@@ -166,8 +160,6 @@ export const PASS_THROUGH_STEPS = [
   "sdd-cycle",
   "sdd-story",
   "common-design-md",
-  "discussion-pack",
-  "discussion-uiux",
   "triage-investigate",
   "implement-scaffold",
   "implement-tdd",

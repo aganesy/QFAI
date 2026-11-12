@@ -96,8 +96,8 @@ make a slow path faster:
 
 - under `gate:user`, put the decision to the operator as a question, return
   `awaiting_input` and change nothing;
-- otherwise take the decision and list it in the result's `adopted` as
-  `{ step, decision, reason }`.
+- otherwise take the decision and write it, with its reason, as an Agent
+  decisions row of the run's deliberation record.
 
 ## What it writes
 

@@ -66,11 +66,11 @@ just placed elsewhere.
 **How it is written.** In the shape every finding takes
 (`.qfai/assistant/rule/shared-skill-delegation-baseline.md#verdict-vocabulary`):
 `Severity: advisory`, and `Traces to:` **the obligation whose implementation the
-advice is about** — which the pack carries, since the subject is how a later
+advice is about** — which the story tree carries, since the subject is how a later
 stage implements something already agreed. Never `none`: that value means
 reviewer-originated scope, goes to the specification owner and reaches no
 implementer, and advice about an agreed obligation proposes no new one. Where an
-item genuinely names nothing the pack carries it is reviewer-originated scope,
+item genuinely names nothing the story tree carries it is reviewer-originated scope,
 and the baseline's `none` path is the right one for it.
 
 This section is the one place an obligation-traced finding is `advisory`, and
@@ -88,16 +88,14 @@ A rerun that dropped it would lose the advice of every reviewer who found
 nothing blocking.
 
 **Where it goes.** The advice stays in the cycle's findings, which the next
-stage reads at its start as non-normative reference material, like the
-discussion pack. That stage gives each
-item a disposition in its own artifacts — a plan step, a spec row, an open
-question, or a line in its report saying it was read and not adopted — and
-nothing is back-propagated into the pack. What it may not do is leave an item
-unmentioned: a decision nobody wrote down cannot be told from an item nobody
-read.
+stage reads at its start as non-normative reference material. That stage gives
+each item a disposition in its own artifacts — a plan step, a spec row, an open
+question, or a line in its report saying it was read and not adopted. What it
+may not do is leave an item unmentioned: a decision nobody wrote down cannot be
+told from an item nobody read.
 
 Wrong repository facts, missing decision traceability, scope contradictions and
-defects in the pack's own safety obligations remain in remit. Non-normative
+defects in the reviewed artifact's own safety obligations remain in remit. Non-normative
 status is not permission to pass those.
 
 ## Agent-to-agent grilling
@@ -117,8 +115,9 @@ started: partial agreement is the ordinary outcome, and rounds past two buy
 fluency rather than a better answer.
 
 Where the authors disagreed, the recommendation is still taken, and each
-position is recorded beside it with whose it is. The stage reports every adopted
-decision at its end without waiting for an answer. A user who disagrees
+position is recorded beside it with whose it is. Every adopted decision is an
+Agent decisions row of the run's deliberation record, written without waiting
+for an answer, and no report lists it. A user who disagrees
 overturns one through a specification change or a rerun.
 
 **A critical decision without an actual answer or recorded applicable user
@@ -129,11 +128,11 @@ a round. Agent agreement and round exhaustion supply no authority.
 | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | It contradicts a spec, a contract or a recorded decision                                                                                      | Changing settled input is the user's decision, not a design round           |
 | Its effect cannot be taken back: security, lost or corrupted data, a broken released contract, spending, a legal commitment, a public release | A wrong recommendation here is not repaired by the next run                 |
-| It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated                  | Two agents reasoning past the evidence converge on the more fluent argument |
+| It rests on product or business intent that the request, the specs and the contracts all leave unstated                                       | Two agents reasoning past the evidence converge on the more fluent argument |
 
-A discussion pack answers product intent for this test. It is non-normative for
-the Drift Protocol, but it is where the user already answered these questions in
-a user session, and asking them again spends that session twice.
+Product intent the user already settled is read from the story tree and
+`decisions.md`, never from a deliberation record. Asking it again spends that
+session twice.
 
 Each uncovered critical decision goes to the user with every position and a
 recommendation when asking is permitted. The work stays where it is while the

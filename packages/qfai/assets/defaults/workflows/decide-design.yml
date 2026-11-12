@@ -3,12 +3,7 @@ family: decide
 stages:
   - id: discussion
     kind: discussion
-    steps:
-      - discussion-research
-      - discussion-interview
-      - { step: discussion-pack, passThrough: true }
-      - { step: discussion-uiux, passThrough: true }
-      - discussion-oq
+    steps: [discussion-research, discussion-interview]
   - id: close
     kind: triage
     steps: [triage-close]

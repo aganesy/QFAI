@@ -43,9 +43,7 @@
     // worktrees — while failing locally.
     ".claude/worktrees/**",
     ".github/prompts/**",
-    ".qfai/discussion/**",
     ".qfai/archive/**",
-    ".qfai/discussion_archive/**",
     ".qfai/review_archive/**",
     ".qfai/review/_archive/**",
     ".qfai/assistant/**",

@@ -62,7 +62,7 @@ describe("the grilling reminder fires where a decision gets made quietly", () =>
     //
     // No `if`, deliberately, and for the reason the implementation-rule hook in
     // this same file gives: the condition is a path scope, and a project moves
-    // its artifacts with `paths.specsDir` / `paths.discussionDir`. A scope
+    // its artifacts with `paths.specsDir` / `paths.deliberationDir`. A scope
     // naming the defaults is silently absent in exactly the project that
     // relocated -- and deriving it at `qfai init` fixes it only until the
     // config changes, which init does not see. The cost of the broader match is

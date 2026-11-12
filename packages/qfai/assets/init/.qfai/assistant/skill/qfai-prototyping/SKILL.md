@@ -49,6 +49,9 @@ When unsure, read inputs in this order:
 - P4: the UI contracts under `<contractsDir>/ui/**/*.{yaml,yml}` and the references each step lists
 - P5: earlier iterations and their reviews under `.qfai/prototype/`
 
+Prototyping takes its direction from P3 and P4, and opens no file under
+`paths.deliberationDir`.
+
 ## Steps
 
 | Step                    | Runs                                                                                                      |
@@ -86,8 +89,9 @@ decide completion.
 
 The invocation completes when the user confirms the prototype and
 `prototyping-handoff` has written the handoff. A blocking finding the latest
-review still lists at that point is named in the final report. Report every
-decision a session adopted, as that step says. Ask about the actions under Next
+review still lists at that point is named in the final report. Every decision
+a session adopted is an Agent decisions row of the run's deliberation record,
+and the final report does not list it. Ask about the actions under Next
 only when proceeding requires the user's answer, as
 `.agents/rules/user-questions.md` § 6 sets out. A completion-only report needs
 no question. Under a no-question mode, list any remaining actions instead.

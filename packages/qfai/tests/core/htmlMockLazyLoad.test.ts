@@ -38,7 +38,6 @@ afterEach(async () => {
 function config(): QfaiConfig {
   return {
     paths: {
-      discussionDir: ".qfai/discussion",
       specsDir: ".qfai/specs",
     },
     uiux: { htmlMockTimeout: 2000 },

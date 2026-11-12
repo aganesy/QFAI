@@ -40,7 +40,6 @@ both outlive an exhausted budget.
 - Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#format-ssot`.
 
 - Before writing or editing any `.qfai/**` artifact, read the relevant skill-local reference or template:
-  - `.qfai/assistant/skill/qfai-discussion/references/discussion-artifact-rules.md`
   - `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md`
   - `.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`
 
@@ -52,6 +51,9 @@ When unsure, read inputs in this order:
 - P2: Read `.qfai/assistant/rule/agent-selection.md`, the cards under `.qfai/assistant/agent/`, and project context under `.qfai/spec/01_policy/` and `.qfai/spec/03_contract/`.
 - P3: `.qfai/spec/decisions.md` (Decision Records; if no decision exists, state "not applicable").
 - P4: the business flows, stories, contracts, tests, and evidence relevant to the configuration.
+
+- Before an agent decision, search the records for a turned-down option, as
+  `.qfai/assistant/rule/references/deliberation-record.md` says.
 
 ## Sub-agent Delegation
 

@@ -84,13 +84,12 @@ describe("BF-0003 doctor acceptance", () => {
     await withWorkspace(async (root) => {
       await writeFile(
         path.join(root, "qfai.config.yaml"),
-        "paths:\n  specsDir: custom/stories\n  contractsDir: custom/contracts\n  discussionDir: custom/discussion\n  testsDir: custom/tests\n",
+        "paths:\n  specsDir: custom/stories\n  contractsDir: custom/contracts\n  testsDir: custom/tests\n",
       );
       const data = await createDoctorData({ startDir: root, rootExplicit: true });
       for (const [key, relative] of [
         ["specsDir", "custom/stories"],
         ["contractsDir", "custom/contracts"],
-        ["discussionDir", "custom/discussion"],
         ["testsDir", "custom/tests"],
       ]) {
         expect(check(data, `paths.${key}`)).toMatchObject({

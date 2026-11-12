@@ -327,10 +327,6 @@ describe("cli usage errors", () => {
   it("surfaces the per-family subcommand diagnostics on stderr", async () => {
     const cases: Array<{ argv: string[]; expected: string }> = [
       { argv: ["atdd"], expected: "qfai atdd: unknown or missing subcommand. Expected: scaffold" },
-      {
-        argv: ["discussion"],
-        expected: "qfai discussion: unknown or missing subcommand. Expected: list|use",
-      },
     ];
     for (const { argv, expected } of cases) {
       const { stderr } = await captureRun(argv);

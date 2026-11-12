@@ -7,8 +7,6 @@ import {
   type CanonicalScreenContract,
   type PrimaryTaskShapeFinding,
 } from "../contracts/screenContracts.js";
-import { isDiscussionUiBearingPack } from "../detection/surfaceType.js";
-import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -139,104 +137,6 @@ function _extractSection(content: string, heading: string): string | null {
 // ---------------------------------------------------------------------------
 // Contracts / Selected Direction Checks
 // ---------------------------------------------------------------------------
-
-function parseScreenBlocks(
-  content: string,
-): Array<{ screenId: string; primaryTasks: string[]; primaryTasksKeyPresent: boolean }> {
-  const blocks: Array<{
-    screenId: string;
-    primaryTasks: string[];
-    primaryTasksKeyPresent: boolean;
-  }> = [];
-  const sections = content.split(/(?=^###\s+Screen:)/m);
-  for (const section of sections) {
-    if (!/^###\s+Screen:/m.test(section)) {
-      continue;
-    }
-    const lines = section.split("\n");
-    const screenId =
-      lines
-        .map((line) => /^\s*-\s+screen_id:\s*(.+)$/.exec(line)?.[1]?.trim() ?? "")
-        .find(Boolean) ?? "unknown";
-    const primaryTasks: string[] = [];
-    let primaryTasksKeyPresent = false;
-
-    let inPrimaryTasks = false;
-    for (const line of lines) {
-      if (/^\s*-\s+primary_tasks:\s*$/i.test(line)) {
-        inPrimaryTasks = true;
-        primaryTasksKeyPresent = true;
-        continue;
-      }
-      if (!inPrimaryTasks) {
-        continue;
-      }
-      if (/^\s*-\s+\w[\w_]*:\s*/.test(line) || /^###\s+Screen:/i.test(line)) {
-        break;
-      }
-      const primaryTaskMatch = /^\s{2,}-\s+(.+)$/.exec(line);
-      if (primaryTaskMatch?.[1]) {
-        primaryTasks.push(primaryTaskMatch[1].trim());
-      }
-    }
-
-    blocks.push({
-      screenId,
-      primaryTasks,
-      primaryTasksKeyPresent,
-    });
-  }
-  return blocks;
-}
-
-function checkContractsHierarchy(
-  contractsContent: string,
-  auditConfig: DesignAuditConfig,
-  file: string,
-): DesignFinding[] {
-  const findings: DesignFinding[] = [];
-  const screens = parseScreenBlocks(contractsContent);
-  for (const screen of screens) {
-    if (screen.primaryTasks.length === 0) {
-      if (screen.primaryTasksKeyPresent) {
-        // key-empty: slot authored but left as `primary_tasks: []`. Treat as
-        // intentional violation, emit severity=error (blocking).
-        findings.push({
-          ruleId: "QFAI-AUD-001",
-          dimension: "visualHierarchy",
-          severityTier: 1,
-          message: `[QFAI-AUD-001] ${file}: screen '${screen.screenId}' has empty primary_tasks; add at least one primary_task entry`,
-          why: "Each screen contract needs a clear primary task to anchor the core user action",
-          evidence: [file, screen.screenId, "QFAI-AUD-001"],
-          guidance: "Add at least one primary_tasks entry to the screen contract.",
-          file,
-        });
-      } else {
-        // key-absent: the screen declares no primary_tasks. The
-        // slot is required, so this is an error.
-        findings.push({
-          ruleId: "QFAI-AUD-001",
-          dimension: "visualHierarchy",
-          severityTier: 3,
-          severityOverride: "error",
-          message: `[QFAI-AUD-001] ${file}: screen '${screen.screenId}' has no primary_tasks; declare primary_tasks as {id, label, acceptance} mappings`,
-          why: "Each screen contract needs a clear primary task to anchor the core user action",
-          evidence: [file, screen.screenId, "QFAI-AUD-001"],
-          guidance:
-            "Declare `primary_tasks` on the screen entry as at least one `{id, label, acceptance}` mapping.",
-          file,
-        });
-      }
-      continue;
-    }
-    const bandFinding = bandFindingFor(screen.screenId, screen.primaryTasks, file, file);
-    if (bandFinding) {
-      findings.push(bandFinding);
-    }
-  }
-
-  return findings;
-}
 
 function bandFindingFor(
   screenId: string,
@@ -460,30 +360,12 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   const auditConfig = resolveAuditConfig(config);
   if (!auditConfig.enabled) return [];
 
-  const discussionDir = path.join(root, config.paths.discussionDir);
   const uiContractScreens = await readUiContractScreenContracts(root, config.paths.contractsDir);
-  const packRoot = await findLatestDiscussionPackDir(discussionDir);
-  if (uiContractScreens.length === 0) {
-    if (!packRoot) return [];
-    const uiBearing = await isDiscussionUiBearingPack(packRoot);
-    if (!uiBearing) return [];
-  }
+  if (uiContractScreens.length === 0) return [];
 
-  const contractsPath = packRoot ? path.join(packRoot, "uiux", "40_screen_contracts.md") : null;
-  const contractsContent = contractsPath ? await readSafe(contractsPath) : "";
-  // The audit decides early-return based on UI contracts and screen
-  // contracts only.
-  if (uiContractScreens.length === 0 && !contractsContent) return [];
-
-  const findings: DesignFinding[] = [];
-
-  if (uiContractScreens.length > 0) {
-    findings.push(...checkContractHierarchyFromScreens(uiContractScreens, auditConfig));
-  } else if (contractsContent) {
-    findings.push(
-      ...checkContractsHierarchy(contractsContent, auditConfig, "uiux/40_screen_contracts.md"),
-    );
-  }
+  const findings: DesignFinding[] = [
+    ...checkContractHierarchyFromScreens(uiContractScreens, auditConfig),
+  ];
 
   // Token drift check
   findings.push(...(await checkTokenDrift(root, auditConfig, config)));

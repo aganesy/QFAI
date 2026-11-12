@@ -45,11 +45,7 @@ const DISCUSSION_AUTHORITY_ASSETS = [
   ".agents/rules/grilling.md",
   ".qfai/assistant/step/common-grilling-record/STEP.md",
   ".qfai/assistant/step/discussion-interview/STEP.md",
-  ".qfai/assistant/step/discussion-pack/STEP.md",
-  ".qfai/assistant/step/discussion-oq/STEP.md",
-  ".qfai/assistant/step/discussion-uiux/STEP.md",
   ".qfai/assistant/skill/qfai-discussion/SKILL.md",
-  ".qfai/assistant/skill/qfai-discussion/references/discussion-completion-matrix.md",
   ".qfai/assistant/skill/qfai-grilling/SKILL.md",
   ".qfai/assistant/skill/qfai-grilling/references/delegated-session.md",
   ".qfai/assistant/skill/qfai-grilling/references/session-record.md",
@@ -219,7 +215,6 @@ describe("qfai init", () => {
       expect(content).toContain(".qfai/report/*");
       expect(content).toContain(".qfai/evidence/*");
       expect(content).toContain(".qfai/review/*");
-      expect(content).toContain(".qfai/discussion/*");
 
       // No subdirectory .gitignore files should be created
       await expect(access(path.join(root, ".qfai", "review", ".gitignore"))).rejects.toMatchObject({
@@ -230,11 +225,6 @@ describe("qfai init", () => {
       });
       await expect(
         access(path.join(root, ".qfai", "evidence", ".gitignore")),
-      ).rejects.toMatchObject({
-        code: "ENOENT",
-      });
-      await expect(
-        access(path.join(root, ".qfai", "discussion", ".gitignore")),
       ).rejects.toMatchObject({
         code: "ENOENT",
       });
@@ -270,49 +260,22 @@ describe("qfai init", () => {
     }
   });
 
-  it("ignores every discussion child on init", async () => {
+  // QFAI:EX-0001-0033-11
+  it("leaves a deliberation record trackable after init on a repository with no .gitignore", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await execFile("git", ["init"], { cwd: root });
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const relativePath = ".qfai/deliberation/20261112043225-example.md";
+      await mkdir(path.join(root, ".qfai", "deliberation"), { recursive: true });
+      await writeFile(path.join(root, relativePath), "# Record\n");
 
-      const discussionDir = path.join(root, ".qfai", "discussion");
-      const directUiuxFile = path.join(discussionDir, "uiux", "40_screen_contracts.md");
-      const generatedPackFile = path.join(
-        discussionDir,
-        "discussion-20260423174107000",
-        "uiux",
-        "40_screen_contracts.md",
-      );
-
-      await mkdir(path.dirname(directUiuxFile), { recursive: true });
-      await mkdir(path.dirname(generatedPackFile), { recursive: true });
-      await writeFile(directUiuxFile, "direct uiux");
-      await writeFile(generatedPackFile, "generated pack uiux");
-
-      const checkIgnore = async (relativePath: string): Promise<string | null> => {
-        try {
-          const { stdout } = await execFile("git", ["check-ignore", "-v", "--", relativePath], {
-            cwd: root,
-          });
-          return stdout.trim();
-        } catch (error: unknown) {
-          if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
-            return null;
-          }
-          throw error;
-        }
-      };
-
-      expect(await checkIgnore(".qfai/discussion/README.md")).toContain(".qfai/discussion/*");
-      expect(await checkIgnore(".qfai/discussion/uiux/40_screen_contracts.md")).toContain(
-        ".qfai/discussion/*",
-      );
-      expect(
-        await checkIgnore(
-          ".qfai/discussion/discussion-20260423174107000/uiux/40_screen_contracts.md",
-        ),
-      ).toContain(".qfai/discussion/*");
+      const result = spawnSync("git", ["check-ignore", "--", relativePath], {
+        cwd: root,
+        encoding: "utf-8",
+      });
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe("");
     } finally {
       await removeTempTree(root);
     }
@@ -368,7 +331,7 @@ describe("qfai init", () => {
           "skill",
           "qfai-discussion",
           "references",
-          "discussion-artifact-rules.md",
+          "design-dna-intake.md",
         ),
         path.join(root, ".github", "copilot-instructions.md"),
       ];
@@ -445,7 +408,6 @@ describe("qfai init", () => {
       const scaffoldFiles = await fg(
         [
           ".qfai/specs/**/*",
-          ".qfai/discussion/**/*",
           ".qfai/report/**/*",
           ".qfai/review/**/*",
           ".qfai/contracts/**/*",
@@ -2022,7 +1984,6 @@ describe("qfai init", () => {
       expect(content).toContain(".qfai/review/*");
       expect(content).toContain(".qfai/report/*");
       expect(content).toContain(".qfai/evidence/*");
-      expect(content).toContain(".qfai/discussion/*");
     } finally {
       await removeTempTree(root);
     }
@@ -2066,7 +2027,6 @@ describe("qfai init", () => {
         QFAI_GITIGNORE_MARKER,
         ".qfai/report/*",
         ".qfai/evidence/*",
-        ".qfai/discussion/*",
         ".qfai/review/*",
         ".qfai/state.json",
         "",
@@ -2100,7 +2060,6 @@ describe("qfai init", () => {
         ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
         ".qfai/report/*",
         ".qfai/evidence/*",
-        ".qfai/discussion/*",
         ".qfai/review/*",
         ".qfai/state.json",
         "",
@@ -2127,7 +2086,6 @@ describe("qfai init", () => {
       const tracked = [
         QFAI_GITIGNORE_MARKER,
         ".qfai/report/*",
-        ".qfai/discussion/*",
         ".qfai/review/*",
         ".qfai/state.json",
         ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
@@ -2160,7 +2118,6 @@ describe("qfai init", () => {
         QFAI_GITIGNORE_MARKER,
         ".qfai/report/*",
         existingIgnore,
-        ".qfai/discussion/*",
         ".qfai/review/*",
         ".qfai/state.json",
         "",
@@ -2191,7 +2148,6 @@ describe("qfai init", () => {
       const block = [
         QFAI_GITIGNORE_MARKER,
         ".qfai/report/*",
-        ".qfai/discussion/*",
         ".qfai/review/*",
         ".qfai/state.json",
         "",

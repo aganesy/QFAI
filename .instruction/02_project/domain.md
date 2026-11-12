@@ -23,7 +23,8 @@ and reporting.
   declares `CLI-NNNN` in its H1 and is named `cli-NNNN-<slug>.md`.
 - `.qfai/spec/decisions.md` and `open-questions.md`: project-wide decision and
   question tables.
-- `.qfai/discussion/`: discussion packs, the optional upstream input to a spec.
+- The directory `paths.deliberationDir` names: per-run deliberation records, the optional
+  upstream input to a spec.
 - `.qfai/assistant/`: the assistant tree — `rule/`, `skill/`, `agent/`,
   `prompt/`, plus project-local `skill.local/` where needed.
 - `.qfai/evidence/`: the per-run evidence a skill writes. It is local and

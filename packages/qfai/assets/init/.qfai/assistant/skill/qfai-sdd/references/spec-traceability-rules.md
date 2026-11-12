@@ -65,12 +65,12 @@ The section holds two things, in this order:
 
 `npx qfai validate` reports a Depends on that names a layer not below its row, and any node or edge the diagram and the table do not share.
 
-| Question            | Answer                                                                                                                                                                                                     |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Written from        | The technical decisions the discussion pack records and, in an existing codebase, its actual module layout and import directions. `/qfai-configure` fills it from the codebase; `/qfai-sdd` from the pack. |
-| Read by             | `/qfai-implement`, to place new code and choose its imports; the architecture and implementation reviewers, to judge a change; `/qfai-sdd`, to add a layer when a contract needs one.                      |
-| What it does        | Every new module belongs to one layer and imports only from the layers its row lists. A change that crosses a boundary is a review finding.                                                                |
-| What it may enforce | A project may add an automated check of import directions that reads this table.                                                                                                                           |
+| Question            | Answer                                                                                                                                                                                                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Written from        | The technical decisions the deliberation record settles and, in an existing codebase, its actual module layout and import directions. `/qfai-configure` fills it from the codebase; `/qfai-sdd` from the record. |
+| Read by             | `/qfai-implement`, to place new code and choose its imports; the architecture and implementation reviewers, to judge a change; `/qfai-sdd`, to add a layer when a contract needs one.                            |
+| What it does        | Every new module belongs to one layer and imports only from the layers its row lists. A change that crosses a boundary is a review finding.                                                                      |
+| What it may enforce | A project may add an automated check of import directions that reads this table.                                                                                                                                 |
 
 The table holds no rule. A behaviour a layer must show is a BR in the contract that enforces it; the table says only where code lives and what it may depend on.
 

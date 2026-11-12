@@ -94,22 +94,44 @@ describe("story-tree structure", () => {
       await mkdir(path.dirname(file), { recursive: true });
       const table = (rows: string[]): string =>
         ["| ID | Constraint | Rationale |", "| --- | --- | --- |", ...rows].join("\n");
-      const document = (technical: string[], business: string[]): string =>
-        `# Constraints\n\n## Technical Constraints\n\n${table(technical)}\n\n## Operational Constraints\n\n${table([])}\n\n## Business Constraints\n\n${table(business)}\n`;
+      const document = (
+        technical: string[],
+        business: string[],
+        quality: string[] = [],
+        legal: string[] = [],
+      ): string =>
+        `# Constraints\n\n## Technical Constraints\n\n${table(technical)}\n\n## Operational Constraints\n\n${table([])}\n\n## Business Constraints\n\n${table(business)}\n\n## Quality targets\n\n${table(quality)}\n\n## Legal and Compliance Constraints\n\n${table(legal)}\n`;
 
       await writeFile(
         file,
-        document(["| TC-01 | A | B |", "| TC-03 | C | D |"], ["| TC-01 | E | F |"]),
+        document(
+          ["| TC-01 | A | B |", "| TC-03 | C | D |"],
+          ["| TC-01 | E | F |"],
+          ["| QT-02 | G | H |"],
+          ["| LC-01 | I | J |", "| BC-02 | K | L |"],
+        ),
       );
       const reported = await validateConstraintIds(specsDir);
       expect(reported.map((item) => [item.code, item.refs])).toEqual([
         ["QFAI-STORY-012", ["TC-03"]],
         ["QFAI-STORY-012", ["TC-01"]],
+        ["QFAI-STORY-012", ["QT-02"]],
+        ["QFAI-STORY-012", ["BC-02"]],
       ]);
       expect(reported[0]?.message).toContain("so it is TC-02");
       expect(reported[1]?.message).toContain("so it is BC-01");
+      expect(reported[2]?.message).toContain("so it is QT-01");
+      expect(reported[3]?.message).toContain("so it is LC-02");
 
-      await writeFile(file, document(["| TC-01 | A | B |", "| TC-02 | C | D |"], []));
+      await writeFile(
+        file,
+        document(
+          ["| TC-01 | A | B |", "| TC-02 | C | D |"],
+          [],
+          ["| QT-01 | G | H |"],
+          ["| LC-01 | I | J |"],
+        ),
+      );
       expect(await validateConstraintIds(specsDir)).toEqual([]);
       const tree = buildStoryTreeModel(new Map(), {
         specsDir,

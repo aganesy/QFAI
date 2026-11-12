@@ -51,15 +51,15 @@ describe("a grilling session between agents has an end", () => {
       );
       expectPhrase(content, "the ones\nthe agents agreed on and the ones still open alike");
       expectPhrase(content, "A third round is never\nstarted");
-      // A disagreement is kept, not averaged, and the user sees every adopted
-      // decision without being stopped for any.
+      // A disagreement is kept, not averaged, and every adopted decision is
+      // recorded without the user being stopped for any.
       expectPhrase(
         content,
         "the recommendation is still taken, and each\nposition is recorded beside it with whose it is",
       );
       expectPhrase(
         content,
-        "The stage reports every adopted\ndecision at its end without waiting for an answer",
+        "Every adopted decision is an Agent decisions row of the run's deliberation record, written without waiting for an answer, and no report lists it.",
       );
       expectPhrase(content, "overturns one through a specification change or a rerun");
     });
@@ -78,12 +78,14 @@ describe("a grilling session between agents has an end", () => {
       expectPhrase(content, "Its effect cannot be taken back");
       expectPhrase(
         content,
-        "It rests on product or business intent that the request, the discussion pack, the specs and the contracts all leave unstated",
+        "It rests on product or business intent that the request, the specs and the contracts all leave unstated",
       );
       expectPhrase(content, "converge on the more fluent argument");
-      // The discussion pack counts as an answer here: it is where the user
-      // already answered product intent in a user session.
-      expectPhrase(content, "A discussion pack answers product intent for this test.");
+      // Settled product intent is read from the story tree, never from a record.
+      expectPhrase(
+        content,
+        "Product intent the user already settled is read from the story tree and `decisions.md`, never from a deliberation record.",
+      );
       expectPhrase(
         content,
         "Each uncovered critical decision goes to the user with every position",

@@ -184,7 +184,7 @@ describe("migration catalog move", () => {
     await put(
       context.root,
       ".qfai/spec/_policies/07_Constraints.md",
-      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Node 22 | Runtime |\n| BC-01 | EU data | Contract |\n",
+      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Node 22 | Runtime |\n| BC-01 | EU data | Contract |\n| QT-01 | Answers in two seconds | Users wait |\n| LC-01 | Data is kept one year | Retention law |\n",
     );
     const result = await run(context);
     expect(result.code).toBe(0);
@@ -204,12 +204,33 @@ describe("migration catalog move", () => {
       "# Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | An accepted request with a receipt. |\n",
     );
     expect(await policy("constraint.md")).toBe(
-      "# Constraints\n\n## Technical Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Node 22 | Runtime |\n\n## Operational Constraints\n\n| ID  | Constraint | Rationale |\n| --- | ---------- | --------- |\n\n## Business Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| BC-01 | EU data | Contract |\n",
+      "# Constraints\n\n## Technical Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| TC-01 | Node 22 | Runtime |\n\n## Operational Constraints\n\n| ID  | Constraint | Rationale |\n| --- | ---------- | --------- |\n\n## Business Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| BC-01 | EU data | Contract |\n\n## Quality targets\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| QT-01 | Answers in two seconds | Users wait |\n\n## Legal and Compliance Constraints\n\n| ID | Constraint | Rationale |\n| --- | --- | --- |\n| LC-01 | Data is kept one year | Retention law |\n",
     );
     for (const name of ["objective", "initiative", "principle", "glossary", "constraint"]) {
       expect(conformance(context.specsDir, name), name).toContain("No violations");
     }
     expect(await validateConstraintIds(context.specsDir)).toEqual([]);
+  });
+
+  // QFAI:EX-0004-0006-09
+  it("moves a 1.x Risks table to the Risks section of initiative.md", async () => {
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/02_Initiative.md",
+      "# 02 Initiative\n\n## Risks\n\n| Risk | Mitigation |\n| --- | --- |\n| The payment API changes | Pin its version |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(0);
+    const initiative = await readFile(
+      path.join(context.specsDir, "01_policy", "initiative.md"),
+      "utf8",
+    );
+    expect(initiative).toContain(
+      "## Risks\n\n| Risk | Mitigation |\n| --- | --- |\n| The payment API changes | Pin its version |\n",
+    );
+    expect(initiative.match(/The payment API changes/g)).toHaveLength(1);
+    expect(conformance(context.specsDir, "initiative")).toContain("No violations");
   });
 
   // QFAI:EX-0004-0006-28

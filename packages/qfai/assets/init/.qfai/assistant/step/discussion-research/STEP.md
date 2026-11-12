@@ -20,22 +20,20 @@ runs before any decision is taken.
 
 ## Writes
 
-The research summary, in the stage report. Nothing under `.qfai/discussion/`,
-and no policy file.
+The research summary, in the stage report. No story-tree file, no policy file
+and no root `DESIGN.md`. A choice this step takes that is an Agent decisions
+row goes to the run's deliberation record, as
+`.qfai/assistant/rule/references/deliberation-record.md` says.
 
 ## Procedure
 
-1. Run `.qfai/assistant/rule/research-first-protocol.md` before any other
-   artifact is authored, and report its `research_summary` output. Its `best_practices` and `anti_patterns` are inputs to every
-   later step, not a late fill-in.
+1. Run `.qfai/assistant/rule/research-first-protocol.md` before the interview
+   starts, and report its `research_summary` output. Its `best_practices` and
+   `anti_patterns` are inputs to the interview, not a late fill-in.
+2. A source a later option rests on is kept as a URL, so the interview can put
+   it in the Background of the row that offers the option.
 
 ## Gate
 
-**Nothing is written under `.qfai/discussion/` until an ending authorizes
-authoring.** The pack under work is resolved by the greatest timestamp with no
-completeness check, so a run cancelled during the session would leave a
-one-file directory that every later validator and the `/qfai-sdd` preflight
-read in place of the last complete pack. A cancellation would make the project
-look broken.
-
-**The pack opens under this run's stamp**, taken when this step starts.
+The research summary is reported before the interview puts its first
+question, and no tracked file other than the run's deliberation record changed.

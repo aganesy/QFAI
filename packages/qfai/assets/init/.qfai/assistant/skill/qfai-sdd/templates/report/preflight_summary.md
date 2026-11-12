@@ -3,30 +3,24 @@
 Output shape of `npx qfai sdd preflight` (Stage 0 of `/qfai-sdd`). The command
 writes this file; re-run it instead of filling the form in by hand. `blocked`
 runs emit Status / Blockers / Open Questions / Next Commands, `ready` runs emit
-Status / Requirement Intake / Pack Gaps / Open Questions. Only a missing or
-misnamed pack blocks: what a present pack lacks or contradicts is listed under
-Pack Gaps, to be recorded in the SDD-owned delta or evidence, and the run
-continues. Carry-over entries come from `--assume <text>` and are preserved
-across re-runs, so findings the command does not compute can still live here.
+Status / Open Questions. The source is the deliberation record `--record`
+names, else the imported specification `--import` names. Only a missing or
+unreadable source blocks: a record that leaves a question open or contradicts
+itself is still read, and SDD states each gap in its report. Carry-over entries
+come from `--assume <text>` and are preserved across re-runs, so findings the
+command does not compute can still live here.
 
 ## Status
 
 - status: <ready | blocked>
 - run id: run-<timestamp>
-- source: <discussion-pack | import-lite>
-- selected <discussion-pack | import-lite>: <path | (not found)>
+- source: <ready only: deliberation-record | import-lite>
+- selected <deliberation-record | import-lite>: <ready only: path>
+- selected input: <blocked only: (none)>
 
 ## Blockers
 
 - <blocked only: blocker item>
-
-## Requirement Intake
-
-- Imported REQ count: <ready only: number>
-
-## Pack Gaps
-
-- <ready only: what the selected pack lacks or contradicts | none>
 
 ## Open Questions (Carry-over)
 
@@ -34,4 +28,4 @@ across re-runs, so findings the command does not compute can still live here.
 
 ## Next Commands
 
-- /qfai-discussion
+- <blocked only: `qfai sdd preflight --record <path>` when records exist, `qfai sdd preflight --import <path>` for an unreadable import, /qfai-discussion otherwise>

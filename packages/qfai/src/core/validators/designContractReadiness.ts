@@ -14,8 +14,7 @@ const ROOT_DESIGN_MD_REL = "DESIGN.md";
  * Whether the root DESIGN.md parses — and nothing else.
  *
  * Split out so a malformed file is reported where it is read. `--profile
- * discussion` runs validators over discussion packs, mermaid, visuals, research
- * summaries and review artifacts — none of them DESIGN.md — and
+ * discussion` otherwise reads only the deliberation records, and
  * `QFAI-DCON-033` reached a run only through the sdd or prototyping readiness
  * gates, so a malformed file surfaced a review round later, under a different
  * skill, with the earlier gate having passed.
@@ -164,7 +163,7 @@ async function validateRootDesignMdSample(root: string, uiBearing: boolean): Pro
       "designContractReadiness.rootDesignMdSample",
       undefined,
       "canonical",
-      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-sdd, whose `common-design-md` step authors it from the design direction the discussion pack recorded, or author it from `.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. /qfai-sdd refuses to build on a sample.",
+      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-sdd, whose `common-design-md` step authors it from the design direction the deliberation record settled, or author it from `.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. /qfai-sdd refuses to build on a sample.",
     ),
   ];
 }

@@ -323,6 +323,83 @@ describe("a closed policy section rejects content of another kind", () => {
   });
 });
 
+describe("the policy layer holds the sections the deliberation record fills", () => {
+  /** A section, the document that holds it, and the text that removes it from the template. */
+  const removed: ReadonlyArray<readonly [string, string, RegExp]> = [
+    ["## Risks", "initiative", /\n## Risks\n\n\| Risk[^\n]*\n\|[^\n]*\n/],
+    ["## Quality targets", "constraint", /\n## Quality targets\n\n\| ID[^\n]*\n\|[^\n]*\n/],
+    [
+      "## Legal and Compliance Constraints",
+      "constraint",
+      /\n## Legal and Compliance Constraints\n\n\| ID[^\n]*\n\|[^\n]*\n/,
+    ],
+  ];
+
+  function check(name: string, text: string): { status: number | null; output: string } {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-policy-"));
+    try {
+      const file = path.join(dir, `${name}.md`);
+      writeFileSync(file, text, "utf-8");
+      const schema = path.join(SCHEMA_ROOT, `story/01_policy/${name}.mdschema.yml`);
+      const result = spawnSync(
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", schema, file],
+        { cwd: REPO_ROOT, encoding: "utf-8" },
+      );
+      return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  function template(name: string): string {
+    return readFileSync(path.join(TEMPLATE_ROOT, `01_policy/${name}.md`), "utf-8");
+  }
+
+  // QFAI:EX-0001-0006-01
+  it("orders the constraint sections with the quality and legal tables last", () => {
+    expect(template("constraint").match(/^## .*$/gm)).toEqual([
+      "## Technical Constraints",
+      "## Operational Constraints",
+      "## Business Constraints",
+      "## Quality targets",
+      "## Legal and Compliance Constraints",
+    ]);
+    expect(template("initiative")).toContain("\n## Risks\n\n| Risk ");
+  });
+
+  // QFAI:EX-0001-0006-01
+  it.each(removed)("reports a document without %s", (_label, name, section) => {
+    const text = template(name);
+    expect(text).toMatch(section);
+    const result = check(name, text.replace(section, ""));
+    expect(result.output).toContain("[structure]");
+    expect(result.status).not.toBe(0);
+  });
+
+  // QFAI:EX-0001-0006-06
+  it.each([
+    ["Quality targets", "QT"],
+    ["Legal and Compliance Constraints", "LC"],
+  ])("refuses a backtick or a rule ID in ## %s and accepts plain words", (heading, prefix) => {
+    const head = `## ${heading}\n\n| ID  | Constraint | Rationale |\n| --- | ---------- | --------- |\n`;
+    const text = template("constraint");
+    expect(text).toContain(head);
+    for (const row of [
+      `| ${prefix}-01 | Answers within \`2s\` | Users wait |\n`,
+      `| ${prefix}-01 | BR-0003-0001 holds | Users wait |\n`,
+    ]) {
+      const result = check("constraint", text.replace(head, `${head}${row}`));
+      expect(result.output).toContain("[forbidden-text]");
+      expect(result.status).not.toBe(0);
+    }
+    const plain = `| ${prefix}-01 | Every screen answers within two seconds | Users wait |\n`;
+    const result = check("constraint", text.replace(head, `${head}${plain}`));
+    expect(result.output).toContain("No violations");
+    expect(result.status).toBe(0);
+  });
+});
+
 describe("a table-only section holds its template's columns and nothing above the header", () => {
   /** Every template a schema governs, named by its path below the template root. */
   const DOCUMENTS = schemas.flatMap((schema) =>
@@ -440,7 +517,7 @@ describe("a table-only section holds its template's columns and nothing above th
   const noteAbove = variants((table) => ["| explanatory note", ...table]);
 
   it("finds every table of every template", () => {
-    expect(extraColumn.length).toBe(17);
+    expect(extraColumn.length).toBe(20);
   });
 
   // QFAI:EX-0001-0011-10
@@ -501,6 +578,7 @@ describe("the technology document holds only its three sections, each in its sha
   const rejected: ReadonlyArray<readonly [string, string, string, string]> = [
     ["a Stack table without a Runtime row", "| Runtime ", "| Engine  ", "[required-text]"],
     ["a Stack table without a Platform row", "| Platform ", "| Hosts    ", "[required-text]"],
+    ["a Stack table without a Surface row", "| Surface ", "| Screens ", "[required-text]"],
     ["prose in Stack", "## Stack\n\n", "## Stack\n\nThe stack.\n\n", "[forbidden-text]"],
     ["a dependency with no nested reason", PACKAGE, "- `<package>`", "[forbidden-text]"],
     [
@@ -651,6 +729,32 @@ describe("the technology document holds only its three sections, each in its sha
     expect(result.output).toContain(finding);
     expect(result.status).not.toBe(0);
   });
+
+  /** The template's Surface row, which the Surface cases rewrite. */
+  const SURFACE_ROW = /^\| Surface .*$/m;
+
+  // QFAI:EX-0001-0300-03
+  it.each(["`web, cli`", "`tui`", "web and cli", ""])(
+    "reports a Surface row holding %j",
+    (value) => {
+      const template = readFileSync(TECH_TEMPLATE, "utf-8");
+      expect(template).toMatch(SURFACE_ROW);
+      const result = check(template.replace(SURFACE_ROW, `| Surface | ${value} |`));
+      expect(result.output).toContain("[required-text]");
+      expect(result.status).not.toBe(0);
+    },
+  );
+
+  // QFAI:EX-0001-0300-03
+  it.each(["`web`", "`mobile`", "`desktop`", "`mixed`", "`cli`", "`non-ui`", "mixed"])(
+    "accepts a Surface row holding %s",
+    (value) => {
+      const template = readFileSync(TECH_TEMPLATE, "utf-8");
+      const result = check(template.replace(SURFACE_ROW, `| Surface | ${value} |`));
+      expect(result.output).toContain("No violations");
+      expect(result.status).toBe(0);
+    },
+  );
 
   it("accepts `- None.` and one Skeleton item per entrypoint", () => {
     const template = readFileSync(TECH_TEMPLATE, "utf-8")
