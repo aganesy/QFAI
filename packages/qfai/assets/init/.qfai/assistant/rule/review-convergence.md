@@ -117,8 +117,9 @@ started: partial agreement is the ordinary outcome, and rounds past two buy
 fluency rather than a better answer.
 
 Where the authors disagreed, the recommendation is still taken, and each
-position is recorded beside it with whose it is. The stage reports every adopted
-decision at its end without waiting for an answer. A user who disagrees
+position is recorded beside it with whose it is. Every adopted decision is an
+Agent decisions row of the run's deliberation record, written without waiting
+for an answer, and no report lists it. A user who disagrees
 overturns one through a specification change or a rerun.
 
 **A critical decision without an actual answer or recorded applicable user

@@ -19,7 +19,9 @@ The last step of a change route. It records the run's work as a local commit.
 
 ## Writes
 
-- One commit on the current branch holding the run's changes.
+- One commit on the current branch holding the run's changes and, where the run
+  wrote one, its deliberation record. No step edits the record's content after
+  that commit.
 - In the final report: the commit, and the files it holds. In the
   `resolve-conflicts` route, also each renumber the merge holds, as old → new.
 

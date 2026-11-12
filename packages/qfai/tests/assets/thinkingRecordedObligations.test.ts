@@ -19,10 +19,7 @@ const SDD_GUIDANCE = [
   "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
   "assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
 ];
-const EVIDENCE_GUIDANCE = [
-  "assistant/step/common-grilling-record/STEP.md",
-  "assistant/skill/qfai-implement/references/parallelization-policy.md",
-];
+const EVIDENCE_GUIDANCE = ["assistant/step/common-grilling-record/STEP.md"];
 
 const read = (tree: string, file: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, file), "utf-8");
@@ -35,7 +32,8 @@ describe("every decision a stage records carries one form", () => {
       expect(article).toContain(
         "The stage that owns `<paths.specsDir>/decisions.md`, `qfai-sdd`, records each",
       );
-      expect(article).toContain("Every other stage records each decision in its own");
+      expect(article).toContain("Every stage writes each agent decision it takes");
+      expect(article).toContain("Agent decisions row of the run's");
       expect(article).toContain(`\`.qfai/assistant/skill/qfai-sdd/${TEMPLATE_CITATION}\``);
       // The rule points to the schema and does not copy it.
       for (const label of LABELS) expect(article).not.toContain(label);

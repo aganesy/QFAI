@@ -15,11 +15,16 @@ update_frequency: rare
 ## What the stage records
 
 The stage that owns `<paths.specsDir>/decisions.md`, `qfai-sdd`, records each
-decision as one row there. Every other stage records each decision in its own
-final report.
+decision as one row there. A `decisions.md` row is a short decision record: what
+was decided and why, in the form stated at the top of
+`.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
 
-Either record is a short decision record: what was decided and why, in the
-form stated at the top of `.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
+Every stage writes each agent decision it takes, a choice no specification,
+contract, rule or convention settles, as an Agent decisions row of the run's
+deliberation record, as
+`.qfai/assistant/rule/references/deliberation-record.md` says. Neither its
+stage report nor the final report lists it, except an assumption a no-question
+mode takes, which the final report also lists.
 
 ## When to stop and ask
 

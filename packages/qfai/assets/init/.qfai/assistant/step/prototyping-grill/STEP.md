@@ -23,6 +23,10 @@ settles, by talking, the questions that do not need a prototype to answer.
 
 - `.qfai/prototype/grilling.md`, before the first iteration of
   `prototyping-loop`.
+- One Agent decisions row of the run's deliberation record for each decision
+  the session adopted, and one Interview row for each question put to the user.
+  The step writes the record and never reads one: no file under
+  `paths.deliberationDir` is an input.
 
 ## Scope
 

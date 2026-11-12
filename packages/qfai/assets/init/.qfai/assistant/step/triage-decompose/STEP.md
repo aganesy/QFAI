@@ -29,7 +29,8 @@ requests. Each child is then handled as a request of its own.
    Route none of them here.
 
 The split is this step's decision point. Where the run stops there for the
-operator, put the proposed children to them before recording them.
+operator, put the proposed children to them before recording them. Otherwise
+the split is an Agent decisions row of the run's deliberation record.
 
 ## What it writes
 

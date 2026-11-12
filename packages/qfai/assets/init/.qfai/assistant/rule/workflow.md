@@ -41,7 +41,8 @@ writes nothing; the session runs the plan.
   before anything that depends on it changes. A decision is critical when it
   contradicts a specification, a contract or a recorded decision, cannot be
   taken back, or rests on product intent nothing written states. Every other
-  decision is taken and reported.
+  decision is taken without a question, and an agent decision is written as an
+  Agent decisions row of the run's deliberation record.
 - At the release point the plan names, the user approves the release before
   anything after it runs. The approval authorizes no push, merge, tag or
   publication.
@@ -82,7 +83,7 @@ Stage 3 (`/qfai-sdd`) target policy:
 
 - With a BF argument, scope requested work to that flow and its shared dependencies.
 - Without an argument, triage the incoming requirements and update the flows they affect.
-- Record a decision in `decisions.md` only when it is hard to reverse, would surprise a reader without context, and was the result of a real trade-off; the stage report states every other one.
+- Record a decision in `decisions.md` only when it is hard to reverse, would surprise a reader without context, and was the result of a real trade-off; every other agent decision is only an Agent decisions row of the run's deliberation record.
 - Write policy and flows before stories, AC, EX, and enforcing contracts. Validate every affected BF.
 
 Prototyping stage policy:

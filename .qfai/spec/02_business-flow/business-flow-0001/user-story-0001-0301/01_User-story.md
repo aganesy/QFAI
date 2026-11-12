@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a maintainer reading a change later, I want every run that asked me a question or took an unforced decision to keep those questions and decisions in one tracked record committed with its work, so that I can see what was considered without the record steering later work.
+As a maintainer reading a change later, I want every run that asked me a question or took an agent decision to keep those questions and agent decisions in one tracked record committed with its work, so that I can see what was considered without the record steering later work.
 
 ## Non-goals
 

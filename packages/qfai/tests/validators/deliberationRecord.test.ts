@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { resolveIssueFix } from "../../src/cli/commands/validate.js";
 import { defaultConfig, loadConfig } from "../../src/core/config.js";
 import type { Issue, ValidationProfile } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
@@ -52,10 +53,7 @@ const INTERVIEW_ROW = "| Who signs in | Staff | Customers | Both | | 3 |";
 const DECISION_ROW = "| Where to keep the rule | Baseline | Reference | Step | | 1 |";
 const VALID = record(table(HEADER, INTERVIEW_ROW), table(HEADER, DECISION_ROW));
 const LACKS_OPTION_4 = record(
-  table(
-    "| Background | Option 1 | Option 2 | Option 3 | Chosen option number |",
-    "| Who signs in | Staff | Customers | Both | 3 |",
-  ),
+  table("| Background | Option 1 | Option 2 | Option 3 | Chosen option number |", INTERVIEW_ROW),
   table(HEADER, DECISION_ROW),
 );
 
@@ -131,23 +129,20 @@ describe("QFAI-DELIB-001 reports each layout defect", () => {
       severity: "error",
       file: ".qfai/deliberation/20261112043225-login.md",
     });
-    expect(found[0]?.message).toContain("Interview");
-    expect(found[0]?.message).toContain("Option 4 (other)");
+    expect(found[0]?.message).toContain("`Interview`");
+    expect(found[0]?.message).toContain("`Option 4 (other)`");
   });
 
   // QFAI:EX-0001-0302-06
   it("names the file, Agent decisions and an added Notes column", async () => {
     await put(
       RECORD,
-      record(
-        table(HEADER, INTERVIEW_ROW),
-        table(`${HEADER} Notes |`, "| Name | A | B | C | | 1 | none |"),
-      ),
+      record(table(HEADER, INTERVIEW_ROW), table(`${HEADER} Notes |`, DECISION_ROW)),
     );
     const found = await findings();
     expect(found).toHaveLength(1);
-    expect(found[0]?.message).toContain("Agent decisions");
-    expect(found[0]?.message).toContain("Notes");
+    expect(found[0]?.message).toContain("`Agent decisions`");
+    expect(found[0]?.message).toContain("`Notes`");
   });
 
   // QFAI:EX-0001-0302-07
@@ -161,10 +156,10 @@ describe("QFAI-DELIB-001 reports each layout defect", () => {
       ".qfai/deliberation/a.md",
       ".qfai/deliberation/b.md",
     ]);
-    expect(found[0]?.message).toContain("Interview");
-    expect(found[0]?.message).toContain("Chosen");
-    expect(found[1]?.message).toContain("Agent decisions");
-    expect(found[1]?.message).toContain("Option 1");
+    expect(found[0]?.message).toContain("`Interview`");
+    expect(found[0]?.message).toContain("`Chosen`");
+    expect(found[1]?.message).toContain("`Agent decisions`");
+    expect(found[1]?.message).toContain("`Option 1`");
     expect(found.every((item) => item.severity === "error")).toBe(true);
   });
 
@@ -177,7 +172,16 @@ describe("QFAI-DELIB-001 reports each layout defect", () => {
     const found = await findings();
     expect(found).toHaveLength(1);
     expect(found[0]?.file).toBe(".qfai/deliberation/20261112043225-login.md");
-    expect(found[0]?.message).toContain("Agent decisions");
+    expect(found[0]?.message).toContain("`Agent decisions`");
+  });
+
+  it("names each section a record lacks when it has neither", async () => {
+    await put(RECORD, ["# Deliberation record", "## Subject", "Login."].join("\n\n"));
+    const found = await findings();
+    expect(found.map((item) => item.message)).toEqual([
+      expect.stringContaining("`Interview`"),
+      expect.stringContaining("`Agent decisions`"),
+    ]);
   });
 
   // QFAI:EX-0001-0302-09
@@ -188,13 +192,55 @@ describe("QFAI-DELIB-001 reports each layout defect", () => {
     );
     const found = await findings();
     expect(found).toHaveLength(1);
-    expect(found[0]?.message).toContain("Agent decisions");
+    expect(found[0]?.message).toContain("`Agent decisions`");
     expect(found[0]?.message).toMatch(/line \d+/);
     expect(found[0]?.message).toContain("5 cells");
+  });
+
+  it("reports a row of the wrong cell count under a wrong header as well as the header", async () => {
+    await put(
+      RECORD,
+      record(
+        table(HEADER, INTERVIEW_ROW),
+        table(`${HEADER} Notes |`, "| Name | A | B | C | | 1 | none |"),
+      ),
+    );
+    const found = await findings();
+    expect(found).toHaveLength(2);
+    expect(found[0]?.message).toContain("`Notes`");
+    expect(found[1]?.message).toMatch(/row at line \d+ has 7 cells/);
+  });
+
+  // QFAI:EX-0001-0298-16
+  it("gives the catalogued fix, which allows a committed record a layout repair only", async () => {
+    await put(RECORD, LACKS_OPTION_4);
+    const [found] = await findings();
+    expect(found?.suggested_action).toBeUndefined();
+    expect(found && resolveIssueFix(found)).toMatch(/table layout only, never its content/);
   });
 });
 
 describe("QFAI-DELIB-001 reads nothing but the layout", () => {
+  it("counts an escaped pipe as part of its cell", async () => {
+    await put(
+      RECORD,
+      record(
+        table(HEADER, "| Pick a \\| b | a \\| b | c | d | | 1 |"),
+        table(HEADER, DECISION_ROW),
+      ),
+    );
+    expect(await findings()).toEqual([]);
+  });
+
+  it("skips a table inside a fenced code block", async () => {
+    const fenced = ["```markdown", "| Background | Chosen |", "| --- | --- |", "| x | 1 |", "```"];
+    await put(
+      RECORD,
+      record([...fenced, "", table(HEADER, INTERVIEW_ROW)].join("\n"), table(HEADER)),
+    );
+    expect(await findings()).toEqual([]);
+  });
+
   // QFAI:EX-0001-0302-10
   it("raises nothing with no directory and with a directory of no Markdown file", async () => {
     expect(await findings()).toEqual([]);

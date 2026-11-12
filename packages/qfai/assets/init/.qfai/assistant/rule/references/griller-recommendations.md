@@ -13,8 +13,8 @@ A grilling session puts a recommended answer beside each question (`.agents/rule
 | Agent to agent, critical, without an actual user answer or recorded applicable authority | The artifact is wrong, and no reviewer can clear it                               |
 
 **The second row is how a delegated session is meant to end**
-(`.agents/rules/grilling.md`), not a finding. The reviewer checks the final
-report and, for a critical decision, the actual
+(`.agents/rules/grilling.md`), not a finding. The reviewer reviews the change
+itself and, for a critical decision, checks the actual
 applicable user authority defined in
 `.agents/rules/grilling.md#explicit-delegation-for-a-discussion`.
 An explicit delegation covering reversible requested judgment is authority,
@@ -32,4 +32,4 @@ The reviewer must return `REVISE` and name the decision: it is reopened and put 
 The first row needs a reason, because the intuitive one is wrong. A sub-agent starting with a reset context cannot defer to something it does not remember, so deference is not the risk. **Correlation** is: a fresh instance of the same agent, on the same model, over the same evidence, re-derives the preference that produced the recommendation and finds it good on the merits. Resetting the
 context removes the memory, not the disposition — which is why role name alone never establishes independence either. Where the user chose, that disposition is one input among several and the decision is not the griller's to re-derive.
 
-**The stage's final report is the record.** It lists every decision the agents adopted and the agent that recommended it, so a reviewer with a reset context reads the third row off the report rather than off recollection.
+**A reviewer reads a recommendation from the session, never from a record.** Where a reviewer needs to know which griller recommended a decision, it takes that from what the griller returned in that session. It reads no deliberation record.

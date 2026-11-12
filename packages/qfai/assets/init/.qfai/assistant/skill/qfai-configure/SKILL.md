@@ -53,6 +53,9 @@ When unsure, read inputs in this order:
 - P3: `.qfai/spec/decisions.md` (Decision Records; if no decision exists, state "not applicable").
 - P4: the business flows, stories, contracts, tests, and evidence relevant to the configuration.
 
+- Before an agent decision, search the records for a turned-down option, as
+  `.qfai/assistant/rule/references/deliberation-record.md` says.
+
 ## Sub-agent Delegation
 
 Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
