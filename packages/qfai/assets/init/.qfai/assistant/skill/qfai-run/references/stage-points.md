@@ -24,7 +24,8 @@ specification, a contract or a recorded decision, cannot be taken back, or
 rests on product intent nothing written states. Take every other decision
 yourself and ask nothing. Write each agent decision, with its reason, as an
 Agent decisions row of the run's deliberation record; the final report does
-not list it.
+not list it, except an assumption a no-question mode takes, which the final
+report also lists.
 
 ## Branch point
 

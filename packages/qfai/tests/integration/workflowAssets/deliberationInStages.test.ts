@@ -28,7 +28,7 @@ describe("an agent decision is a row of the run's deliberation record", () => {
     const point = await section(STAGE_POINTS, "## Decision point");
     expect(point).toMatch(/take every other decision yourself and ask nothing/i);
     expect(point).toMatch(
-      /write each agent decision, with its reason, as an Agent decisions row of the run's deliberation record; the final report does not list it/i,
+      /write each agent decision, with its reason, as an Agent decisions row of the run's deliberation record; the final report does not list it, except an assumption a no-question mode takes, which the final report also lists/i,
     );
     const report = await section(SCREENS, "## Final report");
     expect(report).toMatch(/name the path of the run's deliberation record/i);
@@ -65,7 +65,7 @@ describe("an agent decision is a row of the run's deliberation record", () => {
 
     const thinking = await section("rule/thinking.md", "## What the stage records");
     expect(thinking).toMatch(
-      /every stage writes each agent decision it takes.*as an Agent decisions row of the run's deliberation record.*neither its stage report nor the final report lists it/i,
+      /every stage writes each agent decision it takes.*as an Agent decisions row of the run's deliberation record.*neither its stage report nor the final report lists it, except an assumption a no-question mode takes, which the final report also lists/i,
     );
     const steps: [string, RegExp][] = [
       [

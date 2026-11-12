@@ -21,8 +21,10 @@ was decided and why, in the form stated at the top of
 
 Every stage writes each agent decision it takes, a choice no specification,
 contract, rule or convention settles, as an Agent decisions row of the run's
-deliberation record, as `.qfai/assistant/rule/references/deliberation-record.md` says. Neither its stage report nor the final
-report lists it.
+deliberation record, as
+`.qfai/assistant/rule/references/deliberation-record.md` says. Neither its
+stage report nor the final report lists it, except an assumption a no-question
+mode takes, which the final report also lists.
 
 ## When to stop and ask
 

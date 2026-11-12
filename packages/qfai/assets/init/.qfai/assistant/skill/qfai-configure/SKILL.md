@@ -55,9 +55,10 @@ When unsure, read inputs in this order:
 
 - Before you take an agent decision, search the option cells of the deliberation
   records and the `Declined:` rows of `decisions.md` for the option you are about
-  to choose, as `.qfai/assistant/rule/references/deliberation-record.md` says. Read only the rows that
-  match. A choice whose option was turned down before goes to the user, or is
-  registered as an open question under a no-question mode.
+  to choose, as `.qfai/assistant/rule/references/deliberation-record.md`
+  says. Read only the rows that match. A choice whose option was turned down
+  before goes to the user, or is registered as an open question under a
+  no-question mode.
 
 ## Sub-agent Delegation
 
