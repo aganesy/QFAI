@@ -308,6 +308,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.sddAssumptions.length > 0 ? { assumptions: options.sddAssumptions } : {}),
           ...(options.sddImport !== undefined ? { importPath: options.sddImport } : {}),
+          ...(options.sddRecord !== undefined ? { recordPath: options.sddRecord } : {}),
         });
       }
       return;
@@ -431,8 +432,8 @@ Commands:
   discussion list              List the discussion packs (the active pointer's pack is marked with *)
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
   discussion use <id>          Set the active discussion session pointer
-  sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
-  sdd preflight --import <path> Use an imported specification as the source when no discussion pack exists
+  sdd preflight --record <path> Run the /qfai-sdd Stage 0 gate on the named deliberation record and write .qfai/report/preflight_summary.md
+  sdd preflight --import <path> Use an imported specification as the source when no record is named
   sdd next-id <kind> [<parent-ID>] --base <local-ref>  Print the next free ID of a kind (BF|US|AC|EX|BR) across the base and the working tree; a US takes its BF, an AC or EX its US, a BR its contract
   sdd merge-docs               Merge each conflicted story-tree document from the index by table row and sentence, leave what it cannot settle between conflict markers, and check the result's document schema
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story

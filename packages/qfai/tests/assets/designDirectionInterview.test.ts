@@ -103,11 +103,16 @@ describe("the design direction is the user's decision", () => {
     it(`${tree}: Phase 0 reads the recorded direction and stops without one`, async () => {
       const authoring = flat(await read(tree, AUTHORING));
 
-      expect(authoring).toContain("`01_Context.md#Design Direction` is the decision the user made");
+      expect(authoring).toContain(
+        "The brand comes from the Interview row in which the user chose it.",
+      );
+      expect(authoring).toContain(
+        "a UI-bearing record with no row on the brand direction leaves the brand unchosen",
+      );
       expect(authoring).toContain("stop and ask rather than pick one");
       // Scoring survives only as the fallback, and is named as the assistant's answer.
-      expect(authoring).toContain("Map the theme the pack records to the archetype");
-      expect(authoring).toContain("is the fallback for a pack whose direction names no theme");
+      expect(authoring).toContain("Map the theme the Interview row records to the archetype");
+      expect(authoring).toContain("is the fallback for a brand direction that names no theme");
     });
   }
 });

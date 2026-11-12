@@ -730,6 +730,32 @@ describe("the technology document holds only its three sections, each in its sha
     expect(result.status).not.toBe(0);
   });
 
+  /** The template's Surface row, which the Surface cases rewrite. */
+  const SURFACE_ROW = /^\| Surface .*$/m;
+
+  // QFAI:EX-0001-0300-03
+  it.each(["`web, cli`", "`tui`", "web and cli", ""])(
+    "reports a Surface row holding %j",
+    (value) => {
+      const template = readFileSync(TECH_TEMPLATE, "utf-8");
+      expect(template).toMatch(SURFACE_ROW);
+      const result = check(template.replace(SURFACE_ROW, `| Surface | ${value} |`));
+      expect(result.output).toContain("[required-text]");
+      expect(result.status).not.toBe(0);
+    },
+  );
+
+  // QFAI:EX-0001-0300-03
+  it.each(["`web`", "`mobile`", "`desktop`", "`mixed`", "`cli`", "`non-ui`", "mixed"])(
+    "accepts a Surface row holding %s",
+    (value) => {
+      const template = readFileSync(TECH_TEMPLATE, "utf-8");
+      const result = check(template.replace(SURFACE_ROW, `| Surface | ${value} |`));
+      expect(result.output).toContain("No violations");
+      expect(result.status).toBe(0);
+    },
+  );
+
   it("accepts `- None.` and one Skeleton item per entrypoint", () => {
     const template = readFileSync(TECH_TEMPLATE, "utf-8")
       .replace(PACKAGE, "- None.")

@@ -5,8 +5,8 @@ falls back on the same few defaults whatever the product is, and these are the
 ones people name when they recognise a generated interface.
 
 Each pattern suits some brief. It is a defect when it appears because it is a
-default, not because the brand direction the discussion pack recorded asks for
-it. An instruction to avoid "a generic look" only swaps one default for another;
+default, not because the brand direction the deliberation record settles asks
+for it. An instruction to avoid "a generic look" only swaps one default for another;
 naming the pattern is what works.
 
 ## Contents
@@ -34,7 +34,7 @@ naming the pattern is what works.
 - **Writing root `DESIGN.md`.** Read the list before choosing a value. A value
   that produces a pattern here stays only where the recorded brand direction
   asks for it. Otherwise choose again.
-- **Reviewing.** Check the references the discussion pack adopted, root
+- **Reviewing.** Check the references the deliberation record adopted, root
   `DESIGN.md` and each prototype screen against the list. A finding names the
   aspect and quotes the pattern it matched.
 - **Replacing a pattern.** Its usual substitute is in

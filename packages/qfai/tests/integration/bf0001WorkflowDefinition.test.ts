@@ -84,11 +84,11 @@ describe("BF-0001 workflow definition", () => {
     const sdd = await readSdd();
     expect(discussion).toContain("nine-file discussion pack");
     expect(discussion).toContain("Capture scope, REQ, NFR");
-    expect(sdd).toContain("Read the pack, its completed reviews");
+    expect(sdd).toContain("Read every table of that record, the completed reviews");
   });
 
   // QFAI:EX-0001-0017-01
-  it("instructs SDD to reconcile discussion and completed reviews in its own evidence", async () => {
+  it("instructs SDD to reconcile the record and completed reviews in its own evidence", async () => {
     const sdd = await readSdd();
     const playbook = await readFile(
       path.join(assistant, "skill", "qfai-sdd", "references", "sdd-execution-playbook.md"),
@@ -98,10 +98,12 @@ describe("BF-0001 workflow definition", () => {
       path.join(assistant, "skill", "qfai-sdd", "references", "sdd-phase-checklists.md"),
       "utf8",
     );
-    expect(sdd).toContain("Read the pack, its completed reviews");
-    expect(sdd).toContain("Record a discrepancy in an SDD-owned row or the SDD report");
-    expect(sdd).toContain("do not edit the");
-    expect(playbook).toContain("Disposition its applicable review advice in the SDD report");
+    expect(sdd).toContain("Read every table of that record, the completed reviews");
+    expect(sdd).toContain("State a discrepancy in the SDD report or as an open question.");
+    expect(sdd).toContain("Never edit the record");
+    expect(playbook.replace(/\s+/g, " ")).toContain(
+      "State a discrepancy in the SDD report or as an open question, and never edit the record.",
+    );
     expect(checklist).toContain("A disagreement was resolved in an SDD-owned artifact");
   });
 

@@ -42,7 +42,7 @@ describe("architectural rules have one story-tree home", () => {
 
       const rules = await read("skill/qfai-sdd/references/spec-traceability-rules.md");
       expect(rules).toContain(
-        "| Written from | The technical decisions the discussion pack records",
+        "| Written from | The technical decisions the deliberation record settles",
       );
       expect(rules).toContain("| Read by | `/qfai-implement`, to place new code");
       expect(rules).toContain("imports only from the layers its row lists");
