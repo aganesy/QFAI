@@ -17,7 +17,7 @@ Feature: Answer only the critical decisions, and approve each release
     When the step decides it
     Then nothing is asked
     And the run's deliberation record holds the decision as an Agent decisions row that considers at least three options
-    And no stage writes a grilling record, a session table or a marker saying no session was held
+    And apart from the rows of that record, no stage writes a grilling record, a session table or a marker saying no session was held
 
   # AC-0001-0223-03
   Scenario: A release point always asks

@@ -17,7 +17,7 @@ Feature: Check each term against the glossary while grilling
   Scenario: A settled term is written at once where the stage writes
     Given a term the session settles
     When the round that settled it ends
-    Then the term is written right away, not at the end of the session: a new term goes to the project glossary
+    Then the term is written right away, not at the end of the session: to the project glossary where the stage writes the policy layer, and otherwise as an `open-questions.md` row naming the term and its definition
     And its definition says what the term is, never a rule, a value set or a procedure
     And a change to what the project glossary already defines is a critical decision, and its row is rewritten only after the user approves it
 

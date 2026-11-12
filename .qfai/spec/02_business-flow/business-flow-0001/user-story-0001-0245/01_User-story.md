@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a user in a grilling session at any stage, I want a term I use that conflicts with the project glossary flagged when it appears, with the glossary's term proposed, and a term we settle written to the glossary at once, so that the agents never build against a meaning I did not intend.
+As a user in a grilling session at any stage, I want a term I use that conflicts with the project glossary flagged when it appears, with the glossary's term proposed, and a term we settle written down at once, in the glossary or as an open question for it, so that the agents never build against a meaning I did not intend.
 
 ## Non-goals
 
