@@ -9,7 +9,7 @@
 | CLI-0003 | Configuration | `.qfai/spec/03_contract/cli/cli-0003-configuration.md` | - | - | Project override and path resolution. |
 | CLI-0004 | Delivery Workflow | `.qfai/spec/03_contract/cli/cli-0004-delivery-workflow.md` | - | - | Acceptance tests, implementation and verification handoffs. |
 | CLI-0005 | `qfai atdd scaffold` | `.qfai/spec/03_contract/cli/cli-0005-qfai-atdd-scaffold.md` | - | - | BF and AC acceptance tests with empty, passing bodies. |
-| CLI-0007 | `qfai discussion` | `.qfai/spec/03_contract/cli/cli-0007-qfai-discussion.md` | - | - | Discussion-pack listing and active pointer. |
+| CLI-0007 | Deliberation record | `.qfai/spec/03_contract/cli/cli-0007-deliberation-record.md` | - | - | Where a run records its questions and choices, and who reads the record. |
 | CLI-0008 | `qfai doctor` | `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md` | - | - | Environment and asset checks with repair guidance. |
 | CLI-0009 | `qfai init` | `.qfai/spec/03_contract/cli/cli-0009-qfai-init.md` | - | - | Project seed, paths, and assistant integration. |
 | CLI-0010 | `/qfai-migration-v1-to-v2` scripts | `.qfai/spec/03_contract/cli/cli-0010-qfai-migration-v1-to-v2.md` | - | - | Bundled migration steps, the free-text entry they install and check, and their write boundary. |

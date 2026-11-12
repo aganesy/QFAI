@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an agent writing Mermaid diagrams in a discussion pack or a business flow, I want the step that writes them to run the shipped Mermaid parser on its files, so that a broken diagram is fixed before handoff instead of failing a later CI run.
+As an agent writing Mermaid diagrams in a business flow, I want the step that writes them to run the shipped Mermaid parser on its files, so that a broken diagram is fixed before handoff instead of failing a later CI run.
 
 ## Non-goals
 
