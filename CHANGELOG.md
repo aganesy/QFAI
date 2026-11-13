@@ -85,6 +85,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   language followed by `(translated)`, so a language scan on the file does not
   fail on the user's wording.
 
+### Fixed
+
+- Repository bootstrap starts pnpm 12's native executable itself, so
+  `corepack pnpm bootstrap` no longer stops with the instruction to run that
+  same command.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added
