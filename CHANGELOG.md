@@ -14,6 +14,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A deliberation record keeps both tables, empty where a run has no row.**
+  The record template and its reference say that a stage that asked the user
+  nothing, or took no agent decision, keeps that section's heading with an
+  empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
+  is unchanged.
+
+- **The shipped product-surface reviewer and UI contract guide no longer name
+  discussion UI/UX sidecars.** The reviewer reconciles the UI contract with
+  design tokens, flows and rendered output, and the guide says a deliberation
+  record that discusses the screens is history while the UI contract is the
+  execution authority.
+
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
   the check before a session is reported finished move to
@@ -111,6 +123,68 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A `cd` to the project itself no longer withholds the search fallback.**
+  When a denied search follows `cd`, `pushd` or `Set-Location` to the observed
+  worktree in the same command, the denial still offers the AI-decided
+  fallback. A move anywhere else, or to a target the command text does not
+  spell out, still makes the fallback unavailable.
+- **The search-protection hook treats the PowerShell alias `sls` as
+  `Select-String`.** `sls -Pattern authorize -Path packages/**/*.ts` was
+  allowed as outside the checked boundary while the same command spelled
+  `Select-String` was denied. In PowerShell the alias is now denied, and
+  allowed as a filter of piped text, exactly as `Select-String` is. In other
+  shells `sls` names another program, such as the Serverless Framework CLI,
+  and is classified as before.
+
+- `paths.deliberationDir` that names the project root, such as `.`, a
+  directory outside it, or a value with a part ending in a dot or a space (which
+  Windows drops, so `...` lands in the root) now raises `QFAI-CFG-002` and the default
+  `.qfai/deliberation` is used. A documents or code query on such a value fails
+  and names `qfai.config.yaml`, instead of building a corpus that excludes no
+  deliberation record.
+
+- The comment in the `.gitattributes` that `qfai init` seeds no longer says
+  register rows are never edited. It now says new rows are appended, a row
+  keeps its ID and a decision row's wording may be restated, and still gives
+  the union-merge reason and how to resolve a conflict a host shows. The file
+  is seeded only where none exists, so an existing `.gitattributes` keeps its
+  old comment. Fixes #4173.
+
+- **The search-protection hook no longer denies grep, rg, findstr or
+  Select-String that filters a command's text output.** A search after a pipe
+  with no file operand and only known options, such as
+  `git ls-files | grep auth` or `pnpm test 2>&1 | grep -v passed`, now runs
+  when the stage before it is a git command that prints names, status, history
+  or differences, a package-manager test, lint, build or listing command, a
+  literal echo, or a sort or filter of that text. Every other shape is still
+  denied: recursion, an abbreviated or unknown option, a file operand, a
+  redirection, expansion or subshell, or a stage that lists files, prints their
+  contents or runs another program, such as `cat`, `git show`, `pnpm exec`,
+  `Get-ChildItem` or `Get-Content`. Searches outside the project root are still
+  denied. Fixes #4142.
+
+- **`QFAI-UITEXT-001` exempts link and button components by the last word of
+  their name.** A component such as `ButtonLink`, `NavLink`, `SubmitButton` or
+  Vue's `router-link` now counts as a link or a button, as `Link` and `Button`
+  already did, so a shared link or button component no longer needs a
+  `qfai-text` reason that a plain `<Link>` does not. A name whose last word is
+  something else, such as `ButtonGroup`, is still checked.
+  Fixes #4114.
+
+- **`qfai session-review` names more reminders and exit statuses.**
+  - A hook context that holds a listed reminder text inside other text, such
+    as a host's prefix or several reminders joined, counts under each listed
+    text's key.
+  - A QFAI reminder whose wording `reminders.json` no longer lists counts
+    under the key of the listed reminder that opens the same way, or under
+    the part of the key those reminders share, such as `grilling`, instead of
+    `unregistered`.
+  - A reminder text that several keys share, such as the one the three
+    `grilling-` hooks show, counts under the part of the keys they share,
+    `grilling`, instead of under the last of those keys in the file.
+  - A `qfai` command followed after `;` or a line break by `echo` of
+    `$?` or `$LASTEXITCODE`, such as `npx qfai validate; echo "exit=$?"`,
+    takes the status that `echo` printed instead of `unknown`.
 - `qfai init` in a project with no `.gitignore` now creates it with
   `node_modules/` above the QFAI managed block, so the first `git add -A` no
   longer stages the dependency tree. An existing `.gitignore` is not changed
@@ -131,7 +205,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   then repeat the launcher preflight. Before, only an unknown `workflow`
   operation and an unknown command named the running version, and none of them
   compared it with the project's declaration. Fixes #4083.
-
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.

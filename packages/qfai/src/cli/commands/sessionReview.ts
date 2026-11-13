@@ -32,7 +32,7 @@ import {
   renderMarkdown,
   type ReviewedSession,
 } from "../../core/sessionReview/render.js";
-import { summarise } from "../../core/sessionReview/signals.js";
+import { reminderIndex, summarise } from "../../core/sessionReview/signals.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 
 export type SessionReviewOptions = {
@@ -163,13 +163,12 @@ function choose(
  * would otherwise change without a word.
  */
 async function reminderTexts(root: string): Promise<Map<string, string>> {
-  const texts = new Map<string, string>();
   const file = path.join(root, ...REMINDERS.split("/"));
   let raw: string;
   try {
     raw = await readFile(file, "utf-8");
   } catch (cause) {
-    if (isMissing(cause)) return texts;
+    if (isMissing(cause)) return new Map();
     throw cause;
   }
   let parsed: unknown;
@@ -179,15 +178,16 @@ async function reminderTexts(root: string): Promise<Map<string, string>> {
     throw new ReminderFileError(`${REMINDERS} is not valid JSON`, { cause });
   }
   if (!isRecord(parsed)) throw new ReminderFileError(`${REMINDERS} is not a JSON object`);
+  const entries: [string, string][] = [];
   for (const [key, entry] of Object.entries(parsed)) {
     const full = stringAt(
       isRecord(entry) ? entry.hookSpecificOutput : undefined,
       "additionalContext",
     );
     const brief = stringAt(entry, "briefContext");
-    for (const text of [full, brief]) if (text !== undefined) texts.set(text.trim(), key);
+    for (const text of [full, brief]) if (text !== undefined) entries.push([key, text]);
   }
-  return texts;
+  return reminderIndex(entries);
 }
 
 function environmentFromProcess(): LocateEnvironment {

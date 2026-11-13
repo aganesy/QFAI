@@ -17,11 +17,12 @@
 *.ttf binary
 *.eot binary
 
-# Register rows are only appended, never edited or renumbered, so the union driver keeps both
-# branches' appended rows. GitHub's merge ignores the driver, so a pull request can show a conflict
-# a local merge does not: resolve a conflict confined to the registers by merging the base branch
-# locally and pushing, editing no row. `pnpm ci:lint:scans` and `pnpm branch:catchup` report two
-# rows left with one ID.
+# New register rows are appended and a row keeps its ID, so the union driver keeps both branches'
+# appended rows. A decision row's wording may be restated; when both branches restate one row, the
+# driver keeps both versions. GitHub's merge ignores the driver, so a pull request can show a
+# conflict a local merge does not: resolve a conflict confined to the registers by merging the base
+# branch locally and pushing, changing no row in the merge. `pnpm ci:lint:scans` and
+# `pnpm branch:catchup` report two rows left with one ID.
 /.qfai/spec/decisions.md merge=union
 # Preserve reviewed page bytes; schema and duplicate checks still apply.
 /.qfai/spec/decisions/page-*.md -text merge=union
