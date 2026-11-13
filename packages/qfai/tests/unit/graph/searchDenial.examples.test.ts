@@ -407,6 +407,12 @@ it("denies piped searches that still read project files", () => {
       "Select-String",
     ],
     ["PowerShell", "git ls-files | findstr -g:packages\\x.ts", "findstr"],
+    ["Bash", "X=/echo cat packages/index.ts | grep auth", "grep"],
+    ["Bash", "X=/git diff /dev/null packages/index.ts | grep auth", "grep"],
+    ["Bash", "git diff /dev/null packages/index.ts | grep auth", "grep"],
+    ["Bash", "./git status | grep auth", "grep"],
+    ["Bash", "git(){ cat packages/index.ts; }; git status | grep auth", "grep"],
+    ["Bash", "export RIPGREP_CONFIG_PATH=cfg; git status | rg -e auth", "rg"],
     ["PowerShell", "git ls-files | findstr /S auth", "findstr"],
     ["PowerShell", "git ls-files | findstr auth<packages\\index.ts", "findstr"],
   ] as const) {

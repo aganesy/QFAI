@@ -75,13 +75,48 @@ function classifyCommands(
     : authorize;
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
+  const redefines = commands.some((command) => redefinesCommands(command.words));
   for (const { words, upstream } of commands) {
-    const decision = classifyCommand(words, scopedAuthorization, depth, upstream);
+    const decision = classifyCommand(
+      words,
+      scopedAuthorization,
+      depth,
+      redefines ? undefined : upstream,
+    );
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
   }
   return boundary ?? allowed;
+}
+
+/**
+ * Whether a command defines a function or alias, or sets a variable a later
+ * command may read, so a name in the same event may not run the program it names.
+ */
+function redefinesCommands(words: string[]): boolean {
+  return (
+    words.some((word) => word.includes("()")) ||
+    /^(?:[A-Za-z_][A-Za-z0-9_]*=|\$)/.test(words[0] ?? "") ||
+    [
+      "function",
+      "alias",
+      "export",
+      "declare",
+      "typeset",
+      "readonly",
+      "set",
+      "setx",
+      "set-alias",
+      "new-alias",
+      "sal",
+      "nal",
+      "set-item",
+      "si",
+      "set-variable",
+      "sv",
+    ].includes(words[0]?.toLowerCase() ?? "")
+  );
 }
 
 function changesGraphDirectory(words: string[]): boolean {
@@ -142,7 +177,7 @@ function classifyCommand(
     )
       offset += 1;
     if (words[offset] === "--") offset += 1;
-    const positional = words.slice(offset);
+    const positional = words.slice(offset).filter((word) => !/^&>./.test(word));
     const eligible =
       positional.length > 0 &&
       positional.length <= 2 &&
@@ -245,9 +280,17 @@ function printsText(command: ShellCommand | undefined): boolean {
     )
   )
     return false;
-  const name = commandName(command.words) ?? "";
+  const name = /[\\/=]/.test(command.words[0] ?? "") ? "" : (commandName(command.words) ?? "");
   const args = command.words.slice(1);
-  if (name === "git") return gitTextCommands.has(args[0] ?? "") && !args.includes("--no-index");
+  if (name === "git") {
+    return (
+      gitTextCommands.has(args[0] ?? "") &&
+      !args.some(
+        (word) =>
+          word === "--no-index" || /^(?:\/|[A-Za-z]:|\\)|(?:^|[\\/])\.\.(?:[\\/]|$)/.test(word),
+      )
+    );
+  }
   if (["echo", "printf", "write-output"].includes(name))
     return !args.some((word) => /[*?[!]/.test(word));
   if (name === "pnpm" || name === "npm") return packageTextCommands.has(args[0] ?? "");
