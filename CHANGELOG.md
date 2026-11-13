@@ -139,6 +139,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     a line the command printed.
   - The `--out` message and file-system errors redact paths, including the
     directories `CLAUDE_CONFIG_DIR` and `CODEX_HOME` name.
+- **The Claude Code install check stays silent on notification turns.** A
+  background-task completion, a wake-up, a CI-monitor event and a system
+  notification each repeated the `qfai` install remedy, although such a turn
+  holds no request. The install check now skips the same prompts the
+  question-form and free-text entry reminders skip: a line opening with
+  `<task-notification>`, `<wake>`, `<ci-monitor-event>` or
+  `[SYSTEM NOTIFICATION`. `qfai init` replaces the earlier group of an
+  unchanged settings file.
 
 ## [2.4.0] - 2026-11-11
 

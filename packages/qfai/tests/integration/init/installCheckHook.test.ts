@@ -137,6 +137,43 @@ describe("the install check of the Claude Code settings", () => {
       await removeTempTree(base);
     }
   });
+
+  it("stays silent on a notification turn, which holds no request", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai install check notice "));
+    try {
+      const entry = await installCheckEntry(path.join(".claude", "settings.json"));
+      const bare = await project(path.join(base, "bare"));
+      const run = (prompt: string): Promise<string> =>
+        runReminderHook(
+          { command: "node", args: argsOf(entry) },
+          bare,
+          JSON.stringify({ cwd: bare, prompt }),
+        );
+
+      // The prompt Claude Code passed the hook for a background-task completion, as captured.
+      const taskNotification = [
+        "<task-notification>",
+        "<task-id>b79epgv98</task-id>",
+        "<status>completed</status>",
+        '<summary>Background command "Sleep 5 seconds then echo finished" completed (exit code 0)</summary>',
+        "</task-notification>",
+      ].join("\n");
+      for (const notice of [
+        taskNotification,
+        '<wake reason="external-event">\n</wake>',
+        "<ci-monitor-event>\nchecks finished\n</ci-monitor-event>",
+        "Note:\n[SYSTEM NOTIFICATION - NOT USER INPUT]\nA background task finished.",
+      ]) {
+        expect(await run(notice), notice).toBe("");
+      }
+
+      // A request the user typed still gets the remedy, also when it quotes a marker mid-line.
+      expectRemedy(await run("please fix the bug"));
+      expectRemedy(await run("why does <task-notification> print here?"));
+    } finally {
+      await removeTempTree(base);
+    }
+  });
 });
 
 // QFAI:EX-0001-0196-77
