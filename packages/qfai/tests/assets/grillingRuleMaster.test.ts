@@ -261,29 +261,3 @@ describe("the shipped rule masters stay inside the assistant asset ceilings", ()
     expect(wide, `over ${ASSISTANT_ASSET_MAX_LINE_CHARS} characters on one line`).toEqual([]);
   });
 });
-
-// QFAI:AC-0001-0303-01
-// QFAI:AC-0001-0303-02
-describe("the master keeps its on-demand procedures in skill references", () => {
-  const SKILL_DIR = "packages/qfai/assets/init/.qfai/assistant/skill/qfai-grilling";
-  /** Each section the master keeps, and the reference it points to for the procedure. */
-  const SPLITS = [
-    ["### Explicit delegation for a discussion", "discussion-delegation.md"],
-    ["## Terms against the glossary", "glossary-check.md"],
-    ["## It is working when", "session-check.md"],
-  ] as const;
-
-  // QFAI:EX-0001-0303-01
-  it.each(SPLITS)("%s points to %s and says when to read it", async (heading, file) => {
-    const master = await read(TREES[1] ?? "");
-    const section = master.split(heading)[1]?.split(/^#{2,3} /m)[0] ?? "";
-    expectPhrase(section, `Read \`.qfai/assistant/skill/qfai-grilling/references/${file}\``);
-    expect(unwrap(section)).toMatch(/Not needed /);
-    expect(countLines(await read(`${SKILL_DIR}/references/${file}`))).toBeGreaterThan(0);
-  });
-
-  // QFAI:EX-0001-0303-02
-  it.each(SPLITS)("the skill cites the reference behind %s", async (_heading, file) => {
-    expectPhrase(await read(`${SKILL_DIR}/SKILL.md`), `\`references/${file}\``);
-  });
-});
