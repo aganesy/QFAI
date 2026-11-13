@@ -27,6 +27,59 @@ it("denies rg exploration and redirects code structure with recovery", () => {
   expect(result.message).not.toMatch(/codegraph_explore|query_graph|request_search_fallback|MCP/);
 });
 
+// QFAI:EX-0001-0235-28
+// Mutation: packages/qfai/src/core/graph/hooks.ts `path.resolve(directory, target) !== directory` -> `true` fails "keeps the fallback for a cd to the observed worktree and withholds it for any other move"
+it("keeps the fallback for a cd to the observed worktree and withholds it for any other move", () => {
+  const root = path.resolve("project-root");
+  for (const event of [
+    { tool: "Bash", cwd: root, command: `cd '${root}' && rg auth packages/` },
+    { tool: "Bash", cwd: root, command: "cd . && rg auth packages/" },
+    { tool: "Bash", cwd: root, command: `bash -lc "cd '${root}' && rg auth packages/"` },
+    { tool: "Bash", cwd: root, command: `command cd '${root}/' && rg auth packages/` },
+    { tool: "PowerShell", cwd: root, command: `Set-Location '${root}'; rg auth packages/` },
+    {
+      tool: "exec_command",
+      cwd: path.dirname(root),
+      workdir: "project-root",
+      command: "cd . && rg auth packages/",
+    },
+  ]) {
+    const result = classifyGraphExploration(event);
+    expect(result.decision, event.command).toBe("deny");
+    expect(result.target, event.command).toBe("packages/");
+    expect(result.exceptionEligible, event.command).toBe(true);
+    expect(result.fallbackUnavailable, event.command).toBeUndefined();
+  }
+  for (const event of [
+    { tool: "Bash", cwd: root, command: `cd '${path.join(root, "packages")}' && rg auth src/` },
+    { tool: "Bash", cwd: root, command: "cd .. && rg auth packages/" },
+    { tool: "Bash", cwd: root, command: "cd && rg auth packages/" },
+    { tool: "Bash", cwd: root, command: "cd - && rg auth packages/" },
+    { tool: "Bash", cwd: root, command: "cd $HOME && rg auth packages/" },
+    { tool: "Bash", cwd: root, command: "cd ~ && rg auth packages/" },
+    { tool: "Bash", cwd: root, command: "pushd . && popd && rg auth packages/" },
+    {
+      tool: "Bash",
+      cwd: root,
+      command: "cd() { builtin cd /elsewhere; }; cd . && rg auth packages/",
+    },
+    { tool: "Bash", cwd: root, command: "alias cd=pushd; cd . && rg auth packages/" },
+    { tool: "Bash", cwd: root, command: "CDPATH=/outside cd nested/.. && rg auth packages/" },
+    { tool: "Bash", cwd: root, command: "set -P; cd link/.. && rg auth packages/" },
+    {
+      tool: "Bash",
+      cwd: root,
+      command: `cd '${path.join(root, "packages")}/..' && rg auth packages/`,
+    },
+    { tool: "Bash", command: `cd '${root}' && rg auth packages/` },
+  ]) {
+    const result = classifyGraphExploration(event);
+    expect(result.decision, event.command).toBe("deny");
+    expect(result.fallbackUnavailable, event.command).toBe(true);
+    expect(result.message, event.command).toContain("changes its working directory");
+  }
+});
+
 // QFAI:EX-0001-0235-14
 // Mutation: packages/qfai/src/core/graph/hooks.ts `state: "outside-boundary",` -> `state: "configured",` fails "reports hidden scripts aliases and continuing input outside the proven boundary"
 it("reports hidden scripts aliases and continuing input outside the proven boundary", () => {

@@ -123,6 +123,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A `cd` to the project itself no longer withholds the search fallback.**
+  When a denied search follows `cd`, `pushd` or `Set-Location` to the observed
+  worktree in the same command, the denial still offers the AI-decided
+  fallback. A move anywhere else, or to a target the command text does not
+  spell out, still makes the fallback unavailable.
 - **The search-protection hook treats the PowerShell alias `sls` as
   `Select-String`.** `sls -Pattern authorize -Path packages/**/*.ts` was
   allowed as outside the checked boundary while the same command spelled
@@ -200,7 +205,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   then repeat the launcher preflight. Before, only an unknown `workflow`
   operation and an unknown command named the running version, and none of them
   compared it with the project's declaration. Fixes #4083.
-
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.
