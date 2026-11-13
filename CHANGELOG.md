@@ -80,6 +80,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Repository bootstrap starts pnpm 12's native executable itself, so
+  `corepack pnpm bootstrap` no longer stops with the instruction to run that
+  same command.
 - **`qfai session-review` counts and redacts what it missed.**
   - Text the user types while a tool runs, which Claude Code stores beside the
     tool's result, is counted as a typed turn.
