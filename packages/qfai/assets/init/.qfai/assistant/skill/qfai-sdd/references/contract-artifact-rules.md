@@ -68,8 +68,11 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
   `db/` `DB` and `ui/` `UI`; the QFAI repository's own `cli/` holds `CLI`
   contracts. The ID is `<KIND>-NNNN`.
   Its number is one more than the highest contract number of any kind, so
-  `API-0002` and `DB-0002` cannot both exist. A number is never reused, even
-  after its contract is removed.
+  `API-0002` and `DB-0002` cannot both exist. Find it by reading every `ID` in
+  `contracts.md` and every file name under `api/`, `db/`, `ui/` and `cli/`
+  together, not only the directory the new contract goes in. A number is never
+  reused, even after its contract is removed. `npx qfai validate --profile sdd`
+  reports a number two contracts declare as `QFAI-CONTRACT-034`.
 - **The file is named after the ID**: `<kind>-NNNN-<slug>.<ext>`, such as
   `api/api-0002-orders.yaml` or `db/db-0003-orders.sql`.
 - **The ID is declared once, in the file.** A Markdown contract declares it in

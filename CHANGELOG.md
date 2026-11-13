@@ -95,6 +95,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The `sdd-contract` step, the contract rules and the API, DB and UI contract
+  samples now say that the three kinds share one number sequence, and how to
+  find the next free number: one more than the highest of any kind in
+  `contracts.md` and under the contract directories. They also name
+  `npx qfai validate --profile sdd` as the run that reports a clash, as
+  `QFAI-CONTRACT-034`, while the spec is written; the `discussion` profile
+  does not check contracts.
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.
