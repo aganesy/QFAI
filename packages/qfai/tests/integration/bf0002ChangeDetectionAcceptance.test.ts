@@ -298,4 +298,42 @@ describe("BF-0002 change detection acceptance", () => {
     expect(job("test")).not.toHaveProperty("name");
     expect(job("test")["strategy"]).toMatchObject({ matrix: { slice: expect.any(Array) } });
   });
+
+  // QFAI:AC-0002-0013-07
+  it.skipIf(process.platform === "win32")(
+    "runs every later check of a lint-aggregate lane after one fails, then exits non-zero",
+    async () => {
+      const manifest: unknown = JSON.parse(
+        readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"),
+      );
+      const scripts =
+        isRecord(manifest) && isRecord(manifest["scripts"]) ? manifest["scripts"] : {};
+      const aggregate = readFileSync(path.join(REPO_ROOT, "scripts", "run-lint-checks.sh"), "utf8");
+      const lanes = [...aggregate.matchAll(/^\s*pnpm (ci:(?:lint|gate):[\w:-]+) &$/gm)].map(
+        (match) => match[1] ?? "",
+      );
+      expect(lanes.length).toBeGreaterThan(0);
+      for (const lane of lanes) {
+        const body = scripts[lane];
+        if (typeof body !== "string") throw new Error(`the root manifest does not declare ${lane}`);
+        const temp = mkdtempSync(path.join(os.tmpdir(), "qfai-lane-chain-"));
+        try {
+          // Every stubbed check records its call; the first one called fails.
+          const stub = [
+            'record() { printf "%s\\n" "$*" >> calls.txt; [ -f failed ] || { touch failed; return 1; }; }',
+            'pnpm() { record pnpm "$@"; }',
+            'node() { record node "$@"; }',
+          ].join("\n");
+          const run = spawnSync("sh", ["-c", `${stub}\n${body}`], { cwd: temp, encoding: "utf8" });
+          const calls = readFileSync(path.join(temp, "calls.txt"), "utf8").trim().split("\n");
+          const checks = body.split("; ").filter((link) => link.endsWith(" || status=1"));
+          expect(run.status, `${lane}: ${run.stderr}`).toBe(1);
+          expect(calls, lane).toHaveLength(checks.length);
+          expect(checks.length, `${lane} holds fewer than two checks`).toBeGreaterThan(1);
+        } finally {
+          await removeTempTree(temp);
+        }
+      }
+    },
+  );
 });
