@@ -78,6 +78,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the package now depends on. The releases change only a dependency of
   the checker and its build configuration.
 
+- **An approval row quotes a translated label in the file's language.**
+  When the structured question showed its options in a language other than
+  the one `decisions.md` is written in, `qfai-run` records the chosen option's
+  label as a rendering in the file's language followed by `(translated)`, so a
+  language scan on the file does not fail on the user's wording.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added

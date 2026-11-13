@@ -87,6 +87,7 @@ values plan nothing.
    Fix or answer each finding once; a behaviour fix gets one re-review, as `common-review-cycle` says. Stop a step that exceeds the request.
 7. **Approvals.** An approval of a critical decision or a release is one `decisions.md` row only when it is hard to reverse, would surprise a reader without context, and was the result of a real trade-off:
    what was approved, who approved it, when, and the chosen option's label, in the `qfai-sdd` decisions template's short form. Otherwise the final report states the approval with the same items. A decision you took appends no row.
+   When the question showed the label in a language other than the one `decisions.md` is written in, the row quotes a rendering of the label in the file's language and follows it with `(translated)`, as in `option "Remove it" (translated)`.
    When the release change is produced outside this run (by a release workflow or bot), record its approval in the final report in the same short form, and, when it is to be a row, list the row as a pending follow-up;
    the next change that touches `decisions.md` appends the row, and a `qfai-run` that writes `decisions.md` appends any pending approval row first.
 8. **A finding no stage serves.** Stop, and name the finding, its owner and the stage skill to invoke by name.

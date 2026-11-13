@@ -1058,6 +1058,7 @@ describe("qfai-run", () => {
   // QFAI:AC-0001-0223-04
   // QFAI:EX-0001-0223-06
   // QFAI:EX-0001-0223-08
+  // QFAI:EX-0001-0223-16
   it("records an approval as a decisions row only when it meets the recording test, and no row for a decision taken without the user", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
     const release = flat(sectionOf(await readShipped(STAGE_POINTS), "## Release point"));
@@ -1065,6 +1066,9 @@ describe("qfai-run", () => {
       /an approval of a critical decision or a release is one `decisions\.md` row only when it is hard to reverse, would surprise a reader without context, and was the result of a real trade-off: what was approved, who approved it, when, and the chosen option's label/i,
     );
     expect(work).toMatch(/a decision you took appends no row/i);
+    expect(work).toMatch(
+      /when the question showed the label in a language other than the one `decisions\.md` is written in, the row quotes a rendering of the label in the file's language and follows it with `\(translated\)`/i,
+    );
     expect(work).toMatch(/, in the `qfai-sdd` decisions template's short form\./i);
     expect(work).toMatch(/otherwise the final report states the approval with the same items/i);
     expect(work).toMatch(
