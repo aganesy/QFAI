@@ -37,7 +37,7 @@ specialization_tags:
 - Audit frontend changes for correctness and user-facing risk.
 - Audit layout sanity, interaction usability, and accessibility guardrails.
 - Audit visual design, token alignment, and service-level UX coherence.
-- Reconcile sidecar artifacts (screen contracts), design tokens, mermaid flows, and rendered output consistency.
+- Reconcile the UI contract, design tokens, mermaid flows and rendered output.
   HTML mock is optional fallback evidence only. Design tokens are supporting input.
 - For UI implementation, compare rendered output against the prototype handoff, canonical prototype
   screenshots, HTML snapshots, and the final prototype the handoff's `finalArtifact` names

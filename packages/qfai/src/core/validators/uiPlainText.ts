@@ -47,7 +47,9 @@ const EXEMPT_ELEMENTS = new Set([
   "script",
   "style",
 ]);
-const LINK_ALIASES = new Set(["link", "routerlink", "nuxtlink"]);
+const LINK_ALIASES = new Set(["routerlink", "nuxtlink"]);
+/** The last word of a component name that marks it as a link or a button, whatever words precede it. */
+const EXEMPT_LAST_WORDS = new Set(["link", "button"]);
 const EXEMPT_ROLES = new Set(["alert", "status"]);
 const REASON_MARK = "qfai-text:";
 const EXCERPT_LENGTH = 40;
@@ -250,14 +252,24 @@ function markupOf(source: string, extension: string): string {
 }
 
 /**
- * Renames a capitalised or dotted tag to an unknown element whose last
- * `.`-separated segment is the component's own name, which `isExemptName` reads.
+ * Renames a capitalised, mixed-case or dotted tag to an unknown element whose
+ * last `.`-separated segment is the component's own name, which `isExemptName`
+ * reads. A parser lowers the case of the name, so each word boundary of a
+ * segment that is not already an exempt name is kept as a `-`.
  */
 function renameComponents(markup: string): string {
   return markup.replace(
-    /<(\/?)([A-Z][\w-]*(?:\.[\w-]+)*|[a-z][\w-]*(?:\.[\w-]+)+)(?=[\s/>])/g,
-    (_whole, slash: string, name: string) => `<${slash}c.${name}`,
+    /<(\/?)([A-Z][\w-]*(?:\.[\w-]+)*|[a-z][\w-]*(?:\.[\w-]+)+|[a-z][a-z0-9]*[A-Z][\w-]*)(?=[\s/>])/g,
+    (_whole, slash: string, name: string) =>
+      `<${slash}c.${name
+        .split(".")
+        .map((segment) => (isExemptByName(segment) ? segment : hyphenateWords(segment)))
+        .join(".")}`,
   );
+}
+
+function hyphenateWords(name: string): string {
+  return name.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([A-Z])([A-Z][a-z])/g, "$1-$2");
 }
 
 function blank(text: string): string {
@@ -325,9 +337,24 @@ function insideExempt(element: Element | null): boolean {
   return false;
 }
 
+/**
+ * Whether an element or component name is exempt: its last `.`-separated
+ * segment names an exempt element, or that segment's last word, split at a
+ * case change or a `-`, is `link` or `button`, as in `ButtonLink`,
+ * `RouterLink`, `router-link` or `SubmitButton`. An `.html` tag reaches here
+ * in lower case with no word boundary but `-`, so `routerlink` and `nuxtlink`
+ * are named as well.
+ */
 function isExemptName(name: string): boolean {
-  const last = name.split(".").pop()?.toLowerCase() ?? "";
-  return EXEMPT_ELEMENTS.has(last) || LINK_ALIASES.has(last);
+  const segment = name.split(".").pop() ?? "";
+  if (isExemptByName(segment)) return true;
+  const lastWord = hyphenateWords(segment).split("-").pop()?.toLowerCase() ?? "";
+  return EXEMPT_LAST_WORDS.has(lastWord);
+}
+
+function isExemptByName(segment: string): boolean {
+  const lower = segment.toLowerCase();
+  return EXEMPT_ELEMENTS.has(lower) || LINK_ALIASES.has(lower);
 }
 
 /** The `qfai-text` body of the comment directly before `node`, whitespace aside. */

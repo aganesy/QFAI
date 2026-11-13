@@ -4,6 +4,8 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { isPnpmEntry, pnpmCommand } from "./lib/pnpm-command.mjs";
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function hasBlockingAncestor(relative) {
@@ -21,19 +23,19 @@ function hasBlockingAncestor(relative) {
 function bootstrap() {
   const cli = process.env.npm_execpath;
   const userAgent = process.env.npm_config_user_agent ?? "";
-  const entry = cli ? path.basename(cli) : "";
-  // pnpm 12 names its native executable in npm_execpath; Node cannot load that file.
-  // SIMPLIFIED: a bare `pnpm` entry still starts through Node, though a pnpm 12
-  // platform install names its native executable `pnpm`.
-  // Lift when: bootstrap must run from a pnpm that Corepack did not supply on Linux or macOS.
-  const native = /^(?:pnpm-native(?:\.exe)?|pnpm\.exe)$/i.test(entry);
-  if (
-    !cli ||
-    !path.isAbsolute(cli) ||
-    !(native || /^pnpm(?:\.(?:cjs|mjs|js))?$/i.test(entry)) ||
-    !/^pnpm\/\d+\.\d+\.\d+(?:[-+][^\s]+)?(?:\s|$)/.test(userAgent)
-  ) {
+  if (!isPnpmEntry(cli) || !/^pnpm\/\d+\.\d+\.\d+(?:[-+][^\s]+)?(?:\s|$)/.test(userAgent)) {
     process.stderr.write("Run `corepack pnpm bootstrap` from the repository root.\n");
+    return 1;
+  }
+  let command;
+  let leadingArgs;
+  try {
+    [command, leadingArgs] = pnpmCommand(cli);
+  } catch (error) {
+    process.stderr.write(
+      `Cannot read ${cli}: ${error instanceof Error ? error.message : String(error)}\n` +
+        "Run `corepack pnpm bootstrap` from the repository root.\n",
+    );
     return 1;
   }
 
@@ -75,10 +77,7 @@ function bootstrap() {
     ["-C", "packages/qfai", "build"],
     ["install", "--frozen-lockfile"],
   ]) {
-    const result = spawnSync(native ? cli : process.execPath, native ? args : [cli, ...args], {
-      cwd: root,
-      stdio: "inherit",
-    });
+    const result = spawnSync(command, [...leadingArgs, ...args], { cwd: root, stdio: "inherit" });
     if (result.error) {
       process.stderr.write("Could not start pnpm.\n");
       return 1;
