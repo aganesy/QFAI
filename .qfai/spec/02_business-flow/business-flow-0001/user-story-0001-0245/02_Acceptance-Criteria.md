@@ -25,5 +25,5 @@ Feature: Check each term against the glossary while grilling
   Scenario: The grilling skill carries the check
     Given the shipped `qfai-grilling` skill
     When a stage invokes it
-    Then it points to the glossary check in `.agents/rules/grilling.md`
+    Then it points to the glossary check in `.agents/rules/grilling.md` and to its procedure in `references/glossary-check.md`
 ```

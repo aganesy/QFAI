@@ -38,6 +38,10 @@ const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
 
 const read = (rel: string): Promise<string> => readFile(path.join(repoRoot, rel), "utf-8");
 
+/** The procedure the master's explicit-delegation section points to. */
+const DISCUSSION_DELEGATION =
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-grilling/references/discussion-delegation.md";
+
 function expectPhrase(content: string, phrase: string): void {
   expect(unwrap(content)).toContain(unwrap(phrase));
 }
@@ -156,7 +160,7 @@ describe.each(TREES)("%s", (rel) => {
     expectPhrase(master, "Do not act on what was agreed until the confirmation in step 2.");
     expectPhrase(master, "Discussion is a user session by default.");
     expectPhrase(
-      master,
+      await read(DISCUSSION_DELEGATION),
       "Record the instruction as authority and the adopted option as the agents' decision, never as a fictional individual human answer.",
     );
     expectPhrase(master, "Rounds between agents produce agreement, not authority.");
@@ -255,5 +259,31 @@ describe("the shipped rule masters stay inside the assistant asset ceilings", ()
       if (widest > ASSISTANT_ASSET_MAX_LINE_CHARS) wide.push(`${name} (${String(widest)})`);
     }
     expect(wide, `over ${ASSISTANT_ASSET_MAX_LINE_CHARS} characters on one line`).toEqual([]);
+  });
+});
+
+// QFAI:AC-0001-0303-01
+// QFAI:AC-0001-0303-02
+describe("the master keeps its on-demand procedures in skill references", () => {
+  const SKILL_DIR = "packages/qfai/assets/init/.qfai/assistant/skill/qfai-grilling";
+  /** Each section the master keeps, and the reference it points to for the procedure. */
+  const SPLITS = [
+    ["### Explicit delegation for a discussion", "discussion-delegation.md"],
+    ["## Terms against the glossary", "glossary-check.md"],
+    ["## It is working when", "session-check.md"],
+  ] as const;
+
+  // QFAI:EX-0001-0303-01
+  it.each(SPLITS)("%s points to %s and says when to read it", async (heading, file) => {
+    const master = await read(TREES[1] ?? "");
+    const section = master.split(heading)[1]?.split(/^#{2,3} /m)[0] ?? "";
+    expectPhrase(section, `Read \`.qfai/assistant/skill/qfai-grilling/references/${file}\``);
+    expect(unwrap(section)).toMatch(/Not needed /);
+    expect(countLines(await read(`${SKILL_DIR}/references/${file}`))).toBeGreaterThan(0);
+  });
+
+  // QFAI:EX-0001-0303-02
+  it.each(SPLITS)("the skill cites the reference behind %s", async (_heading, file) => {
+    expectPhrase(await read(`${SKILL_DIR}/SKILL.md`), `\`references/${file}\``);
   });
 });

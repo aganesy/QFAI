@@ -71,8 +71,8 @@ a recorded applicable authorization.
 
 Read `.qfai/assistant/skill/qfai-grilling/references/discussion-delegation.md`
 before declaring a discussion delegated: it holds what to record, the authority
-an instruction supplies and never supplies, and how the session ends. A
-discussion held as a user session does not need it.
+an instruction supplies and never supplies, and how the session ends. Not
+needed for a discussion held as a user session.
 
 ### Critical decisions
 
@@ -291,22 +291,14 @@ and never takes a critical decision without the recorded user authority above.
 
 Every session, user or delegated and at every stage, checks the terms it hears
 against `<specsDir>/01_policy/glossary.md`. A word read two ways is a decision nobody saw being made.
+A clash is raised in the round it appears in, with the glossary's term proposed,
+and a settled term is written at once.
+**Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only after the user approves it.
 
-- **A clash is raised when it appears.** A term the user or an author uses that
-  conflicts with, or is a synonym of, a term the glossary defines is raised first
-  in the round it appears in, or the next one when it appears in an answer.
-  Questions whose answer turns on its meaning wait for the next round. The
-  griller proposes the glossary's term. A plain synonym is corrected to it and
-  noted in the round, not asked; a term with two plausible meanings is a
-  decision node.
-- A matching term raises nothing. A term the glossary does not hold is asked about only
-  when a decision on the tree turns on its meaning.
-- **A settled term is written at once**, not at the end of the session: to the
-  project glossary in a stage that writes the policy layer, and otherwise as an
-  `open-questions.md` row naming the term and its definition, which `/qfai-sdd`
-  writes into the glossary.
-- **Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only after the user approves it.
-- A definition says what the term is. A rule, a value set or a procedure belongs in the spec, not in the row.
+Read `.qfai/assistant/skill/qfai-grilling/references/glossary-check.md` when a
+term clashes with the glossary, is missing from it, or is settled in a round: it
+holds when a clash is raised, what is corrected without asking, and where a
+settled term is written. Not needed while every term matches the glossary.
 
 ## When a session ends
 
@@ -442,24 +434,10 @@ every round avoiding.
 
 ## It is working when
 
-- In a user session, every decision the session opened is either settled by the
-  user or left open on purpose, and they said which. Agreeing with every
-  recommendation is a fine outcome; a decision that closed without them is not,
-  however sound it was.
-- In a delegated session, every critical decision has actual recorded user
-  authority; an uncovered one was asked when permitted or remains open. Every
-  adopted decision is in the record and the final report.
-- Nothing entered the tree that the request did not need.
-- No griller started for a step with no open design decision.
-- Later rounds ask what the first round could not have asked.
-- Facts were looked up rather than asked for.
-- Work running in the background did not stall the round — only the questions
-  downstream of it waited.
-- The session reached one of the five endings on purpose. `confirmed` is the
-  one that asks for confirmation rather than starting work; the other four are
-  reached when the user closes the asking, when a delegated session adopts, when
-  a no-question mode forbids asking, and when the user stops — and a run that
-  could not have asked is not failing this list by not asking.
+Read `.qfai/assistant/skill/qfai-grilling/references/session-check.md` before
+reporting a session finished: it lists what a session that followed this rule
+shows, for each kind of session and each ending. Not needed while the session
+is still asking.
 
 ## Related
 
