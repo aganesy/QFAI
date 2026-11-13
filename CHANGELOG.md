@@ -95,6 +95,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`QFAI-UITEXT-001` exempts link and button components by the last word of
+  their name.** A component such as `ButtonLink`, `NavLink`, `SubmitButton` or
+  Vue's `router-link` now counts as a link or a button, as `Link` and `Button`
+  already did, so a shared link or button component no longer needs a
+  `qfai-text` reason that a plain `<Link>` does not. A name whose last word is
+  something else, such as `ButtonGroup`, is still checked.
+  Fixes #4114.
+
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.
