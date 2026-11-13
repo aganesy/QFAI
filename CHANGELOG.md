@@ -78,6 +78,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the package now depends on. The releases change only a dependency of
   the checker and its build configuration.
 
+### Fixed
+
+- Repository bootstrap starts pnpm 12's native executable itself, so
+  `corepack pnpm bootstrap` no longer stops with the instruction to run that
+  same command.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added
