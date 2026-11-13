@@ -1066,9 +1066,6 @@ describe("qfai-run", () => {
       /an approval of a critical decision or a release is one `decisions\.md` row only when it is hard to reverse, would surprise a reader without context, and was the result of a real trade-off: what was approved, who approved it, when, and the chosen option's label/i,
     );
     expect(work).toMatch(/a decision you took appends no row/i);
-    expect(work).toMatch(
-      /when the question showed the label in a language other than the one `decisions\.md` is written in, the row quotes a rendering of the label in the file's language and follows it with `\(translated\)`/i,
-    );
     expect(work).toMatch(/, in the `qfai-sdd` decisions template's short form\./i);
     expect(work).toMatch(/otherwise the final report states the approval with the same items/i);
     expect(work).toMatch(
@@ -1078,6 +1075,9 @@ describe("qfai-run", () => {
     const template = await readShipped("skill/qfai-sdd/templates/spec/decisions.md");
     const example = template.split("\n").find((line) => line.startsWith("<the release checks"));
     expect(example).toMatch(/^<the release checks[^.]*\. - Rollback: \S/);
+    expect(template.replace(/\s+/g, " ")).toMatch(
+      /when the question showed the label in a language other than the one this file is written in, quote a rendering of the label in this file's language followed by `\(translated\)`/i,
+    );
     expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
     expect(release).toMatch(
       /record the approval as step 7 of `SKILL\.md` says: a `decisions\.md` row the run writes when the approval meets the recording test, the final report otherwise, or, when the release change is produced outside this run, the final report, with any row appended by the next change that touches `decisions\.md`/i,

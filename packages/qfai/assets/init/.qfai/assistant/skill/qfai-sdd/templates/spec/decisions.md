@@ -47,6 +47,10 @@ after any opening citation above:
 - `Consequences:` what the decision makes easier or harder.
 - `Rollback:` the steps that undo it, when they are not obvious.
 
+When the question showed the label in a language other than the one this
+file is written in, quote a rendering of the label in this file's language
+followed by `(translated)`, as in `option "Remove it" (translated)`.
+
 Content and Approach together stay within 600 characters; validation warns
 on a longer row. Write a `|` inside a cell as `\|`.
 
