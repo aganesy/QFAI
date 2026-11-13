@@ -67,8 +67,16 @@ it("treats the session's own nested worktree as the hook's project worktree", as
     expect(await resolveSessionWorktree(root, path.join(root, "packages"))).toBe(root);
     expect(await resolveSessionWorktree(root, os.tmpdir())).toBe(root);
     expect(await resolveSessionWorktree(root, undefined)).toBe(root);
-    const outside = await installedGraphHookResult(root, search(path.resolve("other-worktree")));
-    expect(outside.output).toContain("worktree differs");
+    const outside = await realpath(await mkdtemp(path.join(os.tmpdir(), "qfai-outside-worktree-")));
+    try {
+      await initialise(outside, "directory");
+      expect(await resolveSessionWorktree(root, outside)).toBe(root);
+      const denied = await installedGraphHookResult(root, search(outside));
+      expect(denied.output).toContain("worktree differs");
+      expect(denied.output).not.toContain("Observed attempt:");
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }

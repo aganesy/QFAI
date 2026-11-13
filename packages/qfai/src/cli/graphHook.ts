@@ -98,8 +98,10 @@ export async function runInstalledGraphHook(
 }
 
 async function hasEnforcement(project: string) {
+  // Any existing entry counts: an unsafe one then fails through the same checks as the root's.
   try {
-    return (await lstat(path.join(project, ...enforcement))).isFile();
+    await lstat(path.join(project, ...enforcement));
+    return true;
   } catch (cause: unknown) {
     if (isEnoent(cause)) return false;
     throw cause;

@@ -19,9 +19,11 @@ export async function resolveSessionWorktree(root: string, cwd: string | undefin
     return root;
   }
   if (!inside(base, current)) return root;
-  while (current !== base) {
+  while (path.relative(base, current) !== "") {
     if (await exists(path.join(current, ".git"))) return current;
-    current = path.dirname(current);
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
   }
   return root;
 }
