@@ -58,4 +58,11 @@ Feature: Change-derived lane selection behind a drift-proof aggregate verdict
     And the lane carrying the agent-integration mirror guards still runs, whichever job hosts it
     And the job carrying a required status context still runs unconditionally while it carries it
     And the required ci-pass context is unchanged; full runs report expanded matrix names and documentation-only runs report skipped bare job names
+
+  # AC-0002-0013-07
+  Scenario: A failing lint check does not hide the checks after it
+    Given a lint-aggregate lane runs several checks one after another
+    When one of those checks fails
+    Then every later check in the lane still runs and reports
+    And the lane exits non-zero once all of them have run
 ```

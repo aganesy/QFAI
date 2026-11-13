@@ -63,3 +63,5 @@ the next one against.
   Because: the guard this change removes held this repository's review-profile catalogue to its plans; the package ships no review profiles any more, and the shipped templates never ran it.
 - SHIPPED-CI: not-applicable for package.json
   Because: the removed `check-pack-locations` lane checked this repository's own discussion packs; no pack ships now, and shipped templates never ran it.
+- SHIPPED-CI: not-applicable for package.json
+  Because: these aggregates now run every check after one fails, and the shipped templates run no lint aggregate.
