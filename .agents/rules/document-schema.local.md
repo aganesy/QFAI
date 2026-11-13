@@ -17,13 +17,13 @@ Those are questions about a document's shape, so they need their own checks.
 
 ## Lanes
 
-| Lane                | Implementation                                        | What it reads                                                         |
-| ------------------- | ----------------------------------------------------- | --------------------------------------------------------------------- |
-| `lint:md`           | markdownlint-cli2                                     | Markdown syntax                                                       |
-| `lint:mdschema`     | `packages/qfai/assets/scripts/check-mdschema.mjs`     | Each spec-tree document against its schema                            |
-| `lint:mermaid`      | `packages/qfai/assets/scripts/check-mermaid.mjs`      | Whether each Mermaid diagram parses with Mermaid's own grammar        |
-| markdownlint config | `packages/qfai/scripts/check-markdownlint-config.mjs` | `.qfai/spec/.markdownlint.jsonc` against markdownlint's strict schema |
-| `format:check`      | prettier                                              | Formatting                                                            |
+| Lane                | Implementation                                        | What it reads                                                                                                      |
+| ------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `lint:md`           | markdownlint-cli2                                     | Markdown syntax                                                                                                    |
+| `lint:mdschema`     | `packages/qfai/assets/scripts/check-mdschema.mjs`     | Each spec-tree document against its schema                                                                         |
+| `lint:mermaid`      | `packages/qfai/assets/scripts/check-mermaid.mjs`      | Whether each Mermaid diagram parses with Mermaid's own grammar                                                     |
+| markdownlint config | `packages/qfai/scripts/check-markdownlint-config.mjs` | `.qfai/spec/.markdownlint.jsonc` and `.qfai/deliberation/.markdownlint.jsonc` against markdownlint's strict schema |
+| `format:check`      | prettier                                              | Formatting                                                                                                         |
 
 `pnpm ci:lint` and `pnpm ci:gate` run all of them on every pull request.
 `qfai validate` runs the `lint:mdschema` check too, as `QFAI-DOCSCHEMA-001`.
