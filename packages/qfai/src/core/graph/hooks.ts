@@ -1,3 +1,5 @@
+import path from "node:path";
+
 export type GraphHookHost = "claude" | "codex" | "copilot" | "vscode";
 
 export interface GraphHookEvent {
@@ -44,8 +46,9 @@ export function classifyGraphExploration(
         : "posix";
   const commands = shellPipelines(event.command ?? "", shell);
   if (!commands) return failedGraphHook();
+  const directory = event.cwd ? path.resolve(event.cwd, event.workdir ?? ".") : undefined;
   return (
-    classifyCommands(commands, authorize) ?? {
+    classifyCommands(commands, authorize, directory) ?? {
       decision: "allow",
       state: "configured",
       message: "No direct exploration was classified.",
@@ -56,9 +59,10 @@ export function classifyGraphExploration(
 function classifyCommands(
   commands: string[][],
   authorize: GraphSearchAuthorization,
+  directory: string | undefined,
   depth = 0,
 ): GraphHookDecision | undefined {
-  const changesDirectory = commands.some(changesGraphDirectory);
+  const changesDirectory = commands.some((words) => changesGraphDirectory(words, directory));
   const scopedAuthorization: GraphSearchAuthorization = changesDirectory
     ? (decision) =>
         graphFallbackUnavailable(
@@ -70,7 +74,7 @@ function classifyCommands(
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
   for (const words of commands) {
-    const decision = classifyCommand(words, scopedAuthorization, depth);
+    const decision = classifyCommand(words, scopedAuthorization, directory, depth);
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
@@ -78,7 +82,13 @@ function classifyCommands(
   return boundary ?? allowed;
 }
 
-function changesGraphDirectory(words: string[]): boolean {
+/**
+ * Whether a command moves the shell away from the observed working directory. A move
+ * to that directory itself leaves every later search target project-relative, so it
+ * keeps the fallback; any other move, or one whose target cannot be read from the
+ * text, makes it unavailable.
+ */
+function changesGraphDirectory(words: string[], directory: string | undefined): boolean {
   let offset = 0;
   while (offset < words.length) {
     if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) {
@@ -90,20 +100,34 @@ function changesGraphDirectory(words: string[]): boolean {
     if (words[offset] === "-v" || words[offset] === "-V") return false;
     while (words[offset]?.startsWith("-")) offset += 1;
   }
-  return ["cd", "chdir", "pushd", "popd", "set-location", "sl"].includes(
-    words[offset]?.toLowerCase() ?? "",
+  if (
+    !["cd", "chdir", "pushd", "popd", "set-location", "sl"].includes(
+      words[offset]?.toLowerCase() ?? "",
+    )
+  )
+    return false;
+  const operands = words.slice(offset + 1);
+  const target = operands[0];
+  return (
+    !directory ||
+    operands.length !== 1 ||
+    target === undefined ||
+    target.startsWith("-") ||
+    /[$`~%*?[\]{}]/.test(target) ||
+    path.resolve(directory, target) !== directory
   );
 }
 
 function classifyCommand(
   words: string[],
   authorize: GraphSearchAuthorization,
+  directory: string | undefined,
   depth = 0,
 ): GraphHookDecision | undefined {
   if (depth > 16) return failedGraphHook();
   let offset = 0;
   while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) offset += 1;
-  if (offset > 0) return classifyCommand(words.slice(offset), authorize, depth + 1);
+  if (offset > 0) return classifyCommand(words.slice(offset), authorize, directory, depth + 1);
   const operation = words[0]
     ?.split(/[\\/]/)
     .at(-1)
@@ -114,7 +138,7 @@ function classifyCommand(
     while (words[offset]?.startsWith("-") || /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) {
       offset += 1;
     }
-    return classifyCommand(words.slice(offset), authorize, depth + 1);
+    return classifyCommand(words.slice(offset), authorize, directory, depth + 1);
   }
   if (["bash", "sh", "zsh", "pwsh", "powershell", "cmd"].includes(operation ?? "")) {
     const switchIndex = words.findIndex((word) => /^(?:-[a-z]*c|\/c|-command)$/i.test(word));
@@ -127,7 +151,9 @@ function classifyCommand(
           ? "cmd"
           : "posix";
     const commands = shellPipelines(inner, shell);
-    return commands ? classifyCommands(commands, authorize, depth + 1) : failedGraphHook();
+    return commands
+      ? classifyCommands(commands, authorize, directory, depth + 1)
+      : failedGraphHook();
   }
   if (operation === "rg" || operation === "grep" || operation === "findstr") {
     let offset = 1;
