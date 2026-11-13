@@ -1380,10 +1380,19 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // preferences may simply match, and the decisions were still theirs to
     // authorise. Read as a success criterion, it teaches an agent to skip the
     // next interview on the strength of the last one going smoothly.
+    // The success criteria live in the session check the master points to.
     it.each(MASTERS)("%s does not read agreement as a wasted session", async (rel) => {
-      const text = await readFile(path.join(ROOT, rel), "utf-8");
-      expect(text).toMatch(/Agreeing\s+with\s+every\s+recommendation\s+is\s+a\s+fine/);
-      expect(text).not.toMatch(/session\s+that\s+was\s+not\s+needed/);
+      const check = await readFile(
+        path.join(
+          ROOT,
+          "packages/qfai/assets/init/.qfai/assistant/skill/qfai-grilling/references/session-check.md",
+        ),
+        "utf-8",
+      );
+      expect(check).toMatch(/Agreeing\s+with\s+every\s+recommendation\s+is\s+a\s+fine/);
+      for (const text of [await readFile(path.join(ROOT, rel), "utf-8"), check]) {
+        expect(text).not.toMatch(/session\s+that\s+was\s+not\s+needed/);
+      }
     });
 
     it.each(MASTERS)("%s resolves a no-question run to open questions", async (rel) => {

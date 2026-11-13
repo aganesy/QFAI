@@ -14,6 +14,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`.agents/rules/grilling.md` keeps on-demand procedures in skill
+  references.** The bounds of a delegated discussion, the glossary check and
+  the check before a session is reported finished move to
+  `discussion-delegation.md`, `glossary-check.md` and `session-check.md` under
+  the `qfai-grilling` skill's `references/`. The rule keeps each trigger and
+  says when to read each file. A session runs as before.
+
 - **Breaking: a per-run deliberation record replaces the discussion pack.** A
   run that asks the user a question or takes a decision no specification,
   contract, rule or convention settles writes one Markdown memo under
@@ -102,6 +109,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai-text` reason that a plain `<Link>` does not. A name whose last word is
   something else, such as `ButtonGroup`, is still checked.
   Fixes #4114.
+
+- **An unknown subcommand says when the project declares a newer qfai.** When
+  `qfai sdd`, `qfai atdd` or `qfai workflow` is given a subcommand the running
+  copy does not know, the message names the running version and where it was
+  loaded from. When the project's `package.json` declares a newer qfai, it also
+  says so and tells you to run the project's install command in this checkout,
+  then repeat the launcher preflight. Before, only an unknown `workflow`
+  operation and an unknown command named the running version, and none of them
+  compared it with the project's declaration. Fixes #4083.
 
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
