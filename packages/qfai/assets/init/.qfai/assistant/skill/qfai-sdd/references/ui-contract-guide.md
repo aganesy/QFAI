@@ -269,7 +269,7 @@ downstream skills and every validate lane read `<paths.contractsDir>/ui/*.yaml`.
 
 The review of a screen is scoped beneath `.qfai/prototype/iter-NN/UI-NNNN/<screen>.review.json`.
 
-A malformed UI contract or an empty screen list is an authoring failure. Fix the declared contract and its index row, then refresh the affected flow's SDD validation and downstream evidence. Discussion UI/UX sidecars are source material; the contract is the execution authority.
+A malformed UI contract or an empty screen list is an authoring failure. Fix the declared contract and its index row, then refresh the affected flow's SDD validation and downstream evidence. Where a run's deliberation record discusses the screens, it is history; the UI contract is the execution authority.
 
 ## Root DESIGN.md
 
