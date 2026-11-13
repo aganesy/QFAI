@@ -14,7 +14,7 @@
  * It reads files and compiles nothing. The allowlist is TypeScript, and this program reads its
  * string literals rather than importing it, so the lane needs no TypeScript loader.
  */
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,6 +22,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
 const packageRoot = path.join(repoRoot, "packages", "qfai");
 
+const PACKAGE_REL = "packages/qfai";
 const CONFIG_REL = "tsconfig.tests.json";
 const ALLOWLIST_REL = "tests/scripts/typeCheckEnumeration.allowlist.ts";
 
@@ -34,7 +35,10 @@ export function parseInclude(configText) {
   return parsed.include.filter((entry) => typeof entry === "string");
 }
 
-/** The paths the allowlist's array holds: every double-quoted string inside its brackets. */
+/**
+ * The paths the allowlist's array holds: every double-quoted string inside its brackets, with
+ * comments removed first so a commented-out entry is not counted when TypeScript would not count it.
+ */
 export function parseAllowlist(allowlistText) {
   const text = String(allowlistText);
   const start = text.indexOf("= [");
@@ -42,7 +46,11 @@ export function parseAllowlist(allowlistText) {
   if (start === -1 || end === -1) {
     throw new Error(`${ALLOWLIST_REL} declares no array this check can read`);
   }
-  return [...text.slice(start, end).matchAll(/"([^"\\]+)"/gu)].map((match) => match[1]);
+  const body = text
+    .slice(start, end)
+    .replace(/\/\*[\s\S]*?\*\//gu, "")
+    .replace(/\/\/.*$/gmu, "");
+  return [...body.matchAll(/"([^"\\]+)"/gu)].map((match) => match[1]);
 }
 
 /**
@@ -58,13 +66,19 @@ export function enumerationProblems({ suites, include, allowlist, exists }) {
   return [
     ...suites
       .filter((rel) => !accounted.has(rel))
-      .map((rel) => `${rel} is in neither ${CONFIG_REL}#include nor ${ALLOWLIST_REL}`),
+      .map(
+        (rel) =>
+          `${PACKAGE_REL}/${rel} is in neither ${PACKAGE_REL}/${CONFIG_REL}#include nor ${PACKAGE_REL}/${ALLOWLIST_REL}`,
+      ),
     ...include
       .filter((rel) => !exists(rel))
-      .map((rel) => `${CONFIG_REL}#include names ${rel}, which is not in the tree`),
+      .map((rel) => `${PACKAGE_REL}/${CONFIG_REL}#include names ${rel}, which is not in the tree`),
     ...allowlist
       .filter((rel) => enumerated.has(rel) || !present.has(rel))
-      .map((rel) => `${ALLOWLIST_REL} records ${rel} as uncovered, and it is now covered or gone`),
+      .map(
+        (rel) =>
+          `${PACKAGE_REL}/${ALLOWLIST_REL} records ${rel} as uncovered, and it is now covered or gone`,
+      ),
   ];
 }
 
@@ -92,14 +106,30 @@ function main() {
   if (problems.length > 0) {
     for (const problem of problems) console.error(`check-test-enumeration: ${problem}`);
     console.error(
-      `check-test-enumeration: add a new suite to packages/qfai/${CONFIG_REL}#include, and strike a line from the allowlist in the change that covers or removes its suite.`,
+      `check-test-enumeration: add a new suite to ${PACKAGE_REL}/${CONFIG_REL}#include, and strike a line from the allowlist in the change that covers or removes its suite.`,
     );
     process.exit(1);
   }
   console.log("check-test-enumeration: every test suite is enumerated or recorded as uncovered");
 }
 
+/**
+ * Whether this file is the program Node was asked to run. Both sides are real paths: Node resolves
+ * symlinks for `import.meta.url` but not for `argv[1]`, so a checkout reached through a link or a
+ * junction would otherwise skip `main()` and exit 0 having checked nothing.
+ */
+function isEntry() {
+  if (!process.argv[1]) return false;
+  try {
+    return (
+      realpathSync(path.resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))
+    );
+  } catch {
+    return false;
+  }
+}
+
 // Importing this file reads its rules; running it reads the tree.
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isEntry()) {
   main();
 }
