@@ -4,6 +4,7 @@ import path from "node:path";
 import { isEnoent } from "../fs/errno.js";
 import {
   ARTICLE_XI_TMP_SAMPLE_PATH,
+  FRESH_GITIGNORE_PROJECT_LINES,
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
@@ -41,13 +42,14 @@ export async function ensureRootGitignoreEntries(
   const gitignorePath = path.join(destRoot, ".gitignore");
 
   let existing = "";
+  let creating = false;
   try {
     existing = await readFile(gitignorePath, "utf-8");
   } catch (err: unknown) {
     if (!isEnoent(err)) {
       throw err;
     }
-    // File does not exist yet — will create
+    creating = true;
   }
 
   // The governance negations are checked here but deliberately NOT in
@@ -91,8 +93,9 @@ export async function ensureRootGitignoreEntries(
 
   const omitted =
     managedBlock.length === 0 ? linesTheProjectAlreadyHas(gitignoreLines(stripped)) : [];
+  // A file init creates also ignores what every QFAI install has, above the block and outside it.
   const placement = placeManagedBlock(
-    stripped,
+    creating ? `${FRESH_GITIGNORE_PROJECT_LINES.join("\n")}\n` : stripped,
     rebuildManagedBlock(managedBlock, omitted, rewrites),
     blockAt,
   );
@@ -103,9 +106,11 @@ export async function ensureRootGitignoreEntries(
 
   if (dryRun) {
     report(
-      placement.inPlace
-        ? `  would update: .gitignore (rebuild QFAI entries in place)`
-        : `  would update: .gitignore (append QFAI entries)`,
+      creating
+        ? `  would create: .gitignore (${FRESH_GITIGNORE_PROJECT_LINES.join(", ")} and QFAI entries)`
+        : placement.inPlace
+          ? `  would update: .gitignore (rebuild QFAI entries in place)`
+          : `  would update: .gitignore (append QFAI entries)`,
     );
     if (omittedNote !== undefined) report(omittedNote);
     return { copied: [gitignorePath], skipped: [] };
@@ -113,9 +118,11 @@ export async function ensureRootGitignoreEntries(
 
   await replaceRootGitignore(gitignorePath, placement.content);
   report(
-    placement.inPlace
-      ? "  updated: .gitignore (rebuilt QFAI entries in place)"
-      : "  updated: .gitignore (appended QFAI entries)",
+    creating
+      ? `  created: .gitignore (${FRESH_GITIGNORE_PROJECT_LINES.join(", ")} and QFAI entries)`
+      : placement.inPlace
+        ? "  updated: .gitignore (rebuilt QFAI entries in place)"
+        : "  updated: .gitignore (appended QFAI entries)",
   );
   if (omittedNote !== undefined) report(omittedNote);
   // Only the fallback can demote a project negation, and only against a project

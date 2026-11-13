@@ -124,6 +124,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `Get-ChildItem` or `Get-Content`. Searches outside the project root are still
   denied. Fixes #4142.
 
+- `qfai init` in a project with no `.gitignore` now creates it with
+  `node_modules/` above the QFAI managed block, so the first `git add -A` no
+  longer stages the dependency tree. An existing `.gitignore` is not changed
+  beyond the managed block.
+
 - The `sdd-contract` step, the contract rules and the API, DB and UI contract
   samples now say that the three kinds share one number sequence, and how to
   find the next free number: one more than the highest of any kind in
