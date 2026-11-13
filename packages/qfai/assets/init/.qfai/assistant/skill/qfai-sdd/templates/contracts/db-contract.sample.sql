@@ -1,6 +1,9 @@
 -- QFAI-CONTRACT-ID: DB-0006
 -- Replace the sample IDs: the contract takes the next contract number, its
 -- rules are numbered under it, and its examples come from the story tree.
+-- API, DB and UI share one number sequence: take one more than the highest
+-- number of any kind in contracts.md and the contract file names, not of this
+-- kind alone.
 -- Purpose: Sample order draft persistence contract
 -- Depends on: -
 -- Rule BR-0006-0001: An order draft stores a nonempty customer ID.
