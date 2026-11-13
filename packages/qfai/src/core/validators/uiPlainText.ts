@@ -252,14 +252,19 @@ function markupOf(source: string, extension: string): string {
 }
 
 /**
- * Renames a capitalised or dotted tag to an unknown element whose last
- * `.`-separated segment is the component's own name, which `isExemptName` reads.
- * A parser lowers the case of the name, so each word boundary is kept as a `-`.
+ * Renames a capitalised, mixed-case or dotted tag to an unknown element whose
+ * last `.`-separated segment is the component's own name, which `isExemptName`
+ * reads. A parser lowers the case of the name, so each word boundary of a
+ * segment that is not already an exempt name is kept as a `-`.
  */
 function renameComponents(markup: string): string {
   return markup.replace(
-    /<(\/?)([A-Z][\w-]*(?:\.[\w-]+)*|[a-z][\w-]*(?:\.[\w-]+)+)(?=[\s/>])/g,
-    (_whole, slash: string, name: string) => `<${slash}c.${hyphenateWords(name)}`,
+    /<(\/?)([A-Z][\w-]*(?:\.[\w-]+)*|[a-z][\w-]*(?:\.[\w-]+)+|[a-z][a-z0-9]*[A-Z][\w-]*)(?=[\s/>])/g,
+    (_whole, slash: string, name: string) =>
+      `<${slash}c.${name
+        .split(".")
+        .map((segment) => (isExemptByName(segment) ? segment : hyphenateWords(segment)))
+        .join(".")}`,
   );
 }
 
@@ -342,10 +347,14 @@ function insideExempt(element: Element | null): boolean {
  */
 function isExemptName(name: string): boolean {
   const segment = name.split(".").pop() ?? "";
-  if (EXEMPT_ELEMENTS.has(segment.toLowerCase()) || LINK_ALIASES.has(segment.toLowerCase()))
-    return true;
+  if (isExemptByName(segment)) return true;
   const lastWord = hyphenateWords(segment).split("-").pop()?.toLowerCase() ?? "";
   return EXEMPT_LAST_WORDS.has(lastWord);
+}
+
+function isExemptByName(segment: string): boolean {
+  const lower = segment.toLowerCase();
+  return EXEMPT_ELEMENTS.has(lower) || LINK_ALIASES.has(lower);
 }
 
 /** The `qfai-text` body of the comment directly before `node`, whitespace aside. */

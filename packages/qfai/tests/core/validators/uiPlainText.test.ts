@@ -341,7 +341,7 @@ describe("a component whose name ends in the word Link or Button is exempt", () 
       "src/a.tsx":
         'export const A = () => (\n  <div>\n    <ButtonLink href="/jobs">Find jobs</ButtonLink>\n    <NavLink to="/">Home</NavLink>\n    <UI.SubmitButton>Send</UI.SubmitButton>\n    <HTMLButton>Open</HTMLButton>\n  </div>\n);\n',
       "src/b.vue":
-        '<template>\n  <ButtonLink to="/jobs">Find jobs</ButtonLink>\n  <router-link to="/">Home</router-link>\n</template>\n',
+        '<template>\n  <ButtonLink to="/jobs">Find jobs</ButtonLink>\n  <router-link to="/">Home</router-link>\n  <navLink to="/">Help</navLink>\n  <LaBel>Name</LaBel>\n</template>\n',
       "src/b.svelte": '<ButtonLink href="/jobs">Find jobs</ButtonLink>\n',
       "src/b.html":
         '<RouterLink to="/">Home</RouterLink>\n<NuxtLink to="/">Jobs</NuxtLink>\n<nav-link>Help</nav-link>\n',
