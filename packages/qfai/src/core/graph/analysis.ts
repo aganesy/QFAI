@@ -152,7 +152,7 @@ export class GraphConfigUnreadableError extends GraphLocalStateError {
     super(
       unreadable
         ? `${configFile} could not be read or parsed.`
-        : `${configFile} gives paths.deliberationDir no usable value.`,
+        : `${configFile} gives no usable paths.deliberationDir.`,
       `Correct ${configFile}, then retry.`,
     );
   }
@@ -166,14 +166,11 @@ export class GraphConfigUnreadableError extends GraphLocalStateError {
 export async function graphDeliberationDir(root: string): Promise<string> {
   const { config, document, issues, configPath } = await loadConfig(root);
   const file = path.basename(configPath);
-  if (
-    (document === undefined && issues.length > 0) ||
-    (document !== undefined && document !== null && !object(document))
-  )
-    throw new GraphConfigUnreadableError(file, true);
+  if (document === undefined && issues.length > 0) throw new GraphConfigUnreadableError(file, true);
   const paths = object(document) ? document.paths : undefined;
   const value = object(paths) ? paths.deliberationDir : undefined;
   if (
+    (document !== undefined && document !== null && !object(document)) ||
     (paths !== undefined && paths !== null && !object(paths)) ||
     (value !== undefined && (typeof value !== "string" || value.trim() === ""))
   )
