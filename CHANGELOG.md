@@ -70,6 +70,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
      `qfai sdd preflight --record <path>`, and read `source` from the new
      values.
 
+- **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.15.7.** The
+  document-schema checker the docs lane runs moves from 0.15.5 to 0.15.7, the
+  version the package now depends on. The releases change only a dependency of
+  the checker and its build configuration.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added
