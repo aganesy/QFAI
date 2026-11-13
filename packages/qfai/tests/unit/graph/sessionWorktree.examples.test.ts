@@ -46,7 +46,7 @@ it("treats the session's own nested worktree as the hook's project worktree", as
         ),
       },
     });
-    expect(uninitialised.output).toContain("Run npx qfai init in");
+    expect(uninitialised.output).toContain("Run qfai init in");
     expect(uninitialised.output).not.toContain("worktree differs");
     expect(uninitialised.output).not.toContain("Observed attempt:");
 

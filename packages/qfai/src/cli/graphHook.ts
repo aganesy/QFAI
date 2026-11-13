@@ -76,7 +76,7 @@ export async function runInstalledGraphHook(
     decision = graphFallbackUnavailable(
       decision,
       `The session worktree ${project} has no graph protection; this hook belongs to ${root}.`,
-      `Run npx qfai init in ${project}, then retry the denied action.`,
+      `Run qfai init in ${project}, then retry the denied action.`,
     );
   else if (decision.decision === "deny" && decision.state === "configured") {
     if (event) {
