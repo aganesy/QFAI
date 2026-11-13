@@ -21,7 +21,10 @@ import Ajv from "ajv";
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
 /** The configuration files checked, repository-root-relative. */
-export const CONFIG_FILES = [".qfai/spec/.markdownlint.jsonc"];
+export const CONFIG_FILES = [
+  ".qfai/spec/.markdownlint.jsonc",
+  ".qfai/deliberation/.markdownlint.jsonc",
+];
 
 const cli2Require = createRequire(
   createRequire(path.join(REPO_ROOT, "package.json")).resolve("markdownlint-cli2"),
