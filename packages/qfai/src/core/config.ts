@@ -436,10 +436,9 @@ function normalizePaths(raw: unknown, configPath: string, issues: Issue[]): Qfai
       issues,
     ),
     specsDir: readTreeDirString(raw.specsDir, base.specsDir, "paths.specsDir", configPath, issues),
-    deliberationDir: readTreeDirString(
+    deliberationDir: readDeliberationDir(
       raw.deliberationDir,
       base.deliberationDir,
-      "paths.deliberationDir",
       configPath,
       issues,
     ),
@@ -820,6 +819,41 @@ function readTreeDirString(
   issues: Issue[],
 ): string {
   return readDirString(value, fallback, label, configPath, issues).replace(/\\/g, "/");
+}
+
+/**
+ * `paths.deliberationDir`, kept only where it names a directory inside the project root.
+ *
+ * The graph keeps deliberation records out of its document corpus by excluding this
+ * directory. The root itself, or a directory outside it, leaves nothing to exclude, so
+ * such a value is reported and the default is kept.
+ */
+function readDeliberationDir(
+  value: unknown,
+  fallback: string,
+  configPath: string,
+  issues: Issue[],
+): string {
+  const dir = readTreeDirString(value, fallback, "paths.deliberationDir", configPath, issues);
+  if (isDirectoryInsideRoot(path.dirname(configPath), dir)) return dir;
+  issues.push(
+    configIssue(
+      configPath,
+      "paths.deliberationDir must name a directory inside the project root, not the root itself or a directory outside it.",
+    ),
+  );
+  return fallback;
+}
+
+/** Whether `dir`, read against `root`, names a directory strictly inside `root`. */
+export function isDirectoryInsideRoot(root: string, dir: string): boolean {
+  const relative = path.relative(root, path.resolve(root, dir));
+  return (
+    relative !== "" &&
+    relative !== ".." &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
 }
 
 function readOptionalString(

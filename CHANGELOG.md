@@ -111,6 +111,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- `paths.deliberationDir` that names the project root, such as `.`, or a
+  directory outside it now raises `QFAI-CFG-002` and the default
+  `.qfai/deliberation` is used. A documents or code query on such a value fails
+  and names `qfai.config.yaml`, instead of building a corpus that excludes no
+  deliberation record.
+
 - `qfai init` in a project with no `.gitignore` now creates it with
   `node_modules/` above the QFAI managed block, so the first `git add -A` no
   longer stages the dependency tree. An existing `.gitignore` is not changed

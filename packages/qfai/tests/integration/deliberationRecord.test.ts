@@ -319,6 +319,27 @@ describe("QFAI-DELIB-001 runs in the stated profiles", () => {
     expect(loaded.config.paths.deliberationDir).toBe(".qfai/deliberation");
     expect(loaded.issues.map((item) => item.code)).toContain("QFAI-CFG-002");
   });
+
+  // QFAI:AC-0001-0302-05
+  // QFAI:EX-0001-0302-14
+  it("raises QFAI-CFG-002 and keeps the default for a value naming the project root or a directory outside it", async () => {
+    for (const value of [".", "./", "docs/..", "'.\\'", "../records", "'docs\\..\\..'"]) {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        `paths:\n  deliberationDir: ${value}\n`,
+        "utf-8",
+      );
+      const loaded = await loadConfig(root);
+      expect(loaded.config.paths.deliberationDir, value).toBe(".qfai/deliberation");
+      expect(
+        loaded.issues.some(
+          (item) =>
+            item.code === "QFAI-CFG-002" && item.message.startsWith("paths.deliberationDir must"),
+        ),
+        value,
+      ).toBe(true);
+    }
+  });
 });
 
 describe("the shipped deliberation record template", () => {
