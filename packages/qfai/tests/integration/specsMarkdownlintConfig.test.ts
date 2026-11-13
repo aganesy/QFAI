@@ -22,6 +22,24 @@ import { main as markdownlintCli2Main } from "markdownlint-cli2";
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const rootCli2Config = path.join(repoRoot, ".markdownlint-cli2.jsonc");
 const specsDirConfig = path.join(repoRoot, ".qfai", "spec", ".markdownlint.jsonc");
+const deliberationDirConfig = path.join(repoRoot, ".qfai", "deliberation", ".markdownlint.jsonc");
+
+/** Lint `pattern` under `directory` with markdownlint-cli2 and return its exit code and output. */
+async function lintUnder(
+  directory: string,
+  pattern: string,
+): Promise<{ exitCode: number; output: string }> {
+  const outputLog: string[] = [];
+  const log = (...args: unknown[]) => outputLog.push(args.map((x) => String(x)).join(" "));
+  const exitCode = await markdownlintCli2Main({
+    directory,
+    argv: [pattern],
+    logMessage: log,
+    logError: log,
+    noRequire: true,
+  });
+  return { exitCode, output: outputLog.join("\n") };
+}
 
 describe("nested markdownlint config under .qfai/spec/", () => {
   it("relaxes MD013 for story-tree files via the per-directory .markdownlint.jsonc", async () => {
@@ -55,6 +73,53 @@ describe("nested markdownlint config under .qfai/spec/", () => {
       });
 
       expect(exitCode, outputLog.join("\n")).toBe(0);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("nested markdownlint config under .qfai/deliberation/", () => {
+  // A deliberation record passes QFAI-DELIB-001 on its layout alone, and once
+  // committed its prose may not be edited, so a long Subject line must not fail
+  // the lint.
+  const overLongSubject = "The run was asked to settle" + " the subject".repeat(20) + ".";
+  const record = (subject: string) =>
+    ["# Deliberation record: lint", "", "## Subject", "", subject, ""].join("\n");
+
+  it("exempts a record's long prose line from MD013", async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-md-delib-"));
+    try {
+      await copyFile(rootCli2Config, path.join(tempRoot, ".markdownlint-cli2.jsonc"));
+      const recordsDir = path.join(tempRoot, ".qfai", "deliberation");
+      await mkdir(recordsDir, { recursive: true });
+      await copyFile(deliberationDirConfig, path.join(recordsDir, ".markdownlint.jsonc"));
+      await writeFile(
+        path.join(recordsDir, "20261113000000-lint.md"),
+        record(overLongSubject),
+        "utf-8",
+      );
+
+      const { exitCode, output } = await lintUnder(tempRoot, ".qfai/deliberation/**/*.md");
+
+      expect(exitCode, output).toBe(0);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("still reports the same line outside the records directory", async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-md-delib-"));
+    try {
+      await copyFile(rootCli2Config, path.join(tempRoot, ".markdownlint-cli2.jsonc"));
+      const otherDir = path.join(tempRoot, "docs");
+      await mkdir(otherDir, { recursive: true });
+      await writeFile(path.join(otherDir, "note.md"), record(overLongSubject), "utf-8");
+
+      const { exitCode, output } = await lintUnder(tempRoot, "docs/**/*.md");
+
+      expect(exitCode).not.toBe(0);
+      expect(output).toMatch(/MD013/);
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
