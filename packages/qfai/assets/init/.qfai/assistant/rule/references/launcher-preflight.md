@@ -1,6 +1,6 @@
 # Canonical qfai Launcher
 
-Read before the first `npx qfai` call of a session, a gate or a run's `workflow plan` alike, unless the calling skill already settled the launcher.
+Read before the first `npx qfai` call, a gate or a run's `workflow plan` alike, unless `qfai-run` already passed it on a local binary.
 
 ## Launcher Preflight
 
