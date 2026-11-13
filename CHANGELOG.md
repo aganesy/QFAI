@@ -87,6 +87,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- `qfai init` in a project with no `.gitignore` now creates it with
+  `node_modules/` above the QFAI managed block, so the first `git add -A` no
+  longer stages the dependency tree. An existing `.gitignore` is not changed
+  beyond the managed block.
+
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.

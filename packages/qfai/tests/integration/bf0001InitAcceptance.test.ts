@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 
 import { runInit } from "../helpers/legacyInit.js";
 import {
+  FRESH_GITIGNORE_PROJECT_LINES,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
@@ -200,6 +201,30 @@ describe("BF-0001 managed .gitignore block", () => {
     for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
       expect(lines.indexOf(negation), negation).toBeGreaterThan(lastIgnore);
     }
+  });
+
+  // QFAI:AC-0001-0033-05
+  // QFAI:EX-0001-0033-12
+  it("ignores node_modules/ above the block only in a .gitignore it creates", async () => {
+    expect(FRESH_GITIGNORE_PROJECT_LINES).toEqual(["node_modules/"]);
+    const fresh = await newTempDir();
+
+    const preview = await init(fresh, { dryRun: true });
+    expect(preview).toContain("would create: .gitignore (node_modules/ and QFAI entries)");
+
+    const output = await init(fresh);
+    expect(output).toContain("created: .gitignore (node_modules/ and QFAI entries)");
+    const content = await readFile(path.join(fresh, ".gitignore"), "utf-8");
+    expect(content.startsWith(`node_modules/\n\n${QFAI_GITIGNORE_MARKER}\n`)).toBe(true);
+    expect(countOf(await gitignoreLines(fresh), "node_modules/")).toBe(1);
+
+    await init(fresh);
+    expect(await readFile(path.join(fresh, ".gitignore"), "utf-8")).toBe(content);
+
+    const existing = await newTempDir();
+    await writeFile(path.join(existing, ".gitignore"), "*.log\n", "utf-8");
+    await init(existing);
+    expect(countOf(await gitignoreLines(existing), "node_modules/")).toBe(0);
   });
 
   // QFAI:AC-0001-0033-01

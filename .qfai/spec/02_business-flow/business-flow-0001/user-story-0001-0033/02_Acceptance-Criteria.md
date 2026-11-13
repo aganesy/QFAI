@@ -32,4 +32,13 @@ Feature: Managed `.gitignore` block
     And one output line names the lines left out of the block
     And the second run leaves `.gitignore` byte-identical
     And when the project's own lines do not ignore that directory, for instance because a later `!/tmp/` cancels them, the block carries `/tmp/`
+
+  # AC-0001-0033-05
+  Scenario: A `.gitignore` that init creates also ignores the installed dependencies
+    Given a project directory with no `.gitignore`
+    When `qfai init` runs, and then runs again
+    Then the created `.gitignore` starts with `node_modules/` and a blank line, outside the managed block and above it
+    And one output line says the file was created with `node_modules/` and the QFAI entries
+    And the second run leaves `.gitignore` byte-identical
+    And a `.gitignore` that already existed does not gain `node_modules/`
 ```
