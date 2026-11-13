@@ -2,16 +2,27 @@
  * Integration: deliberation records stay out of the Graphify document corpus, and `verify` and
  * `full` report an unparseable root `DESIGN.md` once.
  */
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../src/core/config.js";
+import { GraphConfigUnreadableError, graphAnalysisRoot } from "../../src/core/graph/analysis.js";
+import { prepareCodeAnalysis } from "../../src/core/graph/codePreparation.js";
+import { prepareDocumentAnalysis } from "../../src/core/graph/documents.js";
+import { prepareGraphRuntimes } from "../../src/core/graph/prepare.js";
 import { exploreGraph } from "../../src/core/graph/query.js";
+import { queryPreparedGraph } from "../../src/core/graph/runner.js";
 import { validateProject } from "../../src/core/validate.js";
-import { documentAnalysisFixture } from "../helpers/graphAnalysis.js";
+import { codeAnalysisFixture, documentAnalysisFixture } from "../helpers/graphAnalysis.js";
+import { graphProcessFixture } from "../helpers/graphProcess.js";
+import {
+  completedCodeSnapshotFixture,
+  completedDocumentSnapshotFixture,
+  localCodeGenerationProcess,
+} from "../helpers/graphReuse.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const roots: string[] = [];
@@ -82,6 +93,153 @@ describe("the Graphify document corpus", () => {
     } finally {
       await fixture.dispose();
     }
+  });
+
+  // QFAI:AC-0001-0234-08
+  // QFAI:EX-0001-0234-19
+  it("never restores a cached code analysis holding a file under a configured deliberation directory", async () => {
+    const fixture = await completedCodeSnapshotFixture();
+    try {
+      await put(fixture.root, "qfai.config.yaml", "paths:\n  deliberationDir: docs/delib\n");
+      expect(
+        await prepareCodeAnalysis(fixture.root, fixture.run, fixture.environment),
+      ).toMatchObject({ status: "prepared", source: "restored" });
+      await rm(fixture.analysis, { recursive: true });
+      const record = ["docs", "delib", "20261113000000-moved.md"];
+      await put(fixture.candidate, ["analysis", ...record].join("/"), "# Deliberation record\n");
+      expect(
+        await prepareCodeAnalysis(
+          fixture.root,
+          localCodeGenerationProcess(fixture),
+          fixture.environment,
+        ),
+      ).toMatchObject({ status: "prepared", source: "generated" });
+      await expect(readFile(path.join(fixture.analysis, ...record))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    } finally {
+      await fixture.dispose();
+    }
+  });
+
+  // QFAI:AC-0001-0234-08
+  // QFAI:EX-0001-0234-19
+  it("never restores a cached document analysis holding a file under a configured deliberation directory", async () => {
+    const fixture = await completedDocumentSnapshotFixture();
+    try {
+      await put(fixture.root, "qfai.config.yaml", "paths:\n  deliberationDir: docs/delib\n");
+      expect(
+        await prepareDocumentAnalysis(fixture.root, fixture.run, undefined, fixture.environment),
+      ).toMatchObject({ status: "prepared", source: "restored" });
+      await rm(fixture.documentAnalysis, { recursive: true });
+      const cache = path.join(fixture.common, "qfai-graph-cache", "win32-x64", "graphify");
+      const [candidate = ""] = await readdir(cache);
+      const record = ["docs", "delib", "20261113000000-moved.md"];
+      await put(
+        path.join(cache, candidate),
+        ["analysis", ...record].join("/"),
+        "# Deliberation record\n",
+      );
+      const result = await prepareDocumentAnalysis(
+        fixture.root,
+        fixture.run,
+        undefined,
+        fixture.environment,
+      );
+      expect(result).not.toMatchObject({ source: "restored" });
+      await expect(readFile(path.join(fixture.documentAnalysis, ...record))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    } finally {
+      await fixture.dispose();
+    }
+  });
+
+  const unusableConfigs = [
+    "paths: [unclosed\n",
+    "paths:\n  deliberationDir: 42\n",
+    "paths: docs\n",
+  ];
+  const unusable = {
+    failure:
+      "qfai.config.yaml could not be read, or its paths.deliberationDir is not a directory path.",
+    recovery: "Correct qfai.config.yaml, then retry.",
+  };
+
+  // QFAI:AC-0001-0234-08
+  // QFAI:EX-0001-0234-20
+  it("builds no corpus when the configuration gives no usable deliberation directory", async () => {
+    for (const config of unusableConfigs) {
+      const fixture = await documentAnalysisFixture();
+      try {
+        await put(fixture.root, "qfai.config.yaml", config);
+        const record = ".qfai/deliberation/20261113000000-kept.md";
+        await put(fixture.root, record, "# Deliberation record: the design rationale\n");
+        const answer = await exploreGraph(
+          fixture.root,
+          { domain: "documents", question: "rationale" },
+          fixture.run,
+        );
+        expect(answer, config).toMatchObject({ status: "failed", ...unusable });
+        await expect(
+          readFile(path.join(fixture.documentAnalysis, ...record.split("/"))),
+        ).rejects.toMatchObject({ code: "ENOENT" });
+        expect(fixture.calls.some((call) => call.args.includes("query"))).toBe(false);
+        expect(
+          fixture.calls.some((call) => call.args.some((arg) => arg.endsWith("graphify-native.py"))),
+        ).toBe(false);
+      } finally {
+        await fixture.dispose();
+      }
+    }
+  });
+
+  // QFAI:AC-0001-0234-08
+  // QFAI:EX-0001-0234-20
+  it("prepares no analysis when the configuration gives no usable deliberation directory", async () => {
+    for (const domain of ["code", "documents"] as const) {
+      const fixture =
+        domain === "code" ? await codeAnalysisFixture() : await documentAnalysisFixture();
+      try {
+        await rm(graphAnalysisRoot(fixture.root, domain === "code" ? "codegraph" : "graphify"), {
+          recursive: true,
+        });
+        await put(fixture.root, "qfai.config.yaml", unusableConfigs[0] ?? "");
+        const prepared = queryPreparedGraph(
+          fixture.root,
+          { domain, question: "rationale" },
+          fixture.run,
+        );
+        await expect(prepared, domain).rejects.toBeInstanceOf(GraphConfigUnreadableError);
+        await expect(prepared, domain).rejects.toMatchObject({
+          message: unusable.failure,
+          recovery: unusable.recovery,
+        });
+        expect(
+          fixture.calls.some(
+            (call) => call.args.includes("index") || call.args.includes("extract"),
+          ),
+          domain,
+        ).toBe(false);
+      } finally {
+        await fixture.dispose();
+      }
+    }
+  });
+
+  // QFAI:AC-0001-0234-08
+  // QFAI:EX-0001-0234-20
+  it("lets a second init finish with code analysis not ready", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-unusable-config-"));
+    roots.push(root);
+    const fixture = graphProcessFixture();
+    await prepareGraphRuntimes(root, fixture.run);
+    const analysis = graphAnalysisRoot(root, "codegraph");
+    await put(analysis, ".codegraph/codegraph.db", "native-status port fixture\n");
+    await put(root, "qfai.config.yaml", unusableConfigs[0] ?? "");
+    const result = await prepareGraphRuntimes(root, fixture.run);
+    expect(result).toMatchObject({ runtime: "installed", code: "code-not-ready" });
+    expect(result.failedStep).toBeUndefined();
   });
 });
 

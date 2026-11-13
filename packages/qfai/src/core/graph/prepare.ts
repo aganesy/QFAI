@@ -12,7 +12,7 @@ import {
   type GraphProcessResult,
 } from "./process.js";
 import { isEnoent } from "../fs/errno.js";
-import { inspectCurrentCodeAnalysis } from "./analysis.js";
+import { GraphConfigUnreadableError, inspectCurrentCodeAnalysis } from "./analysis.js";
 import { GRAPH_VERSIONS, graphRuntimeFiles, graphRuntimePaths } from "./layout.js";
 import { assertGraphStoragePath, replaceGraphDirectory } from "./storage.js";
 import { formatReportPath } from "../init/reportPath.js";
@@ -67,7 +67,7 @@ export async function prepareGraphRuntimes(
     return {
       runtime: "installed",
       tools: { codegraph: "installed", graphify: "installed" },
-      code: (await inspectCurrentCodeAnalysis(root, run)) ? "code-ready" : "code-not-ready",
+      code: (await currentCodeAnalysis(root, run)) ? "code-ready" : "code-not-ready",
       documents: "documents-not-ready",
     };
   }
@@ -269,6 +269,16 @@ function shownOutput(text: string | undefined, prefix: string): string {
   const bounded =
     lines.length > CAUSE_CHARACTERS ? `${lines.slice(0, CAUSE_CHARACTERS)}...` : lines;
   return `${prefix}${formatReportPath(bounded)}`;
+}
+
+/** Whether the code analysis is current; an unreadable configuration leaves it not ready. */
+async function currentCodeAnalysis(root: string, run: GraphProcess): Promise<boolean> {
+  try {
+    return await inspectCurrentCodeAnalysis(root, run);
+  } catch (cause: unknown) {
+    if (cause instanceof GraphConfigUnreadableError) return false;
+    throw cause;
+  }
 }
 
 /** A recovery line for a project root deep enough that the tool files near the Windows path limit. */
