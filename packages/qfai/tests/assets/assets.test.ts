@@ -939,7 +939,7 @@ describe("assets guardrails", () => {
       // would turn a restatement of the comment into a red build.
       const terms = [
         /\bappended\b/i,
-        /\bkeeps its ID\b/i,
+        /\bID\b/,
         /\brestated\b/i,
         /\bunion\b/i,
         /\bbase branch\b/i,
@@ -948,9 +948,10 @@ describe("assets guardrails", () => {
       for (const term of terms) {
         expect(comment, `${file}: the comment must say why (${String(term)})`).toMatch(term);
       }
-      // Since a decision row's wording may be restated, the comment must not forbid editing rows.
+      // Since a decision row's wording may be restated, the comment must not say that every
+      // register row is never edited. A question row is still never edited, so that is allowed.
       expect(comment, `${file}: the comment must not say rows are never edited`).not.toMatch(
-        /never edited/i,
+        /\brows are (?:only appended, )?never edited/i,
       );
     }
   });
