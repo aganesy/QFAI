@@ -17,3 +17,17 @@ export function readRepositoryDecisions(repoRoot: string): string {
     .map((file) => readFileSync(file, "utf-8"))
     .join("\n");
 }
+
+/**
+ * The register row whose ID cell is `id`, or `""` when the register holds none.
+ *
+ * A row keeps its ID and may have its wording restated, so a test that reads a live row locates it
+ * by that ID and asserts only identifiers the row cites, never its prose.
+ */
+export function readRepositoryDecisionRow(repoRoot: string, id: string): string {
+  return (
+    readRepositoryDecisions(repoRoot)
+      .split(/\r?\n/)
+      .find((line) => line.startsWith(`| ${id} |`)) ?? ""
+  );
+}

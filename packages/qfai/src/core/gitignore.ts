@@ -88,6 +88,15 @@ export const QFAI_GITIGNORE_BLOCK = [
 ].join("\n");
 
 /**
+ * Project lines written above the managed block when `qfai init` creates `.gitignore`.
+ *
+ * QFAI is installed as a local dev dependency, so a fresh project always has `node_modules/`,
+ * and a first `git add -A` would stage it. The line sits outside the managed block: it is the
+ * project's to keep or remove, and an existing `.gitignore` never gains it.
+ */
+export const FRESH_GITIGNORE_PROJECT_LINES: readonly string[] = ["node_modules/"] as const;
+
+/**
  * True when `pattern` — one ignore line — could match `samplePath`.
  *
  * A presence check is not enough for a negation: git applies the **last**
