@@ -24,6 +24,12 @@ export interface GraphHookDecision {
 type GraphSearchAuthorization = (decision: GraphHookDecision) => GraphHookDecision;
 type GraphShell = "posix" | "powershell" | "cmd";
 
+/** One command of a shell event; `upstream` holds the pipeline stage whose output it reads. */
+interface ShellCommand {
+  words: string[];
+  upstream?: string[];
+}
+
 export function classifyGraphExploration(
   event: GraphHookEvent,
   authorize: GraphSearchAuthorization = (decision) => decision,
@@ -54,11 +60,11 @@ export function classifyGraphExploration(
 }
 
 function classifyCommands(
-  commands: string[][],
+  commands: ShellCommand[],
   authorize: GraphSearchAuthorization,
   depth = 0,
 ): GraphHookDecision | undefined {
-  const changesDirectory = commands.some(changesGraphDirectory);
+  const changesDirectory = commands.some((command) => changesGraphDirectory(command.words));
   const scopedAuthorization: GraphSearchAuthorization = changesDirectory
     ? (decision) =>
         graphFallbackUnavailable(
@@ -69,8 +75,8 @@ function classifyCommands(
     : authorize;
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
-  for (const words of commands) {
-    const decision = classifyCommand(words, scopedAuthorization, depth);
+  for (const { words, upstream } of commands) {
+    const decision = classifyCommand(words, scopedAuthorization, depth, upstream);
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
@@ -99,11 +105,12 @@ function classifyCommand(
   words: string[],
   authorize: GraphSearchAuthorization,
   depth = 0,
+  upstream?: string[],
 ): GraphHookDecision | undefined {
   if (depth > 16) return failedGraphHook();
   let offset = 0;
   while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) offset += 1;
-  if (offset > 0) return classifyCommand(words.slice(offset), authorize, depth + 1);
+  if (offset > 0) return classifyCommand(words.slice(offset), authorize, depth + 1, upstream);
   const operation = words[0]
     ?.split(/[\\/]/)
     .at(-1)
@@ -114,7 +121,7 @@ function classifyCommand(
     while (words[offset]?.startsWith("-") || /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) {
       offset += 1;
     }
-    return classifyCommand(words.slice(offset), authorize, depth + 1);
+    return classifyCommand(words.slice(offset), authorize, depth + 1, upstream);
   }
   if (["bash", "sh", "zsh", "pwsh", "powershell", "cmd"].includes(operation ?? "")) {
     const switchIndex = words.findIndex((word) => /^(?:-[a-z]*c|\/c|-command)$/i.test(word));
@@ -128,6 +135,13 @@ function classifyCommand(
           : "posix";
     const commands = shellPipelines(inner, shell);
     return commands ? classifyCommands(commands, authorize, depth + 1) : failedGraphHook();
+  }
+  if (
+    (operation === "rg" || operation === "grep" || operation === "findstr") &&
+    upstream &&
+    readsOnlyStandardInput(operation, words.slice(1))
+  ) {
+    return undefined;
   }
   if (operation === "rg" || operation === "grep" || operation === "findstr") {
     let offset = 1;
@@ -170,6 +184,9 @@ function classifyCommand(
     });
   }
   if (operation === "select-string") {
+    if (upstream && !listsFiles(upstream) && selectStringReadsInput(words.slice(1))) {
+      return undefined;
+    }
     const path = words.findIndex((word) => /^-(?:literalpath|path)$/i.test(word));
     const targets: string[] = [];
     for (let offset = path + 1; path >= 0 && offset < words.length; offset += 1) {
@@ -213,6 +230,101 @@ function classifyCommand(
   return outsideBoundary();
 }
 
+const optionsWithValue: Record<"rg" | "grep", RegExp> = {
+  grep: /^(?:-[efmABCdD]|--(?:regexp|file|max-count|context|after-context|before-context|directories|devices|label|binary-files|include|exclude|exclude-dir|exclude-from|color|colour))$/,
+  rg: /^(?:-[efmABCgtTrMjE]|--(?:regexp|file|max-count|context|after-context|before-context|glob|iglob|type|type-not|replace|max-columns|threads|encoding|color|colors|type-add|max-depth|max-filesize|pre|pre-glob|sort|sortr|path-separator|engine))$/,
+};
+
+/** A word the shell may expand or redirect, so its operands cannot be read from the text. */
+function unparsedWord(word: string): boolean {
+  return /\$[\w{(@*#?!$-]|`|%[^%\s]+%|^\d*</.test(word);
+}
+
+/**
+ * Whether grep, rg or findstr after a pipe has no file operand, so it reads the
+ * previous stage's output rather than the project. Recursive grep and rg --files
+ * search the working directory without one, and an unparsed word keeps the search denied.
+ */
+function readsOnlyStandardInput(operation: "rg" | "grep" | "findstr", args: string[]): boolean {
+  let patternGiven = false;
+  const operands: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const word = args[index] ?? "";
+    if (unparsedWord(word)) return false;
+    if (/^\d*>{1,2}$/.test(word)) index += 1;
+    else if (/^\d*>{1,2}./.test(word)) continue;
+    else if (operation === "findstr") {
+      if (/^\/[fgd]:/i.test(word) || /^\/[a-z]*s/i.test(word)) return false;
+      if (/^\/c:/i.test(word)) patternGiven = true;
+      else if (!/^\/[a-z]+$/i.test(word)) operands.push(word);
+    } else if (word === "--") {
+      operands.push(...args.slice(index + 1));
+      break;
+    } else if (!word.startsWith("-") || word === "-") {
+      operands.push(word);
+    } else if (
+      (operation === "rg" && word === "--files") ||
+      (operation === "grep" &&
+        (/^-[^-]*[rR]/.test(word) ||
+          /^--(?:recursive|dereference-recursive|directories=recurse)$/.test(word) ||
+          (/^(?:-d|--directories)$/.test(word) && args[index + 1] === "recurse")))
+    ) {
+      return false;
+    } else if (/^(?:-[ef].|--(?:regexp|file)=)/.test(word)) {
+      patternGiven = true;
+    } else if (optionsWithValue[operation].test(word)) {
+      if (/^(?:-[ef]|--(?:regexp|file))$/.test(word)) patternGiven = true;
+      index += 1;
+    }
+  }
+  const files = patternGiven ? operands : operands.slice(1);
+  return (patternGiven || operands.length > 0) && files.every((word) => word === "-");
+}
+
+/**
+ * Whether Select-String after a pipe names no path, so it searches the piped
+ * objects. Its second positional word is a path.
+ */
+function selectStringReadsInput(args: string[]): boolean {
+  let positional = 0;
+  for (let index = 0; index < args.length; index += 1) {
+    const word = args[index] ?? "";
+    if (unparsedWord(word) || namesPath(word)) return false;
+    if (
+      abbreviates(word, "-pattern", 4) ||
+      /^-(?:encoding|context|include|exclude|culture)$/i.test(word)
+    )
+      index += 1;
+    else if (/^\d*>{1,2}$/.test(word)) index += 1;
+    else if (!word.startsWith("-") && !/^\d*>/.test(word)) positional += 1;
+  }
+  return positional <= (args.some((word) => abbreviates(word, "-pattern", 4)) ? 0 : 1);
+}
+
+/** Whether a Select-String parameter names files, accepting PowerShell's unambiguous abbreviations. */
+function namesPath(word: string): boolean {
+  return (
+    abbreviates(word, "-literalpath", 3) ||
+    abbreviates(word, "-pspath", 3) ||
+    /^-(?:path|lp)$/i.test(word)
+  );
+}
+
+function abbreviates(word: string, parameter: string, minimum: number): boolean {
+  return word.length >= minimum && parameter.startsWith(word.toLowerCase());
+}
+
+/** Whether a PowerShell stage emits file objects that Select-String would search. */
+function listsFiles(words: string[]): boolean {
+  return ["get-childitem", "gci", "ls", "dir", "get-item", "gi", "resolve-path", "rvpa"].includes(
+    words[0]
+      ?.split(/[\\/]/)
+      .at(-1)
+      ?.replace(/\.exe$/i, "")
+      .toLowerCase() ?? "",
+  );
+}
+
 function outsideBoundary(): GraphHookDecision {
   return {
     decision: "allow",
@@ -222,9 +334,10 @@ function outsideBoundary(): GraphHookDecision {
   };
 }
 
-function shellPipelines(command: string, shell: GraphShell): string[][] | undefined {
-  const commands: string[][] = [];
+function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | undefined {
+  const commands: ShellCommand[] = [];
   let words: string[] = [];
+  let upstream: string[] | undefined;
   let word = "";
   let quote: string | undefined;
   const flushWord = () => {
@@ -254,7 +367,11 @@ function shellPipelines(command: string, shell: GraphShell): string[][] | undefi
       quote = character;
     } else if (character === "|" || character === ";" || character === "&" || character === "\n") {
       flushWord();
-      if (words.length) commands.push(words);
+      if (words.length) commands.push({ words, ...(upstream ? { upstream } : {}) });
+      const pipe = character === "|" && next !== "|" && words.length > 0;
+      if (character === "|" && next === "|") index += 1;
+      else if (pipe && shell === "posix" && next === "&") index += 1;
+      upstream = pipe ? words : undefined;
       words = [];
     } else if (/\s/.test(character)) {
       flushWord();
@@ -264,7 +381,7 @@ function shellPipelines(command: string, shell: GraphShell): string[][] | undefi
   }
   if (quote) return undefined;
   flushWord();
-  if (words.length) commands.push(words);
+  if (words.length) commands.push({ words, ...(upstream ? { upstream } : {}) });
   return commands;
 }
 
