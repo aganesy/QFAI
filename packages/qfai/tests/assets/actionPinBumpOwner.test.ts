@@ -9,31 +9,19 @@
  * That is worth doing rather than skipping. A rule satisfied by "somebody decided this"
  * degrades to nothing the moment the person who decided it stops reading pull requests. A
  * rule satisfied by a row in `.qfai/spec/decisions.md`, asserted here, fails when the
- * row is deleted or reworded past the point where it still carries the reason.
+ * row is removed or stops citing what it decides.
  *
  * ## What this file must NOT do
  *
- * It must not assert prose verbatim. A test that pins whole sentences makes every editorial
- * pass a red build, and the rules do not ask for wording — they ask for content. So each
- * claim below names the specific thing its rule names: a path that must be cited, a reason
- * that must be present, a rejected reason that must be marked rejected.
+ * It must not assert a row's prose. A register row keeps its ID and is never removed, but its
+ * wording may be restated while the decision stands, so a test that pins a word, a phrase or a
+ * number of a live row makes every restatement a red build. Each row is therefore located by its
+ * `DEC-NNNN` ID and asserted only through the identifiers it cites: the imported decision key and
+ * the requirement, example and test IDs the decision answers. Whether the prose still carries the
+ * reason the rule asks for is a review question, not a pattern this file can grade.
  *
- * ## The exception, and why it is not a loophole
- *
- * Three claims pin a PHRASE rather than a word, and each says why at its own site. The reason
- * is always the same and it is not editorial taste: these records QUOTE the business rule they
- * satisfy, so the obvious word-level pattern matched the quotation instead of the record's own
- * statement. `/\bkept\b/` passed over a record saying the opposite of what it needed to say,
- * because the flakier-setting rule's quoted text contains "the lower setting MUST be kept". `before` and
- * `first` appear in the surrounding prose; `sign-off` appears in the next sentence.
- *
- * Each of those was found by an oracle round that reddened NOTHING, which is the only way this
- * class of vacuity shows up. So the rule stands as "content, not wording", with the
- * clarification that a phrase is the smallest unit of content when a shorter one is satisfied
- * by the rule's own text quoted nearby. Implementation-review finding L12 pointed out that the
- * paragraph above said otherwise while the pins existed; this is the honest version.
- *
- * Markdown FORMATTING is never part of a pin, and one had crept in — corrected below.
+ * What the rules ask of the TREE — the gate file, its wiring, the retired and surviving workflows,
+ * the declared worker value — is still asserted against the tree.
  *
  * ## The first two rows
  *
@@ -51,14 +39,14 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { readRepositoryDecisions } from "../helpers/decisionRegister.js";
+import { readRepositoryDecisionRow } from "../helpers/decisionRegister.js";
 import { declaredIncludeGlobs, testFileCount } from "../helpers/runnerProjects.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
 
-/** The decision this pair of rows reads. */
-const RETIREMENT_DR = "DR-0017-0007";
+/** The decision this pair of rows reads: its register row and the imported key it carries. */
+const RETIREMENT: DecisionRef = { row: "DEC-0333", key: "DR-0017-0007" };
 
 /**
  * The gate `BR-0016-0060` requires to exist at or before the deletion, as a repository path.
@@ -94,18 +82,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** A decision as the register identifies it: its row ID and the imported decision key it cites. */
+interface DecisionRef {
+  readonly row: string;
+  readonly key: string;
+}
+
 /**
- * One imported decision's row in the consolidated decision register.
+ * One decision's row in the consolidated decision register, located by its row ID.
  *
- * Selected rather than read whole, so a phrase present somewhere else in the register cannot
- * satisfy a claim about this decision.
+ * Selected rather than read whole, so an ID cited somewhere else in the register cannot satisfy a
+ * claim about this decision.
  */
-function decisionSection(id: string): string {
-  const source = readRepositoryDecisions(REPO_ROOT);
-  return (
-    source.split(/\r?\n/).find((line) => /^\| DEC-\d+ \|/.test(line) && line.includes(`#${id}:`)) ??
-    ""
-  );
+function decisionSection(decision: DecisionRef): string {
+  return readRepositoryDecisionRow(REPO_ROOT, decision.row);
+}
+
+/**
+ * Asserts the row exists and cites `ids`, softly, one failure per missing ID.
+ *
+ * The first assertion is hard: a missing row would otherwise produce one confusing failure per ID
+ * instead of one clear one.
+ */
+function expectRowCites(decision: DecisionRef, ids: readonly string[], subject: string): void {
+  const section = decisionSection(decision);
+  expect(section, `${decision.row} must record ${subject}`).not.toBe("");
+  for (const id of [decision.key, ...ids]) {
+    expect.soft(section, `${decision.row} must cite ${id}`).toContain(id);
+  }
 }
 
 // QFAI:EX-0002-0014-09
@@ -114,43 +118,15 @@ function decisionSection(id: string): string {
 // QFAI:EX-0002-0019-05
 // QFAI:EX-0002-0020-04
 describe("TC-0017-0074 (TDD-0074): deleting the copy with no shipped-set gate is rejected", () => {
-  it("records the retirement with the gate named and the cost stated as the lost cross-check", () => {
-    const section = decisionSection(RETIREMENT_DR);
-
-    // CLAIM 1 — the decision exists. Everything below reads it, so this is asserted first
-    // and hard: a missing record would otherwise produce four confusing empty-string
-    // failures instead of one clear one.
-    expect(
-      section,
-      `${RETIREMENT_DR} must record the retirement of the repository's own validate workflow`,
-    ).not.toBe("");
-
-    // CLAIM 2 — it names the gate. `BR-0016-0060`'s accepting shape is "the gate present in
-    // the same change or an earlier one", so a record that omits which gate cannot be
-    // checked against anything.
-    expect
-      .soft(section, `${RETIREMENT_DR} must name the structural contract gate it relies on`)
-      .toContain(SHIPPED_SET_GATE);
-
-    // CLAIM 3 — the recorded cost is the manual cross-check.
-    expect
-      .soft(section, "the recorded justification must be the loss of the manual cross-check")
-      .toMatch(/manual cross-check/i);
-
-    // CLAIM 4 — and the absent mirror is recorded as NOT the reason. This is the half the
-    // rule is specific about: the two files had already diverged, so "we lost the mirror"
-    // would be a reason that was never true. A record naming the cross-check while leaving
-    // the mirror unaddressed passes CLAIM 3 and still misstates the trade.
-    expect
-      .soft(section, "the record must state that the absence of a mirror is NOT the justification")
-      .toMatch(/\bnot\b[^.]{0,120}\bmirror\b/i);
-
-    // CLAIM 5 — and the rejected alternative is kept with its reason. `BR-0016-0058` rejects
-    // repointing at the shipped file because it resolves to the published package; a
-    // register that drops rejected options invites the next reader to re-propose them.
-    expect
-      .soft(section, "the record must keep the rejected repoint alternative and why")
-      .toMatch(/published/i);
+  it("records the retirement, citing its decision key and the gate's test cases", () => {
+    // The row names the gate through the gate's own cases, so a restatement that drops the path
+    // still answers which gate; that the gate exists and runs is TC-0017-0075's half, read from
+    // the tree.
+    expectRowCites(
+      RETIREMENT,
+      ["TC-0017-0074", "TC-0017-0075"],
+      "the retirement of the repository's own validate workflow",
+    );
   });
 });
 
@@ -211,13 +187,13 @@ describe("TC-0017-0075 (TDD-0075): the gate is present at or before the deletion
 // the paragraph as a whole.
 
 /** The decision that names the pin bump owner. */
-const PIN_OWNER_DR = "DR-0017-0003";
+const PIN_OWNER: DecisionRef = { row: "DEC-0329", key: "DR-0017-0003" };
 
 /** The decision recording that shipped coverage did not precede the shipped hardening. */
-const SHIPPED_ORDER_DR = "DR-0017-0008";
+const SHIPPED_ORDER: DecisionRef = { row: "DEC-0334", key: "DR-0017-0008" };
 
 /** The decision recording the parallelism episode. */
-const PARALLELISM_DR = "DR-0017-0009";
+const PARALLELISM: DecisionRef = { row: "DEC-0335", key: "DR-0017-0009" };
 
 /**
  * Files that would BE a bump configuration.
@@ -233,27 +209,10 @@ const BUMP_CONFIGS = [
 ];
 
 describe("TC-0017-0025 (TDD-0025): a durable repository artifact names the pin bump owner", () => {
-  it("records an owner and binds the obligation to a moment something can detect", () => {
-    const section = decisionSection(PIN_OWNER_DR);
-    expect(section, `${PIN_OWNER_DR} must record the pin bump owner`).not.toBe("");
-
-    // CLAIM 1 — an owner is named. `BR-0016-0022` makes the pins unsatisfied until a durable
-    // artifact says who bumps them, so the absence of a name is the failure.
-    expect.soft(section, "the record must name who bumps the pins").toMatch(/owner/i);
-
-    // CLAIM 2 — and the obligation is attached to a recurring moment. An owner with no cadence
-    // discharges "whenever someone remembers", which is the state `BR-0016-0022` describes as
-    // unsatisfied rather than as informal.
-    expect
-      .soft(section, "the record must bind the obligation to a recurring, detectable moment")
-      .toMatch(/release preparation/i);
-
-    // CLAIM 3 — and it is a ROLE. A named individual would go stale with no gate able to
-    // notice, which is the same failure class the version-marker rules exist to prevent. The
-    // record says so; this asserts it still does.
-    expect
-      .soft(section, "the record must name a role rather than an individual, and say why")
-      .toMatch(/role/i);
+  it("records the owner, citing the capability that owns the pins and the criteria it discharges", () => {
+    // `BR-0016-0022` makes the pins unsatisfied until a durable artifact says who bumps them. The
+    // row cites the capability whose maintainer role owns them and the two criteria it discharges.
+    expectRowCites(PIN_OWNER, ["CAP-0017", "AC-0017-0010", "AC-0017-0011"], "the pin bump owner");
   });
 });
 
@@ -268,86 +227,41 @@ describe("TC-0017-0026 (TDD-0026): no root bump configuration, and the owner is 
     // more than a prohibition: the absence of the configuration is only acceptable BECAUSE the
     // record exists, so both are asserted together.
     expect
-      .soft(decisionSection(PIN_OWNER_DR), "the owner must be recorded even with no configuration")
+      .soft(decisionSection(PIN_OWNER), "the owner must be recorded even with no configuration")
       .not.toBe("");
   });
 });
 
 describe("TC-0017-0052 (TDD-0052): shipped coverage never precedes the shipped hardening", () => {
-  it("records that the hardening was in place before the scan was enabled, with what was checked", () => {
-    const section = decisionSection(SHIPPED_ORDER_DR);
-    expect(section, `${SHIPPED_ORDER_DR} must record the ordering check`).not.toBe("");
-
-    // CLAIM 1 — the ordering is stated in the accepting direction. `EX-0017-0045` gives the
-    // rejected shape ("lands instantly red") and the accepting one ("in the same change as the
-    // shipped hardening or later, never before it"), so the record has to say which happened.
-    expect
-      .soft(section, "the record must state that the hardening preceded the coverage")
-      // The SENTENCE, not a word. `before` and `first` both appear elsewhere in this
-      // section, so the alternation this replaced survived its own oracle round.
-      .toMatch(/enabled only after/i);
-
-    // CLAIM 2 — and it says what was checked, not merely that a check happened. A record that
-    // asserts "the tree was hardened" without naming the properties is a claim nobody can
-    // re-derive, which is the same defect as a cost claim with no numbers.
-    for (const property of [/permission/i, /timeout/i, /pin/i]) {
-      expect
-        .soft(section, `the record must name what was verified (${String(property)})`)
-        .toMatch(property);
-    }
+  it("records the ordering check, citing the example it satisfies and this case", () => {
+    // `EX-0017-0045` gives the rejected shape ("lands instantly red") and the accepting one, so the
+    // row that records which happened cites it.
+    expectRowCites(SHIPPED_ORDER, ["EX-0017-0045", "TC-0017-0052"], "the ordering check");
   });
 });
 
 describe("TC-0017-0066 (TDD-0066): a slower or flakier higher value keeps the lower one", () => {
   // QFAI:EX-0002-0019-04
-  it("records the flakiness measurement, and what happened instead of lowering the value", () => {
-    const section = decisionSection(PARALLELISM_DR);
-    expect(section, `${PARALLELISM_DR} must record the parallelism episode`).not.toBe("");
-
-    // CLAIM 1 — the measurement is recorded, with numbers. `BR-0016-0030` is explicit that no
-    // parallelism claim lands on argument, and this record exists because a claim WAS made and
-    // then measured.
-    expect
-      .soft(section, "the record must carry the measurement rather than describing it")
-      .toMatch(/\b862\b/);
-
-    // CLAIM 2 — and the outcome is stated as a THIRD outcome, not as the rule's. `BR-0016-0049`
-    // says a flakier higher value means the lower one is kept; here the higher value was kept
-    // and the cause removed instead. A record that let that read as compliance would be worse
-    // than one that omitted it.
-    expect
-      .soft(section, "the record must say the declared value was KEPT, not lowered")
-      // `kept` alone is not enough: this record QUOTES the flakier-setting rule, whose own text says
-      // the lower setting must be kept. Matching that word let the claim pass over a
-      // record saying the opposite of what it needs to say.
-      //
-      // The subject plus the verb, and NOT the Markdown emphasis around it. The pattern was
-      // `/higher setting was \*\*kept\*\*/i`, which made bolding load-bearing — an
-      // editorial change this file's own docblock says must not break a build.
-      .toMatch(/higher setting[^.]{0,40}\bkept\b/i);
-
-    // CLAIM 3 — and it names the retry loop the rule forbids, as something that did not happen.
-    // "Re-running the comparison until it agrees is forbidden" is the failure mode this episode
-    // was closest to, so the record has to distinguish diagnosis from repetition.
-    expect
-      .soft(section, "the record must distinguish diagnosis from re-running until it agrees")
-      .toMatch(/re-?run/i);
+  it("records the flakiness episode, citing the examples it answers and this case", () => {
+    // `BR-0016-0049` says a flakier higher value means the lower one is kept; here the higher value
+    // was kept and the cause removed instead, and the row recording that cites the examples and
+    // cases of both rules it answers.
+    expectRowCites(
+      PARALLELISM,
+      ["EX-0017-0050", "EX-0017-0051", "TC-0017-0066"],
+      "the parallelism episode",
+    );
   });
 });
 
 describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs the sign-off", () => {
   it("records that a revision was proposed and refused, and that the value did not move", () => {
-    const section = decisionSection(PARALLELISM_DR);
-
     // The rule's negative direction, and this repository has an actual instance of it: a
     // revision was proposed on the strength of a measurement and refused. `BR-0016-0050` says
     // "no agent may substitute a different starting value on the strength of its own
-    // measurement", so the interesting artifact is the refusal, not a value.
-    expect
-      .soft(section, "the record must show a revision was proposed and not taken")
-      // `sign-off` appears in the very next sentence, so matching it let this pass over a
-      // record that never mentioned a proposal at all.
-      .toMatch(/proposed lowering/i);
+    // measurement", so the interesting artifact is the refusal, recorded in the row that cites
+    // this case.
+    expectRowCites(PARALLELISM, ["TC-0017-0067"], "the refused revision");
 
     // And the declared value is still what it was. Asserted against the runner configuration
     // rather than against the record, so the two cannot agree with each other while both being

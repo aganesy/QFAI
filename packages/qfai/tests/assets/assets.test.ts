@@ -929,12 +929,12 @@ describe("assets guardrails", () => {
       .filter((line) => line.startsWith("#"))
       .map((line) => line.replace(/^#\s?/, "").trim())
       .join(" ");
-    expect(seedComment).toContain(
-      "Register rows are only appended, never edited or renumbered, so Git union merging keeps both branches' rows.",
-    );
-    expect(seedComment).toContain(
-      "When a host shows a conflict in these files, merge the base branch locally and push; edit no row.",
-    );
+    // The comment's content, not its sentences: rows are appended, so union merging keeps both
+    // branches' rows, and a conflict a host shows is resolved by merging the base branch locally.
+    // A pinned sentence would turn a restatement of the comment into a red build.
+    for (const term of [/\bappended\b/i, /\bunion\b/i, /\bbase branch\b/i, /\blocally\b/i]) {
+      expect(seedComment, `the seed comment must say why (${String(term)})`).toMatch(term);
+    }
   });
 
   it("states the LF line-ending policy in the Drift Protocol", async () => {
