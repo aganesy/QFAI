@@ -110,14 +110,14 @@ function classifyCommand(
   if (depth > 16) return failedGraphHook();
   let offset = 0;
   while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) offset += 1;
-  if (offset > 0) return classifyCommand(words.slice(offset), authorize, depth + 1, upstream);
+  if (offset > 0) return classifyCommand(words.slice(offset), authorize, depth + 1);
   const operation = commandName(words);
   if (operation === "env" || operation === "command" || operation === "builtin") {
     let offset = 1;
     while (words[offset]?.startsWith("-") || /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) {
       offset += 1;
     }
-    return classifyCommand(words.slice(offset), authorize, depth + 1, upstream);
+    return classifyCommand(words.slice(offset), authorize, depth + 1);
   }
   if (["bash", "sh", "zsh", "pwsh", "powershell", "cmd"].includes(operation ?? "")) {
     const switchIndex = words.findIndex((word) => /^(?:-[a-z]*c|\/c|-command)$/i.test(word));
@@ -227,7 +227,7 @@ function commandName(words: string[]): string | undefined {
 
 /** A word the shell may expand or redirect, so what the command reads cannot be told from the text. */
 function unparsedWord(word: string): boolean {
-  return /\$[\w{(@*#?!$-]|[`<>]|%[^%\s]+%/.test(word);
+  return /\$(?!$)|[`<>]|%[^%\s]+%/.test(word);
 }
 
 /**
@@ -239,23 +239,63 @@ function unparsedWord(word: string): boolean {
 function printsText(command: ShellCommand | undefined): boolean {
   if (
     !command ||
-    command.words.some((word) => unparsedWord(word) && !/^\d*>(?:&\d|\/dev\/null)$/.test(word))
+    command.words.some(
+      (word) =>
+        /[(){}]/.test(word) || (unparsedWord(word) && !/^\d*>(?:&\d|\/dev\/null)$/.test(word)),
+    )
   )
     return false;
-  const name = commandName(command.words);
-  if (name === "git" || ["echo", "printf", "write-output"].includes(name ?? "")) return true;
-  if (["pnpm", "npm", "corepack"].includes(name ?? "")) {
-    return !command.words
-      .slice(1, 3)
-      .some((word) => ["exec", "dlx", "x", "pnpx", "npx"].includes(word.toLowerCase()));
+  const name = commandName(command.words) ?? "";
+  const args = command.words.slice(1);
+  if (name === "git") return gitTextCommands.has(args[0] ?? "");
+  if (["echo", "printf", "write-output"].includes(name))
+    return !args.some((word) => /[*?[!]/.test(word));
+  if (name === "pnpm" || name === "npm") return packageTextCommands.has(args[0] ?? "");
+  if (name === "corepack") {
+    return ["pnpm", "npm"].includes(args[0] ?? "") && packageTextCommands.has(args[1] ?? "");
   }
   if (name === "sort" || name === "uniq") {
-    return command.words.slice(1).every((word) => word.startsWith("-"))
-      ? printsText(command.upstream)
-      : false;
+    const switches = name === "sort" ? /^-[rnufbdhMV]+$/ : /^-[cdiu]+$/;
+    return args.every((word) => switches.test(word)) && printsText(command.upstream);
   }
   return pipeFilter(command.words) && printsText(command.upstream);
 }
+
+/** git subcommands that print names, status, history or differences, never a whole file. */
+const gitTextCommands = new Set([
+  "status",
+  "ls-files",
+  "ls-tree",
+  "log",
+  "diff",
+  "branch",
+  "tag",
+  "remote",
+  "rev-list",
+  "rev-parse",
+  "shortlog",
+  "worktree",
+]);
+
+/** Package-manager commands whose own output is text; exec, dlx and unknown commands run binaries. */
+const packageTextCommands = new Set([
+  "test",
+  "t",
+  "lint",
+  "build",
+  "typecheck",
+  "check-types",
+  "ls",
+  "list",
+  "why",
+  "outdated",
+  "audit",
+  "install",
+  "i",
+  "ci",
+  "view",
+  "info",
+]);
 
 const grepSwitches = /^-[ivncowxEFGPqsHhIyzZLlbUa]+$/;
 const rgSwitches = /^-[ivncowxFsSqaUNHlLIP]+$/;
@@ -361,6 +401,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   let upstream: ShellCommand | undefined;
   let word = "";
   let quote: string | undefined;
+  let afterRedirect = false;
   const flushWord = () => {
     if (word.length) words.push(word);
     word = "";
@@ -376,6 +417,8 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
         (!quote || (quote === '"' && ['"', "\\", "$", "`", "\n"].includes(next)))) ||
         (shell === "powershell" && character === "`" && quote !== "'") ||
         (shell === "cmd" && character === "^" && !quote));
+    const redirectBefore = afterRedirect;
+    afterRedirect = false;
     if (escaped) {
       if (next !== "\n") word += next;
       index += 1;
@@ -388,7 +431,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       quote = character;
     } else if (
       (character === "&" || character === "|") &&
-      (command[index - 1] === ">" || (character === "&" && next === ">"))
+      (redirectBefore || (shell === "posix" && character === "&" && next === ">"))
     ) {
       word += character;
     } else if (character === "\n" && !words.length && !word.length && upstream) {
@@ -408,6 +451,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       flushWord();
     } else {
       word += character;
+      afterRedirect = character === ">";
     }
   }
   if (quote) return undefined;

@@ -375,6 +375,25 @@ it("denies piped searches that still read project files", () => {
     ["PowerShell", "git ls-files | Select-String auth packages/index.ts", "Select-String"],
     ["PowerShell", "git ls-files | Select-String auth -Path:packages/index.ts", "Select-String"],
     ["PowerShell", "git ls-files | Select-String -Pattern:auth packages/index.ts", "Select-String"],
+    ["Bash", "echo \\>|grep -r auth .", "grep"],
+    ["Bash", "echo a\\>&grep -r auth .", "grep"],
+    ["Bash", "echo x | grep $'\\055rie\\x73ecret'", "grep"],
+    ["Bash", "(cat packages/index.ts; echo ) | grep auth", "grep"],
+    ["Bash", "pnpm --filter qfai exec cat packages/index.ts | grep auth", "grep"],
+    ["Bash", "npm -w qfai exec -- cat packages/index.ts | grep auth", "grep"],
+    ["Bash", "pnpm cat packages/index.ts | grep auth", "grep"],
+    ["Bash", "git -c alias.c='!cat packages/index.ts' c | grep auth", "grep"],
+    ["Bash", "git show HEAD:packages/index.ts | grep auth", "grep"],
+    ["Bash", "printf 'packages/index.ts\\0' | sort --files0-from=- | grep auth", "grep"],
+    ["Bash", "git log | RIPGREP_CONFIG_PATH=cfg rg auth", "rg"],
+    ["Bash", "echo packages/* | grep auth", "grep"],
+    [
+      "PowerShell",
+      "Write-Output (Get-Content packages/index.ts) | Select-String auth",
+      "Select-String",
+    ],
+    ["PowerShell", "@(Get-ChildItem -Recurse; git log) | Select-String auth", "Select-String"],
+    ["PowerShell", "echo `>|Select-String auth -Path packages/index.ts", "Select-String"],
     ["PowerShell", "git ls-files | findstr /S auth", "findstr"],
     ["PowerShell", "git ls-files | findstr auth<packages\\index.ts", "findstr"],
   ] as const) {
@@ -382,4 +401,11 @@ it("denies piped searches that still read project files", () => {
     expect(result.decision, command).toBe("deny");
     expect(result.operation, command).toBe(operation);
   }
+  const escaped = classifyGraphExploration({
+    tool: "exec_command",
+    shell: "cmd.exe",
+    command: "echo a ^>|findstr /s auth *",
+  });
+  expect(escaped.decision).toBe("deny");
+  expect(escaped.operation).toBe("findstr");
 });
