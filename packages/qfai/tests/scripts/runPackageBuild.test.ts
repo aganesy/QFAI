@@ -7,7 +7,7 @@
  * pnpm that records how it was called.
  */
 import { spawnSync } from "node:child_process";
-import { chmod, copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,7 +26,20 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map(removeTempTree));
 });
 
-type RunOptions = { cliName?: string; execPath?: "unset" | "relative"; exitCode?: number };
+type RunOptions = {
+  cliName?: string;
+  execPath?: "unset" | "relative" | "missing";
+  exitCode?: number;
+  native?: boolean;
+};
+
+const RECORDER = String.raw`
+require("node:fs").writeFileSync(
+  process.env.BUILD_CALL_LOG,
+  JSON.stringify({ argv: process.argv.slice(2), execArgv: process.execArgv, cwd: process.cwd() }),
+);
+process.exitCode = Number(process.env.BUILD_EXIT_CODE);
+`;
 
 async function runBuild(options: RunOptions = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai build "));
@@ -39,20 +52,15 @@ async function runBuild(options: RunOptions = {}) {
   await copyFile(path.join(REPO_ROOT, "scripts", "run-package-build.mjs"), entry);
   const log = path.join(root, "call.json");
   const cli = path.join(cliDir, options.cliName ?? "pnpm.cjs");
-  // A name with no JavaScript extension stands for the standalone pnpm's own executable.
-  const shebang = /\.(?:cjs|mjs|js)$/.test(cli) ? "" : `#!${process.execPath}\n`;
-  await writeFile(
-    cli,
-    shebang +
-      String.raw`
-require("node:fs").writeFileSync(
-  process.env.BUILD_CALL_LOG,
-  JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd() }),
-);
-process.exitCode = Number(process.env.BUILD_EXIT_CODE);
-`,
-  );
-  if (shebang) await chmod(cli, 0o755);
+  if (options.native) {
+    // A real native executable stands in for the standalone pnpm: Node.js itself. Started with
+    // pnpm's arguments, it reads `-C` as its own `--conditions` flag and runs `<root>/build`.
+    await symlink(process.execPath, cli);
+    await writeFile(path.join(root, "build"), RECORDER);
+  } else {
+    // Plain text with no shebang and no execute bit, so only Node.js can start it.
+    await writeFile(cli, RECORDER);
+  }
   const env: NodeJS.ProcessEnv = Object.fromEntries(
     Object.entries(process.env).filter(
       ([key]) => !["npm_execpath", "path"].includes(key.toLowerCase()),
@@ -62,7 +70,8 @@ process.exitCode = Number(process.env.BUILD_EXIT_CODE);
   env.PATH = "";
   env.BUILD_CALL_LOG = log;
   env.BUILD_EXIT_CODE = String(options.exitCode ?? 0);
-  if (options.execPath === "relative") env.npm_execpath = path.relative(elsewhere, cli);
+  if (options.execPath === "missing") env.npm_execpath = path.join(cliDir, "gone", "pnpm");
+  else if (options.execPath === "relative") env.npm_execpath = path.relative(elsewhere, cli);
   else if (options.execPath !== "unset") env.npm_execpath = cli;
   const result = spawnSync(process.execPath, [entry], { cwd: elsewhere, env, encoding: "utf8" });
   let call: unknown = null;
@@ -92,23 +101,29 @@ describe("the root build script", () => {
     expect(manifest.scripts.build).toBe("node ./scripts/run-package-build.mjs");
   });
 
-  it("builds the package through the pnpm that runs it, with no pnpm on PATH", async () => {
-    const result = await runBuild();
-    expect(result.status, result.stderr).toBe(0);
-    expect(result.call).toEqual({
-      argv: ["-C", path.join("packages", "qfai"), "build"],
-      cwd: result.root,
-    });
-    expect(result.stderr).toBe("");
-  });
-
-  it.skipIf(process.platform === "win32")(
-    "runs a standalone pnpm executable directly rather than through Node.js",
-    async () => {
-      const result = await runBuild({ cliName: "pnpm" });
+  it.each(["pnpm.cjs", "pnpm"])(
+    "builds the package through the pnpm that runs it, with no pnpm on PATH (%s)",
+    async (cliName) => {
+      const result = await runBuild({ cliName });
       expect(result.status, result.stderr).toBe(0);
       expect(result.call).toEqual({
         argv: ["-C", path.join("packages", "qfai"), "build"],
+        execArgv: [],
+        cwd: result.root,
+      });
+      expect(result.stderr).toBe("");
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "runs a native pnpm executable directly rather than through Node.js",
+    async () => {
+      const result = await runBuild({ cliName: "pnpm", native: true });
+      expect(result.status, result.stderr).toBe(0);
+      // Node.js took the arguments itself, so pnpm's would-be arguments land in execArgv.
+      expect(result.call).toEqual({
+        argv: [],
+        execArgv: ["-C", path.join("packages", "qfai")],
         cwd: result.root,
       });
     },
@@ -123,6 +138,7 @@ describe("the root build script", () => {
     { execPath: "unset" as const },
     { execPath: "relative" as const },
     { cliName: "npm-cli.js" },
+    { cliName: "pnpm", execPath: "missing" as const },
   ])("refuses a runner it cannot identify as pnpm (%o)", async (options) => {
     const result = await runBuild(options);
     expect(result.status).toBe(1);
