@@ -545,7 +545,8 @@ describe("the signal helpers", () => {
     // After `&` the status is the background start's, and after `||` the echo may not have run.
     expect(echoedStatus('npx qfai validate & echo "exit=$?"', "exit=0")).toBeNull();
     expect(echoedStatus("npx qfai validate || echo $?", "Found 3 issues\n3")).toBeNull();
-    expect(echoedStatus("npx qfai validate && echo $?", "ok\n0")).toBe(0);
+    // After `&&` the echo runs only when qfai passed, so a failure's last line is not a status.
+    expect(echoedStatus("npx qfai validate && echo $?", "Found issues\n3")).toBeNull();
     expect(
       summarise(
         {

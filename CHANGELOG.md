@@ -149,7 +149,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - A reminder text that several keys share, such as the one the three
     `grilling-` hooks show, counts under the part of the keys they share,
     `grilling`, instead of under the last of those keys in the file.
-  - A `qfai` command followed after `;`, a line break or `&&` by `echo` of
+  - A `qfai` command followed after `;` or a line break by `echo` of
     `$?` or `$LASTEXITCODE`, such as `npx qfai validate; echo "exit=$?"`,
     takes the status that `echo` printed instead of `unknown`.
 - `qfai init` in a project with no `.gitignore` now creates it with

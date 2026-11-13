@@ -433,7 +433,7 @@ const STATUS_VARIABLE = /\$\?|\$\{\?\}|\$LASTEXITCODE\b/i;
  * The status a command line's final `echo` printed for the `qfai` command just before it, as in
  * `npx qfai validate; echo "exit=$?"`: the output's last line, read against the echo's own words
  * with the status variable as a number. `null` when the echo does not follow the `qfai` command
- * after `;`, a line break or `&&`, holds a `'` or a leading option, names the variable other than
+ * after `;` or a line break, holds a `'` or a leading option, names the variable other than
  * once, or the output does not end with its line.
  */
 export function echoedStatus(command: string, output: string): number | null {
@@ -447,9 +447,10 @@ export function echoedStatus(command: string, output: string): number | null {
     .slice(beforeAt, echoAt)
     .map((part) => part.separator)
     .join("");
-  // After `&` the status is the background job's start, after `|` the pipe's, and after `||` the
-  // echo runs only when qfai failed, so its absence would read qfai's own output as a status.
-  const sequential = /^[;\n]+$/.test(joint) || joint === "&&";
+  // After `&` the status is the background job's start and after `|` the pipe's. After `&&` or
+  // `||` the echo runs only on one outcome, so where it did not run, qfai's own last line would
+  // be read as a status.
+  const sequential = /^[;\n]+$/.test(joint);
   if (
     echo === undefined ||
     !sequential ||
