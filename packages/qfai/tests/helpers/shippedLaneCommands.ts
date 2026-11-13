@@ -1291,15 +1291,10 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * `ALLOWED_WORKFLOW_FILES`; the rest are byte-pinned here, and between them every adopter-facing file
  * this tree writes is pinned by content.
  *
- * The `.gitignore` digest moved once, deliberately: the atomic `.qfai/state.json` write leaves a
- * staging directory behind when a run is killed mid-write, and `QFAI_STATE_SCRATCH_IGNORE`
- * (`src/core/gitignore.ts`) joined the managed block so that leftover is ignored rather than swept
- * into an adopter's `git add .`. The added line is the whole delta — `*.qfai-state.tmp`, one entry
- * after `.qfai/state.json` — and re-pinning it here is what makes that one line reviewed content
- * rather than drift. It moved a second time when the workflow's run state arrived: `.qfai/run/`
- * joined the ignore lines, and that line is the whole delta. It moved a third time when the
- * discussion pack was removed: `.qfai/discussion/*` left the ignore lines, and that line is the
- * whole delta.
+ * The `.gitignore` digest moves whenever a line of the managed block does, and each move is
+ * re-pinned here so that the changed line is reviewed content rather than drift. The last move
+ * removed the three state-file lines (`.qfai/state.json`, `*.qfai-state.tmp` and
+ * `.qfai/state.json.lock`) once nothing wrote that file; those lines are the whole delta.
  *
  * `AGENTS.md` is the entry point Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
@@ -1419,7 +1414,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "d136ce57f450e4e91084dde9b218462093d59fddfa9aba2eb1b6227ae8174fda"],
+  [".gitignore", "580605d86b7b469be81e0e2c37229e7e877305a8ac5a09528b7d4105f3744711"],
   // Independent golden files pin the reviewed entry instructions. Update them only after
   // independent review, preserving exact bytes without trimming or newline normalization.
   [
