@@ -5,7 +5,11 @@ import {
   runGraphProcess,
   type GraphProcess,
 } from "./process.js";
-import { inspectCodeCoverage, inspectCurrentCodeAnalysis } from "./analysis.js";
+import {
+  GraphConfigUnreadableError,
+  inspectCodeCoverage,
+  inspectCurrentCodeAnalysis,
+} from "./analysis.js";
 import { graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -72,8 +76,16 @@ export async function exploreGraph(
   const requestedScope = Object.freeze({ ...request });
   try {
     return { ...(await exploreGraphScope(root, request, run)), requestedScope };
-  } catch {
+  } catch (cause: unknown) {
     const engine = request.domain === "code" ? "codegraph" : "graphify";
+    if (cause instanceof GraphConfigUnreadableError)
+      return {
+        requestedScope,
+        engine,
+        status: "failed",
+        failure: cause.message,
+        recovery: cause.recovery,
+      };
     return {
       requestedScope,
       engine,

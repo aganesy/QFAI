@@ -10,6 +10,7 @@ import {
 } from "./reuse.js";
 import { graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
 import {
+  GraphConfigUnreadableError,
   inspectCodeAnalysisAt,
   inspectCurrentCodeAnalysis,
   mirrorGraphCorpus,
@@ -63,7 +64,8 @@ export async function prepareCodeAnalysis(
       source: "generated",
       reuse: await publishCompletedCodeAnalysis(root, run, environment),
     };
-  } catch {
+  } catch (cause: unknown) {
+    if (cause instanceof GraphConfigUnreadableError) throw cause;
     return failed();
   } finally {
     if (created) await rm(staged, { recursive: true, force: true });

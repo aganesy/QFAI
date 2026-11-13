@@ -52,7 +52,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     longer carry `inputs.discussion_pack`. Mermaid, HTML mock and diagram-budget
     checks read only `paths.specsDir`.
   - The Graphify document corpus leaves out `paths.deliberationDir`, so no
-    documents query returns a record.
+    documents query returns a record. A cached analysis holding a record is not
+    restored, and when `qfai.config.yaml` cannot be read or parsed, or its
+    `paths.deliberationDir` is not a directory path, the query fails and
+    names the file instead of guessing the directory.
 
   Migration:
 
