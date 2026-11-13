@@ -13,6 +13,10 @@ node_modules
 !.qfai/report/preflight_summary.md
 .qfai/review/**
 .qfai/evidence/**
+# The discussion pack is gone, and with it the ignore line that hid it, so a
+# checkout that still holds an old pack would fail the formatting check on files
+# the repository no longer tracks. The migration says to delete the directory.
+.qfai/discussion/**
 # The migrated decision ledger preserves archived table cells and provenance.
 # Prettier expands its long cells into a multi-megabyte padded table.
 .qfai/spec/decisions.md
