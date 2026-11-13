@@ -311,12 +311,16 @@ function classifyCommand(
   return outsideBoundary();
 }
 
+/** PowerShell's built-in alias for Select-String, classified as the command it names. */
+const commandAliases = new Map([["sls", "select-string"]]);
+
 function commandName(words: string[]): string | undefined {
-  return words[0]
+  const name = words[0]
     ?.split(/[\\/]/)
     .at(-1)
     ?.replace(/\.exe$/i, "")
     .toLowerCase();
+  return name === undefined ? undefined : (commandAliases.get(name) ?? name);
 }
 
 /** A word the shell may expand or redirect, so what the command reads cannot be told from the text. */
