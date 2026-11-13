@@ -40,8 +40,8 @@ whatever its kind. With `UI-0004` and `DB-0002` present, the next DB contract
 is `DB-0005`, not `DB-0003`. A number is never reused. The file is
 `<kind>-NNNN-<slug>.<ext>`, and it declares its ID once: in the H1 of a
 Markdown contract (`# CLI-0001: <title>`), or on a `QFAI-CONTRACT-ID: API-0002`
-line in YAML or SQL. `npx qfai validate --profile sdd` reports a number two
-contracts declare as `QFAI-CONTRACT-034`; the `discussion` profile does not
+line in YAML or SQL. `npx qfai validate --profile sdd` reports two contracts
+that share a number as `QFAI-CONTRACT-034`; the `discussion` profile does not
 check contracts, so run the `sdd` profile after writing one.
 
 Write only the triaged scope, as

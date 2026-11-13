@@ -1087,12 +1087,15 @@ describe("assets guardrails", () => {
 
     expect(flat(step)).toContain("The number is shared by every kind");
     expect(flat(step)).toContain("the next DB contract is `DB-0005`, not `DB-0003`");
-    expect(flat(step)).toContain("`npx qfai validate --profile sdd` reports a number two");
-    expect(flat(step)).toContain("`QFAI-CONTRACT-034`");
+    expect(flat(step)).toContain(
+      "`npx qfai validate --profile sdd` reports two contracts that share a number as `QFAI-CONTRACT-034`",
+    );
+    expect(flat(step)).toContain("the `discussion` profile does not check contracts");
     expect(flat(rules)).toContain("not only the directory the new contract goes in");
     expect(flat(rules)).toContain("`QFAI-CONTRACT-034`");
     for (const sample of samples) {
       expect(flat(sample)).toContain("API, DB and UI share one number sequence");
+      expect(flat(sample)).toContain("in contracts.md and the contract file names");
     }
   });
 
