@@ -77,15 +77,9 @@ export async function exploreGraph(
   try {
     return { ...(await exploreGraphScope(root, request, run)), requestedScope };
   } catch (cause: unknown) {
+    // The CLI reports it, as it does when preparation finds it, and no fallback is granted.
+    if (cause instanceof GraphConfigUnreadableError) throw cause;
     const engine = request.domain === "code" ? "codegraph" : "graphify";
-    if (cause instanceof GraphConfigUnreadableError)
-      return {
-        requestedScope,
-        engine,
-        status: "failed",
-        failure: cause.message,
-        recovery: cause.recovery,
-      };
     return {
       requestedScope,
       engine,

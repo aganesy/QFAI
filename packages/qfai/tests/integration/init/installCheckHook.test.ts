@@ -137,7 +137,10 @@ describe("the install check of the Claude Code settings", () => {
       await removeTempTree(base);
     }
   });
+});
 
+// QFAI:EX-0001-0196-77
+describe("the install check of the Claude Code settings, for a session in a nested worktree", () => {
   it("judges the session's working directory from the hook input, not the project directory", async () => {
     const base = await mkdtemp(path.join(os.tmpdir(), "qfai install check cwd "));
     try {
