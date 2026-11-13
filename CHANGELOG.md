@@ -14,6 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A deliberation record keeps both tables, empty where a run has no row.**
+  The record template and its reference say that a stage that asked the user
+  nothing, or took no agent decision, keeps that section's heading with an
+  empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
+  is unchanged.
+
 - **The shipped product-surface reviewer and UI contract guide no longer name
   discussion UI/UX sidecars.** The reviewer reconciles the UI contract with
   design tokens, flows and rendered output, and the guide says a deliberation
@@ -124,6 +130,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   allowed as a filter of piped text, exactly as `Select-String` is. In other
   shells `sls` names another program, such as the Serverless Framework CLI,
   and is classified as before.
+
+- `paths.deliberationDir` that names the project root, such as `.`, a
+  directory outside it, or a value with a part ending in a dot or a space (which
+  Windows drops, so `...` lands in the root) now raises `QFAI-CFG-002` and the default
+  `.qfai/deliberation` is used. A documents or code query on such a value fails
+  and names `qfai.config.yaml`, instead of building a corpus that excludes no
+  deliberation record.
+
+- The comment in the `.gitattributes` that `qfai init` seeds no longer says
+  register rows are never edited. It now says new rows are appended, a row
+  keeps its ID and a decision row's wording may be restated, and still gives
+  the union-merge reason and how to resolve a conflict a host shows. The file
+  is seeded only where none exists, so an existing `.gitattributes` keeps its
+  old comment. Fixes #4173.
 
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
