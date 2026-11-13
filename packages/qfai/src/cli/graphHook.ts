@@ -1,15 +1,21 @@
 import { readFileSync } from "node:fs";
+import { lstat } from "node:fs/promises";
 import path from "node:path";
 import { findUnsafeHostFileComponent, readPinnedRegularFile } from "../core/init/fsGuards.js";
 import {
   enforceGraphExploration,
   decodeGraphHookEvent,
   failedGraphHook,
+  graphFallbackUnavailable,
   graphHookOutput,
   type GraphHookHost,
 } from "../core/graph/hooks.js";
 import { classifyStoredGraphExploration } from "../core/graph/fallbackState.js";
 import { GraphLocalStateError } from "../core/graph/localFiles.js";
+import { resolveSessionWorktree } from "../core/graph/sessionWorktree.js";
+import { isEnoent } from "../core/fs/errno.js";
+
+const enforcement = [".qfai", "tools", "graph-enforcement.json"];
 
 function hostName(value: unknown): value is GraphHookHost {
   return value === "claude" || value === "codex" || value === "copilot" || value === "vscode";
@@ -51,20 +57,31 @@ export async function runInstalledGraphHook(
     return;
   }
   let decision = failedGraphHook();
+  const event = decodeGraphHookEvent(input);
+  let project = root;
+  let uninitialised = false;
   try {
-    const components = [".qfai", "tools", "graph-enforcement.json"];
-    if (!(await findUnsafeHostFileComponent(root, components))) {
-      const text = await readPinnedRegularFile(path.join(root, ...components), 4096);
+    // The session's own worktree, when nested under this checkout, is its project worktree.
+    project = await resolveSessionWorktree(root, event?.cwd);
+    uninitialised = project !== root && !(await hasEnforcement(project));
+    const configured = uninitialised ? root : project;
+    if (!(await findUnsafeHostFileComponent(configured, enforcement))) {
+      const text = await readPinnedRegularFile(path.join(configured, ...enforcement), 4096);
       if (text !== null) decision = enforceGraphExploration(input, JSON.parse(text) as unknown);
     }
   } catch {
     // A supported adapter emits denial for invalid input without echoing the payload.
   }
-  if (decision.decision === "deny" && decision.state === "configured") {
-    const event = decodeGraphHookEvent(input);
+  if (decision.decision === "deny" && decision.state === "configured" && uninitialised)
+    decision = graphFallbackUnavailable(
+      decision,
+      `The session worktree ${project} has no graph protection; this hook belongs to ${root}.`,
+      `Run qfai init in ${project}, then retry the denied action.`,
+    );
+  else if (decision.decision === "deny" && decision.state === "configured") {
     if (event) {
       try {
-        decision = await classifyStoredGraphExploration(root, event);
+        decision = await classifyStoredGraphExploration(project, event);
       } catch (cause: unknown) {
         decision = failedGraphHook();
         if (cause instanceof GraphLocalStateError)
@@ -77,6 +94,17 @@ export async function runInstalledGraphHook(
   if (decision.state === "failed") {
     io.error("Graph protection failed. Repair the project hook and enforcement configuration.\n");
     io.fail();
+  }
+}
+
+async function hasEnforcement(project: string) {
+  // Any existing entry counts: an unsafe one then fails through the same checks as the root's.
+  try {
+    await lstat(path.join(project, ...enforcement));
+    return true;
+  } catch (cause: unknown) {
+    if (isEnoent(cause)) return false;
+    throw cause;
   }
 }
 
