@@ -62,6 +62,27 @@ describe("the Graphify document corpus", () => {
       await fixture.dispose();
     }
   });
+
+  // QFAI:AC-0001-0234-08
+  // QFAI:EX-0001-0234-19
+  it("holds no file under a configured deliberation directory", async () => {
+    const fixture = await documentAnalysisFixture();
+    try {
+      await put(fixture.root, "qfai.config.yaml", "paths:\n  deliberationDir: docs\\delib\n");
+      const record = "docs/delib/20261113000000-moved.md";
+      await put(fixture.root, record, "# Deliberation record: the design rationale\n");
+      await put(fixture.root, "docs/guide.md", "# Guide\n");
+      await exploreGraph(fixture.root, { domain: "documents", question: "rationale" }, fixture.run);
+      await expect(
+        readFile(path.join(fixture.documentAnalysis, ...record.split("/"))),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+      expect(await readFile(path.join(fixture.documentAnalysis, "docs", "guide.md"), "utf8")).toBe(
+        "# Guide\n",
+      );
+    } finally {
+      await fixture.dispose();
+    }
+  });
 });
 
 describe("an unparseable root DESIGN.md", () => {

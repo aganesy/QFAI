@@ -36,7 +36,7 @@ describe("validateExternalReferences", () => {
         [policy]:
           "Read `docs/guide.md`.\nAlso [the guide](docs/guide.md#top) and `docs/other.md:12`.\n",
         ".qfai/spec/01_policy/glossary.md": "See `docs/glossary.md`.\n",
-        ".qfai/discussion/discussion-x/notes.md": "Cites `src/b.ts`.\n",
+        ".qfai/deliberation/20261113000000-notes.md": "Cites `src/b.ts`.\n",
       },
       async (root) => {
         const findings = await validateExternalReferences(root, defaultConfig);

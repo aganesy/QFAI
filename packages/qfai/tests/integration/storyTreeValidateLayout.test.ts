@@ -164,7 +164,7 @@ describe("story-tree layout dispatch", () => {
       `${specs}/01_policy/principle.md`,
       "Read `docs/guide.md` and https://example.com/a.md, and see `.qfai/spec/decisions.md`\n",
     );
-    await put(".qfai/discussion/discussion-x/notes.md", "Cites `src/b.ts`.\n");
+    await put(".qfai/deliberation/20261113000000-notes.md", "Cites `src/b.ts`.\n");
 
     const counted = await validateProject(root, configured(), { profile: "sdd" });
     const reported = counted.issues.filter((item) => item.code === "QFAI-STORY-015");
