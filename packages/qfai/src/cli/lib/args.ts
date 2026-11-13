@@ -124,8 +124,8 @@ export type ParsedArgs = {
     workflowAction?: WorkflowOperation;
     /** The first option whose value or placement the parser refused. */
     invalidOption?: string;
-    /** A token in the operation position of `qfai workflow` that names no operation. */
-    workflowUnknownOperation?: string;
+    /** A token in the subcommand position of `qfai sdd`, `atdd` or `workflow` that names none. */
+    unknownSubcommand?: string;
     /** `--route <route>` for `qfai workflow plan`. */
     workflowRoute?: string;
     /** `--in <path|->` for `qfai workflow plan`: the extraction file, or `-` for stdin. */
@@ -277,6 +277,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (candidate === "preflight" || candidate === "next-id" || candidate === "merge-docs") {
         options.sddAction = candidate;
       } else {
+        options.unknownSubcommand = candidate;
         markInvalid(subcommandReason("sdd", candidate));
       }
       args.shift();
@@ -303,7 +304,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (operation) {
         options.workflowAction = operation;
       } else {
-        options.workflowUnknownOperation = candidate;
+        options.unknownSubcommand = candidate;
         markInvalid(subcommandReason("workflow", candidate));
       }
       args.shift();
@@ -317,6 +318,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (candidate === "scaffold") {
         options.atddAction = candidate;
       } else {
+        options.unknownSubcommand = candidate;
         markInvalid(subcommandReason("atdd", candidate));
       }
       args.shift();

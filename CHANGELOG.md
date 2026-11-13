@@ -14,6 +14,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`.agents/rules/grilling.md` keeps on-demand procedures in skill
+  references.** The bounds of a delegated discussion, the glossary check and
+  the check before a session is reported finished move to
+  `discussion-delegation.md`, `glossary-check.md` and `session-check.md` under
+  the `qfai-grilling` skill's `references/`. The rule keeps each trigger and
+  says when to read each file. A session runs as before.
+
 - **Breaking: a per-run deliberation record replaces the discussion pack.** A
   run that asks the user a question or takes a decision no specification,
   contract, rule or convention settles writes one Markdown memo under
@@ -95,9 +102,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An unknown subcommand says when the project declares a newer qfai.** When
+  `qfai sdd`, `qfai atdd` or `qfai workflow` is given a subcommand the running
+  copy does not know, the message names the running version and where it was
+  loaded from. When the project's `package.json` declares a newer qfai, it also
+  says so and tells you to run the project's install command in this checkout,
+  then repeat the launcher preflight. Before, only an unknown `workflow`
+  operation and an unknown command named the running version, and none of them
+  compared it with the project's declaration. Fixes #4083.
+
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.
+- The search-protection hook no longer denies Grep and `grep` in a session whose
+  working directory is a Git worktree nested under the checkout, such as
+  `.claude/worktrees/<name>`, with "The observed worktree differs from this
+  project worktree". That worktree's own protection and permission state now
+  govern its searches. A nested worktree where `qfai init` has not run is
+  denied with a message naming it and asking for `npx qfai init` there.
 - **`qfai session-review` counts and redacts what it missed.**
   - Text the user types while a tool runs, which Claude Code stores beside the
     tool's result, is counted as a typed turn.
