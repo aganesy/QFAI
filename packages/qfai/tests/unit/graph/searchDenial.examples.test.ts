@@ -427,6 +427,14 @@ it("denies piped searches that still read project files", () => {
     ["Bash", ">/dev/null hash -p /bin/cat grep; git status | grep .env", "grep"],
     ["Bash", "command >/dev/null alias grep='cat .env #'; git status | grep x", "grep"],
     ["Bash", ">/dev/null PATH=.; git status | grep x", "grep"],
+    ["Bash", ">&- hash -p /usr/bin/xargs grep; echo authorize packages | grep rg", "grep"],
+    [
+      "Bash",
+      "{fd}>/dev/null hash -p /usr/bin/xargs grep; echo authorize packages | grep rg",
+      "grep",
+    ],
+    ["Bash", "time hash -p /usr/bin/xargs grep; echo authorize packages | grep rg", "grep"],
+    ["Bash", "read PATH <<< /tmp/x; echo authorize packages | grep rg", "grep"],
     ["PowerShell", "git ls-files | findstr /S auth", "findstr"],
     ["PowerShell", "git ls-files | findstr auth<packages\\index.ts", "findstr"],
   ] as const) {

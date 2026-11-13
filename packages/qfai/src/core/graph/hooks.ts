@@ -103,9 +103,28 @@ function redefinesCommands(words: string[]): boolean {
       }
     } else break;
   }
+  const first = words[offset] ?? "";
   return (
     words.some((word) => word.includes("()")) ||
-    /^(?:[A-Za-z_][A-Za-z0-9_]*=|\$)/.test(words[offset] ?? "") ||
+    /^(?:[A-Za-z_][A-Za-z0-9_]*=|\$|\{\w*\}?[<>]?$|\{\w+\}[<>])/.test(first) ||
+    (first === "printf" && words.includes("-v")) ||
+    [
+      "time",
+      "!",
+      "if",
+      "then",
+      "do",
+      "else",
+      "elif",
+      "while",
+      "until",
+      "case",
+      "coproc",
+      "read",
+      "mapfile",
+      "readarray",
+      "getopts",
+    ].includes(first) ||
     [
       "function",
       "alias",
@@ -486,7 +505,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   let upstream: ShellCommand | undefined;
   let word = "";
   let quote: string | undefined;
-  let afterRedirect = false;
+  let afterRedirect: "" | "<" | ">" = "";
   const flushWord = () => {
     if (word.length) words.push(word);
     word = "";
@@ -503,7 +522,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
         (shell === "powershell" && character === "`" && quote !== "'") ||
         (shell === "cmd" && character === "^" && !quote));
     const redirectBefore = afterRedirect;
-    afterRedirect = false;
+    afterRedirect = "";
     if (escaped) {
       if (next !== "\n") word += next;
       index += 1;
@@ -516,8 +535,9 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       quote = character;
     } else if (
       (character === "&" || character === "|") &&
-      redirectBefore &&
-      (character === "&" ? /\d/.test(next ?? "") : shell === "posix")
+      (character === "&"
+        ? redirectBefore !== "" && /[\d-]/.test(next ?? "")
+        : redirectBefore === ">" && shell === "posix")
     ) {
       word += character;
     } else if (shell === "posix" && character === "&" && next === ">") {
@@ -543,7 +563,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
         flushWord();
       }
       word += character;
-      afterRedirect = character === ">";
+      afterRedirect = character === ">" || character === "<" ? character : "";
     }
   }
   if (quote) return undefined;
