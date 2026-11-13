@@ -289,6 +289,32 @@ it("denies PowerShell Select-String over project source", () => {
   expect(result.domain).toBe("code");
 });
 
+// QFAI:EX-0001-0235-04
+// Mutation: packages/qfai/src/core/graph/hooks.ts `const commandAliases = new Map([["sls", "select-string"]]);` -> `const commandAliases = new Map<string, string>();` fails "denies the PowerShell alias sls as Select-String over project source"
+it("denies the PowerShell alias sls as Select-String over project source", () => {
+  for (const command of [
+    "sls -Pattern authorize -Path packages/**/*.ts",
+    "SLS -Pattern authorize -Path packages/**/*.ts",
+    "pwsh -Command 'sls -Pattern authorize -Path packages/**/*.ts'",
+  ]) {
+    const result = classifyGraphExploration({ tool: "PowerShell", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("Select-String");
+    expect(result.target, command).toBe("packages/**/*.ts");
+  }
+});
+
+// QFAI:EX-0001-0235-26
+// Mutation: packages/qfai/src/core/graph/hooks.ts `const commandAliases = new Map([["sls", "select-string"]]);` -> `const commandAliases = new Map<string, string>();` fails "allows git output piped to the PowerShell alias sls with no path"
+it("allows git output piped to the PowerShell alias sls with no path", () => {
+  const result = classifyGraphExploration({
+    tool: "PowerShell",
+    command: "git ls-files | sls -Pattern hooks",
+  });
+  expect(result.decision).toBe("allow");
+  expect(result.state).toBe("configured");
+});
+
 // QFAI:EX-0001-0235-03
 // Mutation: packages/qfai/src/core/graph/hooks.ts `function denyExploration(operation: string, target: string): GraphHookDecision {` -> `function denyExploration(operation: string, target: string): GraphHookDecision { return { decision: "allow", state: "configured", operation, target, message: "Exploration allowed." };` fails "denies git grep exploration before execution"
 it("denies git grep exploration before execution", () => {

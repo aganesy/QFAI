@@ -117,6 +117,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook treats the PowerShell alias `sls` as
+  `Select-String`.** `sls -Pattern authorize -Path packages/**/*.ts` was
+  allowed as outside the checked boundary while the same command spelled
+  `Select-String` was denied. The alias is now denied, and allowed as a filter
+  of piped text, exactly as `Select-String` is.
+
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
   with no file operand and only known options, such as
