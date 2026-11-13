@@ -14,6 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A deliberation record keeps both tables, empty where a run has no row.**
+  The record template and its reference say that a stage that asked the user
+  nothing, or took no agent decision, keeps that section's heading with an
+  empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
+  is unchanged.
+
 - **The shipped product-surface reviewer and UI contract guide no longer name
   discussion UI/UX sidecars.** The reviewer reconciles the UI contract with
   design tokens, flows and rendered output, and the guide says a deliberation
