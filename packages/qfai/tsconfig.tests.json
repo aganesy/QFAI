@@ -374,6 +374,7 @@
     "tests/scripts/checkMdschemaConcurrentEntries.test.ts",
     "tests/scripts/checkMdschemaUnreadableInventory.test.ts",
     "tests/scripts/checkTscCompiler.test.ts",
+    "tests/scripts/checkTestEnumeration.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/ghBudget.test.ts",
     "tests/scripts/releaseMergeAsk.test.ts",
