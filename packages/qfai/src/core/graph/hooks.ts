@@ -241,13 +241,13 @@ function printsText(command: ShellCommand | undefined): boolean {
     !command ||
     command.words.some(
       (word) =>
-        /[(){}]/.test(word) || (unparsedWord(word) && !/^\d*>(?:&\d|\/dev\/null)$/.test(word)),
+        /[(){}@]/.test(word) || (unparsedWord(word) && !/^\d*>(?:&\d|\/dev\/null)$/.test(word)),
     )
   )
     return false;
   const name = commandName(command.words) ?? "";
   const args = command.words.slice(1);
-  if (name === "git") return gitTextCommands.has(args[0] ?? "");
+  if (name === "git") return gitTextCommands.has(args[0] ?? "") && !args.includes("--no-index");
   if (["echo", "printf", "write-output"].includes(name))
     return !args.some((word) => /[*?[!]/.test(word));
   if (name === "pnpm" || name === "npm") return packageTextCommands.has(args[0] ?? "");
@@ -329,7 +329,7 @@ const attachedValueOptions =
 function pipeFilter(words: string[]): boolean {
   const name = commandName(words);
   const args = words.slice(1);
-  if (args.some(unparsedWord)) return false;
+  if (args.some((word) => unparsedWord(word) || /[*?[\]{}()~@!]/.test(word))) return false;
   if (name === "findstr") return findstrFilter(args);
   if (name === "select-string") return selectStringFilter(args);
   if (name !== "grep" && name !== "rg") return false;
@@ -362,7 +362,8 @@ function findstrFilter(args: string[]): boolean {
     if (/^\/c:./i.test(word)) patternGiven = true;
     else if (word.startsWith("/")) {
       if (!/^\/[ivnxbelrmop]+$/i.test(word)) return false;
-    } else operands.push(word);
+    } else if (word.startsWith("-")) return false;
+    else operands.push(word);
   }
   return operands.length === (patternGiven ? 0 : 1);
 }
@@ -431,7 +432,8 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       quote = character;
     } else if (
       (character === "&" || character === "|") &&
-      (redirectBefore || (shell === "posix" && character === "&" && next === ">"))
+      ((redirectBefore && (character === "&" ? /\d/.test(next ?? "") : shell === "posix")) ||
+        (shell === "posix" && character === "&" && next === ">"))
     ) {
       word += character;
     } else if (character === "\n" && !words.length && !word.length && upstream) {
