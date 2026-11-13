@@ -20,6 +20,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
   is unchanged.
 
+- **The shipped product-surface reviewer and UI contract guide no longer name
+  discussion UI/UX sidecars.** The reviewer reconciles the UI contract with
+  design tokens, flows and rendered output, and the guide says a deliberation
+  record that discusses the screens is history while the UI contract is the
+  execution authority.
+
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
   the check before a session is reported finished move to
