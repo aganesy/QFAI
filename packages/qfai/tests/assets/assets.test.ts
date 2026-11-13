@@ -929,10 +929,18 @@ describe("assets guardrails", () => {
       .filter((line) => line.startsWith("#"))
       .map((line) => line.replace(/^#\s?/, "").trim())
       .join(" ");
-    // The comment's content, not its sentences: rows are appended, so union merging keeps both
-    // branches' rows, and a conflict a host shows is resolved by merging the base branch locally.
-    // A pinned sentence would turn a restatement of the comment into a red build.
-    for (const term of [/\bappended\b/i, /\bunion\b/i, /\bbase branch\b/i, /\blocally\b/i]) {
+    // The comment's content, not its sentences: rows are appended and never renumbered, so union
+    // merging keeps both branches' rows, and a conflict a host shows is resolved by merging the
+    // base branch locally. A pinned sentence would turn a restatement of the comment into a red
+    // build. Whether rows may be edited is left out: a row's wording may now be restated.
+    const terms = [
+      /\bappended\b/i,
+      /\brenumbered\b/i,
+      /\bunion\b/i,
+      /\bbase branch\b/i,
+      /\blocally\b/i,
+    ];
+    for (const term of terms) {
       expect(seedComment, `the seed comment must say why (${String(term)})`).toMatch(term);
     }
   });

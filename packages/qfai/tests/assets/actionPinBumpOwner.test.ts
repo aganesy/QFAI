@@ -3,8 +3,8 @@
  *
  * `spec-0017`'s traceability ledger routes thirteen rows here, and they share a shape: the
  * business rule asks for a decision to have been taken and written down — an owner named, a
- * justification recorded, a rejected alternative kept with its reason — and the only thing a
- * test can check is that the record exists and says what the rule requires.
+ * justification recorded, a rejected alternative kept with its reason — and what a test can
+ * check is that the record exists, located by its ID, and cites what it decides.
  *
  * That is worth doing rather than skipping. A rule satisfied by "somebody decided this"
  * degrades to nothing the moment the person who decided it stops reading pull requests. A
@@ -18,7 +18,8 @@
  * number of a live row makes every restatement a red build. Each row is therefore located by its
  * `DEC-NNNN` ID and asserted only through the identifiers it cites: the imported decision key and
  * the requirement, example and test IDs the decision answers. Whether the prose still carries the
- * reason the rule asks for is a review question, not a pattern this file can grade.
+ * reason the rule asks for is a review question, not a pattern this file can grade; the decision
+ * register records that trade for the examples these tests carry.
  *
  * What the rules ask of the TREE — the gate file, its wiring, the retired and surviving workflows,
  * the declared worker value — is still asserted against the tree.
@@ -30,7 +31,8 @@
  * contract gate over the shipped set present at or before it, and requires the recorded cost
  * to be **the loss of the manual cross-check** — explicitly not the absence of a mirror,
  * because the two files had already diverged on the profile they ran, so no mirror existed to
- * lose. Recording the absent mirror would overstate what the deletion takes away.
+ * lose. Recording the absent mirror would overstate what the deletion takes away. That the row
+ * still says so is checked at review, as above.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -44,6 +46,12 @@ import { declaredIncludeGlobs, testFileCount } from "../helpers/runnerProjects.j
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
+
+/** A decision as the register identifies it: its row ID and the imported decision key it cites. */
+interface DecisionRef {
+  readonly row: string;
+  readonly key: string;
+}
 
 /** The decision this pair of rows reads: its register row and the imported key it carries. */
 const RETIREMENT: DecisionRef = { row: "DEC-0333", key: "DR-0017-0007" };
@@ -82,22 +90,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** A decision as the register identifies it: its row ID and the imported decision key it cites. */
-interface DecisionRef {
-  readonly row: string;
-  readonly key: string;
-}
-
-/**
- * One decision's row in the consolidated decision register, located by its row ID.
- *
- * Selected rather than read whole, so an ID cited somewhere else in the register cannot satisfy a
- * claim about this decision.
- */
-function decisionSection(decision: DecisionRef): string {
-  return readRepositoryDecisionRow(REPO_ROOT, decision.row);
-}
-
 /**
  * Asserts the row exists and cites `ids`, softly, one failure per missing ID.
  *
@@ -105,7 +97,9 @@ function decisionSection(decision: DecisionRef): string {
  * instead of one clear one.
  */
 function expectRowCites(decision: DecisionRef, ids: readonly string[], subject: string): void {
-  const section = decisionSection(decision);
+  // Located by its row ID, so an ID cited somewhere else in the register cannot satisfy a claim
+  // about this decision.
+  const section = readRepositoryDecisionRow(REPO_ROOT, decision.row);
   expect(section, `${decision.row} must record ${subject}`).not.toBe("");
   for (const id of [decision.key, ...ids]) {
     expect.soft(section, `${decision.row} must cite ${id}`).toContain(id);
@@ -118,13 +112,12 @@ function expectRowCites(decision: DecisionRef, ids: readonly string[], subject: 
 // QFAI:EX-0002-0019-05
 // QFAI:EX-0002-0020-04
 describe("TC-0017-0074 (TDD-0074): deleting the copy with no shipped-set gate is rejected", () => {
-  it("records the retirement, citing its decision key and the gate's test cases", () => {
-    // The row names the gate through the gate's own cases, so a restatement that drops the path
-    // still answers which gate; that the gate exists and runs is TC-0017-0075's half, read from
-    // the tree.
+  it("records the retirement, citing its decision key, the gate's path and these two cases", () => {
+    // `BR-0016-0060` asks which gate the deletion relies on, so the row cites the gate by path.
+    // That the gate exists and runs is TC-0017-0075's half, read from the tree.
     expectRowCites(
       RETIREMENT,
-      ["TC-0017-0074", "TC-0017-0075"],
+      [SHIPPED_SET_GATE, "TC-0017-0074", "TC-0017-0075"],
       "the retirement of the repository's own validate workflow",
     );
   });
@@ -182,9 +175,9 @@ describe("TC-0017-0075 (TDD-0075): the gate is present at or before the deletion
 
 // ── the pin bump owner, the shipped ordering, and the parallelism episode ────
 //
-// Three subjects, one shape: each is an obligation whose satisfying artifact is a paragraph in
-// the decision register, and each row reads the specific content its rule names rather than
-// the paragraph as a whole.
+// Three subjects, one shape: each is an obligation whose satisfying artifact is a row in the
+// decision register, and each test locates that row by its `DEC-NNNN` ID and checks it through
+// the identifiers it cites.
 
 /** The decision that names the pin bump owner. */
 const PIN_OWNER: DecisionRef = { row: "DEC-0329", key: "DR-0017-0003" };
@@ -227,7 +220,10 @@ describe("TC-0017-0026 (TDD-0026): no root bump configuration, and the owner is 
     // more than a prohibition: the absence of the configuration is only acceptable BECAUSE the
     // record exists, so both are asserted together.
     expect
-      .soft(decisionSection(PIN_OWNER), "the owner must be recorded even with no configuration")
+      .soft(
+        readRepositoryDecisionRow(REPO_ROOT, PIN_OWNER.row),
+        "the owner must be recorded even with no configuration",
+      )
       .not.toBe("");
   });
 });
@@ -255,7 +251,7 @@ describe("TC-0017-0066 (TDD-0066): a slower or flakier higher value keeps the lo
 });
 
 describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs the sign-off", () => {
-  it("records that a revision was proposed and refused, and that the value did not move", () => {
+  it("records the refused revision in a row citing this case, and the value did not move", () => {
     // The rule's negative direction, and this repository has an actual instance of it: a
     // revision was proposed on the strength of a measurement and refused. `BR-0016-0050` says
     // "no agent may substitute a different starting value on the strength of its own

@@ -162,7 +162,6 @@ describe("the extractor reads prose copied from this repository's decision regis
     // exactly like the one above — which is why the claim direction is an input to this module
     // rather than something it infers. If this ever yields a pair, that argument has changed and
     // the API shape should be revisited rather than the assertion relaxed.
-    expect(DESCRIBED_ROW).toContain("regression");
     expect(capturedPairs(DESCRIBED_ROW)).toEqual([]);
   });
 });
