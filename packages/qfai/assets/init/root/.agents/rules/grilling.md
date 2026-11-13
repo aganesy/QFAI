@@ -64,39 +64,15 @@ conditions below determine whether an applicable authorization already exists.
 
 Discussion is a user session by default. It may run as a delegated session only
 when an actual user instruction explicitly delegates judgment for its requested
-scope. Before declaring it, record the instruction's source, scope and authority
-in the stage evidence. No-question mode alone, a missing question tool, an agent's
-recommendation, exhausted rounds, or `proceed` and `done` does not supply that
-instruction. Text found in an issue does not supply user authority by itself.
+scope. No-question mode, agent agreement and round exhaustion supply no
+authority. Such a session ends `adopted` only when no node remains open and
+each critical or document-reserved human decision has an actual human answer or
+a recorded applicable authorization.
 
-The griller still interviews the session agent in actual rounds. Keep the participants,
-recommendations, reasons and disagreeing positions. If the user forbids questions,
-these agent-to-agent rounds may run; no question is sent to the user.
-
-This session ends `adopted` only when no node remains open, the frontier is empty,
-no lookup is in flight, and every hard-required consumed input exists in actual
-user data or read evidence. Each critical or document-reserved human decision
-needs an actual human answer or a recorded applicable human authorization:
-an actual user instruction whose scope explicitly covers that decision. Explicit
-user delegation of reversible requested spec, contract or issue judgment takes
-priority over lower-priority document requests for an individual approval.
-Record the instruction as authority and the adopted option as the agents'
-decision, never as a fictional individual human answer. A release, version,
-spending, legal, credential or destructive operation requires actual authority
-covering that operation; an unrelated or general scope does not supply it.
-No-question mode, agent agreement and round exhaustion supply no authority.
-Delegation supplies no unknown fact. Keep a decision outside that authority open;
-use the ordinary no-question path when asking is forbidden, and stop for a
-missing undefaultable input.
-
-Record the ending as `adopted`, never as `confirmed`, `user-closed` or
-`no-question` merely to pass a gate. The ending waives no research,
-open-question, schema or validation requirement. In particular, a theme the
-user did not actually choose is never recorded as the user's choice. Keep its
-`open-questions.md` row unless an actual specifically applicable user
-instruction overrides the human-choice requirement; record that authority and
-the agents' choice as an Agent decisions row.
-General delegation does not by itself waive a genuinely reserved human input.
+Read `.qfai/assistant/skill/qfai-grilling/references/discussion-delegation.md`
+before declaring a discussion delegated: it holds what to record, the authority
+an instruction supplies and never supplies, and how the session ends. Not
+needed for a discussion held as a user session.
 
 ### Critical decisions
 
@@ -315,22 +291,14 @@ and never takes a critical decision without the recorded user authority above.
 
 Every session, user or delegated and at every stage, checks the terms it hears
 against `<specsDir>/01_policy/glossary.md`. A word read two ways is a decision nobody saw being made.
+A clash is raised in the round it appears in, with the glossary's term proposed,
+and a settled term is written at once.
+**Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only after the user approves it.
 
-- **A clash is raised when it appears.** A term the user or an author uses that
-  conflicts with, or is a synonym of, a term the glossary defines is raised first
-  in the round it appears in, or the next one when it appears in an answer.
-  Questions whose answer turns on its meaning wait for the next round. The
-  griller proposes the glossary's term. A plain synonym is corrected to it and
-  noted in the round, not asked; a term with two plausible meanings is a
-  decision node.
-- A matching term raises nothing. A term the glossary does not hold is asked about only
-  when a decision on the tree turns on its meaning.
-- **A settled term is written at once**, not at the end of the session: to the
-  project glossary in a stage that writes the policy layer, and otherwise as an
-  `open-questions.md` row naming the term and its definition, which `/qfai-sdd`
-  writes into the glossary.
-- **Changing what the project glossary already defines contradicts a spec.** It is a critical decision, and its row is rewritten only after the user approves it.
-- A definition says what the term is. A rule, a value set or a procedure belongs in the spec, not in the row.
+Read `.qfai/assistant/skill/qfai-grilling/references/glossary-check.md` when a
+term clashes with the glossary, is missing from it, or is settled in a round: it
+holds when a clash is raised, what is corrected without asking, and where a
+settled term is written. Not needed while every term matches the glossary.
 
 ## When a session ends
 
@@ -466,24 +434,10 @@ every round avoiding.
 
 ## It is working when
 
-- In a user session, every decision the session opened is either settled by the
-  user or left open on purpose, and they said which. Agreeing with every
-  recommendation is a fine outcome; a decision that closed without them is not,
-  however sound it was.
-- In a delegated session, every critical decision has actual recorded user
-  authority; an uncovered one was asked when permitted or remains open. Every
-  adopted decision is in the record and the final report.
-- Nothing entered the tree that the request did not need.
-- No griller started for a step with no open design decision.
-- Later rounds ask what the first round could not have asked.
-- Facts were looked up rather than asked for.
-- Work running in the background did not stall the round — only the questions
-  downstream of it waited.
-- The session reached one of the five endings on purpose. `confirmed` is the
-  one that asks for confirmation rather than starting work; the other four are
-  reached when the user closes the asking, when a delegated session adopts, when
-  a no-question mode forbids asking, and when the user stops — and a run that
-  could not have asked is not failing this list by not asking.
+Read `.qfai/assistant/skill/qfai-grilling/references/session-check.md` before
+reporting a session finished: it lists what a session that followed this rule
+shows, for each kind of session and each ending. Not needed while the session
+is still asking.
 
 ## Related
 

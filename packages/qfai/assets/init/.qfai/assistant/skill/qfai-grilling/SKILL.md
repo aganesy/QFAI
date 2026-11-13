@@ -28,8 +28,8 @@ interviews the session agent and only a critical decision reaches the user, and 
 for a decision the repository cannot settle (`.agents/rules/grilling.md` § When
 a session is held). Without one, no griller starts. A stage that says nothing
 holds a delegated session where one is held. Read
-`.agents/rules/grilling.md#explicit-delegation-for-a-discussion` before
-delegating a user discussion; record actual authority. No-question alone is not
+`references/discussion-delegation.md` before delegating a user discussion;
+record actual authority. No-question alone is not
 delegation.
 
 **The request bounds the tree** (`.agents/rules/grilling.md`). A decision whose
@@ -123,7 +123,8 @@ answers it is computed from.
 
 **Every round checks terms against the glossary**: a clash or synonym is raised
 first with the glossary's term proposed, and a settled term is written at once
-(`.agents/rules/grilling.md#terms-against-the-glossary`).
+(`.agents/rules/grilling.md#terms-against-the-glossary`); read
+`references/glossary-check.md` when a term clashes, is missing or is settled.
 
 **A no-question mode is read before any of this.** Agent rounds require
 explicit delegation; otherwise the section above governs. A withheld tool with questions still
@@ -208,7 +209,8 @@ lookup the frontier is empty while the tree still holds open nodes, and
 completing there would close the session before the lookup could raise the
 questions it was dispatched to answer.
 
-There is no question cap.
+There is no question cap. Read `references/session-check.md` before reporting a
+session finished.
 
 **A delegated session ends by its own conditions**, because no user is there
 to confirm condition 2. Read `references/delegated-session.md` (§ When a
