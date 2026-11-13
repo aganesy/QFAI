@@ -83,6 +83,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.
+- The search-protection hook no longer denies Grep and `grep` in a session whose
+  working directory is a Git worktree nested under the checkout, such as
+  `.claude/worktrees/<name>`, with "The observed worktree differs from this
+  project worktree". That worktree's own protection and permission state now
+  govern its searches. A nested worktree where `qfai init` has not run is
+  denied with a message naming it and asking for `npx qfai init` there.
 
 ## [2.4.0] - 2026-11-11
 
