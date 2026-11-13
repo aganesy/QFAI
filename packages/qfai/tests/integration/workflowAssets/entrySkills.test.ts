@@ -1058,6 +1058,7 @@ describe("qfai-run", () => {
   // QFAI:AC-0001-0223-04
   // QFAI:EX-0001-0223-06
   // QFAI:EX-0001-0223-08
+  // QFAI:EX-0001-0223-16
   it("records an approval as a decisions row only when it meets the recording test, and no row for a decision taken without the user", async () => {
     const work = flat(sectionOf(await readShipped(RUN), "## The work"));
     const release = flat(sectionOf(await readShipped(STAGE_POINTS), "## Release point"));
@@ -1074,6 +1075,9 @@ describe("qfai-run", () => {
     const template = await readShipped("skill/qfai-sdd/templates/spec/decisions.md");
     const example = template.split("\n").find((line) => line.startsWith("<the release checks"));
     expect(example).toMatch(/^<the release checks[^.]*\. - Rollback: \S/);
+    expect(template.replace(/\s+/g, " ")).toMatch(
+      /when the question showed the chosen option's label in a language other than the one this file is written in, quote a rendering of the label in this file's language followed by `\(translated\)`/i,
+    );
     expect(release).toMatch(/which authorizes no push, merge, tag or publication/i);
     expect(release).toMatch(
       /record the approval as step 7 of `SKILL\.md` says: a `decisions\.md` row the run writes when the approval meets the recording test, the final report otherwise, or, when the release change is produced outside this run, the final report, with any row appended by the next change that touches `decisions\.md`/i,

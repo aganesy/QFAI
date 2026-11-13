@@ -161,6 +161,7 @@
     "tests/assets/reviewPayloadSchemaShipped.test.ts",
     "tests/assets/reviewerDemandBound.test.ts",
     "tests/assets/reviewerResponseProvenance.test.ts",
+    "tests/assets/reviewerRuleCrossCheck.test.ts",
     "tests/assets/sddConcreteAbstractCycle.test.ts",
     "tests/assets/sddInputsPriorityRecut.test.ts",
     "tests/assets/sddOptionalOutputs.test.ts",
