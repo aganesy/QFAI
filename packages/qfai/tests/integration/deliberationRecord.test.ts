@@ -79,6 +79,13 @@ describe("QFAI-DELIB-001 accepts a record of the stated layout", () => {
     expect(await findings()).toEqual([]);
   });
 
+  // QFAI:AC-0001-0298-02
+  // QFAI:EX-0001-0298-17
+  it("raises nothing on a run that asked nothing: an empty Interview table beside two Agent decisions rows", async () => {
+    await put(RECORD, record(table(HEADER), table(HEADER, DECISION_ROW, DECISION_ROW)));
+    expect(await findings()).toEqual([]);
+  });
+
   // QFAI:EX-0001-0302-02
   it("raises nothing on an Interview row that holds only a free answer and chooses 4", async () => {
     await put(
@@ -402,6 +409,18 @@ describe("the shipped deliberation record template", () => {
     expect(text.split(HEADER).length - 1).toBe(2);
     await put(RECORD, text);
     expect(await findings()).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0298-02
+  // QFAI:EX-0001-0298-17
+  it("tells a run to keep a table it has no row for, empty", async () => {
+    const text = await readFile(template, "utf-8");
+    expect(text).toContain("Keep both tables. A table this stage has no row for stays empty");
+    const reference = await readFile(
+      path.join(path.dirname(template), "deliberation-record.md"),
+      "utf-8",
+    );
+    expect(reference).toContain("a run that asked nothing keeps an empty Interview table");
   });
 
   // QFAI:AC-0001-0299-03

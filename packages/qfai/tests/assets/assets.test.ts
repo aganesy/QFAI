@@ -924,24 +924,35 @@ describe("assets guardrails", () => {
         `${file} sets a merge driver only on the two registers and direct decision pages`,
       ).toHaveLength(3);
     }
-    const seedComment = (await readFile(path.join(templateRootDir, ".gitattributes"), "utf-8"))
-      .split("\n")
-      .filter((line) => line.startsWith("#"))
-      .map((line) => line.replace(/^#\s?/, "").trim())
-      .join(" ");
-    // The comment's content, not its sentences: rows are appended and never renumbered, so union
-    // merging keeps both branches' rows, and a conflict a host shows is resolved by merging the
-    // base branch locally. A pinned sentence would turn a restatement of the comment into a red
-    // build. Whether rows may be edited is left out: a row's wording may now be restated.
-    const terms = [
-      /\bappended\b/i,
-      /\brenumbered\b/i,
-      /\bunion\b/i,
-      /\bbase branch\b/i,
-      /\blocally\b/i,
-    ];
-    for (const term of terms) {
-      expect(seedComment, `the seed comment must say why (${String(term)})`).toMatch(term);
+    for (const file of [
+      path.join(templateRootDir, ".gitattributes"),
+      path.join(repoRoot, ".gitattributes"),
+    ]) {
+      const comment = (await readFile(file, "utf-8"))
+        .split("\n")
+        .filter((line) => line.startsWith("#"))
+        .map((line) => line.replace(/^#\s?/, "").trim())
+        .join(" ");
+      // The comment's content, not its sentences: new rows are appended and a row keeps its ID,
+      // so union merging keeps both branches' rows; a decision row's wording may be restated; and
+      // a conflict a host shows is resolved by merging the base branch locally. A pinned sentence
+      // would turn a restatement of the comment into a red build.
+      const terms = [
+        /\bappended\b/i,
+        /\bID\b/,
+        /\brestated\b/i,
+        /\bunion\b/i,
+        /\bbase branch\b/i,
+        /\blocally\b/i,
+      ];
+      for (const term of terms) {
+        expect(comment, `${file}: the comment must say why (${String(term)})`).toMatch(term);
+      }
+      // Since a decision row's wording may be restated, the comment must not say that every
+      // register row is never edited. A question row is still never edited, so that is allowed.
+      expect(comment, `${file}: the comment must not say rows are never edited`).not.toMatch(
+        /\brows are (?:only appended, )?never edited/i,
+      );
     }
   });
 
