@@ -418,6 +418,12 @@ it("denies piped searches that still read project files", () => {
     ["Bash", "git tag -l -n9999 t | grep auth", "grep"],
     ["Bash", "filter grep { rg auth packages }; git status | grep auth", "grep"],
     ["Bash", "git status | ./grep auth", "grep"],
+    ["Bash", "builtin alias grep='rg -n auth packages'; git status | grep x", "grep"],
+    [
+      "Bash",
+      "grep() { cat packages/index.ts; }; export -f grep; bash -c 'git status | grep x'",
+      "grep",
+    ],
     ["PowerShell", "git ls-files | findstr /S auth", "findstr"],
     ["PowerShell", "git ls-files | findstr auth<packages\\index.ts", "findstr"],
   ] as const) {
@@ -432,7 +438,13 @@ it("denies piped searches that still read project files", () => {
   });
   expect(escaped.decision).toBe("deny");
   expect(escaped.operation).toBe("findstr");
-  for (const command of ["rg&>out.txt auth packages", "rg>out.txt auth packages"]) {
+  for (const command of [
+    "rg&>out.txt auth packages",
+    "rg>out.txt auth packages",
+    "X=1>out rg auth packages",
+    "env -i>out rg auth packages",
+    ">out rg auth packages",
+  ]) {
     const attached = classifyGraphExploration({ tool: "Bash", command });
     expect(attached.decision, command).toBe("deny");
     expect(attached.operation, command).toBe("rg");

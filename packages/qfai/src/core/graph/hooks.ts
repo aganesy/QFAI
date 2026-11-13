@@ -63,6 +63,7 @@ function classifyCommands(
   commands: ShellCommand[],
   authorize: GraphSearchAuthorization,
   depth = 0,
+  redefinedOutside = false,
 ): GraphHookDecision | undefined {
   const changesDirectory = commands.some((command) => changesGraphDirectory(command.words));
   const scopedAuthorization: GraphSearchAuthorization = changesDirectory
@@ -75,14 +76,10 @@ function classifyCommands(
     : authorize;
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
-  const redefines = commands.some((command) => redefinesCommands(command.words));
+  const redefines =
+    redefinedOutside || commands.some((command) => redefinesCommands(command.words));
   for (const { words, upstream } of commands) {
-    const decision = classifyCommand(
-      words,
-      scopedAuthorization,
-      depth,
-      redefines ? undefined : upstream,
-    );
+    const decision = classifyCommand(words, scopedAuthorization, depth, upstream, redefines);
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
@@ -95,6 +92,11 @@ function classifyCommands(
  * command may read, so a name in the same event may not run the program it names.
  */
 function redefinesCommands(words: string[]): boolean {
+  let offset = 0;
+  while (["builtin", "command", "env"].includes(words[offset]?.toLowerCase() ?? "")) {
+    offset += 1;
+    while (words[offset]?.startsWith("-")) offset += 1;
+  }
   return (
     words.some((word) => word.includes("()")) ||
     /^(?:[A-Za-z_][A-Za-z0-9_]*=|\$)/.test(words[0] ?? "") ||
@@ -124,8 +126,14 @@ function redefinesCommands(words: string[]): boolean {
       "source",
       ".",
       "hash",
-    ].includes(words[0]?.toLowerCase() ?? "")
+    ].includes(words[offset] === "." ? "." : (commandName(words.slice(offset)) ?? ""))
   );
+}
+
+/** How many words a leading redirection takes: one when its target is attached, else two. */
+function redirectionLength(word: string | undefined): number {
+  if (!word || !/^(?:\d*|&)>/.test(word)) return 0;
+  return /^(?:\d*|&)>{1,2}[&|]?$/.test(word) ? 2 : 1;
 }
 
 function changesGraphDirectory(words: string[]): boolean {
@@ -150,18 +158,33 @@ function classifyCommand(
   authorize: GraphSearchAuthorization,
   depth = 0,
   upstream?: ShellCommand,
+  redefined = false,
 ): GraphHookDecision | undefined {
   if (depth > 16) return failedGraphHook();
   let offset = 0;
-  while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) offset += 1;
-  if (offset > 0) return classifyCommand(words.slice(offset), authorize, depth + 1);
+  while (offset < words.length) {
+    const redirection = redirectionLength(words[offset]);
+    if (redirection) offset += redirection;
+    else if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) offset += 1;
+    else break;
+  }
+  if (offset > 0) {
+    return classifyCommand(words.slice(offset), authorize, depth + 1, undefined, redefined);
+  }
   const operation = commandName(words);
   if (operation === "env" || operation === "command" || operation === "builtin") {
     let offset = 1;
-    while (words[offset]?.startsWith("-") || /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) {
-      offset += 1;
+    while (offset < words.length) {
+      const redirection = redirectionLength(words[offset]);
+      if (redirection) offset += redirection;
+      else if (
+        words[offset]?.startsWith("-") ||
+        /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")
+      )
+        offset += 1;
+      else break;
     }
-    return classifyCommand(words.slice(offset), authorize, depth + 1);
+    return classifyCommand(words.slice(offset), authorize, depth + 1, undefined, redefined);
   }
   if (["bash", "sh", "zsh", "pwsh", "powershell", "cmd"].includes(operation ?? "")) {
     const switchIndex = words.findIndex((word) => /^(?:-[a-z]*c|\/c|-command)$/i.test(word));
@@ -174,9 +197,11 @@ function classifyCommand(
           ? "cmd"
           : "posix";
     const commands = shellPipelines(inner, shell);
-    return commands ? classifyCommands(commands, authorize, depth + 1) : failedGraphHook();
+    return commands
+      ? classifyCommands(commands, authorize, depth + 1, redefined)
+      : failedGraphHook();
   }
-  if (pipeFilter(words) && printsText(upstream)) return undefined;
+  if (!redefined && pipeFilter(words) && printsText(upstream)) return undefined;
   if (operation === "rg" || operation === "grep" || operation === "findstr") {
     let offset = 1;
     while (
@@ -186,7 +211,9 @@ function classifyCommand(
     )
       offset += 1;
     if (words[offset] === "--") offset += 1;
-    const positional = words.slice(offset).filter((word) => !/^&>./.test(word));
+    const positional = words
+      .slice(offset)
+      .filter((word, index, all) => !/^&>/.test(word) && all[index - 1] !== "&>");
     const eligible =
       positional.length > 0 &&
       positional.length <= 2 &&
