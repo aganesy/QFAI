@@ -176,6 +176,10 @@ describe("the Graphify document corpus", () => {
       "qfai.config.yaml gives no usable paths.deliberationDir.",
     "paths:\n  deliberationDir: ../records\n":
       "qfai.config.yaml gives no usable paths.deliberationDir.",
+    "paths:\n  deliberationDir: '.\\'\n": "qfai.config.yaml gives no usable paths.deliberationDir.",
+    "paths:\n  deliberationDir: 'docs\\..\\..'\n":
+      "qfai.config.yaml gives no usable paths.deliberationDir.",
+    "paths:\n  deliberationDir: '...'\n": "qfai.config.yaml gives no usable paths.deliberationDir.",
   };
   const recovery = "Correct qfai.config.yaml, then retry.";
 

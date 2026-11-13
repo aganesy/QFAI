@@ -111,8 +111,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- `paths.deliberationDir` that names the project root, such as `.`, or a
-  directory outside it now raises `QFAI-CFG-002` and the default
+- `paths.deliberationDir` that names the project root, such as `.`, a
+  directory outside it, or a value with a part ending in a dot or a space (which
+  Windows drops, so `...` lands in the root) now raises `QFAI-CFG-002` and the default
   `.qfai/deliberation` is used. A documents or code query on such a value fails
   and names `qfai.config.yaml`, instead of building a corpus that excludes no
   deliberation record.

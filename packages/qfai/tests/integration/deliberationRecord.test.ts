@@ -6,7 +6,11 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { resolveIssueFix } from "../../src/cli/commands/validate.js";
-import { defaultConfig, loadConfig } from "../../src/core/config.js";
+import {
+  DELIBERATION_DIR_OUTSIDE_ROOT_MESSAGE,
+  defaultConfig,
+  loadConfig,
+} from "../../src/core/config.js";
 import type { Issue, ValidationProfile } from "../../src/core/types.js";
 import { validateProject } from "../../src/core/validate.js";
 import { validateDeliberationRecords } from "../../src/core/validators/deliberationRecord.js";
@@ -323,7 +327,18 @@ describe("QFAI-DELIB-001 runs in the stated profiles", () => {
   // QFAI:AC-0001-0302-05
   // QFAI:EX-0001-0302-14
   it("raises QFAI-CFG-002 and keeps the default for a value naming the project root or a directory outside it", async () => {
-    for (const value of [".", "./", "docs/..", "'.\\'", "../records", "'docs\\..\\..'"]) {
+    await put(RECORD, LACKS_OPTION_4);
+    const values = [
+      ".",
+      "./",
+      "docs/..",
+      "'.\\'",
+      "../records",
+      "'docs\\..\\..'",
+      "'...'",
+      "'docs. '",
+    ];
+    for (const value of values) {
       await writeFile(
         path.join(root, "qfai.config.yaml"),
         `paths:\n  deliberationDir: ${value}\n`,
@@ -334,11 +349,32 @@ describe("QFAI-DELIB-001 runs in the stated profiles", () => {
       expect(
         loaded.issues.some(
           (item) =>
-            item.code === "QFAI-CFG-002" && item.message.startsWith("paths.deliberationDir must"),
+            item.code === "QFAI-CFG-002" && item.message === DELIBERATION_DIR_OUTSIDE_ROOT_MESSAGE,
         ),
         value,
       ).toBe(true);
+      const found = await validateDeliberationRecords(root, loaded.config);
+      expect(
+        found.map((item) => item.file),
+        value,
+      ).toEqual([".qfai/deliberation/20261112043225-login.md"]);
     }
+  });
+
+  it("keeps an absolute paths.deliberationDir that lies inside the project root", async () => {
+    const absolute = path.join(root, "docs", "delib");
+    await put(path.join("docs", "delib", "r.md"), LACKS_OPTION_4);
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      `paths:\n  deliberationDir: '${absolute}'\n`,
+      "utf-8",
+    );
+    const loaded = await loadConfig(root);
+    expect(loaded.issues.map((item) => item.message)).not.toContain(
+      DELIBERATION_DIR_OUTSIDE_ROOT_MESSAGE,
+    );
+    const found = await validateDeliberationRecords(root, loaded.config);
+    expect(found.map((item) => item.file)).toEqual(["docs/delib/r.md"]);
   });
 });
 

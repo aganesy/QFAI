@@ -836,19 +836,23 @@ function readDeliberationDir(
 ): string {
   const dir = readTreeDirString(value, fallback, "paths.deliberationDir", configPath, issues);
   if (isDirectoryInsideRoot(path.dirname(configPath), dir)) return dir;
-  issues.push(
-    configIssue(
-      configPath,
-      "paths.deliberationDir must name a directory inside the project root, not the root itself or a directory outside it.",
-    ),
-  );
+  issues.push(configIssue(configPath, DELIBERATION_DIR_OUTSIDE_ROOT_MESSAGE));
   return fallback;
 }
 
-/** Whether `dir`, read against `root`, names a directory strictly inside `root`. */
+export const DELIBERATION_DIR_OUTSIDE_ROOT_MESSAGE =
+  "paths.deliberationDir must name a directory inside the project root, not the root itself or a directory outside it, and no part of it may end in a dot or a space.";
+
+/**
+ * Whether `dir`, read against `root`, names a directory strictly inside `root`.
+ *
+ * A part that ends in a dot or a space, such as `...` or `docs.`, is refused: Windows drops
+ * those characters, so `...` would land in the root while this check reads it as a child.
+ */
 export function isDirectoryInsideRoot(root: string, dir: string): boolean {
   const relative = path.relative(root, path.resolve(root, dir));
   return (
+    !dir.split(/[\\/]/).some((part) => part !== "." && part !== ".." && /[. ]$/.test(part)) &&
     relative !== "" &&
     relative !== ".." &&
     !relative.startsWith(`..${path.sep}`) &&
