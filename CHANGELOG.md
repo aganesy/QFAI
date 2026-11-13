@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The code review of a rule change cross-checks the rules it links to.**
+  When a change adds or edits a rule master under `.agents/rules/`, the
+  `implementation-reviewer` reads every rule the changed master points to and
+  every rule that points to that master, and reports each clause that gives a
+  different answer to the same situation.
+
 ### Changed
 
 - **Breaking: a per-run deliberation record replaces the discussion pack.** A
@@ -77,12 +85,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   document-schema checker the docs lane runs moves from 0.15.5 to 0.15.7, the
   version the package now depends on. The releases change only a dependency of
   the checker and its build configuration.
-
-- **The spec review of a rule change cross-checks the rules it links to.**
-  When a change adds or edits a rule master under `.agents/rules/`, the
-  `requirements-reviewer` reads every rule the change points to and every rule
-  that points to it, and reports each clause that gives a different answer to
-  the same situation.
 
 ### Fixed
 
