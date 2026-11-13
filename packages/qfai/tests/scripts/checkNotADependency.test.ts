@@ -140,9 +140,10 @@ async function runBootstrap(options: BootstrapOptions = {}) {
   const entry = path.join(scripts, "bootstrap.mjs");
   const source = path.join(REPO_ROOT, "scripts/bootstrap.mjs");
   if (existsSync(source)) await copyFile(source, entry);
+  await mkdir(path.join(scripts, "lib"));
   await copyFile(
-    path.join(REPO_ROOT, "scripts", "pnpm-command.mjs"),
-    path.join(scripts, "pnpm-command.mjs"),
+    path.join(REPO_ROOT, "scripts", "lib", "pnpm-command.mjs"),
+    path.join(scripts, "lib", "pnpm-command.mjs"),
   );
   const log = path.join(root, "calls.jsonl");
   const cli = path.join(cliDir, options.cliName ?? "pnpm.cjs");

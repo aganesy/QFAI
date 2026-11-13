@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { isPnpmEntry, pnpmCommand } from "./pnpm-command.mjs";
+import { isPnpmEntry, pnpmCommand } from "./lib/pnpm-command.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

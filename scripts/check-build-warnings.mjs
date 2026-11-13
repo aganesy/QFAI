@@ -1,12 +1,12 @@
 /* global process */
 // Builds the package with the pnpm that runs this script, named by `npm_execpath`, and fails on
 // the build warnings listed below. Run directly with `node`, where `npm_execpath` is unset, it
-// starts the `pnpm` on PATH.
+// starts a native `pnpm` executable on PATH; a `pnpm.cmd` shim on Windows is not found.
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isPnpmEntry, pnpmCommand } from "./pnpm-command.mjs";
+import { isPnpmEntry, pnpmCommand } from "./lib/pnpm-command.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const patterns = [
@@ -34,7 +34,7 @@ function checkBuildWarnings() {
   const result = spawnSync(
     command,
     [...leadingArgs, "-C", path.join("packages", "qfai"), "build"],
-    { cwd: root, encoding: "utf-8" },
+    { cwd: root, encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 },
   );
   process.stdout.write(result.stdout ?? "");
   process.stderr.write(result.stderr ?? "");

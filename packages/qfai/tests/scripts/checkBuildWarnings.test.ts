@@ -53,9 +53,10 @@ async function runGate(options: RunOptions = {}) {
   await Promise.all([scripts, cliDir, elsewhere].map((dir) => mkdir(dir, { recursive: true })));
   const entry = path.join(scripts, "check-build-warnings.mjs");
   await copyFile(path.join(REPO_ROOT, "scripts", "check-build-warnings.mjs"), entry);
+  await mkdir(path.join(scripts, "lib"));
   await copyFile(
-    path.join(REPO_ROOT, "scripts", "pnpm-command.mjs"),
-    path.join(scripts, "pnpm-command.mjs"),
+    path.join(REPO_ROOT, "scripts", "lib", "pnpm-command.mjs"),
+    path.join(scripts, "lib", "pnpm-command.mjs"),
   );
   const log = path.join(root, "call.json");
   const cli = path.join(cliDir, options.cliName ?? "pnpm.cjs");
@@ -131,7 +132,7 @@ describe("the build-warnings gate", () => {
     expect(result.status).toBe(7);
   });
 
-  it("starts the pnpm on PATH when run directly, and names it when none is there", async () => {
+  it("names pnpm when run directly with none on PATH", async () => {
     const result = await runGate({ execPath: "unset" });
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/^Could not start pnpm: /m);
