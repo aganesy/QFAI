@@ -111,6 +111,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`QFAI-UITEXT-001` exempts link and button components by the last word of
+  their name.** A component such as `ButtonLink`, `NavLink`, `SubmitButton` or
+  Vue's `router-link` now counts as a link or a button, as `Link` and `Button`
+  already did, so a shared link or button component no longer needs a
+  `qfai-text` reason that a plain `<Link>` does not. A name whose last word is
+  something else, such as `ButtonGroup`, is still checked.
+  Fixes #4114.
+
 - `qfai init` in a project with no `.gitignore` now creates it with
   `node_modules/` above the QFAI managed block, so the first `git add -A` no
   longer stages the dependency tree. An existing `.gitignore` is not changed
