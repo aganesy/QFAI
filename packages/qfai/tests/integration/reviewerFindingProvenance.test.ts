@@ -76,7 +76,7 @@ describe("reviewer finding provenance", () => {
         "a server-side request forgery or an auth bypass reached through several files, blocks.",
     );
     expect(card).toContain(
-      "This is the one reach beyond the touched files, and it covers only the inputs the change handles.",
+      "Besides the rules a changed rule master links to, this is the one reach beyond the touched files, and it covers only the inputs the change handles.",
     );
     expect(card).toContain("traces to `defect:security`");
     const rows = baseline.split(/\r?\n/).filter((line) => line.startsWith("| `/qfai-implement`"));
