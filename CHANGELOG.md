@@ -111,6 +111,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`QFAI-UITEXT-001` exempts link and button components by the last word of
+  their name.** A component such as `ButtonLink`, `NavLink`, `SubmitButton` or
+  Vue's `router-link` now counts as a link or a button, as `Link` and `Button`
+  already did, so a shared link or button component no longer needs a
+  `qfai-text` reason that a plain `<Link>` does not. A name whose last word is
+  something else, such as `ButtonGroup`, is still checked.
+  Fixes #4114.
+
 - **`qfai session-review` names more reminders and exit statuses.**
   - A hook context that holds a listed reminder text inside other text, such
     as a host's prefix or several reminders joined, counts under each listed
