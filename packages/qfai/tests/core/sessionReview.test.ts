@@ -17,7 +17,10 @@ import {
   sinceInstant,
   type LocateEnvironment,
 } from "../../src/core/sessionReview/locate.js";
-import { parseClaudeTranscript } from "../../src/core/sessionReview/parseClaude.js";
+import {
+  parseClaudeTranscript,
+  readClaudeRecord,
+} from "../../src/core/sessionReview/parseClaude.js";
 import { parseCodexTranscript, readCodexRecord } from "../../src/core/sessionReview/parseCodex.js";
 import { redact } from "../../src/core/sessionReview/redact.js";
 import { renderJson, renderMarkdown } from "../../src/core/sessionReview/render.js";
@@ -604,5 +607,191 @@ describe("the same transcripts give the same bytes", () => {
       /## claude-a-session[\s\S]*## claude-b-session[\s\S]*## claude-c-session/,
     );
     expect(reports[0]).not.toMatch(/\d{2}:\d{2}:\d{2}|2026-/);
+  });
+});
+
+/** The events a run of Codex rollout records leaves. */
+function codexEvents(records: Record<string, unknown>[]): SessionEvents {
+  const events = emptyEvents();
+  for (const record of records) readCodexRecord(record, events);
+  return events;
+}
+
+function codexCall(name: string, id: string, args: Record<string, unknown>) {
+  return {
+    type: "response_item",
+    payload: { type: "function_call", name, call_id: id, arguments: JSON.stringify(args) },
+  };
+}
+
+function codexOutput(id: string, output: unknown) {
+  return { type: "response_item", payload: { type: "function_call_output", call_id: id, output } };
+}
+
+function commandExecution(id: string, status: string, exitCode?: number) {
+  return {
+    type: "event_msg",
+    payload: {
+      type: "item_completed",
+      item: {
+        type: "CommandExecution",
+        id,
+        command: ["bash", "-lc", "npx qfai validate"],
+        status,
+        ...(exitCode === undefined ? {} : { exit_code: exitCode }),
+      },
+    },
+  };
+}
+
+// QFAI:EX-0001-0294-10
+// QFAI:EX-0001-0294-11
+// QFAI:EX-0001-0294-12
+// QFAI:EX-0001-0294-14
+describe("the gaps a host's record shapes and a shell line's syntax leave", () => {
+  it("counts text the user typed beside a tool result in one Claude Code record", () => {
+    const events = emptyEvents();
+    readClaudeRecord(
+      {
+        type: "user",
+        toolUseResult: { stdout: "ok" },
+        message: {
+          role: "user",
+          content: [
+            { type: "tool_result", tool_use_id: "t1", content: "ok" },
+            { type: "text", text: "<system-reminder>note</system-reminder>" },
+            { type: "text", text: "Wrong file, use the other one." },
+          ],
+        },
+      },
+      events,
+    );
+    readClaudeRecord({ type: "user", message: { role: "user", content: "Now stop." } }, events);
+    expect(events.results).toEqual([expect.objectContaining({ id: "t1", isError: false })]);
+    expect(events.userTurns).toEqual(["Wrong file, use the other one.", "Now stop."]);
+    expect(summarise(events, FACTS).corrections).toEqual([
+      { turn: 1, words: ["wrong"] },
+      { turn: 2, words: ["stop"] },
+    ]);
+  });
+
+  it("reads an unquoted # that starts a word as a comment to the end of its line", () => {
+    expect(qfaiCommandsIn("echo ok # ignored; qfai validate")).toEqual([]);
+    expect(qfaiCommandsIn("# npx qfai doctor\nnpx qfai validate # why")).toEqual(["qfai validate"]);
+    expect(qfaiCommandsIn("echo a#b; npx qfai report")).toEqual(["qfai report"]);
+    expect(qfaiCommandsIn("echo '# x'; npx qfai report")).toEqual(["qfai report"]);
+  });
+
+  it("counts qfai run through yarn and yarn exec, as a Plug'n'Play project runs it", () => {
+    expect(qfaiCommandsIn("yarn qfai validate")).toEqual(["qfai validate"]);
+    expect(qfaiCommandsIn("yarn exec qfai workflow plan")).toEqual(["qfai workflow plan"]);
+  });
+
+  it("splits a shell line at a background &, never at one inside a redirection", () => {
+    const events = (command: string): SessionEvents => ({
+      ...emptyEvents(),
+      calls: [{ id: "x", name: "Bash", command }],
+      results: [{ id: "x", isError: false, text: "", exitCode: 0 }],
+    });
+    for (const command of [
+      "npx qfai validate 2>&1",
+      "npx qfai validate &> log.txt",
+      "npx qfai validate >log.txt 2>&1",
+    ]) {
+      expect(summarise(events(command), FACTS).qfaiCommands, command).toEqual([
+        { command: "qfai validate", runs: 1, exits: [{ name: "0", count: 1 }] },
+      ]);
+    }
+    expect(qfaiCommandsIn("npx qfai doctor & npx qfai report")).toEqual([
+      "qfai doctor",
+      "qfai report",
+    ]);
+  });
+
+  it("counts a Codex read_file call on a rule file as a read, with its result bytes", () => {
+    const events = codexEvents([
+      codexCall("read_file", "r1", { file_path: "/work/app/.agents/rules/grilling.md" }),
+      codexOutput("r1", "# Grilling"),
+      codexCall("read_file", "r2", { path: ".agents/rules/grilling.md" }),
+      codexOutput("r2", "Exit code: 1"),
+    ]);
+    expect(summarise(events, FACTS).reads).toEqual([
+      { path: ".agents/rules/grilling.md", reads: 2, repeats: 1, bytes: 22 },
+    ]);
+    expect(summarise(events, FACTS).toolErrors).toEqual([]);
+  });
+
+  it("reads a Codex status line only from the header above the output", () => {
+    const status = (output: string) =>
+      codexEvents([
+        codexCall("shell_command", "s", { command: "npx qfai validate" }),
+        codexOutput("s", output),
+      ]).results[0];
+    expect(status("Exit code: 1\nWall time: 0.2 seconds\nOutput:\nboom")).toEqual(
+      expect.objectContaining({ isError: true, exitCode: 1 }),
+    );
+    expect(
+      status(
+        "Chunk ID: a1\nWall time: 0.1 seconds\nProcess exited with code 0\nOutput:\nExit code: 1",
+      ),
+    ).toEqual(expect.objectContaining({ isError: false, exitCode: 0 }));
+    expect(status("a log line\nExit code: 1")).toEqual(
+      expect.objectContaining({ isError: false, exitCode: null }),
+    );
+  });
+
+  it("takes a Codex command's status from its execution event, tied to its call", () => {
+    const script = codexEvents([
+      {
+        type: "response_item",
+        payload: {
+          type: "custom_tool_call",
+          name: "exec",
+          call_id: "outer",
+          input: 'text((await tools.exec_command({cmd:"npx qfai validate"})).output);',
+        },
+      },
+      commandExecution("inner", "failed", 2),
+      {
+        type: "response_item",
+        payload: { type: "custom_tool_call_output", call_id: "outer", output: "Script completed" },
+      },
+    ]);
+    expect(script.results).toEqual([
+      expect.objectContaining({ id: "outer", isError: true, exitCode: 2 }),
+    ]);
+    expect(summarise(script, FACTS).qfaiCommands).toEqual([
+      { command: "qfai validate", runs: 1, exits: [{ name: "2", count: 1 }] },
+    ]);
+    expect(summarise(script, FACTS).toolErrors).toEqual([{ tool: "exec", count: 1, codes: [] }]);
+
+    const late = codexEvents([
+      codexCall("exec_command", "c", { cmd: "npx qfai doctor" }),
+      codexOutput("c", "done"),
+      commandExecution("c", "completed", 0),
+    ]);
+    expect(late.results).toEqual([expect.objectContaining({ isError: false, exitCode: 0 })]);
+
+    const legacy = codexEvents([
+      codexCall("exec_command", "l", { cmd: "npx qfai doctor" }),
+      {
+        type: "event_msg",
+        payload: { type: "exec_command_end", call_id: "l", exit_code: 1, status: "failed" },
+      },
+      codexOutput("l", "done"),
+    ]);
+    expect(legacy.results).toEqual([expect.objectContaining({ isError: true, exitCode: 1 })]);
+  });
+
+  it("writes the configured transcript directories as placeholders", () => {
+    expect(
+      redact("/srv/claude/projects/x.jsonl and /opt/codex/sessions and /home/dev/.codex", {
+        root: "/work/app",
+        home: "/home/dev",
+        claudeConfigDir: "/srv/claude",
+        codexHome: "/opt/codex/",
+        platform: "linux",
+      }),
+    ).toBe("$CLAUDE_CONFIG_DIR/projects/x.jsonl and $CODEX_HOME/sessions and ~/.codex");
   });
 });

@@ -251,6 +251,33 @@ describe("qfai session-review chooses the sessions and the destination", () => {
 
 // QFAI:EX-0001-0294-23
 describe("qfai session-review exits 1 when a file is there but cannot be used", () => {
+  it("redacts the path in the --out message as it redacts every other string", async () => {
+    const setup = await project();
+    await sessions(setup);
+    const name = `dev${"@"}example.com.md`;
+    const written = await cli(
+      ["session-review", "--root", setup.root, "--out", path.join("reports", name)],
+      setup.root,
+    );
+    expect(written.code).toBe(0);
+    expect(written.out.trim()).toBe("qfai session-review: wrote reports/[redacted]");
+    expect(await readdir(path.join(setup.root, "reports"))).toEqual([name]);
+  });
+
+  // A path component longer than a POSIX file system allows makes the read fail with the path in
+  // its message; Windows reports such a path as missing instead.
+  it.skipIf(process.platform === "win32")(
+    "names a configured transcript directory by its variable when it cannot be read",
+    async () => {
+      const setup = await project();
+      process.env.CODEX_HOME = path.join(setup.base, "c".repeat(300));
+      const result = await cli(["session-review", "--root", setup.root], setup.root);
+      expect(result.code).toBe(1);
+      expect(result.err).toContain("$CODEX_HOME");
+      expect(result.err).not.toContain(setup.base);
+    },
+  );
+
   it("exits 1 with no report when --out cannot be written, naming no local path", async () => {
     const setup = await project();
     await sessions(setup);

@@ -81,9 +81,12 @@ const CORRECTION_WORDS_JA = [
 ] as const;
 
 const FINDING_CODE = /\bQFAI-[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\d{3}\b/g;
-/** A shell segment that runs `qfai`: the command word first, through `npx`, `pnpm` or the local bin. */
+/**
+ * A shell segment that runs `qfai`: the command word first, through `npx`, `pnpm`, `yarn` (the
+ * launcher a Plug'n'Play project uses) or the local bin.
+ */
 const QFAI_SEGMENT =
-  /^(?:npx[ \t]+(?:-y[ \t]+|--yes[ \t]+)?|pnpm[ \t]+(?:exec[ \t]+)?|(?:\.\/)?node_modules\/\.bin\/)?qfai[ \t]+([a-z][a-z-]*)(?:[ \t]+([a-z][a-z-]*))?/;
+  /^(?:npx[ \t]+(?:-y[ \t]+|--yes[ \t]+)?|(?:pnpm|yarn)[ \t]+(?:exec[ \t]+)?|(?:\.\/)?node_modules\/\.bin\/)?qfai[ \t]+([a-z][a-z-]*)(?:[ \t]+([a-z][a-z-]*))?/;
 /** The characters that end a shell command outside quotes. */
 const COMMAND_SEPARATORS: ReadonlySet<string> = new Set([";", "&", "|", "(", ")", "\n"]);
 const COMMANDS_WITH_SUBCOMMAND: ReadonlySet<string> = new Set([
@@ -300,7 +303,8 @@ export function qfaiCommandsIn(command: string): string[] {
 /**
  * The commands a shell line holds, split where a separator stands outside quotes. A quoted
  * separator, as in `printf '; qfai validate'`, is text, and a backslash outside single quotes
- * keeps the next character.
+ * keeps the next character. An unquoted `#` that starts a word comments out the rest of its
+ * line, and an `&` inside a redirection (`2>&1`, `&>`) separates nothing.
  */
 function shellSegments(command: string): string[] {
   const segments: string[] = [];
@@ -308,7 +312,14 @@ function shellSegments(command: string): string[] {
   let quote: "'" | '"' | null = null;
   for (let at = 0; at < command.length; at += 1) {
     const char = command[at] ?? "";
-    if (quote === null && COMMAND_SEPARATORS.has(char)) {
+    const before = command[at - 1];
+    if (quote === null && char === "#" && startsWord(before)) {
+      const end = command.indexOf("\n", at);
+      if (end === -1) break;
+      at = end - 1;
+      continue;
+    }
+    if (quote === null && COMMAND_SEPARATORS.has(char) && !inRedirection(command, at)) {
       segments.push(current);
       current = "";
       continue;
@@ -322,6 +333,18 @@ function shellSegments(command: string): string[] {
   }
   segments.push(current);
   return segments;
+}
+
+/** Whether a word starts after `before`: at the line's start, after a blank or a separator. */
+function startsWord(before: string | undefined): boolean {
+  return before === undefined || /\s/.test(before) || COMMAND_SEPARATORS.has(before);
+}
+
+/** Whether the `&` at `at` belongs to a redirection, as in `2>&1`, `<&3` or `&>file`. */
+function inRedirection(command: string, at: number): boolean {
+  if (command[at] !== "&") return false;
+  const before = command[at - 1];
+  return before === ">" || before === "<" || command[at + 1] === ">";
 }
 
 function endsWithQfai(command: string): boolean {

@@ -51,7 +51,13 @@ export async function runSessionReview(options: SessionReviewOptions): Promise<n
   const root = path.resolve(options.root);
   const env = options.env ?? environmentFromProcess();
   const clean = (text: string): string =>
-    redact(text, { root, home: env.home, platform: env.platform });
+    redact(text, {
+      root,
+      home: env.home,
+      platform: env.platform,
+      ...(env.claudeConfigDir !== undefined ? { claudeConfigDir: env.claudeConfigDir } : {}),
+      ...(env.codexHome !== undefined ? { codexHome: env.codexHome } : {}),
+    });
   try {
     return await review(root, env, options, clean);
   } catch (cause) {
@@ -120,7 +126,7 @@ async function review(
   const out = path.resolve(root, options.outPath);
   await mkdir(path.dirname(out), { recursive: true });
   await writeFile(out, rendered, "utf-8");
-  info(`qfai session-review: wrote ${path.relative(root, out).split(path.sep).join("/")}`);
+  info(clean(`qfai session-review: wrote ${path.relative(root, out).split(path.sep).join("/")}`));
   return EXIT_CODES.ok;
 }
 

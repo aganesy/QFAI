@@ -80,15 +80,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **`qfai session-review` counts and redacts what it missed.** Text the user
-  typed in the same Claude Code record as a tool result is a typed turn; a
-  `qfai` command after an unquoted shell `#` is a comment, not a run; `yarn
-  qfai` and `yarn exec qfai` are counted; `2>&1` and `&>` no longer split a
-  command; a Codex `read_file` call on a rule file is a read; a Codex command's
-  status comes from its `exec_command_end` event and the output wrapper's own
-  status line, never from a line the command printed; and the `--out` message
-  and file-system errors redact the path, the configured `CLAUDE_CONFIG_DIR`
-  and `CODEX_HOME` included.
+- **`qfai session-review` counts and redacts what it missed.**
+  - Text the user types while a tool runs, which Claude Code stores beside the
+    tool's result, is counted as a typed turn.
+  - A `qfai` command after an unquoted `#` is a shell comment, not a run.
+  - `yarn qfai` and `yarn exec qfai` are counted as `qfai` runs.
+  - An `&` inside `2>&1` or `&>` no longer splits a command.
+  - A Codex `read_file` call on a rule file is counted as a read.
+  - A Codex command's status comes from the execution events the rollout
+    records and from the status line of Codex's own output header, never from
+    a line the command printed.
+  - The `--out` message and file-system errors redact paths, including the
+    directories `CLAUDE_CONFIG_DIR` and `CODEX_HOME` name.
 
 ## [2.4.0] - 2026-11-11
 

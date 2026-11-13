@@ -3,9 +3,10 @@
  *
  * The records read: `session_meta` names the session and its working directory; a
  * `response_item` is a message, a tool call (`function_call`, `custom_tool_call`,
- * `local_shell_call`) or a call's output. A rollout marks what each message holds: a developer
- * message marked as a hook's additional context is a hook's context, and a user message marked as
- * user text is a typed turn. An unmarked message is passed over, as is every other record.
+ * `local_shell_call`) or a call's output; an `event_msg` that reports a command execution ending
+ * gives that command's status. A rollout marks what each message holds: a developer message
+ * marked as a hook's additional context is a hook's context, and a user message marked as user
+ * text is a typed turn. An unmarked message is passed over, as is every other record.
  */
 import {
   emptyEvents,
@@ -27,6 +28,7 @@ const SHELL_CALLS: ReadonlySet<string> = new Set([
   "local_shell",
   "exec",
 ]);
+const READ_CALLS: ReadonlySet<string> = new Set(["read_file"]);
 const QUESTION_CALLS: ReadonlySet<string> = new Set([
   "request_user_input",
   "request_user_input_async",
@@ -37,8 +39,10 @@ const QUESTION_CALLS: ReadonlySet<string> = new Set([
  * same field inside the command's output is escaped there (`\"exit_code\"`), so it is not matched.
  */
 const EXIT_FIELD = /(?<!\\)"exit_code"\s*:\s*(-?\d+)/g;
-/** The status line a shell output ends its header or its body with. */
-const EXIT_LINE = /^(?:Exit code:?|Process exited with code) (-?\d+)\s*$/m;
+/** The status line of the header Codex writes above a shell command's output. */
+const EXIT_LINE = /^(?:Exit code:|Process exited with code) (-?\d+)$/;
+/** The line that ends that header; everything after it is what the command printed. */
+const OUTPUT_LINE = "Output:";
 /** A shell command inside an `exec` script: the string given as `cmd`. */
 const EXEC_CMD = /\bcmd\s*:\s*("(?:[^"\\]|\\.)*")/g;
 
@@ -62,9 +66,13 @@ export async function parseCodexTranscript(file: string): Promise<SessionEvents>
 }
 
 export function readCodexRecord(record: JsonRecord, events: SessionEvents): void {
-  if (record.type !== "response_item") return;
   const payload = record.payload;
   if (!isRecord(payload)) return;
+  if (record.type === "event_msg") {
+    readExecution(payload, events);
+    return;
+  }
+  if (record.type !== "response_item") return;
   switch (payload.type) {
     case "message":
       readMessage(payload, events);
@@ -109,6 +117,10 @@ function readCall(payload: JsonRecord): ToolCall {
   if (SHELL_CALLS.has(name) || payload.type === "local_shell_call") {
     const command = commandOf(args) ?? execCommands(stringAt(payload, "input"));
     if (command !== undefined) call.command = command;
+  }
+  if (READ_CALLS.has(name)) {
+    const readPath = stringAt(args, "file_path") ?? stringAt(args, "path");
+    if (readPath !== undefined) call.readPath = readPath;
   }
   if (QUESTION_CALLS.has(name) && isRecord(args) && Array.isArray(args.questions)) {
     call.questions = args.questions.length;
@@ -155,25 +167,107 @@ function execCommands(script: string | undefined): string | undefined {
 }
 
 /**
- * A call's output. The exit status is read only for a shell call, from the structured
- * `exit_code` field, or else from the status line: a status word inside a command's own output
- * is not the call's. A script that ran several commands failed when any of them did.
+ * A command execution's end, from the event that reports it: a paginated rollout's
+ * `item_completed` holding a `CommandExecution`, or a legacy `exec_command_end`. It is tied to the
+ * call of its ID, or else to the latest `exec` script still waiting for its output, which is the
+ * script that ran it. A result already read for that call takes the execution too.
+ */
+function readExecution(payload: JsonRecord, events: SessionEvents): void {
+  const item = payload.item;
+  let source: JsonRecord;
+  let id: string | undefined;
+  if (payload.type === "item_completed" && isRecord(item) && item.type === "CommandExecution") {
+    source = item;
+    id = stringAt(item, "id");
+  } else if (payload.type === "exec_command_end") {
+    source = payload;
+    id = stringAt(payload, "call_id");
+  } else return;
+  const status = stringAt(source, "status");
+  if (status === undefined || status === "in_progress") return;
+  const code = source.exit_code;
+  const exitCode = typeof code === "number" && Number.isInteger(code) ? code : null;
+  const call = executionCall(id, events);
+  if (call === undefined) return;
+  call.executions = [
+    ...(call.executions ?? []),
+    { exitCode, failed: status !== "completed" || (exitCode !== null && exitCode !== 0) },
+  ];
+  const at = events.results.findIndex((result) => result.id === call.id);
+  const result = events.results[at];
+  if (result === undefined) return;
+  const stated = shellStatus(result.text, call);
+  events.results[at] = {
+    ...result,
+    exitCode: stated.exitCode,
+    isError: result.isError || stated.failed,
+  };
+}
+
+function executionCall(id: string | undefined, events: SessionEvents): ToolCall | undefined {
+  const named = id === undefined ? undefined : latestCall(events.calls, id);
+  if (named !== undefined) return named;
+  const answered = new Set(events.results.map((result) => result.id));
+  for (let at = events.calls.length - 1; at >= 0; at -= 1) {
+    const call = events.calls[at];
+    if (call?.name === "exec" && !answered.has(call.id)) return call;
+  }
+  return undefined;
+}
+
+function latestCall(calls: readonly ToolCall[], id: string): ToolCall | undefined {
+  for (let at = calls.length - 1; at >= 0; at -= 1) {
+    if (calls[at]?.id === id) return calls[at];
+  }
+  return undefined;
+}
+
+/**
+ * A call's output. The exit status is read only for a shell call; a status word inside a
+ * command's own output is not the call's.
  */
 function readOutput(payload: JsonRecord, calls: readonly ToolCall[]): ToolResult {
   const id = stringAt(payload, "call_id") ?? "";
   const output = payload.output;
   const text = textOf(output);
-  let call: ToolCall | undefined;
-  for (let at = calls.length - 1; at >= 0 && call === undefined; at -= 1) {
-    if (calls[at]?.id === id) call = calls[at];
-  }
-  let exitCode: number | null = null;
-  if (call !== undefined && (SHELL_CALLS.has(call.name) || call.command !== undefined)) {
-    const fields = [...text.matchAll(EXIT_FIELD)].map((match) => Number(match[1]));
-    const line = EXIT_LINE.exec(text)?.[1];
-    if (fields.length > 0) exitCode = fields.find((code) => code !== 0) ?? 0;
-    else if (line !== undefined) exitCode = Number(line);
-  }
   const unsuccessful = isRecord(output) && output.success === false;
-  return { id, isError: unsuccessful || (exitCode !== null && exitCode !== 0), text, exitCode };
+  const call = latestCall(calls, id);
+  const shell = call !== undefined && (SHELL_CALLS.has(call.name) || call.command !== undefined);
+  const stated = shell ? shellStatus(text, call) : { exitCode: null, failed: false };
+  return { id, isError: unsuccessful || stated.failed, text, exitCode: stated.exitCode };
+}
+
+/**
+ * A shell call's status: the structured `exit_code` fields of its result, else the executions
+ * the rollout reported for it, else the status line of the header Codex writes above the output.
+ * A script that ran several commands failed when any of them did.
+ */
+function shellStatus(text: string, call: ToolCall): { exitCode: number | null; failed: boolean } {
+  const fields = [...text.matchAll(EXIT_FIELD)].map((match) => Number(match[1]));
+  if (fields.length > 0) {
+    const exitCode = fields.find((code) => code !== 0) ?? 0;
+    return { exitCode, failed: exitCode !== 0 };
+  }
+  if (call.executions !== undefined) {
+    const failed = call.executions.some((execution) => execution.failed);
+    const codes = call.executions.map((execution) => execution.exitCode);
+    const exitCode = codes.includes(null) ? null : (codes.find((code) => code !== 0) ?? 0);
+    return { exitCode, failed };
+  }
+  const exitCode = wrapperExitCode(text);
+  return { exitCode, failed: exitCode !== null && exitCode !== 0 };
+}
+
+/**
+ * The status line in the header Codex writes above a shell command's output, or none. The header
+ * ends at the `Output:` line, so a line the command printed is never read as the status.
+ */
+function wrapperExitCode(text: string): number | null {
+  const lines = text.split(/\r?\n/);
+  const end = lines.indexOf(OUTPUT_LINE);
+  for (const line of lines.slice(0, Math.max(end, 0))) {
+    const code = EXIT_LINE.exec(line)?.[1];
+    if (code !== undefined) return Number(code);
+  }
+  return null;
 }
