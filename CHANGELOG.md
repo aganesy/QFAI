@@ -14,6 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A deliberation record keeps both tables, empty where a run has no row.**
+  The record template and its reference say that a stage that asked the user
+  nothing, or took no agent decision, keeps that section's heading with an
+  empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
+  is unchanged.
+
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
   the check before a session is reported finished move to

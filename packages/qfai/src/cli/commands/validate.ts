@@ -1410,7 +1410,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DELIB-001":
-    "Add the missing section, or rewrite the named table header or row in the six-column shape the deliberation record template shows. A committed record may be edited to repair its table layout only, never its content: restore a column or a missing cell, and leave every option and answer as it was written.",
+    "Add the missing section, as its heading and an empty six-column table when the run has no row for it, or rewrite the named table header or row in the six-column shape the deliberation record template shows. A committed record may be edited to repair its table layout only, never its content: restore a column or a missing cell, and leave every option and answer as it was written.",
   "QFAI-DOCSCHEMA-002":
     "Install the qfai package with its dependencies, so @jackchuka/mdschema is present, then rerun validate.",
   // The finding already names the offending key and the release the window
