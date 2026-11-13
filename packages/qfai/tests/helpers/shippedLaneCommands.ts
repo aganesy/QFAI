@@ -1412,9 +1412,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // two that keep the assistant tree
   // reachable under a broad `.qfai/*` or `.qfai/**` rule a project already had.
   //
+  // Re-pinned when a `.gitignore` that init creates began with `node_modules/` and a blank line,
+  // outside the managed block. Dropping those first 15 bytes reproduces the previous digest
+  // (`580605d8…`) byte for byte, so the two lines are the whole delta.
+  //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "580605d86b7b469be81e0e2c37229e7e877305a8ac5a09528b7d4105f3744711"],
+  [".gitignore", "e9ef8ef9183bf5bbdfdffe354d421993a0114a73addadc0f91acdacb7daba39c"],
   // Independent golden files pin the reviewed entry instructions. Update them only after
   // independent review, preserving exact bytes without trimming or newline normalization.
   [
@@ -1527,7 +1531,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // reproduces `680a0162…`.
   // Re-pinned for the `Stop` and `SubagentStop` turn-end check groups appended after the
   // template's other events. Removing both groups reproduces `583f9448…`.
-  [".claude/settings.json", "9da3dc8004cb86338084cfe3c8290fe4cae18346e4781f4eff8667c04d57daa6"],
+  // Re-pinned when the install check started skipping a prompt with the notification markers the
+  // other two prompt reminders skip. Restoring the program reproduces `9da3dc80…`.
+  [".claude/settings.json", "e400fd79fdd4a6a6feea1035141895be10b436c245b7eea05030930d166d32eb"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader

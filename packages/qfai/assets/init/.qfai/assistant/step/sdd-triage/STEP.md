@@ -38,7 +38,7 @@ no-argument batch, and its gate runs with `--flow BF-NNNN` for that flow.
 ## Stage 0: source and preflight
 
 1. Use the launcher established by
-   `.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher`.
+   `.qfai/assistant/rule/references/launcher-preflight.md`.
    Record its resolved package path and version in the SDD report. Check that
    the installed Stage 0 instructions support the procedure being used.
 2. Name the deliberation record this run consumes: the run's own record, or

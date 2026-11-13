@@ -58,6 +58,12 @@ it("keeps the fallback for a cd to the observed worktree and withholds it for an
     { tool: "Bash", cwd: root, command: "cd $HOME && rg auth packages/" },
     { tool: "Bash", cwd: root, command: "cd ~ && rg auth packages/" },
     { tool: "Bash", cwd: root, command: "pushd . && popd && rg auth packages/" },
+    {
+      tool: "Bash",
+      cwd: root,
+      command: "cd() { builtin cd /elsewhere; }; cd . && rg auth packages/",
+    },
+    { tool: "Bash", cwd: root, command: "alias cd=pushd; cd . && rg auth packages/" },
     { tool: "Bash", cwd: root, command: "CDPATH=/outside cd nested/.. && rg auth packages/" },
     { tool: "Bash", cwd: root, command: "set -P; cd link/.. && rg auth packages/" },
     {
@@ -360,4 +366,158 @@ it("denies recursive grep over specifications and redirects document rationale",
   expect(result.message).toContain('node .qfai/tools/graph-cli.mjs documents "<question>"');
   expect(result.message).toContain("fallback --attempt-id");
   expect(result.message).not.toMatch(/codegraph_explore|query_graph|request_search_fallback|MCP/);
+});
+
+// QFAI:EX-0001-0235-26
+// Mutation: packages/qfai/src/core/graph/hooks.ts `function pipeFilter(words: string[]): boolean {` -> `function pipeFilter(words: string[]): boolean { return false;` fails "allows a search tool with no file operand that filters piped text"
+it("allows a search tool with no file operand that filters piped text", () => {
+  for (const [tool, command] of [
+    ["Bash", "git ls-files | grep auth"],
+    ["Bash", "git ls-files | grep '\\.ts$'"],
+    ["Bash", "pnpm test 2>&1 | grep -v passed"],
+    ["Bash", "git log --oneline | grep -iE 'fix|feat'"],
+    ["Bash", "git status |& grep -e modified -e deleted -"],
+    ["Bash", "git ls-files |\ngrep auth"],
+    ["Bash", "git ls-files | sort | grep -v test | grep -c auth"],
+    ["Bash", "git ls-files | grep -A3 --color=never auth"],
+    ["Bash", "git diff | rg -n authorize"],
+    ["Bash", 'bash -c "git ls-files | grep auth"'],
+    ["PowerShell", 'git ls-files | findstr /I /C:"auth flow"'],
+    ["PowerShell", "git ls-files | Select-String auth"],
+    ["PowerShell", "git ls-files | Select-String -Pattern auth -SimpleMatch"],
+  ] as const) {
+    expect(classifyGraphExploration({ tool, command }).decision, command).toBe("allow");
+  }
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `function printsText(command: ShellCommand | undefined): boolean {` -> `function printsText(command: ShellCommand | undefined): boolean { return true;` fails "denies piped searches that still read project files"
+it("denies piped searches that still read project files", () => {
+  for (const [tool, command, operation] of [
+    ["Bash", "git ls-files | grep -r auth", "grep"],
+    ["Bash", "git ls-files | grep --recur auth", "grep"],
+    ["Bash", "git ls-files | grep --dir=recurse auth", "grep"],
+    ["Bash", "git ls-files | grep auth packages", "grep"],
+    ["Bash", "git ls-files | grep -e auth packages", "grep"],
+    ["Bash", "git ls-files | grep --color auth packages/index.ts", "grep"],
+    ["Bash", "git ls-files | rg --files", "rg"],
+    ["Bash", "git ls-files | grep auth < packages/index.ts", "grep"],
+    ["Bash", "git ls-files | grep auth<packages/index.ts", "grep"],
+    ["Bash", "git ls-files | grep -i<packages/index.ts auth", "grep"],
+    ["Bash", "git ls-files | grep auth 2>&1 packages/index.ts", "grep"],
+    ["Bash", "git ls-files | grep auth &>/dev/null packages/index.ts", "grep"],
+    ["Bash", "git ls-files | grep auth >| out.txt packages/index.ts", "grep"],
+    ["Bash", "git ls-files | grep $PATTERN", "grep"],
+    ["Bash", "git status || grep auth", "grep"],
+    ["Bash", "cat packages/qfai/src/**/*.ts | grep -n authorize", "grep"],
+    ["Bash", "find packages -name '*.ts' -exec cat {} + | grep -n authorize", "grep"],
+    ["Bash", 'echo "$(cat packages/index.ts)" | grep auth', "grep"],
+    ["Bash", "pnpm exec cat packages/index.ts | grep auth", "grep"],
+    ["PowerShell", "Get-ChildItem -Recurse packages | Select-String auth", "Select-String"],
+    [
+      "PowerShell",
+      "gci packages | Where-Object Length -gt 0 | Select-String auth",
+      "Select-String",
+    ],
+    ["PowerShell", "(Get-ChildItem -Recurse packages) | Select-String auth", "Select-String"],
+    [
+      "PowerShell",
+      "Get-ChildItem -Recurse packages | Get-Content | Select-String auth",
+      "Select-String",
+    ],
+    ["PowerShell", "git ls-files | Select-String auth packages/index.ts", "Select-String"],
+    ["PowerShell", "git ls-files | Select-String auth -Path:packages/index.ts", "Select-String"],
+    ["PowerShell", "git ls-files | Select-String -Pattern:auth packages/index.ts", "Select-String"],
+    ["Bash", "echo \\>|grep -r auth .", "grep"],
+    ["Bash", "echo a\\>&grep -r auth .", "grep"],
+    ["Bash", "echo x | grep $'\\055rie\\x73ecret'", "grep"],
+    ["Bash", "(cat packages/index.ts; echo ) | grep auth", "grep"],
+    ["Bash", "pnpm --filter qfai exec cat packages/index.ts | grep auth", "grep"],
+    ["Bash", "npm -w qfai exec -- cat packages/index.ts | grep auth", "grep"],
+    ["Bash", "pnpm cat packages/index.ts | grep auth", "grep"],
+    ["Bash", "git -c alias.c='!cat packages/index.ts' c | grep auth", "grep"],
+    ["Bash", "git show HEAD:packages/index.ts | grep auth", "grep"],
+    ["Bash", "printf 'packages/index.ts\\0' | sort --files0-from=- | grep auth", "grep"],
+    ["Bash", "git log | RIPGREP_CONFIG_PATH=cfg rg auth", "rg"],
+    ["Bash", "echo packages/* | grep auth", "grep"],
+    [
+      "PowerShell",
+      "Write-Output (Get-Content packages/index.ts) | Select-String auth",
+      "Select-String",
+    ],
+    ["PowerShell", "@(Get-ChildItem -Recurse; git log) | Select-String auth", "Select-String"],
+    ["PowerShell", "echo `>|Select-String auth -Path packages/index.ts", "Select-String"],
+    ["Bash", "git ls-files | grep {auth,packages/index.ts}", "grep"],
+    ["Bash", "git ls-files | rg *", "rg"],
+    ["Bash", "git ls-files | grep -n ?*", "grep"],
+    ["Bash", "git diff --no-index /dev/null packages/index.ts | grep auth", "grep"],
+    ["PowerShell", "$a = '-r','auth','packages'; git ls-files | grep @a", "grep"],
+    ["PowerShell", "git ls-files | grep -e auth -e (gci)", "grep"],
+    ["PowerShell", "git ls-files | rg -e auth -e @(gci)", "rg"],
+    [
+      "PowerShell",
+      "$a = Get-Content packages/index.ts; echo @a | Select-String auth",
+      "Select-String",
+    ],
+    ["PowerShell", "git ls-files | findstr -g:packages\\x.ts", "findstr"],
+    ["Bash", "X=/echo cat packages/index.ts | grep auth", "grep"],
+    ["Bash", "X=/git diff /dev/null packages/index.ts | grep auth", "grep"],
+    ["Bash", "git diff /dev/null packages/index.ts | grep auth", "grep"],
+    ["Bash", "./git status | grep auth", "grep"],
+    ["Bash", "git(){ cat packages/index.ts; }; git status | grep auth", "grep"],
+    ["Bash", "export RIPGREP_CONFIG_PATH=cfg; git status | rg -e auth", "rg"],
+    ["Bash", "git diff HEAD:../x HEAD:y | grep auth", "grep"],
+    ["Bash", "git diff -- :/x | grep auth", "grep"],
+    ["Bash", "git tag -l -n9999 t | grep auth", "grep"],
+    ["Bash", "filter grep { rg auth packages }; git status | grep auth", "grep"],
+    ["Bash", "git status | ./grep auth", "grep"],
+    ["Bash", "builtin alias grep='rg -n auth packages'; git status | grep x", "grep"],
+    [
+      "Bash",
+      "grep() { cat packages/index.ts; }; export -f grep; bash -c 'git status | grep x'",
+      "grep",
+    ],
+    ["Bash", ">/dev/null hash -p /bin/cat grep; git status | grep .env", "grep"],
+    ["Bash", "command >/dev/null alias grep='cat .env #'; git status | grep x", "grep"],
+    ["Bash", ">/dev/null PATH=.; git status | grep x", "grep"],
+    ["Bash", ">&- hash -p /usr/bin/xargs grep; echo authorize packages | grep rg", "grep"],
+    [
+      "Bash",
+      "{fd}>/dev/null hash -p /usr/bin/xargs grep; echo authorize packages | grep rg",
+      "grep",
+    ],
+    ["Bash", "time hash -p /usr/bin/xargs grep; echo authorize packages | grep rg", "grep"],
+    ["Bash", "read PATH <<< /tmp/x; echo authorize packages | grep rg", "grep"],
+    ["PowerShell", "git ls-files | findstr /S auth", "findstr"],
+    ["PowerShell", "git ls-files | findstr auth<packages\\index.ts", "findstr"],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe(operation);
+  }
+  const escaped = classifyGraphExploration({
+    tool: "exec_command",
+    shell: "cmd.exe",
+    command: "echo a ^>|findstr /s auth *",
+  });
+  expect(escaped.decision).toBe("deny");
+  expect(escaped.operation).toBe("findstr");
+  for (const command of [
+    "rg&>out.txt auth packages",
+    "rg>out.txt auth packages",
+    "X=1>out rg auth packages",
+    "env -i>out rg auth packages",
+    ">out rg auth packages",
+    "<input.txt rg auth packages",
+    "3<> input.txt rg auth packages",
+  ]) {
+    const attached = classifyGraphExploration({ tool: "Bash", command });
+    expect(attached.decision, command).toBe("deny");
+    expect(attached.operation, command).toBe("rg");
+  }
+  for (const command of ['rg auth "&>" /etc/passwd', "rg auth packages &> out.txt"]) {
+    const redirected = classifyGraphExploration({ tool: "Bash", command });
+    expect(redirected.decision, command).toBe("deny");
+    expect(redirected.exceptionEligible, command).toBe(false);
+  }
 });

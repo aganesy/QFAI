@@ -22,9 +22,13 @@ const SHIPPED_ASSISTANT_ROOT = "packages/qfai/assets/init/.qfai/assistant";
  */
 const ROOT_ASSISTANT_MIRROR = ".qfai/assistant";
 
-const BASELINE_PATHS = [
-  `${SHIPPED_ASSISTANT_ROOT}/rule/shared-skill-operating-baseline.md`,
-  `${ROOT_ASSISTANT_MIRROR}/rule/shared-skill-operating-baseline.md`,
+/**
+ * The launcher preflight lives in its own small reference, so a one-command run
+ * does not load the whole operating baseline to find it.
+ */
+const LAUNCHER_REFERENCE_PATHS = [
+  `${SHIPPED_ASSISTANT_ROOT}/rule/references/launcher-preflight.md`,
+  `${ROOT_ASSISTANT_MIRROR}/rule/references/launcher-preflight.md`,
 ];
 
 /**
@@ -120,10 +124,10 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
   // for a package present in neither node_modules of this workspace. Neither
   // spelling proves the qfai that ran was the project's; only a local binary
   // does.
-  it("the shared baseline gates on a local binary, not on an npx flag", async () => {
-    for (const baseline of BASELINE_PATHS) {
+  it("the launcher preflight gates on a local binary, not on an npx flag", async () => {
+    for (const baseline of LAUNCHER_REFERENCE_PATHS) {
       const content = await readFile(path.join(repoRoot, baseline), "utf-8");
-      expect(content).toContain("## Canonical qfai Launcher");
+      expect(content).toMatch(/^# Canonical qfai Launcher$/m);
       expect(content).toContain("Launcher preflight");
       expect(content).toContain("`node_modules/.bin/qfai`");
       expect(content).toContain("UNRUN");
@@ -139,7 +143,7 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
   // directory's copy. Declared-but-not-installed and not-declared are different fixes.
   // QFAI:EX-0001-0194-42
   it("the preflight tells a declared dependency with no install here from no dependency", async () => {
-    for (const baseline of BASELINE_PATHS) {
+    for (const baseline of LAUNCHER_REFERENCE_PATHS) {
       const content = (await readFile(path.join(repoRoot, baseline), "utf-8")).replace(/\s+/g, " ");
       expect(content).toContain("the project's install command in this checkout");
       expect(content).toContain(
@@ -156,7 +160,7 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
   // An interrupted install leaves node_modules without .bin, and a workflow run calls
   // `npx qfai workflow plan` before any gate, so a gate-only preflight runs too late.
   it("the preflight runs before the first qfai call and names an interrupted install", async () => {
-    for (const baseline of BASELINE_PATHS) {
+    for (const baseline of LAUNCHER_REFERENCE_PATHS) {
       const content = (await readFile(path.join(repoRoot, baseline), "utf-8")).replace(/\s+/g, " ");
       expect(content).toContain(
         "**Launcher preflight — run once, before the first `npx qfai` call**, a gate or a run's `workflow plan` alike.",
@@ -184,7 +188,7 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
   // shipped CI workflow deliberately keeps Berry working (it selects
   // `--immutable` for Berry vs `--frozen-lockfile` for Classic).
   it("the preflight accepts Plug'n'Play resolution, not only node_modules/.bin", async () => {
-    for (const baseline of BASELINE_PATHS) {
+    for (const baseline of LAUNCHER_REFERENCE_PATHS) {
       const content = (await readFile(path.join(repoRoot, baseline), "utf-8")).replace(/\s+/g, " ");
       expect(content).toContain("Either proof is sufficient");
       expect(content).toContain("**A Plug'n'Play install.**");
@@ -198,6 +202,42 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
       // The old unconditional wording must be gone.
       expect(content).not.toContain(
         "Confirm the project has a local qfai binary at `node_modules/.bin/qfai`",
+      );
+    }
+  });
+
+  // A one-command operation route used to load the whole operating baseline only to
+  // find the preflight. The entry states the common case in place and the baseline
+  // keeps a pointer, so the long file is not read for it.
+  // QFAI:EX-0001-0194-43
+  it("states the common preflight in qfai-run and keeps only a pointer in the baseline", async () => {
+    const reference = ".qfai/assistant/rule/references/launcher-preflight.md";
+    for (const root of [SHIPPED_ASSISTANT_ROOT, ROOT_ASSISTANT_MIRROR]) {
+      const run = (
+        await readFile(path.join(repoRoot, root, "skill/qfai-run/SKILL.md"), "utf-8")
+      ).replace(/\s+/g, " ");
+      const intro = run.split("## What this skill never does")[0] ?? "";
+      expect(intro).toContain("Run the launcher preflight before planning, `--order` included.");
+      expect(intro).toContain(
+        "When this checkout has `node_modules/.bin/qfai` and no merge since its install changed the lockfile or `package.json`, it passes",
+      );
+      expect(intro).toContain(`Otherwise, as for a Plug'n'Play project, read \`${reference}\`.`);
+      expect(run).not.toContain("shared-skill-operating-baseline.md#canonical-qfai-launcher");
+
+      const baseline = await readFile(
+        path.join(repoRoot, root, "rule/shared-skill-operating-baseline.md"),
+        "utf-8",
+      );
+      const section =
+        baseline.split("## Canonical qfai Launcher")[1]?.split("\n## ")[0]?.replace(/\s+/g, " ") ??
+        "";
+      expect(section).toContain(`Read \`${reference}\` before the first \`npx qfai\` call`);
+      expect(section).not.toContain("Either proof is sufficient");
+      expect(section).not.toContain("`npm i -D qfai`");
+      expect(section).not.toContain("Do **not** fall back to");
+      // The common path must still say when a present binary is stale.
+      expect(section).toContain(
+        "read it again after a merge changes the lockfile or `package.json`",
       );
     }
   });

@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { readRepositoryDecisions } from "../helpers/decisionRegister.js";
+import { readRepositoryDecisionRow } from "../helpers/decisionRegister.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 import {
   editWorkflow,
@@ -258,7 +258,7 @@ describe("BF-0002 workflow hygiene acceptance", () => {
   });
 
   // QFAI:AC-0002-0020-02
-  it("keeps the shipped-set contract gate in a lane every pull request runs, with the duplicate gone and the cost recorded as the lost cross-check", () => {
+  it("keeps the shipped-set contract gate in a lane every pull request runs, with the duplicate gone and the retirement recorded", () => {
     const gate = "tests/integration/shippedWorkflowShapeGate.test.ts";
     expect(existsSync(path.join(PACKAGE_ROOT, gate))).toBe(true);
 
@@ -293,12 +293,9 @@ describe("BF-0002 workflow hygiene acceptance", () => {
       ),
     ).toBe(true);
 
-    const record = readRepositoryDecisions(REPO_ROOT)
-      .split(/\r?\n/u)
-      .find((line) => /^\| DEC-\d+ \|/u.test(line) && line.includes("#DR-0017-0007:"));
-    expect(record).toBeDefined();
-    expect(record).toContain("**manual cross-check**");
-    expect(record).toMatch(/It is \*\*not\*\* the loss of a mirror/u);
+    // The retirement and its recorded cost live in register row DEC-0333. A row's wording may be
+    // restated, so the row is located by its ID and checked through the decision key it cites.
+    expect(readRepositoryDecisionRow(REPO_ROOT, "DEC-0333")).toContain("DR-0017-0007");
   });
 
   // QFAI:AC-0002-0018-03

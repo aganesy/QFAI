@@ -14,6 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped product-surface reviewer and UI contract guide no longer name
+  discussion UI/UX sidecars.** The reviewer reconciles the UI contract with
+  design tokens, flows and rendered output, and the guide says a deliberation
+  record that discusses the screens is history while the UI contract is the
+  execution authority.
+
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
   the check before a session is reported finished move to
@@ -100,6 +106,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   language followed by `(translated)`, so a language scan on the file does not
   fail on the user's wording.
 
+- **The launcher preflight moved into its own short reference.** It now lives
+  in `.qfai/assistant/rule/references/launcher-preflight.md`, and the shared
+  operating baseline only points to it. `qfai-run` states the common case
+  itself: a checkout with `node_modules/.bin/qfai` passes, and `npx qfai` is
+  the launcher, including for an `--order` plan. Only a Plug'n'Play project or
+  a missing install reads the reference. A one-command operation no longer
+  loads the whole baseline to find the check. Run `qfai init --force` to take
+  the new text. Fixes #4058.
+
 ### Fixed
 
 - **A `cd` to the project itself no longer withholds the search fallback.**
@@ -107,6 +122,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   worktree in the same command, the denial still offers the AI-decided
   fallback. A move anywhere else, or to a target the command text does not
   spell out, still makes the fallback unavailable.
+- **The search-protection hook no longer denies grep, rg, findstr or
+  Select-String that filters a command's text output.** A search after a pipe
+  with no file operand and only known options, such as
+  `git ls-files | grep auth` or `pnpm test 2>&1 | grep -v passed`, now runs
+  when the stage before it is a git command that prints names, status, history
+  or differences, a package-manager test, lint, build or listing command, a
+  literal echo, or a sort or filter of that text. Every other shape is still
+  denied: recursion, an abbreviated or unknown option, a file operand, a
+  redirection, expansion or subshell, or a stage that lists files, prints their
+  contents or runs another program, such as `cat`, `git show`, `pnpm exec`,
+  `Get-ChildItem` or `Get-Content`. Searches outside the project root are still
+  denied. Fixes #4142.
+
+- **`QFAI-UITEXT-001` exempts link and button components by the last word of
+  their name.** A component such as `ButtonLink`, `NavLink`, `SubmitButton` or
+  Vue's `router-link` now counts as a link or a button, as `Link` and `Button`
+  already did, so a shared link or button component no longer needs a
+  `qfai-text` reason that a plain `<Link>` does not. A name whose last word is
+  something else, such as `ButtonGroup`, is still checked.
+  Fixes #4114.
+
+- `qfai init` in a project with no `.gitignore` now creates it with
+  `node_modules/` above the QFAI managed block, so the first `git add -A` no
+  longer stages the dependency tree. An existing `.gitignore` is not changed
+  beyond the managed block.
+
 - The `sdd-contract` step, the contract rules and the API, DB and UI contract
   samples now say that the three kinds share one number sequence, and how to
   find the next free number: one more than the highest of any kind in
@@ -143,6 +184,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     a line the command printed.
   - The `--out` message and file-system errors redact paths, including the
     directories `CLAUDE_CONFIG_DIR` and `CODEX_HOME` name.
+- **The Claude Code install check stays silent on notification turns.** A
+  background-task completion, a wake-up, a CI-monitor event and a system
+  notification each repeated the `qfai` install remedy, although such a turn
+  holds no request. The install check now skips the same prompts the
+  question-form and free-text entry reminders skip: a line opening with
+  `<task-notification>`, `<wake>`, `<ci-monitor-event>` or
+  `[SYSTEM NOTIFICATION`. `qfai init` replaces the earlier group of an
+  unchanged settings file.
 
 ## [2.4.0] - 2026-11-11
 
