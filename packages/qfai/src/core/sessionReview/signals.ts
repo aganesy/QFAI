@@ -118,7 +118,7 @@ const HOST_WRAPPER_TAGS: ReadonlySet<string> = new Set([
   "user_instructions",
 ]);
 
-/** The key a hook context that names QFAI but is none of the project's reminder texts takes. */
+/** The key a hook context that names QFAI takes when it is like none of the project's reminders. */
 export const UNREGISTERED_REMINDER = "unregistered";
 
 /** Whether a user message's text is one the user typed, not a wrapper or a notice the host wrote. */
@@ -144,18 +144,65 @@ export function summarise(events: SessionEvents, facts: ProjectFacts): SessionSi
 }
 
 /**
- * The key a hook context is counted under: its key in the project's reminder texts, a fixed key
- * for any other context that names QFAI, so no hook text reaches the report, or `null` for a
- * context of the project's own.
+ * The keys a hook context is counted under, so no hook text reaches the report: its key when it
+ * is one of the project's reminder texts; else the key of each reminder text it holds, as when a
+ * host prefixes a reminder or joins several; else, for a context that names QFAI, the key shared
+ * by the reminders that open with the same `QFAI <name>`, so a wording `reminders.json` no longer
+ * lists still counts under its rule, or `unregistered`. A context of the project's own has none.
  */
-export function reminderKey(
-  text: string,
-  reminderTexts: ReadonlyMap<string, string>,
-): string | null {
+export function reminderKeys(text: string, reminderTexts: ReadonlyMap<string, string>): string[] {
   const trimmed = text.trim();
   const exact = reminderTexts.get(trimmed);
-  if (exact !== undefined) return exact;
-  return trimmed.startsWith("QFAI ") ? UNREGISTERED_REMINDER : null;
+  if (exact !== undefined) return [exact];
+  const held = [...reminderTexts]
+    .map(([listed, key]) => ({ at: listed === "" ? -1 : trimmed.indexOf(listed), key }))
+    .filter((found) => found.at !== -1)
+    .sort((a, b) => a.at - b.at);
+  if (held.length > 0) return held.map((found) => found.key);
+  if (!trimmed.startsWith("QFAI ")) return [];
+  const opening = reminderOpening(trimmed);
+  const alike = [...reminderTexts]
+    .filter(([listed]) => reminderOpening(listed) === opening)
+    .map(([, key]) => key);
+  return [alike.length > 0 ? sharedKey(alike) : UNREGISTERED_REMINDER];
+}
+
+/**
+ * The text of each reminder in a `reminders.json`, mapped to its key. A text several keys carry,
+ * such as one reminder shown on several hooks, maps to the part of the keys they share.
+ */
+export function reminderIndex(
+  entries: ReadonlyArray<readonly [key: string, text: string]>,
+): Map<string, string> {
+  const keysByText = new Map<string, string[]>();
+  for (const [key, text] of entries) {
+    const trimmed = text.trim();
+    if (trimmed !== "") keysByText.set(trimmed, [...(keysByText.get(trimmed) ?? []), key]);
+  }
+  return new Map([...keysByText].map(([text, keys]) => [text, sharedKey(keys)]));
+}
+
+/** The words a QFAI reminder names its rule by: `QFAI <name>`, up to `(`, `:` or `.`. */
+function reminderOpening(text: string): string | null {
+  return /^QFAI [^(:.]+/.exec(text)?.[0].trim() ?? null;
+}
+
+/**
+ * One key for several: the key itself when they are one, else their shared leading
+ * `-`-separated words (`grilling` for `grilling-plan` and `grilling-delegation`), else all of
+ * them joined with `+`.
+ */
+function sharedKey(keys: readonly string[]): string {
+  const distinct = [...new Set(keys)].sort(compareText);
+  const [first, ...rest] = distinct.map((key) => key.split("-"));
+  if (first === undefined) return UNREGISTERED_REMINDER;
+  let length = first.length;
+  for (const words of rest) {
+    let same = 0;
+    while (same < Math.min(length, words.length) && words[same] === first[same]) same += 1;
+    length = same;
+  }
+  return length > 0 ? first.slice(0, length).join("-") : distinct.join("+");
 }
 
 function countReminders(
@@ -164,8 +211,7 @@ function countReminders(
 ): Count[] {
   const counts = new Map<string, number>();
   for (const text of texts) {
-    const key = reminderKey(text, reminderTexts);
-    if (key !== null) bump(counts, key);
+    for (const key of reminderKeys(text, reminderTexts)) bump(counts, key);
   }
   return sortedCounts(counts);
 }
@@ -217,8 +263,10 @@ export function pathsInCommand(
   if (command.includes("apply_patch")) return [];
   let text = slashed(command);
   for (const form of rootForms(facts)) {
-    const escaped = form.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    text = text.replace(new RegExp(`${escaped}/`, facts.platform === "win32" ? "gi" : "g"), " ");
+    text = text.replace(
+      new RegExp(`${escapeRegExp(form)}/`, facts.platform === "win32" ? "gi" : "g"),
+      " ",
+    );
   }
   const found: string[] = [];
   const pattern =
@@ -353,17 +401,50 @@ function endsWithQfai(command: string): boolean {
   return last !== undefined && qfaiCommandsIn(last).length === 1;
 }
 
+/** The variables a shell expands to the last command's status: Bash's and PowerShell's. */
+const STATUS_VARIABLE = /\$\{?\?\}?|\$LASTEXITCODE\b/gi;
+
+/**
+ * The status a command line's final `echo` printed for the `qfai` command just before it, as in
+ * `npx qfai validate; echo "exit=$?"`: the output's last line, read against the echo's own words
+ * with the status variable as a number. `null` when the line has no such echo, the echo is quoted
+ * in single quotes, or the output does not end with its line.
+ */
+export function echoedStatus(command: string, output: string): number | null {
+  const segments = shellSegments(command)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment !== "");
+  const echo = /^echo[ \t]+([^-'][^']*)$/.exec(segments.at(-1) ?? "")?.[1];
+  const before = segments.at(-2);
+  if (echo === undefined || before === undefined || qfaiCommandsIn(before).length !== 1) {
+    return null;
+  }
+  const words = echo
+    .replace(/"/g, "")
+    .trim()
+    .replace(/[ \t]+/g, " ");
+  const parts = words.split(STATUS_VARIABLE);
+  if (parts.length !== 2) return null;
+  const pattern = new RegExp(
+    `^${escapeRegExp(parts[0] ?? "")}(-?\\d+)${escapeRegExp(parts[1] ?? "")}$`,
+  );
+  const lastLine = output.trimEnd().split(/\r?\n/).at(-1)?.trim() ?? "";
+  const printed = pattern.exec(lastLine)?.[1];
+  return printed === undefined ? null : Number(printed);
+}
+
 function countQfaiCommands(events: SessionEvents): QfaiCommand[] {
   const results = resultsById(events.results);
   const commands = new Map<string, { runs: number; exits: Map<string, number> }>();
   for (const call of events.calls) {
     if (call.command === undefined) continue;
     const names = qfaiCommandsIn(call.command);
-    // The shell's status is a qfai command's only when the call ran one and it ran last.
-    const exitCode =
-      names.length === 1 && endsWithQfai(call.command)
-        ? (results.get(call.id)?.exitCode ?? null)
-        : null;
+    // The shell's status is a qfai command's only when the call ran one and it ran last, or
+    // when an `echo` right after it printed the status.
+    const result = results.get(call.id);
+    let exitCode: number | null = null;
+    if (names.length === 1 && endsWithQfai(call.command)) exitCode = result?.exitCode ?? null;
+    else if (names.length === 1) exitCode = echoedStatus(call.command, result?.text ?? "");
     for (const name of names) {
       const entry = commands.get(name) ?? { runs: 0, exits: new Map<string, number>() };
       entry.runs += 1;
@@ -392,7 +473,7 @@ export function correctionWords(text: string): string[] {
   const lower = text.toLowerCase();
   const words: string[] = [];
   for (const word of CORRECTION_WORDS_EN) {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+");
+    const escaped = escapeRegExp(word).replace(/ /g, "\\s+");
     if (new RegExp(`(?<![a-z'])${escaped}(?![a-z'])`).test(lower)) words.push(word);
   }
   for (const word of CORRECTION_WORDS_JA) if (text.includes(word)) words.push(word);
@@ -410,6 +491,11 @@ function findCorrections(turns: readonly string[]): Correction[] {
 
 function resultsById(results: readonly ToolResult[]): Map<string, ToolResult> {
   return new Map(results.map((result) => [result.id, result]));
+}
+
+/** `text` as a regular expression that matches it literally. */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function bump(counts: Map<string, number>, key: string): void {

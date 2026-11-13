@@ -26,10 +26,12 @@ import { redact } from "../../src/core/sessionReview/redact.js";
 import { renderJson, renderMarkdown } from "../../src/core/sessionReview/render.js";
 import {
   correctionWords,
+  echoedStatus,
   isTypedTurn,
   pathsInCommand,
   qfaiCommandsIn,
-  reminderKey,
+  reminderIndex,
+  reminderKeys,
   summarise,
   watchedPath,
   type ProjectFacts,
@@ -315,6 +317,8 @@ describe("what a Codex rollout shows", () => {
 // QFAI:EX-0001-0294-06
 // QFAI:EX-0001-0294-12
 // QFAI:EX-0001-0294-14
+// QFAI:EX-0001-0294-25
+// QFAI:EX-0001-0294-26
 describe("the edges a slug, a shell line and a calendar leave open", () => {
   it("takes a transcript in the root's own directory only when it records the root as cwd", async () => {
     const base = await tempDir();
@@ -462,12 +466,71 @@ describe("the signal helpers", () => {
 
   it("keys a hook context by exact text first, else unregistered when it names QFAI", () => {
     expect(
-      reminderKey("For new requests the user wrote, use qfai-run to plan.", REMINDER_TEXTS),
-    ).toBe("free-text-entry");
-    expect(reminderKey("QFAI token for user alice is wrong, see note", REMINDER_TEXTS)).toBe(
+      reminderKeys("For new requests the user wrote, use qfai-run to plan.", REMINDER_TEXTS),
+    ).toEqual(["free-text-entry"]);
+    expect(reminderKeys("QFAI token for user alice is wrong, see note", REMINDER_TEXTS)).toEqual([
       "unregistered",
-    );
-    expect(reminderKey("The project's own reminder.", REMINDER_TEXTS)).toBeNull();
+    ]);
+    expect(reminderKeys("The project's own reminder.", REMINDER_TEXTS)).toEqual([]);
+  });
+
+  it("keys each reminder a hook context holds inside other text", () => {
+    const joined = [
+      "UserPromptSubmit hook additional context: QFAI API budget (.agents/rules/api-budget.md). Ask git first.",
+      "QFAI free-text entry: for each new request, invoke the qfai-run skill first.",
+    ].join("\n\n");
+    expect(reminderKeys(joined, REMINDER_TEXTS)).toEqual(["api-budget", "free-text-entry"]);
+  });
+
+  it("keys an unlisted wording by the reminder that opens the same way, or their shared key", () => {
+    const texts = reminderIndex([
+      ["api-budget", "QFAI API budget (.agents/rules/api-budget.md). Ask git first."],
+      ["grilling-plan", "QFAI grilling (.agents/rules/grilling.md): ask first."],
+      ["grilling-delegation", "QFAI grilling (.agents/rules/grilling.md): ask first."],
+      ["grilling-design-artifact", "QFAI grilling (.agents/rules/grilling.md): ask first."],
+      ["install-check", "QFAI install check: run the install."],
+    ]);
+    // One text several hooks show counts under the part of their keys they share.
+    expect(texts.get("QFAI grilling (.agents/rules/grilling.md): ask first.")).toBe("grilling");
+    expect(
+      reminderKeys("QFAI API budget (.agents/rules/api-budget.md): older words.", texts),
+    ).toEqual(["api-budget"]);
+    expect(reminderKeys("QFAI grilling (.agents/rules/grilling.md): older words.", texts)).toEqual([
+      "grilling",
+    ]);
+    expect(reminderKeys("QFAI install check: older words.", texts)).toEqual(["install-check"]);
+    expect(reminderKeys("QFAI retired rule: words.", texts)).toEqual(["unregistered"]);
+    // Keys that share no leading word are all named.
+    expect(
+      reminderIndex([
+        ["b-one", "QFAI x."],
+        ["a-two", "QFAI x."],
+      ]).get("QFAI x."),
+    ).toBe("a-two+b-one");
+  });
+
+  it("reads a qfai command's status from an echo of it right after the command", () => {
+    expect(
+      echoedStatus('npx qfai validate; echo "exit=$?"', "validate: 0 findings\nexit=1\n"),
+    ).toBe(1);
+    expect(echoedStatus("cd app && npx qfai workflow plan\necho $?", "plan\n0")).toBe(0);
+    expect(echoedStatus("npx qfai validate; echo ${?}", "2")).toBe(2);
+    expect(echoedStatus('npx qfai validate; echo "status: $LASTEXITCODE"', "status: 3")).toBe(3);
+    // The status is unknown when the echo is not right after qfai, cannot expand, or did not print.
+    expect(echoedStatus('npx qfai validate | tail -5; echo "exit=$?"', "exit=0")).toBeNull();
+    expect(echoedStatus("npx qfai validate; echo 'exit=$?'", "exit=$?")).toBeNull();
+    expect(echoedStatus('npx qfai validate; echo "exit=$?"', "exit=0\nmore")).toBeNull();
+    expect(echoedStatus('npx qfai validate; echo "done"', "done")).toBeNull();
+    expect(
+      summarise(
+        {
+          ...emptyEvents(),
+          calls: [{ id: "x", name: "Bash", command: 'npx qfai validate; echo "exit=$?"' }],
+          results: [{ id: "x", isError: false, text: "found\nexit=1", exitCode: 0 }],
+        },
+        FACTS,
+      ).qfaiCommands,
+    ).toEqual([{ command: "qfai validate", runs: 1, exits: [{ name: "1", count: 1 }] }]);
   });
 
   it("matches English correction words whole, so a longer word is not one", () => {
