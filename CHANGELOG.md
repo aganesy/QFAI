@@ -111,6 +111,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The comment in the `.gitattributes` that `qfai init` seeds no longer says
+  register rows are never edited. It now says new rows are appended, a row
+  keeps its ID and a decision row's wording may be restated, and still gives
+  the union-merge reason and how to resolve a conflict a host shows. The file
+  is seeded only where none exists, so an existing `.gitattributes` keeps its
+  old comment. Fixes #4173.
+
 - `qfai init` in a project with no `.gitignore` now creates it with
   `node_modules/` above the QFAI managed block, so the first `git add -A` no
   longer stages the dependency tree. An existing `.gitignore` is not changed
