@@ -6,7 +6,8 @@
 
 ## Subject
 
-Fix the six small review notes left after the deliberation record redesign: the graph's handling of an unreadable configuration, a double configuration load, two stale spec texts, a stale test comment and a bare type assertion.
+Fix the six small review notes left after the deliberation record redesign:
+the graph's handling of an unreadable configuration, a double configuration load, two stale spec texts, a stale test comment and a bare type assertion.
 
 ## qfai-run
 
