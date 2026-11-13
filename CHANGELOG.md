@@ -53,8 +53,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     checks read only `paths.specsDir`.
   - The Graphify document corpus leaves out `paths.deliberationDir`, so no
     documents query returns a record. A cached analysis holding a record is not
-    restored, and when `qfai.config.yaml` cannot be read or parsed, or its
-    `paths.deliberationDir` is not a directory path, the query fails and
+    restored, and when `qfai.config.yaml` cannot be read or parsed, or gives no
+    usable `paths.deliberationDir`, the query fails and
     names the file instead of guessing the directory.
 
   Migration:
@@ -78,8 +78,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the package now depends on. The releases change only a dependency of
   the checker and its build configuration.
 
+- **An approval row quotes a translated label in the file's language.**
+  When the structured question showed its options in a language other than
+  the one `decisions.md` is written in, the `qfai-sdd` decisions template now
+  says to record the chosen option's label as a rendering in the file's
+  language followed by `(translated)`, so a language scan on the file does not
+  fail on the user's wording.
+
 ### Fixed
 
+- Repository bootstrap starts pnpm 12's native executable itself, so
+  `corepack pnpm bootstrap` no longer stops with the instruction to run that
+  same command.
 - **The Claude Code install check stays silent on notification turns.** A
   background-task completion, a wake-up, a CI-monitor event and a system
   notification each repeated the `qfai` install remedy, although such a turn
