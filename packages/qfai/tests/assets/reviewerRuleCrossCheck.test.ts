@@ -8,6 +8,7 @@ import { readRule } from "../helpers/ruleWithReferences.js";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const CARD = "assistant/agent/implementation-reviewer.md";
+const REMIT = "assistant/rule/references/reviewer-remit.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -21,6 +22,13 @@ describe("the code review of a rule change cross-checks the rules it links to", 
       );
       expect(card).toContain(
         "report as a finding each clause that gives a different answer to the same situation",
+      );
+      // The remit puts the reach in scope, so a contradiction found there can block.
+      const remitRow = (await readRule(path.join(repoRoot, tree, REMIT)))
+        .split(/\r?\n/)
+        .find((line) => line.startsWith("| `/qfai-implement`"));
+      expect(remitRow).toContain(
+        "for a changed rule master, every rule it points to and every rule that points to it",
       );
     });
   }

@@ -61,7 +61,7 @@ specialization_tags:
   unsafe deserialization and path traversal. Judge validation at a trust boundary against `.agents/rules/minimal-implementation.md` § 2.
 - Follow every input the change adds or alters to where it is used, across files the change did not touch.
   A path the change opens there, such as an insecure direct object reference, a server-side request forgery or an auth bypass reached through several files, blocks.
-  This is the one reach beyond the touched files, and it covers only the inputs the change handles.
+  Besides the rules a changed rule master links to, this is the one reach beyond the touched files, and it covers only the inputs the change handles.
   A security finding the review demonstrates traces to `defect:security`.
 - Check the EX test's oracle, selector and RED/GREEN/Refactor evidence.
 - When the change adds, moves or copies an AC or EX annotation, read the annotated test's body and confirm that it asserts the example's observable outcome,
