@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { defaultConfig } from "../../../../src/core/config.js";
 import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
@@ -83,7 +84,7 @@ describe("migration managed gitignore update", () => {
       root,
       specsDir: path.join(root, ".qfai", "spec"),
       contractsDir: path.join(root, ".qfai", "spec", "03_contract"),
-      config: {} as MigrationContext["config"],
+      config: defaultConfig,
     };
     const gitignore = path.join(root, ".gitignore");
     await writeFile(gitignore, "project-only\n", "utf8");
@@ -114,7 +115,7 @@ describe("migration managed gitignore update", () => {
       root,
       specsDir: path.join(root, ".qfai", "spec"),
       contractsDir: path.join(root, ".qfai", "spec", "03_contract"),
-      config: {} as MigrationContext["config"],
+      config: defaultConfig,
     };
     const gitignore = path.join(root, ".gitignore");
     const stateLines = [".qfai/state.json", "*.qfai-state.tmp", ".qfai/state.json.lock"];

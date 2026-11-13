@@ -135,7 +135,7 @@ it("excludes same-machine completed analysis belonging to another repository", a
 });
 
 // QFAI:EX-0001-0236-22
-// Mutation: packages/qfai/src/core/graph/reuse.ts `(next !== engineDirectory && excludedGraphInput(input))` -> `false` fails "rejects completed candidates containing secret files or credential metadata without deleting user data"
+// Mutation: packages/qfai/src/core/graph/reuse.ts `(next !== engineDirectory && excludedGraphInput(input, deliberationDir))` -> `false` fails "rejects completed candidates containing secret files or credential metadata without deleting user data"
 it("rejects completed candidates containing secret files or credential metadata without deleting user data", async () => {
   for (const contaminated of [
     ".env",

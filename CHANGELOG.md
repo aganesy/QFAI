@@ -52,7 +52,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     longer carry `inputs.discussion_pack`. Mermaid, HTML mock and diagram-budget
     checks read only `paths.specsDir`.
   - The Graphify document corpus leaves out `paths.deliberationDir`, so no
-    documents query returns a record.
+    documents query returns a record. A cached analysis holding a record is not
+    restored, and when `qfai.config.yaml` cannot be read or parsed, or its
+    `paths.deliberationDir` is not a directory path, the query fails and
+    names the file instead of guessing the directory.
 
   Migration:
 
@@ -69,6 +72,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   6. Replace `qfai discussion use` and the pack path in scripts with
      `qfai sdd preflight --record <path>`, and read `source` from the new
      values.
+
+- **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.15.7.** The
+  document-schema checker the docs lane runs moves from 0.15.5 to 0.15.7, the
+  version the package now depends on. The releases change only a dependency of
+  the checker and its build configuration.
 
 ### Fixed
 

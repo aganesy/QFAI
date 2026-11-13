@@ -90,7 +90,8 @@ export async function restoreCompletedCodeAnalysis(
     )
       continue;
     if (!(await safeCompletedCorpus(path.join(candidate, "analysis"), deliberationDir))) continue;
-    if (!(await safeCodegraphInputs(root, path.join(candidate, "analysis"), run))) continue;
+    if (!(await safeCodegraphInputs(root, path.join(candidate, "analysis"), run, deliberationDir)))
+      continue;
     const current = graphAnalysisRoot(root, "codegraph");
     const staged = path.join(path.dirname(current), `.restoring-codegraph-${randomUUID()}`);
     await assertGraphStoragePath(root, staged);
@@ -148,7 +149,7 @@ export async function publishCompletedCodeAnalysis(
     const deliberationDir = await graphDeliberationDir(root);
     if (
       !(await safeCompletedCorpus(analysis, deliberationDir)) ||
-      !(await safeCodegraphInputs(root, analysis, run))
+      !(await safeCodegraphInputs(root, analysis, run, deliberationDir))
     )
       return "unavailable";
     const identity = randomUUID();
@@ -158,7 +159,7 @@ export async function publishCompletedCodeAnalysis(
     await assertIndependentAnalysis(path.join(staged, "analysis"));
     if (
       !(await safeCompletedCorpus(path.join(staged, "analysis"), deliberationDir)) ||
-      !(await safeCodegraphInputs(root, path.join(staged, "analysis"), run))
+      !(await safeCodegraphInputs(root, path.join(staged, "analysis"), run, deliberationDir))
     )
       return "unavailable";
     if (!(await nativeCodeAnalysisCurrent(root, path.join(staged, "analysis"), run)))
@@ -282,6 +283,7 @@ async function safeCodegraphInputs(
   root: string,
   analysis: string,
   run: GraphProcess,
+  deliberationDir: string,
 ): Promise<boolean> {
   const runtime = graphRuntimePaths(root);
   const result = await run(
@@ -296,7 +298,6 @@ async function safeCodegraphInputs(
     { cwd: analysis, env: codegraphEnvironment(root) },
   );
   if (result.exitCode !== 0) return false;
-  const deliberationDir = await graphDeliberationDir(root);
   try {
     const inventory: unknown = JSON.parse(result.stdout);
     if (!object(inventory) || !Array.isArray(inventory.files)) return false;

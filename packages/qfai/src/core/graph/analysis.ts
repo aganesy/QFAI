@@ -3,6 +3,7 @@ import { getInitAssetsDir } from "../../shared/assets.js";
 import { copyFile, lstat, mkdir, readdir, rm } from "node:fs/promises";
 import { loadConfig, resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import { GraphLocalStateError } from "./localFiles.js";
 import { GRAPH_VERSIONS, graphRuntimePaths, graphAnalysisRoot } from "./layout.js";
 import type { GraphProcess } from "./process.js";
 import { codegraphEnvironment } from "./process.js";
@@ -142,13 +143,43 @@ const excludedDirectories = new Set([
   ".azure",
 ]);
 
-/** The configured `paths.deliberationDir`, relative to `root` and written with `/`. */
+/**
+ * `qfai.config.yaml` cannot be read, or gives no usable `paths.deliberationDir`, so the graph
+ * cannot know which directory to keep out of its corpus.
+ */
+export class GraphConfigUnreadableError extends GraphLocalStateError {
+  constructor(configFile: string) {
+    super(
+      `${configFile} could not be read, or its paths.deliberationDir is not a directory path.`,
+      `Correct ${configFile}, then retry.`,
+    );
+  }
+}
+
+/**
+ * The configured `paths.deliberationDir`, relative to `root` and written with `/`. It throws
+ * where the configuration cannot be read or its value is rejected, rather than guess the
+ * default: the project may keep its records elsewhere.
+ */
 export async function graphDeliberationDir(root: string): Promise<string> {
-  const { config } = await loadConfig(root);
+  const { config, document, issues, configPath } = await loadConfig(root);
+  const paths = isRecord(document) ? document.paths : undefined;
+  const value = isRecord(paths) ? paths.deliberationDir : undefined;
+  if (
+    (document === undefined && issues.length > 0) ||
+    (document !== undefined && document !== null && !isRecord(document)) ||
+    (paths !== undefined && paths !== null && !isRecord(paths)) ||
+    (value !== undefined && (typeof value !== "string" || value.trim() === ""))
+  )
+    throw new GraphConfigUnreadableError(path.basename(configPath));
   return path
     .relative(root, resolvePath(root, config, "deliberationDir"))
     .split(path.sep)
     .join("/");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function excludedGraphInput(relative: string, deliberationDir: string): boolean {
