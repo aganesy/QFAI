@@ -113,6 +113,10 @@ type BootstrapOptions = {
   packageParent?: { relative: "packages" | "packages/qfai"; kind: "file" | "absent" };
   signal?: boolean;
   recordSpawn?: boolean;
+  /** Write a native executable's leading bytes, with no execute bit, as the pnpm entry. */
+  native?: boolean;
+  /** Leave the pnpm entry `npm_execpath` names absent. */
+  absentCli?: boolean;
 };
 
 async function runBootstrap(options: BootstrapOptions = {}) {
@@ -136,11 +140,19 @@ async function runBootstrap(options: BootstrapOptions = {}) {
   const entry = path.join(scripts, "bootstrap.mjs");
   const source = path.join(REPO_ROOT, "scripts/bootstrap.mjs");
   if (existsSync(source)) await copyFile(source, entry);
+  await copyFile(
+    path.join(REPO_ROOT, "scripts", "pnpm-command.mjs"),
+    path.join(scripts, "pnpm-command.mjs"),
+  );
   const log = path.join(root, "calls.jsonl");
   const cli = path.join(cliDir, options.cliName ?? "pnpm.cjs");
-  await writeFile(
-    cli,
-    String.raw`
+  if (options.native) {
+    // A PE header: read as native on every platform, then refused by the operating system.
+    await writeFile(cli, Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]));
+  } else if (!options.absentCli) {
+    await writeFile(
+      cli,
+      String.raw`
 const fs = require("node:fs");
 const log = process.env.BOOTSTRAP_CALL_LOG;
 const before = fs.existsSync(log) ? fs.readFileSync(log, "utf8") : "";
@@ -148,7 +160,8 @@ const stage = before.split("\n").filter(Boolean).length + 1;
 fs.appendFileSync(log, JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd() }) + "\n");
 if (stage === Number(process.env.BOOTSTRAP_FAIL_STAGE)) process.exitCode = 40 + stage;
 `,
-  );
+    );
+  }
   if (options.realModules) {
     await Promise.all(
       ["node_modules", "packages/qfai/node_modules"].map((relative) =>
@@ -268,10 +281,10 @@ describe("the repository bootstrap entry", () => {
     );
   });
 
-  it.each(["pnpm-native.exe", "pnpm-native", "pnpm.exe"])(
+  it.each(["pnpm-native.exe", "pnpm-native", "pnpm.exe", "pnpm"])(
     "starts the native pnpm executable %s itself, not through Node",
     async (cliName) => {
-      const result = await runBootstrap({ cliName, recordSpawn: true });
+      const result = await runBootstrap({ cliName, native: true, recordSpawn: true });
       expect(result.status, result.stderr).toBe(0);
       const command = path.join(result.root, "mock cli", cliName);
       expect(result.calls).toEqual(
@@ -281,23 +294,34 @@ describe("the repository bootstrap entry", () => {
   );
 
   it("reports a native entry that cannot be started", async () => {
-    const result = await runBootstrap({ cliName: "pnpm-native.exe" });
+    const result = await runBootstrap({ cliName: "pnpm-native.exe", native: true });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Could not start pnpm");
     expect(result.calls).toEqual([]);
   });
 
-  it("still starts a script entry through Node", async () => {
-    const result = await runBootstrap({ recordSpawn: true });
-    expect(result.status, result.stderr).toBe(0);
-    const cli = path.join(result.root, "mock cli", "pnpm.cjs");
-    expect(result.calls).toEqual(
-      bootstrapSteps.map((argv) => ({
-        command: process.execPath,
-        argv: [cli, ...argv],
-        cwd: result.root,
-      })),
-    );
+  it.each(["pnpm.cjs", "pnpm", "pnpm.exe"])(
+    "starts a script entry named %s through Node",
+    async (cliName) => {
+      const result = await runBootstrap({ cliName, recordSpawn: true });
+      expect(result.status, result.stderr).toBe(0);
+      const cli = path.join(result.root, "mock cli", cliName);
+      expect(result.calls).toEqual(
+        bootstrapSteps.map((argv) => ({
+          command: process.execPath,
+          argv: [cli, ...argv],
+          cwd: result.root,
+        })),
+      );
+    },
+  );
+
+  it("refuses an entry it cannot read without launching any command", async () => {
+    const result = await runBootstrap({ cliName: "pnpm", absentCli: true, recordSpawn: true });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/^Cannot read .*pnpm: /m);
+    expect(result.stderr).toContain("corepack pnpm bootstrap");
+    expect(result.calls).toEqual([]);
   });
 
   it.each(["npm_execpath", "npm_config_user_agent"] as const)(

@@ -51,6 +51,10 @@ async function runBuild(options: RunOptions = {}) {
   await Promise.all([scripts, cliDir, elsewhere].map((dir) => mkdir(dir, { recursive: true })));
   const entry = path.join(scripts, "run-package-build.mjs");
   await copyFile(path.join(REPO_ROOT, "scripts", "run-package-build.mjs"), entry);
+  await copyFile(
+    path.join(REPO_ROOT, "scripts", "pnpm-command.mjs"),
+    path.join(scripts, "pnpm-command.mjs"),
+  );
   const log = path.join(root, "call.json");
   const cli = path.join(cliDir, options.cliName ?? "pnpm.cjs");
   if (options.native === "unrunnable") {

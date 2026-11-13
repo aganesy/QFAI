@@ -35,9 +35,10 @@ function isNativeExecutable(file) {
 }
 
 /**
- * The command and arguments that start the pnpm entry `cli` with `args`: the entry itself when
- * it is a native executable, otherwise Node.js running it. Throws when `cli` cannot be read.
+ * The command that starts the pnpm entry `cli`, and the arguments that go before pnpm's own: the
+ * entry itself when it is a native executable, otherwise Node.js running it. Throws when `cli`
+ * cannot be read.
  */
-export function pnpmCommand(cli, args) {
-  return isNativeExecutable(cli) ? [cli, args] : [process.execPath, [cli, ...args]];
+export function pnpmCommand(cli) {
+  return isNativeExecutable(cli) ? [cli, []] : [process.execPath, [cli]];
 }
