@@ -104,16 +104,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
-  with no file operand and only known options, such as `git ls-files | grep
-auth` or `pnpm test 2>&1 | grep -v passed`, now runs when the stage before it
-  is a git command that prints names, status, history or differences, a
-  package-manager test, lint, build or listing command, a literal echo, or a
-  sort or filter of that text. Every other shape is still denied: recursion, an
-  abbreviated or unknown option, a file operand, a redirection, expansion or
-  subshell, or a stage that lists files, prints their contents or runs another
-  program, such as `cat`, `git show`, `pnpm exec`, `Get-ChildItem` or
-  `Get-Content`. Searches outside the project root are still denied. Fixes
-  #4142.
+  with no file operand and only known options, such as
+  `git ls-files | grep auth` or `pnpm test 2>&1 | grep -v passed`, now runs
+  when the stage before it is a git command that prints names, status, history
+  or differences, a package-manager test, lint, build or listing command, a
+  literal echo, or a sort or filter of that text. Every other shape is still
+  denied: recursion, an abbreviated or unknown option, a file operand, a
+  redirection, expansion or subshell, or a stage that lists files, prints their
+  contents or runs another program, such as `cat`, `git show`, `pnpm exec`,
+  `Get-ChildItem` or `Get-Content`. Searches outside the project root are still
+  denied. Fixes #4142.
 
 - **An unknown subcommand says when the project declares a newer qfai.** When
   `qfai sdd`, `qfai atdd` or `qfai workflow` is given a subcommand the running
