@@ -117,6 +117,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook no longer denies grep, rg, findstr or
+  Select-String that filters a command's text output.** A search after a pipe
+  with no file operand and only known options, such as
+  `git ls-files | grep auth` or `pnpm test 2>&1 | grep -v passed`, now runs
+  when the stage before it is a git command that prints names, status, history
+  or differences, a package-manager test, lint, build or listing command, a
+  literal echo, or a sort or filter of that text. Every other shape is still
+  denied: recursion, an abbreviated or unknown option, a file operand, a
+  redirection, expansion or subshell, or a stage that lists files, prints their
+  contents or runs another program, such as `cat`, `git show`, `pnpm exec`,
+  `Get-ChildItem` or `Get-Content`. Searches outside the project root are still
+  denied. Fixes #4142.
+
 - **`QFAI-UITEXT-001` exempts link and button components by the last word of
   their name.** A component such as `ButtonLink`, `NavLink`, `SubmitButton` or
   Vue's `router-link` now counts as a link or a button, as `Link` and `Button`
