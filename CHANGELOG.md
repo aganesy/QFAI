@@ -166,6 +166,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   something else, such as `ButtonGroup`, is still checked.
   Fixes #4114.
 
+- **`qfai session-review` names more reminders and exit statuses.**
+  - A hook context that holds a listed reminder text inside other text, such
+    as a host's prefix or several reminders joined, counts under each listed
+    text's key.
+  - A QFAI reminder whose wording `reminders.json` no longer lists counts
+    under the key of the listed reminder that opens the same way, or under
+    the part of the key those reminders share, such as `grilling`, instead of
+    `unregistered`.
+  - A reminder text that several keys share, such as the one the three
+    `grilling-` hooks show, counts under the part of the keys they share,
+    `grilling`, instead of under the last of those keys in the file.
+  - A `qfai` command followed after `;` or a line break by `echo` of
+    `$?` or `$LASTEXITCODE`, such as `npx qfai validate; echo "exit=$?"`,
+    takes the status that `echo` printed instead of `unknown`.
 - `qfai init` in a project with no `.gitignore` now creates it with
   `node_modules/` above the QFAI managed block, so the first `git add -A` no
   longer stages the dependency tree. An existing `.gitignore` is not changed

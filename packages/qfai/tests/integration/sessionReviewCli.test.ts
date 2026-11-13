@@ -309,6 +309,7 @@ describe("qfai session-review exits 1 when a file is there but cannot be used", 
 // QFAI:EX-0001-0294-09
 // QFAI:EX-0001-0294-12
 // QFAI:EX-0001-0294-22
+// QFAI:EX-0001-0294-25
 describe("qfai session-review counts what the sessions show", () => {
   it("keys a reminder by the project's reminders.json and gives the JSON shape", async () => {
     const setup = await project();
@@ -328,6 +329,20 @@ describe("qfai session-review counts what the sessions show", () => {
         },
         briefContext: "For new requests the user wrote, use qfai-run to plan.",
       },
+      // Two hooks that show one text count it under the part of their keys they share.
+      ...Object.fromEntries(
+        ["structured-question-plan", "structured-question-prompt"].map((key) => [
+          key,
+          {
+            hookSpecificOutput: {
+              hookEventName: "UserPromptSubmit",
+              additionalContext:
+                "QFAI user questions (.agents/rules/user-questions.md): ask only when the next step needs it.",
+            },
+            briefContext: "",
+          },
+        ]),
+      ),
     };
     await mkdir(path.join(setup.root, ".agents", "rules"), { recursive: true });
     await writeFile(
@@ -353,7 +368,8 @@ describe("qfai session-review counts what the sessions show", () => {
           reminders: [
             { name: "api-budget", count: 2 },
             { name: "free-text-entry", count: 2 },
-            { name: "unregistered", count: 2 },
+            { name: "structured-question", count: 1 },
+            { name: "unregistered", count: 1 },
           ],
           reads: [
             { path: ".agents/rules/grilling.md", reads: 2, repeats: 1, bytes: 15 },

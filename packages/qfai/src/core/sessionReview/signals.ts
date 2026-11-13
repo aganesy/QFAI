@@ -118,7 +118,7 @@ const HOST_WRAPPER_TAGS: ReadonlySet<string> = new Set([
   "user_instructions",
 ]);
 
-/** The key a hook context that names QFAI but is none of the project's reminder texts takes. */
+/** The key a hook context that names QFAI takes when it is like none of the project's reminders. */
 export const UNREGISTERED_REMINDER = "unregistered";
 
 /** Whether a user message's text is one the user typed, not a wrapper or a notice the host wrote. */
@@ -144,18 +144,85 @@ export function summarise(events: SessionEvents, facts: ProjectFacts): SessionSi
 }
 
 /**
- * The key a hook context is counted under: its key in the project's reminder texts, a fixed key
- * for any other context that names QFAI, so no hook text reaches the report, or `null` for a
- * context of the project's own.
+ * The keys a hook context is counted under, so no hook text reaches the report: its key when it
+ * is one of the project's reminder texts; else the key of each reminder text it holds, as when a
+ * host prefixes a reminder or joins several; else, for a context that names QFAI, the key shared
+ * by the reminders that open with the same `QFAI <name>`, so a wording `reminders.json` no longer
+ * lists still counts under its rule, or `unregistered`. A context of the project's own has none.
  */
-export function reminderKey(
-  text: string,
-  reminderTexts: ReadonlyMap<string, string>,
-): string | null {
+export function reminderKeys(text: string, reminderTexts: ReadonlyMap<string, string>): string[] {
   const trimmed = text.trim();
   const exact = reminderTexts.get(trimmed);
-  if (exact !== undefined) return exact;
-  return trimmed.startsWith("QFAI ") ? UNREGISTERED_REMINDER : null;
+  if (exact !== undefined) return [exact];
+  const held = heldReminders(trimmed, reminderTexts);
+  if (held.length > 0) return held;
+  if (!trimmed.startsWith("QFAI ")) return [];
+  const opening = reminderOpening(trimmed);
+  if (opening === null) return [UNREGISTERED_REMINDER];
+  const alike = [...reminderTexts]
+    .filter(([listed]) => reminderOpening(listed) === opening)
+    .map(([, key]) => key);
+  return [alike.length > 0 ? sharedKey(alike) : UNREGISTERED_REMINDER];
+}
+
+/**
+ * The keys of the reminder texts `text` holds, in the order they appear. A listed text found
+ * inside a longer listed text it also holds, such as a brief text the full one starts with, is
+ * that longer text's and is not counted again.
+ */
+function heldReminders(text: string, reminderTexts: ReadonlyMap<string, string>): string[] {
+  const taken: { at: number; end: number; key: string }[] = [];
+  const longestFirst = [...reminderTexts]
+    .filter(([listed]) => listed !== "")
+    .sort(([a], [b]) => b.length - a.length);
+  for (const [listed, key] of longestFirst) {
+    for (let at = text.indexOf(listed); at !== -1; at = text.indexOf(listed, at + 1)) {
+      const end = at + listed.length;
+      if (taken.some((range) => range.at <= at && end <= range.end)) continue;
+      taken.push({ at, end, key });
+      break;
+    }
+  }
+  return taken.sort((a, b) => a.at - b.at).map((range) => range.key);
+}
+
+/**
+ * The text of each reminder in a `reminders.json`, mapped to its key. A text several keys carry,
+ * such as one reminder shown on several hooks, maps to the part of the keys they share.
+ */
+export function reminderIndex(
+  entries: ReadonlyArray<readonly [key: string, text: string]>,
+): Map<string, string> {
+  const keysByText = new Map<string, string[]>();
+  for (const [key, text] of entries) {
+    const trimmed = text.trim();
+    if (trimmed !== "") keysByText.set(trimmed, [...(keysByText.get(trimmed) ?? []), key]);
+  }
+  return new Map([...keysByText].map(([text, keys]) => [text, sharedKey(keys)]));
+}
+
+/** The words a QFAI reminder names its rule by: `QFAI <name>`, up to `(`, `:` or `.`. */
+function reminderOpening(text: string): string | null {
+  return /^QFAI [^(:.]+/.exec(text)?.[0].trim() ?? null;
+}
+
+/**
+ * One key for several: the key itself when they are one, else their shared leading
+ * `-`-separated words (`grilling` for `grilling-plan` and `grilling-delegation`), else all of
+ * them joined with `+`.
+ */
+function sharedKey(keys: readonly string[]): string {
+  const distinct = [...new Set(keys)].sort(compareText);
+  const [first, ...rest] = distinct.map((key) => key.split("-"));
+  // Every caller passes at least one key; this keeps the type checker's empty case answered.
+  if (first === undefined) return UNREGISTERED_REMINDER;
+  let length = first.length;
+  for (const words of rest) {
+    let same = 0;
+    while (same < Math.min(length, words.length) && words[same] === first[same]) same += 1;
+    length = same;
+  }
+  return length > 0 ? first.slice(0, length).join("-") : distinct.join("+");
 }
 
 function countReminders(
@@ -164,8 +231,7 @@ function countReminders(
 ): Count[] {
   const counts = new Map<string, number>();
   for (const text of texts) {
-    const key = reminderKey(text, reminderTexts);
-    if (key !== null) bump(counts, key);
+    for (const key of reminderKeys(text, reminderTexts)) bump(counts, key);
   }
   return sortedCounts(counts);
 }
@@ -217,8 +283,10 @@ export function pathsInCommand(
   if (command.includes("apply_patch")) return [];
   let text = slashed(command);
   for (const form of rootForms(facts)) {
-    const escaped = form.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    text = text.replace(new RegExp(`${escaped}/`, facts.platform === "win32" ? "gi" : "g"), " ");
+    text = text.replace(
+      new RegExp(`${escapeRegExp(form)}/`, facts.platform === "win32" ? "gi" : "g"),
+      " ",
+    );
   }
   const found: string[] = [];
   const pattern =
@@ -307,7 +375,12 @@ export function qfaiCommandsIn(command: string): string[] {
  * line, and an `&` inside a redirection (`2>&1`, `&>`) separates nothing.
  */
 function shellSegments(command: string): string[] {
-  const segments: string[] = [];
+  return shellParts(command).map((part) => part.text);
+}
+
+/** The commands a shell line holds, as `shellSegments` splits them, each with the separator that ended it. */
+function shellParts(command: string): { text: string; separator: string }[] {
+  const parts: { text: string; separator: string }[] = [];
   let current = "";
   let quote: "'" | '"' | null = null;
   // Whether the next character starts a word: true after an unescaped blank or separator.
@@ -321,7 +394,7 @@ function shellSegments(command: string): string[] {
       continue;
     }
     if (quote === null && COMMAND_SEPARATORS.has(char) && !inRedirection(command, at)) {
-      segments.push(current);
+      parts.push({ text: current, separator: char });
       current = "";
       wordStart = true;
       continue;
@@ -334,8 +407,8 @@ function shellSegments(command: string): string[] {
     } else if (quote === null && (char === "'" || char === '"')) quote = char;
     else if (char === quote) quote = null;
   }
-  segments.push(current);
-  return segments;
+  parts.push({ text: current, separator: "" });
+  return parts;
 }
 
 /** Whether the `&` at `at` belongs to a redirection, as in `2>&1`, `<&3` or `&>file`. */
@@ -353,17 +426,64 @@ function endsWithQfai(command: string): boolean {
   return last !== undefined && qfaiCommandsIn(last).length === 1;
 }
 
+/** The variables a shell expands to the last command's status: Bash's and PowerShell's. */
+const STATUS_VARIABLE = /\$\?|\$\{\?\}|\$LASTEXITCODE\b/i;
+
+/**
+ * The status a command line's final `echo` printed for the `qfai` command just before it, as in
+ * `npx qfai validate; echo "exit=$?"`: the output's last line, read against the echo's own words
+ * with the status variable as a number. `null` when the echo does not follow the `qfai` command
+ * after `;` or a line break, holds a `'` or a leading option, names the variable other than
+ * once, or the output does not end with its line.
+ */
+export function echoedStatus(command: string, output: string): number | null {
+  const parts = shellParts(command);
+  const filled = parts.flatMap((part, index) => (part.text.trim() === "" ? [] : [index]));
+  const echoAt = filled.at(-1);
+  const beforeAt = filled.at(-2);
+  if (echoAt === undefined || beforeAt === undefined) return null;
+  const echo = /^echo[ \t]+([^-'][^']*)$/.exec(parts[echoAt]?.text.trim() ?? "")?.[1];
+  const joint = parts
+    .slice(beforeAt, echoAt)
+    .map((part) => part.separator)
+    .join("");
+  // After `&` the status is the background job's start and after `|` the pipe's. After `&&` or
+  // `||` the echo runs only on one outcome, so where it did not run, qfai's own last line would
+  // be read as a status.
+  const sequential = /^[;\n]+$/.test(joint);
+  if (
+    echo === undefined ||
+    !sequential ||
+    qfaiCommandsIn(parts[beforeAt]?.text.trim() ?? "").length !== 1
+  ) {
+    return null;
+  }
+  const words = echo
+    .replace(/"/g, "")
+    .trim()
+    .replace(/[ \t]+/g, " ");
+  const pieces = words.split(STATUS_VARIABLE);
+  if (pieces.length !== 2) return null;
+  const pattern = new RegExp(
+    `^${escapeRegExp(pieces[0] ?? "")}(-?\\d+)${escapeRegExp(pieces[1] ?? "")}$`,
+  );
+  const lastLine = output.trimEnd().split(/\r?\n/).at(-1)?.trim() ?? "";
+  const printed = pattern.exec(lastLine)?.[1];
+  return printed === undefined ? null : Number(printed);
+}
+
 function countQfaiCommands(events: SessionEvents): QfaiCommand[] {
   const results = resultsById(events.results);
   const commands = new Map<string, { runs: number; exits: Map<string, number> }>();
   for (const call of events.calls) {
     if (call.command === undefined) continue;
     const names = qfaiCommandsIn(call.command);
-    // The shell's status is a qfai command's only when the call ran one and it ran last.
-    const exitCode =
-      names.length === 1 && endsWithQfai(call.command)
-        ? (results.get(call.id)?.exitCode ?? null)
-        : null;
+    // The shell's status is a qfai command's only when the call ran one and it ran last, or
+    // when an `echo` right after it printed the status.
+    const result = results.get(call.id);
+    let exitCode: number | null = null;
+    if (names.length === 1 && endsWithQfai(call.command)) exitCode = result?.exitCode ?? null;
+    else if (names.length === 1) exitCode = echoedStatus(call.command, result?.text ?? "");
     for (const name of names) {
       const entry = commands.get(name) ?? { runs: 0, exits: new Map<string, number>() };
       entry.runs += 1;
@@ -392,7 +512,7 @@ export function correctionWords(text: string): string[] {
   const lower = text.toLowerCase();
   const words: string[] = [];
   for (const word of CORRECTION_WORDS_EN) {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+");
+    const escaped = escapeRegExp(word).replace(/ /g, "\\s+");
     if (new RegExp(`(?<![a-z'])${escaped}(?![a-z'])`).test(lower)) words.push(word);
   }
   for (const word of CORRECTION_WORDS_JA) if (text.includes(word)) words.push(word);
@@ -410,6 +530,11 @@ function findCorrections(turns: readonly string[]): Correction[] {
 
 function resultsById(results: readonly ToolResult[]): Map<string, ToolResult> {
   return new Map(results.map((result) => [result.id, result]));
+}
+
+/** `text` as a regular expression that matches it literally. */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function bump(counts: Map<string, number>, key: string): void {
