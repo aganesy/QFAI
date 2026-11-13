@@ -499,6 +499,16 @@ function outsideBoundary(): GraphHookDecision {
   };
 }
 
+/**
+ * PowerShell's built-in alias `sls` names Select-String. Only PowerShell resolves it:
+ * elsewhere `sls` is another program, such as the Serverless Framework CLI.
+ */
+function resolveAlias(words: string[], shell: GraphShell): string[] {
+  return shell === "powershell" && words[0]?.toLowerCase() === "sls"
+    ? ["Select-String", ...words.slice(1)]
+    : words;
+}
+
 function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | undefined {
   const commands: ShellCommand[] = [];
   let words: string[] = [];
@@ -548,7 +558,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     } else if (character === "|" || character === ";" || character === "&" || character === "\n") {
       flushWord();
       const stage: ShellCommand | undefined = words.length
-        ? { words, ...(upstream ? { upstream } : {}) }
+        ? { words: resolveAlias(words, shell), ...(upstream ? { upstream } : {}) }
         : undefined;
       if (stage) commands.push(stage);
       const pipe = character === "|" && next !== "|" && stage !== undefined;
@@ -568,7 +578,9 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   }
   if (quote) return undefined;
   flushWord();
-  if (words.length) commands.push({ words, ...(upstream ? { upstream } : {}) });
+  if (words.length) {
+    commands.push({ words: resolveAlias(words, shell), ...(upstream ? { upstream } : {}) });
+  }
   return commands;
 }
 

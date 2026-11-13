@@ -289,6 +289,44 @@ it("denies PowerShell Select-String over project source", () => {
   expect(result.domain).toBe("code");
 });
 
+// QFAI:EX-0001-0235-04
+// Mutation: packages/qfai/src/core/graph/hooks.ts `? ["Select-String", ...words.slice(1)]` -> `? words` fails "denies the PowerShell alias sls as Select-String over project source"
+it("denies the PowerShell alias sls as Select-String over project source", () => {
+  for (const [tool, command] of [
+    ["PowerShell", "sls -Pattern authorize -Path packages/**/*.ts"],
+    ["PowerShell", "SLS -Pattern authorize -Path packages/**/*.ts"],
+    ["PowerShell", "pwsh -Command 'sls -Pattern authorize -Path packages/**/*.ts'"],
+    ["Bash", "pwsh -Command 'sls -Pattern authorize -Path packages/**/*.ts'"],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("Select-String");
+    expect(result.target, command).toBe("packages/**/*.ts");
+  }
+});
+
+// QFAI:EX-0001-0235-14
+// Mutation: packages/qfai/src/core/graph/hooks.ts `return shell === "powershell" && words[0]?.toLowerCase() === "sls"` -> `return words[0]?.toLowerCase() === "sls"` fails "leaves sls outside PowerShell to the program it names"
+it("leaves sls outside PowerShell to the program it names", () => {
+  for (const command of ["sls deploy --stage prod", "sls offline"]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+    expect(result.state, command).toBe("outside-boundary");
+  }
+});
+
+// QFAI:EX-0001-0235-26
+// Mutation: packages/qfai/src/core/graph/hooks.ts `? ["Select-String", ...words.slice(1)]` -> `? words` fails "allows git output piped to the PowerShell alias sls with no path"
+it("allows git output piped to the PowerShell alias sls with no path", () => {
+  const result = classifyGraphExploration({
+    tool: "PowerShell",
+    command: "git ls-files | sls -Pattern hooks",
+  });
+  expect(result.decision).toBe("allow");
+  // Without the alias, sls is an unknown program: still allowed, but outside the boundary.
+  expect(result.state).toBe("configured");
+});
+
 // QFAI:EX-0001-0235-03
 // Mutation: packages/qfai/src/core/graph/hooks.ts `function denyExploration(operation: string, target: string): GraphHookDecision {` -> `function denyExploration(operation: string, target: string): GraphHookDecision { return { decision: "allow", state: "configured", operation, target, message: "Exploration allowed." };` fails "denies git grep exploration before execution"
 it("denies git grep exploration before execution", () => {

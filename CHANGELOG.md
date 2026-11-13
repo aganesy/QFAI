@@ -123,6 +123,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook treats the PowerShell alias `sls` as
+  `Select-String`.** `sls -Pattern authorize -Path packages/**/*.ts` was
+  allowed as outside the checked boundary while the same command spelled
+  `Select-String` was denied. In PowerShell the alias is now denied, and
+  allowed as a filter of piped text, exactly as `Select-String` is. In other
+  shells `sls` names another program, such as the Serverless Framework CLI,
+  and is classified as before.
+
 - `paths.deliberationDir` that names the project root, such as `.`, a
   directory outside it, or a value with a part ending in a dot or a space (which
   Windows drops, so `...` lands in the root) now raises `QFAI-CFG-002` and the default
