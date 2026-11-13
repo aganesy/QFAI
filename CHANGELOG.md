@@ -102,6 +102,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An unknown subcommand says when the project declares a newer qfai.** When
+  `qfai sdd`, `qfai atdd` or `qfai workflow` is given a subcommand the running
+  copy does not know, the message names the running version and where it was
+  loaded from. When the project's `package.json` declares a newer qfai, it also
+  says so and tells you to run the project's install command in this checkout,
+  then repeat the launcher preflight. Before, only an unknown `workflow`
+  operation and an unknown command named the running version, and none of them
+  compared it with the project's declaration. Fixes #4083.
+
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.
