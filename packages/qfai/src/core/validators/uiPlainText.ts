@@ -47,6 +47,7 @@ const EXEMPT_ELEMENTS = new Set([
   "script",
   "style",
 ]);
+const LINK_ALIASES = new Set(["routerlink", "nuxtlink"]);
 /** The last word of a component name that marks it as a link or a button, whatever words precede it. */
 const EXEMPT_LAST_WORDS = new Set(["link", "button"]);
 const EXEMPT_ROLES = new Set(["alert", "status"]);
@@ -335,11 +336,14 @@ function insideExempt(element: Element | null): boolean {
  * Whether an element or component name is exempt: its last `.`-separated
  * segment names an exempt element, or that segment's last word, split at a
  * case change or a `-`, is `link` or `button`, as in `ButtonLink`,
- * `RouterLink`, `router-link` or `SubmitButton`.
+ * `RouterLink`, `router-link` or `SubmitButton`. An `.html` tag reaches here
+ * in lower case with no word boundary but `-`, so `routerlink` and `nuxtlink`
+ * are named as well.
  */
 function isExemptName(name: string): boolean {
   const segment = name.split(".").pop() ?? "";
-  if (EXEMPT_ELEMENTS.has(segment.toLowerCase())) return true;
+  if (EXEMPT_ELEMENTS.has(segment.toLowerCase()) || LINK_ALIASES.has(segment.toLowerCase()))
+    return true;
   const lastWord = hyphenateWords(segment).split("-").pop()?.toLowerCase() ?? "";
   return EXEMPT_LAST_WORDS.has(lastWord);
 }

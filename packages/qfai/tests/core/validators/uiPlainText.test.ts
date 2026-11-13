@@ -336,12 +336,15 @@ describe("exempt components keep their name in every format", () => {
 
 // QFAI:EX-0001-0297-14
 describe("a component whose name ends in the word Link or Button is exempt", () => {
-  it("exempts link and button components in JSX and Vue, and checks other last words", async () => {
+  it("exempts link and button components in every format, and checks other last words", async () => {
     const issues = await run({
       "src/a.tsx":
         'export const A = () => (\n  <div>\n    <ButtonLink href="/jobs">Find jobs</ButtonLink>\n    <NavLink to="/">Home</NavLink>\n    <UI.SubmitButton>Send</UI.SubmitButton>\n    <HTMLButton>Open</HTMLButton>\n  </div>\n);\n',
       "src/b.vue":
         '<template>\n  <ButtonLink to="/jobs">Find jobs</ButtonLink>\n  <router-link to="/">Home</router-link>\n</template>\n',
+      "src/b.svelte": '<ButtonLink href="/jobs">Find jobs</ButtonLink>\n',
+      "src/b.html":
+        '<RouterLink to="/">Home</RouterLink>\n<NuxtLink to="/">Jobs</NuxtLink>\n<nav-link>Help</nav-link>\n',
       "src/c.tsx":
         "export const C = () => (\n  <div>\n    <ButtonGroup>Pick one</ButtonGroup>\n    <Unlink>Detach</Unlink>\n  </div>\n);\n",
     });
