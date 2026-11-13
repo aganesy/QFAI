@@ -123,6 +123,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The comment in the `.gitattributes` that `qfai init` seeds no longer says
+  register rows are never edited. It now says new rows are appended, a row
+  keeps its ID and a decision row's wording may be restated, and still gives
+  the union-merge reason and how to resolve a conflict a host shows. The file
+  is seeded only where none exists, so an existing `.gitattributes` keeps its
+  old comment. Fixes #4173.
+
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
   with no file operand and only known options, such as
