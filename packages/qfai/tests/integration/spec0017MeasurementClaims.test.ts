@@ -10,26 +10,32 @@
  * still open, and for a reason no ratification touches — it needs a new CI job, which adds a check
  * name to a branch-protection set no agent can reconfigure.
  *
- * The fixtures below are fixtures, so the last block anchors the extractor against real prose in this
- * repository's own decision record. Without it every assertion here would be testing whether the
- * fixture matches the regex that was written while looking at it.
+ * The fixtures below are fixtures, so the last block anchors the extractor against real prose: two
+ * rows copied from this repository's decision register. Without it every assertion here would be
+ * testing whether the fixture matches the regex that was written while looking at it. The rows are
+ * copies, not reads of the live register, because a register row's wording may be restated while
+ * its decision stands, and a restatement must not turn this suite red.
  */
-
-import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { readRepositoryDecisions } from "../helpers/decisionRegister.js";
 import {
   capturedPairs,
   evaluateMeasurementClaim,
   resolveArtifactReuse,
 } from "../helpers/measurementClaim.js";
 
-const REPO_ROOT = path.resolve(__dirname, "../../../..");
-/** Every decision row in the register. */
-const decisionRows = (text: string): string[] =>
-  text.split(/\r?\n/).filter((line) => /^\| DEC-\d+ \|/.test(line));
+/**
+ * `DEC-0335` (`DR-0017-0009`) as the register held it when this suite was written: the record that
+ * measured something.
+ */
+const MEASURED_ROW = "| DEC-0335 | spec-0017#DR-0017-0009: the higher setting was kept: the declared parallelism value of ten stayed after it measured flakier, and the flakiness was removed by fixing the fixtures | On 14 CPUs the `integration` slice timed out three cases at workers 10 (concurrency 10 or 5) and passed 862 at workers 4, so the worker axis was the cause; it was diagnosed, not re-run until it agreed. The user refused the proposed lowering of ten and told the agent to fix the structure; the fixture set is now memoized (file from 22.90s to 5.49s). Cross-spec question for the rule is carried by `CR-20260820-0005`. Related: AC-0017-0028, AC-0017-0029, EX-0017-0050, EX-0017-0051, TC-0017-0066, TC-0017-0067. |";
+
+/**
+ * `DEC-0328` (`DR-0017-0002`) as the register held it when this suite was written: the record that
+ * names a regression without measuring one.
+ */
+const DESCRIBED_ROW = "| DEC-0328 | spec-0017#DR-0017-0002: partial observability is preserved rather than over-asserted for two requirements: the action-pin bump owner (REQ-0003) is an artifact-existence obligation (AC-0017-0011), and build-artifact reuse (REQ-0005) is satisfied either by landing the reuse (AC-0017-0014) or by recording a measurement showing a wall-clock regression and keeping the rebuilds (AC-0017-0015) | Pin form is machine-checked, but no automated bump configuration exists (OC-5) and creating one needs user approval (OC-3), so a bump owner stated only in a pull-request description does not count. The reuse baseline (bundler invocation count) does not exist yet (NFR-0001), so both outcomes accept and the requirement fails only when numbers are absent. REQ-0008"s cost partition and REQ-0010"s worker value are a different case, carried by measurement-gated AC-0017-0028. - Consequences: a reviewer must read the recorded evidence, not only the exit code; the bump-owner half becomes machine-checkable once a user approves a bump configuration, the only trigger to revisit. Related: OC-80. |";
 
 /** A record in the shape these rules police, with the numbers left out. */
 const WITHOUT_NUMBERS = [
@@ -145,35 +151,16 @@ describe("an asserted regression with no numbers is not accepting", () => {
   });
 });
 
-describe("the extractor reads this repository's own decision record, not only its fixtures", () => {
+describe("the extractor reads prose copied from this repository's decision register", () => {
   it("finds the one measured pair that exists and none in the record that only describes the rule", () => {
-    const text = readRepositoryDecisions(REPO_ROOT);
-    // Keyed by the imported decision each row carries, `…/07_Decisions.md#DR-NNNN-NNNN: title`.
-    const sections = new Map<string, string>();
-    for (const row of decisionRows(text)) {
-      const id = /#(DR-\d{4}-\d{4}):/.exec(row)?.[1];
-      if (id !== undefined) sections.set(id, row);
-    }
-    expect(
-      sections.size,
-      "the decision record must have sections for this to read",
-    ).toBeGreaterThan(0);
-
     // The record that measured something.
-    const measured = sections.get("DR-0017-0009");
-    expect(
-      measured,
-      "DR-0017-0009 must be present; it is the accepting example this design was fitted to",
-    ).toBeDefined();
-    expect(capturedPairs(measured ?? "")).toEqual([{ before: "22.90s", after: "5.49s" }]);
+    expect(capturedPairs(MEASURED_ROW)).toEqual([{ before: "22.90s", after: "5.49s" }]);
 
-    // The record that names a regression without measuring one. It sits in a `- Decision` bullet and
-    // cites the measurement rule, exactly like the one above — which is why the claim direction is an input
-    // to this module rather than something it infers. If this ever yields a pair, that argument has
-    // changed and the API shape should be revisited rather than the assertion relaxed.
-    const described = sections.get("DR-0017-0002");
-    expect(described, "DR-0017-0002 must be present; it is the counter-example").toBeDefined();
-    expect(described ?? "").toContain("regression");
-    expect(capturedPairs(described ?? "")).toEqual([]);
+    // The record that names a regression without measuring one. It cites the measurement rule,
+    // exactly like the one above — which is why the claim direction is an input to this module
+    // rather than something it infers. If this ever yields a pair, that argument has changed and
+    // the API shape should be revisited rather than the assertion relaxed.
+    expect(DESCRIBED_ROW).toContain("regression");
+    expect(capturedPairs(DESCRIBED_ROW)).toEqual([]);
   });
 });
