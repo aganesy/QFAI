@@ -215,8 +215,10 @@ describe("BF-0001 managed .gitignore block", () => {
     const output = await init(fresh);
     expect(output).toContain("created: .gitignore (node_modules/ and QFAI entries)");
     const content = await readFile(path.join(fresh, ".gitignore"), "utf-8");
-    expect(content.startsWith(`node_modules/\n\n${QFAI_GITIGNORE_MARKER}\n`)).toBe(true);
-    expect(countOf(await gitignoreLines(fresh), "node_modules/")).toBe(1);
+    expect(content.startsWith("node_modules/\n\n")).toBe(true);
+    const lines = await gitignoreLines(fresh);
+    expect(countOf(lines, "node_modules/")).toBe(1);
+    expect(lines.indexOf("node_modules/")).toBeLessThan(lines.indexOf(QFAI_GITIGNORE_MARKER));
 
     await init(fresh);
     expect(await readFile(path.join(fresh, ".gitignore"), "utf-8")).toBe(content);

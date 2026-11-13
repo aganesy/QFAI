@@ -1412,9 +1412,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // two that keep the assistant tree
   // reachable under a broad `.qfai/*` or `.qfai/**` rule a project already had.
   //
+  // Re-pinned when a `.gitignore` that init creates began with `node_modules/` and a blank line,
+  // outside the managed block. Dropping those first 15 bytes reproduces the previous digest
+  // (`580605d8…`) byte for byte, so the two lines are the whole delta.
+  //
   // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
   // wrote — never copy a value out of a failure message.
-  [".gitignore", "580605d86b7b469be81e0e2c37229e7e877305a8ac5a09528b7d4105f3744711"],
+  [".gitignore", "e9ef8ef9183bf5bbdfdffe354d421993a0114a73addadc0f91acdacb7daba39c"],
   // Independent golden files pin the reviewed entry instructions. Update them only after
   // independent review, preserving exact bytes without trimming or newline normalization.
   [
