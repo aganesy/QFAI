@@ -96,13 +96,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ### Fixed
 
 - **The search-protection hook no longer denies grep, rg, findstr or
-  Select-String that filters piped output.** A search with no file operand
-  after a pipe, such as `git ls-files | grep auth` or `pnpm test | grep -v
-passed`, reads the previous command's output, not the project, and now runs.
-  Recursive grep with no file operand, `rg --files`, a named file operand, and
-  Select-String fed by `Get-ChildItem`, `gci`, `ls`, `dir`, `Get-Item` or
-  `Resolve-Path` still search files and are still denied. A logical OR (`||`)
-  is not a pipe. Searches outside the project root are still denied.
+  Select-String that filters a command's text output.** A search after a pipe
+  with no file operand and only known options, such as `git ls-files | grep auth`
+  or `pnpm test 2>&1 | grep -v passed`, now runs when the stage before it is git,
+  a package-manager command, a literal echo, or a sort or filter of that text.
+  Every other shape is still denied: recursion, an abbreviated or unknown option,
+  a file operand, a redirection or expansion, or a stage that lists files or
+  prints their contents, such as `cat`, `Get-ChildItem` or `Get-Content`.
+  Searches outside the project root are still denied.
   Fixes #4142.
 
 - Repository bootstrap starts pnpm 12's native executable itself, so
