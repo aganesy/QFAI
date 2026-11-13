@@ -17,7 +17,12 @@ export type ToolCall = {
   command?: string;
   /** The number of questions a structured-question call carried. */
   questions?: number;
+  /** The command executions a host reported for the call apart from its output, in order. */
+  executions?: Execution[];
 };
+
+/** One command execution's end: its exit code where stated, and whether it failed. */
+export type Execution = { exitCode: number | null; failed: boolean };
 
 /** What came back for a tool call. */
 export type ToolResult = {

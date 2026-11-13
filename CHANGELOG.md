@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The code review of a rule change cross-checks the rules it links to.**
+  When a change adds or edits a rule master under `.agents/rules/`, the
+  `implementation-reviewer` reads every rule the changed master points to and
+  every rule that points to that master, and reports each clause that gives a
+  different answer to the same situation.
+
 ### Changed
 
 - **Breaking: a per-run deliberation record replaces the discussion pack.** A
@@ -95,6 +103,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.
+- **`qfai session-review` counts and redacts what it missed.**
+  - Text the user types while a tool runs, which Claude Code stores beside the
+    tool's result, is counted as a typed turn.
+  - A `qfai` command after an unquoted `#` is a shell comment, not a run.
+  - `yarn qfai` and `yarn exec qfai` are counted as `qfai` runs.
+  - An `&` inside `2>&1` or `&>` no longer splits a command.
+  - A Codex `read_file` call on a rule file is counted as a read.
+  - A Codex command's status comes from the execution events the rollout
+    records and from the status line of Codex's own output header, never from
+    a line the command printed.
+  - The `--out` message and file-system errors redact paths, including the
+    directories `CLAUDE_CONFIG_DIR` and `CODEX_HOME` name.
 
 ## [2.4.0] - 2026-11-11
 

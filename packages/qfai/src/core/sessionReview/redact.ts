@@ -3,8 +3,8 @@
  *
  * The report is built from counts and fixed words, so a secret reaches it only through a string the
  * transcript supplied: a tool name, a session ID, a path. Each of those passes this filter, which
- * writes the project root and the home directory as placeholders and blanks anything shaped like a
- * credential or an e-mail address.
+ * writes the project root, the hosts' configured transcript directories and the home directory as
+ * placeholders and blanks anything shaped like a credential or an e-mail address.
  */
 
 /** The shapes blanked wherever they appear, in the order they are applied. */
@@ -26,13 +26,26 @@ const REDACTED = "[redacted]";
 export type RedactContext = {
   root: string;
   home: string;
+  /** `CLAUDE_CONFIG_DIR`, where it is set. */
+  claudeConfigDir?: string;
+  /** `CODEX_HOME`, where it is set. */
+  codexHome?: string;
   /** Windows compares paths without regard to letter case. */
   platform: NodeJS.Platform;
 };
 
-/** `text` with the root and home written as `<root>` and `~`, and every secret shape blanked. */
+/**
+ * `text` with the root, the configured transcript directories and the home written as `<root>`,
+ * `$CLAUDE_CONFIG_DIR`, `$CODEX_HOME` and `~`, and every secret shape blanked.
+ */
 export function redact(text: string, context: RedactContext): string {
   let out = replacePath(text, context.root, "<root>", context.platform);
+  for (const [dir, placeholder] of [
+    [context.claudeConfigDir, "$CLAUDE_CONFIG_DIR"],
+    [context.codexHome, "$CODEX_HOME"],
+  ] as const) {
+    if (dir !== undefined) out = replacePath(out, dir, placeholder, context.platform);
+  }
   out = replacePath(out, context.home, "~", context.platform);
   for (const pattern of SECRET_PATTERNS) {
     out = out.replace(pattern, REDACTED);
@@ -58,6 +71,6 @@ function replacePath(
   if (platform === "win32" && drive !== null) {
     forms.push(["", (drive[1] ?? "").toLowerCase(), ...parts.slice(1)].map(escape).join("/"));
   }
-  const pattern = `(?:${forms.join("|")})(?![A-Za-z0-9._-])`;
+  const pattern = `(?<![A-Za-z0-9._-])(?:${forms.join("|")})(?![A-Za-z0-9._-])`;
   return text.replace(new RegExp(pattern, platform === "win32" ? "gi" : "g"), placeholder);
 }

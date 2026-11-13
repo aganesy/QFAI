@@ -2,8 +2,8 @@
  * A Claude Code session transcript (`<session>.jsonl`), reduced to session events.
  *
  * The records read: an `attachment` of type `hook_additional_context` is a hook's context; an
- * `assistant` message's `tool_use` blocks are tool calls; a `user` message holds either
- * `tool_result` blocks or the text the user typed. Every other record is counted and passed over,
+ * `assistant` message's `tool_use` blocks are tool calls; a `user` message holds `tool_result`
+ * blocks, the text the user typed, or both. Every other record is counted and passed over,
  * so a record type a later host version adds changes nothing here.
  */
 import {
@@ -52,15 +52,13 @@ export function readClaudeRecord(record: JsonRecord, events: SessionEvents): voi
     return;
   }
   if (type !== "user") return;
-  if (
-    Array.isArray(content) &&
-    content.some((block) => stringAt(block, "type") === "tool_result")
-  ) {
-    for (const block of content) readToolResult(block, events);
-    return;
-  }
+  // A message the user sends while a tool runs is stored in the record that carries the tool's
+  // result, as a text block beside it, so the results are read and the text is still judged.
+  const holdsResult =
+    Array.isArray(content) && content.some((block) => stringAt(block, "type") === "tool_result");
+  if (holdsResult) for (const block of content) readToolResult(block, events);
   if (record.isMeta === true || record.isCompactSummary === true) return;
-  if (record.toolUseResult !== undefined) return;
+  if (!holdsResult && record.toolUseResult !== undefined) return;
   // The host puts its own wrappers, such as a system reminder, in text blocks beside what the
   // user typed, so each block is judged alone.
   const blocks = Array.isArray(content)
