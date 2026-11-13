@@ -78,6 +78,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the package now depends on. The releases change only a dependency of
   the checker and its build configuration.
 
+### Fixed
+
+- **The Claude Code install check stays silent on notification turns.** A
+  background-task completion, a wake-up, a CI-monitor event and a system
+  notification each repeated the `qfai` install remedy, although such a turn
+  holds no request. The install check now skips the same prompts the
+  question-form and free-text entry reminders skip: a line opening with
+  `<task-notification>`, `<wake>`, `<ci-monitor-event>` or
+  `[SYSTEM NOTIFICATION`. `qfai init` replaces the earlier group of an
+  unchanged settings file.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added
