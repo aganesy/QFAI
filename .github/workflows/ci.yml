@@ -720,6 +720,7 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Run build & pack verification
+        id: build-verify
         run: pnpm ci:build-verify
 
       - name: Sanity grep — no internal spec IDs or version markers leak (post-build)
@@ -743,6 +744,11 @@ jobs:
           node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error --format github --root .
 
       - name: QFAI self-validate this repo (dogfooding — SDD gates)
+        # Each profile reports even when an earlier one failed, so one run shows every
+        # failing gate instead of one per round. The build must have passed: these read `dist/`.
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped validate workflow already runs its second profile after the first fails.
+        if: ${{ !cancelled() && steps.build-verify.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -758,6 +764,11 @@ jobs:
           node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --format github --root .
 
       - name: QFAI self-validate this repo (dogfooding — full profile)
+        # Each profile reports even when an earlier one failed, so one run shows every
+        # failing gate instead of one per round. The build must have passed: these read `dist/`.
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped validate workflow already runs its second profile after the first fails.
+        if: ${{ !cancelled() && steps.build-verify.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
