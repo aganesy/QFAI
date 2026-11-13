@@ -37,6 +37,10 @@ specialization_tags:
   a necessary fix and reporting requirement, and states any assumption it built
   on (`.qfai/assistant/rule/test-layers.md#test-suite-sizing`,
   `.agents/rules/minimal-implementation.md` § 4).
+- When the change adds or edits a rule master under `.agents/rules/`, read every
+  rule the changed master points to and every rule that points to that master,
+  and report as a finding each clause that gives a different answer to the same
+  situation.
 - Check each new module against the `## Architecture` table of `<paths.contractsDir>/tech.md`: it belongs to one layer and imports only from the layers its row lists. A crossing is a finding.
 - In TypeScript, flag unjustified assertions, unchecked `unknown`, needless generic complexity and promises that callers neither await nor return.
 - Read the whole of every file the change touches for silent failure and type design, not only the lines the change adds or alters.
@@ -57,7 +61,7 @@ specialization_tags:
   unsafe deserialization and path traversal. Judge validation at a trust boundary against `.agents/rules/minimal-implementation.md` § 2.
 - Follow every input the change adds or alters to where it is used, across files the change did not touch.
   A path the change opens there, such as an insecure direct object reference, a server-side request forgery or an auth bypass reached through several files, blocks.
-  This is the one reach beyond the touched files, and it covers only the inputs the change handles.
+  Besides the rules a changed rule master links to, this is the one reach beyond the touched files, and it covers only the inputs the change handles.
   A security finding the review demonstrates traces to `defect:security`.
 - Check the EX test's oracle, selector and RED/GREEN/Refactor evidence.
 - When the change adds, moves or copies an AC or EX annotation, read the annotated test's body and confirm that it asserts the example's observable outcome,
@@ -148,6 +152,7 @@ command.
 - `qfai.config.yaml` and the affected BF/US/AC/EX story files under `<paths.specsDir>/02_business-flow/**`.
 - `<paths.specsDir>/03_contract/tech.md`, plus the active API, DB or UI contracts this change affects.
 - The changed code and tests, their diff, repository review instructions, and actual quality-gate results.
+- For a change to a rule master under `.agents/rules/`, the rules it points to and the files that point to it.
 - The stage report for the reviewed EX: its test, selector and observed results. A missing required observation prevents PASS.
   A `ci-deferred` Red or Green is not a missing observation: read the test against the code before the fix instead,
   as `.qfai/assistant/skill/qfai-implement/references/red-admissibility.md#ci-only-test-gate` states.
