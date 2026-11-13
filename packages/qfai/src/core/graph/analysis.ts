@@ -1,7 +1,7 @@
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { copyFile, lstat, mkdir, readdir, rm } from "node:fs/promises";
-import { loadConfig, resolvePath } from "../config.js";
+import { isDirectoryInsideRoot, loadConfig, resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import { GraphLocalStateError } from "./localFiles.js";
 import { GRAPH_VERSIONS, graphRuntimePaths, graphAnalysisRoot } from "./layout.js";
@@ -161,7 +161,8 @@ export class GraphConfigUnreadableError extends GraphLocalStateError {
 /**
  * The configured `paths.deliberationDir`, relative to `root` and written with `/`. It throws
  * where the configuration cannot be read or its value is rejected, rather than guess the
- * default: the project may keep its records elsewhere.
+ * default: the project may keep its records elsewhere. A value naming the project root, or a
+ * directory outside it, is rejected too: it would leave the corpus nothing to exclude.
  */
 export async function graphDeliberationDir(root: string): Promise<string> {
   const { config, document, issues, configPath } = await loadConfig(root);
@@ -172,7 +173,10 @@ export async function graphDeliberationDir(root: string): Promise<string> {
   if (
     (document !== undefined && document !== null && !object(document)) ||
     (paths !== undefined && paths !== null && !object(paths)) ||
-    (value !== undefined && (typeof value !== "string" || value.trim() === ""))
+    (value !== undefined &&
+      (typeof value !== "string" ||
+        value.trim() === "" ||
+        !isDirectoryInsideRoot(root, value.replace(/\\/g, "/"))))
   )
     throw new GraphConfigUnreadableError(file, false);
   return path

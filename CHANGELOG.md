@@ -128,6 +128,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   worktree in the same command, the denial still offers the AI-decided
   fallback. A move anywhere else, or to a target the command text does not
   spell out, still makes the fallback unavailable.
+- `paths.deliberationDir` that names the project root, such as `.`, a
+  directory outside it, or a value with a part ending in a dot or a space (which
+  Windows drops, so `...` lands in the root) now raises `QFAI-CFG-002` and the default
+  `.qfai/deliberation` is used. A documents or code query on such a value fails
+  and names `qfai.config.yaml`, instead of building a corpus that excludes no
+  deliberation record.
+
 - The comment in the `.gitattributes` that `qfai init` seeds no longer says
   register rows are never edited. It now says new rows are appended, a row
   keeps its ID and a decision row's wording may be restated, and still gives
