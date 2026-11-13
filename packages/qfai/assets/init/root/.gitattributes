@@ -44,11 +44,13 @@
 /.github/workflows/qfai-tests.yml text=auto eol=lf
 /.github/workflows/qfai-docs.yml text=auto eol=lf
 
-# Register rows are only appended, never edited or renumbered, so Git union
-# merging keeps both branches' rows. When a host shows a conflict in these
-# files, merge the base branch locally and push; edit no row. Validation still
-# reports two rows left with one ID. These paths assume the default
-# paths.specsDir; update them if the project moves its spec tree.
+# New register rows are appended and a row keeps its ID, so Git union merging
+# keeps both branches' rows. A decision row's wording may be restated; when both
+# branches restate one row, the union merge keeps both versions. When a host
+# shows a conflict in these files, merge the base branch locally and push,
+# changing no row in the merge. Validation still reports two rows left with one
+# ID. These paths assume the default paths.specsDir; update them if the project
+# moves its spec tree.
 /.qfai/spec/decisions.md merge=union
 # Preserve reviewed page bytes; schema and duplicate checks still apply.
 /.qfai/spec/decisions/page-*.md -text merge=union

@@ -14,6 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A deliberation record keeps both tables, empty where a run has no row.**
+  The record template and its reference say that a stage that asked the user
+  nothing, or took no agent decision, keeps that section's heading with an
+  empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
+  is unchanged.
+
 - **The shipped product-surface reviewer and UI contract guide no longer name
   discussion UI/UX sidecars.** The reviewer reconciles the UI contract with
   design tokens, flows and rendered output, and the guide says a deliberation
@@ -122,6 +128,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   worktree in the same command, the denial still offers the AI-decided
   fallback. A move anywhere else, or to a target the command text does not
   spell out, still makes the fallback unavailable.
+- The comment in the `.gitattributes` that `qfai init` seeds no longer says
+  register rows are never edited. It now says new rows are appended, a row
+  keeps its ID and a decision row's wording may be restated, and still gives
+  the union-merge reason and how to resolve a conflict a host shows. The file
+  is seeded only where none exists, so an existing `.gitattributes` keeps its
+  old comment. Fixes #4173.
+
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
   with no file operand and only known options, such as
