@@ -93,6 +93,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   language followed by `(translated)`, so a language scan on the file does not
   fail on the user's wording.
 
+- **The launcher preflight moved into its own short reference.** It now lives
+  in `.qfai/assistant/rule/references/launcher-preflight.md`, and the shared
+  operating baseline only points to it. `qfai-run` states the common case
+  itself: a checkout with `node_modules/.bin/qfai` passes, and `npx qfai` is
+  the launcher, including for an `--order` plan. Only a Plug'n'Play project or
+  a missing install reads the reference. A one-command operation no longer
+  loads the whole baseline to find the check. Run `qfai init --force` to take
+  the new text. Fixes #4058.
+
 ### Fixed
 
 - Repository bootstrap starts pnpm 12's native executable itself, so
