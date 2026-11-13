@@ -14,6 +14,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`.agents/rules/grilling.md` keeps on-demand procedures in skill
+  references.** The bounds of a delegated discussion, the glossary check and
+  the check before a session is reported finished move to
+  `discussion-delegation.md`, `glossary-check.md` and `session-check.md` under
+  the `qfai-grilling` skill's `references/`. The rule keeps each trigger and
+  says when to read each file. A session runs as before.
+
 - **Breaking: a per-run deliberation record replaces the discussion pack.** A
   run that asks the user a question or takes a decision no specification,
   contract, rule or convention settles writes one Markdown memo under
@@ -93,11 +100,42 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   language followed by `(translated)`, so a language scan on the file does not
   fail on the user's wording.
 
+- **The launcher preflight moved into its own short reference.** It now lives
+  in `.qfai/assistant/rule/references/launcher-preflight.md`, and the shared
+  operating baseline only points to it. `qfai-run` states the common case
+  itself: a checkout with `node_modules/.bin/qfai` passes, and `npx qfai` is
+  the launcher, including for an `--order` plan. Only a Plug'n'Play project or
+  a missing install reads the reference. A one-command operation no longer
+  loads the whole baseline to find the check. Run `qfai init --force` to take
+  the new text. Fixes #4058.
+
 ### Fixed
+
+- The `sdd-contract` step, the contract rules and the API, DB and UI contract
+  samples now say that the three kinds share one number sequence, and how to
+  find the next free number: one more than the highest of any kind in
+  `contracts.md` and under the contract directories. They also say that
+  `npx qfai validate --profile sdd` reports two contracts that share a number
+  as `QFAI-CONTRACT-034`, and that the `discussion` profile does not check
+  contracts.
+- **An unknown subcommand says when the project declares a newer qfai.** When
+  `qfai sdd`, `qfai atdd` or `qfai workflow` is given a subcommand the running
+  copy does not know, the message names the running version and where it was
+  loaded from. When the project's `package.json` declares a newer qfai, it also
+  says so and tells you to run the project's install command in this checkout,
+  then repeat the launcher preflight. Before, only an unknown `workflow`
+  operation and an unknown command named the running version, and none of them
+  compared it with the project's declaration. Fixes #4083.
 
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.
+- The search-protection hook no longer denies Grep and `grep` in a session whose
+  working directory is a Git worktree nested under the checkout, such as
+  `.claude/worktrees/<name>`, with "The observed worktree differs from this
+  project worktree". That worktree's own protection and permission state now
+  govern its searches. A nested worktree where `qfai init` has not run is
+  denied with a message naming it and asking for `npx qfai init` there.
 - **`qfai session-review` counts and redacts what it missed.**
   - Text the user types while a tool runs, which Claude Code stores beside the
     tool's result, is counted as a typed turn.
@@ -110,6 +148,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     a line the command printed.
   - The `--out` message and file-system errors redact paths, including the
     directories `CLAUDE_CONFIG_DIR` and `CODEX_HOME` name.
+- **The Claude Code install check stays silent on notification turns.** A
+  background-task completion, a wake-up, a CI-monitor event and a system
+  notification each repeated the `qfai` install remedy, although such a turn
+  holds no request. The install check now skips the same prompts the
+  question-form and free-text entry reminders skip: a line opening with
+  `<task-notification>`, `<wake>`, `<ci-monitor-event>` or
+  `[SYSTEM NOTIFICATION`. `qfai init` replaces the earlier group of an
+  unchanged settings file.
 
 ## [2.4.0] - 2026-11-11
 

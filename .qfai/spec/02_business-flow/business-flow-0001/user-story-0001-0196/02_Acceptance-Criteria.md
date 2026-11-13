@@ -127,6 +127,7 @@ Feature: Install or upgrade and get the free-text entry
     Then both hosts print the remedy: run the project's install command when `package.json` lists qfai, and `npm i -D qfai` when it does not
     And a project with a launcher in its own checkout, or below a git root that holds one, prints nothing
     And a launcher in a directory above the git root does not count
+    And Claude Code skips a prompt with a line opening with `<task-notification>`, `<wake>`, `<ci-monitor-event>` or `[SYSTEM NOTIFICATION`, as the other two prompt reminders do
     And each Codex line prints the same through `sh`, `cmd.exe` and PowerShell
 
   # AC-0001-0196-15

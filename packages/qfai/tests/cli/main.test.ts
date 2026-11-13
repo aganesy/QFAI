@@ -317,6 +317,42 @@ describe("cli usage errors", () => {
     await expectInstallationDiagnostic(refusal.message);
   });
 
+  // QFAI:EX-0001-0222-21
+  it("identifies the running installation when an sdd or atdd subcommand is unknown", async () => {
+    for (const argv of [
+      ["sdd", "bogus"],
+      ["atdd", "bogus"],
+    ]) {
+      const { stderr, exitCode } = await captureRun(argv);
+
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("bogus");
+      await expectInstallationDiagnostic(stderr);
+    }
+  });
+
+  // QFAI:EX-0001-0222-21
+  it("names the newer qfai the project declares when a subcommand is unknown", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-declared-"));
+    try {
+      await writeFile(
+        path.join(root, "package.json"),
+        JSON.stringify({ devDependencies: { qfai: "^999.0.0" } }),
+      );
+      const plain = await captureRun(["sdd", "bogus", "--root", root]);
+      const workflow = await captureRun(["workflow", "go", "--root", root]);
+      const refusal = JSON.parse(workflow.stdout) as { message: string };
+
+      for (const text of [plain.stderr, workflow.stderr, refusal.message]) {
+        await expectInstallationDiagnostic(text);
+        expect(text).toContain("^999.0.0");
+        expect(text).toContain("run the project's install command in this checkout");
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("writes the rejection reason to stderr, not only usage to stdout", async () => {
     const { stdout, stderr } = await captureRun(["validate", "--profile", "bogus"]);
     expect(stderr).toContain("--profile");
