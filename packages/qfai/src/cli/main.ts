@@ -15,7 +15,12 @@ import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "../core/logger.js";
 import { findConfigRoot } from "../core/config.js";
-import { resolveToolPackageDir, resolveToolVersion } from "../core/version.js";
+import {
+  compareInstalledToDeclared,
+  readDeclaredQfaiRange,
+  resolveToolPackageDir,
+  resolveToolVersion,
+} from "../core/version.js";
 import { isFileSystemError } from "../core/fs.js";
 
 /**
@@ -75,7 +80,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   // with the code that ships it.
   if (command !== null && !KNOWN_COMMANDS.has(command)) {
     error(`Unknown command: ${command}`);
-    error(await unavailableCommandDiagnosis());
+    error(await unavailableCommandDiagnosis(options.root));
     info(usage());
     process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
     return;
@@ -101,6 +106,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       error(`qfai: ${label}: ${options.unknownFlags.join(", ")}`);
     } else if (invalid) {
       error(invalidReason ?? "qfai: invalid arguments.");
+      if (options.unknownSubcommand !== undefined) {
+        error(await unavailableCommandDiagnosis(options.root));
+      }
     }
     info(usage());
     if (invalid) {
@@ -353,7 +361,9 @@ async function workflowEntry(
         "qfai workflow plan: give one of --in, --route and --order, or --route with --in.",
     );
     const diagnosis =
-      options.workflowUnknownOperation !== undefined ? await unavailableCommandDiagnosis() : null;
+      options.unknownSubcommand !== undefined
+        ? await unavailableCommandDiagnosis(options.root)
+        : null;
     if (diagnosis !== null) error(diagnosis);
     const message =
       "The command line is not `workflow plan` with one of --in, --route and --order, or --route with --in, so run it with --help to see the form.";
@@ -371,17 +381,32 @@ async function workflowEntry(
   });
 }
 
-async function unavailableCommandDiagnosis(): Promise<string> {
-  const [version, packageDir] = await Promise.all([resolveToolVersion(), resolveToolPackageDir()]);
+/**
+ * Why a command or subcommand may be missing: the running copy, where it was
+ * loaded from, and, when the project at or above `root` declares a newer qfai,
+ * that declaration. A fresh checkout with no install of its own runs whatever
+ * copy a parent directory or the npx cache holds, so a command the project's
+ * version has reads as missing.
+ */
+async function unavailableCommandDiagnosis(root: string): Promise<string> {
+  const [version, packageDir, declaredRange] = await Promise.all([
+    resolveToolVersion(),
+    resolveToolPackageDir(),
+    readDeclaredQfaiRange(root),
+  ]);
   const location =
     packageDir === null ? "; package directory could not be determined" : ` from ${packageDir}`;
+  const older = compareInstalledToDeclared(version, declaredRange);
+  if (older !== null) {
+    return `This command is unavailable in qfai ${version}${location}; it may come from a different qfai version: this project declares qfai ${older.declaredRange}, so run the project's install command in this checkout and run the command again.`;
+  }
   return `This command is unavailable in qfai ${version}${location}; it may come from a different qfai version, so if you expected it, install or update the project's local qfai dependency.`;
 }
 
 // What a `workflow` command line gets wrong: an unknown operation or flag, a missing operation,
 // or not one of `--in`, `--route` and `--order`, or `--route` with `--in`.
 function workflowRefusalSubjects(invalid: boolean, options: ParsedArgs["options"]): string[] {
-  if (options.workflowUnknownOperation !== undefined) return [options.workflowUnknownOperation];
+  if (options.unknownSubcommand !== undefined) return [options.unknownSubcommand];
   if (options.unknownFlags.length > 0) return options.unknownFlags;
   if (!options.workflowAction) return ["operation"];
   if (invalid) return [options.invalidOption ?? "arguments"];
