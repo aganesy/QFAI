@@ -100,6 +100,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   language followed by `(translated)`, so a language scan on the file does not
   fail on the user's wording.
 
+- **The launcher preflight moved into its own short reference.** It now lives
+  in `.qfai/assistant/rule/references/launcher-preflight.md`, and the shared
+  operating baseline only points to it. `qfai-run` states the common case
+  itself: a checkout with `node_modules/.bin/qfai` passes, and `npx qfai` is
+  the launcher, including for an `--order` plan. Only a Plug'n'Play project or
+  a missing install reads the reference. A one-command operation no longer
+  loads the whole baseline to find the check. Run `qfai init --force` to take
+  the new text. Fixes #4058.
+
 ### Fixed
 
 - **`QFAI-UITEXT-001` exempts link and button components by the last word of
@@ -109,6 +118,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai-text` reason that a plain `<Link>` does not. A name whose last word is
   something else, such as `ButtonGroup`, is still checked.
   Fixes #4114.
+
+- `qfai init` in a project with no `.gitignore` now creates it with
+  `node_modules/` above the QFAI managed block, so the first `git add -A` no
+  longer stages the dependency tree. An existing `.gitignore` is not changed
+  beyond the managed block.
 
 - The `sdd-contract` step, the contract rules and the API, DB and UI contract
   samples now say that the three kinds share one number sequence, and how to
@@ -147,6 +161,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     a line the command printed.
   - The `--out` message and file-system errors redact paths, including the
     directories `CLAUDE_CONFIG_DIR` and `CODEX_HOME` name.
+- **The Claude Code install check stays silent on notification turns.** A
+  background-task completion, a wake-up, a CI-monitor event and a system
+  notification each repeated the `qfai` install remedy, although such a turn
+  holds no request. The install check now skips the same prompts the
+  question-form and free-text entry reminders skip: a line opening with
+  `<task-notification>`, `<wake>`, `<ci-monitor-event>` or
+  `[SYSTEM NOTIFICATION`. `qfai init` replaces the earlier group of an
+  unchanged settings file.
 
 ## [2.4.0] - 2026-11-11
 

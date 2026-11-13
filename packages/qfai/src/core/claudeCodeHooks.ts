@@ -101,7 +101,9 @@ export const FREE_TEXT_ENTRY_HOOK_MARKER = "QFAI free-text entry reminder";
  * remedy only where there is none. It starts from the `cwd` of the hook input,
  * the checkout the session works in, and from the project directory only when
  * the input names none: a session in a nested worktree has the main checkout as
- * its project directory.
+ * its project directory. The Claude Code program skips a prompt with the same
+ * notification markers as the question-form group: such a turn holds no request,
+ * and the remedy already reached the session on the turn that did.
  */
 export const INSTALL_CHECK_HOOK_MARKER = "QFAI install check reminder";
 
@@ -267,6 +269,9 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "4f6f93dce5cde82e9957ab4802471b8714db812436837746b9abf1af284da94c",
   // install check: the program that judged the project directory, not the session's working directory
   "450e2cc202904e46053c08e55744a6cc665cfe9492b4939865e724e66770b3b5",
+  // install check: the Claude Code program that printed on a task notification, a wake-up, a
+  // CI-monitor event and a system notification
+  "35fb2a26376f56dcc8efe3a4dabc802b3c32f94e59edc5648df39a15fef578a7",
 ]);
 
 export type HookMergeResult =

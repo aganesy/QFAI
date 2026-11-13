@@ -24,7 +24,7 @@ Neither is restated here.
 - `qfai.config.yaml` for `paths.contractsDir`, `paths.outDir` and the test
   globs.
 - The launcher the preflight established, for a qfai command
-  (`.qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher`).
+  (`.qfai/assistant/rule/references/launcher-preflight.md`).
 - `.agents/rules/temporary-files.md`, when this step writes captured output or a script to a
   file.
 - `.agents/rules/api-budget.md`, when this step reads CI state or the project's items through
