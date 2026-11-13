@@ -93,13 +93,19 @@ function classifyCommands(
  */
 function redefinesCommands(words: string[]): boolean {
   let offset = 0;
-  while (["builtin", "command", "env"].includes(words[offset]?.toLowerCase() ?? "")) {
-    offset += 1;
-    while (words[offset]?.startsWith("-")) offset += 1;
+  for (;;) {
+    const redirection = redirectionLength(words[offset]);
+    if (redirection) offset += redirection;
+    else if (["builtin", "command", "env"].includes(words[offset]?.toLowerCase() ?? "")) {
+      offset += 1;
+      while (words[offset]?.startsWith("-")) {
+        offset += /^-[uCS]$|^--(?:unset|chdir|split-string)$/.test(words[offset] ?? "") ? 2 : 1;
+      }
+    } else break;
   }
   return (
     words.some((word) => word.includes("()")) ||
-    /^(?:[A-Za-z_][A-Za-z0-9_]*=|\$)/.test(words[0] ?? "") ||
+    /^(?:[A-Za-z_][A-Za-z0-9_]*=|\$)/.test(words[offset] ?? "") ||
     [
       "function",
       "alias",
@@ -132,8 +138,8 @@ function redefinesCommands(words: string[]): boolean {
 
 /** How many words a leading redirection takes: one when its target is attached, else two. */
 function redirectionLength(word: string | undefined): number {
-  if (!word || !/^(?:\d*|&)>/.test(word)) return 0;
-  return /^(?:\d*|&)>{1,2}[&|]?$/.test(word) ? 2 : 1;
+  if (!word || !/^(?:\d*|&)(?:<|>)/.test(word)) return 0;
+  return /^(?:\d*|&)(?:<>|>{1,2}|<{1,3})[&|]?$/.test(word) ? 2 : 1;
 }
 
 function changesGraphDirectory(words: string[]): boolean {
@@ -211,9 +217,7 @@ function classifyCommand(
     )
       offset += 1;
     if (words[offset] === "--") offset += 1;
-    const positional = words
-      .slice(offset)
-      .filter((word, index, all) => !/^&>/.test(word) && all[index - 1] !== "&>");
+    const positional = words.slice(offset);
     const eligible =
       positional.length > 0 &&
       positional.length <= 2 &&
@@ -535,7 +539,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     } else if (/\s/.test(character)) {
       flushWord();
     } else {
-      if (character === ">" && !/^\d*$/.test(word) && !word.endsWith(">") && word !== "&") {
+      if (character === ">" && !/^\d*$/.test(word) && !/[<>]$/.test(word) && word !== "&") {
         flushWord();
       }
       word += character;

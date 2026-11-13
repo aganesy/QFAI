@@ -424,6 +424,9 @@ it("denies piped searches that still read project files", () => {
       "grep() { cat packages/index.ts; }; export -f grep; bash -c 'git status | grep x'",
       "grep",
     ],
+    ["Bash", ">/dev/null hash -p /bin/cat grep; git status | grep .env", "grep"],
+    ["Bash", "command >/dev/null alias grep='cat .env #'; git status | grep x", "grep"],
+    ["Bash", ">/dev/null PATH=.; git status | grep x", "grep"],
     ["PowerShell", "git ls-files | findstr /S auth", "findstr"],
     ["PowerShell", "git ls-files | findstr auth<packages\\index.ts", "findstr"],
   ] as const) {
@@ -444,9 +447,16 @@ it("denies piped searches that still read project files", () => {
     "X=1>out rg auth packages",
     "env -i>out rg auth packages",
     ">out rg auth packages",
+    "<input.txt rg auth packages",
+    "3<> input.txt rg auth packages",
   ]) {
     const attached = classifyGraphExploration({ tool: "Bash", command });
     expect(attached.decision, command).toBe("deny");
     expect(attached.operation, command).toBe("rg");
+  }
+  for (const command of ['rg auth "&>" /etc/passwd', "rg auth packages &> out.txt"]) {
+    const redirected = classifyGraphExploration({ tool: "Bash", command });
+    expect(redirected.decision, command).toBe("deny");
+    expect(redirected.exceptionEligible, command).toBe(false);
   }
 });
