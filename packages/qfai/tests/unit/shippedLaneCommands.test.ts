@@ -16,8 +16,10 @@
  * refuses nothing, which is why both directions are here.
  */
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
@@ -27,6 +29,7 @@ import {
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
   ALLOWED_INIT_CONTENT,
+  ALLOWED_WORKFLOW_FILES,
   ALLOWED_INVOCATIONS,
   ALLOWED_INIT_SOURCE_BASENAMES,
   ALLOWED_INIT_SOURCE_EXTENSIONS,
@@ -845,5 +848,54 @@ describe("reviewed init entry content", () => {
     expect(fileDigest(Buffer.from(actual.toString("utf8").replaceAll("\n", "\r\n")))).not.toBe(
       digest,
     );
+  });
+});
+
+/**
+ * The pins over files `qfai init` copies byte for byte from `assets/init/root/`, checked here against
+ * the asset itself.
+ *
+ * The end-to-end lane checks every pin against what `qfai init` wrote, and until this block it was the
+ * only check for most of them: a comment-only edit to the shipped `.gitattributes` moved its digest and
+ * was reported first by the e2e, node-floor and Windows jobs. Any pinned path that exists under the
+ * asset root is shipped verbatim, so its digest can be compared before a push. The composed files (the
+ * graph hook, the Copilot instructions, `.gitignore` and the two hook settings) have no copy there and
+ * stay with the end-to-end lane. The message names the asset's current digest so that a reviewed edit
+ * can be re-pinned without a CI round.
+ */
+describe("reviewed init content copied from the asset root", () => {
+  const assetRoot = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "..",
+    "assets",
+    "init",
+    "root",
+  );
+  const copied = [
+    ...[...ALLOWED_INIT_CONTENT].map(([file, digest]) => ({ file, digest })),
+    ...[...ALLOWED_WORKFLOW_FILES].map(([name, digest]) => ({
+      file: `.github/workflows/${name}`,
+      digest,
+    })),
+  ].filter(({ file }) => existsSync(path.join(assetRoot, ...file.split("/"))));
+
+  it("finds the pinned files the asset root carries", () => {
+    expect(copied.map(({ file }) => file).sort()).toEqual(
+      expect.arrayContaining([
+        ".gitattributes",
+        ".github/workflows/qfai-validate.yml",
+        "AGENTS.md",
+        "qfai.config.yaml",
+      ]),
+    );
+  });
+
+  it.each(copied)("keeps $file at its pinned digest", async ({ file, digest }) => {
+    const actual = fileDigest(await readFile(path.join(assetRoot, ...file.split("/"))));
+    expect(
+      actual,
+      `assets/init/root/${file} no longer matches its pinned digest. After reviewing the edit, re-pin it to ${actual}`,
+    ).toBe(digest);
   });
 });
