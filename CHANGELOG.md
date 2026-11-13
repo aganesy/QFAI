@@ -78,6 +78,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the package now depends on. The releases change only a dependency of
   the checker and its build configuration.
 
+### Fixed
+
+- **`qfai session-review` counts and redacts what it missed.** Text the user
+  typed in the same Claude Code record as a tool result is a typed turn; a
+  `qfai` command after an unquoted shell `#` is a comment, not a run; `yarn
+  qfai` and `yarn exec qfai` are counted; `2>&1` and `&>` no longer split a
+  command; a Codex `read_file` call on a rule file is a read; a Codex command's
+  status comes from its `exec_command_end` event and the output wrapper's own
+  status line, never from a line the command printed; and the `--out` message
+  and file-system errors redact the path, the configured `CLAUDE_CONFIG_DIR`
+  and `CODEX_HOME` included.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added
