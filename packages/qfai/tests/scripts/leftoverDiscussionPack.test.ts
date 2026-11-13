@@ -8,48 +8,40 @@
  * failed on files the repository does not hold. Both checks now skip the
  * directory; the migration step that says to delete it still stands.
  *
- * The Markdown case runs the linter's own binary rather than importing it: the
+ * The Markdown case runs the linter's entry script rather than importing it: the
  * package ships no type declarations, and a suite that imports it has to leave
  * the type-check enumeration.
  */
-import { execFile } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
 import * as prettier from "prettier";
 import { describe, expect, it } from "vitest";
-
-const execFileAsync = promisify(execFile);
 
 // tests/scripts/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const packFile = path.join(".qfai", "discussion", "discussion-20260101-000000", "pack.md");
 
-/** The linter's exit code over `directory`, and everything it printed. */
-async function lint(directory: string): Promise<{ code: number; output: string }> {
-  const binary = path.join(
-    repoRoot,
-    "node_modules",
-    ".bin",
-    process.platform === "win32" ? "markdownlint-cli2.cmd" : "markdownlint-cli2",
-  );
-  try {
-    const { stdout, stderr } = await execFileAsync(binary, ["**/*.md"], { cwd: directory });
-    return { code: 0, output: `${stdout}${stderr}` };
-  } catch (cause) {
-    const read = (key: "code" | "stdout" | "stderr"): unknown =>
-      typeof cause === "object" && cause !== null && key in cause
-        ? Reflect.get(cause, key)
-        : undefined;
-    const code = read("code");
-    return {
-      code: typeof code === "number" ? code : 1,
-      output: `${String(read("stdout") ?? "")}${String(read("stderr") ?? "")}`,
-    };
-  }
+// The linter's entry script, run through Node: a `.cmd` shim under `.bin` cannot
+// be spawned without a shell on Windows.
+const LINTER = path.join(
+  repoRoot,
+  "node_modules",
+  "markdownlint-cli2",
+  "markdownlint-cli2-bin.mjs",
+);
+
+/** The linter's exit status over `directory`, and everything it printed. */
+function lint(directory: string): { status: number | null; output: string } {
+  const run = spawnSync(process.execPath, [LINTER, "**/*.md"], {
+    cwd: directory,
+    encoding: "utf-8",
+  });
+  if (run.error) throw run.error;
+  return { status: run.status, output: `${run.stdout}${run.stderr}` };
 }
 
 describe("a leftover discussion pack", () => {
@@ -59,6 +51,15 @@ describe("a leftover discussion pack", () => {
     });
 
     expect(info.ignored).toBe(true);
+
+    // The entry is no wider than the directory: the story tree beside it is still checked.
+    const tracked = await prettier.getFileInfo(
+      path.join(repoRoot, ".qfai", "spec", "01_policy", "glossary.md"),
+      {
+        ignorePath: [path.join(repoRoot, ".gitignore"), path.join(repoRoot, ".prettierignore")],
+      },
+    );
+    expect(tracked.ignored).toBe(false);
   });
 
   it("is skipped by the Markdown lint", async () => {
@@ -76,9 +77,9 @@ describe("a leftover discussion pack", () => {
       // No top-level heading, a trailing space and no final newline.
       await writeFile(absolute, "pack body \n## Section", "utf-8");
 
-      const ignored = await lint(tempRoot);
-      expect(ignored.code, ignored.output).toBe(0);
-      expect(ignored.output).toContain("Linting: 1 file(s)");
+      const ignored = lint(tempRoot);
+      expect(ignored.status, ignored.output).toBe(0);
+      expect(ignored.output).toMatch(/Linting: 1 file/);
 
       // The same tree without the ignore entry: the pack's findings surface,
       // which is the failure a contributor met.
@@ -87,8 +88,8 @@ describe("a leftover discussion pack", () => {
         JSON.stringify({ ignores: ["**/node_modules/**"] }),
         "utf-8",
       );
-      const linted = await lint(tempRoot);
-      expect(linted.code).not.toBe(0);
+      const linted = lint(tempRoot);
+      expect(linted.status, linted.output).toBe(1);
       expect(linted.output).toContain("pack.md");
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
