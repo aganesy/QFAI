@@ -118,7 +118,9 @@ including its `--auto` rule. What each bucket needs inside a workflow run is
 
 ## Canonical qfai Launcher
 
-Read `.qfai/assistant/rule/references/launcher-preflight.md` before the first `npx qfai` call, a gate or a run's `workflow plan` alike. It holds the launcher preflight, the two proofs it accepts (a local binary at `node_modules/.bin/qfai`, or a Plug'n'Play install), the fix for each way it fails, and the launcher each proof establishes. A call whose launcher cannot be resolved is UNRUN, not PASS. Not needed again once the preflight has passed in this checkout.
+Read `.qfai/assistant/rule/references/launcher-preflight.md` before the first `npx qfai` call, a gate or a run's `workflow plan` alike.
+It holds the launcher preflight, the two proofs it accepts (a local binary at `node_modules/.bin/qfai`, or a Plug'n'Play install), the fix for each way it fails, and the launcher each proof establishes. A call whose launcher cannot be resolved is UNRUN, not PASS.
+Not needed again once the preflight has passed in this checkout.
 
 ## Standard Commands
 
