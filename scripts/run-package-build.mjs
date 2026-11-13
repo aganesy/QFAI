@@ -42,16 +42,17 @@ function build() {
   let native;
   try {
     native = isNativeExecutable(cli);
-  } catch {
+  } catch (error) {
     process.stderr.write(
-      "Cannot read the pnpm named by npm_execpath. Run `corepack pnpm build` from the repository root.\n",
+      `Cannot read ${cli}: ${error instanceof Error ? error.message : String(error)}\n` +
+        "Run `corepack pnpm build` from the repository root.\n",
     );
     return 1;
   }
   const [command, commandArgs] = native ? [cli, args] : [process.execPath, [cli, ...args]];
   const result = spawnSync(command, commandArgs, { cwd: root, stdio: "inherit" });
   if (result.error) {
-    process.stderr.write("Could not start pnpm.\n");
+    process.stderr.write(`Could not start ${cli}: ${result.error.message}\n`);
     return 1;
   }
   if (result.signal) {

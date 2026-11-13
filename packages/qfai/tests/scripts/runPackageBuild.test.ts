@@ -7,7 +7,7 @@
  * pnpm that records how it was called.
  */
 import { spawnSync } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,7 +30,7 @@ type RunOptions = {
   cliName?: string;
   execPath?: "unset" | "relative" | "missing";
   exitCode?: number;
-  native?: boolean;
+  native?: boolean | "unrunnable";
 };
 
 const RECORDER = String.raw`
@@ -42,7 +42,8 @@ process.exitCode = Number(process.env.BUILD_EXIT_CODE);
 `;
 
 async function runBuild(options: RunOptions = {}) {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai build "));
+  // The real path, because the script and its child see the temp directory through it (macOS).
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "qfai build ")));
   roots.push(root);
   const scripts = path.join(root, "scripts");
   const cliDir = path.join(root, "corepack cache");
@@ -52,7 +53,10 @@ async function runBuild(options: RunOptions = {}) {
   await copyFile(path.join(REPO_ROOT, "scripts", "run-package-build.mjs"), entry);
   const log = path.join(root, "call.json");
   const cli = path.join(cliDir, options.cliName ?? "pnpm.cjs");
-  if (options.native) {
+  if (options.native === "unrunnable") {
+    // An ELF header with no execute bit: read as native, then refused by the operating system.
+    await writeFile(cli, Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00]));
+  } else if (options.native) {
     // A real native executable stands in for the standalone pnpm: Node.js itself. Started with
     // pnpm's arguments, it reads `-C` as its own `--conditions` flag and runs `<root>/build`.
     await symlink(process.execPath, cli);
@@ -128,6 +132,13 @@ describe("the root build script", () => {
       });
     },
   );
+
+  it.skipIf(process.platform === "win32")("names the pnpm it could not start and why", async () => {
+    const result = await runBuild({ cliName: "pnpm", native: "unrunnable" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/^Could not start .*pnpm: .*EACCES/m);
+    expect(result.call).toBeNull();
+  });
 
   it("keeps the package build's exit code", async () => {
     const result = await runBuild({ exitCode: 7 });

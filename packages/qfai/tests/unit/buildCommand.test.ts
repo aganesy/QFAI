@@ -56,9 +56,9 @@ async function scriptsOf(relative: string): Promise<Record<string, string>> {
 /**
  * The two manifests, keyed by directory rather than merged.
  *
- * Merging them was the first attempt and it cannot work: the root `build` delegates to
- * `pnpm -C packages/qfai build` and the package's `build` is `tsup`, so one map makes the name
- * self-referential and resolves to nothing at all. The `-C` argument is what selects the manifest.
+ * Merging them was the first attempt and it cannot work: the root `build` delegates (through
+ * `scripts/run-package-build.mjs`) to `pnpm -C packages/qfai build` and the package's `build` is
+ * `tsup`, so one map makes the name self-referential and resolves to nothing at all. The `-C` argument is what selects the manifest.
  */
 async function repositorySources(): Promise<ScriptSources> {
   const root = await scriptsOf("package.json");
