@@ -115,6 +115,15 @@ function redefinesCommands(words: string[]): boolean {
       "si",
       "set-variable",
       "sv",
+      "filter",
+      "new-item",
+      "ni",
+      "iex",
+      "invoke-expression",
+      "eval",
+      "source",
+      ".",
+      "hash",
     ].includes(words[0]?.toLowerCase() ?? "")
   );
 }
@@ -287,7 +296,8 @@ function printsText(command: ShellCommand | undefined): boolean {
       gitTextCommands.has(args[0] ?? "") &&
       !args.some(
         (word) =>
-          word === "--no-index" || /^(?:\/|[A-Za-z]:|\\)|(?:^|[\\/])\.\.(?:[\\/]|$)/.test(word),
+          word === "--no-index" ||
+          /^(?:\/|[A-Za-z]:|\\|~|:\/)|(?:^|[\\/:])\.\.(?:[\\/]|$)/.test(word),
       )
     );
   }
@@ -312,7 +322,6 @@ const gitTextCommands = new Set([
   "log",
   "diff",
   "branch",
-  "tag",
   "remote",
   "rev-list",
   "rev-parse",
@@ -370,6 +379,7 @@ const attachedValueOptions =
  * Any other word, such as an unknown or abbreviated option, keeps it a search.
  */
 function pipeFilter(words: string[]): boolean {
+  if (/[\\/=]/.test(words[0] ?? "")) return false;
   const name = commandName(words);
   const args = words.slice(1);
   if (args.some((word) => unparsedWord(word) || /[*?[\]{}()~@!]/.test(word))) return false;
@@ -475,10 +485,13 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       quote = character;
     } else if (
       (character === "&" || character === "|") &&
-      ((redirectBefore && (character === "&" ? /\d/.test(next ?? "") : shell === "posix")) ||
-        (shell === "posix" && character === "&" && next === ">"))
+      redirectBefore &&
+      (character === "&" ? /\d/.test(next ?? "") : shell === "posix")
     ) {
       word += character;
+    } else if (shell === "posix" && character === "&" && next === ">") {
+      flushWord();
+      word = character;
     } else if (character === "\n" && !words.length && !word.length && upstream) {
       continue;
     } else if (character === "|" || character === ";" || character === "&" || character === "\n") {
@@ -495,6 +508,9 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     } else if (/\s/.test(character)) {
       flushWord();
     } else {
+      if (character === ">" && !/^\d*$/.test(word) && !word.endsWith(">") && word !== "&") {
+        flushWord();
+      }
       word += character;
       afterRedirect = character === ">";
     }
