@@ -22,7 +22,7 @@ Feature: Every plain text on a screen states why it is there
 
   # AC-0001-0297-03
   Scenario: Text that names, labels or reports is not checked
-    Given UI source whose literal text sits only in `h1` to `h6`, `label`, `button`, `a`, `legend`, `th`, `caption`, `option`, `summary`, `title`, `script` or `style`, in an element with `role="alert"` or `role="status"`, in an attribute value, or in an expression
+    Given UI source whose literal text sits only in `h1` to `h6`, `label`, `button`, `a`, a component whose name ends in the word `Link` or `Button`, `legend`, `th`, `caption`, `option`, `summary`, `title`, `script` or `style`, in an element with `role="alert"` or `role="status"`, in an attribute value, or in an expression
     When `qfai validate` runs
     Then it raises no `QFAI-UITEXT` finding
 
