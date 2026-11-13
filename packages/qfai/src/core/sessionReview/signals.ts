@@ -154,17 +154,36 @@ export function reminderKeys(text: string, reminderTexts: ReadonlyMap<string, st
   const trimmed = text.trim();
   const exact = reminderTexts.get(trimmed);
   if (exact !== undefined) return [exact];
-  const held = [...reminderTexts]
-    .map(([listed, key]) => ({ at: listed === "" ? -1 : trimmed.indexOf(listed), key }))
-    .filter((found) => found.at !== -1)
-    .sort((a, b) => a.at - b.at);
-  if (held.length > 0) return held.map((found) => found.key);
+  const held = heldReminders(trimmed, reminderTexts);
+  if (held.length > 0) return held;
   if (!trimmed.startsWith("QFAI ")) return [];
   const opening = reminderOpening(trimmed);
+  if (opening === null) return [UNREGISTERED_REMINDER];
   const alike = [...reminderTexts]
     .filter(([listed]) => reminderOpening(listed) === opening)
     .map(([, key]) => key);
   return [alike.length > 0 ? sharedKey(alike) : UNREGISTERED_REMINDER];
+}
+
+/**
+ * The keys of the reminder texts `text` holds, in the order they appear. A listed text found
+ * inside a longer listed text it also holds, such as a brief text the full one starts with, is
+ * that longer text's and is not counted again.
+ */
+function heldReminders(text: string, reminderTexts: ReadonlyMap<string, string>): string[] {
+  const taken: { at: number; end: number; key: string }[] = [];
+  const longestFirst = [...reminderTexts]
+    .filter(([listed]) => listed !== "")
+    .sort(([a], [b]) => b.length - a.length);
+  for (const [listed, key] of longestFirst) {
+    for (let at = text.indexOf(listed); at !== -1; at = text.indexOf(listed, at + 1)) {
+      const end = at + listed.length;
+      if (taken.some((range) => range.at <= at && end <= range.end)) continue;
+      taken.push({ at, end, key });
+      break;
+    }
+  }
+  return taken.sort((a, b) => a.at - b.at).map((range) => range.key);
 }
 
 /**
@@ -195,6 +214,7 @@ function reminderOpening(text: string): string | null {
 function sharedKey(keys: readonly string[]): string {
   const distinct = [...new Set(keys)].sort(compareText);
   const [first, ...rest] = distinct.map((key) => key.split("-"));
+  // Every caller passes at least one key; this keeps the type checker's empty case answered.
   if (first === undefined) return UNREGISTERED_REMINDER;
   let length = first.length;
   for (const words of rest) {
@@ -355,7 +375,12 @@ export function qfaiCommandsIn(command: string): string[] {
  * line, and an `&` inside a redirection (`2>&1`, `&>`) separates nothing.
  */
 function shellSegments(command: string): string[] {
-  const segments: string[] = [];
+  return shellParts(command).map((part) => part.text);
+}
+
+/** The commands a shell line holds, as `shellSegments` splits them, each with the separator that ended it. */
+function shellParts(command: string): { text: string; separator: string }[] {
+  const parts: { text: string; separator: string }[] = [];
   let current = "";
   let quote: "'" | '"' | null = null;
   // Whether the next character starts a word: true after an unescaped blank or separator.
@@ -369,7 +394,7 @@ function shellSegments(command: string): string[] {
       continue;
     }
     if (quote === null && COMMAND_SEPARATORS.has(char) && !inRedirection(command, at)) {
-      segments.push(current);
+      parts.push({ text: current, separator: char });
       current = "";
       wordStart = true;
       continue;
@@ -382,8 +407,8 @@ function shellSegments(command: string): string[] {
     } else if (quote === null && (char === "'" || char === '"')) quote = char;
     else if (char === quote) quote = null;
   }
-  segments.push(current);
-  return segments;
+  parts.push({ text: current, separator: "" });
+  return parts;
 }
 
 /** Whether the `&` at `at` belongs to a redirection, as in `2>&1`, `<&3` or `&>file`. */
@@ -402,31 +427,44 @@ function endsWithQfai(command: string): boolean {
 }
 
 /** The variables a shell expands to the last command's status: Bash's and PowerShell's. */
-const STATUS_VARIABLE = /\$\{?\?\}?|\$LASTEXITCODE\b/gi;
+const STATUS_VARIABLE = /\$\?|\$\{\?\}|\$LASTEXITCODE\b/i;
 
 /**
  * The status a command line's final `echo` printed for the `qfai` command just before it, as in
  * `npx qfai validate; echo "exit=$?"`: the output's last line, read against the echo's own words
- * with the status variable as a number. `null` when the line has no such echo, the echo is quoted
- * in single quotes, or the output does not end with its line.
+ * with the status variable as a number. `null` when the echo does not follow the `qfai` command
+ * after `;`, a line break or `&&`, holds a `'` or a leading option, names the variable other than
+ * once, or the output does not end with its line.
  */
 export function echoedStatus(command: string, output: string): number | null {
-  const segments = shellSegments(command)
-    .map((segment) => segment.trim())
-    .filter((segment) => segment !== "");
-  const echo = /^echo[ \t]+([^-'][^']*)$/.exec(segments.at(-1) ?? "")?.[1];
-  const before = segments.at(-2);
-  if (echo === undefined || before === undefined || qfaiCommandsIn(before).length !== 1) {
+  const parts = shellParts(command);
+  const filled = parts.flatMap((part, index) => (part.text.trim() === "" ? [] : [index]));
+  const echoAt = filled.at(-1);
+  const beforeAt = filled.at(-2);
+  if (echoAt === undefined || beforeAt === undefined) return null;
+  const echo = /^echo[ \t]+([^-'][^']*)$/.exec(parts[echoAt]?.text.trim() ?? "")?.[1];
+  const joint = parts
+    .slice(beforeAt, echoAt)
+    .map((part) => part.separator)
+    .join("");
+  // After `&` the status is the background job's start, after `|` the pipe's, and after `||` the
+  // echo runs only when qfai failed, so its absence would read qfai's own output as a status.
+  const sequential = /^[;\n]+$/.test(joint) || joint === "&&";
+  if (
+    echo === undefined ||
+    !sequential ||
+    qfaiCommandsIn(parts[beforeAt]?.text.trim() ?? "").length !== 1
+  ) {
     return null;
   }
   const words = echo
     .replace(/"/g, "")
     .trim()
     .replace(/[ \t]+/g, " ");
-  const parts = words.split(STATUS_VARIABLE);
-  if (parts.length !== 2) return null;
+  const pieces = words.split(STATUS_VARIABLE);
+  if (pieces.length !== 2) return null;
   const pattern = new RegExp(
-    `^${escapeRegExp(parts[0] ?? "")}(-?\\d+)${escapeRegExp(parts[1] ?? "")}$`,
+    `^${escapeRegExp(pieces[0] ?? "")}(-?\\d+)${escapeRegExp(pieces[1] ?? "")}$`,
   );
   const lastLine = output.trimEnd().split(/\r?\n/).at(-1)?.trim() ?? "";
   const printed = pattern.exec(lastLine)?.[1];

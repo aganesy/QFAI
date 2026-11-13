@@ -146,9 +146,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     under the key of the listed reminder that opens the same way, or under
     the part of the key those reminders share, such as `grilling`, instead of
     `unregistered`.
-  - A `qfai` command followed by `echo` of `$?` or `$LASTEXITCODE`, such as
-    `npx qfai validate; echo "exit=$?"`, takes the status that `echo`
-    printed instead of `unknown`.
+  - A reminder text that several keys share, such as the one the three
+    `grilling-` hooks show, counts under the part of the keys they share,
+    `grilling`, instead of under the last of those keys in the file.
+  - A `qfai` command followed after `;`, a line break or `&&` by `echo` of
+    `$?` or `$LASTEXITCODE`, such as `npx qfai validate; echo "exit=$?"`,
+    takes the status that `echo` printed instead of `unknown`.
 - `qfai init` in a project with no `.gitignore` now creates it with
   `node_modules/` above the QFAI managed block, so the first `git add -A` no
   longer stages the dependency tree. An existing `.gitignore` is not changed

@@ -317,8 +317,6 @@ describe("what a Codex rollout shows", () => {
 // QFAI:EX-0001-0294-06
 // QFAI:EX-0001-0294-12
 // QFAI:EX-0001-0294-14
-// QFAI:EX-0001-0294-25
-// QFAI:EX-0001-0294-26
 describe("the edges a slug, a shell line and a calendar leave open", () => {
   it("takes a transcript in the root's own directory only when it records the root as cwd", async () => {
     const base = await tempDir();
@@ -442,6 +440,8 @@ describe("the edges a slug, a shell line and a calendar leave open", () => {
   });
 });
 
+// QFAI:EX-0001-0294-25
+// QFAI:EX-0001-0294-26
 describe("the signal helpers", () => {
   it("reads a watched path named under the root in either slash style, never one a patch writes", () => {
     const facts = { root: "C:\\Work\\App", platform: "win32" as const };
@@ -480,6 +480,15 @@ describe("the signal helpers", () => {
       "QFAI free-text entry: for each new request, invoke the qfai-run skill first.",
     ].join("\n\n");
     expect(reminderKeys(joined, REMINDER_TEXTS)).toEqual(["api-budget", "free-text-entry"]);
+    // A listed text inside a longer listed text the context holds counts once, as the longer one.
+    const nested = new Map([
+      ["QFAI A: one.", "a-brief"],
+      ["QFAI A: one. two.", "a"],
+    ]);
+    expect(reminderKeys("host: QFAI A: one. two.", nested)).toEqual(["a"]);
+    expect(reminderKeys("host: QFAI A: one. two. QFAI A: one.", nested)).toEqual(["a", "a-brief"]);
+    // An empty listed text matches nothing.
+    expect(reminderKeys("QFAI token words", new Map([["", "empty"]]))).toEqual(["unregistered"]);
   });
 
   it("keys an unlisted wording by the reminder that opens the same way, or their shared key", () => {
@@ -500,6 +509,16 @@ describe("the signal helpers", () => {
     ]);
     expect(reminderKeys("QFAI install check: older words.", texts)).toEqual(["install-check"]);
     expect(reminderKeys("QFAI retired rule: words.", texts)).toEqual(["unregistered"]);
+    // A context that names no rule after `QFAI` is like no listed text, not even a brief one.
+    expect(reminderKeys("QFAI (legacy) reminder", REMINDER_TEXTS)).toEqual(["unregistered"]);
+    expect(reminderKeys("QFAI . x", REMINDER_TEXTS)).toEqual(["unregistered"]);
+    // A key that is the other's leading words is their shared key.
+    expect(
+      reminderIndex([
+        ["grilling", "QFAI y."],
+        ["grilling-plan", "QFAI y."],
+      ]).get("QFAI y."),
+    ).toBe("grilling");
     // Keys that share no leading word are all named.
     expect(
       reminderIndex([
@@ -521,6 +540,12 @@ describe("the signal helpers", () => {
     expect(echoedStatus("npx qfai validate; echo 'exit=$?'", "exit=$?")).toBeNull();
     expect(echoedStatus('npx qfai validate; echo "exit=$?"', "exit=0\nmore")).toBeNull();
     expect(echoedStatus('npx qfai validate; echo "done"', "done")).toBeNull();
+    expect(echoedStatus('npx qfai validate; echo "$? $?"', "1 1")).toBeNull();
+    expect(echoedStatus("npx qfai validate; echo -n $?", "1")).toBeNull();
+    // After `&` the status is the background start's, and after `||` the echo may not have run.
+    expect(echoedStatus('npx qfai validate & echo "exit=$?"', "exit=0")).toBeNull();
+    expect(echoedStatus("npx qfai validate || echo $?", "Found 3 issues\n3")).toBeNull();
+    expect(echoedStatus("npx qfai validate && echo $?", "ok\n0")).toBe(0);
     expect(
       summarise(
         {
