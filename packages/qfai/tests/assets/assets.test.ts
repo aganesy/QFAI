@@ -1072,6 +1072,33 @@ describe("assets guardrails", () => {
     expect(stepContent).toContain("references/contract-artifact-rules.md");
   });
 
+  it("states that API, DB and UI contracts share one number sequence where a contract is numbered", async () => {
+    const skillDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-sdd");
+    const [step, rules, samples] = await Promise.all([
+      readFile(path.join(templateQfaiDir, "assistant", "step", "sdd-contract", "STEP.md"), "utf-8"),
+      readFile(path.join(skillDir, "references", "contract-artifact-rules.md"), "utf-8"),
+      Promise.all(
+        ["api-contract.sample.yaml", "db-contract.sample.sql", "ui-contract.sample.yaml"].map(
+          (name) => readFile(path.join(skillDir, "templates", "contracts", name), "utf-8"),
+        ),
+      ),
+    ]);
+    const flat = (text: string): string => text.replace(/\s*\n\s*(?:#|--)?\s*/g, " ");
+
+    expect(flat(step)).toContain("The number is shared by every kind");
+    expect(flat(step)).toContain("the next DB contract is `DB-0005`, not `DB-0003`");
+    expect(flat(step)).toContain(
+      "`npx qfai validate --profile sdd` reports two contracts that share a number as `QFAI-CONTRACT-034`",
+    );
+    expect(flat(step)).toContain("the `discussion` profile does not check contracts");
+    expect(flat(rules)).toContain("not only the directory the new contract goes in");
+    expect(flat(rules)).toContain("`QFAI-CONTRACT-034`");
+    for (const sample of samples) {
+      expect(flat(sample)).toContain("API, DB and UI share one number sequence");
+      expect(flat(sample)).toContain("in contracts.md and the contract file names");
+    }
+  });
+
   it("ensures qfai-discussion hands off to /qfai-sdd through the next-action question", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
