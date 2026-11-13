@@ -10,7 +10,8 @@ const TEXT_EXTENSIONS = new Set([".md", ".yaml", ".yml", ".json", ".toml", ".txt
 // The discussion pack and its `uiux/` sidecars were removed. A shipped file that
 // still names a discussion or UI/UX sidecar sends an agent looking for files a
 // project no longer has.
-const STALE_SIDECAR = /(discussion|ui\/ux)[^\n]{0,40}\bsidecars?\b|\bsidecar artifacts\b/i;
+const STALE_SIDECAR =
+  /(discussion|ui[-/ ]?ux)[^\n]{0,40}\bsidecars?\b|\bsidecars?\b[^\n]{0,40}(discussion|ui[-/ ]?ux)|\bsidecar artifacts\b/i;
 
 async function listTextFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
