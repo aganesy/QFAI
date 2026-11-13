@@ -1,0 +1,13 @@
+{
+  // markdownlint-cli2 merges this file with the repository's
+  // `.markdownlint-cli2.jsonc` for every Markdown file under
+  // `.qfai/deliberation/`. Only rules that differ from the repository default
+  // are listed here. `packages/qfai/scripts/check-markdownlint-config.mjs`
+  // checks this file against markdownlint's strict schema.
+
+  // A deliberation record is a memo that may not be edited once committed,
+  // except to repair its table layout, and `QFAI-DELIB-001` checks only that
+  // layout. A long prose line would pass validation and then fail the lint
+  // with no way to fix the record, so line length is not checked here.
+  "MD013": false,
+}
