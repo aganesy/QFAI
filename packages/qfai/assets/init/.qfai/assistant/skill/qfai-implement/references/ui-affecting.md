@@ -12,7 +12,8 @@ Read the flow, story, acceptance criterion, and example that the implementation 
 `npx qfai validate` reads `.qfai/prototype/final/index.html`, the `index.html` of the latest `iter-NN/`, and the
 `.html`, `.tsx`, `.jsx`, `.vue` and `.svelte` files `uiux.surfacePaths` selects, except test, spec and story
 files. A plain text there is a literal text node, non-empty after trimming and sample data included, outside
-`h1`-`h6`, `label`, `button`, `a` (and `Link`, `RouterLink`, `NuxtLink`), `legend`, `th`, `caption`, `option`,
+`h1`-`h6`, `label`, `button`, `a`, a component whose name ends in the word `Link` or `Button` (such as `Link`,
+`ButtonLink`, `router-link` or `SubmitButton`), `legend`, `th`, `caption`, `option`,
 `summary`, `title`, `script`, `style` and an element with `role="alert"` or `role="status"`. Attribute values
 and expressions are never plain text; a string literal that is a whole JSX child is.
 
