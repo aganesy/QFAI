@@ -381,6 +381,7 @@
     "tests/scripts/prThreads.test.ts",
     "tests/scripts/storyIds.test.ts",
     "tests/scripts/freshInitFindings.test.ts",
+    "tests/scripts/lintHeapLimit.test.ts",
     "tests/scripts/lintParallel.test.ts",
     "tests/scripts/ownWorkflowTopology.test.ts",
     "tests/scripts/releaseNotesDrift.test.ts",
