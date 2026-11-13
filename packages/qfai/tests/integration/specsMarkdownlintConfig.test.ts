@@ -83,7 +83,7 @@ describe("nested markdownlint config under .qfai/deliberation/", () => {
   // A deliberation record passes QFAI-DELIB-001 on its layout alone, and once
   // committed its prose may not be edited, so a long Subject line must not fail
   // the lint.
-  const overLongSubject = "The run was asked to settle " + "x".repeat(220) + ".";
+  const overLongSubject = "The run was asked to settle" + " the subject".repeat(20) + ".";
   const record = (subject: string) =>
     ["# Deliberation record: lint", "", "## Subject", "", subject, ""].join("\n");
 
