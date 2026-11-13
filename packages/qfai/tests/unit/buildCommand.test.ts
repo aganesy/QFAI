@@ -56,18 +56,27 @@ async function scriptsOf(relative: string): Promise<Record<string, string>> {
 /**
  * The two manifests, keyed by directory rather than merged.
  *
- * Merging them was the first attempt and it cannot work: the root `build` is
+ * Merging them was the first attempt and it cannot work: the root `build` delegates to
  * `pnpm -C packages/qfai build` and the package's `build` is `tsup`, so one map makes the name
  * self-referential and resolves to nothing at all. The `-C` argument is what selects the manifest.
  */
 async function repositorySources(): Promise<ScriptSources> {
+  const root = await scriptsOf("package.json");
   return {
     manifests: {
-      "": await scriptsOf("package.json"),
+      "": { ...root, build: ROOT_BUILD_DELEGATION },
       "packages/qfai": await scriptsOf("packages/qfai/package.json"),
     },
   };
 }
+
+/**
+ * The command the root `build` runs. The root script is `node ./scripts/run-package-build.mjs`,
+ * which spawns this command with the pnpm that runs it, so `corepack pnpm build` works with no
+ * pnpm on PATH. No command-line scan reaches into that helper, so the cases below read the root
+ * `build` as the delegation it performs; one case pins the real body separately.
+ */
+const ROOT_BUILD_DELEGATION = "pnpm -C packages/qfai build";
 
 type ToolGrammarLike = (typeof GRAMMAR.tools)[string];
 type InterpreterGrammarLike = (typeof GRAMMAR.interpreters)[string];
@@ -1094,6 +1103,18 @@ describe("classifyBuildCommand", () => {
         "the root `build` is `pnpm -C packages/qfai build`, whose `build` is `tsup`",
       )
       .toBe("build");
+
+    // The real root body hands the build to a helper, so, like `ci:build-verify`, only the
+    // helper's filename suggests a build.
+    const realRoot = await scriptsOf("package.json");
+    expect
+      .soft(
+        classifyBuildCommand("pnpm build", {
+          manifests: { ...sources.manifests, "": realRoot },
+        }),
+        "the real root `build` is `node ./scripts/run-package-build.mjs`",
+      )
+      .toBe("heuristic");
 
     // With no script map there is nothing but the name, and the verdict says so rather than passing
     // a guess off as an analysis.
