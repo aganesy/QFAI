@@ -35,6 +35,7 @@
     "tests/unit/graph/fallbackFailures.examples.test.ts",
     "tests/unit/graph/fallbackPublication.examples.test.ts",
     "tests/unit/graph/fallbackState.examples.test.ts",
+    "tests/unit/graph/sessionWorktree.examples.test.ts",
     "tests/helpers/legacyInit.ts",
     "tests/helpers/legacyInitArguments.ts",
     "tests/helpers/graphProject.ts",
