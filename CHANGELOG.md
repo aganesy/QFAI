@@ -102,6 +102,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- The `sdd-contract` step, the contract rules and the API, DB and UI contract
+  samples now say that the three kinds share one number sequence, and how to
+  find the next free number: one more than the highest of any kind in
+  `contracts.md` and under the contract directories. They also say that
+  `npx qfai validate --profile sdd` reports two contracts that share a number
+  as `QFAI-CONTRACT-034`, and that the `discussion` profile does not check
+  contracts.
 - **An unknown subcommand says when the project declares a newer qfai.** When
   `qfai sdd`, `qfai atdd` or `qfai workflow` is given a subcommand the running
   copy does not know, the message names the running version and where it was
