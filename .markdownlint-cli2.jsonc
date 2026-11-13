@@ -52,6 +52,9 @@
     // ledger keeps long provenance cells whose formatter padding obscures the
     // record.
     ".qfai/evidence/**",
+    // A discussion pack left over from before the pack was removed is no longer
+    // tracked; linting it fails a checkout on files the repository does not hold.
+    ".qfai/discussion/**",
     ".qfai/spec/decisions.md",
     ".qfai/spec/decisions/page-0001.md",
     ".qfai/spec/decisions/page-0002.md",

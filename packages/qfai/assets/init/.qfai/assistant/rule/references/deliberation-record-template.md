@@ -10,6 +10,8 @@
 
 ## <stage>
 
+<!-- Keep both tables. A table this stage has no row for stays empty: its header and delimiter row only. -->
+
 ### Interview
 
 | Background | Option 1 | Option 2 | Option 3 | Option 4 (other) | Chosen option number |
