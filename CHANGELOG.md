@@ -14,6 +14,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`.agents/rules/grilling.md` keeps on-demand procedures in skill
+  references.** The bounds of a delegated discussion, the glossary check and
+  the check before a session is reported finished move to
+  `discussion-delegation.md`, `glossary-check.md` and `session-check.md` under
+  the `qfai-grilling` skill's `references/`. The rule keeps each trigger and
+  says when to read each file. A session runs as before.
+
 - **Breaking: a per-run deliberation record replaces the discussion pack.** A
   run that asks the user a question or takes a decision no specification,
   contract, rule or convention settles writes one Markdown memo under
@@ -104,9 +111,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An unknown subcommand says when the project declares a newer qfai.** When
+  `qfai sdd`, `qfai atdd` or `qfai workflow` is given a subcommand the running
+  copy does not know, the message names the running version and where it was
+  loaded from. When the project's `package.json` declares a newer qfai, it also
+  says so and tells you to run the project's install command in this checkout,
+  then repeat the launcher preflight. Before, only an unknown `workflow`
+  operation and an unknown command named the running version, and none of them
+  compared it with the project's declaration. Fixes #4083.
+
 - Repository bootstrap starts pnpm 12's native executable itself, so
   `corepack pnpm bootstrap` no longer stops with the instruction to run that
   same command.
+- **`qfai session-review` counts and redacts what it missed.**
+  - Text the user types while a tool runs, which Claude Code stores beside the
+    tool's result, is counted as a typed turn.
+  - A `qfai` command after an unquoted `#` is a shell comment, not a run.
+  - `yarn qfai` and `yarn exec qfai` are counted as `qfai` runs.
+  - An `&` inside `2>&1` or `&>` no longer splits a command.
+  - A Codex `read_file` call on a rule file is counted as a read.
+  - A Codex command's status comes from the execution events the rollout
+    records and from the status line of Codex's own output header, never from
+    a line the command printed.
+  - The `--out` message and file-system errors redact paths, including the
+    directories `CLAUDE_CONFIG_DIR` and `CODEX_HOME` name.
 
 ## [2.4.0] - 2026-11-11
 
