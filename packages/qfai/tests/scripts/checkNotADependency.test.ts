@@ -112,6 +112,7 @@ type BootstrapOptions = {
   invalidNode?: boolean;
   packageParent?: { relative: "packages" | "packages/qfai"; kind: "file" | "absent" };
   signal?: boolean;
+  recordSpawn?: boolean;
 };
 
 async function runBootstrap(options: BootstrapOptions = {}) {
@@ -202,6 +203,27 @@ syncBuiltinESMExports();
 `),
     );
   }
+  if (options.recordSpawn) {
+    // Records each command bootstrap starts instead of running it: no test can
+    // write a native executable for every platform the suite runs on.
+    args.unshift(
+      "--import",
+      "data:text/javascript," +
+        encodeURIComponent(`
+import childProcess from "node:child_process";
+import fs from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
+childProcess.spawnSync = (command, argv, spawnOptions) => {
+  fs.appendFileSync(
+    process.env.BOOTSTRAP_CALL_LOG,
+    JSON.stringify({ command, argv, cwd: spawnOptions.cwd }) + "\\n",
+  );
+  return { status: 0, signal: null };
+};
+syncBuiltinESMExports();
+`),
+    );
+  }
   const result = spawnSync(process.execPath, args, { cwd: foreign, env, encoding: "utf8" });
   const calls: unknown[] = existsSync(log)
     ? (await readFile(log, "utf8"))
@@ -246,6 +268,38 @@ describe("the repository bootstrap entry", () => {
     );
   });
 
+  it.each(["pnpm-native.exe", "pnpm-native", "pnpm.exe"])(
+    "starts the native pnpm executable %s itself, not through Node",
+    async (cliName) => {
+      const result = await runBootstrap({ cliName, recordSpawn: true });
+      expect(result.status, result.stderr).toBe(0);
+      const command = path.join(result.root, "mock cli", cliName);
+      expect(result.calls).toEqual(
+        bootstrapSteps.map((argv) => ({ command, argv, cwd: result.root })),
+      );
+    },
+  );
+
+  it("reports a native entry that cannot be started", async () => {
+    const result = await runBootstrap({ cliName: "pnpm-native.exe" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Could not start pnpm");
+    expect(result.calls).toEqual([]);
+  });
+
+  it("still starts a script entry through Node", async () => {
+    const result = await runBootstrap({ recordSpawn: true });
+    expect(result.status, result.stderr).toBe(0);
+    const cli = path.join(result.root, "mock cli", "pnpm.cjs");
+    expect(result.calls).toEqual(
+      bootstrapSteps.map((argv) => ({
+        command: process.execPath,
+        argv: [cli, ...argv],
+        cwd: result.root,
+      })),
+    );
+  });
+
   it.each(["npm_execpath", "npm_config_user_agent"] as const)(
     "refuses a missing %s without launching any command",
     async (missing) => {
@@ -260,6 +314,8 @@ describe("the repository bootstrap entry", () => {
     { cliName: "npm-cli.js" },
     { cliName: "yarn.js" },
     { cliName: "pnpm.c" },
+    { cliName: "pnpm.cmd" },
+    { cliName: "pnpm-native.exe.js" },
     { userAgent: "npm/11.0.0 node/v24.0.0" },
   ])("refuses another or unknown package-manager entry %j", async (options) => {
     const result = await runBootstrap(options);
