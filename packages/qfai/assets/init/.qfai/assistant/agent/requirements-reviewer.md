@@ -52,6 +52,9 @@ specialization_tags:
   the five kinds it lists. A finding names its kind and target IDs and changes
   no file. Do not raise again a finding already decided, rejected, or answered
   by a declined option, and do not decide your own findings.
+- When the change adds or edits a rule master under `.agents/rules/`, read every
+  rule it points to and every rule that points to it, and report as a finding
+  each clause that gives a different answer to the same situation.
 - Briefed as a griller, follow `.agents/rules/grilling.md` and
   `skill/qfai-grilling/SKILL.md`: put each round to the session agent with a
   recommendation, and never review an artifact whose decision you recommended.

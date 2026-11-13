@@ -78,6 +78,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the package now depends on. The releases change only a dependency of
   the checker and its build configuration.
 
+- **The spec review of a rule change cross-checks the rules it links to.**
+  When a change adds or edits a rule master under `.agents/rules/`, the
+  `requirements-reviewer` reads every rule the change points to and every rule
+  that points to it, and reports each clause that gives a different answer to
+  the same situation.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added
