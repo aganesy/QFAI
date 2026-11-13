@@ -48,6 +48,7 @@ const DISCUSSION_AUTHORITY_ASSETS = [
   ".qfai/assistant/skill/qfai-discussion/SKILL.md",
   ".qfai/assistant/skill/qfai-grilling/SKILL.md",
   ".qfai/assistant/skill/qfai-grilling/references/delegated-session.md",
+  ".qfai/assistant/skill/qfai-grilling/references/discussion-delegation.md",
   ".qfai/assistant/skill/qfai-grilling/references/session-record.md",
   ".qfai/assistant/rule/references/griller-recommendations.md",
   ".qfai/assistant/rule/review-convergence.md",
