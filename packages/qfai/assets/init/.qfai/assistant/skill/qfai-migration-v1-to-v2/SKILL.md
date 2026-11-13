@@ -53,7 +53,7 @@ line, because they compare the project with the installed package and not with
 the old layout. A step never decides that the project is in the wrong place: it
 names the directory and leaves the check to the person.
 
-Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`
+Complete the launcher preflight in `.qfai/assistant/rule/references/launcher-preflight.md`
 before running a CLI command.
 Use `.qfai/assistant/rule/shared-skill-delegation-baseline.md` to route the declared roles and
 keep authors separate from reviewers.

@@ -241,9 +241,7 @@ describe("qfai-run", () => {
       ?.split("**Candidates.**")[0];
     const launcherInstructions = flat(`${intro} ${extract ?? ""}`);
 
-    expect(launcherInstructions).toContain(
-      ".qfai/assistant/rule/shared-skill-operating-baseline.md#canonical-qfai-launcher",
-    );
+    expect(launcherInstructions).toContain(".qfai/assistant/rule/references/launcher-preflight.md");
     expect(launcherInstructions).toMatch(
       /\bpreflight\b.*\bbefore\b.*\bplan(?:ning)?\b|\bbefore\b.*\bplan(?:ning)?\b.*\bpreflight\b/i,
     );
