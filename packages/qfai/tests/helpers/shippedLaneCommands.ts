@@ -1531,7 +1531,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // reproduces `680a0162…`.
   // Re-pinned for the `Stop` and `SubagentStop` turn-end check groups appended after the
   // template's other events. Removing both groups reproduces `583f9448…`.
-  [".claude/settings.json", "9da3dc8004cb86338084cfe3c8290fe4cae18346e4781f4eff8667c04d57daa6"],
+  // Re-pinned when the install check started skipping a prompt with the notification markers the
+  // other two prompt reminders skip. Restoring the program reproduces `9da3dc80…`.
+  [".claude/settings.json", "e400fd79fdd4a6a6feea1035141895be10b436c245b7eea05030930d166d32eb"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
