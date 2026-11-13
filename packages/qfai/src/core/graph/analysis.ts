@@ -148,9 +148,11 @@ const excludedDirectories = new Set([
  * cannot know which directory to keep out of its corpus.
  */
 export class GraphConfigUnreadableError extends GraphLocalStateError {
-  constructor(configFile: string) {
+  constructor(configFile: string, unreadable: boolean) {
     super(
-      `${configFile} could not be read, or its paths.deliberationDir is not a directory path.`,
+      unreadable
+        ? `${configFile} could not be read or parsed.`
+        : `${configFile} gives paths.deliberationDir no usable value.`,
       `Correct ${configFile}, then retry.`,
     );
   }
@@ -163,23 +165,23 @@ export class GraphConfigUnreadableError extends GraphLocalStateError {
  */
 export async function graphDeliberationDir(root: string): Promise<string> {
   const { config, document, issues, configPath } = await loadConfig(root);
-  const paths = isRecord(document) ? document.paths : undefined;
-  const value = isRecord(paths) ? paths.deliberationDir : undefined;
+  const file = path.basename(configPath);
   if (
     (document === undefined && issues.length > 0) ||
-    (document !== undefined && document !== null && !isRecord(document)) ||
-    (paths !== undefined && paths !== null && !isRecord(paths)) ||
+    (document !== undefined && document !== null && !object(document))
+  )
+    throw new GraphConfigUnreadableError(file, true);
+  const paths = object(document) ? document.paths : undefined;
+  const value = object(paths) ? paths.deliberationDir : undefined;
+  if (
+    (paths !== undefined && paths !== null && !object(paths)) ||
     (value !== undefined && (typeof value !== "string" || value.trim() === ""))
   )
-    throw new GraphConfigUnreadableError(path.basename(configPath));
+    throw new GraphConfigUnreadableError(file, false);
   return path
     .relative(root, resolvePath(root, config, "deliberationDir"))
     .split(path.sep)
     .join("/");
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function excludedGraphInput(relative: string, deliberationDir: string): boolean {

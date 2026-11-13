@@ -12,6 +12,7 @@ import { loadConfig } from "../../src/core/config.js";
 import { GraphConfigUnreadableError, graphAnalysisRoot } from "../../src/core/graph/analysis.js";
 import { prepareCodeAnalysis } from "../../src/core/graph/codePreparation.js";
 import { prepareDocumentAnalysis } from "../../src/core/graph/documents.js";
+import { GRAPH_VERSIONS } from "../../src/core/graph/layout.js";
 import { prepareGraphRuntimes } from "../../src/core/graph/prepare.js";
 import { exploreGraph } from "../../src/core/graph/query.js";
 import { queryPreparedGraph } from "../../src/core/graph/runner.js";
@@ -125,62 +126,67 @@ describe("the Graphify document corpus", () => {
   // QFAI:AC-0001-0234-08
   // QFAI:EX-0001-0234-19
   it("never restores a cached document analysis holding a file under a configured deliberation directory", async () => {
-    const fixture = await completedDocumentSnapshotFixture();
-    try {
-      await put(fixture.root, "qfai.config.yaml", "paths:\n  deliberationDir: docs/delib\n");
-      expect(
-        await prepareDocumentAnalysis(fixture.root, fixture.run, undefined, fixture.environment),
-      ).toMatchObject({ status: "prepared", source: "restored" });
-      await rm(fixture.documentAnalysis, { recursive: true });
-      const cache = path.join(fixture.common, "qfai-graph-cache", "win32-x64", "graphify");
-      const [candidate = ""] = await readdir(cache);
-      const record = ["docs", "delib", "20261113000000-moved.md"];
-      await put(
-        path.join(cache, candidate),
-        ["analysis", ...record].join("/"),
-        "# Deliberation record\n",
-      );
-      const result = await prepareDocumentAnalysis(
-        fixture.root,
-        fixture.run,
-        undefined,
-        fixture.environment,
-      );
-      expect(result).not.toMatchObject({ source: "restored" });
-      await expect(readFile(path.join(fixture.documentAnalysis, ...record))).rejects.toMatchObject({
-        code: "ENOENT",
-      });
-    } finally {
-      await fixture.dispose();
+    for (const deliberationDir of [".qfai/deliberation", "docs/delib"]) {
+      const fixture = await completedDocumentSnapshotFixture();
+      try {
+        await put(
+          fixture.root,
+          "qfai.config.yaml",
+          `paths:\n  deliberationDir: ${deliberationDir}\n`,
+        );
+        const cache = path.join(fixture.common, "qfai-graph-cache", "win32-x64", "graphify");
+        const [candidate = ""] = await readdir(cache);
+        const record = ["docs", "delib", "20261113000000-moved.md"];
+        await put(
+          path.join(cache, candidate),
+          ["analysis", ...record].join("/"),
+          "# Deliberation record\n",
+        );
+        const result = await prepareDocumentAnalysis(
+          fixture.root,
+          fixture.run,
+          undefined,
+          fixture.environment,
+        );
+        // With the record's directory left at the default, the same cached copy is restored.
+        expect(result, deliberationDir).toMatchObject({
+          status: "prepared",
+          source: deliberationDir === "docs/delib" ? "generated" : "restored",
+        });
+        if (deliberationDir === "docs/delib")
+          await expect(
+            readFile(path.join(fixture.documentAnalysis, ...record)),
+          ).rejects.toMatchObject({ code: "ENOENT" });
+      } finally {
+        await fixture.dispose();
+      }
     }
   });
 
-  const unusableConfigs = [
-    "paths: [unclosed\n",
-    "paths:\n  deliberationDir: 42\n",
-    "paths: docs\n",
-  ];
-  const unusable = {
-    failure:
-      "qfai.config.yaml could not be read, or its paths.deliberationDir is not a directory path.",
-    recovery: "Correct qfai.config.yaml, then retry.",
+  const unusableConfigs = {
+    "paths: [unclosed\n": "qfai.config.yaml could not be read or parsed.",
+    "paths:\n  deliberationDir: 42\n":
+      "qfai.config.yaml gives paths.deliberationDir no usable value.",
+    "paths: docs\n": "qfai.config.yaml gives paths.deliberationDir no usable value.",
   };
+  const recovery = "Correct qfai.config.yaml, then retry.";
 
   // QFAI:AC-0001-0234-08
   // QFAI:EX-0001-0234-20
-  it("builds no corpus when the configuration gives no usable deliberation directory", async () => {
-    for (const config of unusableConfigs) {
+  it("builds no corpus and runs no query when the configuration gives no usable deliberation directory", async () => {
+    for (const [config, message] of Object.entries(unusableConfigs)) {
       const fixture = await documentAnalysisFixture();
       try {
         await put(fixture.root, "qfai.config.yaml", config);
         const record = ".qfai/deliberation/20261113000000-kept.md";
         await put(fixture.root, record, "# Deliberation record: the design rationale\n");
-        const answer = await exploreGraph(
+        const answer = queryPreparedGraph(
           fixture.root,
           { domain: "documents", question: "rationale" },
           fixture.run,
         );
-        expect(answer, config).toMatchObject({ status: "failed", ...unusable });
+        await expect(answer, config).rejects.toBeInstanceOf(GraphConfigUnreadableError);
+        await expect(answer, config).rejects.toMatchObject({ message, recovery });
         await expect(
           readFile(path.join(fixture.documentAnalysis, ...record.split("/"))),
         ).rejects.toMatchObject({ code: "ENOENT" });
@@ -204,7 +210,7 @@ describe("the Graphify document corpus", () => {
         await rm(graphAnalysisRoot(fixture.root, domain === "code" ? "codegraph" : "graphify"), {
           recursive: true,
         });
-        await put(fixture.root, "qfai.config.yaml", unusableConfigs[0] ?? "");
+        await put(fixture.root, "qfai.config.yaml", "paths: [unclosed\n");
         const prepared = queryPreparedGraph(
           fixture.root,
           { domain, question: "rationale" },
@@ -212,12 +218,14 @@ describe("the Graphify document corpus", () => {
         );
         await expect(prepared, domain).rejects.toBeInstanceOf(GraphConfigUnreadableError);
         await expect(prepared, domain).rejects.toMatchObject({
-          message: unusable.failure,
-          recovery: unusable.recovery,
+          message: unusableConfigs["paths: [unclosed\n"],
+          recovery,
         });
         expect(
-          fixture.calls.some(
-            (call) => call.args.includes("index") || call.args.includes("extract"),
+          fixture.calls.some((call) =>
+            domain === "code"
+              ? call.args.some((arg) => arg.endsWith("codegraph-native.mjs"))
+              : call.args.includes("extract"),
           ),
           domain,
         ).toBe(false);
@@ -236,8 +244,31 @@ describe("the Graphify document corpus", () => {
     await prepareGraphRuntimes(root, fixture.run);
     const analysis = graphAnalysisRoot(root, "codegraph");
     await put(analysis, ".codegraph/codegraph.db", "native-status port fixture\n");
-    await put(root, "qfai.config.yaml", unusableConfigs[0] ?? "");
-    const result = await prepareGraphRuntimes(root, fixture.run);
+    const run: typeof fixture.run = (command, args, options) =>
+      args.includes("status")
+        ? Promise.resolve({
+            exitCode: 0,
+            stdout: JSON.stringify({
+              initialized: true,
+              version: GRAPH_VERSIONS.codegraph,
+              projectPath: analysis,
+              worktreeMismatch: null,
+              pendingChanges: { added: 0, modified: 0, removed: 0 },
+              index: {
+                state: "complete",
+                pendingRefs: 0,
+                reindexRecommended: false,
+                builtWithExtractionVersion: 1,
+                currentExtractionVersion: 1,
+                builtWithVersion: GRAPH_VERSIONS.codegraph,
+              },
+            }),
+          })
+        : fixture.run(command, args, options);
+    await put(root, "qfai.config.yaml", "paths:\n  deliberationDir: .qfai/deliberation\n");
+    expect(await prepareGraphRuntimes(root, run)).toMatchObject({ code: "code-ready" });
+    await put(root, "qfai.config.yaml", "paths: [unclosed\n");
+    const result = await prepareGraphRuntimes(root, run);
     expect(result).toMatchObject({ runtime: "installed", code: "code-not-ready" });
     expect(result.failedStep).toBeUndefined();
   });
