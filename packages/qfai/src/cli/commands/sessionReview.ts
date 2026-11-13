@@ -55,8 +55,10 @@ export async function runSessionReview(options: SessionReviewOptions): Promise<n
       root,
       home: env.home,
       platform: env.platform,
-      ...(env.claudeConfigDir !== undefined ? { claudeConfigDir: env.claudeConfigDir } : {}),
-      ...(env.codexHome !== undefined ? { codexHome: env.codexHome } : {}),
+      ...(env.claudeConfigDir !== undefined
+        ? { claudeConfigDir: path.resolve(env.claudeConfigDir) }
+        : {}),
+      ...(env.codexHome !== undefined ? { codexHome: path.resolve(env.codexHome) } : {}),
     });
   try {
     return await review(root, env, options, clean);

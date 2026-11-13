@@ -71,6 +71,6 @@ function replacePath(
   if (platform === "win32" && drive !== null) {
     forms.push(["", (drive[1] ?? "").toLowerCase(), ...parts.slice(1)].map(escape).join("/"));
   }
-  const pattern = `(?:${forms.join("|")})(?![A-Za-z0-9._-])`;
+  const pattern = `(?<![A-Za-z0-9._-])(?:${forms.join("|")})(?![A-Za-z0-9._-])`;
   return text.replace(new RegExp(pattern, platform === "win32" ? "gi" : "g"), placeholder);
 }

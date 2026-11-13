@@ -310,10 +310,11 @@ function shellSegments(command: string): string[] {
   const segments: string[] = [];
   let current = "";
   let quote: "'" | '"' | null = null;
+  // Whether the next character starts a word: true after an unescaped blank or separator.
+  let wordStart = true;
   for (let at = 0; at < command.length; at += 1) {
     const char = command[at] ?? "";
-    const before = command[at - 1];
-    if (quote === null && char === "#" && startsWord(before)) {
+    if (quote === null && char === "#" && wordStart) {
       const end = command.indexOf("\n", at);
       if (end === -1) break;
       at = end - 1;
@@ -322,9 +323,11 @@ function shellSegments(command: string): string[] {
     if (quote === null && COMMAND_SEPARATORS.has(char) && !inRedirection(command, at)) {
       segments.push(current);
       current = "";
+      wordStart = true;
       continue;
     }
     current += char;
+    wordStart = quote === null && /\s/.test(char);
     if (char === "\\" && quote !== "'") {
       current += command[at + 1] ?? "";
       at += 1;
@@ -333,11 +336,6 @@ function shellSegments(command: string): string[] {
   }
   segments.push(current);
   return segments;
-}
-
-/** Whether a word starts after `before`: at the line's start, after a blank or a separator. */
-function startsWord(before: string | undefined): boolean {
-  return before === undefined || /\s/.test(before) || COMMAND_SEPARATORS.has(before);
 }
 
 /** Whether the `&` at `at` belongs to a redirection, as in `2>&1`, `<&3` or `&>file`. */

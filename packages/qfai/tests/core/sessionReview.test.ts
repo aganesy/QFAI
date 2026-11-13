@@ -680,6 +680,8 @@ describe("the gaps a host's record shapes and a shell line's syntax leave", () =
     expect(qfaiCommandsIn("# npx qfai doctor\nnpx qfai validate # why")).toEqual(["qfai validate"]);
     expect(qfaiCommandsIn("echo a#b; npx qfai report")).toEqual(["qfai report"]);
     expect(qfaiCommandsIn("echo '# x'; npx qfai report")).toEqual(["qfai report"]);
+    expect(qfaiCommandsIn("echo \\ #x; npx qfai report")).toEqual(["qfai report"]);
+    expect(qfaiCommandsIn("echo \\;#x; npx qfai report")).toEqual(["qfai report"]);
   });
 
   it("counts qfai run through yarn and yarn exec, as a Plug'n'Play project runs it", () => {
@@ -783,6 +785,55 @@ describe("the gaps a host's record shapes and a shell line's syntax leave", () =
     expect(legacy.results).toEqual([expect.objectContaining({ isError: true, exitCode: 1 })]);
   });
 
+  it("ties an execution to no call it cannot name: a stale script, a user's command, a file read", () => {
+    const failedEnd = (id: string, source?: string) => ({
+      type: "event_msg",
+      payload: {
+        type: "exec_command_end",
+        call_id: id,
+        exit_code: 3,
+        status: "failed",
+        ...(source === undefined ? {} : { source }),
+      },
+    });
+    const stale = codexEvents([
+      {
+        type: "response_item",
+        payload: {
+          type: "custom_tool_call",
+          name: "exec",
+          call_id: "old",
+          input: 'await tools.exec_command({cmd:"npx qfai doctor"});',
+        },
+      },
+      codexCall("shell_command", "s1", { command: "ls" }),
+      failedEnd("zzz"),
+      {
+        type: "response_item",
+        payload: { type: "custom_tool_call_output", call_id: "old", output: "Script completed" },
+      },
+    ]);
+    expect(stale.calls[0]?.executions).toBeUndefined();
+    expect(stale.results).toEqual([expect.objectContaining({ id: "old", isError: false })]);
+
+    const user = codexEvents([
+      codexCall("exec_command", "u", { cmd: "npx qfai doctor" }),
+      failedEnd("u", "user_shell"),
+      codexOutput("u", "done"),
+    ]);
+    expect(user.results).toEqual([expect.objectContaining({ isError: false, exitCode: null })]);
+
+    const read = codexEvents([
+      codexCall("read_file", "r", { path: "notes.txt" }),
+      codexOutput("r", "hi"),
+      failedEnd("r"),
+    ]);
+    expect(read.results).toEqual([expect.objectContaining({ isError: false, exitCode: null })]);
+  });
+});
+
+// QFAI:EX-0001-0294-16
+describe("what the report may carry from the hosts' configured directories", () => {
   it("writes the configured transcript directories as placeholders", () => {
     expect(
       redact("/srv/claude/projects/x.jsonl and /opt/codex/sessions and /home/dev/.codex", {
@@ -793,5 +844,16 @@ describe("the gaps a host's record shapes and a shell line's syntax leave", () =
         platform: "linux",
       }),
     ).toBe("$CLAUDE_CONFIG_DIR/projects/x.jsonl and $CODEX_HOME/sessions and ~/.codex");
+  });
+
+  it("replaces a configured directory only where a path starts and ends", () => {
+    expect(
+      redact("/prefix/srv/claude/x and /srv/claude/x", {
+        root: "/work/app",
+        home: "/home/dev",
+        claudeConfigDir: "/srv/claude",
+        platform: "linux",
+      }),
+    ).toBe("/prefix/srv/claude/x and $CLAUDE_CONFIG_DIR/x");
   });
 });

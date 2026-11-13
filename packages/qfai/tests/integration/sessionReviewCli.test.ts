@@ -249,8 +249,8 @@ describe("qfai session-review chooses the sessions and the destination", () => {
   });
 });
 
-// QFAI:EX-0001-0294-23
-describe("qfai session-review exits 1 when a file is there but cannot be used", () => {
+// QFAI:EX-0001-0294-16
+describe("qfai session-review redacts the paths it prints", () => {
   it("redacts the path in the --out message as it redacts every other string", async () => {
     const setup = await project();
     await sessions(setup);
@@ -277,7 +277,10 @@ describe("qfai session-review exits 1 when a file is there but cannot be used", 
       expect(result.err).not.toContain(setup.base);
     },
   );
+});
 
+// QFAI:EX-0001-0294-23
+describe("qfai session-review exits 1 when a file is there but cannot be used", () => {
   it("exits 1 with no report when --out cannot be written, naming no local path", async () => {
     const setup = await project();
     await sessions(setup);

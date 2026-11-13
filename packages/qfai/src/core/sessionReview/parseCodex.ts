@@ -169,8 +169,9 @@ function execCommands(script: string | undefined): string | undefined {
 /**
  * A command execution's end, from the event that reports it: a paginated rollout's
  * `item_completed` holding a `CommandExecution`, or a legacy `exec_command_end`. It is tied to the
- * call of its ID, or else to the latest `exec` script still waiting for its output, which is the
- * script that ran it. A result already read for that call takes the execution too.
+ * call of its ID, or else, for a command an `exec` script ran, to that script: the latest call,
+ * when it is an `exec` script still waiting for its output. A command the user ran is no agent
+ * call. A shell result already read for that call takes the execution too.
  */
 function readExecution(payload: JsonRecord, events: SessionEvents): void {
   const item = payload.item;
@@ -183,6 +184,7 @@ function readExecution(payload: JsonRecord, events: SessionEvents): void {
     source = payload;
     id = stringAt(payload, "call_id");
   } else return;
+  if (stringAt(source, "source") === "user_shell") return;
   const status = stringAt(source, "status");
   if (status === undefined || status === "in_progress") return;
   const code = source.exit_code;
@@ -195,7 +197,7 @@ function readExecution(payload: JsonRecord, events: SessionEvents): void {
   ];
   const at = events.results.findIndex((result) => result.id === call.id);
   const result = events.results[at];
-  if (result === undefined) return;
+  if (result === undefined || !isShellCall(call)) return;
   const stated = shellStatus(result.text, call);
   events.results[at] = {
     ...result,
@@ -207,12 +209,13 @@ function readExecution(payload: JsonRecord, events: SessionEvents): void {
 function executionCall(id: string | undefined, events: SessionEvents): ToolCall | undefined {
   const named = id === undefined ? undefined : latestCall(events.calls, id);
   if (named !== undefined) return named;
-  const answered = new Set(events.results.map((result) => result.id));
-  for (let at = events.calls.length - 1; at >= 0; at -= 1) {
-    const call = events.calls[at];
-    if (call?.name === "exec" && !answered.has(call.id)) return call;
-  }
-  return undefined;
+  const last = events.calls.at(-1);
+  if (last?.name !== "exec") return undefined;
+  return events.results.some((result) => result.id === last.id) ? undefined : last;
+}
+
+function isShellCall(call: ToolCall): boolean {
+  return SHELL_CALLS.has(call.name) || call.command !== undefined;
 }
 
 function latestCall(calls: readonly ToolCall[], id: string): ToolCall | undefined {
@@ -232,7 +235,7 @@ function readOutput(payload: JsonRecord, calls: readonly ToolCall[]): ToolResult
   const text = textOf(output);
   const unsuccessful = isRecord(output) && output.success === false;
   const call = latestCall(calls, id);
-  const shell = call !== undefined && (SHELL_CALLS.has(call.name) || call.command !== undefined);
+  const shell = call !== undefined && isShellCall(call);
   const stated = shell ? shellStatus(text, call) : { exitCode: null, failed: false };
   return { id, isError: unsuccessful || stated.failed, text, exitCode: stated.exitCode };
 }
