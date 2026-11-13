@@ -86,7 +86,10 @@ function classifyCommands(
  * Whether a command moves the shell away from the observed working directory. A move
  * to that directory itself leaves every later search target project-relative, so it
  * keeps the fallback; any other move, or one whose target cannot be read from the
- * text, makes it unavailable.
+ * text, makes it unavailable. A `..` segment counts as a move: the shell may resolve
+ * it from a CDPATH entry or through a symbolic link, not lexically. A relative
+ * target without one resolves to the directory only when it starts with `.`, which
+ * CDPATH never applies to.
  */
 function changesGraphDirectory(words: string[], directory: string | undefined): boolean {
   let offset = 0;
@@ -114,6 +117,7 @@ function changesGraphDirectory(words: string[], directory: string | undefined): 
     target === undefined ||
     target.startsWith("-") ||
     /[$`~%*?[\]{}]/.test(target) ||
+    target.split(/[\\/]/).includes("..") ||
     path.resolve(directory, target) !== directory
   );
 }

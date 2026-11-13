@@ -58,6 +58,13 @@ it("keeps the fallback for a cd to the observed worktree and withholds it for an
     { tool: "Bash", cwd: root, command: "cd $HOME && rg auth packages/" },
     { tool: "Bash", cwd: root, command: "cd ~ && rg auth packages/" },
     { tool: "Bash", cwd: root, command: "pushd . && popd && rg auth packages/" },
+    { tool: "Bash", cwd: root, command: "CDPATH=/outside cd nested/.. && rg auth packages/" },
+    { tool: "Bash", cwd: root, command: "set -P; cd link/.. && rg auth packages/" },
+    {
+      tool: "Bash",
+      cwd: root,
+      command: `cd '${path.join(root, "packages")}/..' && rg auth packages/`,
+    },
     { tool: "Bash", command: `cd '${root}' && rg auth packages/` },
   ]) {
     const result = classifyGraphExploration(event);
