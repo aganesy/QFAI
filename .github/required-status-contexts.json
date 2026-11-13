@@ -201,7 +201,7 @@
         ".github/actions/setup/action.yml": "870813bb20aadb817b3496f70f6bdb8bb2e8142f1e5e621efe0751b0eacfed19",
         ".github/actions/setup/dependency-builds.txt": "3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5",
         ".github/actions/setup/verify-rebuild-sources.mjs": "81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3",
-        "scripts/bootstrap.mjs": "de567429342bcb31778b48791c552dc19729b178232fb7df03a36d2253378820",
+        "scripts/bootstrap.mjs": "048af9d6d4311918cf4c257385587cf7351ae800551ead0a1ee405ba9c665b92",
         "scripts/branch-catchup.mjs": "2e53766633afb80a280817888a7b370a85ea109e21a94e611e4be2da31f58117",
         "scripts/check-bidi.mjs": "295f9f9779686435a54d481b740e00b150108525630be3796369403873b70ed5",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
@@ -410,7 +410,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "e995414dcbc61032",
-        "Verify the toolchain action before running it": "d5141aaa2bf3de89",
+        "Verify the toolchain action before running it": "52ffab1e38a9d4e7",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "9c45eddf700085e9",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "bdf80b626fab1660",
