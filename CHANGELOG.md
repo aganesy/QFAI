@@ -14,6 +14,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`.agents/rules/grilling.md` keeps on-demand procedures in skill
+  references.** The bounds of a delegated discussion, the glossary check and
+  the check before a session is reported finished move to
+  `discussion-delegation.md`, `glossary-check.md` and `session-check.md` under
+  the `qfai-grilling` skill's `references/`. The rule keeps each trigger and
+  says when to read each file. A session runs as before.
+
 - **Breaking: a per-run deliberation record replaces the discussion pack.** A
   run that asks the user a question or takes a decision no specification,
   contract, rule or convention settles writes one Markdown memo under

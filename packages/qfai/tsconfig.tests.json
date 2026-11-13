@@ -597,6 +597,7 @@
     "tests/integration/alwaysLoadedBudget.test.ts",
     "tests/integration/doctorSkillBodyBudget.test.ts",
     "tests/scripts/alwaysLoadedFootprint.test.ts",
-    "tests/integration/grillingGlossaryCheck.test.ts"
+    "tests/integration/grillingGlossaryCheck.test.ts",
+    "tests/integration/grillingRuleReferences.test.ts"
   ]
 }
