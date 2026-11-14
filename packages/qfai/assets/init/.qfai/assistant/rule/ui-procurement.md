@@ -18,9 +18,19 @@ catalogue. Root `DESIGN.md` owns the adopted theme. `qfai.config.yaml` carries
 
 ## The ladder
 
+The ladder decides where a region comes from, not whether it exists. A region
+the screen contract names is in scope, and so is a region its pattern implies,
+as `.agents/rules/interface-clarity.md#what-a-business-screen-always-has`
+lists them. Leaving an implied region out needs the reason in the screen's UI
+contract. Dropping a region the contract names is a specification change for
+its owner rather than a choice made here.
+
 Per screen region, stop at the first rung that holds.
 
-1. **Does this region need to exist at all?** Once a screen contract names it, that question is a specification change for its owner rather than a choice made here.
+1. **Does the project already have a component for it?** Reuse it. When the
+   same region appears on a second screen and no shared component realises it,
+   extract one, wrapping whatever rung 2 or 3 supplied, and use it on both,
+   rather than authoring the region again.
 2. **Does the project's installed design system already have it?**
 3. **Does a catalogue have it?** Prefer whole over parts: a page, then a block, then a component.
 4. **Can it be composed from primitives already present?**
@@ -34,6 +44,15 @@ detail of an empty or error state. A static capture shows none of them.
 Take the adopted system's default. A design system has already answered each
 one, and its answers agree with each other in a way per-screen invention does
 not.
+
+## Every state exists
+
+The adopted system answers how a state looks, not whether the screen has it.
+Each region that loads data or accepts input lists its states (default,
+empty, loading, error and success) and what realises each one, recorded with
+the region as "Recording what was procured" describes. A state the region cannot reach is
+listed as not applicable, with the reason. One fallback shared by the whole
+app does not realise a region's loading or error state.
 
 ## Choosing a catalogue
 
