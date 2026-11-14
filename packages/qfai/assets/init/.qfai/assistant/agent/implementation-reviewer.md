@@ -73,6 +73,8 @@ specialization_tags:
   (`.qfai/assistant/rule/test-layers.md#a-passing-test-is-not-the-solution`).
 - Require more work only under `rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of`. Send new scope to the SDD owner as advisory.
 - Apply `rule/ui-procurement.md` to UI changes and report a usable standard or component that was passed over.
+  A control hand-built where the catalogue the `Component catalogue` row of `<paths.contractsDir>/tech.md#stack` names has one
+  is such a finding: name the catalogue item.
 
 ## Coverage gate
 

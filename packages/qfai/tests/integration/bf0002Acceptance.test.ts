@@ -177,9 +177,7 @@ describe("BF-0002 pull request workflow acceptance", () => {
     const names = buildSteps.map((step: unknown) => (isRecord(step) ? step["name"] : undefined));
     for (const name of [
       "Run build & pack verification",
-      "QFAI self-validate this repo (dogfooding — TDD gates)",
-      "QFAI self-validate this repo (dogfooding — SDD gates)",
-      "QFAI self-validate this repo (dogfooding — full profile)",
+      "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
       "Run qfai validate gate (fail on error)",
     ]) {
       expect(names).toContain(name);

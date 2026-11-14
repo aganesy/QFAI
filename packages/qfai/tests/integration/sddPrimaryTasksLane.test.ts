@@ -51,7 +51,6 @@ async function withWorkspace(
         "uiux:",
         "  audit:",
         "    enabled: true",
-        "    maxPrimaryCtas: 1",
         "",
       ].join("\n"),
       "utf-8",
