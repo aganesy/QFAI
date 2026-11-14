@@ -9,9 +9,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **`product-surface-reviewer` checks that a screen is complete.** For each
   screen a change adds or alters, it walks the business-screen floor in
   `.agents/rules/interface-clarity.md`. A listed part missing with no reason in
-  the UI contract blocks the review when the change adds, alters or removes it;
-  a gap already there or elsewhere is advisory. Having
-  a listed part is never filed as excess.
+  the UI contract blocks the review on a screen, list, state or shell part the
+  change adds or alters, or when the change removes the part. A gap already
+  there or elsewhere is advisory. Having a listed part is never filed as excess.
 
 - **`.agents/rules/interface-clarity.md` says what a business screen always
   has.** A new section lists, per application, an app shell with navigation

@@ -72,8 +72,8 @@ specialization_tags:
 
   A listed part with no reason recorded in the UI contract is a blocking finding that traces to
   `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` when it is missing from a
-  screen the change adds, missing from a list, state, change or shell part the change adds or alters
-  (a new list with no pagination, a new save with no feedback), or removed by the change. The rule
+  screen the change adds, missing from a list, state, action that changes data, shell, home or
+  repeated-pattern part the change adds or alters (a new list with no pagination, a new save with no feedback), or removed by the change. The rule
   already makes the part an obligation, so the gap is a defect shown from the changed artifacts
   (`.qfai/assistant/rule/drift-protocol.md#defect-or-new-scope-decide-this-first`), not a demand for
   more work. Name the screen and the missing part. A part the contract leaves out with a reason is
