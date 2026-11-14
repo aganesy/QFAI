@@ -62,6 +62,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`ui-procurement.md` requires each region's states to exist.** A region
+  that loads data or accepts input lists its default, empty, loading, error
+  and success states and what realises each one. A state it cannot reach is
+  marked not applicable with the reason, and one app-wide fallback no longer
+  counts as a region's loading or error state.
+
 - **The UI contract guide says the contract is a floor.** A UI contract
   lists what must be verifiable on a screen, not its whole inventory. The
   built screen also carries the parts `interface-clarity.md` lists under

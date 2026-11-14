@@ -35,6 +35,15 @@ Take the adopted system's default. A design system has already answered each
 one, and its answers agree with each other in a way per-screen invention does
 not.
 
+## Every state exists
+
+The adopted system answers how a state looks, not whether the screen has it.
+Each region that loads data or accepts input lists its states (default,
+empty, loading, error and success) and what realises each one, recorded with
+the region as "Recording what was procured" describes. A state the region cannot reach is
+listed as not applicable, with the reason. One fallback shared by the whole
+app does not realise a region's loading or error state.
+
 ## Choosing a catalogue
 
 Two things decide it, and neither is taste:
