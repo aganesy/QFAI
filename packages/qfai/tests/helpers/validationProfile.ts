@@ -307,6 +307,11 @@ export function measureValidators() {
       (call) => vi.spyOn(storyTreeStructure, "validateTechArchitecture").mockImplementation(call),
     );
     register(
+      "core/validators/storyTreeStructure:validateCatalogueRegistry",
+      storyTreeStructure.validateCatalogueRegistry,
+      (call) => vi.spyOn(storyTreeStructure, "validateCatalogueRegistry").mockImplementation(call),
+    );
+    register(
       "core/validators/storyTreeStructure:validateConstraintIds",
       storyTreeStructure.validateConstraintIds,
       (call) => vi.spyOn(storyTreeStructure, "validateConstraintIds").mockImplementation(call),
