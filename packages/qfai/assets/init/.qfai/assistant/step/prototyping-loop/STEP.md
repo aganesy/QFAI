@@ -38,6 +38,9 @@ command, score or check decides that the loop is done.
   iteration, its files, and when the loop ends
 - `.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md` —
   generator system prompt, Tailwind CDN and DESIGN.md token injection rules
+- `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#plain-text-in-ui-source`
+  — the one copy of the procedure for a plain text, which the generator
+  applies to every text it writes
 - `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md` —
   reviewer schema, the four UX axes, layout anti-patterns,
   `designMdViolations`, pivot rules
