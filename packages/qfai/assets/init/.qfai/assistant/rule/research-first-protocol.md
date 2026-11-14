@@ -27,6 +27,9 @@ research_summary:
       # when type: primary / secondary
       locator: string # how to reach the source
       observed: string # YYYY-MM-DD, observation date
+      # when the source is about a library, catalogue, framework or runtime
+      package: string # its package name, as the manifest names it
+      version: string # the version the source describes
   best_practices:
     - id: string # BP-XXXX format
       category: string
@@ -39,6 +42,10 @@ research_summary:
       title: string
       description: string
       source_id: string
+  version_warnings:
+    - source_id: string
+      described: string # the version the source describes
+      installed: string # each pinned version with its file, or `not installed`
   reflection:
     - source_id: string
       finding: string
@@ -69,8 +76,10 @@ The `type` decides which field each goes in.
 | `external` (default)    | `url`       | `published`     |
 | `primary` / `secondary` | `locator`   | `observed`      |
 
-- Every entry records `id`, `title` and the two fields its `type` points to. A
-  missing field in even one entry is a validation error.
+- Every entry records `id`, `title` and the two fields its `type` points to,
+  and a source about a library, catalogue, framework or runtime also records
+  `package` and `version`. A missing field in even one entry is a validation
+  error.
 - A missing `type`, or one whose value is not in the vocabulary, is treated as
   `external`. A `type` that cannot be read never loosens the obligation.
 - Screenshots of a customer's current system, files supplied by the customer and
@@ -113,6 +122,34 @@ Record what the search found in the summary's `sources`, the same way as any
 other source. A later reader can then tell a verified name from one answered
 from memory.
 
+## Version Rule
+
+A source about a library, a component catalogue, a framework or a runtime
+describes one version of it, and the project may run another. Record the
+`package` and the `version` the source describes, from the page itself, such
+as its version selector or the release it names. When the page names no
+version, look up the latest release in the package's registry, record that
+lookup as a source, and write the version as the latest release on that date.
+
+Then read what the project pins:
+
+- every lockfile or manifest that declares the package, such as
+  `pnpm-lock.yaml`, `package-lock.json`, `poetry.lock`, `Cargo.lock` or
+  `go.mod`, one per workspace in a monorepo;
+- for something the project carries without a package, where it pins it:
+  `components.json` and the copied components for a copied-in catalogue,
+  `engines` or `.nvmrc` for a runtime, the API version setting for a service.
+
+Record each pinned version in `installed`, with the file it came from. Add a
+`version_warnings` entry when any of them differs from the described version
+in its breaking part: the major version, or the minor version below 1.0, or
+the release the package marks as breaking when it uses calendar versions.
+
+Add one, with `installed: not installed`, when the project pins the package
+nowhere. That is expected while the package is only being evaluated: the
+entry's `reason` then names the version the project would adopt, and the
+entry is checked against that version.
+
 ## Conflict Protocol
 
 - When a new research result contradicts an existing BP/AP rule:
@@ -131,6 +168,9 @@ guidance later stages follow (`.agents/rules/untrusted-content.md`).
 - Its `reason` states what the applying agent verified against the repository:
   the file it read, the command it ran, or the behaviour it observed.
 - An entry with nothing verified is `defer`, not `apply`.
+- An entry whose source has a version warning is `apply` only when its `reason`
+  names what was checked against the installed version or, for a package not
+  installed yet, against the version the project would adopt.
 
 ## Storage
 

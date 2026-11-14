@@ -172,6 +172,25 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     });
   }
 
+  for (const protocolPath of protocolPaths) {
+    it(`${path.relative(repoRoot, protocolPath)}: a dependency source is checked against the installed version`, async () => {
+      const protocol = await readFile(protocolPath, "utf-8");
+      const rule = section(protocol, "## Version Rule").replace(/\s+/g, " ");
+      expect(rule).toContain("Record the `package` and the `version` the source describes");
+      expect(rule).toContain("every lockfile or manifest that declares the package");
+      expect(rule).toContain("the minor version below 1.0");
+      expect(rule).toContain("the entry's `reason` then names the version the project would adopt");
+      expect(protocol).toContain("version_warnings:");
+      for (const field of ["package: string", "version: string", "installed: string"]) {
+        expect(protocol, field).toContain(field);
+      }
+      const applying = section(protocol, "## Applying an External Source").replace(/\s+/g, " ");
+      expect(applying).toContain(
+        "An entry whose source has a version warning is `apply` only when its `reason` names what was checked against the installed version or, for a package not installed yet, against the version the project would adopt.",
+      );
+    });
+  }
+
   for (const skillPath of webResearchSkillPaths) {
     it(`${path.relative(repoRoot, skillPath)}: points to both rules instead of restating them`, async () => {
       const skill = await readFile(skillPath, "utf-8");
