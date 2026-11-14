@@ -54,11 +54,12 @@ annotation counts here. AC and EX annotations do not belong in E2E tests. A
 flow may need more than one journey test to prove its branches; one annotation
 is not a substitute for the required assertions.
 
-A flow's journey may open each screen by its URL, so passing every journey
-does not show that a user can reach the screens. Where the app has its own
-navigation (a shell, a menu, a home screen), add one navigation journey per
-role: sign in as that role, then reach every screen the role may use through
-the app's own links and controls only, never by typing a URL. It proves
+A flow's journey can open each screen directly by its URL, so passing every
+journey does not show that a user can reach the screens. Where the app has its
+own navigation (a shell, a menu, a home screen), add one navigation journey per
+role: sign in as that role, then reach every screen the UI contracts declare
+for that role through the app's own links and controls only, never by typing a
+URL. It proves
 reachability rather than one flow, so it carries no BF annotation.
 
 ## Annotation routing
