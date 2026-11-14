@@ -73,11 +73,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **A redesign has a method for surveying reference sites.** The new
   `rule/references/visual-reference-survey.md`, which the research-first
-  protocol names for a redesign or a new product that carries UI, sets the
-  sample by stratum, grades each site's acclaim by its evidence, removes
-  duplicates before counting, records the same fields for every site, and ends
-  in findings that each cite their sites and land in root `DESIGN.md`, a UI
-  contract or the procurement record.
+  protocol names for a whole-site redesign, a new product with no adopted
+  theme, or a survey the user asks for, sets the sample by stratum, grades
+  each site's acclaim by its evidence, removes duplicates before counting, and
+  records the same fields for every site. It ends in checked findings, put to
+  the user as one question, that land as Do and Don't points in root
+  `DESIGN.md` or as structure and elements of a UI contract.
 
 ### Removed
 

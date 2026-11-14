@@ -159,10 +159,27 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
         "The sample size is the count after this.",
       );
       expect(flat).toContain("Record the same fields for every site");
-      expect(flat).toContain("lands_in: design-md | ui-contract | procurement");
+      expect(flat).toContain("lands_in: design-md | ui-contract");
+      expect(flat).toContain("action: adopt | reject | defer");
+      // Colour, type and motion become Do and Don't points, never tokens.
+      expect(section(survey, "## Where findings land").replace(/s+/g, " ")).toContain(
+        "never a `visual.*` value",
+      );
+      expect(flat).toContain("A finding nothing was checked against is `defer`.");
       expect(flat).toContain(
         "A finding rests on at least two sites, at least one of them at `award` or `gallery` level.",
       );
+    });
+  }
+
+  for (const discussionRoot of discussionRoots) {
+    const intakePath = path.join(discussionRoot, "references", "design-dna-intake.md");
+    it(`${path.relative(repoRoot, intakePath)}: points a reference survey to the method`, async () => {
+      const rules = section(await readFile(intakePath, "utf-8"), "## Reference Rules").replace(
+        /\s+/g,
+        " ",
+      );
+      expect(rules).toContain("`.qfai/assistant/rule/references/visual-reference-survey.md`");
     });
   }
 
