@@ -128,6 +128,7 @@ const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
       "QFAI-STORY-012",
       "QFAI-STORY-013",
       "QFAI-STORY-020",
+      "QFAI-STORY-021",
     ],
   ],
 ]);
