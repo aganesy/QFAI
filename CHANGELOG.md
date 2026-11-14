@@ -199,6 +199,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook denies a search behind a named descriptor or
+  inside a substitution.** `{fd}<file grep -r foo src` and searches inside
+  `$(...)`, backticks, `<(...)`, `>(...)` or PowerShell `@(...)` are denied
+  like the same search run directly.
+
 - **The search-protection hook says what it could not read.** A command whose
   quotes it cannot match, or whose wrappers nest more than 16 levels deep, is
   still denied, but the message names that cause and how to retry instead of
