@@ -81,6 +81,10 @@ specialization_tags:
   part missing elsewhere. Never file the presence of a listed part as excess; how it is built stays
   under the excess route above.
 
+- Check each screen against its type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`.
+  A part of that type the UI contract names and the screen lacks is a blocking finding. A part the contract
+  neither names nor leaves out with a reason is an `advisory` finding for the contract stage, naming the
+  part and the type.
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Where the `Component catalogue` row of `<paths.contractsDir>/tech.md#stack` names a catalogue, report a
   screen that hand-builds a control that catalogue has, and name the catalogue item. A named catalogue that
@@ -153,6 +157,7 @@ specialization_tags:
 - [ ] Review verdict is explicit
 - [ ] Findings cite concrete artifacts or evidence
 - [ ] Required gates and residual risks are recorded
+- [ ] Every Domain Responsibility on this card was checked, or named as not applicable to the target, whatever the request's focus
 
 ## When to use
 

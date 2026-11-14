@@ -185,6 +185,7 @@ command.
 - [ ] Findings cite concrete artifacts or evidence
 - [ ] Every finding declares `Severity:` and `Traces to:`; no blocking finding traces to `none` or `record:*`
 - [ ] Required gates and residual risks are recorded
+- [ ] Every Domain Responsibility on this card was checked, or named as not applicable to the target, whatever the request's focus
 
 ## When to use
 
