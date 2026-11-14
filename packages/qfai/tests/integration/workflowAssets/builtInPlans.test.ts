@@ -71,6 +71,7 @@ const VOCABULARY: Record<string, string[]> = {
     "implement-revert",
     "implement-stress-harness",
     "implement-oracle-parity",
+    "implement-settled-edit",
   ],
   verify: [
     "verify-change-note",
@@ -93,6 +94,7 @@ const PASS_THROUGH = [
   "sdd-story",
   "common-design-md",
   "triage-investigate",
+  "implement-settled-edit",
   "implement-scaffold",
   "implement-tdd",
   "implement-credentials",

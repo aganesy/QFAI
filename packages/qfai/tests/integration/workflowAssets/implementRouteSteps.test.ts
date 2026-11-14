@@ -69,6 +69,19 @@ describe("the steps the routes add to qfai-implement", () => {
 
   // QFAI:AC-0001-0200-02
   // QFAI:EX-0001-0200-02
+  it("lists implement-settled-edit as the step apply-settled runs first, not instead of scaffold and TDD", async () => {
+    expect(await skillSteps("qfai-implement")).toContain("implement-settled-edit");
+    const skill = await readShipped("skill/qfai-implement/SKILL.md");
+    expect(rowOf(skill, "| `implement-settled-edit`")).toBe("");
+    expect(flat(skill)).toMatch(
+      /In the `apply-settled` route, `implement-settled-edit` \(`\.qfai\/assistant\/step\/implement-settled-edit\/STEP\.md`\) runs first, before `implement-scaffold` and `implement-tdd`\. It makes a delegated release's hand-made edit and passes on any other work order/,
+    );
+    const front = frontMatterOf(await stepText("implement-settled-edit"));
+    expect([front.name, front.owner]).toEqual(["implement-settled-edit", "qfai-implement"]);
+  });
+
+  // QFAI:AC-0001-0200-02
+  // QFAI:EX-0001-0200-02
   it("changes no tracked file in the steps that only observe", async () => {
     for (const name of ["implement-bisect", "implement-minimize", "implement-benchmark"]) {
       const written = flat(sectionOf(await stepText(name), "## What it writes"));

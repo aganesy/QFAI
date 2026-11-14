@@ -343,6 +343,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   points to the product-surface reviewer card for when it blocks. Read alone,
   the section had suggested such a gap could only be advisory.
 
+- **A delegated release's version edit is made in a reviewed change route.**
+  When a delegated release needs a version edit its release documents make by
+  hand, `triage-operate` reports it as `needs-change` with an `order` naming
+  the `release` artifact and the `release-delegated` qualifier, instead of
+  stopping on it as a blocker. Before the report it collects every value the
+  edit needs: a value the documents fix by a stated rule, such as "increment
+  versionCode by 1", is computed by that rule, and a value they leave to
+  judgement is asked of the user. The order carries the quoted instruction
+  with its source, the approval row, those values, and the files and fields
+  the documents name. It plans `apply-settled`, whose implement stage now
+  serves `release` and runs the new `implement-settled-edit` step first. That
+  step acts only for a delegated release: it sets each named field to its
+  value and changes nothing else, adds no example or test, and stops naming
+  what it cannot confirm, such as a value, a source, or a file the release
+  documents do not name. For any other request it passes, so no other change
+  skips its examples and tests. `implement-scaffold` and `implement-tdd` pass
+  when the work order carries only that edit. Where the instruction delegates
+  more than the version edit, the final report lists running the release
+  again with the same instruction as the user's follow-up. On that run, a
+  version edit already in place is not reported or computed again. Any other
+  hand-made release edit is reported the same way.
+
 ### Fixed
 
 - **The search-protection hook ends a PowerShell statement at a lone carriage

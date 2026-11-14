@@ -27,6 +27,7 @@ steps:
   - implement-backport
   - implement-acceptance
   - implement-procedure
+  - implement-settled-edit
 requires: [common-review-cycle]
 mode: approval-gated
 ---
@@ -65,6 +66,11 @@ Every step follows `.qfai/assistant/rule/shared-skill-operating-baseline.md`,
 | `implement-scaffold`    | `.qfai/assistant/step/implement-scaffold/STEP.md`    | First: the flow's missing acceptance tests, each with an empty body |
 | `implement-credentials` | `.qfai/assistant/step/implement-credentials/STEP.md` | Only when an acceptance test in scope needs an authenticated actor  |
 | `implement-tdd`         | `.qfai/assistant/step/implement-tdd/STEP.md`         | Every owed example, Red, Green, Refactor                            |
+
+In the `apply-settled` route, `implement-settled-edit`
+(`.qfai/assistant/step/implement-settled-edit/STEP.md`) runs first, before
+`implement-scaffold` and `implement-tdd`. It makes a delegated release's
+hand-made edit and passes on any other work order.
 
 Acceptance tests come in two phases. `implement-scaffold` writes them with
 empty bodies before the examples are implemented; `implement-acceptance`

@@ -11,13 +11,21 @@ requires:
 Work within one `BF-NNNN` flow. An EX is the unit of implementation review;
 the BF is the unit of scoped completion. Inside a workflow run, a work order
 whose `target` binds a flow supplies the flow, and no question asks which flow.
-Otherwise the invocation's BF argument names it.
+Otherwise the invocation's BF argument names it. A flow that cannot be
+resolved stops this step: report the missing source.
 
 ## Passes when
 
 Read first: the flow's examples and the tests that annotate them. The step
 passes when every example has an annotating test, so no example needs a Red,
 Green and Refactor cycle. The pass names the examples and their tests.
+
+The step also passes when the work order names no flow because it carries
+only a delegated release's hand-made edit: the extraction names the `release`
+artifact and the `release-delegated` qualifier, and `implement-settled-edit`
+made the edit in files the release documents name. That edit has no example
+to take through a cycle. The pass names the edit. Any other work order that
+names no flow resolves its flow as this step says, or stops.
 
 ## Reads
 
