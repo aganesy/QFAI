@@ -50,7 +50,8 @@ specialization_tags:
   surface framing intent, transition clarity, state coverage, or component character captured by the winning
   prototype.
 - Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
-  The standard parts of a business screen listed under Stop conditions are justified by the pattern itself.
+  The parts in `## What a business screen always has` of `.agents/rules/interface-clarity.md` are justified by the
+  pattern itself.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
 - File excess as `defect:code-quality` against constitution Article VII; tag it
@@ -64,6 +65,9 @@ specialization_tags:
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Require more work only on what `.qfai/assistant/rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of` admits, and report any other gap as advisory.
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
+- Where the `Component catalogue` row of `<paths.contractsDir>/tech.md#stack` names a catalogue, report a
+  screen that hand-builds a control that catalogue has, and name the catalogue item. A named catalogue that
+  the project never installed is one finding against the setup, not one per screen.
 - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 - Judge each `qfai-text` reason comment in the UI source. `npx qfai validate` checks only that a reason
   is present and well formed; whether it is strong is this review's finding. Reject a generic reason
@@ -109,9 +113,9 @@ specialization_tags:
 - The request requires implementation or file editing instead of independent review.
 - The issue falls outside this review domain and must be rerouted to another specialist first.
 - The review would approve configuration, animation or a novel interaction that is not grounded in the current
-  user journey or acceptance criteria. The standard parts of a business screen, such as an app shell, navigation, list search,
-  sort and pagination, and empty, error and success feedback, are grounded by the pattern itself and need no
-  acceptance criterion.
+  user journey or acceptance criteria. The parts in `## What a business screen always has` of
+  `.agents/rules/interface-clarity.md`, such as an app shell, list search and pagination, and empty, error and
+  success states, are grounded by the pattern itself and need no acceptance criterion.
 
 ## Sign-off
 

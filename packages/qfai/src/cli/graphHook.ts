@@ -56,7 +56,7 @@ export async function runInstalledGraphHook(
     io.fail();
     return;
   }
-  let decision = failedGraphHook();
+  let decision = failedGraphHook("configuration");
   const event = decodeGraphHookEvent(input);
   let project = root;
   let uninitialised = false;
@@ -83,7 +83,7 @@ export async function runInstalledGraphHook(
       try {
         decision = await classifyStoredGraphExploration(project, event);
       } catch (cause: unknown) {
-        decision = failedGraphHook();
+        decision = failedGraphHook("state");
         if (cause instanceof GraphLocalStateError)
           decision.message = `${cause.message} ${cause.recovery}`;
       }
@@ -92,7 +92,7 @@ export async function runInstalledGraphHook(
   if (decision.decision === "deny")
     io.output(JSON.stringify(graphHookOutput(host, decision)) + "\n");
   if (decision.state === "failed") {
-    io.error("Graph protection failed. Repair the project hook and enforcement configuration.\n");
+    io.error(`${decision.message}\n`);
     io.fail();
   }
 }

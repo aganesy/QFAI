@@ -37,6 +37,11 @@ naming the pattern is what works.
 - **Reviewing.** Check the references the deliberation record adopted, root
   `DESIGN.md` and each prototype screen against the list. A finding names the
   aspect and quotes the pattern it matched.
+- **Building and reviewing an implemented screen.** _Information
+  architecture and flow_ and _States and accessibility_ apply to every screen
+  the implementation builds, not only to root `DESIGN.md` and prototypes. The
+  implementer checks them before calling a screen done, and the implementation
+  and product-surface reviews check the built screens against them.
 - **Replacing a pattern.** Its usual substitute is in
   [Displacement](#displacement). Moving from one to the other is the same
   defect.
