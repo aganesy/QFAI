@@ -7,8 +7,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ### Added
 
 - **The component catalogue that `tech.md` names is set up before screens
-  are built.** `implement-scaffold` installs the catalogue the `Component
-catalogue` row names with its own setup command and adds its registry to
+  are built.** `implement-scaffold` installs the catalogue the
+  `Component catalogue` row names with its own setup command and adds its registry to
   `uiux.registries`, or reports why it could not. The `product-surface-reviewer`
   and `implementation-reviewer` report a control hand-built where that
   catalogue has one.
