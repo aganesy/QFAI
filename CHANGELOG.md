@@ -62,6 +62,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`ui-procurement.md` requires each region's states to exist.** A region
+  that loads data or accepts input lists its default, empty, loading, error
+  and success states and what realises each one. A state it cannot reach is
+  marked not applicable with the reason, and one app-wide fallback no longer
+  counts as a region's loading or error state.
+
 - **The UI contract guide says the contract is a floor.** A UI contract
   lists what must be verifiable on a screen, not its whole inventory. The
   built screen also carries the parts `interface-clarity.md` lists under
@@ -78,6 +84,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   against the UI contracts under `<paths.contractsDir>/ui/`, and the screen
   contracts review prompt, which nothing loaded and which reviewed that removed
   file, is gone.
+
+- **ID allocation leaves no gap where a project checks IDs run without
+  gaps.** The `sdd-triage` step and its reference say that such a project
+  takes the next ID from the base and the working tree alone, and leaves a
+  collision with an open pull request to the renumbering at merge time,
+  instead of taking a number past the open heads.
 
 - **`interface-clarity.md` walks the user's job across screens.** Section 6
   no longer stops at the tasks a surface declares. It walks the job from where
@@ -200,6 +212,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the package now depends on. The releases change only a dependency of
   the checker and its build configuration.
 
+- **UI evidence captures the standard states of list and form screens.** The
+  `qfai-implement` UI reference asks for the empty, error and success states
+  that every screen listing records or taking input has, whether or not a
+  contract declares them.
+
 - **An approval row quotes a translated label in the file's language.**
   When the structured question showed its options in a language other than
   the one `decisions.md` is written in, the `qfai-sdd` decisions template now
@@ -229,6 +246,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   guide and the `sdd-contract` step name the same exception, so a review that
   cuts how-to copy no longer leaves an empty search result with only "nothing
   matches".
+
+- **The UI procurement ladder starts with the project's own components.** Its
+  first rung now reuses a component the project already has, and extracts a
+  shared one when a region repeats on a second screen. The ladder no longer
+  asks whether a region should exist: a region the screen contract names, or
+  one its pattern implies as interface-clarity lists them, is in scope, and
+  leaving an implied region out needs a reason in the UI contract. The
+  prototype reviewer's second criterion cites rungs 1 to 3.
 
 ### Fixed
 
