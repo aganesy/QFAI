@@ -340,7 +340,10 @@ describe("a question answered without a change", () => {
     );
     expect(release).toMatch(/naming the `release` artifact and the `release-notes` signal/);
     expect(release).toMatch(
-      /Any other hand-made release edit, such as a version bump the preparation does not make, has no route: report it as a blocker/,
+      /A version edit the documents make by hand, such as a version bump the preparation does not make, is a tracked change too: report `needs-change` with an extraction of it as an `order` naming the `release` artifact/,
+    );
+    expect(release).toMatch(
+      /Any other hand-made release edit has no route: report it as a blocker/,
     );
     expect(release).toMatch(
       /Review the release pull request as the project's review rules say, and merge it only when they allow/,

@@ -14,6 +14,7 @@ stages:
       - { step: implement-scaffold, passThrough: true }
       - { step: implement-tdd, passThrough: true }
     after: [spec]
+    serves: [release]
   - id: note
     kind: verify
     steps:

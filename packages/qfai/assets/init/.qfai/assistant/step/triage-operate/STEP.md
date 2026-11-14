@@ -101,9 +101,13 @@ request, or the version edit alone.
    `needs-change` with an extraction of it as an `order` naming the `release`
    artifact and the `release-notes` signal, and carry the quoted instruction
    and the named version into that extraction's request, so the next plan
-   makes the edit under the same instruction. Any other hand-made release
-   edit, such as a version bump the preparation does not make, has no route:
-   report it as a blocker that names the edit.
+   makes the edit under the same instruction. A version edit the documents
+   make by hand, such as a version bump the preparation does not make, is a
+   tracked change too: report `needs-change` with an extraction of it as an
+   `order` naming the `release` artifact, carrying the quoted instruction and
+   the named version the same way, so the next plan's implement stage makes
+   the edit. Any other hand-made release edit has no route: report it as a
+   blocker that names the edit.
 3. Review the release pull request as the project's review rules say, and
    merge it only when they allow, waiting for its checks as above. Where the
    release documents make the merge the instruction for the tag, such as a
