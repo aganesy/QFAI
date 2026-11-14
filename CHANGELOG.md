@@ -14,6 +14,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The UI procurement ladder starts with the project's own components.** Its
+  first rung now reuses a component the project already has, and extracts a
+  shared one when a region repeats on a second screen. The ladder no longer
+  asks whether a region should exist: a region the screen contract names, or
+  one its pattern implies such as a list's pagination, is in scope. The
+  prototype reviewer's second criterion cites rungs 1 to 3.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an

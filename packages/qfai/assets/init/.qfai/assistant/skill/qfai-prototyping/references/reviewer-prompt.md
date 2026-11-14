@@ -202,7 +202,7 @@ count can support a finding, but cannot replace the live assessment.
 | #   | Answer yes or no                                                      | Source                                   |
 | --- | --------------------------------------------------------------------- | ---------------------------------------- |
 | 1   | Catalogues and templates were used where they cover the need          | `.qfai/assistant/rule/ui-procurement.md` |
-| 2   | Components were taken from a package or plugin rather than written    | the same ladder, rungs 2 and 3           |
+| 2   | Components were reused or taken from a package rather than written    | the same ladder, rungs 1 to 3            |
 | 3   | Where nothing provided it, the language or framework standard is used | the same ladder, rung 4                  |
 | 4   | Authoring was the last resort, and each authored region records why   | the same ladder, rung 5                  |
 | 5   | No catalogued anti-pattern is present                                 | `lap-*`, below                           |
