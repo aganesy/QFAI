@@ -22,9 +22,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **An overview screen counts as one view.** `interface-clarity.md` § 4 says
-  an overview or dashboard has the one purpose "see what needs attention",
-  and each of its parts links to the view that does the work.
+- **The home screen counts as one view.** `interface-clarity.md` § 4 says
+  the home, like any dashboard, has the one purpose "see what needs
+  attention", and each of its parts links to the view that does the work.
 
 - **The shipped uix-rev review prompts no longer name the removed
   `40_screen_contracts.md` sidecar.** The strategy review checks brand language

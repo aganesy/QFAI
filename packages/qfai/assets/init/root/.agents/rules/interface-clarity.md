@@ -72,8 +72,8 @@ the user is worse off. If not, it goes.
 ## 4. Use the conventional pattern
 
 - One primary purpose per view. A view answering two questions is two views.
-  An overview or dashboard has one purpose, "see what needs attention", even
-  though its parts answer several questions. Each part links to the view that
+  The home has one purpose, "see what needs attention", even though its parts
+  answer several questions, as a dashboard's do. Each part links to the view that
   does the work rather than doing it in place.
 - The pattern the platform already has, in the place users look for it.
 - One word per concept — the user's word — everywhere it appears.
