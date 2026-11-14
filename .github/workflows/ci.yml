@@ -728,57 +728,38 @@ jobs:
       # SHIPPED-CI: not-applicable
       # Because: the steps removed here wrote lint findings for a reviewer-report check that
       # only this repository's validate ran; the shipped workflows never carried them.
-      - name: QFAI self-validate this repo (dogfooding — TDD gates)
+      - name: QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)
         shell: bash
         run: |
           set -euo pipefail
+          # The three profiles run in one step so that a failing profile does
+          # not skip the ones after it: every profile reports in the same run,
+          # and the step fails at the end if any of them failed.
+          #
           # `tdd` checks story test obligations, drift, test stubs, and
-          # contracts against the repository root.
-          #
-          # A clean gate: this profile reports no `error` on the repository's
-          # own story tree, so any error fails the build.
-          # SHIPPED-CI: not-applicable
-          # Because: this lane validates this repository's own story tree, and
-          # the shipped validate workflow already fails on any error.
-          node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error --format github --root .
-
-      - name: QFAI self-validate this repo (dogfooding — SDD gates)
-        shell: bash
-        run: |
-          set -euo pipefail
-          # `sdd` checks story tree structure, contract references, policy placeholders,
-          # and review artifacts against the repository root. It is paired
-          # with `tdd` and the full sandbox validate below.
-          #
-          # A clean gate: this profile reports no `error` on the repository's
-          # own story tree, so any error fails the build.
-          # SHIPPED-CI: not-applicable
-          # Because: this lane validates this repository's own story tree, and
-          # the shipped validate workflow already fails on any error.
-          node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --format github --root .
-
-      - name: QFAI self-validate this repo (dogfooding — full profile)
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Folded in from the repository's own copy of the shipped validate
-          # workflow, which this change deletes. That copy was never a mirror of
-          # this job: it ran the `full` profile while the steps above run `tdd`
-          # and `sdd`, so deleting it without this step would have dropped
-          # coverage rather than removed a duplicate.
+          # contracts against the repository root. `sdd` checks story tree
+          # structure, contract references, policy placeholders, and review
+          # artifacts. `full` runs every check, and is paired with the sandbox
+          # validate below.
           #
           # The LOCAL binary, not a resolver. This job installs before it
           # builds, so the root's workspace link to the package has no
           # `node_modules/.bin/qfai`, and `npx qfai` from here resolves to the
           # PUBLISHED release — CI would validate a version nobody is reviewing.
-          # That is why the run was folded in rather than repointed at the
-          # shipped workflow file.
-          # A clean gate: this profile reports no `error` on the repository's
+          #
+          # A clean gate: each profile reports no `error` on the repository's
           # own story tree, so any error fails the build.
           # SHIPPED-CI: not-applicable
           # Because: this lane validates this repository's own story tree, and
           # the shipped validate workflow already fails on any error.
-          node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --format github --root .
+          failed=""
+          node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error --format github --root . || failed="$failed tdd"
+          node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --format github --root . || failed="$failed sdd"
+          node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --format github --root . || failed="$failed full"
+          if [ -n "$failed" ]; then
+            echo "::error::qfai validate failed for profile(s):$failed"
+            exit 1
+          fi
 
       - name: Run qfai validate gate (fail on error)
         shell: bash

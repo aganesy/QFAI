@@ -236,13 +236,14 @@ describe("BF-0002 CI verdict examples", () => {
       expect.arrayContaining([
         expect.objectContaining({ name: "Run build & pack verification" }),
         expect.objectContaining({
-          name: "QFAI self-validate this repo (dogfooding — full profile)",
+          name: "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
         }),
         expect.objectContaining({ name: "Run qfai validate gate (fail on error)" }),
       ]),
     );
     const fullProfile = buildSteps.find(
-      (step) => step["name"] === "QFAI self-validate this repo (dogfooding — full profile)",
+      (step) =>
+        step["name"] === "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
     );
     expect(fullProfile?.["run"]).toContain(
       "node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --format github --root .",
@@ -254,9 +255,7 @@ describe("BF-0002 CI verdict examples", () => {
     expect(sandboxValidate?.["run"]).toContain("--root tmp/pack/sandbox/out --fail-on error");
     for (const name of [
       "Run build & pack verification",
-      "QFAI self-validate this repo (dogfooding — TDD gates)",
-      "QFAI self-validate this repo (dogfooding — SDD gates)",
-      "QFAI self-validate this repo (dogfooding — full profile)",
+      "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
       "Run qfai validate gate (fail on error)",
     ]) {
       const verification = buildSteps.find((step) => step["name"] === name);
@@ -269,7 +268,9 @@ describe("BF-0002 CI verdict examples", () => {
     const context = record(contexts[0], "required context");
     expect(context["job"]).toBe("ci-pass");
     expect(context["verificationSet"]).toEqual(
-      expect.arrayContaining(["QFAI self-validate this repo (dogfooding — full profile)"]),
+      expect.arrayContaining([
+        "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
+      ]),
     );
   });
 
