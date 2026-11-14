@@ -84,6 +84,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   record that discusses the screens is history while the UI contract is the
   execution authority.
 
+- **Every UI contract screen states its purpose and its place in the app.**
+  The shipped `ui-contract.sample.yaml` gives each screen a `purpose` and a
+  `navigation` with `shell`, `entry_points` and `back_to`. The UI contract
+  guide, the contract rules and the `sdd-contract` step say every screen
+  carries them. `npx qfai validate` does not check these keys.
+
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
   the check before a session is reported finished move to
