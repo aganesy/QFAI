@@ -631,16 +631,25 @@ describe("shipped template and this repository agree", () => {
 
     // The hooks and the allow list are shared. `permissions.ask` is this
     // repository's own: it stops the commands that tag and publish
-    // (`releaseCommandStop.test.ts`).
+    // (`releaseCommandStop.test.ts`). So are the session tools in
+    // REPO_ONLY_ALLOW: unattended sessions here schedule check-ins and report
+    // back, and an adopter's host may have no such tools.
+    const REPO_ONLY_ALLOW: ReadonlySet<string> = new Set([
+      "mcp__claude-code-remote__send_later",
+      "mcp__claude-code-remote__send_message",
+    ]);
     const shared = (text: string): unknown => {
       const settings: Record<string, unknown> = JSON.parse(text);
       const permissions = settings.permissions;
+      const allow: unknown =
+        typeof permissions === "object" && permissions !== null
+          ? Reflect.get(permissions, "allow")
+          : undefined;
       return {
         hooks: settings.hooks,
-        allow:
-          typeof permissions === "object" && permissions !== null
-            ? Reflect.get(permissions, "allow")
-            : undefined,
+        allow: Array.isArray(allow)
+          ? allow.filter((entry) => typeof entry !== "string" || !REPO_ONLY_ALLOW.has(entry))
+          : allow,
       };
     };
 
