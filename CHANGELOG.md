@@ -170,6 +170,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   only the record and its `open-questions.md` rows at its last step. The
   story tree, `decisions.md` and `open-questions.md` stay the current state.
 
+- **The product-surface review checks every screen for missing states and a
+  weak structure.** The `product-surface-reviewer` card now applies the
+  _Information architecture and flow_ and _States and accessibility_ sections
+  of `design-anti-patterns.md` on every review, not only the copy section, so
+  a missing empty, error or success state or a data-heavy screen with no table
+  is reported even when no acceptance criterion names it. Each finding's
+  severity still follows the shared reviewer findings rule.
+
   - The discussion pack (`.qfai/discussion/discussion-<timestamp>/`), its
     templates, `prototyping.yaml` and the `uiux/` sidecars are removed. The
     discussion stage keeps `discussion-research` and `discussion-interview`,
