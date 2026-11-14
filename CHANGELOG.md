@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`product-surface-reviewer` checks that a screen is complete.** For each
+  screen a change adds or alters, it walks the business-screen floor in
+  `.agents/rules/interface-clarity.md`. A listed part missing with no reason in
+  the UI contract blocks the review on a screen, list, state or shell part the
+  change adds or alters, or when the change removes the part. A gap already
+  there or elsewhere is advisory. Having a listed part is never filed as excess.
+
 - **The component catalogue that `tech.md` names is set up before screens
   are built.** `implement-scaffold` installs the catalogue the
   `Component catalogue` row names with its own setup command and adds its registry to
