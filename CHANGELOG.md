@@ -14,6 +14,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The test-layers rule recommends one navigation journey per role.** Where
+  an app has its own navigation, an E2E test signs in as each role and reaches
+  every screen that role may use through the app's links only, so a screen
+  reachable only by typing its URL no longer passes every test.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
