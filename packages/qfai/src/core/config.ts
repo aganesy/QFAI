@@ -79,7 +79,6 @@ export type QfaiOutputConfig = {
 export type QfaiUiuxAuditConfig = {
   enabled?: boolean;
   slopDetection?: boolean;
-  maxPrimaryCtas?: number;
   maxRawTokenLiteralWarnings?: number;
   maxDuplicateFindingsPerRule?: number;
 };
@@ -1125,22 +1124,6 @@ function normalizeUiuxAudit(
       result.slopDetection = raw.slopDetection;
     } else {
       issues.push(configIssue(configPath, "uiux.audit.slopDetection must be a boolean."));
-    }
-  }
-  if (raw.maxPrimaryCtas !== undefined) {
-    if (
-      typeof raw.maxPrimaryCtas === "number" &&
-      Number.isFinite(raw.maxPrimaryCtas) &&
-      raw.maxPrimaryCtas >= 0
-    ) {
-      result.maxPrimaryCtas = raw.maxPrimaryCtas;
-    } else {
-      issues.push(
-        configIssue(
-          configPath,
-          "uiux.audit.maxPrimaryCtas must be a number greater than or equal to 0.",
-        ),
-      );
     }
   }
   if (raw.maxRawTokenLiteralWarnings !== undefined) {
