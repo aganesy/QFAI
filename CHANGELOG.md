@@ -45,6 +45,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   profiles. A row that is empty, a template placeholder or states none raises
   nothing.
 
+- **A UI contract screen lists its states.** The shipped
+  `ui-contract.sample.yaml`, the UI contract guide, the contract artifact rules
+  and the `sdd-contract` step give every screen a `states` list: `default`,
+  `empty`, `loading`, `error` and `success`, each with what renders and the
+  user's next action, or `none` with the reason the screen cannot be in that
+  state. A supplement's `when` names one of these states. Validate does not
+  check the key.
+
 ### Removed
 
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
