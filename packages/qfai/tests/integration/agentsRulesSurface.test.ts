@@ -869,10 +869,11 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /app shell with navigation/,
         /search or filter, sort, a count and\s+pagination/,
         /Empty, loading, error and success states/,
-        /confirmation before an irreversible one/,
-        /home or dashboard/,
+        /Feedback after every change/,
+        /A home whose one question/,
         /One shared component per repeated pattern/,
-        /needs a recorded\s+reason/,
+        /needs a reason recorded in the UI contract/,
+        /counts as asked for/,
       ]) {
         expect(text).toMatch(part);
       }

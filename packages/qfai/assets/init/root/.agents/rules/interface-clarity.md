@@ -61,7 +61,8 @@ list is empty are the same clause. An empty state says what to do next.
 ## 3. Cut
 
 - A label that restates the control beside it.
-- A control nobody asked for, and every state it brings with it.
+- A control nobody asked for, and every state it brings with it. A part listed
+  in `## What a business screen always has` counts as asked for.
 - Decoration that displaces signal.
 - The second place the same thing is said.
 
@@ -109,20 +110,24 @@ Cutting stops here. None of these is excess at any size.
 ## What a business screen always has
 
 The cutting above removes excess. It never decides what a screen is missing. A
-screen in a business application is built with these parts whether or not its
-UI contract names them:
+business application has these parts whether or not a UI contract names them.
+
+Once per application:
 
 - An app shell with navigation that shows where the user is, and a way back.
+- A home whose one question is what needs the user's attention now.
+- One shared component per repeated pattern.
+
+On every screen it applies to:
+
 - For a list that can outgrow one screen: search or filter, sort, a count and
   pagination.
 - Empty, loading, error and success states. The empty state says what to do
-  next; the error state says how to recover.
-- Feedback after every change, and a confirmation before an irreversible one.
-- A home or dashboard that shows what needs the user's attention.
-- One shared component per repeated pattern.
+  next.
+- Feedback after every change.
 
-Leaving one of these out is a departure like any other: it needs a recorded
-reason. A missing part is a defect, not a cut.
+Leaving one of these out needs a reason recorded in the UI contract of the
+screen it is missing from. A part left out without one is a defect, not a cut.
 
 ## Related
 

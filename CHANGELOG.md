@@ -7,11 +7,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ### Added
 
 - **`.agents/rules/interface-clarity.md` says what a business screen always
-  has.** A new section lists an app shell with navigation and a way back, list
-  search or filter with sort, count and pagination, empty, loading, error and
-  success states, feedback and confirmation, a home that shows what needs
-  attention, and one shared component per repeated pattern. Leaving one out
-  needs a recorded reason.
+  has.** A new section lists, per application, an app shell with navigation
+  and a way back, a home that shows what needs attention and one shared
+  component per repeated pattern; per screen, list search or filter with sort,
+  count and pagination, empty, loading, error and success states, and feedback
+  after every change. Leaving one out needs a reason recorded in the screen's UI
+  contract, and the Cut section counts a listed part as asked for.
 
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
