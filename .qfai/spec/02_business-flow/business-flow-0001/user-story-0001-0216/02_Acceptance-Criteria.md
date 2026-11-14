@@ -16,4 +16,12 @@ Feature: Pass a step that has nothing to write
     Given the `STEP.md` of a step on the pass-through list
     When an agent reads it
     Then it states what the step reads first and what shows it has nothing to write
+
+  # AC-0001-0216-05
+  Scenario: A delegated release's hand-made edit is made as its release documents name it
+    Given an `apply-settled` work order planned from an extraction naming the `release` artifact and the `release-delegated` qualifier
+    When `implement-settled-edit` runs
+    Then it sets each field the release documents name to the value the user's instruction or a quoted rule of those documents gives
+    And it changes nothing else, adding no example and no test
+    And it stops before any edit on a source, value or file it cannot confirm
 ```

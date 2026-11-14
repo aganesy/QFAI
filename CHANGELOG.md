@@ -326,6 +326,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   points to the product-surface reviewer card for when it blocks. Read alone,
   the section had suggested such a gap could only be advisory.
 
+- **A delegated release's version edit is made in a reviewed change route.**
+  When a delegated release needs a version edit its release documents make by
+  hand, `triage-operate` reports it as `needs-change` with an `order` naming
+  the `release` artifact and the `release-delegated` qualifier, instead of
+  stopping on it as a blocker. Before the report it collects every value the
+  edit needs: a value the documents fix by a stated rule, such as "increment
+  versionCode by 1", is computed by that rule, and a value they leave to
+  judgement is asked of the user. The order carries the quoted instruction
+  with its source, the approval row, those values, and the files and fields
+  the documents name. It plans `apply-settled`, whose implement stage now
+  serves `release` and runs the new `implement-settled-edit` step first. That
+  step acts only for a delegated release: it sets each named field to its
+  value and changes nothing else, adds no example or test, and stops naming
+  what it cannot confirm, such as a value, a source, or a file the release
+  documents do not name. For any other request it passes, so no other change
+  skips its examples and tests. `implement-scaffold` and `implement-tdd` pass
+  when the work order carries only that edit. The final report lists running
+  the release again with the same instruction as the user's follow-up. Any
+  other hand-made release edit is reported the same way.
+
 ### Fixed
 
 - **The search-protection hook ends a PowerShell statement at a lone carriage
@@ -545,21 +565,6 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   filter inside a group, such as `git log | { grep fix; }`, is allowed like
   the same filter without the group. A PowerShell here-string is read as one
   string, so an apostrophe in its text no longer ends it.
-
-- **A delegated release's version edit is made in a reviewed change route.**
-  When a delegated release needs a version edit its release documents make by
-  hand, `triage-operate` reports it as `needs-change` with an `order` naming
-  the `release` artifact, instead of stopping on it as a blocker. The order
-  carries the quoted instruction, the version the user named, and the files
-  and fields the documents name. It plans `apply-settled`, whose implement
-  stage now serves `release` and runs the new `implement-settled-edit` step
-  first. That step sets each named field to the named value and changes
-  nothing else, adds no example or test, and stops naming what is missing
-  when a value, file or field cannot be found. It passes when the work order
-  names no such edit. `implement-scaffold` and `implement-tdd` pass when the
-  work order carries only that edit. The edit then gets the route's code
-  review and gates like any change. Any other hand-made release edit is
-  reported the same way.
 
 - **`qfai validate` reads the Markdown under `paths.specsDir` once for the
   UI/UX checks.** The HTML mock, UI definition and Mermaid screen flow checks

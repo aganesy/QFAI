@@ -343,7 +343,13 @@ describe("a question answered without a change", () => {
       /A version edit the documents make by hand, such as a version bump the preparation does not make, is a tracked change too: report `needs-change` with an extraction of it as an `order` naming the `release` artifact/,
     );
     expect(release).toMatch(
-      /Its request carries the quoted instruction, the named version, and each file and field the documents name for the edit, as they name them, so the next plan's `implement-settled-edit` makes exactly that edit/,
+      /an `order` naming the `release` artifact and the `release-delegated` qualifier\. Its request carries the quoted instruction with its source, the approval row `qfai-run` wrote in `decisions\.md` before this step, the named version, and each file and field the documents name for the edit, as they name them, so the next plan's `implement-settled-edit` makes exactly that edit/,
+    );
+    expect(release).toMatch(
+      /Before the report, collect every value the documents need for the edit: - A value the documents fix by a stated rule, such as "increment versionCode by 1", is computed by that rule and named with the rule quoted\. - A value the documents leave to judgement is asked of the user before the report, and the request names the answer/,
+    );
+    expect(release).toMatch(
+      /After a `needs-change` report for a hand-made release edit, list as the user's follow-up: run the release again with the same quoted instruction once the edit lands/,
     );
     expect(release).toMatch(
       /Any other hand-made release edit is reported the same way, its request naming each file, field and value the documents give for it/,

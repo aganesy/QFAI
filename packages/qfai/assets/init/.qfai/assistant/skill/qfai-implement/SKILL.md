@@ -67,6 +67,11 @@ Every step follows `.qfai/assistant/rule/shared-skill-operating-baseline.md`,
 | `implement-credentials` | `.qfai/assistant/step/implement-credentials/STEP.md` | Only when an acceptance test in scope needs an authenticated actor  |
 | `implement-tdd`         | `.qfai/assistant/step/implement-tdd/STEP.md`         | Every owed example, Red, Green, Refactor                            |
 
+In the `apply-settled` route, `implement-settled-edit`
+(`.qfai/assistant/step/implement-settled-edit/STEP.md`) runs first, before
+`implement-scaffold` and `implement-tdd`. It makes a delegated release's
+hand-made edit and passes on any other work order.
+
 Acceptance tests come in two phases. `implement-scaffold` writes them with
 empty bodies before the examples are implemented; `implement-acceptance`
 writes their bodies once the system's shape has settled. Unit and component
@@ -105,7 +110,6 @@ behaviour but a failure, a repair or upkeep:
 | `implement-tooling`        | `.qfai/assistant/step/implement-tooling/STEP.md`        | A workflow, a script or a development tool is to change                   |
 | `implement-backport`       | `.qfai/assistant/step/implement-backport/STEP.md`       | A merged change is to be carried to a release branch                      |
 | `implement-acceptance`     | `.qfai/assistant/step/implement-acceptance/STEP.md`     | The flow's acceptance tests have empty bodies to write                    |
-| `implement-settled-edit`   | `.qfai/assistant/step/implement-settled-edit/STEP.md`   | A settled instruction names a literal edit, its exact values and fields   |
 
 Read the `STEP.md` of the current step only, run it, then move to the next.
 Each step names the common steps it runs in `requires`; read those when the
