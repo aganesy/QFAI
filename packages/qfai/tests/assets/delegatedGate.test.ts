@@ -117,7 +117,7 @@ describe("a UI change is verified by looking at its screens", () => {
       expect(visual).toContain("a path `uiux.surfacePaths` selects");
       expect(visual).toContain("recorded in `gates` as `visual check`");
       expect(visual).toContain(
-        "`qfai-sdd/references/ui-contract-guide.md` requires of every screen",
+        "qfai-sdd/references/ui-contract-guide.md` requires of every screen",
       );
       expect(visual).toContain(
         "when a capture contradicts its contract or a required part is missing",
