@@ -16,7 +16,9 @@
       "Skill(web-research)",
       "Bash(npx qfai:*)",
       "Bash(yarn exec qfai:*)",
-      "Bash(yarn qfai:*)"
+      "Bash(yarn qfai:*)",
+      "mcp__claude-code-remote__send_later",
+      "mcp__claude-code-remote__send_message"
     ],
     "ask": [
       "Bash(git tag:*)",
