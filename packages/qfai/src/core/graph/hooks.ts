@@ -707,7 +707,12 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       index = readHeredocOperator(index) - 1;
     } else {
       if (shell === "posix" && character === "#" && !word.length) commented = true;
-      if (character === ">" && !/^\d*$/.test(word) && !/[<>]$/.test(word) && word !== "&") {
+      if (
+        (character === ">" || character === "<") &&
+        !/^\d*$/.test(word) &&
+        !/[<>]$/.test(word) &&
+        word !== "&"
+      ) {
         flushWord();
       }
       word += character;
