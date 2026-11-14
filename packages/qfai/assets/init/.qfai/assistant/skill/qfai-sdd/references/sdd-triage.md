@@ -155,9 +155,10 @@ Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-re
 It reads the working tree and the base ref's commit, a fetched ref such as `origin/main`, and prints the number after the highest of both, wherever a row sits. It writes nothing and does not see open pull requests.
 A decisions.md or open-questions.md row takes its timestamp ID from the time it is written instead; no count and no other branch decides it.
 
-Read the IDs open pull requests add before taking a BF, US, AC, EX or BR ID. Fetch the base. Where a forge CLI is available, list the open pull requests once per session through its REST API, for example `gh api repos/{owner}/{repo}/pulls?state=open`, and reuse that listing for every ID the session takes.
+Read the IDs open pull requests add before taking a BF, US, AC, EX or BR ID, unless the project checks that IDs run without gaps (below). Fetch the base. Where a forge CLI is available, list the open pull requests once per session through its REST API, for example `gh api repos/{owner}/{repo}/pulls?state=open`, and reuse that listing for every ID the session takes.
 Fetch each one's head ref, such as `refs/pull/<n>/head`, so a pull request from a fork is read too, and read the IDs it adds from `git diff <base>...<head>`. Take the highest across the base, the working tree and those heads, plus one. Without a forge CLI, read the base alone.
-Where the project checks that IDs of a kind run without gaps, an ID taken past an open head leaves a gap on the branch until that pull request merges, and that check fails. There, take the number `next-id` prints from the base and the working tree alone, and leave a collision with an open head to the renumbering at merge time below.
+Where the project checks that IDs of a kind run without gaps, for example a CI check that fails on a missing number, an ID taken past an open head leaves a gap on the branch until that pull request merges, and that check fails.
+There, skip the open heads and take the number `next-id` prints. It reads only the base and the working tree. Leave a collision with an open head to the renumbering at merge time below.
 When merging the base into the branch, check each such ID the branch adds against the merged base. The base's item keeps its ID; the branch renumbers its own item and every reference to it, then runs the gates again.
 
 ### Register conflicts

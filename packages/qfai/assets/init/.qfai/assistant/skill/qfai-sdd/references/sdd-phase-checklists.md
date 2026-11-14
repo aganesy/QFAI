@@ -10,7 +10,7 @@ Use these checkpoints with the ordered stages of the SDD steps. A checked item r
 - Only a decision the user made that passes the recording test, approvals included, and a justified `Test exception:` row are decision rows; a rejected option is a `Declined:` row. Open questions are open-questions.md rows.
 - Both tables have exactly ID, Content, Approach. New rows take timestamp IDs; existing decision rows keep their IDs and are never removed, though their wording may be restated, and a question row was only deleted when a decision or a replacing question names it.
 - Critical decisions have the user's answer before any dependent write. Under --auto, pending decisions stopped the run without an invented answer.
-- New IDs use highest-in-scope plus one, including retired IDs and the IDs open pull requests add.
+- New IDs use highest-in-scope plus one, including retired IDs and the IDs open pull requests add, unless the project checks that IDs run without gaps (`sdd-triage.md` § ID allocation).
 
 ## Policy and business flow
 
