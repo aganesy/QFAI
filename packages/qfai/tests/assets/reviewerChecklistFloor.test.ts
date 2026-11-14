@@ -51,7 +51,9 @@ describe("a review request cannot narrow a reviewer's checklist", () => {
       expect(step).toContain(
         "the responsibilities it checked and the ones it named not applicable",
       );
-      expect(step).toContain("Each response accounted for every Domain Responsibility of the reviewer's card.");
+      expect(step).toContain(
+        "Each response accounted for every Domain Responsibility of the reviewer's card.",
+      );
     });
 
     it(`${tree}: every reviewer card signs off on its whole checklist`, async () => {
