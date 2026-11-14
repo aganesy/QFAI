@@ -74,6 +74,9 @@ the user is worse off. If not, it goes.
 ## 4. Use the conventional pattern
 
 - One primary purpose per view. A view answering two questions is two views.
+  The home has one purpose, "see what needs attention", even though its parts
+  answer several questions, as a dashboard's do. Each part links to the view that
+  does the work rather than doing it in place.
 - The pattern the platform already has, in the place users look for it.
 - One word per concept — the user's word — everywhere it appears.
 
@@ -91,9 +94,21 @@ Order and grouping carry what a sentence would otherwise have to state.
 
 ## 6. Walk it
 
-Before calling a surface done, perform every task it declares, start to finish,
-as someone who does not know how it is built. Anything you have to read twice is
-a defect in the control it sits under.
+Before calling a surface done, walk the user's job across screens, start to
+finish, as someone who does not know how it is built: enter from where the user
+starts, find the record, act on it, see the result, and get back. Walk every task
+the surface declares this way, and the jobs it serves that no contract names, such
+as reaching a record from the home screen, finding one record among many, or
+recovering after an error. Walk it with a realistic volume of data and, on a
+screen, at phone and desktop widths. A command-line surface is walked the same
+way, from the first command to the result.
+
+Anything you have to read twice is a defect in the control it sits under. A step
+you cannot reach, a record you cannot find or an action whose result you cannot
+tell is a gap in the surface. A gap that a part listed in `## What a business
+screen always has` closes is a defect to fix. Raise any other gap on a job no
+contract names with the owner of the spec, rather than building what the spec
+does not ask for.
 
 ## What this rule never removes
 
