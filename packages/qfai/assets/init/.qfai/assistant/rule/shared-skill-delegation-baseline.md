@@ -252,10 +252,13 @@ When preparing a delegation, use the template in
 
 ```text
 Result: PASS | REVISE
+Responsibilities:
+- <each Domain Responsibility on the reviewer's card> | checked | not applicable: <why>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <BF-*/AC-*/EX-*/BR-*/<contract-ID>/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none> | Fix: <action, for a blocking finding>
 ```
 
+- `Responsibilities:` lists every Domain Responsibility on the reviewer's card, whatever the request's focus.
 - A reviewer that authored or edited what it reviews says so instead of returning a verdict, and the review goes to a non-participating reviewer (see `Definition: independent reviewer`).
 - `Result: REVISE` is legal only when at least one finding is `Severity: blocking`. A response whose findings are all advisory returns `Result: PASS` with the proposals attached.
 

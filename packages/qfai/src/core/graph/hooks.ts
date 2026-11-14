@@ -154,19 +154,26 @@ function classifyCommands(
   let location = start;
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
+  // Inside a `case`, a command that starts with a word ending in `)`, such as `y)`
+  // or `"a b")`, is an arm: its pattern is not a command.
+  let openCases = 0;
   for (const [index, command] of commands.entries()) {
+    const words =
+      openCases > 0 && command.words[0]?.endsWith(")") ? command.words.slice(1) : command.words;
+    if (words[0] === "case") openCases += 1;
+    else if (words[0] === "esac") openCases = Math.max(0, openCases - 1);
     // After a move, only an `&&` chain, or a pipeline inside one, runs where the move went:
     // `||`, `;`, `&` and a new line also run when the move failed.
     if (typeof location === "object" && index > 0 && command.join !== "&&" && command.join !== "|")
       location = "unknown";
-    const operand = directoryOperand(command.words);
+    const operand = directoryOperand(words);
     if (operand !== undefined) {
       location = redefined
         ? "unknown"
         : movedLocation(location, operand, command, commands[index + 1], scope);
     }
     const decision = classifyCommand(
-      command.words,
+      words,
       { ...scope, location, redefined },
       depth,
       command.upstream,
@@ -388,6 +395,17 @@ function classifyCommand(
     return classifyCommand(words.slice(offset), context, depth + 1);
   }
   const operation = commandName(words);
+  // A `{ ...; }` group and a `case` command's first arm run the command after their
+  // opening words. `classifyCommands` strips the pattern of each later arm.
+  if (operation === "{") {
+    return classifyCommand(words.slice(1), context, depth + 1);
+  }
+  if (operation === "case") {
+    const subject = words.indexOf("in");
+    const arm = words.findIndex((word, index) => index > subject && word.endsWith(")"));
+    return arm < 0 ? undefined : classifyCommand(words.slice(arm + 1), context, depth + 1);
+  }
+  if (operation === "}" || operation === "esac") return undefined;
   if (operation === "env" || operation === "command" || operation === "builtin") {
     let offset = 1;
     while (offset < words.length) {
@@ -754,12 +772,12 @@ const DATA_FILE = String.raw`(?!/dev/|/proc/)[\w./-]+`;
 const DATA_OPERAND = String.raw`[ \t]+(?:-[A-Za-z]+|>>?[ \t]*${DATA_FILE}|>[ \t]*/dev/null|${DATA_FILE})`;
 /**
  * A whole line that writes one here-document to files and nothing else: `cat` or `tee`,
- * plain operands, one `<<` or `<<-` with a quoted identifier delimiter. A line of this
+ * plain operands, one `<<` or `<<-` with a quoted or escaped identifier delimiter. A line of this
  * shape hands its body to no shell, pipe, descriptor or later command, and the quoted
  * delimiter makes Bash read the body literally, with no expansion or line joining.
  */
 const DATA_HEREDOC_LINE = new RegExp(
-  String.raw`^[ \t]*(?:cat|tee)(?:${DATA_OPERAND})*[ \t]*<<-?[ \t]*(['"])[A-Za-z_]\w*\1(?:${DATA_OPERAND})*[ \t]*$`,
+  String.raw`^[ \t]*(?:cat|tee)(?:${DATA_OPERAND})*[ \t]*<<-?[ \t]*(?:(['"])[A-Za-z_]\w*\1|\\[A-Za-z_]\w*)(?:${DATA_OPERAND})*[ \t]*$`,
 );
 /** A line that may come before a data line: blank, `mkdir -p` of plain paths, or another data line. */
 const DATA_PRELUDE_LINE = new RegExp(
@@ -987,16 +1005,19 @@ function shellPipelines(
 }
 
 /**
- * The bodies of the substitutions a shell runs as commands: `$(...)` in POSIX and
- * PowerShell, `@(...)` in PowerShell, `<(...)`, `>(...)` and backticks in POSIX.
- * Single quotes keep them literal, and an escaped opener is not one. An arithmetic
- * `$((...))` runs no command. A substitution left open runs nothing, and no later
- * one can close, so the scan stops there. A here-document body is data and is not
- * scanned: `heredocData` says which bodies.
+ * The bodies of the substitutions and groups a shell runs as commands: `$(...)` in
+ * POSIX and PowerShell, `@(...)` and a grouping `(...)` in PowerShell, `<(...)`,
+ * `>(...)`, zsh `=(...)`, a subshell `(...)` and backticks in POSIX. Quotes keep a
+ * bare `(` literal, single quotes keep every opener literal, and an escaped opener
+ * is not one. An arithmetic `$((...))` runs no command. A substitution left open
+ * runs nothing, and no later one can close, so the scan stops there. A here-document
+ * body is data, except the substitutions an unquoted delimiter's body expands:
+ * `heredocData` says which bodies.
  */
 function substitutionBodies(text: string, shell: GraphShell, nested = false): string[] {
   if (shell === "cmd") return [];
-  const command = shell === "posix" ? heredocData(text, nested) : text;
+  const { text: command, expanded } =
+    shell === "posix" ? heredocData(text, nested) : { text, expanded: [] };
   const escape = shell === "posix" ? "\\" : "`";
   const bodies: string[] = [];
   let quote: string | undefined;
@@ -1031,7 +1052,8 @@ function substitutionBodies(text: string, shell: GraphShell, nested = false): st
     }
     if (!quote && character !== undefined && WORD_BREAK.test(character)) {
       wordStart = true;
-      continue;
+      // A bare `(` also starts a word, and may open a subshell or a grouping below.
+      if (character !== "(") continue;
     }
     if (character === "'" && !quote) {
       quote = "'";
@@ -1053,11 +1075,56 @@ function substitutionBodies(text: string, shell: GraphShell, nested = false): st
         bodies.push(command.slice(index + 2, end));
       }
       index = end;
+    } else if (
+      !quote &&
+      character === "(" &&
+      // A POSIX subshell starts a command, and zsh `=(...)` starts a word; any other
+      // `(`, such as an array's in `name=(...)`, is data, scanned on.
+      (shell === "powershell" ||
+        commandPosition(command, index, 0) ||
+        (command[index - 1] === "=" && /^$|[\s;&|(]/.test(command[index - 2] ?? "")))
+    ) {
+      const end = closingParenthesis(command, index + 1, escape);
+      if (end === undefined) break;
+      bodies.push(command.slice(index + 1, end));
+      index = end;
     } else if (shell === "posix" && character === "`") {
-      let end = index + 1;
-      while (end < command.length && command[end] !== "`") end += command[end] === "\\" ? 2 : 1;
-      if (end >= command.length) break;
+      const end = closingBacktick(command, index + 1);
+      if (end === undefined) break;
       bodies.push(command.slice(index + 1, end).replace(/\\([`\\$])/g, "$1"));
+      index = end;
+    }
+  }
+  for (const body of expanded) bodies.push(...expandedSubstitutions(body));
+  return bodies;
+}
+
+/** The index of the backtick that closes one opened before `start`, or undefined. */
+function closingBacktick(command: string, start: number): number | undefined {
+  let end = start;
+  while (end < command.length && command[end] !== "`") end += command[end] === "\\" ? 2 : 1;
+  return end < command.length ? end : undefined;
+}
+
+/**
+ * The `$(...)` and backtick substitutions an unquoted here-document body expands.
+ * Quotes in the body are text, so only a backslash keeps an opener literal.
+ */
+function expandedSubstitutions(body: string): string[] {
+  const bodies: string[] = [];
+  for (let index = 0; index < body.length; index += 1) {
+    const character = body[index];
+    if (character === "\\") {
+      index += 1;
+    } else if (character === "$" && body[index + 1] === "(") {
+      const end = closingParenthesis(body, index + 2, "\\");
+      if (end === undefined) break;
+      if (body[index + 2] !== "(") bodies.push(body.slice(index + 2, end));
+      index = end;
+    } else if (character === "`") {
+      const end = closingBacktick(body, index + 1);
+      if (end === undefined) break;
+      bodies.push(body.slice(index + 1, end).replace(/\\([`\\$])/g, "$1"));
       index = end;
     }
   }
@@ -1072,11 +1139,11 @@ const MESSAGE_WORD = String.raw`[ \t]+[\w./=:@-]+`;
 /**
  * A line that opens a here-document as the text of a message: `git commit` or `git tag`,
  * or `gh pr`, `gh issue` or `gh release` with `create`, `edit` or `comment`, plain
- * words, then `"$(cat <<'EOF'` with a quoted identifier delimiter. The body becomes an
- * argument that names a message, so no shell runs it.
+ * words, then `"$(cat <<'EOF'` with a quoted or escaped identifier delimiter. The body
+ * becomes an argument that names a message, so no shell runs it.
  */
 const MESSAGE_HEREDOC_LINE = new RegExp(
-  String.raw`^[ \t]*(?:git[ \t]+(?:commit|tag)|gh[ \t]+(?:pr|issue|release)[ \t]+(?:create|edit|comment))(?:${MESSAGE_WORD})*[ \t]+"\$\(cat[ \t]+<<-?[ \t]*(['"])[A-Za-z_]\w*\1[ \t]*$`,
+  String.raw`^[ \t]*(?:git[ \t]+(?:commit|tag)|gh[ \t]+(?:pr|issue|release)[ \t]+(?:create|edit|comment))(?:${MESSAGE_WORD})*[ \t]+"\$\(cat[ \t]+<<-?[ \t]*(?:(['"])[A-Za-z_]\w*\1|\\[A-Za-z_]\w*)[ \t]*$`,
 );
 /** The line that closes a message substitution: `)"` and plain words. */
 const MESSAGE_CLOSE_LINE = new RegExp(String.raw`^[ \t]*\)"(?:${MESSAGE_WORD})*[ \t]*$`);
@@ -1089,18 +1156,20 @@ const MESSAGE_PRELUDE_LINE = new RegExp(String.raw`^[ \t]*git[ \t]+add(?:${MESSA
  * or `$(...)` in it starts no substitution here. A body is removed only in a closed
  * shape: its operator's whole line writes files (a data line) or opens a message
  * (`git commit -m "$(cat <<'EOF'` and the like), every line before it is a data line,
- * a message line or its closing line, the delimiter is a quoted identifier, so Bash
- * expands nothing in the body, the command holds no carriage return, the delimiter line
- * is present, and the text is not nested in another command. Every other body is kept
- * and scanned, so a substitution in it is classified.
+ * a message line, its closing line or a prelude, the delimiter is a quoted or escaped
+ * identifier, so Bash expands nothing in the body, the command holds no carriage return,
+ * the delimiter line is present, and the text is not nested in another command. Every
+ * other body is kept in the text and scanned, so a substitution in it is classified.
+ * `expanded` stays for bodies a shell expands; a closed-shape body expands nothing.
  */
-function heredocData(command: string, nested = false): string {
+function heredocData(command: string, nested = false): { text: string; expanded: string[] } {
   let output = "";
   let quote: string | undefined;
   let comment = false;
   let depth = 0;
   const outer: { quote: string | undefined; depth: number }[] = [];
-  let pending: { delimiter: string; stripTabs: boolean; data: boolean }[] = [];
+  const expanded: string[] = [];
+  let pending: (HeredocBody & { data: boolean })[] = [];
   // Where the current line starts in `output`, which holds no removed body.
   let lineOutput = 0;
   for (let index = 0; index < command.length; index += 1) {
@@ -1110,7 +1179,7 @@ function heredocData(command: string, nested = false): string {
       comment = false;
       if (!quote && pending.length) {
         const end = pending.every((body) => body.data)
-          ? heredocEnd(command, index + 1, pending)
+          ? heredocEnd(command, index + 1, pending, expanded)
           : undefined;
         if (end !== undefined) index = end - 1;
         pending = [];
@@ -1150,11 +1219,12 @@ function heredocData(command: string, nested = false): string {
       const lineStart = command.lastIndexOf("\n", index) + 1;
       const lineEnd = command.indexOf("\n", index);
       const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
-      const delimiter = match[2] ?? match[3];
+      const delimiter = match[2] ?? match[3] ?? match[4] ?? "";
+      const expands = match[4] !== undefined && !match[0].includes("\\");
       const data =
         !nested &&
+        !expands &&
         !command.includes("\r") &&
-        delimiter !== undefined &&
         /^[A-Za-z_]\w*$/.test(delimiter) &&
         (DATA_HEREDOC_LINE.test(line) || MESSAGE_HEREDOC_LINE.test(line)) &&
         output
@@ -1168,52 +1238,91 @@ function heredocData(command: string, nested = false): string {
               MESSAGE_CLOSE_LINE.test(prior) ||
               MESSAGE_PRELUDE_LINE.test(prior),
           );
-      pending.push({ delimiter: delimiter ?? match[4] ?? "", stripTabs: !!match[1], data });
+      pending.push({ delimiter, stripTabs: !!match[1], expands, data });
       output += command.slice(index + 1, heredocOperator.lastIndex);
       index = heredocOperator.lastIndex - 1;
     }
   }
-  return output;
+  return { text: output, expanded };
+}
+
+interface HeredocBody {
+  delimiter: string;
+  stripTabs: boolean;
+  /** An unquoted delimiter: the shell expands substitutions in the body. */
+  expands: boolean;
 }
 
 /**
- * The index after the delimiter line that closes the last of `bodies`, or undefined. A
- * line that starts with a delimiter but holds more, such as `EOF)`, also returns
- * undefined: inside a substitution Bash may end the body there, so the body is kept.
+ * The index after the delimiter line that closes the last of `bodies`, or undefined.
+ * The text of each body that expands is added to `expanded`. A line that starts with a
+ * delimiter but holds more, such as `EOF)`, also returns undefined: inside a
+ * substitution Bash may end the body there, so the body is kept.
  */
 function heredocEnd(
   command: string,
   start: number,
-  bodies: { delimiter: string; stripTabs: boolean }[],
+  bodies: HeredocBody[],
+  expanded: string[],
 ): number | undefined {
   let position = start;
-  for (const { delimiter, stripTabs } of bodies) {
+  const texts: string[] = [];
+  for (const { delimiter, stripTabs, expands } of bodies) {
+    const bodyStart = position;
+    let bodyEnd = position;
     let closed = false;
     while (!closed && position < command.length) {
       const end = command.indexOf("\n", position);
-      const raw = command.slice(position, end < 0 ? command.length : end).replace(/\r$/, "");
-      const line = stripTabs ? raw.replace(/^\t+/, "") : raw;
+      const line = command.slice(position, end < 0 ? command.length : end).replace(/\r$/, "");
+      const stripped = stripTabs ? line.replace(/^\t+/, "") : line;
+      closed = stripped === delimiter;
+      if (!closed && stripped.startsWith(delimiter)) return undefined;
+      if (!closed) bodyEnd = end < 0 ? command.length : end;
       position = end < 0 ? command.length : end + 1;
-      closed = line === delimiter;
-      if (!closed && line.startsWith(delimiter)) return undefined;
     }
     if (!closed) return undefined;
+    if (expands) texts.push(command.slice(bodyStart, bodyEnd));
   }
+  expanded.push(...texts);
   return position;
 }
 
-/** The index of the `)` that closes a parenthesis opened before `start`, outside quotes. */
+/** A POSIX `case` or `esac` reserved word. */
+const caseWord = /(case|esac)(?=$|[\s;&|)])/y;
+
+/** Whether `index` starts a command: only blanks lie between it and `start` or an operator. */
+function commandPosition(command: string, index: number, start: number): boolean {
+  let before = index - 1;
+  while (before >= start && /[ \t]/.test(command[before] ?? "")) before -= 1;
+  return before < start || /[;&|(\n]/.test(command[before] ?? "");
+}
+
+/**
+ * The index of the `)` that closes a parenthesis opened before `start`, outside quotes.
+ * In POSIX text a `)` that ends a `case` pattern, such as `x)` in
+ * `case x in x) ...;; esac`, closes nothing. `case` and `esac` count only where a
+ * command starts, so an argument such as `test/case` opens no case.
+ */
 function closingParenthesis(command: string, start: number, escape: string): number | undefined {
   let depth = 1;
   let quote: string | undefined;
+  /** The parenthesis depth at which each open `case` started. */
+  const cases: number[] = [];
   for (let index = start; index < command.length; index += 1) {
-    const character = command[index];
+    const character = command[index] ?? "";
     if (character === escape && quote !== "'") index += 1;
     else if (quote) {
       if (character === quote) quote = undefined;
     } else if (character === "'" || character === '"') quote = character;
-    else if (character === "(") depth += 1;
+    else if (escape === "\\" && /[ce]/.test(character) && commandPosition(command, index, start)) {
+      caseWord.lastIndex = index;
+      const word = caseWord.exec(command)?.[1];
+      if (word === "case") cases.push(depth);
+      else if (word === "esac" && cases.at(-1) === depth) cases.pop();
+      if (word) index += word.length - 1;
+    } else if (character === "(") depth += 1;
     else if (character === ")") {
+      if (cases.at(-1) === depth) continue;
       depth -= 1;
       if (depth === 0) return index;
     }

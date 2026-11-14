@@ -82,6 +82,7 @@ specialization_tags:
 - [ ] Review verdict is explicit
 - [ ] Findings cite concrete artifacts or evidence
 - [ ] Required gates and residual risks are recorded
+- [ ] Every Domain Responsibility on this card was checked, or named as not applicable to the target, whatever the request's focus
 
 ## When to use
 
