@@ -414,7 +414,7 @@
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "787f513ede8f7fc6",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "bdf80b626fab1660",
-        "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)": "987703b280abd6d8",
+        "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)": "3665225de2c960c8",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
         "Run lint gate": "0349a5fe73ddf76e",
         "Run type check": "0fef1267bf5c92bf",

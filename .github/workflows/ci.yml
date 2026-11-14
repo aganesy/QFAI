@@ -735,6 +735,9 @@ jobs:
           # The three profiles run in one step so that a failing profile does
           # not skip the ones after it: every profile reports in the same run,
           # and the step fails at the end if any of them failed.
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped validate workflow already runs its drift
+          # profile after a failing full profile, so one run reports both.
           #
           # `tdd` checks story test obligations, drift, test stubs, and
           # contracts against the repository root. `sdd` checks story tree
