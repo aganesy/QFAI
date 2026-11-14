@@ -26,12 +26,13 @@ A UI contract lists what must be verifiable on a screen: its tasks, the
 elements and actions tests reach, and the copy that needs a reason. It is the
 minimum, not the inventory of the screen.
 
-The built screen also carries the standard parts of its business-UI pattern,
-such as navigation in the app shell, search, sort and pagination on a list,
-feedback after an action, and its loading, empty, error and success states.
-It keeps everything `.agents/rules/interface-clarity.md` lists under "What
-this rule never removes". The contract need not repeat these parts, and their
-absence from the contract is no reason to leave them out of the screen.
+The built screen also carries the parts that the conventional pattern for
+its kind of screen carries (`.agents/rules/interface-clarity.md`, section 4),
+where the screen needs them. Examples are navigation in the app shell,
+pagination on a list that can outgrow one page, feedback after an action, and
+the screen's loading, empty, error and success states. The contract need not
+repeat these parts, and their absence from the contract is no reason to leave
+them out of the screen.
 
 ## `screens[].primary_tasks` shape
 

@@ -16,9 +16,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The UI contract guide says the contract is a floor.** A UI contract
   lists what must be verifiable on a screen, not its whole inventory. The
-  built screen also carries the standard parts of its business-UI pattern,
-  such as shell navigation, list search, sort and pagination, feedback after
-  an action and its states, which the contract need not repeat.
+  built screen also carries the parts the conventional pattern for its kind
+  of screen carries, where the screen needs them, such as shell navigation,
+  pagination on a long list, feedback after an action and its states. The
+  contract need not repeat them.
 
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
