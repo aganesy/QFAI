@@ -764,8 +764,11 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
     } else if (
       !quote &&
       character === "(" &&
-      // `name=(...)` assigns a POSIX array: its words are data, scanned on.
-      !(shell === "posix" && arrayAssignment.test(command.slice(0, index)))
+      // A POSIX subshell starts a command, and zsh `=(...)` starts a word; any other
+      // `(`, such as an array's in `name=(...)`, is data, scanned on.
+      (shell === "powershell" ||
+        commandPosition(command, index, 0) ||
+        (command[index - 1] === "=" && /^$|[\s;&|(]/.test(command[index - 2] ?? "")))
     ) {
       const end = closingParenthesis(command, index + 1, escape);
       if (end === undefined) break;
@@ -781,9 +784,6 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
   for (const body of expanded) bodies.push(...expandedSubstitutions(body));
   return bodies;
 }
-
-/** Text that ends in a POSIX `name=` or `name+=` assignment, before an array's `(`. */
-const arrayAssignment = /(?:^|[\s;&|(])[A-Za-z_][A-Za-z0-9_]*\+?=$/;
 
 /** The index of the backtick that closes one opened before `start`, or undefined. */
 function closingBacktick(command: string, start: number): number | undefined {

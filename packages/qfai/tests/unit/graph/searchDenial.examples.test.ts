@@ -675,7 +675,7 @@ it("denies a search in a case arm, a subshell, a group or zsh process substituti
   // A `case` or `esac` that is an argument, not a command, opens or closes no case.
   for (const command of [
     "echo $(ls test/case) $(grep -r foo src)",
-    "echo $(echo $case) (grep -r foo src)",
+    "echo $(echo $case); (grep -r foo src)",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
@@ -689,6 +689,7 @@ it("denies a search in a case arm, a subshell, a group or zsh process substituti
     "tools=(rg grep)",
     "pnpm build # (grep found nothing)",
     "echo $(date; hostname) rg",
+    "[[ $c =~ ^(grep|rg) ]]",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("allow");
