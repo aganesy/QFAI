@@ -163,13 +163,28 @@ describe("a file reason clears every text the file gives no reason of its own", 
       "src/Broken.tsx":
         "\n/* qfai-text-file: why=Needed */\nexport const B = () => <p>Credits expire after a year.</p>;\n",
       "src/Plain.tsx": "export const P = () => <p>Credits expire after a year.</p>;\n",
+      // A JSX child comment and a multi-line HTML comment count; the defect is at the opener.
+      "src/Child.tsx":
+        "export const C = () => (\n  <div>\n    {/* qfai-text-file: why=Each term needs its definition; without=Users misread the bill */}\n    <p>Credits expire after a year.</p>\n  </div>\n);\n",
+      "src/broken.html": "<!--\n  qfai-text-file: why=Needed\n-->\n<p>Totals update nightly.</p>\n",
+      // A line comment and a mention inside other text are not file reasons.
+      "src/Line.tsx":
+        "// qfai-text-file: why=Each term needs its definition; without=Users misread the bill\nexport const L = () => <p>Credits expire after a year.</p>;\n",
+      ".qfai/prototype/final/index.html": page(
+        "<!-- qfai-text-file: why=Every screen explains itself; without=Users are lost -->\n<p>Manage all your orders easily.</p>",
+      ),
     });
     // A text's own reason is still checked, and a file without a file reason is unchanged.
     const found = issues.map((each) => `${each.file}:${each.loc?.line} ${each.code}`).sort();
+    // A prototype page holds every screen, so its file reason is not read.
     expect(found).toEqual([
+      ".qfai/prototype/final/index.html:6 QFAI-UITEXT-001",
       "src/Broken.tsx:2 QFAI-UITEXT-002",
       "src/Broken.tsx:3 QFAI-UITEXT-001",
+      "src/Line.tsx:2 QFAI-UITEXT-001",
       "src/Plain.tsx:1 QFAI-UITEXT-001",
+      "src/broken.html:1 QFAI-UITEXT-002",
+      "src/broken.html:4 QFAI-UITEXT-001",
       "src/notes.html:4 QFAI-UITEXT-002",
     ]);
     const fileDefect = issues.find(

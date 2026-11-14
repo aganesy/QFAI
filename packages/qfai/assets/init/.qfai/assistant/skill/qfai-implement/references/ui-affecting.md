@@ -23,7 +23,9 @@ between. A missing reason is `QFAI-UITEXT-001` and a malformed one `QFAI-UITEXT-
 Where one reason holds for every text in a file, such as a help page or release notes, write it once as
 `<!-- qfai-text-file: why=...; without=... -->` or `/* qfai-text-file: why=...; without=... */` anywhere in the
 file. It stands for each plain text in the file that has no reason of its own, and it is checked and judged like
-any reason. A text with its own `qfai-text` comment keeps that one.
+any reason. A text with its own `qfai-text` comment keeps that one. A prototype page holds every screen, so its
+file reason is not read. The reason does not skip the procedure below: each text it covers is still one the user
+needs, or it is deleted, replaced or moved.
 
 This section is the one copy of the procedure for a plain text; other documents point here. For each plain
 text, ask first whether the user needs it at that point:

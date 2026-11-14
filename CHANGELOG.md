@@ -66,10 +66,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **A file can record one reason for all its plain texts.** A
   `qfai-text-file` comment, `<!-- qfai-text-file: why=...; without=... -->` or
   `/* qfai-text-file: why=...; without=... */`, gives its reason to every plain
-  text in the file that has none of its own, so a help page or release notes
-  no longer need a `qfai-text` comment before each text. The body is checked
-  like a `qfai-text` body, and a malformed one raises `QFAI-UITEXT-002` at its
-  line.
+  text in a selected surface file that has none of its own, so a help page or
+  release notes no longer need a `qfai-text` comment before each text. The
+  body is checked like a `qfai-text` body, and a malformed one raises
+  `QFAI-UITEXT-002` at its line. A prototype page's file reason is not read.
 
 ### Removed
 

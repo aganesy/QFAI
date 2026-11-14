@@ -120,8 +120,9 @@ export async function validateUiPlainText(
     } else {
       candidates = await markupCandidates(markupOf(source, extension));
     }
-    // A valid file reason stands for every text the file gives no reason of its own.
-    const recorded = fileReason(source);
+    // A valid file reason stands for every text the file gives no reason of its own. A prototype
+    // page holds every screen, so one comment there would clear them all: it is not read.
+    const recorded = isPrototypePage(file) ? null : fileReason(source);
     const defect = recorded ? reasonDefect(recorded.body) : null;
     if (recorded && defect !== null) {
       issues.push(
@@ -538,10 +539,19 @@ function findingsFor(candidate: Candidate, file: string): Issue[] {
   ];
 }
 
-/** A `qfai-text-file` comment, which records one reason for every plain text in its file. */
-const FILE_REASON = /qfai-text-file:([\s\S]*?)(?:-->|\*\/)/;
+/**
+ * A `qfai-text-file` comment, which records one reason for every plain text in its file: an HTML
+ * or block comment that opens with the mark. Ceiling: the source is read as text, so the same
+ * characters inside a string literal count too; reading the parsers' comment nodes lifts it.
+ */
+const FILE_REASON = /(?:<!--|\/\*)\s*qfai-text-file:([\s\S]*?)(?:-->|\*\/)/;
 
-/** The body and line of the file's first `qfai-text-file` comment, or `null` when it has none. */
+/** Whether a repository-relative posix path is a page under `.qfai/prototype/`. */
+function isPrototypePage(file: string): boolean {
+  return file.startsWith(`${PROTOTYPE_DIR.split(path.sep).join("/")}/`);
+}
+
+/** The body of the file's first `qfai-text-file` comment and its opener's line, or `null`. */
 function fileReason(source: string): { body: string; line: number } | null {
   const match = FILE_REASON.exec(source);
   if (!match) return null;

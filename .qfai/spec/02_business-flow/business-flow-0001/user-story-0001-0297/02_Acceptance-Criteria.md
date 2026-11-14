@@ -8,6 +8,7 @@ Feature: Every plain text on a screen states why it is there
   Scenario: A plain text without a reason fails
     Given a prototype page or a file `uiux.surfacePaths` selects, holding a literal text outside every exempt element, sample data included
     And no `qfai-text` comment comes directly before the text or before its parent element
+    And no valid `qfai-text-file` comment in a selected surface file gives the text a reason
     When `qfai validate` runs in the `prototyping`, `saas-package`, `verify` or `full` profile
     Then it raises `QFAI-UITEXT-001` at error, naming the file, the line and the first 40 characters of the text
     And the finding says to delete the text, replace it with another component, move its job to an existing element, or write the reason
@@ -47,4 +48,13 @@ Feature: Every plain text on a screen states why it is there
     Then the implementation UI guidance holds the one copy of the procedure: the `qfai-text` comment, a text the user needs kept with its reason, and delete, replace and move, in that order, for any other text
     And the prototyping generator and the `fullstack-engineer` card state the comment and point to that copy instead of repeating it
     And the prototype reviewer and the `product-surface-reviewer` card judge each reason and the `supplements` and `structure` a UI contract describes, as review findings and not as validate findings
+
+  # AC-0001-0297-07
+  Scenario: A file records one reason for its plain texts
+    Given a file `uiux.surfacePaths` selects whose first comment opening with `qfai-text-file:` holds a body
+    When `qfai validate` runs in the `prototyping`, `saas-package`, `verify` or `full` profile
+    Then a body with a non-empty `why` and a different non-empty `without` gives its reason to every plain text in that file that carries no `qfai-text` comment of its own, so none of them raises `QFAI-UITEXT-001`
+    And a text with its own `qfai-text` comment is still checked against that comment
+    And a body that a `qfai-text` comment would fail raises `QFAI-UITEXT-002` at error, naming the file, the comment's line and the defect, and gives no text a reason
+    And a `qfai-text-file` comment in a prototype page gives no text a reason
 ```
