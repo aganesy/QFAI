@@ -763,7 +763,7 @@ it("denies a search inside a command or process substitution", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `const command = shell === "posix" ? heredocData(text) : text;` -> `const command = text;` fails "reads a here-document body as data, not as substitutions"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `shell === "posix" ? heredocData(text) : { text, expanded: [] };` -> `{ text, expanded: [] };` fails "reads a here-document body as data, not as substitutions"
 it("reads a here-document body as data, not as substitutions", () => {
   const message = [
     "Deny the search",
@@ -774,7 +774,8 @@ it("reads a here-document body as data, not as substitutions", () => {
   for (const command of [
     `git commit -m "$(cat <<'EOF'\n${message}\nEOF\n)"`,
     `git commit -m "$(cat <<"EOF"\n${message}\nEOF\n)"`,
-    `git commit -m "$(cat <<-EOF\n${message}\n\tEOF\n)"`,
+    `git commit -m "$(cat <<-'EOF'\n${message}\n\tEOF\n)"`,
+    `git commit -m "$(cat <<\\EOF\n${message}\nEOF\n)"`,
     `gh pr create --body "$(cat <<'EOF'\n${message}\nEOF\n)" --title x`,
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
@@ -794,6 +795,75 @@ it("reads a here-document body as data, not as substitutions", () => {
   // Nesting past the depth limit still fails closed.
   const deep = `${"echo $(".repeat(20)}grep -r foo src${")".repeat(20)}`;
   expect(classifyGraphExploration({ tool: "Bash", command: deep }).decision).toBe("deny");
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (cases.at(-1) === depth) continue;` -> `if (false) continue;` fails "denies a search in a case arm, a subshell, a group or zsh process substitution"
+it("denies a search in a case arm, a subshell, a group or zsh process substitution", () => {
+  for (const [tool, command, operation] of [
+    ["Bash", "echo $(case x in x) grep -r foo src;; esac)", "grep"],
+    ["Bash", "echo $(case x in (x) grep -r foo src;; esac)", "grep"],
+    ["Bash", "case x in x) grep -r foo src;; esac", "grep"],
+    ["Bash", "case x in\n  y) echo y;;\n  *) rg auth packages;;\nesac", "rg"],
+    ["Bash", "cat =(grep -r foo src)", "grep"],
+    ["Bash", "(grep -r foo src)", "grep"],
+    ["Bash", "( cd sub && rg auth packages )", "rg"],
+    ["Bash", "{ grep -r foo src; }", "grep"],
+    ["PowerShell", "Write-Output (rg auth packages)", "rg"],
+    ["Bash", "echo $(case x in x) echo $(case y in y) grep -r foo src;; esac);; esac)", "grep"],
+    ["Bash", 'case x in\n"a b") grep -r foo src;;\nesac', "grep"],
+    ["Bash", "arr=($(grep -r foo src))", "grep"],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe(operation);
+  }
+  // A `case` or `esac` that is an argument, not a command, opens or closes no case.
+  for (const command of [
+    "echo $(ls test/case) $(grep -r foo src)",
+    "echo $(echo $case); (grep -r foo src)",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+  }
+  for (const command of [
+    'echo "(grep -r foo src)"',
+    "echo '(grep -r foo src)'",
+    "echo $(case x in x) echo hi;; esac)",
+    "{ echo hi; }",
+    "arr=(a b c)",
+    "tools=(rg grep)",
+    "pnpm build # (grep found nothing)",
+    "echo $(date; hostname) rg",
+    "[[ $c =~ ^(grep|rg) ]]",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+  }
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `for (const body of expanded) bodies.push(...expandedSubstitutions(body));` -> `` fails "denies a search an unquoted here-document body expands"
+it("denies a search an unquoted here-document body expands", () => {
+  for (const command of [
+    "cat <<EOF\n$(grep -r foo src)\nEOF",
+    "cat <<EOF\nfound: `rg auth packages`\nEOF",
+    "cat <<-EOF\n\t$(grep -r foo src)\n\tEOF",
+    "cat <<EOF\ndon't $(grep -r foo src)\nEOF",
+    'git commit -m "$(cat <<EOF\nSee $(grep -r foo src)\nEOF\n)"',
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+  }
+  for (const command of [
+    "cat <<'EOF'\n$(grep -r foo src)\nEOF",
+    'cat <<"EOF"\n$(grep -r foo src)\nEOF',
+    "cat <<\\EOF\n$(grep -r foo src)\nEOF",
+    "cat <<EOF\n\\$(grep -r foo src) and $((1 + 2))\nEOF",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+  }
 });
 
 // QFAI:EX-0001-0235-27

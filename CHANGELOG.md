@@ -444,6 +444,14 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   `[SYSTEM NOTIFICATION`. `qfai init` replaces the earlier group of an
   unchanged settings file.
 
+- **The search-protection hook denies a search in a case arm, a subshell, a
+  group or an unquoted here-document body.** A search after `x)` in
+  `$(case x in x) ...;; esac)`, in `(grep -r foo src)`, in
+  `{ grep -r foo src; }`, in zsh `=(...)`, in PowerShell
+  `Write-Output (rg auth packages)`, or in a `$(...)` or backtick in the body
+  of `cat <<EOF` is denied like the same search run directly. A quoted
+  delimiter such as `<<'EOF'` still keeps its body as data.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added
