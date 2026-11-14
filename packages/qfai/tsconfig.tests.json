@@ -29,6 +29,7 @@
     "means adding it here."
   ],
   "include": [
+    "tests/assets/workOrderChecksAndPush.test.ts",
     "tests/helpers/graphCli.ts",
     "tests/unit/graph/graphLocks.examples.test.ts",
     "tests/unit/graph/fallbackOutcomes.examples.test.ts",
