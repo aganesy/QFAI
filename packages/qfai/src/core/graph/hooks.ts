@@ -111,13 +111,19 @@ function classifyShellText(
   if (source === undefined || !commands) {
     return substitution ? undefined : failedGraphHook("quote");
   }
+  const bodies = substitutionBodies(source, scope.shell, depth > 0);
+  // A substitution whose end the scan cannot find may still run in the shell, which reads
+  // comments the scan does not, so the command is denied rather than its body dropped.
+  // SIMPLIFIED: this denies a valid command whose substitution holds a comment with a quote
+  // or an unmatched parenthesis. Lift when: closingParenthesis reads comments.
+  if (!bodies) return failedGraphHook("substitution");
   return classifyCommands(
     commands,
     scope,
     depth,
     redefinedOutside,
     start,
-    substitutionBodies(source, scope.shell, depth > 0).map(
+    bodies.map(
       (body) => (location: ShellLocation, redefines: boolean) =>
         classifyShellText(body, scope, depth + 1, redefines, location, true),
     ),
@@ -1155,12 +1161,13 @@ function shellPipelines(
  * POSIX and PowerShell, `@(...)` and a grouping `(...)` in PowerShell, `<(...)`,
  * `>(...)`, zsh `=(...)`, a subshell `(...)` and backticks in POSIX. Quotes keep a
  * bare `(` literal, single quotes keep every opener literal, and an escaped opener
- * is not one. An arithmetic `$((...))` runs no command. A substitution left open
- * runs nothing, and no later one can close, so the scan stops there. A here-document
+ * is not one. An arithmetic `$((...))` runs no command. A substitution whose end the
+ * scan cannot find returns undefined: the shell may still close it, for example past a
+ * quote in a comment, so the caller denies the command. A here-document
  * body is data, except the substitutions an unquoted delimiter's body expands:
  * `heredocData` says which bodies.
  */
-function substitutionBodies(text: string, shell: GraphShell, nested = false): string[] {
+function substitutionBodies(text: string, shell: GraphShell, nested = false): string[] | undefined {
   if (shell === "cmd") return [];
   const { text: command, expanded } =
     shell === "posix" ? heredocData(text, nested) : { text, expanded: [] };
@@ -1216,7 +1223,7 @@ function substitutionBodies(text: string, shell: GraphShell, nested = false): st
         (!quote && shell === "posix" && (character === "<" || character === ">")));
     if (opens) {
       const end = closingParenthesis(command, index + 2, escape);
-      if (end === undefined) break;
+      if (end === undefined) return undefined;
       if (!(character === "$" && command[index + 2] === "(")) {
         bodies.push(command.slice(index + 2, end));
       }
@@ -1231,7 +1238,7 @@ function substitutionBodies(text: string, shell: GraphShell, nested = false): st
         (command[index - 1] === "=" && /^$|[\s;&|(]/.test(command[index - 2] ?? "")))
     ) {
       const end = closingParenthesis(command, index + 1, escape);
-      if (end === undefined) break;
+      if (end === undefined) return undefined;
       bodies.push(command.slice(index + 1, end));
       index = end;
     } else if (
@@ -1249,12 +1256,16 @@ function substitutionBodies(text: string, shell: GraphShell, nested = false): st
       index = end;
     } else if (shell === "posix" && character === "`") {
       const end = closingBacktick(command, index + 1);
-      if (end === undefined) break;
+      if (end === undefined) return undefined;
       bodies.push(command.slice(index + 1, end).replace(/\\([`\\$])/g, "$1"));
       index = end;
     }
   }
-  for (const body of expanded) bodies.push(...expandedSubstitutions(body));
+  for (const body of expanded) {
+    const nested = expandedSubstitutions(body);
+    if (!nested) return undefined;
+    bodies.push(...nested);
+  }
   return bodies;
 }
 
@@ -1288,7 +1299,7 @@ function closingBacktick(command: string, start: number): number | undefined {
  * The `$(...)` and backtick substitutions an unquoted here-document body expands.
  * Quotes in the body are text, so only a backslash keeps an opener literal.
  */
-function expandedSubstitutions(body: string): string[] {
+function expandedSubstitutions(body: string): string[] | undefined {
   const bodies: string[] = [];
   for (let index = 0; index < body.length; index += 1) {
     const character = body[index];
@@ -1296,12 +1307,12 @@ function expandedSubstitutions(body: string): string[] {
       index += 1;
     } else if (character === "$" && body[index + 1] === "(") {
       const end = closingParenthesis(body, index + 2, "\\");
-      if (end === undefined) break;
+      if (end === undefined) return undefined;
       if (body[index + 2] !== "(") bodies.push(body.slice(index + 2, end));
       index = end;
     } else if (character === "`") {
       const end = closingBacktick(body, index + 1);
-      if (end === undefined) break;
+      if (end === undefined) return undefined;
       bodies.push(body.slice(index + 1, end).replace(/\\([`\\$])/g, "$1"));
       index = end;
     }
@@ -1582,7 +1593,8 @@ export function decodeGraphHookEvent(input: unknown): GraphHookEvent | undefined
 }
 
 /** Why the hook could not decide: what it names, and what the user does next. */
-export type GraphHookFailure = "configuration" | "input" | "state" | "quote" | "depth";
+export type GraphHookFailure =
+  "configuration" | "input" | "state" | "quote" | "substitution" | "depth";
 
 const FAILURE_MESSAGES: Record<GraphHookFailure, string> = {
   configuration:
@@ -1593,6 +1605,8 @@ const FAILURE_MESSAGES: Record<GraphHookFailure, string> = {
     "Graph protection failed: the hook could not read its local search state. Retry, and run qfai doctor if it repeats.",
   quote:
     "Graph protection failed: the hook could not match the quotes in the command. Retry without an unmatched quote, heredoc or here-string.",
+  substitution:
+    "Graph protection failed: the hook could not find where a $(...), (...) or backtick substitution in the command ends. Close it, move any comment out of it, or run its inner command directly.",
   depth:
     "Graph protection failed: the command nests env, command or shell wrappers more than 16 levels deep. Run the inner command directly and retry.",
 };

@@ -763,6 +763,30 @@ it("denies a search inside a command or process substitution", () => {
 });
 
 // QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!bodies) return failedGraphHook("substitution");` -> `if (false) return failedGraphHook("substitution");` fails "denies a command whose substitution end the scan cannot find"
+it("denies a command whose substitution end the scan cannot find", () => {
+  // The shell ends each comment (a POSIX `#` at its line, a PowerShell `<# #>` at `#>`) and
+  // runs the search; the scan reads the quote in the comment as open and finds no `)`.
+  for (const [tool, command] of [
+    ["Bash", 'echo "$(echo # \'\nrg auth packages/)"'],
+    ["Bash", "echo $(echo # '\nrg auth packages/)"],
+    ["Bash", "cat <(echo # '\nrg auth packages/)"],
+    ["Bash", "(echo # '\nrg auth packages/)"],
+    ["Bash", "cat <<EOF\n$(echo # '\nrg auth packages/)\nEOF"],
+    ["PowerShell", 'Write-Output "$(<# \' #> rg auth packages/)"'],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.state, command).toBe("failed");
+    expect(result.message, command).toContain("could not find where");
+  }
+  // A substitution the scan can close is still read, and allowed when it holds no search.
+  for (const command of ['echo "$(git status)"', "echo $(echo '(' )"]) {
+    expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
+  }
+});
+
+// QFAI:EX-0001-0235-27
 // Mutation: packages/qfai/src/core/graph/hooks.ts `shell === "posix" ? heredocData(text, nested) : { text, expanded: [] };` -> `{ text, expanded: [] };` fails "reads a here-document body as data, not as substitutions"
 it("reads a here-document body as data, not as substitutions", () => {
   const message = [
@@ -859,7 +883,7 @@ it("denies a search in a case arm, a subshell, a group or zsh process substituti
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `for (const body of expanded) bodies.push(...expandedSubstitutions(body));` -> `` fails "denies a search an unquoted here-document body expands"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `bodies.push(...nested);` -> `` fails "denies a search an unquoted here-document body expands"
 it("denies a search an unquoted here-document body expands", () => {
   for (const command of [
     "cat <<EOF\n$(grep -r foo src)\nEOF",

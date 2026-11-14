@@ -321,6 +321,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   markers separate commands, so what lies between and after them is still
   read. A search that appears only in a comment is not denied.
 
+- **The search-protection hook denies a command whose substitution it cannot
+  close.** When the hook found no end for a `$(...)`, `<(...)`, `>(...)`,
+  subshell, PowerShell `(...)` or `@(...)`, backtick or here-document
+  substitution, for example because a quote inside a comment in its body
+  looked open, it skipped the body, so a search there ran. The hook now denies
+  such a command and says it could not find where the substitution ends.
+
 - **The search-protection hook denies a search behind a named descriptor or
   inside a substitution.** `{fd}<file grep -r foo src` and searches inside
   `$(...)`, backticks, `<(...)`, `>(...)` or PowerShell `@(...)` are denied
