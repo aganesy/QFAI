@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -275,6 +275,73 @@ describe("BF-0002 CI verdict examples", () => {
       ]),
     );
   });
+
+  // The self-validate step runs three profiles and fails at the end if any failed. Its
+  // name and its command lines are pinned above; this runs the body itself, so a body
+  // whose closing check is deleted can no longer pass.
+  // QFAI:EX-0002-0016-05
+  it.skipIf(process.platform === "win32")(
+    "runs every self-validate profile and fails the step when one fails",
+    () => {
+      const step = steps("build").find(
+        (candidate) =>
+          candidate["name"] ===
+          "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
+      );
+      const body = step?.["run"];
+      if (typeof body !== "string") throw new Error("the self-validate step has no run body");
+      const run = (failing: string | undefined) => {
+        const directory = mkdtempSync(path.join(tmpdir(), "qfai-self-validate-"));
+        try {
+          // The stub stands in for the built CLI: it records each call and fails the
+          // profile under test.
+          const stub = [
+            "node() {",
+            '  printf "%s\\n" "$*" >> calls.txt',
+            '  case " $* " in *" --profile $FAILING "*) return 1;; esac',
+            "}",
+          ].join("\n");
+          const result = spawnSync("bash", ["-c", `${stub}\n${body}`], {
+            cwd: directory,
+            encoding: "utf8",
+            env: {
+              ...process.env,
+              FAILING: failing ?? "none",
+              GITHUB_STEP_SUMMARY: path.join(directory, "summary.md"),
+            },
+          });
+          if (result.error) throw result.error;
+          const calls = readFileSync(path.join(directory, "calls.txt"), "utf8").trim().split("\n");
+          const summaryPath = path.join(directory, "summary.md");
+          const summary = existsSync(summaryPath) ? readFileSync(summaryPath, "utf8") : "";
+          return {
+            status: result.status,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            calls,
+            summary,
+          };
+        } finally {
+          rmSync(directory, { recursive: true, force: true });
+        }
+      };
+
+      for (const failing of ["tdd", "sdd", "full"]) {
+        const result = run(failing);
+        expect(result.status, `${failing}: ${result.stderr}`).toBe(1);
+        expect(
+          result.calls.map((call) => /--profile (\S+)/u.exec(call)?.[1]),
+          failing,
+        ).toEqual(["tdd", "sdd", "full"]);
+        expect(result.stdout).toContain(`qfai validate failed for profile(s): ${failing}`);
+        expect(result.summary).toContain(`qfai validate failed for profile(s): ${failing}`);
+      }
+      const clean = run(undefined);
+      expect(clean.status, clean.stderr).toBe(0);
+      expect(clean.calls).toHaveLength(3);
+      expect(clean.summary).toBe("");
+    },
+  );
 
   // QFAI:EX-0002-0018-01
   // QFAI:EX-0002-0018-02
