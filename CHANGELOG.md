@@ -47,13 +47,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The product-surface review checks every screen for missing states and a
-  weak structure.** The `product-surface-reviewer` card now applies the
-  _Information architecture and flow_ and _States and accessibility_ sections
-  of `design-anti-patterns.md` on every review, not only the copy section, so
-  a missing empty, error or success state or a data-heavy screen with no table
-  is reported even when no acceptance criterion names it. Each finding's
-  severity still follows the shared reviewer findings rule.
+- **The UI contract guide says the contract is a floor.** A UI contract
+  lists what must be verifiable on a screen, not its whole inventory. The
+  built screen also carries the parts `interface-clarity.md` lists under
+  "What a business screen always has", which the contract need not repeat.
 
 - **A work order says which checks the worker runs and whether it may push.**
   The unit work order template gains `Local checks` and `Push` lines, and
@@ -78,6 +75,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   design tokens, flows and rendered output, and the guide says a deliberation
   record that discusses the screens is history while the UI contract is the
   execution authority.
+
+- **The product-surface review checks every screen for missing states and a
+  weak structure.** The `product-surface-reviewer` card now applies the
+  _Information architecture and flow_ and _States and accessibility_ sections
+  of `design-anti-patterns.md` on every review, not only the copy section, so
+  a missing empty, error or success state or a data-heavy screen with no table
+  is reported even when no acceptance criterion names it. Each finding's
+  severity still follows the shared reviewer findings rule.
 
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
@@ -214,6 +219,12 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   the union-merge reason and how to resolve a conflict a host shows. The file
   is seeded only where none exists, so an existing `.gitattributes` keeps its
   old comment. Fixes #4173.
+
+- **This repository's build job reports every self-validate profile.** The
+  `tdd`, `sdd` and `full` runs of `qfai validate` were three steps, so a
+  failing `tdd` run skipped the other two and their errors showed only in a
+  later CI run. They now run in one step that runs all three and fails at the
+  end, naming each profile that failed. Fixes #4199.
 
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
