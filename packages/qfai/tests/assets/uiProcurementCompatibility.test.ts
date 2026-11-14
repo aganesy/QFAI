@@ -43,7 +43,7 @@ describe("ui-procurement checks runtime compatibility", () => {
       expect(text).toContain("Three things decide it, and none is taste:");
       expect(text).toContain("**Does it meet the constraints the project has fixed?**");
       expect(text).toContain("An item that breaks a constraint is not installed");
-      expect(text).toContain("naming the item and the constraint it breaks");
+      expect(text).toContain("procurement record names the item and the constraint it breaks");
       expect(text).toContain(
         "`## Technical Constraints` and `## Quality targets` rows of `01_policy/constraint.md`",
       );

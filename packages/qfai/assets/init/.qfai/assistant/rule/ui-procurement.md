@@ -78,7 +78,7 @@ Three things decide it, and none is taste:
 The same check applies to each item procured from the catalogue. An item that
 breaks a constraint is not installed, and the ladder moves to its next rung.
 The region's procurement record names the item and the constraint it breaks, so
-a later procurement in the project does not try it again.
+the next procurement for that region does not try it again.
 
 A registry entry is a name pointing at a URL template carrying `{name}`,
 which is where the component name goes. That shape is not owned by any
