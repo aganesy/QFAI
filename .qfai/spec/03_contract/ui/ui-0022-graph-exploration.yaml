@@ -64,15 +64,15 @@ screens:
         next: check trust and runtime verification for each host, and run qfai init in each other clone or worktree
       - id: empty
         renders: Analysis shows documents not ready, or Protection shows that the host cannot enforce the search denial
-        next: configure document processing, or treat the unsupported host as unprotected
+        next: configure document processing; an unsupported host stays without search protection
       - id: loading
         none: the summary is printed once when preparation ends; nothing of it renders while preparation runs
       - id: error
         renders: the Failed step, its Recovery and whether the Previous installation was retained
         next: fix the cause, then run qfai init again
       - id: success
-        renders: every tool, the analysis and each host report ready in their own status lines, with no failed step
-        next: explore through the graph CLI
+        renders: every tool and the analysis report ready with no failed step; each host shows its configured protection with the notice that configuration does not verify it
+        next: query the graph with node .qfai/tools/graph-cli.mjs code or documents
     supplements:
       - id: graph_prepare_documents_missing
         near: graph_prepare_analysis_status
@@ -127,7 +127,7 @@ screens:
       - id: loading
         none: the preview is printed once when it is complete; nothing of it renders before
       - id: error
-        none: a dry-run changes nothing, so it has no failed step of its own; a failure to read state is shown as that tool's Observed status
+        none: a dry-run changes nothing and runs no step that can fail
       - id: success
         none: a preview completes nothing, so it never reports installation as done
     supplements:
@@ -257,7 +257,7 @@ screens:
         next: read the referenced file for the evidence
       - id: empty
         renders: the notice that the scope is incomplete and that no matches do not establish absence
-        next: prepare the missing scope, or read the sources directly through the fallback command
+        next: prepare the missing scope, or treat the result as incomplete before relying on it
       - id: loading
         none: the result is printed once when the query ends; nothing of it renders while the query runs
       - id: error
