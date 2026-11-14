@@ -59,6 +59,26 @@ delegates a gate on its own judgment. Retain observed FAIL or
 UNRUN results. Where the environment cannot run any other command, ask the user
 to run it and provide the output. Never assume PASS without evidence.
 
+### Visual check of a UI change
+
+A change that touches a path `uiux.surfacePaths` selects has one more gate in
+scope, recorded in `gates` as `visual check`. It has no command: passing tests
+and a clean validation say nothing about what a user sees. Its `command` lists
+the captures it read, as `verify-output-contract.md` says.
+
+1. Take the captures of each changed screen from the screen review the change
+   went through, as
+   `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md` says.
+2. Check each capture against the screen's UI contract and against the parts
+   `.qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md` requires of
+   every screen.
+3. Record the result:
+   - PASS only when every changed screen has a capture at the revision under
+     verification that matches its contract and lacks no required part;
+   - FAIL, naming the screen and what differs, when a capture contradicts its
+     contract or a required part is missing;
+   - UNRUN, never PASS, when a changed screen has no capture.
+
 ## Fix loop
 
 Quality gates are the decision mechanism. Fix until PASS.
@@ -305,6 +325,8 @@ The step is done when:
 - every gate in scope ran and is recorded, or is recorded UNRUN with the
   reason, or is recorded DELEGATED with its CI check;
 - every gate passes, or each failure has an actionable fix list and an owner;
+- a change under `uiux.surfacePaths` has its `visual check` recorded, and it
+  is not PASS without a capture of every changed screen;
 - `verify.json` exists, its `status` matches the gate results and its `scope`
   matches the required validate profile. A delegated validation check must cover
   that same profile and scan; a whole-repository scope still requires a full

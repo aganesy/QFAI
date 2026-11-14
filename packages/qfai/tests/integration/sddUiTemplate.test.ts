@@ -97,6 +97,47 @@ describe("shipped primary_tasks ceiling", () => {
   });
 });
 
+// A screen that says neither why it exists nor how the user reaches it is
+// built as a standalone page: the shipped template gives every screen a
+// purpose and its place in the app.
+describe("shipped ui-contract.sample.yaml places every screen in the app", () => {
+  it("gives each screen a purpose and a navigation with shell, entry points and back_to", async () => {
+    const parsed = parseYaml(await readFile(TEMPLATE_PATH, "utf-8")) as ParsedScreens;
+    const screens = parsed.screens ?? [];
+    expect(screens.length).toBeGreaterThan(0);
+
+    for (const screen of screens) {
+      expect(typeof screen.purpose).toBe("string");
+      expect(String(screen.purpose).trim()).not.toBe("");
+      const navigation = screen.navigation;
+      expect(typeof navigation === "object" && navigation !== null).toBe(true);
+      if (typeof navigation !== "object" || navigation === null) continue;
+      expect(Object.keys(navigation).sort()).toEqual(["back_to", "entry_points", "shell"]);
+      const entryPoints: unknown = Reflect.get(navigation, "entry_points");
+      expect(Array.isArray(entryPoints) && entryPoints.length > 0).toBe(true);
+    }
+  });
+
+  it("documents purpose and navigation in the guide, the rules and the contract step", async () => {
+    const flat = (text: string): string => text.replace(/\s+/g, " ");
+    const guide = flat(
+      await readFile(path.join(SDD_SKILL_DIR, "references", "ui-contract-guide.md"), "utf-8"),
+    );
+    expect(guide).toContain("## Screen purpose and navigation: `purpose` and `navigation`");
+
+    const rules = flat(await readFile(AGENT_GUIDE_PATH, "utf-8"));
+    expect(rules).toContain("states its `purpose` and its `navigation`");
+
+    const step = flat(
+      await readFile(
+        path.join(SDD_SKILL_DIR, "..", "..", "step", "sdd-contract", "STEP.md"),
+        "utf-8",
+      ),
+    );
+    expect(step).toContain("Each screen states its `purpose` and its `navigation`");
+  });
+});
+
 describe("shipped qfai-sdd design contracts", () => {
   // QFAI:AC-0001-0152-02
   // QFAI:EX-0001-0152-02
@@ -137,5 +178,49 @@ describe("shipped qfai-sdd design contracts", () => {
       "utf-8",
     );
     expect(designMd).toContain("## Author and validate");
+  });
+});
+
+const STATE_IDS = ["default", "empty", "loading", "error", "success"];
+
+// A screen whose states nobody wrote down gets none built: the shipped
+// template lists every state, each with what renders and the next action, or
+// the reason the screen cannot be in it.
+describe("shipped ui-contract.sample.yaml lists every screen state", () => {
+  it("gives each screen all five states, each rendered with a next action or set to none", async () => {
+    const parsed = parseYaml(await readFile(TEMPLATE_PATH, "utf-8")) as ParsedScreens;
+    expect(parsed.screens?.length ?? 0).toBeGreaterThan(0);
+
+    for (const screen of parsed.screens ?? []) {
+      const states = Array.isArray(screen.states) ? screen.states : [];
+      const entries = states.filter(
+        (state): state is Record<string, unknown> => typeof state === "object" && state !== null,
+      );
+      expect(entries.map((state) => state.id)).toEqual(STATE_IDS);
+      for (const state of entries) {
+        const keys = Object.keys(state).sort();
+        expect([
+          ["id", "next", "renders"],
+          ["id", "none"],
+        ]).toContainEqual(keys);
+      }
+    }
+  });
+
+  it("documents the states key in the guide and the contract step", async () => {
+    const flat = (text: string): string => text.replace(/\s+/g, " ");
+    const guide = flat(
+      await readFile(path.join(SDD_SKILL_DIR, "references", "ui-contract-guide.md"), "utf-8"),
+    );
+    expect(guide).toContain("## Screen states: `states`");
+    expect(guide).toContain("A state is never left out");
+
+    const step = flat(
+      await readFile(
+        path.join(SDD_SKILL_DIR, "..", "..", "step", "sdd-contract", "STEP.md"),
+        "utf-8",
+      ),
+    );
+    expect(step).toContain("Each screen lists its `states`");
   });
 });

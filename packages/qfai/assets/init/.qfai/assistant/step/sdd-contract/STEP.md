@@ -79,7 +79,9 @@ For a UI-bearing flow, write the screen contracts under
 `<paths.contractsDir>/ui/` as the UI guides above state. A visual prototyping
 surface also needs the root `DESIGN.md`, which `common-design-md` writes and
 validates after this step. A CLI-only surface does not require one. Do not
-adopt a sample design.
+adopt a sample design. Each screen states its `purpose` and its `navigation`:
+the shell it renders in, the entry points that lead to it, and where back
+leads.
 
 Name each screen's type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`
 and write the parts of that type the screen needs into its contract, with the
@@ -90,7 +92,9 @@ screen's tasks and the information the user needs at that point. A text that
 repeats a heading, an action, or a condition the user already has is left out;
 one that carries a condition, cost, destination, result, recovery step or
 consequence stays, with its reason. Fix a control that needs explaining before
-adding text for it. A screen may describe the copy that stays in its optional
+adding text for it. Each screen lists its `states`: what renders in `default`, `empty`,
+`loading`, `error` and `success`, and the next action from each, or `none`
+with the reason for a state the screen cannot reach. A screen may describe the copy that stays in its optional
 `supplements` and `structure`; `npx qfai validate` does not check them, and the
 reason that counts is the `qfai-text` comment written in the UI source.
 
