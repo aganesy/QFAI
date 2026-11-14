@@ -651,7 +651,9 @@ it("reads a here-document body as data, not as substitutions", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `} else if (character === "#" && !word.length && startsComment(command, index, shell)) {` -> `} else if (false) {` fails "ends a # comment at its line so a quote inside it hides no later search"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `index = (end === -1 ? command.length : end) - 1;` -> `index += 0;` fails "ends a # comment at its line so a quote inside it hides no later search"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `!quotedWord &&` -> `true &&` fails "ends a # comment at its line so a quote inside it hides no later search"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `const WORD_BREAK = /[ \t\n;&|()]/;` -> `const WORD_BREAK = /[\s;&|()]/;` fails "ends a # comment at its line so a quote inside it hides no later search"
 // Mutation: packages/qfai/src/core/graph/hooks.ts `if (!quote && atWordStart && character === "#" && shell === "posix") {` -> `if (false) {` fails "ends a # comment at its line so a quote inside it hides no later search"
 // Mutation: packages/qfai/src/core/graph/hooks.ts `if (!quote && atWordStart && character === "#" && shell === "posix") {` -> `if (!quote && character === "#" && shell === "posix") {` fails "ends a # comment at its line so a quote inside it hides no later search"
 it("ends a # comment at its line so a quote inside it hides no later search", () => {
@@ -671,10 +673,15 @@ it("ends a # comment at its line so a quote inside it hides no later search", ()
   const reported = "echo # '\nrg auth packages/\n'";
   expect(classifyGraphExploration({ tool: "Bash", command: reported }).decision).toBe("deny");
   // A `#` inside a word starts no comment: after other characters, inside
-  // quotes, after an escaped separator, or right after a closed substitution.
+  // quotes, after an empty quote and a line continuation, after a character
+  // the shell does not treat as a blank, after an escaped separator, or right
+  // after a closed substitution.
   for (const command of [
     "echo a#b && rg auth packages/",
     "echo '#' && rg auth packages/",
+    "echo ''\\\n#x; rg auth packages/",
+    "echo a\r#x; rg auth packages/",
+    "echo a #$(rg auth packages/)",
     "echo \\ #$(rg auth packages/)",
     "echo a\\;#$(rg auth packages/)",
     "echo a\\|#`rg auth packages/`",

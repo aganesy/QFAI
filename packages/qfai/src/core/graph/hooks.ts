@@ -601,6 +601,13 @@ function resolveAlias(words: string[], shell: GraphShell): string[] {
 }
 
 /**
+ * A character after which a POSIX shell starts a new word. Only space, tab and newline are
+ * blanks there: a carriage return, form feed or no-break space is part of the word, so a `#`
+ * after one is not a comment.
+ */
+const WORD_BREAK = /[ \t\n;&|()]/;
+
+/**
  * Whether the `#` at `index`, read where no word has started yet, opens a comment. In a POSIX
  * shell an unquoted `#` at the start of a word runs to the end of its line, so a quote inside it
  * opens nothing and the next line is a command again. The caller must know no word is under way:
@@ -612,7 +619,7 @@ function resolveAlias(words: string[], shell: GraphShell): string[] {
 function startsComment(command: string, index: number, shell: GraphShell): boolean {
   if (shell !== "posix") return false;
   const previous = command[index - 1];
-  return previous === undefined || /[\s;&|()]/.test(previous);
+  return previous === undefined || WORD_BREAK.test(previous);
 }
 
 function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | undefined {
@@ -622,9 +629,12 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   let word = "";
   let quote: string | undefined;
   let afterRedirect: "" | "<" | ">" = "";
+  // An empty quote such as `''` starts a word that holds no character yet.
+  let quotedWord = false;
   const flushWord = () => {
     if (word.length) words.push(word);
     word = "";
+    quotedWord = false;
   };
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index];
@@ -647,11 +657,17 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     if (quote) {
       if (character === quote) quote = undefined;
       else word += character;
-    } else if (character === "#" && !word.length && startsComment(command, index, shell)) {
+    } else if (
+      character === "#" &&
+      !word.length &&
+      !quotedWord &&
+      startsComment(command, index, shell)
+    ) {
       const end = command.indexOf("\n", index);
       index = (end === -1 ? command.length : end) - 1;
     } else if (character === '"' || character === "'") {
       quote = character;
+      quotedWord = true;
     } else if (
       (character === "&" || character === "|") &&
       (character === "&"
@@ -735,7 +751,7 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
       wordStart = true;
       continue;
     }
-    if (!quote && character !== undefined && /[\s;&|()]/.test(character)) {
+    if (!quote && character !== undefined && WORD_BREAK.test(character)) {
       wordStart = true;
       continue;
     }
