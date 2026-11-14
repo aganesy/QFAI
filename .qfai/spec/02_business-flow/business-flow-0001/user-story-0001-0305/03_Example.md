@@ -1,0 +1,12 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                                            | Expected                                                                                        |
+| --------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| EX-0001-0305-01 | AC-0001-0305-01 | A `tech.md` whose `Component catalogue` row is `` `shadcn/ui` ``, with no `qfai.config.yaml`, run in `sdd`                                                                       | One `QFAI-STORY-021` at warning naming `tech.md` and `shadcn/ui`, and no error from the check   |
+| EX-0001-0305-02 | AC-0001-0305-01 | The `tech.md` of EX-0001-0305-01 with `uiux.registries: {}`, and then with only the entry `shadcn: https://ui.shadcn.com/r/`, which lacks `{name}`                               | One `QFAI-STORY-021` at warning in each run                                                     |
+| EX-0001-0305-03 | AC-0001-0305-01 | The tree of EX-0001-0305-01 run in each of the nine profiles                                                                                                                     | `sdd`, `verify` and `full` each report one `QFAI-STORY-021`; the other six profiles report none |
+| EX-0001-0305-04 | AC-0001-0305-02 | The `tech.md` of EX-0001-0305-01 with `uiux.registries` holding `shadcn: https://ui.shadcn.com/r/{name}.json`                                                                    | No `QFAI-STORY-021`                                                                             |
+| EX-0001-0305-05 | AC-0001-0305-03 | The `Component catalogue` row set in turn to the template's `` `<primary component catalogue, or none>` ``, `none`, `None: the package is a command-line tool` and an empty cell | No `QFAI-STORY-021` in any run                                                                  |
+| EX-0001-0305-06 | AC-0001-0305-03 | A tree with no `tech.md`, then a `tech.md` with no `## Stack` section, then a Stack table with no `Component catalogue` row                                                      | No `QFAI-STORY-021` in any run                                                                  |

@@ -11,6 +11,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `implementation-reviewer` reads every rule the changed master points to and
   every rule that points to that master, and reports each clause that gives a
   different answer to the same situation.
+- **`qfai validate` warns about a component catalogue with no registry.**
+  When the `Component catalogue` row of the `tech.md` Stack table names a
+  catalogue and `qfai.config.yaml` declares no `uiux.registries` entry,
+  `QFAI-STORY-021` is raised at warning in the `sdd`, `verify` and `full`
+  profiles. A row that is empty, a template placeholder or states none raises
+  nothing.
 
 ### Changed
 

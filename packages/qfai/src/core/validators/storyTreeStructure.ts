@@ -477,8 +477,61 @@ export async function validateStoryTreeStructure(
     ...validateStoryTreeStructureModel(tree),
     ...(await validateConstraintIds(roots.specsDir)),
     ...(await validateTechArchitecture(roots.contractsDir)),
+    ...(await validateCatalogueRegistry(roots.contractsDir, config)),
     ...(await validateExternalReferences(root, config)),
   ];
+}
+
+/**
+ * The `Component catalogue` row of the `tech.md` Stack table names the catalogue
+ * screens are procured from, and `uiux.registries` is where a tool resolves a
+ * component name against it. A named catalogue with no registry is one nobody
+ * set up, so it is reported before a reviewer finds it in the screens.
+ */
+export async function validateCatalogueRegistry(
+  contractsDir: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
+  if (Object.keys(config.uiux?.registries ?? {}).length > 0) return [];
+  const file = path.join(contractsDir, "tech.md");
+  let content: string;
+  try {
+    content = await readFile(file, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
+  const catalogue = namedCatalogue(content);
+  if (catalogue === null) return [];
+  return [
+    issue(
+      "QFAI-STORY-021",
+      `## Stack of ${file} names the component catalogue ${catalogue}, but qfai.config.yaml declares no uiux.registries entry to procure it from`,
+      "warning",
+      file,
+      "storyTree.structure",
+    ),
+  ];
+}
+
+/**
+ * The catalogue the Stack table's `Component catalogue` row names, or null when
+ * the row is absent, empty, an angle-bracket placeholder, or states none.
+ */
+function namedCatalogue(content: string): string | null {
+  const section = extractH2Sections(content).get("Stack");
+  const table = section === undefined ? undefined : parseAllMarkdownTables(section.body)[0];
+  if (table === undefined) return null;
+  const component = table.headers.findIndex((header) => header.trim() === "Component");
+  const choice = table.headers.findIndex((header) => header.trim() === "Choice");
+  if (component < 0 || choice < 0) return null;
+  const row = table.rows.find((cells) => (cells[component] ?? "").trim() === "Component catalogue");
+  const value = (row?.[choice] ?? "")
+    .trim()
+    .replace(/^`+|`+$/g, "")
+    .trim();
+  if (value === "" || /^<.*>$/.test(value) || /^none\b/i.test(value)) return null;
+  return value;
 }
 
 /**
