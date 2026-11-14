@@ -783,7 +783,7 @@ it("denies a command whose substitution end the scan cannot find", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `(index === start || (posix ? WORD_BREAK : /[ \t\n;|&(]/).test(previous)) &&` -> `false &&` fails "reads a comment inside a substitution as the shell does"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!quote && /[ \t\n;&|(]/.test(character)) wordStart = true;` -> `` fails "reads a comment inside a substitution as the shell does"
 it("reads a comment inside a substitution as the shell does", () => {
   // The shell ends each comment (a POSIX `#` at its line, a PowerShell `#` at its line and
   // `<# #>` at `#>`), so a `)` or a quote inside it closes or opens nothing, and the search
@@ -802,6 +802,20 @@ it("reads a comment inside a substitution as the shell does", () => {
     const result = classifyGraphExploration({ tool, command });
     expect(result.decision, command).toBe("deny");
     expect(result.operation, command).toBe("rg");
+  }
+  // A `#` inside a word, after an escaped break or a closed substitution, is text, so the
+  // quote after it still opens and the search after the substitution is still read.
+  for (const [tool, command] of [
+    ["Bash", "echo \"$(echo a\\ #'\n)' ; rg auth packages/ )\""],
+    ["Bash", "echo \"$(echo a\\;#'\n)' ; rg auth packages/ )\""],
+    ["Bash", "echo \"$(echo a\\|#'\n)' ; rg auth packages/ )\""],
+    ["Bash", "echo \"$(echo a\\(#'\n)' ; rg auth packages/ )\""],
+    ["Bash", "echo \"$(echo a\\\n#'\n)' ; rg auth packages/ )\""],
+    ["Bash", "echo \"$(echo $(true)#'\n)' ; rg auth packages/ )\""],
+    ["PowerShell", "Write-Output \"$(echo a<#'#> ) ' ; rg auth packages/ )\""],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
   }
   // A comment that holds a quote or a parenthesis no longer makes a valid command fail.
   for (const command of [

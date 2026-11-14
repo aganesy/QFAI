@@ -1408,25 +1408,32 @@ function closingParenthesis(command: string, start: number, escape: string): num
   /** The parenthesis depth at which each open `case` started. */
   const cases: number[] = [];
   const posix = escape === "\\";
+  // Whether the character at `index` starts a word: after an unescaped blank, `;`, `&`,
+  // `|`, `(` or newline outside quotes. A `)` does not start one, since the word goes on
+  // after a closed substitution, and an escaped character keeps the word going.
+  let wordStart = true;
   for (let index = start; index < command.length; index += 1) {
     const character = command[index] ?? "";
-    const previous = command[index - 1] ?? "";
+    const atWordStart = wordStart;
+    wordStart = false;
     if (character === escape && quote !== "'") index += 1;
     else if (quote) {
       if (character === quote) quote = undefined;
     } else if (character === "'" || character === '"') quote = character;
-    else if (!posix && character === "<" && command[index + 1] === "#") {
+    else if (!posix && atWordStart && character === "<" && command[index + 1] === "#") {
       const end = command.indexOf("#>", index + 2);
       if (end === -1) return undefined;
       index = end + 1;
+      wordStart = true;
     } else if (
       character === "#" &&
-      (index === start || (posix ? WORD_BREAK : /[ \t\n;|&(]/).test(previous)) &&
+      atWordStart &&
       (!posix || !inArithmeticOrUntracked(command, start, index))
     ) {
       const end = command.indexOf("\n", index);
       if (end === -1) return undefined;
       index = end - 1;
+      wordStart = true;
     } else if (posix && /[ce]/.test(character) && commandPosition(command, index, start)) {
       caseWord.lastIndex = index;
       const word = caseWord.exec(command)?.[1];
@@ -1439,6 +1446,7 @@ function closingParenthesis(command: string, start: number, escape: string): num
       depth -= 1;
       if (depth === 0) return index;
     }
+    if (!quote && /[ \t\n;&|(]/.test(character)) wordStart = true;
   }
   return undefined;
 }
