@@ -100,8 +100,10 @@ way, from the first command to the result.
 
 Anything you have to read twice is a defect in the control it sits under. A step
 you cannot reach, a record you cannot find or an action whose result you cannot
-tell is a gap in the surface. Raise a gap on a job no contract names with the
-owner of the spec, rather than building what the spec does not ask for.
+tell is a gap in the surface. A gap that a part listed in `## What a business
+screen always has` closes is a defect to fix. Raise any other gap on a job no
+contract names with the owner of the spec, rather than building what the spec
+does not ask for.
 
 ## What this rule never removes
 

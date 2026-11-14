@@ -33,8 +33,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the user starts to the result and back, including jobs no contract names,
   such as finding one record among many or recovering after an error, with a
   realistic volume of data and, on a screen, at phone and desktop widths. A gap
-  on a job no contract names goes to the owner of the spec rather than being
-  built.
+  that a business-screen part closes is a defect to fix; any other gap on a job
+  no contract names goes to the owner of the spec rather than being built.
 
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
