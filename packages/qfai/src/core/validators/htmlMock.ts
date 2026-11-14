@@ -1,13 +1,11 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
-
-import fg from "fast-glob";
 
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { computeContrastRatio } from "../uiux/contrastRatio.js";
 import { extractTokenComments } from "../uiux/htmlMockParser.js";
 import { collectHtmlMockBlocks, mockMarkdownGlobs } from "./htmlMockBlocks.js";
+import { readMarkdownFiles, type MarkdownFileReader } from "./markdownFiles.js";
 import { issue } from "./utils.js";
 
 const WCAG_AA_RATIO = 4.5;
@@ -35,19 +33,15 @@ export async function validateHtmlMock(
   platform: string,
   config: QfaiConfig,
   timing?: HtmlMockTiming,
+  readMarkdown: MarkdownFileReader = readMarkdownFiles,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
 
-  const files = await fg(mockMarkdownGlobs(root, config), { absolute: true });
+  const files = await readMarkdown(mockMarkdownGlobs(root, config));
   const mockBlocks: { file: string; html: string; rawBlock: string }[] = [];
 
-  for (const filePath of files) {
-    let content: string;
-    try {
-      content = await readFile(filePath, "utf-8");
-    } catch {
-      continue;
-    }
+  for (const { filePath, content } of files) {
+    if (content === null) continue;
 
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
 

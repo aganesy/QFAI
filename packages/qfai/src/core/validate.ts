@@ -24,6 +24,7 @@ import { validateStoryPolicyPlaceholders } from "./validators/assistantAssets.js
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { issue } from "./validators/utils.js";
+import { sharedMarkdownFileReader } from "./validators/markdownFiles.js";
 import type {
   Issue,
   ValidationCounts,
@@ -972,11 +973,16 @@ async function runUiuxValidators(
   // paid once per process, and on a cold disk cache it alone outran the whole
   // group's budget.
   const htmlMockTiming: HtmlMockTiming = { parseMs: 0, loadMs: 0 };
+  // Three of the parts read the Markdown under `paths.specsDir`; they share one walk and one read.
+  const readMarkdown = sharedMarkdownFileReader();
   const uiuxValidators: Array<[name: string, run: () => Promise<Issue[]>]> = [
     ["design tokens", () => validateDesignToken(root, config)],
-    ["html mock", () => validateHtmlMock(root, platform, config, htmlMockTiming)],
-    ["mermaid screen flow", () => validateMermaidScreenFlow(root, config)],
-    ["UI definition consistency", () => validateUiDefinitionConsistency(root, config)],
+    ["html mock", () => validateHtmlMock(root, platform, config, htmlMockTiming, readMarkdown)],
+    ["mermaid screen flow", () => validateMermaidScreenFlow(root, config, readMarkdown)],
+    [
+      "UI definition consistency",
+      () => validateUiDefinitionConsistency(root, config, readMarkdown),
+    ],
     ["agent definition", () => validateAgentDefinition(root)],
     ["design audit", () => validateDesignAudit(root, config)],
   ];
