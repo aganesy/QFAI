@@ -1002,6 +1002,12 @@ it("ends a PowerShell statement and line comment at a lone carriage return", () 
     expect(result.decision, command).toBe("deny");
     expect(result.operation, command).toBe("rg");
   }
+  // A backtick before a carriage return continues the line, so `rg` is only
+  // an argument there.
+  const continued = "Write-Output x`\rrg auth packages/";
+  expect(classifyGraphExploration({ tool: "PowerShell", command: continued }).decision).toBe(
+    "allow",
+  );
   // A carriage return inside a string is data, and a search after it in the
   // same string runs nothing.
   const quoted = "Write-Output 'a\rrg auth packages/'";

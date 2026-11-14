@@ -773,6 +773,9 @@ function inUntrackedContext(command: string, index: number): boolean {
 /**
  * The PowerShell text with each lone carriage return read as a line feed. PowerShell ends a
  * statement and a `#` line comment at either, while these readers split lines at `\n` only.
+ * Ceiling: the whole text is converted, quoted arguments too, so a carriage return inside a
+ * `bash -c` argument, which Bash reads as an ordinary character, also splits there and may
+ * deny more than Bash runs. Converting only outside quotes lifts this.
  */
 function powerShellLines(command: string): string {
   return command.replace(/\r(?!\n)/g, "\n");
