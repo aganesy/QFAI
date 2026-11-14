@@ -102,7 +102,9 @@ function classifyShellText(
   const source = scope.shell === "powershell" ? withoutPowerShellComments(text) : text;
   const commands = source === undefined ? undefined : shellPipelines(source, scope.shell);
   // Text in a substitution that cannot be read as commands is no verdict of its own.
-  if (source === undefined || !commands) return substitution ? undefined : failedGraphHook("quote");
+  if (source === undefined || !commands) {
+    return substitution ? undefined : failedGraphHook("quote");
+  }
   return classifyCommands(
     commands,
     scope,
@@ -756,10 +758,17 @@ const POWERSHELL_BREAK = /[ \t\n;|&]/;
  * either opens nothing and a command after either is classified. A block comment with no `#>`
  * leaves the script unparsable, so the text is unreadable and fails closed.
  * Where the start of a token is not certain, inside a word, or after a context these readers
- * do not track (`inUntrackedContext`) or a `@"`/`@'` here-string, a `<#` and its `#>` are
+ * do not track (`inUntrackedContext`, `POWERSHELL_UNTRACKED`), a `<#` and its `#>` are
  * replaced by command separators instead, so what lies between and after them is still read as
  * commands, and a `#` there stays text.
  */
+/**
+ * Text after which this reader cannot be sure where a PowerShell string ends: a `@"`/`@'`
+ * here-string, a `$(` whose body may hold its own quotes inside a double-quoted string, or a
+ * curly quote (U+2018 to U+201E), which PowerShell also reads as a quote.
+ */
+const POWERSHELL_UNTRACKED = /@["']|\$\(|[\u2018-\u201e]/;
+
 function withoutPowerShellComments(command: string): string | undefined {
   let output = "";
   let quote: string | undefined;
@@ -778,7 +787,7 @@ function withoutPowerShellComments(command: string): string | undefined {
       continue;
     }
     const tracked = () =>
-      !inUntrackedContext(command, index) && !/@["']/.test(command.slice(0, index));
+      !inUntrackedContext(command, index) && !POWERSHELL_UNTRACKED.test(command.slice(0, index));
     if (character === "<" && command[index + 1] === "#") {
       const end = command.indexOf("#>", index + 2);
       if (end === -1) return undefined;

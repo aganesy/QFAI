@@ -817,6 +817,13 @@ it("reads PowerShell line and block comments so a command after either is classi
     '@"\n# \n"@\nrg auth packages/',
     // A `#` inside a word starts no comment.
     "Write-Output a#b; rg auth packages/",
+    // After a `$(` that may hold its own quotes inside a string, or a curly
+    // quote, where a string ends is not certain, so a `#` there stays text.
+    'Write-Output "$(" # ")"; rg auth packages/',
+    'Write-Output "$(" <# ")"; rg auth packages/; "$(" #> ")"',
+    `Write-Output ${String.fromCharCode(0x2018)} # ${String.fromCharCode(0x2019)}; rg auth packages/`,
+    `Write-Output ${String.fromCharCode(0x201c)} # ${String.fromCharCode(0x201d)}; rg auth packages/`,
+    `Write-Output ${String.fromCharCode(0x2018)} <# ${String.fromCharCode(0x2019)}; rg auth packages/; ${String.fromCharCode(0x2018)} #> ${String.fromCharCode(0x2019)}`,
   ]) {
     const result = classifyGraphExploration({ tool: "PowerShell", command });
     expect(result.decision, command).toBe("deny");
