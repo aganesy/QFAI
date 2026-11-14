@@ -265,6 +265,8 @@ Subtraction removes text that adds no meaning. It never removes:
   action that is not visible otherwise (a demo-data notice that is true and
   shown where the user decides is one of these);
 - error recovery, and the consequence of an action that cannot be undone;
+- the next step an empty state offers: the action, or a short sentence naming
+  it, that leads out of it;
 - labels, accessible names, roles and states.
 
 Moving such text into a tooltip or a placeholder does not keep it. A word or

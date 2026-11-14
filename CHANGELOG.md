@@ -279,6 +279,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   response template, and the stage report records them. The four
   reviewer cards sign off on the whole checklist.
 
+- **An empty state's next step is protected from copy cuts.**
+  `interface-clarity.md` lists the action, or a short sentence naming it, that
+  leads out of an empty state under "What this rule never removes". The
+  product-surface reviewer, the prototyping reviewer prompt, the UI contract
+  guide and the `sdd-contract` step name the same exception, so a review that
+  cuts how-to copy no longer leaves an empty search result with only "nothing
+  matches".
+
 - **The UI procurement ladder starts with the project's own components.** Its
   first rung now reuses a component the project already has, and extracts a
   shared one when a region repeats on a second screen. The ladder no longer
