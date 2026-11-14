@@ -154,7 +154,7 @@ it("allows quoted search words printed without invoking search", () => {
 });
 
 // QFAI:EX-0001-0235-29
-// Mutation: packages/qfai/src/core/graph/hooks.ts `heredocs.push({ delimiter, stripTabs, data: plain && reader && stageStart >= lineStart });` -> `heredocs.push({ delimiter, stripTabs, data: false });` fails "allows here-document bodies that hold an apostrophe or a search word"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `heredocs.push({ delimiter, stripTabs, data });` -> `heredocs.push({ delimiter, stripTabs, data: false });` fails "allows here-document bodies that hold an apostrophe or a search word"
 it("allows here-document bodies that hold an apostrophe or a search word", () => {
   for (const command of [
     "cat > notes.md <<'EOF'\nThe hook doesn't search.\nEOF\ngh issue create --body-file notes.md",
@@ -171,7 +171,7 @@ it("allows here-document bodies that hold an apostrophe or a search word", () =>
   }
   for (const command of [
     "cat > a.txt <<'EOF'\nIt's data.\nEOF\nrg auth packages/",
-    "cat <<'EOF' && rg auth packages/\nIt's data.\nEOF",
+    "cat <<'EOF' && rg auth packages/\ndata\nEOF",
     // A `<<` that is not an operator registers no body.
     "echo '<<' EOF\nrg auth packages/",
     'echo "<<x"\nrg auth packages/',
@@ -205,6 +205,16 @@ it("allows here-document bodies that hold an apostrophe or a search word", () =>
     "mkfifo p; bash < p & cat <<EOF > p\nrg auth packages/\nEOF",
     "cat <<EOF > /dev/fd/3\nrg auth packages/\nEOF",
     "cat <<EOF &\nrg auth packages/\nEOF",
+    // Only a whole line that writes files, after only such lines, skips its body.
+    "{\ncat <<EOF\nrg auth packages/\nEOF\n} | bash",
+    "if true\nthen\ncat <<EOF\nrg auth packages/\nEOF\nfi | sh",
+    'bash -c "cat <<EOF\nrg auth packages/\nEOF" | bash',
+    "tee 'x\ny' <<EOF | bash\nrg auth packages/\nEOF",
+    "\\hash -p /bin/bash cat\ncat <<EOF\nrg auth packages/\nEOF",
+    "printf -v PATH /tmp/e\ncat <<EOF\nrg auth packages/\nEOF",
+    "cat <<EOF\rx\nhi\nEOF\rx\nrg auth packages/\nEOF",
+    'cat <<"E\\\\F"\nhi\nE\\F\nrg auth packages/\nE\\\\F',
+    "cat > /dev/fd/3 <<EOF\nrg auth packages/\nEOF",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");

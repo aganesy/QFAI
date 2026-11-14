@@ -273,7 +273,7 @@ function classifyCommand(
         : operation === "cmd"
           ? "cmd"
           : "posix";
-    const commands = shellPipelines(inner, shell);
+    const commands = shellPipelines(inner, shell, true);
     return commands
       ? classifyCommands(commands, authorize, depth + 1, redefined, directory)
       : failedGraphHook();
@@ -561,7 +561,32 @@ function resolveAlias(words: string[], shell: GraphShell): string[] {
     : words;
 }
 
-function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | undefined {
+/** A file operand that names no device or process file: letters, digits and `._/-` only. */
+const DATA_FILE = String.raw`(?!/dev/|/proc/)[\w./-]+`;
+/** An operand of `cat` or `tee` on a data line: an option, a file, or a redirection to one. */
+const DATA_OPERAND = String.raw`[ \t]+(?:-[A-Za-z]+|>>?[ \t]*${DATA_FILE}|>[ \t]*/dev/null|${DATA_FILE})`;
+/**
+ * A whole line that writes one here-document to files and nothing else: `cat` or `tee`,
+ * plain operands, one `<<` or `<<-` with an identifier delimiter, optionally quoted. A
+ * line of this shape hands its body to no shell, pipe, descriptor or later command.
+ */
+const DATA_HEREDOC_LINE = new RegExp(
+  String.raw`^[ \t]*(?:cat|tee)(?:${DATA_OPERAND})*[ \t]*<<-?[ \t]*(['"]?)[A-Za-z_]\w*\1(?:${DATA_OPERAND})*[ \t]*\r?$`,
+);
+/** A line that may come before a data line: blank, `mkdir -p` of plain paths, or another data line. */
+const DATA_PRELUDE_LINE = new RegExp(
+  String.raw`^[ \t]*(?:mkdir[ \t]+-p(?:[ \t]+${DATA_FILE})+[ \t]*)?\r?$`,
+);
+
+/**
+ * Splits a shell command into its pipelines. A nested command string, such as the
+ * argument of `bash -c`, skips no here-document body: what reads its output is outside it.
+ */
+function shellPipelines(
+  command: string,
+  shell: GraphShell,
+  nested = false,
+): ShellCommand[] | undefined {
   const commands: ShellCommand[] = [];
   let words: string[] = [];
   let upstream: ShellCommand | undefined;
@@ -570,9 +595,6 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   let afterRedirect: "" | "<" | ">" = "";
   // Here-documents whose bodies start after the next unquoted newline.
   const heredocs: { delimiter: string; stripTabs: boolean; data: boolean }[] = [];
-  // Set by an unquoted `#` that starts a word, until the next newline.
-  let commented = false;
-  let stageStart = 0;
   // The spans of bodies already skipped as data, which later checks do not read.
   const skipped: [number, number][] = [];
   const flushWord = () => {
@@ -581,16 +603,10 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   };
   /**
    * Reads an unquoted `<<` or `<<-` operator and its delimiter word at `index`, pushes
-   * both as words, and returns the index after the delimiter. The body is skipped only
-   * when it is surely data, and every other body stays classified as shell text:
-   *
-   * - the command that receives it is a data reader (`cat` or `tee`) whose output goes
-   *   to no pipe, descriptor, device or background job, so no shell reads it as a script;
-   * - the command text before the operator, less bodies already skipped, holds no comment,
-   *   expansion, substitution, subshell, assignment, pipe, background job,
-   *   line continuation or builtin that defines or redirects commands, so the `<<` is surely
-   *   an operator and `cat` is surely the program;
-   * - the delimiter is literal text, as Bash reads it.
+   * both as words, and returns the index after the delimiter. Its body is skipped as data
+   * only when the operator's whole line is a data line and every line before it, less
+   * bodies already skipped, is a data line or a data prelude. Every other body stays
+   * classified as shell text, as if no here-document were read.
    */
   const readHeredocOperator = (index: number): number => {
     if (word.length && !/^\d+$/.test(word)) flushWord();
@@ -600,7 +616,6 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     words.push(`${word}<<${stripTabs ? "-" : ""}`);
     word = "";
     while (command[cursor] === " " || command[cursor] === "\t") cursor += 1;
-    const delimiterStart = cursor;
     let delimiter = "";
     let read = false;
     let delimiterQuote: string | undefined;
@@ -630,26 +645,22 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     words.push(delimiter);
     const lineStart = command.lastIndexOf("\n", index) + 1;
     const lineEnd = command.indexOf("\n", index);
-    // The command text before the operator, less the bodies already skipped as data.
+    // The command text before the operator's line, less the bodies already skipped as data.
     let earlier = "";
     let from = 0;
     for (const [start, end] of skipped) {
       earlier += command.slice(from, start);
       from = end;
     }
-    earlier += command.slice(from, index);
-    const after = command.slice(cursor, lineEnd < 0 ? command.length : lineEnd);
-    // Nothing earlier may define, redirect or start what could read the body later.
-    const plain =
-      !commented &&
-      !/[#`()$=|]|(?<!&)&(?!&)|\\\r?\n/.test(earlier) &&
-      !/(?:^|[\s;&])(?:alias|function|exec|mkfifo|coproc|hash|enable|source|eval|trap|declare|typeset|export|readonly|set|shopt|builtin|command|unset|\.)(?=$|[\s;&])/.test(
-        earlier,
-      ) &&
-      !/[|`()]|\\\r?$|>&|\/dev\/(?!null\b)|\/proc\/|(?<!&)&(?!&)/.test(after) &&
-      !/[$`()]/.test(command.slice(delimiterStart, cursor));
-    const reader = ["cat", "tee"].includes(words[0] ?? "");
-    heredocs.push({ delimiter, stripTabs, data: plain && reader && stageStart >= lineStart });
+    earlier += command.slice(from, lineStart);
+    const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
+    const data =
+      !nested &&
+      DATA_HEREDOC_LINE.test(line) &&
+      earlier
+        .split("\n")
+        .every((prior) => DATA_PRELUDE_LINE.test(prior) || DATA_HEREDOC_LINE.test(prior));
+    heredocs.push({ delimiter, stripTabs, data });
     return cursor;
   };
   /**
@@ -708,9 +719,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       flushWord();
       word = character;
     } else if (character === "\n" && !words.length && !word.length && upstream) {
-      commented = false;
       index = skipHeredocs(index);
-      stageStart = index + 1;
       continue;
     } else if (character === "|" || character === ";" || character === "&" || character === "\n") {
       flushWord();
@@ -723,11 +732,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       else if (pipe && shell === "posix" && next === "&") index += 1;
       upstream = pipe ? stage : undefined;
       words = [];
-      if (character === "\n") {
-        commented = false;
-        index = skipHeredocs(index);
-      }
-      stageStart = index + 1;
+      if (character === "\n") index = skipHeredocs(index);
     } else if (/\s/.test(character)) {
       flushWord();
     } else if (
@@ -739,7 +744,6 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     ) {
       index = readHeredocOperator(index) - 1;
     } else {
-      if (shell === "posix" && character === "#" && !word.length) commented = true;
       if (
         (character === ">" || character === "<") &&
         !/^\d*$/.test(word) &&
