@@ -311,12 +311,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `design-anti-patterns.md`, which the implementer checks before calling a
   screen done.
 
-- **A screen missing a part of the business-screen floor can force REVISE.**
-  The reviewer findings rule admits a demand for more work on UI contracts and
-  implemented screens against "What a business screen always has" in
-  `interface-clarity.md`. A missing part with no reason in the screen's UI
-  contract is a `defect:code-quality` finding, not new scope, so it may block
-  although no acceptance criterion names it.
+- **The reviewer findings rule says a missing screen-floor part is a defect.**
+  Its section on what a reviewer may demand more of now says that a part
+  missing from "What a business screen always has" in `interface-clarity.md`
+  is not a demand for more work but a defect that traces to that rule, and
+  points to the product-surface reviewer card for when it blocks. Read alone,
+  the section had suggested such a gap could only be advisory.
 
 ### Fixed
 

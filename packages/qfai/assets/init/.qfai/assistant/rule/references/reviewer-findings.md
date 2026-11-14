@@ -25,15 +25,9 @@ Read when a reviewer finding is written or judged.
 A finding that asks for more work — another item, more detail, a wider set — is admissible only on
 the concrete artifacts.
 
-| Admissible on                                                                                                                                       | Inadmissible on                                                                   |
-| --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| business flows, user stories, acceptance criteria, examples, test cases, and UI contracts and implemented screens against the business-screen floor | business rules, non-functional requirements, policies and decisions, architecture |
-
-The business-screen floor is "What a business screen always has" in
-`.agents/rules/interface-clarity.md`. A screen that lacks one of its parts, with
-no reason recorded in the screen's UI contract, carries a defect
-(`defect:code-quality`), not new scope, so the finding may be `blocking` and
-force `REVISE` although no acceptance criterion names the part.
+| Admissible on                                                           | Inadmissible on                                                                   |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| business flows, user stories, acceptance criteria, examples, test cases | business rules, non-functional requirements, policies and decisions, architecture |
 
 Two demands stay admissible on any artifact:
 
@@ -41,6 +35,12 @@ Two demands stay admissible on any artifact:
   its verification method;
 - that a safety-floor item be met: security, accessibility, data-loss handling, or validation at a
   trust boundary (`.agents/rules/minimal-implementation.md` § 2).
+
+A part missing from the business-screen floor
+(`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`) is not a demand for more
+work: that rule already makes the part an obligation, so the gap is a defect that traces to it, and
+`.qfai/assistant/agent/product-surface-reviewer.md` says when the finding blocks and when it is
+`advisory`.
 
 This bounds what a reviewer may require, never what a reviewer may report. A demand the table does
 not admit, such as one for another business rule, is recorded as `advisory` and cannot force
