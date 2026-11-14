@@ -9,7 +9,9 @@ the session agent reads their answers into the summary.
 ## Trigger
 
 `/qfai-discussion` triggers this protocol. Run it whether or not the work
-includes UI.
+includes UI. For a redesign or a new product that carries UI, whose direction
+rests on reference sites, also run
+`.qfai/assistant/rule/references/visual-reference-survey.md`.
 
 ## Output Schema
 

@@ -131,6 +131,41 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     });
   }
 
+  for (const protocolPath of protocolPaths) {
+    const surveyPath = path.join(
+      path.dirname(protocolPath),
+      "references",
+      "visual-reference-survey.md",
+    );
+    it(`${path.relative(repoRoot, protocolPath)}: a redesign also runs the visual reference survey`, async () => {
+      const trigger = section(await readFile(protocolPath, "utf-8"), "## Trigger").replace(
+        /\s+/g,
+        " ",
+      );
+      expect(trigger).toContain("`.qfai/assistant/rule/references/visual-reference-survey.md`");
+    });
+
+    it(`${path.relative(repoRoot, surveyPath)}: samples by stratum, grades acclaim, dedupes, and lands each finding`, async () => {
+      const survey = await readFile(surveyPath, "utf-8");
+      const flat = survey.replace(/\s+/g, " ");
+      for (const stratum of ["same-domain", "adjacent-domain", "target-market", "aspect-award"]) {
+        expect(section(survey, "## Sample"), stratum).toContain(`\`${stratum}\``);
+      }
+      for (const level of ["award", "gallery", "case-study", "unconfirmed"]) {
+        expect(section(survey, "## Acclaim"), level).toContain(`\`${level}\``);
+      }
+      expect(flat).toContain("no finding rests on it alone");
+      expect(section(survey, "## Dedupe before counting").replace(/\s+/g, " ")).toContain(
+        "The sample size is the count after this.",
+      );
+      expect(flat).toContain("Record the same fields for every site");
+      expect(flat).toContain("lands_in: design-md | ui-contract | procurement");
+      expect(flat).toContain(
+        "A finding rests on at least two sites, at least one of them at `award` or `gallery` level.",
+      );
+    });
+  }
+
   for (const skillPath of webResearchSkillPaths) {
     it(`${path.relative(repoRoot, skillPath)}: points to both rules instead of restating them`, async () => {
       const skill = await readFile(skillPath, "utf-8");

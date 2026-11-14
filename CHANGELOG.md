@@ -71,6 +71,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   body is checked like a `qfai-text` body, and a malformed one raises
   `QFAI-UITEXT-002` at its line. A prototype page's file reason is not read.
 
+- **A redesign has a method for surveying reference sites.** The new
+  `rule/references/visual-reference-survey.md`, which the research-first
+  protocol names for a redesign or a new product that carries UI, sets the
+  sample by stratum, grades each site's acclaim by its evidence, removes
+  duplicates before counting, records the same fields for every site, and ends
+  in findings that each cite their sites and land in root `DESIGN.md`, a UI
+  contract or the procurement record.
+
 ### Removed
 
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
