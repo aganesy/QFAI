@@ -765,15 +765,11 @@ it("denies a search inside a command or process substitution", () => {
 // QFAI:EX-0001-0235-27
 // Mutation: packages/qfai/src/core/graph/hooks.ts `if (!bodies) return failedGraphHook("substitution");` -> `if (false) return failedGraphHook("substitution");` fails "denies a command whose substitution end the scan cannot find"
 it("denies a command whose substitution end the scan cannot find", () => {
-  // The shell ends each comment (a POSIX `#` at its line, a PowerShell `<# #>` at `#>`) and
-  // runs the search; the scan reads the quote in the comment as open and finds no `)`.
+  // No `)` closes these substitutions, or a block comment has no `#>`.
   for (const [tool, command] of [
-    ["Bash", 'echo "$(echo # \'\nrg auth packages/)"'],
-    ["Bash", "echo $(echo # '\nrg auth packages/)"],
-    ["Bash", "cat <(echo # '\nrg auth packages/)"],
-    ["Bash", "(echo # '\nrg auth packages/)"],
-    ["Bash", "cat <<EOF\n$(echo # '\nrg auth packages/)\nEOF"],
-    ["PowerShell", 'Write-Output "$(<# \' #> rg auth packages/)"'],
+    ["Bash", "echo $(echo # '\nrg auth packages/"],
+    ["Bash", "echo $(rg auth packages/ # )"],
+    ["PowerShell", 'Write-Output "$(Get-Date <# ) rg auth packages/)"'],
   ] as const) {
     const result = classifyGraphExploration({ tool, command });
     expect(result.decision, command).toBe("deny");
@@ -783,6 +779,52 @@ it("denies a command whose substitution end the scan cannot find", () => {
   // A substitution the scan can close is still read, and allowed when it holds no search.
   for (const command of ['echo "$(git status)"', "echo $(echo '(' )"]) {
     expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
+  }
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!quote && /[ \t\n;&|(]/.test(character)) wordStart = true;` -> `` fails "reads a comment inside a substitution as the shell does"
+it("reads a comment inside a substitution as the shell does", () => {
+  // The shell ends each comment (a POSIX `#` at its line, a PowerShell `#` at its line and
+  // `<# #>` at `#>`), so a `)` or a quote inside it closes or opens nothing, and the search
+  // after the comment runs.
+  for (const [tool, command] of [
+    ["Bash", 'echo "$(echo # )\nrg auth packages/)"'],
+    ["Bash", 'echo "$(echo # \'\nrg auth packages/)"'],
+    ["Bash", "echo $(echo # '\nrg auth packages/)"],
+    ["Bash", "cat <(echo # '\nrg auth packages/)"],
+    ["Bash", "(echo # '\nrg auth packages/)"],
+    ["Bash", "cat <<EOF\n$(echo # '\nrg auth packages/)\nEOF"],
+    ["PowerShell", 'Write-Output "$(Get-Date # )\nrg auth packages/)"'],
+    ["PowerShell", 'Write-Output "$(<# \' #> rg auth packages/)"'],
+    ["PowerShell", 'Write-Output "$(Get-Date <# ) #> ; rg auth packages/)"'],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("rg");
+  }
+  // A `#` inside a word, after an escaped break or a closed substitution, is text, so the
+  // quote after it still opens and the search after the substitution is still read.
+  for (const [tool, command] of [
+    ["Bash", "echo \"$(echo a\\ #'\n)' ; rg auth packages/ )\""],
+    ["Bash", "echo \"$(echo a\\;#'\n)' ; rg auth packages/ )\""],
+    ["Bash", "echo \"$(echo a\\|#'\n)' ; rg auth packages/ )\""],
+    ["Bash", "echo \"$(echo a\\(#'\n)' ; rg auth packages/ )\""],
+    ["Bash", "echo \"$(echo a\\\n#'\n)' ; rg auth packages/ )\""],
+    ["Bash", "echo \"$(echo $(true)#'\n)' ; rg auth packages/ )\""],
+    ["PowerShell", "Write-Output \"$(echo a<#'#> ) ' ; rg auth packages/ )\""],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+  }
+  // A comment that holds a quote or a parenthesis no longer makes a valid command fail.
+  for (const command of [
+    "x=$( # don't\ngit status)",
+    "x=$( # a ) b\ngit status)",
+    "echo $(echo a#b)",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
   }
 });
 

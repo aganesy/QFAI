@@ -321,6 +321,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   markers separate commands, so what lies between and after them is still
   read. A search that appears only in a comment is not denied.
 
+- **The search-protection hook reads a comment inside a substitution.** A `)`
+  inside a comment, such as `$(echo # )` followed by `rg auth packages/)` on the
+  next line, closed the substitution early, so the search after the comment ran
+  while the hook allowed it. A POSIX `#` comment, and a PowerShell `#` or
+  `<# ... #>` comment, now runs as the shell reads it. A valid command whose
+  substitution holds a comment with a quote, such as `x=$( # don't` and
+  `git status)`, is no longer denied.
+
 - **The search-protection hook denies a command whose substitution it cannot
   close.** When the hook found no end for a `$(...)`, `<(...)`, `>(...)`,
   subshell, PowerShell `(...)` or `@(...)`, backtick or here-document

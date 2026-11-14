@@ -114,8 +114,9 @@ function classifyShellText(
   const bodies = substitutionBodies(source, scope.shell, depth > 0);
   // A substitution whose end the scan cannot find may still run in the shell, which reads
   // comments the scan does not, so the command is denied rather than its body dropped.
-  // SIMPLIFIED: this denies a valid command whose substitution holds a comment with a quote
-  // or an unmatched parenthesis. Lift when: closingParenthesis reads comments.
+  // SIMPLIFIED: this denies a valid command whose substitution holds an unmatched
+  // parenthesis, or a comment after an untracked context (`inUntrackedContext`) with a quote
+  // or a parenthesis. Lift when: those contexts are tracked as the quotes are.
   if (!bodies) return failedGraphHook("substitution");
   return classifyCommands(
     commands,
@@ -1262,6 +1263,9 @@ function substitutionBodies(text: string, shell: GraphShell, nested = false): st
     } else if (
       !quote &&
       character === "(" &&
+      // The first `(` of a POSIX `((` arithmetic command opens no subshell; the scan moves
+      // on to the second, whose body the comment reader then knows is arithmetic.
+      !(shell === "posix" && command[index + 1] === "(") &&
       // A POSIX subshell starts a command, and zsh `=(...)` starts a word; any other
       // `(`, such as an array's in `name=(...)`, is data, scanned on.
       (shell === "powershell" ||
@@ -1522,19 +1526,60 @@ function commandPosition(command: string, index: number, start: number): boolean
  * In POSIX text a `)` that ends a `case` pattern, such as `x)` in
  * `case x in x) ...;; esac`, closes nothing. `case` and `esac` count only where a
  * command starts, so an argument such as `test/case` opens no case.
+ * A comment runs as the shell reads it, so a `)` or a quote inside it closes and opens
+ * nothing: in POSIX text a `#` that starts a word runs to the end of its line, unless an
+ * untracked context or arithmetic comes before it (`inArithmeticOrUntracked`), and in PowerShell a `#` that
+ * starts a token runs to the end of its line and a `<#` runs to its `#>`. A block comment
+ * with no `#>` leaves no end.
  */
+/**
+ * Whether a POSIX `#` at `index`, inside a parenthesis that opened just before `start`,
+ * may sit in a context where the shell starts no comment: an untracked context before it,
+ * or arithmetic, which a body cut from `((` no longer shows as `((`, so a body that opens
+ * with `(` or holds `((` counts as arithmetic too.
+ */
+function inArithmeticOrUntracked(command: string, start: number, index: number): boolean {
+  return (
+    inUntrackedContext(command, index) ||
+    command[start] === "(" ||
+    command[start - 2] === "(" ||
+    command.slice(start, index).includes("((")
+  );
+}
+
 function closingParenthesis(command: string, start: number, escape: string): number | undefined {
   let depth = 1;
   let quote: string | undefined;
   /** The parenthesis depth at which each open `case` started. */
   const cases: number[] = [];
+  const posix = escape === "\\";
+  // Whether the character at `index` starts a word: after an unescaped blank, `;`, `&`,
+  // `|`, `(` or newline outside quotes. A `)` does not start one, since the word goes on
+  // after a closed substitution, and an escaped character keeps the word going.
+  let wordStart = true;
   for (let index = start; index < command.length; index += 1) {
     const character = command[index] ?? "";
+    const atWordStart = wordStart;
+    wordStart = false;
     if (character === escape && quote !== "'") index += 1;
     else if (quote) {
       if (character === quote) quote = undefined;
     } else if (character === "'" || character === '"') quote = character;
-    else if (escape === "\\" && /[ce]/.test(character) && commandPosition(command, index, start)) {
+    else if (!posix && atWordStart && character === "<" && command[index + 1] === "#") {
+      const end = command.indexOf("#>", index + 2);
+      if (end === -1) return undefined;
+      index = end + 1;
+      wordStart = true;
+    } else if (
+      character === "#" &&
+      atWordStart &&
+      (!posix || !inArithmeticOrUntracked(command, start, index))
+    ) {
+      const end = command.indexOf("\n", index);
+      if (end === -1) return undefined;
+      index = end - 1;
+      wordStart = true;
+    } else if (posix && /[ce]/.test(character) && commandPosition(command, index, start)) {
       caseWord.lastIndex = index;
       const word = caseWord.exec(command)?.[1];
       if (word === "case") cases.push(depth);
@@ -1546,6 +1591,7 @@ function closingParenthesis(command: string, start: number, escape: string): num
       depth -= 1;
       if (depth === 0) return index;
     }
+    if (!quote && /[ \t\n;&|(]/.test(character)) wordStart = true;
   }
   return undefined;
 }
