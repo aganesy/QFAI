@@ -51,7 +51,7 @@ export function classifyGraphExploration(
         ? "cmd"
         : "posix";
   const commands = shellPipelines(event.command ?? "", shell);
-  if (!commands) return failedGraphHook();
+  if (!commands) return failedGraphHook("quote");
   const directory = event.cwd ? path.resolve(event.cwd, event.workdir ?? ".") : undefined;
   return (
     classifyCommands(commands, authorize, 0, false, directory) ?? {
@@ -223,7 +223,7 @@ function classifyCommand(
   redefined = false,
   directory?: string,
 ): GraphHookDecision | undefined {
-  if (depth > 16) return failedGraphHook();
+  if (depth > 16) return failedGraphHook("depth");
   let offset = 0;
   while (offset < words.length) {
     const redirection = redirectionLength(words[offset]);
@@ -276,7 +276,7 @@ function classifyCommand(
     const commands = shellPipelines(inner, shell);
     return commands
       ? classifyCommands(commands, authorize, depth + 1, redefined, directory)
-      : failedGraphHook();
+      : failedGraphHook("quote");
   }
   if (!redefined && pipeFilter(words) && printsText(upstream)) return undefined;
   if (operation === "rg" || operation === "grep" || operation === "findstr") {
@@ -714,13 +714,24 @@ export function decodeGraphHookEvent(input: unknown): GraphHookEvent | undefined
   };
 }
 
-export function failedGraphHook(): GraphHookDecision {
-  return {
-    decision: "deny",
-    state: "failed",
-    message:
-      "Graph protection failed: invalid pre-tool input. Repair hook configuration before direct exploration.",
-  };
+/** Why the hook could not decide: what it names, and what the user does next. */
+export type GraphHookFailure = "configuration" | "input" | "state" | "quote" | "depth";
+
+const FAILURE_MESSAGES: Record<GraphHookFailure, string> = {
+  configuration:
+    "Graph protection failed: .qfai/tools/graph-enforcement.json is missing or is not a valid enforcement configuration. Repair hook configuration with qfai init before direct exploration.",
+  input:
+    "Graph protection failed: the hook could not read the host's pre-tool event. Repair hook configuration so the hook receives the host's pre-tool event.",
+  state:
+    "Graph protection failed: the hook could not read its local search state. Retry, and run qfai doctor if it repeats.",
+  quote:
+    "Graph protection failed: the hook could not match the quotes in the command. Retry without an unmatched quote, heredoc or here-string.",
+  depth:
+    "Graph protection failed: the command nests env, command or shell wrappers more than 16 levels deep. Run the inner command directly and retry.",
+};
+
+export function failedGraphHook(failure: GraphHookFailure): GraphHookDecision {
+  return { decision: "deny", state: "failed", message: FAILURE_MESSAGES[failure] };
 }
 
 export function enforceGraphExploration(input: unknown, configuration: unknown): GraphHookDecision {
@@ -730,9 +741,9 @@ export function enforceGraphExploration(input: unknown, configuration: unknown):
     configuration.kind !== "graph-enforcement" ||
     configuration.denyExploration !== true
   )
-    return failedGraphHook();
+    return failedGraphHook("configuration");
   const event = decodeGraphHookEvent(input);
-  return event ? classifyGraphExploration(event) : failedGraphHook();
+  return event ? classifyGraphExploration(event) : failedGraphHook("input");
 }
 
 export function graphHookOutput(
