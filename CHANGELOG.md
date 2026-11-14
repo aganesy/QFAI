@@ -14,6 +14,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **An overview screen counts as one view.** `interface-clarity.md` § 4 says
+  an overview or dashboard has the one purpose "see what needs attention",
+  and each of its parts links to the view that does the work.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
