@@ -66,6 +66,28 @@ describe("a reason that leaves out what is asked fails", () => {
   });
 });
 
+// QFAI:AC-0001-0297-07
+describe("a file records one reason for its plain texts", () => {
+  it("clears a surface file's texts, fails a malformed one, and reads none in a prototype page", async () => {
+    const root = await projectWith({
+      "src/help.html":
+        "<!-- qfai-text-file: why=Each billing term needs its definition; without=Users misread their invoice -->\n<p>Credits expire after a year.</p>\n<p>Refunds return to the card used.</p>\n",
+      "src/broken.html":
+        "<!-- qfai-text-file: why=Needed -->\n<p>Credits expire after a year.</p>\n",
+      ".qfai/prototype/final/index.html":
+        "<!-- qfai-text-file: why=Every screen explains itself; without=Users are lost -->\n<main><p>Manage all your orders easily.</p></main>\n",
+    });
+    const found = (await uitext(root))
+      .map((item) => `${path.basename(item.file ?? "")} ${item.code}`)
+      .sort();
+    expect(found).toEqual([
+      "broken.html QFAI-UITEXT-001",
+      "broken.html QFAI-UITEXT-002",
+      "index.html QFAI-UITEXT-001",
+    ]);
+  });
+});
+
 // QFAI:AC-0001-0297-03
 describe("text that names, labels or reports is not checked", () => {
   it("raises nothing for a heading, a button, a label and an alert", async () => {
