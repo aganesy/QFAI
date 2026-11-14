@@ -15,6 +15,7 @@ The `CSS framework` and `Component catalogue` rows of
 `<paths.contractsDir>/tech.md#stack` name the CSS framework and the primary
 catalogue. Root `DESIGN.md` owns the adopted theme. `qfai.config.yaml` carries
 `uiux.registries`, the name-to-URL map a tool resolves a component name against.
+The constraints a component must meet are rows of `01_policy/constraint.md`.
 
 ## The ladder
 
@@ -66,17 +67,18 @@ Three things decide it, and none is taste:
   has to be copied by hand cannot.
 - **Is the licence open?** A paid catalogue is usable only where the project
   holds the licence, and an agent cannot check that.
-- **Does it meet the constraints the project has fixed?** The `UI constraints`
-  row of `<paths.contractsDir>/tech.md#stack` names them: the content security
-  policy, server rendering, behaviour without script and the accessibility
-  target. A catalogue whose components break one is not adopted for the
-  regions they would serve.
+- **Does it meet the constraints the project has fixed?** The
+  `## Technical Constraints` and `## Quality targets` rows of
+  `01_policy/constraint.md` name them, such as a content security policy,
+  server rendering, behaviour without script and an accessibility target. A
+  catalogue whose components break one is not adopted for the regions they
+  would serve. Where those sections name none of these, there is nothing to
+  check, and the procurement record says so.
 
 The same check applies to each item procured from the catalogue. An item that
-breaks a constraint is not installed; the ladder moves to its next rung. The
-incompatibility is written as a line under the catalogue in
-`<paths.contractsDir>/tech.md#dependencies`, naming the item and the
-constraint it breaks, so the next procurement does not find it again.
+breaks a constraint is not installed, and the ladder moves to its next rung.
+The region's procurement record names the item and the constraint it breaks, so
+a later procurement in the project does not try it again.
 
 A registry entry is a name pointing at a URL template carrying `{name}`,
 which is where the component name goes. That shape is not owned by any
@@ -87,10 +89,9 @@ has, in the same field.
 
 Each screen region names what realises it: a native element, a catalogue item,
 a component the project already has, or authored code with the reason. A
-catalogue item also records that it meets each constraint of the `UI
-constraints` row. An implementer then
-installs rather than reconstructs, and a reviewer has something to check
-instead of a resemblance to judge.
+catalogue item also names the constraints it was checked against. An
+implementer then installs rather than reconstructs, and a reviewer has
+something to check instead of a resemblance to judge.
 
 ## Related
 
