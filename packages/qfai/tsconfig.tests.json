@@ -147,6 +147,7 @@
     "tests/assets/outputLanguageSingleSource.test.ts",
     "tests/assets/packGateQualifier.test.ts",
     "tests/assets/projectMemoryReadScope.test.ts",
+    "tests/assets/reviewerChecklistFloor.test.ts",
     "tests/assets/reviewerRegressionPower.test.ts",
     "tests/assets/prototypingGrilling.test.ts",
     "tests/assets/passingTestIsNotTheSolution.test.ts",

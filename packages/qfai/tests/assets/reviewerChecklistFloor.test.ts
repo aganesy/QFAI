@@ -1,6 +1,6 @@
 /**
  * A reviewer's card is its checklist, and the request that dispatches it can
- * add a focus but never drop a check (#4130).
+ * add a focus but never drop a check.
  *
  * The session agent writes the request. A request that said "check against the
  * UI contracts" and "do not flag" a missing screen turned the screen review into
