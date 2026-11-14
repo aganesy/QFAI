@@ -99,7 +99,8 @@ function classifyShellText(
   substitution = false,
 ): GraphHookDecision | undefined {
   if (depth > 16) return failedGraphHook("depth");
-  const source = scope.shell === "powershell" ? withoutPowerShellComments(text) : text;
+  const source =
+    scope.shell === "powershell" ? withoutPowerShellComments(powerShellLines(text)) : text;
   const commands = source === undefined ? undefined : shellPipelines(source, scope.shell);
   // Text in a substitution that cannot be read as commands is no verdict of its own.
   if (source === undefined || !commands) {
@@ -746,6 +747,14 @@ function startsComment(command: string, index: number, shell: GraphShell): boole
  */
 function inUntrackedContext(command: string, index: number): boolean {
   return /`|\$\{|\$\[|\$'|\(\(|[?*+@!]\(/.test(command.slice(0, index));
+}
+
+/**
+ * The PowerShell text with each lone carriage return read as a line feed. PowerShell ends a
+ * statement and a `#` line comment at either, while these readers split lines at `\n` only.
+ */
+function powerShellLines(command: string): string {
+  return command.replace(/\r(?!\n)/g, "\n");
 }
 
 /** A character after which PowerShell starts a new token and no word of these readers is under way. */
