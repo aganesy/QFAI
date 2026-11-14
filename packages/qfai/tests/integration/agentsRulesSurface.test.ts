@@ -215,6 +215,24 @@ describe("reviewer stop conditions distinguish named-rule defects from new produ
     expect(stop).toContain("a regression against a governing rule or contract");
     expect(stop).toContain("it stays blocking and traces to its `defect:*` class");
   });
+
+  // A stop on every UI part no acceptance criterion names made a reviewer resist
+  // pagination, navigation and feedback. The stop is held to configuration,
+  // animation and novel interaction, and the standard parts stay grounded.
+  it.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
+    "%s/product-surface-reviewer stops only on ungrounded configuration, animation or novel interaction",
+    async (tree) => {
+      const text = await readFile(
+        path.join(ROOT, tree, "assistant/agent", "product-surface-reviewer.md"),
+        "utf-8",
+      );
+      const stop = text.split("## Stop conditions")[1]?.split(/^## /m)[0]?.replace(/\s+/g, " ");
+      expect(stop).toBeDefined();
+      expect(stop).toContain("configuration, animation or a novel interaction that is not grounded");
+      expect(stop).toContain("are grounded by the pattern itself and need no acceptance criterion");
+      expect(stop).not.toContain("approve UI complexity");
+    },
+  );
 });
 
 describe("repository async guidance agrees with the retained-failure test", () => {

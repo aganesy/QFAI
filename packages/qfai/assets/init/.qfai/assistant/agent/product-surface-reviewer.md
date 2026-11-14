@@ -107,7 +107,10 @@ specialization_tags:
 - Required evidence, governing specs, or target artifacts are missing.
 - The request requires implementation or file editing instead of independent review.
 - The issue falls outside this review domain and must be rerouted to another specialist first.
-- The review would approve UI complexity that is not grounded in the current user journey or acceptance criteria.
+- The review would approve configuration, animation or a novel interaction that is not grounded in the current
+  user journey or acceptance criteria. The standard parts of a business screen, such as navigation, list search,
+  sort and pagination, and empty, error and success feedback, are grounded by the pattern itself and need no
+  acceptance criterion.
 
 ## Sign-off
 
