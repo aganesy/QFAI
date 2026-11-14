@@ -26,7 +26,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   first rung now reuses a component the project already has, and extracts a
   shared one when a region repeats on a second screen. The ladder no longer
   asks whether a region should exist: a region the screen contract names, or
-  one its pattern implies such as a list's pagination, is in scope. The
+  one its pattern implies as interface-clarity lists them, is in scope, and
+  leaving an implied region out needs a reason in the UI contract. The
   prototype reviewer's second criterion cites rungs 1 to 3.
 
 - **The shipped uix-rev review prompts no longer name the removed

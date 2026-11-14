@@ -121,7 +121,12 @@ describe("four ordinal axes and eight diagnostic questions", () => {
       expect(ladder).toContain(
         "1. **Does the project already have a component for it?** Reuse it.",
       );
-      expect(ladder).toContain("extract one and use it on both");
+      expect(ladder).toContain(
+        "extract one, wrapping whatever rung 2 or 3 supplied, and use it on both",
+      );
+      expect(ladder).toContain(
+        "Leaving an implied region out needs the reason in the screen's UI contract.",
+      );
       expect(ladder).not.toContain("Does this region need to exist at all?");
       expect(review).toMatch(/^\| 2 .*\| the same ladder, rungs 1 to 3 +\|$/m);
     });
