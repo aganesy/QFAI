@@ -62,6 +62,8 @@ specialization_tags:
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Require more work only on what `.qfai/assistant/rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of` admits, and report any other gap as advisory.
+- Check each screen against its type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`:
+  a standard part of that type missing with no reason recorded in the UI contract is a finding naming the part and the type.
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 - Judge each `qfai-text` reason comment in the UI source. `npx qfai validate` checks only that a reason

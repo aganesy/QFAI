@@ -81,6 +81,10 @@ surface also needs the root `DESIGN.md`, which `common-design-md` writes and
 validates after this step. A CLI-only surface does not require one. Do not
 adopt a sample design.
 
+Name each screen's type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`
+and write the parts of that type the screen needs into its contract, with the
+reason for each part it leaves out.
+
 Check every text element the discussion or the story proposes against the
 screen's tasks and the information the user needs at that point. A text that
 repeats a heading, an action, or a condition the user already has is left out;

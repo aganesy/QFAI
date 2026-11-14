@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A business UI pattern reference.** `qfai-sdd` ships
+  `references/business-ui-patterns.md`, which lists the standard parts, the
+  anti-patterns and the usual catalogue source of a list, detail, form,
+  settings, member-management and dashboard screen, and what every screen has.
+  The `sdd-contract` step, the implementation's UI reference and the
+  product-surface reviewer cite it: a standard part left out needs a reason in
+  the UI contract.
+
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
   `implementation-reviewer` reads every rule the changed master points to and
