@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { enforceGraphExploration } from "../../../src/core/graph/hooks.js";
+import { enforceGraphExploration, failedGraphHook } from "../../../src/core/graph/hooks.js";
 import { runInstalledGraphHook } from "../../../src/cli/graphHook.js";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -68,21 +68,21 @@ it("denies invalid classifier input and enforcement configuration with repair gu
 });
 
 // QFAI:EX-0001-0235-22
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!commands) return failedGraphHook("quote");` -> `if (!commands) return failedGraphHook();` fails "names what it could not read instead of asking to repair a valid configuration"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!commands) return failedGraphHook("quote");` -> `if (!commands) return failedGraphHook("depth");` fails "names what it could not read instead of asking to repair a valid configuration"
 it("names what it could not read instead of asking to repair a valid configuration", async () => {
   const unclosed = enforceGraphExploration(
     { tool_name: "Bash", tool_input: { command: 'echo "unclosed' } },
     configured,
   );
   expect(unclosed).toMatchObject({ decision: "deny", state: "failed" });
-  expect(unclosed.message).toContain("a quote is not closed");
+  expect(unclosed.message).toContain("could not match the quotes");
   expect(unclosed.message).not.toContain("Repair");
 
   const nestedQuote = enforceGraphExploration(
     { tool_name: "Bash", tool_input: { command: 'bash -c "echo \'open"' } },
     configured,
   );
-  expect(nestedQuote.message).toContain("a quote is not closed");
+  expect(nestedQuote.message).toContain("could not match the quotes");
 
   const deep = enforceGraphExploration(
     { tool_name: "Bash", tool_input: { command: `${"env ".repeat(20)}rg auth packages/` } },
@@ -93,12 +93,15 @@ it("names what it could not read instead of asking to repair a valid configurati
   expect(deep.message).not.toContain("Repair");
 
   const input = enforceGraphExploration({ tool_name: "Bash", tool_input: {} }, configured);
-  expect(input.message).toContain("pre-tool input");
+  expect(input.message).toContain("pre-tool event");
   const configuration = enforceGraphExploration(
     { tool_name: "Bash", tool_input: { command: "pnpm test" } },
     {},
   );
   expect(configuration.message).toContain(".qfai/tools/graph-enforcement.json");
+  // Local search state that cannot be read is not a configuration fault.
+  expect(failedGraphHook("state").message).toContain("local search state");
+  expect(failedGraphHook("state").message).not.toContain("graph-enforcement.json");
 
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-hook-unreadable-"));
   try {
@@ -116,7 +119,7 @@ it("names what it could not read instead of asking to repair a valid configurati
       },
       fail: () => {},
     });
-    expect(error).toContain("a quote is not closed");
+    expect(error).toContain("could not match the quotes");
     expect(error).not.toContain("Repair");
   } finally {
     await rm(root, { recursive: true, force: true });

@@ -710,20 +710,22 @@ export function decodeGraphHookEvent(input: unknown): GraphHookEvent | undefined
 }
 
 /** Why the hook could not decide: what it names, and what the user does next. */
-export type GraphHookFailure = "configuration" | "input" | "quote" | "depth";
+export type GraphHookFailure = "configuration" | "input" | "state" | "quote" | "depth";
 
 const FAILURE_MESSAGES: Record<GraphHookFailure, string> = {
   configuration:
     "Graph protection failed: .qfai/tools/graph-enforcement.json is missing or is not a valid enforcement configuration. Repair hook configuration with qfai init before direct exploration.",
   input:
-    "Graph protection failed: the pre-tool input has no tool name, or no command or path the tool needs. Repair hook configuration so the hook receives the host's pre-tool event.",
+    "Graph protection failed: the hook could not read the host's pre-tool event. Repair hook configuration so the hook receives the host's pre-tool event.",
+  state:
+    "Graph protection failed: the hook could not read its local search state. Retry, and run qfai doctor if it repeats.",
   quote:
-    "Graph protection could not read the command: a quote is not closed. Close the quote and retry.",
+    "Graph protection failed: the hook could not match the quotes in the command. Retry without an unmatched quote, heredoc or here-string.",
   depth:
-    "Graph protection could not read the command: it nests env, command or shell wrappers more than 16 levels deep. Run the inner command directly and retry.",
+    "Graph protection failed: the command nests env, command or shell wrappers more than 16 levels deep. Run the inner command directly and retry.",
 };
 
-export function failedGraphHook(failure: GraphHookFailure = "configuration"): GraphHookDecision {
+export function failedGraphHook(failure: GraphHookFailure): GraphHookDecision {
   return { decision: "deny", state: "failed", message: FAILURE_MESSAGES[failure] };
 }
 
@@ -734,7 +736,7 @@ export function enforceGraphExploration(input: unknown, configuration: unknown):
     configuration.kind !== "graph-enforcement" ||
     configuration.denyExploration !== true
   )
-    return failedGraphHook();
+    return failedGraphHook("configuration");
   const event = decodeGraphHookEvent(input);
   return event ? classifyGraphExploration(event) : failedGraphHook("input");
 }
