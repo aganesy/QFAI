@@ -22,6 +22,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The contract step writes the standard parts of a business screen into its
+  UI contract.** After deriving a screen's elements and actions from the
+  examples, `sdd-contract` checks the screen against
+  `## What a business screen always has` in `interface-clarity.md` and adds
+  each part that applies and is missing: navigation, list behaviour, the
+  empty, loading, error and success states and the feedback after a change.
+  Such a part needs no example of its own unless it carries a business rule.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
