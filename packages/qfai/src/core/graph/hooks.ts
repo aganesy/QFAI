@@ -1122,6 +1122,8 @@ function heredocData(command: string, nested = false): string {
       if (character === "'") quote = undefined;
     } else if (character === "\\") {
       output += command[index + 1] ?? "";
+      // A continued line is still a line the earlier-line check must read.
+      if (command[index + 1] === "\n") lineOutput = output.length;
       index += 1;
     } else if (character === "$" && command[index + 1] === "(" && command[index + 2] !== "(") {
       outer.push({ quote, depth });
@@ -1174,7 +1176,11 @@ function heredocData(command: string, nested = false): string {
   return output;
 }
 
-/** The index after the delimiter line that closes the last of `bodies`, or undefined. */
+/**
+ * The index after the delimiter line that closes the last of `bodies`, or undefined. A
+ * line that starts with a delimiter but holds more, such as `EOF)`, also returns
+ * undefined: inside a substitution Bash may end the body there, so the body is kept.
+ */
 function heredocEnd(
   command: string,
   start: number,
@@ -1185,9 +1191,11 @@ function heredocEnd(
     let closed = false;
     while (!closed && position < command.length) {
       const end = command.indexOf("\n", position);
-      const line = command.slice(position, end < 0 ? command.length : end).replace(/\r$/, "");
+      const raw = command.slice(position, end < 0 ? command.length : end).replace(/\r$/, "");
+      const line = stripTabs ? raw.replace(/^\t+/, "") : raw;
       position = end < 0 ? command.length : end + 1;
-      closed = (stripTabs ? line.replace(/^\t+/, "") : line) === delimiter;
+      closed = line === delimiter;
+      if (!closed && line.startsWith(delimiter)) return undefined;
     }
     if (!closed) return undefined;
   }

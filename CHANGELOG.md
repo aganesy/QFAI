@@ -305,7 +305,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `'bash' <<EOF`, `bash.exe <<EOF`, a pipe to `bash` after the body, an
   unquoted delimiter that Bash expands, and similar shapes hid a search. A body
   is now left out of the scan only when its line writes files with `cat` or
-  `tee`, or opens a `git commit` or `gh` message as `"$(cat <<'EOF'`, with a
+  `tee`, or opens a `git commit`, `git tag` or `gh` message as `"$(cat <<'EOF'`, with a
   quoted delimiter and nothing before it but such lines.
 
 - **The search-protection hook says what it could not read.** A command whose

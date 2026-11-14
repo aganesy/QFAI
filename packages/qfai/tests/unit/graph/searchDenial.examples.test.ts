@@ -799,6 +799,10 @@ it("reads a here-document body as data, not as substitutions", () => {
     "eval \"$(cat <<'EOF'\n$(rg auth packages)\nEOF\n)\"",
     "bash -c \"$(cat <<'EOF'\n$(rg auth packages)\nEOF\n)\"",
     'git(){ eval "$2"; }\ngit commit -m "$(cat <<\'EOF\'\n$(rg auth packages)\nEOF\n)"',
+    // A continued line is an earlier line too, and a line that starts with the
+    // delimiter may end the body inside a substitution.
+    "eval \\\ngit commit -m \"$(cat <<'EOF'\n$(rg auth packages)\nEOF\n)\"",
+    "git commit -m \"$(cat <<'EOF'\nmsg\nEOF)\"\necho $(rg auth packages)\nEOF",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
