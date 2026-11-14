@@ -254,7 +254,12 @@ describe("a step that may pass with evidence", () => {
       /skip this section when the `Component catalogue` row is missing, reads `none`, or still holds its template placeholder/i,
     );
     expect(section).toMatch(/install it with the setup command its own documentation gives/i);
-    expect(section).toMatch(/add its registry to `uiux\.registries` in `qfai\.config\.yaml`/i);
+    expect(section).toMatch(
+      /when `uiux\.registries` has no entry for it, installed before or just now, add its registry there/i,
+    );
+    expect(section).toMatch(
+      /the catalogue needs no setup when it is installed and `uiux\.registries` has its entry/i,
+    );
     expect(section).toMatch(/install nothing and report the row and the reason/i);
     expect(flat(sectionOf(text, "## Procedure"))).toMatch(
       /5\. Set up the component catalogue as § Component catalogue says/i,
