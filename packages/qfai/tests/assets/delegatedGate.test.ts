@@ -105,3 +105,33 @@ describe("a gate the project runs in CI only is recorded as delegated", () => {
     });
   }
 });
+
+// Validate, tests, lint and build all pass on a screen nobody has looked at,
+// so a UI change carries a gate that reads its captures.
+describe("a UI change is verified by looking at its screens", () => {
+  for (const tree of TREES) {
+    it(`${tree}: adds a visual check that is UNRUN, never PASS, without captures`, async () => {
+      const repoGate = await read(tree, "assistant/step/verify-repo-gate/STEP.md");
+      const visual = flat(sectionOf(repoGate, "### Visual check of a UI change"));
+
+      expect(visual).toContain("a path `uiux.surfacePaths` selects");
+      expect(visual).toContain("recorded in `gates` as `visual check`");
+      expect(visual).toContain(
+        "qfai-sdd/references/ui-contract-guide.md` requires of every screen",
+      );
+      expect(visual).toContain(
+        "when a capture contradicts its contract or a required part is missing",
+      );
+      const contract = flat(
+        await read(tree, "assistant/skill/qfai-verify/references/verify-output-contract.md"),
+      );
+      expect(contract).toContain(
+        "The `visual check` gate of a UI change has no command: its `command` lists the captures it read",
+      );
+      expect(visual).toContain("UNRUN, never PASS, when a changed screen has no capture");
+      expect(flat(sectionOf(repoGate, "## Gate"))).toContain(
+        "is not PASS without a capture of every changed screen",
+      );
+    });
+  }
+});
