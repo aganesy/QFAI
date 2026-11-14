@@ -10,7 +10,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `references/business-ui-patterns.md`, which lists the standard parts, the
   anti-patterns and the usual catalogue source of a list, detail, form,
   settings, member-management and dashboard screen, and what every screen has.
-  The `sdd-contract` step, the implementation's UI reference and the
+  The `sdd-contract` step, the `implement-tdd` step and the
   product-surface reviewer cite it: a standard part left out needs a reason in
   the UI contract.
 

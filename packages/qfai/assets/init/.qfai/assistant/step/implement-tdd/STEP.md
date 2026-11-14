@@ -200,7 +200,9 @@ ordinary success. Existing approved alternative RED routes remain available.
 
 For UI-affecting work, follow
 `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`; source code
-alone does not prove the user-visible result. A component test carries only
+alone does not prove the user-visible result. Read each screen's type in
+`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`: build every part the contract names,
+and every part of its type the contract does not exclude with a reason. A component test carries only
 `QFAI:EX` annotations: a UI acceptance criterion's `QFAI:AC` annotation goes in
 an integration or API test, and a flow's `QFAI:BF` annotation in an E2E test, as
 `.qfai/assistant/rule/test-layers.md#annotation-routing` states. The route's

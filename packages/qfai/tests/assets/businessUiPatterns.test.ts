@@ -4,7 +4,7 @@
  * Without a description of what a standard screen of each type contains, the
  * agent's idea of done was the UI contract. The reference lists the parts of
  * each screen type, and the three stages that decide a screen read the same
- * file: the contract step, the implementation reference and the screen review.
+ * file: the contract step, the implementation step and the screen review.
  */
 
 import { readFile } from "node:fs/promises";
@@ -34,7 +34,7 @@ const SCREEN_TYPES = [
 
 const CITERS = [
   "step/sdd-contract/STEP.md",
-  "skill/qfai-implement/references/ui-affecting.md",
+  "step/implement-tdd/STEP.md",
   "agent/product-surface-reviewer.md",
 ];
 

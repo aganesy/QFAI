@@ -6,7 +6,6 @@ Read the UI surface paths `uiux.surfacePaths` declares in qfai.config.yaml, and 
 When a prototyping loop ran in this checkout, read its handoff at .qfai/prototype/final/handoff.json: the final prototype, its procurement and the implementation notes, or, for a restyle, its live routes, its stylesheet and motion entry points and the implementation notes.
 When `.qfai/prototype/progress.md` records `iterationKind` `restyle` with `restyleLevel` `none` and no handoff was written, the restyle stopped with nothing to fix: implement makes no change to the screens it covered.
 Read the flow, story, acceptance criterion, and example that the implementation changes.
-Read `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` for each screen's type: build every part the contract names, and every part of its type the contract does not exclude with a reason.
 
 ## Plain text in UI source
 
