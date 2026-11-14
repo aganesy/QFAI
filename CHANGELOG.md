@@ -313,11 +313,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook reads PowerShell comments.** A `<# ... #>`
+  block comment that starts a token ends at its `#>`, and a `#` line comment at
+  its line, so `<# x #> rg auth packages/` and a quote inside a comment before
+  a search on the next line are denied as searches. A block comment with no
+  `#>` fails closed. Where the start of a token is not certain, the comment
+  markers separate commands, so what lies between and after them is still
+  read. A search that appears only in a comment is not denied.
+
 - **The search-protection hook denies a command whose substitution it cannot
-  close.** A quote inside a comment in a `$(...)`, `<(...)` or PowerShell
-  `$(...)` body made the hook miss the closing parenthesis and skip the body,
-  so a search there ran. The hook now denies such a command and says it could
-  not find where the substitution ends.
+  close.** When the hook found no end for a `$(...)`, `<(...)`, `>(...)`,
+  subshell, PowerShell `(...)` or `@(...)`, backtick or here-document
+  substitution, for example because a quote inside a comment in its body
+  looked open, it skipped the body, so a search there ran. The hook now denies
+  such a command and says it could not find where the substitution ends.
 
 - **The search-protection hook denies a search behind a named descriptor or
   inside a substitution.** `{fd}<file grep -r foo src` and searches inside

@@ -765,12 +765,14 @@ it("denies a search inside a command or process substitution", () => {
 // QFAI:EX-0001-0235-27
 // Mutation: packages/qfai/src/core/graph/hooks.ts `if (!bodies) return failedGraphHook("substitution");` -> `if (false) return failedGraphHook("substitution");` fails "denies a command whose substitution end the scan cannot find"
 it("denies a command whose substitution end the scan cannot find", () => {
-  // The shell ends the `#` comment at its line and runs the search; the scan reads the
-  // quote in the comment as open and never finds the `)`, so the body is not dropped.
+  // The shell ends each comment (a POSIX `#` at its line, a PowerShell `<# #>` at `#>`) and
+  // runs the search; the scan reads the quote in the comment as open and finds no `)`.
   for (const [tool, command] of [
     ["Bash", 'echo "$(echo # \'\nrg auth packages/)"'],
     ["Bash", "echo $(echo # '\nrg auth packages/)"],
     ["Bash", "cat <(echo # '\nrg auth packages/)"],
+    ["Bash", "(echo # '\nrg auth packages/)"],
+    ["Bash", "cat <<EOF\n$(echo # '\nrg auth packages/)\nEOF"],
     ["PowerShell", 'Write-Output "$(<# \' #> rg auth packages/)"'],
   ] as const) {
     const result = classifyGraphExploration({ tool, command });
@@ -865,7 +867,7 @@ it("denies a search in a case arm, a subshell, a group or zsh process substituti
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `for (const body of expanded) bodies.push(...expandedSubstitutions(body));` -> `` fails "denies a search an unquoted here-document body expands"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `bodies.push(...nested);` -> `` fails "denies a search an unquoted here-document body expands"
 it("denies a search an unquoted here-document body expands", () => {
   for (const command of [
     "cat <<EOF\n$(grep -r foo src)\nEOF",
@@ -946,10 +948,67 @@ it("ends a # comment at its line so a quote inside it hides no later search", ()
   for (const command of ["echo hi # rg auth packages/", "echo hi # $(rg auth packages/)"]) {
     expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
   }
-  // PowerShell comments are not read, so a `#` there hides no substitution.
+  // A PowerShell block comment ends at its `#>`, and a `#` inside a word
+  // starts no comment, so neither hides a later substitution.
   for (const command of ["<# x #> $(rg auth packages/)", "echo @(1)#$(rg auth packages/)"]) {
     const result = classifyGraphExploration({ tool: "PowerShell", command });
     expect(result.decision, command).toBe("deny");
     expect(result.operation, command).toBe("rg");
+  }
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `index = end + 1;` -> `index = command.length;` fails "reads PowerShell line and block comments so a command after either is classified"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (end === -1) return undefined;` -> `if (end === -1) break;` fails "reads PowerShell line and block comments so a command after either is classified"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `wordStarted = !POWERSHELL_BREAK.test(character);` -> `wordStarted = false;` fails "reads PowerShell line and block comments so a command after either is classified"
+it("reads PowerShell line and block comments so a command after either is classified", () => {
+  for (const command of [
+    // The report: a block comment before a search, and a quote in a line
+    // comment before a search on the next line.
+    "<# x #> rg auth packages/",
+    "Write-Output x # '\nrg auth packages/",
+    "<# it's a note #> rg auth packages/",
+    "<# a\n' b #>\nrg auth packages/",
+    "# it's a note\nrg auth packages/",
+    "Write-Output x; # '\nrg auth packages/",
+    "Write-Output x | <# ' #> rg auth packages/",
+    // Where the start of a token is not certain, the comment markers separate
+    // commands, so what lies between and after them is still read.
+    "Write-Output a<# x #>rg auth packages/",
+    "$(<# x #> rg auth packages/)",
+    "Write-Output @(1) <# x #> rg auth packages/",
+    "Write-Output @(1)<#; rg auth packages/; #>",
+    // In a here-string a comment marker is data.
+    '@"\n<#\n"@\nrg auth packages/ #>',
+    '@"\n# \n"@\nrg auth packages/',
+    // A `#` inside a word starts no comment.
+    "Write-Output a#b; rg auth packages/",
+    // After a `$(` that may hold its own quotes inside a string, or a curly
+    // quote, where a string ends is not certain, so a `#` there stays text.
+    'Write-Output "$(" # ")"; rg auth packages/',
+    'Write-Output "$(" <# ")"; rg auth packages/; "$(" #> ")"',
+    `Write-Output ${String.fromCharCode(0x2018)} # ${String.fromCharCode(0x2019)}; rg auth packages/`,
+    `Write-Output ${String.fromCharCode(0x201c)} # ${String.fromCharCode(0x201d)}; rg auth packages/`,
+    `Write-Output ${String.fromCharCode(0x2018)} <# ${String.fromCharCode(0x2019)}; rg auth packages/; ${String.fromCharCode(0x2018)} #> ${String.fromCharCode(0x2019)}`,
+  ]) {
+    const result = classifyGraphExploration({ tool: "PowerShell", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("rg");
+  }
+  // A block comment with no `#>` leaves the script unparsable: fail closed.
+  for (const command of ["<# x rg auth packages/", "Write-Output a<# rg auth packages/"]) {
+    const result = classifyGraphExploration({ tool: "PowerShell", command });
+    expect(result.decision, command).toBe("deny");
+  }
+  // A search that exists only inside a comment is never run.
+  for (const command of [
+    "Write-Output hi # rg auth packages/",
+    "Write-Output hi # $(rg auth packages/)",
+    "Write-Output hi <# rg auth packages/ #>",
+    "Write-Output hi <# $(rg auth packages/) #>",
+    "<#\n'\n#> Write-Output hi",
+  ]) {
+    const result = classifyGraphExploration({ tool: "PowerShell", command });
+    expect(result.decision, command).toBe("allow");
   }
 });
