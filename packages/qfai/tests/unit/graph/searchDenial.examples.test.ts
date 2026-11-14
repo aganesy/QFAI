@@ -649,3 +649,35 @@ it("reads a here-document body as data, not as substitutions", () => {
   const deep = `${"echo $(".repeat(20)}grep -r foo src${")".repeat(20)}`;
   expect(classifyGraphExploration({ tool: "Bash", command: deep }).decision).toBe("deny");
 });
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `} else if (character === "#" && !word.length && startsComment(command, index, shell)) {` -> `} else if (false) {` fails "ends a # comment at its line so a quote inside it hides no later search"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!quote && character === "#" && startsComment(command, index, shell)) {` -> `if (false) {` fails "ends a # comment at its line so a quote inside it hides no later search"
+it("ends a # comment at its line so a quote inside it hides no later search", () => {
+  for (const [tool, command] of [
+    ["Bash", "echo # '\nrg auth packages/"],
+    ["Bash", 'echo hi # "\nrg auth packages/'],
+    ["Bash", "# it's a note\nrg auth packages/"],
+    ["Bash", "true;# '\nrg auth packages/"],
+    ["Bash", "echo # '\necho $(rg auth packages/)"],
+    ["PowerShell", "Write-Output x # '\nrg auth packages/"],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("rg");
+  }
+  // The shape the report gave: the quote a later line closes is a syntax
+  // error only after the search on the line between has run.
+  const reported = "echo # '\nrg auth packages/\n'";
+  expect(classifyGraphExploration({ tool: "Bash", command: reported }).decision).toBe("deny");
+  // A `#` inside a word, or quoted, starts no comment.
+  for (const command of ["echo a#b && rg auth packages/", "echo '#' && rg auth packages/"]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("rg");
+  }
+  // A search that exists only inside a comment is never run.
+  for (const command of ["echo hi # rg auth packages/", "echo hi # $(rg auth packages/)"]) {
+    expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
+  }
+});

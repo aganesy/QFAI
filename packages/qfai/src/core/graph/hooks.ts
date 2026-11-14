@@ -600,6 +600,17 @@ function resolveAlias(words: string[], shell: GraphShell): string[] {
     : words;
 }
 
+/**
+ * Whether the `#` at `index` opens a comment. In a POSIX shell and in PowerShell an unquoted
+ * `#` at the start of a word runs to the end of its line, so a quote inside it opens nothing and
+ * the next line is a command again. `cmd` has no such comment.
+ */
+function startsComment(command: string, index: number, shell: GraphShell): boolean {
+  if (shell === "cmd") return false;
+  const previous = command[index - 1];
+  return previous === undefined || /[\s;&|()]/.test(previous);
+}
+
 function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | undefined {
   const commands: ShellCommand[] = [];
   let words: string[] = [];
@@ -632,6 +643,9 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     if (quote) {
       if (character === quote) quote = undefined;
       else word += character;
+    } else if (character === "#" && !word.length && startsComment(command, index, shell)) {
+      const end = command.indexOf("\n", index);
+      index = (end === -1 ? command.length : end) - 1;
     } else if (character === '"' || character === "'") {
       quote = character;
     } else if (
@@ -703,6 +717,12 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
     }
     if (quote === "'") {
       if (character === "'") quote = undefined;
+      continue;
+    }
+    if (!quote && character === "#" && startsComment(command, index, shell)) {
+      const end = command.indexOf("\n", index);
+      if (end === -1) break;
+      index = end;
       continue;
     }
     if (character === "'" && !quote) {
