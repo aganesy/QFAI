@@ -1210,9 +1210,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
   "QFAI-UITEXT-001":
-    "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert or the like) or has a `qfai-text` comment with `why` and `without` directly before it or before its parent element.",
+    "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert or the like) or has a `qfai-text` comment with `why` and `without` directly before it or before its parent element, or a `qfai-text-file` comment in its file gives it one.",
   "QFAI-UITEXT-002":
-    "Every `qfai-text` comment before a plain text holds exactly a non-empty `why` and a non-empty `without` that say different things.",
+    "Every `qfai-text` comment before a plain text, and every `qfai-text-file` comment, holds exactly a non-empty `why` and a non-empty `without` that say different things.",
   "QFAI-UITEXT-003":
     "When `uiux.surfacePaths` selects `.tsx` or `.jsx` files, the project installs `typescript` so the plain-text check can read them.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
