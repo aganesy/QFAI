@@ -49,7 +49,9 @@ describe("a plain text without a reason fails", () => {
     });
     const found = await uitext(root);
     expect(found.map((item) => [item.code, item.severity])).toEqual([["QFAI-UITEXT-001", "error"]]);
-    expect(found[0]?.suggested_action).toMatch(/Delete[\s\S]*Replace[\s\S]*Move[\s\S]*reason/);
+    expect(found[0]?.suggested_action).toMatch(
+      /needs this text[\s\S]*reason[\s\S]*delete[\s\S]*replace[\s\S]*move/,
+    );
     expect(await uitext(root, "sdd")).toEqual([]);
   });
 });
@@ -124,7 +126,7 @@ describe("the duty reaches the agents that write and review screens", () => {
     ]) {
       const text = await read(writer);
       expect(text).toContain("qfai-text: why=");
-      expect(text).toMatch(/^1\. Delete/m);
+      expect(text).toMatch(/a text the user needs|is needed\. Keep it and write its reason/);
     }
     for (const reviewer of [
       "skill/qfai-prototyping/references/reviewer-prompt.md",

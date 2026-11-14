@@ -33,7 +33,11 @@ const WRITERS = [
   PROCEDURE,
   "agent/fullstack-engineer.md",
 ];
-const POINTERS = WRITERS.filter((file) => file !== PROCEDURE);
+/** Each writer that defers to the one copy, and the file that names its path for it. */
+const POINTERS = [
+  ["agent/fullstack-engineer.md", "agent/fullstack-engineer.md"],
+  ["skill/qfai-prototyping/references/generator-prompt.md", "step/prototyping-loop/STEP.md"],
+] as const;
 const REVIEWERS = [
   "skill/qfai-prototyping/references/reviewer-prompt.md",
   "agent/product-surface-reviewer.md",
@@ -56,9 +60,10 @@ describe("the plain-text duty reaches writers and reviewers", () => {
     );
   });
 
-  it.each(POINTERS)("%s points to the one copy instead of repeating it", async (file) => {
+  it.each(POINTERS)("%s defers to the one copy, which %s names", async (file, namer) => {
+    expect(await read(namer)).toContain(`.qfai/assistant/${PROCEDURE}`);
     const text = await read(file);
-    expect(text).toContain(`.qfai/assistant/${PROCEDURE}`);
+    expect(text).toMatch(/a text the user needs[\s\S]*?stays with its reason/);
     expect(text).not.toMatch(/^\s*1\. Delete it\./m);
   });
 
