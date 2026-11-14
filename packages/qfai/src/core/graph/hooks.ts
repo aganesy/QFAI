@@ -732,7 +732,12 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     } else if (/\s/.test(character)) {
       flushWord();
     } else {
-      if (character === ">" && !/^\d*$/.test(word) && !/[<>]$/.test(word) && word !== "&") {
+      if (
+        (character === ">" || character === "<") &&
+        !/^\d*$/.test(word) &&
+        !/[<>]$/.test(word) &&
+        word !== "&"
+      ) {
         flushWord();
       }
       word += character;

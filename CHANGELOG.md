@@ -149,6 +149,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   worktree in the same command, the denial still offers the AI-decided
   fallback. A move anywhere else, or to a target the command text does not
   spell out, still makes the fallback unavailable.
+- **The search-protection hook denies a search with an input redirection
+  attached to its name.** `grep</dev/null -r foo src` and `grep<&3 -r foo .`
+  were allowed as outside the checked boundary, while `grep>/dev/null -r foo
+src` was denied. A `<` after a command name now starts a new word, as `>`
+  does, so both are denied.
 - **The search-protection hook treats the PowerShell alias `sls` as
   `Select-String`.** `sls -Pattern authorize -Path packages/**/*.ts` was
   allowed as outside the checked boundary while the same command spelled

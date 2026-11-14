@@ -627,6 +627,11 @@ it("denies piped searches that still read project files", () => {
     expect(attached.decision, command).toBe("deny");
     expect(attached.operation, command).toBe("rg");
   }
+  for (const command of ["grep</dev/null -r foo src", "grep<&3 -r foo ."]) {
+    const attached = classifyGraphExploration({ tool: "Bash", command });
+    expect(attached.decision, command).toBe("deny");
+    expect(attached.operation, command).toBe("grep");
+  }
   for (const command of ['rg auth "&>" /etc/passwd', "rg auth packages &> out.txt"]) {
     const redirected = classifyGraphExploration({ tool: "Bash", command });
     expect(redirected.decision, command).toBe("deny");
