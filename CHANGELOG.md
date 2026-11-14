@@ -199,6 +199,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   language followed by `(translated)`, so a language scan on the file does not
   fail on the user's wording.
 
+- **The test-layers rule recommends one navigation journey per role.** Where
+  an app has its own navigation, an E2E test signs in as each role and reaches
+  every screen the UI contracts declare for that role through the app's own
+  links and controls, so the suite catches a screen reachable only by typing
+  its URL.
+
 - **The launcher preflight moved into its own short reference.** It now lives
   in `.qfai/assistant/rule/references/launcher-preflight.md`, and the shared
   operating baseline only points to it. `qfai-run` states the common case
