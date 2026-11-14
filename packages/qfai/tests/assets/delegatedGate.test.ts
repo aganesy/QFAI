@@ -116,7 +116,18 @@ describe("a UI change is verified by looking at its screens", () => {
 
       expect(visual).toContain("a path `uiux.surfacePaths` selects");
       expect(visual).toContain("recorded in `gates` as `visual check`");
-      expect(visual).toContain("against the parts the UI contract guide requires of every screen");
+      expect(visual).toContain(
+        "`qfai-sdd/references/ui-contract-guide.md` requires of every screen",
+      );
+      expect(visual).toContain(
+        "when a capture contradicts its contract or a required part is missing",
+      );
+      const contract = flat(
+        await read(tree, "assistant/skill/qfai-verify/references/verify-output-contract.md"),
+      );
+      expect(contract).toContain(
+        "The `visual check` gate of a UI change has no command: its `command` lists the captures it read",
+      );
       expect(visual).toContain("UNRUN, never PASS, when a changed screen has no capture");
       expect(flat(sectionOf(repoGate, "## Gate"))).toContain(
         "is not PASS without a capture of every changed screen",

@@ -63,17 +63,20 @@ to run it and provide the output. Never assume PASS without evidence.
 
 A change that touches a path `uiux.surfacePaths` selects has one more gate in
 scope, recorded in `gates` as `visual check`. It has no command: passing tests
-and a clean validation say nothing about what a user sees.
+and a clean validation say nothing about what a user sees. Its `command` lists
+the captures it read, as `verify-output-contract.md` says.
 
 1. Take the captures of each changed screen from the screen review the change
    went through, as
    `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md` says.
 2. Check each capture against the screen's UI contract and against the parts
-   the UI contract guide requires of every screen.
+   `.qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md` requires of
+   every screen.
 3. Record the result:
    - PASS only when every changed screen has a capture at the revision under
-     verification and none lacks a required part;
-   - FAIL, naming the screen and the part, when a required part is missing;
+     verification that matches its contract and lacks no required part;
+   - FAIL, naming the screen and what differs, when a capture contradicts its
+     contract or a required part is missing;
    - UNRUN, never PASS, when a changed screen has no capture.
 
 ## Fix loop
