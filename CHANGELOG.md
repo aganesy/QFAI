@@ -488,6 +488,14 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   of `cat <<EOF` is denied like the same search run directly. A quoted
   delimiter such as `<<'EOF'` still keeps its body as data.
 
+- **The search-protection hook reads compound commands, PowerShell script
+  blocks and here-strings.** A search after `if`, `then`, `elif`, `else`,
+  `while`, `until`, `do`, `!` or `time` is denied, and so is one inside a
+  PowerShell script block such as `ForEach-Object { rg foo $_ }`. A pipe
+  filter inside a group, such as `git log | { grep fix; }`, is allowed like
+  the same filter without the group. A PowerShell here-string is read as one
+  string, so an apostrophe in its text no longer ends it.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added

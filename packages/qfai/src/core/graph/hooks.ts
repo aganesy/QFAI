@@ -101,7 +101,10 @@ function classifyShellText(
   if (depth > 16) return failedGraphHook("depth");
   // Nested text, such as a `bash -c` argument or a substitution body, skips no
   // here-document body: what reads its output lies outside it.
-  const source = scope.shell === "powershell" ? withoutPowerShellComments(text) : text;
+  // A here-string is read as one string first, so a comment marker or a quote in its text is
+  // data to the comment reader too.
+  const source =
+    scope.shell === "powershell" ? withoutPowerShellComments(powershellHereStrings(text)) : text;
   const commands =
     source === undefined ? undefined : shellPipelines(source, scope.shell, depth > 0);
   // Text in a substitution that cannot be read as commands is no verdict of its own.
@@ -120,6 +123,44 @@ function classifyShellText(
     ),
   );
 }
+
+/**
+ * PowerShell text with each here-string read as a plain string. The body of `@'...'@` is
+ * literal, so it becomes `''`; a quote inside it, such as the apostrophe in `It's`, no longer
+ * ends a string early. The body of `@"..."@` still expands `$(...)`, so it stays inside double
+ * quotes with its own double quotes removed.
+ */
+function powershellHereStrings(text: string): string {
+  let output = "";
+  let quote: string | undefined;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index] ?? "";
+    if (character === "`" && quote !== "'") {
+      output += character + (text[index + 1] ?? "");
+      index += 1;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) quote = undefined;
+      output += character;
+      continue;
+    }
+    // Only an `@'` or `@"` outside a string opens one, and whichever opens first is the string.
+    hereString.lastIndex = index;
+    const match = character === "@" ? hereString.exec(text) : null;
+    if (match) {
+      output += match[1] === "'" ? "''" : `"${(match[2] ?? "").replace(/"/g, "")}"`;
+      index = hereString.lastIndex - 1;
+      continue;
+    }
+    if (character === "'" || character === '"') quote = character;
+    output += character;
+  }
+  return output;
+}
+
+/** A PowerShell here-string: `@'` or `@"` at a line end, closed by `'@` or `"@` at a line start. */
+const hereString = /@(['"])[ \t]*\r?\n([\s\S]*?)\r?\n\1@/y;
 
 type NestedClassification = (
   location: ShellLocation,
@@ -176,12 +217,11 @@ function classifyCommands(
         ? "unknown"
         : movedLocation(location, operand, command, commands[index + 1], scope);
     }
-    const decision = classifyCommand(
-      words,
-      { ...scope, location, redefined },
-      depth,
-      command.upstream,
-    );
+    // A group reads the pipe before it only when its `}` redirects nothing: in
+    // `git log | { grep fix; } < .env` the group reads `.env`.
+    const upstream =
+      words[0] === "{" && !groupClosesBare(commands, index) ? undefined : command.upstream;
+    const decision = classifyCommand(words, { ...scope, location, redefined }, depth, upstream);
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
@@ -198,6 +238,8 @@ function redefinesCommands(words: string[]): boolean {
   for (;;) {
     const redirection = redirectionLength(words[offset]);
     if (redirection) offset += redirection;
+    // A group's `{` defines nothing itself; the command it opens is read instead.
+    else if (words[offset] === "{") offset += 1;
     else if (["builtin", "command", "env"].includes(words[offset]?.toLowerCase() ?? "")) {
       offset += 1;
       while (words[offset]?.startsWith("-")) {
@@ -276,10 +318,29 @@ function redirectionLength(word: string | undefined): number {
  * a `+N` operand rotates the directory stack, and a colon other than a drive letter's
  * names a PowerShell provider drive such as `env:`, not a folder.
  */
+/** Whether the `{` group opened at `index` closes with a bare `}`, which redirects nothing. */
+function groupClosesBare(commands: ShellCommand[], index: number): boolean {
+  let depth = 0;
+  for (const { words } of commands.slice(index)) {
+    const opened = words.findIndex((word) => word !== "{");
+    depth += opened < 0 ? words.length : opened;
+    if (words[0]?.startsWith("}")) {
+      depth -= 1;
+      if (depth <= 0) return words.length === 1 && words[0] === "}";
+    }
+  }
+  return false;
+}
+
 function directoryOperand(words: string[]): string | null | undefined {
   let offset = 0;
   while (offset < words.length) {
-    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) {
+    // `if cd /tmp` and `{ cd /tmp` move as `cd /tmp` does.
+    if (
+      /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "") ||
+      words[offset] === "{" ||
+      COMPOUND_KEYWORDS.includes(words[offset] ?? "")
+    ) {
       offset += 1;
       continue;
     }
@@ -380,6 +441,19 @@ function authorizeAt(context: CommandContext, decision: GraphHookDecision): Grap
   return authorize({ ...denyExploration(decision.operation, relative), exceptionEligible: true });
 }
 
+/** POSIX words that start a compound command or one of its parts, followed by a command. */
+const COMPOUND_KEYWORDS: readonly string[] = [
+  "if",
+  "then",
+  "elif",
+  "else",
+  "while",
+  "until",
+  "do",
+  "!",
+  "time",
+];
+
 function classifyCommand(
   words: string[],
   context: CommandContext,
@@ -399,10 +473,18 @@ function classifyCommand(
     return classifyCommand(words.slice(offset), context, depth + 1);
   }
   const operation = commandName(words);
+  // A compound-command keyword runs the command after it: `if grep ...`, `then grep ...`,
+  // `do grep ...`, `! grep ...`, `time -p grep ...`. `fi` and `done` run nothing.
+  if (COMPOUND_KEYWORDS.includes(words[0] ?? "")) {
+    const skip = words[0] === "time" && words[1] === "-p" ? 2 : 1;
+    return classifyCommand(words.slice(skip), context, depth + 1);
+  }
+  if (words[0] === "fi" || words[0] === "done") return undefined;
   // A `{ ...; }` group and a `case` command's first arm run the command after their
-  // opening words. `classifyCommands` strips the pattern of each later arm.
+  // opening words. `classifyCommands` strips the pattern of each later arm. A group
+  // keeps the pipeline stage before it, so `git log | { grep fix; }` is a filter.
   if (operation === "{") {
-    return classifyCommand(words.slice(1), context, depth + 1);
+    return classifyCommand(words.slice(1), context, depth + 1, upstream);
   }
   if (operation === "case") {
     const subject = words.indexOf("in");
@@ -1152,6 +1234,19 @@ function substitutionBodies(text: string, shell: GraphShell, nested = false): st
       if (end === undefined) break;
       bodies.push(command.slice(index + 1, end));
       index = end;
+    } else if (
+      !quote &&
+      shell === "powershell" &&
+      character === "{" &&
+      command[index - 1] !== "@"
+    ) {
+      // A script block, such as the one `ForEach-Object { rg foo $_ }` runs, holds commands.
+      // A hashtable `@{...}` holds keys, and a brace this scan cannot close is text; the scan
+      // goes on inside either, so a `$(...)` there is still read.
+      const end = closingBrace(command, index + 1);
+      if (end === undefined) continue;
+      bodies.push(command.slice(index + 1, end));
+      index = end;
     } else if (shell === "posix" && character === "`") {
       const end = closingBacktick(command, index + 1);
       if (end === undefined) break;
@@ -1161,6 +1256,25 @@ function substitutionBodies(text: string, shell: GraphShell, nested = false): st
   }
   for (const body of expanded) bodies.push(...expandedSubstitutions(body));
   return bodies;
+}
+
+/** The index of the `}` that closes a PowerShell brace opened before `start`, outside quotes. */
+function closingBrace(command: string, start: number): number | undefined {
+  let depth = 1;
+  let quote: string | undefined;
+  for (let index = start; index < command.length; index += 1) {
+    const character = command[index];
+    if (character === "`" && quote !== "'") index += 1;
+    else if (quote) {
+      if (character === quote) quote = undefined;
+    } else if (character === "'" || character === '"') quote = character;
+    else if (character === "{") depth += 1;
+    else if (character === "}") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return undefined;
 }
 
 /** The index of the backtick that closes one opened before `start`, or undefined. */
