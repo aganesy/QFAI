@@ -274,7 +274,8 @@ static page is plain text too. Plain text is a literal text node outside a headi
 the plain-text procedure in the implementation UI guidance, which the
 `prototyping-loop` step lists: a text the user needs, such as a result, a cost,
 a consequence or an empty state's next step, stays with its reason; any other
-text is deleted, replaced or moved first.
+text is first deleted, replaced or moved, and kept with a reason only when none
+of those works.
 
 ```html
 <!-- qfai-text: why=the fee is charged only on this step; without=users pay a fee they never saw -->

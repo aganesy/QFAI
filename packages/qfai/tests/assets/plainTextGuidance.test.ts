@@ -61,7 +61,10 @@ describe("the plain-text duty reaches writers and reviewers", () => {
   });
 
   it.each(POINTERS)("%s defers to the one copy, which %s names", async (file, namer) => {
-    expect(await read(namer)).toContain(`.qfai/assistant/${PROCEDURE}`);
+    const naming = await read(namer);
+    const at = naming.indexOf("## Plain text");
+    const section = at === -1 ? naming : naming.slice(at);
+    expect(section).toContain(`.qfai/assistant/${PROCEDURE}`);
     const text = await read(file);
     expect(text).toMatch(/a text the user needs[\s\S]*?stays with its reason/);
     expect(text).not.toMatch(/^\s*1\. Delete it\./m);
@@ -71,6 +74,11 @@ describe("the plain-text duty reaches writers and reviewers", () => {
     const text = await read(file);
     expect(text).toContain("qfai-text");
     expect(text).toContain("supplements");
+  });
+
+  it.each(REVIEWERS)("%s keeps a text the user needs out of excess", async (file) => {
+    const text = (await read(file)).replace(/\s+/g, " ");
+    expect(text).toMatch(/is excess even with a reason, unless it tells the user a result, a cost/);
   });
 
   it("leaves no shipped statement that validate checks contract copy or a rendered dump", async () => {

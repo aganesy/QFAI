@@ -69,7 +69,7 @@ const VOID_ELEMENTS = new Set([
   "wbr",
 ]);
 const REMEDIES =
-  "If the user needs this text here (a result, a cost, a condition, a consequence, a destination, a recovery step, or an empty state's next step), keep it and write the reason before it: `<!-- qfai-text: why=<why it must exist>; without=<what goes wrong without it> -->`, or `{/* qfai-text: ... */}` in JSX. Otherwise delete it, replace it with another component (an icon with an accessible name, a state, a badge), or move its job to an existing element (a label, a heading, the button wording).";
+  "If the user needs this text here (a result, a cost, a condition, a consequence, a destination, a recovery step, or an empty state's next step), keep it and write the reason before it: `<!-- qfai-text: why=<why it must exist>; without=<what goes wrong without it> -->`, or `{/* qfai-text: ... */}` in JSX. Otherwise delete it, replace it with another component (an icon with an accessible name, a state, a badge), or move its job to an existing element (a label, a heading, the button wording). If none of these works without losing what the user needs, keep it and write its reason.";
 
 export type UiPlainTextOptions = {
   /** Loads the project's `typescript`; the default resolves it from the project root. */

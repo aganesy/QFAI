@@ -262,7 +262,10 @@ judge:
   restates the text.
 - A text that could be deleted, replaced by another component (an icon with an
   accessible name, a disabled state, a badge) or moved into a label, heading,
-  button wording or empty state is excess even with a reason.
+  button wording or empty state is excess even with a reason, unless it tells
+  the user a result, a cost, a condition, a consequence, a destination, a
+  recovery step or an empty state's next step: such a text stays with its
+  reason.
 - Judge whether the copy the UI contract describes (`supplements`, group
   headings) is needed at all.
 
