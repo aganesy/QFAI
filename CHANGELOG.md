@@ -22,6 +22,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Implementation and prototype reviewers may raise a UI contract gap.**
+  `reviewer-remit.md` puts a screen whose UI contract leaves out a part the
+  UI contract guide requires of every screen in scope for `/qfai-implement`
+  and `/qfai-prototyping` review. The finding is routed to `/qfai-sdd`, and it
+  blocks when a required part is missing.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
