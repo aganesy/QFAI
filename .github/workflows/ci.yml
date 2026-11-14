@@ -752,15 +752,15 @@ jobs:
           #
           # A clean gate: each profile reports no `error` on the repository's
           # own story tree, so any error fails the build.
-          # SHIPPED-CI: not-applicable
-          # Because: this lane validates this repository's own story tree, and
-          # the shipped validate workflow already fails on any error.
+          # The three runs share this step's annotation cap, so the closing
+          # list of failed profiles goes to the log and the job summary rather
+          # than taking an annotation slot.
           failed=""
           node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error --format github --root . || failed="$failed tdd"
           node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --format github --root . || failed="$failed sdd"
           node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --format github --root . || failed="$failed full"
           if [ -n "$failed" ]; then
-            echo "::error::qfai validate failed for profile(s):$failed"
+            echo "qfai validate failed for profile(s):$failed" | tee -a "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 

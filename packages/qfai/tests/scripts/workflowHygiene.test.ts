@@ -1108,7 +1108,7 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
     // `always()` on the declared job stands property 2 down for the whole `needs` closure —
     // correctly, because a skipped dependency is the state `always()` exists to classify — but
     // property 3 would go on counting a skipped dependency's steps as performed. Measured against
-    // the lane: `if: false` on `build` leaves all six build-side verification items reading as
+    // the lane: `if: false` on `build` leaves all four build-side verification items reading as
     // performed, and since the aggregate verdict accepts `skipped`, the required context would go
     // green with the pack verification and all three self-validates never run.
     //

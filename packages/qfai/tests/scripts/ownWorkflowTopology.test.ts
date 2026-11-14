@@ -927,9 +927,9 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
         forRequired === undefined ? undefined : forRequired["verificationSet"],
         "this row's literals and the declaration production reads must not drift apart",
       )
-      // The declaration names SEVEN items and this row restates four, and the difference is not
-      // drift: the other three belong to jobs other than `build` — the verdict step to the
-      // declared job itself, and two to `lint`. The pre-flight refusal of the local composite
+      // The declaration names EIGHT items and this row restates four, and the difference is not
+      // drift: the other four belong to jobs other than `build` — the classifier to `detect`,
+      // the verdict step to the declared job itself, and two to `lint`. The pre-flight refusal of the local composite
       // actions has to run before that job invokes one; `pnpm ci:lint` is the lint job's own work,
       // pinned by body because being in the aggregate is not the same claim as still doing the
       // work. Composed here rather than added to `REQUIRED`, which is checked against

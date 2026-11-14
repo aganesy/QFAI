@@ -241,13 +241,15 @@ describe("BF-0002 CI verdict examples", () => {
         expect.objectContaining({ name: "Run qfai validate gate (fail on error)" }),
       ]),
     );
-    const fullProfile = buildSteps.find(
+    const selfValidate = buildSteps.find(
       (step) =>
         step["name"] === "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
     );
-    expect(fullProfile?.["run"]).toContain(
-      "node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --format github --root .",
-    );
+    for (const profile of ["tdd", "sdd", "full"]) {
+      expect(selfValidate?.["run"]).toContain(
+        `node packages/qfai/dist/cli/index.mjs validate --profile ${profile} --fail-on error --format github --root .`,
+      );
+    }
     const sandboxValidate = buildSteps.find(
       (step) => step["name"] === "Run qfai validate gate (fail on error)",
     );
