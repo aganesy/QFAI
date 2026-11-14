@@ -53,6 +53,10 @@ describe("business UI pattern reference", () => {
         expect(section).toContain("Catalogue:");
       }
       expect(text).toContain(".qfai/assistant/rule/ui-procurement.md");
+      expect(text).toContain(
+        ".agents/rules/interface-clarity.md#what-a-business-screen-always-has",
+      );
+      expect(text).toContain(".qfai/assistant/rule/drift-protocol.md");
     });
 
     it(`${tree}: the contract step, the implementation and the screen review cite it`, async () => {

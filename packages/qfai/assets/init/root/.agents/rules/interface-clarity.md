@@ -137,3 +137,5 @@ screen it is missing from. A part left out without one is a defect, not a cut.
   `.qfai/assistant/rule/ui-definition-protocol.md`
 - Where a screen's components and layouts come from:
   `.qfai/assistant/rule/ui-procurement.md`
+- What each type of business screen contains:
+  `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`

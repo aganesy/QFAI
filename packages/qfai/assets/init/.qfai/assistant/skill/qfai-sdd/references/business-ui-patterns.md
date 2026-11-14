@@ -5,8 +5,11 @@ to a screen; this reference lists what a screen of its type has anyway, so the
 contract is not mistaken for the whole screen. The contract author, the
 implementer and the screen reviewer read the same entry.
 
-A part this reference lists is in scope unless the screen's UI contract records
-why the screen leaves it out. Where a part comes from is
+The parts every business application has are
+`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`; this
+reference adds what each type of screen has. A part of a type counts as asked
+for once the screen's UI contract names it: the contract author writes it there
+or records why the screen leaves it out. Where a part comes from is
 `.qfai/assistant/rule/ui-procurement.md`: most of these are a catalogue block
 or a design-system component, not authored code.
 
@@ -26,7 +29,8 @@ or a design-system component, not authored code.
 - **Place in the app.** The app shell's navigation shows which section the
   screen is in; a screen below the top level shows the way back.
 - **States.** `default`, `empty`, `loading`, `error` and `success` each render
-  something the user can act on.
+  as the screen's UI contract `states` entry describes, or carry `none` with
+  the reason.
 - **Feedback.** Every change the user makes is confirmed where they made it,
   and a failure says what was not done and how to retry.
 
@@ -42,7 +46,7 @@ Standard parts:
 
 - a title with the primary action that creates an item;
 - search, and filters for the attributes users narrow by;
-- sortable columns, with the default order stated by the column that holds it;
+- sortable columns, the column the list is sorted by by default marked as such;
 - a total count, and pagination or incremental loading once the list can
   outgrow one screen;
 - each row opens the item's detail; row actions only for what users do without
@@ -144,8 +148,10 @@ Catalogue: stat cards, a task list, an activity feed.
 - **Writing a UI contract.** For each screen, name its type here, then write
   in the contract the parts this screen needs, and the reason for a part it
   leaves out.
-- **Implementing.** Build every part the contract names and every part its
-  type lists that the contract does not exclude.
+- **Implementing.** Build what the contract names. A part of the screen's type
+  that the contract neither names nor excludes with a reason is drift: raise
+  it to the contract stage under `.qfai/assistant/rule/drift-protocol.md`
+  instead of building it.
 - **Reviewing a screen.** A part of its type that is missing with no recorded
   reason is a finding against the screen, named with the part and the type.
 

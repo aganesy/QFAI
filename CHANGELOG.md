@@ -11,8 +11,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   anti-patterns and the usual catalogue source of a list, detail, form,
   settings, member-management and dashboard screen, and what every screen has.
   The `sdd-contract` step, the `implement-tdd` step and the
-  product-surface reviewer cite it: a standard part left out needs a reason in
-  the UI contract.
+  product-surface reviewer cite it, and `interface-clarity.md` links to it: a
+  standard part of a screen type is written into the UI contract or left out
+  with a reason, and implementation raises a part the contract misses as drift
+  instead of building it.
 
 - **`.agents/rules/interface-clarity.md` says what a business screen always
   has.** A new section lists, per application, an app shell with navigation
