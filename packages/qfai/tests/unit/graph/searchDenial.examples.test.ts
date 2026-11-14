@@ -1053,10 +1053,14 @@ it("denies a search after a compound-command keyword", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (/\)\)$/.test(words[0] ?? "") && (words[1] === "{" || words[1] === "do")) {` -> `if (false) {` fails "denies a search in the body of an arithmetic for loop"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (body) return classifyCommand(body, context, depth + 1);` -> `` fails "denies a search in the body of an arithmetic for loop"
 it("denies a search in the body of an arithmetic for loop", () => {
   for (const command of [
     "for ((;;)) { rg auth packages/; }",
+    "for ((;;)){ rg auth packages/; }",
+    "for (( i=0; i<3; i++ )) { rg auth packages/; }",
+    "for (( i=0; i<3; i++ )) do rg auth packages/; done",
+    "for ((;;)) do alias grep='rg -r x .'; done; git log | grep fix",
     "for ((i=0; i<1; i++)) { rg auth packages/; }",
     "for ((i=0; i<1; i++)) do rg auth packages/; done",
     "for ((i=0; i<1; i++ #\n)) { rg auth packages/; }",
@@ -1065,11 +1069,11 @@ it("denies a search in the body of an arithmetic for loop", () => {
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
-    expect(result.operation, command).toBe("rg");
   }
   for (const command of [
     "for ((i=0; i<1; i++)) { echo ok; }",
     "for ((i=0; i<1; i++)); do echo ok; done",
+    "echo $((1)) do rg auth packages/",
   ]) {
     expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
   }

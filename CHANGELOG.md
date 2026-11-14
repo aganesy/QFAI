@@ -329,9 +329,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such a command and says it could not find where the substitution ends.
 
 - **The search-protection hook denies a search in an arithmetic `for` body.**
-  `for ((;;)) { rg auth packages/; }` and `for ((i=0; i<1; i++)) do rg ...;
-done` were allowed: the `))` that closes the header began the body's command.
-  The body after it, a `{ ...; }` group or `do ...`, is now classified.
+  A search after the header of a `for ((...))` loop was allowed, as in
+  `for ((;;)) { rg auth packages/; }` or a header closed by `i++ ))` or `)){`:
+  the `))` began the command of the body. The body after it, a `{ ...; }` group
+  or `do ...`, is now classified, and a definition in it is seen.
 
 - **The search-protection hook denies a search behind a named descriptor or
   inside a substitution.** `{fd}<file grep -r foo src` and searches inside
