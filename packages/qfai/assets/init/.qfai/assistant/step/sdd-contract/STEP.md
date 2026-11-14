@@ -95,6 +95,11 @@ as elements, actions and `supplements` entries with their `when`. Such a part ne
 business rule. A part left out gets its reason in that screen's contract, as
 the rule says.
 
+Then name each screen's type in
+`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` and write
+the parts of that type the screen needs into its contract the same way, with
+the reason for each part it leaves out.
+
 Check every text element the discussion or the story proposes against the
 screen's tasks and the information the user needs at that point. A text that
 repeats a heading, an action, or a condition the user already has is left out;

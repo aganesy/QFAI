@@ -45,6 +45,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   profiles. A row that is empty, a template placeholder or states none raises
   nothing.
 
+- **A business UI pattern reference.** `qfai-sdd` ships
+  `references/business-ui-patterns.md`, which lists the standard parts, the
+  anti-patterns and the usual catalogue source of a list, detail, form,
+  settings, member-management and dashboard screen, and what every screen has.
+  The `sdd-contract` step, the `implement-tdd` step and the
+  product-surface reviewer cite it, and `interface-clarity.md` links to it: a
+  standard part of a screen type is written into the UI contract or left out
+  with a reason, and implementation raises a part the contract misses as drift
+  instead of building it.
+
 - **A UI contract screen lists its states.** The shipped
   `ui-contract.sample.yaml`, the UI contract guide, the contract artifact rules
   and the `sdd-contract` step give every screen a `states` list: `default`,
@@ -302,6 +312,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   screen done.
 
 ### Fixed
+
+- **The search-protection hook reads PowerShell comments.** A `<# ... #>`
+  block comment that starts a token ends at its `#>`, and a `#` line comment at
+  its line, so `<# x #> rg auth packages/` and a quote inside a comment before
+  a search on the next line are denied as searches. A block comment with no
+  `#>` fails closed. Where the start of a token is not certain, the comment
+  markers separate commands, so what lies between and after them is still
+  read. A search that appears only in a comment is not denied.
 
 - **The search-protection hook denies a search behind a named descriptor or
   inside a substitution.** `{fd}<file grep -r foo src` and searches inside

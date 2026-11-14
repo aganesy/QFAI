@@ -101,16 +101,20 @@ function classifyShellText(
   if (depth > 16) return failedGraphHook("depth");
   // Nested text, such as a `bash -c` argument or a substitution body, skips no
   // here-document body: what reads its output lies outside it.
-  const commands = shellPipelines(text, scope.shell, depth > 0);
+  const source = scope.shell === "powershell" ? withoutPowerShellComments(text) : text;
+  const commands =
+    source === undefined ? undefined : shellPipelines(source, scope.shell, depth > 0);
   // Text in a substitution that cannot be read as commands is no verdict of its own.
-  if (!commands) return substitution ? undefined : failedGraphHook("quote");
+  if (source === undefined || !commands) {
+    return substitution ? undefined : failedGraphHook("quote");
+  }
   return classifyCommands(
     commands,
     scope,
     depth,
     redefinedOutside,
     start,
-    substitutionBodies(text, scope.shell, depth > 0).map(
+    substitutionBodies(source, scope.shell, depth > 0).map(
       (body) => (location: ShellLocation, redefines: boolean) =>
         classifyShellText(body, scope, depth + 1, redefines, location, true),
     ),
@@ -740,9 +744,8 @@ const WORD_BREAK = /[ \t\n;&|()]/;
  * shell an unquoted `#` at the start of a word runs to the end of its line, so a quote inside it
  * opens nothing and the next line is a command again. The caller must know no word is under way:
  * an escaped separator or a closed substitution before the `#` puts it inside a word.
- * Ceiling: PowerShell and `cmd` comments are not read, because a PowerShell `<# ... #>` block
- * comment can end mid-line; a quote inside a PowerShell comment still fails closed as an
- * unmatched quote. Reading PowerShell comments needs block comments handled first.
+ * PowerShell comments are removed before this reader runs: `withoutPowerShellComments`.
+ * Ceiling: `cmd` has no comment inside a command line, so none is read there.
  */
 function startsComment(command: string, index: number, shell: GraphShell): boolean {
   if (shell !== "posix") return false;
@@ -764,6 +767,67 @@ function startsComment(command: string, index: number, shell: GraphShell): boole
  */
 function inUntrackedContext(command: string, index: number): boolean {
   return /`|\$\{|\$\[|\$'|\(\(|[?*+@!]\(/.test(command.slice(0, index));
+}
+
+/** A character after which PowerShell starts a new token and no word of these readers is under way. */
+const POWERSHELL_BREAK = /[ \t\n;|&]/;
+
+/**
+ * Text after which this reader cannot be sure where a PowerShell string ends: a `@"`/`@'`
+ * here-string, a `$(` whose body may hold its own quotes inside a double-quoted string, or a
+ * curly quote (U+2018 to U+201E), which PowerShell also reads as a quote.
+ */
+const POWERSHELL_UNTRACKED = /@["']|\$\(|[\u2018-\u201e]/;
+
+/**
+ * The PowerShell text with its comments removed, so both readers see the same commands. A
+ * `<# ... #>` block comment that starts a token is replaced by a space up to its `#>`, and a
+ * `#` line comment that starts a token is removed up to the end of its line, so a quote inside
+ * either opens nothing and a command after either is classified. A block comment with no `#>`
+ * leaves the script unparsable, so the text is unreadable and fails closed.
+ * Where the start of a token is not certain, inside a word, or after a context these readers
+ * do not track (`inUntrackedContext`, `POWERSHELL_UNTRACKED`), a `<#` and its `#>` are
+ * replaced by command separators instead, so what lies between and after them is still read as
+ * commands, and a `#` there stays text.
+ */
+function withoutPowerShellComments(command: string): string | undefined {
+  let output = "";
+  let quote: string | undefined;
+  let wordStarted = false;
+  for (let index = 0; index < command.length; index += 1) {
+    const character = command[index] ?? "";
+    if (character === "`" && quote !== "'") {
+      output += character + (command[index + 1] ?? "");
+      index += 1;
+      wordStarted = true;
+      continue;
+    }
+    if (quote) {
+      output += character;
+      if (character === quote) quote = undefined;
+      continue;
+    }
+    const tracked = () =>
+      !inUntrackedContext(command, index) && !POWERSHELL_UNTRACKED.test(command.slice(0, index));
+    if (character === "<" && command[index + 1] === "#") {
+      const end = command.indexOf("#>", index + 2);
+      if (end === -1) return undefined;
+      output += !wordStarted && tracked() ? " " : `;${command.slice(index + 2, end)};`;
+      index = end + 1;
+      wordStarted = false;
+      continue;
+    }
+    if (character === "#" && !wordStarted && tracked()) {
+      const end = command.indexOf("\n", index);
+      if (end === -1) break;
+      index = end - 1;
+      continue;
+    }
+    output += character;
+    if (character === "'" || character === '"') quote = character;
+    wordStarted = !POWERSHELL_BREAK.test(character);
+  }
+  return output;
 }
 
 /** A file operand that names no device or process file: letters, digits and `._/-` only. */
