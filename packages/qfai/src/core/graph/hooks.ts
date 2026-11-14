@@ -568,9 +568,35 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   let word = "";
   let quote: string | undefined;
   let afterRedirect: "" | "<" | ">" = "";
+  // Here-documents whose bodies start after the next unquoted newline.
+  const heredocs: { delimiter: string; stripTabs: boolean }[] = [];
   const flushWord = () => {
-    if (word.length) words.push(word);
+    if (word.length) {
+      const operator = words[words.length - 1];
+      const attached = /^\d*<<-?$/.test(word) ? null : /^\d*<<(?!<)(-?)(.+)$/.exec(word);
+      const separate = operator === undefined ? null : /^\d*<<(-?)$/.exec(operator);
+      if (shell === "posix" && (attached || separate)) {
+        heredocs.push({
+          delimiter: attached ? (attached[2] ?? "") : word,
+          stripTabs: (attached ?? separate)?.[1] === "-",
+        });
+      }
+      words.push(word);
+    }
     word = "";
+  };
+  // Skips the bodies of pending here-documents after the newline at `index`; their text is data.
+  const skipHeredocs = (index: number): number => {
+    let position = index + 1;
+    for (const { delimiter, stripTabs } of heredocs.splice(0)) {
+      while (position < command.length) {
+        const end = command.indexOf("\n", position);
+        const line = command.slice(position, end < 0 ? command.length : end).replace(/\r$/, "");
+        position = end < 0 ? command.length : end + 1;
+        if ((stripTabs ? line.replace(/^\t+/, "") : line) === delimiter) break;
+      }
+    }
+    return position - 1;
   };
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index];
@@ -606,6 +632,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       flushWord();
       word = character;
     } else if (character === "\n" && !words.length && !word.length && upstream) {
+      index = skipHeredocs(index);
       continue;
     } else if (character === "|" || character === ";" || character === "&" || character === "\n") {
       flushWord();
@@ -618,6 +645,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       else if (pipe && shell === "posix" && next === "&") index += 1;
       upstream = pipe ? stage : undefined;
       words = [];
+      if (character === "\n") index = skipHeredocs(index);
     } else if (/\s/.test(character)) {
       flushWord();
     } else {

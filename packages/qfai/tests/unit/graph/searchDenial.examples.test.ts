@@ -153,6 +153,29 @@ it("allows quoted search words printed without invoking search", () => {
   }
 });
 
+// QFAI:EX-0001-0235-29
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (character === "\n") index = skipHeredocs(index);` -> `` fails "allows here-document bodies that hold an apostrophe or a search word"
+it("allows here-document bodies that hold an apostrophe or a search word", () => {
+  for (const command of [
+    "cat > notes.md <<'EOF'\nThe hook doesn't search.\nEOF\ngh issue create --body-file notes.md",
+    "cat <<EOF > a.txt\ngrep -R policy .qfai/spec\nEOF",
+    'cat <<-"END" > b.txt\n\tIt\'s data.\n\tEND\necho done',
+    "cat > c.txt <<EOF\r\nrg auth packages/\r\nEOF\r\n",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+    expect(result.state, command).toBe("configured");
+  }
+  for (const command of [
+    "cat > a.txt <<'EOF'\nIt's data.\nEOF\nrg auth packages/",
+    "cat <<'EOF' && rg auth packages/\nIt's data.\nEOF",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("rg");
+  }
+});
+
 // QFAI:EX-0001-0235-09
 // Mutation: packages/qfai/src/core/graph/hooks.ts `function denyExploration(operation: string, target: string): GraphHookDecision {` -> `function denyExploration(operation: string, target: string): GraphHookDecision { return { decision: "allow", state: "configured", operation, target, message: "Exploration allowed." };` fails "denies separate exploration following a quality command"
 it("denies separate exploration following a quality command", () => {
