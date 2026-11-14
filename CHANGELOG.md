@@ -226,8 +226,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   search-protection hook.** In a POSIX shell an unquoted `#` at the start of a
   word ends at its line, so `echo # '` followed by `rg auth packages/` on the
   next line is denied. A `#` inside a word, such as after an escaped separator
-  or a closed substitution, starts no comment. A search that appears only in a
-  comment is not denied.
+  or a closed substitution, starts no comment, and neither does one after a
+  backtick, `${` or `((`. A search that appears only in a comment is not
+  denied.
 
 - **A `cd` to the project itself no longer withholds the search fallback.**
   When a denied search follows `cd`, `pushd` or `Set-Location` to the observed

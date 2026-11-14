@@ -654,8 +654,8 @@ it("reads a here-document body as data, not as substitutions", () => {
 // Mutation: packages/qfai/src/core/graph/hooks.ts `index = (end === -1 ? command.length : end) - 1;` -> `index += 0;` fails "ends a # comment at its line so a quote inside it hides no later search"
 // Mutation: packages/qfai/src/core/graph/hooks.ts `!quotedWord &&` -> `true &&` fails "ends a # comment at its line so a quote inside it hides no later search"
 // Mutation: packages/qfai/src/core/graph/hooks.ts `const WORD_BREAK = /[ \t\n;&|()]/;` -> `const WORD_BREAK = /[\s;&|()]/;` fails "ends a # comment at its line so a quote inside it hides no later search"
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!quote && atWordStart && character === "#" && shell === "posix") {` -> `if (false) {` fails "ends a # comment at its line so a quote inside it hides no later search"
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!quote && atWordStart && character === "#" && shell === "posix") {` -> `if (!quote && character === "#" && shell === "posix") {` fails "ends a # comment at its line so a quote inside it hides no later search"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `atWordStart &&` -> `true &&` fails "ends a # comment at its line so a quote inside it hides no later search"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `return /`|\$\{|\(\(/.test(command.slice(0, index));` -> `return false;` fails "ends a # comment at its line so a quote inside it hides no later search"
 it("ends a # comment at its line so a quote inside it hides no later search", () => {
   for (const command of [
     "echo # '\nrg auth packages/",
@@ -687,6 +687,11 @@ it("ends a # comment at its line so a quote inside it hides no later search", ()
     "echo a\\|#`rg auth packages/`",
     "echo $(true)#$(rg auth packages/)",
     "cat <(true)#$(rg auth packages/)",
+    // A `${...}`, `((...))` or backtick context before the `#` keeps it text.
+    "echo ${x:- #$(rg auth packages/)}",
+    "echo ${x:- #}; rg auth packages/",
+    "(( 1 # )); rg auth packages/",
+    "echo `echo #`; rg auth packages/",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
