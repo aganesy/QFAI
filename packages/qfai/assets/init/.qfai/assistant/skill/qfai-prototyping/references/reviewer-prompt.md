@@ -277,10 +277,10 @@ rest of the design anti-patterns list stays with the direction review.
 
 A repair keeps what the task needs: a condition, cost, storage or transmission
 destination, result, recovery step, the consequence of an action that cannot be
-undone, and every label, accessible name, role and state. Moving that into a
-tooltip or a placeholder is not a repair. After a repair, walk the task again at
-the declared narrow and desktop widths, in the normal, empty, error, loading and
-success states the screen has.
+undone, the next step an empty state offers, and every label, accessible name,
+role and state. Moving that into a tooltip or a placeholder is not a repair.
+After a repair, walk the task again at the declared narrow and desktop widths,
+in the normal, empty, error, loading and success states the screen has.
 
 The counts are contract-relative. A screen declaring one primary task and
 carrying forty controls is wrong; the same forty elsewhere may be right. The

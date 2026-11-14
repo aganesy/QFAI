@@ -73,7 +73,13 @@ them; it is the procedure that applies them.
 ## Cycle
 
 1. **Build the request.** Name the scope, the target files and the review
-   focus. Put the answers an earlier stage recorded on the same artifact into
+   focus. The reviewer's card is its checklist: its Domain Responsibilities
+   apply in full to every review it is dispatched to. A focus adds to them and
+   never removes one. The request does not tell a reviewer to check only some
+   of them, to look only for conformance to a contract, or not to flag a gap a
+   responsibility covers, such as the navigation or a state the screen needs.
+   Whether a finding blocks is decided by what a reviewer may demand, never by
+   the request. Put the answers an earlier stage recorded on the same artifact into
    this review's request before dispatching reviewers, under
    `.qfai/assistant/rule/review-convergence.md#answered-demands`.
    For the code review, name each test the run recorded `red: ci-deferred`:
@@ -85,8 +91,12 @@ them; it is the procedure that applies them.
    recommended a decision in the reviewed artifact is not its independent
    reviewer. The session report names its authors, editors and decision
    recommenders, and the independent reviewers.
-   Each reviewer returns a verdict, `PASS` or `REVISE`, and its
-   findings, in the shared reviewer response template.
+   Each reviewer returns a verdict, `PASS` or `REVISE`, its findings, and
+   the Domain Responsibilities of its card it checked, naming each one it
+   found not applicable to the target and why, in the shared reviewer
+   response template. A response that leaves a responsibility unaccounted for
+   is incomplete: it goes back to the reviewer to complete, and the completed
+   response is that reviewer's one response.
 3. **Address every finding** once: fix it in its owning source with the
    smallest edit that resolves it, or record a reasoned answer beside it, and
    rerun the tests a fix touches. An upstream finding is not repaired here:
@@ -106,8 +116,9 @@ them; it is the procedure that applies them.
 
 ## Writes
 
-- In the stage report: each reviewer's verdict, the findings, and how each was
-  fixed or answered, and for each behaviour fix its re-review's verdict and
+- In the stage report: each reviewer's verdict, the responsibilities it checked
+  and the ones it named not applicable, the findings, and how each was fixed or
+  answered, and for each behaviour fix its re-review's verdict and
   findings.
 - For a code review skipped as a small literal-only change: the skip, the
   changed lines and why no reviewer ran, in the stage report and in the final
@@ -118,7 +129,8 @@ them; it is the procedure that applies them.
 Every required reviewer responded once, each behaviour fix had its one focused
 re-review, every finding is fixed or answered, and
 the stage report names each verdict and each answer, or says why the review
-dispatched no reviewer. For a code review skipped as a small literal-only
+dispatched no reviewer. Each response accounted for every Domain
+Responsibility of the reviewer's card. For a code review skipped as a small literal-only
 change, the stage report names the skip, the changed lines and why, and records
 the skip for the final report. A finding the author
 cannot fix is in the stage's final report, and a critical decision has gone to

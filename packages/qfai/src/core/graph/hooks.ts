@@ -99,9 +99,12 @@ function classifyShellText(
   substitution = false,
 ): GraphHookDecision | undefined {
   if (depth > 16) return failedGraphHook("depth");
+  // Nested text, such as a `bash -c` argument or a substitution body, skips no
+  // here-document body: what reads its output lies outside it.
   const source =
     scope.shell === "powershell" ? withoutPowerShellComments(powerShellLines(text)) : text;
-  const commands = source === undefined ? undefined : shellPipelines(source, scope.shell);
+  const commands =
+    source === undefined ? undefined : shellPipelines(source, scope.shell, depth > 0);
   // Text in a substitution that cannot be read as commands is no verdict of its own.
   if (source === undefined || !commands) {
     return substitution ? undefined : failedGraphHook("quote");
@@ -156,19 +159,26 @@ function classifyCommands(
   let location = start;
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
+  // Inside a `case`, a command that starts with a word ending in `)`, such as `y)`
+  // or `"a b")`, is an arm: its pattern is not a command.
+  let openCases = 0;
   for (const [index, command] of commands.entries()) {
+    const words =
+      openCases > 0 && command.words[0]?.endsWith(")") ? command.words.slice(1) : command.words;
+    if (words[0] === "case") openCases += 1;
+    else if (words[0] === "esac") openCases = Math.max(0, openCases - 1);
     // After a move, only an `&&` chain, or a pipeline inside one, runs where the move went:
     // `||`, `;`, `&` and a new line also run when the move failed.
     if (typeof location === "object" && index > 0 && command.join !== "&&" && command.join !== "|")
       location = "unknown";
-    const operand = directoryOperand(command.words);
+    const operand = directoryOperand(words);
     if (operand !== undefined) {
       location = redefined
         ? "unknown"
         : movedLocation(location, operand, command, commands[index + 1], scope);
     }
     const decision = classifyCommand(
-      command.words,
+      words,
       { ...scope, location, redefined },
       depth,
       command.upstream,
@@ -390,6 +400,17 @@ function classifyCommand(
     return classifyCommand(words.slice(offset), context, depth + 1);
   }
   const operation = commandName(words);
+  // A `{ ...; }` group and a `case` command's first arm run the command after their
+  // opening words. `classifyCommands` strips the pattern of each later arm.
+  if (operation === "{") {
+    return classifyCommand(words.slice(1), context, depth + 1);
+  }
+  if (operation === "case") {
+    const subject = words.indexOf("in");
+    const arm = words.findIndex((word, index) => index > subject && word.endsWith(")"));
+    return arm < 0 ? undefined : classifyCommand(words.slice(arm + 1), context, depth + 1);
+  }
+  if (operation === "}" || operation === "esac") return undefined;
   if (operation === "env" || operation === "command" || operation === "builtin") {
     let offset = 1;
     while (offset < words.length) {
@@ -818,7 +839,33 @@ function withoutPowerShellComments(command: string): string | undefined {
   return output;
 }
 
-function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | undefined {
+/** A file operand that names no device or process file: letters, digits and `._/-` only. */
+const DATA_FILE = String.raw`(?!/dev/|/proc/)[\w./-]+`;
+/** An operand of `cat` or `tee` on a data line: an option, a file, or a redirection to one. */
+const DATA_OPERAND = String.raw`[ \t]+(?:-[A-Za-z]+|>>?[ \t]*${DATA_FILE}|>[ \t]*/dev/null|${DATA_FILE})`;
+/**
+ * A whole line that writes one here-document to files and nothing else: `cat` or `tee`,
+ * plain operands, one `<<` or `<<-` with a quoted identifier delimiter. A line of this
+ * shape hands its body to no shell, pipe, descriptor or later command, and the quoted
+ * delimiter makes Bash read the body literally, with no expansion or line joining.
+ */
+const DATA_HEREDOC_LINE = new RegExp(
+  String.raw`^[ \t]*(?:cat|tee)(?:${DATA_OPERAND})*[ \t]*<<-?[ \t]*(['"])[A-Za-z_]\w*\1(?:${DATA_OPERAND})*[ \t]*$`,
+);
+/** A line that may come before a data line: blank, `mkdir -p` of plain paths, or another data line. */
+const DATA_PRELUDE_LINE = new RegExp(
+  String.raw`^[ \t]*(?:mkdir[ \t]+-p(?:[ \t]+${DATA_FILE})+[ \t]*)?$`,
+);
+
+/**
+ * Splits a shell command into its pipelines. A nested command string, such as the
+ * argument of `bash -c`, skips no here-document body: what reads its output is outside it.
+ */
+function shellPipelines(
+  command: string,
+  shell: GraphShell,
+  nested = false,
+): ShellCommand[] | undefined {
   const commands: ShellCommand[] = [];
   let words: string[] = [];
   let upstream: ShellCommand | undefined;
@@ -826,12 +873,103 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   let word = "";
   let quote: string | undefined;
   let afterRedirect: "" | "<" | ">" = "";
+  // Here-documents whose bodies start after the next unquoted newline.
+  const heredocs: { delimiter: string; stripTabs: boolean; data: boolean }[] = [];
+  // The spans of bodies already skipped as data, which later checks do not read.
+  const skipped: [number, number][] = [];
   // An empty quote such as `''` starts a word that holds no character yet.
   let quotedWord = false;
   const flushWord = () => {
     if (word.length) words.push(word);
     word = "";
     quotedWord = false;
+  };
+  /**
+   * Reads an unquoted `<<` or `<<-` operator and its delimiter word at `index`, pushes
+   * both as words, and returns the index after the delimiter. Its body is skipped as data
+   * only when the operator's whole line is a data line and every line before it, less
+   * bodies already skipped, is a data line or a data prelude. Every other body stays
+   * classified as shell text, as if no here-document were read.
+   */
+  const readHeredocOperator = (index: number): number => {
+    if (word.length && !/^\d+$/.test(word)) flushWord();
+    let cursor = index + 2;
+    const stripTabs = command[cursor] === "-";
+    if (stripTabs) cursor += 1;
+    words.push(`${word}<<${stripTabs ? "-" : ""}`);
+    word = "";
+    while (command[cursor] === " " || command[cursor] === "\t") cursor += 1;
+    let delimiter = "";
+    let read = false;
+    let delimiterQuote: string | undefined;
+    while (cursor < command.length) {
+      const character = command[cursor] ?? "";
+      if (delimiterQuote) {
+        if (character === delimiterQuote) delimiterQuote = undefined;
+        else delimiter += character;
+      } else if (character === '"' || character === "'") {
+        delimiterQuote = character;
+      } else if (character === "\\" && cursor + 1 < command.length) {
+        delimiter += command[cursor + 1] ?? "";
+        cursor += 1;
+      } else if (/[\s;|&<>()]/.test(character)) {
+        break;
+      } else {
+        delimiter += character;
+      }
+      read = true;
+      cursor += 1;
+    }
+    if (delimiterQuote) {
+      quote = delimiterQuote;
+      return command.length;
+    }
+    if (!read) return cursor;
+    words.push(delimiter);
+    const lineStart = command.lastIndexOf("\n", index) + 1;
+    const lineEnd = command.indexOf("\n", index);
+    // The command text before the operator's line, less the bodies already skipped as data.
+    let earlier = "";
+    let from = 0;
+    for (const [start, end] of skipped) {
+      earlier += command.slice(from, start);
+      from = end;
+    }
+    earlier += command.slice(from, lineStart);
+    const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
+    // A carriage return is an ordinary character to Bash, so a command holding one skips
+    // nothing rather than risk ending a body on a different line than Bash does.
+    const data =
+      !nested &&
+      !command.includes("\r") &&
+      DATA_HEREDOC_LINE.test(line) &&
+      earlier
+        .split("\n")
+        .every((prior) => DATA_PRELUDE_LINE.test(prior) || DATA_HEREDOC_LINE.test(prior));
+    heredocs.push({ delimiter, stripTabs, data });
+    return cursor;
+  };
+  /**
+   * Skips the bodies of pending here-documents after the newline at `index`. A body
+   * whose delimiter line never comes is not skipped, and when any body on the line is
+   * not data none is skipped, so no text is hidden on a guess.
+   */
+  const skipHeredocs = (index: number): number => {
+    let position = index + 1;
+    const pending = heredocs.splice(0);
+    if (!pending.every((heredoc) => heredoc.data)) return index;
+    for (const { delimiter, stripTabs } of pending) {
+      let closed = false;
+      while (position < command.length && !closed) {
+        const end = command.indexOf("\n", position);
+        const line = command.slice(position, end < 0 ? command.length : end);
+        position = end < 0 ? command.length : end + 1;
+        closed = (stripTabs ? line.replace(/^\t+/, "") : line) === delimiter;
+      }
+      if (!closed) return index;
+    }
+    skipped.push([index + 1, position]);
+    return position - 1;
   };
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index];
@@ -876,6 +1014,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       flushWord();
       word = character;
     } else if (character === "\n" && !words.length && !word.length && upstream) {
+      index = skipHeredocs(index);
       continue;
     } else if (character === "|" || character === ";" || character === "&" || character === "\n") {
       flushWord();
@@ -902,8 +1041,17 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       if (stage || join === undefined || operator !== "\n") join = operator;
       upstream = pipe ? stage : undefined;
       words = [];
+      if (character === "\n") index = skipHeredocs(index);
     } else if (/\s/.test(character)) {
       flushWord();
+    } else if (
+      shell === "posix" &&
+      character === "<" &&
+      next === "<" &&
+      command[index + 2] !== "<" &&
+      command[index - 1] !== "<"
+    ) {
+      index = readHeredocOperator(index) - 1;
     } else {
       if (
         (character === ">" || character === "<") &&
@@ -930,16 +1078,19 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
 }
 
 /**
- * The bodies of the substitutions a shell runs as commands: `$(...)` in POSIX and
- * PowerShell, `@(...)` in PowerShell, `<(...)`, `>(...)` and backticks in POSIX.
- * Single quotes keep them literal, and an escaped opener is not one. An arithmetic
- * `$((...))` runs no command. A substitution left open runs nothing, and no later
- * one can close, so the scan stops there. A here-document body is data and is not
- * scanned: `heredocData` says which bodies.
+ * The bodies of the substitutions and groups a shell runs as commands: `$(...)` in
+ * POSIX and PowerShell, `@(...)` and a grouping `(...)` in PowerShell, `<(...)`,
+ * `>(...)`, zsh `=(...)`, a subshell `(...)` and backticks in POSIX. Quotes keep a
+ * bare `(` literal, single quotes keep every opener literal, and an escaped opener
+ * is not one. An arithmetic `$((...))` runs no command. A substitution left open
+ * runs nothing, and no later one can close, so the scan stops there. A here-document
+ * body is data, except the substitutions an unquoted delimiter's body expands:
+ * `heredocData` says which bodies.
  */
 function substitutionBodies(text: string, shell: GraphShell): string[] {
   if (shell === "cmd") return [];
-  const command = shell === "posix" ? heredocData(text) : text;
+  const { text: command, expanded } =
+    shell === "posix" ? heredocData(text) : { text, expanded: [] };
   const escape = shell === "posix" ? "\\" : "`";
   const bodies: string[] = [];
   let quote: string | undefined;
@@ -974,7 +1125,8 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
     }
     if (!quote && character !== undefined && WORD_BREAK.test(character)) {
       wordStart = true;
-      continue;
+      // A bare `(` also starts a word, and may open a subshell or a grouping below.
+      if (character !== "(") continue;
     }
     if (character === "'" && !quote) {
       quote = "'";
@@ -996,11 +1148,56 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
         bodies.push(command.slice(index + 2, end));
       }
       index = end;
+    } else if (
+      !quote &&
+      character === "(" &&
+      // A POSIX subshell starts a command, and zsh `=(...)` starts a word; any other
+      // `(`, such as an array's in `name=(...)`, is data, scanned on.
+      (shell === "powershell" ||
+        commandPosition(command, index, 0) ||
+        (command[index - 1] === "=" && /^$|[\s;&|(]/.test(command[index - 2] ?? "")))
+    ) {
+      const end = closingParenthesis(command, index + 1, escape);
+      if (end === undefined) break;
+      bodies.push(command.slice(index + 1, end));
+      index = end;
     } else if (shell === "posix" && character === "`") {
-      let end = index + 1;
-      while (end < command.length && command[end] !== "`") end += command[end] === "\\" ? 2 : 1;
-      if (end >= command.length) break;
+      const end = closingBacktick(command, index + 1);
+      if (end === undefined) break;
       bodies.push(command.slice(index + 1, end).replace(/\\([`\\$])/g, "$1"));
+      index = end;
+    }
+  }
+  for (const body of expanded) bodies.push(...expandedSubstitutions(body));
+  return bodies;
+}
+
+/** The index of the backtick that closes one opened before `start`, or undefined. */
+function closingBacktick(command: string, start: number): number | undefined {
+  let end = start;
+  while (end < command.length && command[end] !== "`") end += command[end] === "\\" ? 2 : 1;
+  return end < command.length ? end : undefined;
+}
+
+/**
+ * The `$(...)` and backtick substitutions an unquoted here-document body expands.
+ * Quotes in the body are text, so only a backslash keeps an opener literal.
+ */
+function expandedSubstitutions(body: string): string[] {
+  const bodies: string[] = [];
+  for (let index = 0; index < body.length; index += 1) {
+    const character = body[index];
+    if (character === "\\") {
+      index += 1;
+    } else if (character === "$" && body[index + 1] === "(") {
+      const end = closingParenthesis(body, index + 2, "\\");
+      if (end === undefined) break;
+      if (body[index + 2] !== "(") bodies.push(body.slice(index + 2, end));
+      index = end;
+    } else if (character === "`") {
+      const end = closingBacktick(body, index + 1);
+      if (end === undefined) break;
+      bodies.push(body.slice(index + 1, end).replace(/\\([`\\$])/g, "$1"));
       index = end;
     }
   }
@@ -1019,24 +1216,24 @@ const feedsShell = /(?:^|[\s|;&(`/])(?:(?:ba|z|da|k)?sh|eval|source)(?=$|[\s|;&)
  * starts no substitution here. Only an operator outside quotes, comments and
  * arithmetic starts a body; a `$(` starts a fresh context, as the shell reads it,
  * even inside double quotes. A body fed to a shell is a script and is kept, and so
- * is one with no closing delimiter line.
- * Ceiling: an unquoted delimiter's body does expand `$(...)`, and that body is
- * removed as well, so a search inside it stays unclassified, as it was before.
+ * is one with no closing delimiter line. An unquoted delimiter's body still expands
+ * `$(...)` and backticks, so it comes back in `expanded` for those to be read.
  */
-function heredocData(command: string): string {
+function heredocData(command: string): { text: string; expanded: string[] } {
   let output = "";
   let quote: string | undefined;
   let comment = false;
   let depth = 0;
   const outer: { quote: string | undefined; depth: number }[] = [];
-  let pending: { delimiter: string; stripTabs: boolean }[] = [];
+  const expanded: string[] = [];
+  let pending: HeredocBody[] = [];
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index] ?? "";
     output += character;
     if (character === "\n") {
       comment = false;
       if (!quote && pending.length) {
-        const end = heredocEnd(command, index + 1, pending);
+        const end = heredocEnd(command, index + 1, pending, expanded);
         if (end !== undefined) index = end - 1;
         pending = [];
       }
@@ -1073,47 +1270,92 @@ function heredocData(command: string): string {
       const lineEnd = command.indexOf("\n", index);
       const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
       if (!feedsShell.test(line) && !command.slice(lineStart, index).includes("((")) {
-        pending.push({ delimiter: match[2] ?? match[3] ?? match[4] ?? "", stripTabs: !!match[1] });
+        pending.push({
+          delimiter: match[2] ?? match[3] ?? match[4] ?? "",
+          stripTabs: !!match[1],
+          expands: match[4] !== undefined && !match[0].includes("\\"),
+        });
       }
       output += command.slice(index + 1, heredocOperator.lastIndex);
       index = heredocOperator.lastIndex - 1;
     }
   }
-  return output;
+  return { text: output, expanded };
 }
 
-/** The index after the delimiter line that closes the last of `bodies`, or undefined. */
+interface HeredocBody {
+  delimiter: string;
+  stripTabs: boolean;
+  /** An unquoted delimiter: the shell expands substitutions in the body. */
+  expands: boolean;
+}
+
+/**
+ * The index after the delimiter line that closes the last of `bodies`, or undefined.
+ * The text of each body that expands is added to `expanded`.
+ */
 function heredocEnd(
   command: string,
   start: number,
-  bodies: { delimiter: string; stripTabs: boolean }[],
+  bodies: HeredocBody[],
+  expanded: string[],
 ): number | undefined {
   let position = start;
-  for (const { delimiter, stripTabs } of bodies) {
+  const texts: string[] = [];
+  for (const { delimiter, stripTabs, expands } of bodies) {
+    const bodyStart = position;
+    let bodyEnd = position;
     let closed = false;
     while (!closed && position < command.length) {
       const end = command.indexOf("\n", position);
       const line = command.slice(position, end < 0 ? command.length : end).replace(/\r$/, "");
-      position = end < 0 ? command.length : end + 1;
       closed = (stripTabs ? line.replace(/^\t+/, "") : line) === delimiter;
+      if (!closed) bodyEnd = end < 0 ? command.length : end;
+      position = end < 0 ? command.length : end + 1;
     }
     if (!closed) return undefined;
+    if (expands) texts.push(command.slice(bodyStart, bodyEnd));
   }
+  expanded.push(...texts);
   return position;
 }
 
-/** The index of the `)` that closes a parenthesis opened before `start`, outside quotes. */
+/** A POSIX `case` or `esac` reserved word. */
+const caseWord = /(case|esac)(?=$|[\s;&|)])/y;
+
+/** Whether `index` starts a command: only blanks lie between it and `start` or an operator. */
+function commandPosition(command: string, index: number, start: number): boolean {
+  let before = index - 1;
+  while (before >= start && /[ \t]/.test(command[before] ?? "")) before -= 1;
+  return before < start || /[;&|(\n]/.test(command[before] ?? "");
+}
+
+/**
+ * The index of the `)` that closes a parenthesis opened before `start`, outside quotes.
+ * In POSIX text a `)` that ends a `case` pattern, such as `x)` in
+ * `case x in x) ...;; esac`, closes nothing. `case` and `esac` count only where a
+ * command starts, so an argument such as `test/case` opens no case.
+ */
 function closingParenthesis(command: string, start: number, escape: string): number | undefined {
   let depth = 1;
   let quote: string | undefined;
+  /** The parenthesis depth at which each open `case` started. */
+  const cases: number[] = [];
   for (let index = start; index < command.length; index += 1) {
-    const character = command[index];
+    const character = command[index] ?? "";
     if (character === escape && quote !== "'") index += 1;
     else if (quote) {
       if (character === quote) quote = undefined;
     } else if (character === "'" || character === '"') quote = character;
-    else if (character === "(") depth += 1;
+    else if (escape === "\\" && /[ce]/.test(character) && commandPosition(command, index, start)) {
+      caseWord.lastIndex = index;
+      const word = caseWord.exec(command)?.[1];
+      if (word === "case") cases.push(depth);
+      else if (word === "esac" && cases.at(-1) === depth) cases.pop();
+      if (word) index += word.length - 1;
+    } else if (character === "(") depth += 1;
     else if (character === ")") {
+      if (cases.at(-1) === depth) continue;
       depth -= 1;
       if (depth === 0) return index;
     }

@@ -20,6 +20,12 @@ screens:
   - id: graph_prepare
     title: Graph tools
     route: qfai init
+    purpose: Prepare the project's graph tools and show what is ready, what failed and what to do next.
+    navigation:
+      shell: the terminal that runs qfai init
+      entry_points:
+        - qfai init run in the project root
+      back_to: none; the command ends and the shell prompt returns
     primary_tasks:
       - id: prepare_tools
         label: Prepare project graph tools
@@ -102,6 +108,12 @@ screens:
   - id: graph_preview
     title: Graph tools preview
     route: qfai init --dry-run
+    purpose: Show what qfai init would do to the graph tools without changing anything.
+    navigation:
+      shell: the terminal that runs qfai init --dry-run
+      entry_points:
+        - qfai init --dry-run run in the project root
+      back_to: none; the command ends and the shell prompt returns
     primary_tasks:
       - id: preview_preparation
         label: Inspect planned preparation
@@ -139,6 +151,12 @@ screens:
   - id: graph_search_denied
     title: Exploration redirected
     route: Supported pre-tool exploratory-search event
+    purpose: Redirect an exploratory search to the graph operation that answers it, and say how to proceed when the graph cannot.
+    navigation:
+      shell: the assistant host's tool-call result, shown to the agent that attempted the search
+      entry_points:
+        - an exploratory search the host's pre-tool hook denies
+      back_to: none; the agent continues its task with the named graph command or the scoped fallback
     primary_tasks:
       - id: follow_graph_redirect
         label: Follow the graph operation
@@ -213,6 +231,13 @@ screens:
   - id: graph_query_result
     title: Graph evidence
     route: node .qfai/tools/graph-cli.mjs code or documents
+    purpose: Answer a code or document question from the graph, with its scope, readiness and limits.
+    navigation:
+      shell: the terminal or agent tool call that runs the graph CLI
+      entry_points:
+        - node .qfai/tools/graph-cli.mjs code or documents with a query
+        - the graph command named by a redirected search
+      back_to: none; the command ends and the caller continues
     primary_tasks:
       - id: assess_graph_evidence
         label: Assess the requested scope and evidence
