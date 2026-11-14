@@ -365,6 +365,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version edit already in place is not reported or computed again. Any other
   hand-made release edit is reported the same way.
 
+- **Research checks the version a dependency source describes.** The
+  research-first protocol's new Version Rule records the package and version a
+  source about a library, catalogue or framework describes, reads the installed
+  version from the lockfile or package manifest, and adds a version warning
+  when the major versions differ or the package is not installed. An entry
+  from a source with that warning is applied only when its reason says what
+  was checked against the installed version.
+
 ### Fixed
 
 - **The search-protection hook ends a PowerShell statement at a lone carriage

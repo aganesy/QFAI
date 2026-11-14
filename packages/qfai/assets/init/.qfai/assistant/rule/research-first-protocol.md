@@ -27,6 +27,9 @@ research_summary:
       # when type: primary / secondary
       locator: string # how to reach the source
       observed: string # YYYY-MM-DD, observation date
+      # when the source is about a library, catalogue or framework
+      package: string # its package name, as the manifest names it
+      version: string # the version the source describes
   best_practices:
     - id: string # BP-XXXX format
       category: string
@@ -39,6 +42,10 @@ research_summary:
       title: string
       description: string
       source_id: string
+  version_warnings:
+    - source_id: string
+      described: string # the version the source describes
+      installed: string # the installed version, or `not installed`
   reflection:
     - source_id: string
       finding: string
@@ -113,6 +120,24 @@ Record what the search found in the summary's `sources`, the same way as any
 other source. A later reader can then tell a verified name from one answered
 from memory.
 
+## Version Rule
+
+A source about a library, a component catalogue or a framework describes one
+version of it, and the project may run another. Record the `package` and the
+`version` the source describes, from the page itself, such as its version
+selector or the release it names. When the page names no version, record the
+latest release on the date it was read, and say so.
+
+Then read the installed version from the project's lockfile, or from its
+package manifest when no lockfile pins it. Add a `version_warnings` entry when:
+
+- the major versions differ, or
+- the project does not install the package.
+
+A source with a version warning still counts as a source. Its guidance may
+describe behaviour the installed version does not have, so it is applied only
+as the section on applying an external source says.
+
 ## Conflict Protocol
 
 - When a new research result contradicts an existing BP/AP rule:
@@ -131,6 +156,8 @@ guidance later stages follow (`.agents/rules/untrusted-content.md`).
 - Its `reason` states what the applying agent verified against the repository:
   the file it read, the command it ran, or the behaviour it observed.
 - An entry with nothing verified is `defer`, not `apply`.
+- An entry whose source has a version warning is `apply` only when its `reason`
+  names what was checked against the installed version.
 
 ## Storage
 
