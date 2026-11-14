@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`product-surface-reviewer` checks that a screen is complete.** It walks
+  the business-screen floor in `.agents/rules/interface-clarity.md` against the
+  running surface. A listed part missing with no reason in the screen's UI
+  contract is a blocking `defect:code-quality`, and a listed part is never
+  filed as excess.
+
 - **`.agents/rules/interface-clarity.md` says what a business screen always
   has.** A new section lists, per application, an app shell with navigation
   and a way back, a home that shows what needs attention and one shared

@@ -879,6 +879,31 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       }
     });
 
+    // The floor only works if a review applies it. Without this duty the
+    // screen reviewer checks for excess and approves a screen that is bare.
+    it("product-surface-reviewer walks the business-screen floor and blocks a missing part", async () => {
+      const card = (
+        await readFile(
+          path.join(
+            ROOT,
+            "packages/qfai/assets/init/.qfai/assistant/agent/product-surface-reviewer.md",
+          ),
+          "utf-8",
+        )
+      ).replace(/\s*\n\s*/g, " ");
+      expect(card).toContain(
+        "Check that each screen is complete, not only that it holds no excess.",
+      );
+      expect(card).toContain(
+        "`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`",
+      );
+      expect(card).toContain(
+        "A part missing with no reason recorded in that screen's UI contract is a blocking `defect:code-quality` against that rule",
+      );
+      expect(card).toContain("Never file a listed part as excess.");
+      expect(card).toContain("A part the business-screen floor below lists is never needless.");
+    });
+
     // A terminal is an interface. Without that sentence the rule reads as a
     // web rule, and a command-line surface — which is the only interface this
     // repository itself has — falls outside the only rule written for it.
