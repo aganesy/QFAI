@@ -99,6 +99,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that a business-screen part closes is a defect to fix; any other gap on a job
   no contract names goes to the owner of the spec rather than being built.
 
+- **The product-surface reviewer no longer stops on standard screen parts.**
+  Its stop condition covers configuration, animation and novel interaction
+  that the user journey or acceptance criteria do not ground. Navigation,
+  list search, sort and pagination, and empty, error and success feedback are
+  grounded by the pattern itself.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
