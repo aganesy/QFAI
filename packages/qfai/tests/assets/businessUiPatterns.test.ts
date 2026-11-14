@@ -62,7 +62,7 @@ describe("business UI pattern reference", () => {
     // A list that paged in memory, matched keywords without normalising them and
     // lost its state on the way back passed review: the parts were all there.
     it(`${tree}: the list entry says where search, sort and paging run`, async () => {
-      const text = (await readFile(path.join(root, REFERENCE), "utf-8")).replace(/s+/g, " ");
+      const text = (await readFile(path.join(root, REFERENCE), "utf-8")).replace(/\s+/g, " ");
 
       expect(text).toContain("lives in the URL query");
       expect(text).toContain("on the server for any list that can outgrow one page");
