@@ -16,9 +16,10 @@ Stage 4 of the story tree: contracts and the business rules they enforce.
   types, realizability, cross-contract reconciliation, and DB executability.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-phase-checklists.md#contracts-and-business-rules`
   when editing.
-- For UI work, `.qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md`
-  and
-  `.qfai/assistant/skill/qfai-sdd/references/ui-design-contract-normalization.md`.
+- For UI work, `.qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md`,
+  `.qfai/assistant/skill/qfai-sdd/references/ui-design-contract-normalization.md`
+  and `## What a business screen always has` in
+  `.agents/rules/interface-clarity.md`.
 - The paired templates under
   `.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/` and
   `.qfai/assistant/skill/qfai-sdd/templates/contracts/`.
@@ -83,12 +84,25 @@ adopt a sample design. Each screen states its `purpose` and its `navigation`:
 the shell it renders in, the entry points that lead to it, and where back
 leads.
 
+Examples describe business behaviour, so they rarely name pagination or a save
+confirmation. After deriving a screen's elements and actions from the examples,
+check the screen against `## What a business screen always has` in
+`.agents/rules/interface-clarity.md`: the app shell, navigation and home once
+per application, and on each screen the list behaviour, the empty, loading,
+error and success states and the feedback after a change. Add each part that
+applies and is missing: navigation in the screen's `navigation`, and the rest
+as elements, actions and `supplements` entries with their `when`. Such a part needs no example of its own unless it carries a
+business rule. A part left out gets its reason in that screen's contract, as
+the rule says.
+
 Check every text element the discussion or the story proposes against the
 screen's tasks and the information the user needs at that point. A text that
 repeats a heading, an action, or a condition the user already has is left out;
 one that carries a condition, cost, destination, result, recovery step or
 consequence stays, with its reason. Fix a control that needs explaining before
-adding text for it. A screen may describe the copy that stays in its optional
+adding text for it. Each screen lists its `states`: what renders in `default`, `empty`,
+`loading`, `error` and `success`, and the next action from each, or `none`
+with the reason for a state the screen cannot reach. A screen may describe the copy that stays in its optional
 `supplements` and `structure`; `npx qfai validate` does not check them, and the
 reason that counts is the `qfai-text` comment written in the UI source.
 
