@@ -567,15 +567,16 @@ const DATA_FILE = String.raw`(?!/dev/|/proc/)[\w./-]+`;
 const DATA_OPERAND = String.raw`[ \t]+(?:-[A-Za-z]+|>>?[ \t]*${DATA_FILE}|>[ \t]*/dev/null|${DATA_FILE})`;
 /**
  * A whole line that writes one here-document to files and nothing else: `cat` or `tee`,
- * plain operands, one `<<` or `<<-` with an identifier delimiter, optionally quoted. A
- * line of this shape hands its body to no shell, pipe, descriptor or later command.
+ * plain operands, one `<<` or `<<-` with a quoted identifier delimiter. A line of this
+ * shape hands its body to no shell, pipe, descriptor or later command, and the quoted
+ * delimiter makes Bash read the body literally, with no expansion or line joining.
  */
 const DATA_HEREDOC_LINE = new RegExp(
-  String.raw`^[ \t]*(?:cat|tee)(?:${DATA_OPERAND})*[ \t]*<<-?[ \t]*(['"]?)[A-Za-z_]\w*\1(?:${DATA_OPERAND})*[ \t]*\r?$`,
+  String.raw`^[ \t]*(?:cat|tee)(?:${DATA_OPERAND})*[ \t]*<<-?[ \t]*(['"])[A-Za-z_]\w*\1(?:${DATA_OPERAND})*[ \t]*$`,
 );
 /** A line that may come before a data line: blank, `mkdir -p` of plain paths, or another data line. */
 const DATA_PRELUDE_LINE = new RegExp(
-  String.raw`^[ \t]*(?:mkdir[ \t]+-p(?:[ \t]+${DATA_FILE})+[ \t]*)?\r?$`,
+  String.raw`^[ \t]*(?:mkdir[ \t]+-p(?:[ \t]+${DATA_FILE})+[ \t]*)?$`,
 );
 
 /**
@@ -654,8 +655,11 @@ function shellPipelines(
     }
     earlier += command.slice(from, lineStart);
     const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
+    // A carriage return is an ordinary character to Bash, so a command holding one skips
+    // nothing rather than risk ending a body on a different line than Bash does.
     const data =
       !nested &&
+      !command.includes("\r") &&
       DATA_HEREDOC_LINE.test(line) &&
       earlier
         .split("\n")
@@ -676,7 +680,7 @@ function shellPipelines(
       let closed = false;
       while (position < command.length && !closed) {
         const end = command.indexOf("\n", position);
-        const line = command.slice(position, end < 0 ? command.length : end).replace(/\r$/, "");
+        const line = command.slice(position, end < 0 ? command.length : end);
         position = end < 0 ? command.length : end + 1;
         closed = (stripTabs ? line.replace(/^\t+/, "") : line) === delimiter;
       }

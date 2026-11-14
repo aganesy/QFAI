@@ -146,8 +146,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   command that wrote a file through `cat <<'EOF'` was refused as "invalid
   pre-tool input" when the body held an unpaired apostrophe, and a body line
   such as `grep -R policy .qfai/spec` was denied as a search. The body is now
-  read as data when its whole line only writes files with `cat` or `tee`, such
-  as `cat > notes.md <<'EOF'`, and every line before it is such a line or a
+  read as data when its whole line only writes files with `cat` or `tee` and a
+  quoted delimiter, such as `cat > notes.md <<'EOF'`, and every line before it is such a line or a
   `mkdir -p`. Any other here-document body is still read as shell text.
 - **The search-protection hook denies a search with an input redirection
   attached to its name.** `grep</dev/null -r foo src` and `grep<&3 -r foo .`

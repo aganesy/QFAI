@@ -158,10 +158,9 @@ it("allows quoted search words printed without invoking search", () => {
 it("allows here-document bodies that hold an apostrophe or a search word", () => {
   for (const command of [
     "cat > notes.md <<'EOF'\nThe hook doesn't search.\nEOF\ngh issue create --body-file notes.md",
-    "cat <<EOF > a.txt\ngrep -R policy .qfai/spec\nEOF",
+    "cat <<'EOF' > a.txt\ngrep -R policy .qfai/spec\nEOF",
     'cat <<-"END" > b.txt\n\tIt\'s data.\n\tEND\necho done',
-    "cat > c.txt <<EOF\r\nrg auth packages/\r\nEOF\r\n",
-    "cat<<EOF\nIt's data.\nEOF",
+    "cat<<'EOF'\nIt's data.\nEOF",
     "tee out.txt <<'EOF' >/dev/null\nIt's data.\nEOF",
     "cat > a.md <<'EOF'\nIt's $x (a).\nEOF\ncat > b.md <<'EOF'\nIt's b.\nEOF\ngh issue create --body-file a.md",
   ]) {
@@ -215,6 +214,10 @@ it("allows here-document bodies that hold an apostrophe or a search word", () =>
     "cat <<EOF\rx\nhi\nEOF\rx\nrg auth packages/\nEOF",
     'cat <<"E\\\\F"\nhi\nE\\F\nrg auth packages/\nE\\\\F',
     "cat > /dev/fd/3 <<EOF\nrg auth packages/\nEOF",
+    // An unquoted delimiter lets Bash expand and join body lines; a carriage return is
+    // an ordinary character to Bash. Neither body is skipped.
+    "cat > f.sh <<EOF\nx=$(\nrg auth packages/\n)\nEOF",
+    "cat > c.txt <<'EOF'\r\nrg auth packages/\r\nEOF\r\n",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
