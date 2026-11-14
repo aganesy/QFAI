@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`.agents/rules/interface-clarity.md` says what a business screen always
+  has.** A new section lists, per application, an app shell with navigation
+  and a way back, a home that shows what needs attention and one shared
+  component per repeated pattern; per screen, list search or filter with sort,
+  count and pagination, empty, loading, error and success states, and feedback
+  after every change. Leaving one out needs a reason recorded in the screen's UI
+  contract, and the Cut section counts a listed part as asked for.
+
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
   `implementation-reviewer` reads every rule the changed master points to and
@@ -17,6 +25,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **An overview screen counts as one view.** `interface-clarity.md` § 4 says
   an overview or dashboard has the one purpose "see what needs attention",
   and each of its parts links to the view that does the work.
+
+- **The shipped uix-rev review prompts no longer name the removed
+  `40_screen_contracts.md` sidecar.** The strategy review checks brand language
+  against the UI contracts under `<paths.contractsDir>/ui/`, and the screen
+  contracts review prompt, which nothing loaded and which reviewed that removed
+  file, is gone.
 
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
@@ -132,6 +146,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   worktree in the same command, the denial still offers the AI-decided
   fallback. A move anywhere else, or to a target the command text does not
   spell out, still makes the fallback unavailable.
+- **The search-protection hook denies a search with an input redirection
+  attached to its name.** `grep</dev/null -r foo src` and `grep<&3 -r foo .`
+  were allowed as outside the checked boundary, while `grep>/dev/null -r foo
+src` was denied. A `<` after a command name now starts a new word, as `>`
+  does, so both are denied.
 - **The search-protection hook treats the PowerShell alias `sls` as
   `Select-String`.** `sls -Pattern authorize -Path packages/**/*.ts` was
   allowed as outside the checked boundary while the same command spelled
