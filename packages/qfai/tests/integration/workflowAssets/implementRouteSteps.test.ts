@@ -31,6 +31,7 @@ const ROUTE_STEPS: Record<string, string> = {
   "implement-dep-bump": "default",
   "implement-tooling": "default",
   "implement-backport": "default",
+  "implement-settled-edit": "default",
 };
 
 const VERDICTS = [

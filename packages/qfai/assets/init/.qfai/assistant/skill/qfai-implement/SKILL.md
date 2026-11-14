@@ -27,6 +27,7 @@ steps:
   - implement-backport
   - implement-acceptance
   - implement-procedure
+  - implement-settled-edit
 requires: [common-review-cycle]
 mode: approval-gated
 ---
@@ -104,6 +105,7 @@ behaviour but a failure, a repair or upkeep:
 | `implement-tooling`        | `.qfai/assistant/step/implement-tooling/STEP.md`        | A workflow, a script or a development tool is to change                   |
 | `implement-backport`       | `.qfai/assistant/step/implement-backport/STEP.md`       | A merged change is to be carried to a release branch                      |
 | `implement-acceptance`     | `.qfai/assistant/step/implement-acceptance/STEP.md`     | The flow's acceptance tests have empty bodies to write                    |
+| `implement-settled-edit`   | `.qfai/assistant/step/implement-settled-edit/STEP.md`   | A settled instruction names a literal edit, its exact values and fields   |
 
 Read the `STEP.md` of the current step only, run it, then move to the next.
 Each step names the common steps it runs in `requires`; read those when the

@@ -11,6 +11,7 @@ stages:
   - id: implement
     kind: implement
     steps:
+      - { step: implement-settled-edit, passThrough: true }
       - { step: implement-scaffold, passThrough: true }
       - { step: implement-tdd, passThrough: true }
     after: [spec]

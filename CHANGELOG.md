@@ -546,13 +546,20 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   the same filter without the group. A PowerShell here-string is read as one
   string, so an apostrophe in its text no longer ends it.
 
-- **A delegated release's version edit reaches a stage that makes it.** When a
-  delegated release needs a version edit its release documents make by hand,
-  `triage-operate` reports it as `needs-change` with an `order` naming the
-  `release` artifact, as the release route's contract already said, instead
-  of stopping on it as a blocker. That order plans `apply-settled`, whose
-  implement stage now serves `release`, so the plan offers one scope that
-  makes the edit and puts no scope question.
+- **A delegated release's version edit is made in a reviewed change route.**
+  When a delegated release needs a version edit its release documents make by
+  hand, `triage-operate` reports it as `needs-change` with an `order` naming
+  the `release` artifact, instead of stopping on it as a blocker. The order
+  carries the quoted instruction, the version the user named, and the files
+  and fields the documents name. It plans `apply-settled`, whose implement
+  stage now serves `release` and runs the new `implement-settled-edit` step
+  first. That step sets each named field to the named value and changes
+  nothing else, adds no example or test, and stops naming what is missing
+  when a value, file or field cannot be found. It passes when the work order
+  names no such edit. `implement-scaffold` and `implement-tdd` pass when the
+  work order carries only that edit. The edit then gets the route's code
+  review and gates like any change. Any other hand-made release edit is
+  reported the same way.
 
 - **`qfai validate` reads the Markdown under `paths.specsDir` once for the
   UI/UX checks.** The HTML mock, UI definition and Mermaid screen flow checks

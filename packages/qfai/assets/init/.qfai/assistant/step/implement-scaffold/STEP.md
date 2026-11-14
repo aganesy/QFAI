@@ -16,7 +16,9 @@ the system's shape has settled.
 
 - The active flow, one `BF-NNNN`, which the invocation's BF argument or the
   request names. A flow that cannot be resolved stops this step: report the
-  missing source.
+  missing source. A work order that names no flow because it carries only a
+  settled literal edit, which `implement-settled-edit` makes, is not such a
+  case: the step passes, as § Passes when states.
 - The flow's stories and acceptance criteria under `paths.specsDir`. The
   default tree is `.qfai/spec/`.
 - `.qfai/assistant/rule/test-layers.md` for the layer each ID maps to.
@@ -113,6 +115,10 @@ Read first: the BF and AC items of the flow that no `Test exception:` row
 names, and the tests that annotate them. The step passes when every one
 already has an annotating test at its layer and § Component catalogue needs no
 setup. The pass names the test for each item.
+
+The step also passes when the work order names no flow because its request
+carries only a settled literal edit, such as a delegated release's version.
+That edit has no business flow and owes no test. The pass names the edit.
 
 ## Gate
 

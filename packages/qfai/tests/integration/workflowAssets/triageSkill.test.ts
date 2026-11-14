@@ -343,8 +343,12 @@ describe("a question answered without a change", () => {
       /A version edit the documents make by hand, such as a version bump the preparation does not make, is a tracked change too: report `needs-change` with an extraction of it as an `order` naming the `release` artifact/,
     );
     expect(release).toMatch(
-      /Any other hand-made release edit has no route: report it as a blocker/,
+      /Its request carries the quoted instruction, the named version, and each file and field the documents name for the edit, as they name them, so the next plan's `implement-settled-edit` makes exactly that edit/,
     );
+    expect(release).toMatch(
+      /Any other hand-made release edit is reported the same way, its request naming each file, field and value the documents give for it/,
+    );
+    expect(release).not.toMatch(/has no route|as a blocker/);
     expect(release).toMatch(
       /Review the release pull request as the project's review rules say, and merge it only when they allow/,
     );

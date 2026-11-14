@@ -20,6 +20,7 @@ const PASS_THROUGH = [
   "triage-investigate",
   "implement-bisect",
   "implement-minimize",
+  "implement-settled-edit",
   "implement-scaffold",
   "implement-tdd",
   "implement-credentials",
@@ -265,6 +266,62 @@ describe("a step that may pass with evidence", () => {
       /5\. Set up the component catalogue as § Component catalogue says/i,
     );
     expect(await passesWhen("implement-scaffold")).toMatch(/§ Component catalogue needs no setup/i);
+  });
+
+  // BR-0002-0016
+  // QFAI:EX-0001-0216-11
+  it("runs implement-settled-edit first in apply-settled, passing on no settled edit and making a named one exactly", async () => {
+    const plan = (await loadBuiltInPlans()).find((each) => each.route === "apply-settled");
+    const implement = plan?.stages.find((stage) => stage.id === "implement");
+    expect(implement?.steps[0]).toMatchObject({
+      name: "implement-settled-edit",
+      passThrough: true,
+    });
+    expect(await passesWhen("implement-settled-edit")).toMatch(
+      /Read first: the work order's request\. The step passes when the request names no settled literal edit: it quotes no instruction that gives exact values for named files and fields\. The pass names the request it read/,
+    );
+    const text = await readShipped("step/implement-settled-edit/STEP.md");
+    expect(frontMatterOf(text).owner).toBe("qfai-implement");
+    expect(flat(sectionOf(text, "## Reads"))).toMatch(
+      /the quoted release instruction, the version the user named, and the files and fields the project's release documents name for the version edit/,
+    );
+    const procedure = flat(sectionOf(text, "## Procedure"));
+    expect(procedure).toMatch(
+      /Set each named field to its named value\. Change nothing else: no other field, line, formatting or file/,
+    );
+    expect(procedure).toMatch(/Add no example and no test, and edit no story or contract/);
+    expect(flat(sectionOf(text, "## What it writes"))).toMatch(
+      /In the stage report, each file and field changed, with its old and its new value, and the quoted instruction and its source/,
+    );
+  });
+
+  // BR-0002-0016
+  // QFAI:EX-0001-0216-12
+  it("stops implement-settled-edit before any edit when a value or a named field is missing", async () => {
+    const procedure = flat(
+      sectionOf(await readShipped("step/implement-settled-edit/STEP.md"), "## Procedure"),
+    );
+    expect(procedure).toMatch(
+      /A value the request leaves to judgement, such as "the next version", or a value the quoted instruction does not name, stops the step: change nothing, and report the value that is missing/,
+    );
+    expect(procedure).toMatch(
+      /A file that does not exist, or a field the file does not hold as the documents name it, stops the step: change nothing, and report each file and field that is missing/,
+    );
+  });
+
+  // BR-0002-0016
+  // QFAI:EX-0001-0216-13
+  it("lets implement-scaffold and implement-tdd pass on a work order that carries only a settled edit", async () => {
+    for (const step of ["implement-scaffold", "implement-tdd"]) {
+      expect(await passesWhen(step), step).toMatch(
+        /The step also passes when the work order names no flow because its request carries only a settled literal edit, such as a delegated release's version\..*The pass names the edit/,
+      );
+    }
+    expect(
+      flat(sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Reads")),
+    ).toMatch(
+      /A work order that names no flow because it carries only a settled literal edit, which `implement-settled-edit` makes, is not such a case: the step passes/,
+    );
   });
 
   it("leaves no step with a skip condition a plan predicate decided", async () => {

@@ -19,6 +19,10 @@ Read first: the flow's examples and the tests that annotate them. The step
 passes when every example has an annotating test, so no example needs a Red,
 Green and Refactor cycle. The pass names the examples and their tests.
 
+The step also passes when the work order names no flow because its request
+carries only a settled literal edit, such as a delegated release's version.
+That edit has no example to take through a cycle. The pass names the edit.
+
 ## Reads
 
 - The flow's stories, acceptance criteria, examples and owning contracts,

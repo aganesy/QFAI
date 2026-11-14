@@ -597,6 +597,7 @@ describe("report ownership after workflow record retirement", () => {
       "implement-refactor",
       "implement-retire",
       "implement-revert",
+      "implement-settled-edit",
       "implement-stress-harness",
       "implement-sweep",
       "implement-tooling",

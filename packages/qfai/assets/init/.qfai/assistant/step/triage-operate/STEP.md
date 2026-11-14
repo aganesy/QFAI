@@ -104,10 +104,13 @@ request, or the version edit alone.
    makes the edit under the same instruction. A version edit the documents
    make by hand, such as a version bump the preparation does not make, is a
    tracked change too: report `needs-change` with an extraction of it as an
-   `order` naming the `release` artifact, carrying the quoted instruction and
-   the named version the same way, so the next plan's implement stage makes
-   the edit. Any other hand-made release edit has no route: report it as a
-   blocker that names the edit.
+   `order` naming the `release` artifact. Its request carries the quoted
+   instruction, the named version, and each file and field the documents name
+   for the edit, as they name them, so the next plan's `implement-settled-edit`
+   makes exactly that edit. Any other hand-made release edit is reported the
+   same way, its request naming each file, field and value the documents give
+   for it; that step makes it, or stops and names what the documents leave
+   open.
 3. Review the release pull request as the project's review rules say, and
    merge it only when they allow, waiting for its checks as above. Where the
    release documents make the merge the instruction for the tag, such as a

@@ -574,18 +574,26 @@ it("A conflict resolution in spec and contract files plans, and one in code is r
 });
 
 // BR-0015-0296
+// BR-0002-0016
 // QFAI:EX-0001-0229-33
-it("A delegated release's version edit plans apply-settled with one scope that writes it", async () => {
-  const planned = await planFor(
-    extraction({
-      intent: "order",
-      qualifiers: ["release-delegated"],
-      artifacts: ["release", "spec"],
-    }),
-  );
+it.each([[["release", "spec"] as const], [["release"] as const]])(
+  "A delegated release's version edit naming %j plans apply-settled with one scope that makes it",
+  async (artifacts) => {
+    const planned = await planFor(
+      extraction({ intent: "order", qualifiers: ["release-delegated"], artifacts: [...artifacts] }),
+    );
 
-  expect(planned.status).toBe(0);
-  expect(field(planned.json, "route")).toBe("apply-settled");
-  expect(stageIds(planned.json)).toContain("implement");
-  expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
-});
+    expect(planned.status).toBe(0);
+    expect(field(planned.json, "route")).toBe("apply-settled");
+    const stages = field(planned.json, "stages");
+    const implement = Array.isArray(stages)
+      ? stages.find((stage) => field(stage, "id") === "implement")
+      : undefined;
+    const steps = field(implement, "steps");
+    expect(Array.isArray(steps) ? steps[0] : undefined).toMatchObject({
+      name: "implement-settled-edit",
+      passThrough: true,
+    });
+    expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
+  },
+);

@@ -146,6 +146,7 @@ const KINDS: Record<string, string[]> = {
     "implement-revert",
     "implement-stress-harness",
     "implement-oracle-parity",
+    "implement-settled-edit",
   ],
 };
 
@@ -161,6 +162,7 @@ export const PASS_THROUGH_STEPS = [
   "sdd-story",
   "common-design-md",
   "triage-investigate",
+  "implement-settled-edit",
   "implement-scaffold",
   "implement-tdd",
   "implement-credentials",

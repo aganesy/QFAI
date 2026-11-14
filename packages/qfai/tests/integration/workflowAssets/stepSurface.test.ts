@@ -177,6 +177,7 @@ describe("the skills a workflow run's steps belong to", () => {
         "implement-credentials",
         "implement-acceptance",
         "implement-procedure",
+        "implement-settled-edit",
       ].sort(),
     );
     const implement = await kindSteps([
