@@ -331,6 +331,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `$(...)`, backticks, `<(...)`, `>(...)` or PowerShell `@(...)` are denied
   like the same search run directly.
 
+- **A substitution inside a here-document body that a shell runs is no longer
+  skipped by the search-protection hook.** The hook stopped scanning a body
+  for `$(...)` and backticks whenever its line did not name a shell, so
+  `'bash' <<EOF`, `bash.exe <<EOF`, a pipe to `bash` after the body,
+  `eval "$(cat <<'EOF' …)"` and similar shapes hid a search. A body
+  is now left out of the scan only when its line writes files with `cat` or
+  `tee`, or opens a `git commit`, `git tag` or `gh` message as `"$(cat <<'EOF'`, with a
+  quoted delimiter and nothing before it but such lines.
+
 - **The search-protection hook says what it could not read.** A command whose
   quotes it cannot match, or whose wrappers nest more than 16 levels deep, is
   still denied, but the message names that cause and how to retry instead of
@@ -483,6 +492,14 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   `Write-Output (rg auth packages)`, or in a `$(...)` or backtick in the body
   of `cat <<EOF` is denied like the same search run directly. A quoted
   delimiter such as `<<'EOF'` still keeps its body as data.
+
+- **The search-protection hook reads compound commands, PowerShell script
+  blocks and here-strings.** A search after `if`, `then`, `elif`, `else`,
+  `while`, `until`, `do`, `!` or `time` is denied, and so is one inside a
+  PowerShell script block such as `ForEach-Object { rg foo $_ }`. A pipe
+  filter inside a group, such as `git log | { grep fix; }`, is allowed like
+  the same filter without the group. A PowerShell here-string is read as one
+  string, so an apostrophe in its text no longer ends it.
 
 ## [2.4.0] - 2026-11-11
 

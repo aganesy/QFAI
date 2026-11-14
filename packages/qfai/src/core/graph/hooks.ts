@@ -101,8 +101,12 @@ function classifyShellText(
   if (depth > 16) return failedGraphHook("depth");
   // Nested text, such as a `bash -c` argument or a substitution body, skips no
   // here-document body: what reads its output lies outside it.
+  // A here-string is read as one string first, so a comment marker or a quote in its text is
+  // data to the comment reader too.
   const source =
-    scope.shell === "powershell" ? withoutPowerShellComments(powerShellLines(text)) : text;
+    scope.shell === "powershell"
+      ? withoutPowerShellComments(powershellHereStrings(powerShellLines(text)))
+      : text;
   const commands =
     source === undefined ? undefined : shellPipelines(source, scope.shell, depth > 0);
   // Text in a substitution that cannot be read as commands is no verdict of its own.
@@ -115,12 +119,50 @@ function classifyShellText(
     depth,
     redefinedOutside,
     start,
-    substitutionBodies(source, scope.shell).map(
+    substitutionBodies(source, scope.shell, depth > 0).map(
       (body) => (location: ShellLocation, redefines: boolean) =>
         classifyShellText(body, scope, depth + 1, redefines, location, true),
     ),
   );
 }
+
+/**
+ * PowerShell text with each here-string read as a plain string. The body of `@'...'@` is
+ * literal, so it becomes `''`; a quote inside it, such as the apostrophe in `It's`, no longer
+ * ends a string early. The body of `@"..."@` still expands `$(...)`, so it stays inside double
+ * quotes with its own double quotes removed.
+ */
+function powershellHereStrings(text: string): string {
+  let output = "";
+  let quote: string | undefined;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index] ?? "";
+    if (character === "`" && quote !== "'") {
+      output += character + (text[index + 1] ?? "");
+      index += 1;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) quote = undefined;
+      output += character;
+      continue;
+    }
+    // Only an `@'` or `@"` outside a string opens one, and whichever opens first is the string.
+    hereString.lastIndex = index;
+    const match = character === "@" ? hereString.exec(text) : null;
+    if (match) {
+      output += match[1] === "'" ? "''" : `"${(match[2] ?? "").replace(/"/g, "")}"`;
+      index = hereString.lastIndex - 1;
+      continue;
+    }
+    if (character === "'" || character === '"') quote = character;
+    output += character;
+  }
+  return output;
+}
+
+/** A PowerShell here-string: `@'` or `@"` at a line end, closed by `'@` or `"@` at a line start. */
+const hereString = /@(['"])[ \t]*\r?\n([\s\S]*?)\r?\n\1@/y;
 
 type NestedClassification = (
   location: ShellLocation,
@@ -177,12 +219,11 @@ function classifyCommands(
         ? "unknown"
         : movedLocation(location, operand, command, commands[index + 1], scope);
     }
-    const decision = classifyCommand(
-      words,
-      { ...scope, location, redefined },
-      depth,
-      command.upstream,
-    );
+    // A group reads the pipe before it only when its `}` redirects nothing: in
+    // `git log | { grep fix; } < .env` the group reads `.env`.
+    const upstream =
+      words[0] === "{" && !groupClosesBare(commands, index) ? undefined : command.upstream;
+    const decision = classifyCommand(words, { ...scope, location, redefined }, depth, upstream);
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
@@ -199,6 +240,8 @@ function redefinesCommands(words: string[]): boolean {
   for (;;) {
     const redirection = redirectionLength(words[offset]);
     if (redirection) offset += redirection;
+    // A group's `{` defines nothing itself; the command it opens is read instead.
+    else if (words[offset] === "{") offset += 1;
     else if (["builtin", "command", "env"].includes(words[offset]?.toLowerCase() ?? "")) {
       offset += 1;
       while (words[offset]?.startsWith("-")) {
@@ -277,10 +320,29 @@ function redirectionLength(word: string | undefined): number {
  * a `+N` operand rotates the directory stack, and a colon other than a drive letter's
  * names a PowerShell provider drive such as `env:`, not a folder.
  */
+/** Whether the `{` group opened at `index` closes with a bare `}`, which redirects nothing. */
+function groupClosesBare(commands: ShellCommand[], index: number): boolean {
+  let depth = 0;
+  for (const { words } of commands.slice(index)) {
+    const opened = words.findIndex((word) => word !== "{");
+    depth += opened < 0 ? words.length : opened;
+    if (words[0]?.startsWith("}")) {
+      depth -= 1;
+      if (depth <= 0) return words.length === 1 && words[0] === "}";
+    }
+  }
+  return false;
+}
+
 function directoryOperand(words: string[]): string | null | undefined {
   let offset = 0;
   while (offset < words.length) {
-    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) {
+    // `if cd /tmp` and `{ cd /tmp` move as `cd /tmp` does.
+    if (
+      /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "") ||
+      words[offset] === "{" ||
+      COMPOUND_KEYWORDS.includes(words[offset] ?? "")
+    ) {
       offset += 1;
       continue;
     }
@@ -381,6 +443,19 @@ function authorizeAt(context: CommandContext, decision: GraphHookDecision): Grap
   return authorize({ ...denyExploration(decision.operation, relative), exceptionEligible: true });
 }
 
+/** POSIX words that start a compound command or one of its parts, followed by a command. */
+const COMPOUND_KEYWORDS: readonly string[] = [
+  "if",
+  "then",
+  "elif",
+  "else",
+  "while",
+  "until",
+  "do",
+  "!",
+  "time",
+];
+
 function classifyCommand(
   words: string[],
   context: CommandContext,
@@ -400,10 +475,18 @@ function classifyCommand(
     return classifyCommand(words.slice(offset), context, depth + 1);
   }
   const operation = commandName(words);
+  // A compound-command keyword runs the command after it: `if grep ...`, `then grep ...`,
+  // `do grep ...`, `! grep ...`, `time -p grep ...`. `fi` and `done` run nothing.
+  if (COMPOUND_KEYWORDS.includes(words[0] ?? "")) {
+    const skip = words[0] === "time" && words[1] === "-p" ? 2 : 1;
+    return classifyCommand(words.slice(skip), context, depth + 1);
+  }
+  if (words[0] === "fi" || words[0] === "done") return undefined;
   // A `{ ...; }` group and a `case` command's first arm run the command after their
-  // opening words. `classifyCommands` strips the pattern of each later arm.
+  // opening words. `classifyCommands` strips the pattern of each later arm. A group
+  // keeps the pipeline stage before it, so `git log | { grep fix; }` is a filter.
   if (operation === "{") {
-    return classifyCommand(words.slice(1), context, depth + 1);
+    return classifyCommand(words.slice(1), context, depth + 1, upstream);
   }
   if (operation === "case") {
     const subject = words.indexOf("in");
@@ -848,12 +931,12 @@ const DATA_FILE = String.raw`(?!/dev/|/proc/)[\w./-]+`;
 const DATA_OPERAND = String.raw`[ \t]+(?:-[A-Za-z]+|>>?[ \t]*${DATA_FILE}|>[ \t]*/dev/null|${DATA_FILE})`;
 /**
  * A whole line that writes one here-document to files and nothing else: `cat` or `tee`,
- * plain operands, one `<<` or `<<-` with a quoted identifier delimiter. A line of this
+ * plain operands, one `<<` or `<<-` with a quoted or escaped identifier delimiter. A line of this
  * shape hands its body to no shell, pipe, descriptor or later command, and the quoted
  * delimiter makes Bash read the body literally, with no expansion or line joining.
  */
 const DATA_HEREDOC_LINE = new RegExp(
-  String.raw`^[ \t]*(?:cat|tee)(?:${DATA_OPERAND})*[ \t]*<<-?[ \t]*(['"])[A-Za-z_]\w*\1(?:${DATA_OPERAND})*[ \t]*$`,
+  String.raw`^[ \t]*(?:cat|tee)(?:${DATA_OPERAND})*[ \t]*<<-?[ \t]*(?:(['"])[A-Za-z_]\w*\1|\\[A-Za-z_]\w*)(?:${DATA_OPERAND})*[ \t]*$`,
 );
 /** A line that may come before a data line: blank, `mkdir -p` of plain paths, or another data line. */
 const DATA_PRELUDE_LINE = new RegExp(
@@ -1090,10 +1173,10 @@ function shellPipelines(
  * body is data, except the substitutions an unquoted delimiter's body expands:
  * `heredocData` says which bodies.
  */
-function substitutionBodies(text: string, shell: GraphShell): string[] {
+function substitutionBodies(text: string, shell: GraphShell, nested = false): string[] {
   if (shell === "cmd") return [];
   const { text: command, expanded } =
-    shell === "posix" ? heredocData(text) : { text, expanded: [] };
+    shell === "posix" ? heredocData(text, nested) : { text, expanded: [] };
   const escape = shell === "posix" ? "\\" : "`";
   const bodies: string[] = [];
   let quote: string | undefined;
@@ -1164,6 +1247,19 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
       if (end === undefined) break;
       bodies.push(command.slice(index + 1, end));
       index = end;
+    } else if (
+      !quote &&
+      shell === "powershell" &&
+      character === "{" &&
+      command[index - 1] !== "@"
+    ) {
+      // A script block, such as the one `ForEach-Object { rg foo $_ }` runs, holds commands.
+      // A hashtable `@{...}` holds keys, and a brace this scan cannot close is text; the scan
+      // goes on inside either, so a `$(...)` there is still read.
+      const end = closingBrace(command, index + 1);
+      if (end === undefined) continue;
+      bodies.push(command.slice(index + 1, end));
+      index = end;
     } else if (shell === "posix" && character === "`") {
       const end = closingBacktick(command, index + 1);
       if (end === undefined) break;
@@ -1173,6 +1269,25 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
   }
   for (const body of expanded) bodies.push(...expandedSubstitutions(body));
   return bodies;
+}
+
+/** The index of the `}` that closes a PowerShell brace opened before `start`, outside quotes. */
+function closingBrace(command: string, start: number): number | undefined {
+  let depth = 1;
+  let quote: string | undefined;
+  for (let index = start; index < command.length; index += 1) {
+    const character = command[index];
+    if (character === "`" && quote !== "'") index += 1;
+    else if (quote) {
+      if (character === quote) quote = undefined;
+    } else if (character === "'" || character === '"') quote = character;
+    else if (character === "{") depth += 1;
+    else if (character === "}") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return undefined;
 }
 
 /** The index of the backtick that closes one opened before `start`, or undefined. */
@@ -1210,42 +1325,65 @@ function expandedSubstitutions(body: string): string[] {
 /** A `<<` or `<<-` here-document operator and its delimiter, quoted or not; `<<<` is not one. */
 const heredocOperator = /<<(?!<)(-?)[ \t]*(?:'([^'\n]*)'|"([^"\n]*)"|\\?([^\s;|&<>()'"]+))/y;
 
-/** A line that hands its input to a shell, whose here-document body is a script. */
-const feedsShell = /(?:^|[\s|;&(`/])(?:(?:ba|z|da|k)?sh|eval|source)(?=$|[\s|;&)<>])/;
+/** A plain word of a message command line: an option, a value or a subcommand. */
+const MESSAGE_WORD = String.raw`[ \t]+[\w./=:@-]+`;
+/**
+ * A line that opens a here-document as the text of a message: `git commit` or `git tag`,
+ * or `gh pr`, `gh issue` or `gh release` with `create`, `edit` or `comment`, plain
+ * words, then `"$(cat <<'EOF'` with a quoted or escaped identifier delimiter. The body
+ * becomes an argument that names a message, so no shell runs it.
+ */
+const MESSAGE_HEREDOC_LINE = new RegExp(
+  String.raw`^[ \t]*(?:git[ \t]+(?:commit|tag)|gh[ \t]+(?:pr|issue|release)[ \t]+(?:create|edit|comment))(?:${MESSAGE_WORD})*[ \t]+"\$\(cat[ \t]+<<-?[ \t]*(?:(['"])[A-Za-z_]\w*\1|\\[A-Za-z_]\w*)[ \t]*$`,
+);
+/** The line that closes a message substitution: `)"` and plain words. */
+const MESSAGE_CLOSE_LINE = new RegExp(String.raw`^[ \t]*\)"(?:${MESSAGE_WORD})*[ \t]*$`);
+/** A line that may come before a message line: `git add` of plain paths. */
+const MESSAGE_PRELUDE_LINE = new RegExp(String.raw`^[ \t]*git[ \t]+add(?:${MESSAGE_WORD})*[ \t]*$`);
 
 /**
- * The text with each here-document body and its delimiter line removed. The body is
- * text the command reads, such as a commit message, so a backtick or `$(...)` in it
- * starts no substitution here. Only an operator outside quotes, comments and
- * arithmetic starts a body; a `$(` starts a fresh context, as the shell reads it,
- * even inside double quotes. A body fed to a shell is a script and is kept, and so
- * is one with no closing delimiter line. An unquoted delimiter's body still expands
- * `$(...)` and backticks, so it comes back in `expanded` for those to be read.
+ * The text with each here-document body that is surely data, and its delimiter line,
+ * removed. Such a body is text a command reads, such as a commit message, so a backtick
+ * or `$(...)` in it starts no substitution here. A body is removed only in a closed
+ * shape: its operator's whole line writes files (a data line) or opens a message
+ * (`git commit -m "$(cat <<'EOF'` and the like), every line before it is a data line,
+ * a message line, its closing line or a prelude, the delimiter is a quoted or escaped
+ * identifier, so Bash expands nothing in the body, the command holds no carriage return,
+ * the delimiter line is present, and the text is not nested in another command. Every
+ * other body is kept in the text and scanned, so a substitution in it is classified.
+ * `expanded` stays for bodies a shell expands; a closed-shape body expands nothing.
  */
-function heredocData(command: string): { text: string; expanded: string[] } {
+function heredocData(command: string, nested = false): { text: string; expanded: string[] } {
   let output = "";
   let quote: string | undefined;
   let comment = false;
   let depth = 0;
   const outer: { quote: string | undefined; depth: number }[] = [];
   const expanded: string[] = [];
-  let pending: HeredocBody[] = [];
+  let pending: (HeredocBody & { data: boolean })[] = [];
+  // Where the current line starts in `output`, which holds no removed body.
+  let lineOutput = 0;
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index] ?? "";
     output += character;
     if (character === "\n") {
       comment = false;
       if (!quote && pending.length) {
-        const end = heredocEnd(command, index + 1, pending, expanded);
+        const end = pending.every((body) => body.data)
+          ? heredocEnd(command, index + 1, pending, expanded)
+          : undefined;
         if (end !== undefined) index = end - 1;
         pending = [];
       }
+      lineOutput = output.length;
     } else if (comment) {
       continue;
     } else if (quote === "'") {
       if (character === "'") quote = undefined;
     } else if (character === "\\") {
       output += command[index + 1] ?? "";
+      // A continued line is still a line the earlier-line check must read.
+      if (command[index + 1] === "\n") lineOutput = output.length;
       index += 1;
     } else if (character === "$" && command[index + 1] === "(" && command[index + 2] !== "(") {
       outer.push({ quote, depth });
@@ -1272,13 +1410,26 @@ function heredocData(command: string): { text: string; expanded: string[] } {
       const lineStart = command.lastIndexOf("\n", index) + 1;
       const lineEnd = command.indexOf("\n", index);
       const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
-      if (!feedsShell.test(line) && !command.slice(lineStart, index).includes("((")) {
-        pending.push({
-          delimiter: match[2] ?? match[3] ?? match[4] ?? "",
-          stripTabs: !!match[1],
-          expands: match[4] !== undefined && !match[0].includes("\\"),
-        });
-      }
+      const delimiter = match[2] ?? match[3] ?? match[4] ?? "";
+      const expands = match[4] !== undefined && !match[0].includes("\\");
+      const data =
+        !nested &&
+        !expands &&
+        !command.includes("\r") &&
+        /^[A-Za-z_]\w*$/.test(delimiter) &&
+        (DATA_HEREDOC_LINE.test(line) || MESSAGE_HEREDOC_LINE.test(line)) &&
+        output
+          .slice(0, lineOutput)
+          .split("\n")
+          .every(
+            (prior) =>
+              DATA_PRELUDE_LINE.test(prior) ||
+              DATA_HEREDOC_LINE.test(prior) ||
+              MESSAGE_HEREDOC_LINE.test(prior) ||
+              MESSAGE_CLOSE_LINE.test(prior) ||
+              MESSAGE_PRELUDE_LINE.test(prior),
+          );
+      pending.push({ delimiter, stripTabs: !!match[1], expands, data });
       output += command.slice(index + 1, heredocOperator.lastIndex);
       index = heredocOperator.lastIndex - 1;
     }
@@ -1295,7 +1446,9 @@ interface HeredocBody {
 
 /**
  * The index after the delimiter line that closes the last of `bodies`, or undefined.
- * The text of each body that expands is added to `expanded`.
+ * The text of each body that expands is added to `expanded`. A line that starts with a
+ * delimiter but holds more, such as `EOF)`, also returns undefined: inside a
+ * substitution Bash may end the body there, so the body is kept.
  */
 function heredocEnd(
   command: string,
@@ -1312,7 +1465,9 @@ function heredocEnd(
     while (!closed && position < command.length) {
       const end = command.indexOf("\n", position);
       const line = command.slice(position, end < 0 ? command.length : end).replace(/\r$/, "");
-      closed = (stripTabs ? line.replace(/^\t+/, "") : line) === delimiter;
+      const stripped = stripTabs ? line.replace(/^\t+/, "") : line;
+      closed = stripped === delimiter;
+      if (!closed && stripped.startsWith(delimiter)) return undefined;
       if (!closed) bodyEnd = end < 0 ? command.length : end;
       position = end < 0 ? command.length : end + 1;
     }
