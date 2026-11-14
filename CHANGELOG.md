@@ -72,6 +72,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`ui-procurement.md` requires each region's states to exist.** A region
+  that loads data or accepts input lists its default, empty, loading, error
+  and success states and what realises each one. A state it cannot reach is
+  marked not applicable with the reason, and one app-wide fallback no longer
+  counts as a region's loading or error state.
+
 - **The UI contract guide says the contract is a floor.** A UI contract
   lists what must be verifiable on a screen, not its whole inventory. The
   built screen also carries the parts `interface-clarity.md` lists under
@@ -89,6 +95,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contracts review prompt, which nothing loaded and which reviewed that removed
   file, is gone.
 
+- **ID allocation leaves no gap where a project checks IDs run without
+  gaps.** The `sdd-triage` step and its reference say that such a project
+  takes the next ID from the base and the working tree alone, and leaves a
+  collision with an open pull request to the renumbering at merge time,
+  instead of taking a number past the open heads.
+
 - **`interface-clarity.md` walks the user's job across screens.** Section 6
   no longer stops at the tasks a surface declares. It walks the job from where
   the user starts to the result and back, including jobs no contract names,
@@ -96,6 +108,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   realistic volume of data and, on a screen, at phone and desktop widths. A gap
   that a business-screen part closes is a defect to fix; any other gap on a job
   no contract names goes to the owner of the spec rather than being built.
+
+- **The product-surface reviewer no longer stops on standard screen parts.**
+  Its stop condition covers configuration, animation and novel interaction
+  that the user journey or acceptance criteria do not ground. Navigation,
+  list search, sort and pagination, and empty, error and success feedback are
+  grounded by the pattern itself.
 
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
@@ -118,6 +136,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `navigation` with `shell`, `entry_points` and `back_to`. The UI contract
   guide, the contract rules and the `sdd-contract` step say every screen
   carries them. `npx qfai validate` does not check these keys.
+
+- **The contract step writes the standard parts of a business screen into its
+  UI contract.** After deriving a screen's elements and actions from the
+  examples, `sdd-contract` checks the screen against
+  `## What a business screen always has` in `interface-clarity.md` and adds
+  each part that applies and is missing: navigation, list behaviour, the
+  empty, loading, error and success states and the feedback after a change.
+  Such a part needs no example of its own unless it carries a business rule.
 
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
@@ -210,6 +236,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the package now depends on. The releases change only a dependency of
   the checker and its build configuration.
 
+- **UI evidence captures the standard states of list and form screens.** The
+  `qfai-implement` UI reference asks for the empty, error and success states
+  that every screen listing records or taking input has, whether or not a
+  contract declares them.
+
 - **An approval row quotes a translated label in the file's language.**
   When the structured question showed its options in a language other than
   the one `decisions.md` is written in, the `qfai-sdd` decisions template now
@@ -232,6 +263,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   loads the whole baseline to find the check. Run `qfai init --force` to take
   the new text. Fixes #4058.
 
+- **The UI procurement ladder starts with the project's own components.** Its
+  first rung now reuses a component the project already has, and extracts a
+  shared one when a region repeats on a second screen. The ladder no longer
+  asks whether a region should exist: a region the screen contract names, or
+  one its pattern implies as interface-clarity lists them, is in scope, and
+  leaving an implied region out needs a reason in the UI contract. The
+  prototype reviewer's second criterion cites rungs 1 to 3.
+
 ### Fixed
 
 - **The search-protection hook denies a search behind a named descriptor or
@@ -251,6 +290,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   worktree in the same command, the denial still offers the AI-decided
   fallback. A move anywhere else, or to a target the command text does not
   spell out, still makes the fallback unavailable.
+- **The search-protection hook keeps the fallback after a `cd` into a project
+  subdirectory.** In `cd packages/qfai && rg auth src/`, the denied search
+  keeps the AI-decided fallback, scoped to `packages/qfai/src`. The hook
+  follows a move only while it runs outside a pipeline and an `&&` joins it to
+  what comes next. A move joined by `||`, `;`, `&` or a new line, one CDPATH may
+  resolve, or a target that leaves the worktree keeps the fallback unavailable.
+
 - **The search-protection hook denies a search with an input redirection
   attached to its name.** `grep</dev/null -r foo src` and `grep<&3 -r foo .`
   were allowed as outside the checked boundary, while `grep>/dev/null -r foo
