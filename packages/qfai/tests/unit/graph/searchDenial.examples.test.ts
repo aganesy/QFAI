@@ -139,7 +139,7 @@ it("rebases the search target after an && chain into a project subdirectory and 
   const escaping = classifyGraphExploration({
     tool: "Bash",
     cwd: root,
-    command: "cd packages && rg auth ../../outside",
+    command: `cd packages && rg auth '${path.join(path.dirname(root), "outside")}'`,
   });
   expect(escaping.fallbackUnavailable).toBe(true);
   expect(escaping.message).toContain("resolves outside this project worktree");
