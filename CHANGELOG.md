@@ -270,6 +270,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   loads the whole baseline to find the check. Run `qfai init --force` to take
   the new text. Fixes #4058.
 
+- **An empty state's next step is protected from copy cuts.**
+  `interface-clarity.md` lists the action, or a short sentence naming it, that
+  leads out of an empty state under "What this rule never removes". The
+  product-surface reviewer, the prototyping reviewer prompt, the UI contract
+  guide and the `sdd-contract` step name the same exception, so a review that
+  cuts how-to copy no longer leaves an empty search result with only "nothing
+  matches".
+
 - **The UI procurement ladder starts with the project's own components.** Its
   first rung now reuses a component the project already has, and extracts a
   shared one when a region repeats on a second screen. The ladder no longer
@@ -306,6 +314,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file, an unreadable pre-tool event and unreadable local search state each get
   their own message, and the hook prints the same message to standard error.
 
+- **The search-protection hook reads past here-document bodies.** A Bash
+  command that wrote a file through `cat <<'EOF'` was refused as "invalid
+  pre-tool input" when the body held an unpaired apostrophe, and a body line
+  such as `grep -R policy .qfai/spec` was denied as a search. The body is now
+  read as data when its whole line only writes files with `cat` or `tee` and a
+  quoted delimiter, such as `cat > notes.md <<'EOF'`, and every line before it is such a line or a
+  `mkdir -p`. Any other here-document body is still read as shell text.
 - **A quote inside a `#` comment no longer hides the next lines from the
   search-protection hook.** In a POSIX shell an unquoted `#` at the start of a
   word ends at its line, so `echo # '` followed by `rg auth packages/` on the
@@ -436,6 +451,14 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   `<task-notification>`, `<wake>`, `<ci-monitor-event>` or
   `[SYSTEM NOTIFICATION`. `qfai init` replaces the earlier group of an
   unchanged settings file.
+
+- **The search-protection hook denies a search in a case arm, a subshell, a
+  group or an unquoted here-document body.** A search after `x)` in
+  `$(case x in x) ...;; esac)`, in `(grep -r foo src)`, in
+  `{ grep -r foo src; }`, in zsh `=(...)`, in PowerShell
+  `Write-Output (rg auth packages)`, or in a `$(...)` or backtick in the body
+  of `cat <<EOF` is denied like the same search run directly. A quoted
+  delimiter such as `<<'EOF'` still keeps its body as data.
 
 ## [2.4.0] - 2026-11-11
 

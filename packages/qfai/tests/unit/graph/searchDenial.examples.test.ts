@@ -227,6 +227,78 @@ it("allows quoted search words printed without invoking search", () => {
   }
 });
 
+// QFAI:EX-0001-0235-29
+// Mutation: packages/qfai/src/core/graph/hooks.ts `heredocs.push({ delimiter, stripTabs, data });` -> `heredocs.push({ delimiter, stripTabs, data: false });` fails "allows here-document bodies that hold an apostrophe or a search word"
+it("allows here-document bodies that hold an apostrophe or a search word", () => {
+  for (const command of [
+    "cat > notes.md <<'EOF'\nThe hook doesn't search.\nEOF\ngh issue create --body-file notes.md",
+    "cat <<'EOF' > a.txt\ngrep -R policy .qfai/spec\nEOF",
+    'cat <<-"END" > b.txt\n\tIt\'s data.\n\tEND\necho done',
+    "cat<<'EOF'\nIt's data.\nEOF",
+    "tee out.txt <<'EOF' >/dev/null\nIt's data.\nEOF",
+    "cat > a.md <<'EOF'\nIt's $x (a).\nEOF\ncat > b.md <<'EOF'\nIt's b.\nEOF\ngh issue create --body-file a.md",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+    expect(result.state, command).not.toBe("failed");
+  }
+  for (const command of [
+    "cat > a.txt <<'EOF'\nIt's data.\nEOF\nrg auth packages/",
+    "cat <<'EOF' && rg auth packages/\ndata\nEOF",
+    // A `<<` that is not an operator registers no body.
+    "echo '<<' EOF\nrg auth packages/",
+    'echo "<<x"\nrg auth packages/',
+    "echo hi # <<EOF\nrg auth packages/",
+    "echo $((1 << 2))\nrg auth packages/",
+    "cat <<<x\nrg auth packages/",
+    // An empty quoted delimiter ends the body at the first empty line.
+    "cat <<'' x\nbody\n\nrg auth packages/\nx",
+    "echo $[1<<2]\nrg auth packages/",
+    "echo ${x:-<<EOF}\nrg auth packages/",
+    "(true)#<<EOF\nrg auth packages/",
+    "for ((i=0; i<1<<2; i++)); do :; done\nrg auth packages/",
+    // A delimiter that is not literal text is not read as Bash reads it.
+    "cat <<$'EOF'\nx\nEOF\nrg auth packages/",
+    // A body with no delimiter line is not skipped.
+    "cat <<EOF\nrg auth packages/",
+    // Only a body that cat or tee reads, and that reaches no pipe, is data.
+    "bash <<'EOF'\nrg auth packages/\nEOF",
+    "'bash' <<EOF\nrg auth packages/\nEOF",
+    "bash.exe <<EOF\nrg auth packages/\nEOF",
+    ". /dev/stdin <<EOF\nrg auth packages/\nEOF",
+    "cat <<'EOF' | sh\nrg auth packages/\nEOF",
+    "cat <<EOF |\nrg auth packages/\nEOF\nbash",
+    "exec 0<<EOF\nrg auth packages/\nEOF\nbash",
+    "x=$(cat <<EOF\nrg auth packages/\nEOF\n)",
+    "bash <<B; cat <<A\nrg auth packages/\nB\nx\nA",
+    // Nothing earlier may redefine cat or open a reader of what it writes.
+    "cat(){ bash; }; cat <<EOF\nrg auth packages/\nEOF",
+    "alias cat=bash\ncat <<EOF\nrg auth packages/\nEOF",
+    "exec 3> >(bash)\ncat <<EOF >&3\nrg auth packages/\nEOF",
+    "mkfifo p; bash < p & cat <<EOF > p\nrg auth packages/\nEOF",
+    "cat <<EOF > /dev/fd/3\nrg auth packages/\nEOF",
+    "cat <<EOF &\nrg auth packages/\nEOF",
+    // Only a whole line that writes files, after only such lines, skips its body.
+    "{\ncat <<EOF\nrg auth packages/\nEOF\n} | bash",
+    "if true\nthen\ncat <<EOF\nrg auth packages/\nEOF\nfi | sh",
+    'bash -c "cat <<EOF\nrg auth packages/\nEOF" | bash',
+    "tee 'x\ny' <<EOF | bash\nrg auth packages/\nEOF",
+    "\\hash -p /bin/bash cat\ncat <<EOF\nrg auth packages/\nEOF",
+    "printf -v PATH /tmp/e\ncat <<EOF\nrg auth packages/\nEOF",
+    "cat <<EOF\rx\nhi\nEOF\rx\nrg auth packages/\nEOF",
+    'cat <<"E\\\\F"\nhi\nE\\F\nrg auth packages/\nE\\\\F',
+    "cat > /dev/fd/3 <<EOF\nrg auth packages/\nEOF",
+    // An unquoted delimiter lets Bash expand and join body lines; a carriage return is
+    // an ordinary character to Bash. Neither body is skipped.
+    "cat > f.sh <<EOF\nx=$(\nrg auth packages/\n)\nEOF",
+    "cat > c.txt <<'EOF'\r\nrg auth packages/\r\nEOF\r\n",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("rg");
+  }
+});
+
 // QFAI:EX-0001-0235-09
 // Mutation: packages/qfai/src/core/graph/hooks.ts `function denyExploration(operation: string, target: string): GraphHookDecision {` -> `function denyExploration(operation: string, target: string): GraphHookDecision { return { decision: "allow", state: "configured", operation, target, message: "Exploration allowed." };` fails "denies separate exploration following a quality command"
 it("denies separate exploration following a quality command", () => {
@@ -691,7 +763,7 @@ it("denies a search inside a command or process substitution", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `const command = shell === "posix" ? heredocData(text) : text;` -> `const command = text;` fails "reads a here-document body as data, not as substitutions"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `shell === "posix" ? heredocData(text) : { text, expanded: [] };` -> `{ text, expanded: [] };` fails "reads a here-document body as data, not as substitutions"
 it("reads a here-document body as data, not as substitutions", () => {
   const message = [
     "Deny the search",
@@ -702,7 +774,8 @@ it("reads a here-document body as data, not as substitutions", () => {
   for (const command of [
     `git commit -m "$(cat <<'EOF'\n${message}\nEOF\n)"`,
     `git commit -m "$(cat <<"EOF"\n${message}\nEOF\n)"`,
-    `git commit -m "$(cat <<-EOF\n${message}\n\tEOF\n)"`,
+    `git commit -m "$(cat <<-'EOF'\n${message}\n\tEOF\n)"`,
+    `git commit -m "$(cat <<\\EOF\n${message}\nEOF\n)"`,
     `gh pr create --body "$(cat <<'EOF'\n${message}\nEOF\n)" --title x`,
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
@@ -722,6 +795,75 @@ it("reads a here-document body as data, not as substitutions", () => {
   // Nesting past the depth limit still fails closed.
   const deep = `${"echo $(".repeat(20)}grep -r foo src${")".repeat(20)}`;
   expect(classifyGraphExploration({ tool: "Bash", command: deep }).decision).toBe("deny");
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (cases.at(-1) === depth) continue;` -> `if (false) continue;` fails "denies a search in a case arm, a subshell, a group or zsh process substitution"
+it("denies a search in a case arm, a subshell, a group or zsh process substitution", () => {
+  for (const [tool, command, operation] of [
+    ["Bash", "echo $(case x in x) grep -r foo src;; esac)", "grep"],
+    ["Bash", "echo $(case x in (x) grep -r foo src;; esac)", "grep"],
+    ["Bash", "case x in x) grep -r foo src;; esac", "grep"],
+    ["Bash", "case x in\n  y) echo y;;\n  *) rg auth packages;;\nesac", "rg"],
+    ["Bash", "cat =(grep -r foo src)", "grep"],
+    ["Bash", "(grep -r foo src)", "grep"],
+    ["Bash", "( cd sub && rg auth packages )", "rg"],
+    ["Bash", "{ grep -r foo src; }", "grep"],
+    ["PowerShell", "Write-Output (rg auth packages)", "rg"],
+    ["Bash", "echo $(case x in x) echo $(case y in y) grep -r foo src;; esac);; esac)", "grep"],
+    ["Bash", 'case x in\n"a b") grep -r foo src;;\nesac', "grep"],
+    ["Bash", "arr=($(grep -r foo src))", "grep"],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe(operation);
+  }
+  // A `case` or `esac` that is an argument, not a command, opens or closes no case.
+  for (const command of [
+    "echo $(ls test/case) $(grep -r foo src)",
+    "echo $(echo $case); (grep -r foo src)",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+  }
+  for (const command of [
+    'echo "(grep -r foo src)"',
+    "echo '(grep -r foo src)'",
+    "echo $(case x in x) echo hi;; esac)",
+    "{ echo hi; }",
+    "arr=(a b c)",
+    "tools=(rg grep)",
+    "pnpm build # (grep found nothing)",
+    "echo $(date; hostname) rg",
+    "[[ $c =~ ^(grep|rg) ]]",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+  }
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `for (const body of expanded) bodies.push(...expandedSubstitutions(body));` -> `` fails "denies a search an unquoted here-document body expands"
+it("denies a search an unquoted here-document body expands", () => {
+  for (const command of [
+    "cat <<EOF\n$(grep -r foo src)\nEOF",
+    "cat <<EOF\nfound: `rg auth packages`\nEOF",
+    "cat <<-EOF\n\t$(grep -r foo src)\n\tEOF",
+    "cat <<EOF\ndon't $(grep -r foo src)\nEOF",
+    'git commit -m "$(cat <<EOF\nSee $(grep -r foo src)\nEOF\n)"',
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+  }
+  for (const command of [
+    "cat <<'EOF'\n$(grep -r foo src)\nEOF",
+    'cat <<"EOF"\n$(grep -r foo src)\nEOF',
+    "cat <<\\EOF\n$(grep -r foo src)\nEOF",
+    "cat <<EOF\n\\$(grep -r foo src) and $((1 + 2))\nEOF",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+  }
 });
 
 // QFAI:EX-0001-0235-27
