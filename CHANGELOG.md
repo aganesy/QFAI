@@ -14,6 +14,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The product-surface review checks every screen for missing states and a
+  weak structure.** The `product-surface-reviewer` card now applies the
+  _Information architecture and flow_ and _States and accessibility_ sections
+  of `design-anti-patterns.md` on every review, not only the copy section, so
+  a missing empty, error or success state or a data-heavy screen with no table
+  is reported even when no acceptance criterion names it. Each finding's
+  severity still follows the shared reviewer findings rule.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an

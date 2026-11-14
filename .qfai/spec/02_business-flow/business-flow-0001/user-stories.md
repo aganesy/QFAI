@@ -178,3 +178,4 @@
 | US-0001-0301 | A run keeps and commits its deliberation record                                        | `user-story-0001-0301/` |
 | US-0001-0302 | Validate checks only the deliberation record's table layout                            | `user-story-0001-0302/` |
 | US-0001-0303 | Read the grilling rule's procedures only when they apply                               | `user-story-0001-0303/` |
+| US-0001-0304 | Review an implemented screen for missing states and a weak structure                   | `user-story-0001-0304/` |
