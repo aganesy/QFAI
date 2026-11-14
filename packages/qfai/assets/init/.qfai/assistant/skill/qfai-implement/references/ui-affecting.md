@@ -63,4 +63,4 @@ For a UI affecting example, report the screen state, action, expected and observ
 
 A fix made for a finding of that review refreshes the capture it changes, and a fix that changes behaviour gets its one focused re-review (`.qfai/assistant/rule/review-convergence.md#one-review`). A passing code test cannot substitute for the visual and interaction evidence that the acceptance criterion requires.
 
-Capture each declared task at a desktop width and a narrow width, in the normal state and in every declared empty, error, loading and success state the screen has.
+Capture each declared task at a desktop width and a narrow width, in the normal state and in every declared empty, error, loading and success state the screen has. A screen that lists records or takes input also gets the empty, error and success states it has captured, whether or not a contract declares them.
