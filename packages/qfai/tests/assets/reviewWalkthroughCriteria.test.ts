@@ -145,5 +145,16 @@ describe("four ordinal axes and eight diagnostic questions", () => {
 
       expect(missing, "a role named in the review with no procurement line").toEqual([]);
     });
+
+    // A catalogue tech.md names and nobody installed leaves every screen
+    // hand-built, so the reviewers of a screen report the control it replaced.
+    it(`${tree}: the UI reviewers report a control hand-built where the named catalogue has one`, async () => {
+      const surface = flat(await read(tree, `${AGENTS}/product-surface-reviewer.md`));
+      const implementation = flat(await read(tree, `${AGENTS}/implementation-reviewer.md`));
+
+      expect(surface).toContain("report a screen that hand-builds a control that catalogue has");
+      expect(surface).toContain("never installed is one finding against the setup");
+      expect(implementation).toContain("A control hand-built where the catalogue");
+    });
   }
 });

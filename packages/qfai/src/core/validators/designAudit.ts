@@ -18,7 +18,6 @@ export type DesignAuditConfig = {
   enabled: boolean;
   slopDetection: boolean;
   qualityProfile: "default" | "high" | "strict";
-  maxPrimaryCtas: number;
   maxRawTokenLiteralWarnings: number;
   maxDuplicateFindingsPerRule: number;
 };
@@ -75,7 +74,6 @@ export function resolveAuditConfig(config: QfaiConfig): DesignAuditConfig {
     enabled: audit?.enabled ?? true,
     slopDetection: audit?.slopDetection ?? true,
     qualityProfile: profile,
-    maxPrimaryCtas: audit?.maxPrimaryCtas ?? 1,
     maxRawTokenLiteralWarnings: audit?.maxRawTokenLiteralWarnings ?? 5,
     maxDuplicateFindingsPerRule: audit?.maxDuplicateFindingsPerRule ?? 5,
   };
