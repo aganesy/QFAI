@@ -228,7 +228,9 @@ describe("reviewer stop conditions distinguish named-rule defects from new produ
       );
       const stop = text.split("## Stop conditions")[1]?.split(/^## /m)[0]?.replace(/\s+/g, " ");
       expect(stop).toBeDefined();
-      expect(stop).toContain("configuration, animation or a novel interaction that is not grounded");
+      expect(stop).toContain(
+        "configuration, animation or a novel interaction that is not grounded",
+      );
       expect(stop).toContain("are grounded by the pattern itself and need no acceptance criterion");
       expect(stop).not.toContain("approve UI complexity");
     },

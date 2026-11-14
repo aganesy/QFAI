@@ -49,7 +49,8 @@ specialization_tags:
 - Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,
   surface framing intent, transition clarity, state coverage, or component character captured by the winning
   prototype.
-- Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal. The standard parts of a business screen listed under Stop conditions are justified by the pattern itself.
+- Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
+  The standard parts of a business screen listed under Stop conditions are justified by the pattern itself.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
 - File excess as `defect:code-quality` against constitution Article VII; tag it
