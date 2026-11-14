@@ -212,6 +212,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the package now depends on. The releases change only a dependency of
   the checker and its build configuration.
 
+- **UI evidence captures the standard states of list and form screens.** The
+  `qfai-implement` UI reference asks for the empty, error and success states
+  that every screen listing records or taking input has, whether or not a
+  contract declares them.
+
 - **An approval row quotes a translated label in the file's language.**
   When the structured question showed its options in a language other than
   the one `decisions.md` is written in, the `qfai-sdd` decisions template now
