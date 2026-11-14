@@ -148,8 +148,9 @@ author and whoever reviews the prototype. Follow the shape
 ## Screen states: `states`
 
 Every screen lists `states`, one entry for each of `default`, `empty`,
-`loading`, `error` and `success`, so an implementer builds each state rather
-than assuming it. Each entry uses these keys:
+`loading`, `error` and `success`, in that order, so an implementer builds each
+state rather than assuming it. The rule behind `next` is
+`.agents/rules/interface-clarity.md`: an empty state says what to do next. Each entry uses these keys:
 
 | Key       | Holds                                                                   |
 | --------- | ----------------------------------------------------------------------- |

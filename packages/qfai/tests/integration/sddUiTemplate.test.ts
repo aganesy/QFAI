@@ -148,6 +148,7 @@ const STATE_IDS = ["default", "empty", "loading", "error", "success"];
 describe("shipped ui-contract.sample.yaml lists every screen state", () => {
   it("gives each screen all five states, each rendered with a next action or set to none", async () => {
     const parsed = parseYaml(await readFile(TEMPLATE_PATH, "utf-8")) as ParsedScreens;
+    expect(parsed.screens?.length ?? 0).toBeGreaterThan(0);
 
     for (const screen of parsed.screens ?? []) {
       const states = Array.isArray(screen.states) ? screen.states : [];
