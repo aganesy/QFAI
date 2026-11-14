@@ -306,6 +306,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   file, an unreadable pre-tool event and unreadable local search state each get
   their own message, and the hook prints the same message to standard error.
 
+- **The search-protection hook reads past here-document bodies.** A Bash
+  command that wrote a file through `cat <<'EOF'` was refused as "invalid
+  pre-tool input" when the body held an unpaired apostrophe, and a body line
+  such as `grep -R policy .qfai/spec` was denied as a search. The body is now
+  read as data when its whole line only writes files with `cat` or `tee` and a
+  quoted delimiter, such as `cat > notes.md <<'EOF'`, and every line before it is such a line or a
+  `mkdir -p`. Any other here-document body is still read as shell text.
 - **A quote inside a `#` comment no longer hides the next lines from the
   search-protection hook.** In a POSIX shell an unquoted `#` at the start of a
   word ends at its line, so `echo # '` followed by `rg auth packages/` on the
