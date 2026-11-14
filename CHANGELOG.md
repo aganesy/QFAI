@@ -6,13 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
-- **A UI contract screen lists its states.** The shipped
-  `ui-contract.sample.yaml`, the UI contract guide, the contract artifact rules
-  and the `sdd-contract` step give every screen a `states` list: `default`,
-  `empty`, `loading`, `error` and `success`, each with what renders and the
-  user's next action, or `none` with the reason the screen cannot be in that
-  state. A supplement's `when` names one of these states. Validate does not
-  check the key.
+- **The component catalogue that `tech.md` names is set up before screens
+  are built.** `implement-scaffold` installs the catalogue the
+  `Component catalogue` row names with its own setup command and adds its registry to
+  `uiux.registries`, or reports why it could not. The `product-surface-reviewer`
+  and `implementation-reviewer` report a control hand-built where that
+  catalogue has one.
 
 - **`.agents/rules/interface-clarity.md` says what a business screen always
   has.** A new section lists, per application, an app shell with navigation
@@ -22,13 +21,45 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after every change. Leaving one out needs a reason recorded in the screen's UI
   contract, and the Cut section counts a listed part as asked for.
 
+- **The design anti-pattern list reaches implemented screens.** Its
+  _Information architecture and flow_ and _States and accessibility_ sections
+  now apply to the screens an implementation builds and to their review, not
+  only to root `DESIGN.md` authoring and prototype review.
+
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
   `implementation-reviewer` reads every rule the changed master points to and
   every rule that points to that master, and reports each clause that gives a
   different answer to the same situation.
+- **`qfai validate` warns about a component catalogue with no registry.**
+  When the `Component catalogue` row of the `tech.md` Stack table names a
+  catalogue and `qfai.config.yaml` declares no valid `uiux.registries` entry,
+  `QFAI-STORY-021` is raised at warning in the `sdd`, `verify` and `full`
+  profiles. A row that is empty, a template placeholder or states none raises
+  nothing.
+
+- **A UI contract screen lists its states.** The shipped
+  `ui-contract.sample.yaml`, the UI contract guide, the contract artifact rules
+  and the `sdd-contract` step give every screen a `states` list: `default`,
+  `empty`, `loading`, `error` and `success`, each with what renders and the
+  user's next action, or `none` with the reason the screen cannot be in that
+  state. A supplement's `when` names one of these states. Validate does not
+  check the key.
+
+### Removed
+
+- **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
+  removed.** Validate parsed the setting but never read it, and no code read
+  `ddpBannedPatterns.txt`. A config that still sets the key is accepted and
+  the key, whatever its value, is ignored.
 
 ### Changed
+
+- **A work order says which checks the worker runs and whether it may push.**
+  The unit work order template gains `Local checks` and `Push` lines, and
+  `delegation-steering.md` checks a delegated agent's first actions against
+  them. A worker whose order says `Push: no` neither pushes nor opens a pull
+  request.
 
 - **The shipped uix-rev review prompts no longer name the removed
   `40_screen_contracts.md` sidecar.** The strategy review checks brand language
@@ -145,6 +176,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook says what it could not read.** A command whose
+  quotes it cannot match, or whose wrappers nest more than 16 levels deep, is
+  still denied, but the message names that cause and how to retry instead of
+  asking to repair a hook configuration that is fine. An invalid enforcement
+  file, an unreadable pre-tool event and unreadable local search state each get
+  their own message, and the hook prints the same message to standard error.
+
 - **A `cd` to the project itself no longer withholds the search fallback.**
   When a denied search follows `cd`, `pushd` or `Set-Location` to the observed
   worktree in the same command, the denial still offers the AI-decided
@@ -176,6 +214,12 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   the union-merge reason and how to resolve a conflict a host shows. The file
   is seeded only where none exists, so an existing `.gitattributes` keeps its
   old comment. Fixes #4173.
+
+- **This repository's build job reports every self-validate profile.** The
+  `tdd`, `sdd` and `full` runs of `qfai validate` were three steps, so a
+  failing `tdd` run skipped the other two and their errors showed only in a
+  later CI run. They now run in one step that runs all three and fails at the
+  end, naming each profile that failed. Fixes #4199.
 
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
