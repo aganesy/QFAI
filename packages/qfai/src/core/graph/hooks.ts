@@ -601,12 +601,16 @@ function resolveAlias(words: string[], shell: GraphShell): string[] {
 }
 
 /**
- * Whether the `#` at `index` opens a comment. In a POSIX shell and in PowerShell an unquoted
- * `#` at the start of a word runs to the end of its line, so a quote inside it opens nothing and
- * the next line is a command again. `cmd` has no such comment.
+ * Whether the `#` at `index`, read where no word has started yet, opens a comment. In a POSIX
+ * shell an unquoted `#` at the start of a word runs to the end of its line, so a quote inside it
+ * opens nothing and the next line is a command again. The caller must know no word is under way:
+ * an escaped separator or a closed substitution before the `#` puts it inside a word.
+ * Ceiling: PowerShell and `cmd` comments are not read, because a PowerShell `<# ... #>` block
+ * comment can end mid-line; a quote inside a PowerShell comment still fails closed as an
+ * unmatched quote. Reading PowerShell comments needs block comments handled first.
  */
 function startsComment(command: string, index: number, shell: GraphShell): boolean {
-  if (shell === "cmd") return false;
+  if (shell !== "posix") return false;
   const previous = command[index - 1];
   return previous === undefined || /[\s;&|()]/.test(previous);
 }
@@ -708,9 +712,14 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
   const escape = shell === "posix" ? "\\" : "`";
   const bodies: string[] = [];
   let quote: string | undefined;
+  // Whether no word is under way: true at the start and after an unquoted separator only, so an
+  // escaped separator or a closed substitution before a `#` keeps it inside its word.
+  let wordStart = true;
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index];
     const next = command[index + 1];
+    const atWordStart = wordStart;
+    wordStart = false;
     if (character === escape && quote !== "'") {
       index += 1;
       continue;
@@ -719,10 +728,15 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
       if (character === "'") quote = undefined;
       continue;
     }
-    if (!quote && character === "#" && startsComment(command, index, shell)) {
+    if (!quote && atWordStart && character === "#" && shell === "posix") {
       const end = command.indexOf("\n", index);
       if (end === -1) break;
       index = end;
+      wordStart = true;
+      continue;
+    }
+    if (!quote && character !== undefined && /[\s;&|()]/.test(character)) {
+      wordStart = true;
       continue;
     }
     if (character === "'" && !quote) {
