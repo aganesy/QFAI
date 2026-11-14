@@ -311,6 +311,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `design-anti-patterns.md`, which the implementer checks before calling a
   screen done.
 
+- **The reviewer findings rule says a missing screen-floor part is a defect.**
+  Its section on what a reviewer may demand more of now says that a part
+  missing from "What a business screen always has" in `interface-clarity.md`
+  is not a demand for more work but a defect that traces to that rule, and
+  points to the product-surface reviewer card for when it blocks. Read alone,
+  the section had suggested such a gap could only be advisory.
+
 ### Fixed
 
 - **The search-protection hook ends a PowerShell statement at a lone carriage
@@ -325,6 +332,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `#>` fails closed. Where the start of a token is not certain, the comment
   markers separate commands, so what lies between and after them is still
   read. A search that appears only in a comment is not denied.
+
+- **`qfai session-review` finds a Claude Code session that moved into the
+  project after it started.** A session the desktop app opened in a scratch
+  directory records that directory as its `cwd` until it moves into the
+  repository. The command now takes a transcript in the root's project
+  directory when any of its records names the root, not only the first, so
+  such a session is no longer reported as missing. In the fallback over
+  directories that only share the start of the root's name, which includes
+  every worktree of the root, the first recorded `cwd` still decides.
 
 - **The search-protection hook reads a comment inside a substitution.** A `)`
   inside a comment, such as `$(echo # )` followed by `rg auth packages/)` on the
