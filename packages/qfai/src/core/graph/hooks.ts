@@ -68,10 +68,12 @@ function classifyShellText(
   depth: number,
   redefinedOutside: boolean,
   directory: string | undefined,
+  substitution = false,
 ): GraphHookDecision | undefined {
   if (depth > 16) return failedGraphHook();
   const commands = shellPipelines(text, shell);
-  if (!commands) return failedGraphHook();
+  // Text in a substitution that cannot be read as commands is no verdict of its own.
+  if (!commands) return substitution ? undefined : failedGraphHook();
   return classifyCommands(
     commands,
     authorize,
@@ -80,7 +82,7 @@ function classifyShellText(
     directory,
     substitutionBodies(text, shell).map(
       (body) => (scoped: GraphSearchAuthorization, redefines: boolean) =>
-        classifyShellText(body, shell, scoped, depth + 1, redefines, directory),
+        classifyShellText(body, shell, scoped, depth + 1, redefines, directory, true),
     ),
   );
 }
@@ -112,11 +114,10 @@ function classifyCommands(
         )
     : authorize;
   // A substitution runs its own command list, so a search inside one is a search.
-  // Only a search it denies counts here: what else it runs, or text it cannot
-  // read as commands, keeps the outer verdict.
+  // Only its denial counts here: what else it runs keeps the outer verdict.
   for (const classify of substitutions) {
     const decision = classify(scopedAuthorization, redefines);
-    if (decision?.decision === "deny" && decision.state === "configured") return decision;
+    if (decision?.decision === "deny") return decision;
   }
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
@@ -736,7 +737,7 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
 }
 
 /** A `<<` or `<<-` here-document operator and its delimiter, quoted or not; `<<<` is not one. */
-const heredocOperator = /(?<!<)<<(?!<)(-?)[ \t]*(?:'([^'\n]*)'|"([^"\n]*)"|\\?([^\s;|&<>()'"]+))/g;
+const heredocOperator = /<<(?!<)(-?)[ \t]*(?:'([^'\n]*)'|"([^"\n]*)"|\\?([^\s;|&<>()'"]+))/y;
 
 /** A line that hands its input to a shell, whose here-document body is a script. */
 const feedsShell = /(?:^|[\s|;&(`/])(?:(?:ba|z|da|k)?sh|eval|source)(?=$|[\s|;&)<>])/;
@@ -744,31 +745,90 @@ const feedsShell = /(?:^|[\s|;&(`/])(?:(?:ba|z|da|k)?sh|eval|source)(?=$|[\s|;&)
 /**
  * The text with each here-document body and its delimiter line removed. The body is
  * text the command reads, such as a commit message, so a backtick or `$(...)` in it
- * starts no substitution here. A body fed to a shell is a script and is kept. A body
- * with no closing delimiter line is kept too, since the operator may sit in quotes.
+ * starts no substitution here. Only an operator outside quotes, comments and
+ * arithmetic starts a body; a `$(` starts a fresh context, as the shell reads it,
+ * even inside double quotes. A body fed to a shell is a script and is kept, and so
+ * is one with no closing delimiter line.
  * Ceiling: an unquoted delimiter's body does expand `$(...)`, and that body is
  * removed as well, so a search inside it stays unclassified, as it was before.
  */
 function heredocData(command: string): string {
-  const lines = command.split("\n");
-  const kept: string[] = [];
-  let index = 0;
-  while (index < lines.length) {
-    const line = lines[index] ?? "";
-    kept.push(line);
-    index += 1;
-    if (feedsShell.test(line)) continue;
-    for (const match of line.matchAll(heredocOperator)) {
-      const delimiter = match[2] ?? match[3] ?? match[4] ?? "";
-      const stripTabs = match[1] === "-";
-      const end = lines.findIndex((candidate, at) => {
-        const body = candidate.replace(/\r$/, "");
-        return at >= index && (stripTabs ? body.replace(/^\t+/, "") : body) === delimiter;
-      });
-      if (end >= 0) index = end + 1;
+  let output = "";
+  let quote: string | undefined;
+  let comment = false;
+  let depth = 0;
+  const outer: { quote: string | undefined; depth: number }[] = [];
+  let pending: { delimiter: string; stripTabs: boolean }[] = [];
+  for (let index = 0; index < command.length; index += 1) {
+    const character = command[index] ?? "";
+    output += character;
+    if (character === "\n") {
+      comment = false;
+      if (!quote && pending.length) {
+        const end = heredocEnd(command, index + 1, pending);
+        if (end !== undefined) index = end - 1;
+        pending = [];
+      }
+    } else if (comment) {
+      continue;
+    } else if (quote === "'") {
+      if (character === "'") quote = undefined;
+    } else if (character === "\\") {
+      output += command[index + 1] ?? "";
+      index += 1;
+    } else if (character === "$" && command[index + 1] === "(" && command[index + 2] !== "(") {
+      outer.push({ quote, depth });
+      quote = undefined;
+      depth = 0;
+      output += "(";
+      index += 1;
+    } else if (quote) {
+      if (character === quote) quote = undefined;
+    } else if (character === "'" || character === '"') {
+      quote = character;
+    } else if (character === "#" && /^$|[\s;|&(]/.test(command[index - 1] ?? "")) {
+      comment = true;
+    } else if (character === "(") {
+      depth += 1;
+    } else if (character === ")") {
+      const context = depth === 0 ? outer.pop() : undefined;
+      if (context) ({ quote, depth } = context);
+      else depth = Math.max(0, depth - 1);
+    } else if (character === "<" && command[index - 1] !== "<") {
+      heredocOperator.lastIndex = index;
+      const match = heredocOperator.exec(command);
+      if (!match) continue;
+      const lineStart = command.lastIndexOf("\n", index) + 1;
+      const lineEnd = command.indexOf("\n", index);
+      const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
+      if (!feedsShell.test(line) && !command.slice(lineStart, index).includes("((")) {
+        pending.push({ delimiter: match[2] ?? match[3] ?? match[4] ?? "", stripTabs: !!match[1] });
+      }
+      output += command.slice(index + 1, heredocOperator.lastIndex);
+      index = heredocOperator.lastIndex - 1;
     }
   }
-  return kept.join("\n");
+  return output;
+}
+
+/** The index after the delimiter line that closes the last of `bodies`, or undefined. */
+function heredocEnd(
+  command: string,
+  start: number,
+  bodies: { delimiter: string; stripTabs: boolean }[],
+): number | undefined {
+  let position = start;
+  for (const { delimiter, stripTabs } of bodies) {
+    let closed = false;
+    while (!closed && position < command.length) {
+      const end = command.indexOf("\n", position);
+      const line = command.slice(position, end < 0 ? command.length : end).replace(/\r$/, "");
+      position = end < 0 ? command.length : end + 1;
+      closed = (stripTabs ? line.replace(/^\t+/, "") : line) === delimiter;
+    }
+    if (!closed) return undefined;
+  }
+  return position;
 }
 
 /** The index of the `)` that closes a parenthesis opened before `start`, outside quotes. */

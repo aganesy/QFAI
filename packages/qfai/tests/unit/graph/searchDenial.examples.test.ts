@@ -634,9 +634,18 @@ it("reads a here-document body as data, not as substitutions", () => {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("allow");
   }
-  // A body a shell reads is a script, so a search in it is still a search.
-  const script = "echo $(bash <<'EOF'\ngrep -r foo src\nEOF\n)";
-  const scripted = classifyGraphExploration({ tool: "Bash", command: script });
-  expect(scripted.decision).toBe("deny");
-  expect(scripted.operation).toBe("grep");
+  // A body a shell reads is a script, and a `<<` the shell does not read as an
+  // operator starts no body, so a search after either is still a search.
+  for (const command of [
+    "echo $(bash <<'EOF'\ngrep -r foo src\nEOF\n)",
+    'echo "<<X"\necho $(grep -r foo src)\nX',
+    "echo hi # <<X\necho $(grep -r foo src)\nX",
+    "echo $((1<<2))\necho $(grep -r foo src)\n2",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+  }
+  // Nesting past the depth limit still fails closed.
+  const deep = `${"echo $(".repeat(20)}grep -r foo src${")".repeat(20)}`;
+  expect(classifyGraphExploration({ tool: "Bash", command: deep }).decision).toBe("deny");
 });
