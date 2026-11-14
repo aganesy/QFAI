@@ -903,11 +903,17 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         "Check the once-per-application parts only when the change adds or alters the shell, the home or a repeated pattern.",
       );
       expect(card).toContain(
-        "a listed part missing with no reason recorded in the UI contract is a blocking finding that traces to that section.",
+        "A listed part with no reason recorded in the UI contract is a blocking finding that traces to `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` when it is missing from a screen the change adds",
       );
-      expect(card).toContain("A part missing elsewhere is `advisory`.");
+      expect(card).toContain("or removed by the change.");
+      expect(card).toContain("A part the contract leaves out with a reason is not a finding.");
+      expect(card).toContain(
+        "A part that was already missing from an altered screen is `advisory`, and so is a part missing elsewhere.",
+      );
       expect(card).toContain("Never file the presence of a listed part as excess;");
-      expect(card).toContain("A part the business-screen floor below lists is never needless;");
+      expect(card).toContain(
+        "and the UI contract does not exclude, is never needless; how it is built can still be excess.",
+      );
       const master = await readFile(
         path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/interface-clarity.md"),
         "utf-8",

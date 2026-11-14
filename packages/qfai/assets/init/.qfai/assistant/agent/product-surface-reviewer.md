@@ -50,7 +50,8 @@ specialization_tags:
   surface framing intent, transition clarity, state coverage, or component character captured by the winning
   prototype.
 - Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
-  A part the business-screen floor below lists is never needless; how it is built can still be excess.
+  A part the business-screen floor in `.agents/rules/interface-clarity.md` requires of that screen, and the UI
+  contract does not exclude, is never needless; how it is built can still be excess.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
 - File excess as `defect:code-quality` against constitution Article VII; tag it
@@ -69,11 +70,16 @@ specialization_tags:
   Walk it for each screen the change adds or alters. Check the once-per-application parts only when
   the change adds or alters the shell, the home or a repeated pattern.
 
-  On those screens, a listed part missing with no reason recorded in the UI contract is a blocking
-  finding that traces to that section. The rule already makes the part an obligation, so it is a
-  defect, not new scope. Name the screen and the missing part. A part the contract leaves out with a
-  reason is not a finding. A part missing elsewhere is `advisory`. Never file the presence of a
-  listed part as excess; how it is built stays under the excess route above.
+  A listed part with no reason recorded in the UI contract is a blocking finding that traces to
+  `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` when it is missing from a
+  screen the change adds, missing from a list, state, change or shell part the change adds or alters
+  (a new list with no pagination, a new save with no feedback), or removed by the change. The rule
+  already makes the part an obligation, so the gap is a defect shown from the changed artifacts
+  (`.qfai/assistant/rule/drift-protocol.md#defect-or-new-scope-decide-this-first`), not a demand for
+  more work. Name the screen and the missing part. A part the contract leaves out with a reason is
+  not a finding. A part that was already missing from an altered screen is `advisory`, and so is a
+  part missing elsewhere. Never file the presence of a listed part as excess; how it is built stays
+  under the excess route above.
 
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
