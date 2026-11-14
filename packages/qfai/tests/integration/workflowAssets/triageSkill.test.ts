@@ -349,7 +349,13 @@ describe("a question answered without a change", () => {
       /Before the report, collect every value the documents need for the edit: - A value the documents fix by a stated rule, such as "increment versionCode by 1", is computed by that rule and named with the rule quoted\. - A value the documents leave to judgement is asked of the user before the report, and the request names the answer/,
     );
     expect(release).toMatch(
-      /After a `needs-change` report for a hand-made release edit, list as the user's follow-up: run the release again with the same quoted instruction once the edit lands/,
+      /After a `needs-change` report for a hand-made release edit, under an instruction that delegates more than the version edit, list as the user's follow-up: run the release again with the same quoted instruction once the edit lands\. An instruction that covers only the version edit is complete once the edit lands/,
+    );
+    expect(release).toMatch(
+      /A version edit has landed when each field the documents name already holds the named version, and each value a rule computes already holds the value the rule gave for that version\. Then report no `needs-change` for it, compute no rule value again, and continue with the preparation/,
+    );
+    expect(release).toMatch(
+      /Under a no-question mode, write it as an `open-questions\.md` row instead and stop before the report, as for a release point/,
     );
     expect(release).toMatch(
       /Any other hand-made release edit is reported the same way, its request naming each file, field and value the documents give for it/,

@@ -342,9 +342,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   what it cannot confirm, such as a value, a source, or a file the release
   documents do not name. For any other request it passes, so no other change
   skips its examples and tests. `implement-scaffold` and `implement-tdd` pass
-  when the work order carries only that edit. The final report lists running
-  the release again with the same instruction as the user's follow-up. Any
-  other hand-made release edit is reported the same way.
+  when the work order carries only that edit. Where the instruction delegates
+  more than the version edit, the final report lists running the release
+  again with the same instruction as the user's follow-up. On that run, a
+  version edit already in place is not reported or computed again. Any other
+  hand-made release edit is reported the same way.
 
 ### Fixed
 

@@ -248,7 +248,8 @@ only after reading what it depends on.
   A conflict confined to `decisions.md`, its pages and `open-questions.md` is resolved by merging the base, whose union merge keeps both sides' rows; no register row is edited or renumbered.
   It lists the artifacts the conflict touches; a conflict in code, a generated file or a lockfile is not this qualifier.
 - `distribution-incident`, with `release`: A published key, certificate, feed or package is broken.
-- `release-delegated`, with `release`: The user's own instruction for this run, quoted word for word with its source, has the agent carry out the release, its preparation up to an open release pull request, or its version edit, for a version the user named. A request only for a release, a version with no one named to carry it out, a branch name or a project policy delegates nothing.
+- `release-delegated`, with `release` or `order`: The user's own instruction for this run, quoted word for word with its source, has the agent carry out the release, its preparation up to an open release pull request, or its version edit, for a version the user named. A request only for a release, a version with no one named to carry it out, a branch name or a project policy delegates nothing.
+  It goes with `order` only when `triage-operate` reports a delegated release's hand-made edit.
 - `settled-design`, with `upstream`: The cited record exists, no later decision row supersedes it, and it settles the design.
 - `red-since-change`, with `ci`: CI fails since a named change, and a correct existing test catches it.
 - `check-misses`, with `unenforced`: A check exists and misses cases, or a check the declaration needs is absent.

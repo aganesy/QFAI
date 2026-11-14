@@ -624,8 +624,11 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0211-58
   it("reads a release the user's quoted instruction delegates as a delegated release, and a bare release as none", async () => {
     const reference = await readShipped(EXTRACTION);
+    expect(sectionOf(reference, "## Qualifiers")).toContain(
+      "\n  It goes with `order` only when `triage-operate` reports a delegated release's hand-made edit.",
+    );
     expect(itemOf(sectionOf(reference, "## Qualifiers"), "release-delegated")).toContain(
-      "with `release`: The user's own instruction for this run, quoted word for word with its source, has the agent carry out the release, its preparation up to an open release pull request, or its version edit, for a version the user named. A request only for a release, a version with no one named to carry it out, a branch name or a project policy delegates nothing.",
+      "with `release` or `order`: The user's own instruction for this run, quoted word for word with its source, has the agent carry out the release, its preparation up to an open release pull request, or its version edit, for a version the user named. A request only for a release, a version with no one named to carry it out, a branch name or a project policy delegates nothing.",
     );
     const line = sectionOf(reference, "## Examples")
       .split("\n")
@@ -649,6 +652,16 @@ describe("qfai-run", () => {
       routeOf(routingOutcome(pinned)),
       routeOf(routingOutcome({ ...pinned, qualifiers: [] })),
     ]).toEqual(["run-release", "hand-off-operation"]);
+    // A delegated release's hand-made edit, as `triage-operate` reports it, is a valid order.
+    const order: unknown = {
+      ...extraction(),
+      intent: "order",
+      qualifiers: ["release-delegated"],
+      artifacts: ["release"],
+      confidence: "high",
+    };
+    if (!isExtraction(order)) throw new Error("a delegated release's order is not an extraction");
+    expect(routeOf(routingOutcome(order))).toBe("apply-settled");
   });
 
   // QFAI:AC-0001-0211-05

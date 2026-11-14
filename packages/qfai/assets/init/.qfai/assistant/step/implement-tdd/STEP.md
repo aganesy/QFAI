@@ -11,7 +11,8 @@ requires:
 Work within one `BF-NNNN` flow. An EX is the unit of implementation review;
 the BF is the unit of scoped completion. Inside a workflow run, a work order
 whose `target` binds a flow supplies the flow, and no question asks which flow.
-Otherwise the invocation's BF argument names it.
+Otherwise the invocation's BF argument names it. A flow that cannot be
+resolved stops this step: report the missing source.
 
 ## Passes when
 

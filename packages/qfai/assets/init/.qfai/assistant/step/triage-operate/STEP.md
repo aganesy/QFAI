@@ -116,7 +116,15 @@ request, or the version edit alone.
      versionCode by 1", is computed by that rule and named with the rule
      quoted.
    - A value the documents leave to judgement is asked of the user before the
-     report, and the request names the answer.
+     report, and the request names the answer. Under a no-question mode, write
+     it as an `open-questions.md` row instead and stop before the report, as
+     for a release point.
+
+   A version edit has landed when each field the documents name already
+   holds the named version, and each value a rule computes already holds the
+   value the rule gave for that version. Then report no `needs-change` for
+   it, compute no rule value again, and continue with the preparation.
+
 3. Review the release pull request as the project's review rules say, and
    merge it only when they allow, waiting for its checks as above. Where the
    release documents make the merge the instruction for the tag, such as a
@@ -133,8 +141,10 @@ request, or the version edit alone.
    the user has not said they will approve it in this session, stop waiting and
    report the approval as pending.
 5. Report each operation and its result, including an approval still pending.
-   After a `needs-change` report for a hand-made release edit, list as the
-   user's follow-up: run the release again with the same quoted instruction
+   After a `needs-change` report for a hand-made release edit, under an
+   instruction that delegates more than the version edit, list as the user's
+   follow-up: run the release again with the same quoted instruction once the
+   edit lands. An instruction that covers only the version edit is complete
    once the edit lands.
 
 ## What it writes

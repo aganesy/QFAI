@@ -346,6 +346,9 @@ describe("a step that may pass with evidence", () => {
     expect(await passesWhen("implement-tdd")).toMatch(
       /Any other work order that names no flow resolves its flow as this step says, or stops/,
     );
+    expect(flat(await readShipped("step/implement-tdd/STEP.md"))).toMatch(
+      /A flow that cannot be resolved stops this step: report the missing source/,
+    );
     expect(
       flat(sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Reads")),
     ).toMatch(/A flow that cannot be resolved stops this step: report the missing source/);
