@@ -170,6 +170,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   only the record and its `open-questions.md` rows at its last step. The
   story tree, `decisions.md` and `open-questions.md` stay the current state.
 
+- **The product-surface review checks every screen for missing states and a
+  weak structure.** The `product-surface-reviewer` card now applies the
+  _Information architecture and flow_ and _States and accessibility_ sections
+  of `design-anti-patterns.md` on every review, not only the copy section, so
+  a missing empty, error or success state or a data-heavy screen with no table
+  is reported even when no acceptance criterion names it. Each finding's
+  severity still follows the shared reviewer findings rule.
+
   - The discussion pack (`.qfai/discussion/discussion-<timestamp>/`), its
     templates, `prototyping.yaml` and the `uiux/` sidecars are removed. The
     discussion stage keeps `discussion-research` and `discussion-interview`,
@@ -269,6 +277,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   one its pattern implies as interface-clarity lists them, is in scope, and
   leaving an implied region out needs a reason in the UI contract. The
   prototype reviewer's second criterion cites rungs 1 to 3.
+
+- **The implement skill points the implementer at the anti-pattern sections
+  for built screens.** For UI work, `qfai-implement` names the _Information
+  architecture and flow_ and _States and accessibility_ sections of
+  `design-anti-patterns.md`, which the implementer checks before calling a
+  screen done.
 
 ### Fixed
 
@@ -414,6 +428,14 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   `<task-notification>`, `<wake>`, `<ci-monitor-event>` or
   `[SYSTEM NOTIFICATION`. `qfai init` replaces the earlier group of an
   unchanged settings file.
+
+- **The search-protection hook denies a search in a case arm, a subshell, a
+  group or an unquoted here-document body.** A search after `x)` in
+  `$(case x in x) ...;; esac)`, in `(grep -r foo src)`, in
+  `{ grep -r foo src; }`, in zsh `=(...)`, in PowerShell
+  `Write-Output (rg auth packages)`, or in a `$(...)` or backtick in the body
+  of `cat <<EOF` is denied like the same search run directly. A quoted
+  delimiter such as `<<'EOF'` still keeps its body as data.
 
 ## [2.4.0] - 2026-11-11
 
@@ -22794,14 +22816,6 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   `<task-notification>`, `<wake>`, `<ci-monitor-event>` or
   `[SYSTEM NOTIFICATION`. `qfai init` replaces the earlier group of an
   unchanged settings file.
-
-- **The search-protection hook denies a search in a case arm, a subshell, a
-  group or an unquoted here-document body.** A search after `x)` in
-  `$(case x in x) ...;; esac)`, in `(grep -r foo src)`, in
-  `{ grep -r foo src; }`, in zsh `=(...)`, in PowerShell
-  `Write-Output (rg auth packages)`, or in a `$(...)` or backtick in the body
-  of `cat <<EOF` is denied like the same search run directly. A quoted
-  delimiter such as `<<'EOF'` still keeps its body as data.
 
 ## [2.4.0] - 2026-11-11
 
