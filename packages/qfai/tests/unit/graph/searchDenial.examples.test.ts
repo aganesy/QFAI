@@ -97,7 +97,7 @@ it("reports hidden scripts aliases and continuing input outside the proven bound
 });
 
 // QFAI:EX-0001-0235-13
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook();` -> `if (depth >= 0) return failedGraphHook();` fails "allows graph engine commands whose native implementations search internally"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook("depth");` -> `if (depth >= 0) return failedGraphHook("depth");` fails "allows graph engine commands whose native implementations search internally"
 it("allows graph engine commands whose native implementations search internally", () => {
   for (const command of [
     "node .qfai/tools/runtimes/codegraph/node_modules/@colbymchenry/codegraph/npm-shim.js context authorize --path .qfai/tools/analysis/codegraph",
@@ -111,7 +111,7 @@ it("allows graph engine commands whose native implementations search internally"
 });
 
 // QFAI:EX-0001-0235-12
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook();` -> `if (depth >= 0) return failedGraphHook();` fails "allows quality commands whose ordinary implementations search internally"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook("depth");` -> `if (depth >= 0) return failedGraphHook("depth");` fails "allows quality commands whose ordinary implementations search internally"
 it("allows quality commands whose ordinary implementations search internally", () => {
   for (const command of [
     "pnpm test",
@@ -126,7 +126,7 @@ it("allows quality commands whose ordinary implementations search internally", (
 });
 
 // QFAI:EX-0001-0235-11
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook();` -> `if (depth >= 0) return failedGraphHook();` fails "allows exact known-file reads without graph exploration"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook("depth");` -> `if (depth >= 0) return failedGraphHook("depth");` fails "allows exact known-file reads without graph exploration"
 it("allows exact known-file reads without graph exploration", () => {
   for (const command of [
     "cat packages/qfai/src/core/index.ts",
@@ -139,7 +139,7 @@ it("allows exact known-file reads without graph exploration", () => {
 });
 
 // QFAI:EX-0001-0235-10
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook();` -> `if (depth >= 0) return failedGraphHook();` fails "allows quoted search words printed without invoking search"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook("depth");` -> `if (depth >= 0) return failedGraphHook("depth");` fails "allows quoted search words printed without invoking search"
 it("allows quoted search words printed without invoking search", () => {
   for (const command of [
     "echo 'grep'",
@@ -635,4 +635,89 @@ it("denies piped searches that still read project files", () => {
     expect(redirected.decision, command).toBe("deny");
     expect(redirected.exceptionEligible, command).toBe(false);
   }
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `!/^(?:\d*|\{[A-Za-z_][A-Za-z0-9_]*\})$/.test(word) &&` -> `!/^\d*$/.test(word) &&` fails "denies a search behind a named descriptor redirection"
+it("denies a search behind a named descriptor redirection", () => {
+  for (const command of [
+    "{fd}<file grep -r foo src",
+    "{fd}< file grep -r foo src",
+    "{out}>log.txt rg auth packages",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe(command.includes("rg") ? "rg" : "grep");
+  }
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `for (const classify of substitutions) {` -> `for (const classify of substitutions.slice(0, 0)) {` fails "denies a search inside a command or process substitution"
+it("denies a search inside a command or process substitution", () => {
+  for (const [tool, command, operation] of [
+    ["Bash", "echo $(grep -r foo src)", "grep"],
+    ["Bash", 'echo "$(grep -r foo src)"', "grep"],
+    ["Bash", "cat <(grep -r foo src)", "grep"],
+    ["Bash", "tee >(rg auth packages) < /dev/null", "rg"],
+    ["Bash", "echo `grep -r foo src`", "grep"],
+    ["Bash", "echo $(echo $(rg auth packages))", "rg"],
+    ["Bash", "bash -c 'echo $(grep -r foo src)'", "grep"],
+    [
+      "PowerShell",
+      "Write-Output $(Select-String -Pattern auth -Path packages/index.ts)",
+      "Select-String",
+    ],
+    ["PowerShell", "Write-Output @(rg auth packages)", "rg"],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe(operation);
+  }
+  for (const command of [
+    "echo '$(grep -r foo src)'",
+    String.raw`echo \$(grep -r foo src)`,
+    "echo $((1 + 2))",
+    'echo "$(git status)"',
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+  }
+  const quotedGroup = 'Write-Output "@(rg auth packages)"';
+  expect(classifyGraphExploration({ tool: "PowerShell", command: quotedGroup }).decision).toBe(
+    "allow",
+  );
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `const command = shell === "posix" ? heredocData(text) : text;` -> `const command = text;` fails "reads a here-document body as data, not as substitutions"
+it("reads a here-document body as data, not as substitutions", () => {
+  const message = [
+    "Deny the search",
+    "",
+    "Searches such as `grep -r foo src` and $(rg auth packages) are now denied.",
+    "rg auth packages is the shape the hook reads.",
+  ].join("\n");
+  for (const command of [
+    `git commit -m "$(cat <<'EOF'\n${message}\nEOF\n)"`,
+    `git commit -m "$(cat <<"EOF"\n${message}\nEOF\n)"`,
+    `git commit -m "$(cat <<-EOF\n${message}\n\tEOF\n)"`,
+    `gh pr create --body "$(cat <<'EOF'\n${message}\nEOF\n)" --title x`,
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+  }
+  // A body a shell reads is a script, and a `<<` the shell does not read as an
+  // operator starts no body, so a search after either is still a search.
+  for (const command of [
+    "echo $(bash <<'EOF'\ngrep -r foo src\nEOF\n)",
+    'echo "<<X"\necho $(grep -r foo src)\nX',
+    "echo hi # <<X\necho $(grep -r foo src)\nX",
+    "echo $((1<<2))\necho $(grep -r foo src)\n2",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+  }
+  // Nesting past the depth limit still fails closed.
+  const deep = `${"echo $(".repeat(20)}grep -r foo src${")".repeat(20)}`;
+  expect(classifyGraphExploration({ tool: "Bash", command: deep }).decision).toBe("deny");
 });

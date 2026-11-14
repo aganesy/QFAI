@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -236,17 +236,20 @@ describe("BF-0002 CI verdict examples", () => {
       expect.arrayContaining([
         expect.objectContaining({ name: "Run build & pack verification" }),
         expect.objectContaining({
-          name: "QFAI self-validate this repo (dogfooding — full profile)",
+          name: "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
         }),
         expect.objectContaining({ name: "Run qfai validate gate (fail on error)" }),
       ]),
     );
-    const fullProfile = buildSteps.find(
-      (step) => step["name"] === "QFAI self-validate this repo (dogfooding — full profile)",
+    const selfValidate = buildSteps.find(
+      (step) =>
+        step["name"] === "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
     );
-    expect(fullProfile?.["run"]).toContain(
-      "node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --format github --root .",
-    );
+    for (const profile of ["tdd", "sdd", "full"]) {
+      expect(selfValidate?.["run"]).toContain(
+        `node packages/qfai/dist/cli/index.mjs validate --profile ${profile} --fail-on error --format github --root .`,
+      );
+    }
     const sandboxValidate = buildSteps.find(
       (step) => step["name"] === "Run qfai validate gate (fail on error)",
     );
@@ -254,9 +257,7 @@ describe("BF-0002 CI verdict examples", () => {
     expect(sandboxValidate?.["run"]).toContain("--root tmp/pack/sandbox/out --fail-on error");
     for (const name of [
       "Run build & pack verification",
-      "QFAI self-validate this repo (dogfooding — TDD gates)",
-      "QFAI self-validate this repo (dogfooding — SDD gates)",
-      "QFAI self-validate this repo (dogfooding — full profile)",
+      "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
       "Run qfai validate gate (fail on error)",
     ]) {
       const verification = buildSteps.find((step) => step["name"] === name);
@@ -269,9 +270,78 @@ describe("BF-0002 CI verdict examples", () => {
     const context = record(contexts[0], "required context");
     expect(context["job"]).toBe("ci-pass");
     expect(context["verificationSet"]).toEqual(
-      expect.arrayContaining(["QFAI self-validate this repo (dogfooding — full profile)"]),
+      expect.arrayContaining([
+        "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
+      ]),
     );
   });
+
+  // The self-validate step runs three profiles and fails at the end if any failed. Its
+  // name and its command lines are pinned above; this runs the body itself, so a body
+  // whose closing check is deleted can no longer pass.
+  // QFAI:EX-0002-0016-05
+  it.skipIf(process.platform === "win32")(
+    "runs every self-validate profile and fails the step when one fails",
+    () => {
+      const step = steps("build").find(
+        (candidate) =>
+          candidate["name"] ===
+          "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
+      );
+      const body = step?.["run"];
+      if (typeof body !== "string") throw new Error("the self-validate step has no run body");
+      const run = (failing: string | undefined) => {
+        const directory = mkdtempSync(path.join(tmpdir(), "qfai-self-validate-"));
+        try {
+          // The stub stands in for the built CLI: it records each call and fails the
+          // profile under test.
+          const stub = [
+            "node() {",
+            '  printf "%s\\n" "$*" >> calls.txt',
+            '  case " $* " in *" --profile $FAILING "*) return 1;; esac',
+            "}",
+          ].join("\n");
+          const result = spawnSync("bash", ["-c", `${stub}\n${body}`], {
+            cwd: directory,
+            encoding: "utf8",
+            env: {
+              ...process.env,
+              FAILING: failing ?? "none",
+              GITHUB_STEP_SUMMARY: path.join(directory, "summary.md"),
+            },
+          });
+          if (result.error) throw result.error;
+          const calls = readFileSync(path.join(directory, "calls.txt"), "utf8").trim().split("\n");
+          const summaryPath = path.join(directory, "summary.md");
+          const summary = existsSync(summaryPath) ? readFileSync(summaryPath, "utf8") : "";
+          return {
+            status: result.status,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            calls,
+            summary,
+          };
+        } finally {
+          rmSync(directory, { recursive: true, force: true });
+        }
+      };
+
+      for (const failing of ["tdd", "sdd", "full"]) {
+        const result = run(failing);
+        expect(result.status, `${failing}: ${result.stderr}`).toBe(1);
+        expect(
+          result.calls.map((call) => /--profile (\S+)/u.exec(call)?.[1]),
+          failing,
+        ).toEqual(["tdd", "sdd", "full"]);
+        expect(result.stdout).toContain(`qfai validate failed for profile(s): ${failing}`);
+        expect(result.summary).toContain(`qfai validate failed for profile(s): ${failing}`);
+      }
+      const clean = run(undefined);
+      expect(clean.status, clean.stderr).toBe(0);
+      expect(clean.calls).toHaveLength(3);
+      expect(clean.summary).toBe("");
+    },
+  );
 
   // QFAI:EX-0002-0018-01
   // QFAI:EX-0002-0018-02

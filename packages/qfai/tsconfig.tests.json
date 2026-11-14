@@ -29,6 +29,8 @@
     "means adding it here."
   ],
   "include": [
+    "tests/assets/uiProcurementStates.test.ts",
+    "tests/assets/workOrderChecksAndPush.test.ts",
     "tests/helpers/graphCli.ts",
     "tests/unit/graph/graphLocks.examples.test.ts",
     "tests/unit/graph/fallbackOutcomes.examples.test.ts",
@@ -439,6 +441,7 @@
     "tests/validators/configReferenceIntegrity.test.ts",
     "tests/validators/dbContractApplyOrder.test.ts",
     "tests/integration/deliberationRecord.test.ts",
+    "tests/integration/catalogueRegistry.test.ts",
     "tests/helpers/typescriptSourceScan.ts",
     "tests/unit/runtimeMessageLauncher.test.ts",
     "tests/e2e/spec0017WindowsParityE2E.test.ts",
