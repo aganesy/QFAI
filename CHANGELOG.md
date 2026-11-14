@@ -14,6 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **ID allocation leaves no gap where a project checks IDs run without
+  gaps.** The `sdd-triage` step and its reference say that such a project
+  takes the next ID from the base and the working tree alone, and leaves a
+  collision with an open pull request to the renumbering at merge time,
+  instead of taking a number past the open heads.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an

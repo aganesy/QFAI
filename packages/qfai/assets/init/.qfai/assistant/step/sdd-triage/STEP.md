@@ -220,7 +220,10 @@ Parallel branches pick the same next ID unless each reads the others first:
    `refs/pull/<n>/head`, so a pull request from a fork is read too, and read
    the IDs it adds from `git diff <base>...<head>`. Take the highest across the
    base, the working tree and those heads, plus one. Without a forge CLI, read
-   the base alone.
+   the base alone. Where the project checks that IDs of a kind run without
+   gaps, an ID past an open head fails that check until the head merges: take
+   the number from the base and the working tree alone, and leave a collision
+   to step 2.
 2. When merging the base into the branch, check each such ID the branch adds
    against the merged base. The base's item keeps its ID; the branch renumbers
    its own item and every reference to it, then runs the gates again.
