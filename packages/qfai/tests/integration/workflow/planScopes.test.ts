@@ -572,3 +572,20 @@ it("A conflict resolution in spec and contract files plans, and one in code is r
   expect(code.status).toBe(2);
   expect(reasonsOf(code.json)).toEqual([{ reason: "artifact-unserved", subject: "code" }]);
 });
+
+// BR-0015-0296
+// QFAI:EX-0001-0229-33
+it("A delegated release's version edit plans apply-settled with one scope that writes it", async () => {
+  const planned = await planFor(
+    extraction({
+      intent: "order",
+      qualifiers: ["release-delegated"],
+      artifacts: ["release", "spec"],
+    }),
+  );
+
+  expect(planned.status).toBe(0);
+  expect(field(planned.json, "route")).toBe("apply-settled");
+  expect(stageIds(planned.json)).toContain("implement");
+  expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
+});

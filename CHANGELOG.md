@@ -522,6 +522,14 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   the same filter without the group. A PowerShell here-string is read as one
   string, so an apostrophe in its text no longer ends it.
 
+- **A delegated release's version edit reaches a stage that makes it.** When a
+  delegated release needs a version edit its release documents make by hand,
+  `triage-operate` reports it as `needs-change` with an `order` naming the
+  `release` artifact, as the release route's contract already said, instead
+  of stopping on it as a blocker. That order plans `apply-settled`, whose
+  implement stage now serves `release`, so the plan offers one scope that
+  makes the edit and puts no scope question.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added
