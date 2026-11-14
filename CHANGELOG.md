@@ -272,6 +272,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   worktree in the same command, the denial still offers the AI-decided
   fallback. A move anywhere else, or to a target the command text does not
   spell out, still makes the fallback unavailable.
+- **The search-protection hook keeps the fallback after a `cd` into a project
+  subdirectory.** In `cd packages/qfai && rg auth src/`, the denied search
+  keeps the AI-decided fallback, scoped to `packages/qfai/src`. The hook
+  follows a move only while it runs outside a pipeline and an `&&` joins it to
+  what comes next. A move joined by `||`, `;`, `&` or a new line, one CDPATH may
+  resolve, or a target that leaves the worktree keeps the fallback unavailable.
+
 - **The search-protection hook denies a search with an input redirection
   attached to its name.** `grep</dev/null -r foo src` and `grep<&3 -r foo .`
   were allowed as outside the checked boundary, while `grep>/dev/null -r foo
