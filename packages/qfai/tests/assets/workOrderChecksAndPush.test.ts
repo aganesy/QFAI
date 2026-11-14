@@ -35,9 +35,10 @@ describe("work order names local checks and push permission", () => {
       const text = await readFile(path.join(repoRoot, tree, WORK_ORDER), "utf-8");
 
       expect(text).toContain("Local checks: <the commands the worker runs itself, or none>");
-      expect(text).toContain("every other check is left to the project CI");
+      expect(text).toContain("lists at least the selector it turns RED then GREEN");
+      expect(text).toContain("every other check runs in CI after the session agent pushes");
       expect(text).toContain("Push: no | <what the worker may push");
-      expect(text).toContain("no: it neither pushes nor opens a pull request");
+      expect(text).toContain("no, or no Push line: it neither pushes nor opens a pull request");
     });
   }
 

@@ -39,8 +39,8 @@ Checkout: <absolute checkout assigned to this task by the host>
 Write paths: <exact owned paths, or none for a read-only task>
 Do not touch: <paths outside the unit that the worker leaves as they are>   # unit work orders only
 Edit method: <host-permitted tool; worktree creation does not grant access>
-Local checks: <the commands the worker runs itself, or none>   # every other check is left to the project CI
-Push: no | <what the worker may push and whether it may open a pull request>   # no: it neither pushes nor opens a pull request
+Local checks: <the commands the worker runs itself, or none>   # a unit that implements an example lists at least the selector it turns RED then GREEN; every other check runs in CI after the session agent pushes
+Push: no | <what the worker may push and whether it may open a pull request>   # no, or no Push line: it neither pushes nor opens a pull request
 If an edit is refused: stop that target; return tool, cwd, target, refusal text, owned paths and a reviewable diff
 Inputs (refs):
 - <file/section>
