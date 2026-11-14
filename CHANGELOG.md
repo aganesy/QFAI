@@ -164,6 +164,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
      `qfai sdd preflight --record <path>`, and read `source` from the new
      values.
 
+- **Verify checks the screens of a UI change.** `verify-repo-gate` adds a
+  `visual check` gate for a change under `uiux.surfacePaths`: the captures of
+  each changed screen are checked against its UI contract and the parts the
+  UI contract guide requires. A screen with no capture leaves the gate UNRUN,
+  never PASS.
+
 - **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.15.7.** The
   document-schema checker the docs lane runs moves from 0.15.5 to 0.15.7, the
   version the package now depends on. The releases change only a dependency of
