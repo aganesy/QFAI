@@ -104,6 +104,7 @@ function environment(base: string): LocateEnvironment {
 // QFAI:EX-0001-0294-02
 // QFAI:EX-0001-0294-03
 // QFAI:EX-0001-0294-04
+// QFAI:EX-0001-0294-27
 describe("where the transcripts are", () => {
   it("names the Claude Code project directory after the absolute root on Windows and POSIX", () => {
     expect(claudeProjectSlug("C:\\Work\\My App", path.win32)).toBe("C--Work-My-App");
@@ -166,6 +167,22 @@ describe("where the transcripts are", () => {
 
     const found = await locateSessions(root, ["claude"], env);
     expect(found.map((session) => session.sessionId)).toEqual(["cased"]);
+  });
+
+  it("takes a transcript that started in another directory and moved into the root", async () => {
+    const base = await tempDir();
+    const root = path.join(base, "project");
+    const scratch = path.join(base, "scratch");
+    const dir = path.join(base, "claude", "projects", claudeProjectSlug(root));
+    const lines = (...cwds: string[]): string =>
+      cwds.map((cwd) => `${JSON.stringify({ type: "user", cwd })}\n`).join("");
+    // The desktop app opened the session in a scratch directory; it moved into the root later.
+    await place(path.join(dir, "moved.jsonl"), lines(scratch, scratch, root));
+    // A transcript of this directory that never records the root stays out.
+    await place(path.join(dir, "never.jsonl"), lines(scratch, scratch));
+
+    const found = await locateSessions(root, ["claude"], environment(base));
+    expect(found.map((session) => session.sessionId)).toEqual(["moved"]);
   });
 
   it("takes only the Codex rollouts whose session_meta names the root", async () => {

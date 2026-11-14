@@ -99,7 +99,7 @@ async function locateClaude(
   const projects = path.join(env.claudeConfigDir ?? path.join(env.home, ".claude"), "projects");
   const slug = claudeProjectSlug(root);
   // Two roots can share a slug (`/repo/a-b` and `/repo/a/b`), so even this directory's
-  // transcripts count only when they record the root as their cwd.
+  // transcripts count only when they record the root as a cwd.
   const own = await sessionsOfRoot(path.join(projects, slug), root, env, list);
   if (own.length > 0) return own;
   // A long root is shortened in the directory name, so the slug alone cannot always find it.
@@ -113,7 +113,11 @@ async function locateClaude(
   return matched;
 }
 
-/** The transcripts in `dir` whose first recorded cwd is the root. */
+/**
+ * The transcripts in `dir` that record the root as a cwd. Any record counts, not only the first: a
+ * session the desktop app opened in a scratch directory records that directory until it moves
+ * into the root.
+ */
 async function sessionsOfRoot(
   dir: string,
   root: string,
@@ -122,8 +126,7 @@ async function sessionsOfRoot(
 ): Promise<SessionFile[]> {
   const matched: SessionFile[] = [];
   for (const session of await claudeSessionsIn(dir, list)) {
-    const cwd = await firstValue(session.file, (record) => stringAt(record, "cwd"));
-    if (cwd !== undefined && sameDirectory(cwd, root, env.platform)) matched.push(session);
+    if (await recordsCwd(session.file, root, env.platform)) matched.push(session);
   }
   return matched;
 }
@@ -190,6 +193,17 @@ async function fileTime(file: string): Promise<number | null> {
     if (isMissing(error)) return null;
     throw error;
   }
+}
+
+/** Whether a record of `file` names `root` as its cwd, reading no further than the first that does. */
+async function recordsCwd(file: string, root: string, platform: NodeJS.Platform): Promise<boolean> {
+  let found = false;
+  await readJsonl(file, (record) => {
+    const cwd = stringAt(record, "cwd");
+    found = cwd !== undefined && sameDirectory(cwd, root, platform);
+    return !found;
+  });
+  return found;
 }
 
 /** The first value `pick` finds, reading no further than it and at most `limit` records. */
