@@ -47,14 +47,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **A plain text the user needs stays, with its reason.** The implementation
-  UI guidance now holds the one copy of the procedure for a plain text in UI
-  source, and the `fullstack-engineer` card and the prototyping generator
-  prompt point to it. The procedure first keeps a text that tells the user a
-  result, a cost, a condition, a consequence, a destination, a recovery step or
-  an empty screen's next step, with its reason, and only then deletes,
-  replaces or moves any other text. The `QFAI-UITEXT-001` fix text gives the
-  same order.
+- **The UI contract guide says the contract is a floor.** A UI contract
+  lists what must be verifiable on a screen, not its whole inventory. The
+  built screen also carries the parts `interface-clarity.md` lists under
+  "What a business screen always has", which the contract need not repeat.
 
 - **A work order says which checks the worker runs and whether it may push.**
   The unit work order template gains `Local checks` and `Push` lines, and
@@ -73,6 +69,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing, or took no agent decision, keeps that section's heading with an
   empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
   is unchanged.
+
+- **A plain text the user needs stays, with its reason.** The implementation
+  UI guidance now holds the one copy of the procedure for a plain text in UI
+  source, and the `fullstack-engineer` card and the prototyping generator
+  prompt point to it. The procedure first keeps a text that tells the user a
+  result, a cost, a condition, a consequence, a destination, a recovery step or
+  an empty screen's next step, with its reason, and only then deletes,
+  replaces or moves any other text. The `QFAI-UITEXT-001` fix text gives the
+  same order.
 
 - **The shipped product-surface reviewer and UI contract guide no longer name
   discussion UI/UX sidecars.** The reviewer reconciles the UI contract with
