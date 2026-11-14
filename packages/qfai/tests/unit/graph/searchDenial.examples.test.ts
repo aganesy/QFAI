@@ -655,7 +655,8 @@ it("reads a here-document body as data, not as substitutions", () => {
 // Mutation: packages/qfai/src/core/graph/hooks.ts `!quotedWord &&` -> `true &&` fails "ends a # comment at its line so a quote inside it hides no later search"
 // Mutation: packages/qfai/src/core/graph/hooks.ts `const WORD_BREAK = /[ \t\n;&|()]/;` -> `const WORD_BREAK = /[\s;&|()]/;` fails "ends a # comment at its line so a quote inside it hides no later search"
 // Mutation: packages/qfai/src/core/graph/hooks.ts `atWordStart &&` -> `true &&` fails "ends a # comment at its line so a quote inside it hides no later search"
-// Mutation: packages/qfai/src/core/graph/hooks.ts `return /`|\$\{|\(\(/.test(command.slice(0, index));` -> `return false;` fails "ends a # comment at its line so a quote inside it hides no later search"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `return /`|\$\{|\$\[|\$'|\(\(|[?*+@!]\(/.test(command.slice(0, index));` -> `return false;` fails "ends a # comment at its line so a quote inside it hides no later search"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `return /`|\$\{|\$\[|\$'|\(\(|[?*+@!]\(/.test(command.slice(0, index));` -> `return /`|\$\{|\(\(/.test(command.slice(0, index));` fails "ends a # comment at its line so a quote inside it hides no later search"
 it("ends a # comment at its line so a quote inside it hides no later search", () => {
   for (const command of [
     "echo # '\nrg auth packages/",
@@ -672,6 +673,10 @@ it("ends a # comment at its line so a quote inside it hides no later search", ()
   // error only after the search on the line between has run.
   const reported = "echo # '\nrg auth packages/\n'";
   expect(classifyGraphExploration({ tool: "Bash", command: reported }).decision).toBe("deny");
+  // In an ANSI-C `$'...'` string `\'` does not close it, so the `#` after it
+  // is not a comment and the quote it leaves open still fails closed.
+  const ansiC = "echo $'a\\' #'; rg auth packages/";
+  expect(classifyGraphExploration({ tool: "Bash", command: ansiC }).decision).toBe("deny");
   // A `#` inside a word starts no comment: after other characters, inside
   // quotes, after an empty quote and a line continuation, after a character
   // the shell does not treat as a blank, after an escaped separator, or right
@@ -687,7 +692,9 @@ it("ends a # comment at its line so a quote inside it hides no later search", ()
     "echo a\\|#`rg auth packages/`",
     "echo $(true)#$(rg auth packages/)",
     "cat <(true)#$(rg auth packages/)",
-    // A `${...}`, `((...))` or backtick context before the `#` keeps it text.
+    // A `${...}`, `((...))`, `$[...]` or backtick context before the `#`
+    // keeps it text.
+    "echo $[ 1 #$(rg auth packages/) ]",
     "echo ${x:- #$(rg auth packages/)}",
     "echo ${x:- #}; rg auth packages/",
     "(( 1 # )); rg auth packages/",

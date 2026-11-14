@@ -626,15 +626,16 @@ function startsComment(command: string, index: number, shell: GraphShell): boole
 
 /**
  * Whether the text before `index` may leave a context open that these readers do not track and
- * where the shell starts no comment: a backtick substitution, a `${...}` expansion or a `((...))`
- * arithmetic command. A `#` after one is read as text, as it was before comments were read, so a
- * search after it is still classified.
+ * where the shell starts no comment or quotes differently: a backtick substitution, a `${...}`
+ * expansion, a `((...))` or `$[...]` arithmetic, an ANSI-C `$'...'` string, whose `\'` does not
+ * close it, or an extended glob such as `@(...)`. A `#` after one is read as text, as it was
+ * before comments were read, so a search after it is still classified.
  * Ceiling: any such opener earlier in the command turns comment reading off for the rest of it,
  * so a quote in a later comment there still fails closed as an unmatched quote. Tracking those
  * contexts as the quotes are tracked lifts this.
  */
 function inUntrackedContext(command: string, index: number): boolean {
-  return /`|\$\{|\(\(/.test(command.slice(0, index));
+  return /`|\$\{|\$\[|\$'|\(\(|[?*+@!]\(/.test(command.slice(0, index));
 }
 
 function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | undefined {
