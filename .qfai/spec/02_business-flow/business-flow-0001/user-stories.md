@@ -178,3 +178,4 @@
 | US-0001-0301 | A run keeps and commits its deliberation record                                        | `user-story-0001-0301/` |
 | US-0001-0302 | Validate checks only the deliberation record's table layout                            | `user-story-0001-0302/` |
 | US-0001-0303 | Read the grilling rule's procedures only when they apply                               | `user-story-0001-0303/` |
+| US-0001-0306 | Validate warns when tech.md names a catalogue no registry serves                       | `user-story-0001-0306/` |

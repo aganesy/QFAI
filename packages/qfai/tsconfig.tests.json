@@ -440,6 +440,7 @@
     "tests/validators/configReferenceIntegrity.test.ts",
     "tests/validators/dbContractApplyOrder.test.ts",
     "tests/integration/deliberationRecord.test.ts",
+    "tests/integration/catalogueRegistry.test.ts",
     "tests/helpers/typescriptSourceScan.ts",
     "tests/unit/runtimeMessageLauncher.test.ts",
     "tests/e2e/spec0017WindowsParityE2E.test.ts",
