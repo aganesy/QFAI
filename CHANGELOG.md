@@ -28,6 +28,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   links and controls, so the suite catches a screen reachable only by typing
   its URL.
 
+- **The shipped uix-rev review prompts no longer name the removed
+  `40_screen_contracts.md` sidecar.** The strategy review checks brand language
+  against the UI contracts under `<paths.contractsDir>/ui/`, and the screen
+  contracts review prompt, which nothing loaded and which reviewed that removed
+  file, is gone.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
