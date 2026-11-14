@@ -648,7 +648,9 @@ describe("shipped template and this repository agree", () => {
       return {
         hooks: settings.hooks,
         allow: Array.isArray(allow)
-          ? allow.filter((entry) => typeof entry !== "string" || !REPO_ONLY_ALLOW.has(entry))
+          ? allow.filter(
+              (entry: unknown) => typeof entry !== "string" || !REPO_ONLY_ALLOW.has(entry),
+            )
           : allow,
       };
     };
