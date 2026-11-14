@@ -763,7 +763,7 @@ it("denies a search inside a command or process substitution", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `shell === "posix" ? heredocData(text) : { text, expanded: [] };` -> `{ text, expanded: [] };` fails "reads a here-document body as data, not as substitutions"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `shell === "posix" ? heredocData(text, nested) : { text, expanded: [] };` -> `{ text, expanded: [] };` fails "reads a here-document body as data, not as substitutions"
 it("reads a here-document body as data, not as substitutions", () => {
   const message = [
     "Deny the search",
@@ -777,6 +777,7 @@ it("reads a here-document body as data, not as substitutions", () => {
     `git commit -m "$(cat <<-'EOF'\n${message}\n\tEOF\n)"`,
     `git commit -m "$(cat <<\\EOF\n${message}\nEOF\n)"`,
     `gh pr create --body "$(cat <<'EOF'\n${message}\nEOF\n)" --title x`,
+    `git add -A\ngit commit -m "$(cat <<'EOF'\n${message}\nEOF\n)"`,
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("allow");
@@ -788,6 +789,21 @@ it("reads a here-document body as data, not as substitutions", () => {
     'echo "<<X"\necho $(grep -r foo src)\nX',
     "echo hi # <<X\necho $(grep -r foo src)\nX",
     "echo $((1<<2))\necho $(grep -r foo src)\n2",
+    // A body is left out of the scan only in a closed data or message shape;
+    // every other shape stays scanned.
+    "'bash' <<EOF\n$(rg auth packages)\nEOF",
+    "bash.exe <<EOF\n$(rg auth packages)\nEOF",
+    "cat <<'EOF' |\n$(rg auth packages)\nEOF\nbash",
+    "{\ncat <<'EOF'\n$(rg auth packages)\nEOF\n} | bash",
+    "echo $[1<<2]\necho $(rg auth packages)\n2]",
+    "cat <<'EOF'\r\n$(rg auth packages)\r\nEOF\r\n",
+    "eval \"$(cat <<'EOF'\n$(rg auth packages)\nEOF\n)\"",
+    "bash -c \"$(cat <<'EOF'\n$(rg auth packages)\nEOF\n)\"",
+    'git(){ eval "$2"; }\ngit commit -m "$(cat <<\'EOF\'\n$(rg auth packages)\nEOF\n)"',
+    // A continued line is an earlier line too, and a line that starts with the
+    // delimiter may end the body inside a substitution.
+    "eval \\\ngit commit -m \"$(cat <<'EOF'\n$(rg auth packages)\nEOF\n)\"",
+    "git commit -m \"$(cat <<'EOF'\nmsg\nEOF)\"\necho $(rg auth packages)\nEOF",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
@@ -1038,22 +1054,6 @@ it("denies a search inside a PowerShell script block", () => {
     const result = classifyGraphExploration({ tool: "PowerShell", command });
     expect(result.decision, command).toBe("allow");
   }
-});
-
-// QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `expands: !/['"\\]/.test(match[2] ?? ""),` -> `expands: true,` fails "keeps the body of a delimiter word with a quote inside it as data"
-it("keeps the body of a delimiter word with a quote inside it as data", () => {
-  for (const command of [
-    'cat <<E"O"F\n$(grep -r foo src)\nEOF',
-    "cat <<E'O'F\n$(grep -r foo src)\nEOF",
-    "cat <<'E'OF\n$(grep -r foo src)\nEOF",
-    "cat <<E\\OF\n$(grep -r foo src)\nEOF",
-  ]) {
-    expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
-  }
-  // The same word without quotes still expands its body.
-  const unquoted = "cat <<EOF\n$(grep -r foo src)\nEOF";
-  expect(classifyGraphExploration({ tool: "Bash", command: unquoted }).decision).toBe("deny");
 });
 
 // QFAI:EX-0001-0235-26
