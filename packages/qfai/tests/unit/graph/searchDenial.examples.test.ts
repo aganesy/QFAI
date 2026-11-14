@@ -97,7 +97,7 @@ it("reports hidden scripts aliases and continuing input outside the proven bound
 });
 
 // QFAI:EX-0001-0235-13
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook();` -> `if (depth >= 0) return failedGraphHook();` fails "allows graph engine commands whose native implementations search internally"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook("depth");` -> `if (depth >= 0) return failedGraphHook("depth");` fails "allows graph engine commands whose native implementations search internally"
 it("allows graph engine commands whose native implementations search internally", () => {
   for (const command of [
     "node .qfai/tools/runtimes/codegraph/node_modules/@colbymchenry/codegraph/npm-shim.js context authorize --path .qfai/tools/analysis/codegraph",
@@ -111,7 +111,7 @@ it("allows graph engine commands whose native implementations search internally"
 });
 
 // QFAI:EX-0001-0235-12
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook();` -> `if (depth >= 0) return failedGraphHook();` fails "allows quality commands whose ordinary implementations search internally"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook("depth");` -> `if (depth >= 0) return failedGraphHook("depth");` fails "allows quality commands whose ordinary implementations search internally"
 it("allows quality commands whose ordinary implementations search internally", () => {
   for (const command of [
     "pnpm test",
@@ -126,7 +126,7 @@ it("allows quality commands whose ordinary implementations search internally", (
 });
 
 // QFAI:EX-0001-0235-11
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook();` -> `if (depth >= 0) return failedGraphHook();` fails "allows exact known-file reads without graph exploration"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook("depth");` -> `if (depth >= 0) return failedGraphHook("depth");` fails "allows exact known-file reads without graph exploration"
 it("allows exact known-file reads without graph exploration", () => {
   for (const command of [
     "cat packages/qfai/src/core/index.ts",
@@ -139,7 +139,7 @@ it("allows exact known-file reads without graph exploration", () => {
 });
 
 // QFAI:EX-0001-0235-10
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook();` -> `if (depth >= 0) return failedGraphHook();` fails "allows quoted search words printed without invoking search"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (depth > 16) return failedGraphHook("depth");` -> `if (depth >= 0) return failedGraphHook("depth");` fails "allows quoted search words printed without invoking search"
 it("allows quoted search words printed without invoking search", () => {
   for (const command of [
     "echo 'grep'",
