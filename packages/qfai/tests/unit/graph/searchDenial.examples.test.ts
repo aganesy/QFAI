@@ -580,7 +580,7 @@ it("denies a search behind a named descriptor redirection", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `for (const classify of substitutions) {` -> `for (const classify of []) {` fails "denies a search inside a command or process substitution"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `for (const classify of substitutions) {` -> `for (const classify of substitutions.slice(0, 0)) {` fails "denies a search inside a command or process substitution"
 it("denies a search inside a command or process substitution", () => {
   for (const [tool, command, operation] of [
     ["Bash", "echo $(grep -r foo src)", "grep"],
@@ -610,4 +610,33 @@ it("denies a search inside a command or process substitution", () => {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("allow");
   }
+  const quotedGroup = 'Write-Output "@(rg auth packages)"';
+  expect(classifyGraphExploration({ tool: "PowerShell", command: quotedGroup }).decision).toBe(
+    "allow",
+  );
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `const command = shell === "posix" ? heredocData(text) : text;` -> `const command = text;` fails "reads a here-document body as data, not as substitutions"
+it("reads a here-document body as data, not as substitutions", () => {
+  const message = [
+    "Deny the search",
+    "",
+    "Searches such as `grep -r foo src` and $(rg auth packages) are now denied.",
+    "rg auth packages is the shape the hook reads.",
+  ].join("\n");
+  for (const command of [
+    `git commit -m "$(cat <<'EOF'\n${message}\nEOF\n)"`,
+    `git commit -m "$(cat <<"EOF"\n${message}\nEOF\n)"`,
+    `git commit -m "$(cat <<-EOF\n${message}\n\tEOF\n)"`,
+    `gh pr create --body "$(cat <<'EOF'\n${message}\nEOF\n)" --title x`,
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+  }
+  // A body a shell reads is a script, so a search in it is still a search.
+  const script = "echo $(bash <<'EOF'\ngrep -r foo src\nEOF\n)";
+  const scripted = classifyGraphExploration({ tool: "Bash", command: script });
+  expect(scripted.decision).toBe("deny");
+  expect(scripted.operation).toBe("grep");
 });

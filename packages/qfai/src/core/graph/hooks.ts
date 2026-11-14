@@ -112,10 +112,11 @@ function classifyCommands(
         )
     : authorize;
   // A substitution runs its own command list, so a search inside one is a search.
-  // Only its denial counts here: what else it runs keeps the outer verdict.
+  // Only a search it denies counts here: what else it runs, or text it cannot
+  // read as commands, keeps the outer verdict.
   for (const classify of substitutions) {
     const decision = classify(scopedAuthorization, redefines);
-    if (decision?.decision === "deny") return decision;
+    if (decision?.decision === "deny" && decision.state === "configured") return decision;
   }
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
@@ -682,10 +683,13 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
  * The bodies of the substitutions a shell runs as commands: `$(...)` in POSIX and
  * PowerShell, `@(...)` in PowerShell, `<(...)`, `>(...)` and backticks in POSIX.
  * Single quotes keep them literal, and an escaped opener is not one. An arithmetic
- * `$((...))` runs no command. A substitution left open runs nothing, so it is skipped.
+ * `$((...))` runs no command. A substitution left open runs nothing, and no later
+ * one can close, so the scan stops there. A here-document body is data and is not
+ * scanned: `heredocData` says which bodies.
  */
-function substitutionBodies(command: string, shell: GraphShell): string[] {
+function substitutionBodies(text: string, shell: GraphShell): string[] {
   if (shell === "cmd") return [];
+  const command = shell === "posix" ? heredocData(text) : text;
   const escape = shell === "posix" ? "\\" : "`";
   const bodies: string[] = [];
   let quote: string | undefined;
@@ -711,11 +715,11 @@ function substitutionBodies(command: string, shell: GraphShell): string[] {
     const opens =
       next === "(" &&
       (character === "$" ||
-        (shell === "powershell" && character === "@") ||
-        (shell === "posix" && !quote && (character === "<" || character === ">")));
+        (!quote && shell === "powershell" && character === "@") ||
+        (!quote && shell === "posix" && (character === "<" || character === ">")));
     if (opens) {
       const end = closingParenthesis(command, index + 2, escape);
-      if (end === undefined) continue;
+      if (end === undefined) break;
       if (!(character === "$" && command[index + 2] === "(")) {
         bodies.push(command.slice(index + 2, end));
       }
@@ -723,12 +727,48 @@ function substitutionBodies(command: string, shell: GraphShell): string[] {
     } else if (shell === "posix" && character === "`") {
       let end = index + 1;
       while (end < command.length && command[end] !== "`") end += command[end] === "\\" ? 2 : 1;
-      if (end >= command.length) continue;
+      if (end >= command.length) break;
       bodies.push(command.slice(index + 1, end).replace(/\\([`\\$])/g, "$1"));
       index = end;
     }
   }
   return bodies;
+}
+
+/** A `<<` or `<<-` here-document operator and its delimiter, quoted or not; `<<<` is not one. */
+const heredocOperator = /(?<!<)<<(?!<)(-?)[ \t]*(?:'([^'\n]*)'|"([^"\n]*)"|\\?([^\s;|&<>()'"]+))/g;
+
+/** A line that hands its input to a shell, whose here-document body is a script. */
+const feedsShell = /(?:^|[\s|;&(`/])(?:(?:ba|z|da|k)?sh|eval|source)(?=$|[\s|;&)<>])/;
+
+/**
+ * The text with each here-document body and its delimiter line removed. The body is
+ * text the command reads, such as a commit message, so a backtick or `$(...)` in it
+ * starts no substitution here. A body fed to a shell is a script and is kept. A body
+ * with no closing delimiter line is kept too, since the operator may sit in quotes.
+ * Ceiling: an unquoted delimiter's body does expand `$(...)`, and that body is
+ * removed as well, so a search inside it stays unclassified, as it was before.
+ */
+function heredocData(command: string): string {
+  const lines = command.split("\n");
+  const kept: string[] = [];
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index] ?? "";
+    kept.push(line);
+    index += 1;
+    if (feedsShell.test(line)) continue;
+    for (const match of line.matchAll(heredocOperator)) {
+      const delimiter = match[2] ?? match[3] ?? match[4] ?? "";
+      const stripTabs = match[1] === "-";
+      const end = lines.findIndex((candidate, at) => {
+        const body = candidate.replace(/\r$/, "");
+        return at >= index && (stripTabs ? body.replace(/^\t+/, "") : body) === delimiter;
+      });
+      if (end >= 0) index = end + 1;
+    }
+  }
+  return kept.join("\n");
 }
 
 /** The index of the `)` that closes a parenthesis opened before `start`, outside quotes. */
