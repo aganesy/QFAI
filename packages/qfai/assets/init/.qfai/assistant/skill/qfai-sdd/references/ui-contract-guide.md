@@ -5,6 +5,7 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 
 ## Contents
 
+- The contract is a floor
 - `screens[].primary_tasks` shape
 - Recommended ceiling: at most 7
 - `elements[].id` naming policy
@@ -18,6 +19,19 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 - Prototyping coverage
 - Root DESIGN.md
 - Review checklist
+
+## The contract is a floor
+
+A UI contract lists what must be verifiable on a screen: its tasks, the
+elements and actions tests reach, and the copy that needs a reason. It is the
+minimum, not the inventory of the screen.
+
+The built screen also carries the standard parts of its business-UI pattern,
+such as navigation in the app shell, search, sort and pagination on a list,
+feedback after an action, and its loading, empty, error and success states.
+It keeps everything `.agents/rules/interface-clarity.md` lists under "What
+this rule never removes". The contract need not repeat these parts, and their
+absence from the contract is no reason to leave them out of the screen.
 
 ## `screens[].primary_tasks` shape
 
