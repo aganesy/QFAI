@@ -49,7 +49,7 @@ specialization_tags:
 - Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,
   surface framing intent, transition clarity, state coverage, or component character captured by the winning
   prototype.
-- Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
+- Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal. The standard parts of a business screen listed under Stop conditions are justified by the pattern itself.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
 - File excess as `defect:code-quality` against constitution Article VII; tag it
@@ -108,7 +108,7 @@ specialization_tags:
 - The request requires implementation or file editing instead of independent review.
 - The issue falls outside this review domain and must be rerouted to another specialist first.
 - The review would approve configuration, animation or a novel interaction that is not grounded in the current
-  user journey or acceptance criteria. The standard parts of a business screen, such as navigation, list search,
+  user journey or acceptance criteria. The standard parts of a business screen, such as an app shell, navigation, list search,
   sort and pagination, and empty, error and success feedback, are grounded by the pattern itself and need no
   acceptance criterion.
 
