@@ -13,7 +13,7 @@ This review is scoped to planner-quality only. Winner selection belongs to the p
 
 - The brand SSOT must be specific enough to support divergent exploration
 - The SSOT must not prematurely collapse to a single chosen visual direction
-- Brand language must remain consistent with `40_screen_contracts.md`
+- Brand language must remain consistent with the UI contracts under `<paths.contractsDir>/ui/`
 - Differentiation targets must explicitly push away from generic defaults
 
 ## Verdict
