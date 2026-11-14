@@ -234,6 +234,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   loads the whole baseline to find the check. Run `qfai init --force` to take
   the new text. Fixes #4058.
 
+- **The UI procurement ladder starts with the project's own components.** Its
+  first rung now reuses a component the project already has, and extracts a
+  shared one when a region repeats on a second screen. The ladder no longer
+  asks whether a region should exist: a region the screen contract names, or
+  one its pattern implies as interface-clarity lists them, is in scope, and
+  leaving an implied region out needs a reason in the UI contract. The
+  prototype reviewer's second criterion cites rungs 1 to 3.
+
 ### Fixed
 
 - **The search-protection hook denies a search behind a named descriptor or
