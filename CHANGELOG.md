@@ -16,7 +16,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **UI evidence captures the standard states of list and form screens.** The
   `qfai-implement` UI reference asks for the empty, error and success states
-  of every screen that lists records or takes input, whether or not a
+  that every screen listing records or taking input has, whether or not a
   contract declares them.
 
 - **A deliberation record keeps both tables, empty where a run has no row.**
