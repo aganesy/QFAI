@@ -77,8 +77,5 @@ describe.each(TREES)("%s", (tree) => {
     expect(list).toContain(
       "the implementation and product-surface reviews check the built screens against them.",
     );
-    expect(list).toContain(
-      "Those two sections reach past `DESIGN.md` authoring and prototype review: they apply to implemented screens and their review.",
-    );
   });
 });

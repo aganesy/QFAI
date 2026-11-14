@@ -67,8 +67,7 @@ naming the pattern is what works.
 - Where an entry touches behaviour, as most of _Information architecture and
   flow_ and _States and accessibility_ do, `interface-clarity.md` and the spec
   are the rules. The entry is the form a breach of them takes on a generated
-  screen. Those two sections reach past `DESIGN.md` authoring and prototype
-  review: they apply to implemented screens and their review.
+  screen.
 - The reviewer inside the prototyping loop does not apply the sections about
   identity. Root `DESIGN.md` locks the brand values that reviewer sees, so a
   pattern there is caught where the design direction is reviewed and where
