@@ -29,6 +29,7 @@
     "means adding it here."
   ],
   "include": [
+    "tests/assets/implementAntiPatternSections.test.ts",
     "tests/assets/uiProcurementStates.test.ts",
     "tests/assets/workOrderChecksAndPush.test.ts",
     "tests/helpers/graphCli.ts",
