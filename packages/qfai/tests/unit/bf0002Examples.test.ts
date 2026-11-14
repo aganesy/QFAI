@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -310,14 +310,17 @@ describe("BF-0002 CI verdict examples", () => {
               GITHUB_STEP_SUMMARY: path.join(directory, "summary.md"),
             },
           });
+          if (result.error) throw result.error;
           const calls = readFileSync(path.join(directory, "calls.txt"), "utf8").trim().split("\n");
-          let summary = "";
-          try {
-            summary = readFileSync(path.join(directory, "summary.md"), "utf8");
-          } catch {
-            summary = "";
-          }
-          return { status: result.status, stdout: result.stdout, calls, summary };
+          const summaryPath = path.join(directory, "summary.md");
+          const summary = existsSync(summaryPath) ? readFileSync(summaryPath, "utf8") : "";
+          return {
+            status: result.status,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            calls,
+            summary,
+          };
         } finally {
           rmSync(directory, { recursive: true, force: true });
         }
@@ -325,7 +328,7 @@ describe("BF-0002 CI verdict examples", () => {
 
       for (const failing of ["tdd", "sdd", "full"]) {
         const result = run(failing);
-        expect(result.status, failing).toBe(1);
+        expect(result.status, `${failing}: ${result.stderr}`).toBe(1);
         expect(
           result.calls.map((call) => /--profile (\S+)/u.exec(call)?.[1]),
           failing,
@@ -334,7 +337,7 @@ describe("BF-0002 CI verdict examples", () => {
         expect(result.summary).toContain(`qfai validate failed for profile(s): ${failing}`);
       }
       const clean = run(undefined);
-      expect(clean.status).toBe(0);
+      expect(clean.status, clean.stderr).toBe(0);
       expect(clean.calls).toHaveLength(3);
       expect(clean.summary).toBe("");
     },
