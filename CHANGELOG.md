@@ -127,6 +127,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   guide, the contract rules and the `sdd-contract` step say every screen
   carries them. `npx qfai validate` does not check these keys.
 
+- **The contract step writes the standard parts of a business screen into its
+  UI contract.** After deriving a screen's elements and actions from the
+  examples, `sdd-contract` checks the screen against
+  `## What a business screen always has` in `interface-clarity.md` and adds
+  each part that applies and is missing: navigation, list behaviour, the
+  empty, loading, error and success states and the feedback after a change.
+  Such a part needs no example of its own unless it carries a business rule.
+
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
   the check before a session is reported finished move to
