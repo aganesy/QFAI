@@ -564,3 +564,50 @@ it("denies piped searches that still read project files", () => {
     expect(redirected.exceptionEligible, command).toBe(false);
   }
 });
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `!/^(?:\d*|\{[A-Za-z_][A-Za-z0-9_]*\})$/.test(word) &&` -> `!/^\d*$/.test(word) &&` fails "denies a search behind a named descriptor redirection"
+it("denies a search behind a named descriptor redirection", () => {
+  for (const command of [
+    "{fd}<file grep -r foo src",
+    "{fd}< file grep -r foo src",
+    "{out}>log.txt rg auth packages",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe(command.includes("rg") ? "rg" : "grep");
+  }
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `for (const classify of substitutions) {` -> `for (const classify of []) {` fails "denies a search inside a command or process substitution"
+it("denies a search inside a command or process substitution", () => {
+  for (const [tool, command, operation] of [
+    ["Bash", "echo $(grep -r foo src)", "grep"],
+    ["Bash", 'echo "$(grep -r foo src)"', "grep"],
+    ["Bash", "cat <(grep -r foo src)", "grep"],
+    ["Bash", "tee >(rg auth packages) < /dev/null", "rg"],
+    ["Bash", "echo `grep -r foo src`", "grep"],
+    ["Bash", "echo $(echo $(rg auth packages))", "rg"],
+    ["Bash", "bash -c 'echo $(grep -r foo src)'", "grep"],
+    [
+      "PowerShell",
+      "Write-Output $(Select-String -Pattern auth -Path packages/index.ts)",
+      "Select-String",
+    ],
+    ["PowerShell", "Write-Output @(rg auth packages)", "rg"],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe(operation);
+  }
+  for (const command of [
+    "echo '$(grep -r foo src)'",
+    String.raw`echo \$(grep -r foo src)`,
+    "echo $((1 + 2))",
+    'echo "$(git status)"',
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("allow");
+  }
+});

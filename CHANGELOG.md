@@ -137,6 +137,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook denies a search behind a named descriptor or
+  inside a substitution.** `{fd}<file grep -r foo src` and searches inside
+  `$(...)`, backticks, `<(...)`, `>(...)` or PowerShell `@(...)` are denied
+  like the same search run directly.
+
 - **A `cd` to the project itself no longer withholds the search fallback.**
   When a denied search follows `cd`, `pushd` or `Set-Location` to the observed
   worktree in the same command, the denial still offers the AI-decided
