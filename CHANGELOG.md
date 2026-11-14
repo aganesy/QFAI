@@ -15,11 +15,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 ### Changed
 
 - **An empty state's next step is protected from copy cuts.**
-  `interface-clarity.md` lists the action or short pointer that leads out of an
-  empty state under "What this rule never removes". The product-surface
-  reviewer and the `sdd-contract` step name the same exception, so a review
-  that cuts how-to copy no longer leaves an empty search result with only
-  "nothing matches".
+  `interface-clarity.md` lists the action, or a short sentence naming it, that
+  leads out of an empty state under "What this rule never removes". The
+  product-surface reviewer, the prototyping reviewer prompt, the UI contract
+  guide and the `sdd-contract` step name the same exception, so a review that
+  cuts how-to copy no longer leaves an empty search result with only "nothing
+  matches".
 
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
