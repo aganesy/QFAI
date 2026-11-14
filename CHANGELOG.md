@@ -14,6 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A work order says which checks the worker runs and whether it may push.**
+  The unit work order template gains `Local checks` and `Push` lines, and
+  `delegation-steering.md` checks a delegated agent's first actions against
+  them. A worker whose order says `Push: no` neither pushes nor opens a pull
+  request.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
