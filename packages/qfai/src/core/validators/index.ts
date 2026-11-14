@@ -12,6 +12,7 @@ export {
   validateStoryTreeObligationsModel,
 } from "./storyTreeObligations.js";
 export {
+  validateCatalogueRegistry,
   validateConstraintIds,
   validateStoryDirectories,
   validateStoryTreeStructure,
