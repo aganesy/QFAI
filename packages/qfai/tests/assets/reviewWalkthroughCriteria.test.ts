@@ -122,13 +122,15 @@ describe("four ordinal axes and eight diagnostic questions", () => {
         "1. **Does the project already have a component for it?** Reuse it.",
       );
       expect(ladder).toContain(
-        "extract one, wrapping whatever rung 2 or 3 supplied, and use it on both",
+        "extract one, wrapping whatever rung 2, 3 or 4 supplied, and use it on both",
       );
       expect(ladder).toContain(
         "Leaving an implied region out needs the reason in the screen's UI contract.",
       );
       expect(ladder).not.toContain("Does this region need to exist at all?");
-      expect(review).toMatch(/^\| 2 .*\| the same ladder, rungs 1 to 3 +\|$/m);
+      expect(review).toMatch(/^\| 2 .*\| the same ladder, rungs 1, 3 and 4 +\|$/m);
+      expect(review).toMatch(/^\| 3 .*\| the same ladder, rungs 2 and 5 +\|$/m);
+      expect(review).toMatch(/^\| 4 .*\| the same ladder, rung 6 +\|$/m);
     });
 
     // Each role named in the review carries its line, so the criteria reach the

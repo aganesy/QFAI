@@ -80,6 +80,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`ui-procurement.md` checks runtime compatibility and tries a native
+  element first.** A new rung before the design system asks whether a native
+  element such as `details` or `dialog` does the job. A catalogue, and each item
+  taken from it, must meet the constraints in the new `UI constraints` row of
+  the `tech.md` template, and a known incompatibility is recorded under the
+  catalogue in `tech.md` Dependencies.
+
 - **`ui-procurement.md` requires each region's states to exist.** A region
   that loads data or accepts input lists its default, empty, loading, error
   and success states and what realises each one. A state it cannot reach is
