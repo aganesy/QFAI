@@ -522,6 +522,13 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   the same filter without the group. A PowerShell here-string is read as one
   string, so an apostrophe in its text no longer ends it.
 
+- **`qfai validate` reads the Markdown under `paths.specsDir` once for the
+  UI/UX checks.** The HTML mock, UI definition and Mermaid screen flow checks
+  each found and read every Markdown file there, so a large story tree was
+  read three times in one run. They now share one read, and their findings
+  are unchanged. On a tree of 4,000 Markdown files the UI/UX group took
+  1.1 s instead of 2.8 s.
+
 ## [2.4.0] - 2026-11-11
 
 ### Added
