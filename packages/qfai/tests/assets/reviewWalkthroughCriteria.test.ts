@@ -109,7 +109,7 @@ describe("four ordinal axes and eight diagnostic questions", () => {
 
     // The ladder decides where a region comes from, never whether a region the
     // pattern implies exists, and a component the project already has comes
-    // before anything procured or authored (#4100).
+    // before anything procured or authored.
     it(`${tree}: the ladder starts by reusing the project's own components`, async () => {
       const ladder = flat(await read(tree, "assistant/rule/ui-procurement.md"));
       const review = await read(tree, REVIEWER_PROMPT);
