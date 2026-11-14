@@ -89,6 +89,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`ui-procurement.md` checks runtime compatibility and tries a native
+  element first.** A new rung before the design system asks whether a native
+  element such as `details` or `dialog` does the job. A catalogue, and each item
+  taken from it, must meet the technical constraints and quality targets in
+  `01_policy/constraint.md`, and an item that breaks one is recorded with the
+  region's procurement. The prototype review no longer blocks a native element
+  chosen over a catalogue item.
+
 - **The business UI pattern list says where search, sort and paging run.**
   The List entry gains a Behaviour list: list state in the screen's address,
   search, filters, sort and paging on the server for a list that can outgrow
