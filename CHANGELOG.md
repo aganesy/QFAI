@@ -155,6 +155,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook says what it could not read.** A command whose
+  quotes it cannot match, or whose wrappers nest more than 16 levels deep, is
+  still denied, but the message names that cause and how to retry instead of
+  asking to repair a hook configuration that is fine. An invalid enforcement
+  file, an unreadable pre-tool event and unreadable local search state each get
+  their own message, and the hook prints the same message to standard error.
+
 - **A `cd` to the project itself no longer withholds the search fallback.**
   When a denied search follows `cd`, `pushd` or `Set-Location` to the observed
   worktree in the same command, the denial still offers the AI-decided
