@@ -114,9 +114,13 @@ describe("four ordinal axes and eight diagnostic questions", () => {
       const ladder = flat(await read(tree, "assistant/rule/ui-procurement.md"));
       const review = await read(tree, REVIEWER_PROMPT);
 
-      expect(ladder).toContain("The ladder decides where a region comes from, not whether it exists.");
+      expect(ladder).toContain(
+        "The ladder decides where a region comes from, not whether it exists.",
+      );
       expect(ladder).toContain("a region its pattern implies");
-      expect(ladder).toContain("1. **Does the project already have a component for it?** Reuse it.");
+      expect(ladder).toContain(
+        "1. **Does the project already have a component for it?** Reuse it.",
+      );
       expect(ladder).toContain("extract one and use it on both");
       expect(ladder).not.toContain("Does this region need to exist at all?");
       expect(review).toMatch(/^\| 2 .*\| the same ladder, rungs 1 to 3 +\|$/m);
