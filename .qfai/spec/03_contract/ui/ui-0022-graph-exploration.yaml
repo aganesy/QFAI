@@ -58,6 +58,21 @@ screens:
         label: Configure document processing
         kind: command
         effect: Applies an explicitly selected upstream processing destination to the managed process before document analysis.
+    states:
+      - id: default
+        renders: the Tools, Analysis and Protection status lines, each with its own value, and the notices that configuration does not verify protection and that .qfai/tools/ is local to this checkout
+        next: check trust and runtime verification for each host, and run qfai init in each other clone or worktree
+      - id: empty
+        renders: Analysis shows documents not ready, or Protection shows that the host cannot enforce the search denial
+        next: configure document processing, or treat the unsupported host as unprotected
+      - id: loading
+        none: the summary is printed once when preparation ends; nothing of it renders while preparation runs
+      - id: error
+        renders: the Failed step, its Recovery and whether the Previous installation was retained
+        next: fix the cause, then run qfai init again
+      - id: success
+        renders: every tool, the analysis and each host report ready in their own status lines, with no failed step
+        next: explore through the graph CLI
     supplements:
       - id: graph_prepare_documents_missing
         near: graph_prepare_analysis_status
@@ -103,6 +118,18 @@ screens:
         label: Run qfai init
         kind: command
         effect: Starts actual preparation when the user runs init without --dry-run.
+    states:
+      - id: default
+        renders: the Planned actions and the Observed status under the preview title, with the notice that nothing was changed
+        next: run qfai init to carry out the planned actions
+      - id: empty
+        none: a preview always lists the planned action or the observed state of each tool, so it is never empty
+      - id: loading
+        none: the preview is printed once when it is complete; nothing of it renders before
+      - id: error
+        none: a dry-run changes nothing, so it has no failed step of its own; a failure to read state is shown as that tool's Observed status
+      - id: success
+        none: a preview completes nothing, so it never reports installation as done
     supplements:
       - id: graph_preview_no_changes
         near: graph_preview_actions
@@ -148,6 +175,20 @@ screens:
         label: Use scoped search when the graph cannot answer
         kind: request
         effect: Runs the fallback CLI with pending attempt UUID, unresolved question and AI reason; attempts the relevant graph and permits only the immutable observed target, operation, worktree and session for 60 seconds without human search approval.
+    states:
+      - id: default
+        renders: the Attempted action, the Reason, the Graph CLI command and the Pending attempt, with the notice that exploratory search was denied
+        next: run the suggested graph CLI command
+      - id: empty
+        renders: the notice that the required analysis is not ready, with the preparation and fallback commands
+        next: prepare the analysis, or run the fallback command with the pending attempt, unresolved question and reason
+      - id: loading
+        none: the denial is printed once when the event is decided; nothing of it renders before
+      - id: error
+        renders: Protection status shows that search protection failed, or the notice that the pending attempt cannot grant search permission
+        next: repair the reported configuration, or correct the reported cause and retry the denied action
+      - id: success
+        none: the screen shows only a denial; a permitted search is never redirected here
     supplements:
       - id: graph_search_redirect
         near: graph_search_denied_operation
@@ -210,6 +251,21 @@ screens:
         label: Follow the reported recovery
         kind: command
         effect: Corrects invalid arguments or the reported failure before retrying; waits on contention or follows manual recovery for an abandoned lock without automatically deleting another operation's lock.
+    states:
+      - id: default
+        renders: the Requested scope, its Readiness and Coverage limits, the Source facts and the Inferred relationships labelled apart from them
+        next: read the referenced file for the evidence
+      - id: empty
+        renders: the notice that the scope is incomplete and that no matches do not establish absence
+        next: prepare the missing scope, or read the sources directly through the fallback command
+      - id: loading
+        none: the result is printed once when the query ends; nothing of it renders while the query runs
+      - id: error
+        renders: the Failure cause and its Recovery, with the lock notice when analysis is locked
+        next: correct the arguments or the reported failure and retry; wait on contention, or follow manual recovery for an abandoned lock
+      - id: success
+        renders: the requested scope is ready and complete, with its source facts
+        next: read the referenced file for the evidence
     supplements:
       - id: graph_query_incomplete
         near: graph_query_coverage
