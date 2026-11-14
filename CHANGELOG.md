@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`product-surface-reviewer` checks that a screen is complete.** For each
+  screen a change adds or alters, it walks the business-screen floor in
+  `.agents/rules/interface-clarity.md`. A listed part missing with no reason in
+  the UI contract blocks the review on a screen, list, state or shell part the
+  change adds or alters, or when the change removes the part. A gap already
+  there or elsewhere is advisory. Having a listed part is never filed as excess.
+
 - **The component catalogue that `tech.md` names is set up before screens
   are built.** `implement-scaffold` installs the catalogue the
   `Component catalogue` row names with its own setup command and adds its registry to
@@ -38,6 +45,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   profiles. A row that is empty, a template placeholder or states none raises
   nothing.
 
+- **A UI contract screen lists its states.** The shipped
+  `ui-contract.sample.yaml`, the UI contract guide, the contract artifact rules
+  and the `sdd-contract` step give every screen a `states` list: `default`,
+  `empty`, `loading`, `error` and `success`, each with what renders and the
+  user's next action, or `none` with the reason the screen cannot be in that
+  state. A supplement's `when` names one of these states. Validate does not
+  check the key.
+
 ### Removed
 
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
@@ -64,6 +79,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contracts review prompt, which nothing loaded and which reviewed that removed
   file, is gone.
 
+- **`interface-clarity.md` walks the user's job across screens.** Section 6
+  no longer stops at the tasks a surface declares. It walks the job from where
+  the user starts to the result and back, including jobs no contract names,
+  such as finding one record among many or recovering after an error, with a
+  realistic volume of data and, on a screen, at phone and desktop widths. A gap
+  that a business-screen part closes is a defect to fix; any other gap on a job
+  no contract names goes to the owner of the spec rather than being built.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
@@ -79,11 +102,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   replaces or moves any other text. The `QFAI-UITEXT-001` fix text gives the
   same order.
 
+- **The home screen counts as one view.** `interface-clarity.md` § 4 says
+  the home, like any dashboard, has the one purpose "see what needs
+  attention", and each of its parts links to the view that does the work.
+
 - **The shipped product-surface reviewer and UI contract guide no longer name
   discussion UI/UX sidecars.** The reviewer reconciles the UI contract with
   design tokens, flows and rendered output, and the guide says a deliberation
   record that discusses the screens is history while the UI contract is the
   execution authority.
+
+- **Every UI contract screen states its purpose and its place in the app.**
+  The shipped `ui-contract.sample.yaml` gives each screen a `purpose` and a
+  `navigation` with `shell`, `entry_points` and `back_to`. The UI contract
+  guide, the contract rules and the `sdd-contract` step say every screen
+  carries them. `npx qfai validate` does not check these keys.
 
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
@@ -91,6 +124,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `discussion-delegation.md`, `glossary-check.md` and `session-check.md` under
   the `qfai-grilling` skill's `references/`. The rule keeps each trigger and
   says when to read each file. A session runs as before.
+
+- **Implementation and prototype reviewers may raise a UI contract gap.**
+  `reviewer-remit.md` puts a screen whose UI contract leaves out a part the
+  UI contract guide requires of every screen in scope for `/qfai-implement`
+  and `/qfai-prototyping` review. The finding is routed to `/qfai-sdd`, and it
+  blocks when a required part is missing.
 
 - **Breaking: a per-run deliberation record replaces the discussion pack.** A
   run that asks the user a question or takes a decision no specification,
@@ -159,6 +198,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
      `qfai sdd preflight --record <path>`, and read `source` from the new
      values.
 
+- **Verify checks the screens of a UI change.** `verify-repo-gate` adds a
+  `visual check` gate for a change under `uiux.surfacePaths`: the captures of
+  each changed screen are checked against its UI contract and the parts the
+  UI contract guide requires. A screen with no capture leaves the gate UNRUN,
+  never PASS.
+
 - **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.15.7.** The
   document-schema checker the docs lane runs moves from 0.15.5 to 0.15.7, the
   version the package now depends on. The releases change only a dependency of
@@ -171,6 +216,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   language followed by `(translated)`, so a language scan on the file does not
   fail on the user's wording.
 
+- **The test-layers rule recommends one navigation journey per role.** Where
+  an app has its own navigation, an E2E test signs in as each role and reaches
+  every screen the UI contracts declare for that role through the app's own
+  links and controls, so the suite catches a screen reachable only by typing
+  its URL.
+
 - **The launcher preflight moved into its own short reference.** It now lives
   in `.qfai/assistant/rule/references/launcher-preflight.md`, and the shared
   operating baseline only points to it. `qfai-run` states the common case
@@ -181,6 +232,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new text. Fixes #4058.
 
 ### Fixed
+
+- **The search-protection hook denies a search behind a named descriptor or
+  inside a substitution.** `{fd}<file grep -r foo src` and searches inside
+  `$(...)`, backticks, `<(...)`, `>(...)` or PowerShell `@(...)` are denied
+  like the same search run directly.
 
 - **The search-protection hook says what it could not read.** A command whose
   quotes it cannot match, or whose wrappers nest more than 16 levels deep, is
