@@ -270,6 +270,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   leaving an implied region out needs a reason in the UI contract. The
   prototype reviewer's second criterion cites rungs 1 to 3.
 
+- **The implement skill points the implementer at the anti-pattern sections
+  for built screens.** For UI work, `qfai-implement` names the _Information
+  architecture and flow_ and _States and accessibility_ sections of
+  `design-anti-patterns.md`, which the implementer checks before calling a
+  screen done.
+
 ### Fixed
 
 - **The search-protection hook denies a search behind a named descriptor or
