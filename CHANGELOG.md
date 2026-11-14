@@ -22,6 +22,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Verify checks the screens of a UI change.** `verify-repo-gate` adds a
+  `visual check` gate for a change under `uiux.surfacePaths`: the captures of
+  each changed screen are checked against its UI contract and the parts the
+  UI contract guide requires. A screen with no capture leaves the gate UNRUN,
+  never PASS.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
