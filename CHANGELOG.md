@@ -34,14 +34,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **An empty state's next step is protected from copy cuts.**
-  `interface-clarity.md` lists the action, or a short sentence naming it, that
-  leads out of an empty state under "What this rule never removes". The
-  product-surface reviewer, the prototyping reviewer prompt, the UI contract
-  guide and the `sdd-contract` step name the same exception, so a review that
-  cuts how-to copy no longer leaves an empty search result with only "nothing
-  matches".
-
 - **A work order says which checks the worker runs and whether it may push.**
   The unit work order template gains `Local checks` and `Push` lines, and
   `delegation-steering.md` checks a delegated agent's first actions against
@@ -160,6 +152,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a missing install reads the reference. A one-command operation no longer
   loads the whole baseline to find the check. Run `qfai init --force` to take
   the new text. Fixes #4058.
+
+- **An empty state's next step is protected from copy cuts.**
+  `interface-clarity.md` lists the action, or a short sentence naming it, that
+  leads out of an empty state under "What this rule never removes". The
+  product-surface reviewer, the prototyping reviewer prompt, the UI contract
+  guide and the `sdd-contract` step name the same exception, so a review that
+  cuts how-to copy no longer leaves an empty search result with only "nothing
+  matches".
 
 ### Fixed
 
