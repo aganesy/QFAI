@@ -77,5 +77,14 @@ describe.each(TREES)("%s", (tree) => {
     expect(list).toContain(
       "the implementation and product-surface reviews check the built screens against them.",
     );
+    const implement = (
+      await readFile(
+        path.join(repoRoot, tree, "skill/qfai-implement/references/ui-affecting.md"),
+        "utf-8",
+      )
+    ).replace(/\s*\n\s*/g, " ");
+    expect(implement).toContain(
+      "Before calling a screen done, check it against the _Information architecture and flow_ and _States and accessibility_ sections of `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md`.",
+    );
   });
 });
