@@ -25,9 +25,15 @@ Read when a reviewer finding is written or judged.
 A finding that asks for more work — another item, more detail, a wider set — is admissible only on
 the concrete artifacts.
 
-| Admissible on                                                           | Inadmissible on                                                                   |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| business flows, user stories, acceptance criteria, examples, test cases | business rules, non-functional requirements, policies and decisions, architecture |
+| Admissible on                                                                                                                                       | Inadmissible on                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| business flows, user stories, acceptance criteria, examples, test cases, and UI contracts and implemented screens against the business-screen floor | business rules, non-functional requirements, policies and decisions, architecture |
+
+The business-screen floor is "What a business screen always has" in
+`.agents/rules/interface-clarity.md`. A screen that lacks one of its parts, with
+no reason recorded in the screen's UI contract, carries a defect
+(`defect:code-quality`), not new scope, so the finding may be `blocking` and
+force `REVISE` although no acceptance criterion names the part.
 
 Two demands stay admissible on any artifact:
 

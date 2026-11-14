@@ -311,6 +311,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `design-anti-patterns.md`, which the implementer checks before calling a
   screen done.
 
+- **A screen missing a part of the business-screen floor can force REVISE.**
+  The reviewer findings rule admits a demand for more work on UI contracts and
+  implemented screens against "What a business screen always has" in
+  `interface-clarity.md`. A missing part with no reason in the screen's UI
+  contract is a `defect:code-quality` finding, not new scope, so it may block
+  although no acceptance criterion names it.
+
 ### Fixed
 
 - **The search-protection hook reads PowerShell comments.** A `<# ... #>`

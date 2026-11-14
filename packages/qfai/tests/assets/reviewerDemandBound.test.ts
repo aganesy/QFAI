@@ -32,8 +32,14 @@ describe("a reviewer's demand for more work is bounded by the artifact", () => {
       const content = await read(tree, DELEGATION);
       expect(content).toContain("### What a reviewer may demand more of");
       expect(content).toMatch(
-        /\|\s*business flows, user stories, acceptance criteria, examples, test cases\s*\|\s*business rules, non-functional requirements, policies and decisions, architecture\s*\|/,
+        /\|\s*business flows, user stories, acceptance criteria, examples, test cases, and UI contracts and implemented screens against the business-screen floor\s*\|\s*business rules, non-functional requirements, policies and decisions, architecture\s*\|/,
       );
+    });
+
+    it(`${tree}: a missing part of the business-screen floor is a defect that may block`, async () => {
+      const content = await read(tree, DELEGATION);
+      expect(content).toContain("What a business screen always has");
+      expect(content).toContain("carries a defect (`defect:code-quality`), not new scope");
     });
 
     it(`${tree}: a missing pair and a safety-floor item stay demandable anywhere`, async () => {
