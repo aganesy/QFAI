@@ -80,7 +80,9 @@ For a UI-bearing flow, write the screen contracts under
 `<paths.contractsDir>/ui/` as the UI guides above state. A visual prototyping
 surface also needs the root `DESIGN.md`, which `common-design-md` writes and
 validates after this step. A CLI-only surface does not require one. Do not
-adopt a sample design.
+adopt a sample design. Each screen states its `purpose` and its `navigation`:
+the shell it renders in, the entry points that lead to it, and where back
+leads.
 
 Examples describe business behaviour, so they rarely name pagination or a save
 confirmation. After deriving a screen's elements and actions from the examples,

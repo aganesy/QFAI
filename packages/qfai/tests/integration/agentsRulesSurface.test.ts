@@ -195,8 +195,15 @@ describe("the implementation reviewer reads silent failure and type design", () 
         "silent failure and type design across the whole of every file the change touches",
       );
       expect(row).toContain(
-        "| Upstream spec content, contract design, and a finding on code in a touched file that the change did not add or alter |",
+        "| Upstream spec content, contract design other than a UI contract gap (below), and a finding on code in a touched file that the change did not add or alter |",
       );
+      // A thin contract passes the spec review before anyone has seen a
+      // screen, so the reviewers who first see one may still challenge it.
+      const flatBaseline = baseline.replace(/\s+/g, " ");
+      expect(flatBaseline).toContain(
+        "A UI contract gap is in scope for `/qfai-implement` and `/qfai-prototyping` review.",
+      );
+      expect(flatBaseline).toContain("is routed to `/qfai-sdd`, which amends the contract");
     },
   );
 });
@@ -842,7 +849,9 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /displaces signal/,
         /One primary purpose per view/,
         /disclosure/,
-        /perform every task it declares/,
+        /walk the user's job across screens/,
+        /that no contract names/,
+        /realistic volume of data/,
       ]) {
         expect(text).toMatch(clause);
       }
