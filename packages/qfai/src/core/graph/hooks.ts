@@ -752,6 +752,13 @@ function inUntrackedContext(command: string, index: number): boolean {
 const POWERSHELL_BREAK = /[ \t\n;|&]/;
 
 /**
+ * Text after which this reader cannot be sure where a PowerShell string ends: a `@"`/`@'`
+ * here-string, a `$(` whose body may hold its own quotes inside a double-quoted string, or a
+ * curly quote (U+2018 to U+201E), which PowerShell also reads as a quote.
+ */
+const POWERSHELL_UNTRACKED = /@["']|\$\(|[\u2018-\u201e]/;
+
+/**
  * The PowerShell text with its comments removed, so both readers see the same commands. A
  * `<# ... #>` block comment that starts a token is replaced by a space up to its `#>`, and a
  * `#` line comment that starts a token is removed up to the end of its line, so a quote inside
@@ -762,13 +769,6 @@ const POWERSHELL_BREAK = /[ \t\n;|&]/;
  * replaced by command separators instead, so what lies between and after them is still read as
  * commands, and a `#` there stays text.
  */
-/**
- * Text after which this reader cannot be sure where a PowerShell string ends: a `@"`/`@'`
- * here-string, a `$(` whose body may hold its own quotes inside a double-quoted string, or a
- * curly quote (U+2018 to U+201E), which PowerShell also reads as a quote.
- */
-const POWERSHELL_UNTRACKED = /@["']|\$\(|[\u2018-\u201e]/;
-
 function withoutPowerShellComments(command: string): string | undefined {
   let output = "";
   let quote: string | undefined;
