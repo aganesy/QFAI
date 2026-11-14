@@ -869,9 +869,7 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
     const REQUIRED = [
       "Run build & pack verification",
       "Sanity grep — no internal spec IDs or version markers leak (post-build)",
-      "QFAI self-validate this repo (dogfooding — TDD gates)",
-      "QFAI self-validate this repo (dogfooding — SDD gates)",
-      "QFAI self-validate this repo (dogfooding — full profile)",
+      "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
       "Run qfai validate gate (fail on error)",
     ] as const;
 
@@ -901,7 +899,7 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
 
     // And this list is pinned to the DECLARATION, which is the copy production reads.
     //
-    // The same six literals exist in three places — this
+    // The same four literals exist in three places — this
     // `REQUIRED`, `TC-0017-0036`'s `VERIFICATION_SET`, and
     // `.github/required-status-contexts.json`. `TC-0017-0036` CLAIM 4 pins its copy to the
     // declaration. This one was pinned to nothing, so it could drift from both while every
@@ -929,9 +927,9 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
         forRequired === undefined ? undefined : forRequired["verificationSet"],
         "this row's literals and the declaration production reads must not drift apart",
       )
-      // The declaration names NINE items and this row restates six, and the difference is not
-      // drift: the other three belong to jobs other than `build` — the verdict step to the
-      // declared job itself, and two to `lint`. The pre-flight refusal of the local composite
+      // The declaration names EIGHT items and this row restates four, and the difference is not
+      // drift: the other four belong to jobs other than `build` — the classifier to `detect`,
+      // the verdict step to the declared job itself, and two to `lint`. The pre-flight refusal of the local composite
       // actions has to run before that job invokes one; `pnpm ci:lint` is the lint job's own work,
       // pinned by body because being in the aggregate is not the same claim as still doing the
       // work. Composed here rather than added to `REQUIRED`, which is checked against
@@ -2014,9 +2012,7 @@ const VERIFICATION_SET = [
   "Derive the verdict from the serialized needs map",
   "Run build & pack verification",
   "Sanity grep — no internal spec IDs or version markers leak (post-build)",
-  "QFAI self-validate this repo (dogfooding — TDD gates)",
-  "QFAI self-validate this repo (dogfooding — SDD gates)",
-  "QFAI self-validate this repo (dogfooding — full profile)",
+  "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)",
   "Run qfai validate gate (fail on error)",
   // Last, and in `lint`: `pnpm ci:lint` is that job's own work. A declared
   // dependency pins only the name and the condition on its own, and nothing about

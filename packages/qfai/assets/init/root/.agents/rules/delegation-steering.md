@@ -22,8 +22,10 @@ less than a third correction.
 Where the host shows a delegated agent's progress, read its first actions as
 they appear: the files it opens, the commands it runs, its first edit. They show
 whether it read the brief as meant: the right paths, the right step, nothing
-outside what it was given. Where the host shows nothing before the result, the
-result is the first check.
+outside what it was given. Hold them against the work order's `Local checks`
+and `Push` lines: a check the brief did not list, or a push or pull request it
+did not allow, is off course. Where the host shows nothing before the result,
+the result is the first check.
 
 ## 2. Interrupt early
 

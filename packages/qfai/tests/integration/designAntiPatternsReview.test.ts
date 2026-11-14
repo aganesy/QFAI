@@ -65,4 +65,17 @@ describe.each(TREES)("%s", (tree) => {
       "Inside the prototyping loop, the claim and the user's answer go to the final report instead",
     );
   });
+
+  // The information-architecture and states sections name the missing states
+  // and missing tables a bare screen shows. Scoped to DESIGN.md authoring and
+  // prototype review, they never reached the screens the implementation builds.
+  it("applies the information-architecture and states sections to implemented screens", async () => {
+    const list = await read(tree);
+    expect(list).toContain(
+      "_Information architecture and flow_ and _States and accessibility_ apply to every screen the implementation builds, not only to root `DESIGN.md` and prototypes.",
+    );
+    expect(list).toContain(
+      "the implementation and product-surface reviews check the built screens against them.",
+    );
+  });
 });
