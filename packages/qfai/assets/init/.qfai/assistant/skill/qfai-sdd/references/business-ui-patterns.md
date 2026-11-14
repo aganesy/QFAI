@@ -55,11 +55,24 @@ Standard parts:
 - an empty state that says what to do next, distinct from "no results" for a
   search or filter, which offers to clear it.
 
+Behaviour:
+
+- the list state (keyword, filters, sort and page) lives in the URL query, so
+  a reload, a shared link and the way back from a detail keep it;
+- search, filters, sort and paging run where the data is: on the server for
+  any list that can outgrow one page, with the total count taken from the same
+  query;
+- the search input and the values it is matched against are normalised the
+  same way, such as Unicode NFKC so full-width and half-width forms match;
+- page and sort values are validated and capped, and a page past the end shows
+  the last page or the empty state, not an error.
+
 Anti-patterns: a table of every field; filters that reset when the user comes
 back from a detail; a destructive row action with no confirmation; an empty
-list shown as a blank table.
+list shown as a blank table; every row loaded and then paged in memory.
 
-Catalogue: a data table with toolbar, pagination and empty state.
+Catalogue: a data table with toolbar, pagination and empty state, whose
+search, sort and paging state is held by the server, not a client-only table.
 
 ## Detail
 
@@ -154,5 +167,7 @@ Catalogue: stat cards, a task list, an activity feed.
   instead of building it.
 - **Reviewing a screen.** A part of its type that is missing with no recorded
   reason is a finding against the screen, named with the part and the type.
+  For a type with a Behaviour list, a behaviour the screen breaks is a finding
+  in the same way.
 
 A screen that fits no type here still gets the parts under "Every screen".

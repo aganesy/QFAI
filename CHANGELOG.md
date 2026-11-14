@@ -80,6 +80,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The business UI pattern list says where search, sort and paging run.**
+  The List entry gains a Behaviour list: list state in the URL query,
+  search, filters, sort and paging on the server for a list that can outgrow
+  one page, the same normalisation for input and matched values, and capped,
+  validated page and sort values. The screen review treats a broken behaviour
+  as a finding.
+
 - **`ui-procurement.md` requires each region's states to exist.** A region
   that loads data or accepts input lists its default, empty, loading, error
   and success states and what realises each one. A state it cannot reach is
