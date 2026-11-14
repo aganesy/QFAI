@@ -110,7 +110,7 @@ function classifyShellText(
     depth,
     redefinedOutside,
     start,
-    substitutionBodies(text, scope.shell).map(
+    substitutionBodies(text, scope.shell, depth > 0).map(
       (body) => (location: ShellLocation, redefines: boolean) =>
         classifyShellText(body, scope, depth + 1, redefines, location, true),
     ),
@@ -994,9 +994,9 @@ function shellPipelines(
  * one can close, so the scan stops there. A here-document body is data and is not
  * scanned: `heredocData` says which bodies.
  */
-function substitutionBodies(text: string, shell: GraphShell): string[] {
+function substitutionBodies(text: string, shell: GraphShell, nested = false): string[] {
   if (shell === "cmd") return [];
-  const command = shell === "posix" ? heredocData(text) : text;
+  const command = shell === "posix" ? heredocData(text, nested) : text;
   const escape = shell === "posix" ? "\\" : "`";
   const bodies: string[] = [];
   let quote: string | undefined;
@@ -1067,36 +1067,55 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
 /** A `<<` or `<<-` here-document operator and its delimiter, quoted or not; `<<<` is not one. */
 const heredocOperator = /<<(?!<)(-?)[ \t]*(?:'([^'\n]*)'|"([^"\n]*)"|\\?([^\s;|&<>()'"]+))/y;
 
-/** A line that hands its input to a shell, whose here-document body is a script. */
-const feedsShell = /(?:^|[\s|;&(`/])(?:(?:ba|z|da|k)?sh|eval|source)(?=$|[\s|;&)<>])/;
+/** A plain word of a message command line: an option, a value or a subcommand. */
+const MESSAGE_WORD = String.raw`[ \t]+[\w./=:@-]+`;
+/**
+ * A line that opens a here-document as the text of a message: `git commit` or `git tag`,
+ * or `gh pr`, `gh issue` or `gh release` with `create`, `edit` or `comment`, plain
+ * words, then `"$(cat <<'EOF'` with a quoted identifier delimiter. The body becomes an
+ * argument that names a message, so no shell runs it.
+ */
+const MESSAGE_HEREDOC_LINE = new RegExp(
+  String.raw`^[ \t]*(?:git[ \t]+(?:commit|tag)|gh[ \t]+(?:pr|issue|release)[ \t]+(?:create|edit|comment))(?:${MESSAGE_WORD})*[ \t]+"\$\(cat[ \t]+<<-?[ \t]*(['"])[A-Za-z_]\w*\1[ \t]*$`,
+);
+/** The line that closes a message substitution: `)"` and plain words. */
+const MESSAGE_CLOSE_LINE = new RegExp(String.raw`^[ \t]*\)"(?:${MESSAGE_WORD})*[ \t]*$`);
+/** A line that may come before a message line: `git add` of plain paths. */
+const MESSAGE_PRELUDE_LINE = new RegExp(String.raw`^[ \t]*git[ \t]+add(?:${MESSAGE_WORD})*[ \t]*$`);
 
 /**
- * The text with each here-document body and its delimiter line removed. The body is
- * text the command reads, such as a commit message, so a backtick or `$(...)` in it
- * starts no substitution here. Only an operator outside quotes, comments and
- * arithmetic starts a body; a `$(` starts a fresh context, as the shell reads it,
- * even inside double quotes. A body fed to a shell is a script and is kept, and so
- * is one with no closing delimiter line.
- * Ceiling: an unquoted delimiter's body does expand `$(...)`, and that body is
- * removed as well, so a search inside it stays unclassified, as it was before.
+ * The text with each here-document body that is surely data, and its delimiter line,
+ * removed. Such a body is text a command reads, such as a commit message, so a backtick
+ * or `$(...)` in it starts no substitution here. A body is removed only in a closed
+ * shape: its operator's whole line writes files (a data line) or opens a message
+ * (`git commit -m "$(cat <<'EOF'` and the like), every line before it is a data line,
+ * a message line or its closing line, the delimiter is a quoted identifier, so Bash
+ * expands nothing in the body, the command holds no carriage return, the delimiter line
+ * is present, and the text is not nested in another command. Every other body is kept
+ * and scanned, so a substitution in it is classified.
  */
-function heredocData(command: string): string {
+function heredocData(command: string, nested = false): string {
   let output = "";
   let quote: string | undefined;
   let comment = false;
   let depth = 0;
   const outer: { quote: string | undefined; depth: number }[] = [];
-  let pending: { delimiter: string; stripTabs: boolean }[] = [];
+  let pending: { delimiter: string; stripTabs: boolean; data: boolean }[] = [];
+  // Where the current line starts in `output`, which holds no removed body.
+  let lineOutput = 0;
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index] ?? "";
     output += character;
     if (character === "\n") {
       comment = false;
       if (!quote && pending.length) {
-        const end = heredocEnd(command, index + 1, pending);
+        const end = pending.every((body) => body.data)
+          ? heredocEnd(command, index + 1, pending)
+          : undefined;
         if (end !== undefined) index = end - 1;
         pending = [];
       }
+      lineOutput = output.length;
     } else if (comment) {
       continue;
     } else if (quote === "'") {
@@ -1129,9 +1148,25 @@ function heredocData(command: string): string {
       const lineStart = command.lastIndexOf("\n", index) + 1;
       const lineEnd = command.indexOf("\n", index);
       const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
-      if (!feedsShell.test(line) && !command.slice(lineStart, index).includes("((")) {
-        pending.push({ delimiter: match[2] ?? match[3] ?? match[4] ?? "", stripTabs: !!match[1] });
-      }
+      const delimiter = match[2] ?? match[3];
+      const data =
+        !nested &&
+        !command.includes("\r") &&
+        delimiter !== undefined &&
+        /^[A-Za-z_]\w*$/.test(delimiter) &&
+        (DATA_HEREDOC_LINE.test(line) || MESSAGE_HEREDOC_LINE.test(line)) &&
+        output
+          .slice(0, lineOutput)
+          .split("\n")
+          .every(
+            (prior) =>
+              DATA_PRELUDE_LINE.test(prior) ||
+              DATA_HEREDOC_LINE.test(prior) ||
+              MESSAGE_HEREDOC_LINE.test(prior) ||
+              MESSAGE_CLOSE_LINE.test(prior) ||
+              MESSAGE_PRELUDE_LINE.test(prior),
+          );
+      pending.push({ delimiter: delimiter ?? match[4] ?? "", stripTabs: !!match[1], data });
       output += command.slice(index + 1, heredocOperator.lastIndex);
       index = heredocOperator.lastIndex - 1;
     }

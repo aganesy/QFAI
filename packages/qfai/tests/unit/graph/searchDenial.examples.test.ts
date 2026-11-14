@@ -763,7 +763,7 @@ it("denies a search inside a command or process substitution", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `const command = shell === "posix" ? heredocData(text) : text;` -> `const command = text;` fails "reads a here-document body as data, not as substitutions"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `const command = shell === "posix" ? heredocData(text, nested) : text;` -> `const command = text;` fails "reads a here-document body as data, not as substitutions"
 it("reads a here-document body as data, not as substitutions", () => {
   const message = [
     "Deny the search",
@@ -774,7 +774,7 @@ it("reads a here-document body as data, not as substitutions", () => {
   for (const command of [
     `git commit -m "$(cat <<'EOF'\n${message}\nEOF\n)"`,
     `git commit -m "$(cat <<"EOF"\n${message}\nEOF\n)"`,
-    `git commit -m "$(cat <<-EOF\n${message}\n\tEOF\n)"`,
+    `git add -A\ngit commit -m "$(cat <<'EOF'\n${message}\nEOF\n)"`,
     `gh pr create --body "$(cat <<'EOF'\n${message}\nEOF\n)" --title x`,
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
@@ -787,6 +787,18 @@ it("reads a here-document body as data, not as substitutions", () => {
     'echo "<<X"\necho $(grep -r foo src)\nX',
     "echo hi # <<X\necho $(grep -r foo src)\nX",
     "echo $((1<<2))\necho $(grep -r foo src)\n2",
+    // A body is removed only in a closed data or message shape with a quoted
+    // delimiter; Bash expands an unquoted one, and every other shape stays scanned.
+    `git commit -m "$(cat <<-EOF\n${message}\n\tEOF\n)"`,
+    "'bash' <<EOF\n$(rg auth packages)\nEOF",
+    "bash.exe <<EOF\n$(rg auth packages)\nEOF",
+    "cat <<EOF |\n$(rg auth packages)\nEOF\nbash",
+    "{\ncat <<'EOF'\n$(rg auth packages)\nEOF\n} | bash",
+    "echo $[1<<2]\necho $(rg auth packages)\n2]",
+    "cat <<'EOF'\r\n$(rg auth packages)\r\nEOF\r\n",
+    "eval \"$(cat <<'EOF'\n$(rg auth packages)\nEOF\n)\"",
+    "bash -c \"$(cat <<'EOF'\n$(rg auth packages)\nEOF\n)\"",
+    'git(){ eval "$2"; }\ngit commit -m "$(cat <<\'EOF\'\n$(rg auth packages)\nEOF\n)"',
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
