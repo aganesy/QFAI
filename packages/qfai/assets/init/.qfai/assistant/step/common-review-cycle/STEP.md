@@ -123,11 +123,11 @@ them; it is the procedure that applies them.
 
 ## Gate
 
-Every required reviewer responded once and accounted for every Domain
-Responsibility of its card, each behaviour fix had its one focused
+Every required reviewer responded once, each behaviour fix had its one focused
 re-review, every finding is fixed or answered, and
 the stage report names each verdict and each answer, or says why the review
-dispatched no reviewer. For a code review skipped as a small literal-only
+dispatched no reviewer. Each response accounted for every Domain
+Responsibility of the reviewer's card. For a code review skipped as a small literal-only
 change, the stage report names the skip, the changed lines and why, and records
 the skip for the final report. A finding the author
 cannot fix is in the stage's final report, and a critical decision has gone to
