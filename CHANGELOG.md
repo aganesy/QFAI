@@ -64,6 +64,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contracts review prompt, which nothing loaded and which reviewed that removed
   file, is gone.
 
+- **`interface-clarity.md` walks the user's job across screens.** Section 6
+  no longer stops at the tasks a surface declares. It walks the job from where
+  the user starts to the result and back, including jobs no contract names,
+  such as finding one record among many or recovering after an error, with a
+  realistic volume of data and, on a screen, at phone and desktop widths. A gap
+  that a business-screen part closes is a defect to fix; any other gap on a job
+  no contract names goes to the owner of the spec rather than being built.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
