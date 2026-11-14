@@ -104,7 +104,9 @@ function classifyShellText(
   // A here-string is read as one string first, so a comment marker or a quote in its text is
   // data to the comment reader too.
   const source =
-    scope.shell === "powershell" ? withoutPowerShellComments(powershellHereStrings(text)) : text;
+    scope.shell === "powershell"
+      ? withoutPowerShellComments(powershellHereStrings(powerShellLines(text)))
+      : text;
   const commands =
     source === undefined ? undefined : shellPipelines(source, scope.shell, depth > 0);
   // Text in a substitution that cannot be read as commands is no verdict of its own.
@@ -887,6 +889,17 @@ function startsComment(command: string, index: number, shell: GraphShell): boole
  */
 function inUntrackedContext(command: string, index: number): boolean {
   return /`|\$\{|\$\[|\$'|\(\(|[?*+@!]\(/.test(command.slice(0, index));
+}
+
+/**
+ * The PowerShell text with each lone carriage return read as a line feed. PowerShell ends a
+ * statement and a `#` line comment at either, while these readers split lines at `\n` only.
+ * Ceiling: the whole text is converted, quoted arguments too, so a carriage return inside a
+ * `bash -c` argument, which Bash reads as an ordinary character, also splits there and may
+ * deny more than Bash runs. Converting only outside quotes lifts this.
+ */
+function powerShellLines(command: string): string {
+  return command.replace(/\r(?!\n)/g, "\n");
 }
 
 /** A character after which PowerShell starts a new token and no word of these readers is under way. */

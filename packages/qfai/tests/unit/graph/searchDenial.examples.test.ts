@@ -1207,3 +1207,28 @@ it("reads a cd after a group or keyword as a move", () => {
     expect(result.exceptionEligible, command).toBe(false);
   }
 });
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `return command.replace(/\r(?!\n)/g, "\n");` -> `return command;` fails "ends a PowerShell statement and line comment at a lone carriage return"
+it("ends a PowerShell statement and line comment at a lone carriage return", () => {
+  for (const command of [
+    "Write-Output x\rrg auth packages/",
+    "Write-Output x # c\rrg auth packages/",
+    "Write-Output x # '\rrg auth packages/",
+    "Write-Output x\r\nrg auth packages/",
+  ]) {
+    const result = classifyGraphExploration({ tool: "PowerShell", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("rg");
+  }
+  // A backtick before a carriage return continues the line, so `rg` is only
+  // an argument there.
+  const continued = "Write-Output x`\rrg auth packages/";
+  expect(classifyGraphExploration({ tool: "PowerShell", command: continued }).decision).toBe(
+    "allow",
+  );
+  // A carriage return inside a string is data, and a search after it in the
+  // same string runs nothing.
+  const quoted = "Write-Output 'a\rrg auth packages/'";
+  expect(classifyGraphExploration({ tool: "PowerShell", command: quoted }).decision).toBe("allow");
+});

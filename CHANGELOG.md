@@ -313,6 +313,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook ends a PowerShell statement at a lone carriage
+  return.** PowerShell ends a statement and a `#` line comment at a carriage
+  return as well as at a line feed, so `Write-Output x` followed by a lone
+  carriage return and `rg auth packages/` is denied as a search.
+
 - **The search-protection hook reads PowerShell comments.** A `<# ... #>`
   block comment that starts a token ends at its `#>`, and a `#` line comment at
   its line, so `<# x #> rg auth packages/` and a quote inside a comment before
