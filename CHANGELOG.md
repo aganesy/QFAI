@@ -313,6 +313,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook denies a command whose substitution it cannot
+  close.** A quote inside a comment in a `$(...)`, `<(...)` or PowerShell
+  `$(...)` body made the hook miss the closing parenthesis and skip the body,
+  so a search there ran. The hook now denies such a command and says it could
+  not find where the substitution ends.
+
 - **The search-protection hook denies a search behind a named descriptor or
   inside a substitution.** `{fd}<file grep -r foo src` and searches inside
   `$(...)`, backticks, `<(...)`, `>(...)` or PowerShell `@(...)` are denied

@@ -763,6 +763,28 @@ it("denies a search inside a command or process substitution", () => {
 });
 
 // QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!bodies) return failedGraphHook("substitution");` -> `if (false) return failedGraphHook("substitution");` fails "denies a command whose substitution end the scan cannot find"
+it("denies a command whose substitution end the scan cannot find", () => {
+  // The shell ends the `#` comment at its line and runs the search; the scan reads the
+  // quote in the comment as open and never finds the `)`, so the body is not dropped.
+  for (const [tool, command] of [
+    ["Bash", 'echo "$(echo # \'\nrg auth packages/)"'],
+    ["Bash", "echo $(echo # '\nrg auth packages/)"],
+    ["Bash", "cat <(echo # '\nrg auth packages/)"],
+    ["PowerShell", 'Write-Output "$(<# \' #> rg auth packages/)"'],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.state, command).toBe("failed");
+    expect(result.message, command).toContain("could not find where");
+  }
+  // A substitution the scan can close is still read, and allowed when it holds no search.
+  for (const command of ['echo "$(git status)"', "echo $(echo '(' )"]) {
+    expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
+  }
+});
+
+// QFAI:EX-0001-0235-27
 // Mutation: packages/qfai/src/core/graph/hooks.ts `shell === "posix" ? heredocData(text) : { text, expanded: [] };` -> `{ text, expanded: [] };` fails "reads a here-document body as data, not as substitutions"
 it("reads a here-document body as data, not as substitutions", () => {
   const message = [
