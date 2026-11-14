@@ -23,9 +23,8 @@ A finding outside the reviewing stage's remit is recorded and deferred, never bl
 
 A UI contract gap is in scope for `/qfai-implement` and `/qfai-prototyping`
 review. The screen is first seen working or drawn there, after the spec review.
-A gap is a screen whose contract leaves out a part
-`.qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md` requires of
-every screen. The finding is `blocking`, traces to the contract ID and is
+A gap is a screen whose contract leaves out a part the `qfai-sdd` UI contract
+guide requires of every screen. The finding is `blocking`, traces to the contract ID and is
 routed to `/qfai-sdd`, which amends the contract; the implementer does not fill
 it in the code. A finding that only argues the contract could say more is not a
 gap: it is `advisory` and takes the path in
