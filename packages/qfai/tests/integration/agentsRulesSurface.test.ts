@@ -879,6 +879,26 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/placeholder/i);
     });
 
+    // A rule that only cuts lets every screen shrink to what its contract
+    // names. The floor is the counterpart: the standard parts of a business
+    // screen, each of which needs a recorded reason to leave out.
+    it.each(MASTERS)("%s states what a business screen always has", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toMatch(/^## What a business screen always has$/m);
+      for (const part of [
+        /app shell with navigation/,
+        /search or filter, sort, a count and\s+pagination/,
+        /Empty, loading, error and success states/,
+        /Feedback after every change/,
+        /A home whose one question/,
+        /One shared component per repeated pattern/,
+        /needs a reason recorded in the UI contract/,
+        /counts as asked for/,
+      ]) {
+        expect(text).toMatch(part);
+      }
+    });
+
     // A terminal is an interface. Without that sentence the rule reads as a
     // web rule, and a command-line surface — which is the only interface this
     // repository itself has — falls outside the only rule written for it.
