@@ -125,13 +125,36 @@ function classifyShellText(
  * quotes with its own double quotes removed.
  */
 function powershellHereStrings(text: string): string {
-  return text
-    .replace(/@'[ \t]*\r?\n[\s\S]*?\r?\n'@/g, "''")
-    .replace(
-      /@"[ \t]*\r?\n([\s\S]*?)\r?\n"@/g,
-      (_match, body: string) => `"${body.replace(/"/g, "")}"`,
-    );
+  let output = "";
+  let quote: string | undefined;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index] ?? "";
+    if (character === "`" && quote !== "'") {
+      output += character + (text[index + 1] ?? "");
+      index += 1;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) quote = undefined;
+      output += character;
+      continue;
+    }
+    // Only an `@'` or `@"` outside a string opens one, and whichever opens first is the string.
+    hereString.lastIndex = index;
+    const match = character === "@" ? hereString.exec(text) : null;
+    if (match) {
+      output += match[1] === "'" ? "''" : `"${(match[2] ?? "").replace(/"/g, "")}"`;
+      index = hereString.lastIndex - 1;
+      continue;
+    }
+    if (character === "'" || character === '"') quote = character;
+    output += character;
+  }
+  return output;
 }
+
+/** A PowerShell here-string: `@'` or `@"` at a line end, closed by `'@` or `"@` at a line start. */
+const hereString = /@(['"])[ \t]*\r?\n([\s\S]*?)\r?\n\1@/y;
 
 type NestedClassification = (
   location: ShellLocation,
@@ -188,12 +211,11 @@ function classifyCommands(
         ? "unknown"
         : movedLocation(location, operand, command, commands[index + 1], scope);
     }
-    const decision = classifyCommand(
-      words,
-      { ...scope, location, redefined },
-      depth,
-      command.upstream,
-    );
+    // A group reads the pipe before it only when its `}` redirects nothing: in
+    // `git log | { grep fix; } < .env` the group reads `.env`.
+    const upstream =
+      words[0] === "{" && !groupClosesBare(commands, index) ? undefined : command.upstream;
+    const decision = classifyCommand(words, { ...scope, location, redefined }, depth, upstream);
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
@@ -290,10 +312,29 @@ function redirectionLength(word: string | undefined): number {
  * a `+N` operand rotates the directory stack, and a colon other than a drive letter's
  * names a PowerShell provider drive such as `env:`, not a folder.
  */
+/** Whether the `{` group opened at `index` closes with a bare `}`, which redirects nothing. */
+function groupClosesBare(commands: ShellCommand[], index: number): boolean {
+  let depth = 0;
+  for (const { words } of commands.slice(index)) {
+    const opened = words.findIndex((word) => word !== "{");
+    depth += opened < 0 ? words.length : opened;
+    if (words[0]?.startsWith("}")) {
+      depth -= 1;
+      if (depth <= 0) return words.length === 1 && words[0] === "}";
+    }
+  }
+  return false;
+}
+
 function directoryOperand(words: string[]): string | null | undefined {
   let offset = 0;
   while (offset < words.length) {
-    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) {
+    // `if cd /tmp` and `{ cd /tmp` move as `cd /tmp` does.
+    if (
+      /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "") ||
+      words[offset] === "{" ||
+      COMPOUND_KEYWORDS.includes(words[offset] ?? "")
+    ) {
       offset += 1;
       continue;
     }
@@ -430,7 +471,7 @@ function classifyCommand(
   // `do grep ...`, `! grep ...`, `time -p grep ...`. `fi` and `done` run nothing.
   if (COMPOUND_KEYWORDS.includes(words[0] ?? "")) {
     const skip = words[0] === "time" && words[1] === "-p" ? 2 : 1;
-    return classifyCommand(words.slice(skip), context, depth + 1, upstream);
+    return classifyCommand(words.slice(skip), context, depth + 1);
   }
   if (words[0] === "fi" || words[0] === "done") return undefined;
   // A `{ ...; }` group and a `case` command's first arm run the command after their
@@ -1127,10 +1168,17 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
       if (end === undefined) break;
       bodies.push(command.slice(index + 1, end));
       index = end;
-    } else if (!quote && shell === "powershell" && character === "{") {
+    } else if (
+      !quote &&
+      shell === "powershell" &&
+      character === "{" &&
+      command[index - 1] !== "@"
+    ) {
       // A script block, such as the one `ForEach-Object { rg foo $_ }` runs, holds commands.
+      // A hashtable `@{...}` holds keys, and a brace this scan cannot close is text; the scan
+      // goes on inside either, so a `$(...)` there is still read.
       const end = closingBrace(command, index + 1);
-      if (end === undefined) break;
+      if (end === undefined) continue;
       bodies.push(command.slice(index + 1, end));
       index = end;
     } else if (shell === "posix" && character === "`") {
@@ -1199,14 +1247,14 @@ function expandedSubstitutions(body: string): string[] {
  * A `<<` or `<<-` here-document operator and its delimiter, quoted or not; `<<<` is not one.
  * A delimiter word may mix quoted and unquoted parts, as in `E"O"F`.
  */
-const heredocOperator =
-  /<<(?!<)(-?)[ \t]*(?:'([^'\n]*)'|"([^"\n]*)"|\\?((?:[^\s;|&<>()'"]|'[^'\n]*'|"[^"\n]*")+))/y;
+const heredocOperator = /<<(?!<)(-?)[ \t]*((?:\\.|[^\s;|&<>()'"\\]|'[^'\n]*'|"[^"\n]*")+)/y;
 
-/** The delimiter a mixed word such as `E"O"F` names once its quotes are removed. */
+/** The delimiter a word such as `E"O"F`, `'E'OF` or `\EOF` names once its quoting is removed. */
 function delimiterWord(word: string): string {
   return word.replace(
-    /'([^']*)'|"([^"]*)"/g,
-    (_match, single?: string, double?: string) => single ?? double ?? "",
+    /'([^']*)'|"([^"]*)"|\\(.)/g,
+    (_match, single?: string, double?: string, escaped?: string) =>
+      single ?? double ?? escaped ?? "",
   );
 }
 
@@ -1274,10 +1322,10 @@ function heredocData(command: string): { text: string; expanded: string[] } {
       const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
       if (!feedsShell.test(line) && !command.slice(lineStart, index).includes("((")) {
         pending.push({
-          delimiter: match[2] ?? match[3] ?? delimiterWord(match[4] ?? ""),
+          delimiter: delimiterWord(match[2] ?? ""),
           stripTabs: !!match[1],
           // A backslash or a quote anywhere in the word quotes the whole delimiter.
-          expands: match[4] !== undefined && !match[0].includes("\\") && !/['"]/.test(match[4]),
+          expands: !/['"\\]/.test(match[2] ?? ""),
         });
       }
       output += command.slice(index + 1, heredocOperator.lastIndex);

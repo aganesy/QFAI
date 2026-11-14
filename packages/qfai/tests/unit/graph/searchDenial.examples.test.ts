@@ -956,12 +956,16 @@ it("denies a search after a compound-command keyword", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `} else if (!quote && shell === "powershell" && character === "{") {` -> `} else if (false) {` fails "denies a search inside a PowerShell script block"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `command[index - 1] !== "@"` -> `false` fails "denies a search inside a PowerShell script block"
 it("denies a search inside a PowerShell script block", () => {
   for (const command of [
     "Get-ChildItem | ForEach-Object { rg foo $_ }",
     "if (Test-Path x) { rg auth packages }",
     "Invoke-Command -ScriptBlock { & { rg auth packages } }",
+    // A brace the scan cannot close is text, and the scan goes on past it.
+    "& { # {\n Get-Date }; $(rg auth packages)",
+    '& { "$( "{" )" }; $(rg auth packages)',
+    "$h = @{ k = $(rg auth packages) }",
   ]) {
     const result = classifyGraphExploration({ tool: "PowerShell", command });
     expect(result.decision, command).toBe("deny");
@@ -971,6 +975,8 @@ it("denies a search inside a PowerShell script block", () => {
     "Get-ChildItem | Where-Object { $_.Length -gt 0 }",
     "Write-Output '{ rg auth packages }'",
     "$table = @{ Name = 'x' }",
+    "$h = @{ rg = 1 }",
+    "$h = @{ grep = 'x' }",
   ]) {
     const result = classifyGraphExploration({ tool: "PowerShell", command });
     expect(result.decision, command).toBe("allow");
@@ -978,11 +984,13 @@ it("denies a search inside a PowerShell script block", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `expands: match[4] !== undefined && !match[0].includes("\\") && !/['"]/.test(match[4]),` -> `expands: match[4] !== undefined && !match[0].includes("\\"),` fails "keeps the body of a delimiter word with a quote inside it as data"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `expands: !/['"\\]/.test(match[2] ?? ""),` -> `expands: true,` fails "keeps the body of a delimiter word with a quote inside it as data"
 it("keeps the body of a delimiter word with a quote inside it as data", () => {
   for (const command of [
     'cat <<E"O"F\n$(grep -r foo src)\nEOF',
     "cat <<E'O'F\n$(grep -r foo src)\nEOF",
+    "cat <<'E'OF\n$(grep -r foo src)\nEOF",
+    "cat <<E\\OF\n$(grep -r foo src)\nEOF",
   ]) {
     expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
   }
@@ -1000,10 +1008,13 @@ it("allows a pipe filter inside a group", () => {
   ]) {
     expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
   }
-  // A group that searches, or one that redefines the filter, is still denied.
+  // A group that searches, one that redefines the filter, and one whose `}` redirects
+  // its input are still denied.
   for (const command of [
     "git log --oneline | { grep -r fix src; }",
     "{ alias grep='rg -n auth packages'; }; git status | grep x",
+    "git log --oneline | { grep fix; } < .env",
+    "git log --oneline | { grep fix; }<.env",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
@@ -1020,9 +1031,26 @@ it("reads a PowerShell here-string as one string", () => {
     const result = classifyGraphExploration({ tool: "PowerShell", command });
     expect(result.decision, command).toBe("allow");
   }
-  // An expandable here-string still runs its subexpressions.
-  const expanded = '$body = @"\nSee "this" $(rg auth packages)\n"@';
-  const result = classifyGraphExploration({ tool: "PowerShell", command: expanded });
-  expect(result.decision).toBe("deny");
-  expect(result.operation).toBe("rg");
+  // An expandable here-string still runs its subexpressions, a literal one inside it
+  // is its text, and an `@'` inside a string opens nothing.
+  for (const command of [
+    '$body = @"\nSee "this" $(rg auth packages)\n"@',
+    "$b = @\"\nx @'\n$(rg auth packages)\n'@\n\"@",
+    "$a = \"@'\n$(rg auth packages)\n'@\"",
+  ]) {
+    const result = classifyGraphExploration({ tool: "PowerShell", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("rg");
+  }
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `words[offset] === "{" ||` -> `false ||` fails "reads a cd after a group or keyword as a move"
+it("reads a cd after a group or keyword as a move", () => {
+  const root = path.resolve("project-root");
+  for (const command of ["if cd /tmp; then grep -r x .; fi", "{ cd /tmp; grep -r x .; }"]) {
+    const result = classifyGraphExploration({ tool: "Bash", cwd: root, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.exceptionEligible, command).toBe(false);
+  }
 });
