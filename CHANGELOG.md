@@ -45,6 +45,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   profiles. A row that is empty, a template placeholder or states none raises
   nothing.
 
+- **A UI contract screen lists its states.** The shipped
+  `ui-contract.sample.yaml`, the UI contract guide, the contract artifact rules
+  and the `sdd-contract` step give every screen a `states` list: `default`,
+  `empty`, `loading`, `error` and `success`, each with what renders and the
+  user's next action, or `none` with the reason the screen cannot be in that
+  state. A supplement's `when` names one of these states. Validate does not
+  check the key.
+
 ### Removed
 
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
@@ -198,6 +206,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   says to record the chosen option's label as a rendering in the file's
   language followed by `(translated)`, so a language scan on the file does not
   fail on the user's wording.
+
+- **The test-layers rule recommends one navigation journey per role.** Where
+  an app has its own navigation, an E2E test signs in as each role and reaches
+  every screen the UI contracts declare for that role through the app's own
+  links and controls, so the suite catches a screen reachable only by typing
+  its URL.
 
 - **The launcher preflight moved into its own short reference.** It now lives
   in `.qfai/assistant/rule/references/launcher-preflight.md`, and the shared

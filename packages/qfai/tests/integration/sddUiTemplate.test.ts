@@ -180,3 +180,47 @@ describe("shipped qfai-sdd design contracts", () => {
     expect(designMd).toContain("## Author and validate");
   });
 });
+
+const STATE_IDS = ["default", "empty", "loading", "error", "success"];
+
+// A screen whose states nobody wrote down gets none built: the shipped
+// template lists every state, each with what renders and the next action, or
+// the reason the screen cannot be in it.
+describe("shipped ui-contract.sample.yaml lists every screen state", () => {
+  it("gives each screen all five states, each rendered with a next action or set to none", async () => {
+    const parsed = parseYaml(await readFile(TEMPLATE_PATH, "utf-8")) as ParsedScreens;
+    expect(parsed.screens?.length ?? 0).toBeGreaterThan(0);
+
+    for (const screen of parsed.screens ?? []) {
+      const states = Array.isArray(screen.states) ? screen.states : [];
+      const entries = states.filter(
+        (state): state is Record<string, unknown> => typeof state === "object" && state !== null,
+      );
+      expect(entries.map((state) => state.id)).toEqual(STATE_IDS);
+      for (const state of entries) {
+        const keys = Object.keys(state).sort();
+        expect([
+          ["id", "next", "renders"],
+          ["id", "none"],
+        ]).toContainEqual(keys);
+      }
+    }
+  });
+
+  it("documents the states key in the guide and the contract step", async () => {
+    const flat = (text: string): string => text.replace(/\s+/g, " ");
+    const guide = flat(
+      await readFile(path.join(SDD_SKILL_DIR, "references", "ui-contract-guide.md"), "utf-8"),
+    );
+    expect(guide).toContain("## Screen states: `states`");
+    expect(guide).toContain("A state is never left out");
+
+    const step = flat(
+      await readFile(
+        path.join(SDD_SKILL_DIR, "..", "..", "step", "sdd-contract", "STEP.md"),
+        "utf-8",
+      ),
+    );
+    expect(step).toContain("Each screen lists its `states`");
+  });
+});
