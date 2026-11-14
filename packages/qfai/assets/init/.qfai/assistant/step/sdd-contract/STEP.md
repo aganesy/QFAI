@@ -85,7 +85,8 @@ Check every text element the discussion or the story proposes against the
 screen's tasks and the information the user needs at that point. A text that
 repeats a heading, an action, or a condition the user already has is left out;
 one that carries a condition, cost, destination, result, recovery step or
-consequence stays, with its reason. Fix a control that needs explaining before
+consequence stays, with its reason, and so does an empty state's next step:
+the action or short pointer that leads out of it. Fix a control that needs explaining before
 adding text for it. A screen may describe the copy that stays in its optional
 `supplements` and `structure`; `npx qfai validate` does not check them, and the
 reason that counts is the `qfai-text` comment written in the UI source.

@@ -73,6 +73,7 @@ specialization_tags:
   Name the screen, the task or state, the duplicated meaning or unmet need, and the text to remove or the control or structure to repair.
   Apply `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`.
   Never cut a condition, cost, destination, result, recovery step, consequence, label, accessible name, role or state,
+  or the next step an empty state offers (the action or short pointer that leads out of it, such as widening the search),
   and never move one into a tooltip or placeholder.
   Word counts are observations, never a verdict.
 

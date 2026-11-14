@@ -55,7 +55,10 @@ Longer than a sentence means the question needs clarifying or splitting, not
 explaining.
 
 An introductory paragraph, a tour on first run and an empty state that says the
-list is empty are the same clause. An empty state says what to do next.
+list is empty are the same clause. An empty state says what to do next: the
+action or short pointer that leads out of it, such as widening the search or
+adding the first item. That next step is not an explanation of the interface,
+and this clause never cuts it.
 
 ## 3. Cut
 
@@ -102,6 +105,8 @@ Cutting stops here. None of these is excess at any size.
 - Accessible names, roles and states, and a focus order that follows the reading
   order.
 - Error text that says what went wrong and what to do about it.
+- The next step an empty state offers: the action or short pointer that leads
+  out of it.
 - A confirmation before anything the user cannot undo.
 - Anything the spec asks for.
 
