@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { collectHeadingSlugs } from "../../src/core/validators/assistantAnchorReferences.js";
 import { readRule } from "../helpers/ruleWithReferences.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -897,11 +898,21 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(card).toContain(
         "`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`",
       );
+      expect(card).toContain("Walk it for each screen the change adds or alters.");
       expect(card).toContain(
-        "A part missing with no reason recorded in that screen's UI contract is a blocking `defect:code-quality` against that rule",
+        "Check the once-per-application parts only when the change adds or alters the shell, the home or a repeated pattern.",
       );
-      expect(card).toContain("Never file a listed part as excess.");
-      expect(card).toContain("A part the business-screen floor below lists is never needless.");
+      expect(card).toContain(
+        "a listed part missing with no reason recorded in the UI contract is a blocking finding that traces to that section.",
+      );
+      expect(card).toContain("A part missing elsewhere is `advisory`.");
+      expect(card).toContain("Never file the presence of a listed part as excess;");
+      expect(card).toContain("A part the business-screen floor below lists is never needless;");
+      const master = await readFile(
+        path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/interface-clarity.md"),
+        "utf-8",
+      );
+      expect(collectHeadingSlugs(master)).toContain("what-a-business-screen-always-has");
     });
 
     // A terminal is an interface. Without that sentence the rule reads as a

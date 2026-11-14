@@ -50,7 +50,7 @@ specialization_tags:
   surface framing intent, transition clarity, state coverage, or component character captured by the winning
   prototype.
 - Review UI changes at the surface layer: avoid needless states, controls, flows, animations, and configuration that are not justified by the product goal.
-  A part the business-screen floor below lists is never needless.
+  A part the business-screen floor below lists is never needless; how it is built can still be excess.
 - Check naming, structure, and responsibility split of UI components for clarity, cohesion, and minimal surprise.
 - Validate docs/UX consistency so usage text, labels, error states, and user flows match the intended product behavior.
 - File excess as `defect:code-quality` against constitution Article VII; tag it
@@ -63,16 +63,17 @@ specialization_tags:
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Require more work only on what `.qfai/assistant/rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of` admits, and report any other gap as advisory.
-- Check that each screen is complete, not only that it holds no excess. Walk
-  `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` against the running surface:
-  - once per application: the app shell with navigation and a way back, the home that shows what
-    needs attention now, and one shared component per repeated pattern;
-  - on each screen it applies to: search or filter, sort, a count and pagination for a list that can
-    outgrow one screen; the empty, loading, error and success states; feedback after every change.
+- Check that each screen is complete, not only that it holds no excess. Walk every part
+  `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` lists against the rendered
+  surface: the running app, the prototype, or the UI contract when reviewing a specification.
+  Walk it for each screen the change adds or alters. Check the once-per-application parts only when
+  the change adds or alters the shell, the home or a repeated pattern.
 
-  A part missing with no reason recorded in that screen's UI contract is a blocking
-  `defect:code-quality` against that rule, not a demand for more work. Name the screen and the missing
-  part. A part the contract leaves out with a reason is not a finding. Never file a listed part as excess.
+  On those screens, a listed part missing with no reason recorded in the UI contract is a blocking
+  finding that traces to that section. The rule already makes the part an obligation, so it is a
+  defect, not new scope. Name the screen and the missing part. A part the contract leaves out with a
+  reason is not a finding. A part missing elsewhere is `advisory`. Never file the presence of a
+  listed part as excess; how it is built stays under the excess route above.
 
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
