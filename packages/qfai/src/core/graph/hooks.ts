@@ -99,9 +99,10 @@ function classifyShellText(
   substitution = false,
 ): GraphHookDecision | undefined {
   if (depth > 16) return failedGraphHook("depth");
+  const source = scope.shell === "powershell" ? powershellHereStrings(text) : text;
   // Nested text, such as a `bash -c` argument or a substitution body, skips no
   // here-document body: what reads its output lies outside it.
-  const commands = shellPipelines(text, scope.shell, depth > 0);
+  const commands = shellPipelines(source, scope.shell, depth > 0);
   // Text in a substitution that cannot be read as commands is no verdict of its own.
   if (!commands) return substitution ? undefined : failedGraphHook("quote");
   return classifyCommands(
@@ -110,11 +111,26 @@ function classifyShellText(
     depth,
     redefinedOutside,
     start,
-    substitutionBodies(text, scope.shell).map(
+    substitutionBodies(source, scope.shell).map(
       (body) => (location: ShellLocation, redefines: boolean) =>
         classifyShellText(body, scope, depth + 1, redefines, location, true),
     ),
   );
+}
+
+/**
+ * PowerShell text with each here-string read as a plain string. The body of `@'...'@` is
+ * literal, so it becomes `''`; a quote inside it, such as the apostrophe in `It's`, no longer
+ * ends a string early. The body of `@"..."@` still expands `$(...)`, so it stays inside double
+ * quotes with its own double quotes removed.
+ */
+function powershellHereStrings(text: string): string {
+  return text
+    .replace(/@'[ \t]*\r?\n[\s\S]*?\r?\n'@/g, "''")
+    .replace(
+      /@"[ \t]*\r?\n([\s\S]*?)\r?\n"@/g,
+      (_match, body: string) => `"${body.replace(/"/g, "")}"`,
+    );
 }
 
 type NestedClassification = (
@@ -194,6 +210,8 @@ function redefinesCommands(words: string[]): boolean {
   for (;;) {
     const redirection = redirectionLength(words[offset]);
     if (redirection) offset += redirection;
+    // A group's `{` defines nothing itself; the command it opens is read instead.
+    else if (words[offset] === "{") offset += 1;
     else if (["builtin", "command", "env"].includes(words[offset]?.toLowerCase() ?? "")) {
       offset += 1;
       while (words[offset]?.startsWith("-")) {
@@ -376,6 +394,19 @@ function authorizeAt(context: CommandContext, decision: GraphHookDecision): Grap
   return authorize({ ...denyExploration(decision.operation, relative), exceptionEligible: true });
 }
 
+/** POSIX words that start a compound command or one of its parts, followed by a command. */
+const COMPOUND_KEYWORDS: readonly string[] = [
+  "if",
+  "then",
+  "elif",
+  "else",
+  "while",
+  "until",
+  "do",
+  "!",
+  "time",
+];
+
 function classifyCommand(
   words: string[],
   context: CommandContext,
@@ -395,10 +426,18 @@ function classifyCommand(
     return classifyCommand(words.slice(offset), context, depth + 1);
   }
   const operation = commandName(words);
+  // A compound-command keyword runs the command after it: `if grep ...`, `then grep ...`,
+  // `do grep ...`, `! grep ...`, `time -p grep ...`. `fi` and `done` run nothing.
+  if (COMPOUND_KEYWORDS.includes(words[0] ?? "")) {
+    const skip = words[0] === "time" && words[1] === "-p" ? 2 : 1;
+    return classifyCommand(words.slice(skip), context, depth + 1, upstream);
+  }
+  if (words[0] === "fi" || words[0] === "done") return undefined;
   // A `{ ...; }` group and a `case` command's first arm run the command after their
-  // opening words. `classifyCommands` strips the pattern of each later arm.
+  // opening words. `classifyCommands` strips the pattern of each later arm. A group
+  // keeps the pipeline stage before it, so `git log | { grep fix; }` is a filter.
   if (operation === "{") {
-    return classifyCommand(words.slice(1), context, depth + 1);
+    return classifyCommand(words.slice(1), context, depth + 1, upstream);
   }
   if (operation === "case") {
     const subject = words.indexOf("in");
@@ -1088,6 +1127,12 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
       if (end === undefined) break;
       bodies.push(command.slice(index + 1, end));
       index = end;
+    } else if (!quote && shell === "powershell" && character === "{") {
+      // A script block, such as the one `ForEach-Object { rg foo $_ }` runs, holds commands.
+      const end = closingBrace(command, index + 1);
+      if (end === undefined) break;
+      bodies.push(command.slice(index + 1, end));
+      index = end;
     } else if (shell === "posix" && character === "`") {
       const end = closingBacktick(command, index + 1);
       if (end === undefined) break;
@@ -1097,6 +1142,25 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
   }
   for (const body of expanded) bodies.push(...expandedSubstitutions(body));
   return bodies;
+}
+
+/** The index of the `}` that closes a PowerShell brace opened before `start`, outside quotes. */
+function closingBrace(command: string, start: number): number | undefined {
+  let depth = 1;
+  let quote: string | undefined;
+  for (let index = start; index < command.length; index += 1) {
+    const character = command[index];
+    if (character === "`" && quote !== "'") index += 1;
+    else if (quote) {
+      if (character === quote) quote = undefined;
+    } else if (character === "'" || character === '"') quote = character;
+    else if (character === "{") depth += 1;
+    else if (character === "}") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return undefined;
 }
 
 /** The index of the backtick that closes one opened before `start`, or undefined. */
@@ -1131,8 +1195,20 @@ function expandedSubstitutions(body: string): string[] {
   return bodies;
 }
 
-/** A `<<` or `<<-` here-document operator and its delimiter, quoted or not; `<<<` is not one. */
-const heredocOperator = /<<(?!<)(-?)[ \t]*(?:'([^'\n]*)'|"([^"\n]*)"|\\?([^\s;|&<>()'"]+))/y;
+/**
+ * A `<<` or `<<-` here-document operator and its delimiter, quoted or not; `<<<` is not one.
+ * A delimiter word may mix quoted and unquoted parts, as in `E"O"F`.
+ */
+const heredocOperator =
+  /<<(?!<)(-?)[ \t]*(?:'([^'\n]*)'|"([^"\n]*)"|\\?((?:[^\s;|&<>()'"]|'[^'\n]*'|"[^"\n]*")+))/y;
+
+/** The delimiter a mixed word such as `E"O"F` names once its quotes are removed. */
+function delimiterWord(word: string): string {
+  return word.replace(
+    /'([^']*)'|"([^"]*)"/g,
+    (_match, single?: string, double?: string) => single ?? double ?? "",
+  );
+}
 
 /** A line that hands its input to a shell, whose here-document body is a script. */
 const feedsShell = /(?:^|[\s|;&(`/])(?:(?:ba|z|da|k)?sh|eval|source)(?=$|[\s|;&)<>])/;
@@ -1198,9 +1274,10 @@ function heredocData(command: string): { text: string; expanded: string[] } {
       const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
       if (!feedsShell.test(line) && !command.slice(lineStart, index).includes("((")) {
         pending.push({
-          delimiter: match[2] ?? match[3] ?? match[4] ?? "",
+          delimiter: match[2] ?? match[3] ?? delimiterWord(match[4] ?? ""),
           stripTabs: !!match[1],
-          expands: match[4] !== undefined && !match[0].includes("\\"),
+          // A backslash or a quote anywhere in the word quotes the whole delimiter.
+          expands: match[4] !== undefined && !match[0].includes("\\") && !/['"]/.test(match[4]),
         });
       }
       output += command.slice(index + 1, heredocOperator.lastIndex);
