@@ -44,7 +44,11 @@ first.
 - The flow's stories, acceptance criteria, examples and contracts, from the
   configured `paths.specsDir` and `paths.contractsDir`.
 - For UI work, root `DESIGN.md` and the flow's UI contracts. The rendered
-  surface is reviewed, not only the source.
+  surface is reviewed, not only the source. Before calling a screen done, check
+  it against
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#information-architecture-and-flow`
+  and
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#states-and-accessibility`.
 - No deliberation record: this stage opens no file under `paths.deliberationDir`.
 
 Every step follows `.qfai/assistant/rule/shared-skill-operating-baseline.md`,
