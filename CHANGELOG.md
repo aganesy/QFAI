@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`product-surface-reviewer` checks that a screen is complete.** For each
+  screen a change adds or alters, it walks the business-screen floor in
+  `.agents/rules/interface-clarity.md`. A listed part missing with no reason in
+  the UI contract blocks the review on a screen, list, state or shell part the
+  change adds or alters, or when the change removes the part. A gap already
+  there or elsewhere is advisory. Having a listed part is never filed as excess.
+
 - **The component catalogue that `tech.md` names is set up before screens
   are built.** `implement-scaffold` installs the catalogue the
   `Component catalogue` row names with its own setup command and adds its registry to
@@ -37,6 +44,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-STORY-021` is raised at warning in the `sdd`, `verify` and `full`
   profiles. A row that is empty, a template placeholder or states none raises
   nothing.
+
+- **A UI contract screen lists its states.** The shipped
+  `ui-contract.sample.yaml`, the UI contract guide, the contract artifact rules
+  and the `sdd-contract` step give every screen a `states` list: `default`,
+  `empty`, `loading`, `error` and `success`, each with what renders and the
+  user's next action, or `none` with the reason the screen cannot be in that
+  state. A supplement's `when` names one of these states. Validate does not
+  check the key.
 
 ### Removed
 
@@ -78,6 +93,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
   is unchanged.
 
+- **The home screen counts as one view.** `interface-clarity.md` § 4 says
+  the home, like any dashboard, has the one purpose "see what needs
+  attention", and each of its parts links to the view that does the work.
+
 - **The shipped product-surface reviewer and UI contract guide no longer name
   discussion UI/UX sidecars.** The reviewer reconciles the UI contract with
   design tokens, flows and rendered output, and the guide says a deliberation
@@ -96,6 +115,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `discussion-delegation.md`, `glossary-check.md` and `session-check.md` under
   the `qfai-grilling` skill's `references/`. The rule keeps each trigger and
   says when to read each file. A session runs as before.
+
+- **Implementation and prototype reviewers may raise a UI contract gap.**
+  `reviewer-remit.md` puts a screen whose UI contract leaves out a part the
+  UI contract guide requires of every screen in scope for `/qfai-implement`
+  and `/qfai-prototyping` review. The finding is routed to `/qfai-sdd`, and it
+  blocks when a required part is missing.
 
 - **Breaking: a per-run deliberation record replaces the discussion pack.** A
   run that asks the user a question or takes a decision no specification,
@@ -190,6 +215,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   language followed by `(translated)`, so a language scan on the file does not
   fail on the user's wording.
 
+- **The test-layers rule recommends one navigation journey per role.** Where
+  an app has its own navigation, an E2E test signs in as each role and reaches
+  every screen the UI contracts declare for that role through the app's own
+  links and controls, so the suite catches a screen reachable only by typing
+  its URL.
+
 - **The launcher preflight moved into its own short reference.** It now lives
   in `.qfai/assistant/rule/references/launcher-preflight.md`, and the shared
   operating baseline only points to it. `qfai-run` states the common case
@@ -200,6 +231,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new text. Fixes #4058.
 
 ### Fixed
+
+- **The search-protection hook denies a search behind a named descriptor or
+  inside a substitution.** `{fd}<file grep -r foo src` and searches inside
+  `$(...)`, backticks, `<(...)`, `>(...)` or PowerShell `@(...)` are denied
+  like the same search run directly.
 
 - **The search-protection hook says what it could not read.** A command whose
   quotes it cannot match, or whose wrappers nest more than 16 levels deep, is

@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { collectHeadingSlugs } from "../../src/core/validators/assistantAnchorReferences.js";
 import { readRule } from "../helpers/ruleWithReferences.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -195,8 +196,15 @@ describe("the implementation reviewer reads silent failure and type design", () 
         "silent failure and type design across the whole of every file the change touches",
       );
       expect(row).toContain(
-        "| Upstream spec content, contract design, and a finding on code in a touched file that the change did not add or alter |",
+        "| Upstream spec content, contract design other than a UI contract gap (below), and a finding on code in a touched file that the change did not add or alter |",
       );
+      // A thin contract passes the spec review before anyone has seen a
+      // screen, so the reviewers who first see one may still challenge it.
+      const flatBaseline = baseline.replace(/\s+/g, " ");
+      expect(flatBaseline).toContain(
+        "A UI contract gap is in scope for `/qfai-implement` and `/qfai-prototyping` review.",
+      );
+      expect(flatBaseline).toContain("is routed to `/qfai-sdd`, which amends the contract");
     },
   );
 });
@@ -879,6 +887,47 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       ]) {
         expect(text).toMatch(part);
       }
+    });
+
+    // The floor only works if a review applies it. Without this duty the
+    // screen reviewer checks for excess and approves a screen that is bare.
+    it("product-surface-reviewer walks the business-screen floor and blocks a missing part", async () => {
+      const card = (
+        await readFile(
+          path.join(
+            ROOT,
+            "packages/qfai/assets/init/.qfai/assistant/agent/product-surface-reviewer.md",
+          ),
+          "utf-8",
+        )
+      ).replace(/\s*\n\s*/g, " ");
+      expect(card).toContain(
+        "Check that each screen is complete, not only that it holds no excess.",
+      );
+      expect(card).toContain(
+        "`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`",
+      );
+      expect(card).toContain("Walk it for each screen the change adds or alters.");
+      expect(card).toContain(
+        "Check the once-per-application parts only when the change adds or alters the shell, the home or a repeated pattern.",
+      );
+      expect(card).toContain(
+        "A listed part with no reason recorded in the UI contract is a blocking finding that traces to `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` when it is missing from a screen the change adds",
+      );
+      expect(card).toContain("or removed by the change.");
+      expect(card).toContain("A part the contract leaves out with a reason is not a finding.");
+      expect(card).toContain(
+        "A part that was already missing from an altered screen is `advisory`, and so is a part missing elsewhere.",
+      );
+      expect(card).toContain("Never file the presence of a listed part as excess;");
+      expect(card).toContain(
+        "and the UI contract does not exclude, is never needless; how it is built can still be excess.",
+      );
+      const master = await readFile(
+        path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/interface-clarity.md"),
+        "utf-8",
+      );
+      expect(collectHeadingSlugs(master)).toContain("what-a-business-screen-always-has");
     });
 
     // A terminal is an interface. Without that sentence the rule reads as a
