@@ -97,6 +97,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the `qfai-grilling` skill's `references/`. The rule keeps each trigger and
   says when to read each file. A session runs as before.
 
+- **Implementation and prototype reviewers may raise a UI contract gap.**
+  `reviewer-remit.md` puts a screen whose UI contract leaves out a part the
+  UI contract guide requires of every screen in scope for `/qfai-implement`
+  and `/qfai-prototyping` review. The finding is routed to `/qfai-sdd`, and it
+  blocks when a required part is missing.
+
 - **Breaking: a per-run deliberation record replaces the discussion pack.** A
   run that asks the user a question or takes a decision no specification,
   contract, rule or convention settles writes one Markdown memo under
