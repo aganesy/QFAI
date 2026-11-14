@@ -652,7 +652,7 @@ it("reads a here-document body as data, not as substitutions", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (cases > 0 && depth === 1) continue;` -> `if (false) continue;` fails "denies a search in a case arm, a subshell, a group or zsh process substitution"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (cases.at(-1) === depth) continue;` -> `if (false) continue;` fails "denies a search in a case arm, a subshell, a group or zsh process substitution"
 it("denies a search in a case arm, a subshell, a group or zsh process substitution", () => {
   for (const [tool, command, operation] of [
     ["Bash", "echo $(case x in x) grep -r foo src;; esac)", "grep"],
@@ -664,10 +664,21 @@ it("denies a search in a case arm, a subshell, a group or zsh process substituti
     ["Bash", "( cd sub && rg auth packages )", "rg"],
     ["Bash", "{ grep -r foo src; }", "grep"],
     ["PowerShell", "Write-Output (rg auth packages)", "rg"],
+    ["Bash", "echo $(case x in x) echo $(case y in y) grep -r foo src;; esac);; esac)", "grep"],
+    ["Bash", 'case x in\n"a b") grep -r foo src;;\nesac', "grep"],
+    ["Bash", "arr=($(grep -r foo src))", "grep"],
   ] as const) {
     const result = classifyGraphExploration({ tool, command });
     expect(result.decision, command).toBe("deny");
     expect(result.operation, command).toBe(operation);
+  }
+  // A `case` or `esac` that is an argument, not a command, opens or closes no case.
+  for (const command of [
+    "echo $(ls test/case) $(grep -r foo src)",
+    "echo $(echo $case) (grep -r foo src)",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
   }
   for (const command of [
     'echo "(grep -r foo src)"',
@@ -675,6 +686,9 @@ it("denies a search in a case arm, a subshell, a group or zsh process substituti
     "echo $(case x in x) echo hi;; esac)",
     "{ echo hi; }",
     "arr=(a b c)",
+    "tools=(rg grep)",
+    "pnpm build # (grep found nothing)",
+    "echo $(date; hostname) rg",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("allow");

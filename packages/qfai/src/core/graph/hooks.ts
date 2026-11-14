@@ -121,7 +121,13 @@ function classifyCommands(
   }
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
-  for (const { words, upstream } of commands) {
+  // Inside a `case`, a command that starts with a word ending in `)`, such as `y)`
+  // or `"a b")`, is an arm: its pattern is not a command.
+  let openCases = 0;
+  for (const { words: stage, upstream } of commands) {
+    const words = openCases > 0 && stage[0]?.endsWith(")") ? stage.slice(1) : stage;
+    if (words[0] === "case") openCases += 1;
+    else if (words[0] === "esac") openCases = Math.max(0, openCases - 1);
     const decision = classifyCommand(
       words,
       scopedAuthorization,
@@ -284,9 +290,9 @@ function classifyCommand(
     );
   }
   const operation = commandName(words);
-  // A `{ ...; }` group and a `case` arm run the command after their opening word.
-  // A word ending in `)` can only start a command as a case pattern, such as `x)`.
-  if (operation === "{" || /^\(?[^()\s]*\)$/.test(words[0] ?? "")) {
+  // A `{ ...; }` group and a `case` command's first arm run the command after their
+  // opening words. `classifyCommands` strips the pattern of each later arm.
+  if (operation === "{") {
     return classifyCommand(words.slice(1), authorize, depth + 1, undefined, redefined, directory);
   }
   if (operation === "case") {
@@ -736,6 +742,13 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
       quote = quote ? undefined : '"';
       continue;
     }
+    // A comment runs nothing; the scan resumes on the next line.
+    if (!quote && character === "#" && /^$|[\s;&|(]/.test(command[index - 1] ?? "")) {
+      const end = command.indexOf("\n", index);
+      if (end < 0) break;
+      index = end;
+      continue;
+    }
     const opens =
       next === "(" &&
       (character === "$" ||
@@ -748,7 +761,12 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
         bodies.push(command.slice(index + 2, end));
       }
       index = end;
-    } else if (!quote && character === "(") {
+    } else if (
+      !quote &&
+      character === "(" &&
+      // `name=(...)` assigns a POSIX array: its words are data, scanned on.
+      !(shell === "posix" && arrayAssignment.test(command.slice(0, index)))
+    ) {
       const end = closingParenthesis(command, index + 1, escape);
       if (end === undefined) break;
       bodies.push(command.slice(index + 1, end));
@@ -763,6 +781,9 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
   for (const body of expanded) bodies.push(...expandedSubstitutions(body));
   return bodies;
 }
+
+/** Text that ends in a POSIX `name=` or `name+=` assignment, before an array's `(`. */
+const arrayAssignment = /(?:^|[\s;&|(])[A-Za-z_][A-Za-z0-9_]*\+?=$/;
 
 /** The index of the backtick that closes one opened before `start`, or undefined. */
 function closingBacktick(command: string, start: number): number | undefined {
@@ -912,33 +933,42 @@ function heredocEnd(
   return position;
 }
 
-/** A POSIX `case` or `esac` reserved word, read where a word starts. */
-const caseWord = /(case|esac)(?![\w-])/y;
+/** A POSIX `case` or `esac` reserved word. */
+const caseWord = /(case|esac)(?=$|[\s;&|)])/y;
+
+/** Whether `index` starts a command: only blanks lie between it and `start` or an operator. */
+function commandPosition(command: string, index: number, start: number): boolean {
+  let before = index - 1;
+  while (before >= start && /[ \t]/.test(command[before] ?? "")) before -= 1;
+  return before < start || /[;&|(\n]/.test(command[before] ?? "");
+}
 
 /**
  * The index of the `)` that closes a parenthesis opened before `start`, outside quotes.
  * In POSIX text a `)` that ends a `case` pattern, such as `x)` in
- * `case x in x) ...;; esac`, closes nothing.
+ * `case x in x) ...;; esac`, closes nothing. `case` and `esac` count only where a
+ * command starts, so an argument such as `test/case` opens no case.
  */
 function closingParenthesis(command: string, start: number, escape: string): number | undefined {
   let depth = 1;
   let quote: string | undefined;
-  let cases = 0;
+  /** The parenthesis depth at which each open `case` started. */
+  const cases: number[] = [];
   for (let index = start; index < command.length; index += 1) {
     const character = command[index] ?? "";
     if (character === escape && quote !== "'") index += 1;
     else if (quote) {
       if (character === quote) quote = undefined;
     } else if (character === "'" || character === '"') quote = character;
-    else if (escape === "\\" && /[ce]/.test(character) && !/[\w-]/.test(command[index - 1] ?? "")) {
+    else if (escape === "\\" && /[ce]/.test(character) && commandPosition(command, index, start)) {
       caseWord.lastIndex = index;
       const word = caseWord.exec(command)?.[1];
-      if (word === "case") cases += 1;
-      else if (word === "esac" && cases > 0) cases -= 1;
+      if (word === "case") cases.push(depth);
+      else if (word === "esac" && cases.at(-1) === depth) cases.pop();
       if (word) index += word.length - 1;
     } else if (character === "(") depth += 1;
     else if (character === ")") {
-      if (cases > 0 && depth === 1) continue;
+      if (cases.at(-1) === depth) continue;
       depth -= 1;
       if (depth === 0) return index;
     }
