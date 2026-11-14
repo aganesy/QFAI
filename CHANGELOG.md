@@ -131,9 +131,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The search-protection hook reads past here-document bodies.** A Bash
   command that wrote a file through `cat <<'EOF'` was refused as "invalid
   pre-tool input" when the body held an unpaired apostrophe, and a body line
-  such as `grep -R policy .qfai/spec` was denied as a search. The body is now
-  read as data. A search on the operator's line or after the delimiter is
-  still denied.
+  such as `grep -R policy .qfai/spec` was denied as a search. A body handed to
+  a command other than a shell is now read as data. A body handed to `bash`,
+  `sh` or a similar shell is still classified, and so is a search on the
+  operator's line or after the delimiter. A `<<` that is quoted, commented or an
+  arithmetic shift starts no body.
 - **The search-protection hook treats the PowerShell alias `sls` as
   `Select-String`.** `sls -Pattern authorize -Path packages/**/*.ts` was
   allowed as outside the checked boundary while the same command spelled

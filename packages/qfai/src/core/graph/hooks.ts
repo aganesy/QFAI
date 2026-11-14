@@ -570,20 +570,63 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   let afterRedirect: "" | "<" | ">" = "";
   // Here-documents whose bodies start after the next unquoted newline.
   const heredocs: { delimiter: string; stripTabs: boolean }[] = [];
+  // Set by an unquoted `#` that starts a word, until the next newline.
+  let commented = false;
+  let stageStart = 0;
   const flushWord = () => {
-    if (word.length) {
-      const operator = words[words.length - 1];
-      const attached = /^\d*<<-?$/.test(word) ? null : /^\d*<<(?!<)(-?)(.+)$/.exec(word);
-      const separate = operator === undefined ? null : /^\d*<<(-?)$/.exec(operator);
-      if (shell === "posix" && (attached || separate)) {
-        heredocs.push({
-          delimiter: attached ? (attached[2] ?? "") : word,
-          stripTabs: (attached ?? separate)?.[1] === "-",
-        });
-      }
-      words.push(word);
-    }
+    if (word.length) words.push(word);
     word = "";
+  };
+  /**
+   * Reads an unquoted `<<` or `<<-` operator and its delimiter word at `index`, pushes
+   * both as words, and returns the index after the delimiter. The body is skipped only
+   * when it is surely data: not after a comment, not inside arithmetic, and not on a line
+   * that hands input to a shell, whose body is a script and stays classified.
+   */
+  const readHeredocOperator = (index: number): number => {
+    if (word.length && !/^\d+$/.test(word)) flushWord();
+    let cursor = index + 2;
+    const stripTabs = command[cursor] === "-";
+    if (stripTabs) cursor += 1;
+    words.push(`${word}<<${stripTabs ? "-" : ""}`);
+    word = "";
+    while (command[cursor] === " " || command[cursor] === "\t") cursor += 1;
+    let delimiter = "";
+    let read = false;
+    let delimiterQuote: string | undefined;
+    while (cursor < command.length) {
+      const character = command[cursor] ?? "";
+      if (delimiterQuote) {
+        if (character === delimiterQuote) delimiterQuote = undefined;
+        else delimiter += character;
+      } else if (character === '"' || character === "'") {
+        delimiterQuote = character;
+      } else if (character === "\\" && cursor + 1 < command.length) {
+        delimiter += command[cursor + 1] ?? "";
+        cursor += 1;
+      } else if (/[\s;|&<>()]/.test(character)) {
+        break;
+      } else {
+        delimiter += character;
+      }
+      read = true;
+      cursor += 1;
+    }
+    if (delimiterQuote) {
+      quote = delimiterQuote;
+      return command.length;
+    }
+    if (!read) return cursor;
+    words.push(delimiter);
+    const lineStart = command.lastIndexOf("\n", index) + 1;
+    const lineEnd = command.indexOf("\n", index);
+    const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
+    const feedsShell = /(?:^|[\s|;&(`/])(?:(?:ba|z|da|k)?sh|eval|source)(?=$|[\s|;&)<>])/.test(
+      line,
+    );
+    const arithmetic = command.slice(stageStart, index).includes("((");
+    if (!commented && !arithmetic && !feedsShell) heredocs.push({ delimiter, stripTabs });
+    return cursor;
   };
   // Skips the bodies of pending here-documents after the newline at `index`; their text is data.
   const skipHeredocs = (index: number): number => {
@@ -632,6 +675,8 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       flushWord();
       word = character;
     } else if (character === "\n" && !words.length && !word.length && upstream) {
+      commented = false;
+      stageStart = index + 1;
       index = skipHeredocs(index);
       continue;
     } else if (character === "|" || character === ";" || character === "&" || character === "\n") {
@@ -645,10 +690,23 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       else if (pipe && shell === "posix" && next === "&") index += 1;
       upstream = pipe ? stage : undefined;
       words = [];
-      if (character === "\n") index = skipHeredocs(index);
+      stageStart = index + 1;
+      if (character === "\n") {
+        commented = false;
+        index = skipHeredocs(index);
+      }
     } else if (/\s/.test(character)) {
       flushWord();
+    } else if (
+      shell === "posix" &&
+      character === "<" &&
+      next === "<" &&
+      command[index + 2] !== "<" &&
+      command[index - 1] !== "<"
+    ) {
+      index = readHeredocOperator(index) - 1;
     } else {
+      if (shell === "posix" && character === "#" && !word.length) commented = true;
       if (character === ">" && !/^\d*$/.test(word) && !/[<>]$/.test(word) && word !== "&") {
         flushWord();
       }

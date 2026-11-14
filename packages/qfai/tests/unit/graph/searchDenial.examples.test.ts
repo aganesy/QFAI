@@ -154,13 +154,15 @@ it("allows quoted search words printed without invoking search", () => {
 });
 
 // QFAI:EX-0001-0235-29
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (character === "\n") index = skipHeredocs(index);` -> `` fails "allows here-document bodies that hold an apostrophe or a search word"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!commented && !arithmetic && !feedsShell) heredocs.push({ delimiter, stripTabs });` -> `` fails "allows here-document bodies that hold an apostrophe or a search word"
 it("allows here-document bodies that hold an apostrophe or a search word", () => {
   for (const command of [
     "cat > notes.md <<'EOF'\nThe hook doesn't search.\nEOF\ngh issue create --body-file notes.md",
     "cat <<EOF > a.txt\ngrep -R policy .qfai/spec\nEOF",
     'cat <<-"END" > b.txt\n\tIt\'s data.\n\tEND\necho done',
     "cat > c.txt <<EOF\r\nrg auth packages/\r\nEOF\r\n",
+    "cat<<EOF\nIt's data.\nEOF",
+    "cat <<EOF |\nIt's data.\nEOF\nwc -l",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("allow");
@@ -169,6 +171,17 @@ it("allows here-document bodies that hold an apostrophe or a search word", () =>
   for (const command of [
     "cat > a.txt <<'EOF'\nIt's data.\nEOF\nrg auth packages/",
     "cat <<'EOF' && rg auth packages/\nIt's data.\nEOF",
+    // A `<<` that is not an operator registers no body.
+    "echo '<<' EOF\nrg auth packages/",
+    'echo "<<x"\nrg auth packages/',
+    "echo hi # <<EOF\nrg auth packages/",
+    "echo $((1 << 2))\nrg auth packages/",
+    "cat <<<x\nrg auth packages/",
+    // An empty quoted delimiter ends the body at the first empty line.
+    "cat <<'' x\nbody\n\nrg auth packages/\nx",
+    // A body handed to a shell is a script, so it stays classified.
+    "bash <<'EOF'\nrg auth packages/\nEOF",
+    "cat <<'EOF' | sh\nrg auth packages/\nEOF",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
