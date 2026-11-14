@@ -99,6 +99,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that a business-screen part closes is a defect to fix; any other gap on a job
   no contract names goes to the owner of the spec rather than being built.
 
+- **The product-surface reviewer no longer stops on standard screen parts.**
+  Its stop condition covers configuration, animation and novel interaction
+  that the user journey or acceptance criteria do not ground. Navigation,
+  list search, sort and pagination, and empty, error and success feedback are
+  grounded by the pattern itself.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
@@ -120,6 +126,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `navigation` with `shell`, `entry_points` and `back_to`. The UI contract
   guide, the contract rules and the `sdd-contract` step say every screen
   carries them. `npx qfai validate` does not check these keys.
+
+- **The contract step writes the standard parts of a business screen into its
+  UI contract.** After deriving a screen's elements and actions from the
+  examples, `sdd-contract` checks the screen against
+  `## What a business screen always has` in `interface-clarity.md` and adds
+  each part that applies and is missing: navigation, list behaviour, the
+  empty, loading, error and success states and the feedback after a change.
+  Such a part needs no example of its own unless it carries a business rule.
 
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
@@ -273,6 +287,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read as data when its whole line only writes files with `cat` or `tee` and a
   quoted delimiter, such as `cat > notes.md <<'EOF'`, and every line before it is such a line or a
   `mkdir -p`. Any other here-document body is still read as shell text.
+- **The search-protection hook keeps the fallback after a `cd` into a project
+  subdirectory.** In `cd packages/qfai && rg auth src/`, the denied search
+  keeps the AI-decided fallback, scoped to `packages/qfai/src`. The hook
+  follows a move only while it runs outside a pipeline and an `&&` joins it to
+  what comes next. A move joined by `||`, `;`, `&` or a new line, one CDPATH may
+  resolve, or a target that leaves the worktree keeps the fallback unavailable.
+
 - **The search-protection hook denies a search with an input redirection
   attached to its name.** `grep</dev/null -r foo src` and `grep<&3 -r foo .`
   were allowed as outside the checked boundary, while `grep>/dev/null -r foo

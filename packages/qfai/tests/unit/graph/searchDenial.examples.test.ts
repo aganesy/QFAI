@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -28,7 +28,7 @@ it("denies rg exploration and redirects code structure with recovery", () => {
 });
 
 // QFAI:EX-0001-0235-28
-// Mutation: packages/qfai/src/core/graph/hooks.ts `path.resolve(directory, target) !== directory` -> `true` fails "keeps the fallback for a cd to the observed worktree and withholds it for any other move"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (location === "observed" && directory === scope.directory) return "observed";` -> `` fails "keeps the fallback for a cd to the observed worktree and withholds it for any other move"
 it("keeps the fallback for a cd to the observed worktree and withholds it for any other move", () => {
   const root = path.resolve("project-root");
   for (const event of [
@@ -51,7 +51,6 @@ it("keeps the fallback for a cd to the observed worktree and withholds it for an
     expect(result.fallbackUnavailable, event.command).toBeUndefined();
   }
   for (const event of [
-    { tool: "Bash", cwd: root, command: `cd '${path.join(root, "packages")}' && rg auth src/` },
     { tool: "Bash", cwd: root, command: "cd .. && rg auth packages/" },
     { tool: "Bash", cwd: root, command: "cd && rg auth packages/" },
     { tool: "Bash", cwd: root, command: "cd - && rg auth packages/" },
@@ -78,6 +77,81 @@ it("keeps the fallback for a cd to the observed worktree and withholds it for an
     expect(result.fallbackUnavailable, event.command).toBe(true);
     expect(result.message, event.command).toContain("changes its working directory");
   }
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+// QFAI:EX-0001-0235-28
+// Mutation: packages/qfai/src/core/graph/hooks.ts `command.join === "||" ||` -> `` fails "rebases the search target after an && chain into a project subdirectory and withholds the fallback otherwise"
+it("rebases the search target after an && chain into a project subdirectory and withholds the fallback otherwise", () => {
+  vi.stubEnv("CDPATH", "");
+  const root = path.resolve("project-root");
+  const rebased: [command: string, target: string, tool?: string][] = [
+    [`cd '${path.join(root, "packages")}' && rg auth src/`, "packages/src"],
+    ["cd ./packages && rg auth src/", "packages/src"],
+    ["cd packages && rg auth", "packages"],
+    ["cd packages && cd qfai && rg auth src/", "packages/qfai/src"],
+    ["cd packages && echo start && rg auth src/", "packages/src"],
+    ['cd packages && bash -c "rg auth src/"', "packages/src"],
+    ["Set-Location packages && rg auth src/", "packages/src", "PowerShell"],
+  ];
+  for (const [command, target, tool = "Bash"] of rebased) {
+    const result = classifyGraphExploration({ tool, cwd: root, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.target, command).toBe(target);
+    expect(result.exceptionEligible, command).toBe(true);
+    expect(result.fallbackUnavailable, command).toBeUndefined();
+  }
+  for (const command of [
+    "cd packages || rg auth src/",
+    "cd packages; rg auth src/",
+    "cd packages & rg auth src/",
+    "cd packages | rg auth src/",
+    "echo packages | cd packages && rg auth src/",
+    "cd packages && echo start; rg auth src/",
+    "cd packages && echo start || rg auth src/",
+    "cd packages\nrg auth src/",
+    "true || cd packages && rg auth src/",
+    "pushd packages && pushd +1 && rg auth src/",
+    `cd '${path.dirname(root)}' && rg auth src/`,
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", cwd: root, command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.fallbackUnavailable, command).toBe(true);
+    expect(result.message, command).toContain("changes its working directory");
+  }
+  const provider = classifyGraphExploration({
+    tool: "PowerShell",
+    cwd: root,
+    command: "Set-Location env: && rg auth src/",
+  });
+  expect(provider.fallbackUnavailable).toBe(true);
+  expect(provider.message).toContain("changes its working directory");
+  const parent = classifyGraphExploration({
+    tool: "Bash",
+    cwd: root,
+    command: "cd packages && rg auth ../docs",
+  });
+  expect(parent.fallbackUnavailable).toBe(true);
+  expect(parent.message).toContain("has a .. segment after a directory change");
+  const escaping = classifyGraphExploration({
+    tool: "Bash",
+    cwd: root,
+    command: `cd packages && rg auth '${path.join(path.dirname(root), "outside")}'`,
+  });
+  expect(escaping.fallbackUnavailable).toBe(true);
+  expect(escaping.message).toContain("resolves outside this project worktree");
+  vi.stubEnv("CDPATH", "/elsewhere");
+  expect(
+    classifyGraphExploration({ tool: "Bash", cwd: root, command: "cd packages && rg auth src/" })
+      .fallbackUnavailable,
+  ).toBe(true);
+  expect(
+    classifyGraphExploration({ tool: "Bash", cwd: root, command: "cd ./packages && rg auth src/" })
+      .target,
+  ).toBe("packages/src");
 });
 
 // QFAI:EX-0001-0235-14
