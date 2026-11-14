@@ -37,6 +37,9 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
   the validate lane, under `QFAI-AUD-001`. The shipped `ui-contract.sample.yaml`
   carries filled entries; replace them with the screen's own rather than
   emptying the list.
+- Every screen lists its `states`: `default`, `empty`, `loading`, `error` and
+  `success`, each with what renders and the next action, or `none` with the
+  reason for a state the screen cannot reach.
 - A screen may describe its copy in the optional `supplements` and `structure`.
   Check each proposed text against the screen's tasks and the information the
   user needs there. A text that only repeats a heading, an action or a

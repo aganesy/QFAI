@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A UI contract screen lists its states.** The shipped
+  `ui-contract.sample.yaml`, the UI contract guide, the contract artifact rules
+  and the `sdd-contract` step give every screen a `states` list: `default`,
+  `empty`, `loading`, `error` and `success`, each with what renders and the
+  user's next action, or `none` with the reason the screen cannot be in that
+  state. A supplement's `when` names one of these states. Validate does not
+  check the key.
+
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
   `implementation-reviewer` reads every rule the changed master points to and
