@@ -240,6 +240,8 @@ function classifyCommands(
  * command may read, so a name in the same event may not run the program it names.
  */
 function redefinesCommands(words: string[]): boolean {
+  const body = arithmeticForBody(words);
+  if (body) return redefinesCommands(body);
   let offset = 0;
   for (;;) {
     const redirection = redirectionLength(words[offset]);
@@ -460,6 +462,33 @@ const COMPOUND_KEYWORDS: readonly string[] = [
   "time",
 ];
 
+/**
+ * The loop body after the last part of a `for ((...))` header. The tokenizer splits the
+ * header at its `;`, so its last part is a command whose words hold the closing `))`,
+ * alone (`i++ ))`), at the end of a word (`i++))`) or before an unspaced `{` (`)){`).
+ * Parentheses inside that part, as in `i+=$((1))`, are balanced, so the closing `))` is
+ * the one that takes the count of `(` minus `)` to -2. The words after it, a `{ ...; }`
+ * group or `do ...`, run as the loop body. Unquoted, a `)` that no `(` in the command
+ * opened is a syntax error outside such a header, so no runnable command matches.
+ * Ceiling: the tokenizer drops quotes, so `echo "a))" do rg ...` is read as a header and
+ * denied. Keeping quote marks on words lifts this.
+ */
+function arithmeticForBody(words: string[]): string[] | undefined {
+  let depth = 0;
+  for (const [index, word] of words.entries()) {
+    for (let offset = 0; offset < word.length; offset += 1) {
+      if (word[offset] === "(") depth += 1;
+      else if (word[offset] === ")") depth -= 1;
+      if (depth > -2) continue;
+      if (word[offset - 1] !== ")") return undefined;
+      const rest = word.slice(offset + 1);
+      const body = rest === "" ? words.slice(index + 1) : [rest, ...words.slice(index + 1)];
+      return body[0] === "{" || body[0] === "do" ? body : undefined;
+    }
+  }
+  return undefined;
+}
+
 function classifyCommand(
   words: string[],
   context: CommandContext,
@@ -486,6 +515,8 @@ function classifyCommand(
     return classifyCommand(words.slice(skip), context, depth + 1);
   }
   if (words[0] === "fi" || words[0] === "done") return undefined;
+  const body = arithmeticForBody(words);
+  if (body) return classifyCommand(body, context, depth + 1);
   // A `{ ...; }` group and a `case` command's first arm run the command after their
   // opening words. `classifyCommands` strips the pattern of each later arm. A group
   // keeps the pipeline stage before it, so `git log | { grep fix; }` is a filter.
