@@ -20,6 +20,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every rule that points to that master, and reports each clause that gives a
   different answer to the same situation.
 
+### Removed
+
+- **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
+  removed.** Validate parsed the setting but never read it, and no code read
+  `ddpBannedPatterns.txt`. A config that still sets the key is accepted and
+  the key, whatever its value, is ignored.
+
 ### Changed
 
 - **The UI contract guide says the contract is a floor.** A UI contract
