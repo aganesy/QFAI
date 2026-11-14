@@ -44,6 +44,7 @@ Feature: Every plain text on a screen states why it is there
   Scenario: The duty reaches the agents that write and review screens
     Given a project initialised by `qfai init`
     When an agent reads the shipped prototyping, implementation, contract and reviewer guidance for a screen
-    Then the prototyping generator, the implementation UI guidance and the `fullstack-engineer` card state the `qfai-text` comment and the four remedies, with deletion first
+    Then the implementation UI guidance holds the one copy of the procedure: the `qfai-text` comment, a text the user needs kept with its reason, and delete, replace and move, in that order, for any other text
+    And the prototyping generator and the `fullstack-engineer` card state the comment and point to that copy instead of repeating it
     And the prototype reviewer and the `product-surface-reviewer` card judge each reason and the `supplements` and `structure` a UI contract describes, as review findings and not as validate findings
 ```

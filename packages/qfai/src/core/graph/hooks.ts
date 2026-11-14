@@ -99,7 +99,9 @@ function classifyShellText(
   substitution = false,
 ): GraphHookDecision | undefined {
   if (depth > 16) return failedGraphHook("depth");
-  const commands = shellPipelines(text, scope.shell);
+  // Nested text, such as a `bash -c` argument or a substitution body, skips no
+  // here-document body: what reads its output lies outside it.
+  const commands = shellPipelines(text, scope.shell, depth > 0);
   // Text in a substitution that cannot be read as commands is no verdict of its own.
   if (!commands) return substitution ? undefined : failedGraphHook("quote");
   return classifyCommands(
@@ -708,7 +710,71 @@ function resolveAlias(words: string[], shell: GraphShell): string[] {
     : words;
 }
 
-function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | undefined {
+/**
+ * A character after which a POSIX shell starts a new word. Only space, tab and newline are
+ * blanks there: a carriage return, form feed or no-break space is part of the word, so a `#`
+ * after one is not a comment.
+ */
+const WORD_BREAK = /[ \t\n;&|()]/;
+
+/**
+ * Whether the `#` at `index`, read where no word has started yet, opens a comment. In a POSIX
+ * shell an unquoted `#` at the start of a word runs to the end of its line, so a quote inside it
+ * opens nothing and the next line is a command again. The caller must know no word is under way:
+ * an escaped separator or a closed substitution before the `#` puts it inside a word.
+ * Ceiling: PowerShell and `cmd` comments are not read, because a PowerShell `<# ... #>` block
+ * comment can end mid-line; a quote inside a PowerShell comment still fails closed as an
+ * unmatched quote. Reading PowerShell comments needs block comments handled first.
+ */
+function startsComment(command: string, index: number, shell: GraphShell): boolean {
+  if (shell !== "posix") return false;
+  const previous = command[index - 1];
+  return (
+    (previous === undefined || WORD_BREAK.test(previous)) && !inUntrackedContext(command, index)
+  );
+}
+
+/**
+ * Whether the text before `index` may leave a context open that these readers do not track and
+ * where the shell starts no comment or quotes differently: a backtick substitution, a `${...}`
+ * expansion, a `((...))` or `$[...]` arithmetic, an ANSI-C `$'...'` string, whose `\'` does not
+ * close it, or an extended glob such as `@(...)`. A `#` after one is read as text, as it was
+ * before comments were read, so a search after it is still classified.
+ * Ceiling: any such opener earlier in the command turns comment reading off for the rest of it,
+ * so a quote in a later comment there still fails closed as an unmatched quote. Tracking those
+ * contexts as the quotes are tracked lifts this.
+ */
+function inUntrackedContext(command: string, index: number): boolean {
+  return /`|\$\{|\$\[|\$'|\(\(|[?*+@!]\(/.test(command.slice(0, index));
+}
+
+/** A file operand that names no device or process file: letters, digits and `._/-` only. */
+const DATA_FILE = String.raw`(?!/dev/|/proc/)[\w./-]+`;
+/** An operand of `cat` or `tee` on a data line: an option, a file, or a redirection to one. */
+const DATA_OPERAND = String.raw`[ \t]+(?:-[A-Za-z]+|>>?[ \t]*${DATA_FILE}|>[ \t]*/dev/null|${DATA_FILE})`;
+/**
+ * A whole line that writes one here-document to files and nothing else: `cat` or `tee`,
+ * plain operands, one `<<` or `<<-` with a quoted identifier delimiter. A line of this
+ * shape hands its body to no shell, pipe, descriptor or later command, and the quoted
+ * delimiter makes Bash read the body literally, with no expansion or line joining.
+ */
+const DATA_HEREDOC_LINE = new RegExp(
+  String.raw`^[ \t]*(?:cat|tee)(?:${DATA_OPERAND})*[ \t]*<<-?[ \t]*(['"])[A-Za-z_]\w*\1(?:${DATA_OPERAND})*[ \t]*$`,
+);
+/** A line that may come before a data line: blank, `mkdir -p` of plain paths, or another data line. */
+const DATA_PRELUDE_LINE = new RegExp(
+  String.raw`^[ \t]*(?:mkdir[ \t]+-p(?:[ \t]+${DATA_FILE})+[ \t]*)?$`,
+);
+
+/**
+ * Splits a shell command into its pipelines. A nested command string, such as the
+ * argument of `bash -c`, skips no here-document body: what reads its output is outside it.
+ */
+function shellPipelines(
+  command: string,
+  shell: GraphShell,
+  nested = false,
+): ShellCommand[] | undefined {
   const commands: ShellCommand[] = [];
   let words: string[] = [];
   let upstream: ShellCommand | undefined;
@@ -716,9 +782,103 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   let word = "";
   let quote: string | undefined;
   let afterRedirect: "" | "<" | ">" = "";
+  // Here-documents whose bodies start after the next unquoted newline.
+  const heredocs: { delimiter: string; stripTabs: boolean; data: boolean }[] = [];
+  // The spans of bodies already skipped as data, which later checks do not read.
+  const skipped: [number, number][] = [];
+  // An empty quote such as `''` starts a word that holds no character yet.
+  let quotedWord = false;
   const flushWord = () => {
     if (word.length) words.push(word);
     word = "";
+    quotedWord = false;
+  };
+  /**
+   * Reads an unquoted `<<` or `<<-` operator and its delimiter word at `index`, pushes
+   * both as words, and returns the index after the delimiter. Its body is skipped as data
+   * only when the operator's whole line is a data line and every line before it, less
+   * bodies already skipped, is a data line or a data prelude. Every other body stays
+   * classified as shell text, as if no here-document were read.
+   */
+  const readHeredocOperator = (index: number): number => {
+    if (word.length && !/^\d+$/.test(word)) flushWord();
+    let cursor = index + 2;
+    const stripTabs = command[cursor] === "-";
+    if (stripTabs) cursor += 1;
+    words.push(`${word}<<${stripTabs ? "-" : ""}`);
+    word = "";
+    while (command[cursor] === " " || command[cursor] === "\t") cursor += 1;
+    let delimiter = "";
+    let read = false;
+    let delimiterQuote: string | undefined;
+    while (cursor < command.length) {
+      const character = command[cursor] ?? "";
+      if (delimiterQuote) {
+        if (character === delimiterQuote) delimiterQuote = undefined;
+        else delimiter += character;
+      } else if (character === '"' || character === "'") {
+        delimiterQuote = character;
+      } else if (character === "\\" && cursor + 1 < command.length) {
+        delimiter += command[cursor + 1] ?? "";
+        cursor += 1;
+      } else if (/[\s;|&<>()]/.test(character)) {
+        break;
+      } else {
+        delimiter += character;
+      }
+      read = true;
+      cursor += 1;
+    }
+    if (delimiterQuote) {
+      quote = delimiterQuote;
+      return command.length;
+    }
+    if (!read) return cursor;
+    words.push(delimiter);
+    const lineStart = command.lastIndexOf("\n", index) + 1;
+    const lineEnd = command.indexOf("\n", index);
+    // The command text before the operator's line, less the bodies already skipped as data.
+    let earlier = "";
+    let from = 0;
+    for (const [start, end] of skipped) {
+      earlier += command.slice(from, start);
+      from = end;
+    }
+    earlier += command.slice(from, lineStart);
+    const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
+    // A carriage return is an ordinary character to Bash, so a command holding one skips
+    // nothing rather than risk ending a body on a different line than Bash does.
+    const data =
+      !nested &&
+      !command.includes("\r") &&
+      DATA_HEREDOC_LINE.test(line) &&
+      earlier
+        .split("\n")
+        .every((prior) => DATA_PRELUDE_LINE.test(prior) || DATA_HEREDOC_LINE.test(prior));
+    heredocs.push({ delimiter, stripTabs, data });
+    return cursor;
+  };
+  /**
+   * Skips the bodies of pending here-documents after the newline at `index`. A body
+   * whose delimiter line never comes is not skipped, and when any body on the line is
+   * not data none is skipped, so no text is hidden on a guess.
+   */
+  const skipHeredocs = (index: number): number => {
+    let position = index + 1;
+    const pending = heredocs.splice(0);
+    if (!pending.every((heredoc) => heredoc.data)) return index;
+    for (const { delimiter, stripTabs } of pending) {
+      let closed = false;
+      while (position < command.length && !closed) {
+        const end = command.indexOf("\n", position);
+        const line = command.slice(position, end < 0 ? command.length : end);
+        position = end < 0 ? command.length : end + 1;
+        closed = (stripTabs ? line.replace(/^\t+/, "") : line) === delimiter;
+      }
+      if (!closed) return index;
+    }
+    skipped.push([index + 1, position]);
+    return position - 1;
   };
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index];
@@ -741,8 +901,17 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     if (quote) {
       if (character === quote) quote = undefined;
       else word += character;
+    } else if (
+      character === "#" &&
+      !word.length &&
+      !quotedWord &&
+      startsComment(command, index, shell)
+    ) {
+      const end = command.indexOf("\n", index);
+      index = (end === -1 ? command.length : end) - 1;
     } else if (character === '"' || character === "'") {
       quote = character;
+      quotedWord = true;
     } else if (
       (character === "&" || character === "|") &&
       (character === "&"
@@ -754,6 +923,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       flushWord();
       word = character;
     } else if (character === "\n" && !words.length && !word.length && upstream) {
+      index = skipHeredocs(index);
       continue;
     } else if (character === "|" || character === ";" || character === "&" || character === "\n") {
       flushWord();
@@ -780,8 +950,17 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       if (stage || join === undefined || operator !== "\n") join = operator;
       upstream = pipe ? stage : undefined;
       words = [];
+      if (character === "\n") index = skipHeredocs(index);
     } else if (/\s/.test(character)) {
       flushWord();
+    } else if (
+      shell === "posix" &&
+      character === "<" &&
+      next === "<" &&
+      command[index + 2] !== "<" &&
+      command[index - 1] !== "<"
+    ) {
+      index = readHeredocOperator(index) - 1;
     } else {
       if (
         (character === ">" || character === "<") &&
@@ -821,15 +1000,37 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
   const escape = shell === "posix" ? "\\" : "`";
   const bodies: string[] = [];
   let quote: string | undefined;
+  // Whether no word is under way: true at the start and after an unquoted separator only, so an
+  // escaped separator or a closed substitution before a `#` keeps it inside its word.
+  let wordStart = true;
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index];
     const next = command[index + 1];
+    const atWordStart = wordStart;
+    wordStart = false;
     if (character === escape && quote !== "'") {
       index += 1;
       continue;
     }
     if (quote === "'") {
       if (character === "'") quote = undefined;
+      continue;
+    }
+    if (
+      !quote &&
+      atWordStart &&
+      character === "#" &&
+      shell === "posix" &&
+      !inUntrackedContext(command, index)
+    ) {
+      const end = command.indexOf("\n", index);
+      if (end === -1) break;
+      index = end;
+      wordStart = true;
+      continue;
+    }
+    if (!quote && character !== undefined && WORD_BREAK.test(character)) {
+      wordStart = true;
       continue;
     }
     if (character === "'" && !quote) {

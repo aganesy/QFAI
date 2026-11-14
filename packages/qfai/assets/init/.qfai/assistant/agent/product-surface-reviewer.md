@@ -90,13 +90,27 @@ specialization_tags:
   is present and well formed; whether it is strong is this review's finding. Reject a generic reason
   ("helps the user", "for clarity") and a reason that restates the text. A text that could be deleted,
   replaced by another component or moved into a label, heading, button wording or empty state is
-  excess even with a reason.
+  excess even with a reason, unless it tells the user a result, a cost, a condition, a consequence, a
+  destination, a recovery step or an empty state's next step: such a text stays with its reason.
 - Judge whether the copy a UI contract describes (`supplements`, group headings) is needed at all.
   Name the screen, the task or state, the duplicated meaning or unmet need, and the text to remove or the control or structure to repair.
   Apply `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`.
   Never cut a condition, cost, destination, result, recovery step, consequence, label, accessible name, role or state,
+  or the next step an empty state offers (the action, or a short sentence naming it, that leads out of it, such as widening the search),
   and never move one into a tooltip or placeholder.
   Word counts are observations, never a verdict.
+- Check every implemented screen against
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#information-architecture-and-flow`
+  and `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#states-and-accessibility`
+  on every review, whether or not an acceptance criterion names the part: a missing loading, empty,
+  error or success state, a form that fails silently, a data-heavy screen with no table, the steps of
+  one task split across sections, and a control or link that leads nowhere. Name the screen, the
+  pattern matched and the state or structure to add. Where the entry is about behaviour, trace the
+  finding to `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` or the spec, as
+  that list's _Where the list stops_ says, and do not report a part whose UI contract records a
+  reason for leaving it out. Declare each finding's severity and trace as
+  `.qfai/assistant/rule/references/reviewer-findings.md` says. Inside the prototyping loop,
+  `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md` sets which sections apply.
 
 ## Inputs you must read
 

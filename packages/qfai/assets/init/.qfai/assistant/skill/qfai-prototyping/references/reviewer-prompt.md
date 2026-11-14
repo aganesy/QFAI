@@ -262,7 +262,10 @@ judge:
   restates the text.
 - A text that could be deleted, replaced by another component (an icon with an
   accessible name, a disabled state, a badge) or moved into a label, heading,
-  button wording or empty state is excess even with a reason.
+  button wording or empty state is excess even with a reason, unless it tells
+  the user a result, a cost, a condition, a consequence, a destination, a
+  recovery step or an empty state's next step: such a text stays with its
+  reason.
 - Judge whether the copy the UI contract describes (`supplements`, group
   headings) is needed at all.
 
@@ -274,10 +277,10 @@ rest of the design anti-patterns list stays with the direction review.
 
 A repair keeps what the task needs: a condition, cost, storage or transmission
 destination, result, recovery step, the consequence of an action that cannot be
-undone, and every label, accessible name, role and state. Moving that into a
-tooltip or a placeholder is not a repair. After a repair, walk the task again at
-the declared narrow and desktop widths, in the normal, empty, error, loading and
-success states the screen has.
+undone, the next step an empty state offers, and every label, accessible name,
+role and state. Moving that into a tooltip or a placeholder is not a repair.
+After a repair, walk the task again at the declared narrow and desktop widths,
+in the normal, empty, error, loading and success states the screen has.
 
 The counts are contract-relative. A screen declaring one primary task and
 carrying forty controls is wrong; the same forty elsewhere may be right. The
