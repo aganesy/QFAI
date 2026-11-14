@@ -20,7 +20,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every rule that points to that master, and reports each clause that gives a
   different answer to the same situation.
 
+### Removed
+
+- **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
+  removed.** Validate parsed the setting but never read it, and no code read
+  `ddpBannedPatterns.txt`. A config that still sets the key is accepted and
+  the key, whatever its value, is ignored.
+
 ### Changed
+
+- **A work order says which checks the worker runs and whether it may push.**
+  The unit work order template gains `Local checks` and `Push` lines, and
+  `delegation-steering.md` checks a delegated agent's first actions against
+  them. A worker whose order says `Push: no` neither pushes nor opens a pull
+  request.
 
 - **The shipped uix-rev review prompts no longer name the removed
   `40_screen_contracts.md` sidecar.** The strategy review checks brand language
