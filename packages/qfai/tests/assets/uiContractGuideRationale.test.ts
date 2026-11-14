@@ -50,8 +50,8 @@ describe.each(QFAI_TREES)("%s ui-contract-guide.md", (tree) => {
     // parts it named: no shell, no list behaviour, no success feedback.
     expect(guide).toContain("## The contract is a floor");
     expect(guide).toContain("It is the minimum, not the inventory of the screen.");
-    expect(guide).toContain("the conventional pattern for its kind of screen carries");
-    expect(guide).toContain("where the screen needs them");
+    expect(guide).toContain('lists under "What a business screen always has"');
+    expect(guide).toContain("Leaving one out needs a reason recorded in the screen's UI contract");
     expect(guide).toContain("`.agents/rules/interface-clarity.md`");
     expect(guide).toContain(
       "their absence from the contract is no reason to leave them out of the screen",

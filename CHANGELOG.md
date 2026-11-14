@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`.agents/rules/interface-clarity.md` says what a business screen always
+  has.** A new section lists, per application, an app shell with navigation
+  and a way back, a home that shows what needs attention and one shared
+  component per repeated pattern; per screen, list search or filter with sort,
+  count and pagination, empty, loading, error and success states, and feedback
+  after every change. Leaving one out needs a reason recorded in the screen's UI
+  contract, and the Cut section counts a listed part as asked for.
+
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
   `implementation-reviewer` reads every rule the changed master points to and
@@ -16,10 +24,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The UI contract guide says the contract is a floor.** A UI contract
   lists what must be verifiable on a screen, not its whole inventory. The
-  built screen also carries the parts the conventional pattern for its kind
-  of screen carries, where the screen needs them, such as shell navigation,
-  pagination on a long list, feedback after an action and its states. The
-  contract need not repeat them.
+  built screen also carries the parts `interface-clarity.md` lists under
+  "What a business screen always has", which the contract need not repeat.
+
+- **The shipped uix-rev review prompts no longer name the removed
+  `40_screen_contracts.md` sidecar.** The strategy review checks brand language
+  against the UI contracts under `<paths.contractsDir>/ui/`, and the screen
+  contracts review prompt, which nothing loaded and which reviewed that removed
+  file, is gone.
 
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
