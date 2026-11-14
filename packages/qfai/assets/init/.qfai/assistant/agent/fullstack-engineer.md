@@ -76,15 +76,12 @@ specialization_tags:
 `npx qfai validate` reports, as an error, a plain text in UI source that no reason
 comment directly precedes. Plain text is a literal text node outside a heading,
 label, button, link, legend, table header, caption, option, summary, title,
-script, style and `role="alert"` or `role="status"`. For a text you cannot
-justify, in this order:
-
-1. Delete it.
-2. Replace it with another component: an icon with an accessible name, a
-   disabled state, a badge.
-3. Move its job to an element already there: a label, a heading, the button
-   wording, the empty state.
-4. Only then write the reason, directly before the text or its element.
+script, style and `role="alert"` or `role="status"`. Decide each text as
+`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`
+`## Plain text in UI source` says: a text the user needs, such as a result, a
+cost, a consequence or an empty state's next step, stays with its reason,
+directly before the text or its element; any other text is first deleted,
+replaced or moved, and kept with a reason only when none of those works.
 
 ```html
 <!-- qfai-text: why=the fee is charged only on this step; without=users pay a fee they never saw -->

@@ -73,7 +73,9 @@ describe("a plain text without a reason fails", () => {
     expect(found?.message).toContain("Manage all your orders easily in one pla");
     expect(found?.message).not.toContain("in one place");
     const fix = found?.suggested_action ?? "";
-    const order = ["Delete", "Replace", "Move", "write"].map((word) => fix.indexOf(word));
+    const order = ["needs this text", "write the reason", "delete", "replace", "move"].map((word) =>
+      fix.indexOf(word),
+    );
     expect(order.every((at) => at >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });

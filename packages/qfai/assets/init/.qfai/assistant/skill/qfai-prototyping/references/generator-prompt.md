@@ -270,15 +270,12 @@ under `.qfai/prototype/` and reports, as an error, a plain text with no reason
 comment directly before it or before its parent element. Sample data in a
 static page is plain text too. Plain text is a literal text node outside a heading, `label`,
 `button`, `a`, `legend`, `th`, `caption`, `option`, `summary`, `title`,
-`script`, `style` and `role="alert"` or `role="status"`. For a text you cannot
-justify, in this order:
-
-1. Delete it.
-2. Replace it with another component: an icon with an accessible name, a
-   disabled state, a badge.
-3. Move its job to an element already there: a label, a heading, the button
-   wording, the empty state.
-4. Only then write the reason.
+`script`, `style` and `role="alert"` or `role="status"`. Decide each text by
+the plain-text procedure in the implementation UI guidance, which the
+`prototyping-loop` step lists: a text the user needs, such as a result, a cost,
+a consequence or an empty state's next step, stays with its reason; any other
+text is first deleted, replaced or moved, and kept with a reason only when none
+of those works.
 
 ```html
 <!-- qfai-text: why=the fee is charged only on this step; without=users pay a fee they never saw -->

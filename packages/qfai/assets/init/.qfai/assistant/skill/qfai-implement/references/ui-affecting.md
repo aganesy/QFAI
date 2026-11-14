@@ -20,12 +20,17 @@ and expressions are never plain text; a string literal that is a whole JSX child
 Each plain text needs a reason comment directly before it, or before its parent element, with only whitespace
 between. A missing reason is `QFAI-UITEXT-001` and a malformed one `QFAI-UITEXT-002`; `QFAI-UITEXT-003` means a `.tsx` or `.jsx` file is selected but `typescript` cannot be resolved from the project root. All three are errors and cannot be waived.
 
-For a text you cannot justify, try these in order:
+This section is the one copy of the procedure for a plain text; other documents point here. For each plain
+text, ask first whether the user needs it at that point:
 
-1. Delete it.
-2. Replace it with another component: an icon with an accessible name, a disabled state, a badge.
-3. Move its job to an element already there: a label, a heading, the button wording, the empty state.
-4. Only then write the reason.
+- A text that tells the user a result, a cost, a condition, a consequence, a destination, a recovery step or
+  what to do next on an empty screen is needed. Keep it and write its reason.
+- For any other text, try these in order:
+  1. Delete it.
+  2. Replace it with another component: an icon with an accessible name, a disabled state, a badge.
+  3. Move its job to an element already there: a label, a heading, the button wording, the empty state.
+  4. If none of these works without losing what the user needs, the text is needed after all: keep it and
+     write its reason.
 
 ```html
 <!-- qfai-text: why=the fee is charged only on this step; without=users pay a fee they never saw -->

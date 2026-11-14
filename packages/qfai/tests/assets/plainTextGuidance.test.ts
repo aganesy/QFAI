@@ -1,8 +1,10 @@
 /**
  * The plain-text duty reaches the agents that write and review screens.
  *
- * The writers state the `qfai-text` comment and the four remedies, deletion
- * first; the reviewers judge each reason and the copy UI contracts describe.
+ * The implementation UI guidance holds the one copy of the procedure: a text
+ * the user needs stays with its reason, any other is deleted, replaced or
+ * moved first. The other writers state the comment and point to that copy; the
+ * reviewers judge each reason and the copy UI contracts describe.
  * No shipped guidance still says validate checks `supplements` or `structure`.
  */
 
@@ -25,11 +27,17 @@ const assistant = path.resolve(
 const read = (relative: string): Promise<string> =>
   readFile(path.join(assistant, ...relative.split("/")), "utf-8");
 
+const PROCEDURE = "skill/qfai-implement/references/ui-affecting.md";
 const WRITERS = [
   "skill/qfai-prototyping/references/generator-prompt.md",
-  "skill/qfai-implement/references/ui-affecting.md",
+  PROCEDURE,
   "agent/fullstack-engineer.md",
 ];
+/** Each writer that defers to the one copy, and the file that names its path for it. */
+const POINTERS = [
+  ["agent/fullstack-engineer.md", "agent/fullstack-engineer.md"],
+  ["skill/qfai-prototyping/references/generator-prompt.md", "step/prototyping-loop/STEP.md"],
+] as const;
 const REVIEWERS = [
   "skill/qfai-prototyping/references/reviewer-prompt.md",
   "agent/product-surface-reviewer.md",
@@ -37,20 +45,40 @@ const REVIEWERS = [
 
 // QFAI:EX-0001-0297-13
 describe("the plain-text duty reaches writers and reviewers", () => {
-  it.each(WRITERS)("%s states the comment and the remedies, deletion first", async (file) => {
+  it.each(WRITERS)("%s states the comment form", async (file) => {
     const text = await read(file);
     expect(text).toContain("qfai-text:");
     expect(text).toContain("why=");
     expect(text).toContain("without=");
+  });
+
+  it("keeps the one copy of the procedure, a needed text first", async () => {
+    const text = await read(PROCEDURE);
+    expect(text).toContain("the one copy of the procedure");
     expect(text).toMatch(
-      /^1\. Delete[\s\S]*?^2\. Replace[\s\S]*?^3\. Move[\s\S]*?^4\. Only then write the reason/m,
+      /is needed\. Keep it and write its reason\.[\s\S]*?^ {2}1\. Delete[\s\S]*?^ {2}2\. Replace[\s\S]*?^ {2}3\. Move[\s\S]*?^ {2}4\. If none of these works/m,
     );
+  });
+
+  it.each(POINTERS)("%s defers to the one copy, which %s names", async (file, namer) => {
+    const naming = await read(namer);
+    const at = naming.indexOf("## Plain text");
+    const section = at === -1 ? naming : naming.slice(at);
+    expect(section).toContain(`.qfai/assistant/${PROCEDURE}`);
+    const text = await read(file);
+    expect(text).toMatch(/a text the user needs[\s\S]*?stays with its reason/);
+    expect(text).not.toMatch(/^\s*1\. Delete it\./m);
   });
 
   it.each(REVIEWERS)("%s reviews each reason and the copy a contract describes", async (file) => {
     const text = await read(file);
     expect(text).toContain("qfai-text");
     expect(text).toContain("supplements");
+  });
+
+  it.each(REVIEWERS)("%s keeps a text the user needs out of excess", async (file) => {
+    const text = (await read(file)).replace(/\s+/g, " ");
+    expect(text).toMatch(/is excess even with a reason, unless it tells the user a result, a cost/);
   });
 
   it("leaves no shipped statement that validate checks contract copy or a rendered dump", async () => {
