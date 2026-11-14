@@ -64,12 +64,14 @@ describe("business UI pattern reference", () => {
     it(`${tree}: the list entry says where search, sort and paging run`, async () => {
       const text = (await readFile(path.join(root, REFERENCE), "utf-8")).replace(/\s+/g, " ");
 
-      expect(text).toContain("lives in the URL query");
+      expect(text).toContain("lives in the screen's address, the URL query on the web");
       expect(text).toContain("on the server for any list that can outgrow one page");
       expect(text).toContain("the total count taken from the same query");
       expect(text).toContain("the values it is matched against are normalised the same way");
       expect(text).toContain("validated and capped");
-      expect(text).toContain("a behaviour the screen breaks is a finding");
+      expect(text).toContain("a behaviour the screen breaks with no recorded reason is a finding");
+      expect(text).toContain("applies without being named");
+      expect(text).not.toContain("the last page or the empty state");
     });
 
     it(`${tree}: the contract step, the implementation and the screen review cite it`, async () => {
