@@ -99,8 +99,9 @@ async function locateClaude(
   const projects = path.join(env.claudeConfigDir ?? path.join(env.home, ".claude"), "projects");
   const slug = claudeProjectSlug(root);
   // Two roots can share a slug (`/repo/a-b` and `/repo/a/b`), so even this directory's
-  // transcripts count only when they record the root as a cwd.
-  const own = await sessionsOfRoot(path.join(projects, slug), root, env, list);
+  // transcripts count only when they record the root as a cwd. Any record counts here: a session
+  // the desktop app opened in a scratch directory records that directory until it moves in.
+  const own = await sessionsOfRoot(path.join(projects, slug), root, env, list, "any");
   if (own.length > 0) return own;
   // A long root is shortened in the directory name, so the slug alone cannot always find it.
   const fold = (value: string): string => (env.platform === "win32" ? value.toLowerCase() : value);
@@ -108,25 +109,24 @@ async function locateClaude(
   const matched: SessionFile[] = [];
   for (const dir of await sortedEntries(projects, list)) {
     if (dir === slug || !fold(dir).startsWith(prefix)) continue;
-    matched.push(...(await sessionsOfRoot(path.join(projects, dir), root, env, list)));
+    // Only the first cwd decides here. The prefix also matches every worktree of the root
+    // (`<slug>--claude-worktrees-*`), whose sessions may run one command in the root.
+    matched.push(...(await sessionsOfRoot(path.join(projects, dir), root, env, list, "first")));
   }
   return matched;
 }
 
-/**
- * The transcripts in `dir` that record the root as a cwd. Any record counts, not only the first: a
- * session the desktop app opened in a scratch directory records that directory until it moves
- * into the root.
- */
+/** The transcripts in `dir` whose first recorded cwd, or with `any` one of whose recorded cwds, is the root. */
 async function sessionsOfRoot(
   dir: string,
   root: string,
   env: LocateEnvironment,
   list: ListDirectory,
+  which: "first" | "any",
 ): Promise<SessionFile[]> {
   const matched: SessionFile[] = [];
   for (const session of await claudeSessionsIn(dir, list)) {
-    if (await recordsCwd(session.file, root, env.platform)) matched.push(session);
+    if (await recordsCwd(session.file, root, env.platform, which)) matched.push(session);
   }
   return matched;
 }
@@ -195,13 +195,22 @@ async function fileTime(file: string): Promise<number | null> {
   }
 }
 
-/** Whether a record of `file` names `root` as its cwd, reading no further than the first that does. */
-async function recordsCwd(file: string, root: string, platform: NodeJS.Platform): Promise<boolean> {
+/**
+ * Whether `file` names `root` as its cwd: in its first record that carries a cwd, or with `any` in
+ * any record. Reading stops as soon as the answer is known.
+ */
+async function recordsCwd(
+  file: string,
+  root: string,
+  platform: NodeJS.Platform,
+  which: "first" | "any",
+): Promise<boolean> {
   let found = false;
   await readJsonl(file, (record) => {
     const cwd = stringAt(record, "cwd");
-    found = cwd !== undefined && sameDirectory(cwd, root, platform);
-    return !found;
+    if (cwd === undefined) return true;
+    found = sameDirectory(cwd, root, platform);
+    return !found && which === "any";
   });
   return found;
 }
