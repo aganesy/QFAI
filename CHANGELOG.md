@@ -6,6 +6,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The design anti-pattern list reaches implemented screens.** Its
+  _Information architecture and flow_ and _States and accessibility_ sections
+  now apply to the screens an implementation builds and to their review, not
+  only to root `DESIGN.md` authoring and prototype review.
+
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
   `implementation-reviewer` reads every rule the changed master points to and

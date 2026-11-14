@@ -37,6 +37,11 @@ naming the pattern is what works.
 - **Reviewing.** Check the references the deliberation record adopted, root
   `DESIGN.md` and each prototype screen against the list. A finding names the
   aspect and quotes the pattern it matched.
+- **Building and reviewing an implemented screen.** _Information
+  architecture and flow_ and _States and accessibility_ apply to every screen
+  the implementation builds, not only to root `DESIGN.md` and prototypes. The
+  implementer checks them before calling a screen done, and the implementation
+  and product-surface reviews check the built screens against them.
 - **Replacing a pattern.** Its usual substitute is in
   [Displacement](#displacement). Moving from one to the other is the same
   defect.
@@ -62,7 +67,8 @@ naming the pattern is what works.
 - Where an entry touches behaviour, as most of _Information architecture and
   flow_ and _States and accessibility_ do, `interface-clarity.md` and the spec
   are the rules. The entry is the form a breach of them takes on a generated
-  screen.
+  screen. Those two sections reach past `DESIGN.md` authoring and prototype
+  review: they apply to implemented screens and their review.
 - The reviewer inside the prototyping loop does not apply the sections about
   identity. Root `DESIGN.md` locks the brand values that reviewer sees, so a
   pattern there is caught where the design direction is reviewed and where
