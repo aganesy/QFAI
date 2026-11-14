@@ -87,9 +87,15 @@ Order and grouping carry what a sentence would otherwise have to state.
 
 ## 6. Walk it
 
-Before calling a surface done, perform every task it declares, start to finish,
-as someone who does not know how it is built. Anything you have to read twice is
-a defect in the control it sits under.
+Before calling a surface done, walk the user's job across screens, start to
+finish, as someone who does not know how it is built: enter from where the user
+starts, find the record, act on it, see the result, and get back. Walk every task
+the surface declares this way, and the jobs it serves that no contract names, such
+as reaching a record from the home screen, finding one record among many, or
+recovering after an error. Walk it with a realistic volume of data, at phone and
+desktop widths. Anything you have to read twice is a defect in the control it
+sits under; a step you cannot reach, a record you cannot find or an action whose
+result you cannot tell is a missing part of the surface.
 
 ## What this rule never removes
 

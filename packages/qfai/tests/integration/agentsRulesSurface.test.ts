@@ -842,7 +842,9 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /displaces signal/,
         /One primary purpose per view/,
         /disclosure/,
-        /perform every task it declares/,
+        /walk the user's job across screens/,
+        /that no contract names/,
+        /realistic volume of data/,
       ]) {
         expect(text).toMatch(clause);
       }

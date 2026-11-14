@@ -14,6 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`interface-clarity.md` walks the user's job across screens.** Section 6
+  no longer stops at the tasks a surface declares. It walks the job from where
+  the user starts to the result and back, including jobs no contract names,
+  such as finding one record among many or recovering after an error, with a
+  realistic volume of data at phone and desktop widths.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
