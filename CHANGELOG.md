@@ -27,7 +27,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   its checklist: the request may not tell a reviewer to check only some of
   them, to look only for contract conformance, or not to flag a gap one
   covers. Each reviewer names the responsibilities it checked and the ones not
-  applicable to the target, and the stage report records them. The four
+  applicable to the target in a new `Responsibilities:` block of the reviewer
+  response template, and the stage report records them. The four
   reviewer cards sign off on the whole checklist.
 
 - **The shipped uix-rev review prompts no longer name the removed

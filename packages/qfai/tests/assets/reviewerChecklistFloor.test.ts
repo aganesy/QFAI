@@ -9,7 +9,7 @@
  * on its card, and the stage report records which ones each review covered.
  */
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -19,13 +19,6 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 const ASSISTANT_ROOTS = [
   path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant"),
   path.join(repoRoot, ".qfai/assistant"),
-];
-
-const REVIEWERS = [
-  "implementation-reviewer",
-  "requirements-reviewer",
-  "architecture-reviewer",
-  "product-surface-reviewer",
 ];
 
 const SIGN_OFF =
@@ -56,10 +49,25 @@ describe("a review request cannot narrow a reviewer's checklist", () => {
       );
     });
 
+    it(`${tree}: the reviewer response template carries the responsibilities`, async () => {
+      const baseline = await readFile(
+        path.join(root, "rule/shared-skill-delegation-baseline.md"),
+        "utf-8",
+      );
+      const template = baseline.slice(baseline.indexOf("## Reviewer response template"));
+      expect(template).toContain(
+        ["Result: PASS | REVISE", "Responsibilities:", "- <each Domain Responsibility"].join("\n"),
+      );
+    });
+
     it(`${tree}: every reviewer card signs off on its whole checklist`, async () => {
+      const reviewers = (await readdir(path.join(root, "agent")))
+        .filter((name) => name.endsWith("-reviewer.md"))
+        .sort();
+      expect(reviewers.length).toBeGreaterThanOrEqual(4);
       const missing: string[] = [];
-      for (const reviewer of REVIEWERS) {
-        const card = await readFile(path.join(root, "agent", `${reviewer}.md`), "utf-8");
+      for (const reviewer of reviewers) {
+        const card = await readFile(path.join(root, "agent", reviewer), "utf-8");
         const signOff = card.slice(card.indexOf("## Sign-off"), card.indexOf("## When to use"));
         if (!signOff.includes(SIGN_OFF)) missing.push(reviewer);
       }

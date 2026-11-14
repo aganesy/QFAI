@@ -77,7 +77,9 @@ them; it is the procedure that applies them.
    apply in full to every review it is dispatched to. A focus adds to them and
    never removes one. The request does not tell a reviewer to check only some
    of them, to look only for conformance to a contract, or not to flag a gap a
-   responsibility covers, such as a screen a later flow is expected to add. Put the answers an earlier stage recorded on the same artifact into
+   responsibility covers, such as the navigation or a state the screen needs.
+   Whether a finding blocks is decided by what a reviewer may demand, never by
+   the request. Put the answers an earlier stage recorded on the same artifact into
    this review's request before dispatching reviewers, under
    `.qfai/assistant/rule/review-convergence.md#answered-demands`.
    For the code review, name each test the run recorded `red: ci-deferred`:
@@ -93,7 +95,8 @@ them; it is the procedure that applies them.
    the Domain Responsibilities of its card it checked, naming each one it
    found not applicable to the target and why, in the shared reviewer
    response template. A response that leaves a responsibility unaccounted for
-   is incomplete, and the reviewer is asked once to cover it.
+   is incomplete: it goes back to the reviewer to complete, and the completed
+   response is that reviewer's one response.
 3. **Address every finding** once: fix it in its owning source with the
    smallest edit that resolves it, or record a reasoned answer beside it, and
    rerun the tests a fix touches. An upstream finding is not repaired here:
