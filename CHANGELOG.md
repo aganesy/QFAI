@@ -14,6 +14,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A review request can add a focus but cannot drop a reviewer's check.**
+  `common-review-cycle` treats each reviewer card's Domain Responsibilities as
+  its checklist: the request may not tell a reviewer to check only some of
+  them, to look only for contract conformance, or not to flag a gap one
+  covers. Each reviewer names the responsibilities it checked and the ones not
+  applicable to the target, and the stage report records them. The four
+  reviewer cards sign off on the whole checklist.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
