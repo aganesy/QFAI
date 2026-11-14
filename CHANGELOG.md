@@ -14,6 +14,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A plain text the user needs stays, with its reason.** The implementation
+  UI guidance now holds the one copy of the procedure for a plain text in UI
+  source, and the `fullstack-engineer` card and the prototyping generator
+  prompt point to it. The procedure first keeps a text that tells the user a
+  result, a cost, a condition, a consequence, a destination, a recovery step or
+  an empty screen's next step, with its reason, and only then deletes,
+  replaces or moves any other text. The `QFAI-UITEXT-001` fix text gives the
+  same order.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
