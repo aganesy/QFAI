@@ -47,6 +47,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The UI contract guide says the contract is a floor.** A UI contract
+  lists what must be verifiable on a screen, not its whole inventory. The
+  built screen also carries the parts `interface-clarity.md` lists under
+  "What a business screen always has", which the contract need not repeat.
+
 - **A work order says which checks the worker runs and whether it may push.**
   The unit work order template gains `Local checks` and `Push` lines, and
   `delegation-steering.md` checks a delegated agent's first actions against
@@ -58,6 +63,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   against the UI contracts under `<paths.contractsDir>/ui/`, and the screen
   contracts review prompt, which nothing loaded and which reviewed that removed
   file, is gone.
+
+- **`interface-clarity.md` walks the user's job across screens.** Section 6
+  no longer stops at the tasks a surface declares. It walks the job from where
+  the user starts to the result and back, including jobs no contract names,
+  such as finding one record among many or recovering after an error, with a
+  realistic volume of data and, on a screen, at phone and desktop widths. A gap
+  that a business-screen part closes is a defect to fix; any other gap on a job
+  no contract names goes to the owner of the spec rather than being built.
 
 - **The product-surface reviewer no longer stops on standard screen parts.**
   Its stop condition covers configuration, animation and novel interaction
@@ -212,6 +225,12 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   the union-merge reason and how to resolve a conflict a host shows. The file
   is seeded only where none exists, so an existing `.gitattributes` keeps its
   old comment. Fixes #4173.
+
+- **This repository's build job reports every self-validate profile.** The
+  `tdd`, `sdd` and `full` runs of `qfai validate` were three steps, so a
+  failing `tdd` run skipped the other two and their errors showed only in a
+  later CI run. They now run in one step that runs all three and fails at the
+  end, naming each profile that failed. Fixes #4199.
 
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
