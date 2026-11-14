@@ -45,6 +45,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   profiles. A row that is empty, a template placeholder or states none raises
   nothing.
 
+- **A business UI pattern reference.** `qfai-sdd` ships
+  `references/business-ui-patterns.md`, which lists the standard parts, the
+  anti-patterns and the usual catalogue source of a list, detail, form,
+  settings, member-management and dashboard screen, and what every screen has.
+  The `sdd-contract` step, the `implement-tdd` step and the
+  product-surface reviewer cite it, and `interface-clarity.md` links to it: a
+  standard part of a screen type is written into the UI contract or left out
+  with a reason, and implementation raises a part the contract misses as drift
+  instead of building it.
+
 - **A UI contract screen lists its states.** The shipped
   `ui-contract.sample.yaml`, the UI contract guide, the contract artifact rules
   and the `sdd-contract` step give every screen a `states` list: `default`,
