@@ -48,8 +48,8 @@ async function findings(profile: ValidationProfile = "sdd"): Promise<Issue[]> {
 }
 
 describe("QFAI-STORY-021 warns about a catalogue with no registry", () => {
-  // QFAI:AC-0001-0305-01
-  // QFAI:EX-0001-0305-01
+  // QFAI:AC-0001-0306-01
+  // QFAI:EX-0001-0306-01
   it("raises one warning naming tech.md and the catalogue when no config declares a registry", async () => {
     await put(TECH, tech("`shadcn/ui`"));
     const reported = await findings();
@@ -59,11 +59,35 @@ describe("QFAI-STORY-021 warns about a catalogue with no registry", () => {
     expect(found?.file).toContain("tech.md");
     expect(found?.message).toContain("shadcn/ui");
     expect(found?.message).toContain("uiux.registries");
-    expect(ISSUE_EXPECTED_BY_CODE[CODE]).toBeDefined();
-    expect(found && resolveIssueFix(found)).toContain("uiux.registries");
+    expect(ISSUE_EXPECTED_BY_CODE[CODE]).toEqual(expect.stringMatching(/\S/));
+    const hint = found ? resolveIssueFix(found) : "";
+    expect(hint).toEqual(expect.stringMatching(/\S/));
+    expect(hint).toContain("uiux.registries");
+    expect(hint).toContain("exactly `none`");
   });
 
-  // QFAI:EX-0001-0305-02
+  // QFAI:EX-0001-0306-07
+  it("compares labels without case and names only the first code span of the cell", async () => {
+    await put(
+      TECH,
+      [
+        "# Technology",
+        "",
+        "## Stack",
+        "",
+        "| component | CHOICE |",
+        "| --- | --- |",
+        "| component catalogue | `shadcn/ui` (via components.json) |",
+        "",
+      ].join("\n"),
+    );
+    const reported = await findings();
+    expect(reported).toHaveLength(1);
+    expect(reported[0]?.message).toContain("catalogue shadcn/ui,");
+    expect(reported[0]?.message).not.toContain("via components.json");
+  });
+
+  // QFAI:EX-0001-0306-02
   it("raises it when uiux.registries is empty or holds no valid entry", async () => {
     await put(TECH, tech("`shadcn/ui`"));
     await put("qfai.config.yaml", "uiux:\n  registries: {}\n");
@@ -72,7 +96,7 @@ describe("QFAI-STORY-021 warns about a catalogue with no registry", () => {
     expect(await findings()).toHaveLength(1);
   });
 
-  // QFAI:EX-0001-0305-03
+  // QFAI:EX-0001-0306-03
   it("is reported in sdd, verify and full, and not in the other six profiles", async () => {
     await put(TECH, tech("`shadcn/ui`"));
     for (const profile of ["sdd", "verify", "full"] as const) {
@@ -92,8 +116,8 @@ describe("QFAI-STORY-021 warns about a catalogue with no registry", () => {
 });
 
 describe("QFAI-STORY-021 stays quiet when a registry serves the catalogue", () => {
-  // QFAI:AC-0001-0305-02
-  // QFAI:EX-0001-0305-04
+  // QFAI:AC-0001-0306-02
+  // QFAI:EX-0001-0306-04
   it("raises nothing when uiux.registries holds a valid entry", async () => {
     await put(TECH, tech("`shadcn/ui`"));
     await put(
@@ -105,12 +129,14 @@ describe("QFAI-STORY-021 stays quiet when a registry serves the catalogue", () =
 });
 
 describe("QFAI-STORY-021 reads only a row that names a catalogue", () => {
-  // QFAI:AC-0001-0305-03
-  // QFAI:EX-0001-0305-05
+  // QFAI:AC-0001-0306-03
+  // QFAI:EX-0001-0306-05
   it("raises nothing for the template placeholder, none, a none sentence or an empty cell", async () => {
     for (const cell of [
       "`<primary component catalogue, or none>`",
       "none",
+      "`none`",
+      "NONE",
       "None: the package is a command-line tool",
       "",
     ]) {
@@ -119,7 +145,7 @@ describe("QFAI-STORY-021 reads only a row that names a catalogue", () => {
     }
   });
 
-  // QFAI:EX-0001-0305-06
+  // QFAI:EX-0001-0306-06
   it("raises nothing with no tech.md, no Stack section or no Component catalogue row", async () => {
     expect(await findings()).toEqual([]);
     await put(TECH, "# Technology\n\n## Architecture\n\nNone.\n");

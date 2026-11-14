@@ -1,4 +1,4 @@
-# US-0001-0305: Validate warns when tech.md names a catalogue no registry serves
+# US-0001-0306: Validate warns when tech.md names a catalogue no registry serves
 
 ## User Story
 

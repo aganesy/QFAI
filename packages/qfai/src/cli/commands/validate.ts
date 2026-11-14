@@ -1411,7 +1411,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-020":
     "Rewrite the row under its ID in the short form: the decision and its reason in one to three sentences, with the detail where it already lives.",
   "QFAI-STORY-021":
-    "Add the catalogue's registry to `uiux.registries` in qfai.config.yaml, a name and a URL template carrying `{name}`, or state none in the Component catalogue row if the project adopts no catalogue.",
+    "Add the catalogue's registry to `uiux.registries` in qfai.config.yaml, a name and a URL template carrying `{name}`, or write exactly `none` in the Component catalogue row if the project adopts no catalogue.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it. Move a document no schema covers out of the spec tree.",
   "QFAI-DELIB-001":

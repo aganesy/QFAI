@@ -516,20 +516,24 @@ export async function validateCatalogueRegistry(
 
 /**
  * The catalogue the Stack table's `Component catalogue` row names, or null when
- * the row is absent, empty, an angle-bracket placeholder, or states none.
+ * the row is absent, empty, an angle-bracket placeholder, or states none. Labels
+ * compare without case. A cell holding an inline-code span names what its first
+ * span holds, so a note after it, such as `(via components.json)`, is left out.
  */
 function namedCatalogue(content: string): string | null {
   const section = extractH2Sections(content).get("Stack");
   const table = section === undefined ? undefined : parseAllMarkdownTables(section.body)[0];
   if (table === undefined) return null;
-  const component = table.headers.findIndex((header) => header.trim() === "Component");
-  const choice = table.headers.findIndex((header) => header.trim() === "Choice");
+  const column = (name: string): number =>
+    table.headers.findIndex((header) => header.trim().toLowerCase() === name);
+  const component = column("component");
+  const choice = column("choice");
   if (component < 0 || choice < 0) return null;
-  const row = table.rows.find((cells) => (cells[component] ?? "").trim() === "Component catalogue");
-  const value = (row?.[choice] ?? "")
-    .trim()
-    .replace(/^`+|`+$/g, "")
-    .trim();
+  const row = table.rows.find(
+    (cells) => (cells[component] ?? "").trim().toLowerCase() === "component catalogue",
+  );
+  const cell = (row?.[choice] ?? "").trim();
+  const value = (/`+([^`]*)`+/.exec(cell)?.[1] ?? cell).trim();
   if (value === "" || /^<.*>$/.test(value) || /^none\b/i.test(value)) return null;
   return value;
 }
