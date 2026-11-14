@@ -14,6 +14,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The search-protection hook keeps the fallback after a `cd` into a project
+  subdirectory.** In `cd packages/qfai && rg auth src/`, the denied search
+  keeps the AI-decided fallback, scoped to `packages/qfai/src`. The hook
+  follows a move only while it runs outside a pipeline and an `&&` joins it to
+  what comes next. A move joined by `||`, `;`, `&` or a new line, one CDPATH may
+  resolve, or a target that leaves the worktree keeps the fallback unavailable.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
