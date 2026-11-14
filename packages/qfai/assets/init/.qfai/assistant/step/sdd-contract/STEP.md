@@ -90,8 +90,8 @@ check the screen against `## What a business screen always has` in
 `.agents/rules/interface-clarity.md`: the app shell, navigation and home once
 per application, and on each screen the list behaviour, the empty, loading,
 error and success states and the feedback after a change. Add each part that
-applies and is missing, as elements, actions and `supplements` entries with
-their `when`. Such a part needs no example of its own unless it carries a
+applies and is missing: navigation in the screen's `navigation`, and the rest
+as elements, actions and `supplements` entries with their `when`. Such a part needs no example of its own unless it carries a
 business rule. A part left out gets its reason in that screen's contract, as
 the rule says.
 
