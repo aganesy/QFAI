@@ -120,7 +120,35 @@ export async function validateUiPlainText(
     } else {
       candidates = await markupCandidates(markupOf(source, extension));
     }
-    issues.push(...candidates.flatMap((candidate) => findingsFor(candidate, file)));
+    // A valid file reason stands for every text the file gives no reason of its own.
+    const recorded = fileReason(source);
+    const defect = recorded ? reasonDefect(recorded.body) : null;
+    if (recorded && defect !== null) {
+      issues.push(
+        issue(
+          "QFAI-UITEXT-002",
+          `The \`qfai-text-file\` reason ${defect}.`,
+          "error",
+          file,
+          RULE,
+          undefined,
+          "canonical",
+          "Write exactly `why=<why the file's texts must exist>; without=<what goes wrong without them>`, both non-empty and saying different things — or remove the comment and give each text its own reason.",
+          { loc: { line: recorded.line } },
+        ),
+      );
+    }
+    const shared = recorded && defect === null ? recorded.body : null;
+    issues.push(
+      ...candidates.flatMap((candidate) =>
+        findingsFor(
+          shared !== null && candidate.reason === null
+            ? { ...candidate, reason: shared }
+            : candidate,
+          file,
+        ),
+      ),
+    );
   }
   if (jsxFiles.length > 0 && !ts) {
     issues.push(
@@ -508,6 +536,16 @@ function findingsFor(candidate: Candidate, file: string): Issue[] {
       loc,
     ),
   ];
+}
+
+/** A `qfai-text-file` comment, which records one reason for every plain text in its file. */
+const FILE_REASON = /qfai-text-file:([\s\S]*?)(?:-->|\*\/)/;
+
+/** The body and line of the file's first `qfai-text-file` comment, or `null` when it has none. */
+function fileReason(source: string): { body: string; line: number } | null {
+  const match = FILE_REASON.exec(source);
+  if (!match) return null;
+  return { body: (match[1] ?? "").trim(), line: source.slice(0, match.index).split("\n").length };
 }
 
 /** What a `qfai-text` body lacks, or `null` when it holds a valid reason. */

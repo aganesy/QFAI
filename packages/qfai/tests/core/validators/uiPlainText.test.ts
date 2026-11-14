@@ -152,6 +152,33 @@ describe("a reason that leaves out what is asked fails", () => {
   });
 });
 
+// QFAI:EX-0001-0297-15
+describe("a file reason clears every text the file gives no reason of its own", () => {
+  it("clears a file's texts once, and fails a malformed one at its line", async () => {
+    const issues = await run({
+      "src/Help.tsx":
+        "/* qfai-text-file: why=This help page explains each billing term; without=Users misread their invoice */\nexport const Help = () => (\n  <div>\n    <p>Credits expire after a year.</p>\n    <p>Refunds return to the card used.</p>\n  </div>\n);\n",
+      "src/notes.html":
+        "<!-- qfai-text-file: why=Release notes are read as text; without=Users miss what changed -->\n<p>Exports now include tax.</p>\n<!-- qfai-text: why=a; without=a -->\n<p>Totals update nightly.</p>\n",
+      "src/Broken.tsx":
+        "\n/* qfai-text-file: why=Needed */\nexport const B = () => <p>Credits expire after a year.</p>;\n",
+      "src/Plain.tsx": "export const P = () => <p>Credits expire after a year.</p>;\n",
+    });
+    // A text's own reason is still checked, and a file without a file reason is unchanged.
+    const found = issues.map((each) => `${each.file}:${each.loc?.line} ${each.code}`).sort();
+    expect(found).toEqual([
+      "src/Broken.tsx:2 QFAI-UITEXT-002",
+      "src/Broken.tsx:3 QFAI-UITEXT-001",
+      "src/Plain.tsx:1 QFAI-UITEXT-001",
+      "src/notes.html:4 QFAI-UITEXT-002",
+    ]);
+    const fileDefect = issues.find(
+      (each) => each.file === "src/Broken.tsx" && each.loc?.line === 2,
+    );
+    expect(fileDefect?.message).toContain("`qfai-text-file`");
+  });
+});
+
 // QFAI:EX-0001-0297-06
 describe("a reason counts only before the text or its parent", () => {
   it("ignores a reason before an exempt element and one two levels up", async () => {

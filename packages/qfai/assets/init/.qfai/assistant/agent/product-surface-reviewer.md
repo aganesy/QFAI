@@ -90,7 +90,7 @@ specialization_tags:
   screen that hand-builds a control that catalogue has, and name the catalogue item. A named catalogue that
   the project never installed is one finding against the setup, not one per screen.
 - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
-- Judge each `qfai-text` reason comment in the UI source. `npx qfai validate` checks only that a reason
+- Judge each `qfai-text` and `qfai-text-file` reason comment in the UI source; a file reason must hold for every text it covers. `npx qfai validate` checks only that a reason
   is present and well formed; whether it is strong is this review's finding. Reject a generic reason
   ("helps the user", "for clarity") and a reason that restates the text. A text that could be deleted,
   replaced by another component or moved into a label, heading, button wording or empty state is
