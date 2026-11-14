@@ -235,7 +235,7 @@ describe("a step that may pass with evidence", () => {
     expect(section).toMatch(/an AC or BF annotation counts anywhere in such a file/i);
     expect(section).toMatch(/change no existing test in the file/i);
     expect(section).toMatch(
-      /the step then passes as Passes when states\. Procedure items 1 and 4 still apply\./i,
+      /the step then passes as Passes when states\. Procedure items 1, 4 and 5 still apply\./i,
     );
     const procedure = flat(
       sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Procedure"),
@@ -245,6 +245,21 @@ describe("a step that may pass with evidence", () => {
     expect(frontMatterOf(await readShipped("step/implement-scaffold/STEP.md")).purpose).toMatch(
       /or, in a project with purpose-named test files, by hand/i,
     );
+  });
+
+  it("sets up the component catalogue tech.md names before any example is implemented", async () => {
+    const text = await readShipped("step/implement-scaffold/STEP.md");
+    const section = flat(sectionOf(text, "## Component catalogue"));
+    expect(section).toMatch(
+      /skip this section when the `Component catalogue` row is missing, reads `none`, or still holds its template placeholder/i,
+    );
+    expect(section).toMatch(/install it with the setup command its own documentation gives/i);
+    expect(section).toMatch(/add its registry to `uiux\.registries` in `qfai\.config\.yaml`/i);
+    expect(section).toMatch(/install nothing and report the row and the reason/i);
+    expect(flat(sectionOf(text, "## Procedure"))).toMatch(
+      /5\. Set up the component catalogue as § Component catalogue says/i,
+    );
+    expect(await passesWhen("implement-scaffold")).toMatch(/§ Component catalogue needs no setup/i);
   });
 
   it("leaves no step with a skip condition a plan predicate decided", async () => {

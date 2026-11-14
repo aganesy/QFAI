@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The component catalogue that `tech.md` names is set up before screens
+  are built.** `implement-scaffold` installs the catalogue the `Component
+catalogue` row names with its own setup command and adds its registry to
+  `uiux.registries`, or reports why it could not. The `product-surface-reviewer`
+  and `implementation-reviewer` report a control hand-built where that
+  catalogue has one.
+
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
   `implementation-reviewer` reads every rule the changed master points to and
