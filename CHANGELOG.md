@@ -17,7 +17,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
   removed.** Validate parsed the setting but never read it, and no code read
   `ddpBannedPatterns.txt`. A config that still sets the key is accepted and
-  the key is ignored, as before.
+  the key, whatever its value, is ignored.
 
 ### Changed
 
