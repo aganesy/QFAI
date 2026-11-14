@@ -47,6 +47,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The UI contract guide says the contract is a floor.** A UI contract
+  lists what must be verifiable on a screen, not its whole inventory. The
+  built screen also carries the parts `interface-clarity.md` lists under
+  "What a business screen always has", which the contract need not repeat.
+
 - **A work order says which checks the worker runs and whether it may push.**
   The unit work order template gains `Local checks` and `Push` lines, and
   `delegation-steering.md` checks a delegated agent's first actions against
