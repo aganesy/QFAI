@@ -177,6 +177,8 @@
     "tests/assets/sddInstructionConsistency.test.ts",
     "tests/integration/sddRecordAnswerMapping.test.ts",
     "tests/assets/reviewWalkthroughCriteria.test.ts",
+    "tests/assets/sddContractScreenFloor.test.ts",
+    "tests/integration/sddContractScreenFloor.test.ts",
     "tests/assets/projectLayerFacts.test.ts",
     "tests/assets/skillInputsPriority.test.ts",
     "tests/assets/skillStartLoad.test.ts",
