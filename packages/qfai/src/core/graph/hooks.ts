@@ -573,6 +573,8 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   // Set by an unquoted `#` that starts a word, until the next newline.
   let commented = false;
   let stageStart = 0;
+  // The spans of bodies already skipped as data, which later checks do not read.
+  const skipped: [number, number][] = [];
   const flushWord = () => {
     if (word.length) words.push(word);
     word = "";
@@ -583,9 +585,11 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
    * when it is surely data, and every other body stays classified as shell text:
    *
    * - the command that receives it is a data reader (`cat` or `tee`) whose output goes
-   *   to no pipe, so no shell reads the body as a script;
-   * - the operator's line holds no comment, substitution, expansion, subshell or
-   *   arithmetic, and no `((` comes before it, so the `<<` is surely an operator;
+   *   to no pipe, descriptor, device or background job, so no shell reads it as a script;
+   * - the command text before the operator, less bodies already skipped, holds no comment,
+   *   expansion, substitution, subshell, assignment, pipe, background job,
+   *   line continuation or builtin that defines or redirects commands, so the `<<` is surely
+   *   an operator and `cat` is surely the program;
    * - the delimiter is literal text, as Bash reads it.
    */
   const readHeredocOperator = (index: number): number => {
@@ -626,15 +630,24 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     words.push(delimiter);
     const lineStart = command.lastIndexOf("\n", index) + 1;
     const lineEnd = command.indexOf("\n", index);
-    const before = command.slice(lineStart, index);
+    // The command text before the operator, less the bodies already skipped as data.
+    let earlier = "";
+    let from = 0;
+    for (const [start, end] of skipped) {
+      earlier += command.slice(from, start);
+      from = end;
+    }
+    earlier += command.slice(from, index);
     const after = command.slice(cursor, lineEnd < 0 ? command.length : lineEnd);
+    // Nothing earlier may define, redirect or start what could read the body later.
     const plain =
       !commented &&
-      !/[#`()]|\$[[{(]/.test(before) &&
-      !/[|`()]|\\\r?$/.test(after) &&
-      !/[$`()]/.test(command.slice(delimiterStart, cursor)) &&
-      !command.slice(0, index).includes("((") &&
-      command[lineStart - 2] !== "\\";
+      !/[#`()$=|]|(?<!&)&(?!&)|\\\r?\n/.test(earlier) &&
+      !/(?:^|[\s;&])(?:alias|function|exec|mkfifo|coproc|hash|enable|source|eval|trap|declare|typeset|export|readonly|set|shopt|builtin|command|unset|\.)(?=$|[\s;&])/.test(
+        earlier,
+      ) &&
+      !/[|`()]|\\\r?$|>&|\/dev\/(?!null\b)|\/proc\/|(?<!&)&(?!&)/.test(after) &&
+      !/[$`()]/.test(command.slice(delimiterStart, cursor));
     const reader = ["cat", "tee"].includes(words[0] ?? "");
     heredocs.push({ delimiter, stripTabs, data: plain && reader && stageStart >= lineStart });
     return cursor;
@@ -658,6 +671,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       }
       if (!closed) return index;
     }
+    skipped.push([index + 1, position]);
     return position - 1;
   };
   for (let index = 0; index < command.length; index += 1) {
@@ -695,8 +709,8 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       word = character;
     } else if (character === "\n" && !words.length && !word.length && upstream) {
       commented = false;
-      stageStart = index + 1;
       index = skipHeredocs(index);
+      stageStart = index + 1;
       continue;
     } else if (character === "|" || character === ";" || character === "&" || character === "\n") {
       flushWord();
@@ -709,11 +723,11 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
       else if (pipe && shell === "posix" && next === "&") index += 1;
       upstream = pipe ? stage : undefined;
       words = [];
-      stageStart = index + 1;
       if (character === "\n") {
         commented = false;
         index = skipHeredocs(index);
       }
+      stageStart = index + 1;
     } else if (/\s/.test(character)) {
       flushWord();
     } else if (

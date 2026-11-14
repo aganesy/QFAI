@@ -149,7 +149,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   or `tee` reads, with no pipe after it, is now read as data. Every other body
   stays classified as shell text: one handed to a shell, a pipe or `exec`, one
   after a `<<` inside quotes, a comment, an expansion or arithmetic, one with a
-  delimiter that is not literal, and one whose delimiter line never comes.
+  delimiter that is not literal, one whose delimiter line never comes, and one
+  after earlier text that could redefine `cat` or open a reader of its output.
 - **The search-protection hook denies a search with an input redirection
   attached to its name.** `grep</dev/null -r foo src` and `grep<&3 -r foo .`
   were allowed as outside the checked boundary, while `grep>/dev/null -r foo

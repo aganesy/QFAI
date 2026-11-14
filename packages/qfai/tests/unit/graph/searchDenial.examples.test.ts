@@ -163,6 +163,7 @@ it("allows here-document bodies that hold an apostrophe or a search word", () =>
     "cat > c.txt <<EOF\r\nrg auth packages/\r\nEOF\r\n",
     "cat<<EOF\nIt's data.\nEOF",
     "tee out.txt <<'EOF' >/dev/null\nIt's data.\nEOF",
+    "cat > a.md <<'EOF'\nIt's $x (a).\nEOF\ncat > b.md <<'EOF'\nIt's b.\nEOF\ngh issue create --body-file a.md",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("allow");
@@ -197,6 +198,13 @@ it("allows here-document bodies that hold an apostrophe or a search word", () =>
     "exec 0<<EOF\nrg auth packages/\nEOF\nbash",
     "x=$(cat <<EOF\nrg auth packages/\nEOF\n)",
     "bash <<B; cat <<A\nrg auth packages/\nB\nx\nA",
+    // Nothing earlier may redefine cat or open a reader of what it writes.
+    "cat(){ bash; }; cat <<EOF\nrg auth packages/\nEOF",
+    "alias cat=bash\ncat <<EOF\nrg auth packages/\nEOF",
+    "exec 3> >(bash)\ncat <<EOF >&3\nrg auth packages/\nEOF",
+    "mkfifo p; bash < p & cat <<EOF > p\nrg auth packages/\nEOF",
+    "cat <<EOF > /dev/fd/3\nrg auth packages/\nEOF",
+    "cat <<EOF &\nrg auth packages/\nEOF",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
