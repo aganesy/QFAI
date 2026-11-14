@@ -71,6 +71,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   body is checked like a `qfai-text` body, and a malformed one raises
   `QFAI-UITEXT-002` at its line. A prototype page's file reason is not read.
 
+- **A redesign has a method for surveying reference sites.** The new
+  `rule/references/visual-reference-survey.md`, which the research-first
+  protocol names for a whole-site redesign, a new product with no adopted
+  theme, or a survey the user asks for, sets the sample by stratum, grades
+  each site's acclaim by its evidence, removes duplicates before counting, and
+  records the same fields for every site. It ends in checked findings, put to
+  the user as one question, that land as Do and Don't points in root
+  `DESIGN.md` or as structure and elements of a UI contract.
+
 ### Removed
 
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
@@ -87,6 +96,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `01_policy/constraint.md`, and an item that breaks one is recorded with the
   region's procurement. The prototype review no longer blocks a native element
   chosen over a catalogue item.
+
+- **The business UI pattern list says where search, sort and paging run.**
+  The List entry gains a Behaviour list: list state in the screen's address,
+  search, filters, sort and paging on the server for a list that can outgrow
+  one page, the same normalisation for input and matched values, and capped,
+  validated page and sort values. A behaviour applies unless the UI contract
+  leaves it out with a reason, and the screen review treats a broken one as a
+  finding.
 
 - **`ui-procurement.md` requires each region's states to exist.** A region
   that loads data or accepts input lists its default, empty, loading, error
