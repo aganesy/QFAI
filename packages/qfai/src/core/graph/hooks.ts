@@ -569,7 +569,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   let quote: string | undefined;
   let afterRedirect: "" | "<" | ">" = "";
   // Here-documents whose bodies start after the next unquoted newline.
-  const heredocs: { delimiter: string; stripTabs: boolean }[] = [];
+  const heredocs: { delimiter: string; stripTabs: boolean; data: boolean }[] = [];
   // Set by an unquoted `#` that starts a word, until the next newline.
   let commented = false;
   let stageStart = 0;
@@ -580,8 +580,13 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   /**
    * Reads an unquoted `<<` or `<<-` operator and its delimiter word at `index`, pushes
    * both as words, and returns the index after the delimiter. The body is skipped only
-   * when it is surely data: not after a comment, not inside arithmetic, and not on a line
-   * that hands input to a shell, whose body is a script and stays classified.
+   * when it is surely data, and every other body stays classified as shell text:
+   *
+   * - the command that receives it is a data reader (`cat` or `tee`) whose output goes
+   *   to no pipe, so no shell reads the body as a script;
+   * - the operator's line holds no comment, substitution, expansion, subshell or
+   *   arithmetic, and no `((` comes before it, so the `<<` is surely an operator;
+   * - the delimiter is literal text, as Bash reads it.
    */
   const readHeredocOperator = (index: number): number => {
     if (word.length && !/^\d+$/.test(word)) flushWord();
@@ -591,6 +596,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     words.push(`${word}<<${stripTabs ? "-" : ""}`);
     word = "";
     while (command[cursor] === " " || command[cursor] === "\t") cursor += 1;
+    const delimiterStart = cursor;
     let delimiter = "";
     let read = false;
     let delimiterQuote: string | undefined;
@@ -620,24 +626,37 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     words.push(delimiter);
     const lineStart = command.lastIndexOf("\n", index) + 1;
     const lineEnd = command.indexOf("\n", index);
-    const line = command.slice(lineStart, lineEnd < 0 ? command.length : lineEnd);
-    const feedsShell = /(?:^|[\s|;&(`/])(?:(?:ba|z|da|k)?sh|eval|source)(?=$|[\s|;&)<>])/.test(
-      line,
-    );
-    const arithmetic = command.slice(stageStart, index).includes("((");
-    if (!commented && !arithmetic && !feedsShell) heredocs.push({ delimiter, stripTabs });
+    const before = command.slice(lineStart, index);
+    const after = command.slice(cursor, lineEnd < 0 ? command.length : lineEnd);
+    const plain =
+      !commented &&
+      !/[#`()]|\$[[{(]/.test(before) &&
+      !/[|`()]|\\\r?$/.test(after) &&
+      !/[$`()]/.test(command.slice(delimiterStart, cursor)) &&
+      !command.slice(0, index).includes("((") &&
+      command[lineStart - 2] !== "\\";
+    const reader = ["cat", "tee"].includes(words[0] ?? "");
+    heredocs.push({ delimiter, stripTabs, data: plain && reader && stageStart >= lineStart });
     return cursor;
   };
-  // Skips the bodies of pending here-documents after the newline at `index`; their text is data.
+  /**
+   * Skips the bodies of pending here-documents after the newline at `index`. A body
+   * whose delimiter line never comes is not skipped, and when any body on the line is
+   * not data none is skipped, so no text is hidden on a guess.
+   */
   const skipHeredocs = (index: number): number => {
     let position = index + 1;
-    for (const { delimiter, stripTabs } of heredocs.splice(0)) {
-      while (position < command.length) {
+    const pending = heredocs.splice(0);
+    if (!pending.every((heredoc) => heredoc.data)) return index;
+    for (const { delimiter, stripTabs } of pending) {
+      let closed = false;
+      while (position < command.length && !closed) {
         const end = command.indexOf("\n", position);
         const line = command.slice(position, end < 0 ? command.length : end).replace(/\r$/, "");
         position = end < 0 ? command.length : end + 1;
-        if ((stripTabs ? line.replace(/^\t+/, "") : line) === delimiter) break;
+        closed = (stripTabs ? line.replace(/^\t+/, "") : line) === delimiter;
       }
+      if (!closed) return index;
     }
     return position - 1;
   };

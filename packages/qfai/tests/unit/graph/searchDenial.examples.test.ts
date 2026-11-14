@@ -154,7 +154,7 @@ it("allows quoted search words printed without invoking search", () => {
 });
 
 // QFAI:EX-0001-0235-29
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!commented && !arithmetic && !feedsShell) heredocs.push({ delimiter, stripTabs });` -> `` fails "allows here-document bodies that hold an apostrophe or a search word"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `heredocs.push({ delimiter, stripTabs, data: plain && reader && stageStart >= lineStart });` -> `heredocs.push({ delimiter, stripTabs, data: false });` fails "allows here-document bodies that hold an apostrophe or a search word"
 it("allows here-document bodies that hold an apostrophe or a search word", () => {
   for (const command of [
     "cat > notes.md <<'EOF'\nThe hook doesn't search.\nEOF\ngh issue create --body-file notes.md",
@@ -162,7 +162,7 @@ it("allows here-document bodies that hold an apostrophe or a search word", () =>
     'cat <<-"END" > b.txt\n\tIt\'s data.\n\tEND\necho done',
     "cat > c.txt <<EOF\r\nrg auth packages/\r\nEOF\r\n",
     "cat<<EOF\nIt's data.\nEOF",
-    "cat <<EOF |\nIt's data.\nEOF\nwc -l",
+    "tee out.txt <<'EOF' >/dev/null\nIt's data.\nEOF",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("allow");
@@ -179,9 +179,24 @@ it("allows here-document bodies that hold an apostrophe or a search word", () =>
     "cat <<<x\nrg auth packages/",
     // An empty quoted delimiter ends the body at the first empty line.
     "cat <<'' x\nbody\n\nrg auth packages/\nx",
-    // A body handed to a shell is a script, so it stays classified.
+    "echo $[1<<2]\nrg auth packages/",
+    "echo ${x:-<<EOF}\nrg auth packages/",
+    "(true)#<<EOF\nrg auth packages/",
+    "for ((i=0; i<1<<2; i++)); do :; done\nrg auth packages/",
+    // A delimiter that is not literal text is not read as Bash reads it.
+    "cat <<$'EOF'\nx\nEOF\nrg auth packages/",
+    // A body with no delimiter line is not skipped.
+    "cat <<EOF\nrg auth packages/",
+    // Only a body that cat or tee reads, and that reaches no pipe, is data.
     "bash <<'EOF'\nrg auth packages/\nEOF",
+    "'bash' <<EOF\nrg auth packages/\nEOF",
+    "bash.exe <<EOF\nrg auth packages/\nEOF",
+    ". /dev/stdin <<EOF\nrg auth packages/\nEOF",
     "cat <<'EOF' | sh\nrg auth packages/\nEOF",
+    "cat <<EOF |\nrg auth packages/\nEOF\nbash",
+    "exec 0<<EOF\nrg auth packages/\nEOF\nbash",
+    "x=$(cat <<EOF\nrg auth packages/\nEOF\n)",
+    "bash <<B; cat <<A\nrg auth packages/\nB\nx\nA",
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", command });
     expect(result.decision, command).toBe("deny");
