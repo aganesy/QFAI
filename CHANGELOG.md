@@ -367,11 +367,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **Research checks the version a dependency source describes.** The
   research-first protocol's new Version Rule records the package and version a
-  source about a library, catalogue or framework describes, reads the installed
-  version from the lockfile or package manifest, and adds a version warning
-  when the major versions differ or the package is not installed. An entry
-  from a source with that warning is applied only when its reason says what
-  was checked against the installed version.
+  source about a library, catalogue, framework or runtime describes, reads
+  every lockfile, manifest or pin that declares it, and adds a version warning
+  when a pinned version differs in its breaking part or nothing pins it. An
+  entry from a warned source is applied only after it is checked against the
+  installed version, or, for a package still being evaluated, against the
+  version the project would adopt.
 
 ### Fixed
 

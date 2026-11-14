@@ -177,13 +177,16 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       const protocol = await readFile(protocolPath, "utf-8");
       const rule = section(protocol, "## Version Rule").replace(/\s+/g, " ");
       expect(rule).toContain("Record the `package` and the `version` the source describes");
-      expect(rule).toContain("read the installed version from the project's lockfile");
-      expect(rule).toContain("the major versions differ, or");
-      expect(rule).toContain("the project does not install the package.");
+      expect(rule).toContain("every lockfile or manifest that declares the package");
+      expect(rule).toContain("the minor version below 1.0");
+      expect(rule).toContain("the entry's `reason` then names the version the project would adopt");
       expect(protocol).toContain("version_warnings:");
+      for (const field of ["package: string", "version: string", "installed: string"]) {
+        expect(protocol, field).toContain(field);
+      }
       const applying = section(protocol, "## Applying an External Source").replace(/\s+/g, " ");
       expect(applying).toContain(
-        "An entry whose source has a version warning is `apply` only when its `reason` names what was checked against the installed version.",
+        "An entry whose source has a version warning is `apply` only when its `reason` names what was checked against the installed version or, for a package not installed yet, against the version the project would adopt.",
       );
     });
   }
