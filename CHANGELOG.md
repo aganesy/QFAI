@@ -14,6 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Every UI contract screen states its purpose and its place in the app.**
+  The shipped `ui-contract.sample.yaml` gives each screen a `purpose` and a
+  `navigation` with `shell`, `entry_points` and `back_to`. The UI contract
+  guide, the contract rules and the `sdd-contract` step say every screen
+  carries them. `npx qfai validate` does not check these keys.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an

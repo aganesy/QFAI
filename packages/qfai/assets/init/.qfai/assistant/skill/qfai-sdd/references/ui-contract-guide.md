@@ -7,6 +7,7 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 
 - `screens[].primary_tasks` shape
 - Recommended ceiling: at most 7
+- Screen purpose and navigation: `purpose` and `navigation`
 - `elements[].id` naming policy
 - `elements[].label` is inspection-target text
 - `data-qfai` marker convention
@@ -69,6 +70,24 @@ this ceiling exists to protect, so it passes silently like any other.
 
 The ceiling of 7 reflects multi-screen SaaS and dashboard workloads,
 where 5 or 6 primary tasks per surface is common.
+
+## Screen purpose and navigation: `purpose` and `navigation`
+
+Every screen states why it exists and where it sits in the app, so it is built
+inside the app rather than as a standalone page reached through a list of
+links.
+
+| Key                       | Holds                                                          |
+| ------------------------- | -------------------------------------------------------------- |
+| `purpose`                 | why the screen exists, in one sentence                         |
+| `navigation.shell`        | the app frame the screen renders inside, such as the app shell |
+| `navigation.entry_points` | the screens, menus or actions that lead to it, at least one    |
+| `navigation.back_to`      | the route the user returns to from it                          |
+
+A screen with no frame, such as a sign-in page, says so in `shell`. A top-level
+screen with nowhere to return to says so in `back_to`. `npx qfai validate` does
+not check these keys; they describe the screen for the implementer and the
+reviewer.
 
 ## `elements[].id` naming policy
 
@@ -278,6 +297,7 @@ For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by 
 ## Review checklist
 
 - [ ] Every UI-bearing contract has one full declared ID, at least one screen, and a matching `contracts.md` row.
+- [ ] Every screen states its `purpose` and its `navigation`: shell, entry points and where back leads.
 - [ ] Screen IDs, routes, primary tasks, labels, markers, and actions are stable and testable.
 - [ ] Every declared action has an observable effect, including relevant failure states.
 - [ ] No supplement restates a label, heading or action the screen already shows, and none is development commentary.
