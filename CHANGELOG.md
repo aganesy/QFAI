@@ -207,6 +207,12 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   is seeded only where none exists, so an existing `.gitattributes` keeps its
   old comment. Fixes #4173.
 
+- **This repository's build job reports every self-validate profile.** The
+  `tdd`, `sdd` and `full` runs of `qfai validate` were three steps, so a
+  failing `tdd` run skipped the other two and their errors showed only in a
+  later CI run. They now run in one step that runs all three and fails at the
+  end, naming each profile that failed. Fixes #4199.
+
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
   with no file operand and only known options, such as
