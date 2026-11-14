@@ -486,6 +486,11 @@ function classifyCommand(
     return classifyCommand(words.slice(skip), context, depth + 1);
   }
   if (words[0] === "fi" || words[0] === "done") return undefined;
+  // The `))` that closes a `for ((...))` header ends the last word of a header part, and
+  // the loop body after it, `{ ...; }` or `do ...`, still runs.
+  if (/\)\)$/.test(words[0] ?? "") && (words[1] === "{" || words[1] === "do")) {
+    return classifyCommand(words.slice(1), context, depth + 1);
+  }
   // A `{ ...; }` group and a `case` command's first arm run the command after their
   // opening words. `classifyCommands` strips the pattern of each later arm. A group
   // keeps the pipeline stage before it, so `git log | { grep fix; }` is a filter.

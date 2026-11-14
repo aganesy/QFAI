@@ -1053,6 +1053,29 @@ it("denies a search after a compound-command keyword", () => {
 });
 
 // QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (/\)\)$/.test(words[0] ?? "") && (words[1] === "{" || words[1] === "do")) {` -> `if (false) {` fails "denies a search in the body of an arithmetic for loop"
+it("denies a search in the body of an arithmetic for loop", () => {
+  for (const command of [
+    "for ((;;)) { rg auth packages/; }",
+    "for ((i=0; i<1; i++)) { rg auth packages/; }",
+    "for ((i=0; i<1; i++)) do rg auth packages/; done",
+    "for ((i=0; i<1; i++ #\n)) { rg auth packages/; }",
+    "for ((i=0; i<1; i++ #\n)); do rg auth packages/; done",
+    "for ((i=0;\ni<1;\ni++)); do rg auth packages/; done",
+  ]) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("rg");
+  }
+  for (const command of [
+    "for ((i=0; i<1; i++)) { echo ok; }",
+    "for ((i=0; i<1; i++)); do echo ok; done",
+  ]) {
+    expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
+  }
+});
+
+// QFAI:EX-0001-0235-27
 // Mutation: packages/qfai/src/core/graph/hooks.ts `command[index - 1] !== "@"` -> `false` fails "denies a search inside a PowerShell script block"
 it("denies a search inside a PowerShell script block", () => {
   for (const command of [
