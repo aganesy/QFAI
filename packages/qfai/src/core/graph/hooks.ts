@@ -466,19 +466,27 @@ const COMPOUND_KEYWORDS: readonly string[] = [
  * The loop body after the last part of a `for ((...))` header. The tokenizer splits the
  * header at its `;`, so its last part is a command whose words hold the closing `))`,
  * alone (`i++ ))`), at the end of a word (`i++))`) or before an unspaced `{` (`)){`).
- * The words after it, a `{ ...; }` group or `do ...`, run as the loop body. Unquoted, a
- * `)` outside such a header is a syntax error, so no runnable command matches.
+ * Parentheses inside that part, as in `i+=$((1))`, are balanced, so the closing `))` is
+ * the one that takes the count of `(` minus `)` to -2. The words after it, a `{ ...; }`
+ * group or `do ...`, run as the loop body. Unquoted, a `)` that no `(` in the command
+ * opened is a syntax error outside such a header, so no runnable command matches.
  * Ceiling: the tokenizer drops quotes, so `echo "a))" do rg ...` is read as a header and
  * denied. Keeping quote marks on words lifts this.
  */
 function arithmeticForBody(words: string[]): string[] | undefined {
-  const close = words.findIndex((word) => word.includes("))"));
-  const word = words[close];
-  if (word === undefined || word.includes("((")) return undefined;
-  if (words.slice(0, close).some((before) => before.includes("("))) return undefined;
-  const rest = word.slice(word.indexOf("))") + 2);
-  const body = rest === "" ? words.slice(close + 1) : [rest, ...words.slice(close + 1)];
-  return body[0] === "{" || body[0] === "do" ? body : undefined;
+  let depth = 0;
+  for (const [index, word] of words.entries()) {
+    for (let offset = 0; offset < word.length; offset += 1) {
+      if (word[offset] === "(") depth += 1;
+      else if (word[offset] === ")") depth -= 1;
+      if (depth > -2) continue;
+      if (word[offset - 1] !== ")") return undefined;
+      const rest = word.slice(offset + 1);
+      const body = rest === "" ? words.slice(index + 1) : [rest, ...words.slice(index + 1)];
+      return body[0] === "{" || body[0] === "do" ? body : undefined;
+    }
+  }
+  return undefined;
 }
 
 function classifyCommand(
