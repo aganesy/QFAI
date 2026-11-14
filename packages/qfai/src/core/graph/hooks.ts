@@ -1150,6 +1150,9 @@ function substitutionBodies(text: string, shell: GraphShell, nested = false): st
     } else if (
       !quote &&
       character === "(" &&
+      // The first `(` of a POSIX `((` arithmetic command opens no subshell; the scan moves
+      // on to the second, whose body the comment reader then knows is arithmetic.
+      !(shell === "posix" && command[index + 1] === "(") &&
       // A POSIX subshell starts a command, and zsh `=(...)` starts a word; any other
       // `(`, such as an array's in `name=(...)`, is data, scanned on.
       (shell === "powershell" ||
@@ -1380,10 +1383,25 @@ function commandPosition(command: string, index: number, start: number): boolean
  * command starts, so an argument such as `test/case` opens no case.
  * A comment runs as the shell reads it, so a `)` or a quote inside it closes and opens
  * nothing: in POSIX text a `#` that starts a word runs to the end of its line, unless an
- * untracked context comes before it (`inUntrackedContext`), and in PowerShell a `#` that
+ * untracked context or arithmetic comes before it (`inArithmeticOrUntracked`), and in PowerShell a `#` that
  * starts a token runs to the end of its line and a `<#` runs to its `#>`. A block comment
  * with no `#>` leaves no end.
  */
+/**
+ * Whether a POSIX `#` at `index`, inside a parenthesis that opened just before `start`,
+ * may sit in a context where the shell starts no comment: an untracked context before it,
+ * or arithmetic, which a body cut from `((` no longer shows as `((`, so a body that opens
+ * with `(` or holds `((` counts as arithmetic too.
+ */
+function inArithmeticOrUntracked(command: string, start: number, index: number): boolean {
+  return (
+    inUntrackedContext(command, index) ||
+    command[start] === "(" ||
+    command[start - 2] === "(" ||
+    command.slice(start, index).includes("((")
+  );
+}
+
 function closingParenthesis(command: string, start: number, escape: string): number | undefined {
   let depth = 1;
   let quote: string | undefined;
@@ -1404,7 +1422,7 @@ function closingParenthesis(command: string, start: number, escape: string): num
     } else if (
       character === "#" &&
       (index === start || (posix ? WORD_BREAK : /[ \t\n;|&(]/).test(previous)) &&
-      (!posix || !inUntrackedContext(command, index))
+      (!posix || !inArithmeticOrUntracked(command, start, index))
     ) {
       const end = command.indexOf("\n", index);
       if (end === -1) return undefined;
