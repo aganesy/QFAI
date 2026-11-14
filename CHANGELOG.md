@@ -64,6 +64,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contracts review prompt, which nothing loaded and which reviewed that removed
   file, is gone.
 
+- **`interface-clarity.md` walks the user's job across screens.** Section 6
+  no longer stops at the tasks a surface declares. It walks the job from where
+  the user starts to the result and back, including jobs no contract names,
+  such as finding one record among many or recovering after an error, with a
+  realistic volume of data and, on a screen, at phone and desktop widths. A gap
+  that a business-screen part closes is a defect to fix; any other gap on a job
+  no contract names goes to the owner of the spec rather than being built.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
@@ -76,13 +84,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   record that discusses the screens is history while the UI contract is the
   execution authority.
 
-- **The product-surface review checks every screen for missing states and a
-  weak structure.** The `product-surface-reviewer` card now applies the
-  _Information architecture and flow_ and _States and accessibility_ sections
-  of `design-anti-patterns.md` on every review, not only the copy section, so
-  a missing empty, error or success state or a data-heavy screen with no table
-  is reported even when no acceptance criterion names it. Each finding's
-  severity still follows the shared reviewer findings rule.
+- **Every UI contract screen states its purpose and its place in the app.**
+  The shipped `ui-contract.sample.yaml` gives each screen a `purpose` and a
+  `navigation` with `shell`, `entry_points` and `back_to`. The UI contract
+  guide, the contract rules and the `sdd-contract` step say every screen
+  carries them. `npx qfai validate` does not check these keys.
 
 - **`.agents/rules/grilling.md` keeps on-demand procedures in skill
   references.** The bounds of a delegated discussion, the glossary check and
@@ -103,6 +109,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   commits it with the change, and a stage skill run by name commits locally
   only the record and its `open-questions.md` rows at its last step. The
   story tree, `decisions.md` and `open-questions.md` stay the current state.
+
+- **The product-surface review checks every screen for missing states and a
+  weak structure.** The `product-surface-reviewer` card now applies the
+  _Information architecture and flow_ and _States and accessibility_ sections
+  of `design-anti-patterns.md` on every review, not only the copy section, so
+  a missing empty, error or success state or a data-heavy screen with no table
+  is reported even when no acceptance criterion names it. Each finding's
+  severity still follows the shared reviewer findings rule.
 
   - The discussion pack (`.qfai/discussion/discussion-<timestamp>/`), its
     templates, `prototyping.yaml` and the `uiux/` sidecars are removed. The
@@ -157,6 +171,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   6. Replace `qfai discussion use` and the pack path in scripts with
      `qfai sdd preflight --record <path>`, and read `source` from the new
      values.
+
+- **Verify checks the screens of a UI change.** `verify-repo-gate` adds a
+  `visual check` gate for a change under `uiux.surfacePaths`: the captures of
+  each changed screen are checked against its UI contract and the parts the
+  UI contract guide requires. A screen with no capture leaves the gate UNRUN,
+  never PASS.
 
 - **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.15.7.** The
   document-schema checker the docs lane runs moves from 0.15.5 to 0.15.7, the

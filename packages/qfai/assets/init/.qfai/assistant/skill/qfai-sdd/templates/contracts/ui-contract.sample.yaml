@@ -26,6 +26,18 @@ screens:
     # under `structure`.
     title: Create Order
     route: /orders/new
+    # purpose: why the screen exists, in one sentence the user would agree with.
+    # navigation: where the screen sits in the app. `shell` names the app frame
+    # it renders inside, `entry_points` the screens or menus that lead to it,
+    # and `back_to` the route the user returns to. These keys describe the
+    # screen; validate does not check them.
+    purpose: Record a customer's order so it can be fulfilled or finished later.
+    navigation:
+      shell: main app shell with the role's navigation
+      entry_points:
+        - New order button on /orders
+        - Orders item in the main navigation
+      back_to: /orders
     # primary_tasks: at least one entry required per screen (QFAI-AUD-001).
     # Recommended ceiling: at most 7 entries per screen (QFAI-AUD-020).
     # More than 7 warns at validate time. The required minimum is one: a screen

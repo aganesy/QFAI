@@ -121,7 +121,10 @@ Minimal conforming example for the prototyping gate:
 
 Rules:
 
-- A PASS gate needs actual command output or matching CI evidence. The existing
+- A PASS gate needs actual command output or matching CI evidence. The
+  `visual check` gate of a UI change has no command: its `command` lists the
+  captures it read, and a capture of every changed screen at the verified
+  revision is its evidence. The existing
   top-level pending-DELEGATED allowance supports only the covered verification
   commit described above. A `FAIL` verdict is a legitimate output; downstream
   work stops as its gate requires.

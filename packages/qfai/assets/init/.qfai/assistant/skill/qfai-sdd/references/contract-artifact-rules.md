@@ -32,6 +32,8 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
 ## Rules
 
 - Keep contract files minimal: only what flows, stories, and tests actually reference.
+- Every entry in a UI contract's `screens[]` states its `purpose` and its
+  `navigation`: the shell it renders in, its entry points and where back leads.
 - Every entry in a UI contract's `screens[]` carries at least one
   `primary_task`. An empty `primary_tasks` array blocks `/qfai-prototyping` at
   the validate lane, under `QFAI-AUD-001`. The shipped `ui-contract.sample.yaml`
