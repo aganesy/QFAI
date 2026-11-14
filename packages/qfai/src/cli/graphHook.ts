@@ -92,7 +92,7 @@ export async function runInstalledGraphHook(
   if (decision.decision === "deny")
     io.output(JSON.stringify(graphHookOutput(host, decision)) + "\n");
   if (decision.state === "failed") {
-    io.error("Graph protection failed. Repair the project hook and enforcement configuration.\n");
+    io.error(`${decision.message}\n`);
     io.fail();
   }
 }

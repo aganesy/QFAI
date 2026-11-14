@@ -66,3 +66,59 @@ it("denies invalid classifier input and enforcement configuration with repair gu
     ).decision,
   ).toBe("allow");
 });
+
+// QFAI:EX-0001-0235-22
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!commands) return failedGraphHook("quote");` -> `if (!commands) return failedGraphHook();` fails "names what it could not read instead of asking to repair a valid configuration"
+it("names what it could not read instead of asking to repair a valid configuration", async () => {
+  const unclosed = enforceGraphExploration(
+    { tool_name: "Bash", tool_input: { command: 'echo "unclosed' } },
+    configured,
+  );
+  expect(unclosed).toMatchObject({ decision: "deny", state: "failed" });
+  expect(unclosed.message).toContain("a quote is not closed");
+  expect(unclosed.message).not.toContain("Repair");
+
+  const nestedQuote = enforceGraphExploration(
+    { tool_name: "Bash", tool_input: { command: 'bash -c "echo \'open"' } },
+    configured,
+  );
+  expect(nestedQuote.message).toContain("a quote is not closed");
+
+  const deep = enforceGraphExploration(
+    { tool_name: "Bash", tool_input: { command: `${"env ".repeat(20)}rg auth packages/` } },
+    configured,
+  );
+  expect(deep).toMatchObject({ decision: "deny", state: "failed" });
+  expect(deep.message).toContain("more than 16 levels deep");
+  expect(deep.message).not.toContain("Repair");
+
+  const input = enforceGraphExploration({ tool_name: "Bash", tool_input: {} }, configured);
+  expect(input.message).toContain("pre-tool input");
+  const configuration = enforceGraphExploration(
+    { tool_name: "Bash", tool_input: { command: "pnpm test" } },
+    {},
+  );
+  expect(configuration.message).toContain(".qfai/tools/graph-enforcement.json");
+
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-hook-unreadable-"));
+  try {
+    await mkdir(path.join(root, ".qfai", "tools"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "tools", "graph-enforcement.json"),
+      JSON.stringify(configured),
+    );
+    let error = "";
+    await runInstalledGraphHook(root, ["claude"], {
+      read: () => ({ tool_name: "Bash", tool_input: { command: 'echo "unclosed' } }),
+      output: () => {},
+      error: (text) => {
+        error += text;
+      },
+      fail: () => {},
+    });
+    expect(error).toContain("a quote is not closed");
+    expect(error).not.toContain("Repair");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
