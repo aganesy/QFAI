@@ -34,12 +34,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The test-layers rule recommends one navigation journey per role.** Where
-  an app has its own navigation, an E2E test signs in as each role and reaches
-  every screen the UI contracts declare for that role through the app's own
-  links and controls, so the suite catches a screen reachable only by typing
-  its URL.
-
 - **A work order says which checks the worker runs and whether it may push.**
   The unit work order template gains `Local checks` and `Push` lines, and
   `delegation-steering.md` checks a delegated agent's first actions against
@@ -149,6 +143,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   says to record the chosen option's label as a rendering in the file's
   language followed by `(translated)`, so a language scan on the file does not
   fail on the user's wording.
+
+- **The test-layers rule recommends one navigation journey per role.** Where
+  an app has its own navigation, an E2E test signs in as each role and reaches
+  every screen the UI contracts declare for that role through the app's own
+  links and controls, so the suite catches a screen reachable only by typing
+  its URL.
 
 - **The launcher preflight moved into its own short reference.** It now lives
   in `.qfai/assistant/rule/references/launcher-preflight.md`, and the shared
