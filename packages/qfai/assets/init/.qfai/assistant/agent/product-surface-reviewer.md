@@ -90,7 +90,8 @@ specialization_tags:
   is present and well formed; whether it is strong is this review's finding. Reject a generic reason
   ("helps the user", "for clarity") and a reason that restates the text. A text that could be deleted,
   replaced by another component or moved into a label, heading, button wording or empty state is
-  excess even with a reason.
+  excess even with a reason, unless it tells the user a result, a cost, a condition, a consequence, a
+  destination, a recovery step or an empty state's next step: such a text stays with its reason.
 - Judge whether the copy a UI contract describes (`supplements`, group headings) is needed at all.
   Name the screen, the task or state, the duplicated meaning or unmet need, and the text to remove or the control or structure to repair.
   Apply `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`.

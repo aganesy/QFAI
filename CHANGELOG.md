@@ -111,6 +111,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
   is unchanged.
 
+- **A plain text the user needs stays, with its reason.** The implementation
+  UI guidance now holds the one copy of the procedure for a plain text in UI
+  source, and the `fullstack-engineer` card and the prototyping generator
+  prompt point to it. The procedure first keeps a text that tells the user a
+  result, a cost, a condition, a consequence, a destination, a recovery step or
+  an empty screen's next step, with its reason, and only then deletes,
+  replaces or moves any other text. The `QFAI-UITEXT-001` fix text gives the
+  same order.
+
 - **The home screen counts as one view.** `interface-clarity.md` § 4 says
   the home, like any dashboard, has the one purpose "see what needs
   attention", and each of its parts links to the view that does the work.
