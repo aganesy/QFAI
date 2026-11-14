@@ -1,5 +1,5 @@
 /**
- * The business UI pattern reference (#4140).
+ * The business UI pattern reference.
  *
  * Without a description of what a standard screen of each type contains, the
  * agent's idea of done was the UI contract. The reference lists the parts of
