@@ -68,6 +68,16 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(reviewer).toContain("For UI work, inspect the rendered surface");
   });
 
+  // The qfai-sdd UI contract guide defines no states key, so a capture of declared
+  // states alone showed only the normal path. List and form screens get the
+  // standard states they have captured.
+  it("captures the empty, error and success states of every list and form screen", async () => {
+    const text = await read("skill/qfai-implement/references/ui-affecting.md");
+    expect(text.replace(/\s+/g, " ")).toContain(
+      "A screen that lists records or takes input also gets the empty, error and success states it has captured, whether or not a contract declares them.",
+    );
+  });
+
   it("names the layers a UI test's annotations belong in where UI work is implemented", async () => {
     const tdd = (await read("step/implement-tdd/STEP.md")).replace(/\s+/g, " ");
     expect(tdd).toContain(
