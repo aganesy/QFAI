@@ -14,6 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`ui-procurement.md` requires each region's states to exist.** A region
+  that loads data or accepts input lists its default, empty, loading, error
+  and success states and what realises each one. A state it cannot reach is
+  marked not applicable with the reason, and one app-wide fallback no longer
+  counts as a region's loading or error state.
+
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
   nothing, or took no agent decision, keeps that section's heading with an
