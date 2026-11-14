@@ -782,10 +782,67 @@ it("ends a # comment at its line so a quote inside it hides no later search", ()
   for (const command of ["echo hi # rg auth packages/", "echo hi # $(rg auth packages/)"]) {
     expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
   }
-  // PowerShell comments are not read, so a `#` there hides no substitution.
+  // A PowerShell block comment ends at its `#>`, and a `#` inside a word
+  // starts no comment, so neither hides a later substitution.
   for (const command of ["<# x #> $(rg auth packages/)", "echo @(1)#$(rg auth packages/)"]) {
     const result = classifyGraphExploration({ tool: "PowerShell", command });
     expect(result.decision, command).toBe("deny");
     expect(result.operation, command).toBe("rg");
+  }
+});
+
+// QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `index = end + 1;` -> `index = command.length;` fails "reads PowerShell line and block comments so a command after either is classified"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (end === -1) return undefined;` -> `if (end === -1) break;` fails "reads PowerShell line and block comments so a command after either is classified"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `wordStarted = !POWERSHELL_BREAK.test(character);` -> `wordStarted = false;` fails "reads PowerShell line and block comments so a command after either is classified"
+it("reads PowerShell line and block comments so a command after either is classified", () => {
+  for (const command of [
+    // The report: a block comment before a search, and a quote in a line
+    // comment before a search on the next line.
+    "<# x #> rg auth packages/",
+    "Write-Output x # '\nrg auth packages/",
+    "<# it's a note #> rg auth packages/",
+    "<# a\n' b #>\nrg auth packages/",
+    "# it's a note\nrg auth packages/",
+    "Write-Output x; # '\nrg auth packages/",
+    "Write-Output x | <# ' #> rg auth packages/",
+    // Where the start of a token is not certain, the comment markers separate
+    // commands, so what lies between and after them is still read.
+    "Write-Output a<# x #>rg auth packages/",
+    "$(<# x #> rg auth packages/)",
+    "Write-Output @(1) <# x #> rg auth packages/",
+    "Write-Output @(1)<#; rg auth packages/; #>",
+    // In a here-string a comment marker is data.
+    '@"\n<#\n"@\nrg auth packages/ #>',
+    '@"\n# \n"@\nrg auth packages/',
+    // A `#` inside a word starts no comment.
+    "Write-Output a#b; rg auth packages/",
+    // After a `$(` that may hold its own quotes inside a string, or a curly
+    // quote, where a string ends is not certain, so a `#` there stays text.
+    'Write-Output "$(" # ")"; rg auth packages/',
+    'Write-Output "$(" <# ")"; rg auth packages/; "$(" #> ")"',
+    `Write-Output ${String.fromCharCode(0x2018)} # ${String.fromCharCode(0x2019)}; rg auth packages/`,
+    `Write-Output ${String.fromCharCode(0x201c)} # ${String.fromCharCode(0x201d)}; rg auth packages/`,
+    `Write-Output ${String.fromCharCode(0x2018)} <# ${String.fromCharCode(0x2019)}; rg auth packages/; ${String.fromCharCode(0x2018)} #> ${String.fromCharCode(0x2019)}`,
+  ]) {
+    const result = classifyGraphExploration({ tool: "PowerShell", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe("rg");
+  }
+  // A block comment with no `#>` leaves the script unparsable: fail closed.
+  for (const command of ["<# x rg auth packages/", "Write-Output a<# rg auth packages/"]) {
+    const result = classifyGraphExploration({ tool: "PowerShell", command });
+    expect(result.decision, command).toBe("deny");
+  }
+  // A search that exists only inside a comment is never run.
+  for (const command of [
+    "Write-Output hi # rg auth packages/",
+    "Write-Output hi # $(rg auth packages/)",
+    "Write-Output hi <# rg auth packages/ #>",
+    "Write-Output hi <# $(rg auth packages/) #>",
+    "<#\n'\n#> Write-Output hi",
+  ]) {
+    const result = classifyGraphExploration({ tool: "PowerShell", command });
+    expect(result.decision, command).toBe("allow");
   }
 });
