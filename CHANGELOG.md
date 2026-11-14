@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The component catalogue that `tech.md` names is set up before screens
+  are built.** `implement-scaffold` installs the catalogue the
+  `Component catalogue` row names with its own setup command and adds its registry to
+  `uiux.registries`, or reports why it could not. The `product-surface-reviewer`
+  and `implementation-reviewer` report a control hand-built where that
+  catalogue has one.
+
 - **`.agents/rules/interface-clarity.md` says what a business screen always
   has.** A new section lists, per application, an app shell with navigation
   and a way back, a home that shows what needs attention and one shared
@@ -24,6 +31,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `implementation-reviewer` reads every rule the changed master points to and
   every rule that points to that master, and reports each clause that gives a
   different answer to the same situation.
+- **`qfai validate` warns about a component catalogue with no registry.**
+  When the `Component catalogue` row of the `tech.md` Stack table names a
+  catalogue and `qfai.config.yaml` declares no valid `uiux.registries` entry,
+  `QFAI-STORY-021` is raised at warning in the `sdd`, `verify` and `full`
+  profiles. A row that is empty, a template placeholder or states none raises
+  nothing.
 
 ### Removed
 
@@ -193,6 +206,12 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   the union-merge reason and how to resolve a conflict a host shows. The file
   is seeded only where none exists, so an existing `.gitattributes` keeps its
   old comment. Fixes #4173.
+
+- **This repository's build job reports every self-validate profile.** The
+  `tdd`, `sdd` and `full` runs of `qfai validate` were three steps, so a
+  failing `tdd` run skipped the other two and their errors showed only in a
+  later CI run. They now run in one step that runs all three and fails at the
+  end, naming each profile that failed. Fixes #4199.
 
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
