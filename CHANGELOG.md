@@ -13,6 +13,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   change adds or alters, or when the change removes the part. A gap already
   there or elsewhere is advisory. Having a listed part is never filed as excess.
 
+- **The component catalogue that `tech.md` names is set up before screens
+  are built.** `implement-scaffold` installs the catalogue the
+  `Component catalogue` row names with its own setup command and adds its registry to
+  `uiux.registries`, or reports why it could not. The `product-surface-reviewer`
+  and `implementation-reviewer` report a control hand-built where that
+  catalogue has one.
+
 - **`.agents/rules/interface-clarity.md` says what a business screen always
   has.** A new section lists, per application, an app shell with navigation
   and a way back, a home that shows what needs attention and one shared
@@ -21,13 +28,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after every change. Leaving one out needs a reason recorded in the screen's UI
   contract, and the Cut section counts a listed part as asked for.
 
+- **The design anti-pattern list reaches implemented screens.** Its
+  _Information architecture and flow_ and _States and accessibility_ sections
+  now apply to the screens an implementation builds and to their review, not
+  only to root `DESIGN.md` authoring and prototype review.
+
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
   `implementation-reviewer` reads every rule the changed master points to and
   every rule that points to that master, and reports each clause that gives a
   different answer to the same situation.
 
+### Removed
+
+- **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
+  removed.** Validate parsed the setting but never read it, and no code read
+  `ddpBannedPatterns.txt`. A config that still sets the key is accepted and
+  the key, whatever its value, is ignored.
+
 ### Changed
+
+- **A work order says which checks the worker runs and whether it may push.**
+  The unit work order template gains `Local checks` and `Push` lines, and
+  `delegation-steering.md` checks a delegated agent's first actions against
+  them. A worker whose order says `Push: no` neither pushes nor opens a pull
+  request.
 
 - **The shipped uix-rev review prompts no longer name the removed
   `40_screen_contracts.md` sidecar.** The strategy review checks brand language
@@ -143,6 +168,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new text. Fixes #4058.
 
 ### Fixed
+
+- **The search-protection hook says what it could not read.** A command whose
+  quotes it cannot match, or whose wrappers nest more than 16 levels deep, is
+  still denied, but the message names that cause and how to retry instead of
+  asking to repair a hook configuration that is fine. An invalid enforcement
+  file, an unreadable pre-tool event and unreadable local search state each get
+  their own message, and the hook prints the same message to standard error.
 
 - **A `cd` to the project itself no longer withholds the search fallback.**
   When a denied search follows `cd`, `pushd` or `Set-Location` to the observed

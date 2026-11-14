@@ -82,6 +82,9 @@ specialization_tags:
   under the excess route above.
 
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
+- Where the `Component catalogue` row of `<paths.contractsDir>/tech.md#stack` names a catalogue, report a
+  screen that hand-builds a control that catalogue has, and name the catalogue item. A named catalogue that
+  the project never installed is one finding against the setup, not one per screen.
 - Apply `.agents/rules/interface-clarity.md`: report copy that explains the interface as a finding against the control under it, and name the control to fix.
 - Judge each `qfai-text` reason comment in the UI source. `npx qfai validate` checks only that a reason
   is present and well formed; whether it is strong is this review's finding. Reject a generic reason

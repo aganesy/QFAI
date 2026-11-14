@@ -68,7 +68,6 @@ async function seedWorkspace(root: string, uiContract: string): Promise<void> {
       "uiux:",
       "  audit:",
       "    enabled: true",
-      "    maxPrimaryCtas: 1",
       "",
     ].join("\n"),
     "utf-8",
