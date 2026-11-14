@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`.agents/rules/interface-clarity.md` says what a business screen always
+  has.** A new section lists, per application, an app shell with navigation
+  and a way back, a home that shows what needs attention and one shared
+  component per repeated pattern; per screen, list search or filter with sort,
+  count and pagination, empty, loading, error and success states, and feedback
+  after every change. Leaving one out needs a reason recorded in the screen's UI
+  contract, and the Cut section counts a listed part as asked for.
+
 - **The design anti-pattern list reaches implemented screens.** Its
   _Information architecture and flow_ and _States and accessibility_ sections
   now apply to the screens an implementation builds and to their review, not
