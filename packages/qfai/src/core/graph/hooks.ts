@@ -26,10 +26,33 @@ export interface GraphHookDecision {
 type GraphSearchAuthorization = (decision: GraphHookDecision) => GraphHookDecision;
 type GraphShell = "posix" | "powershell" | "cmd";
 
-/** One command of a shell event; `upstream` is the pipeline stage whose output it reads. */
+/**
+ * One command of a shell event; `upstream` is the pipeline stage whose output it reads,
+ * and `join` the operator that joins it to the command before it.
+ */
 interface ShellCommand {
   words: string[];
   upstream?: ShellCommand;
+  join?: ShellOperator;
+}
+
+type ShellOperator = "&&" | "||" | "|" | ";" | "&" | "\n";
+
+/**
+ * Where the shell stands when a command runs: the observed directory, a directory
+ * inside it reached by an unconditional `cd` chain, or a place the text cannot tell.
+ */
+type ShellLocation = "observed" | "unknown" | { directory: string };
+
+interface ShellScope {
+  authorize: GraphSearchAuthorization;
+  shell: GraphShell;
+  directory?: string;
+}
+
+interface CommandContext extends ShellScope {
+  location: ShellLocation;
+  redefined: boolean;
 }
 
 export function classifyGraphExploration(
@@ -52,7 +75,13 @@ export function classifyGraphExploration(
         : "posix";
   const directory = event.cwd ? path.resolve(event.cwd, event.workdir ?? ".") : undefined;
   return (
-    classifyShellText(event.command ?? "", shell, authorize, 0, false, directory) ?? {
+    classifyShellText(
+      event.command ?? "",
+      { authorize, shell, ...(directory ? { directory } : {}) },
+      0,
+      false,
+      "observed",
+    ) ?? {
       decision: "allow",
       state: "configured",
       message: "No direct exploration was classified.",
@@ -63,72 +92,82 @@ export function classifyGraphExploration(
 /** Classify one shell command line, including the command lists its substitutions run. */
 function classifyShellText(
   text: string,
-  shell: GraphShell,
-  authorize: GraphSearchAuthorization,
+  scope: ShellScope,
   depth: number,
   redefinedOutside: boolean,
-  directory: string | undefined,
+  start: ShellLocation,
   substitution = false,
 ): GraphHookDecision | undefined {
   if (depth > 16) return failedGraphHook("depth");
-  const commands = shellPipelines(text, shell);
+  const commands = shellPipelines(text, scope.shell);
   // Text in a substitution that cannot be read as commands is no verdict of its own.
   if (!commands) return substitution ? undefined : failedGraphHook("quote");
   return classifyCommands(
     commands,
-    authorize,
+    scope,
     depth,
     redefinedOutside,
-    directory,
-    substitutionBodies(text, shell).map(
-      (body) => (scoped: GraphSearchAuthorization, redefines: boolean) =>
-        classifyShellText(body, shell, scoped, depth + 1, redefines, directory, true),
+    start,
+    substitutionBodies(text, scope.shell).map(
+      (body) => (location: ShellLocation, redefines: boolean) =>
+        classifyShellText(body, scope, depth + 1, redefines, location, true),
     ),
   );
 }
 
 type NestedClassification = (
-  authorize: GraphSearchAuthorization,
+  location: ShellLocation,
   redefined: boolean,
 ) => GraphHookDecision | undefined;
 
 function classifyCommands(
   commands: ShellCommand[],
-  authorize: GraphSearchAuthorization,
-  depth = 0,
-  redefinedOutside = false,
-  directory?: string,
+  scope: ShellScope,
+  depth: number,
+  redefinedOutside: boolean,
+  start: ShellLocation,
   substitutions: NestedClassification[] = [],
 ): GraphHookDecision | undefined {
-  const redefines =
+  const redefined =
     redefinedOutside || commands.some((command) => redefinesCommands(command.words));
-  const changesDirectory = commands.some((command) =>
-    changesGraphDirectory(command.words, redefines ? undefined : directory),
-  );
-  const scopedAuthorization: GraphSearchAuthorization = changesDirectory
-    ? (decision) =>
-        graphFallbackUnavailable(
-          decision,
-          "The command changes its working directory.",
-          "Run a single search from this project worktree, then retry the denied action.",
-        )
-    : authorize;
   // A substitution runs its own command list, so a search inside one is a search.
-  // Only its denial counts here: what else it runs keeps the outer verdict.
+  // Only its denial counts here: what else it runs keeps the outer verdict. Which
+  // command holds it is not tracked, so it runs from the start only while no command
+  // in the list moves the shell anywhere else.
+  const stays = commands.every((command) => {
+    const operand = directoryOperand(command.words);
+    if (operand === undefined) return true;
+    return (
+      !redefined &&
+      operand !== null &&
+      start === "observed" &&
+      scope.directory !== undefined &&
+      path.resolve(scope.directory, operand) === scope.directory
+    );
+  });
   for (const classify of substitutions) {
-    const decision = classify(scopedAuthorization, redefines);
+    const decision = classify(stays ? start : "unknown", redefined);
     if (decision?.decision === "deny") return decision;
   }
+  let location = start;
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
-  for (const { words, upstream } of commands) {
+  for (const [index, command] of commands.entries()) {
+    // After a move, only an `&&` chain, or a pipeline inside one, runs where the move went:
+    // `||`, `;`, `&` and a new line also run when the move failed.
+    if (typeof location === "object" && index > 0 && command.join !== "&&" && command.join !== "|")
+      location = "unknown";
+    const operand = directoryOperand(command.words);
+    if (operand !== undefined) {
+      location = redefined
+        ? "unknown"
+        : movedLocation(location, operand, command, commands[index + 1], scope);
+    }
     const decision = classifyCommand(
-      words,
-      scopedAuthorization,
+      command.words,
+      { ...scope, location, redefined },
       depth,
-      upstream,
-      redefines,
-      directory,
+      command.upstream,
     );
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
@@ -217,16 +256,14 @@ function redirectionLength(word: string | undefined): number {
 }
 
 /**
- * Whether a command moves the shell away from the observed working directory. A move
- * to that directory itself leaves every later search target project-relative, so it
- * keeps the fallback; any other move, or one whose target cannot be read from the
- * text, makes it unavailable. A `..` segment counts as a move: the shell may resolve
- * it from a CDPATH entry or through a symbolic link, not lexically. A relative
- * target without one resolves to the directory only when it starts with `.`, which
- * CDPATH never applies to. With no directory, as when the event redefines commands
- * and `cd` may not be the builtin, every directory command counts as a move.
+ * The target of a command that changes the shell's directory: `undefined` when the
+ * command changes none, `null` when its target cannot be read from the text. A `..`
+ * segment is unreadable: the shell may resolve it from a CDPATH entry or through a
+ * symbolic link, not lexically. `popd` returns to a directory the text does not name,
+ * a `+N` operand rotates the directory stack, and a colon other than a drive letter's
+ * names a PowerShell provider drive such as `env:`, not a folder.
  */
-function changesGraphDirectory(words: string[], directory: string | undefined): boolean {
+function directoryOperand(words: string[]): string | null | undefined {
   let offset = 0;
   while (offset < words.length) {
     if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")) {
@@ -235,36 +272,108 @@ function changesGraphDirectory(words: string[], directory: string | undefined): 
     }
     if (!["command", "builtin", "env"].includes(words[offset]?.toLowerCase() ?? "")) break;
     offset += 1;
-    if (words[offset] === "-v" || words[offset] === "-V") return false;
+    if (words[offset] === "-v" || words[offset] === "-V") return undefined;
     while (words[offset]?.startsWith("-")) offset += 1;
   }
-  if (
-    !["cd", "chdir", "pushd", "popd", "set-location", "sl"].includes(
-      words[offset]?.toLowerCase() ?? "",
-    )
-  )
-    return false;
+  const name = words[offset]?.toLowerCase() ?? "";
+  if (!["cd", "chdir", "pushd", "popd", "set-location", "sl"].includes(name)) return undefined;
   const operands = words.slice(offset + 1);
   const target = operands[0];
-  return (
-    !directory ||
+  return name === "popd" ||
     operands.length !== 1 ||
     target === undefined ||
     target.startsWith("-") ||
+    target.startsWith("+") ||
+    (target.includes(":") && !/^[A-Za-z]:[\\/]/.test(target)) ||
     /[$`~%*?[\]{}]/.test(target) ||
-    target.split(/[\\/]/).includes("..") ||
-    path.resolve(directory, target) !== directory
-  );
+    target.split(/[\\/]/).includes("..")
+    ? null
+    : target;
+}
+
+/**
+ * Where the shell stands after a directory command. A move to the observed directory
+ * itself changes nothing, whatever joins it. A move into a directory inside it is
+ * followed only while the move runs unconditionally before what comes next: it is
+ * not a pipeline stage, which runs in a subshell, no `||` joins it to the command
+ * before it, which may skip it, and an `&&` joins it to the next command. Any other
+ * move, or one whose target cannot be read, leaves the location unknown.
+ *
+ * A relative POSIX target that does not start with `.` is resolved from CDPATH when
+ * that is set, so such a move is followed only while CDPATH is unset. Ceiling: the
+ * hook reads its own environment, so a CDPATH that only the agent's shell sets is
+ * not seen. Lift when a host reports the shell environment in the pre-tool event.
+ */
+function movedLocation(
+  location: ShellLocation,
+  operand: string | null,
+  command: ShellCommand,
+  next: ShellCommand | undefined,
+  scope: ShellScope,
+): ShellLocation {
+  if (location === "unknown" || operand === null || !scope.directory) return "unknown";
+  const from = location === "observed" ? scope.directory : location.directory;
+  const directory = path.resolve(from, operand);
+  if (location === "observed" && directory === scope.directory) return "observed";
+  if (outside(scope.directory, directory)) return "unknown";
+  if (command.join === "|" || command.join === "||" || (next !== undefined && next.join !== "&&"))
+    return "unknown";
+  if (
+    scope.shell === "posix" &&
+    !path.isAbsolute(operand) &&
+    !operand.startsWith(".") &&
+    process.env.CDPATH
+  )
+    return "unknown";
+  return { directory };
+}
+
+function outside(root: string, target: string): boolean {
+  const relative = path.relative(root, target);
+  return relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
+}
+
+/**
+ * Hands a denied search to the fallback authorization from where the shell stands.
+ * After a followed move, the search target is rebased to the project-relative path
+ * it names, so the grant matches the scope the search actually reads. A `..` segment
+ * is not rebased: through a symbolic link it resolves from the link's real location.
+ */
+function authorizeAt(context: CommandContext, decision: GraphHookDecision): GraphHookDecision {
+  const { location, directory, authorize } = context;
+  if (location === "observed") return authorize(decision);
+  if (location === "unknown" || !directory)
+    return graphFallbackUnavailable(
+      decision,
+      "The command changes its working directory.",
+      "Run a single search from this project worktree, then retry the denied action.",
+    );
+  if (!decision.exceptionEligible || decision.target === undefined || !decision.operation)
+    return authorize(decision);
+  if (decision.target.split(/[\\/]/).includes(".."))
+    return graphFallbackUnavailable(
+      decision,
+      "The search target has a .. segment after a directory change.",
+      "Run a single search from this project worktree, then retry the denied action.",
+    );
+  const target = path.resolve(location.directory, decision.target);
+  if (outside(directory, target))
+    return graphFallbackUnavailable(
+      decision,
+      "The search target resolves outside this project worktree.",
+      "Run a single search with one explicit project-relative target, then retry the denied action.",
+    );
+  const relative = path.relative(directory, target).split(path.sep).join("/") || ".";
+  return authorize({ ...denyExploration(decision.operation, relative), exceptionEligible: true });
 }
 
 function classifyCommand(
   words: string[],
-  authorize: GraphSearchAuthorization,
-  depth = 0,
+  context: CommandContext,
+  depth: number,
   upstream?: ShellCommand,
-  redefined = false,
-  directory?: string,
 ): GraphHookDecision | undefined {
+  const { redefined } = context;
   if (depth > 16) return failedGraphHook("depth");
   let offset = 0;
   while (offset < words.length) {
@@ -274,14 +383,7 @@ function classifyCommand(
     else break;
   }
   if (offset > 0) {
-    return classifyCommand(
-      words.slice(offset),
-      authorize,
-      depth + 1,
-      undefined,
-      redefined,
-      directory,
-    );
+    return classifyCommand(words.slice(offset), context, depth + 1);
   }
   const operation = commandName(words);
   if (operation === "env" || operation === "command" || operation === "builtin") {
@@ -296,14 +398,7 @@ function classifyCommand(
         offset += 1;
       else break;
     }
-    return classifyCommand(
-      words.slice(offset),
-      authorize,
-      depth + 1,
-      undefined,
-      redefined,
-      directory,
-    );
+    return classifyCommand(words.slice(offset), context, depth + 1);
   }
   if (["bash", "sh", "zsh", "pwsh", "powershell", "cmd"].includes(operation ?? "")) {
     const switchIndex = words.findIndex((word) => /^(?:-[a-z]*c|\/c|-command)$/i.test(word));
@@ -315,7 +410,17 @@ function classifyCommand(
         : operation === "cmd"
           ? "cmd"
           : "posix";
-    return classifyShellText(inner, shell, authorize, depth + 1, redefined, directory);
+    return classifyShellText(
+      inner,
+      {
+        authorize: context.authorize,
+        shell,
+        ...(context.directory ? { directory: context.directory } : {}),
+      },
+      depth + 1,
+      redefined,
+      context.location,
+    );
   }
   if (!redefined && pipeFilter(words) && printsText(upstream)) return undefined;
   if (operation === "rg" || operation === "grep" || operation === "findstr") {
@@ -333,7 +438,10 @@ function classifyCommand(
       positional.length <= 2 &&
       !positional.some((word) => word.startsWith("-") || /[$%`<>]/.test(word));
     const target = eligible ? (positional[1] ?? ".") : JSON.stringify(positional);
-    return authorize({ ...denyExploration(operation, target), exceptionEligible: eligible });
+    return authorizeAt(context, {
+      ...denyExploration(operation, target),
+      exceptionEligible: eligible,
+    });
   }
   let gitCommand = 1;
   if (operation === "git") {
@@ -350,7 +458,7 @@ function classifyCommand(
       targets.length <= 1 &&
       (paths >= 0 || words.length === 3) &&
       !targets.some((word) => /[$%`<>]/.test(word));
-    return authorize({
+    return authorizeAt(context, {
       ...denyExploration(
         "git grep",
         eligible ? (targets[0] ?? ".") : JSON.stringify(words.slice(1)),
@@ -367,7 +475,7 @@ function classifyCommand(
       targets.push(word);
     }
     const eligible = targets.length === 1 && !targets.some((word) => /[,$%`<>]/.test(word));
-    return authorize({
+    return authorizeAt(context, {
       ...denyExploration("Select-String", eligible ? (targets[0] ?? ".") : JSON.stringify(targets)),
       exceptionEligible: eligible,
     });
@@ -604,6 +712,7 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   const commands: ShellCommand[] = [];
   let words: string[] = [];
   let upstream: ShellCommand | undefined;
+  let join: ShellOperator | undefined;
   let word = "";
   let quote: string | undefined;
   let afterRedirect: "" | "<" | ">" = "";
@@ -649,12 +758,26 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     } else if (character === "|" || character === ";" || character === "&" || character === "\n") {
       flushWord();
       const stage: ShellCommand | undefined = words.length
-        ? { words: resolveAlias(words, shell), ...(upstream ? { upstream } : {}) }
+        ? {
+            words: resolveAlias(words, shell),
+            ...(upstream ? { upstream } : {}),
+            ...(join ? { join } : {}),
+          }
         : undefined;
       if (stage) commands.push(stage);
       const pipe = character === "|" && next !== "|" && stage !== undefined;
-      if (character === "|" && next === "|") index += 1;
+      const operator: ShellOperator =
+        (character === "|" || character === "&") && next === character
+          ? character === "|"
+            ? "||"
+            : "&&"
+          : character === "|" || character === "&" || character === ";"
+            ? character
+            : "\n";
+      if ((character === "|" || character === "&") && next === character) index += 1;
       else if (pipe && shell === "posix" && next === "&") index += 1;
+      // An empty line after an operator continues the command it joins.
+      if (stage || join === undefined || operator !== "\n") join = operator;
       upstream = pipe ? stage : undefined;
       words = [];
     } else if (/\s/.test(character)) {
@@ -675,7 +798,11 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   if (quote) return undefined;
   flushWord();
   if (words.length) {
-    commands.push({ words: resolveAlias(words, shell), ...(upstream ? { upstream } : {}) });
+    commands.push({
+      words: resolveAlias(words, shell),
+      ...(upstream ? { upstream } : {}),
+      ...(join ? { join } : {}),
+    });
   }
   return commands;
 }
