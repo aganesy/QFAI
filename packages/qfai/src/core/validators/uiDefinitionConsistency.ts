@@ -13,11 +13,13 @@ import {
   collectScreenMockLabels,
   mockMarkdownGlobs,
 } from "./htmlMockBlocks.js";
+import { readMarkdownFiles, type MarkdownFileReader } from "./markdownFiles.js";
 import { issue } from "./utils.js";
 
 export async function validateUiDefinitionConsistency(
   root: string,
   config: QfaiConfig,
+  readMarkdown: MarkdownFileReader = readMarkdownFiles,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
 
@@ -76,12 +78,12 @@ export async function validateUiDefinitionConsistency(
   }
 
   // Load HTML Mock blocks
-  const mdFiles = await fg(mockMarkdownGlobs(root, config), { absolute: true });
+  const mdFiles = await readMarkdown(mockMarkdownGlobs(root, config));
   const mockScreenIds = new Set<string>();
 
-  for (const mdFile of mdFiles) {
+  for (const { filePath: mdFile, content } of mdFiles) {
+    if (content === null) continue;
     try {
-      const content = await readFile(mdFile, "utf-8");
       const rel = path.relative(root, mdFile).replace(/\\/g, "/");
       const htmlBlocks = collectHtmlMockBlocks(content);
 

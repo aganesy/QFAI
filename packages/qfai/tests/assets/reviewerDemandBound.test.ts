@@ -36,6 +36,14 @@ describe("a reviewer's demand for more work is bounded by the artifact", () => {
       );
     });
 
+    it(`${tree}: a missing part of the business-screen floor is a defect, not a demand for more`, async () => {
+      const content = await read(tree, DELEGATION);
+      expect(content).toContain(
+        "A part missing from the business-screen floor (`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`) is not a demand for more work",
+      );
+      expect(content).toContain("the gap is a defect that traces to it");
+    });
+
     it(`${tree}: a missing pair and a safety-floor item stay demandable anywhere`, async () => {
       const content = await read(tree, DELEGATION);
       expect(content).toContain("an abstract item already recorded carry its mandatory pair");

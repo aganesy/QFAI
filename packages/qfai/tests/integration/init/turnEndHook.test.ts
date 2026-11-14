@@ -17,6 +17,7 @@ import {
 } from "../../../src/core/claudeCodeHooks.js";
 import { loadConfig } from "../../../src/core/config.js";
 import { readTurnEndChecks, runTurnEndHook } from "../../../src/core/turnEndHook.js";
+import { removeTempTree } from "../../helpers/tempTree.js";
 
 let root: string;
 let stateDir: string;
@@ -27,8 +28,8 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
-  await rm(stateDir, { recursive: true, force: true });
+  await removeTempTree(root);
+  await removeTempTree(stateDir);
 });
 
 /** A project with a config and a tech.md whose Standard commands section holds `items`. */
@@ -375,7 +376,7 @@ describe("the turn-end groups qfai init writes", () => {
         expect([viaShell.status, viaShell.stdout]).toEqual([0, expected]);
       }
     } finally {
-      await rm(empty, { recursive: true, force: true });
+      await removeTempTree(empty);
     }
   });
 

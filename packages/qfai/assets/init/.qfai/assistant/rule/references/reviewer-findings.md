@@ -36,6 +36,12 @@ Two demands stay admissible on any artifact:
 - that a safety-floor item be met: security, accessibility, data-loss handling, or validation at a
   trust boundary (`.agents/rules/minimal-implementation.md` § 2).
 
+A part missing from the business-screen floor
+(`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`) is not a demand for more
+work: that rule already makes the part an obligation, so the gap is a defect that traces to it, and
+`.qfai/assistant/agent/product-surface-reviewer.md` says when the finding blocks and when it is
+`advisory`.
+
 This bounds what a reviewer may require, never what a reviewer may report. A demand the table does
 not admit, such as one for another business rule, is recorded as `advisory` and cannot force
 `REVISE`.

@@ -1,11 +1,9 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
-
-import fg from "fast-glob";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import type { Issue } from "../types.js";
+import { readMarkdownFiles, type MarkdownFileReader } from "./markdownFiles.js";
 import { extractFencedCodeBlocks, containsMermaidSyntax } from "./mermaidUtils.js";
 import { issue } from "./utils.js";
 
@@ -28,20 +26,16 @@ type TransitionInfo = {
 export async function validateMermaidScreenFlow(
   root: string,
   config: QfaiConfig,
+  readMarkdown: MarkdownFileReader = readMarkdownFiles,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const specsRoot = resolvePath(root, config, "specsDir");
   const pattern = path.posix.join(specsRoot.replace(/\\/g, "/"), "**/*.md");
 
-  const files = await fg(pattern, { absolute: true });
+  const files = await readMarkdown([pattern]);
 
-  for (const filePath of files) {
-    let content: string;
-    try {
-      content = await readFile(filePath, "utf-8");
-    } catch {
-      continue;
-    }
+  for (const { filePath, content } of files) {
+    if (content === null) continue;
 
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
     const blocks = extractFencedCodeBlocks(content);

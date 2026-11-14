@@ -63,6 +63,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   state. A supplement's `when` names one of these states. Validate does not
   check the key.
 
+- **A file can record one reason for all its plain texts.** A
+  `qfai-text-file` comment, `<!-- qfai-text-file: why=...; without=... -->` or
+  `/* qfai-text-file: why=...; without=... */`, gives its reason to every plain
+  text in a selected surface file that has none of its own, so a help page or
+  release notes no longer need a `qfai-text` comment before each text. The
+  body is checked like a `qfai-text` body, and a malformed one raises
+  `QFAI-UITEXT-002` at its line. A prototype page's file reason is not read.
+
 ### Removed
 
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
@@ -311,6 +319,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `design-anti-patterns.md`, which the implementer checks before calling a
   screen done.
 
+- **The reviewer findings rule says a missing screen-floor part is a defect.**
+  Its section on what a reviewer may demand more of now says that a part
+  missing from "What a business screen always has" in `interface-clarity.md`
+  is not a demand for more work but a defect that traces to that rule, and
+  points to the product-surface reviewer card for when it blocks. Read alone,
+  the section had suggested such a gap could only be advisory.
+
 ### Fixed
 
 - **The search-protection hook ends a PowerShell statement at a lone carriage
@@ -325,6 +340,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `#>` fails closed. Where the start of a token is not certain, the comment
   markers separate commands, so what lies between and after them is still
   read. A search that appears only in a comment is not denied.
+
+- **`qfai session-review` finds a Claude Code session that moved into the
+  project after it started.** A session the desktop app opened in a scratch
+  directory records that directory as its `cwd` until it moves into the
+  repository. The command now takes a transcript in the root's project
+  directory when any of its records names the root, not only the first, so
+  such a session is no longer reported as missing. In the fallback over
+  directories that only share the start of the root's name, which includes
+  every worktree of the root, the first recorded `cwd` still decides.
 
 - **The search-protection hook reads a comment inside a substitution.** A `)`
   inside a comment, such as `$(echo # )` followed by `rg auth packages/)` on the
@@ -529,6 +553,13 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   of stopping on it as a blocker. That order plans `apply-settled`, whose
   implement stage now serves `release`, so the plan offers one scope that
   makes the edit and puts no scope question.
+
+- **`qfai validate` reads the Markdown under `paths.specsDir` once for the
+  UI/UX checks.** The HTML mock, UI definition and Mermaid screen flow checks
+  each found and read every Markdown file there, so a large story tree was
+  read three times in one run. They now share one read of each file, done 64
+  files at a time, and their findings are unchanged. On a tree of 4,000
+  Markdown files the UI/UX group took 0.8 s instead of 2.8 s.
 
 ## [2.4.0] - 2026-11-11
 
