@@ -79,6 +79,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contracts review prompt, which nothing loaded and which reviewed that removed
   file, is gone.
 
+- **ID allocation leaves no gap where a project checks IDs run without
+  gaps.** The `sdd-triage` step and its reference say that such a project
+  takes the next ID from the base and the working tree alone, and leaves a
+  collision with an open pull request to the renumbering at merge time,
+  instead of taking a number past the open heads.
+
 - **`interface-clarity.md` walks the user's job across screens.** Section 6
   no longer stops at the tasks a surface declares. It walks the job from where
   the user starts to the result and back, including jobs no contract names,
