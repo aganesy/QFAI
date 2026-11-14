@@ -14,6 +14,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after every change. Leaving one out needs a reason recorded in the screen's UI
   contract, and the Cut section counts a listed part as asked for.
 
+- **The design anti-pattern list reaches implemented screens.** Its
+  _Information architecture and flow_ and _States and accessibility_ sections
+  now apply to the screens an implementation builds and to their review, not
+  only to root `DESIGN.md` authoring and prototype review.
+
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
   `implementation-reviewer` reads every rule the changed master points to and
@@ -154,6 +159,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   inside a substitution.** `{fd}<file grep -r foo src` and searches inside
   `$(...)`, backticks, `<(...)`, `>(...)` or PowerShell `@(...)` are denied
   like the same search run directly.
+
+- **The search-protection hook says what it could not read.** A command whose
+  quotes it cannot match, or whose wrappers nest more than 16 levels deep, is
+  still denied, but the message names that cause and how to retry instead of
+  asking to repair a hook configuration that is fine. An invalid enforcement
+  file, an unreadable pre-tool event and unreadable local search state each get
+  their own message, and the hook prints the same message to standard error.
 
 - **A `cd` to the project itself no longer withholds the search fallback.**
   When a denied search follows `cd`, `pushd` or `Set-Location` to the observed
