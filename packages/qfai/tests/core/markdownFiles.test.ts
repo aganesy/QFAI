@@ -60,11 +60,11 @@ describe("Markdown under the specs directory in the UI/UX group", () => {
       return shared(globs);
     };
 
-    const sharedIssues = [
-      await validateHtmlMock(root, "web", config, undefined, reader),
-      await validateUiDefinitionConsistency(root, config, reader),
-      await validateMermaidScreenFlow(root, config, reader),
-    ];
+    const sharedIssues = await Promise.all([
+      validateHtmlMock(root, "web", config, undefined, reader),
+      validateUiDefinitionConsistency(root, config, reader),
+      validateMermaidScreenFlow(root, config, reader),
+    ]);
 
     expect(asked).toHaveLength(3);
     expect(walks).toBe(1);
@@ -75,5 +75,31 @@ describe("Markdown under the specs directory in the UI/UX group", () => {
     ]);
     expect(sharedIssues[0]?.some((entry) => entry.code === "QFAI-MOCK-004")).toBe(true);
     expect(sharedIssues[2]?.some((entry) => entry.code === "QFAI-FLOW-002")).toBe(true);
+  });
+
+  it("skips a file the reader could not read, as the default reader does", async () => {
+    const root = await projectWithMockAndFlow();
+    const unreadable = path.join(root, ".qfai", "specs", "unreadable.md");
+    const reader: MarkdownFileReader = async (globs) => [
+      ...(await readMarkdownFiles(globs)),
+      { filePath: unreadable, content: null },
+    ];
+
+    const withUnreadable = await Promise.all([
+      validateHtmlMock(root, "web", config, undefined, reader),
+      validateUiDefinitionConsistency(root, config, reader),
+      validateMermaidScreenFlow(root, config, reader),
+    ]);
+
+    expect(withUnreadable).toEqual(
+      await Promise.all([
+        validateHtmlMock(root, "web", config),
+        validateUiDefinitionConsistency(root, config),
+        validateMermaidScreenFlow(root, config),
+      ]),
+    );
+    expect(withUnreadable.flat().some((entry) => entry.file?.endsWith("unreadable.md"))).toBe(
+      false,
+    );
   });
 });

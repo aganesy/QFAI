@@ -5,17 +5,33 @@ import fg from "fast-glob";
 /** A file a Markdown glob matched, with its text, or `null` when it could not be read. */
 export type MarkdownFile = { filePath: string; content: string | null };
 
-/** Every file `globs` match, absolute and in the order the walk returns them, each read once. */
-export type MarkdownFileReader = (globs: string[]) => Promise<MarkdownFile[]>;
+/**
+ * Every file `globs` match, absolute and in the order the walk returns them, each read once.
+ * Read-only, because one reading is shared by several checks and none may change what the others see.
+ */
+export type MarkdownFileReader = (globs: string[]) => Promise<readonly Readonly<MarkdownFile>[]>;
+
+/**
+ * How many files are open at once. Opening every file together can hit the open-file limit, and
+ * a failed open reads as an unreadable file, which is skipped without a message.
+ */
+const READ_BATCH = 64;
 
 export const readMarkdownFiles: MarkdownFileReader = async (globs) => {
   const files = await fg(globs, { absolute: true });
-  return Promise.all(
-    files.map(async (filePath) => ({
-      filePath,
-      content: await readFile(filePath, "utf-8").catch(() => null),
-    })),
-  );
+  const read: MarkdownFile[] = [];
+  for (let start = 0; start < files.length; start += READ_BATCH) {
+    const batch = files.slice(start, start + READ_BATCH);
+    read.push(
+      ...(await Promise.all(
+        batch.map(async (filePath) => ({
+          filePath,
+          content: await readFile(filePath, "utf-8").catch(() => null),
+        })),
+      )),
+    );
+  }
+  return read;
 };
 
 /**
@@ -28,7 +44,7 @@ export const readMarkdownFiles: MarkdownFileReader = async (globs) => {
 export function sharedMarkdownFileReader(
   read: MarkdownFileReader = readMarkdownFiles,
 ): MarkdownFileReader {
-  const cache = new Map<string, Promise<MarkdownFile[]>>();
+  const cache = new Map<string, Promise<readonly Readonly<MarkdownFile>[]>>();
   return (globs) => {
     const key = JSON.stringify(globs);
     const cached = cache.get(key);
