@@ -16,6 +16,16 @@ date of its acclaim evidence, such as the award or listing date. A site with no
 dated evidence records the date it was observed, and the freshness warning
 names it as undated.
 
+## Contents
+
+- Sample
+- Acclaim
+- Dedupe before counting
+- What to record per site
+- Findings
+- Where findings land
+- Storage
+
 ## Sample
 
 Size the sample to the request. A whole-site redesign covers every stratum

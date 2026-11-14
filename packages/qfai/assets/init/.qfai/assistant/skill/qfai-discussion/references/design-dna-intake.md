@@ -32,9 +32,6 @@ the accent — the primary hue, the typeface pairing — not on the shape of
 the screen.
 
 - Capture both adopted and rejected points for every reference.
-- A survey of reference sites, for a whole-site redesign or a new product with
-  no adopted theme, follows
-  `.qfai/assistant/rule/references/visual-reference-survey.md`.
 - Translate a competitor reference into a local product rule instead of
   copying its visual surface. Take a catalogue's layout as it is.
 - Record copy risk as `low`, `medium`, or `high`.
