@@ -6,6 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **The component catalogue that `tech.md` names is set up before screens
+  are built.** `implement-scaffold` installs the catalogue the
+  `Component catalogue` row names with its own setup command and adds its registry to
+  `uiux.registries`, or reports why it could not. The `product-surface-reviewer`
+  and `implementation-reviewer` report a control hand-built where that
+  catalogue has one.
+
 - **`.agents/rules/interface-clarity.md` says what a business screen always
   has.** A new section lists, per application, an app shell with navigation
   and a way back, a home that shows what needs attention and one shared
@@ -24,6 +31,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `implementation-reviewer` reads every rule the changed master points to and
   every rule that points to that master, and reports each clause that gives a
   different answer to the same situation.
+- **`qfai validate` warns about a component catalogue with no registry.**
+  When the `Component catalogue` row of the `tech.md` Stack table names a
+  catalogue and `qfai.config.yaml` declares no valid `uiux.registries` entry,
+  `QFAI-STORY-021` is raised at warning in the `sdd`, `verify` and `full`
+  profiles. A row that is empty, a template placeholder or states none raises
+  nothing.
 
 ### Removed
 
@@ -33,6 +46,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the key, whatever its value, is ignored.
 
 ### Changed
+
+- **The UI contract guide says the contract is a floor.** A UI contract
+  lists what must be verifiable on a screen, not its whole inventory. The
+  built screen also carries the parts `interface-clarity.md` lists under
+  "What a business screen always has", which the contract need not repeat.
 
 - **A work order says which checks the worker runs and whether it may push.**
   The unit work order template gains `Local checks` and `Push` lines, and
@@ -46,12 +64,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contracts review prompt, which nothing loaded and which reviewed that removed
   file, is gone.
 
-- **The search-protection hook keeps the fallback after a `cd` into a project
-  subdirectory.** In `cd packages/qfai && rg auth src/`, the denied search
-  keeps the AI-decided fallback, scoped to `packages/qfai/src`. The hook
-  follows a move only while it runs outside a pipeline and an `&&` joins it to
-  what comes next. A move joined by `||`, `;`, `&` or a new line, one CDPATH may
-  resolve, or a target that leaves the worktree keeps the fallback unavailable.
+- **`interface-clarity.md` walks the user's job across screens.** Section 6
+  no longer stops at the tasks a surface declares. It walks the job from where
+  the user starts to the result and back, including jobs no contract names,
+  such as finding one record among many or recovering after an error, with a
+  realistic volume of data and, on a screen, at phone and desktop widths. A gap
+  that a business-screen part closes is a defect to fix; any other gap on a job
+  no contract names goes to the owner of the spec rather than being built.
 
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
@@ -174,6 +193,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   worktree in the same command, the denial still offers the AI-decided
   fallback. A move anywhere else, or to a target the command text does not
   spell out, still makes the fallback unavailable.
+- **The search-protection hook keeps the fallback after a `cd` into a project
+  subdirectory.** In `cd packages/qfai && rg auth src/`, the denied search
+  keeps the AI-decided fallback, scoped to `packages/qfai/src`. The hook
+  follows a move only while it runs outside a pipeline and an `&&` joins it to
+  what comes next. A move joined by `||`, `;`, `&` or a new line, one CDPATH may
+  resolve, or a target that leaves the worktree keeps the fallback unavailable.
+
 - **The search-protection hook denies a search with an input redirection
   attached to its name.** `grep</dev/null -r foo src` and `grep<&3 -r foo .`
   were allowed as outside the checked boundary, while `grep>/dev/null -r foo
@@ -200,6 +226,12 @@ src` was denied. A `<` after a command name now starts a new word, as `>`
   the union-merge reason and how to resolve a conflict a host shows. The file
   is seeded only where none exists, so an existing `.gitattributes` keeps its
   old comment. Fixes #4173.
+
+- **This repository's build job reports every self-validate profile.** The
+  `tdd`, `sdd` and `full` runs of `qfai validate` were three steps, so a
+  failing `tdd` run skipped the other two and their errors showed only in a
+  later CI run. They now run in one step that runs all three and fails at the
+  end, naming each profile that failed. Fixes #4199.
 
 - **The search-protection hook no longer denies grep, rg, findstr or
   Select-String that filters a command's text output.** A search after a pipe
