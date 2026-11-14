@@ -5,12 +5,15 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 
 ## Contents
 
+- The contract is a floor
 - `screens[].primary_tasks` shape
 - Recommended ceiling: at most 7
+- Screen purpose and navigation: `purpose` and `navigation`
 - `elements[].id` naming policy
 - `elements[].label` is inspection-target text
 - `data-qfai` marker convention
 - Prototype metadata
+- Screen states: `states`
 - Purposeful copy: `supplements` and `structure`
 - Screen contract rules
 - Template
@@ -18,6 +21,21 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 - Prototyping coverage
 - Root DESIGN.md
 - Review checklist
+
+## The contract is a floor
+
+A UI contract lists what must be verifiable on a screen: its tasks, the
+elements and actions tests reach, and the copy that needs a reason. It is the
+minimum, not the inventory of the screen.
+
+The built screen also carries the parts that
+`.agents/rules/interface-clarity.md` lists under "What a business screen
+always has": the app shell and its navigation, list search, sort and
+pagination where a list can outgrow one screen, feedback after every change,
+and the loading, empty, error and success states. The contract need not repeat
+these parts, and their absence from the contract is no reason to leave them
+out of the screen. Leaving one out needs a reason recorded in the screen's UI
+contract, as that rule says.
 
 ## `screens[].primary_tasks` shape
 
@@ -69,6 +87,24 @@ this ceiling exists to protect, so it passes silently like any other.
 
 The ceiling of 7 reflects multi-screen SaaS and dashboard workloads,
 where 5 or 6 primary tasks per surface is common.
+
+## Screen purpose and navigation: `purpose` and `navigation`
+
+Every screen states why it exists and where it sits in the app, so it is built
+inside the app rather than as a standalone page reached through a list of
+links.
+
+| Key                       | Holds                                                          |
+| ------------------------- | -------------------------------------------------------------- |
+| `purpose`                 | why the screen exists, in one sentence                         |
+| `navigation.shell`        | the app frame the screen renders inside, such as the app shell |
+| `navigation.entry_points` | the screens, menus or actions that lead to it, at least one    |
+| `navigation.back_to`      | the route the user returns to from it                          |
+
+A screen with no frame, such as a sign-in page, says so in `shell`. A top-level
+screen with nowhere to return to says so in `back_to`. `npx qfai validate` does
+not check these keys; they describe the screen for the implementer and the
+reviewer.
 
 ## `elements[].id` naming policy
 
@@ -144,6 +180,26 @@ evidence records nothing against it — an entry is a note between the contract'
 author and whoever reviews the prototype. Follow the shape
 `templates/contracts/ui-contract.sample.yaml` shows.
 
+## Screen states: `states`
+
+Every screen lists `states`, one entry for each of `default`, `empty`,
+`loading`, `error` and `success`, in that order, so an implementer builds each
+state rather than assuming it. The rule behind `next` is
+`.agents/rules/interface-clarity.md`: an empty state says what to do next. Each entry uses these keys:
+
+| Key       | Holds                                                                   |
+| --------- | ----------------------------------------------------------------------- |
+| `id`      | the state: `default`, `empty`, `loading`, `error` or `success`          |
+| `renders` | what the screen shows in that state                                     |
+| `next`    | the action the user takes next from that state                          |
+| `none`    | instead of `renders` and `next`: why the screen cannot be in that state |
+
+A state is never left out: one the screen cannot reach, such as `empty` on a
+form that starts blank, carries `none` with the reason. "The design system
+default" is not a `renders`; name what the user sees. A supplement's `when`
+names one of these states. `npx qfai validate` does not check this key; it
+describes the screen for the implementer and the reviewer.
+
 ## Purposeful copy: `supplements` and `structure`
 
 Two optional keys, beside `primary_tasks`, `elements` and `actions`, describe the
@@ -163,7 +219,7 @@ that cannot be undone. Each entry uses these keys:
 | ------ | ----------------------------------------------------------------------------------------- |
 | `id`   | stable key, unique in the screen                                                          |
 | `near` | the `id` of the element, action or structure group the text sits with                     |
-| `when` | the state it shows in: `default`, `empty`, `loading`, `error` or `success`                |
+| `when` | the `states` id it shows in: `default`, `empty`, `loading`, `error` or `success`          |
 | `text` | the words as displayed                                                                    |
 | `why`  | what the user could not know or do without it, and why a label or structure is not enough |
 
@@ -278,7 +334,9 @@ For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by 
 ## Review checklist
 
 - [ ] Every UI-bearing contract has one full declared ID, at least one screen, and a matching `contracts.md` row.
+- [ ] Every screen states its `purpose` and its `navigation`: shell, entry points and where back leads.
 - [ ] Screen IDs, routes, primary tasks, labels, markers, and actions are stable and testable.
 - [ ] Every declared action has an observable effect, including relevant failure states.
+- [ ] Every screen lists all five `states`, each with what renders and the next action, or `none` with a reason.
 - [ ] No supplement restates a label, heading or action the screen already shows, and none is development commentary.
 - [ ] Prototyping coverage uses full contract IDs and the current cycle-0 fields.

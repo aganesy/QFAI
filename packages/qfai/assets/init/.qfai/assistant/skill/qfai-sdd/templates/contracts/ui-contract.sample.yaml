@@ -26,6 +26,18 @@ screens:
     # under `structure`.
     title: Create Order
     route: /orders/new
+    # purpose: why the screen exists, in one sentence the user would agree with.
+    # navigation: where the screen sits in the app. `shell` names the app frame
+    # it renders inside, `entry_points` the screens or menus that lead to it,
+    # and `back_to` the route the user returns to. These keys describe the
+    # screen; validate does not check them.
+    purpose: Record a customer's order so it can be fulfilled or finished later.
+    navigation:
+      shell: main app shell with the role's navigation
+      entry_points:
+        - New order button on /orders
+        - Orders item in the main navigation
+      back_to: /orders
     # primary_tasks: at least one entry required per screen (QFAI-AUD-001).
     # Recommended ceiling: at most 7 entries per screen (QFAI-AUD-020).
     # More than 7 warns at validate time. The required minimum is one: a screen
@@ -72,6 +84,25 @@ screens:
         label: Discard draft
         kind: navigate
         effect: navigates to /orders without storing the order
+    # states: what the screen renders in each of the five states, and the
+    # user's next action there. Every state is listed: one the screen cannot be
+    # in carries `none` with the reason instead of `renders` and `next`. This
+    # key describes the screen; validate does not check it.
+    states:
+      - id: default
+        renders: the empty form with Submit order disabled until both fields hold a value
+        next: fill in the customer and the item, then submit or save a draft
+      - id: empty
+        none: the form starts empty by design; there is no list on this screen to be empty
+      - id: loading
+        renders: the submit and save actions show progress and are disabled; the entries stay visible
+        next: wait; nothing on the form can be changed until the request returns
+      - id: error
+        renders: each rejected field shows its validation message, and a failed save shows sp_draft_not_saved
+        next: correct the field or retry the save; nothing entered is lost
+      - id: success
+        renders: a submit navigates to /orders with the created row; a saved draft shows sp_draft_saved
+        next: continue on /orders, or keep editing the draft
     # structure (optional): the groups the screen is read in, in reading order.
     # `tasks` are primary_tasks ids, `members` are elements/actions ids, and
     # `heading` is the displayed heading of the group; leave it out for a group
@@ -94,7 +125,7 @@ screens:
     # `validations`. This key describes the copy; validate does not check it.
     # Validate checks the UI source instead: every plain text there carries a
     # `qfai-text` reason comment. `near` is an elements/actions/structure id, `when` is one of
-    # default, empty, loading, error, success, and `why` says what the user
+    # the `states` ids (default, empty, loading, error, success), and `why` says what the user
     # could not know or do without the text, and why a label or the structure
     # cannot carry it.
     #
