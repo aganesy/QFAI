@@ -726,6 +726,44 @@ function resolveAlias(words: string[], shell: GraphShell): string[] {
     : words;
 }
 
+/**
+ * A character after which a POSIX shell starts a new word. Only space, tab and newline are
+ * blanks there: a carriage return, form feed or no-break space is part of the word, so a `#`
+ * after one is not a comment.
+ */
+const WORD_BREAK = /[ \t\n;&|()]/;
+
+/**
+ * Whether the `#` at `index`, read where no word has started yet, opens a comment. In a POSIX
+ * shell an unquoted `#` at the start of a word runs to the end of its line, so a quote inside it
+ * opens nothing and the next line is a command again. The caller must know no word is under way:
+ * an escaped separator or a closed substitution before the `#` puts it inside a word.
+ * Ceiling: PowerShell and `cmd` comments are not read, because a PowerShell `<# ... #>` block
+ * comment can end mid-line; a quote inside a PowerShell comment still fails closed as an
+ * unmatched quote. Reading PowerShell comments needs block comments handled first.
+ */
+function startsComment(command: string, index: number, shell: GraphShell): boolean {
+  if (shell !== "posix") return false;
+  const previous = command[index - 1];
+  return (
+    (previous === undefined || WORD_BREAK.test(previous)) && !inUntrackedContext(command, index)
+  );
+}
+
+/**
+ * Whether the text before `index` may leave a context open that these readers do not track and
+ * where the shell starts no comment or quotes differently: a backtick substitution, a `${...}`
+ * expansion, a `((...))` or `$[...]` arithmetic, an ANSI-C `$'...'` string, whose `\'` does not
+ * close it, or an extended glob such as `@(...)`. A `#` after one is read as text, as it was
+ * before comments were read, so a search after it is still classified.
+ * Ceiling: any such opener earlier in the command turns comment reading off for the rest of it,
+ * so a quote in a later comment there still fails closed as an unmatched quote. Tracking those
+ * contexts as the quotes are tracked lifts this.
+ */
+function inUntrackedContext(command: string, index: number): boolean {
+  return /`|\$\{|\$\[|\$'|\(\(|[?*+@!]\(/.test(command.slice(0, index));
+}
+
 function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | undefined {
   const commands: ShellCommand[] = [];
   let words: string[] = [];
@@ -734,9 +772,12 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
   let word = "";
   let quote: string | undefined;
   let afterRedirect: "" | "<" | ">" = "";
+  // An empty quote such as `''` starts a word that holds no character yet.
+  let quotedWord = false;
   const flushWord = () => {
     if (word.length) words.push(word);
     word = "";
+    quotedWord = false;
   };
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index];
@@ -759,8 +800,17 @@ function shellPipelines(command: string, shell: GraphShell): ShellCommand[] | un
     if (quote) {
       if (character === quote) quote = undefined;
       else word += character;
+    } else if (
+      character === "#" &&
+      !word.length &&
+      !quotedWord &&
+      startsComment(command, index, shell)
+    ) {
+      const end = command.indexOf("\n", index);
+      index = (end === -1 ? command.length : end) - 1;
     } else if (character === '"' || character === "'") {
       quote = character;
+      quotedWord = true;
     } else if (
       (character === "&" || character === "|") &&
       (character === "&"
@@ -842,9 +892,14 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
   const escape = shell === "posix" ? "\\" : "`";
   const bodies: string[] = [];
   let quote: string | undefined;
+  // Whether no word is under way: true at the start and after an unquoted separator only, so an
+  // escaped separator or a closed substitution before a `#` keeps it inside its word.
+  let wordStart = true;
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index];
     const next = command[index + 1];
+    const atWordStart = wordStart;
+    wordStart = false;
     if (character === escape && quote !== "'") {
       index += 1;
       continue;
@@ -853,19 +908,30 @@ function substitutionBodies(text: string, shell: GraphShell): string[] {
       if (character === "'") quote = undefined;
       continue;
     }
+    if (
+      !quote &&
+      atWordStart &&
+      character === "#" &&
+      shell === "posix" &&
+      !inUntrackedContext(command, index)
+    ) {
+      const end = command.indexOf("\n", index);
+      if (end === -1) break;
+      index = end;
+      wordStart = true;
+      continue;
+    }
+    if (!quote && character !== undefined && WORD_BREAK.test(character)) {
+      wordStart = true;
+      // A bare `(` also starts a word, and may open a subshell or a grouping below.
+      if (character !== "(") continue;
+    }
     if (character === "'" && !quote) {
       quote = "'";
       continue;
     }
     if (character === '"') {
       quote = quote ? undefined : '"';
-      continue;
-    }
-    // A comment runs nothing; the scan resumes on the next line.
-    if (!quote && character === "#" && /^$|[\s;&|(]/.test(command[index - 1] ?? "")) {
-      const end = command.indexOf("\n", index);
-      if (end < 0) break;
-      index = end;
       continue;
     }
     const opens =
