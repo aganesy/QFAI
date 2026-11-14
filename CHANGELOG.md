@@ -13,6 +13,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and `implementation-reviewer` report a control hand-built where that
   catalogue has one.
 
+- **`.agents/rules/interface-clarity.md` says what a business screen always
+  has.** A new section lists, per application, an app shell with navigation
+  and a way back, a home that shows what needs attention and one shared
+  component per repeated pattern; per screen, list search or filter with sort,
+  count and pagination, empty, loading, error and success states, and feedback
+  after every change. Leaving one out needs a reason recorded in the screen's UI
+  contract, and the Cut section counts a listed part as asked for.
+
 - **The code review of a rule change cross-checks the rules it links to.**
   When a change adds or edits a rule master under `.agents/rules/`, the
   `implementation-reviewer` reads every rule the changed master points to and
@@ -20,6 +28,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   different answer to the same situation.
 
 ### Changed
+
+- **The shipped uix-rev review prompts no longer name the removed
+  `40_screen_contracts.md` sidecar.** The strategy review checks brand language
+  against the UI contracts under `<paths.contractsDir>/ui/`, and the screen
+  contracts review prompt, which nothing loaded and which reviewed that removed
+  file, is gone.
 
 - **A deliberation record keeps both tables, empty where a run has no row.**
   The record template and its reference say that a stage that asked the user
