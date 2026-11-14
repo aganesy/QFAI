@@ -333,6 +333,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   markers separate commands, so what lies between and after them is still
   read. A search that appears only in a comment is not denied.
 
+- **`qfai session-review` finds a Claude Code session that moved into the
+  project after it started.** A session the desktop app opened in a scratch
+  directory records that directory as its `cwd` until it moves into the
+  repository. The command now takes a transcript in the root's project
+  directory when any of its records names the root, not only the first, so
+  such a session is no longer reported as missing. In the fallback over
+  directories that only share the start of the root's name, which includes
+  every worktree of the root, the first recorded `cwd` still decides.
+
 - **The search-protection hook reads a comment inside a substitution.** A `)`
   inside a comment, such as `$(echo # )` followed by `rg auth packages/)` on the
   next line, closed the substitution early, so the search after the comment ran
