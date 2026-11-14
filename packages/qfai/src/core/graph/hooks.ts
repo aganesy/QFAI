@@ -205,7 +205,9 @@ function redirectionLength(word: string | undefined): number {
  * The target of a command that changes the shell's directory: `undefined` when the
  * command changes none, `null` when its target cannot be read from the text. A `..`
  * segment is unreadable: the shell may resolve it from a CDPATH entry or through a
- * symbolic link, not lexically. `popd` returns to a directory the text does not name.
+ * symbolic link, not lexically. `popd` returns to a directory the text does not name,
+ * a `+N` operand rotates the directory stack, and a colon other than a drive letter's
+ * names a PowerShell provider drive such as `env:`, not a folder.
  */
 function directoryOperand(words: string[]): string | null | undefined {
   let offset = 0;
@@ -227,6 +229,8 @@ function directoryOperand(words: string[]): string | null | undefined {
     operands.length !== 1 ||
     target === undefined ||
     target.startsWith("-") ||
+    target.startsWith("+") ||
+    (target.includes(":") && !/^[A-Za-z]:[\\/]/.test(target)) ||
     /[$`~%*?[\]{}]/.test(target) ||
     target.split(/[\\/]/).includes("..")
     ? null
@@ -237,10 +241,14 @@ function directoryOperand(words: string[]): string | null | undefined {
  * Where the shell stands after a directory command. A move to the observed directory
  * itself changes nothing, whatever joins it. A move into a directory inside it is
  * followed only while the move runs unconditionally before what comes next: it is
- * not a pipeline stage, which runs in a subshell, and an `&&` joins it to the next
- * command. Any other move, or one whose target cannot be read, leaves the location
- * unknown. A relative POSIX target that does not start with `.` is resolved from
- * CDPATH when that is set, so such a move is followed only while CDPATH is unset.
+ * not a pipeline stage, which runs in a subshell, no `||` joins it to the command
+ * before it, which may skip it, and an `&&` joins it to the next command. Any other
+ * move, or one whose target cannot be read, leaves the location unknown.
+ *
+ * A relative POSIX target that does not start with `.` is resolved from CDPATH when
+ * that is set, so such a move is followed only while CDPATH is unset. Ceiling: the
+ * hook reads its own environment, so a CDPATH that only the agent's shell sets is
+ * not seen. Lift when a host reports the shell environment in the pre-tool event.
  */
 function movedLocation(
   location: ShellLocation,
@@ -254,7 +262,8 @@ function movedLocation(
   const directory = path.resolve(from, operand);
   if (location === "observed" && directory === scope.directory) return "observed";
   if (outside(scope.directory, directory)) return "unknown";
-  if (command.join === "|" || (next !== undefined && next.join !== "&&")) return "unknown";
+  if (command.join === "|" || command.join === "||" || (next !== undefined && next.join !== "&&"))
+    return "unknown";
   if (
     scope.shell === "posix" &&
     !path.isAbsolute(operand) &&
@@ -273,7 +282,8 @@ function outside(root: string, target: string): boolean {
 /**
  * Hands a denied search to the fallback authorization from where the shell stands.
  * After a followed move, the search target is rebased to the project-relative path
- * it names, so the grant matches the scope the search actually reads.
+ * it names, so the grant matches the scope the search actually reads. A `..` segment
+ * is not rebased: through a symbolic link it resolves from the link's real location.
  */
 function authorizeAt(context: CommandContext, decision: GraphHookDecision): GraphHookDecision {
   const { location, directory, authorize } = context;
@@ -286,6 +296,12 @@ function authorizeAt(context: CommandContext, decision: GraphHookDecision): Grap
     );
   if (!decision.exceptionEligible || decision.target === undefined || !decision.operation)
     return authorize(decision);
+  if (decision.target.split(/[\\/]/).includes(".."))
+    return graphFallbackUnavailable(
+      decision,
+      "The search target has a .. segment after a directory change.",
+      "Run a single search from this project worktree, then retry the denied action.",
+    );
   const target = path.resolve(location.directory, decision.target);
   if (outside(directory, target))
     return graphFallbackUnavailable(

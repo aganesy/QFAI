@@ -94,7 +94,6 @@ it("rebases the search target after an && chain into a project subdirectory and 
     ["cd packages && rg auth", "packages"],
     ["cd packages && cd qfai && rg auth src/", "packages/qfai/src"],
     ["cd packages && echo start && rg auth src/", "packages/src"],
-    ["cd packages && rg auth ../docs", "docs"],
     ['cd packages && bash -c "rg auth src/"', "packages/src"],
     ["Set-Location packages && rg auth src/", "packages/src", "PowerShell"],
   ];
@@ -114,6 +113,8 @@ it("rebases the search target after an && chain into a project subdirectory and 
     "cd packages && echo start; rg auth src/",
     "cd packages && echo start || rg auth src/",
     "cd packages\nrg auth src/",
+    "true || cd packages && rg auth src/",
+    "pushd packages && pushd +1 && rg auth src/",
     `cd '${path.dirname(root)}' && rg auth src/`,
   ]) {
     const result = classifyGraphExploration({ tool: "Bash", cwd: root, command });
@@ -121,6 +122,20 @@ it("rebases the search target after an && chain into a project subdirectory and 
     expect(result.fallbackUnavailable, command).toBe(true);
     expect(result.message, command).toContain("changes its working directory");
   }
+  const provider = classifyGraphExploration({
+    tool: "PowerShell",
+    cwd: root,
+    command: "Set-Location env: && rg auth src/",
+  });
+  expect(provider.fallbackUnavailable).toBe(true);
+  expect(provider.message).toContain("changes its working directory");
+  const parent = classifyGraphExploration({
+    tool: "Bash",
+    cwd: root,
+    command: "cd packages && rg auth ../docs",
+  });
+  expect(parent.fallbackUnavailable).toBe(true);
+  expect(parent.message).toContain("has a .. segment after a directory change");
   const escaping = classifyGraphExploration({
     tool: "Bash",
     cwd: root,
