@@ -55,11 +55,26 @@ Standard parts:
 - an empty state that says what to do next, distinct from "no results" for a
   search or filter, which offers to clear it.
 
+Behaviour:
+
+- the list state (keyword, filters, sort and page) lives in the screen's
+  address, the URL query on the web, so a reload, a shared link and the way
+  back from a detail keep it;
+- search, filters, sort and paging run where the data is: on the server for
+  any list that can outgrow one page, with the total count taken from the same
+  query;
+- the search input and the values it is matched against are normalised the
+  same way, such as Unicode NFKC so full-width and half-width forms match;
+- page and sort values are validated and capped, and a page past the end shows
+  the last page, not an error.
+
 Anti-patterns: a table of every field; filters that reset when the user comes
 back from a detail; a destructive row action with no confirmation; an empty
-list shown as a blank table.
+list shown as a blank table; a list that can outgrow one page loaded whole and
+paged in memory.
 
-Catalogue: a data table with toolbar, pagination and empty state.
+Catalogue: a data table with toolbar, pagination and empty state, whose
+search, sort and paging run on the server for a list that can outgrow one page.
 
 ## Detail
 
@@ -147,12 +162,17 @@ Catalogue: stat cards, a task list, an activity feed.
 
 - **Writing a UI contract.** For each screen, name its type here, then write
   in the contract the parts this screen needs, and the reason for a part it
-  leaves out.
+  leaves out. A behaviour in its type's Behaviour list applies without being
+  named; the contract records only a behaviour the screen leaves out, with
+  the reason, such as a fixed list of a few items paged on the client.
 - **Implementing.** Build what the contract names. A part of the screen's type
   that the contract neither names nor excludes with a reason is drift: raise
   it to the contract stage under `.qfai/assistant/rule/drift-protocol.md`
-  instead of building it.
+  instead of building it. A behaviour of the type is built unless the contract
+  leaves it out with a reason.
 - **Reviewing a screen.** A part of its type that is missing with no recorded
   reason is a finding against the screen, named with the part and the type.
+  For a type with a Behaviour list, a behaviour the screen breaks with no
+  recorded reason is a finding in the same way.
 
 A screen that fits no type here still gets the parts under "Every screen".
