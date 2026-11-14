@@ -9,7 +9,8 @@ field, a tooltip on a button whose label already says what it does, and every
 parameter the thing underneath happens to expose.
 
 The user arrived to do one task and has read nothing about the product. Leave
-what that person needs, and nothing else.
+what that person needs, and nothing else. What that person needs includes the
+standard parts of a business screen, listed near the end of this rule.
 
 ## Scope
 
@@ -104,6 +105,24 @@ Cutting stops here. None of these is excess at any size.
 - Error text that says what went wrong and what to do about it.
 - A confirmation before anything the user cannot undo.
 - Anything the spec asks for.
+
+## What a business screen always has
+
+The cutting above removes excess. It never decides what a screen is missing. A
+screen in a business application is built with these parts whether or not its
+UI contract names them:
+
+- An app shell with navigation that shows where the user is, and a way back.
+- For a list that can outgrow one screen: search or filter, sort, a count and
+  pagination.
+- Empty, loading, error and success states. The empty state says what to do
+  next; the error state says how to recover.
+- Feedback after every change, and a confirmation before an irreversible one.
+- A home or dashboard that shows what needs the user's attention.
+- One shared component per repeated pattern.
+
+Leaving one of these out is a departure like any other: it needs a recorded
+reason. A missing part is a defect, not a cut.
 
 ## Related
 
