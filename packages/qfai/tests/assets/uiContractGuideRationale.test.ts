@@ -43,4 +43,18 @@ describe.each(QFAI_TREES)("%s ui-contract-guide.md", (tree) => {
     expect(guide).not.toContain("08_Decisions.md");
     expect(guide).not.toContain("_policies/");
   });
+
+  it("says the contract is a floor, not the screen inventory", async () => {
+    const guide = await readGuide(tree);
+    // Read as a closed list, the contract let a screen ship with only the
+    // parts it named: no shell, no list behaviour, no success feedback.
+    expect(guide).toContain("## The contract is a floor");
+    expect(guide).toContain("It is the minimum, not the inventory of the screen.");
+    expect(guide).toContain('lists under "What a business screen always has"');
+    expect(guide).toContain("Leaving one out needs a reason recorded in the screen's UI contract");
+    expect(guide).toContain("`.agents/rules/interface-clarity.md`");
+    expect(guide).toContain(
+      "their absence from the contract is no reason to leave them out of the screen",
+    );
+  });
 });
