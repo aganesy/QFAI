@@ -85,6 +85,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
   is unchanged.
 
+- **The home screen counts as one view.** `interface-clarity.md` § 4 says
+  the home, like any dashboard, has the one purpose "see what needs
+  attention", and each of its parts links to the view that does the work.
+
 - **The shipped product-surface reviewer and UI contract guide no longer name
   discussion UI/UX sidecars.** The reviewer reconciles the UI contract with
   design tokens, flows and rendered output, and the guide says a deliberation
