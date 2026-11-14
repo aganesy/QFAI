@@ -142,7 +142,7 @@ describe("shipped qfai-sdd design contracts", () => {
 
 const STATE_IDS = ["default", "empty", "loading", "error", "success"];
 
-// A screen whose states nobody wrote down gets none built (#4110): the shipped
+// A screen whose states nobody wrote down gets none built: the shipped
 // template lists every state, each with what renders and the next action, or
 // the reason the screen cannot be in it.
 describe("shipped ui-contract.sample.yaml lists every screen state", () => {
