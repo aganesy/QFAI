@@ -15,6 +15,14 @@ theme, or a survey the user asks for, also run
 screen type or a component the project does not have yet, also fill
 `.qfai/assistant/rule/references/ui-research-brief.md` for each one.
 
+`prototyping-grill` also triggers it, scoped to UI, when a run adds a screen
+whose type the project's pattern references do not cover, or that needs a
+component the project's component catalogues do not list. It then researches
+those gaps alone, as
+`.qfai/assistant/step/prototyping-grill/STEP.md#ui-research-for-uncovered-screens`
+says, and the visual reference survey does not apply. A run whose screens they
+all cover runs no research.
+
 ## Output Schema
 
 ```yaml

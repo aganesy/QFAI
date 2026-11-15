@@ -1643,7 +1643,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for `paths.deliberationDir: .qfai/deliberation`, which states where the run's
   // deliberation records go. The value is the default the loader already applies, so behaviour
   // is unchanged; deleting that one line reproduces `e9129574…` byte for byte.
-  ["qfai.config.yaml", "9a9855d21422fc4d7adafaf6f919d4372faafcc493baf08e2fd15b33f4cba6b3"],
+  //
+  // Re-pinned for the commented `uiText.elements` block, which maps a project component to the
+  // element it renders for the plain-text check. The whole delta is that comment: every key the
+  // file sets is unchanged, and deleting the block reproduces `9a9855d2…` byte for byte.
+  ["qfai.config.yaml", "76202c57875e8fa263af3f34d5e70fa13ab75a981a803a1270d427244a2951dd"],
 ]);
 
 /**

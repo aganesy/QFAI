@@ -1,3 +1,4 @@
+import { closeSync, existsSync, openSync, readSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 
 export type GraphHookHost = "claude" | "codex" | "copilot" | "vscode";
@@ -6,6 +7,8 @@ export interface GraphHookEvent {
   tool: string;
   command?: string;
   path?: string;
+  /** The host gave `path` as an include glob, such as VS Code's `includePattern`, not a path. */
+  pathIsPattern?: true;
   session?: string;
   cwd?: string;
   workdir?: string;
@@ -48,21 +51,49 @@ interface ShellScope {
   authorize: GraphSearchAuthorization;
   shell: GraphShell;
   directory?: string;
+  /** The project root a scoped search must stay inside; without one no search is scoped. */
+  root?: string;
+  /**
+   * The project root and the checkout the hook belongs to, given only when the checkout is
+   * known: a search that reads one regular file outside all of them is not denied. Empty, no
+   * search is exempt as an outside read.
+   */
+  worktrees: readonly string[];
+  /**
+   * Whether this text is the whole event: no command before it, and no substitution, can have
+   * changed the file system a search would read.
+   */
+  alone: boolean;
 }
 
 interface CommandContext extends ShellScope {
   location: ShellLocation;
   redefined: boolean;
+  /**
+   * Whether this command is the whole command text, alone or with pipeline stages after it.
+   * Only then is a scoped search placed: any command before it, a nested shell, a
+   * substitution or a wrapper can move the shell in ways the directory tracker does not
+   * follow (`Push-Location`, `cd..`, a script block, `env --chdir`, `pwsh -WorkingDirectory`).
+   */
+  placeable?: boolean;
 }
 
 export function classifyGraphExploration(
   event: GraphHookEvent,
   authorize: GraphSearchAuthorization = (decision) => decision,
+  root?: string,
+  checkout?: string,
 ): GraphHookDecision {
+  // The outside-file case needs the checkout the hook belongs to. Without it no search is exempt
+  // as an outside read, so a caller that knows only the project root never widens it.
+  const worktrees = checkout ? [...(root ? [root] : []), checkout] : [];
   if (event.tool === "write_stdin") return outsideBoundary();
   if (
     ["rg", "grep", "grep_search", "search_files", "file_search"].includes(event.tool.toLowerCase())
   ) {
+    const base = event.cwd ? path.resolve(event.cwd) : undefined;
+    if (event.path !== undefined && !event.pathIsPattern && insideProject(root, base, [event.path]))
+      return scopedSearch();
     return authorize(denyExploration(event.tool, event.path ?? "."));
   }
   const shell: GraphShell =
@@ -77,7 +108,14 @@ export function classifyGraphExploration(
   return (
     classifyShellText(
       event.command ?? "",
-      { authorize, shell, ...(directory ? { directory } : {}) },
+      {
+        authorize,
+        shell,
+        worktrees,
+        alone: true,
+        ...(directory ? { directory } : {}),
+        ...(root ? { root } : {}),
+      },
       0,
       false,
       "observed",
@@ -128,7 +166,7 @@ function classifyShellText(
     start,
     bodies.map(
       (body) => (location: ShellLocation, redefines: boolean) =>
-        classifyShellText(body, scope, depth + 1, redefines, location, true),
+        classifyShellText(body, { ...scope, alone: false }, depth + 1, redefines, location, true),
     ),
   );
 }
@@ -208,9 +246,14 @@ function classifyCommands(
   let location = start;
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
+  let unreadable: GraphHookDecision | undefined;
   // Inside a `case`, a command that starts with a word ending in `)`, such as `y)`
   // or `"a b")`, is an arm: its pattern is not a command.
   let openCases = 0;
+  const sole =
+    depth === 0 &&
+    substitutions.length === 0 &&
+    commands.every((command, index) => index === 0 || command.join === "|");
   for (const [index, command] of commands.entries()) {
     const words =
       openCases > 0 && command.words[0]?.endsWith(")") ? command.words.slice(1) : command.words;
@@ -230,13 +273,31 @@ function classifyCommands(
     // `git log | { grep fix; } < .env` the group reads `.env`.
     const upstream =
       words[0] === "{" && !groupClosesBare(commands, index) ? undefined : command.upstream;
-    const decision = classifyCommand(words, { ...scope, location, redefined }, depth, upstream);
-    if (decision?.decision === "deny") return decision;
-    if (decision?.state === "outside-boundary") boundary = decision;
+    const placeable = sole && index === 0;
+    // Only a search that is the event's one command can read outside files: any other command,
+    // before it or in a later pipeline stage running beside it, may swap the file it reads.
+    const alone = scope.alone && commands.length === 1 && substitutions.length === 0;
+    const decision = classifyCommand(
+      words,
+      { ...scope, alone, location, redefined, placeable },
+      depth,
+      upstream,
+    );
+    // A command the hook cannot read is denied, but a later search it can name is reported
+    // in its place, so the denial says what was found.
+    if (decision?.state === "failed") unreadable ??= decision;
+    else if (decision?.decision === "deny") return decision;
+    else if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
   }
-  return boundary ?? allowed;
+  return unreadable ?? boundary ?? allowed;
 }
+
+/**
+ * An `env` option that splits its value into a command line: `-S`, `-S<value>`, a cluster of
+ * argument-free short options ending in `S` such as `-iS`, and `--split-string[=<value>]`.
+ */
+const envSplitOption = /^-[i0v]*S|^--split-string(?:=|$)/;
 
 /**
  * Whether a command defines a function or alias, or sets a variable a later
@@ -251,16 +312,27 @@ function redefinesCommands(words: string[]): boolean {
     if (redirection) offset += redirection;
     // A group's `{` defines nothing itself; the command it opens is read instead.
     else if (words[offset] === "{") offset += 1;
-    else if (["builtin", "command", "env"].includes(words[offset]?.toLowerCase() ?? "")) {
+    else if (["builtin", "command", "env"].includes(commandName(words.slice(offset)) ?? "")) {
+      const wrapper = commandName(words.slice(offset));
       offset += 1;
       while (words[offset]?.startsWith("-")) {
+        // `env -S` runs its value as a new command line, which may set a variable or name
+        // another program; the words after it are not the command this loop would find.
+        if (wrapper === "env" && envSplitOption.test(words[offset] ?? "")) return true;
         offset += /^-[uCS]$|^--(?:unset|chdir|split-string)$/.test(words[offset] ?? "") ? 2 : 1;
       }
     } else break;
   }
   const first = words[offset] ?? "";
   return (
-    words.some((word) => word.includes("()") || /^\{[A-Za-z_][A-Za-z0-9_]*\}[<>]/.test(word)) ||
+    words.some(
+      (word) =>
+        word.includes("()") ||
+        /^\{[A-Za-z_][A-Za-z0-9_]*\}[<>]/.test(word) ||
+        // PowerShell sets an environment variable through the env: drive or the .NET API.
+        /^env:/i.test(word) ||
+        word.includes("Environment]::"),
+    ) ||
     /^(?:[A-Za-z_][A-Za-z0-9_]*=|\$|\{\w*\}?[<>]?$|\{\w+\}[<>])/.test(first) ||
     (first === "printf" && words.includes("-v")) ||
     [
@@ -413,6 +485,185 @@ function movedLocation(
   return { directory };
 }
 
+/** The directory a search's relative paths resolve from, when the text tells it. */
+function searchBase(context: CommandContext): string | undefined {
+  const { location, directory } = context;
+  if (location === "unknown") return undefined;
+  return location === "observed" ? directory : location.directory;
+}
+
+/**
+ * Whether a search names at least one path and every path it names lies inside the
+ * project root, below it. The root itself, as `.` or by its own path, is the whole
+ * repository and is no scope. A path the text cannot place is not inside: one with a
+ * `..` segment, which may resolve through a symbolic link, an expansion, a glob, a home
+ * or provider prefix, or a list. A parenthesis, `@` or `!` marks a PowerShell
+ * subexpression or array, such as `(Get-Location)` or `@('.')`, or a Bash extended glob
+ * such as `!(node_modules)`, so its value is unknown.
+ *
+ * SIMPLIFIED: a glob such as `src/*.ts` stays denied, though it only names project
+ * files; a leading-dot glob or a brace can name `..`. Lift when: globs are expanded
+ * against the project tree before the decision.
+ */
+function insideProject(
+  root: string | undefined,
+  base: string | undefined,
+  paths: string[] | undefined,
+): boolean {
+  if (!root || !base || !paths || paths.length === 0) return false;
+  return paths.every((operand) => {
+    if (
+      !operand.trim() ||
+      /[$`%<>~*?[\]{},()@!]/.test(operand) ||
+      (operand.includes(":") && !/^[A-Za-z]:[\\/]/.test(operand)) ||
+      operand.split(/[\\/]/).includes("..")
+    )
+      return false;
+    const target = path.resolve(base, operand);
+    if (path.relative(root, target) === "" || outside(root, target)) return false;
+    // A symbolic link or junction inside the project may point outside it.
+    const real = realPath(target);
+    const realRoot = realPath(root);
+    return real === undefined || realRoot === undefined || !outside(realRoot, real);
+  });
+}
+
+/** The path with every link resolved, or `undefined` when it cannot be resolved. */
+function realPath(target: string): string | undefined {
+  try {
+    return realpathSync.native(target);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether a grep or rg command follows symbolic links it finds below the paths it names. */
+function followsLinks(words: string[]): boolean {
+  const name = commandName(words);
+  return words
+    .slice(1)
+    .some((word) =>
+      name === "rg"
+        ? word === "--follow" || /^-[A-Za-z]*L/.test(word)
+        : name === "grep" && (word === "--dereference-recursive" || /^-[A-Za-z]*R/.test(word)),
+    );
+}
+
+function scopedSearch(): GraphHookDecision {
+  return {
+    decision: "allow",
+    state: "configured",
+    message: "Scoped search allowed: every path it names lies inside the project.",
+  };
+}
+
+/**
+ * The paths a grep, rg, findstr, Select-String or git grep command names, read only
+ * from a shape known option by option. `undefined` when the command is no such search,
+ * or holds a word the shell may expand, an unknown option, an option missing its value,
+ * or, for git grep, a revision or no `--` before its paths.
+ */
+function searchPaths(words: string[]): string[] | undefined {
+  if (/[\\/=]/.test(words[0] ?? "")) return undefined;
+  const name = commandName(words);
+  const args = words.slice(1);
+  if (args.some((word) => unparsedWord(word))) return undefined;
+  if (name === "grep" || name === "rg") return grepPaths(name, args);
+  if (name === "findstr") return findstrPaths(args);
+  if (name === "select-string") return selectStringPaths(args);
+  if (name === "git" && args[0]?.toLowerCase() === "grep") return gitGrepPaths(args.slice(1));
+  return undefined;
+}
+
+/** rg options that take the next word as their value. */
+const rgValueOptions = /^(?:-[gtT]|--(?:glob|type|type-not))$/;
+const scopedGrepSwitches = /^-[ivncowxEFGPqsHhIyzZLlbUarR]+$/;
+
+function grepPaths(name: "grep" | "rg", args: string[]): string[] | undefined {
+  let patternGiven = false;
+  const operands: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const word = args[index] ?? "";
+    if (word === "--") {
+      operands.push(...args.slice(index + 1));
+      break;
+    }
+    if (!word.startsWith("-")) operands.push(word);
+    else if (valueOptions.test(word) || (name === "rg" && rgValueOptions.test(word))) {
+      if (word === "-e" || word === "--regexp") patternGiven = true;
+      index += 1;
+      if (index >= args.length) return undefined;
+    } else if (
+      attachedValueOptions.test(word) ||
+      /^--(?:include|exclude|glob|type)=.+$/.test(word)
+    ) {
+      if (/^(?:-e|--regexp=)/.test(word)) patternGiven = true;
+    } else if (
+      !(name === "grep" ? scopedGrepSwitches : rgSwitches).test(word) &&
+      !longSwitches.has(word) &&
+      word !== "--recursive" &&
+      word !== "--hidden"
+    )
+      return undefined;
+  }
+  return patternGiven ? operands : operands.slice(1);
+}
+
+/** With `/s`, findstr searches every directory below the current one for each file name. */
+function findstrPaths(args: string[]): string[] | undefined {
+  let patternGiven = false;
+  const operands: string[] = [];
+  for (const word of args) {
+    if (/^\/c:./i.test(word)) patternGiven = true;
+    else if (word.startsWith("/")) {
+      if (!/^\/[ivnxbelrmop]+$/i.test(word)) return undefined;
+    } else if (word.startsWith("-")) return undefined;
+    else operands.push(word);
+  }
+  return patternGiven ? operands : operands.slice(1);
+}
+
+/** Select-String binds its first free positional word to Pattern and the next to Path. */
+function selectStringPaths(args: string[]): string[] | undefined {
+  let patternGiven = false;
+  const named: string[] = [];
+  const positional: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const word = args[index] ?? "";
+    if (!word.startsWith("-")) positional.push(word);
+    else if (/^-(?:pattern|path|literalpath|context|encoding)$/i.test(word)) {
+      const value = args[index + 1];
+      if (value === undefined) return undefined;
+      index += 1;
+      if (/^-pattern$/i.test(word)) patternGiven = true;
+      else if (/path$/i.test(word)) named.push(value);
+    } else if (
+      !/^-(?:simplematch|casesensitive|notmatch|allmatches|list|quiet|raw|noemphasis)$/i.test(word)
+    )
+      return undefined;
+  }
+  const rest = patternGiven ? positional : positional.slice(1);
+  if (rest.length > 1 || (named.length > 0 && rest.length > 0)) return undefined;
+  return [...named, ...rest];
+}
+
+function gitGrepPaths(args: string[]): string[] | undefined {
+  const separator = args.indexOf("--");
+  if (separator < 0) return undefined;
+  let patternGiven = false;
+  const operands: string[] = [];
+  for (let index = 0; index < separator; index += 1) {
+    const word = args[index] ?? "";
+    if (!word.startsWith("-")) operands.push(word);
+    else if (word === "-e") {
+      patternGiven = true;
+      index += 1;
+      if (index >= separator) return undefined;
+    } else if (!/^-[nilwvcEFPIhH]+$/.test(word) && !longSwitches.has(word)) return undefined;
+  }
+  return operands.length === (patternGiven ? 0 : 1) ? args.slice(separator + 1) : undefined;
+}
+
 function outside(root: string, target: string): boolean {
   const relative = path.relative(root, target);
   return relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
@@ -492,6 +743,25 @@ function arithmeticForBody(words: string[]): string[] | undefined {
   return undefined;
 }
 
+/**
+ * Programs that run another program from their arguments. `valued` matches an option that
+ * takes the next word as its value; `operands` counts the words before the program, such as
+ * the duration of `timeout`.
+ */
+const PROGRAM_RUNNERS: Record<string, { valued: RegExp; operands: number }> = {
+  nohup: { valued: /^$/u, operands: 0 },
+  setsid: { valued: /^$/u, operands: 0 },
+  nice: { valued: /^(?:-n|--adjustment)$/u, operands: 0 },
+  ionice: { valued: /^(?:-c|-n|-p|-P|-u|--class|--classdata)$/u, operands: 0 },
+  stdbuf: { valued: /^(?:-i|-o|-e|--input|--output|--error)$/u, operands: 0 },
+  timeout: { valued: /^(?:-s|-k|--signal|--kill-after)$/u, operands: 1 },
+  xargs: {
+    valued:
+      /^(?:-I|-n|-P|-L|-d|-E|-s|-a|--max-args|--max-procs|--max-lines|--delimiter|--eof|--max-chars|--arg-file|--replace)$/u,
+    operands: 0,
+  },
+};
+
 function classifyCommand(
   words: string[],
   context: CommandContext,
@@ -534,21 +804,64 @@ function classifyCommand(
   if (operation === "}" || operation === "esac") return undefined;
   if (operation === "env" || operation === "command" || operation === "builtin") {
     let offset = 1;
+    let split: string[] = [];
     while (offset < words.length) {
-      const redirection = redirectionLength(words[offset]);
+      const word = words[offset] ?? "";
+      const redirection = redirectionLength(word);
       if (redirection) offset += redirection;
-      else if (
-        words[offset]?.startsWith("-") ||
-        /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")
-      )
-        offset += 1;
+      else if (operation === "env" && envSplitOption.test(word)) {
+        // `env -S 'rg foo /'` runs the split string as the command and its arguments.
+        const separate = /^-[i0v]*S$/.test(word) || word === "--split-string";
+        const value = separate
+          ? (words[offset + 1] ?? "")
+          : word.startsWith("--")
+            ? word.slice(word.indexOf("=") + 1)
+            : word.slice(word.indexOf("S") + 1);
+        split = value.split(/\s+/).filter((part) => part.length > 0);
+        offset += separate ? 2 : 1;
+        break;
+      } else if (operation === "env" && /^(?:-C|-u|--chdir|--unset)$/.test(word)) {
+        // These options take the next word as their value, not as the command.
+        offset += 2;
+      } else if (word.startsWith("-") || /^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) offset += 1;
       else break;
     }
-    return classifyCommand(words.slice(offset), context, depth + 1);
+    // `env` can change the directory (`-C`), the environment (an assignment, `-u`, `-i`) or the
+    // command line (`-S`) of what it runs, so a search behind it is never an outside read.
+    return classifyCommand(
+      [...split, ...words.slice(offset)],
+      operation === "env" ? { ...context, alone: false } : context,
+      depth + 1,
+    );
+  }
+  const runner = PROGRAM_RUNNERS[operation ?? ""];
+  if (runner) {
+    let offset = 1;
+    while (offset < words.length) {
+      const word = words[offset] ?? "";
+      const redirection = redirectionLength(word);
+      if (redirection) offset += redirection;
+      else if (word === "--") {
+        offset += 1;
+        break;
+      } else if (runner.valued.test(word)) offset += 2;
+      else if (word.startsWith("-")) offset += 1;
+      else break;
+    }
+    // `xargs` passes its input as arguments, so the program it runs reads no piped text.
+    const input = operation === "xargs" ? undefined : upstream;
+    return classifyCommand(words.slice(offset + runner.operands), context, depth + 1, input);
   }
   if (["bash", "sh", "zsh", "pwsh", "powershell", "cmd"].includes(operation ?? "")) {
     const switchIndex = words.findIndex((word) => /^(?:-[a-z]*c|\/c|-command)$/i.test(word));
     const inner = switchIndex >= 0 ? words[switchIndex + 1] : undefined;
+    // A shell given no command and no script, or `-Command -`, runs the text piped into it,
+    // which the hook cannot read.
+    const operands = words
+      .slice(1)
+      .filter((word) => !word.startsWith("-") && !redirectionLength(word));
+    if (upstream && (inner === "-" || (!inner && operands.length === 0)))
+      return failedGraphHook("piped-shell");
     if (!inner) return outsideBoundary();
     const shell =
       operation === "pwsh" || operation === "powershell"
@@ -561,7 +874,10 @@ function classifyCommand(
       {
         authorize: context.authorize,
         shell,
+        worktrees: context.worktrees,
+        alone: context.alone,
         ...(context.directory ? { directory: context.directory } : {}),
+        ...(context.root ? { root: context.root } : {}),
       },
       depth + 1,
       redefined,
@@ -569,7 +885,18 @@ function classifyCommand(
     );
   }
   if (!redefined && pipeFilter(words) && printsText(upstream)) return undefined;
+  if (
+    !redefined &&
+    depth === 0 &&
+    context.placeable === true &&
+    !followsLinks(words) &&
+    !(context.shell === "powershell" && words.some((word) => word.startsWith("@"))) &&
+    insideProject(context.root, searchBase(context), searchPaths(words))
+  )
+    return scopedSearch();
   if (operation === "rg" || operation === "grep" || operation === "findstr") {
+    if (readsOnlyOutside(context, searchOperands(operation, words.slice(1))))
+      return outsideProject();
     let offset = 1;
     while (
       /^(?:-[RrinlIHsvwxcFoq]+|--(?:hidden|line-number|ignore-case|fixed-strings|recursive)|\/[SIMOPVNLR]+)$/i.test(
@@ -613,6 +940,7 @@ function classifyCommand(
     });
   }
   if (operation === "select-string") {
+    if (readsOnlyOutside(context, selectStringOperands(words.slice(1)))) return outsideProject();
     const path = words.findIndex((word) => /^-(?:literalpath|path)$/i.test(word));
     const targets: string[] = [];
     for (let offset = path + 1; path >= 0 && offset < words.length; offset += 1) {
@@ -842,6 +1170,254 @@ function outsideBoundary(): GraphHookDecision {
     message:
       "Search inside scripts, aliases or continuing input is not verified by this pre-tool boundary.",
   };
+}
+
+function outsideProject(): GraphHookDecision {
+  return {
+    decision: "allow",
+    state: "configured",
+    message: "The search reads only files outside this project worktree.",
+  };
+}
+
+/**
+ * The switches each search may carry before its pattern when it is checked for reading only
+ * files outside the project. None reads a file list or a pattern file, or takes a value. Every
+ * operand must be a regular file, so no switch can recurse into a directory. Ceiling: any other
+ * option keeps the search denied; lift when an option is shown to read nothing beyond the
+ * operands.
+ */
+const OUTSIDE_SWITCHES: Readonly<Record<string, RegExp>> = {
+  grep: /^-[inlHhsvwxcFoqrE]+$/,
+  rg: /^-[inlHsvwxcFoq]+$/,
+  findstr: /^\/[IVNLXBEMOPR]+$/i,
+};
+
+/**
+ * A character a shell may expand, split, quote or redirect, so the words the program receives
+ * cannot be read from the text. The tokenizer drops quotes, so a quoted glob is refused too.
+ * Ceiling: `grep -n "a.*b" file` stays denied; lift when words keep their quote marks.
+ */
+const EXPANDING = /[$`~%*?[\]{}()<>|;&,!@^'"#]/;
+
+/** The pattern word and the file operands of a search checked for reading only outside files. */
+interface OutsideSearch {
+  pattern: string;
+  operands: string[];
+}
+
+/**
+ * The file operands of a grep, rg or findstr whose words are all known: switches from
+ * `OUTSIDE_SWITCHES`, then a literal pattern, then the operands. Options are read only before
+ * the pattern, since BSD grep and POSIXLY_CORRECT read a later `-x` as a file. `undefined` when
+ * the shape is any other.
+ *
+ * Ceiling: `RIPGREP_CONFIG_PATH` and `GREP_OPTIONS` add arguments the command text does not
+ * show, and the hook reads its own environment, so a value only the agent's shell profile sets,
+ * or an alias or function defined outside the event, is not seen. Lift when a host reports the
+ * shell environment in the pre-tool event.
+ */
+function searchOperands(operation: string, args: string[]): OutsideSearch | undefined {
+  const switches = OUTSIDE_SWITCHES[operation];
+  if (
+    !switches ||
+    (operation === "rg" && process.env.RIPGREP_CONFIG_PATH) ||
+    (operation === "grep" && process.env.GREP_OPTIONS)
+  )
+    return undefined;
+  let index = 0;
+  while (switches.test(args[index] ?? "")) index += 1;
+  if (operation !== "findstr" && args[index] === "--") index += 1;
+  const [pattern, ...rest] = args.slice(index);
+  if (pattern === undefined || pattern.startsWith("-") || EXPANDING.test(pattern)) return undefined;
+  // findstr reads a `/` word anywhere as an option, such as `/S` or `/F:list`, and reads
+  // `C:/a/b.txt` as the drive-relative `C:b.txt`, so no word after its switches may hold a `/`.
+  if (operation === "findstr" && args.slice(index).some((word) => word.includes("/")))
+    return undefined;
+  return { pattern, operands: rest };
+}
+
+/**
+ * The file operands of a Select-String whose words are all known: `-Pattern`, `-Path` and
+ * `-LiteralPath` with a value, switches that read no other file, and positional words, the
+ * first of which is the pattern when `-Pattern` is absent. `undefined` for any other shape.
+ */
+function selectStringOperands(args: string[]): OutsideSearch | undefined {
+  let pattern: string | undefined;
+  const operands: string[] = [];
+  const positional: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const word = args[index] ?? "";
+    if (/^-(?:pattern|path|literalpath)$/i.test(word)) {
+      index += 1;
+      const value = args[index];
+      if (value === undefined || value.startsWith("-")) return undefined;
+      if (!/^-pattern$/i.test(word)) operands.push(value);
+      else if (pattern === undefined) pattern = value;
+      else return undefined;
+    } else if (word.startsWith("-")) {
+      if (!/^-(?:simplematch|casesensitive|notmatch|allmatches|list|quiet|noemphasis)$/i.test(word))
+        return undefined;
+    } else positional.push(word);
+  }
+  pattern ??= positional.shift();
+  if (pattern === undefined || EXPANDING.test(pattern)) return undefined;
+  return { pattern, operands: [...operands, ...positional] };
+}
+
+/**
+ * Whether the one operand of a search provably names a regular file outside the project. The
+ * search is the whole event, so no other command can have made a link it reads, and no part
+ * of the event redefines a command or sets an environment variable. It runs from a known
+ * directory, and its pattern word names nothing that exists there, so an argument the
+ * environment adds, such as `-e x` in `GREP_OPTIONS`, cannot turn that word into a file. Each
+ * operand is an absolute literal path that, lexically and after resolving symbolic links,
+ * neither lies inside nor contains any of the worktrees, and resolves to a regular file with one
+ * name that is not a Cygwin or MSYS link file or a Windows shortcut.
+ *
+ * A directory is refused, since a search recursing into it may reach the project through a
+ * link, a junction or a mount below it. No operand, or one that cannot be resolved, proves
+ * nothing, so the search stays denied. A `..` segment is refused: the shell resolves it through
+ * a symbolic link where a lexical reading does not. Every operand is checked lexically before
+ * any is resolved, so a search with a project operand is denied without reading the disk. This
+ * reads the file system only; it queries no graph.
+ *
+ * Ceiling: the hook reads its own environment, so a `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH`
+ * left in a persistent terminal that adds a file operand is not seen. A single file bind-mounted
+ * from the project onto an outside path keeps its own name and one link, so it is not seen
+ * either. A process outside the event, such as a background job an earlier event started, can
+ * swap the file between this check and the search opening it; a pre-tool hook cannot close that
+ * race. One operand bounds it to one file's matching lines, which a direct `cat` of that file
+ * already prints, and the hook steers searches rather than bounding reads. A sibling worktree
+ * of the same repository outside the checkout is not part of the project here, so its files are allowed. Resolving a path on a mapped network drive or
+ * a network mount is a file-system call that may reach the network; network paths written as
+ * `\\server` or `//server` are refused before they are resolved. Lift when a host reports the
+ * files a command opened.
+ */
+function readsOnlyOutside(context: CommandContext, search: OutsideSearch | undefined): boolean {
+  const { location, directory, worktrees, redefined, shell, alone } = context;
+  if (
+    search?.operands.length !== 1 ||
+    !alone ||
+    redefined ||
+    location === "unknown" ||
+    !directory ||
+    !worktrees.length ||
+    /^[\\/]{2}/.test(search.pattern)
+  )
+    return false;
+  const { pattern, operands } = search;
+  const base = location === "observed" ? directory : location.directory;
+  const lexicalRoots = worktrees.map((root) => path.resolve(root));
+  const lexical = operands.map((operand) => path.resolve(operand));
+  if (
+    !operands.every((operand) => literalPath(operand, shell)) ||
+    !lexical.every((file) => !systemPath(file) && lexicalRoots.every((root) => apart(root, file)))
+  )
+    return false;
+  try {
+    if (existsSync(path.resolve(base, pattern))) return false;
+    const roots = [...lexicalRoots, ...worktrees.map((root) => realpathSync.native(root))];
+    return lexical.every((file) => {
+      const real = realpathSync.native(file);
+      const status = statSync(real);
+      return (
+        !systemPath(real) &&
+        status.isFile() &&
+        status.nlink === 1 &&
+        !/\.lnk$/i.test(file) &&
+        !/\.lnk$/i.test(real) &&
+        !linkFile(real) &&
+        roots.every((root) => apart(root, file) && apart(root, real) && apartOnDisk(root, real))
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Headers of files that a Cygwin or MSYS shell, such as Git Bash, follows as a link while
+ * Node.js reads a regular file: a `winsymlinks:sys` link, an Interix link and a Windows
+ * shortcut, which `winsymlinks:lnk` writes.
+ */
+const LINK_HEADERS: readonly Buffer[] = [
+  Buffer.from("!<symlink>", "latin1"),
+  Buffer.from("IntxLNK\x01", "latin1"),
+  Buffer.from([0x4c, 0x00, 0x00, 0x00, 0x01, 0x14, 0x02, 0x00]),
+];
+
+/** Whether a file starts with a header from `LINK_HEADERS`. */
+function linkFile(file: string): boolean {
+  const head = Buffer.alloc(16);
+  const descriptor = openSync(file, "r");
+  try {
+    const read = readSync(descriptor, head, 0, head.length, 0);
+    return LINK_HEADERS.some(
+      (header) => read >= header.length && head.subarray(0, header.length).equals(header),
+    );
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+/** A path under `/proc`, `/dev` or `/sys`, whose entries are not ordinary files. */
+function systemPath(file: string): boolean {
+  return /^\/(?:proc|dev|sys)(?:\/|$)/.test(file.split(path.sep).join("/"));
+}
+
+/**
+ * Whether an operand is an absolute path the shell passes as written, so it names the same file
+ * whatever the shell's directory is: a drive letter path on Windows, a `/` path elsewhere. A
+ * colon is allowed only after a drive letter, so a provider drive, a URL or a pathspec is
+ * refused, and a network path is refused before it is resolved. A POSIX shell reads a
+ * backslash as an escape, and on Windows maps a path from `/` through its own mount table.
+ */
+function literalPath(operand: string, shell: GraphShell): boolean {
+  return !(
+    !(process.platform === "win32" ? /^[A-Za-z]:[\\/]/ : /^\//).test(operand) ||
+    EXPANDING.test(operand) ||
+    !/^(?:[A-Za-z]:[\\/])?[^:]*$/.test(operand) ||
+    /^[\\/]{2}/.test(operand) ||
+    operand.split(/[\\/]/).includes("..") ||
+    (shell === "posix" && operand.includes("\\")) ||
+    (shell === "posix" && process.platform === "win32" && operand.startsWith("/"))
+  );
+}
+
+/** Neither path lies inside the other, compared without case or Unicode form. */
+function apart(first: string, second: string): boolean {
+  const one = first.normalize("NFC").toLowerCase();
+  const other = second.normalize("NFC").toLowerCase();
+  return outside(one, other) && outside(other, one);
+}
+
+/**
+ * Neither directory holds the other by file identity, which a bind mount or a second name
+ * for the same directory cannot hide. A file system that reports no identity, such as FAT,
+ * gives every entry the same one, so the search stays denied there.
+ */
+function apartOnDisk(root: string, target: string): boolean {
+  const rootChain = identities(root);
+  const targetChain = identities(target);
+  const [rootId] = rootChain;
+  const [targetId] = targetChain;
+  return (
+    rootId !== undefined &&
+    targetId !== undefined &&
+    !targetChain.includes(rootId) &&
+    !rootChain.includes(targetId)
+  );
+}
+
+/** The device and file identity of a path and of each directory above it. */
+function identities(file: string): string[] {
+  const chain: string[] = [];
+  for (let current = file; ; current = path.dirname(current)) {
+    const { dev, ino } = statSync(current, { bigint: true });
+    chain.push(`${dev}:${ino}`);
+    if (path.dirname(current) === current) return chain;
+  }
 }
 
 /**
@@ -1619,7 +2195,7 @@ function denyExploration(operation: string, target: string): GraphHookDecision {
     operation,
     target,
     domain,
-    message: `Exploration redirected: ${operation} over ${JSON.stringify(target)} was denied. Use ${domain === "code" ? 'CodeGraph for symbols, callers and change impact: node .qfai/tools/graph-cli.mjs code "<question>"' : 'Graphify for document concepts and rationale: node .qfai/tools/graph-cli.mjs documents "<question>"'}. Prepare the required analysis through the CLI. For AI-decided scoped search, run node .qfai/tools/graph-cli.mjs fallback --attempt-id <observed-UUID> --question "<unresolved question>" --reason "<graph limitation>". The fallback command attempts the relevant graph before granting a matching search. Human approval is not required for this search.`,
+    message: `Exploration redirected: ${operation} over ${JSON.stringify(target)} was denied. Use ${domain === "code" ? 'CodeGraph for symbols, callers and change impact: node .qfai/tools/graph-cli.mjs code "<question>"' : 'Graphify for document concepts and rationale: node .qfai/tools/graph-cli.mjs documents "<question>"'}. Prepare the required analysis through the CLI. For AI-decided scoped search, run node .qfai/tools/graph-cli.mjs fallback --attempt-id <observed-UUID> --question "<unresolved question>" --reason "<graph limitation>". The fallback command attempts the relevant graph before granting a matching search. Human approval is not required for this search. A search that names explicit project paths, with no glob, expansion or \`..\`, is not denied.`,
   };
 }
 
@@ -1675,6 +2251,7 @@ export function decodeGraphHookEvent(input: unknown): GraphHookEvent | undefined
     tool,
     ...(typeof command === "string" ? { command } : {}),
     ...(typeof target === "string" ? { path: target } : {}),
+    ...(typeof target === "string" && payload.path === undefined ? { pathIsPattern: true } : {}),
     ...(typeof workdir === "string" ? { workdir } : {}),
     ...(typeof shell === "string" ? { shell } : {}),
     ...(typeof input.cwd === "string" ? { cwd: input.cwd } : {}),
@@ -1684,7 +2261,7 @@ export function decodeGraphHookEvent(input: unknown): GraphHookEvent | undefined
 
 /** Why the hook could not decide: what it names, and what the user does next. */
 export type GraphHookFailure =
-  "configuration" | "input" | "state" | "quote" | "substitution" | "depth";
+  "configuration" | "input" | "state" | "quote" | "substitution" | "piped-shell" | "depth";
 
 const FAILURE_MESSAGES: Record<GraphHookFailure, string> = {
   configuration:
@@ -1695,6 +2272,8 @@ const FAILURE_MESSAGES: Record<GraphHookFailure, string> = {
     "Graph protection failed: the hook could not read its local search state. Retry, and run qfai doctor if it repeats.",
   quote:
     "Graph protection failed: the hook could not match the quotes in the command. Retry without an unmatched quote, heredoc or here-string.",
+  "piped-shell":
+    "Graph protection failed: the command pipes text into a shell, so the hook cannot read the commands that shell runs. Run those commands directly and retry.",
   substitution:
     "Graph protection failed: the hook could not find where a $(...), (...) or backtick substitution in the command ends. Close it, move any comment out of it, or run its inner command directly.",
   depth:
@@ -1705,7 +2284,18 @@ export function failedGraphHook(failure: GraphHookFailure): GraphHookDecision {
   return { decision: "deny", state: "failed", message: FAILURE_MESSAGES[failure] };
 }
 
-export function enforceGraphExploration(input: unknown, configuration: unknown): GraphHookDecision {
+/**
+ * Classify a host event under a configuration. A search whose every path lies inside `root` is
+ * not denied. A search that reads one regular file outside both `root` and `checkout`, the
+ * checkout the hook belongs to, is not denied either; with no `checkout`, no search is exempt
+ * as an outside read.
+ */
+export function enforceGraphExploration(
+  input: unknown,
+  configuration: unknown,
+  root?: string,
+  checkout?: string,
+): GraphHookDecision {
   if (
     !object(configuration) ||
     Object.keys(configuration).length !== 2 ||
@@ -1714,7 +2304,9 @@ export function enforceGraphExploration(input: unknown, configuration: unknown):
   )
     return failedGraphHook("configuration");
   const event = decodeGraphHookEvent(input);
-  return event ? classifyGraphExploration(event) : failedGraphHook("input");
+  return event
+    ? classifyGraphExploration(event, undefined, root, checkout)
+    : failedGraphHook("input");
 }
 
 export function graphHookOutput(

@@ -564,6 +564,70 @@ describe.each(TREES)("%s", (tree) => {
     );
     expect(prompt).toContain("An unreachable entry is critique there, not a blocking finding.");
   });
+
+  // QFAI:AC-0001-0116-04
+  // QFAI:EX-0001-0116-06
+  it("blocks on a floor part the run's screen lacks and keeps an earlier gap as critique", async () => {
+    const prompt = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+    expect(prompt).toContain(
+      "`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`",
+    );
+    expect(prompt).not.toContain("business-ui-patterns.md");
+    expect(prompt).toContain(
+      "an app shell whose navigation shows where the user is, a way back from a screen below the top level, and the empty, loading, error and success states",
+    );
+    expect(prompt).toContain("whether or not the UI contract names the part");
+    expect(prompt).toContain(
+      "A part left out with a recorded reason is not a finding. The reason is in one of three places:",
+    );
+    expect(prompt).toContain(
+      "a part the screen leaves out: a `{ part, reason }` entry in the `omitted` list of the screen's UI contract;",
+    );
+    expect(prompt).toContain(
+      "a state the screen cannot be in: `none` under the screen's `states`;",
+    );
+    expect(prompt).toContain(
+      "a once-per-application part such as the app shell: an entry on the app frame's contract, the UI contract that holds the app shell and the home, not on the screen's.",
+    );
+    expect(prompt).toContain("unless the contract records `none` for it under `states`.");
+    expect(prompt).toContain(
+      "a scoped run: the confirmed `final/index.html` its first iteration copies;",
+    );
+    expect(prompt).toContain(
+      "a `restyle`: each route's baseline, `.qfai/prototype/baseline/<ui-contract-id>/<screen>.txt`, and the audit lines `progress.md` records before iteration 00. A part they do not show counts as already missing; only a part the baseline shows and the restyle drops blocks;",
+    );
+    expect(prompt).toContain(
+      "an unscoped `prototype` run: nothing, so every screen it reviews and its shell are the run's own.",
+    );
+    expect(prompt).toContain(
+      "A part left out with no recorded reason is a blocking finding when it is missing from a screen the run adds or changes, or when the run removes it.",
+    );
+    expect(prompt).toContain(
+      "A part that was already missing before the run is critique: it goes in `proseCritique`, naming the screen and the part.",
+    );
+    expect(prompt).toContain(
+      "A missing or broken shell blocks only when the run adds or alters the shell, or removes one `final/index.html` had. When the prototype the run started from had no shell, its absence is critique, naming every screen it affects, the ones the run adds included, unless a shell component is in the run scope.",
+    );
+    expect(prompt).toContain(
+      "A missing state counts once: record it as a `lap-007-state-not-represented` detection, not also as a blocking finding",
+    );
+    expect(prompt).toContain(
+      "A render-check screen is checked only as [Inputs](#inputs) says, and a screen whose UI contract declares `surface: marketing` is not held to this floor.",
+    );
+    expect(prompt).toContain(
+      "The floor's other parts, such as feedback after a change and how a list behaves, are left to the `product-surface-reviewer` at implementation review.",
+    );
+    expect(prompt).toContain(
+      "Outside these cases, an observation that something could be better is not a finding.",
+    );
+    expect(prompt).toContain(
+      "The business-screen floor requires the state, or the screen contract declares it",
+    );
+    expect(prompt).not.toContain("at least two modal states");
+    expect(prompt).toContain(
+      "one that was already missing before the run is critique, not a detection",
+    );
+  });
 });
 
 describe("the qfai command", () => {

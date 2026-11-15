@@ -67,7 +67,10 @@ export async function runInstalledGraphHook(
     const configured = uninitialised ? root : project;
     if (!(await findUnsafeHostFileComponent(configured, enforcement))) {
       const text = await readPinnedRegularFile(path.join(configured, ...enforcement), 4096);
-      if (text !== null) decision = enforceGraphExploration(input, JSON.parse(text) as unknown);
+      // A search inside the session worktree is scoped; a search of one file outside both the
+      // session worktree and this checkout is not exploration of either.
+      if (text !== null)
+        decision = enforceGraphExploration(input, JSON.parse(text) as unknown, project, root);
     }
   } catch {
     // A supported adapter emits denial for invalid input without echoing the payload.

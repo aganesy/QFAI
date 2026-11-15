@@ -460,6 +460,40 @@ it("A settled behaviour change that asks to change the prototype applies its rec
   ]);
 });
 
+// QFAI:EX-0001-0211-63
+it("A settled change that adds screens applies its record, then designs and prototypes", async () => {
+  const settled = {
+    entryFlags: ["upstream" as const],
+    qualifiers: ["settled-design" as const, "new-screens" as const],
+  };
+  expect([
+    await decided({ intent: "order", ...settled, signals: ["approved-record-task"] }),
+    await decided({
+      intent: "feature",
+      qualifiers: ["new-screens"],
+      signals: ["approved-record-task"],
+    }),
+    await decided({ intent: "behaviour-change", ...settled }),
+    await decided({
+      intent: "order",
+      qualifiers: ["new-screens"],
+      artifacts: ["spec", "ui", "code", "tests"],
+    }),
+    await decided({
+      intent: "order",
+      entryFlags: ["upstream"],
+      qualifiers: ["settled-design"],
+      signals: ["approved-record-task"],
+    }),
+  ]).toEqual([
+    ["apply-settled-prototype", 2],
+    ["apply-settled-prototype", 2],
+    ["apply-settled-prototype", 15],
+    ["apply-settled-prototype", 15],
+    ["apply-settled", 2],
+  ]);
+});
+
 // QFAI:EX-0001-0211-32
 it("A refactor and a documentation change", async () => {
   expect(await routes({ intent: "refactor" }, { intent: "docs" })).toEqual([
