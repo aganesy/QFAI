@@ -4,6 +4,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **Data values need no `qfai-text` reason, and one reason covers a whole
+  element.** `QFAI-UITEXT-001` stays an error but no longer reports a short
+  value that is not a sentence (at most 20 characters, with no sentence-ending
+  `.`, `!` or `?`, and none of the CJK marks U+3002, U+FF01, U+FF1F, U+FF61 and
+  U+FF0E) in a `td`, a `dd` or a `*Cell` component, or
+  as a whole JSX string literal child, such as `<td>ORD-1042</td>` or
+  `<td>{'-'}</td>`. A sentence in a cell still needs its reason. A `qfai-text`
+  comment directly before an element, or as its first child with text after
+  it, now gives its reason to every plain text inside it, so a paragraph that
+  a link splits, a list or a table needs one comment instead of one per
+  fragment; a malformed one raises one `QFAI-UITEXT-002`. A first-child
+  comment before an element covers that element only, and a comment at the
+  top of `body` or of a component's top-level JSX fragment covers only what
+  it stands before.
+
 ### Fixed
 
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
@@ -132,21 +149,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   user is worse off) is asked with the volume of data the screen will hold in
   production, not the test fixture, so a list control is not cut because a
   five-row fixture does not need it.
-
-- **Data values need no `qfai-text` reason, and one reason covers a whole
-  element.** `QFAI-UITEXT-001` stays an error but no longer reports a short
-  value that is not a sentence (at most 20 characters, with no sentence-ending
-  `.`, `!` or `?`, and none of the CJK marks U+3002, U+FF01, U+FF1F, U+FF61 and
-  U+FF0E) in a `td`, a `dd` or a `*Cell` component, or
-  as a whole JSX string literal child, such as `<td>ORD-1042</td>` or
-  `<td>{'-'}</td>`. A sentence in a cell still needs its reason. A `qfai-text`
-  comment directly before an element, or as its first child with text after
-  it, now gives its reason to every plain text inside it, so a paragraph that
-  a link splits, a list or a table needs one comment instead of one per
-  fragment; a malformed one raises one `QFAI-UITEXT-002`. A first-child
-  comment before an element covers that element only, and a comment at the
-  top of `body` or of a component's top-level JSX fragment covers only what
-  it stands before.
 
 - **`ui-procurement.md` checks runtime compatibility and tries a native
   element first.** A new rung before the design system asks whether a native

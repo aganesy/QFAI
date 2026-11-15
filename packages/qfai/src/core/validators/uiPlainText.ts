@@ -596,17 +596,17 @@ function jsxCandidates(ts: TsApi, source: string, file: string): Candidate[] {
     const children = childrenOf(element)
       .slice(1, -1)
       .filter((child) => !isBlankText(child));
-    const next = children[1];
-    const isElement =
-      next !== undefined && (isJsxElement(next) || next.kind === k.JsxSelfClosingElement);
+    const nextKind = children[1]?.kind;
+    const elementKinds = [k.JsxElement, k.JsxFragment, k.JsxSelfClosingElement];
+    const isElement = nextKind !== undefined && elementKinds.includes(nextKind);
     return isElement ? null : commentChildReason(children[0]);
   };
   // A fragment no JSX encloses is a component's top level, as `body` is a page's: a comment before
   // it or first inside it would stand for the whole component.
   const isTopFragment = (node: TsNode): boolean => {
     if (node.kind !== k.JsxFragment) return false;
-    for (let current = node.parent; current; current = current.parent) {
-      if (isJsxElement(current)) return false;
+    for (let current = node.parent; current !== undefined; current = current.parent) {
+      if (current.kind === k.JsxElement || current.kind === k.JsxFragment) return false;
     }
     return true;
   };
