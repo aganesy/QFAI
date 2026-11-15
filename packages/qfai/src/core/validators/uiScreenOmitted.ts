@@ -60,7 +60,7 @@ export function omittedDefectsOf(entry: Readonly<Record<string, unknown>>): stri
     const missing = OMITTED_ENTRY_KEYS.filter((key) => !isFilled(item[key]));
     return missing.length === 0
       ? []
-      : [`${where} has no ${missing.map((key) => `\`${key}\``).join(" and no ")}`];
+      : [`${where} has no ${missing.map((key) => `non-blank string \`${key}\``).join(" and no ")}`];
   });
 }
 
@@ -99,7 +99,7 @@ export async function validateUiScreenOmitted(root: string, config: QfaiConfig):
       "contracts.ui.omitted",
       screenId ? [screenId] : undefined,
       "canonical",
-      "Write each entry as a mapping with a non-blank `part`, naming a part from the business-screen list in `.agents/rules/interface-clarity.md`, and a non-blank `reason` saying why the screen leaves it out. Drop the key when the screen leaves nothing out.",
+      "Write each entry as a mapping with a non-blank `part`, naming a part from the list in `.agents/rules/interface-clarity.md` that applies to the screen, and a non-blank `reason` saying why the screen leaves it out. Drop the key when the screen leaves nothing out.",
     );
   });
 }

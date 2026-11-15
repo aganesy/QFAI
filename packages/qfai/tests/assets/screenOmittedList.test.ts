@@ -71,6 +71,9 @@ describe("the rule, guide, template and contract step say where the reason goes"
     expect(step).toContain(
       "A part left out gets a `{ part, reason }` entry in that screen's `omitted` list",
     );
+    expect(step).toContain(
+      "A required notice it leaves out gets a `{ part, reason }` entry in its `omitted` list",
+    );
   });
 });
 

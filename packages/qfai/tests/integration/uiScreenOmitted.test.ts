@@ -73,8 +73,8 @@ describe("validate shape-checks the omitted list of each UI contract screen", ()
     const reported = await omittedFindings();
     expect(reported).toHaveLength(2);
     expect(reported.every((item) => item.severity === "error")).toBe(true);
-    expect(reported[0]?.message).toContain("`omitted[0]` has no `reason`");
-    expect(reported[1]?.message).toContain("`omitted[1]` has no `part`");
+    expect(reported[0]?.message).toContain("`omitted[0]` has no non-blank string `reason`");
+    expect(reported[1]?.message).toContain("`omitted[1]` has no non-blank string `part`");
     expect(ISSUE_EXPECTED_BY_CODE[CODE]).toContain("`part`");
     expect(ISSUE_EXPECTED_BY_CODE[CODE]).toContain("`reason`");
   });

@@ -83,12 +83,18 @@ describe("validate reports an omitted list it cannot read", () => {
     ]);
     expect(
       omittedDefectsOf({
-        omitted: [{ part: "sort" }, { part: " ", reason: "x" }, { reason: "" }],
+        omitted: [
+          { part: "sort" },
+          { part: " ", reason: "x" },
+          { reason: "" },
+          { part: 42, reason: "x" },
+        ],
       }),
     ).toEqual([
-      "`omitted[0]` has no `reason`",
-      "`omitted[1]` has no `part`",
-      "`omitted[2]` has no `part` and no `reason`",
+      "`omitted[0]` has no non-blank string `reason`",
+      "`omitted[1]` has no non-blank string `part`",
+      "`omitted[2]` has no non-blank string `part` and no non-blank string `reason`",
+      "`omitted[3]` has no non-blank string `part`",
     ]);
   });
 
@@ -111,7 +117,7 @@ describe("validate reports an omitted list it cannot read", () => {
     expect(finding?.severity).toBe("error");
     expect(finding?.file).toBe(CONTRACT.split(path.sep).join("/"));
     expect(finding?.message).toContain("screen 'orders'");
-    expect(finding?.message).toContain("`omitted[0]` has no `reason`");
+    expect(finding?.message).toContain("`omitted[0]` has no non-blank string `reason`");
     expect(finding?.refs).toEqual(["orders"]);
   });
 

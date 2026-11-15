@@ -37,7 +37,7 @@ pagination where a list can outgrow one screen, feedback after every change,
 and the loading, empty, error and success states. The contract need not repeat
 these parts, and their absence from the contract is no reason to leave them
 out of the screen. Leaving one out needs a reason recorded in the screen's
-`omitted` list, as that rule says.
+`omitted` list, or for a state, `none` under `states`, as that rule says.
 
 That list is for application screens. A marketing screen, declared with
 `surface: marketing`, carries the parts of its section entries in the marketing

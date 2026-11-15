@@ -110,7 +110,9 @@ inform, such as a home, audience, pricing, guide, about or legal page, declares
 the business types above. Name the entry for each of its sections in
 `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` instead,
 write the parts it needs into the contract the same way, and record each
-image's source and licence. Its `states` combine the states of its sections.
+image's source and licence. A required notice it leaves out gets a
+`{ part, reason }` entry in its `omitted` list, as the rule and the UI contract
+guide say. Its `states` combine the states of its sections.
 
 Check every text element the discussion or the story proposes against the
 screen's tasks and the information the user needs at that point. A text that
