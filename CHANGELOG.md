@@ -83,6 +83,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
 
+- **A checkout that did not reinstall after a qfai upgrade is caught.** When
+  the running qfai is the project's own copy and the lockfile
+  (`package-lock.json`, `pnpm-lock.yaml` or `yarn.lock`) pins another version,
+  every command prints one stderr line naming both versions and the install
+  command, and `qfai validate`, `qfai sdd preflight` and `qfai workflow plan`
+  stop with exit 1. A `workflow plan` refusal carries the new reason
+  `stale-install`. The upgrade guide now tells every checkout and worktree to
+  run its install after pulling a qfai upgrade.
+
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
   no confirmed prototype covers, even when the request asks no design question.
