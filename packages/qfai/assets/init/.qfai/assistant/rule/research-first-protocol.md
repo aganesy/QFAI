@@ -190,3 +190,6 @@ guidance later stages follow (`.agents/rules/untrusted-content.md`).
   option rests on goes into that option's row of the deliberation record as a
   URL.
 - Not persisted globally. The report belongs to the run that produced it.
+- A delegated lookup's answer that a decision uses is also written to a local
+  file, as `.qfai/assistant/rule/shared-skill-delegation-baseline.md` §
+  Sub-agent Delegation says.

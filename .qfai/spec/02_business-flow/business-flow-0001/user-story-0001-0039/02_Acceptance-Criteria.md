@@ -52,4 +52,11 @@ Feature: Deterministic validation gate
     When `qfai validate` runs the contract checks
     Then such an element of an application screen with no `list`, and no `list.none` with a reason, raises `QFAI-CONTRACT-055` at warning, naming the screen and the element
     And an element of a `surface: marketing` screen and the shipped UI contract sample raise none
+
+  # AC-0001-0039-06
+  Scenario: Validate reads the business screen type of each UI contract screen
+    Given a UI contract whose screens declare `pattern` or leave it out
+    When `qfai validate` runs the contract checks
+    Then a screen that writes no `pattern`, leaves it empty, or writes `list`, `detail`, `form`, `settings`, `members` or `dashboard` raises nothing
+    And any other value raises `QFAI-CONTRACT-056` at error, naming the contract, the screen, the value and the vocabulary
 ```
