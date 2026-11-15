@@ -96,7 +96,8 @@ check the screen against `## What a business screen always has` in
 `.agents/rules/interface-clarity.md`: the app shell, navigation and home once
 per application, and on each screen the list behaviour, the empty, loading,
 error and success states and the feedback after a change. Add each part that
-applies and is missing: navigation in the screen's `navigation`, and the rest
+applies and is missing: navigation in the screen's `navigation`, the list
+behaviour in the `list` of the list or table element, and the rest
 as elements, actions and `supplements` entries with their `when`. Such a part needs no example of its own unless it carries a
 business rule. A part of one screen left out gets its reason in that screen's
 contract, as the rule says; a once-per-application part's goes in the app frame
@@ -146,7 +147,9 @@ so one that only restates its heading is left out. Fix a control
 that needs explaining before adding text for it. Each screen lists its
 `states`: what renders in `default`, `empty`, `loading`, `error` and
 `success`, and the next action from each, or `none` with the reason for a
-state the screen cannot reach. A screen may describe the copy that stays in its optional
+state the screen cannot reach. Each `list` or `table` element carries `list`:
+its `columns`, `search`, `filters`, `sort` and `pagination`, each set or
+`none` with the reason; `npx qfai validate` does not check this key. A screen may describe the copy that stays in its optional
 `supplements` and `structure`; `npx qfai validate` does not check them, and the
 reason that counts is the `qfai-text` comment written in the UI source.
 

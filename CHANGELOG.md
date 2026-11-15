@@ -25,7 +25,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **A UI contract list or table element says how it is shown and narrowed.**
+  The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
+  artifact rules and the `sdd-contract` step give every `type: list` or
+  `type: table` element a `list` key: `columns`, `search`, `filters`, `sort`
+  and `pagination`, each set or `none` with the reason the element does
+  without it, the same shape as `states`. The business UI pattern reference
+  now says a List behaviour applies to what `list` sets and the entry it
+  concerns records a departure. Validate does not check the key yet.
+  Closes #4109.
+
 ### Changed
+
+- **The parts of a business screen outrank the minimal-scope article.**
+  Article VII of the shipped constitution now names the list under
+  `## What a business screen always has` in `interface-clarity.md` among what
+  outranks it, beside the safety floor. On an application screen whose UI
+  contract records no reason to leave a part out, navigation, list behaviour,
+  states and feedback are no longer cut as scope beyond the minimum, and the
+  architecture, product-surface and requirements reviewers refuse such a cut;
+  how a part is built remains subject to the article.
 
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the
@@ -57,6 +76,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   production, not the test fixture, so a list control is not cut because a
   five-row fixture does not need it.
 
+- **`validate.json` names the UI/UX check times for how they ran.**
+  `familyTimings.overlapping` becomes `familyTimings.uiux`, with
+  `familyTimings.sharedMarkdownReadMs` and `familyTimings.htmlMockLoadMs`
+  beside it, and `timings.uiuxPartsRun` says whether the parts ran
+  `side-by-side` or `one-after-another`. Closes #4279.
+
 ### Fixed
 
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
@@ -77,6 +102,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   on the field, as the reference describes for a status computed at read time.
   A value only in a description is still reported, and the message now says the
   API contract declares no `enum` for it.
+
+- **`qfai validate --timings` times each UI/UX check on its own.** The six
+  UI/UX checks ran side by side, so a check that waited on file reads was
+  charged for the others' work and the `slowest` names could point at a check
+  that did almost nothing. Under `--timings` they now run one after another,
+  the line says `slowest, one after another`, and the shared Markdown read
+  and the html-mock parser's one-off load are each reported once, on their
+  own, as part of the group's time. A run without `--timings` still runs them
+  side by side, and the findings and counts are the same either way.
+  Fixes #4279.
 
 ## [2.5.0] - 2026-11-15
 
