@@ -195,6 +195,17 @@ describe("the existing DB checks are unchanged", () => {
     expect(issues.find((i) => i.code === "QFAI-DB-001")?.severity).toBe("warning");
   });
 
+  // A reviewed TRUNCATE warned on every validate with no hint of why, what to
+  // write instead, or that the waiver file can record the review.
+  it("says why a dangerous statement is flagged and how to resolve or waive it", async () => {
+    const issues = await runOn(`${HEADER}TRUNCATE orders;\n`);
+    const finding = issues.find((i) => i.code === "QFAI-DB-001");
+    expect(finding?.message).toContain("Dangerous SQL operation found: TRUNCATE");
+    expect(finding?.message).toContain("applying this statement destroys data or structure");
+    expect(finding?.suggested_action).toContain("move a data reset to test support");
+    expect(finding?.suggested_action).toContain(".qfai/waivers.yml");
+  });
+
   it("still requires the contract id declaration", async () => {
     const issues = await runOn("CREATE TABLE t (a int);\n");
     expect(issues.map((i) => i.code)).toContain("QFAI-CONTRACT-010");

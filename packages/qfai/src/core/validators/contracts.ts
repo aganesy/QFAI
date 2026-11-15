@@ -274,10 +274,13 @@ export function lintSql(text: string, file: string): Issue[] {
       issues.push(
         issue(
           "QFAI-DB-001",
-          `Dangerous SQL operation found: ${label}`,
+          `Dangerous SQL operation found: ${label}. A DB contract describes the schema the product runs on, and applying this statement destroys data or structure`,
           "warning",
           file,
           "contracts.db.sql",
+          [label],
+          "change",
+          "Keep the contract to the schema: move a data reset to test support and a destructive change to the migration that makes it. If the statement was reviewed and stays, waive QFAI-DB-001 for this file in .qfai/waivers.yml with its reason.",
         ),
       );
     }

@@ -115,6 +115,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`QFAI-DB-001` says why the SQL is flagged and how to resolve it.** The
+  warning now says that applying the statement destroys data or structure, and
+  its suggested action moves a data reset to test support and a destructive
+  change to its migration. A statement that was reviewed and stays is waived
+  for its file in `.qfai/waivers.yml`, with its reason.
+
 - The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
 
 - **A scope that stops before implementation can reach its own commit.** In
