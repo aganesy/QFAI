@@ -22,6 +22,12 @@ it is the release notes adopters read before they upgrade.
   description, so before you run Prepare release, run
   `git diff v<previous> -- packages/qfai/package.json` and add the line for each
   pin it shows moving (such as `@jackchuka/mdschema`)
+- The maintainer-run eval ran on a real host for this release, with its
+  routing and design-authoring cases, and its record under
+  `packages/qfai/tests/eval/records/` is committed. CI never runs an agent, so
+  this is the only run that checks how a host follows the shipped skills. Run
+  it from `packages/qfai` after a build:
+  `QFAI_EVAL_HOST=claude-code QFAI_EVAL_COMMAND='["claude", "-p", "{prompt}"]' node node_modules/vitest/vitest.mjs run --config tests/eval/vitest.config.ts`
 - Supported: Node.js >= 20.19.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS or later
 
 ### Using the automated path
