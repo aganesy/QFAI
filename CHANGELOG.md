@@ -116,6 +116,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
+  examples are green, each screen the flow adds or changes is placed in the
+  shell its UI contract names, linked from its entry points, built from shared
+  components for the parts the screens repeat, and captured. The flow is not
+  done until that is so.
+
 - **`ui-procurement.md` checks runtime compatibility and tries a native
   element first.** A new rung before the design system asks whether a native
   element such as `details` or `dialog` does the job. A catalogue, and each item

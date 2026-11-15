@@ -227,6 +227,27 @@ code review reads the recorded Red and Green results, and reads each
 `.qfai/assistant/skill/qfai-implement/references/finding-classification.md`
 says. A record correction follows `.qfai/assistant/rule/drift-protocol.md`.
 
+## Assemble the flow's screens
+
+For a UI-affecting flow, once its examples are green, the screens it adds or
+changes are put together into the product rather than left as separate pages:
+
+1. Place each screen in the shell its UI contract's `navigation.shell` names,
+   with the shell's navigation showing it where its role reaches it.
+2. Link each of its entry points the contract's `navigation` names, so the user
+   reaches the screen through the app's own links, not only by its URL.
+3. Reuse a component the catalogue lists for each part the flow's screens
+   repeat, or extract the repeated part into one shared component, as
+   `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#component-catalogue`
+   says. A part used once stays where it is.
+4. Capture each changed route as
+   `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md` § Evidence
+   sets out, at the revision the review will read.
+
+The shell itself, its navigation by role and the home screen are not designed
+here: a part the contracts do not name is raised as drift under
+`.qfai/assistant/rule/drift-protocol.md`.
+
 ## Align the other surfaces
 
 Where the run recorded which of two disagreeing surfaces owns the truth, the
@@ -262,4 +283,5 @@ The step is done for an example when its RED, GREEN and Refactor results are
 observed and recorded, or recorded `ci-deferred` where the Test entry is
 `CI only: <check name>` or the user's instruction for this run delegates that
 gate to a named CI check. It is done for the flow when every example the
-selection listed is done.
+selection listed is done and, for a UI-affecting flow, its screens are
+assembled and captured as `## Assemble the flow's screens` says.
