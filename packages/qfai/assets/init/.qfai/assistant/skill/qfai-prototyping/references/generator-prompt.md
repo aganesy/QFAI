@@ -44,6 +44,10 @@ identity.
    its `runScope`, present or absent.
 6. In a scoped run, every iteration: `runScope` in `progress.md` and
    `.qfai/prototype/final/index.html`.
+7. UI research, only when the session agent passes it: the findings the grill
+   applied for this lineage's screen type or components, which the project had
+   no pattern for. Build those parts to the findings, within the `DESIGN.md`
+   tokens. A `## Session` row wins where the two disagree.
 
 ## HTML envelope (every iteration)
 
