@@ -1,7 +1,7 @@
 ---
 name: implement-scaffold
 owner: qfai-implement
-purpose: "Write, with `npx qfai atdd scaffold` or, in a project with purpose-named test files, by hand, the E2E test of each business flow and the integration test of each acceptance criterion the flow lacks, each with an empty body, and set up the component catalogue `tech.md` names."
+purpose: "Write, with `npx qfai atdd scaffold` or, in a project with purpose-named test files, by hand, the E2E test of each business flow and the integration test of each acceptance criterion the flow lacks, each with an empty body, add the per-role navigation journey's missing tests, and set up the component catalogue `tech.md` names."
 requires: [common-gate-run]
 ---
 
@@ -119,26 +119,37 @@ A flow's journey can open each screen by its URL, so the flow tests alone do
 not show that a user can reach the screens. `.qfai/assistant/rule/test-layers.md`
 § L5 E2E recommends one navigation journey per role for that.
 
-Skip this section when the app has no navigation of its own: no UI contract
-gives a screen a `navigation` with a `shell` or `entry_points`.
+The app has navigation of its own when at least one UI contract screen with
+`surface: application`, or no `surface` key, has `navigation.entry_points`
+that name another screen, a menu or a control of the app, not only a direct
+URL. A `shell` that states no frame does not count. Skip this section when no
+screen meets that.
+
+Until UI contracts name the roles of each screen, a role's screens are the
+screens of the flows whose stories name that role as their actor. The pass
+names the mapping it used: each role and the screens it counted.
 
 Otherwise:
 
-1. When the project has no navigation journey, add one under
+1. List the roles this flow adds a screen to: each role a story of this flow
+   names as its actor, where the flow has a UI contract screen.
+2. When the project has no navigation journey, add one under
    `<testsDir>/e2e/`, in a file the configured globs select, for example
    `<testsDir>/e2e/navigation.test.<ext>`: one test per role, each with an
    empty body that passes.
-2. When the journey exists but has no test for a role this flow adds a screen
-   to, add that role's test, with an empty body, to the same file. Change no
-   existing test there.
-3. The journey proves reachability rather than one flow, so it carries no BF,
+3. When the journey exists but has no test for a listed role, add that role's
+   test, with an empty body, to the same file. Change no existing test there.
+4. Record the listed roles for `implement-acceptance`: a role whose test
+   already has a body gains this flow's screens there, not here.
+5. Record each listed role that signs in as an authenticated actor, so
+   `implement-credentials` serves one signed-in session per role. A visitor
+   role that does not sign in is not an actor: its test starts signed out.
+6. The journey proves reachability rather than one flow, so it carries no BF,
    AC or EX annotation. `npx qfai validate` therefore does not report it
    missing; the pass names its file instead.
-4. Record each role of the journey as an authenticated actor, so
-   `implement-credentials` serves one signed-in session per role.
 
 The journey needs nothing when the app has no navigation of its own, or when
-its file already has a test for every role this flow adds a screen to.
+its file already has a test for every listed role and the roles are recorded.
 
 ## Passes when
 
@@ -147,7 +158,7 @@ names, and the tests that annotate them. The step passes when every one
 already has an annotating test at its layer and § Component catalogue needs no
 setup and § Per-role navigation journey needs nothing. The pass names the
 test for each item, and the navigation journey's file or the reason the app
-has none.
+has none, and the role-to-screen mapping it used.
 
 The step also passes when the work order names no flow because it carries
 only a delegated release's hand-made edit: the extraction names the `release`

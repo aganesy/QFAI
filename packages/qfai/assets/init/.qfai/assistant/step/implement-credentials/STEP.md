@@ -9,13 +9,14 @@ requires: []
 
 Runs before `implement-acceptance`, only when an E2E, API or integration test
 in scope needs an authenticated actor. The per-role navigation journey
-`implement-scaffold` adds is such a test: it needs one actor per role.
+`implement-scaffold` adds is such a test: it needs one actor per role that
+signs in. A visitor role's test starts signed out and needs none.
 
 ## Reads
 
 - The acceptance tests of the flow, and which actor each one needs.
-- The per-role navigation journey's file and the roles `implement-scaffold`
-  recorded for it, when it added or kept one.
+- The per-role navigation journey's file and the signed-in roles
+  `implement-scaffold` recorded for it as authenticated actors.
 - The project's test runner configuration: where per-worker setup and teardown
   live.
 - Any environment identifier the caller injects.
@@ -30,8 +31,8 @@ in scope needs an authenticated actor. The per-role navigation journey
 Follow `.qfai/assistant/skill/qfai-implement/references/credential-reuse.md`.
 It holds the seven session-reuse rules, the rule for a caller-injected
 environment and a worked example. Keep actors and sessions isolated by worker.
-Serve the navigation journey one signed-in session per role it records, so
-each role's test starts signed in as that role.
+Serve the navigation journey one signed-in session per role it records as an
+authenticated actor, so each such role's test starts signed in as that role.
 For a Playwright or Vitest suite, the optional recipes in
 `.qfai/assistant/skill/qfai-implement/references/test-runner-recipes.md` put
 the rules into code, with the business data, shared-state, credential
