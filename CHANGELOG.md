@@ -6,13 +6,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **A change that adds screens gets the design and prototype stages.** The
-  extraction has a new qualifier, `new-screens`, for a change that adds new UI
-  contracts or new routes users see. A `feature` or `behaviour-change` with it
-  routes `prototype-feature`. A settled change with it (an approved record with
-  a task, a settled upstream design, or an order) routes
-  `apply-settled-prototype`. Before, such work went straight to implementation
-  with no design or prototype stage.
+- **Settled work that adds screens gets the design and prototype stages.**
+  The extraction has a new qualifier, `new-screens`, for a settled change that
+  adds new UI contracts or new routes users see: an approved record with a
+  task, a settled upstream design, or an order. Such a change now routes
+  `apply-settled-prototype` instead of `apply-settled`. Before, it went straight
+  to implementation with no design or prototype stage. A new feature that adds
+  screens reads as `visual-open` and routes `prototype-feature`.
 
 ## [2.5.0] - 2026-11-15
 

@@ -693,30 +693,32 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0211-05
-  // QFAI:EX-0001-0211-65
-  it("reads a change that adds screens as new screens, which design and prototype first", async () => {
+  // QFAI:EX-0001-0211-64
+  it("reads a settled change that adds screens as new screens, which design and prototype first", async () => {
     const reference = await readShipped(EXTRACTION);
     expect(itemOf(sectionOf(reference, "## Qualifiers"), "new-screens")).toContain(
-      "with `feature`, `behaviour-change` or `order`, or with `upstream` and `settled-design`: The change adds screens: new UI contracts, or new routes users see. A change to screens that already exist does not set it. The plan then runs the design and prototype stages before implementation.",
+      "with `approved-record-task`, with `upstream` and `settled-design`, or with `order`: The settled change adds screens: new UI contracts, or new routes users see. A change to screens that already exist does not set it. The plan then runs the design and prototype stages before implementation. A new feature that adds screens sets `visual-open` instead.",
     );
     const line = sectionOf(reference, "## Examples")
       .split("\n")
       .find((each) =>
         each.startsWith(
-          '- "Add a customer list screen, opened from the main menu, that shows each customer\'s name and status." → ',
+          "- An approved decision cited with a task section and a done-when block, which adds a customer list screen → ",
         ),
       );
     const parsed: unknown = parse(/→ `(\{.*\})`$/.exec(line ?? "")?.[1] ?? "null");
     expect(parsed).toEqual({
-      intent: "feature",
-      qualifiers: ["new-screens"],
+      intent: "order",
+      entryFlags: ["upstream"],
+      qualifiers: ["settled-design", "new-screens"],
+      signals: ["approved-record-task"],
       artifacts: ["spec", "contract", "ui", "code", "tests"],
       confidence: "high",
     });
     const pinned: unknown = { ...extraction(), ...(isRecord(parsed) ? parsed : {}) };
     if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
     const outcome = routingOutcome(pinned);
-    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("prototype-feature");
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("apply-settled-prototype");
   });
 
   // QFAI:AC-0001-0211-05

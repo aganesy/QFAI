@@ -43,8 +43,8 @@ const signalled = (input: RuleInput, ...names: string[]) =>
 const prototypeChange = (input: RuleInput) =>
   is("behaviour-change")(input) && qualified(input, "prototype-requested");
 
-// A change that adds screens gains the design and prototype stages before implementation,
-// whatever its route.
+// A settled change that adds screens gains the design and prototype stages before
+// implementation. A new feature that adds screens reads as `visual-open` instead.
 const addsScreens = (input: RuleInput) => qualified(input, "new-screens");
 const throughPrototype = (input: RuleInput) => prototypeChange(input) || addsScreens(input);
 
@@ -228,10 +228,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
       (input) => is("feature", "behaviour-change")(input) && flag(input, "decision"),
       "decide-design",
     ),
-    clause(
-      (input) => prototypeChange(input) || (is("behaviour-change")(input) && addsScreens(input)),
-      "prototype-feature",
-    ),
+    clause(prototypeChange, "prototype-feature"),
     // A behaviour change that removes a feature rewrites its specification, then retires its
     // code and tests, adding none.
     clause(
@@ -246,10 +243,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
       "rename-concept",
     ),
     clause(is("deprecation", "behaviour-change"), "change-compatibility"),
-    clause(
-      (input) => is("feature")(input) && (qualified(input, "visual-open") || addsScreens(input)),
-      "prototype-feature",
-    ),
+    clause((input) => is("feature")(input) && qualified(input, "visual-open"), "prototype-feature"),
     clause(is("feature"), "add-feature"),
   ),
   rule(

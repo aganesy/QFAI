@@ -494,23 +494,6 @@ it("A settled change that adds screens applies its record, then designs and prot
   ]);
 });
 
-// QFAI:EX-0001-0211-64
-it("A feature or behaviour change that adds screens prototypes, unless a choice is open", async () => {
-  expect([
-    await decided({ intent: "feature", qualifiers: ["new-screens"] }),
-    await decided({ intent: "feature", entryFlags: ["decision"], qualifiers: ["new-screens"] }),
-    await decided({ intent: "behaviour-change", qualifiers: ["new-screens"] }),
-    await decided({ intent: "feature" }),
-    await decided({ intent: "behaviour-change" }),
-  ]).toEqual([
-    ["prototype-feature", 28],
-    ["decide-design", 28],
-    ["prototype-feature", 28],
-    ["add-feature", 28],
-    ["change-compatibility", 28],
-  ]);
-});
-
 // QFAI:EX-0001-0211-32
 it("A refactor and a documentation change", async () => {
   expect(await routes({ intent: "refactor" }, { intent: "docs" })).toEqual([
