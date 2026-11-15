@@ -79,6 +79,18 @@ output:
 #   # case-sensitive. `[]` states that the project renders no surface.
 #   surfacePaths:
 #     - src/components/**
+# uiText:
+#   # Project components mapped to the element they render, so `qfai validate`
+#   # reads the text inside `<TableHead>` as it reads text inside `<th>` and asks
+#   # no `qfai-text` reason for it. A value is an element the plain-text check
+#   # already exempts (h1-h6, label, button, a, legend, th, caption, option,
+#   # summary, title, script, style), or `status` or `alert` for a live region.
+#   # A key matches the component's whole name or the last `.`-separated part.
+#   elements:
+#     TableHead: th
+#     CardTitle: h3
+#     NavLink: a
+#     StatusRegion: status
 prototyping:
   execution:
     targetUrl: null

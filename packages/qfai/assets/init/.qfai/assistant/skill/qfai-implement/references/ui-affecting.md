@@ -60,6 +60,12 @@ files. A plain text there is a literal text node, non-empty after trimming and s
 `summary`, `title`, `script`, `style` and an element with `role="alert"` or `role="status"`. Attribute values
 and expressions are never plain text; a string literal that is a whole JSX child is.
 
+A project component that renders one of those elements counts as that element once `uiText.elements` in
+qfai.config.yaml maps it, as `TableHead: th`, `CardTitle: h3`, `NavLink: a` or `StatusRegion: status`. The
+value is one of the elements above, or `status` or `alert` for the role. A key matches the component's whole
+name or the last `.`-separated part of it, word by word, so `TableHead` also matches `UI.TableHead` and
+`table-head`. Only component tags are mapped: a native `<header>` stays plain even with a `Header` key. Map the component once instead of writing a reason that only says what the component renders.
+
 Each plain text needs a reason comment directly before it, or before its parent element, with only whitespace
 between. A missing reason is `QFAI-UITEXT-001` and a malformed one `QFAI-UITEXT-002`; `QFAI-UITEXT-003` means a `.tsx` or `.jsx` file is selected but `typescript` cannot be resolved from the project root. All three are errors and cannot be waived.
 
