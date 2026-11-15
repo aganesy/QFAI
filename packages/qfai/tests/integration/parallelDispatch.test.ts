@@ -185,5 +185,8 @@ describe("parallel read-only lookups", () => {
       "The decision cites that file, never the result message: a result message lives only in the conversation, and compaction shortens it to a line.",
     );
     expect(baseline).toContain("An answer no decision uses is not written.");
+    expect(baseline).toContain(
+      "The file is local evidence, ignored by git, so a tracked record that cites it also keeps the answer's source URLs.",
+    );
   });
 });
