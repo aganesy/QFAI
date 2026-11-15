@@ -90,6 +90,7 @@ const NAMED_TYPE_DB = [
   "",
 ].join("\n");
 
+// QFAI:EX-0001-0039-48
 describe("collectApiStateEnums — local $ref resolution", () => {
   it("keys a $ref'd enum by the referencing field name", () => {
     const doc = {
@@ -172,6 +173,7 @@ describe("collectApiStateEnums — local $ref resolution", () => {
   });
 });
 
+// QFAI:EX-0001-0039-48
 describe("collectSqlEnumDomains — named enum type usage", () => {
   it("carries a CREATE TYPE domain onto the column declared with it", () => {
     const domains = collectSqlEnumDomains(NAMED_TYPE_DB);
@@ -243,6 +245,7 @@ describe("collectSqlEnumDomains — named enum type usage", () => {
 });
 
 describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
+  // QFAI:EX-0001-0039-48
   it("reports an API value the CHECK-IN domain cannot store", async () => {
     const { api, db } = await seedPair(INLINE_ENUM_API, CHECK_IN_DB);
     const issues = await validateContractConsistency([api], [db]);
@@ -252,6 +255,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(issues[0]?.message).toContain("failed");
   });
 
+  // QFAI:EX-0001-0039-48
   it("reports across a $ref'd API enum and a named DB enum type", async () => {
     const { api, db } = await seedPair(REF_ENUM_API, NAMED_TYPE_DB);
     const issues = await validateContractConsistency([api], [db]);
@@ -260,6 +264,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(issues[0]?.message).toContain("failed");
   });
 
+  // QFAI:EX-0001-0039-48
   it("raises an ENUM-backed contradiction to error", async () => {
     // The severity is the point. A Postgres ENUM rejects an
     // out-of-domain value at insert time, so the two contracts cannot both be
@@ -277,6 +282,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(issues[0]?.suggested_action).toContain("is canonical");
   });
 
+  // QFAI:EX-0001-0039-48
   it("keeps a CHECK-constraint contradiction a warning", async () => {
     // A check constraint is a bound the DB currently asserts, not the shape of
     // the column: it can be dropped, replaced, or declared `NOT VALID`. Raising
@@ -290,6 +296,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(issues[0]?.suggested_action).toContain("Contracts table");
   });
 
+  // QFAI:EX-0001-0039-48
   it("takes the enum severity when both forms bound one field", async () => {
     // The strictest constraint is the one an implementation has to satisfy, so
     // a column that is an ENUM *and* carries a redundant CHECK is still
@@ -366,6 +373,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       return { api, dbs };
     }
 
+    // QFAI:EX-0001-0039-49
     it("stays a warning when one candidate binding is a CHECK", async () => {
       const { api, dbs } = await seedMany(SIM_LINE_API, {
         "db-0002-call-lists.sql": CALL_LISTS_DB,
@@ -381,6 +389,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       expect(issues[0]?.severity).toBe("warning");
     });
 
+    // QFAI:EX-0001-0039-49
     it("does not claim a physical constraint the field does not have", async () => {
       const { api, dbs } = await seedMany(SIM_LINE_API, {
         "db-0002-call-lists.sql": CALL_LISTS_DB,
@@ -403,6 +412,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       expect(issues[0]?.suggested_action).toContain("db-0003-sim-lines.sql");
     });
 
+    // QFAI:EX-0001-0039-49
     it("attributes the allowed values per contract, not as one domain", async () => {
       const { api, dbs } = await seedMany(SIM_LINE_API, {
         "db-0002-call-lists.sql": CALL_LISTS_DB,
@@ -421,6 +431,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       );
     });
 
+    // QFAI:EX-0001-0039-49
     it("still raises to error when every candidate binding is an ENUM", async () => {
       // The mix is what removes the claim. Where nothing can store the value,
       // the finding stays the same.
@@ -450,6 +461,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
      * column collapse to a single bound with `enumBacked` OR-ed — and the
      * per-contract split above cannot see inside it.
      */
+    // QFAI:EX-0001-0039-49
     it("stays a warning when the two forms are on different tables in one contract", async () => {
       const twoTables = [
         "CREATE TYPE call_list_status AS ENUM ('pending', 'running', 'completed');",
@@ -487,6 +499,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       expect(remedy).not.toMatch(/\(\s*\)/);
     });
 
+    // QFAI:EX-0001-0039-49
     it("does not call it one contract when several declare an ENUM and one is mixed", async () => {
       // The empty CHECK side is not evidence of a single contract. Here BOTH
       // contracts declare an ENUM — one of them non-decisively, because its own
@@ -537,6 +550,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       expect(remedy).not.toMatch(/\(\s*\)/);
     });
 
+    // QFAI:EX-0001-0039-49
     it("still raises to error when the redundant CHECK is on the only table", async () => {
       // The reason the tie is broken on the table count
       // rather than on the mere presence of both forms: with one table there is
@@ -561,6 +575,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       expect(issues[0]?.message).toContain("ENUM (a physical constraint: the insert is rejected)");
     });
 
+    // QFAI:EX-0001-0039-49
     it("does not let a commented-out CREATE TABLE make one table look like two", async () => {
       const oneTable = [
         "-- CREATE TABLE archived_sim_lines (status TEXT);",
@@ -586,6 +601,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
      * would make it possible to STORE a value the contract forbids storing, and
      * deleting it from the API would remove a value the UI requires.
      */
+    // QFAI:EX-0001-0039-50
     describe("a value the DB contract declares derived", () => {
       const DERIVED_DB = [
         "-- Derived (not stored): status = standby, powered_off from enabled, connection_status, JST clock",
@@ -719,6 +735,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
      * column holds at all. With nothing on the DB side to compare, the
      * declaration is read against the API contract that requires the values.
      */
+    // QFAI:EX-0001-0039-51
     describe("a derived value no DB column holds", () => {
       const EVENTS_DB = [
         "-- Derived (not stored): acceptance_status = not_open, open, ended from acceptance_start, acceptance_end, JST clock",
@@ -834,6 +851,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       });
     });
 
+    // QFAI:EX-0001-0039-49
     it("keeps the single-contract message flat", async () => {
       const { api, dbs } = await seedMany(SIM_LINE_API, {
         "db-0003-sim-lines.sql": SIM_LINES_DB,
@@ -847,18 +865,21 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     });
   });
 
+  // QFAI:EX-0001-0039-48
   it("reports a $ref'd API enum against a CHECK-IN column", async () => {
     const { api, db } = await seedPair(REF_ENUM_API, CHECK_IN_DB);
     const issues = await validateContractConsistency([api], [db]);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-CONTRACT-040"]);
   });
 
+  // QFAI:EX-0001-0039-48
   it("reports an inline API enum against a named DB enum type", async () => {
     const { api, db } = await seedPair(INLINE_ENUM_API, NAMED_TYPE_DB);
     const issues = await validateContractConsistency([api], [db]);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-CONTRACT-040"]);
   });
 
+  // QFAI:EX-0001-0039-48
   it("stays silent when the DB domain covers every API value", async () => {
     const covering = [
       "CREATE TYPE order_status AS ENUM ('pending', 'paid', 'failed');",
@@ -868,6 +889,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
     expect(await validateContractConsistency([api], [db])).toEqual([]);
   });
 
+  // QFAI:EX-0001-0039-48
   it("stays silent when only one side declares a domain", async () => {
     const { api, db } = await seedPair(
       REF_ENUM_API,
