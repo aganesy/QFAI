@@ -168,7 +168,12 @@ the plan `--route` returns for the chosen one takes them in place of its own.
 ## Scopes
 
 Each scope is `{ scope, stages, recommended }`: `narrow`, `medium` or `broad`,
-the ids of the stages it runs in plan order, and `true` for the narrowest.
+the ids of the stages it runs in plan order, and `true` for the narrowest. A
+scope also holds `testsPending: true` when one of its stages writes `spec` and
+it leaves out a stage of kind `implement` the route has; no other scope holds
+the key. The tests that specification asks for come with the implement stage,
+so in that scope `verify-qfai-gate` records their obligations as pending and
+`verify-commit` still commits.
 
 - `narrow` runs the stages up to the last one that writes an artifact the
   extraction names, less any implementation that writes none of them. When those stages include implementation or a test fix, the

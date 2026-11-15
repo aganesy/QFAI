@@ -19,6 +19,8 @@ signals; this one decides. It records failures and repairs none of them:
 - `.qfai/report/validate.json`. Its keys are in
   `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`.
 - `.qfai/waivers.yml`, where the project has one.
+- In a route, whether the plan scope the session chose at the scope question
+  carries `testsPending`, as `qfai-run`'s `references/plan.md` `## Scopes` says.
 
 ## Writes
 
@@ -70,6 +72,16 @@ needs an E2E test, an AC an integration or API test, and an EX a selected
 non-E2E test. Record each uncovered ID and its flow. `QFAI-SCAN-002` means the
 scan cannot prove coverage; a missing layer is never a passing scan.
 
+### Test obligations a scope leaves pending
+
+When the chosen plan scope carries `testsPending`, the run writes the
+specification and leaves out the implement stage that writes its tests. The
+scan stays full. Record each `QFAI-STORY-006` through `QFAI-STORY-009` error as
+`PENDING`, with its uncovered ID and its flow, not as a failure: the tests come
+with the implement stage. Every other error still fails the gate, and a scope
+without `testsPending` leaves no obligation pending. A gate whose only errors
+are pending obligations is recorded `PASS`, and its result names each one.
+
 ## Waivers
 
 - A waiver covers a `warning` or `info` finding only. A waiver that suppresses
@@ -85,4 +97,6 @@ scan cannot prove coverage; a missing layer is never a passing scan.
 The step is done when:
 
 - validation ran in the profile the scope names, and its result is recorded;
-- `error=0` for a pass, or the failing findings are recorded for the fix loop.
+- `error=0` for a pass, or, under a `testsPending` scope, no error other than
+  the pending test obligations, each recorded `PENDING`; otherwise the failing
+  findings are recorded for the fix loop.
