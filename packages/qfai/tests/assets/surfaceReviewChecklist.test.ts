@@ -52,7 +52,7 @@ const WCAG = [
   ["4.1.2", "name-role-value"],
 ] as const;
 
-// QFAI:EX-0001-0315-01
+// QFAI:EX-0001-0304-02
 describe("the surface review checklist lists sourced items in a fixed order", () => {
   it("has the four item sections after how to walk it and the report", async () => {
     const headings = (await read(CHECKLIST))
@@ -92,7 +92,10 @@ describe("the surface review checklist lists sourced items in a fixed order", ()
 
   it("asks keyboard, roles and focus of every widget against its APG pattern", async () => {
     const text = flat(await read(CHECKLIST));
-    expect(text).toContain("add one item per widget, with the ID `APG <pattern>`");
+    expect(text).toContain("add one item per widget, with the ID `APG <slug>`");
+    expect(text).toContain(
+      "The slug is the pattern's path segment under `/WAI/ARIA/apg/patterns/`",
+    );
     for (const question of ["**Keyboard.**", "**Roles, states and properties.**", "**Focus.**"]) {
       expect(text).toContain(question);
     }
@@ -108,9 +111,47 @@ describe("the surface review checklist lists sourced items in a fixed order", ()
     }
     expect(text).toContain('"Not checked" is not a reason');
   });
+
+  // A paraphrase that drops a criterion's exceptions turns a conforming screen
+  // into a blocking finding.
+  it("keeps the exceptions of the contrast, non-text contrast and target size criteria", async () => {
+    const rows = (await read(CHECKLIST)).split(/\r?\n/);
+    const row = (criterion: string): string =>
+      rows.find((line) => line.startsWith(`| \`WCAG ${criterion}\``)) ?? "";
+    expect(row("1.4.3")).toContain(
+      "Text on a disabled control, decorative or incidental text, and logos are exempt.",
+    );
+    expect(row("1.4.10")).toContain("256 CSS pixels high");
+    expect(row("1.4.11")).toContain(
+      "the visual information needed to identify a control or its state reach 3:1",
+    );
+    expect(row("1.4.11")).toContain("A disabled control");
+    for (const exception of [
+      "a 24-pixel circle centred on it intersects no other target or another target's circle",
+      "an equivalent control on the same page meets the size",
+      "inline in a sentence or block of text",
+      "the browser sets its size and the author left it",
+      "essential or legally required",
+    ]) {
+      expect(row("2.5.8"), exception).toContain(exception);
+    }
+  });
+
+  it("makes one defect one finding at the strictest severity of its lines", async () => {
+    const text = flat(await read(CHECKLIST));
+    expect(text).toContain(
+      "every line it answers points at that one finding, and the finding takes the strictest severity any of those lines allows",
+    );
+  });
+
+  it("marks TYPE not applicable when the UI contract names no pattern", async () => {
+    expect(flat(await read(CHECKLIST))).toContain(
+      "`TYPE` is not applicable on an application screen whose UI contract names no `pattern`",
+    );
+  });
 });
 
-// QFAI:EX-0001-0315-02
+// QFAI:EX-0001-0304-03
 describe("the product-surface reviewer walks the checklist on every review", () => {
   it("cites a checklist that ships, for every screen on every review", async () => {
     const card = flat(await read(CARD));
@@ -134,7 +175,16 @@ describe("the product-surface reviewer walks the checklist on every review", () 
       'A "no" on a usability heuristic is filed under the route on this card it matches',
     );
     expect(card).toContain(
+      "one no route covers is `advisory` with `Traces to: none`, unless it is a defect demonstrable from the changed artifacts, which takes its `defect:*` class",
+    );
+    expect(card).toContain(
       "traces to the accessibility item of the safety floor in `.agents/rules/minimal-implementation.md` § 2",
+    );
+  });
+
+  it("blocks an accessibility finding only on what the change adds, alters or breaks", async () => {
+    expect(flat(await read(CARD))).toContain(
+      "It is blocking when the failing element is one the change adds or alters, or the change causes the failure; it is `advisory` when it predates the change on an element the change leaves alone, even on an altered screen.",
     );
   });
 });

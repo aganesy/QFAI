@@ -188,4 +188,3 @@
 | US-0001-0311 | Check every route of the built app for accessibility                                   | `user-story-0001-0311/` |
 | US-0001-0313 | A checkout that did not reinstall after a qfai upgrade is caught                       | `user-story-0001-0313/` |
 | US-0001-0314 | Settle what a Japanese product needs from one locale reference                         | `user-story-0001-0314/` |
-| US-0001-0315 | Review every screen against the same sourced checklist                                 | `user-story-0001-0315/` |

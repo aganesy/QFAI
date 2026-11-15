@@ -50,6 +50,10 @@ One line per item, per screen, in the order of this list:
   reason: an item that could apply and was not checked is a gap in the review.
 - An item ID is the one this list gives it. A widget item adds the widget, as
   in `APG dialog-modal: delete confirmation`.
+- One defect is one finding. When it answers more than one line, such as an
+  error shown only in red that fails `H9` and `WCAG 3.3.1`, every line it
+  answers points at that one finding, and the finding takes the strictest
+  severity any of those lines allows.
 
 ## Screen completeness
 
@@ -60,7 +64,8 @@ One line per item, per screen, in the order of this list:
 
 These are the completeness checks the reviewer card already sets. Walk them as
 the card says and report the result here as one line each; they are not walked
-a second time.
+a second time. `TYPE` is not applicable on an application screen whose UI
+contract names no `pattern`: the screen fits none of the catalogue's types.
 
 ## Usability heuristics
 
@@ -91,20 +96,20 @@ Source: Web Content Accessibility Guidelines (WCAG) 2.2, W3C Recommendation,
 Understanding page. These are the level A and AA criteria a business screen
 touches most often; they do not replace the full standard.
 
-| ID            | Criterion                         | Question about the screen                                                                                                                          | Understanding page                                                       |
-| ------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `WCAG 1.3.1`  | Info and Relationships (A)        | Are headings, lists, tables, form groups and label-to-field links real markup, not only a visual style?                                            | <https://www.w3.org/WAI/WCAG22/Understanding/info-and-relationships>     |
-| `WCAG 1.4.3`  | Contrast (Minimum) (AA)           | Does text reach 4.5:1 against its background, or 3:1 when it is large, in every state the screen shows?                                            | <https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum>           |
-| `WCAG 1.4.10` | Reflow (AA)                       | At 320 CSS pixels wide, does the content read without scrolling in two directions, except a part such as a data table that needs both?             | <https://www.w3.org/WAI/WCAG22/Understanding/reflow>                     |
-| `WCAG 1.4.11` | Non-text Contrast (AA)            | Do control borders, focus and selection states and icons that carry meaning reach 3:1 against what is next to them?                                | <https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast>          |
-| `WCAG 2.1.1`  | Keyboard (A)                      | Can every action be done with the keyboard alone, with no timing needed between keys?                                                              | <https://www.w3.org/WAI/WCAG22/Understanding/keyboard>                   |
-| `WCAG 2.4.3`  | Focus Order (A)                   | Does Tab move through the screen in an order that keeps its meaning, and does focus go somewhere sensible when a dialog or panel opens and closes? | <https://www.w3.org/WAI/WCAG22/Understanding/focus-order>                |
-| `WCAG 2.4.7`  | Focus Visible (AA)                | Is the focused element always visibly marked?                                                                                                      | <https://www.w3.org/WAI/WCAG22/Understanding/focus-visible>              |
-| `WCAG 2.4.11` | Focus Not Obscured (Minimum) (AA) | Does a sticky header, footer, banner or toast never hide the whole of the focused element?                                                         | <https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum> |
-| `WCAG 2.5.8`  | Target Size (Minimum) (AA)        | Is each pointer target at least 24 by 24 CSS pixels, or spaced so a 24-pixel circle around it touches no other target?                             | <https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum>        |
-| `WCAG 3.3.1`  | Error Identification (A)          | When input is rejected, is the field in error named and the error described in text, not by colour alone?                                          | <https://www.w3.org/WAI/WCAG22/Understanding/error-identification>       |
-| `WCAG 3.3.2`  | Labels or Instructions (A)        | Does every input have a visible label, with the format stated where one is required, and never a placeholder standing in for the label?            | <https://www.w3.org/WAI/WCAG22/Understanding/labels-or-instructions>     |
-| `WCAG 4.1.2`  | Name, Role, Value (A)             | Does every control expose its name, its role and its current state, such as expanded, selected or checked, to assistive technology?                | <https://www.w3.org/WAI/WCAG22/Understanding/name-role-value>            |
+| ID            | Criterion                         | Question about the screen                                                                                                                                                                                                                                                                                                                                                                          | Understanding page                                                       |
+| ------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `WCAG 1.3.1`  | Info and Relationships (A)        | Are headings, lists, tables, form groups and label-to-field links real markup, not only a visual style?                                                                                                                                                                                                                                                                                            | <https://www.w3.org/WAI/WCAG22/Understanding/info-and-relationships>     |
+| `WCAG 1.4.3`  | Contrast (Minimum) (AA)           | Does text, including text in images, reach 4.5:1 against its background, or 3:1 when it is large (18 point, or 14 point bold), in every state the screen shows? Text on a disabled control, decorative or incidental text, and logos are exempt.                                                                                                                                                   | <https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum>           |
+| `WCAG 1.4.10` | Reflow (AA)                       | At 320 CSS pixels wide, and for content that scrolls horizontally at 256 CSS pixels high, does the content read without scrolling in two directions, except a part such as a data table, map or diagram that needs both?                                                                                                                                                                           | <https://www.w3.org/WAI/WCAG22/Understanding/reflow>                     |
+| `WCAG 1.4.11` | Non-text Contrast (AA)            | Does the visual information needed to identify a control or its state reach 3:1 against what is next to it: a border where the border is what shows the control, focus and selection indicators, and icons that carry meaning? A disabled control, and a control whose look the browser sets and the author left unchanged, are exempt.                                                            | <https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast>          |
+| `WCAG 2.1.1`  | Keyboard (A)                      | Can every action be done with the keyboard alone, with no timing needed between keys?                                                                                                                                                                                                                                                                                                              | <https://www.w3.org/WAI/WCAG22/Understanding/keyboard>                   |
+| `WCAG 2.4.3`  | Focus Order (A)                   | Does Tab move through the screen in an order that keeps its meaning, and does focus go somewhere sensible when a dialog or panel opens and closes?                                                                                                                                                                                                                                                 | <https://www.w3.org/WAI/WCAG22/Understanding/focus-order>                |
+| `WCAG 2.4.7`  | Focus Visible (AA)                | Is the focused element always visibly marked?                                                                                                                                                                                                                                                                                                                                                      | <https://www.w3.org/WAI/WCAG22/Understanding/focus-visible>              |
+| `WCAG 2.4.11` | Focus Not Obscured (Minimum) (AA) | Does a sticky header, footer, banner or toast never hide the whole of the focused element?                                                                                                                                                                                                                                                                                                         | <https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum> |
+| `WCAG 2.5.8`  | Target Size (Minimum) (AA)        | Is each pointer target at least 24 by 24 CSS pixels? A smaller target passes when a 24-pixel circle centred on it intersects no other target or another target's circle, when an equivalent control on the same page meets the size, when it sits inline in a sentence or block of text, when the browser sets its size and the author left it, or when its size is essential or legally required. | <https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum>        |
+| `WCAG 3.3.1`  | Error Identification (A)          | When input is rejected, is the field in error named and the error described in text, not by colour alone?                                                                                                                                                                                                                                                                                          | <https://www.w3.org/WAI/WCAG22/Understanding/error-identification>       |
+| `WCAG 3.3.2`  | Labels or Instructions (A)        | Does every input have a visible label, with the format stated where one is required, and never a placeholder standing in for the label?                                                                                                                                                                                                                                                            | <https://www.w3.org/WAI/WCAG22/Understanding/labels-or-instructions>     |
+| `WCAG 4.1.2`  | Name, Role, Value (A)             | Does every control expose its name, its role and its current state, such as expanded, selected or checked, to assistive technology?                                                                                                                                                                                                                                                                | <https://www.w3.org/WAI/WCAG22/Understanding/name-role-value>            |
 
 ## Widget patterns
 
@@ -112,7 +117,8 @@ Source: WAI-ARIA Authoring Practices Guide (APG), W3C,
 <https://www.w3.org/WAI/ARIA/apg/patterns/>.
 
 List every interactive widget on the screen and add one item per widget, with
-the ID `APG <pattern>` and the widget's name. The pattern for each common widget
+the ID `APG <slug>` and the widget's name. The slug is the pattern's path
+segment under `/WAI/ARIA/apg/patterns/`, such as `dialog-modal` or `tabs`. The pattern for each common widget
 is in `.qfai/assistant/rule/ui-procurement.md#widgets-that-are-not-hand-authored`;
 for another widget, take the APG pattern whose description matches what it
 does. For each one ask:

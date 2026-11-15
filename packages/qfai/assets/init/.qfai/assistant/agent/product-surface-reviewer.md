@@ -113,11 +113,13 @@ specialization_tags:
   `not applicable` in the shape it sets, so two rounds of the same screen cover the same list. Its
   `FLOOR` and `TYPE` lines record the two completeness checks above; do not walk them twice.
   A "no" on a usability heuristic is filed under the route on this card it matches, with that
-  route's severity and trace; one no route covers is `advisory`. A "no" on an accessibility
-  criterion or a widget pattern traces to the accessibility item of the safety floor in
-  `.agents/rules/minimal-implementation.md` § 2, naming the criterion or pattern. It is blocking on a
-  screen or widget the change adds or alters, or when the change causes it, and `advisory` when it
-  was already there on a part the change leaves alone.
+  route's severity and trace; one no route covers is `advisory` with `Traces to: none`, unless it
+  is a defect demonstrable from the changed artifacts, which takes its `defect:*` class. A "no" on
+  an accessibility criterion or a widget pattern traces to the accessibility item of the safety floor
+  in `.agents/rules/minimal-implementation.md` § 2, naming the criterion or pattern. It is blocking
+  when the failing element is one the change adds or alters, or the change causes the failure; it is
+  `advisory` when it predates the change on an element the change leaves alone, even on an altered
+  screen.
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Where the `Component catalogue` row of `<paths.contractsDir>/tech.md#stack` names a catalogue, report a
   screen that hand-builds a control that catalogue has, and name the catalogue item. A named catalogue that
