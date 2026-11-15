@@ -776,6 +776,42 @@ it("denies a search inside a command or process substitution", () => {
 });
 
 // QFAI:EX-0001-0235-27
+// Mutation: packages/qfai/src/core/graph/hooks.ts `const runner = PROGRAM_RUNNERS[operation ?? ""];` -> `const runner = undefined;` fails "denies a search a program runner or a piped shell runs"
+it("denies a search a program runner or a piped shell runs", () => {
+  for (const [command, operation] of [
+    ["nohup rg foo /", "rg"],
+    ["xargs rg foo src", "rg"],
+    ["git ls-files | xargs grep -r bar /", "grep"],
+    ["git log | xargs -I {} grep -r {} /", "grep"],
+    ["timeout 5 rg foo /", "rg"],
+    ["timeout -s KILL 5s grep -r foo /", "grep"],
+    ["nice -n 10 grep -r foo /", "grep"],
+    ["setsid stdbuf -oL rg foo /", "rg"],
+  ] as const) {
+    const result = classifyGraphExploration({ tool: "Bash", command });
+    expect(result.decision, command).toBe("deny");
+    expect(result.operation, command).toBe(operation);
+  }
+  for (const [tool, command] of [
+    ["Bash", "echo 'rg foo /' | sh"],
+    ["Bash", "echo 'rg foo /' | bash -s"],
+    ["PowerShell", "'rg foo /' | pwsh -Command -"],
+  ] as const) {
+    const result = classifyGraphExploration({ tool, command });
+    expect(result, command).toMatchObject({ decision: "deny", state: "failed" });
+    expect(result.message, command).toContain("pipes text into a shell");
+  }
+  // A runner of a program that searches nothing, and a shell that runs a script file, stay allowed.
+  for (const command of [
+    "nohup make build",
+    "timeout 30 npm test",
+    "cat input.txt | sh build.sh",
+  ]) {
+    expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
+  }
+});
+
+// QFAI:EX-0001-0235-27
 // Mutation: packages/qfai/src/core/graph/hooks.ts `if (!bodies) return failedGraphHook("substitution");` -> `if (false) return failedGraphHook("substitution");` fails "denies a command whose substitution end the scan cannot find"
 it("denies a command whose substitution end the scan cannot find", () => {
   // No `)` closes these substitutions, or a block comment has no `#>`.
