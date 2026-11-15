@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
+  examples are green, each screen the flow adds or changes is placed in the
+  shell its UI contract names, linked from its entry points, built from shared
+  components for the parts the screens repeat, and captured. The flow is not
+  done until that is so.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
@@ -117,12 +125,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the key, whatever its value, is ignored.
 
 ### Changed
-
-- **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
-  examples are green, each screen the flow adds or changes is placed in the
-  shell its UI contract names, linked from its entry points, built from shared
-  components for the parts the screens repeat, and captured. The flow is not
-  done until that is so.
 
 - **The interface-clarity cut is judged with production-sized data.** The test
   in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
