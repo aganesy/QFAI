@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { runInstalledGraphHook } from "../../../src/cli/graphHook.js";
@@ -1249,9 +1249,26 @@ async function outsideSearchLayout() {
   await mkdir(nested, { recursive: true });
   await mkdir(path.join(outside, "sub"), { recursive: true });
   await writeFile(path.join(project, "src", "a.ts"), "export const foo = 1;\n");
+  // A project file with one name, so only its location keeps a search through a link denied.
+  await writeFile(path.join(project, "src", "b.ts"), "export const foo = 2;\n");
   await writeFile(path.join(nested, ".git"), "gitdir: elsewhere\n");
   await writeFile(path.join(outside, "notes.txt"), "foo\n");
   await writeFile(path.join(outside, "sub", "other.txt"), "foo\n");
+  // A hard link to a project file, and files a Cygwin or MSYS shell follows as links.
+  await link(path.join(project, "src", "a.ts"), path.join(outside, "hard.txt"));
+  await writeFile(
+    path.join(outside, "sys.txt"),
+    Buffer.concat([
+      Buffer.from("!<symlink>"),
+      Buffer.from(String.fromCharCode(0xfeff) + project, "utf16le"),
+    ]),
+  );
+  await writeFile(path.join(outside, "interix.txt"), Buffer.from("IntxLNK\x01", "latin1"));
+  await writeFile(
+    path.join(outside, "shortcut.txt"),
+    Buffer.from([0x4c, 0x00, 0x00, 0x00, 0x01, 0x14, 0x02, 0x00, 0, 0, 0, 0, 0, 0, 0, 0]),
+  );
+  await writeFile(path.join(outside, "project.lnk"), "foo\n");
   await symlink(
     project,
     path.join(outside, "link"),
@@ -1280,16 +1297,24 @@ it("allows a search whose every literal operand lies outside the project", async
     for (const event of [
       { tool: "Bash", cwd: project, command: `grep -n foo ${out}/notes.txt` },
       { tool: "Bash", cwd: project, command: `rg -n -- foo ${out}/notes.txt ${out}/sub/other.txt` },
-      { tool: "Bash", cwd: project, command: `cd src && grep -rn foo ${out}/sub/other.txt` },
-      { tool: "Bash", cwd: outside, command: "grep -n foo notes.txt" },
-      { tool: "PowerShell", cwd: outside, command: "findstr /n foo notes.txt" },
+      { tool: "Bash", cwd: outside, command: `grep -rn foo ${out}/sub/other.txt | sort` },
       {
         tool: "PowerShell",
         cwd: project,
         command: `Select-String -Pattern foo -LiteralPath ${out}/notes.txt`,
       },
-      { tool: "PowerShell", cwd: outside, command: "sls foo notes.txt" },
+      { tool: "PowerShell", cwd: outside, command: `sls foo ${out}/notes.txt` },
       { tool: "Bash", cwd: project, command: `bash -c "grep -n foo ${out}/notes.txt"` },
+      // findstr takes an absolute operand only as a Windows path with backslashes.
+      ...(process.platform === "win32"
+        ? [
+            {
+              tool: "PowerShell",
+              cwd: project,
+              command: `findstr /n foo ${path.join(outside, "notes.txt")}`,
+            },
+          ]
+        : []),
     ]) {
       const result = classifyGraphExploration(event, undefined, [project]);
       expect(result.decision, event.command).toBe("allow");
@@ -1309,7 +1334,7 @@ it("denies a search whose operands are not provably outside the project", async 
   try {
     const denied: [event: GraphHookEvent, worktrees: string[]][] = [
       // A link outside that leads back into the project.
-      [{ tool: "Bash", cwd: project, command: `grep -n foo ${out}/link/src/a.ts` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep -n foo ${out}/link/src/b.ts` }, [project]],
       [{ tool: "Bash", cwd: project, command: `rg foo ${out}/link` }, [project]],
       // A directory, which a search may recurse through to reach the project.
       [{ tool: "Bash", cwd: project, command: `rg foo ${out}` }, [project]],
@@ -1324,6 +1349,56 @@ it("denies a search whose operands are not provably outside the project", async 
       ],
       // A file the kernel synthesises.
       [{ tool: "Bash", cwd: project, command: "grep foo /proc/self/environ" }, [project]],
+      // A hard link to a project file, an MSYS or Interix link file, a shortcut and a .lnk name.
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/hard.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/sys.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/interix.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/shortcut.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/project.lnk` }, [project]],
+      // A command earlier in the event, which may make the link the search reads.
+      [
+        { tool: "Bash", cwd: project, command: `cd src && grep -n foo ${out}/notes.txt` },
+        [project],
+      ],
+      [{ tool: "Bash", cwd: project, command: `echo x; grep -n foo ${out}/notes.txt` }, [project]],
+      [
+        {
+          tool: "Bash",
+          cwd: project,
+          command: `ln -s ${project} ${out}/made && grep -n foo ${out}/notes.txt`,
+        },
+        [project],
+      ],
+      // An environment variable set in the same PowerShell event.
+      [
+        {
+          tool: "PowerShell",
+          cwd: project,
+          command: `Set-Content env:GREP_OPTIONS '-e x'; grep foo ${out}/notes.txt`,
+        },
+        [project],
+      ],
+      [
+        {
+          tool: "PowerShell",
+          cwd: project,
+          command: `Rename-Item env:FOO RIPGREP_CONFIG_PATH; rg foo ${out}/notes.txt`,
+        },
+        [project],
+      ],
+      [
+        {
+          tool: "PowerShell",
+          cwd: project,
+          command: `[Environment]::SetEnvironmentVariable('GREP_OPTIONS', '-e x'); grep foo ${out}/notes.txt`,
+        },
+        [project],
+      ],
+      // A pattern word that names a file, which an added `-e` would turn into an operand.
+      [{ tool: "Bash", cwd: project, command: `grep src ${out}/notes.txt` }, [project]],
+      // A relative operand, which depends on the shell's directory.
+      [{ tool: "Bash", cwd: outside, command: "grep -n foo notes.txt" }, [project]],
+      [{ tool: "PowerShell", cwd: outside, command: "findstr /n foo notes.txt" }, [project]],
       // One operand outside and one inside.
       [{ tool: "Bash", cwd: project, command: `grep foo ${out}/notes.txt ${inside}` }, [project]],
       [{ tool: "Bash", cwd: project, command: `grep foo ${out}/notes.txt src/a.ts` }, [project]],
@@ -1364,6 +1439,16 @@ it("denies a search whose operands are not provably outside the project", async 
     ];
     for (const [event, worktrees] of denied) {
       expect(classifyGraphExploration(event, undefined, worktrees).decision, event.command).toBe(
+        "deny",
+      );
+    }
+    // Setting an environment variable redefines what a later search reads, so a pipe filter
+    // after it is no longer exempt either.
+    for (const command of [
+      "Set-Content env:GREP_OPTIONS x; git status | grep x",
+      "[Environment]::SetEnvironmentVariable('GREP_OPTIONS', 'x'); git status | grep x",
+    ]) {
+      expect(classifyGraphExploration({ tool: "PowerShell", command }).decision, command).toBe(
         "deny",
       );
     }

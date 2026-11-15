@@ -1,4 +1,4 @@
-import { realpathSync, statSync } from "node:fs";
+import { closeSync, existsSync, openSync, readSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 
 export type GraphHookHost = "claude" | "codex" | "copilot" | "vscode";
@@ -51,6 +51,11 @@ interface ShellScope {
   directory?: string;
   /** The project worktree and the checkout the hook belongs to: a search of neither is not denied. */
   worktrees: readonly string[];
+  /**
+   * Whether this text is the whole event: no command before it, and no substitution, can have
+   * changed the file system a search would read.
+   */
+  alone: boolean;
 }
 
 interface CommandContext extends ShellScope {
@@ -81,7 +86,7 @@ export function classifyGraphExploration(
   return (
     classifyShellText(
       event.command ?? "",
-      { authorize, shell, worktrees, ...(directory ? { directory } : {}) },
+      { authorize, shell, worktrees, alone: true, ...(directory ? { directory } : {}) },
       0,
       false,
       "observed",
@@ -132,7 +137,7 @@ function classifyShellText(
     start,
     bodies.map(
       (body) => (location: ShellLocation, redefines: boolean) =>
-        classifyShellText(body, scope, depth + 1, redefines, location, true),
+        classifyShellText(body, { ...scope, alone: false }, depth + 1, redefines, location, true),
     ),
   );
 }
@@ -234,7 +239,19 @@ function classifyCommands(
     // `git log | { grep fix; } < .env` the group reads `.env`.
     const upstream =
       words[0] === "{" && !groupClosesBare(commands, index) ? undefined : command.upstream;
-    const decision = classifyCommand(words, { ...scope, location, redefined }, depth, upstream);
+    // Only the first command can be a search that reads outside files: any command before it
+    // may make a link it reads. A pipeline stage after it may still run.
+    const alone =
+      scope.alone &&
+      index === 0 &&
+      substitutions.length === 0 &&
+      commands.slice(1).every((next) => next.join === "|");
+    const decision = classifyCommand(
+      words,
+      { ...scope, alone, location, redefined },
+      depth,
+      upstream,
+    );
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
@@ -264,7 +281,14 @@ function redefinesCommands(words: string[]): boolean {
   }
   const first = words[offset] ?? "";
   return (
-    words.some((word) => word.includes("()") || /^\{[A-Za-z_][A-Za-z0-9_]*\}[<>]/.test(word)) ||
+    words.some(
+      (word) =>
+        word.includes("()") ||
+        /^\{[A-Za-z_][A-Za-z0-9_]*\}[<>]/.test(word) ||
+        // PowerShell sets an environment variable through the env: drive or the .NET API.
+        /^env:/i.test(word) ||
+        word.includes("Environment]::"),
+    ) ||
     /^(?:[A-Za-z_][A-Za-z0-9_]*=|\$|\{\w*\}?[<>]?$|\{\w+\}[<>])/.test(first) ||
     (first === "printf" && words.includes("-v")) ||
     [
@@ -566,6 +590,7 @@ function classifyCommand(
         authorize: context.authorize,
         shell,
         worktrees: context.worktrees,
+        alone: context.alone,
         ...(context.directory ? { directory: context.directory } : {}),
       },
       depth + 1,
@@ -880,6 +905,12 @@ const OUTSIDE_SWITCHES: Readonly<Record<string, RegExp>> = {
  */
 const EXPANDING = /[$`~%*?[\]{}()<>|;&,!@^'"#]/;
 
+/** The pattern word and the file operands of a search checked for reading only outside files. */
+interface OutsideSearch {
+  pattern: string;
+  operands: string[];
+}
+
 /**
  * The file operands of a grep, rg or findstr whose words are all known: switches from
  * `OUTSIDE_SWITCHES`, then a literal pattern, then the operands. Options are read only before
@@ -891,7 +922,7 @@ const EXPANDING = /[$`~%*?[\]{}()<>|;&,!@^'"#]/;
  * or an alias or function defined outside the event, is not seen. Lift when a host reports the
  * shell environment in the pre-tool event.
  */
-function searchOperands(operation: string, args: string[]): string[] | undefined {
+function searchOperands(operation: string, args: string[]): OutsideSearch | undefined {
   const switches = OUTSIDE_SWITCHES[operation];
   if (
     !switches ||
@@ -908,7 +939,7 @@ function searchOperands(operation: string, args: string[]): string[] | undefined
   // `C:/a/b.txt` as the drive-relative `C:b.txt`, so no word after its switches may hold a `/`.
   if (operation === "findstr" && args.slice(index).some((word) => word.includes("/")))
     return undefined;
-  return rest;
+  return { pattern, operands: rest };
 }
 
 /**
@@ -916,7 +947,7 @@ function searchOperands(operation: string, args: string[]): string[] | undefined
  * `-LiteralPath` with a value, switches that read no other file, and positional words, the
  * first of which is the pattern when `-Pattern` is absent. `undefined` for any other shape.
  */
-function selectStringOperands(args: string[]): string[] | undefined {
+function selectStringOperands(args: string[]): OutsideSearch | undefined {
   let pattern: string | undefined;
   const operands: string[] = [];
   const positional: string[] = [];
@@ -936,51 +967,100 @@ function selectStringOperands(args: string[]): string[] | undefined {
   }
   pattern ??= positional.shift();
   if (pattern === undefined || EXPANDING.test(pattern)) return undefined;
-  return [...operands, ...positional];
+  return { pattern, operands: [...operands, ...positional] };
 }
 
 /**
- * Whether every operand of a search provably names a regular file outside the project: read
- * from a known directory, by a command no part of the event redefines, as a literal path that,
- * lexically and after resolving symbolic links, neither lies inside nor contains any of the
- * worktrees. A directory is refused, since a search recursing into it may reach the project
- * through a link, a junction or a mount below it. No operand, or one that cannot be resolved,
- * proves nothing, so the search stays denied. A `..` segment is refused: the shell resolves it
- * through a symbolic link where a lexical reading does not. Every operand is checked lexically
- * before any is resolved, so a search with a project operand is denied without reading the
- * disk. This reads the file system only; it queries no graph.
+ * Whether every operand of a search provably names a regular file outside the project. The
+ * search is the whole event, so no earlier command can have made a link it reads, and no part
+ * of the event redefines a command or sets an environment variable. It runs from a known
+ * directory, and its pattern word names nothing that exists there, so an argument the
+ * environment adds, such as `-e x` in `GREP_OPTIONS`, cannot turn that word into a file. Each
+ * operand is an absolute literal path that, lexically and after resolving symbolic links,
+ * neither lies inside nor contains any of the worktrees, and resolves to a regular file with one
+ * name that is not a Cygwin or MSYS link file or a Windows shortcut.
  *
- * Ceiling: the check sees the file system when the hook runs, so a link another command of
- * the same event makes, or a hard link to a project file, is not seen. A sibling worktree of the
- * same repository outside the checkout is not part of the project here, so its files are
- * allowed. Resolving a path on a mapped network drive or a network mount is a file-system call
- * that may reach the network; network paths written as `\\server` or `//server` are refused
- * before they are resolved. Lift when a host reports the files a command opened.
+ * A directory is refused, since a search recursing into it may reach the project through a
+ * link, a junction or a mount below it. No operand, or one that cannot be resolved, proves
+ * nothing, so the search stays denied. A `..` segment is refused: the shell resolves it through
+ * a symbolic link where a lexical reading does not. Every operand is checked lexically before
+ * any is resolved, so a search with a project operand is denied without reading the disk. This
+ * reads the file system only; it queries no graph.
+ *
+ * Ceiling: the hook reads its own environment, so a `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH`
+ * left in a persistent terminal that adds a file operand is not seen. A single file bind-mounted
+ * from the project onto an outside path keeps its own name and one link, so it is not seen
+ * either. A pipeline stage after the search runs beside it and could change a link before the
+ * search opens it. A sibling worktree of the same repository outside the checkout is not part
+ * of the project here, so its files are allowed. Resolving a path on a mapped network drive or
+ * a network mount is a file-system call that may reach the network; network paths written as
+ * `\\server` or `//server` are refused before they are resolved. Lift when a host reports the
+ * files a command opened.
  */
-function readsOnlyOutside(context: CommandContext, operands: string[] | undefined): boolean {
-  const { location, directory, worktrees, redefined, shell } = context;
-  if (!operands?.length || redefined || location === "unknown" || !directory || !worktrees.length)
+function readsOnlyOutside(context: CommandContext, search: OutsideSearch | undefined): boolean {
+  const { location, directory, worktrees, redefined, shell, alone } = context;
+  if (
+    !search?.operands.length ||
+    !alone ||
+    redefined ||
+    location === "unknown" ||
+    !directory ||
+    !worktrees.length ||
+    /^[\\/]{2}/.test(search.pattern)
+  )
     return false;
+  const { pattern, operands } = search;
   const base = location === "observed" ? directory : location.directory;
   const lexicalRoots = worktrees.map((root) => path.resolve(root));
-  const lexical = operands.map((operand) => path.resolve(base, operand));
+  const lexical = operands.map((operand) => path.resolve(operand));
   if (
     !operands.every((operand) => literalPath(operand, shell)) ||
     !lexical.every((file) => !systemPath(file) && lexicalRoots.every((root) => apart(root, file)))
   )
     return false;
   try {
+    if (existsSync(path.resolve(base, pattern))) return false;
     const roots = [...lexicalRoots, ...worktrees.map((root) => realpathSync.native(root))];
     return lexical.every((file) => {
       const real = realpathSync.native(file);
+      const status = statSync(real);
       return (
         !systemPath(real) &&
-        statSync(real).isFile() &&
+        status.isFile() &&
+        status.nlink === 1 &&
+        !/\.lnk$/i.test(file) &&
+        !/\.lnk$/i.test(real) &&
+        !linkFile(real) &&
         roots.every((root) => apart(root, file) && apart(root, real) && apartOnDisk(root, real))
       );
     });
   } catch {
     return false;
+  }
+}
+
+/**
+ * Headers of files that a Cygwin or MSYS shell, such as Git Bash, follows as a link while
+ * Node.js reads a regular file: a `winsymlinks:sys` link, an Interix link and a Windows
+ * shortcut, which `winsymlinks:lnk` writes.
+ */
+const LINK_HEADERS: readonly Buffer[] = [
+  Buffer.from("!<symlink>", "latin1"),
+  Buffer.from("IntxLNK\x01", "latin1"),
+  Buffer.from([0x4c, 0x00, 0x00, 0x00, 0x01, 0x14, 0x02, 0x00]),
+];
+
+/** Whether a file starts with a header from `LINK_HEADERS`. */
+function linkFile(file: string): boolean {
+  const head = Buffer.alloc(16);
+  const descriptor = openSync(file, "r");
+  try {
+    const read = readSync(descriptor, head, 0, head.length, 0);
+    return LINK_HEADERS.some(
+      (header) => read >= header.length && head.subarray(0, header.length).equals(header),
+    );
+  } finally {
+    closeSync(descriptor);
   }
 }
 
@@ -990,14 +1070,15 @@ function systemPath(file: string): boolean {
 }
 
 /**
- * Whether an operand is a path the shell passes as written. A colon is allowed only after a
- * drive letter, so a provider drive, a URL or a pathspec is refused, and a network path is
- * refused before it is resolved. A POSIX shell reads a backslash as an escape, and on Windows
- * maps a path from `/` through its own mount table.
+ * Whether an operand is an absolute path the shell passes as written, so it names the same file
+ * whatever the shell's directory is: a drive letter path on Windows, a `/` path elsewhere. A
+ * colon is allowed only after a drive letter, so a provider drive, a URL or a pathspec is
+ * refused, and a network path is refused before it is resolved. A POSIX shell reads a
+ * backslash as an escape, and on Windows maps a path from `/` through its own mount table.
  */
 function literalPath(operand: string, shell: GraphShell): boolean {
   return !(
-    operand.startsWith("-") ||
+    !(process.platform === "win32" ? /^[A-Za-z]:[\\/]/ : /^\//).test(operand) ||
     EXPANDING.test(operand) ||
     !/^(?:[A-Za-z]:[\\/])?[^:]*$/.test(operand) ||
     /^[\\/]{2}/.test(operand) ||
