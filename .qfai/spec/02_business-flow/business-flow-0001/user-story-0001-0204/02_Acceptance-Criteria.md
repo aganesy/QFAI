@@ -25,4 +25,19 @@ Feature: Settle one visual decision as a stage of a route
     When qfai-prototyping runs in it
     Then it writes nothing
     And the session stops, naming the missing UI surface
+
+  # AC-0001-0204-05
+  Scenario: A prototype stage researches only the screens the project has no pattern for
+    Given a prototype stage of a route whose run adds screens no confirmed prototype covers
+    When qfai-prototyping checks each added screen's type against the business UI patterns and each element and structure group its UI contract declares against the component catalogue
+    Then it runs the research protocol, scoped to UI, for each screen type or component none of them covers, before the session
+    And it runs no research when they cover every added screen
+
+  # AC-0001-0204-06
+  Scenario: The prototype loop builds and reviews from the UI research the grill recorded
+    Given a prototype stage whose grill recorded a research summary for screen types or components the project does not cover
+    When qfai-prototyping runs its loop
+    Then the generator of each lineage reads the findings the grill applied for that lineage's gaps
+    And the reviewer receives the same entries
+    And a finding the grill rejected or deferred reaches neither
 ```

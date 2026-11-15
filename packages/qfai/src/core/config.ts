@@ -107,6 +107,53 @@ export type QfaiUiuxConfig = {
   audit?: QfaiUiuxAuditConfig;
 };
 
+/**
+ * The elements QFAI-UITEXT-001 never reads plain text in, and the roles that
+ * exempt any element that carries them. `uiText.elements` may map a component
+ * to one of either, and to nothing else.
+ */
+export const UI_TEXT_EXEMPT_ELEMENTS = [
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "label",
+  "button",
+  "a",
+  "legend",
+  "th",
+  "caption",
+  "option",
+  "summary",
+  "title",
+  "script",
+  "style",
+] as const;
+export const UI_TEXT_EXEMPT_ROLES = ["alert", "status"] as const;
+export type UiTextElement =
+  (typeof UI_TEXT_EXEMPT_ELEMENTS)[number] | (typeof UI_TEXT_EXEMPT_ROLES)[number];
+const UI_TEXT_ELEMENT_VALUES: readonly string[] = [
+  ...UI_TEXT_EXEMPT_ELEMENTS,
+  ...UI_TEXT_EXEMPT_ROLES,
+];
+/**
+ * A component name: `.`-separated segments of letters, digits, `_` and `-`,
+ * each opening with a letter. A single lower-case word is an HTML element's
+ * name, not a component's, so it is refused.
+ */
+const UI_TEXT_COMPONENT_NAME = /^[A-Za-z][\w-]*(?:\.[A-Za-z][\w-]*)*$/;
+const HTML_ELEMENT_NAME = /^[a-z][a-z0-9]*$/;
+
+export type QfaiUiTextConfig = {
+  /**
+   * Project components, by name, mapped to the element they render, so the
+   * plain-text check reads `<TableHead>` as it reads `<th>`.
+   */
+  elements?: Record<string, UiTextElement>;
+};
+
 export type QfaiPrototypingExecutionConfig = {
   targetUrl?: string | null;
   /**
@@ -149,6 +196,7 @@ export type QfaiConfig = {
   validation: QfaiValidationConfig;
   output: QfaiOutputConfig;
   uiux?: QfaiUiuxConfig;
+  uiText?: QfaiUiTextConfig;
   prototyping?: QfaiPrototypingConfig;
   report?: QfaiReportConfig;
   baseBranch?: string;
@@ -385,6 +433,7 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   }
 
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
+  const uiText = normalizeUiText(raw.uiText, configPath, issues);
   const prototyping = normalizePrototyping(raw.prototyping, configPath, issues);
   const report = normalizeReport(raw.report, configPath, issues);
   const base: QfaiConfig = {
@@ -394,6 +443,9 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   };
   if (uiux) {
     base.uiux = uiux;
+  }
+  if (uiText) {
+    base.uiText = uiText;
   }
   if (prototyping) {
     base.prototyping = prototyping;
@@ -1065,6 +1117,64 @@ function normalizeUiux(
     }
   }
   return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/**
+ * `uiText.elements`: each entry whose key is a component name and whose value
+ * is an element the plain-text check exempts is kept; every other entry is
+ * reported and dropped, and the rest still apply.
+ */
+function normalizeUiText(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiUiTextConfig | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "uiText must be an object."));
+    return undefined;
+  }
+  for (const key of Object.keys(raw)) {
+    if (key !== "elements") {
+      issues.push(configIssue(configPath, `uiText.${key} is not a setting.`));
+    }
+  }
+  if (raw.elements === undefined) {
+    return undefined;
+  }
+  if (!isRecord(raw.elements)) {
+    issues.push(configIssue(configPath, "uiText.elements must be an object."));
+    return undefined;
+  }
+  const elements: Record<string, UiTextElement> = {};
+  for (const [name, element] of Object.entries(raw.elements)) {
+    if (!UI_TEXT_COMPONENT_NAME.test(name) || HTML_ELEMENT_NAME.test(name)) {
+      issues.push(
+        configIssue(
+          configPath,
+          `uiText.elements key "${name}" is not a component name: write the name as the source does, such as TableHead or Card.Title.`,
+        ),
+      );
+      continue;
+    }
+    if (!isUiTextElement(element)) {
+      issues.push(
+        configIssue(
+          configPath,
+          `uiText.elements.${name} must be one of ${UI_TEXT_ELEMENT_VALUES.join("|")}.`,
+        ),
+      );
+      continue;
+    }
+    elements[name] = element;
+  }
+  return Object.keys(elements).length > 0 ? { elements } : undefined;
+}
+
+function isUiTextElement(value: unknown): value is UiTextElement {
+  return typeof value === "string" && UI_TEXT_ELEMENT_VALUES.includes(value);
 }
 
 /**

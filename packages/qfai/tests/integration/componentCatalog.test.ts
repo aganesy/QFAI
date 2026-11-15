@@ -303,3 +303,130 @@ describe("the implementer reads the catalogue and keeps it current", () => {
     expect(step).toContain("skill/qfai-implement/references/ui-affecting.md");
   });
 });
+
+// QFAI:AC-0001-0310-01
+describe("a hand-written dialog, menu or tab list is a warning where a catalogue is installed", () => {
+  it("warns at the element's line when a registry is declared and no catalogue file exists", async () => {
+    const root = await projectWith({
+      "qfai.config.yaml": [
+        "uiux:",
+        '  surfacePaths: ["src/**"]',
+        "  registries:",
+        '    shadcn: "https://ui.shadcn.com/r/{name}.json"',
+        "",
+      ].join("\n"),
+      "src/pages/account.tsx":
+        'export const Account = () => (\n  <nav>\n    <ul role="menu" />\n  </nav>\n);\n',
+    });
+    const found = await comp(root);
+    expect(found.map((item) => [item.code, item.severity, item.file, item.loc?.line])).toEqual([
+      ["QFAI-COMP-005", "warning", "src/pages/account.tsx", 3],
+    ]);
+    expect(found[0]?.message).toContain('`role="menu"`');
+  });
+
+  // QFAI:EX-0001-0310-05
+  it("warns in the four UI profiles only, outside the catalogue item's own file", async () => {
+    const root = await projectWith({
+      "src/ui/dialog.tsx": component(
+        "Dialog",
+        [
+          "@source shadcn/ui dialog@2.1",
+          "@a11y APG Dialog (Modal); Escape closes, focus is trapped",
+        ],
+        '<div role="dialog" />',
+      ),
+      "src/pages/home.tsx": component("Home", [], '<div role="dialog" />'),
+    });
+    await cli(["catalog", "components", "--root", root]);
+    const reporting: ValidationProfile[] = ["prototyping", "saas-package", "verify", "full"];
+    const silent: ValidationProfile[] = ["discussion", "sdd", "atdd", "tdd", "drift"];
+    for (const profile of reporting) {
+      const found = await comp(root, profile);
+      expect(found.map((item) => [item.code, item.severity, item.file])).toEqual([
+        ["QFAI-COMP-005", "warning", "src/pages/home.tsx"],
+      ]);
+    }
+    for (const profile of silent) expect(await comp(root, profile)).toEqual([]);
+  });
+});
+
+// QFAI:AC-0001-0310-02
+describe("a listed interactive widget with no accessibility notes is a warning", () => {
+  it("names the component and its widget pattern", async () => {
+    const root = await projectWith({
+      "src/ui/tabs.tsx": component("SettingsTabs", [
+        "@source authored",
+        "@reason The settings tabs carry a badge per tab",
+        "@pattern tabs",
+      ]),
+      "src/ui/menu.tsx": component("AccountMenu", [
+        "@source shadcn/ui dropdown-menu@2.1",
+        "@pattern menu button",
+        "@a11y APG Menu Button; Enter, Space and ArrowDown open the menu",
+      ]),
+    });
+    await cli(["catalog", "components", "--root", root]);
+    const found = await comp(root);
+    expect(found.map((item) => [item.code, item.severity, item.file])).toEqual([
+      ["QFAI-COMP-006", "warning", "src/ui/tabs.tsx"],
+    ]);
+    expect(found[0]?.message).toContain("`SettingsTabs`");
+    expect(found[0]?.message).toContain("`tabs`");
+  });
+});
+
+// QFAI:AC-0001-0310-03
+describe("the procurement rule names the widgets that are not hand-authored", () => {
+  // QFAI:EX-0001-0310-06
+  it("lists each widget with its APG pattern and what an authored one records", async () => {
+    const rule = await readFile(
+      path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        "..",
+        "..",
+        "assets",
+        "init",
+        ".qfai",
+        "assistant",
+        "rule",
+        "ui-procurement.md",
+      ),
+      "utf-8",
+    );
+    const text = rule.replace(/\s*\n\s*/g, " ");
+    const section = text.slice(
+      text.indexOf("## Widgets that are not hand-authored"),
+      text.indexOf("## What the prototype does not answer"),
+    );
+    const rows: ReadonlyArray<readonly [string, string]> = [
+      ["Dialog", "Dialog (Modal)"],
+      ["Alert dialog", "Alert and Message Dialogs"],
+      ["Drawer or sheet", "Dialog (Modal)"],
+      ["Menu and menu button", "Menu and Menubar, Menu Button"],
+      ["Tabs", "Tabs"],
+      ["Combobox and autocomplete", "Combobox"],
+      ["Listbox and select", "Listbox, Select-Only Combobox"],
+      ["Tooltip", "Tooltip"],
+      ["Popover", "Disclosure (Show/Hide)"],
+      ["Toast", "Alert"],
+      ["Date picker", "Date Picker Dialog"],
+      ["Disclosure and accordion", "Disclosure (Show/Hide), Accordion"],
+    ];
+    const cells = section
+      .split("|")
+      .map((cell) => cell.trim())
+      .filter((cell) => cell !== "");
+    for (const [widget, pattern] of rows) {
+      expect(cells[cells.indexOf(widget) + 1]).toBe(pattern);
+    }
+    expect(section).toContain("skip rung 5, composing from primitives");
+    expect(section).toContain(
+      "its component's `@a11y` tag in the component catalogue records the APG pattern and the keyboard behaviour it implements, and a test covers that behaviour",
+    );
+    const record = text.slice(text.indexOf("## Recording what was procured"));
+    expect(record).toContain(
+      "also names its APG pattern and the keyboard behaviour it implements, in its `@a11y` tag, and the test that covers that behaviour",
+    );
+  });
+});

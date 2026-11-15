@@ -14,6 +14,14 @@ theme, or a survey the user asks for, also run
 `.qfai/assistant/rule/references/visual-reference-survey.md`; its findings are
 checked against `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md`.
 
+`prototyping-grill` also triggers it, scoped to UI, when a run adds a screen
+whose type the project's pattern references do not cover, or that needs a
+component the project's component catalogues do not list. It then researches
+those gaps alone, as
+`.qfai/assistant/step/prototyping-grill/STEP.md#ui-research-for-uncovered-screens`
+says, and the visual reference survey does not apply. A run whose screens they
+all cover runs no research.
+
 ## Output Schema
 
 ```yaml

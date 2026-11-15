@@ -4,8 +4,9 @@
 
 This contract decides what `/qfai-configure` writes into a project and which
 values of `qfai.config.yaml` a project may override: the test globs, the story
-and contract roots, the workflow mode and the paths that render a
-user-visible surface. A `routing:` or `reviewProfiles:` key a project kept
+and contract roots, the workflow mode, the paths that render a
+user-visible surface and the components the plain-text check reads as the
+elements they render. A `routing:` or `reviewProfiles:` key a project kept
 from an earlier release is not read and raises no finding. It also decides how every
 QFAI command reads those values.
 
@@ -36,3 +37,4 @@ does.
 | BR-0003-0065 | `validation.diagramBudget` in `qfai.config.yaml` is optional. When present it is a mapping whose optional `nodes` and `edges` are each an integer of 1 or more, and each replaces the diagram budget's default limit of the same name. A value that is not such an integer, or a key other than these two, raises the error `QFAI-CFG-002` naming its key, and that limit keeps its default. A `diagramBudget` that is not a mapping raises `QFAI-CFG-002` naming `validation.diagramBudget`, and both limits keep their defaults. | EX-0001-0240-10, EX-0001-0240-11, EX-0001-0240-12 |
 | BR-0003-0066 | `workflow.stopGate` in `qfai.config.yaml` is `true` or `false`, and an absent key means `true`. `qfai validate` reports any other value as a configuration issue with the message `workflow.stopGate must be true or false; an absent key means true.`, and the turn-end hook treats such a value as `false`. `qfai init` writes no `workflow` key. | EX-0001-0244-11, EX-0001-0244-12 |
 | BR-0003-0067 | `paths.deliberationDir` in `qfai.config.yaml` names the directory that holds the deliberation records. It is optional, and an absent key means `.qfai/deliberation`. Its value is read with every `\` taken as `/`, on every platform. A value that is not a non-empty string, or that names the project root or a directory outside it, or that has a part ending in a dot or a space, raises `QFAI-CFG-002`, and the default is used. | EX-0001-0302-13, EX-0001-0302-14 |
+| BR-0003-0068 | `uiText.elements` in `qfai.config.yaml` is optional. When present it is a mapping from a component name to the element the component renders, and the plain-text check reads it. A key is a component name: `.`-separated segments of letters, digits, `_` and `-`, each opening with a letter, and not a single lower-case word, which names an HTML element. A value is one of `h1` to `h6`, `label`, `button`, `a`, `legend`, `th`, `caption`, `option`, `summary`, `title`, `script`, `style`, `status` or `alert`. A key that is not a component name, a value outside that list, a `uiText` or `uiText.elements` that is not a mapping, and a key of `uiText` other than `elements` each raise `QFAI-CFG-002` naming the key; the entry so reported maps nothing, and every other entry still applies. `qfai init` writes the key only as a comment. | EX-0001-0297-19 |

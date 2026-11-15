@@ -99,6 +99,30 @@ describe("text that names, labels or reports is not checked", () => {
   });
 });
 
+// QFAI:AC-0001-0297-09
+describe("a project maps its components to the elements they render", () => {
+  it("reads a mapped component as its element, the rest as before, and reports a bad entry", async () => {
+    const root = await projectWith({
+      "qfai.config.yaml":
+        'uiux:\n  surfacePaths: ["src/**"]\nuiText:\n  elements:\n    TableHead: th\n    StatusRegion: status\n    Panel: div\n',
+      "src/a.vue":
+        "<template>\n  <TableHead>Order</TableHead>\n  <StatusRegion>Saved</StatusRegion>\n  <TableCell>ORD-1042</TableCell>\n</template>\n",
+      "src/b.svelte": "<TableHead>Total</TableHead>\n",
+    });
+    const result = await validateProject(root, undefined, { profile: "prototyping" });
+    const found = result.issues.filter((item) => item.code.startsWith("QFAI-UITEXT-"));
+    expect(found.map((item) => [item.code, item.file, item.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", "src/a.vue", 4],
+    ]);
+    expect(
+      result.issues
+        .filter((item) => item.code === "QFAI-CFG-002")
+        .map((item) => item.message)
+        .some((message) => message.includes("uiText.elements.Panel")),
+    ).toBe(true);
+  });
+});
+
 // QFAI:AC-0001-0297-04
 describe("the files read are the current prototype and the declared surface", () => {
   it("reads the latest iteration and the selected components, not old pages or tests", async () => {

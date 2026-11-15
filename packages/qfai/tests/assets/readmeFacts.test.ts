@@ -71,6 +71,18 @@ describe("README facts", () => {
     }
   });
 
+  // QFAI:EX-0001-0313-07
+  it("tells every checkout to reinstall after pulling a qfai upgrade", async () => {
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("### Keeping QFAI itself up to date");
+      const section = readme.slice(start, readme.indexOf("\n## ", start)).replace(/\s+/g, " ");
+      expect(section, readmePath).toContain(
+        "every other checkout and worktree of the project runs its install once it pulls the change, for example `npm ci`",
+      );
+    }
+  });
+
   it("keeps npm README onboarding consistent", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
     const readme = await readFile(readmePath, "utf-8");

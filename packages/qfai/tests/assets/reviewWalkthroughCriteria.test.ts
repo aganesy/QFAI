@@ -121,8 +121,16 @@ describe("four ordinal axes and eight diagnostic questions", () => {
       expect(ladder).toContain(
         "1. **Does the project already have a component for it?** Reuse it.",
       );
+      // Built one example at a time, a region is only ever used once when it
+      // is written; a region two contracts name is shared from its first use.
       expect(ladder).toContain(
-        "extract one, wrapping whatever rung 2, 3 or 4 supplied, and use it on both",
+        "When two or more UI contracts name the same region, extract a shared component at the region's first use.",
+      );
+      expect(ladder).toContain(
+        "When only one UI contract names a region and it then appears on a second screen that no shared component serves, extract one then.",
+      );
+      expect(ladder).toContain(
+        "wrap whatever rung 2, 3 or 4 supplied and use it on every screen, rather than authoring the region again.",
       );
       expect(ladder).toContain(
         "Leaving an implied region out needs the reason in the screen's UI contract.",
