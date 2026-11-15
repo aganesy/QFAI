@@ -4,7 +4,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
+  examples are green, each screen the flow adds or changes is placed in the
+  shell its UI contract names, linked from its entry points, built from shared
+  components for the parts the screens repeat, and captured. The flow is not
+  done until that is so.
+
+- **A request for new screens plans the prototype loop.** `qfai-run` now sets
+  the qualifier `visual-open` when a request adds a screen or a UI surface that
+  no confirmed prototype covers, even when the request asks no design question.
+  Such a feature routes `prototype-feature`. A control added to an existing
+  screen in that screen's style still routes `add-feature` unless the request
+  leaves its look open.
+
 ### Fixed
+
+- **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
+  derived-value declaration covered both a value the DB stores and a value
+  the API does not require, the two remedy sentences ran together with no
+  space. They are now separated by one.
 
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
   info.** On a Windows `git worktree`, git can store a directory wrapper as a
@@ -20,6 +40,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stop with exit 1. A `workflow plan` refusal carries the new reason
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
+
+### Changed
+
+- **Parallel screen units start from a shared foundation.** Disjoint writes no
+  longer let two or more parallel story units that build application screens
+  each author their own list toolbar, page header, back link and status
+  badges. Before they fan out, the session agent lands a foundation unit: the
+  app shell, a page template for each screen type the units build, the status
+  map and the shared list behaviour, from the component catalogue or extracted
+  once. A new parallel-unit gate condition, G7, fails a screen unit whose
+  screen type has no template yet, and each screen unit's brief names the
+  templates and catalogue entries it uses. A split with fewer than two screen
+  units is unaffected. Closes #4306.
 
 ## [2.5.0] - 2026-11-15
 
