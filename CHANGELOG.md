@@ -109,6 +109,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Removed
 
+- **No hook blocks a direct search any more.** `qfai init` no longer writes
+  the graph search-denial hooks into `.claude/settings.json`,
+  `.codex/hooks.json` or `.github/hooks/qfai-graph.json`, no longer installs
+  `.qfai/tools/graph-hook.mjs` or `graph-enforcement.json`, and no longer
+  prints a Protection section. The `graph-cli.mjs fallback` command and its
+  pending and grant state are gone, and `qfai doctor` no longer checks for the
+  hook script. `.agents/rules/graph-exploration.md` now says to prefer the
+  graph CLIs for searching, exploring and investigating, and that ordinary
+  search is acceptable. Hook entries an earlier init wrote stay in your
+  settings until you delete them.
+
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
   removed.** Validate parsed the setting but never read it, and no code read
   `ddpBannedPatterns.txt`. A config that still sets the key is accepted and
