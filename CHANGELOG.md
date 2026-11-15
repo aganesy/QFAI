@@ -295,6 +295,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   moving a sentence into a constant, a prop or an attribute value is not a fix:
   the product-surface review still judges that copy.
 
+- **A UI review without captures is `PENDING`, never `PASS`.** For a
+  UI-affecting change, the product-surface reviewer requires a capture of each
+  changed screen at the reviewed revision. Passing tests or a clean `validate`
+  do not stand in for it, and the reviewer does not start the app itself: it
+  stops before a verdict and names what is missing, the review is recorded
+  `PENDING`, and it is dispatched again once the captures exist.
+
 ### Fixed
 
 - **The `DESIGN.md` step says where a flow's surfaces come from.** It
