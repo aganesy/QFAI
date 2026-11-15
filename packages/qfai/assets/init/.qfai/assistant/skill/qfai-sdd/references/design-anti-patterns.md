@@ -41,7 +41,9 @@ naming the pattern is what works.
   architecture and flow_ and _States and accessibility_ apply to every screen
   the implementation builds, not only to root `DESIGN.md` and prototypes. The
   implementer checks them before calling a screen done, and the implementation
-  and product-surface reviews check the built screens against them.
+  and product-surface reviews check the built screens against them. The
+  product-surface review also checks built screens against _Components_,
+  _Layout and composition_ and [Displacement](#displacement).
 - **Replacing a pattern.** Its usual substitute is in
   [Displacement](#displacement). Moving from one to the other is the same
   defect.

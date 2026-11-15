@@ -243,6 +243,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   findings reached the prototype only through what the grill session settled.
   Closes #4387.
 
+- **UI research and design close gaps a redesign exposed.**
+  - The product-surface reviewer also checks built screens against the
+    _Components_, _Layout and composition_ and _Displacement_ anti-patterns,
+    such as serial numbers on cards and all-caps eyebrow labels.
+  - The visual reference survey opens a whole-site redesign with an inventory
+    of the current surface, and the user decides every removal. Each finding to
+    adopt is checked against the anti-pattern list and `do_not_look_like`.
+  - `.agents/rules/interface-clarity.md` cuts development notation, such as
+    code, spec IDs or test syntax, from screens visitors read.
+  - A figure or claim shown on more than one page comes from one source.
+
 - **A UI review without captures is `PENDING`, never `PASS`.** For a
   UI-affecting change, the product-surface reviewer requires a capture of each
   changed screen at the reviewed revision. Passing tests or a clean `validate`
