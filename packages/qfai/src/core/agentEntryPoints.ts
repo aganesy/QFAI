@@ -1173,18 +1173,20 @@ export function keepProjectEntries(
   const shippedHeadings = new Set(sectionStarts(out, outOpen).map((at) => headingKey(out[at])));
   const starts = sectionStarts(lines, open);
   let text = out.join("\n");
+  // Right after the shipped text, so a subsection stays under the last shipped section and does
+  // not slide into a section the project added after it.
+  for (const { keep } of subsections) {
+    for (const at of keep) kept.add(at);
+    const block = keep.map((at) => lines[at] ?? "");
+    while (block.length > 1 && (block.at(-1) ?? "").trim() === "") block.pop();
+    text += `${text.endsWith("\n") ? "" : "\n"}\n${block.join("\n")}\n`;
+  }
   for (const [n, start] of starts.entries()) {
     if (shippedHeadings.has(headingKey(lines[start]))) continue;
     let end = starts[n + 1] ?? lines.length;
     for (let at = start; at < end; at += 1) kept.add(at);
     while (end > start + 1 && (lines[end - 1] ?? "").trim() === "") end -= 1;
     text += `${text.endsWith("\n") ? "" : "\n"}\n${lines.slice(start, end).join("\n")}\n`;
-  }
-  for (const { from, to } of subsections) {
-    let end = to;
-    for (let at = from; at < end; at += 1) kept.add(at);
-    while (end > from + 1 && (lines[end - 1] ?? "").trim() === "") end -= 1;
-    text += `${text.endsWith("\n") ? "" : "\n"}\n${lines.slice(from, end).join("\n")}\n`;
   }
 
   const held = new Set(text.split("\n"));
@@ -1202,42 +1204,64 @@ function sectionStarts(lines: readonly string[], open: readonly boolean[]): numb
 }
 
 /**
- * The subsections of `lines` the shipped text `out` does not have, in file order.
+ * The subsections of `lines` the shipped text `out` does not have, in file order, each with the
+ * lines of it that are the project's.
  *
  * A subsection opens at an ATX heading of level 3 or deeper whose text no heading of the shipped
  * text carries, and runs to the next heading of the same or a higher level. Only one under a
  * section the shipped text owns counts: under a section the project added, it travels with that
- * section. Without this a project's `###` notes under a shipped section were replaced along with
- * the section.
+ * section. Inside it, a line the shipped text holds stays the shipped text's, and a list item that
+ * cites a master the shipped list cites is replaced by the shipped bullet, so neither is carried as
+ * the project's. Without this a project's `###` notes under a shipped section were replaced along
+ * with the section.
  */
 function projectSubsections(
   lines: readonly string[],
   open: readonly boolean[],
   out: readonly string[],
   outOpen: readonly boolean[],
-): { from: number; to: number }[] {
-  const shipped = new Set(
-    out.flatMap((line, index) =>
-      outOpen[index] === true && !isQuoted(line) && atxLevel(plainLine(line)) !== null
-        ? [headingKey(line)]
-        : [],
-    ),
-  );
+): { from: number; to: number; keep: number[] }[] {
+  const headingsOf = (deepest: number): Set<string> =>
+    new Set(
+      out.flatMap((line, index) =>
+        outOpen[index] === true && !isQuoted(line) && (atxLevel(plainLine(line)) ?? 7) <= deepest
+          ? [headingKey(line)]
+          : [],
+      ),
+    );
+  const shippedSections = headingsOf(2);
+  const shippedHeadings = headingsOf(6);
+  const shippedLines = new Set(out.filter((line) => line.trim() !== ""));
+  const shippedMasters = new Set(citedRuleMastersOutsideCode(out.join("\n")));
   const levelAt = (index: number): number | null =>
     open[index] === true && !isQuoted(lines[index]) ? atxLevel(plainLine(lines[index])) : null;
-  const found: { from: number; to: number }[] = [];
+  const found: { from: number; to: number; keep: number[] }[] = [];
   let sectionIsShipped = true;
   for (let start = 0; start < lines.length; start += 1) {
     const level = levelAt(start);
     if (level === null) continue;
     if (level <= 2) {
-      sectionIsShipped = shipped.has(headingKey(lines[start]));
+      sectionIsShipped = shippedSections.has(headingKey(lines[start]));
       continue;
     }
-    if (!sectionIsShipped || shipped.has(headingKey(lines[start]))) continue;
+    if (!sectionIsShipped || shippedHeadings.has(headingKey(lines[start]))) continue;
     let end = start + 1;
     while (end < lines.length && (levelAt(end) ?? Number.POSITIVE_INFINITY) > level) end += 1;
-    found.push({ from: start, to: end });
+    const keep: number[] = [];
+    for (let at = start; at < end; at += 1) {
+      const line = lines[at] ?? "";
+      if (open[at] === true && !isQuoted(line) && LIST_ITEM_RE.test(line)) {
+        const itemEnd = Math.min(endOfListItem(lines, open, at), end);
+        const cites = citedRuleMasters(lines.slice(at, itemEnd).join("\n"));
+        if (cites.some((master) => shippedMasters.has(master))) {
+          at = itemEnd - 1;
+          continue;
+        }
+      }
+      if (line.trim() !== "" && shippedLines.has(line)) continue;
+      keep.push(at);
+    }
+    found.push({ from: start, to: end, keep });
     start = end - 1;
   }
   return found;
