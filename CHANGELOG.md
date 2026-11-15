@@ -9,8 +9,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **A known catalogue incompatibility reaches the next project.** QFAI ships
   `rule/references/catalogue-compatibility.md`, a dated table of catalogue items
   that broke a project's constraints. `ui-procurement.md` reads it before an
-  item is installed and adds a new incompatibility to it; a row is a hint to
-  check against the installed version, not a verdict.
+  item is installed; a row is a hint to check against the installed version,
+  not a verdict. A project records a new incompatibility in its procurement
+  record and reports it to QFAI.
 
 ### Fixed
 

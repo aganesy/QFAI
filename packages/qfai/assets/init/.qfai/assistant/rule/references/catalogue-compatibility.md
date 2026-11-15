@@ -1,7 +1,9 @@
 # Catalogue Compatibility
 
-Read when choosing a component catalogue or an item from one, as
-`.qfai/assistant/rule/ui-procurement.md` § Choosing a catalogue says.
+Read before installing an item from a component catalogue, as
+`.qfai/assistant/rule/ui-procurement.md` § Choosing a catalogue says. A region
+realised by a native element, a project component or authored code needs no
+read.
 
 Each row records a catalogue item that broke a constraint a project had fixed,
 such as a content security policy, server rendering or behaviour without
@@ -10,8 +12,8 @@ table carries it to the next project that adopts the catalogue, which is a
 different repository and cannot read that record.
 
 A row is a hint to verify, not a verdict. Catalogues change: check the row
-against the version the project installs, as the research protocol's Version
-Rule says, and test the item under the project's own constraints before
+against the version the project installs, as
+`.qfai/assistant/rule/research-first-protocol.md#version-rule` says, and test the item under the project's own constraints before
 installing it. A row whose version is older than the installed one says only
 where to look.
 
@@ -20,11 +22,13 @@ where to look.
 | Catalogue | Item | Constraint it breaks | How it breaks | Version checked | Checked on | Source |
 | --------- | ---- | -------------------- | ------------- | --------------- | ---------- | ------ |
 
-The table is empty until a row is confirmed. A failure whose report does not
-name the catalogue and its version is not recorded here: such a row could not
-be checked against an installed version.
+A failure whose report does not name the catalogue and its version is not
+recorded here: such a row could not be checked against an installed version.
 
 ## Adding a row
+
+QFAI's maintainers add a row from an incompatibility a project reported; a
+project records its own in its procurement record and does not edit this file.
 
 - Name the catalogue and the item exactly as its registry does, and the version
   the failure was observed on.
