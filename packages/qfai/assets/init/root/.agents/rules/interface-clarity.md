@@ -78,7 +78,9 @@ adds no meaning. It carries its `qfai-text` or `qfai-text-file` reason.
 - The second place the same thing is said.
 
 The test is the one `documentation-clarity.md` uses. Remove it, and ask whether
-the user is worse off. If not, it goes.
+the user is worse off. If not, it goes. Ask it with the volume of data the
+screen will hold in production, not with the test fixture: a list control that
+looks unneeded with five fixture rows is the only way through five thousand.
 
 ## 4. Use the conventional pattern
 
@@ -155,8 +157,13 @@ On every screen it applies to:
   next.
 - Feedback after every change.
 
-Leaving one of these out needs a reason recorded in the UI contract of the
-screen it is missing from. A part left out without one is a defect, not a cut.
+Leaving one of these out needs a reason recorded in the `omitted` list of the
+UI contract of the screen it is missing from: one entry naming the part and
+the reason. A state the screen cannot be in is recorded under that contract's
+`states` instead. A once-per-application part belongs to no single screen, so
+its entry goes in the app frame: the UI contract that holds the app shell and
+the home, or that records why the application has none. A part left out
+without an entry is a defect, not a cut.
 
 These parts apply to application screens: a screen whose UI contract declares
 no `surface`, or `surface: application`. A marketing screen, one a visitor sees
@@ -190,7 +197,7 @@ not its UI contract names them.
   from every page and from the point of sign-up or payment.
 
 Leaving out a state or a notice needs a reason recorded in the screen's UI
-contract. Invented proof, an unlabelled example and a new unsourced image have
+contract: a state under its `states`, a notice in its `omitted` list. Invented proof, an unlabelled example and a new unsourced image have
 no such reason.
 
 ## Related

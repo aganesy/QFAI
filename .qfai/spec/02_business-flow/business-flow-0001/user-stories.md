@@ -183,4 +183,5 @@
 | US-0001-0306 | Validate warns when tech.md names a catalogue no registry serves                       | `user-story-0001-0306/` |
 | US-0001-0307 | Catalogue the components a project already has                                         | `user-story-0001-0307/` |
 | US-0001-0308 | Write, build and review a marketing page against its own patterns                      | `user-story-0001-0308/` |
+| US-0001-0309 | Keep the parts of a business screen out of minimal-scope cuts                          | `user-story-0001-0309/` |
 | US-0001-0311 | Check every route of the built app for accessibility                                   | `user-story-0001-0311/` |

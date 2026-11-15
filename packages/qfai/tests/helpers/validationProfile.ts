@@ -39,6 +39,7 @@ import * as uiMarkerPresence from "../../src/core/validators/uiMarkerPresence.js
 import * as uiPrototypeMode from "../../src/core/validators/uiPrototypeMode.js";
 import * as uiPlainText from "../../src/core/validators/uiPlainText.js";
 import * as uiScreenEntries from "../../src/core/validators/uiScreenEntries.js";
+import * as uiScreenOmitted from "../../src/core/validators/uiScreenOmitted.js";
 import * as uiScreenSurface from "../../src/core/validators/uiScreenSurface.js";
 import * as uiAccessibilityLayer from "../../src/core/validators/uiAccessibilityLayer.js";
 import * as upstreamSsotGuard from "../../src/core/validators/upstreamSsotGuard.js";
@@ -355,6 +356,11 @@ export function measureValidators() {
       "core/validators/uiScreenSurface:validateUiScreenSurface",
       uiScreenSurface.validateUiScreenSurface,
       (call) => vi.spyOn(uiScreenSurface, "validateUiScreenSurface").mockImplementation(call),
+    );
+    register(
+      "core/validators/uiScreenOmitted:validateUiScreenOmitted",
+      uiScreenOmitted.validateUiScreenOmitted,
+      (call) => vi.spyOn(uiScreenOmitted, "validateUiScreenOmitted").mockImplementation(call),
     );
     register(
       "core/validators/uiAccessibilityLayer:validateUiAccessibilityLayer",

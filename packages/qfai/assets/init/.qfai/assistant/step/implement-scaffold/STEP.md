@@ -1,7 +1,7 @@
 ---
 name: implement-scaffold
 owner: qfai-implement
-purpose: "Write, with `npx qfai atdd scaffold` or, in a project with purpose-named test files, by hand, the E2E test of each business flow and the integration test of each acceptance criterion the flow lacks, each with an empty body, set up the component catalogue `tech.md` names, and in a UI project write the accessibility check."
+purpose: "Write, with `npx qfai atdd scaffold` or, in a project with purpose-named test files, by hand, the E2E test of each business flow and the integration test of each acceptance criterion the flow lacks, each with an empty body, add the per-role navigation journey's missing tests, set up the component catalogue `tech.md` names, and in a UI project write the accessibility check."
 requires: [common-gate-run]
 ---
 
@@ -28,6 +28,8 @@ the system's shape has settled.
 - The `Component catalogue` row of `<paths.contractsDir>/tech.md#stack`, for
   § Component catalogue, and the catalogue's own config file or package
   manifest entry, which tells whether it is installed.
+- The UI contracts under `paths.contractsDir`, for § Per-role navigation
+  journey: each screen's `navigation` and the roles the flow's stories name.
 - The UI contracts under `<paths.contractsDir>/ui/` and the project's package
   manifest, for § Accessibility check.
 
@@ -38,6 +40,7 @@ the system's shape has settled.
   annotation lines this step adds to those files instead.
 - The catalogue setup § Component catalogue writes: the files the catalogue's
   own setup command writes, and its entry in `uiux.registries`.
+- The empty per-role navigation journey § Per-role navigation journey adds.
 - The accessibility setup § Accessibility check writes: the
   `@axe-core/playwright` dev dependency and the accessibility spec under
   `<testsDir>/e2e/`.
@@ -50,7 +53,11 @@ the system's shape has settled.
    test.
 2. Unless § Purpose-named test files applies, when the flow is still on that
    list, run `npx qfai atdd scaffold --flow BF-NNNN`. It writes
-   `<testsDir>/e2e/<BF-ID>.test.<ext>`.
+   `<testsDir>/e2e/<BF-ID>.test.<ext>`. The body `implement-acceptance`
+   writes there waits for readiness after each page load: the app shell sets
+   `data-qfai-ready` on `<html>` once it is interactive. After a client-side
+   route change it waits for that route's own content instead, as
+   `.qfai/assistant/rule/test-layers.md` § L5 E2E says.
 3. Under the same condition, for each story with an acceptance criterion still on that list, run
    `npx qfai atdd scaffold --story US-NNNN-NNNN`. It writes one test per
    criterion under `<testsDir>/integration/<US-ID>/`, so delete each test it
@@ -58,7 +65,8 @@ the system's shape has settled.
 4. Record which tests need an authenticated actor. Any such test makes
    `implement-credentials` run before `implement-acceptance`.
 5. Set up the component catalogue as § Component catalogue says.
-6. Set up the accessibility check as § Accessibility check says.
+6. Add the per-role navigation journey as § Per-role navigation journey says.
+7. Set up the accessibility check as § Accessibility check says.
 
 The command never overwrites an existing test. A destination the configured
 globs would not collect is a refusal: fix the globs or the layout, not the
@@ -85,8 +93,8 @@ new purpose-named file instead. Where they are not, run the scaffold as
 - Change no existing test in the file: add no assertion, and move or remove no
   annotation already there.
 
-The step then passes as Passes when states. Procedure items 1, 4, 5 and 6
-still apply.
+The step then passes as Passes when states. Procedure items 1, 4, 5, 6
+and 7 still apply.
 
 ## Component catalogue
 
@@ -115,6 +123,44 @@ The catalogue needs no setup when it is installed and `uiux.registries` has
 its entry, or when a run already reported it as one that cannot be installed
 and the row has not changed since.
 
+## Per-role navigation journey
+
+A flow's journey can open each screen by its URL, so the flow tests alone do
+not show that a user can reach the screens. `.qfai/assistant/rule/test-layers.md`
+§ L5 E2E recommends one navigation journey per role for that.
+
+The app has navigation of its own when at least one UI contract screen with
+`surface: application`, or no `surface` key, has `navigation.entry_points`
+that name another screen, a menu or a control of the app, not only a direct
+URL. A `shell` that states no frame does not count. Skip this section when no
+screen meets that.
+
+Until UI contracts name the roles of each screen, a role's screens are the
+screens of the flows whose stories name that role as their actor. The pass
+names the mapping it used: each role and the screens it counted.
+
+Otherwise:
+
+1. List the roles this flow adds a screen to: each role a story of this flow
+   names as its actor, where the flow has a UI contract screen.
+2. When the project has no navigation journey, add one under
+   `<testsDir>/e2e/`, in a file the configured globs select, for example
+   `<testsDir>/e2e/navigation.test.<ext>`: one test per role, each with an
+   empty body that passes.
+3. When the journey exists but has no test for a listed role, add that role's
+   test, with an empty body, to the same file. Change no existing test there.
+4. Record the listed roles for `implement-acceptance`: a role whose test
+   already has a body gains this flow's screens there, not here.
+5. Record each listed role that signs in as an authenticated actor, so
+   `implement-credentials` serves one signed-in session per role. A visitor
+   role that does not sign in is not an actor: its test starts signed out.
+6. The journey proves reachability rather than one flow, so it carries no BF,
+   AC or EX annotation. `npx qfai validate` therefore does not report it
+   missing; the pass names its file instead.
+
+The journey needs nothing when the app has no navigation of its own, or when
+its file already has a test for every listed role and the roles are recorded.
+
 ## Accessibility check
 
 A built screen nobody checks for accessibility ships whatever violations its
@@ -134,14 +180,16 @@ Otherwise:
    package manifest, install it as one with the project's package manager.
 3. When no selected test file calls axe, write the spec
    `.qfai/assistant/skill/qfai-implement/references/accessibility-check.md`
-   gives under `<testsDir>/e2e/`. Fill its route map from the UI contracts:
-   each role with every route that role can reach.
+   gives under `<testsDir>/e2e/`. Fill its route map from the role-to-screen
+   mapping § Per-role navigation journey uses: each role with the route of
+   every screen it counts that starts with `/`.
 4. When the spec already exists, add to its route map each route starting
    with `/` that the current flow's UI contracts declare and the map lacks,
-   under every role that can reach it.
-5. The spec signs in through the E2E layer's sign-in for each role other
-   than a visitor, which signs in nowhere. Record that it needs an
-   authenticated actor when it names such a role, as § Procedure item 4 says.
+   under every role that mapping gives the screen.
+5. The spec signs in through the E2E layer's sign-in for each role it names.
+   Record each such role that signs in as an authenticated actor, as
+   § Procedure item 4 says. A visitor role that does not sign in is not an
+   actor: it runs signed out.
 
 The check needs no setup when the dependency is installed, a selected test
 file calls axe, and its route map holds every route starting with `/` that
@@ -154,8 +202,10 @@ layer has not changed since.
 Read first: the BF and AC items of the flow that no `Test exception:` row
 names, and the tests that annotate them. The step passes when every one
 already has an annotating test at its layer, § Component catalogue needs no
-setup and § Accessibility check needs no setup. The pass names the test for
-each item.
+setup, § Per-role navigation journey needs nothing and § Accessibility check
+needs no setup. The pass names the test for each item, and the navigation
+journey's file or the reason the app has none, and the role-to-screen mapping
+it used.
 
 The step also passes when the work order names no flow because it carries
 only a delegated release's hand-made edit: the extraction names the `release`
@@ -168,6 +218,6 @@ names no flow still stops this step.
 
 PASS when every BF and AC of the flow that no `Test exception:` row names
 has an annotating test at its layer, § Component catalogue needs no setup,
-§ Accessibility check needs no setup, and
-`npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
+§ Per-role navigation journey needs nothing, § Accessibility check needs no
+setup, and `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
 error owned by this flow.

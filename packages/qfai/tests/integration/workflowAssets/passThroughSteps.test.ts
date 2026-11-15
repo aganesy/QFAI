@@ -236,7 +236,7 @@ describe("a step that may pass with evidence", () => {
     expect(section).toMatch(/an AC or BF annotation counts anywhere in such a file/i);
     expect(section).toMatch(/change no existing test in the file/i);
     expect(section).toMatch(
-      /the step then passes as Passes when states\. Procedure items 1, 4, 5 and 6 still apply\./i,
+      /the step then passes as Passes when states\. Procedure items 1, 4, 5, 6 and 7 still apply\./i,
     );
     const procedure = flat(
       sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Procedure"),
@@ -266,6 +266,63 @@ describe("a step that may pass with evidence", () => {
       /5\. Set up the component catalogue as § Component catalogue says/i,
     );
     expect(await passesWhen("implement-scaffold")).toMatch(/§ Component catalogue needs no setup/i);
+  });
+
+  it("splits the per-role navigation journey across scaffold, credentials and acceptance, each naming its file", async () => {
+    const scaffold = await readShipped("step/implement-scaffold/STEP.md");
+    const journey = flat(sectionOf(scaffold, "## Per-role navigation journey"));
+    expect(journey).toMatch(
+      /at least one UI contract screen with `surface: application`, or no `surface` key, has `navigation\.entry_points` that name another screen, a menu or a control of the app, not only a direct URL\. A `shell` that states no frame does not count/i,
+    );
+    expect(journey).toMatch(
+      /a role's screens are the screens of the flows whose stories name that role as their actor\. The pass names the mapping it used/i,
+    );
+    expect(journey).toMatch(/one test per role, each with an empty body that passes/i);
+    expect(journey).toMatch(/has no test for a listed role, add that role's test/i);
+    expect(journey).toMatch(
+      /a role whose test already has a body gains this flow's screens there, not here/i,
+    );
+    expect(journey).toMatch(
+      /record each listed role that signs in as an authenticated actor, so `implement-credentials` serves one signed-in session per role\. A visitor role that does not sign in is not an actor/i,
+    );
+    expect(journey).toMatch(/carries no BF, AC or EX annotation/i);
+    expect(flat(sectionOf(scaffold, "## Procedure"))).toMatch(
+      /6\. Add the per-role navigation journey as § Per-role navigation journey says/i,
+    );
+    expect(await passesWhen("implement-scaffold")).toMatch(
+      /the pass names the test for each item, and the navigation journey's file or the reason the app has none, and the role-to-screen mapping it used/i,
+    );
+    expect(frontMatterOf(scaffold).purpose).toMatch(/the per-role navigation journey/i);
+
+    const credentials = await readShipped("step/implement-credentials/STEP.md");
+    expect(flat(sectionOf(credentials, "## Procedure"))).toMatch(
+      /serve the navigation journey one signed-in session per role it records as an authenticated actor/i,
+    );
+    expect(await passesWhen("implement-credentials")).toMatch(
+      /the pass names the tests, the navigation journey's file and the setup it read/i,
+    );
+
+    const acceptance = await readShipped("step/implement-acceptance/STEP.md");
+    expect(acceptance, "implement-acceptance always runs its tests").not.toContain(
+      "## Passes when",
+    );
+    expect(flat(sectionOf(acceptance, "## Reads"))).toMatch(
+      /the navigation journey's test of each role this flow adds a screen to, empty or not/i,
+    );
+    expect(flat(sectionOf(acceptance, "## Reads"))).toMatch(
+      /`\.qfai\/assistant\/rule\/test-layers\.md` § L5 E2E/i,
+    );
+    const procedure = flat(sectionOf(acceptance, "## Procedure"));
+    expect(procedure).toMatch(
+      /then reach every screen the UI contracts declare for that role through the app's own links and controls only, never by typing a URL/i,
+    );
+    expect(procedure).toMatch(
+      /where the test already has a body, extend it with this flow's screens and keep the screens it already reaches/i,
+    );
+    expect(flat(sectionOf(acceptance, "## Gate"))).toMatch(
+      /or the app has no navigation of its own, .*the report names the navigation journey's file, or the reason the app has none, and the role-to-screen mapping it used/i,
+    );
+    expect(frontMatterOf(acceptance).purpose).toMatch(/the per-role navigation journey/i);
   });
 
   // BR-0002-0016

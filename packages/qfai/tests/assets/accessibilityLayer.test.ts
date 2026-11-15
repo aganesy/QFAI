@@ -63,13 +63,14 @@ describe("implement-scaffold writes the accessibility check from the shipped tem
     );
     expect(setup).toMatch(/install it as one with the project's package manager/);
     expect(setup).toContain("references/accessibility-check.md");
-    expect(setup).toMatch(/each role with every route that role can reach/);
-    expect(setup).toMatch(/E2E layer's sign-in for each role other than a visitor/);
+    expect(setup).toMatch(/role-to-screen mapping § Per-role navigation journey uses/);
+    expect(setup).toMatch(/E2E layer's sign-in for each role it names/);
+    expect(setup).toMatch(/A visitor role that does not sign in is not an actor/);
     expect(setup).toMatch(
       /When the spec already exists, add to its route map each route starting with `\/` that the current flow's UI contracts declare and the map lacks/,
     );
     expect(setup).toMatch(/does not run Playwright for JavaScript or TypeScript/);
-    expect(step).toMatch(/6\. Set up the accessibility check as § Accessibility check says/);
+    expect(step).toMatch(/7\. Set up the accessibility check as § Accessibility check says/);
     expect(section(step, "## Gate")).toMatch(/§ Accessibility check needs no setup/);
   });
 

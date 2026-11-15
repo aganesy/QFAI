@@ -300,6 +300,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-040",
     "QFAI-CONTRACT-041",
     "QFAI-CONTRACT-051",
+    "QFAI-CONTRACT-052",
     "QFAI-DB-*",
   ],
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
@@ -745,11 +746,13 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
   }
   const parts: string[] = [];
   if (timings.uiuxMs > timings.uiuxBudgetMs) {
-    // The group's validators run side by side, so the slowest two are the ones to look at.
+    // The slowest two are the ones to look at. Side by side their times overlap and say only
+    // where to look; one after another (`--timings`) each is that validator's own work.
     const slowest = timings.uiuxParts
       .slice(0, 2)
       .map((part) => `${part.name} ${Math.round(part.ms)}ms`);
-    const where = slowest.length > 0 ? `; slowest, overlapping: ${slowest.join(", ")}` : "";
+    const run = timings.uiuxPartsRun === "one-after-another" ? "one after another" : "overlapping";
+    const where = slowest.length > 0 ? `; slowest, ${run}: ${slowest.join(", ")}` : "";
     parts.push(
       `uiux=${formatOverrunMs(timings.uiuxMs, timings.uiuxBudgetMs)}ms ` +
         `(budget ${timings.uiuxBudgetMs}ms${where})`,
@@ -769,8 +772,9 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
 
 /**
  * The `--timings` line: each finding family with its time, slowest first, or `null` when the run
- * was not asked for it. The UI/UX group's checks run side by side, so their times follow
- * separately, as the over-budget line marks them: they overlap and do not add to the rest.
+ * was not asked for it. The UI/UX group is one entry `uiux`; its checks, which `--timings` runs one
+ * after another, follow as its breakdown. The shared Markdown read and the html-mock parser's
+ * one-off load belong to no check, so they follow on their own, as part of `uiux` and not extra.
  */
 export function formatFamilyTimings(families: ValidationFamilyTimings | undefined): string | null {
   if (!families) {
@@ -778,11 +782,16 @@ export function formatFamilyTimings(families: ValidationFamilyTimings | undefine
   }
   const list = (entries: ValidationFamilyTimings["sequential"]): string =>
     entries.map((entry) => `${entry.family} ${Math.round(entry.ms)}ms`).join(", ");
-  const overlapping =
-    families.overlapping.length > 0
-      ? `; side by side, overlapping: ${list(families.overlapping)}`
-      : "";
-  return `timings: by family ${list(families.sequential)}${overlapping}`;
+  const uiux = families.uiux.length > 0 ? `; uiux one after another: ${list(families.uiux)}` : "";
+  const shared = [
+    ["shared Markdown read", families.sharedMarkdownReadMs],
+    ["html mock parser load", families.htmlMockLoadMs],
+  ] as const;
+  const ofWhich = shared
+    .filter(([, ms]) => ms > 0)
+    .map(([name, ms]) => `${name} ${Math.round(ms)}ms`);
+  const load = ofWhich.length > 0 ? `; of which ${ofWhich.join(", ")}` : "";
+  return `timings: by family ${list(families.sequential)}${uiux}${load}`;
 }
 
 const MAX_OVERRUN_DECIMALS = 9;
@@ -1209,11 +1218,13 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM), unless a DB contract declares it `Derived (not stored)`. Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
   "QFAI-CONTRACT-041":
-    "Every `-- Derived (not stored): <column> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
+    "Every `-- Derived (not stored): <field> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. Where no DB contract declares the field at all, a value the API contract requires through an `enum` on it is enough. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
   "QFAI-CONTRACT-051":
     "Every `surface` a UI contract screen declares is `application` or `marketing`, so the screen is built and reviewed against a pattern list that exists. A screen that declares no surface is an application screen.",
+  "QFAI-CONTRACT-052":
+    "Every `omitted` list a UI contract screen declares is a list of mappings, each with a non-blank `part` naming a part the screen leaves out and a non-blank `reason` saying why, so a reviewer can tell a deliberate omission from a missing part.",
   "QFAI-AXE-001":
     "A project whose UI contracts declare a screen with a web route has a selected test file that calls axe (`AxeBuilder` or an `@axe-core/` package), so its routes are checked against the WCAG 2.2 A and AA rules.",
   "QFAI-UITEXT-001":
