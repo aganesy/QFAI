@@ -23,10 +23,10 @@ Feature: Every plain text on a screen states why it is there
 
   # AC-0001-0297-03
   Scenario: Text that names, labels or reports is not checked
-    Given UI source whose literal text sits only in `h1` to `h6`, `label`, `button`, `a`, a component whose name ends in the word `Link` or `Button`, `legend`, `th`, `caption`, `option`, `summary`, `title`, `script` or `style`, in an element with `role="alert"` or `role="status"`, in an attribute value, in an expression, or is a data value: a text of at most 20 code points with no sentence-ending mark, inside a `td`, a `dd` or a component whose name ends in the word `Cell`, or as a whole JSX string literal child
+    Given UI source whose literal text sits only in `h1` to `h6`, `label`, `button`, `a`, a component whose name ends in the word `Link` or `Button`, `legend`, `th`, `caption`, `option`, `summary`, `title`, `script` or `style`, in an element with `role="alert"` or `role="status"`, in an attribute value, in an expression, or is a data value: a text inside a `td`, a `dd` or a component whose name ends in the word `Cell` whose nearest such cell's whole text is at most 20 code points with no sentence-ending mark, or such a text as a whole JSX string literal child
     When `qfai validate` runs
     Then it raises no `QFAI-UITEXT` finding
-    And a sentence or a longer text inside a data cell is still plain text
+    And a sentence or a longer text inside a data cell is still plain text, even when a nested element splits it
 
   # AC-0001-0297-04
   Scenario: The files read are the current prototype and the declared surface

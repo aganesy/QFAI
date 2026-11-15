@@ -83,7 +83,11 @@ export type UiPlainTextOptions = {
  */
 type MappedNames = ReadonlySet<string>;
 
-/** A `qfai-text` body and the comment it came from, which one finding names however many texts it covers. */
+/**
+ * A `qfai-text` body and where it came from: the comment node (a DOM or a TypeScript node), or the
+ * file reason's record. `source` is the identity one finding names however many texts the reason
+ * covers, and the markup reader walks on from it to the element the comment stands before.
+ */
 type Reason = { body: string; source: object };
 
 /** One literal text and the comment that gives it its reason, if any. */
@@ -439,7 +443,9 @@ async function markupCandidates(markup: string, mapped: MappedNames): Promise<Ca
     const raw = node.textContent ?? "";
     if (raw.trim() === "") continue;
     if (insideExempt(node.parentElement, mapped)) continue;
-    if (insideDataCell(node.parentElement) && isDataValue(raw)) continue;
+    // A cell is judged by its whole text, so a sentence a nested element splits is still read.
+    const cell = dataCellOf(node.parentElement);
+    if (cell && isDataValue(cell.textContent)) continue;
     const location = dom.nodeLocation(node);
     const leading = raw.slice(0, raw.length - raw.trimStart().length);
     const line = (location?.startLine ?? 1) + (leading.match(/\n/g)?.length ?? 0);
@@ -450,11 +456,12 @@ async function markupCandidates(markup: string, mapped: MappedNames): Promise<Ca
   return candidates;
 }
 
-function insideDataCell(element: Element | null): boolean {
+/** The nearest enclosing data cell, or `null` when no data cell encloses the element. */
+function dataCellOf(element: Element | null): Element | null {
   for (let current = element; current; current = current.parentElement) {
-    if (isDataCellName(current.localName)) return true;
+    if (isDataCellName(current.localName)) return current;
   }
-  return false;
+  return null;
 }
 
 /**
@@ -594,11 +601,42 @@ function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNa
     }
     return false;
   };
-  const inDataCell = (node: TsNode): boolean => {
+  const dataCellOf = (node: TsNode): TsNode | null => {
     for (let current = node.parent; current; current = current.parent) {
-      if (current.kind === k.JsxElement && isDataCellName(tagName(current))) return true;
+      if (current.kind === k.JsxElement && isDataCellName(tagName(current))) return current;
     }
-    return false;
+    return null;
+  };
+  // A JSX text with `&nbsp;` read as the space an HTML parser reads it as.
+  const jsxText = (node: TsNode): string => node.getText().replace(/&(nbsp|#160|#xa0);/gi, " ");
+  // A string or template literal that is the whole content of a JSX `{}` child, without its quotes.
+  const literalChild = (node: TsNode): string | null => {
+    if (node.kind !== k.JsxExpression || !isJsxElement(node.parent)) return null;
+    const meaningful = childrenOf(node).filter(
+      (child) => child.kind !== k.OpenBraceToken && child.kind !== k.CloseBraceToken,
+    );
+    const inner = meaningful.length === 1 ? meaningful[0] : undefined;
+    if (inner === undefined) return null;
+    const literal =
+      inner.kind === k.StringLiteral || inner.kind === k.NoSubstitutionTemplateLiteral;
+    return literal ? inner.getText().slice(1, -1) : null;
+  };
+  // A cell's whole text, as an HTML parser's `textContent` reads it: every JSX text and literal
+  // child inside it, in order; another expression adds nothing.
+  const cellText = (node: TsNode): string => {
+    if (node.kind === k.JsxText) return jsxText(node);
+    const literal = literalChild(node);
+    if (literal !== null) return literal;
+    return childrenOf(node)
+      .filter((child) => child.kind !== k.JsxOpeningElement && child.kind !== k.JsxClosingElement)
+      .map(cellText)
+      .join("");
+  };
+  // A text is a data value when the nearest data cell's whole text is one, so a sentence a nested
+  // element splits is still read.
+  const inDataValueCell = (node: TsNode): boolean => {
+    const cell = dataCellOf(node);
+    return cell !== null && isDataValue(cellText(cell));
   };
   // The reason a `{/* qfai-text: ... */}` child holds.
   const commentChildReason = (node: TsNode | undefined): Reason | null => {
@@ -666,25 +704,15 @@ function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNa
   };
 
   const visit = (node: TsNode): void => {
-    let text: string | null = null;
-    // A data value is exempt as a string literal child anywhere, and as a text in a data cell.
-    let dataValue = false;
     // For a JSX text the compiler's start already skips leading whitespace.
     const start = node.getStart();
-    if (node.kind === k.JsxText) {
-      // An entity that only spaces, as `&nbsp;`, is whitespace, as an HTML parser reads it.
-      text = node.getText().replace(/&(nbsp|#160|#xa0);/gi, " ");
-      dataValue = isDataValue(text) && inDataCell(node);
-    } else if (node.kind === k.JsxExpression && isJsxElement(node.parent)) {
-      const inner = childrenOf(node).find(
-        (child) => child.kind === k.StringLiteral || child.kind === k.NoSubstitutionTemplateLiteral,
-      );
-      const meaningful = childrenOf(node).filter(
-        (child) => child.kind !== k.OpenBraceToken && child.kind !== k.CloseBraceToken,
-      );
-      if (inner && meaningful.length === 1) text = inner.getText().slice(1, -1);
-      dataValue = text !== null && isDataValue(text);
-    }
+    const isText = node.kind === k.JsxText;
+    const text = isText ? jsxText(node) : literalChild(node);
+    // A JSX text is a data value when its cell's whole text is one. A literal child is one on its
+    // own, and inside a cell only when the whole cell is one too.
+    const dataValue = isText
+      ? inDataValueCell(node)
+      : text !== null && isDataValue(text) && (dataCellOf(node) === null || inDataValueCell(node));
     if (text !== null && text.trim() !== "" && !dataValue && !exempt(node)) {
       const line = sourceFile.getLineAndCharacterOfPosition(start).line + 1;
       candidates.push({ line, text, reason: reasonFor(node) });

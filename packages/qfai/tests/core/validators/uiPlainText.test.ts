@@ -410,15 +410,17 @@ describe("a component whose name ends in the word Link or Button is exempt", () 
 
 // QFAI:EX-0001-0297-18
 describe("uiText.elements reads a project component as the element it renders", () => {
+  // The unmapped component is a `Card`, not a data cell: a short value in a `TableCell` is a data
+  // value and exempt on its own, so it would not show that an unmapped component is still checked.
   const files = {
     "src/a.tsx":
-      'export const A = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <UI.CardTitle>Recent orders</UI.CardTitle>\n    <NavItem href="/">Home</NavItem>\n    <StatusRegion>Saved</StatusRegion>\n    <Ui.Banner>Welcome</Ui.Banner>\n    <TableCell>ORD-1042</TableCell>\n    <header>Plain</header>\n  </div>\n);\n',
+      'export const A = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <UI.CardTitle>Recent orders</UI.CardTitle>\n    <NavItem href="/">Home</NavItem>\n    <StatusRegion>Saved</StatusRegion>\n    <Ui.Banner>Welcome</Ui.Banner>\n    <Card>Ships once paid.</Card>\n    <header>Plain</header>\n  </div>\n);\n',
     "src/b.vue":
-      "<template>\n  <TableHead>Order</TableHead>\n  <table-head>Total</table-head>\n  <StatusRegion>Saved</StatusRegion>\n  <TableCell>ORD-1042</TableCell>\n  <header>Plain</header>\n</template>\n",
+      "<template>\n  <TableHead>Order</TableHead>\n  <table-head>Total</table-head>\n  <StatusRegion>Saved</StatusRegion>\n  <Card>Ships once paid.</Card>\n  <header>Plain</header>\n</template>\n",
     "src/c.svelte":
       "<CardTitle>Recent orders</CardTitle>\n<Ui.Banner>Welcome</Ui.Banner>\n<Banner>Hello</Banner>\n",
     "src/d.jsx":
-      "export const D = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <Header>Top</Header>\n    <TableCell>ORD-1042</TableCell>\n  </div>\n);\n",
+      "export const D = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <Header>Top</Header>\n    <Card>Ships once paid.</Card>\n  </div>\n);\n",
     "src/e.html":
       "<table-head>Total</table-head>\n<TableHead>Order</TableHead>\n<header>Plain</header>\n",
   };
@@ -504,6 +506,59 @@ describe("a data value is not plain text", () => {
       ["QFAI-UITEXT-001", "src/a.html", 7],
       ["QFAI-UITEXT-001", "src/b.tsx", 3],
       ["QFAI-UITEXT-001", "src/b.tsx", 4],
+    ]);
+  });
+
+  it("judges a cell by its whole text, so a sentence a nested element splits is still read", async () => {
+    const issues = await run({
+      "src/a.html": [
+        "<table><tr>",
+        "<td>Ships in <b>3</b> days once paid</td>",
+        "<td>Order <b>ORD-1042</b></td>",
+        "</tr></table>",
+      ].join("\n"),
+      "src/b.tsx": [
+        "export const B = () => (",
+        "  <tr>",
+        "    <td>Ships in <b>3</b> days once paid</td>",
+        '    <td>{"Ships in "}<b>3</b>{" days once paid"}</td>',
+        "    <td>Order <b>ORD-1042</b></td>",
+        "  </tr>",
+        ");",
+      ].join("\n"),
+    });
+    expect(issues.map((found) => [found.file, found.loc?.line])).toEqual([
+      ["src/a.html", 2],
+      ["src/a.html", 2],
+      ["src/a.html", 2],
+      ["src/b.tsx", 3],
+      ["src/b.tsx", 3],
+      ["src/b.tsx", 3],
+      ["src/b.tsx", 4],
+      ["src/b.tsx", 4],
+      ["src/b.tsx", 4],
+    ]);
+  });
+
+  it("reads a data cell the same way under a uiText.elements map", async () => {
+    const root = await projectWith({
+      "src/a.tsx": [
+        "export const A = () => (",
+        "  <tr>",
+        "    <td><StatusBadge>Paid in full after the finance review</StatusBadge></td>",
+        "    <TableCell>ORD-1042</TableCell>",
+        "    <TableCell>Ships once paid.</TableCell>",
+        "  </tr>",
+        ");",
+      ].join("\n"),
+    });
+    const config: QfaiConfig = {
+      ...configWith(["src/**"]),
+      uiText: { elements: { StatusBadge: "status" } },
+    };
+    const issues = await validateUiPlainText(root, config, { loadTypescript: realTypescript });
+    expect(issues.map((found) => [found.code, found.file, found.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", "src/a.tsx", 5],
     ]);
   });
 });

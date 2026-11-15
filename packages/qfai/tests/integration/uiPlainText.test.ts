@@ -124,11 +124,13 @@ describe("one reason covers every plain text inside an element", () => {
 // QFAI:AC-0001-0297-09
 describe("a project maps its components to the elements they render", () => {
   it("reads a mapped component as its element, the rest as before, and reports a bad entry", async () => {
+    // The unmapped component is a `Card`, not a data cell: a short value in a `TableCell` is a data
+    // value and exempt on its own, so it would not show that an unmapped component is still checked.
     const root = await projectWith({
       "qfai.config.yaml":
         'uiux:\n  surfacePaths: ["src/**"]\nuiText:\n  elements:\n    TableHead: th\n    StatusRegion: status\n    Panel: div\n',
       "src/a.vue":
-        "<template>\n  <TableHead>Order</TableHead>\n  <StatusRegion>Saved</StatusRegion>\n  <TableCell>ORD-1042</TableCell>\n</template>\n",
+        "<template>\n  <TableHead>Order</TableHead>\n  <StatusRegion>Saved</StatusRegion>\n  <Card>Ships once paid.</Card>\n</template>\n",
       "src/b.svelte": "<TableHead>Total</TableHead>\n",
     });
     const result = await validateProject(root, undefined, { profile: "prototyping" });

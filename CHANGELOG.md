@@ -129,7 +129,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.`, `!` or `?`, and none of the CJK marks U+3002, U+FF01, U+FF1F, U+FF61 and
   U+FF0E) in a `td`, a `dd` or a `*Cell` component, or
   as a whole JSX string literal child, such as `<td>ORD-1042</td>` or
-  `<td>{'-'}</td>`. A sentence in a cell still needs its reason. A `qfai-text`
+  `<td>{'-'}</td>`. A cell is judged by its whole text, so a sentence in a cell
+  still needs its reason even when a nested element splits it. A `qfai-text`
   comment directly before an element, or as its first child with text after
   it, now gives its reason to every plain text inside it, so a paragraph that
   a link splits, a list or a table needs one comment instead of one per
