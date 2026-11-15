@@ -11,8 +11,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   out the route's implement stage, such as `medium` of `add-feature`, now holds
   `testsPending: true`. In such a run the QFAI gate still runs the full scan and
   still fails on any error, but lists as pending each missing-test error
-  (`QFAI-STORY-006`) for an ID the run's specification stage wrote. When those
-  are its only errors, the local commit is made and its report lists the
+  (`QFAI-STORY-006`) for an ID the run's specification stage wrote. The
+  repository gate's fix loop leaves those alone instead of writing the tests.
+  When those are its only errors, the local commit is made and its report lists the
   pending tests for the implement stage. The
   scope question says so for that option. Other scopes are printed as before.
 

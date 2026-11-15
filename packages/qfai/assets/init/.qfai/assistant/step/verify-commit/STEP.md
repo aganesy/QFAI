@@ -48,7 +48,8 @@ covering that action, target and scope. Commit authority alone covers none of th
    recorded `DELEGATED` does not stop the commit while its named CI check
    is pending under that authority. This permits that commit, not a
    verification-complete claim.
-   Every nondelegated gate must pass.
+   Every nondelegated gate must pass, except as the `testsPending` exception
+   at the end of this item says.
    A delegated red check stops transport of the same unchanged candidate.
    Under explicit delegation (CI-only or by instruction) covering the
    transport commit, the

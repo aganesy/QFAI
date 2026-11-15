@@ -9,7 +9,8 @@ requires: [common-gate-run]
 
 The binding QFAI gate. Per-stage validate runs in the other skills are
 signals; this one decides. It records failures and repairs none of them:
-`verify-repo-gate` runs the fix loop over every failing gate.
+`verify-repo-gate` runs the fix loop over every failure except the test
+obligations this gate lists as pending.
 
 ## Reads
 

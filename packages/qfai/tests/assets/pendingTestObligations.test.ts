@@ -18,8 +18,9 @@ describe("a scope that leaves out the implement stage leaves its test obligation
     // BR-0015-0336
     // QFAI:EX-0001-0229-35
     it(`${tree}: the QFAI gate records the obligations pending, and the commit is made`, async () => {
-      const [gate, commit, output] = await Promise.all([
+      const [gate, repo, commit, output] = await Promise.all([
         read(tree, "assistant/step/verify-qfai-gate/STEP.md"),
+        read(tree, "assistant/step/verify-repo-gate/STEP.md"),
         read(tree, "assistant/step/verify-commit/STEP.md"),
         read(tree, "assistant/skill/qfai-verify/references/verify-output-contract.md"),
       ]);
@@ -37,6 +38,15 @@ describe("a scope that leaves out the implement stage leaves its test obligation
       );
       expect(pending).not.toMatch(/`PASS`|QFAI-STORY-00[789]/);
       expect(flat(sectionOf(gate, "## Gate"))).not.toContain("testsPending` scope, no error");
+      expect(flat(repo)).toMatch(
+        /Under a `testsPending` scope, the `QFAI-STORY-006` obligations `verify-qfai-gate` lists as `PENDING` are not repaired: the loop neither writes their tests, reruns a gate for them nor escalates them.*Every other failure, of the QFAI gate included, keeps the loop\./,
+      );
+      expect(flat(gate)).toContain(
+        "runs the fix loop over every failure except the test obligations this gate lists as pending",
+      );
+      expect(flat(sectionOf(commit, "## Procedure"))).toContain(
+        "Every nondelegated gate must pass, except as the `testsPending` exception at the end of this item says.",
+      );
       expect(flat(sectionOf(commit, "## Procedure"))).toMatch(
         /A QFAI gate `FAIL` whose only errors are the `QFAI-STORY-006` obligations it listed `PENDING` under a `testsPending` scope.*does not stop the commit\. The gate stays `FAIL` in the report\. Any other error of that gate still stops the commit\./,
       );
