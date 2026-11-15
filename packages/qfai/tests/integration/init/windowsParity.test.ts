@@ -241,7 +241,7 @@ describe("native linked worktree skill wrappers", () => {
       const findings = await validateIntegrationSurface(linked);
       expect(findings).toHaveLength(unfollowable.length === 0 ? 0 : 1);
       expect(findings.map((issue) => [issue.code, issue.severity])).toEqual(
-        unfollowable.length === 0 ? [] : [["QFAI-LINK-001", "warning"]],
+        unfollowable.length === 0 ? [] : [["QFAI-LINK-001", "info"]],
       );
       expect(findings.flatMap((issue) => issue.refs ?? []).sort()).toEqual(unfollowable.sort());
       const packagedBefore = await snapshot(path.join(linked, assets));
