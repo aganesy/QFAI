@@ -116,6 +116,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The interface-clarity cut is judged with production-sized data.** The test
+  in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
+  user is worse off) is asked with the volume of data the screen will hold in
+  production, not the test fixture, so a list control is not cut because a
+  five-row fixture does not need it.
+
 - **`ui-procurement.md` checks runtime compatibility and tries a native
   element first.** A new rung before the design system asks whether a native
   element such as `details` or `dialog` does the job. A catalogue, and each item
