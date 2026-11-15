@@ -58,10 +58,14 @@ catalogue where an entry fits and extracted once where none does:
 - the list behaviour the list screens share: search or filter, sort, the count
   and pagination.
 
+The session agent lands the foundation before the fan-out, so it is neither a
+parallel unit under G1 nor another unit's output under G5. The screen units
+read it as-is, which does not fail G4.
+
 Among two or more screen units, one whose screen type has no page template yet
-fails G7. The screen units read the foundation as-is, which does not fail G4. A
-parallel split with no screen unit, or with one screen unit, needs no
-foundation unit.
+fails G7. Landing the missing template in the foundation clears that failure;
+the units then fan out as before, not serially. A parallel split with no screen
+unit, or with one screen unit, needs no foundation unit.
 
 ## Briefing a unit
 

@@ -124,6 +124,12 @@ describe("parallel dispatch by story, under the gate the session agent applies",
     expect(screens).toContain(
       "A parallel split with no screen unit, or with one screen unit, needs no foundation unit.",
     );
+    expect(screens).toContain(
+      "The session agent lands the foundation before the fan-out, so it is neither a parallel unit under G1 nor another unit's output under G5.",
+    );
+    expect(screens).toContain(
+      "Landing the missing template in the foundation clears that failure;",
+    );
     expect(section(text, "Briefing a unit")).toContain(
       "A screen unit's brief also names the page templates and the `.qfai/catalog/components.yaml` entries it uses;",
     );
