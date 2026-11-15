@@ -29,8 +29,9 @@ screens:
     # purpose: why the screen exists, in one sentence the user would agree with.
     # navigation: where the screen sits in the app. `shell` names the app frame
     # it renders inside, `entry_points` the screens or menus that lead to it,
-    # and `back_to` the route the user returns to. These keys describe the
-    # screen; validate does not check them.
+    # and `back_to` the route the user returns to. A screen in no navigation on
+    # purpose writes `navigation: { none: <reason> }` instead. An application
+    # screen with no navigation is QFAI-CONTRACT-054, a warning.
     # surface: `application` for a screen a member uses after signing in (the
     # default when the key is left out), `marketing` for a page a visitor sees
     # before signing in that explains, persuades or informs. Any other value is
@@ -103,8 +104,9 @@ screens:
         effect: navigates to /orders without storing the order
     # states: what the screen renders in each of the five states, and the
     # user's next action there. Every state is listed: one the screen cannot be
-    # in carries `none` with the reason instead of `renders` and `next`. This
-    # key describes the screen; validate does not check it.
+    # in carries `none` with the reason instead of `renders` and `next`. An
+    # application screen with no `states`, or without one of the five, is
+    # QFAI-CONTRACT-053, a warning.
     states:
       - id: default
         renders: the empty form with Submit order disabled until both fields hold a value

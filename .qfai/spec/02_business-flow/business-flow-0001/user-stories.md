@@ -186,3 +186,4 @@
 | US-0001-0309 | Keep the parts of a business screen out of minimal-scope cuts                          | `user-story-0001-0309/` |
 | US-0001-0310 | Take interactive widgets from a tested source                                          | `user-story-0001-0310/` |
 | US-0001-0313 | A checkout that did not reinstall after a qfai upgrade is caught                       | `user-story-0001-0313/` |
+| US-0001-0314 | Settle what a Japanese product needs from one locale reference                         | `user-story-0001-0314/` |

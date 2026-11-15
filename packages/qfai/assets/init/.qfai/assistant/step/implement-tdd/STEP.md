@@ -42,6 +42,11 @@ names no flow resolves its flow as this step says, or stops.
   `<paths.contractsDir>/ui/`, before changing the surface.
 - The references this step cites, under
   `.qfai/assistant/skill/qfai-implement/references/`.
+- When the specification or `tech.md` states the product's locale, the
+  locale's reference under `.qfai/assistant/rule/references/`, such as
+  `.qfai/assistant/rule/references/locale/ja.md` for Japanese, before building a
+  field or screen it covers: each format and input rule is one shared helper
+  or component that every screen calls.
 
 ## Scope
 
