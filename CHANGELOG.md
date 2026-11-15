@@ -8,12 +8,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The search-protection hook lets a search of files outside the project
   run.** A grep, rg, findstr or Select-String that is the only command of its
-  event, whose literal pattern names no existing file and whose absolute file
-  operands all name existing single-link regular files outside the project
-  worktree and the checkout the hook belongs to, before and after symbolic
-  links, is no longer denied, so `grep -n foo /etc/hosts` runs. A directory or
-  relative operand, git grep, a search after another command, a search with
-  no file operand, a project operand beside an outside one, a glob, `~`,
+  event, with no pipeline stage, whose literal pattern names no existing file
+  and whose one absolute file operand names an existing single-link regular
+  file outside the project worktree and the checkout the hook belongs to,
+  before and after symbolic links, is no longer denied, so
+  `grep -n foo /etc/hosts` runs. A directory or relative operand, a second
+  operand, git grep, a search beside another command or pipeline stage, a
+  search with no file operand, a project operand beside an outside one, a glob, `~`,
   variable or `..` operand, a link, hard link, MSYS link file or shortcut, an
   option that reads another file, `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH` set,
   or an operand that does not exist stays denied. Fixes #4179.

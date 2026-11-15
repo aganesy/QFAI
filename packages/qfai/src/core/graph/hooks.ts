@@ -239,13 +239,9 @@ function classifyCommands(
     // `git log | { grep fix; } < .env` the group reads `.env`.
     const upstream =
       words[0] === "{" && !groupClosesBare(commands, index) ? undefined : command.upstream;
-    // Only the first command can be a search that reads outside files: any command before it
-    // may make a link it reads. A pipeline stage after it may still run.
-    const alone =
-      scope.alone &&
-      index === 0 &&
-      substitutions.length === 0 &&
-      commands.slice(1).every((next) => next.join === "|");
+    // Only a search that is the event's one command can read outside files: any other command,
+    // before it or in a later pipeline stage running beside it, may swap the file it reads.
+    const alone = scope.alone && commands.length === 1 && substitutions.length === 0;
     const decision = classifyCommand(
       words,
       { ...scope, alone, location, redefined },
@@ -971,8 +967,8 @@ function selectStringOperands(args: string[]): OutsideSearch | undefined {
 }
 
 /**
- * Whether every operand of a search provably names a regular file outside the project. The
- * search is the whole event, so no earlier command can have made a link it reads, and no part
+ * Whether the one operand of a search provably names a regular file outside the project. The
+ * search is the whole event, so no other command can have made a link it reads, and no part
  * of the event redefines a command or sets an environment variable. It runs from a known
  * directory, and its pattern word names nothing that exists there, so an argument the
  * environment adds, such as `-e x` in `GREP_OPTIONS`, cannot turn that word into a file. Each
@@ -990,9 +986,11 @@ function selectStringOperands(args: string[]): OutsideSearch | undefined {
  * Ceiling: the hook reads its own environment, so a `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH`
  * left in a persistent terminal that adds a file operand is not seen. A single file bind-mounted
  * from the project onto an outside path keeps its own name and one link, so it is not seen
- * either. A pipeline stage after the search runs beside it and could change a link before the
- * search opens it. A sibling worktree of the same repository outside the checkout is not part
- * of the project here, so its files are allowed. Resolving a path on a mapped network drive or
+ * either. A process outside the event, such as a background job an earlier event started, can
+ * swap the file between this check and the search opening it; a pre-tool hook cannot close that
+ * race. One operand bounds it to one file's matching lines, which a direct `cat` of that file
+ * already prints, and the hook steers searches rather than bounding reads. A sibling worktree
+ * of the same repository outside the checkout is not part of the project here, so its files are allowed. Resolving a path on a mapped network drive or
  * a network mount is a file-system call that may reach the network; network paths written as
  * `\\server` or `//server` are refused before they are resolved. Lift when a host reports the
  * files a command opened.
@@ -1000,7 +998,7 @@ function selectStringOperands(args: string[]): OutsideSearch | undefined {
 function readsOnlyOutside(context: CommandContext, search: OutsideSearch | undefined): boolean {
   const { location, directory, worktrees, redefined, shell, alone } = context;
   if (
-    !search?.operands.length ||
+    search?.operands.length !== 1 ||
     !alone ||
     redefined ||
     location === "unknown" ||

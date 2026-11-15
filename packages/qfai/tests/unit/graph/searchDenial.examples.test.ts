@@ -1296,8 +1296,8 @@ it("allows a search whose every literal operand lies outside the project", async
   try {
     for (const event of [
       { tool: "Bash", cwd: project, command: `grep -n foo ${out}/notes.txt` },
-      { tool: "Bash", cwd: project, command: `rg -n -- foo ${out}/notes.txt ${out}/sub/other.txt` },
-      { tool: "Bash", cwd: outside, command: `grep -rn foo ${out}/sub/other.txt | sort` },
+      { tool: "Bash", cwd: project, command: `rg -n -- foo ${out}/notes.txt` },
+      { tool: "Bash", cwd: outside, command: `grep -rn foo ${out}/sub/other.txt` },
       {
         tool: "PowerShell",
         cwd: project,
@@ -1355,6 +1355,25 @@ it("denies a search whose operands are not provably outside the project", async 
       [{ tool: "Bash", cwd: project, command: `grep foo ${out}/interix.txt` }, [project]],
       [{ tool: "Bash", cwd: project, command: `grep foo ${out}/shortcut.txt` }, [project]],
       [{ tool: "Bash", cwd: project, command: `grep foo ${out}/project.lnk` }, [project]],
+      // A second operand, during whose read a slow first one lets another process swap it, and
+      // a later pipeline stage, which runs beside the search and may swap its file.
+      [
+        {
+          tool: "Bash",
+          cwd: project,
+          command: `rg -n -- foo ${out}/notes.txt ${out}/sub/other.txt`,
+        },
+        [project],
+      ],
+      [{ tool: "Bash", cwd: outside, command: `grep -rn foo ${out}/notes.txt | sort` }, [project]],
+      [
+        {
+          tool: "Bash",
+          cwd: outside,
+          command: `grep foo ${out}/notes.txt | sh -c "rm ${out}/sub/other.txt && sort"`,
+        },
+        [project],
+      ],
       // A command earlier in the event, which may make the link the search reads.
       [
         { tool: "Bash", cwd: project, command: `cd src && grep -n foo ${out}/notes.txt` },
