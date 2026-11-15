@@ -19,6 +19,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The parts of a business screen outrank the minimal-scope article.**
+  Article VII of the shipped constitution now names the list under
+  `## What a business screen always has` in `interface-clarity.md` among what
+  outranks it, beside the safety floor. On an application screen whose UI
+  contract records no reason to leave a part out, navigation, list behaviour,
+  states and feedback are no longer cut as scope beyond the minimum, and the
+  architecture, product-surface and requirements reviewers refuse such a cut;
+  how a part is built remains subject to the article.
+
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the
   shell its UI contract names, linked from its entry points, built from shared
