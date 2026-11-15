@@ -44,7 +44,9 @@ specialization_tags:
   and what replaces it. `delete` also covers replacement by code already present.
   For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
   Refuse it when the cut removes or weakens an obligation in the safety floor at
-  `.agents/rules/minimal-implementation.md` § 2.
+  `.agents/rules/minimal-implementation.md` § 2, or a part
+  `## What a business screen always has` in `.agents/rules/interface-clarity.md`
+  requires of an application screen whose UI contract does not exclude it.
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Require more work only on what `.qfai/assistant/rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of` admits, and report any other gap as advisory.

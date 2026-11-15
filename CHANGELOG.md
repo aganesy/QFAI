@@ -17,6 +17,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **A UI contract list or table element says how it is shown and narrowed.**
+  The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
+  artifact rules and the `sdd-contract` step give every `type: list` or
+  `type: table` element a `list` key: `columns`, `search`, `filters`, `sort`
+  and `pagination`, each set or `none` with the reason the element does
+  without it, the same shape as `states`. The business UI pattern reference
+  now says a List behaviour applies to what `list` sets and the entry it
+  concerns records a departure. Validate does not check the key yet.
+  Closes #4109.
+
 ### Changed
 
 - **Settled work that adds screens gets the design and prototype stages.**
@@ -26,6 +36,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `apply-settled-prototype` instead of `apply-settled`. Before, it went straight
   to implementation with no design or prototype stage. A new feature with no
   settled record is covered by `visual-open`.
+
+- **The parts of a business screen outrank the minimal-scope article.**
+  Article VII of the shipped constitution now names the list under
+  `## What a business screen always has` in `interface-clarity.md` among what
+  outranks it, beside the safety floor. On an application screen whose UI
+  contract records no reason to leave a part out, navigation, list behaviour,
+  states and feedback are no longer cut as scope beyond the minimum, and the
+  architecture, product-surface and requirements reviewers refuse such a cut;
+  how a part is built remains subject to the article.
 
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the
