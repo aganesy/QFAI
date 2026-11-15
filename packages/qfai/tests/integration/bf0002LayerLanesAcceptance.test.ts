@@ -380,7 +380,14 @@ describe("BF-0002 layer-to-lane mapping in the layer rule", () => {
   // QFAI:AC-0002-0021-02
   it("names only layers the taxonomy lists", () => {
     const taxonomy = taxonomyLayers(rule);
-    expect(taxonomy.sort()).toEqual(["API", "Component", "E2E", "Integration", "Unit"]);
+    expect(taxonomy.sort()).toEqual([
+      "API",
+      "Accessibility",
+      "Component",
+      "E2E",
+      "Integration",
+      "Unit",
+    ]);
 
     const named = namedLayers(mappingSection(rule));
     expect(named.length).toBeGreaterThan(0);

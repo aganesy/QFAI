@@ -42,6 +42,7 @@ import * as uiScreenEntries from "../../src/core/validators/uiScreenEntries.js";
 import * as uiScreenCompleteness from "../../src/core/validators/uiScreenCompleteness.js";
 import * as uiScreenOmitted from "../../src/core/validators/uiScreenOmitted.js";
 import * as uiScreenSurface from "../../src/core/validators/uiScreenSurface.js";
+import * as uiAccessibilityLayer from "../../src/core/validators/uiAccessibilityLayer.js";
 import * as upstreamSsotGuard from "../../src/core/validators/upstreamSsotGuard.js";
 import * as configuration from "../../src/core/config.js";
 import * as storyModel from "../../src/core/storyTree/tree.js";
@@ -367,6 +368,12 @@ export function measureValidators() {
       "core/validators/uiScreenOmitted:validateUiScreenOmitted",
       uiScreenOmitted.validateUiScreenOmitted,
       (call) => vi.spyOn(uiScreenOmitted, "validateUiScreenOmitted").mockImplementation(call),
+    );
+    register(
+      "core/validators/uiAccessibilityLayer:validateUiAccessibilityLayer",
+      uiAccessibilityLayer.validateUiAccessibilityLayer,
+      (call) =>
+        vi.spyOn(uiAccessibilityLayer, "validateUiAccessibilityLayer").mockImplementation(call),
     );
     register(
       "core/validators/upstreamSsotGuard:validateStoryTreeDrift",

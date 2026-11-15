@@ -87,6 +87,15 @@ is an ordinary failure, and an older one is handled as `common-gate-run`'s
 leaves no obligation pending. Whether a `FAIL` whose only errors are pending
 obligations stops the commit is decided by `verify-commit`.
 
+## Accessibility layer
+
+In a project whose UI contracts declare a screen with a route that starts with
+`/`, record whether the accessibility layer
+`.qfai/assistant/rule/test-layers.md#l6-accessibility` defines exists: a
+selected test file that calls axe. `QFAI-AXE-001` (`warning`) reports that no
+selected test file does. Record the layer as present or missing in the stage
+report, so the missing accessibility gate in `verify-repo-gate` has its reason.
+
 ## Waivers
 
 - A waiver covers a `warning` or `info` finding only. A waiver that suppresses
@@ -104,4 +113,5 @@ The step is done when:
 - validation ran in the profile the scope names, and its result is recorded;
 - `error=0` for a pass; otherwise the failing findings are recorded for the
   fix loop, and under a `testsPending` scope the result lists each pending
-  test obligation as `PENDING`.
+  test obligation as `PENDING`;
+- where the accessibility layer applies, it is recorded as present or missing.

@@ -42,6 +42,7 @@ export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 export { validateUiScreenCompleteness } from "./uiScreenCompleteness.js";
 export { validateUiScreenSurface } from "./uiScreenSurface.js";
 export { validateUiScreenOmitted } from "./uiScreenOmitted.js";
+export { validateUiAccessibilityLayer } from "./uiAccessibilityLayer.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateStepTree } from "./stepTree.js";
 export { validateDesignAudit } from "./designAudit.js";

@@ -57,6 +57,7 @@ describe("the layer to CI lane map is part of the layer rule", () => {
     expect(section).not.toMatch(/`QFAI:TC-[^`]+`/);
 
     expect(layerTokens(rule)).toEqual([
+      "layer-accessibility",
       "layer-api",
       "layer-component",
       "layer-e2e",
@@ -69,6 +70,7 @@ describe("the layer to CI lane map is part of the layer rule", () => {
       "### L3 Integration",
       "### L4 API",
       "### L5 E2E",
+      "### L6 Accessibility",
     ]);
   });
 
@@ -97,7 +99,14 @@ describe("the layer to CI lane map is part of the layer rule", () => {
         (match) => match[1] ?? "",
       ),
     );
-    expect([...catalog].sort()).toEqual(["API", "Component", "E2E", "Integration", "Unit"]);
+    expect([...catalog].sort()).toEqual([
+      "API",
+      "Accessibility",
+      "Component",
+      "E2E",
+      "Integration",
+      "Unit",
+    ]);
     const named = new Set(
       [...section.matchAll(/\b([A-Z][A-Za-z0-9]*)(?:\s+and\s+([A-Z][A-Za-z0-9]*))?\s+tests\b/g)]
         .flatMap((match) => [match[1], match[2]])
