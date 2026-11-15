@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **A request for new screens plans the prototype loop.** `qfai-run` now sets
+  the qualifier `visual-open` when a request adds a screen or a UI surface that
+  no confirmed prototype covers, even when the request asks no design question.
+  Such a feature routes `prototype-feature`. A control added to an existing
+  screen in that screen's style still routes `add-feature` unless the request
+  leaves its look open.
+
 ### Fixed
 
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
