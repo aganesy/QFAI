@@ -11,9 +11,10 @@ the session agent reads their answers into the summary.
 `/qfai-discussion` triggers this protocol. Run it whether or not the work
 includes UI. For a whole-site redesign, a new product that carries UI and has no adopted
 theme, or a survey the user asks for, also run
-`.qfai/assistant/rule/references/visual-reference-survey.md`. When the work adds a
-screen type or a component the project does not have yet, also fill
-`.qfai/assistant/rule/references/ui-research-brief.md` for each one.
+`.qfai/assistant/rule/references/visual-reference-survey.md`; its findings are
+checked against `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md`.
+When the work adds a screen type or a component the project does not have yet,
+also fill `.qfai/assistant/rule/references/ui-research-brief.md` for each one.
 
 `prototyping-grill` also triggers it, scoped to UI, when a run adds a screen
 whose type the project's pattern references do not cover, or that needs a

@@ -198,6 +198,17 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
         "A finding rests on at least two sites, at least one of them at `award` or `gallery` level.",
       );
     });
+
+    it(`${path.relative(repoRoot, surveyPath)}: opens a redesign with an inventory and checks each adopted finding against the anti-patterns`, async () => {
+      const survey = await readFile(surveyPath, "utf-8");
+      const inventory = section(survey, "## Inventory first").replace(/\s+/g, " ");
+      expect(inventory).toContain("the user decides every removal before the survey starts");
+      const findings = section(survey, "## Findings").replace(/\s+/g, " ");
+      expect(findings).toContain("checked against the design anti-pattern list");
+      expect(findings).toContain("_Displacement_ section included");
+      expect(findings).toContain("`audience.do_not_look_like`");
+      expect(findings).toContain("A pattern common on well-known sites is not exempt.");
+    });
   }
 
   for (const protocolPath of protocolPaths) {
