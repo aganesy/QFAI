@@ -141,6 +141,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
 
+- **The prototype reviewer checks the business-screen floor, not only what
+  the UI contract declares.** On an application screen the run adds or
+  changes, a missing way back, or empty, loading, error or success state with
+  no reason recorded in the UI contract blocks, as does one the run removes. A
+  gap that was already there before the run goes in the critique. The app
+  shell is judged once for the application: it blocks only when the run adds,
+  alters or removes it, so a scoped run is never blocked by a shell it may not
+  build. `lap-007-state-not-represented` now rests on the same floor. Closes
+  #4129.
+
 - **A UI pattern repeated across screens becomes a shared component.**
   `minimal-implementation.md` no longer counts a region that several screens
   repeat as "an operation done once": it follows rung 1 of `ui-procurement.md`
