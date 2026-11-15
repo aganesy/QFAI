@@ -57,7 +57,7 @@ describe("sdd-contract writes the app frame once", () => {
       "Every other application screen that renders inside the shell names the frame's shell screen in `navigation.shell`; a screen with no frame, such as a sign-in page, says so.",
     );
     expect(section).toContain(
-      "A once-per-application part the project leaves out, the shell included, gets its reason in the frame.",
+      "A once-per-application part the project leaves out, the shell included, gets its entry in the frame's `omitted` list.",
     );
     expect(section).toContain(
       "Settings, member management and notifications become frame screens only when a story needs them; this step adds none on its own.",
