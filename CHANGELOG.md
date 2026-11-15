@@ -53,6 +53,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   web screens has no test that calls axe. QFAI itself takes no axe dependency.
   Closes #4309.
 
+- **Browser tests survive a rebuild that keeps the behaviour.** QFAI said
+  nothing about how a browser test finds an element or injects a failure, so
+  tests tied to class names, CSS values and the module files a page loads broke
+  when the screens were rebuilt, and the failure-state cases could not be run
+  at all once a bundler merged those modules. `test-layers.md` gains a section
+  for every test that drives a browser: locate an element by what a user
+  perceives (accessible role and name, label or visible text) or by a declared
+  `data-qfai` marker, never by class name, CSS value or DOM path; where a root
+  `DESIGN.md` exists, check its design tokens in a test of their own, and
+  assert no CSS value in a behaviour case; inject a failure by intercepting the
+  network request or through a test-only fault seam a production build does
+  not carry, never through a module file the page loads. `implement-scaffold`,
+  `implement-acceptance` and `implement-tdd` point to it, and the
+  implementation reviewer flags a browser test that reroutes or replaces an
+  application module file or reads a global such a module sets, and a
+  behaviour case that asserts a CSS value. Closes #4292.
+
 - **The contract step writes the app frame once.** The app shell, the
   navigation for each role and the home belong to no single flow, so
   `sdd-contract` writes them as the screens of one UI contract, the app frame,
