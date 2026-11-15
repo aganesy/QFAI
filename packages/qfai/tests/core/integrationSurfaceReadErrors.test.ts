@@ -304,6 +304,8 @@ describe("a structurally broken target is a finding, not a crash", () => {
       expect(finding?.message).not.toContain("\n");
       expect(finding?.message.length).toBeLessThan(500);
       expect(finding?.message).toContain("3 wrapper(s)");
+      // At info the consequence must still be on the line, or nobody runs the repair.
+      expect(finding?.message).toContain("the host does not load these skills from this checkout");
       expect(finding?.message).toContain("(and 2 more)");
       expect(finding?.message).not.toContain("->");
       expect(finding?.suggested_action).not.toContain("\n");

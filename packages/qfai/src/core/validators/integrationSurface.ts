@@ -1604,7 +1604,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     issues.push(
       issue(
         "QFAI-LINK-001",
-        `${String(reachable.length)} wrapper(s) in the assistant integration directories resolve through a symlink the OS will not follow: ${first?.relative ?? ""}${rest > 0 ? ` (and ${String(rest)} more)` : ""}. The canonical documents behind them read fine, so the instructions are in this tree; only this path does not reach them.`,
+        `${String(reachable.length)} wrapper(s) in the assistant integration directories resolve through a symlink the OS will not follow: ${first?.relative ?? ""}${rest > 0 ? ` (and ${String(rest)} more)` : ""}. The canonical documents behind them read fine, so the instructions are in this tree; only this path does not reach them, so the host does not load these skills from this checkout.`,
         "info",
         first?.relative,
         "integrationSurface.links",
