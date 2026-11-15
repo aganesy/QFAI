@@ -667,6 +667,22 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
         );
       });
 
+      it("separates the two remedies when a declaration is stale both ways", async () => {
+        const both = DERIVED_DB.replace(
+          "status = standby, powered_off from",
+          "status = active, retired from",
+        );
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": both });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.suggested_action).toContain(
+          "remove the value from the DB domain. The API contract does not require",
+        );
+      });
+
       it("reports a declaration covering a value the API never asks for", async () => {
         const unasked = DERIVED_DB.replace("powered_off from", "retired from");
         const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": unasked });
