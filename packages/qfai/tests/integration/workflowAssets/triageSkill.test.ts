@@ -277,6 +277,16 @@ describe("a question answered without a change", () => {
   it("waits for the checks a merge needs and checks the merged result", async () => {
     const procedure = flat(sectionOf(await step("triage-operate"), "## Procedure"));
     expect(procedure).toMatch(/Wait for checks still running before a merge/);
+    expect(procedure).toMatch(
+      /Checks still running means every check run of the pull request's head commit that is queued or in progress, including checks branch protection does not require/,
+    );
+    expect(procedure).toMatch(
+      /A merge waits until none is left, or stops and reports the checks still running; it never goes ahead because the host would allow it/,
+    );
+    expect(procedure).toMatch(/A failed check stops the merge too, until a rerun clears it/);
+    expect(procedure).toMatch(
+      /A report of a merge names the merge commit and, next to it, the state of the head commit's checks when it merged: each check run and its conclusion/,
+    );
     expect(procedure).toMatch(/Poll no faster than the checks change/);
     expect(procedure).toMatch(
       /A failing check that a rerun does not clear stops the operation as a tracked change it needs/,

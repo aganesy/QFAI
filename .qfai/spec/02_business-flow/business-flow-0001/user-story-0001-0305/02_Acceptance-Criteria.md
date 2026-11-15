@@ -26,4 +26,11 @@ Feature: Write the standard parts of a business screen into its UI contract
     When the contract step writes its UI contract, or the product-surface reviewer reviews the screen
     Then the reason is a `{ part, reason }` entry in that screen's `omitted` list, and for a once-per-application part in the app frame
     And the reviewer reads that list, and a state's `none` under `states`, as the recorded reason
+
+  # AC-0001-0305-04
+  Scenario: The contract step names each application screen's type by its ID
+    Given the shipped `sdd-contract` step and `business-ui-patterns.md`
+    When the step names the type of an application screen in its UI contract
+    Then it writes `pattern: <id>` with the ID the reference gives that type
+    And a screen that fits no type, and a marketing screen, leave `pattern` out
 ```
