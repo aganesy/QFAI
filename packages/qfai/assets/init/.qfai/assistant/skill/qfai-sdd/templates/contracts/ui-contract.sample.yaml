@@ -187,8 +187,9 @@ screens:
         # columns, search, filters, sort and pagination is set, or carries
         # `none` with the reason the element does without it, such as
         # `pagination: { none: at most 12 fixed plans are all shown at once }`.
-        # No entry is left out. This key describes the element; validate does
-        # not check it.
+        # No entry is left out. An element with no list behaviour on purpose
+        # writes `list: { none: <reason> }` instead. A list or table element of
+        # an application screen with no `list` is QFAI-CONTRACT-055, a warning.
         list:
           columns: [order number, customer, status, created at]
           search: order number and customer name, normalised the same way on both sides
