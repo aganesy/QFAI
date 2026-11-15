@@ -32,6 +32,7 @@
     "tests/assets/uiProcurementCompatibility.test.ts",
     "tests/assets/implementAntiPatternSections.test.ts",
     "tests/assets/uiProcurementStates.test.ts",
+    "tests/assets/uiProcurementSharedComponent.test.ts",
     "tests/assets/workOrderChecksAndPush.test.ts",
     "tests/helpers/graphCli.ts",
     "tests/unit/graph/graphLocks.examples.test.ts",

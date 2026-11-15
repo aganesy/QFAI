@@ -140,6 +140,13 @@ minimal on its own terms. Additions take four shapes, and each stays out.
 | Defensive coding | Error handling, a fallback or validation for a case that cannot happen.                                        |
 | Abstraction      | A helper for an operation done once, or one extracted for length alone. A design for a requirement nobody has. |
 
+A UI region repeated across screens is not an operation done once. It follows
+rung 1 of `.qfai/assistant/rule/ui-procurement.md#the-ladder` and the
+business-screen floor in `interface-clarity.md#what-a-business-screen-always-has`:
+one shared component per repeated pattern. When two or more UI contracts name
+the same pattern, the shared component is extracted at its first use. A
+design-system part no contract uses yet stays out.
+
 A comment in the change goes where the logic is not self-evident.
 
 Code written only to pass a test stays out too: see

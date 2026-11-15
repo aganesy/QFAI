@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **A UI pattern repeated across screens becomes a shared component.**
+  `minimal-implementation.md` no longer counts a region that several screens
+  repeat as "an operation done once": it follows rung 1 of `ui-procurement.md`
+  and the business-screen floor. When two or more UI contracts name the same
+  region, rung 1 now extracts the shared component at its first use instead of
+  waiting for the second screen. Design-system parts that no contract uses are
+  still not set up in advance. Closes #4099.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

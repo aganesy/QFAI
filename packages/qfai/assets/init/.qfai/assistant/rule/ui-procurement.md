@@ -32,9 +32,11 @@ Per screen region, stop at the first rung that holds.
 
 1. **Does the project already have a component for it?** Reuse it. The
    component catalogue lists what exists
-   (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#component-catalogue`). When the
-   same region appears on a second screen and no shared component realises it,
-   extract one, wrapping whatever rung 2, 3 or 4 supplied, and use it on both,
+   (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#component-catalogue`). When
+   two or more UI contracts name the same region, extract a shared component at
+   the region's first use. When a region no second contract names appears on a
+   second screen and no shared component realises it, extract one then. Either
+   way, wrap whatever rung 2, 3 or 4 supplied and use it on every screen,
    rather than authoring the region again.
 2. **Does a native platform element do it?** Examples on the web are
    `details` and `summary`, `dialog`, and form validation attributes. A native
