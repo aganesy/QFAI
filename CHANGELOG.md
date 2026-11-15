@@ -51,6 +51,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The search-protection hook allows a search scoped inside the project.** A
+  grep, rg, git grep, Select-String, findstr or native search call that names
+  at least one path, every one inside the project root, now runs. A search with
+  no path, one over the project root itself (such as `.`), and one whose path
+  the hook cannot place inside the project are still redirected to the graph:
+  a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
+  home prefix or a `..` segment. A findstr with `/s` and a native search scoped
+  only by an include glob are also redirected.
+
 - **Settled work that adds screens gets the design and prototype stages.**
   The extraction has a new qualifier, `new-screens`, for a settled change that
   adds new UI contracts or new routes users see: an approved record with a

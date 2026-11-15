@@ -14,7 +14,7 @@ it("rejects invalid fallback CLI arguments without granting or querying", async 
     );
     const event = {
       tool_name: "Bash",
-      tool_input: { command: "rg legacy packages/" },
+      tool_input: { command: "rg legacy" },
       session_id: "invalid-arguments-session",
       cwd: fixture.root,
     };
