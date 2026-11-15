@@ -4,6 +4,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The contract step writes the app frame once.** The app shell, the
+  navigation for each role and the home belong to no single flow, so
+  `sdd-contract` writes them as the screens of one UI contract, the app frame,
+  when no UI contract holds the shell yet. Every other screen's
+  `navigation.shell` names the frame's shell screen. A once-per-application
+  part the project leaves out records its reason in the frame, and
+  `interface-clarity.md` and `product-surface-reviewer` read the reason there.
+  Settings, member management and notifications are added only when a story
+  needs them.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

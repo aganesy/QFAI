@@ -97,6 +97,17 @@ as elements, actions and `supplements` entries with their `when`. Such a part ne
 business rule. A part left out gets its reason in that screen's contract, as
 the rule says.
 
+The app shell, the navigation for each role and the home belong to no single
+flow, so one UI contract, the app frame, holds them. When no UI contract holds
+the shell yet, write the frame with the flow at hand: the shell with its
+navigation for each role as one screen and the home as another, each with its
+`purpose`, `navigation` and `states` like any screen. Every other screen's
+`navigation.shell` names the frame's shell screen. A later flow adds its entry
+points to the frame's navigation and leaves the rest of the frame as it is. A
+once-per-application part the project leaves out gets its reason in the frame.
+Settings, member management and notifications become frame screens only when a
+story needs them; this step adds none on its own.
+
 Then name each screen's type in
 `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` and write
 the parts of that type the screen needs into its contract the same way, with

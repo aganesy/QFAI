@@ -10,4 +10,13 @@ Feature: Write the standard parts of a business screen into its UI contract
     When it writes the UI contract of a screen for a UI-bearing flow
     Then after deriving the screen's elements and actions from the examples it checks the screen against `## What a business screen always has` in `interface-clarity.md` and adds each part that applies and is missing
     And a part it adds needs no example of its own unless it carries a business rule
+
+  # AC-0001-0305-02
+  Scenario: The contract step writes the app frame once
+    Given the shipped `sdd-contract` step
+    When it writes the UI contracts of a UI-bearing flow and no UI contract holds the app shell yet
+    Then it writes one UI contract, the app frame, holding the shell with the navigation for each role and the home
+    And every other screen's `navigation.shell` names the frame's shell screen
+    And a once-per-application part left out gets its reason in the frame
+    And settings, member management and notifications are frame screens only when a story needs them
 ```

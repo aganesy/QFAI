@@ -106,7 +106,9 @@ links.
 | `navigation.entry_points` | the screens, menus or actions that lead to it, at least one    |
 | `navigation.back_to`      | the route the user returns to from it                          |
 
-A screen with no frame, such as a sign-in page, says so in `shell`. A top-level
+The shell, the navigation for each role and the home are written once, as the
+screens of one UI contract, the app frame, and `shell` names the frame's shell
+screen. A screen with no frame, such as a sign-in page, says so in `shell`. A top-level
 screen with nowhere to return to says so in `back_to`. `npx qfai validate` does
 not check these keys; they describe the screen for the implementer and the
 reviewer.
