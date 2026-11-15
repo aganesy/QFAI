@@ -1,5 +1,13 @@
 # UI Affecting Examples
 
+## Contents
+
+- Inputs
+- Component catalogue
+- Plain text in UI source
+- Routing
+- Evidence
+
 ## Inputs
 
 Read the UI surface paths `uiux.surfacePaths` declares in qfai.config.yaml, and resolve paths.contractsDir from the same file. Read every UI contract under its ui/ directory, and the root DESIGN.md if present for the brand tokens.
