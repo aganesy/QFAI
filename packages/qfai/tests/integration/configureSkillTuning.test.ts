@@ -155,7 +155,7 @@ describe("Tool Selection Rationale Recorded", () => {
     );
 
     const template = await readFile(TECH_TEMPLATE_PATH, "utf-8");
-    const testerRow = "| Test runner         | `<test runner>`                            |";
+    const testerRow = "| Test runner         | `<example: Vitest>`                   |";
     expect(template).toContain(testerRow);
     const layerRows = [
       "| Integration tests | Vitest 4: `package.json` and `vitest.config.ts` show it, and `tests/integration/` runs on it; it runs the checks that call the module boundary directly |",
