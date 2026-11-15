@@ -291,11 +291,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The template held placeholders such as `<package>`, so a project filling it
   in guessed the shapes and needed several validate rounds. Every value is now
   a filled example to replace, such as `<example: pnpm build>`, inside the
-  backticks, list marks and table cells the schema checks; replacing each with
-  the project's value gives a `tech.md` that passes on the first run, and an
-  example left in place is still reported by `QFAI-ASSETS-003`. A missing
-  required line, such as the Format command, is now reported with an example
-  line in place of a regular expression. Closes #4404.
+  backticks, list marks and table cells the schema checks. Replacing each
+  example with the project's value, and replacing or deleting the two optional
+  lines marked `<optional example: ...>`, gives a `tech.md` that passes on the
+  first run. An example left in place is still reported by `QFAI-ASSETS-003`,
+  and a Turn-end check line left as shipped turns on no turn-end check. A
+  missing required line, such as the Format command, is now reported with an
+  example line in place of a regular expression. Closes #4404.
 
 - **E2E tests wait until a server-rendered page is interactive.** A test that
   filled a field before the page hydrated lost the value and failed some runs.

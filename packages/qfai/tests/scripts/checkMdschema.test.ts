@@ -1447,7 +1447,7 @@ describe("a required-text finding", () => {
 
   // QFAI:EX-0001-0011-21
   it("keeps the pattern where the rule gives no example, or the section is not the rule's", () => {
-    const noExample = TECH_SCHEMA.replace(/^ +example: '- Format: .*\n/m, "");
+    const noExample = TECH_SCHEMA.replace(/^ +example: ["']- Format: .*\n/m, "");
     expect(noExample).not.toBe(TECH_SCHEMA);
     expect(explainRequiredText(lineOf(FORMAT), noExample)).toBe(lineOf(FORMAT));
     expect(explainRequiredText(lineOf(FORMAT, "Stack"), TECH_SCHEMA)).toBe(lineOf(FORMAT, "Stack"));
