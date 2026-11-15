@@ -229,14 +229,24 @@ the DB domain makes it _possible_ to store a value the contract says must not be
 clock-derived value goes stale the moment the clock moves, which is why it is not stored), while
 deleting it from the API removes a value the UI contract requires.
 
-Declare it in the **DB** contract, which is the artifact that owns storage:
+Declare it in the **DB** contract, which is the artifact that owns storage, on one comment line of
+this form:
+
+```text
+-- Derived (not stored): <column> = <value>, <value> from <input>, <input>
+```
 
 ```sql
 -- Derived (not stored): status = standby, powered_off from enabled, connection_status, health_status, JST clock
 ```
 
+- **`<column>` is one name** of letters, digits and underscores, followed by `=`. A sentence after
+  the key does not parse.
+- **The values are separated by commas**, with no comma before `from`.
+- **`from` and at least one input end the line.** The inputs are free text, so a clock or a column
+  of another table can be named.
 - **The comment marker is required and the key starts the line**, as with `-- Depends on:`, so prose
-  _about_ a derivation is not itself a declaration.
+  _about_ a derivation is not itself a declaration. Write that prose on its own comment line.
 - **The `from` clause is required.** Naming the inputs is what makes the claim reviewable; without
   it the marker would be a way to silence the rule rather than a way to answer it.
 - **The value list is all-or-nothing.** An empty element means the author was mid-edit, and the
