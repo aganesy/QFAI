@@ -229,7 +229,10 @@ Declare it in the **DB** contract, which is the artifact that owns storage:
 
 `QFAI-CONTRACT-041` reports a declaration that does no work: one that does not parse — so the
 author believes they answered a finding that is still standing — and one naming a value the API
-does not require, or that the DB domain stores after all. A value **nobody declared** still raises
+does not require, or that the DB domain stores after all. When no DB contract declares the field at all,
+because no column holds the value, the declaration is checked against the API contract alone: each
+value it names must be in the `enum` the API declares on that field, so declare the values there
+rather than only in a description. A value **nobody declared** still raises
 `QFAI-CONTRACT-040`, or the marker would be a silencer.
 
 The format is new, so the first authors to use it are answering another finding voluntarily and
