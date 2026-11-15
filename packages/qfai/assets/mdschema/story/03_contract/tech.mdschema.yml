@@ -1,4 +1,6 @@
 # Document schema: <contractsDir>/tech.md
+# A required_text item may carry `example:`, a line of the shape the rule
+# requires; the checker shows it in place of the pattern when the line is missing.
 heading_rules:
   no_skip_levels: true
   max_depth: 2
@@ -24,11 +26,14 @@ structure:
         required_text:
           - pattern: '(?m)^\|[ \t]*Runtime[ \t]*\|'
             regex: true
+            example: "| Runtime | `Node.js 22` |"
           - pattern: '(?m)^\|[ \t]*Platform[ \t]*\|'
             regex: true
+            example: "| Platform | `Linux, macOS and Windows` |"
           # One surface, optionally in backticks, or the template's placeholder.
           - pattern: '(?m)^\|[ \t]*Surface[ \t]*\|[ \t]*`?(?:web|mobile|desktop|mixed|cli|non-ui|<[^>|\n]*>)`?[ \t]*\|'
             regex: true
+            example: "| Surface | `cli` |, where Surface holds one of web, mobile, desktop, mixed, cli or non-ui"
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
@@ -136,20 +141,28 @@ structure:
         required_text:
           - pattern: "(?m)^- Install: `"
             regex: true
+            example: "- Install: `pnpm install --frozen-lockfile`"
           - pattern: "(?m)^- Format: `"
             regex: true
+            example: "- Format: `pnpm prettier --check .`"
           - pattern: "(?m)^- Test: `"
             regex: true
+            example: "- Test: `pnpm vitest run`"
           - pattern: "(?m)^- Lint: `"
             regex: true
+            example: "- Lint: `pnpm eslint .`"
           - pattern: "(?m)^- Typecheck: `"
             regex: true
+            example: "- Typecheck: `pnpm tsc --noEmit`"
           - pattern: "(?m)^- Build: `"
             regex: true
+            example: "- Build: `pnpm build`"
           - pattern: "(?m)^- Skeleton: `"
             regex: true
+            example: "- Skeleton: `node dist/cli.js --help`"
           - pattern: "(?m)^- Validate: `"
             regex: true
+            example: "- Validate: `npx qfai validate`"
         forbidden_text:
           # Anything but top-level items, and an item whose command is not in backticks.
           - pattern: '(?m)^[ \t]*[^-\s#]'

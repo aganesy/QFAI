@@ -46,6 +46,7 @@ import {
   parseViolations,
   patternToRegExp,
   explainForbiddenText,
+  explainRequiredText,
   offendingLine,
   sectionDescriptions,
   rootHeadingPattern,
@@ -1236,7 +1237,7 @@ describe("a forbidden-text finding", () => {
     "utf-8",
   ).replace(/\r\n/g, "\n");
   const PROSE_DEPENDENCIES = TECH_TEMPLATE.replace(
-    /^- `<package>`\n {2}- `<what the project uses it for>`\n/m,
+    /^- `<example: yaml>`\n {2}- <example: Parses the configuration file\.>\n/m,
     "- some prose\n",
   );
   const DESCRIPTION =
@@ -1388,7 +1389,7 @@ describe("a forbidden-text finding", () => {
   it("returns the offending line to a caller", async () => {
     const root = await newTempDir();
     const body = TECH_TEMPLATE.replace(
-      /^- `<package>`\n {2}- `<what the project uses it for>`\n/m,
+      /^- `<example: yaml>`\n {2}- <example: Parses the configuration file\.>\n/m,
       "- `zod`\n  - validation\n- `react` 18.3.1\n  - ui\n",
     );
     await writeTech(root, body);
@@ -1404,6 +1405,76 @@ describe("a forbidden-text finding", () => {
         .filter((v: { rule: string }) => v.rule === "forbidden-text")
         .map((v: { line: number; column: number }) => [v.line, v.column]),
     ).toEqual([[expected, 1]]);
+  });
+});
+
+describe("a required-text finding", () => {
+  const TECH_SCHEMA = readFileSync(
+    path.join(REPO_ROOT, "packages/qfai/assets/mdschema/story/03_contract/tech.mdschema.yml"),
+    "utf-8",
+  );
+  const FORMAT = "(?m)^- Format: `";
+  const lineOf = (pattern: string, section = "Standard commands (copy-paste)"): string =>
+    `  ✗ 36:4 [required-text] Required text '${pattern}' not found in section '${section}'`;
+
+  // QFAI:EX-0001-0011-19
+  it("reads the example of each required-text rule", () => {
+    const commands = sectionDescriptions(TECH_SCHEMA).find(
+      (entry: { pattern: string }) =>
+        entry.pattern === String.raw`^## Standard commands \(copy-paste\)$`,
+    );
+    expect(commands?.examples).toContainEqual({
+      pattern: FORMAT,
+      example: "- Format: `pnpm prettier --check .`",
+    });
+    const stack = sectionDescriptions(TECH_SCHEMA).find(
+      (entry: { pattern: string }) => entry.pattern === "^## Stack$",
+    );
+    expect(stack?.examples).toContainEqual({
+      pattern: String.raw`(?m)^\|[ \t]*Runtime[ \t]*\|`,
+      example: "| Runtime | `Node.js 22` |",
+    });
+  });
+
+  // QFAI:EX-0001-0011-19
+  it("shows the rule's example line in place of the pattern", () => {
+    const explained = explainRequiredText(lineOf(FORMAT), TECH_SCHEMA);
+
+    expect(explained).toBe(
+      "  ✗ 36:4 [required-text] Section 'Standard commands (copy-paste)' lacks a line the schema requires, for example: - Format: `pnpm prettier --check .`",
+    );
+  });
+
+  // QFAI:EX-0001-0011-21
+  it("keeps the pattern where the rule gives no example, or the section is not the rule's", () => {
+    const noExample = TECH_SCHEMA.replace(/^ +example: '- Format: .*\n/m, "");
+    expect(noExample).not.toBe(TECH_SCHEMA);
+    expect(explainRequiredText(lineOf(FORMAT), noExample)).toBe(lineOf(FORMAT));
+    expect(explainRequiredText(lineOf(FORMAT, "Stack"), TECH_SCHEMA)).toBe(lineOf(FORMAT, "Stack"));
+  });
+
+  // QFAI:EX-0001-0011-19
+  it("is reported by the lane with the example, and as the pattern behind --show-patterns", async () => {
+    const root = await newTempDir();
+    const template = readFileSync(
+      path.join(
+        REPO_ROOT,
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md",
+      ),
+      "utf-8",
+    ).replace(/\r\n/g, "\n");
+    const dir = path.join(root, ".qfai", "contracts");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "tech.md"), template.replace(/^- Format: .*\n/m, ""), "utf-8");
+    const file = ".qfai/contracts/tech.md";
+
+    const explained = runDriver(["--root", root, "--scope", "files", file]);
+    const raw = runDriver(["--root", root, "--scope", "files", "--show-patterns", file]);
+
+    expect(explained.status).toBe(1);
+    expect(explained.stderr).toContain("for example: - Format: `pnpm prettier --check .`");
+    expect(explained.stderr).not.toContain("Required text");
+    expect(raw.stderr).toContain("Required text '(?m)^- Format: `'");
   });
 });
 

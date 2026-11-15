@@ -85,7 +85,7 @@
  *   node scripts/check-mdschema.mjs --scope all --summary
  *   node scripts/check-mdschema.mjs --base <ref>         # ratchet against <ref>
  *   node scripts/check-mdschema.mjs --scope files a.md b.md
- *   node scripts/check-mdschema.mjs --scope all --show-patterns  # the pattern behind each forbidden-text finding
+ *   node scripts/check-mdschema.mjs --scope all --show-patterns  # the pattern behind each forbidden-text and required-text finding
  *   node scripts/check-mdschema.mjs --root <dir> --scope all   # another tree
  *   node scripts/check-mdschema.mjs --tools <dir> --scope all  # mdschema installed under <dir>
  *
@@ -856,7 +856,7 @@ function mdschemaResult(result, schemaPath) {
   return {
     ok: result.status === 0,
     spawnFailed: false,
-    output: showPatterns ? output : explainForbiddenText(output, readFileSync(schemaPath, "utf-8")),
+    output: showPatterns ? output : explainFindings(output, readFileSync(schemaPath, "utf-8")),
   };
 }
 
@@ -1060,28 +1060,54 @@ let showPatterns = false;
 const FORBIDDEN_TEXT_MESSAGE = /^Forbidden text '(.*)' found in section '([^']*)'$/u;
 
 /**
- * The heading entries of a schema with the description each declares.
+ * The heading entries of a schema with the description each declares, and the
+ * example line each of its required-text rules gives.
  *
  * Read with a line scanner, for the reason {@link rootHeadingPattern} is: the
  * schemas are fixed shapes authored here, and this script runs before anything
  * beyond the root devDependencies is installed. A description is a plain value
- * or a folded or literal block.
+ * or a folded or literal block. An example is the optional `example:` key of a
+ * `required_text` item, a quoted or plain value on one line; mdschema ignores
+ * the key.
+ *
+ * A key belongs to the heading entry read last, so a schema writes a section's
+ * own keys before its `children:`.
  *
  * @param {string} schemaText
- * @returns {{ pattern: string, regex: boolean, description: string }[]}
+ * @returns {{ pattern: string, regex: boolean, description: string, examples: { pattern: string, example: string }[] }[]}
  */
 export function sectionDescriptions(schemaText) {
   const lines = schemaText.split(/\r?\n/);
   const entries = [];
   let current = null;
+  /** The indent of the `required_text:` key being read, or -1 outside one. */
+  let requiredIndent = -1;
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
     if (/^\s*-\s+heading:\s*$/.test(raw)) {
-      current = { pattern: "", regex: false, description: "" };
+      current = { pattern: "", regex: false, description: "", examples: [] };
       entries.push(current);
+      requiredIndent = -1;
       continue;
     }
     if (current === null) continue;
+    const key = /^(\s*)([a-z_]+):/.exec(raw);
+    if (key !== null && key[1].length <= requiredIndent) requiredIndent = -1;
+    if (key !== null && key[2] === "required_text") {
+      requiredIndent = key[1].length;
+      continue;
+    }
+    if (requiredIndent >= 0) {
+      const item = /^\s*-\s+pattern:\s*(.*?)\s*$/.exec(raw);
+      if (item !== null) {
+        current.examples.push({ pattern: yamlScalar(item[1]), example: "" });
+        continue;
+      }
+      const example = /^\s+example:\s*(.*?)\s*$/.exec(raw);
+      const last = current.examples.at(-1);
+      if (example !== null && last !== undefined) last.example = yamlScalar(example[1]);
+      continue;
+    }
     const pattern = /^\s+pattern:\s*(?:"([^"]*)"|'([^']*)'|(\S+))\s*$/.exec(raw);
     if (pattern !== null && current.pattern === "") {
       current.pattern = pattern[1] ?? pattern[2] ?? pattern[3] ?? "";
@@ -1116,21 +1142,114 @@ export function sectionDescriptions(schemaText) {
  */
 function sectionDescription(entries, name) {
   for (const entry of entries) {
-    if (entry.description === "") continue;
-    for (let level = 1; level <= 6; level++) {
-      const heading = `${"#".repeat(level)} ${name}`;
-      let matches;
-      try {
-        matches = entry.regex
-          ? new RegExp(entry.pattern, "u").test(heading)
-          : entry.pattern === heading;
-      } catch {
-        matches = false;
-      }
-      if (matches) return entry.description;
-    }
+    if (entry.description !== "" && namesSection(entry, name)) return entry.description;
   }
   return null;
+}
+
+/**
+ * Whether the heading entry's pattern matches a heading of any level named `name`.
+ *
+ * @param {{ pattern: string, regex: boolean }} entry
+ * @param {string} name the heading text, without its `#` marks
+ * @returns {boolean}
+ */
+function namesSection(entry, name) {
+  for (let level = 1; level <= 6; level++) {
+    const heading = `${"#".repeat(level)} ${name}`;
+    try {
+      if (entry.regex ? new RegExp(entry.pattern, "u").test(heading) : entry.pattern === heading) {
+        return true;
+      }
+    } catch {
+      // A pattern JavaScript refuses names no section here.
+    }
+  }
+  return false;
+}
+
+/**
+ * The example line the schema gives for the required-text rule `pattern` of the
+ * section named `name`, or `null`.
+ *
+ * @param {{ pattern: string, regex: boolean, examples: { pattern: string, example: string }[] }[]} entries
+ * @param {string} name the heading text, without its `#` marks
+ * @param {string} pattern the rule's pattern, as mdschema prints it
+ * @returns {string | null}
+ */
+function requiredTextExample(entries, name, pattern) {
+  for (const entry of entries) {
+    const found = entry.examples.find((rule) => rule.pattern === pattern && rule.example !== "");
+    if (found !== undefined && namesSection(entry, name)) return found.example;
+  }
+  return null;
+}
+
+/**
+ * The value of a one-line YAML scalar: single-quoted, with `''` for a quote;
+ * double-quoted, with the escapes JSON shares with YAML; or plain.
+ *
+ * SIMPLIFIED: a double-quoted value holding an escape only YAML has is kept as
+ * written, and a plain value is not read past a comment or a flow indicator.
+ * Lift when: a schema's required-text pattern or example needs such a value.
+ *
+ * @param {string} text the value as written after the key
+ * @returns {string}
+ */
+function yamlScalar(text) {
+  const single = /^'((?:[^']|'')*)'$/u.exec(text);
+  if (single !== null) return single[1].replaceAll("''", "'");
+  if (/^".*"$/u.test(text)) {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text.slice(1, -1);
+    }
+  }
+  return text;
+}
+
+/** A required-text finding: the pattern that found nothing and the section it looked in. */
+const REQUIRED_TEXT_MESSAGE = /^Required text '(.*)' not found in section '([^']*)'$/u;
+
+/**
+ * Rewrites the required-text findings in one batch of `mdschema check` output
+ * so each shows a line of the shape the section lacks, from the rule's
+ * `example:`, instead of the pattern that found nothing. A rule with no example
+ * keeps the pattern, because it is all there is to say.
+ *
+ * @param {string} output
+ * @param {string} schemaText
+ * @returns {string}
+ */
+export function explainRequiredText(output, schemaText) {
+  const entries = sectionDescriptions(schemaText);
+  return output
+    .split(/\r?\n/)
+    .map((line) => {
+      const found = VIOLATION_LINE.exec(line);
+      const required =
+        found !== null && found[3] === "required-text"
+          ? REQUIRED_TEXT_MESSAGE.exec(found[4])
+          : null;
+      const example =
+        required === null ? null : requiredTextExample(entries, required[2], required[1]);
+      if (found === null || required === null || example === null) return line;
+      return `  ✗ ${found[1]}:${found[2]} [required-text] Section '${required[2]}' lacks a line the schema requires, for example: ${example}`;
+    })
+    .join("\n");
+}
+
+/**
+ * One batch of `mdschema check` output with each forbidden-text and
+ * required-text finding stated in the schema's own words.
+ *
+ * @param {string} output
+ * @param {string} schemaText
+ * @returns {string}
+ */
+export function explainFindings(output, schemaText) {
+  return explainRequiredText(explainForbiddenText(output, schemaText), schemaText);
 }
 
 /**
