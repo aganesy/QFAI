@@ -477,6 +477,8 @@
     "tests/validators/uiPrototypeMode.test.ts",
     "tests/validators/uiScreenSurface.test.ts",
     "tests/integration/uiScreenSurface.test.ts",
+    "tests/validators/uiScreenCompleteness.test.ts",
+    "tests/integration/uiScreenCompleteness.test.ts",
     "tests/validators/uiScreenOmitted.test.ts",
     "tests/integration/uiScreenOmitted.test.ts",
     "tests/validators/validatorReachability.test.ts",
