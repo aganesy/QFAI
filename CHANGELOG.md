@@ -266,6 +266,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   cites that file. Before, the answer lived only in the result message, which
   context compaction shortened to a line. Closes #4407.
 
+- **`QFAI-UITEXT-001` says what it reads.** The finding's fix text and the
+  implementer guidance say that the check reads only literal text, and that
+  moving a sentence into a constant, a prop or an attribute value is not a fix:
+  the product-surface review still judges that copy.
+
 ### Fixed
 
 - **The search-protection hook reads a search that a program runner or a piped
