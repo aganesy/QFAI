@@ -13,6 +13,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **A `Derived (not stored)` declaration for a value no DB column holds is
+  accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
+  credits each declared value that the API contract requires through an `enum`
+  on the field, as the reference describes for a status computed at read time.
+  A value only in a description is still reported, and the message now says the
+  API contract declares no `enum` for it.
+
+### Changed
+
+- **The interface-clarity cut is judged with production-sized data.** The test
+  in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
+  user is worse off) is asked with the volume of data the screen will hold in
+  production, not the test fixture, so a list control is not cut because a
+  five-row fixture does not need it.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
@@ -126,12 +141,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the key, whatever its value, is ignored.
 
 ### Changed
-
-- **The interface-clarity cut is judged with production-sized data.** The test
-  in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
-  user is worse off) is asked with the volume of data the screen will hold in
-  production, not the test fixture, so a list control is not cut because a
-  five-row fixture does not need it.
 
 - **`ui-procurement.md` checks runtime compatibility and tries a native
   element first.** A new rung before the design system asks whether a native
@@ -428,13 +437,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the project would adopt.
 
 ### Fixed
-
-- **A `Derived (not stored)` declaration for a value no DB column holds is
-  accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
-  credits each declared value that the API contract requires through an `enum`
-  on the field, as the reference describes for a status computed at read time.
-  A value only in a description is still reported, and the message now says the
-  API contract declares no `enum` for it.
 
 - **The search-protection hook ends a PowerShell statement at a lone carriage
   return.** PowerShell ends a statement and a `#` line comment at a carriage
