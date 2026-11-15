@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The search-protection hook allows a search scoped inside the project.** A
+  grep, rg, git grep, Select-String, findstr or native search call that names
+  at least one path, every one inside the project root, now runs. A search with
+  no path, one over the project root itself (such as `.`), and one whose path
+  the hook cannot place inside the project are still redirected to the graph.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

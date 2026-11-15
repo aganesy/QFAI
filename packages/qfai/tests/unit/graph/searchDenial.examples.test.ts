@@ -13,10 +13,14 @@ import {
 // QFAI:EX-0001-0235-01
 // Mutation: packages/qfai/src/core/graph/hooks.ts `function denyExploration(operation: string, target: string): GraphHookDecision {` -> `function denyExploration(operation: string, target: string): GraphHookDecision { return { decision: "allow", state: "configured", operation, target, message: "Exploration allowed." };` fails "denies rg exploration and redirects code structure with recovery"
 it("denies rg exploration and redirects code structure with recovery", () => {
-  const result = classifyGraphExploration({ tool: "Bash", command: "rg auth packages/" });
+  const result = classifyGraphExploration(
+    { tool: "Bash", command: "rg auth", cwd: path.resolve("project-root") },
+    undefined,
+    path.resolve("project-root"),
+  );
   expect(result.decision).toBe("deny");
   expect(result.operation).toBe("rg");
-  expect(result.target).toBe("packages/");
+  expect(result.target).toBe(".");
   expect(result.domain).toBe("code");
   expect(result.message).toContain("rg");
   expect(result.message).toContain("CodeGraph");
@@ -428,7 +432,11 @@ it("denies native search events through host-specific pre-tool responses", async
         reason: "worktree differs",
       },
     ]) {
-      const denied = await installedGraphHookResult(root, { ...events[0], ...identity.fields });
+      const denied = await installedGraphHookResult(root, {
+        tool_name: "Grep",
+        tool_input: { pattern: "authorize" },
+        ...identity.fields,
+      });
       expect(denied.output).toContain(identity.reason);
       expect(denied.output).not.toContain("fallback --attempt-id");
       expect(denied.output).not.toContain("Observed attempt:");
@@ -539,10 +547,15 @@ it("denies git grep exploration before execution", () => {
 // QFAI:EX-0001-0235-02
 // Mutation: packages/qfai/src/core/graph/hooks.ts `function denyExploration(operation: string, target: string): GraphHookDecision {` -> `function denyExploration(operation: string, target: string): GraphHookDecision { return { decision: "allow", state: "configured", operation, target, message: "Exploration allowed." };` fails "denies recursive grep over specifications and redirects document rationale"
 it("denies recursive grep over specifications and redirects document rationale", () => {
-  const result = classifyGraphExploration({ tool: "Bash", command: "grep -R policy .qfai/spec" });
+  const root = path.resolve("project-root");
+  const result = classifyGraphExploration(
+    { tool: "Bash", command: "grep -R policy .qfai/spec/*.md", cwd: root },
+    undefined,
+    root,
+  );
   expect(result.decision).toBe("deny");
   expect(result.operation).toBe("grep");
-  expect(result.target).toBe(".qfai/spec");
+  expect(result.target).toBe(".qfai/spec/*.md");
   expect(result.domain).toBe("documents");
   expect(result.message).toContain("Graphify");
   expect(result.message).toContain("Prepare");
@@ -1231,4 +1244,104 @@ it("ends a PowerShell statement and line comment at a lone carriage return", () 
   // same string runs nothing.
   const quoted = "Write-Output 'a\rrg auth packages/'";
   expect(classifyGraphExploration({ tool: "PowerShell", command: quoted }).decision).toBe("allow");
+});
+
+const projectRoot = path.resolve("project-root");
+
+function classifyInProject(event: { tool: string; command?: string; path?: string }) {
+  return classifyGraphExploration({ ...event, cwd: projectRoot }, undefined, projectRoot);
+}
+
+// QFAI:EX-0001-0235-36
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!redefined && insideProject(context.root, searchBase(context), searchPaths(words)))` -> `if (false)` fails "allows a direct search scoped to a path inside the project"
+it("allows a direct search scoped to a path inside the project", () => {
+  for (const [tool, command] of [
+    ["Bash", "grep -n foo packages/qfai/src"],
+    ["Bash", "grep -rn foo packages/qfai/src"],
+    ["Bash", "command grep -n foo packages/qfai/src"],
+    ["Bash", "cd ./packages && rg foo qfai/src"],
+    ["Bash", "git grep -n foo -- packages/qfai/src"],
+    ["PowerShell", "Select-String -Pattern foo -Path packages/qfai/src/index.ts"],
+    ["PowerShell", "findstr /S /N foo packages\\qfai\\src\\index.ts"],
+  ] as const) {
+    const result = classifyInProject({ tool, command });
+    expect(result.decision, command).toBe("allow");
+    expect(result.state, command).toBe("configured");
+  }
+  // Without a known project root, nothing is scoped.
+  expect(
+    classifyGraphExploration({ tool: "Bash", command: "grep -n foo packages/qfai/src" }).decision,
+  ).toBe("deny");
+});
+
+// QFAI:EX-0001-0235-37
+// Mutation: packages/qfai/src/core/graph/hooks.ts `return paths.every((operand) => {` -> `return paths.some((operand) => {` fails "allows a search over several paths only when every path lies inside the project"
+it("allows a search over several paths only when every path lies inside the project", () => {
+  for (const command of ["rg foo src/a.ts docs/", "rg -n -e foo -- src/a.ts docs/"]) {
+    expect(classifyInProject({ tool: "Bash", command }).decision, command).toBe("allow");
+  }
+  for (const command of [
+    "rg foo src/a.ts ../elsewhere",
+    `rg foo src/a.ts '${path.dirname(projectRoot)}'`,
+  ]) {
+    expect(classifyInProject({ tool: "Bash", command }).decision, command).toBe("deny");
+  }
+});
+
+// QFAI:EX-0001-0235-38
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (event.path !== undefined && insideProject(root, base, [event.path]))` -> `if (false)` fails "allows a native search tool call whose path lies inside the project"
+it("allows a native search tool call whose path lies inside the project", () => {
+  for (const target of ["packages/qfai/src", path.join(projectRoot, "docs")]) {
+    expect(classifyInProject({ tool: "Grep", path: target }).decision, target).toBe("allow");
+  }
+  expect(classifyInProject({ tool: "Grep", path: "../elsewhere" }).decision).toBe("deny");
+});
+
+// QFAI:EX-0001-0235-39
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!root || !base || !paths || paths.length === 0) return false;` -> `if (!root || !base || !paths) return false;` fails "denies a search that names no path"
+it("denies a search that names no path", () => {
+  for (const event of [
+    { tool: "Bash", command: "grep -rn foo" },
+    { tool: "Bash", command: "rg foo" },
+    { tool: "Grep" },
+  ]) {
+    const result = classifyInProject(event);
+    expect(result.decision, event.command ?? event.tool).toBe("deny");
+    expect(result.target, event.command ?? event.tool).toBe(".");
+    expect(result.message, event.command ?? event.tool).toContain("CodeGraph");
+  }
+});
+
+// QFAI:EX-0001-0235-40
+// Mutation: packages/qfai/src/core/graph/hooks.ts `return path.relative(root, target) !== "" && !outside(root, target);` -> `return !outside(root, target);` fails "denies a search over the project root itself or over a path it cannot read"
+it("denies a search over the project root itself or over a path it cannot read", () => {
+  for (const event of [
+    { tool: "Bash", command: "rg foo ." },
+    { tool: "Bash", command: "grep -rn foo ./" },
+    { tool: "Bash", command: `rg foo '${projectRoot}'` },
+    { tool: "Bash", command: "rg foo src ." },
+    { tool: "Grep", path: "." },
+    { tool: "Grep", path: projectRoot },
+    { tool: "Bash", command: "rg foo $DIR" },
+    { tool: "Bash", command: "rg foo src/*.ts" },
+    { tool: "Bash", command: "rg foo src/../.." },
+    { tool: "Bash", command: "rg foo ~/src" },
+    { tool: "Bash", command: "rg --unknown foo src" },
+    { tool: "Bash", command: "cd $X && rg foo src" },
+    { tool: "Bash", command: "alias rg=cat; rg foo src" },
+    { tool: "Bash", command: "git grep foo src" },
+    { tool: "Bash", command: "git grep foo HEAD -- src" },
+    { tool: "PowerShell", command: "Select-String -Pattern foo -Path src/a.ts,../b.ts" },
+  ]) {
+    expect(classifyInProject(event).decision, event.command ?? event.path).toBe("deny");
+  }
+});
+
+// QFAI:EX-0001-0235-41
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!redefined && pipeFilter(words) && printsText(upstream)) return undefined;` -> `` fails "keeps a search that filters piped text allowed inside a known project"
+it("keeps a search that filters piped text allowed inside a known project", () => {
+  for (const command of ["git log --oneline | grep foo", "git ls-files | rg -n foo"]) {
+    expect(classifyInProject({ tool: "Bash", command }).decision, command).toBe("allow");
+    expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
+  }
 });

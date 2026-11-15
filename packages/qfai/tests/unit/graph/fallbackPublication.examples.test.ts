@@ -63,7 +63,7 @@ it("publishes no search grant after detected prepublication state or lock failur
       );
       const event = {
         tool_name: "Bash",
-        tool_input: { command: "rg legacy packages/" },
+        tool_input: { command: "rg legacy" },
         session_id: "publication-session",
         cwd: fixture.root,
       };
