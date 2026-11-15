@@ -300,6 +300,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-040",
     "QFAI-CONTRACT-041",
     "QFAI-CONTRACT-051",
+    "QFAI-CONTRACT-052",
     "QFAI-DB-*",
   ],
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
@@ -1213,6 +1214,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
   "QFAI-CONTRACT-051":
     "Every `surface` a UI contract screen declares is `application` or `marketing`, so the screen is built and reviewed against a pattern list that exists. A screen that declares no surface is an application screen.",
+  "QFAI-CONTRACT-052":
+    "Every `omitted` list a UI contract screen declares is a list of mappings, each with a non-blank `part` naming a part the screen leaves out and a non-blank `reason` saying why, so a reviewer can tell a deliberate omission from a missing part.",
   "QFAI-UITEXT-001":
     "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert or the like) or has a `qfai-text` comment with `why` and `without` directly before it or before its parent element, or a `qfai-text-file` comment in its file gives it one.",
   "QFAI-UITEXT-002":

@@ -902,7 +902,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /Feedback after every change/,
         /A home whose one question/,
         /One shared component per repeated pattern/,
-        /needs a reason recorded in the UI contract/,
+        /needs a reason recorded in the `omitted` list/,
         /counts as asked for/,
       ]) {
         expect(text).toMatch(part);

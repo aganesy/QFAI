@@ -13,6 +13,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **A part a screen leaves out has one place for its reason.** The rule said
+  leaving out a part every business screen has needs a reason in the screen's
+  UI contract, but named no field for it, and the app shell, the home and the
+  shared components belong to no single screen. A reviewer could not tell a
+  deliberate omission from a missing part. A UI contract screen now takes an
+  optional `omitted` list of `{ part, reason }` entries, and the parts once per
+  application are listed on the home screen's contract until an app-level UI
+  contract exists. `qfai validate` reports an `omitted` that is not a list, and
+  an entry with no `part` or no `reason`, as `QFAI-CONTRACT-052` at error. The
+  rule, the UI contract guide and template, the `sdd-contract` step and the
+  product-surface reviewer point at the list.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

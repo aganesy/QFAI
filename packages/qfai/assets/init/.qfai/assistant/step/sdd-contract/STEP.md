@@ -94,7 +94,8 @@ per application, and on each screen the list behaviour, the empty, loading,
 error and success states and the feedback after a change. Add each part that
 applies and is missing: navigation in the screen's `navigation`, and the rest
 as elements, actions and `supplements` entries with their `when`. Such a part needs no example of its own unless it carries a
-business rule. A part left out gets its reason in that screen's contract, as
+business rule. A part left out gets a `{ part, reason }` entry in that screen's `omitted`
+list, and a once-per-application part one in the home screen's contract, as
 the rule says.
 
 Then name each screen's type in
