@@ -35,17 +35,45 @@ user nothing.
 | G4  | Writes are disjoint, compared by read and write sets rather than by file name: production files, test files, fixtures, schema or database objects, generated assets, and shared resources such as ports |
 | G5  | No unit needs another unit's output                                                                                                                                                                     |
 | G6  | Each unit returns a small result: a diff on its owned paths with its selectors' results, or a cited answer                                                                                              |
+| G7  | Where two or more units are screen units, each builds only screen types that already have a page template, as "Screen units" below says                                                                 |
 
 Two units that write the same shared fixture or mock file, or mutate the same
 fixture instance, fail G4. A shared fixture module that both only read as-is
 does not fail it on its own. Where any condition is uncertain, the units run
 serially.
 
+## Screen units
+
+A screen unit is a story unit that builds an application screen. Disjoint
+writes do not stop two screen units from each authoring their own list toolbar,
+page header, back link and status badges. Before two or more screen units fan
+out, the session agent lands a foundation unit itself, from the component
+catalogue where an entry fits and extracted once where none does:
+
+- the app shell;
+- a page template for each screen type the units build, such as list, detail,
+  form, settings and dashboard, and no other;
+- the status map that gives each status its label and badge;
+- the list behaviour the list screens share: search or filter, sort, the count
+  and pagination.
+
+The session agent lands the foundation before the fan-out, so it is neither a
+parallel unit under G1 nor another unit's output under G5. The screen units
+read it as-is, which does not fail G4.
+
+Among two or more screen units, one whose screen type has no page template yet
+fails G7. Landing the missing template in the foundation clears that failure;
+the units then fan out as before, not serially. A parallel split with no screen
+unit, or with one screen unit, needs no foundation unit.
+
 ## Briefing a unit
 
 Give each worker a self-contained brief, never a fork of the session's
 conversation: the step files to run, the story-tree IDs, the exact owned-path
 list (empty for a lookup), the checks to run and the shape of its answer.
+A screen unit's brief also names the page templates and the
+`.qfai/catalog/components.yaml` entries it uses; the unit builds on them and
+does not author those regions again.
 Give each a checkout assigned by the host. Use separate worktrees when the host
 supports editing them; otherwise use the existing shared-index mode in
 `.qfai/assistant/rule/workflow.md#concurrency-every-stage`.

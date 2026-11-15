@@ -95,8 +95,24 @@ error and success states and the feedback after a change. Add each part that
 applies and is missing: navigation in the screen's `navigation`, the list
 behaviour in the `list` of the list or table element, and the rest
 as elements, actions and `supplements` entries with their `when`. Such a part needs no example of its own unless it carries a
-business rule. A part left out gets its reason in that screen's contract, as
-the rule says.
+business rule. A part of one screen left out gets its reason in that screen's
+contract, as the rule says; a once-per-application part's goes in the app frame
+below.
+
+The app shell, the navigation for each role and the home belong to no single
+flow, so one UI contract, the app frame, holds them. When no UI contract holds
+the shell or records why the application has none, write the frame with the
+flow at hand: the shell with its navigation for each role as one screen and the
+home as another, each with its `purpose`, `navigation`, `primary_tasks` and
+`states` like any screen. The shell screen says `none` in its own `shell`; the
+home's type is Dashboard, and the shell has no business type. Every other
+application screen that renders inside the shell names the frame's shell screen
+in `navigation.shell`; a screen with no frame, such as a sign-in page, says so.
+A later flow adds its entry points to the frame's navigation and leaves the
+rest of the frame as it is. A once-per-application part the project leaves out,
+the shell included, gets its reason in the frame. Settings, member management
+and notifications become frame screens only when a story needs them; this step
+adds none on its own.
 
 Then name each screen's type in
 `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` and write
