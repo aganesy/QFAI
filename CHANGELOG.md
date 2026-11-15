@@ -4,7 +4,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The contract step writes the app frame once.** The app shell, the
+  navigation for each role and the home belong to no single flow, so
+  `sdd-contract` writes them as the screens of one UI contract, the app frame,
+  when no UI contract holds the shell or records why the application has none.
+  Every application screen inside the shell names the frame's shell screen in
+  `navigation.shell`, and prototyping reads the frame with every flow. A once-per-application
+  part the project leaves out records its reason in the frame, and
+  `interface-clarity.md` and `product-surface-reviewer` read the reason there.
+  Settings, member management and notifications are added only when a story
+  needs them.
+
 ### Changed
+
+- **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
+  examples are green, each screen the flow adds or changes is placed in the
+  shell its UI contract names, linked from its entry points, built from shared
+  components for the parts the screens repeat, and captured. The flow is not
+  done until that is so.
 
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
@@ -12,6 +31,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Such a feature routes `prototype-feature`. A control added to an existing
   screen in that screen's style still routes `add-feature` unless the request
   leaves its look open.
+
+- **Parallel screen units start from a shared foundation.** Disjoint writes no
+  longer let two or more parallel story units that build application screens
+  each author their own list toolbar, page header, back link and status
+  badges. Before they fan out, the session agent lands a foundation unit: the
+  app shell, a page template for each screen type the units build, the status
+  map and the shared list behaviour, from the component catalogue or extracted
+  once. A new parallel-unit gate condition, G7, fails a screen unit whose
+  screen type has no template yet, and each screen unit's brief names the
+  templates and catalogue entries it uses. A split with fewer than two screen
+  units is unaffected. Closes #4306.
+
+- **The interface-clarity cut is judged with production-sized data.** The test
+  in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
+  user is worse off) is asked with the volume of data the screen will hold in
+  production, not the test fixture, so a list control is not cut because a
+  five-row fixture does not need it.
 
 - **`validate.json` names the UI/UX check times for how they ran.**
   `familyTimings.overlapping` becomes `familyTimings.uiux`, with
@@ -33,6 +69,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **A `Derived (not stored)` declaration for a value no DB column holds is
+  accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
+  credits each declared value that the API contract requires through an `enum`
+  on the field, as the reference describes for a status computed at read time.
+  A value only in a description is still reported, and the message now says the
+  API contract declares no `enum` for it.
+
 - **`qfai validate --timings` times each UI/UX check on its own.** The six
   UI/UX checks ran side by side, so a check that waited on file reads was
   charged for the others' work and the `slowest` names could point at a check
@@ -42,19 +85,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   own, as part of the group's time. A run without `--timings` still runs them
   side by side, and the findings and counts are the same either way.
   Fixes #4279.
-
-### Changed
-
-- **Parallel screen units start from a shared foundation.** Disjoint writes no
-  longer let two or more parallel story units that build application screens
-  each author their own list toolbar, page header, back link and status
-  badges. Before they fan out, the session agent lands a foundation unit: the
-  app shell, a page template for each screen type the units build, the status
-  map and the shared list behaviour, from the component catalogue or extracted
-  once. A new parallel-unit gate condition, G7, fails a screen unit whose
-  screen type has no template yet, and each screen unit's brief names the
-  templates and catalogue entries it uses. A split with fewer than two screen
-  units is unaffected. Closes #4306.
 
 ## [2.5.0] - 2026-11-15
 
@@ -169,12 +199,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the key, whatever its value, is ignored.
 
 ### Changed
-
-- **The interface-clarity cut is judged with production-sized data.** The test
-  in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
-  user is worse off) is asked with the volume of data the screen will hold in
-  production, not the test fixture, so a list control is not cut because a
-  five-row fixture does not need it.
 
 - **`ui-procurement.md` checks runtime compatibility and tries a native
   element first.** A new rung before the design system asks whether a native
@@ -471,13 +495,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the project would adopt.
 
 ### Fixed
-
-- **A `Derived (not stored)` declaration for a value no DB column holds is
-  accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
-  credits each declared value that the API contract requires through an `enum`
-  on the field, as the reference describes for a status computed at read time.
-  A value only in a description is still reported, and the message now says the
-  API contract declares no `enum` for it.
 
 - **The search-protection hook ends a PowerShell statement at a lone carriage
   return.** PowerShell ends a statement and a `#` line comment at a carriage

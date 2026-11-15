@@ -292,6 +292,23 @@ describe("implement-tdd", () => {
     expect(align).toMatch(/run the project's generation or synchronisation command/i);
     expect(align).toMatch(/change nothing on the surface that owns the truth/i);
   });
+
+  it("assembles a UI-affecting flow's screens into the product before the flow is done", async () => {
+    const text = await stepText("implement-tdd");
+    const assemble = flat(sectionOf(text, "## Assemble the flow's screens"));
+    expect(assemble).toMatch(/shell its UI contract's `navigation\.shell` names/i);
+    expect(assemble).toMatch(/through the app's own links, not only by its URL/i);
+    expect(assemble).toMatch(/each part the flow's screens repeat one shared component/i);
+    // A rerun whose examples are already annotated does not skip the assembly.
+    expect(flat(sectionOf(text, "## Passes when"))).toMatch(
+      /for a UI-affecting flow, its screens are already assembled and captured/i,
+    );
+    expect(assemble).toMatch(/capture each changed route/i);
+    expect(assemble).toMatch(/raised as drift/i);
+    expect(flat(sectionOf(text, "## Gate"))).toMatch(
+      /for a UI-affecting flow, its screens are assembled and captured/i,
+    );
+  });
 });
 
 async function procedureText(): Promise<string> {
