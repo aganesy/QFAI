@@ -171,6 +171,19 @@ describe("layout and data display tokens", () => {
 
 describe("hex literals in source", () => {
   // QFAI:EX-0001-0312-09
+  it("reads a Vue bound attribute by its name: a colour one is a colour place, another is not", () => {
+    const found = findRawHexes(
+      [
+        `<a :href="'#bad'">x</a>`,
+        `<a v-bind:aria-controls="'#bad'">x</a>`,
+        `<path :fill="'#12ab56'" />`,
+        `<path v-bind:stroke="'#12ab56'" />`,
+      ].join("\n"),
+    );
+    expect(found.map((hex) => hex.line)).toEqual([3, 4]);
+  });
+
+  // QFAI:EX-0001-0312-09
   it("reads a colour attribute only by its whole name", () => {
     const found = findRawHexes(
       [

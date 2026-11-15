@@ -279,6 +279,7 @@ describe("a hex colour in UI source that matches no token is a warning", () => {
         "export const f = <p>Order #12ab</p>;",
         'export const g = <path fill="url(#fade)" />;',
         'export const h = <rect data-color="#12ab56" />;',
+        `export const i = '<a :href="\\'#bad\\'">x</a>';`,
         "",
       ].join("\n"),
     });

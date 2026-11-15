@@ -943,9 +943,26 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     if ("error" in layout) return { error: layout.error };
     value.layout = layout.value;
   }
-  const breaker = findCssBreaker(value);
+  const breaker = findCssBreaker(value) ?? findOverflowingNumber(value);
   if (breaker) return { error: breaker };
   return { value };
+}
+
+/**
+ * The first theme-bound value holding a number too long to read as one, such as a length of
+ * hundreds of digits. The token file would state it as no number at all.
+ */
+function findOverflowingNumber(visual: DesignMd["visual"]): ParseError | null {
+  for (const [at, text] of themeBoundValues(visual)) {
+    const numbers = text.match(/\d*\.?\d+/g) ?? [];
+    if (numbers.every((written) => Number.isFinite(Number(written)))) continue;
+    return {
+      path: at,
+      code: "invalid-format",
+      message: `'${at}' holds a number too large to read.`,
+    };
+  }
+  return null;
 }
 
 /** Each `visual` string `qfai catalog design` writes into a `theme.css` declaration, by path. */

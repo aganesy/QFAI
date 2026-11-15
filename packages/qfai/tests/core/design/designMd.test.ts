@@ -1463,6 +1463,20 @@ describe("parseDesignMd: data_display", () => {
   });
 
   // QFAI:EX-0001-0312-04
+  it("rejects a theme-bound number too long to read as one", () => {
+    const result = parseDesignMd(
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "${"9".repeat(400)}rem"`,
+      ),
+    );
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.typography.scale.base",
+      code: "invalid-format",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
   it("rejects a repeated spacing step, which would name two tokens alike", () => {
     const result = parseDesignMd(
       withValue(

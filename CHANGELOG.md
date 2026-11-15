@@ -23,8 +23,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stack, type-scale size, `spacing.base`, radius, shadow, breakpoint or content
   width holding `;`, `{`, `}`, `/*` or `*/`, ending in a backslash, or leaving
   a bracket or quote open, now fails it, since the theme writes each into a CSS
-  declaration. So do a font weight outside 1 to 1000, a spacing step given
-  twice and a `target_min_px` too large to write without an exponent.
+  declaration. So do a number too long to read, a font weight outside 1 to
+  1000, a spacing step given twice and a `target_min_px` too large to write without an exponent.
 
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and

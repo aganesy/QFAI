@@ -119,16 +119,19 @@ const RAW_HEX_RE =
 // is not read after a `:`, so the path of a URL such as `https://` is not taken for a comment.
 const COMMENT_RE = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<!:)\/\/[^\n]*/g;
 /**
- * An attribute whose value is a colour: `style="color: #fff"`, `fill="#fff"`. The name starts the
- * line or follows whitespace, so `data-color="#fff"` is another attribute.
+ * An attribute whose value is a colour: `style="color: #fff"`, `fill="#fff"`, or one Vue binds,
+ * `:fill="'#fff'"`. The name starts the line or follows whitespace, so `data-color="#fff"` is
+ * another attribute. The value runs to the quote that opened it, so a quoted expression inside a
+ * bound value is still part of it.
  */
 const COLOR_ATTRIBUTE_RE =
-  /(?:^|\s)(?:style|fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*\{?\s*["'`][^"'`]*$/i;
+  /(?:^|\s)(?::|v-bind:)?(?:style|fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*\{?\s*(["'`])(?:(?!\1).)*$/i;
 /**
- * Any other attribute's value, such as `aria-controls="#bad"`: never a colour place. Markup writes
- * no space around an attribute's `=`, which keeps `const accent = "#fff"` a whole string literal.
+ * Any other attribute's value, such as `aria-controls="#bad"` or Vue's `:href="'#bad'"`: never a
+ * colour place. Markup writes no space around an attribute's `=`, which keeps
+ * `const accent = "#fff"` a whole string literal.
  */
-const OTHER_ATTRIBUTE_RE = /(?:^|\s)[\w-]+=\{?\s*["'`][^"'`]*$/;
+const OTHER_ATTRIBUTE_RE = /(?:^|\s)(?::|@|v-[\w-]+:)?[\w-]+=\{?\s*(["'`])(?:(?!\1).)*$/;
 /** A CSS declaration value: a `:` since the last `;`, `{` or `}` on the line. */
 const DECLARATION_RE = /:[^:;{}]*$/;
 
@@ -402,7 +405,8 @@ function parseDimension(css: string): Dimension | null {
   const amount = match?.[1];
   const unit = match?.[2];
   if (amount === undefined || (unit !== "px" && unit !== "rem")) return null;
-  return { value: Number(amount), unit };
+  const value = Number(amount);
+  return Number.isFinite(value) ? { value, unit } : null;
 }
 
 /** A length that may carry a sign, as a shadow's offsets and spread do. */
