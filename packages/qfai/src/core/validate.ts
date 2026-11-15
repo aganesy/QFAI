@@ -24,6 +24,7 @@ import { validateStoryPolicyPlaceholders } from "./validators/assistantAssets.js
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { issue } from "./validators/utils.js";
+import { mockMarkdownGlobs } from "./validators/htmlMockBlocks.js";
 import { sharedMarkdownFileReader } from "./validators/markdownFiles.js";
 import type {
   Issue,
@@ -51,6 +52,7 @@ import {
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateComponentCatalog } from "./validators/componentCatalog.js";
 import { validateUiPlainText } from "./validators/uiPlainText.js";
+import { validateUiAccessibilityLayer } from "./validators/uiAccessibilityLayer.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDiagramBudget } from "./validators/diagramBudget.js";
 import { validateDeliberationRecords } from "./validators/deliberationRecord.js";
@@ -97,7 +99,15 @@ const HTML_MOCK_VALIDATION_BUDGET_MS = 2000;
  * the host's speed into `counts.warning`; the sink keeps the signal without
  * letting it reach the issue stream.
  */
-type TimingsSink = { timings?: ValidationTimings; sequential: CheckClock; overlapping: CheckClock };
+type TimingsSink = {
+  timings?: ValidationTimings;
+  sequential: CheckClock;
+  uiux: CheckClock;
+  htmlMockLoadMs: number;
+  sharedMarkdownReadMs: number;
+  /** `--timings`: run the UI/UX checks one after another, so each time is that check's own work. */
+  uiuxOneAfterAnother: boolean;
+};
 
 /**
  * What each check took, keyed by the check, with the code families of the issues it returned.
@@ -107,8 +117,14 @@ type TimingsSink = { timings?: ValidationTimings; sequential: CheckClock; overla
  */
 type CheckClock = Map<string, { ms: number; families: Set<string> }>;
 
-function newTimingsSink(): TimingsSink {
-  return { sequential: new Map(), overlapping: new Map() };
+function newTimingsSink(uiuxOneAfterAnother: boolean): TimingsSink {
+  return {
+    sequential: new Map(),
+    uiux: new Map(),
+    htmlMockLoadMs: 0,
+    sharedMarkdownReadMs: 0,
+    uiuxOneAfterAnother,
+  };
 }
 
 /** The family a finding code belongs to, as users read it: `QFAI-CFG-LINK-002` is `CFG-LINK`. */
@@ -192,7 +208,7 @@ export async function validateProject(
     ...buildInstalledOlderIssues(olderThanDeclared),
     ...buildAssistantVersionIssues(assistantMismatch),
   ];
-  const timingsSink = newTimingsSink();
+  const timingsSink = newTimingsSink(options.familyTimings === true);
   const forbiddenIdentifiers = config.validation.forbiddenIdentifiers ?? [];
   const securityIssues =
     forbiddenIdentifiers.length > 0
@@ -290,7 +306,9 @@ export async function validateProject(
       ? {
           familyTimings: {
             sequential: labelCheckTimings(timingsSink.sequential),
-            overlapping: labelCheckTimings(timingsSink.overlapping),
+            uiux: labelCheckTimings(timingsSink.uiux),
+            htmlMockLoadMs: timingsSink.htmlMockLoadMs,
+            sharedMarkdownReadMs: timingsSink.sharedMarkdownReadMs,
           },
         }
       : {}),
@@ -761,6 +779,11 @@ async function runStoryProfileValidators(
           ...(await runPrototypingValidators(root, config, timings, platformOption)),
           ...(await atdd()),
           ...(await tdd(false, false)),
+          // Whether a project with web screens checks them for accessibility at all. Only a
+          // full scan reads both the UI contracts and every selected test file.
+          ...(await timed(timings, "accessibility-layer", () =>
+            validateUiAccessibilityLayer(root, config),
+          )),
           ...(await timed(timings, "prototyping-skill", () =>
             validatePrototypingSkill(root, config),
           )),
@@ -990,22 +1013,37 @@ async function runUiuxValidators(
   ];
   const uiuxParts: { name: string; ms: number }[] = [];
   const partIssues = new Map<string, Issue[]>();
-  const uiuxIssueGroups = await Promise.all(
-    uiuxValidators.map(async ([name, run]) => {
-      const start = performance.now();
-      const found = await run();
-      uiuxParts.push({ name, ms: performance.now() - start });
-      partIssues.set(name, found);
-      return found;
-    }),
-  );
+  const runPart = async ([name, run]: (typeof uiuxValidators)[number]): Promise<Issue[]> => {
+    const start = performance.now();
+    const found = await run();
+    uiuxParts.push({ name, ms: performance.now() - start });
+    partIssues.set(name, found);
+    return found;
+  };
+  // Side by side, each part's clock runs while the others work, so a part that waits on a read is
+  // charged for their time. `--timings` asks where the time goes, so it runs them one after
+  // another and each time is that part's own work. The findings are the same either way: the
+  // groups are kept in declaration order.
+  const uiuxIssueGroups: Issue[][] = [];
+  if (timings.uiuxOneAfterAnother) {
+    // Run one after another, the first check to ask for the shared Markdown would be charged for
+    // the read the others reuse, so the read is done first and reported on its own.
+    const readStart = performance.now();
+    await readMarkdown(mockMarkdownGlobs(root, config));
+    timings.sharedMarkdownReadMs += performance.now() - readStart;
+    for (const part of uiuxValidators) uiuxIssueGroups.push(await runPart(part));
+  } else {
+    uiuxIssueGroups.push(...(await Promise.all(uiuxValidators.map(runPart))));
+  }
   const uiuxIssues: Issue[] = [...platformResult.issues, ...uiuxIssueGroups.flat()];
 
-  // The html-mock part leaves out the one-off load of its parser, as `uiuxMs` does.
+  // The html-mock part leaves out the one-off load of its parser, as `uiuxMs` does; the load is
+  // reported once, on its own.
   const orderedParts = orderUiuxParts(uiuxParts, htmlMockTiming.loadMs);
   for (const part of orderedParts) {
-    recordCheck(timings.overlapping, part.name, part.ms, partIssues.get(part.name) ?? []);
+    recordCheck(timings.uiux, part.name, part.ms, partIssues.get(part.name) ?? []);
   }
+  timings.htmlMockLoadMs += htmlMockTiming.loadMs;
   // The group as one entry of the checks that ran one after another, so that list sums close to
   // the run. Its whole wall clock, the parser load included, because the run paid for it.
   recordCheck(timings.sequential, "uiux", performance.now() - uiuxStart, []);
@@ -1014,6 +1052,7 @@ async function runUiuxValidators(
     uiuxBudgetMs: UIUX_VALIDATION_BUDGET_MS,
     htmlMockMs: htmlMockTiming.parseMs,
     htmlMockBudgetMs: config.uiux?.htmlMockTimeout ?? HTML_MOCK_VALIDATION_BUDGET_MS,
+    uiuxPartsRun: timings.uiuxOneAfterAnother ? "one-after-another" : "side-by-side",
     uiuxParts: orderedParts,
   };
   return uiuxIssues;

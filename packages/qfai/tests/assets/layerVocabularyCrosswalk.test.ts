@@ -12,7 +12,7 @@ const read = (tree: string): Promise<string> => readFile(path.join(repoRoot, tre
 
 describe("story-tree test layer rule", () => {
   for (const tree of TREES) {
-    it(`${tree}: defines all five layers and their tags`, async () => {
+    it(`${tree}: defines all six layers and their tags`, async () => {
       const text = await read(tree);
       for (const [code, name, tag] of [
         ["L1", "Unit", "layer-unit"],
@@ -20,6 +20,7 @@ describe("story-tree test layer rule", () => {
         ["L3", "Integration", "layer-integration"],
         ["L4", "API", "layer-api"],
         ["L5", "E2E", "layer-e2e"],
+        ["L6", "Accessibility", "layer-accessibility"],
       ]) {
         expect(text).toContain(`### ${code} ${name}`);
         expect(text).toContain(`\`${tag}\``);

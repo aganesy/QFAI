@@ -24,6 +24,8 @@ The last step of a change route. It records the run's work as a local commit.
   that commit.
 - In the final report: the commit, and the files it holds. In the
   `resolve-conflicts` route, also each renumber the merge holds, as old → new.
+  Under a `testsPending` scope, also each pending `QFAI-STORY-006` obligation,
+  with its ID and flow, and that the implement stage writes those tests later.
 
 A local commit records work; it does not establish formal verification. Push,
 pull request creation and merge each need a user instruction or project policy
@@ -46,7 +48,8 @@ covering that action, target and scope. Commit authority alone covers none of th
    recorded `DELEGATED` does not stop the commit while its named CI check
    is pending under that authority. This permits that commit, not a
    verification-complete claim.
-   Every nondelegated gate must pass.
+   Every nondelegated gate must pass, except as the `testsPending` exception
+   at the end of this item says.
    A delegated red check stops transport of the same unchanged candidate.
    Under explicit delegation (CI-only or by instruction) covering the
    transport commit, the
@@ -59,6 +62,11 @@ covering that action, target and scope. Commit authority alone covers none of th
    CI results are observed. This exception covers neither an ordinary FAIL or
    UNRUN nor a locally runnable gate the agent delegates on its own judgment
    to avoid running it.
+   A QFAI gate `FAIL` whose only errors are the `QFAI-STORY-006` obligations
+   it listed `PENDING` under a `testsPending` scope, as `verify-qfai-gate`'s
+   `### Test obligations a scope leaves pending` says, does not stop the
+   commit. The gate stays `FAIL` in the report. Any other error of that gate
+   still stops the commit.
 2. Stage exactly the authorized tracked deliverables the run wrote, with
    `git add <those paths>`. Never `git add -A`, `git add .` or `git add -f`,
    and never a file git ignores, such as `.qfai/report/*`. A file that was
@@ -93,6 +101,9 @@ When the delegated check reports, `verify-repo-gate`'s `## After CI` updates the
 - Pending CI is named in the report with the target, current head, run ID or URL
   when available, check, observed outcome and counts, blocker and resume condition.
   If no run exists, say so; invent no run ID or result.
+- Each `QFAI-STORY-006` obligation the QFAI gate listed `PENDING` appears in
+  the final report as pending, saying that its test comes with the implement
+  stage.
 - The report names the verification commit, the commit `verify-repo-gate`'s
   `## After CI` compares against. With a delegated check pending, the resume
   condition reads: when `<check>` reports for `<head>`, follow

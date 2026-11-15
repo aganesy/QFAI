@@ -45,7 +45,7 @@ describe("AC-0001-0236-02", () => {
       ).toBe("Process-port DB marker");
       const event = {
         tool: "Bash",
-        command: "rg checkout packages/",
+        command: "rg checkout",
         cwd: fixture.root,
         session: "session",
       };
