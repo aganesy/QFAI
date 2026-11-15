@@ -22,7 +22,9 @@ The constraints a component must meet are rows of `01_policy/constraint.md`.
 The ladder decides where a region comes from, not whether it exists. A region
 the screen contract names is in scope, and so is a region its pattern implies,
 as `.agents/rules/interface-clarity.md#what-a-business-screen-always-has`
-lists them. Leaving an implied region out needs the reason in the screen's UI
+lists them for an application screen and
+`.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has` for a
+marketing screen. Leaving an implied region out needs the reason in the screen's UI
 contract. Dropping a region the contract names is a specification change for
 its owner rather than a choice made here.
 

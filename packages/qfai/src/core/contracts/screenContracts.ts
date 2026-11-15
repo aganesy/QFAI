@@ -86,10 +86,11 @@ export async function readUiContractScreenContracts(
  * Every UI contract file under `uiDir`, parsed, in the order the walk returns
  * them. A file that cannot be read or does not parse contributes nothing.
  *
- * One walk for the screen reader and for the report of the entries it leaves
- * out, so the two agree on which entry of a repeated `id` is the first.
+ * One walk for the screen reader, the report of the entries it leaves out and
+ * the surface check, so the three agree on which files are contracts and the
+ * first two on which entry of a repeated `id` is the first.
  */
-async function readUiContractDocuments(
+export async function readUiContractDocuments(
   uiDir: string,
   root: string,
 ): Promise<Array<{ relativePath: string; raw: string; parsed: unknown }>> {

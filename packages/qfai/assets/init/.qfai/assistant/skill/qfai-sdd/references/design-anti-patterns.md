@@ -68,6 +68,12 @@ naming the pattern is what works.
   flow_ and _States and accessibility_ do, `interface-clarity.md` and the spec
   are the rules. The entry is the form a breach of them takes on a generated
   screen.
+- On a screen whose UI contract declares `surface: marketing`, a part the
+  screen's UI contract names from its marketing pattern entry, such as a hero,
+  feature cards, a recommended pricing tier or text beside a labelled product
+  image, is not one of these patterns; only its default styling and its wording can be. What
+  such a screen always has is
+  `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`.
 - The reviewer inside the prototyping loop does not apply the sections about
   identity. Root `DESIGN.md` locks the brand values that reviewer sees, so a
   pattern there is caught where the design direction is reviewed and where

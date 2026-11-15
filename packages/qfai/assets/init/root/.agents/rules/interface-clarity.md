@@ -10,7 +10,8 @@ parameter the thing underneath happens to expose.
 
 The user arrived to do one task and has read nothing about the product. Leave
 what that person needs, and nothing else. What that person needs includes the
-standard parts of a business screen, listed near the end of this rule.
+standard parts of a business or a marketing screen, listed near the end of this
+rule.
 
 ## Scope
 
@@ -60,11 +61,19 @@ list is empty are the same clause. An empty state says what to do next: the
 action, or a short sentence naming it, that leads out of it, such as widening
 the search or adding the first item.
 
+A marketing page's copy is not interface explanation. On a screen whose UI
+contract declares `surface: marketing`, a part of its section's marketing
+pattern entry that its UI contract names, such as a hero's supporting sentence,
+a feature's short description or an FAQ answer, is content the page needs, not
+excess. Its wording is still judged: a sentence that only restates its heading
+adds no meaning. It carries its `qfai-text` or `qfai-text-file` reason.
+
 ## 3. Cut
 
 - A label that restates the control beside it.
 - A control nobody asked for, and every state it brings with it. A part listed
-  in `## What a business screen always has` counts as asked for.
+  in `## What a business screen always has` counts as asked for, and so does a
+  part of a marketing screen's pattern entry that its UI contract names.
 - Decoration that displaces signal.
 - The second place the same thing is said.
 
@@ -106,7 +115,8 @@ way, from the first command to the result.
 Anything you have to read twice is a defect in the control it sits under. A step
 you cannot reach, a record you cannot find or an action whose result you cannot
 tell is a gap in the surface. A gap that a part listed in `## What a business
-screen always has` closes is a defect to fix. Raise any other gap on a job no
+screen always has` or `## What a marketing screen always has` closes is a
+defect to fix. Raise any other gap on a job no
 contract names with the owner of the spec, rather than building what the spec
 does not ask for.
 
@@ -148,6 +158,41 @@ On every screen it applies to:
 Leaving one of these out needs a reason recorded in the UI contract of the
 screen it is missing from. A part left out without one is a defect, not a cut.
 
+These parts apply to application screens: a screen whose UI contract declares
+no `surface`, or `surface: application`. A marketing screen, one a visitor sees
+before signing in that exists to explain, persuade or inform, declares
+`surface: marketing`. It is checked against its entries in
+`.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` and the
+section below instead, and a part of this list missing from it is not a defect.
+
+## What a marketing screen always has
+
+A screen whose UI contract declares `surface: marketing` has these whether or
+not its UI contract names them.
+
+- **No invented proof.** A figure, customer count, testimonial, quote or logo
+  the page shows is read from the product or confirmed by the project's owner,
+  and a figure shows the time it was counted. An agent never writes one. A
+  claim already on the page, or in material the user supplied, that nothing
+  confirms is put to the user as
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#claims-nobody-has-confirmed`
+  says, not deleted or rewritten.
+- **Examples labelled.** A product image or mock-up that shows made-up data, or
+  a screen the product does not have yet, is labelled as an example where it is
+  shown.
+- **Images sourced.** Each image records where it came from and the licence it
+  is used under. A new image with neither is not used. One already on the page
+  with neither is put to the user, not removed.
+- **States of what it sends or reads.** A section that sends something, such as
+  a contact form, or reads data when the page is viewed, such as live figures
+  or prices, has its loading, error and success states.
+- **Required notices.** The legal notices the jurisdiction requires are linked
+  from every page and from the point of sign-up or payment.
+
+Leaving out a state or a notice needs a reason recorded in the screen's UI
+contract. Invented proof, an unlabelled example and a new unsourced image have
+no such reason.
+
 ## Related
 
 - The same standard for prose: `documentation-clarity.md`
@@ -158,3 +203,5 @@ screen it is missing from. A part left out without one is a defect, not a cut.
   `.qfai/assistant/rule/ui-procurement.md`
 - What each type of business screen contains:
   `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`
+- What each section of a marketing page contains:
+  `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`

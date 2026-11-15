@@ -213,7 +213,9 @@ lists, and give a shared component you author its doc comment and refresh the
 catalogue, as
 `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#component-catalogue`
 says. Read each screen's type in
-`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`: build
+`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`, or, for a
+screen whose contract declares `surface: marketing`, its section entries in
+`.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`: build
 what the contract names, and raise a part of its type that the contract
 neither names nor excludes with a reason as drift under
 `.qfai/assistant/rule/drift-protocol.md` instead of building it. A component test carries only

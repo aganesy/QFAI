@@ -64,7 +64,7 @@ specialization_tags:
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Require more work only on what `.qfai/assistant/rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of` admits, and report any other gap as advisory.
-- Check that each screen is complete, not only that it holds no excess. Walk every part
+- Check that each application screen is complete, not only that it holds no excess. Walk every part
   `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` lists against the rendered
   surface: the running app, the prototype, or the UI contract when reviewing a specification.
   Walk it for each screen the change adds or alters. Check the once-per-application parts only when
@@ -81,10 +81,25 @@ specialization_tags:
   part missing elsewhere. Never file the presence of a listed part as excess; how it is built stays
   under the excess route above.
 
-- Check each screen against its type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`.
+- Check each application screen against its type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`.
   A part of that type the UI contract names and the screen lacks is a blocking finding. A part the contract
   neither names nor leaves out with a reason is an `advisory` finding for the contract stage, naming the
   part and the type.
+- Check a screen whose UI contract declares `surface: marketing` against its section entries in
+  `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`, not against the business-screen
+  list or the business types. Findings follow the same split: a named part missing is blocking, and an
+  unnamed one is `advisory` for the contract stage. A state or notice the marketing floor lists that is
+  missing from a section, page or sign-up or payment point the change adds or alters, or that the change removes, is a blocking finding
+  that traces to `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`; one that was
+  already missing is `advisory`. Invented proof, an unlabelled example mock-up and an
+  image with no recorded source and licence that the change introduces are blocking findings that trace
+  to `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`; one already on an altered
+  page is `advisory`. A claim already on the page, or supplied by the user, that nothing confirms follows
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#claims-nobody-has-confirmed`: it is
+  put to the user, not deleted. Another anti-pattern the entry lists is `advisory` unless it breaches that
+  rule section. A mock-up labelled as an example under the reference's image rules is not the fake product
+  dashboard of `design-anti-patterns.md`, and the reference's entries are kinds of section, not the stock
+  section order that list names.
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Where the `Component catalogue` row of `<paths.contractsDir>/tech.md#stack` names a catalogue, report a
   screen that hand-builds a control that catalogue has, and name the catalogue item. A named catalogue that
@@ -95,7 +110,12 @@ specialization_tags:
   ("helps the user", "for clarity") and a reason that restates the text. A text that could be deleted,
   replaced by another component or moved into a label, heading, button wording or empty state is
   excess even with a reason, unless it tells the user a result, a cost, a condition, a consequence, a
-  destination, a recovery step or an empty state's next step: such a text stays with its reason.
+  destination, a recovery step or an empty state's next step: such a text stays with its reason. On a
+  marketing screen, a part of its section's marketing pattern entry that its UI contract names, such as a
+  hero's supporting sentence, a feature's short description or an FAQ answer, is not excess; its wording
+  is still judged against
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`, so a
+  supporting sentence that only restates the headline is still reported.
 - Judge whether the copy a UI contract describes (`supplements`, group headings) is needed at all.
   Name the screen, the task or state, the duplicated meaning or unmet need, and the text to remove or the control or structure to repair.
   Apply `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`.
@@ -111,7 +131,9 @@ specialization_tags:
   one task split across sections, and a control or link that leads nowhere. Name the screen, the
   pattern matched and the state or structure to add. Where the entry is about behaviour, trace the
   finding to `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` or the spec, as
-  that list's _Where the list stops_ says, and do not report a part whose UI contract records a
+  that list's _Where the list stops_ says; for a marketing screen, trace it to
+  `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has` or the screen's UI contract, with
+  the severity the marketing check above sets, and do not report a part whose UI contract records a
   reason for leaving it out. Declare each finding's severity and trace as
   `.qfai/assistant/rule/references/reviewer-findings.md` says. Inside the prototyping loop,
   `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md` sets which sections apply.

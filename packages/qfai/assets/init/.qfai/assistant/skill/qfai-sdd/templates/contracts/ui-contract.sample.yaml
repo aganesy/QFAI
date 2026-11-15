@@ -31,6 +31,11 @@ screens:
     # it renders inside, `entry_points` the screens or menus that lead to it,
     # and `back_to` the route the user returns to. These keys describe the
     # screen; validate does not check them.
+    # surface: `application` for a screen a member uses after signing in (the
+    # default when the key is left out), `marketing` for a page a visitor sees
+    # before signing in that explains, persuades or informs. Any other value is
+    # QFAI-CONTRACT-051.
+    surface: application
     purpose: Record a customer's order so it can be fulfilled or finished later.
     navigation:
       shell: main app shell with the role's navigation
