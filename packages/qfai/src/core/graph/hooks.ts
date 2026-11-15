@@ -6,6 +6,8 @@ export interface GraphHookEvent {
   tool: string;
   command?: string;
   path?: string;
+  /** The host gave `path` as an include glob, such as VS Code's `includePattern`, not a path. */
+  pathIsPattern?: true;
   session?: string;
   cwd?: string;
   workdir?: string;
@@ -67,7 +69,8 @@ export function classifyGraphExploration(
     ["rg", "grep", "grep_search", "search_files", "file_search"].includes(event.tool.toLowerCase())
   ) {
     const base = event.cwd ? path.resolve(event.cwd) : undefined;
-    if (event.path !== undefined && insideProject(root, base, [event.path])) return scopedSearch();
+    if (event.path !== undefined && !event.pathIsPattern && insideProject(root, base, [event.path]))
+      return scopedSearch();
     return authorize(denyExploration(event.tool, event.path ?? "."));
   }
   const shell: GraphShell =
@@ -430,7 +433,9 @@ function searchBase(context: CommandContext): string | undefined {
  * project root, below it. The root itself, as `.` or by its own path, is the whole
  * repository and is no scope. A path the text cannot place is not inside: one with a
  * `..` segment, which may resolve through a symbolic link, an expansion, a glob, a home
- * or provider prefix, or a list.
+ * or provider prefix, or a list. A parenthesis, `@` or `!` marks a PowerShell
+ * subexpression or array, such as `(Get-Location)` or `@('.')`, or a Bash extended glob
+ * such as `!(node_modules)`, so its value is unknown.
  *
  * SIMPLIFIED: a glob such as `src/*.ts` stays denied, though it only names project
  * files; a leading-dot glob or a brace can name `..`. Lift when: globs are expanded
@@ -445,7 +450,7 @@ function insideProject(
   return paths.every((operand) => {
     if (
       !operand.trim() ||
-      /[$`%<>~*?[\]{},]/.test(operand) ||
+      /[$`%<>~*?[\]{},()@!]/.test(operand) ||
       (operand.includes(":") && !/^[A-Za-z]:[\\/]/.test(operand)) ||
       operand.split(/[\\/]/).includes("..")
     )
@@ -515,13 +520,14 @@ function grepPaths(name: "grep" | "rg", args: string[]): string[] | undefined {
   return patternGiven ? operands : operands.slice(1);
 }
 
+/** With `/s`, findstr searches every directory below the current one for each file name. */
 function findstrPaths(args: string[]): string[] | undefined {
   let patternGiven = false;
   const operands: string[] = [];
   for (const word of args) {
     if (/^\/c:./i.test(word)) patternGiven = true;
     else if (word.startsWith("/")) {
-      if (!/^\/[ivnxbelrmops]+$/i.test(word)) return undefined;
+      if (!/^\/[ivnxbelrmop]+$/i.test(word)) return undefined;
     } else if (word.startsWith("-")) return undefined;
     else operands.push(word);
   }
@@ -1778,7 +1784,7 @@ function denyExploration(operation: string, target: string): GraphHookDecision {
     operation,
     target,
     domain,
-    message: `Exploration redirected: ${operation} over ${JSON.stringify(target)} was denied. Use ${domain === "code" ? 'CodeGraph for symbols, callers and change impact: node .qfai/tools/graph-cli.mjs code "<question>"' : 'Graphify for document concepts and rationale: node .qfai/tools/graph-cli.mjs documents "<question>"'}. Prepare the required analysis through the CLI. For AI-decided scoped search, run node .qfai/tools/graph-cli.mjs fallback --attempt-id <observed-UUID> --question "<unresolved question>" --reason "<graph limitation>". The fallback command attempts the relevant graph before granting a matching search. Human approval is not required for this search. A search that names paths inside the project, other than the project root itself, is not denied.`,
+    message: `Exploration redirected: ${operation} over ${JSON.stringify(target)} was denied. Use ${domain === "code" ? 'CodeGraph for symbols, callers and change impact: node .qfai/tools/graph-cli.mjs code "<question>"' : 'Graphify for document concepts and rationale: node .qfai/tools/graph-cli.mjs documents "<question>"'}. Prepare the required analysis through the CLI. For AI-decided scoped search, run node .qfai/tools/graph-cli.mjs fallback --attempt-id <observed-UUID> --question "<unresolved question>" --reason "<graph limitation>". The fallback command attempts the relevant graph before granting a matching search. Human approval is not required for this search. A search that names explicit project paths, with no glob, expansion or \`..\`, is not denied.`,
   };
 }
 
@@ -1834,6 +1840,7 @@ export function decodeGraphHookEvent(input: unknown): GraphHookEvent | undefined
     tool,
     ...(typeof command === "string" ? { command } : {}),
     ...(typeof target === "string" ? { path: target } : {}),
+    ...(typeof target === "string" && payload.path === undefined ? { pathIsPattern: true } : {}),
     ...(typeof workdir === "string" ? { workdir } : {}),
     ...(typeof shell === "string" ? { shell } : {}),
     ...(typeof input.cwd === "string" ? { cwd: input.cwd } : {}),

@@ -1262,7 +1262,7 @@ it("allows a direct search scoped to a path inside the project", () => {
     ["Bash", "cd ./packages && rg foo qfai/src"],
     ["Bash", "git grep -n foo -- packages/qfai/src"],
     ["PowerShell", "Select-String -Pattern foo -Path packages/qfai/src/index.ts"],
-    ["PowerShell", "findstr /S /N foo packages\\qfai\\src\\index.ts"],
+    ["PowerShell", "findstr /N foo packages\\qfai\\src\\index.ts"],
   ] as const) {
     const result = classifyInProject({ tool, command });
     expect(result.decision, command).toBe("allow");
@@ -1289,7 +1289,7 @@ it("allows a search over several paths only when every path lies inside the proj
 });
 
 // QFAI:EX-0001-0235-38
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (event.path !== undefined && insideProject(root, base, [event.path]))` -> `if (false)` fails "allows a native search tool call whose path lies inside the project"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `!event.pathIsPattern && insideProject(root, base, [event.path])` -> `false` fails "allows a native search tool call whose path lies inside the project"
 it("allows a native search tool call whose path lies inside the project", () => {
   for (const target of ["packages/qfai/src", path.join(projectRoot, "docs")]) {
     expect(classifyInProject({ tool: "Grep", path: target }).decision, target).toBe("allow");
@@ -1344,4 +1344,45 @@ it("keeps a search that filters piped text allowed inside a known project", () =
     expect(classifyInProject({ tool: "Bash", command }).decision, command).toBe("allow");
     expect(classifyGraphExploration({ tool: "Bash", command }).decision, command).toBe("allow");
   }
+});
+
+// QFAI:EX-0001-0235-40
+// Mutation: packages/qfai/src/core/graph/hooks.ts `{},()@!]/.test(operand) ||` -> `{},]/.test(operand) ||` fails "denies a PowerShell subexpression or array and a Bash extended glob as a search path"
+it("denies a PowerShell subexpression or array and a Bash extended glob as a search path", () => {
+  for (const [tool, command] of [
+    ["PowerShell", "rg foo (Get-Location)"],
+    ["PowerShell", "rg foo (pwd)"],
+    ["PowerShell", "rg foo ('.')"],
+    ["PowerShell", "rg foo @('.')"],
+    ["PowerShell", "grep -r foo (Resolve-Path .)"],
+    ["PowerShell", "rg foo (Split-Path src)"],
+    ["Bash", "grep -r foo !(node_modules)"],
+  ] as const) {
+    expect(classifyInProject({ tool, command }).decision, command).toBe("deny");
+  }
+});
+
+// QFAI:EX-0001-0235-40
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!/^\/[ivnxbelrmop]+$/i.test(word)) return undefined;` -> `if (!/^\/[ivnxbelrmops]+$/i.test(word)) return undefined;` fails "denies findstr with /s, which searches every directory below the current one"
+it("denies findstr with /s, which searches every directory below the current one", () => {
+  for (const command of [
+    "findstr /s /c:foo package.json",
+    "findstr /S /N foo packages\\qfai\\src\\index.ts",
+  ]) {
+    expect(classifyInProject({ tool: "PowerShell", command }).decision, command).toBe("deny");
+  }
+});
+
+// QFAI:EX-0001-0235-40
+// Mutation: packages/qfai/src/core/graph/hooks.ts `...(typeof target === "string" && payload.path === undefined ? { pathIsPattern: true } : {}),` -> `` fails "denies a native search whose scope is an include glob rather than a path"
+it("denies a native search whose scope is an include glob rather than a path", () => {
+  const decoded = decodeGraphHookEvent({
+    tool_name: "grep_search",
+    tool_input: { query: "authorize", includePattern: "packages" },
+    cwd: projectRoot,
+  });
+  if (!decoded) throw new Error("Expected a supported native pre-tool event");
+  const result = classifyGraphExploration(decoded, undefined, projectRoot);
+  expect(result.decision).toBe("deny");
+  expect(result.target).toBe("packages");
 });

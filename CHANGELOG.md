@@ -10,7 +10,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   grep, rg, git grep, Select-String, findstr or native search call that names
   at least one path, every one inside the project root, now runs. A search with
   no path, one over the project root itself (such as `.`), and one whose path
-  the hook cannot place inside the project are still redirected to the graph.
+  the hook cannot place inside the project are still redirected to the graph:
+  a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
+  home prefix or a `..` segment. A findstr with `/s` and a native search scoped
+  only by an include glob are also redirected.
 
 ### Fixed
 
