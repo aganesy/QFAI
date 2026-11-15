@@ -129,6 +129,8 @@ export type TsNode = {
   heritageClauses?: readonly TsNode[];
   attributes?: TsNode;
   properties?: readonly TsNode[];
+  /** A string or template literal's value, its escapes decoded. */
+  text?: string;
 };
 export type TsApi = {
   createSourceFile(
@@ -153,13 +155,14 @@ export async function validateUiPlainText(
   const jsxFiles = files.filter((file) => [".tsx", ".jsx"].includes(path.extname(file)));
   const ts = jsxFiles.length > 0 ? loadTs(root, options.loadTypescript) : null;
   const mapped: MappedNames = new Set(Object.keys(config.uiText?.elements ?? {}).map(wordsOf));
+  const decoder = ts ? await entityDecoder() : null;
   for (const file of files) {
     const extension = path.extname(file);
     const source = await readSafe(path.join(root, file));
     let candidates: Candidate[];
     if (extension === ".tsx" || extension === ".jsx") {
-      if (!ts) continue;
-      candidates = jsxCandidates(ts, source, file, mapped);
+      if (!ts || !decoder) continue;
+      candidates = jsxCandidates(ts, source, file, mapped, decoder.decode);
     } else {
       candidates = await markupCandidates(markupOf(source, extension), mapped);
     }
@@ -212,7 +215,29 @@ export async function validateUiPlainText(
       ),
     );
   }
+  decoder?.close();
   return issues;
+}
+
+/**
+ * Decodes the character references in a JSX text, such as `&amp;`, `&#46;` or `&nbsp;`, to the
+ * string the page shows. A `textarea` reads its content as text with references, so no markup in
+ * the text is parsed.
+ */
+async function entityDecoder(): Promise<{ decode: (text: string) => string; close: () => void }> {
+  const { loadJsdom } = await import("../uiux/htmlMockDom.js");
+  const { JSDOM } = await loadJsdom();
+  const dom = new JSDOM("<textarea></textarea>");
+  const area = dom.window.document.querySelector("textarea");
+  if (!area) throw new Error("jsdom did not parse a textarea");
+  return {
+    decode: (text) => {
+      if (!text.includes("&")) return text;
+      area.innerHTML = text;
+      return area.value;
+    },
+    close: () => dom.window.close(),
+  };
 }
 
 /** The current prototype pages and the declared surface files, repository-relative and posix. */
@@ -564,7 +589,13 @@ function reasonBody(comment: string): string | null {
   return trimmed.startsWith(REASON_MARK) ? trimmed.slice(REASON_MARK.length) : null;
 }
 
-function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNames): Candidate[] {
+function jsxCandidates(
+  ts: TsApi,
+  source: string,
+  file: string,
+  mapped: MappedNames,
+  decode: (text: string) => string,
+): Candidate[] {
   const kind = path.extname(file) === ".jsx" ? ts.ScriptKind.JSX : ts.ScriptKind.TSX;
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, kind);
   const k = ts.SyntaxKind;
@@ -618,9 +649,10 @@ function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNa
     }
     return null;
   };
-  // A JSX text with `&nbsp;` read as the space an HTML parser reads it as.
-  const jsxText = (node: TsNode): string => node.getText().replace(/&(nbsp|#160|#xa0);/gi, " ");
-  // A string or template literal that is the whole content of a JSX `{}` child, without its quotes.
+  // A JSX text as the page shows it, its character references decoded.
+  const jsxText = (node: TsNode): string => decode(node.getText());
+  // The value of a string or template literal that is the whole content of a JSX `{}` child, its
+  // escapes decoded.
   const literalChild = (node: TsNode): string | null => {
     if (node.kind !== k.JsxExpression || !isJsxElement(node.parent)) return null;
     const meaningful = childrenOf(node).filter(
@@ -630,7 +662,7 @@ function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNa
     if (inner === undefined) return null;
     const literal =
       inner.kind === k.StringLiteral || inner.kind === k.NoSubstitutionTemplateLiteral;
-    return literal ? inner.getText().slice(1, -1) : null;
+    return literal ? (inner.text ?? null) : null;
   };
   // A cell's whole text: every JSX text and literal child inside it, in order, except one an exempt
   // element such as a button, a link or a `role="status"` holds; another expression adds nothing.

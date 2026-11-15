@@ -560,6 +560,26 @@ describe("a data value is not plain text", () => {
     expect(issues).toEqual([]);
   });
 
+  it("judges the text a JSX reference or a literal escape shows, not its source", async () => {
+    const issues = await run({
+      "src/b.tsx": [
+        "export const B = () => (",
+        "  <tr>",
+        "    <td>Saved&#46;</td>",
+        "    <td>Paid&excl;</td>",
+        "    <td>A&amp;B&amp;C&amp;D&amp;E&amp;F</td>",
+        '    <td>{"Saved\\u002E"}</td>',
+        '    <td>{"\\u0041\\u0042\\u0043\\u0044\\u0045"}</td>',
+        '    <p>{"Saved\\u002E"}</p>',
+        '    <p>{"\\u0041\\u0042\\u0043\\u0044\\u0045"}</p>',
+        "  </tr>",
+        ");",
+      ].join("\n"),
+    });
+    expect(issues.map((found) => found.loc?.line)).toEqual([3, 4, 6, 8]);
+    expect(issues[0]?.message).toContain('"Saved."');
+  });
+
   it("reads a data cell the same way under a uiText.elements map", async () => {
     const root = await projectWith({
       "src/a.tsx": [
