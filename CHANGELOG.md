@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A Japanese locale reference.** `.qfai/assistant/rule/references/locale-ja.md`
+  lists what a product whose locale is Japanese needs from its contracts and
+  code: NFKC input normalisation, IME composition on Enter, yen, number, date
+  and era formats, postcode, phone, corporate and invoice numbers, line
+  breaking, line height and font loading. `sdd-contract` and `implement-tdd`
+  read it when the specification or `tech.md` states the locale, so these are
+  settled once instead of found screen by screen as bugs.
+
 - **The contract step writes the app frame once.** The app shell, the
   navigation for each role and the home belong to no single flow, so
   `sdd-contract` writes them as the screens of one UI contract, the app frame,
