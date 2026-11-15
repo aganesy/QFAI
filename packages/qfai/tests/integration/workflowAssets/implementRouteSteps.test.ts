@@ -298,7 +298,11 @@ describe("implement-tdd", () => {
     const assemble = flat(sectionOf(text, "## Assemble the flow's screens"));
     expect(assemble).toMatch(/shell its UI contract's `navigation\.shell` names/i);
     expect(assemble).toMatch(/through the app's own links, not only by its URL/i);
-    expect(assemble).toMatch(/extract the repeated part into one shared component/i);
+    expect(assemble).toMatch(/each part the flow's screens repeat one shared component/i);
+    // A rerun whose examples are already annotated does not skip the assembly.
+    expect(flat(sectionOf(text, "## Passes when"))).toMatch(
+      /for a UI-affecting flow, its screens are already assembled and captured/i,
+    );
     expect(assemble).toMatch(/capture each changed route/i);
     expect(assemble).toMatch(/raised as drift/i);
     expect(flat(sectionOf(text, "## Gate"))).toMatch(
