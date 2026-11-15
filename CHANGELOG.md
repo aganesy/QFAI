@@ -12,8 +12,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   thrown away when the other change merged first. After its announcement and
   before any edit, `qfai-run` now makes one REST search of the forge for open
   issues and pull requests naming the request's files or symptom, leaving out
-  the one the request itself names. On a match it writes nothing and asks the
-  user whether to continue or to leave the problem to that work. Without a
+  the one the request itself names. A match is a result that describes the
+  same problem, not one that only shares words. On a match it writes nothing
+  and asks the user, with at most three matches, whether to continue or to
+  leave the problem to that work. Without a
   forge remote or API access it says so in the announcement and continues;
   under a no-question mode it continues and the final report lists the match.
 

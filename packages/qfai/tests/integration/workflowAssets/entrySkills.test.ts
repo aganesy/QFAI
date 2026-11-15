@@ -465,29 +465,53 @@ describe("qfai-run", () => {
   // QFAI:AC-0001-0224-01
   // QFAI:EX-0001-0224-55
   it("searches once for open work on the same problem before any edit, and waits on a match", async () => {
-    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
-    expect(work).toMatch(
-      /on a route that changes files, then search once for open work on the same problem before any edit, as `references\/operator-screens\.md` says, and on a match wait for the user\. then run `common-policy-check`/i,
+    const run = await readShipped(RUN);
+    expect(flat(sectionOf(run, "## The work"))).toMatch(
+      /on a route that changes files, a branch destination's included, then search once per run for open work on the same problem before any edit, as `references\/operator-screens\.md` says, and on a match wait for the user\. then run `common-policy-check`/i,
+    );
+    expect(flat(sectionOf(run, "## Under a no-question mode"))).toMatch(
+      /an open-work match is taken as continue and listed first in the report as an assumption/i,
+    );
+    expect(flat(sectionOf(run, "## Default Autopilot Policy"))).toMatch(
+      /ask-user:.*\ban open-work match\b.*hard-required:/i,
     );
     const screens = await readShipped(SCREENS);
     expect(sectionOf(screens, "## Contents")).toContain("- Open work on the same problem\n");
     const search = flat(sectionOf(screens, "## Open work on the same problem"));
-    expect(search).toMatch(/runs once per run, before the policy check and before any edit/i);
+    expect(search).toMatch(
+      /runs once per run, at the first announcement of a route that changes files, a branch destination's included, before the policy check and before any edit\. once made, a later branch move does not repeat it/i,
+    );
+    expect(search).toMatch(
+      /judge this without a call, from the remote URL and from a signed-in CLI or a token being present/i,
+    );
     expect(search).toMatch(
       /without either, the announcement adds one line saying that no search for open work was made and why, and the work continues/i,
     );
     expect(search).toMatch(
-      /ask the forge's REST issue search once, as `\.agents\/rules\/api-budget\.md` says, for open issues and pull requests/i,
+      /ask the forge's REST issue search once, as `\.agents\/rules\/api-budget\.md` says, for this repository's open issues and pull requests together where the forge's search covers both in one call; otherwise search open issues only/i,
     );
     expect(search).toMatch(/make no second call and no call per term/i);
+    expect(search).toMatch(/at most five, joined with `OR`/i);
     expect(search).toMatch(
-      /the issue or pull request the request itself names, and the one the current branch's work is for/i,
+      /each term is a bare word of letters, digits, `\.`, `-`, `_` or `\/`; drop any other character, so no quote or shell metacharacter reaches the query/i,
+    );
+    expect(search).toMatch(/at most five `OR` operators and 256 characters/i);
+    expect(search).toMatch(
+      /a returned issue or pull request whose title or body describes the same problem, as the session judges from the result\. a hit that only shares words is not a match/i,
     );
     expect(search).toMatch(
-      /a match\.\*\* write nothing, and put the open-work question as `## Questions` says\. continue only on the user's answer/i,
+      /neither is the issue or pull request the request itself names, nor the one the current branch's work is for/i,
+    );
+    expect(search).toMatch(/unrelated hits and an empty result continue without a question/i);
+    expect(search).toMatch(/a search refused for authentication counts as a failed call/i);
+    expect(search).toMatch(
+      /a match\.\*\* write nothing, and put the open-work question as `## Questions` says, with the best three matches at most\. continue only on the user's answer/i,
+    );
+    expect(search).toMatch(
+      /under a no-question mode\.\*\* continue, and the final report lists each match first, as an assumption the mode took/i,
     );
     expect(rowOf(sectionOf(screens, "## Questions"), "| Open work on the same problem")).toMatch(
-      /each match by number, title and link, and the options to continue anyway, or to stop and leave the problem to that work/i,
+      /each match, three at most, by number, title and link, and the options to continue anyway, or to stop and leave the problem to that work/i,
     );
   });
 
