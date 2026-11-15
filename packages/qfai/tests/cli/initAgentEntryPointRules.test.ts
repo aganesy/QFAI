@@ -2052,6 +2052,59 @@ describe("what a forced rewrite keeps of the Copilot file", () => {
     expect(result.removed).toEqual([]);
   });
 
+  it("keeps a subsection the shipped text does not have, and replaces one it has", () => {
+    const existing = `${shipped}\n### Our notes\n\nOurs.\n\n### Golden rules\n\nStale.\n`;
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(`${shipped}\n### Our notes\n\nOurs.\n`);
+    expect(result.removed).toEqual(["### Golden rules", "Stale."]);
+  });
+
+  it("keeps a project bullet under its own subsection heading, once", () => {
+    const existing = shipped.replace(
+      "interview the decision tree.\n",
+      "interview the decision tree.\n\n### House rules\n\n- `.agents/rules/house.md` — our rule.\n",
+    );
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text.split("- `.agents/rules/house.md` — our rule.").length).toBe(2);
+    expect(result.text).toContain("### House rules\n\n- `.agents/rules/house.md` — our rule.");
+    expect(result.removed).toEqual([]);
+  });
+
+  it("leaves the shipped lines after a mid-section subsection to the shipped text", () => {
+    const existing = shipped.replace(
+      "- Keep changes small.\n",
+      "### Mine\n\nOurs.\n\n- Keep changes small.\n",
+    );
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(`${shipped}\n### Mine\n\nOurs.\n`);
+    expect(result.text.split("- Keep changes small.").length).toBe(2);
+    expect(result.removed).toEqual([]);
+  });
+
+  it("writes a kept subsection before a section the project added", () => {
+    const existing = `${shipped}\n### Sub\n\nS.\n\n## Notes\n\nN.\n`;
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(`${shipped}\n### Sub\n\nS.\n\n## Notes\n\nN.\n`);
+    expect(keepProjectEntries(shipped, result.text).text).toBe(result.text);
+  });
+
+  it("replaces and names a shipped master's bullet reworded inside a subsection", () => {
+    const existing = `${shipped}\n### Sub\n\n- \`.agents/rules/grilling.md\` — old.\n`;
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(`${shipped}\n### Sub\n`);
+    expect(result.removed).toEqual(["- `.agents/rules/grilling.md` — old."]);
+  });
+
   it("reads a heading or bullet inside a fence or a quote as neither", () => {
     const existing = shipped.replace(
       "- Keep changes small.\n",

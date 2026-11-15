@@ -1120,9 +1120,11 @@ export function ruleListBullet(existing: string, master: string): string | undef
  *
  * The project keeps what the shipped text does not know, as it does in
  * `AGENTS.md`: a list item in the rule list that cites no master the shipped
- * list cites, and a section whose heading the shipped text does not have. An
- * item goes after the last shipped rule bullet, in the project's order, and a
- * section goes at the end of the file. Every other line sits in a section the
+ * list cites, a section whose heading the shipped text does not have, and a
+ * deeper subsection under a shipped section whose heading the shipped text does
+ * not have. An item goes after the last shipped rule bullet, in the project's
+ * order, a subsection right after the shipped text, and a section at the end of
+ * the file. Every other line sits in a section the
  * shipped text owns and is replaced by it, so a line there that the result does
  * not hold is returned for the run to name.
  */
@@ -1135,15 +1137,21 @@ export function keepProjectEntries(
   const out = generated.split("\n");
   const shippedMasters = new Set(citedRuleMastersOutsideCode(generated));
   const kept = new Set<number>();
+  const shippedOpen = outsideFences(out);
+  // A subsection the project added keeps its own lines, its bullets included.
+  const subsections = projectSubsections(lines, open, out, shippedOpen);
+  const inSubsection = new Set(
+    subsections.flatMap(({ from, to }) => Array.from({ length: to - from }, (_, k) => from + k)),
+  );
 
   // A list item is kept only where the shipped text has a list to put it in.
-  const shippedOpen = outsideFences(out);
   const shippedRange = ruleListRange(out, shippedOpen);
   const entries: string[] = [];
   const range = ruleListRange(lines, open);
   if (range !== null && shippedRange !== null) {
     for (let index = range.from; index < range.to; index += 1) {
       const line = lines[index] ?? "";
+      if (inSubsection.has(index)) continue;
       if (open[index] !== true || isQuoted(line) || !LIST_ITEM_RE.test(line)) continue;
       const end = Math.min(endOfListItem(lines, open, index), range.to);
       const item = lines.slice(index, end);
@@ -1167,6 +1175,14 @@ export function keepProjectEntries(
   const shippedHeadings = new Set(sectionStarts(out, outOpen).map((at) => headingKey(out[at])));
   const starts = sectionStarts(lines, open);
   let text = out.join("\n");
+  // Right after the shipped text, so a subsection stays under the last shipped section and does
+  // not slide into a section the project added after it.
+  for (const { keep } of subsections) {
+    for (const at of keep) kept.add(at);
+    const block = keep.map((at) => lines[at] ?? "");
+    while (block.length > 1 && (block.at(-1) ?? "").trim() === "") block.pop();
+    text += `${text.endsWith("\n") ? "" : "\n"}\n${block.join("\n")}\n`;
+  }
   for (const [n, start] of starts.entries()) {
     if (shippedHeadings.has(headingKey(lines[start]))) continue;
     let end = starts[n + 1] ?? lines.length;
@@ -1187,6 +1203,70 @@ function sectionStarts(lines: readonly string[], open: readonly boolean[]): numb
   return lines.flatMap((line, index) =>
     open[index] === true && !isQuoted(line) && (atxLevel(plainLine(line)) ?? 7) <= 2 ? [index] : [],
   );
+}
+
+/**
+ * The subsections of `lines` the shipped text `out` does not have, in file order, each with the
+ * lines of it that are the project's.
+ *
+ * A subsection opens at an ATX heading of level 3 or deeper whose text no heading of the shipped
+ * text carries, and runs to the next heading of the same or a higher level. Only one under a
+ * section the shipped text owns counts: under a section the project added, it travels with that
+ * section. Inside it, a line the shipped text holds stays the shipped text's, and a list item that
+ * cites a master the shipped list cites is replaced by the shipped bullet, so neither is carried as
+ * the project's. Without this a project's `###` notes under a shipped section were replaced along
+ * with the section.
+ */
+function projectSubsections(
+  lines: readonly string[],
+  open: readonly boolean[],
+  out: readonly string[],
+  outOpen: readonly boolean[],
+): { from: number; to: number; keep: number[] }[] {
+  const headingsOf = (deepest: number): Set<string> =>
+    new Set(
+      out.flatMap((line, index) =>
+        outOpen[index] === true && !isQuoted(line) && (atxLevel(plainLine(line)) ?? 7) <= deepest
+          ? [headingKey(line)]
+          : [],
+      ),
+    );
+  const shippedSections = headingsOf(2);
+  const shippedHeadings = headingsOf(6);
+  const shippedLines = new Set(out.filter((line) => line.trim() !== ""));
+  const shippedMasters = new Set(citedRuleMastersOutsideCode(out.join("\n")));
+  const levelAt = (index: number): number | null =>
+    open[index] === true && !isQuoted(lines[index]) ? atxLevel(plainLine(lines[index])) : null;
+  const found: { from: number; to: number; keep: number[] }[] = [];
+  let sectionIsShipped = true;
+  for (let start = 0; start < lines.length; start += 1) {
+    const level = levelAt(start);
+    if (level === null) continue;
+    if (level <= 2) {
+      sectionIsShipped = shippedSections.has(headingKey(lines[start]));
+      continue;
+    }
+    if (!sectionIsShipped || shippedHeadings.has(headingKey(lines[start]))) continue;
+    let end = start + 1;
+    while (end < lines.length && (levelAt(end) ?? Number.POSITIVE_INFINITY) > level) end += 1;
+    const keep: number[] = [];
+    for (let at = start; at < end; at += 1) {
+      const line = lines[at] ?? "";
+      if (open[at] === true && !isQuoted(line) && LIST_ITEM_RE.test(line)) {
+        const itemEnd = Math.min(endOfListItem(lines, open, at), end);
+        const cites = citedRuleMasters(lines.slice(at, itemEnd).join("\n"));
+        if (cites.some((master) => shippedMasters.has(master))) {
+          at = itemEnd - 1;
+          continue;
+        }
+      }
+      if (line.trim() !== "" && shippedLines.has(line)) continue;
+      keep.push(at);
+    }
+    found.push({ from: start, to: end, keep });
+    start = end - 1;
+  }
+  return found;
 }
 
 /** A heading's text, without its marker, closing run of `#` or surrounding space. */

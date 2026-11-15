@@ -217,6 +217,41 @@ describe("BF-0001 init preserves project content", () => {
     }
   });
 
+  // QFAI:EX-0001-0029-06
+  it("keeps the subsections the project added under a shipped section of the Copilot file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-copilot-subsections-"));
+    try {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      const copilot = path.join(root, ".github", "copilot-instructions.md");
+      const shipped = await readFile(copilot, "utf8");
+      const notes = [
+        "### Review checklist",
+        "",
+        "- Check the migration order.",
+        "",
+        "### Release",
+        "",
+        "Tag from the main branch only.",
+      ].join("\n");
+      // Written below the last shipped section, so each one sits inside it as a subsection.
+      await writeFile(copilot, `${shipped}\n${notes}\n`, "utf8");
+
+      const stderr = await captureStderr(() =>
+        captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true })),
+      );
+
+      const after = await readFile(copilot, "utf8");
+      expect(after.startsWith(shipped)).toBe(true);
+      expect(after).toContain(
+        ["### Review checklist", "", "- Check the migration order."].join("\n"),
+      );
+      expect(after).toContain(["### Release", "", "Tag from the main branch only."].join("\n"));
+      expect(stderr).not.toContain("copilot-instructions.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:EX-0001-0029-05
   it("names each line --force changed or removed in the Copilot file", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-copilot-removed-"));
