@@ -67,6 +67,11 @@ them; it is the procedure that applies them.
   from, so the code and tests earlier stages wrote are read with the change note.
 - **The latest results the run recorded**, such as the test runs and gate
   results. The review runs no gate of its own.
+- **The captures**, when `product-surface-reviewer` reads a UI-affecting
+  change: each changed screen at the reviewed revision, as
+  `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md` § Evidence
+  sets out. A passing test or a clean `validate` is not that evidence. Without
+  the captures that review is `PENDING`, never `PASS`, and the stage is not done.
 - **Answers an earlier stage recorded**, when an earlier stage's review already
   answered findings on the same artifact.
 
@@ -91,7 +96,8 @@ them; it is the procedure that applies them.
    recommended a decision in the reviewed artifact is not its independent
    reviewer. The session report names its authors, editors and decision
    recommenders, and the independent reviewers.
-   Each reviewer returns a verdict, `PASS` or `REVISE`, its findings, and
+   Each reviewer returns a verdict, `PASS` or `REVISE` (or `PENDING` from
+   `product-surface-reviewer` when the captures are missing), its findings, and
    the Domain Responsibilities of its card it checked, naming each one it
    found not applicable to the target and why, in the shared reviewer
    response template. A response that leaves a responsibility unaccounted for

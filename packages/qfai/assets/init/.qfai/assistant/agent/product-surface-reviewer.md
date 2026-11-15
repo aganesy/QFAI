@@ -155,7 +155,9 @@ specialization_tags:
   (compare in the running app) and `entryPoints`.
   Read it in the checkout that ran the loop.
 - Root `DESIGN.md` for the brand tokens.
-- Runtime screenshots / HTML evidence / relevant diffs
+- Captures of each changed screen at the reviewed revision, as
+  `skill/qfai-implement/references/ui-affecting.md` § Evidence sets out: required for a UI-affecting change
+- Relevant diffs
 
 ## Deliverables
 
@@ -167,6 +169,10 @@ specialization_tags:
 ## Stop conditions
 
 - Required evidence, governing specs, or target artifacts are missing.
+- A UI-affecting change has a changed screen with no capture at the reviewed revision, or offers only test or
+  `validate` results as its evidence. The review is recorded `PENDING`, never `PASS`: it names each missing
+  capture and state, and the work is not done until they arrive. The reviewer does not start the app to make
+  them: a review runs nothing.
 - The request requires implementation or file editing instead of independent review.
 - The issue falls outside this review domain and must be rerouted to another specialist first.
 - The review would approve configuration, animation or a novel interaction that is not grounded in the current
