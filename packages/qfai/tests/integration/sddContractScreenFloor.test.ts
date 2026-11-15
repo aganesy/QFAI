@@ -30,3 +30,20 @@ describe("the contract step checks each screen against the business-screen list"
     expect(step).toContain(`check the screen against \`${LIST}\``);
   });
 });
+
+// QFAI:AC-0001-0305-02
+describe("the contract step writes the app frame once, where the rule and the reviewer read it", () => {
+  it("puts a left-out once-per-application part's reason in the contract the rule and the reviewer name", async () => {
+    const step = flat(await read(".qfai/assistant/step/sdd-contract/STEP.md"));
+    const rule = flat(await read("root/.agents/rules/interface-clarity.md"));
+    const reviewer = flat(await read(".qfai/assistant/agent/product-surface-reviewer.md"));
+    expect(step).toContain("one UI contract, the app frame, holds them");
+    expect(step).toContain(
+      "A once-per-application part the project leaves out gets its reason in the frame.",
+    );
+    expect(rule).toContain("its reason goes in the UI contract that holds the app shell");
+    expect(reviewer).toContain(
+      "for a once-per-application part in the UI contract that holds the app shell",
+    );
+  });
+});
