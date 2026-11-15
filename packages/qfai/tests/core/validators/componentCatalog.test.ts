@@ -58,6 +58,11 @@ async function catalogued(files: Readonly<Record<string, string>>): Promise<stri
   return root;
 }
 
+const withRegistry: QfaiConfig = {
+  ...config,
+  uiux: { ...config.uiux, registries: { shadcn: "https://ui.shadcn.com/r/{name}.json" } },
+};
+
 async function warnings(root: string): Promise<Issue[]> {
   return validateComponentCatalog(root, config, { loadTypescript: realTypescript });
 }
@@ -192,16 +197,16 @@ describe("validate warns from the component catalogue", () => {
         '      <div role={"tablist"} />',
         '      <Panel role="dialog" />',
         '      <div role="alert">Saved</div>',
+        '      <div aria-modal="true" />',
+        '      <div role="none menu" />',
+        '      <dialog aria-modal="true" />',
+        '      <div aria-modal="false" />',
         "    </div>",
         "  </main>",
         ");",
         "",
       ].join("\n"),
     });
-    const withRegistry: QfaiConfig = {
-      ...config,
-      uiux: { ...config.uiux, registries: { shadcn: "https://ui.shadcn.com/r/{name}.json" } },
-    };
     const found = await validateComponentCatalog(root, withRegistry, {
       loadTypescript: realTypescript,
     });
@@ -209,11 +214,53 @@ describe("validate warns from the component catalogue", () => {
       ["QFAI-COMP-005", "warning", "src/pages/settings.tsx", 3],
       ["QFAI-COMP-005", "warning", "src/pages/settings.tsx", 4],
       ["QFAI-COMP-005", "warning", "src/pages/settings.tsx", 5],
+      ["QFAI-COMP-005", "warning", "src/pages/settings.tsx", 8],
+      ["QFAI-COMP-005", "warning", "src/pages/settings.tsx", 9],
     ]);
     expect(found[0]?.message).toContain('`role="dialog"` and `aria-modal`');
     expect(found[1]?.message).toContain('`role="menu"`');
     expect(found[2]?.message).toContain('`role="tablist"`');
+    expect(found[3]?.message).toBe(
+      "Hand-written `aria-modal` in a project with a component catalogue installed.",
+    );
+    expect(found[4]?.message).toContain('`role="menu"`');
     expect(found[0]?.suggested_action).toContain("ui-procurement.md");
+  });
+
+  // QFAI:EX-0001-0310-07
+  it("spares the file of an authored widget that records its pattern and @a11y", async () => {
+    const root = await catalogued({
+      "src/ui/confirm.tsx": component(
+        "ConfirmDialog",
+        [
+          "@source authored",
+          "@reason The confirm step needs its own layout",
+          "@pattern dialog",
+          "@a11y APG Dialog (Modal); Escape closes, focus is trapped and returns to the opener",
+        ],
+        '<div role="dialog" aria-modal="true" />',
+      ),
+      "src/ui/button.tsx": component("Button", ["@source shadcn/ui button@2.1"]),
+    });
+    expect(await warnings(root)).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0310-08
+  it("spares a file whose own doc comment names a catalogue item before the catalogue is written", async () => {
+    const root = await projectWith({
+      "src/ui/dialog.tsx": component(
+        "Dialog",
+        ["@source shadcn/ui dialog@2.1"],
+        '<div role="dialog" />',
+      ),
+      "src/pages/home.tsx": component("Home", [], '<div role="dialog" />'),
+    });
+    const found = await validateComponentCatalog(root, withRegistry, {
+      loadTypescript: realTypescript,
+    });
+    expect(found.map((item) => [item.code, item.file])).toEqual([
+      ["QFAI-COMP-005", "src/pages/home.tsx"],
+    ]);
   });
 
   // QFAI:EX-0001-0310-02

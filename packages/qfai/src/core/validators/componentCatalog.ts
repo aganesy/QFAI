@@ -10,7 +10,8 @@
  *
  * A project counts as having a catalogue installed when `uiux.registries` declares a valid
  * entry or a listed component's `@source` is a catalogue item. There a hand-written dialog, menu
- * or tab list is a warning too, outside the files of the components procured from a catalogue.
+ * or tab list is a warning too, outside the files of the components procured from a catalogue
+ * and of the authored widgets that record their `@a11y`.
  */
 
 import path from "node:path";
@@ -126,15 +127,29 @@ function isProcured(component: CatalogComponent): boolean {
   return source !== undefined && source !== "" && source !== "authored";
 }
 
+/** Whether the entry realises a listed interactive widget and records its `@a11y`. */
+function isRecordedWidget(component: CatalogComponent): boolean {
+  const pattern = component.pattern?.trim();
+  if (!pattern || !INTERACTIVE_WIDGET_PATTERNS.has(widgetPatternKey(pattern))) return false;
+  return Boolean(component.a11y?.trim());
+}
+
 /**
  * A hand-written dialog, menu or tab list in a surface file, outside the file of a component
- * procured from a catalogue. Not given when `typescript` cannot be loaded from the project root.
+ * procured from a catalogue or of a listed widget that records its `@a11y`. The components are
+ * read from the committed catalogue and from the doc comments the scan read, so a file is spared
+ * before `qfai catalog components` runs. Not given when `typescript` cannot be loaded from the
+ * project root.
  */
 function widgetMarkupFindings(scan: ComponentScan, listed: readonly CatalogComponent[]): Issue[] {
   if (!scan.readable) return [];
-  const procuredFiles = new Set(listed.filter(isProcured).map((component) => component.file));
+  const sparedFiles = new Set(
+    [...listed, ...scan.components]
+      .filter((component) => isProcured(component) || isRecordedWidget(component))
+      .map((component) => component.file),
+  );
   return scan.widgetMarkup
-    .filter((found) => !procuredFiles.has(found.file))
+    .filter((found) => !sparedFiles.has(found.file))
     .map((found) =>
       issue(
         "QFAI-COMP-005",
@@ -144,7 +159,7 @@ function widgetMarkupFindings(scan: ComponentScan, listed: readonly CatalogCompo
         RULE,
         undefined,
         "canonical",
-        "Take the widget from the catalogue or a headless library, as `.qfai/assistant/rule/ui-procurement.md` lists it. When it must be authored, record its WAI-ARIA pattern and keyboard behaviour in the component's `@a11y`, cover that behaviour with a test, and run `qfai catalog components`.",
+        "Take the widget from the catalogue or a headless library, as `.qfai/assistant/rule/ui-procurement.md` lists it. When it must be authored, give its component `@pattern <widget>` and record its WAI-ARIA pattern and keyboard behaviour in `@a11y`, cover that behaviour with a test, and run `qfai catalog components`.",
         { loc: { line: found.line } },
       ),
     );
@@ -158,7 +173,7 @@ function codeSpan(text: string): string {
 function widgetA11yFindings(component: CatalogComponent): Issue[] {
   const pattern = component.pattern?.trim();
   if (!pattern || !INTERACTIVE_WIDGET_PATTERNS.has(widgetPatternKey(pattern))) return [];
-  if (component.a11y?.trim()) return [];
+  if (isRecordedWidget(component)) return [];
   return [
     issue(
       "QFAI-COMP-006",

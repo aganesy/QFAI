@@ -440,10 +440,20 @@ function componentsOfFile(
     if (!/^[a-z][\w-]*$/.test(tag)) return [];
     const roles = (literalAttribute(element, "role") ?? "").trim().split(/\s+/);
     const markup = roles.filter((role) => WIDGET_ROLES.has(role)).map((role) => `role="${role}"`);
-    const modal = (element.attributes?.properties ?? []).some(
-      (attribute) =>
-        attribute.kind === k.JsxAttribute && attribute.name?.getText() === "aria-modal",
-    );
+    // A native `<dialog>` is the platform's own widget, and `aria-modal="false"` or
+    // `aria-modal={false}` declares no modal.
+    const modal =
+      tag !== "dialog" &&
+      (element.attributes?.properties ?? []).some((attribute) => {
+        if (attribute.kind !== k.JsxAttribute || attribute.name?.getText() !== "aria-modal") {
+          return false;
+        }
+        const value = attribute.initializer;
+        const literal = value && value.kind === k.JsxExpression ? value.expression : value;
+        if (literal?.kind === k.FalseKeyword) return false;
+        if (!literal || literal.kind !== k.StringLiteral) return true;
+        return literal.getText().slice(1, -1) !== "false";
+      });
     return modal ? [...markup, "aria-modal"] : markup;
   };
   const rawElements: RawElement[] = [];

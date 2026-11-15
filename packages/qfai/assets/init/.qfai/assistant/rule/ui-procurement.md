@@ -73,10 +73,15 @@ authored, its component's `@a11y` tag in the component catalogue records the
 APG pattern and the keyboard behaviour it implements, and a test covers that
 behaviour.
 
-`npx qfai validate` warns about a hand-written `role="dialog"`, `role="menu"`,
-`role="tablist"` or `aria-modal` in a project with a catalogue installed, and
-about a catalogued component whose `@pattern` is one of these widgets with no
-`@a11y`.
+A project has a catalogue installed when `uiux.registries` in
+`qfai.config.yaml` declares an entry, or when a component's `@source` names a
+catalogue item rather than `authored`. There `npx qfai validate` warns about a
+hand-written `role="dialog"`, `role="menu"`, `role="tablist"` or `aria-modal`,
+except in the file of a component procured from a catalogue or of an authored
+widget whose `@pattern` and `@a11y` are recorded. It also warns about a
+catalogued component whose `@pattern` is one of these widgets with no
+`@a11y`. The pattern names it reads are listed in
+`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#component-catalogue`.
 
 ## What the prototype does not answer
 

@@ -44,6 +44,12 @@ installed, and a component whose `@pattern` is an interactive widget `ui-procure
 `@a11y` (`QFAI-COMP-001` to `QFAI-COMP-006`). `npx qfai catalog components --check` fails CI on an
 out-of-date catalogue.
 
+The widget `@pattern` names it reads, compared without case, spaces, hyphens or underscores, are
+`dialog`, `alert dialog`, `drawer`, `sheet`, `menu`, `menu button`, `tabs`, `combobox`,
+`autocomplete`, `listbox`, `select`, `tooltip`, `popover`, `toast`, `date picker`, `disclosure` and
+`accordion`. A component with one of them and a filled `@a11y` spares its own file the hand-written
+markup warning.
+
 ## Plain text in UI source
 
 `npx qfai validate` reads `.qfai/prototype/final/index.html`, the `index.html` of the latest `iter-NN/`, and the

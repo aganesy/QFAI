@@ -9,7 +9,8 @@ Feature: Take interactive widgets from a tested source
     Given a project whose `uiux.registries` declares a valid entry, or whose committed component catalogue lists a component with a `@source` other than `authored`
     When `qfai validate` runs in the `prototyping`, `saas-package`, `verify` or `full` profile over a selected `.tsx` or `.jsx` surface file whose intrinsic element carries `role="dialog"`, `role="menu"`, `role="tablist"` or `aria-modal`
     Then it raises `QFAI-COMP-005` at warning at the element's line, naming what the element carries
-    And the file of a catalogued component whose `@source` is a catalogue item raises none, a component element raises none, and a project with no catalogue installed raises none
+    And none is raised in the file of a component, read from the committed catalogue or from its doc comment, whose `@source` is a catalogue item or whose `@pattern` is a listed widget with an `@a11y`
+    And a component element, a native `<dialog>` carrying `aria-modal`, an `aria-modal` whose literal is `false`, and a project with no catalogue installed raise none
 
   # AC-0001-0310-02
   Scenario: A listed interactive widget with no accessibility notes is a warning
