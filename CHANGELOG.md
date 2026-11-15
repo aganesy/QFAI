@@ -53,6 +53,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `navigation: { none: <reason> }`, and a `surface: marketing` screen is asked
   for neither. The UI contract guide, the contract artifact rules, the
   `sdd-contract` step and the shipped sample say so. Part of #4119.
+
 - **The implement steps now write the per-role navigation journey.** Where an
   app has navigation of its own, `implement-scaffold` adds an empty journey
   test for each role a flow adds a screen to, and records the roles that sign
@@ -74,6 +75,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Closes #4109.
 
 ### Changed
+
+- The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
 
 - **A scope that stops before implementation can reach its own commit.** In
   `npx qfai workflow plan`, a scope that writes the specification and leaves
