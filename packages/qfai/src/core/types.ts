@@ -122,10 +122,15 @@ export type ValidationTimings = {
   htmlMockMs: number;
   htmlMockBudgetMs: number;
   /**
-   * What each validator of the UI/UX group took, slowest first. The validators run side by side
-   * on one event loop, so each time includes waiting for the others: the parts overlap, do not
-   * add up to `uiuxMs`, and can credit a fast validator with another's time. They say where to
-   * look, not how the time divides.
+   * How the validators of the UI/UX group ran. A plain run runs them side by side on one event
+   * loop, so each part's time includes waiting for the others: the parts overlap, do not add up
+   * to `uiuxMs`, and can credit a fast validator with another's time. Under `--timings` they run
+   * one after another, so each part's time is that validator's own work.
+   */
+  uiuxPartsRun: "side-by-side" | "one-after-another";
+  /**
+   * What each validator of the UI/UX group took, slowest first, read as `uiuxPartsRun` says. The
+   * html-mock part leaves out the one-off load of its parser.
    */
   uiuxParts: readonly { name: string; ms: number }[];
 };
@@ -142,13 +147,15 @@ export type ValidationFamilyTiming = { family: string; ms: number };
  * Like `ValidationTimings` it describes the machine, not the tree, so it raises no finding.
  */
 export type ValidationFamilyTimings = {
-  /** Checks that ran one after another, summed per family. */
+  /** Checks that ran one after another, summed per family; the UI/UX group is one entry `uiux`. */
   sequential: readonly ValidationFamilyTiming[];
   /**
-   * The UI/UX group, whose checks run side by side: each time includes waiting for the others,
-   * so these overlap and do not add up to the group's own time.
+   * The checks of the UI/UX group, which `--timings` runs one after another so each time is that
+   * check's own work. The html-mock check leaves out the one-off load of its parser.
    */
-  overlapping: readonly ValidationFamilyTiming[];
+  uiux: readonly ValidationFamilyTiming[];
+  /** The one-off load of the html-mock parser, 0 when no mock block needed it. */
+  htmlMockLoadMs: number;
 };
 
 export type ValidationResult = {
