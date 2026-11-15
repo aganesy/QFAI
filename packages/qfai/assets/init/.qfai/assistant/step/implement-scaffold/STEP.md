@@ -28,6 +28,8 @@ the system's shape has settled.
 - The `Component catalogue` row of `<paths.contractsDir>/tech.md#stack`, for
   § Component catalogue, and the catalogue's own config file or package
   manifest entry, which tells whether it is installed.
+- The UI contracts under `paths.contractsDir`, for § Per-role navigation
+  journey: each screen's `navigation` and the roles the flow's stories name.
 
 ## Writes
 
@@ -36,6 +38,7 @@ the system's shape has settled.
   annotation lines this step adds to those files instead.
 - The catalogue setup § Component catalogue writes: the files the catalogue's
   own setup command writes, and its entry in `uiux.registries`.
+- The empty per-role navigation journey § Per-role navigation journey adds.
 
 ## Procedure
 
@@ -53,6 +56,7 @@ the system's shape has settled.
 4. Record which tests need an authenticated actor. Any such test makes
    `implement-credentials` run before `implement-acceptance`.
 5. Set up the component catalogue as § Component catalogue says.
+6. Add the per-role navigation journey as § Per-role navigation journey says.
 
 The command never overwrites an existing test. A destination the configured
 globs would not collect is a refusal: fix the globs or the layout, not the
@@ -79,7 +83,7 @@ new purpose-named file instead. Where they are not, run the scaffold as
 - Change no existing test in the file: add no assertion, and move or remove no
   annotation already there.
 
-The step then passes as Passes when states. Procedure items 1, 4 and 5
+The step then passes as Passes when states. Procedure items 1, 4, 5 and 6
 still apply.
 
 ## Component catalogue
@@ -109,12 +113,41 @@ The catalogue needs no setup when it is installed and `uiux.registries` has
 its entry, or when a run already reported it as one that cannot be installed
 and the row has not changed since.
 
+## Per-role navigation journey
+
+A flow's journey can open each screen by its URL, so the flow tests alone do
+not show that a user can reach the screens. `.qfai/assistant/rule/test-layers.md`
+§ L5 E2E recommends one navigation journey per role for that.
+
+Skip this section when the app has no navigation of its own: no UI contract
+gives a screen a `navigation` with a `shell` or `entry_points`.
+
+Otherwise:
+
+1. When the project has no navigation journey, add one under
+   `<testsDir>/e2e/`, in a file the configured globs select, for example
+   `<testsDir>/e2e/navigation.test.<ext>`: one test per role, each with an
+   empty body that passes.
+2. When the journey exists but has no test for a role this flow adds a screen
+   to, add that role's test, with an empty body, to the same file. Change no
+   existing test there.
+3. The journey proves reachability rather than one flow, so it carries no BF,
+   AC or EX annotation. `npx qfai validate` therefore does not report it
+   missing; the pass names its file instead.
+4. Record each role of the journey as an authenticated actor, so
+   `implement-credentials` serves one signed-in session per role.
+
+The journey needs nothing when the app has no navigation of its own, or when
+its file already has a test for every role this flow adds a screen to.
+
 ## Passes when
 
 Read first: the BF and AC items of the flow that no `Test exception:` row
 names, and the tests that annotate them. The step passes when every one
 already has an annotating test at its layer and § Component catalogue needs no
-setup. The pass names the test for each item.
+setup and § Per-role navigation journey needs nothing. The pass names the
+test for each item, and the navigation journey's file or the reason the app
+has none.
 
 The step also passes when the work order names no flow because it carries
 only a delegated release's hand-made edit: the extraction names the `release`
@@ -127,5 +160,6 @@ names no flow still stops this step.
 
 PASS when every BF and AC of the flow that no `Test exception:` row names
 has an annotating test at its layer, § Component catalogue needs no setup,
-and `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
+§ Per-role navigation journey needs nothing, and
+`npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
 error owned by this flow.

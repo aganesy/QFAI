@@ -11,11 +11,16 @@ The quality phase of acceptance testing. `implement-scaffold` left an E2E test
 for each business flow and an integration test for each acceptance criterion,
 each with an empty body. An API test an acceptance criterion already had is
 worked the same way. Once the system's shape has settled, this
-step writes the assertions those bodies owe.
+step writes the assertions those bodies owe, and the body of the per-role
+navigation journey `implement-scaffold` added.
 
 ## Reads
 
-- The flow's acceptance tests whose bodies are empty.
+- The flow's acceptance tests whose bodies are empty, and the per-role
+  navigation journey's tests whose bodies are empty.
+- `.qfai/assistant/rule/test-layers.md` § L5 E2E, for what the navigation
+  journey proves, and the UI contracts under `paths.contractsDir`, for the
+  screens each role reaches.
 - The BF or AC each test annotates, under `paths.specsDir`, and its owning
   contracts, under `paths.contractsDir`.
 - The worker session setup `implement-credentials` wrote, when a test needs an
@@ -26,7 +31,8 @@ step writes the assertions those bodies owe.
 
 ## Writes
 
-- The body of each empty acceptance test in scope.
+- The body of each empty acceptance test in scope, the navigation journey's
+  included.
 
 ## Ownership and annotation
 
@@ -38,28 +44,42 @@ step writes the assertions those bodies owe.
 
 Each test keeps its annotation and its file. No annotation is added, moved or
 removed. Contract references and business rules define assertions, but
-contract IDs are not coverage annotations.
+contract IDs are not coverage annotations. The navigation journey carries no
+annotation and gains none.
 
 ## Procedure
 
 1. Write the assertions the test's BF or AC states, against observable
    behaviour.
-2. Run each test with the Test command `common-gate-run` names, and confirm it
+2. For each role's test in the navigation journey, sign in as that role
+   through the session `implement-credentials` serves, then reach every
+   screen the UI contracts declare for that role through the app's own links
+   and controls only, never by typing a URL, and assert that each screen
+   rendered.
+3. Run each test with the Test command `common-gate-run` names, and confirm it
    passes.
-3. The behaviour already exists, so prove each assertion can fail: change the
+4. The behaviour already exists, so prove each assertion can fail: change the
    production predicate it checks, observe that assertion fail, restore the
    predicate, and observe the test pass again. Report the command, the
    mutation and both results. A
    syntax error, a deleted export or a bare throw is not a discriminating
    mutation.
-4. A test that fails because the product is wrong is not repaired here: report
+5. A test that fails because the product is wrong is not repaired here: report
    it as a defect for `implement-tdd` or a fix route. A test that cannot be
    written because the story or contract is wrong is a specification change under
    `.qfai/assistant/rule/drift-protocol.md`.
 
+## Passes when
+
+Read first: the flow's acceptance tests in scope and the navigation journey's
+file. The step passes when every one already has a body that asserts its BF,
+its AC or, for the journey, each role's screens. The pass names the tests and
+the navigation journey's file, or the reason the app has none.
+
 ## Gate
 
 PASS when every test in scope has a body that asserts its BF or AC, keeps its
-annotation and file, passes, and
+annotation and file, passes, the navigation journey reaches each role's
+screens through the app's own navigation, and
 `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
 error owned by this flow.

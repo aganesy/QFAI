@@ -4,6 +4,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The implement steps now write the per-role navigation journey.** Where an
+  app has its own navigation, `implement-scaffold` adds an empty navigation
+  journey test per role and records each role as a signed-in actor,
+  `implement-credentials` serves one session per role, and
+  `implement-acceptance` writes each role's body: sign in, then reach every
+  screen the UI contracts declare for that role through the app's own links
+  and controls. Each step's pass names the journey file, since `qfai validate`
+  does not report it. Closes #4229.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

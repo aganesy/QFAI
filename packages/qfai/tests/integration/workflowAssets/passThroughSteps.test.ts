@@ -236,7 +236,7 @@ describe("a step that may pass with evidence", () => {
     expect(section).toMatch(/an AC or BF annotation counts anywhere in such a file/i);
     expect(section).toMatch(/change no existing test in the file/i);
     expect(section).toMatch(
-      /the step then passes as Passes when states\. Procedure items 1, 4 and 5 still apply\./i,
+      /the step then passes as Passes when states\. Procedure items 1, 4, 5 and 6 still apply\./i,
     );
     const procedure = flat(
       sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Procedure"),
@@ -266,6 +266,47 @@ describe("a step that may pass with evidence", () => {
       /5\. Set up the component catalogue as § Component catalogue says/i,
     );
     expect(await passesWhen("implement-scaffold")).toMatch(/§ Component catalogue needs no setup/i);
+  });
+
+  it("splits the per-role navigation journey across scaffold, credentials and acceptance, each naming its file", async () => {
+    const scaffold = await readShipped("step/implement-scaffold/STEP.md");
+    const journey = flat(sectionOf(scaffold, "## Per-role navigation journey"));
+    expect(journey).toMatch(
+      /skip this section when the app has no navigation of its own: no UI contract gives a screen a `navigation` with a `shell` or `entry_points`/i,
+    );
+    expect(journey).toMatch(/one test per role, each with an empty body that passes/i);
+    expect(journey).toMatch(
+      /has no test for a role this flow adds a screen to, add that role's test/i,
+    );
+    expect(journey).toMatch(/carries no BF, AC or EX annotation/i);
+    expect(journey).toMatch(
+      /record each role of the journey as an authenticated actor, so `implement-credentials` serves one signed-in session per role/i,
+    );
+    expect(flat(sectionOf(scaffold, "## Procedure"))).toMatch(
+      /6\. Add the per-role navigation journey as § Per-role navigation journey says/i,
+    );
+    expect(await passesWhen("implement-scaffold")).toMatch(
+      /the pass names the test for each item, and the navigation journey's file or the reason the app has none/i,
+    );
+
+    const credentials = await readShipped("step/implement-credentials/STEP.md");
+    expect(flat(sectionOf(credentials, "## Procedure"))).toMatch(
+      /serve the navigation journey one signed-in session per role it records/i,
+    );
+    expect(await passesWhen("implement-credentials")).toMatch(
+      /the pass names the tests, the navigation journey's file and the setup it read/i,
+    );
+
+    const acceptance = await readShipped("step/implement-acceptance/STEP.md");
+    expect(flat(sectionOf(acceptance, "## Reads"))).toMatch(
+      /`\.qfai\/assistant\/rule\/test-layers\.md` § L5 E2E/i,
+    );
+    expect(flat(sectionOf(acceptance, "## Procedure"))).toMatch(
+      /sign in as that role through the session `implement-credentials` serves, then reach every screen the UI contracts declare for that role through the app's own links and controls only, never by typing a URL/i,
+    );
+    expect(await passesWhen("implement-acceptance")).toMatch(
+      /the pass names the tests and the navigation journey's file, or the reason the app has none/i,
+    );
   });
 
   // BR-0002-0016
