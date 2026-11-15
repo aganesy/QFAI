@@ -363,8 +363,17 @@ whose navigation shows where the user is, a way back from a screen below the
 top level, and the empty, loading, error and success states, the empty one
 saying what to do next. The rule already makes each part an obligation, so a
 missing one is a defect that traces to it, whether or not the UI contract
-names the part, and not an observation that the screen could be better. A
-part the UI contract leaves out with a reason is not a finding.
+names the part, and not an observation that the screen could be better.
+
+A part left out with a recorded reason is not a finding. The reason is in one
+of three places:
+
+- a part the screen leaves out: a `{ part, reason }` entry in the `omitted`
+  list of the screen's UI contract;
+- a state the screen cannot be in: `none` under the screen's `states`;
+- a once-per-application part such as the app shell: an entry on the app
+  frame's contract, the UI contract that holds the app shell and the home, not
+  on the screen's.
 
 The finding blocks only where the run made the gap. Before the run means
 what the run started from:
@@ -379,7 +388,7 @@ what the run started from:
   shell are the run's own.
 
 The way back and the states are judged on each screen you review in full. A
-part with no reason recorded in the screen's UI contract is a blocking finding
+part left out with no recorded reason is a blocking finding
 when it is missing from a screen the run adds or changes, or when the run
 removes it. Name the screen, the missing part and the trace. A part that was
 already missing before the run is critique: it goes in `proseCritique`,
@@ -438,7 +447,7 @@ Its authority is the business-screen floor
 (`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`): on an
 application screen, an empty, loading, error or success state the screen does
 not show is a detection whether or not the screen contract declares it, unless
-the contract records the reason it is left out. A state the screen contract
+the contract records `none` for it under `states`. A state the screen contract
 declares counts on any screen. A state that was already missing before the run
 is critique, not a detection, as [What blocks](#what-blocks) says.
 

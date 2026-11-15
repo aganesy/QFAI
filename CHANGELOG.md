@@ -159,6 +159,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   build. `lap-007-state-not-represented` now rests on the same floor. Closes
   #4129.
 
+- **The prototype reviewer looks for a left-out part's reason where the UI
+  contract guide puts it.** A part a screen leaves out is excused by an entry
+  in the `omitted` list of that screen's UI contract, a state the screen
+  cannot be in by `none` under its `states`, and a once-per-application part
+  such as the app shell by an entry on the app frame's contract. The reviewer
+  no longer reads a shell reason recorded on the app frame as missing.
+  Closes #4389.
+
 - **A UI pattern repeated across screens becomes a shared component.**
   `minimal-implementation.md` no longer counts a region that several screens
   repeat as "an operation done once": it follows rung 1 of `ui-procurement.md`

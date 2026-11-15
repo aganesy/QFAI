@@ -577,7 +577,19 @@ describe.each(TREES)("%s", (tree) => {
       "an app shell whose navigation shows where the user is, a way back from a screen below the top level, and the empty, loading, error and success states",
     );
     expect(prompt).toContain("whether or not the UI contract names the part");
-    expect(prompt).toContain("A part the UI contract leaves out with a reason is not a finding.");
+    expect(prompt).toContain(
+      "A part left out with a recorded reason is not a finding. The reason is in one of three places:",
+    );
+    expect(prompt).toContain(
+      "a part the screen leaves out: a `{ part, reason }` entry in the `omitted` list of the screen's UI contract;",
+    );
+    expect(prompt).toContain(
+      "a state the screen cannot be in: `none` under the screen's `states`;",
+    );
+    expect(prompt).toContain(
+      "a once-per-application part such as the app shell: an entry on the app frame's contract, the UI contract that holds the app shell and the home, not on the screen's.",
+    );
+    expect(prompt).toContain("unless the contract records `none` for it under `states`.");
     expect(prompt).toContain(
       "a scoped run: the confirmed `final/index.html` its first iteration copies;",
     );
@@ -588,7 +600,7 @@ describe.each(TREES)("%s", (tree) => {
       "an unscoped `prototype` run: nothing, so every screen it reviews and its shell are the run's own.",
     );
     expect(prompt).toContain(
-      "A part with no reason recorded in the screen's UI contract is a blocking finding when it is missing from a screen the run adds or changes, or when the run removes it.",
+      "A part left out with no recorded reason is a blocking finding when it is missing from a screen the run adds or changes, or when the run removes it.",
     );
     expect(prompt).toContain(
       "A part that was already missing before the run is critique: it goes in `proseCritique`, naming the screen and the part.",
