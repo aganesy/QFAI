@@ -230,6 +230,45 @@ it("prepares graph tools when an older adopter reruns init", async () => {
   }
 });
 
+// QFAI:EX-0001-0237-03
+// Mutation: packages/qfai/src/core/graph/entrypoints.ts `if (Object.values(recorded).some((source: unknown) => typeof source !== "string"))` -> `if (Object.keys(recorded).some((name) => !(name in sources) || typeof recorded[name] !== "string"))` fails "reruns init without a conflict when the entrypoint record lists files an earlier release installed"
+it("reruns init without a conflict when the entrypoint record lists files an earlier release installed", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-earlier-entrypoints-"));
+  try {
+    const fixture = graphProcessFixture();
+    expect((await prepareGraphIntegration(root, fixture.run)).conflicts).toEqual([]);
+    const tools = path.join(root, ".qfai", "tools");
+    const record = path.join(tools, "graph-entrypoints.json");
+    const current: unknown = JSON.parse(await readFile(record, "utf8"));
+    const sources =
+      typeof current === "object" && current !== null && "sources" in current
+        ? current.sources
+        : undefined;
+    if (typeof sources !== "object" || sources === null) throw new Error("No entrypoint record.");
+    const earlier = {
+      "graph-hook.mjs": "// Earlier graph hook wrapper.\n",
+      "graph-enforcement.json": '{"kind":"graph-enforcement","denyExploration":true}\n',
+    };
+    for (const [name, text] of Object.entries(earlier))
+      await writeFile(path.join(tools, name), text);
+    await writeFile(
+      record,
+      JSON.stringify({
+        kind: "graph-entrypoints",
+        sources: { ...sources, ...earlier },
+      }) + "\n",
+    );
+    const rerun = await prepareGraphIntegration(root, fixture.run);
+    expect(rerun.runtime).toBe("installed");
+    expect(rerun.conflicts).toEqual([]);
+    expect(await readFile(path.join(tools, "graph-cli.mjs"), "utf8")).toContain(
+      "runInstalledGraphCli",
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 // QFAI:EX-0001-0237-02
 // Mutation: packages/qfai/src/core/graph/prepare.ts `return { runtime: "installed", code: "code-not-ready", documents: "documents-not-ready" };` -> `return { runtime: "not-ready", code: "code-not-ready", documents: "documents-not-ready" };` fails "prepares pinned tools in a project path containing spaces"
 it("prepares pinned tools in a project path containing spaces", async () => {

@@ -57,7 +57,7 @@
     "tests/unit/graph/lifecycle.examples.test.ts",
     "tests/unit/graph/preparationFailures.examples.test.ts",
     "tests/integration/designAntiPatternsReview.test.ts",
-    "tests/integration/graph/hostSettings.examples.test.ts",
+    "tests/integration/graph/cliSettingsPreservation.examples.test.ts",
     "tests/integration/graph/runtimePreparation.examples.test.ts",
     "tests/integration/graph/US-0001-0237/AC-0001-0237-01.test.ts",
     "tests/integration/graph/US-0001-0237/AC-0001-0237-02.test.ts",

@@ -92,7 +92,7 @@ function conflict(): GraphSettingsComposition {
   return {
     files: [],
     conflicts: [
-      "Retain edited graph entrypoints. Review .qfai/tools before repairing graph protection.",
+      "Retain edited graph entrypoints. Review .qfai/tools before repairing the graph CLI.",
     ],
   };
 }
