@@ -397,6 +397,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   markers separate commands, so what lies between and after them is still
   read. A search that appears only in a comment is not denied.
 
+- **`qfai init --force` keeps the subsections a project added to
+  `.github/copilot-instructions.md`.** A `###` or deeper heading the shipped
+  text does not have, written under a section QFAI owns, was replaced with that
+  section, so project notes below the rule list were lost on an upgrade. Such
+  a subsection now stays, with its text and bullets, after the project's own
+  sections at the end of the file.
+
 - **`qfai session-review` finds a Claude Code session that moved into the
   project after it started.** A session the desktop app opened in a scratch
   directory records that directory as its `cwd` until it moves into the

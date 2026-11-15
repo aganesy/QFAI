@@ -1135,15 +1135,21 @@ export function keepProjectEntries(
   const out = generated.split("\n");
   const shippedMasters = new Set(citedRuleMastersOutsideCode(generated));
   const kept = new Set<number>();
+  const shippedOpen = outsideFences(out);
+  // A subsection the project added keeps its own lines, its bullets included.
+  const subsections = projectSubsections(lines, open, out, shippedOpen);
+  const inSubsection = new Set(
+    subsections.flatMap(({ from, to }) => Array.from({ length: to - from }, (_, k) => from + k)),
+  );
 
   // A list item is kept only where the shipped text has a list to put it in.
-  const shippedOpen = outsideFences(out);
   const shippedRange = ruleListRange(out, shippedOpen);
   const entries: string[] = [];
   const range = ruleListRange(lines, open);
   if (range !== null && shippedRange !== null) {
     for (let index = range.from; index < range.to; index += 1) {
       const line = lines[index] ?? "";
+      if (inSubsection.has(index)) continue;
       if (open[index] !== true || isQuoted(line) || !LIST_ITEM_RE.test(line)) continue;
       const end = Math.min(endOfListItem(lines, open, index), range.to);
       const item = lines.slice(index, end);
@@ -1174,6 +1180,12 @@ export function keepProjectEntries(
     while (end > start + 1 && (lines[end - 1] ?? "").trim() === "") end -= 1;
     text += `${text.endsWith("\n") ? "" : "\n"}\n${lines.slice(start, end).join("\n")}\n`;
   }
+  for (const { from, to } of subsections) {
+    let end = to;
+    for (let at = from; at < end; at += 1) kept.add(at);
+    while (end > from + 1 && (lines[end - 1] ?? "").trim() === "") end -= 1;
+    text += `${text.endsWith("\n") ? "" : "\n"}\n${lines.slice(from, end).join("\n")}\n`;
+  }
 
   const held = new Set(text.split("\n"));
   const removed = lines.filter(
@@ -1187,6 +1199,48 @@ function sectionStarts(lines: readonly string[], open: readonly boolean[]): numb
   return lines.flatMap((line, index) =>
     open[index] === true && !isQuoted(line) && (atxLevel(plainLine(line)) ?? 7) <= 2 ? [index] : [],
   );
+}
+
+/**
+ * The subsections of `lines` the shipped text `out` does not have, in file order.
+ *
+ * A subsection opens at an ATX heading of level 3 or deeper whose text no heading of the shipped
+ * text carries, and runs to the next heading of the same or a higher level. Only one under a
+ * section the shipped text owns counts: under a section the project added, it travels with that
+ * section. Without this a project's `###` notes under a shipped section were replaced along with
+ * the section.
+ */
+function projectSubsections(
+  lines: readonly string[],
+  open: readonly boolean[],
+  out: readonly string[],
+  outOpen: readonly boolean[],
+): { from: number; to: number }[] {
+  const shipped = new Set(
+    out.flatMap((line, index) =>
+      outOpen[index] === true && !isQuoted(line) && atxLevel(plainLine(line)) !== null
+        ? [headingKey(line)]
+        : [],
+    ),
+  );
+  const levelAt = (index: number): number | null =>
+    open[index] === true && !isQuoted(lines[index]) ? atxLevel(plainLine(lines[index])) : null;
+  const found: { from: number; to: number }[] = [];
+  let sectionIsShipped = true;
+  for (let start = 0; start < lines.length; start += 1) {
+    const level = levelAt(start);
+    if (level === null) continue;
+    if (level <= 2) {
+      sectionIsShipped = shipped.has(headingKey(lines[start]));
+      continue;
+    }
+    if (!sectionIsShipped || shipped.has(headingKey(lines[start]))) continue;
+    let end = start + 1;
+    while (end < lines.length && (levelAt(end) ?? Number.POSITIVE_INFINITY) > level) end += 1;
+    found.push({ from: start, to: end });
+    start = end - 1;
+  }
+  return found;
 }
 
 /** A heading's text, without its marker, closing run of `#` or surrounding space. */

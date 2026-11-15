@@ -18,8 +18,8 @@ Feature: Copilot instructions generation
 
   # AC-0001-0029-04
   Scenario: A forced init keeps the project entries in the Copilot instructions
-    Given a project whose `.github/copilot-instructions.md` has a rule-list entry and a section the shipped text does not have
+    Given a project whose `.github/copilot-instructions.md` has a rule-list entry, a section and a subsection the shipped text does not have
     When `qfai init --force` runs
-    Then the file holds the shipped text with that entry and that section
+    Then the file holds the shipped text with that entry, that section and that subsection
     And init names each line it changed or removed, and names none when it removed none
 ```

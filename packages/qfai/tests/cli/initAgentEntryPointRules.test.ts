@@ -2052,6 +2052,28 @@ describe("what a forced rewrite keeps of the Copilot file", () => {
     expect(result.removed).toEqual([]);
   });
 
+  it("keeps a subsection the shipped text does not have, and replaces one it has", () => {
+    const existing = `${shipped}\n### Our notes\n\nOurs.\n\n### Golden rules\n\nStale.\n`;
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text).toBe(`${shipped}\n### Our notes\n\nOurs.\n`);
+    expect(result.removed).toEqual(["### Golden rules", "Stale."]);
+  });
+
+  it("keeps a project bullet under its own subsection heading, once", () => {
+    const existing = shipped.replace(
+      "interview the decision tree.\n",
+      "interview the decision tree.\n\n### House rules\n\n- `.agents/rules/house.md` — our rule.\n",
+    );
+
+    const result = keepProjectEntries(shipped, existing);
+
+    expect(result.text.split("- `.agents/rules/house.md` — our rule.").length).toBe(2);
+    expect(result.text).toContain("### House rules\n\n- `.agents/rules/house.md` — our rule.");
+    expect(result.removed).toEqual([]);
+  });
+
   it("reads a heading or bullet inside a fence or a quote as neither", () => {
     const existing = shipped.replace(
       "- Keep changes small.\n",
