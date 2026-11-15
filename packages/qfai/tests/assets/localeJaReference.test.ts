@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const assistant = path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant");
-const CITATION = ".qfai/assistant/rule/references/locale-ja.md";
+const CITATION = ".qfai/assistant/rule/references/locale/ja.md";
 
 async function read(relative: string): Promise<string> {
   return readFile(path.join(assistant, relative), "utf-8");
@@ -27,7 +27,7 @@ function flat(text: string): string {
 // QFAI:EX-0001-0314-01
 describe("the Japanese locale reference covers each settled point", () => {
   it("has one section per point", async () => {
-    const headings = (await read("rule/references/locale-ja.md"))
+    const headings = (await read("rule/references/locale/ja.md"))
       .split(/\r?\n/)
       .filter((line) => line.startsWith("## "));
     expect(headings).toEqual([
@@ -43,7 +43,7 @@ describe("the Japanese locale reference covers each settled point", () => {
   });
 
   it("states the rule each section settles", async () => {
-    const text = flat(await read("rule/references/locale-ja.md"));
+    const text = flat(await read("rule/references/locale/ja.md"));
     for (const phrase of [
       '`value.normalize("NFKC")` on both sides',
       "returns early while `event.isComposing` is true",
@@ -56,6 +56,12 @@ describe("the Japanese locale reference covers each settled point", () => {
       'new Intl.Segmenter("ja", { granularity: "word" })',
       "`line-height: 1.7`",
       "`font-display: swap`",
+      "`9 - (sum of digit_n * (n is odd ? 1 : 2)) mod 9`",
+      "Load only subsets",
+      "`word-break: keep-all`",
+      "runs once more on `compositionend`",
+      "has 10 or 11 digits",
+      "`￥` (U+FFE5)",
     ]) {
       expect(text, phrase).toContain(phrase);
     }
@@ -76,7 +82,7 @@ describe("the contract and implementation steps read the locale reference", () =
   it("names it in each step's Reads, and the cited file exists", async () => {
     for (const step of ["step/sdd-contract/STEP.md", "step/implement-tdd/STEP.md"]) {
       const body = await read(step);
-      const reads = body.split(/^## /m).find((part) => part.startsWith("Reads\n")) ?? "";
+      const reads = body.split(/^## /m).find((part) => /^Reads\r?\n/.test(part)) ?? "";
       expect(flat(reads), step).toContain(`\`${CITATION}\` for Japanese`);
       expect(flat(reads), step).toContain("states the product's locale");
     }

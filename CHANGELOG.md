@@ -6,7 +6,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
-- **A Japanese locale reference.** `.qfai/assistant/rule/references/locale-ja.md`
+- **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
   and era formats, postcode, phone, corporate and invoice numbers, line

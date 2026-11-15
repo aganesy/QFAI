@@ -1,7 +1,8 @@
 /**
  * A product whose locale is Japanese gets its formats and input rules from the
- * shipped locale reference that `qfai init` writes, through the two steps that
- * write contracts and build screens.
+ * locale reference shipped under `assets/init`, through the two steps that
+ * write contracts and build screens, and the repository's own assistant tree
+ * carries the same file.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -16,7 +17,7 @@ const initRoot = path.resolve(
   "assets",
   "init",
 );
-const CITATION = ".qfai/assistant/rule/references/locale-ja.md";
+const CITATION = ".qfai/assistant/rule/references/locale/ja.md";
 
 // QFAI:AC-0001-0314-01
 describe("the contract and implementation steps read the Japanese locale reference", () => {
@@ -29,6 +30,8 @@ describe("the contract and implementation steps read the Japanese locale referen
       expect(body.replace(/\s+/g, " "), step).toContain(`\`${CITATION}\``);
     }
     const reference = await readFile(path.join(initRoot, CITATION), "utf-8");
+    const repoRoot = path.resolve(initRoot, "..", "..", "..", "..");
+    expect(await readFile(path.join(repoRoot, CITATION), "utf-8")).toBe(reference);
     for (const heading of [
       "Input normalisation",
       "IME composition",

@@ -24,7 +24,7 @@ Stage 4 of the story tree: contracts and the business rules they enforce.
   `## What a marketing screen always has` in the same rule.
 - When the specification or `tech.md` states the product's locale, the
   locale's reference under `.qfai/assistant/rule/references/`, such as
-  `.qfai/assistant/rule/references/locale-ja.md` for Japanese: the formats and
+  `.qfai/assistant/rule/references/locale/ja.md` for Japanese: the formats and
   input rules it lists go into the contracts that own those fields and screens.
 - The paired templates under
   `.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/` and

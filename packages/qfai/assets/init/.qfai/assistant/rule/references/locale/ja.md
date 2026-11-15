@@ -2,7 +2,7 @@
 
 Read this file when the specification or `tech.md` states that the product's locale is Japanese. It lists what a Japanese product needs from its contracts and its code, so these points are settled once and not found one screen at a time as bugs.
 
-Each locale has one file beside this one, named `locale-<language tag>.md`, with the headings this file uses. A heading that does not apply to a locale says so in one line.
+Each locale has one file in this directory, named by its language tag (`ja.md`), with the headings this file uses. A heading that does not apply to a locale says so in one line.
 
 Write each format below into the contract that owns the field or screen, and record the project's choices (the yen form, the era screens, the fonts) in root `DESIGN.md`. Implement each once in a shared helper or input component, listed in the component catalogue where the project has one, that every screen calls. A screen does not format a value or check an identifier on its own.
 
@@ -11,7 +11,7 @@ Write each format below into the contract that owns the field or screen, and rec
 - Search and comparison use a key made with `value.normalize("NFKC")` on both sides: the stored value and the query. NFKC turns full-width Latin letters and digits (`ＡＢＣ１２３`) into ASCII and half-width katakana (`ｶﾀｶﾅ`) into full-width katakana.
 - Store what the user typed and compare the normalised key. NFKC also rewrites characters such as `①` to `1` and `㈱` to `(株)`, which a display must not lose.
 - NFKC does not change letter case and does not fold hiragana into katakana. Lower-case the key with `toLowerCase()` after NFKC. Where `あ` must match `ア`, map hiragana U+3041 to U+3096 to katakana by adding 0x60 to each code point, on both sides.
-- Trim with `trim()` after NFKC: NFKC turns the full-width space U+3000 into an ASCII space, so a value padded with full-width spaces is trimmed too.
+- Trim the normalised key. A browser's `trim()` removes the full-width space U+3000 either way, but SQL `TRIM` and many server-side trims remove only ASCII spaces; NFKC turns U+3000 into an ASCII space first, so every trim treats it alike.
 - A database search applies the same key. Store it in its own column, or normalise in the query the same way; do not normalise only in the browser.
 
 ## IME composition
@@ -19,12 +19,12 @@ Write each format below into the contract that owns the field or screen, and rec
 Japanese is typed through an input method: the user types kana, converts it, and presses Enter to confirm the conversion. That Enter is part of typing, not a submit.
 
 - A `keydown` handler that acts on Enter returns early while `event.isComposing` is true. Safari reports `isComposing` as false on the Enter that ends a composition, so also return when `event.keyCode === 229`. In React, read `event.nativeEvent.isComposing`.
-- A handler that reacts to each input, such as an incremental search or validation, waits for `compositionend` before using the value, or ignores `input` events while composing.
+- A handler that reacts to each input, such as an incremental search or validation, waits for `compositionend` before using the value, or ignores `input` events while `isComposing` is true and runs once more on `compositionend`: the last `input` event of a composition still reports `isComposing`, so skipping it alone loses the confirmed text.
 - A single-line field inside a `<form>` submits on Enter by default. Where the screen submits by Enter, test the confirming Enter with an IME on the browsers the product supports.
 
 ## Currency and numbers
 
-- Format yen with `new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" })`. JPY has no minor unit, so the output has no decimal places; do not store or show sen.
+- Format yen with `new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" })`. JPY has no minor unit, so the output has no decimal places; do not store or show sen. The symbol is the full-width `￥` (U+FFE5), not `¥` (U+00A5), which a test or snapshot must match.
 - Many business screens show amounts as a number followed by `円`. Where the contract chooses that form, format the number with `new Intl.NumberFormat("ja-JP")` and append `円`. The contract names one form and every screen uses it.
 - Keep money in integers of yen. Round tax with the rule the contract states (round down, round half up or round up) at the point the contract states, per line or per invoice.
 - `notation: "compact"` with `ja-JP` groups large numbers by 万 and 億. Use it only where the contract allows an approximate figure.
@@ -43,9 +43,9 @@ Japanese is typed through an input method: the user types kana, converts it, and
 Every identifier field accepts full-width digits and full-width hyphens: normalise with NFKC first, then check. NFKC does not turn U+2212 (minus sign), U+2010 to U+2015 (dashes) or U+30FC (prolonged sound mark) into an ASCII hyphen, so an identifier field maps those to `-` itself before it checks the value. Store the digits in one canonical form and format them for display.
 
 - **Postcode.** Seven digits, shown as `NNN-NNNN`. Accept the value with or without the hyphen, and store the seven digits.
-- **Phone number.** A domestic number starts with `0` and has 10 digits, or 11 for mobile and IP numbers such as `090`, `080`, `070` and `050`. Where the hyphens go depends on the length of the area code, so store digits only and do not reject a value because of where its hyphens are.
+- **Phone number.** A domestic number starts with `0` and has 10 or 11 digits: 11 for `070`, `080` and `090` mobile, `050` IP, `0800` free dial and `020` numbers. Check the length only. Where the hyphens go depends on the length of the area code, so store digits only and do not reject a value because of where its hyphens are.
 - **Corporate number.** Thirteen digits; the first digit is a check digit over the other twelve. Number the twelve digits `n = 1` to `12` from the rightmost. The check digit is `9 - (sum of digit_n * (n is odd ? 1 : 2)) mod 9`. For example, `7000012050002` is valid.
-- **Qualified invoice registration number.** `T` followed by thirteen digits; for a corporation the digits are its corporate number. Accept a lower-case or full-width `T` by normalising, and check the digits as a corporate number when the registrant is a corporation.
+- **Qualified invoice registration number.** `T` followed by thirteen digits; for a corporation the digits are its corporate number. Accept a lower-case or full-width `T`: normalise with NFKC, then upper-case the leading letter, and check the digits as a corporate number when the registrant is a corporation.
 
 Write each field's accepted input, stored form, display form and error message into its contract.
 
@@ -62,7 +62,7 @@ Japanese has no spaces between words, and a browser may break a line between any
 
 ## Line height
 
-- Kanji and kana fill the whole em box, so text set at a Latin line height looks cramped. Set body text near `line-height: 1.7`. The W3C Requirements for Japanese Text Layout advise a gap between lines of half to the whole character size, which is a line height of 1.5 to 2.
+- Kanji and kana fill the whole em box, so text set at a Latin line height looks cramped. Set body text near `line-height: 1.7`. The W3C Requirements for Japanese Text Layout describe a usual gap between lines of half to the whole character size, which is a line height of 1.5 to 2.
 - Headings and compact table cells may go lower, near 1.4. Do not go below the size at which descenders of mixed Latin text touch the next line.
 - Do not set a negative `letter-spacing` on Japanese text.
 
@@ -71,6 +71,6 @@ Japanese has no spaces between words, and a browser may break a line between any
 - A Japanese font holds thousands of glyphs and is several megabytes as one file. Never load it as one file on a page.
 - Load only subsets: Google Fonts serves Noto Sans JP as many files, each with a `unicode-range`, so the browser downloads only the ranges a page uses. A self-hosted font is split the same way, with one `@font-face` per range.
 - Set `font-display: swap` on every `@font-face`, so text renders in a fallback font at once and is replaced when the web font arrives.
-- Load only the weights the design uses. Each weight is a separate set of files.
-- Give a fallback stack that covers Japanese on each platform, for example `"Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif`.
+- Request only the weights the design uses; a static font adds a set of files for each weight.
+- After the face `DESIGN.md` chooses, give a fallback stack that covers Japanese on each platform, for example `"Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic Medium", "Yu Gothic", Meiryo, sans-serif`. Plain `"Yu Gothic"` renders thin on Windows at weight 400, so the medium face comes before it.
 - Text the user enters can contain any character, so a subset made only from the characters in the page's own copy is used only for that copy, never for user content.
