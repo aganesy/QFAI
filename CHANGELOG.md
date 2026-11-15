@@ -4,6 +4,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-11-15
+
 ### Added
 
 - **`product-surface-reviewer` checks that a screen is complete.** For each
