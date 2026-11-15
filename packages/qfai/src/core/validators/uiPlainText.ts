@@ -392,8 +392,7 @@ async function markupCandidates(markup: string, mapped: MappedNames): Promise<Ca
 function insideExempt(element: Element | null, mapped: MappedNames): boolean {
   for (let current = element; current; current = current.parentElement) {
     if (isExemptName(current.localName)) return true;
-    // `renameComponents` put `c.` before a component's name; the name the source wrote follows it.
-    if (isMappedName(current.localName.replace(/^c\./, ""), mapped)) return true;
+    if (isMappedName(markupComponentName(current.localName), mapped)) return true;
     const role = current.getAttribute("role")?.trim().toLowerCase();
     if (role && EXEMPT_ROLES.has(role)) return true;
   }
@@ -420,10 +419,25 @@ function isExemptName(name: string): boolean {
  * `.`-separated segment, are those of a mapped name, so `TableHead`, `UI.TableHead` and
  * `table-head` all match the key `TableHead`.
  */
-function isMappedName(name: string, mapped: MappedNames): boolean {
-  if (mapped.size === 0) return false;
+function isMappedName(name: string | null, mapped: MappedNames): boolean {
+  if (name === null || mapped.size === 0) return false;
   const words = wordsOf(name);
   return mapped.has(words) || mapped.has(words.split(".").pop() ?? "");
+}
+
+/**
+ * The component name a markup element was written with, or `null` for a native element, which
+ * the map never names: `renameComponents` put `c.` before a capitalised, mixed-case or dotted
+ * name, and a name with a `-` is a kebab-case component or a custom element.
+ */
+function markupComponentName(localName: string): string | null {
+  if (localName.startsWith("c.")) return localName.slice(2);
+  return localName.includes("-") ? localName : null;
+}
+
+/** The component name a JSX tag was written with, or `null` for a native element such as `<header>`. */
+function jsxComponentName(tag: string): string | null {
+  return /^[A-Z]/.test(tag) || tag.includes(".") || tag.includes("-") ? tag : null;
 }
 
 /** A name's `.`-separated segments, each split into words at `-` and case changes, in lower case. */
@@ -493,7 +507,11 @@ function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNa
     for (let current = node.parent; current; current = current.parent) {
       if (current.kind !== k.JsxElement) continue;
       const name = tagName(current);
-      if (isExemptName(name) || isMappedName(name, mapped) || EXEMPT_ROLES.has(roleOf(current)))
+      if (
+        isExemptName(name) ||
+        isMappedName(jsxComponentName(name), mapped) ||
+        EXEMPT_ROLES.has(roleOf(current))
+      )
         return true;
     }
     return false;

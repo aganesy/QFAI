@@ -249,7 +249,7 @@ describe("uiux.registries", () => {
   });
 });
 
-// QFAI:EX-0001-0297-17
+// QFAI:EX-0001-0297-19
 describe("uiText.elements", () => {
   async function loadWith(body: string): Promise<Awaited<ReturnType<typeof loadConfig>>> {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-ui-text-"));
