@@ -260,6 +260,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     code, spec IDs or test syntax, from screens visitors read.
   - A figure or claim shown on more than one page comes from one source.
 
+- **`QFAI-UITEXT-001` says what it reads.** The finding's fix text and the
+  implementer guidance say that the check reads only literal text, and that
+  moving a sentence into a constant, a prop or an attribute value is not a fix:
+  the product-surface review still judges that copy.
+
 ### Fixed
 
 - **The search-protection hook reads a search that a program runner or a piped
