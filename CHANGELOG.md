@@ -121,6 +121,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-CONTRACT-056`, at error; a screen without the key is asked nothing,
   and a marketing screen leaves it out.
 
+- **Research has a UI research brief.** Research for a screen type or a
+  component the project does not have yet fills
+  `rule/references/ui-research-brief.md`: one entry per axis (design-system
+  pattern, accessibility, catalogue, domain analogues, framework idioms,
+  locale), each with its sources or a reason it does not apply. The visual
+  reference survey still decides the visual direction; the brief decides what
+  the screen contains.
+
 ### Changed
 
 - **`QFAI-DB-001` says why the SQL is flagged and how to resolve it.** The
