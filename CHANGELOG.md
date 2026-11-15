@@ -14,6 +14,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.svelte` and `.html` files alike. A key that is not a component name, or a
   value outside that list, is reported as `QFAI-CFG-002`. Closes #4329.
 
+- **A part a screen leaves out has one place for its reason.** The rule said
+  leaving out a part every business screen has needs a reason in the screen's
+  UI contract, but named no field for it, and the app shell, the home and the
+  shared components belong to no single screen. A reviewer could not tell a
+  deliberate omission from a missing part. A UI contract screen now takes an
+  optional `omitted` list of `{ part, reason }` entries, and the parts once per
+  application are listed on the home screen's contract until an app-level UI
+  contract exists. `qfai validate` reports an `omitted` that is not a list, an
+  entry that is not a mapping, and an entry with no `part` or no `reason`, as
+  `QFAI-CONTRACT-052` at error. The rule, the UI contract guide and template,
+  the `sdd-contract` step and the product-surface reviewer point at the list.
+
 - **The contract step writes the app frame once.** The app shell, the
   navigation for each role and the home belong to no single flow, so
   `sdd-contract` writes them as the screens of one UI contract, the app frame,
@@ -25,7 +37,44 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **The implement steps now write the per-role navigation journey.** Where an
+  app has navigation of its own, `implement-scaffold` adds an empty journey
+  test for each role a flow adds a screen to, and records the roles that sign
+  in. `implement-credentials` serves one session per such role, and
+  `implement-acceptance` writes or extends each role's test: it reaches every
+  screen of that role through the app's own links and controls. Until UI
+  contracts name the roles of each screen, a role's screens are those of the
+  flows whose stories name it as their actor. `qfai validate` does not report
+  the journey, so each step names its file.
+
+- **A UI contract list or table element says how it is shown and narrowed.**
+  The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
+  artifact rules and the `sdd-contract` step give every `type: list` or
+  `type: table` element a `list` key: `columns`, `search`, `filters`, `sort`
+  and `pagination`, each set or `none` with the reason the element does
+  without it, the same shape as `states`. The business UI pattern reference
+  now says a List behaviour applies to what `list` sets and the entry it
+  concerns records a departure. Validate does not check the key yet.
+  Closes #4109.
+
 ### Changed
+
+- **Settled work that adds screens gets the design and prototype stages.**
+  The extraction has a new qualifier, `new-screens`, for a settled change that
+  adds new UI contracts or new routes users see: an approved record with a
+  task, a settled upstream design, or an order. Such a change now routes
+  `apply-settled-prototype` instead of `apply-settled`. Before, it went straight
+  to implementation with no design or prototype stage. A new feature with no
+  settled record is covered by `visual-open`.
+
+- **The parts of a business screen outrank the minimal-scope article.**
+  Article VII of the shipped constitution now names the list under
+  `## What a business screen always has` in `interface-clarity.md` among what
+  outranks it, beside the safety floor. On an application screen whose UI
+  contract records no reason to leave a part out, navigation, list behaviour,
+  states and feedback are no longer cut as scope beyond the minimum, and the
+  architecture, product-surface and requirements reviewers refuse such a cut;
+  how a part is built remains subject to the article.
 
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the
@@ -57,6 +106,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   production, not the test fixture, so a list control is not cut because a
   five-row fixture does not need it.
 
+- **`validate.json` names the UI/UX check times for how they ran.**
+  `familyTimings.overlapping` becomes `familyTimings.uiux`, with
+  `familyTimings.sharedMarkdownReadMs` and `familyTimings.htmlMockLoadMs`
+  beside it, and `timings.uiuxPartsRun` says whether the parts ran
+  `side-by-side` or `one-after-another`. Closes #4279.
+
 ### Fixed
 
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
@@ -71,12 +126,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **E2E tests wait until a server-rendered page is interactive.** A test that
+  filled a field before the page hydrated lost the value and failed some runs.
+  The guidance now has the app shell set `data-qfai-ready` on `<html>` once it
+  is interactive, and the test wait for it after each page load. The
+  `/qfai-implement` Playwright recipe shows a `waitForAppReady` helper, the
+  wait for a new page after a click, and the shell code for React and plain
+  DOM. The test layers rule and the scaffold and acceptance steps forbid a
+  fixed sleep or a blind retry in its place.
+
 - **A `Derived (not stored)` declaration for a value no DB column holds is
   accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
   credits each declared value that the API contract requires through an `enum`
   on the field, as the reference describes for a status computed at read time.
   A value only in a description is still reported, and the message now says the
   API contract declares no `enum` for it.
+
+- **`qfai validate --timings` times each UI/UX check on its own.** The six
+  UI/UX checks ran side by side, so a check that waited on file reads was
+  charged for the others' work and the `slowest` names could point at a check
+  that did almost nothing. Under `--timings` they now run one after another,
+  the line says `slowest, one after another`, and the shared Markdown read
+  and the html-mock parser's one-off load are each reported once, on their
+  own, as part of the group's time. A run without `--timings` still runs them
+  side by side, and the findings and counts are the same either way.
+  Fixes #4279.
 
 ## [2.5.0] - 2026-11-15
 
