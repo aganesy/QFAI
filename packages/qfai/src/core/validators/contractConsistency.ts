@@ -348,12 +348,14 @@ function staleDerivedDeclarations(
           "contracts.crossContract.derivedNotStored",
           [declaration.fieldName, ...unused],
           "canonical",
-          (stored.length > 0
-            ? "The DB domain can store that value, which contradicts the claim that it is " +
-              "not stored - drop the declaration, or, if it really is not stored, remove the " +
-              "value from the DB domain."
-            : "") +
-            (unasked.length > 0
+          // One remedy per kind of staleness, separated like the sentences they are.
+          [
+            stored.length > 0
+              ? "The DB domain can store that value, which contradicts the claim that it is " +
+                "not stored - drop the declaration, or, if it really is not stored, remove the " +
+                "value from the DB domain."
+              : "",
+            unasked.length > 0
               ? domain === undefined
                 ? "No DB contract stores this field, so the declaration is read against the " +
                   "API contracts: declare the values as an `enum` on the API field, or drop " +
@@ -362,7 +364,10 @@ function staleDerivedDeclarations(
                 : "The API contract does not require that value, so the declaration exempts " +
                   "nothing. Keep it if the value is about to be added to the API; otherwise " +
                   "drop it."
-              : ""),
+              : "",
+          ]
+            .filter((remedy) => remedy !== "")
+            .join(" "),
         ),
       );
     }
