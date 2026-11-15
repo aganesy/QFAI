@@ -88,6 +88,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **E2E tests wait until a server-rendered page is interactive.** A test that
+  filled a field before the page hydrated lost the value and failed some runs.
+  The guidance now has the app shell set `data-qfai-ready` on `<html>` once it
+  is interactive, and the test wait for it after each page load. The
+  `/qfai-implement` Playwright recipe shows a `waitForAppReady` helper, the
+  wait for a new page after a click, and the shell code for React and plain
+  DOM. The test layers rule and the scaffold and acceptance steps forbid a
+  fixed sleep or a blind retry in its place.
+
 - **A `Derived (not stored)` declaration for a value no DB column holds is
   accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
   credits each declared value that the API contract requires through an `enum`
