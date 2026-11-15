@@ -10,6 +10,7 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 - Recommended ceiling: at most 7
 - Screen purpose and navigation: `purpose` and `navigation`
 - Surface kind: `surface`
+- Parts left out: `omitted`
 - `elements[].id` naming policy
 - `elements[].label` is inspection-target text
 - `data-qfai` marker convention
@@ -38,9 +39,9 @@ and the loading, empty, error and success states. A `list` or `table` element
 names its list behaviour in its `list` entry, and the screen names its states in
 `states`; the contract need not repeat the shell or the feedback after a
 change, and their absence from the contract is no reason to leave them out of
-the screen. Leaving one out needs a reason recorded in the screen's UI
-contract, as that rule says; a once-per-application part's reason goes in the
-app frame.
+the screen. Leaving one out needs a reason recorded in the screen's `omitted`
+list, or for a state, `none` under `states`, as that rule says; a
+once-per-application part's entry goes in the app frame.
 
 That list is for application screens. A marketing screen, declared with
 `surface: marketing`, carries the parts of its section entries in the marketing
@@ -138,6 +139,37 @@ marketing screen against its section entries in the marketing pattern
 reference. `npx qfai validate` reports any other value as `QFAI-CONTRACT-051`,
 at error. A marketing screen is not asked for `states` or `navigation` by
 `QFAI-CONTRACT-053` and `QFAI-CONTRACT-054`.
+
+## Parts left out: `omitted`
+
+A screen lists each part of the business-screen list that applies to it and
+that it leaves out, with the reason. This is the one place the reason is
+recorded, so a reviewer can tell a deliberate omission from a missing part.
+
+| Key      | Holds                                                                        |
+| -------- | ---------------------------------------------------------------------------- |
+| `part`   | the part left out, in the list's words, such as `pagination` or `app shell`  |
+| `reason` | why the screen does without it, specific enough for a reviewer to agree with |
+
+```yaml
+omitted:
+  - part: feedback after every change
+    reason: Discard draft stores nothing; it returns to /orders, where the list already shows no draft
+```
+
+- A part that does not apply needs no entry: a screen with no list lists no
+  pagination.
+- A state the screen cannot be in is recorded with `none` under `states`, not
+  here.
+- The once-per-application parts, the app shell with navigation, the home and
+  one shared component per repeated pattern, belong to no single screen. List one the application leaves out on the app frame's contract.
+- On a marketing screen, list a required notice it leaves out here in the same
+  way.
+- A part left out with no entry is a defect, not a cut.
+
+The key is optional. `npx qfai validate` reports, as `QFAI-CONTRACT-052` at
+error, an `omitted` that is not a list and an entry with no `part` or no
+`reason`. Whether the reason holds is the reviewer's to judge.
 
 ## `elements[].id` naming policy
 
@@ -398,6 +430,7 @@ For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by 
 - [ ] Every UI-bearing contract has one full declared ID, at least one screen, and a matching `contracts.md` row.
 - [ ] Every screen states its `purpose` and its `navigation`: shell, entry points and where back leads.
 - [ ] Every screen a visitor sees before signing in declares `surface: marketing`; every other screen leaves the key out or writes `application`.
+- [ ] Every part of the business-screen list a screen leaves out has a `{ part, reason }` entry in its `omitted` list, and the once-per-application parts are listed on the app frame's contract.
 - [ ] Screen IDs, routes, primary tasks, labels, markers, and actions are stable and testable.
 - [ ] Every declared action has an observable effect, including relevant failure states.
 - [ ] Every screen lists all five `states`, each with what renders and the next action, or `none` with a reason.

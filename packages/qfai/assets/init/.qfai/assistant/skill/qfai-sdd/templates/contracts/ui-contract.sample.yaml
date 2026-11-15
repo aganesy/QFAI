@@ -44,6 +44,18 @@ screens:
         - New order button on /orders
         - Orders item in the main navigation
       back_to: /orders
+    # omitted (optional): each part of "What a business screen always has" in
+    # .agents/rules/interface-clarity.md that applies to this screen and that
+    # it leaves out, with the reason. `part` names the part in the list's words,
+    # `reason` says why the screen does without it. A part left out with no
+    # entry here is a defect. A state the screen cannot be in is recorded with
+    # `none` under `states`, not here. The once-per-application parts (app
+    # shell, home, shared component) are listed on the app frame's
+    # contract. An entry with no `part` or no
+    # `reason` is QFAI-CONTRACT-052.
+    omitted:
+      - part: feedback after every change
+        reason: Discard draft stores nothing; it returns to /orders, where the list already shows no draft
     # primary_tasks: at least one entry required per screen (QFAI-AUD-001).
     # Recommended ceiling: at most 7 entries per screen (QFAI-AUD-020).
     # More than 7 warns at validate time. The required minimum is one: a screen

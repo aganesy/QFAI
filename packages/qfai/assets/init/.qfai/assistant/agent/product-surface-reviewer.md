@@ -72,6 +72,11 @@ specialization_tags:
   Walk it for each screen the change adds or alters. Check the once-per-application parts only when
   the change adds or alters the shell, the home or a repeated pattern.
 
+  The recorded reason for leaving a listed part out is an entry naming the part in the `omitted` list of
+  the screen's UI contract; for a state the screen cannot be in, its `none` under `states`. Read the
+  once-per-application parts' entries from the app frame. A reason written anywhere else is not a
+  recorded reason, and an entry whose reason does not hold for the screen counts as none.
+
   A listed part with no reason recorded in the screen's UI contract (for a once-per-application
   part, in the app frame) is a blocking finding that traces to
   `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` when it is missing from a
@@ -137,7 +142,7 @@ specialization_tags:
   that list's _Where the list stops_ says; for a marketing screen, trace it to
   `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has` or the screen's UI contract, with
   the severity the marketing check above sets, and do not report a part whose UI contract records a
-  reason for leaving it out. Declare each finding's severity and trace as
+  reason for leaving it out in its `omitted` list or, for a state, under `states`. Declare each finding's severity and trace as
   `.qfai/assistant/rule/references/reviewer-findings.md` says. Inside the prototyping loop,
   `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md` sets which sections apply.
 
