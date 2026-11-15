@@ -290,6 +290,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The `DESIGN.md` step says where a flow's surfaces come from.** It
+  decided whether to run from `primary_surface` and `secondary_surfaces`, fields
+  nothing has defined since 2.5.0. It now reads the `tech.md` `Surface` row, the
+  surfaces the deliberation record settles and the UI contracts linked to the
+  flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
+
 - **The search-protection hook reads a search that a program runner or a piped
   shell runs.** `nohup`, `setsid`, `nice`, `ionice`, `stdbuf`, `timeout` and
   `xargs` are unwrapped like `env`, so `nohup rg foo /` and

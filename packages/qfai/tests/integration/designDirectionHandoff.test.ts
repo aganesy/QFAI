@@ -135,3 +135,14 @@ it("The installed design step leaves CLI-only files unchanged and stops on an un
   );
   expect(step).toMatch(/under `--auto` stop and name it/i);
 });
+
+it("The installed design step reads the surface set from the tech.md Surface row", async () => {
+  const step = await installed(".qfai/assistant/step/common-design-md/STEP.md");
+  const authoring = await installed(`${SKILLS}/qfai-sdd/references/design-md-authoring.md`);
+
+  for (const text of [step, authoring]) {
+    expect(text).toMatch(
+      /`03_contract\/tech\.md` `Surface` row, the surfaces the deliberation record settles and the UI contracts linked to the flow/,
+    );
+  }
+});
