@@ -381,7 +381,8 @@
                   "unknown-route",
                   "plan-invalid",
                   "artifact-unserved",
-                  "io-error"
+                  "io-error",
+                  "stale-install"
                 ]
               },
               "subject": {

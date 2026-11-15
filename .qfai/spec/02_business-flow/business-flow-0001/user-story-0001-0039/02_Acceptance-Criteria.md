@@ -30,4 +30,11 @@ Feature: Deterministic validation gate
     When `qfai validate` runs the contract checks
     Then a screen that writes no `surface`, leaves it empty, or writes `application` or `marketing` raises nothing, and one that writes none is an application screen
     And any other value raises `QFAI-CONTRACT-051` at error, naming the contract, the screen, the value and the vocabulary
+
+  # AC-0001-0039-05
+  Scenario: Validate shape-checks the omitted list of each UI contract screen
+    Given a UI contract whose screens declare an `omitted` list or leave it out
+    When `qfai validate` runs the contract checks
+    Then a screen that writes no `omitted`, leaves it empty, or lists only entries with a non-blank `part` and `reason` raises nothing
+    And each list that is not a list, entry that is not a mapping and entry with no `part` or no `reason` raises `QFAI-CONTRACT-052` at error, naming the contract, the screen and the defect
 ```

@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A part a screen leaves out has one place for its reason.** The rule said
+  leaving out a part every business screen has needs a reason in the screen's
+  UI contract, but named no field for it, and the app shell, the home and the
+  shared components belong to no single screen. A reviewer could not tell a
+  deliberate omission from a missing part. A UI contract screen now takes an
+  optional `omitted` list of `{ part, reason }` entries, and the parts once per
+  application are listed on the home screen's contract until an app-level UI
+  contract exists. `qfai validate` reports an `omitted` that is not a list, an
+  entry that is not a mapping, and an entry with no `part` or no `reason`, as
+  `QFAI-CONTRACT-052` at error. The rule, the UI contract guide and template,
+  the `sdd-contract` step and the product-surface reviewer point at the list.
+
 - **The contract step writes the app frame once.** The app shell, the
   navigation for each role and the home belong to no single flow, so
   `sdd-contract` writes them as the screens of one UI contract, the app frame,
@@ -16,6 +28,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `interface-clarity.md` and `product-surface-reviewer` read the reason there.
   Settings, member management and notifications are added only when a story
   needs them.
+
+- **The implement steps now write the per-role navigation journey.** Where an
+  app has navigation of its own, `implement-scaffold` adds an empty journey
+  test for each role a flow adds a screen to, and records the roles that sign
+  in. `implement-credentials` serves one session per such role, and
+  `implement-acceptance` writes or extends each role's test: it reaches every
+  screen of that role through the app's own links and controls. Until UI
+  contracts name the roles of each screen, a role's screens are those of the
+  flows whose stories name it as their actor. `qfai validate` does not report
+  the journey, so each step names its file.
 
 - **A UI contract list or table element says how it is shown and narrowed.**
   The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
@@ -40,6 +62,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending tests for the implement stage. The
   scope question says so for that option. Other scopes are printed as before.
 
+- **The search-protection hook allows a search scoped inside the project.** A
+  grep, rg, git grep, Select-String, findstr or native search call that names
+  at least one path, every one inside the project root, now runs. A search with
+  no path, one over the project root itself (such as `.`), and one whose path
+  the hook cannot place inside the project are still redirected to the graph:
+  a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
+  home prefix or a `..` segment. A findstr with `/s` and a native search scoped
+  only by an include glob are also redirected.
+
 - **Settled work that adds screens gets the design and prototype stages.**
   The extraction has a new qualifier, `new-screens`, for a settled change that
   adds new UI contracts or new routes users see: an approved record with a
@@ -62,6 +93,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shell its UI contract names, linked from its entry points, built from shared
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
+
+- **A checkout that did not reinstall after a qfai upgrade is caught.** When
+  the running qfai is the project's own copy and the lockfile
+  (`package-lock.json`, `pnpm-lock.yaml` or `yarn.lock`) pins another version,
+  every command prints one stderr line naming both versions and the install
+  command, and `qfai validate`, `qfai sdd preflight` and `qfai workflow plan`
+  stop with exit 1. A `workflow plan` refusal carries the new reason
+  `stale-install`. The upgrade guide now tells every checkout and worktree to
+  run its install after pulling a qfai upgrade.
 
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
