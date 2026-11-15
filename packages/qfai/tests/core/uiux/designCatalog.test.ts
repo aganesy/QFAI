@@ -105,6 +105,24 @@ describe("the token file and the theme", () => {
   });
 
   // QFAI:EX-0001-0312-02
+  it("reads a negative shadow offset or spread, and leaves a negative blur to the theme", async () => {
+    const spread = await sampleDesign((text) =>
+      text.replace('sm: "0 1px 2px rgba(15,23,42,0.05)"', 'sm: "0 -2px 4px -1px #0a0a0a"'),
+    );
+    expect(tokenAt(spread, "shadow.sm.$value")).toMatchObject({
+      offsetX: { value: 0, unit: "px" },
+      offsetY: { value: -2, unit: "px" },
+      blur: { value: 4, unit: "px" },
+      spread: { value: -1, unit: "px" },
+    });
+    const blur = await sampleDesign((text) =>
+      text.replace('sm: "0 1px 2px rgba(15,23,42,0.05)"', 'sm: "0 2px -4px #0a0a0a"'),
+    );
+    expect(tokenAt(blur, "shadow.sm")).toBeUndefined();
+    expect(renderTheme(blur)).toContain("  --shadow-sm: 0 2px -4px #0a0a0a;\n");
+  });
+
+  // QFAI:EX-0001-0312-02
   it("leaves a value no token type states out of the token file and keeps it in the theme", async () => {
     const design = await sampleDesign((text) =>
       text

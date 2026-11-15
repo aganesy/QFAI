@@ -405,6 +405,15 @@ function parseDimension(css: string): Dimension | null {
   return { value: Number(amount), unit };
 }
 
+/** A length that may carry a sign, as a shadow's offsets and spread do. */
+function parseSignedDimension(css: string): Dimension | null {
+  const text = css.trim();
+  const negative = text.startsWith("-");
+  const dimension = parseDimension(/^[-+]/.test(text) ? text.slice(1) : text);
+  if (!dimension || !negative || dimension.value === 0) return dimension;
+  return { value: -dimension.value, unit: dimension.unit };
+}
+
 /** A CSS `box-shadow` as 2025.10 shadow objects, or null when a layer is not one this reads. */
 function parseShadow(css: string): Record<string, unknown>[] | null {
   const layers: Record<string, unknown>[] = [];
@@ -412,7 +421,7 @@ function parseShadow(css: string): Record<string, unknown>[] | null {
     const parts = splitOutsideParens(layer, " ").filter((part) => part !== "");
     const inset = parts.includes("inset");
     const rest = parts.filter((part) => part !== "inset");
-    const lengths = rest.map(parseDimension);
+    const lengths = rest.map(parseSignedDimension);
     const colors = rest.map(parseColor);
     const lengthCount = lengths.filter((found) => found !== null).length;
     const colorIndex = colors.findIndex((found) => found !== null);
@@ -421,6 +430,8 @@ function parseShadow(css: string): Record<string, unknown>[] | null {
       return null;
     }
     const [offsetX, offsetY, blur, spread] = lengths.filter((found) => found !== null);
+    // An offset or spread may be negative; a blur may not.
+    if (blur !== undefined && blur.value < 0) return null;
     const zero: Dimension = { value: 0, unit: "px" };
     layers.push({
       color: colorValue(color),

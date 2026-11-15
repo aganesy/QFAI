@@ -159,9 +159,10 @@ file's `data-display` group; no CSS variable carries them.
 - `visual.colors.overlay`: must be an `rgba(...)` value.
 - All token strings reject leading/trailing whitespace.
 - No colour, font family stack, `typography.scale` size, `spacing.base`,
-  radius, shadow, breakpoint or content width may hold `;`, `{` or `}`:
-  `qfai catalog design` writes each into a CSS declaration of the theme,
-  where one would end it.
+  radius, shadow, breakpoint or content width may hold `;`, `{`, `}`, `/*`
+  or `*/`, or leave a parenthesis, bracket or quote open: `qfai catalog
+design` writes each into a CSS declaration of the theme, where one would
+  end it or swallow what follows.
 - `visual.typography.weight.*`: a number from 1 to 1000, the font weights the
   Design Tokens Community Group 2025.10 format states.
 - Unknown keys at any level are rejected.

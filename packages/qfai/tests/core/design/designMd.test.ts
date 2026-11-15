@@ -1439,4 +1439,35 @@ describe("parseDesignMd: data_display", () => {
       code: "invalid-css-value",
     });
   });
+
+  // QFAI:EX-0001-0312-04
+  it.each([
+    ["an opening comment marker", "1rem /*"],
+    ["a closing comment marker", "1rem */"],
+    ["an unclosed parenthesis", "calc(1rem + 2px"],
+    ["a stray closing parenthesis", "1rem)"],
+    ["an unclosed bracket", "1rem [a"],
+    ["an unclosed quote", "1rem 'a"],
+  ])("rejects %s in a theme-bound value", (_label, size) => {
+    const result = parseDesignMd(
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: ${JSON.stringify(size)}`,
+      ),
+    );
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.typography.scale.base",
+      code: "invalid-css-value",
+    });
+  });
+
+  it("accepts balanced quotes and the rgba() shadows in theme-bound values", () => {
+    const result = parseDesignMd(
+      withValue(
+        'family_sans:    "Inter, system-ui, sans-serif"',
+        `family_sans: "'Inter Variable', system-ui, sans-serif"`,
+      ),
+    );
+    expect("error" in result).toBe(false);
+  });
 });

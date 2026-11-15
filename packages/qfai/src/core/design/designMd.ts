@@ -957,20 +957,43 @@ function themeBoundValues(visual: DesignMd["visual"]): Array<[string, string]> {
 }
 
 /**
- * The first theme-bound value holding `;`, `{` or `}`. Each value is written as the value of a
- * custom property in the theme's `@theme` block, where any of the three would end the declaration
- * or the block and let the rest of the value run as CSS of its own.
+ * The first theme-bound value that could end its declaration. Each value is written as the value
+ * of a custom property in the theme's `@theme` block, where a `;`, `{` or `}`, a comment marker, or
+ * a bracket or quote left open would end the declaration or the block, or swallow what follows.
  */
 function findCssBreaker(visual: DesignMd["visual"]): ParseError | null {
   for (const [at, text] of themeBoundValues(visual)) {
-    if (!/[;{}]/.test(text)) continue;
+    if (!breaksDeclaration(text)) continue;
     return {
       path: at,
       code: "invalid-css-value",
-      message: `'${at}' holds ";", "{" or "}", which a value written into a CSS declaration cannot contain.`,
+      message: `'${at}' holds ";", "{", "}", "/*" or "*/", or leaves a bracket or quote open, which a value written into a CSS declaration cannot.`,
     };
   }
   return null;
+}
+
+/** Whether a value holds `;`, `{`, `}` or a comment marker, or does not close its brackets and quotes. */
+function breaksDeclaration(text: string): boolean {
+  if (/[;{}]/.test(text) || text.includes("/*") || text.includes("*/")) return true;
+  const closers: string[] = [];
+  let quote: string | null = null;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text.charAt(index);
+    if (character === "\\") {
+      index += 1;
+      continue;
+    }
+    if (quote !== null) {
+      if (character === quote) quote = null;
+      continue;
+    }
+    if (character === '"' || character === "'") quote = character;
+    else if (character === "(") closers.push(")");
+    else if (character === "[") closers.push("]");
+    else if ((character === ")" || character === "]") && closers.pop() !== character) return true;
+  }
+  return quote !== null || closers.length > 0;
 }
 
 function layoutError(path: string, code: string, message: string): { error: ParseError } {
