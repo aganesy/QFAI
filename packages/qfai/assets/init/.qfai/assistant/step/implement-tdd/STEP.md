@@ -161,7 +161,9 @@ annotate it `QFAI:EX-NNNN-NNNN-NN` on the comment line directly before its
 `it(`, `test(` or `describe(`, or the equivalent test declaration of another
 framework. Preserve the BF E2E and AC integration
 or API tests `implement-scaffold` wrote. Put the test where the observable
-behavior belongs. Use
+behavior belongs. A test that drives a browser locates elements and injects
+failures as `.qfai/assistant/rule/test-layers.md` § Browser test locators and
+fault injection says. Use
 `.qfai/assistant/skill/qfai-implement/references/walking-skeleton.md` and
 `.qfai/assistant/skill/qfai-implement/references/oracle-strength.md` to choose
 the smallest useful seam and a falsifiable assertion.

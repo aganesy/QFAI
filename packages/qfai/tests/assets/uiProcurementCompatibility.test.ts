@@ -51,6 +51,28 @@ describe("ui-procurement checks runtime compatibility", () => {
       expect(text).toContain("names the constraints it was checked against");
     });
 
+    it(`${tree}: a known incompatibility reaches the next project that adopts the catalogue`, async () => {
+      const text = flat(await readFile(path.join(repoRoot, tree, RULE), "utf-8"));
+      expect(text).toContain("`.qfai/assistant/rule/references/catalogue-compatibility.md`");
+      const reference = flat(
+        await readFile(
+          path.join(
+            repoRoot,
+            tree,
+            "assistant",
+            "rule",
+            "references",
+            "catalogue-compatibility.md",
+          ),
+          "utf-8",
+        ),
+      );
+      expect(reference).toContain("A row is a hint to verify, not a verdict.");
+      expect(reference).toContain(
+        "| Catalogue | Item | Constraint it breaks | How it breaks | Version checked | Checked on | Source |",
+      );
+    });
+
     it(`${tree}: the prototype review does not block a native element`, async () => {
       const text = flat(await readFile(path.join(repoRoot, tree, REVIEWER), "utf-8"));
 

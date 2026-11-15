@@ -26,6 +26,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declaration. So do a number too long to read or compute, a font weight outside 1 to
   1000, a spacing step given twice and a `target_min_px` too large to write without an exponent.
 
+- **Screen reviews walk one sourced checklist.** Review rounds of the same
+  screen raised different classes of issue, because nothing fixed what a round
+  covers. `.qfai/assistant/rule/references/surface-review-checklist.md` lists
+  the screen completeness checks the reviewer already makes, Nielsen's ten
+  usability heuristics as questions about the screen, the WCAG 2.2 criteria a
+  business screen touches most (1.3.1, 1.4.3, 1.4.10, 1.4.11, 2.1.1, 2.4.3,
+  2.4.7, 2.4.11, 2.5.8, 3.3.1, 3.3.2 and 4.1.2) and the WAI-ARIA APG pattern of
+  each interactive widget, each with its source. The product-surface reviewer
+  walks it for every screen on every review and reports each item as pass,
+  finding or not applicable, so a gap in coverage shows.
+
+- **A run that changes files first looks for open work on the same problem.**
+  A fix could run every step, reviews and full suite included, while an open
+  issue or pull request already covered the same problem, and the work was
+  thrown away when the other change merged first. After its announcement and
+  before any edit, `qfai-run` now makes one REST search of the forge for open
+  issues and pull requests naming the request's files or symptom, leaving out
+  the one the request itself names. A match is a result that describes the
+  same problem, not one that only shares words. On a match it writes nothing
+  and asks the user, with at most three matches, whether to continue or to
+  leave the problem to that work. Without a
+  forge remote or API access it says so in the announcement and continues;
+  under a no-question mode it continues and the final report lists the match.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
@@ -59,6 +83,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   warns with `QFAI-AXE-001` in the verify and full profiles when a project with
   web screens has no test that calls axe. QFAI itself takes no axe dependency.
   Closes #4309.
+
+- **Browser tests survive a rebuild that keeps the behaviour.** QFAI said
+  nothing about how a browser test finds an element or injects a failure, so
+  tests tied to class names, CSS values and the module files a page loads broke
+  when the screens were rebuilt, and the failure-state cases could not be run
+  at all once a bundler merged those modules. `test-layers.md` gains a section
+  for every test that drives a browser: locate an element by what a user
+  perceives (accessible role and name, label or visible text) or by a declared
+  `data-qfai` marker, never by class name, CSS value or DOM path; where a root
+  `DESIGN.md` exists, check its design tokens in a test of their own, and
+  assert no CSS value in a behaviour case; inject a failure by intercepting the
+  network request or through a test-only fault seam a production build does
+  not carry, never through a module file the page loads. `implement-scaffold`,
+  `implement-acceptance` and `implement-tdd` point to it, and the
+  implementation reviewer flags a browser test that reroutes or replaces an
+  application module file or reads a global such a module sets, and a
+  behaviour case that asserts a CSS value. Closes #4292.
 
 - **The contract step writes the app frame once.** The app shell, the
   navigation for each role and the home belong to no single flow, so
@@ -140,6 +181,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `sdd-contract` step writes. `qfai validate` reports any other value as
   `QFAI-CONTRACT-056`, at error; a screen without the key is asked nothing,
   and a marketing screen leaves it out.
+
+- **Research has a UI research brief.** Research for a screen type or a
+  component the project does not have yet fills
+  `rule/references/ui-research-brief.md`: one entry per axis (design-system
+  pattern, accessibility, catalogue, domain analogues, framework idioms,
+  locale), each with its sources or a reason it does not apply. The visual
+  reference survey still decides the visual direction; the brief decides what
+  the screen contains.
 
 ### Changed
 
@@ -322,6 +371,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stops before a verdict and names what is missing, the review is recorded
   `PENDING`, and it is dispatched again once the captures exist.
 
+- **A known catalogue incompatibility reaches the next project.** QFAI ships
+  `rule/references/catalogue-compatibility.md`, a dated table of catalogue items
+  that broke a project's constraints. `ui-procurement.md` reads it before an
+  item is installed; a row is a hint to check against the installed version,
+  not a verdict. A project records a new incompatibility in its procurement
+  record and reports it to QFAI.
+
 ### Fixed
 
 - **The `DESIGN.md` step says where a flow's surfaces come from.** It
@@ -396,6 +452,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   on the field, as the reference describes for a status computed at read time.
   A value only in a description is still reported, and the message now says the
   API contract declares no `enum` for it.
+
+- **A `Derived (not stored)` declaration that does not parse is reported with
+  the form it needs.** The `QFAI-CONTRACT-041` message said only that the line
+  did not parse, so authors rewrote it by trial. It now quotes the expected form
+  `-- Derived (not stored): <column> = <value>[, <value>...] from <input>[, <input>...]`,
+  one declaration that parses, and the reference section that defines the
+  grammar. That section now states the grammar in full, and the DB contract
+  template carries a commented example. Fixes #4402.
 
 - **`qfai validate --timings` times each UI/UX check on its own.** The six
   UI/UX checks ran side by side, so a check that waited on file reads was

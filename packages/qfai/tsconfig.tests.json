@@ -29,6 +29,8 @@
     "means adding it here."
   ],
   "include": [
+    "tests/assets/surfaceReviewChecklist.test.ts",
+    "tests/integration/surfaceReviewChecklist.test.ts",
     "tests/core/sqlContractStructure.test.ts",
     "tests/assets/uiProcurementCompatibility.test.ts",
     "tests/assets/implementAntiPatternSections.test.ts",
@@ -304,6 +306,7 @@
     "tests/helpers/tempTree.ts",
     "tests/helpers/validatorGraph.ts",
     "tests/integration/atddCredentialReuseGuidance.test.ts",
+    "tests/integration/browserTestCouplingGuidance.test.ts",
     "tests/integration/cli/commands/doctorClean.runLogs.test.ts",
     "tests/integration/cli/commands/validate.profileCoverageNotice.test.ts",
     "tests/integration/cli/commands/validate.strictFailOnPrecedence.test.ts",

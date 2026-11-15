@@ -9,6 +9,7 @@ Feature: Follow a route in the session
     Given a free-text change request in workflow mode `active`
     When the session has planned it
     Then it states the goal, the stages in plain words and the files it may change before the first stage
+    And on a route that changes files it puts any open issue or pull request on the same problem to the user before any edit
     And it runs every step the plan names, in plan order
     And the user names no stage
 

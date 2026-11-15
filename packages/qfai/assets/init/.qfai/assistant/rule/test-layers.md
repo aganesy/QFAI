@@ -95,7 +95,8 @@ in with no session.
   announces says what a control does. The screen review checks both by hand,
   as
   `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#states-and-accessibility`
-  lists them.
+  lists them, through the accessibility criteria and widget patterns of
+  `.qfai/assistant/rule/references/surface-review-checklist.md`.
 - The spec carries no annotation. It proves the routes, not one flow or
   example.
 
@@ -184,6 +185,28 @@ failures sets the bill more than the number of tests does.
   example in a lower layer.
 
 These are review signals, not gates. No validator reads them.
+
+## Browser test locators and fault injection
+
+A browser test that reads the page's markup or the application's module layout
+breaks when the screens are rebuilt, even if every behaviour stays the same.
+This applies to every test that drives a browser, at any layer.
+
+- **Locate an element as a user finds it:** by what a user perceives (its
+  accessible role and name, its label or its visible text), or by a `data-qfai`
+  marker its UI contract declares. Never by a class name, a CSS value or the
+  DOM path. The readiness marker § L5 E2E names is the one other attribute a
+  test reads.
+- **Check style once, not in every case.** Where the project has a root
+  `DESIGN.md`, check its design tokens in a test of their own. A behaviour case
+  asserts no CSS value.
+- **Inject a failure at a stable boundary:** intercept the HTTP request at the
+  network (for example with the runner's route interception), or call a
+  test-only fault seam the application exposes on purpose. Such a seam exists
+  only in a test build or behind a test-environment switch; a production build
+  does not carry it. Never reroute or replace a module file the page loads,
+  and never read a global such a module sets. A bundler merges those files, so
+  a rebuild leaves the test nothing to reroute.
 
 ## Test stub detection
 
