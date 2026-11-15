@@ -51,13 +51,13 @@ describe("sdd-contract writes the app frame once", () => {
       "The app shell, the navigation for each role and the home belong to no single flow, so one UI contract, the app frame, holds them.",
     );
     expect(section).toContain(
-      "When no UI contract holds the shell yet, write the frame with the flow at hand",
+      "When no UI contract holds the shell or records why the application has none, write the frame with the flow at hand",
     );
     expect(section).toContain(
-      "Every other screen's `navigation.shell` names the frame's shell screen.",
+      "Every other application screen that renders inside the shell names the frame's shell screen in `navigation.shell`; a screen with no frame, such as a sign-in page, says so.",
     );
     expect(section).toContain(
-      "A once-per-application part the project leaves out gets its reason in the frame.",
+      "A once-per-application part the project leaves out, the shell included, gets its reason in the frame.",
     );
     expect(section).toContain(
       "Settings, member management and notifications become frame screens only when a story needs them; this step adds none on its own.",

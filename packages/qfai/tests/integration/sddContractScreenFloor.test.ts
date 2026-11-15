@@ -39,11 +39,9 @@ describe("the contract step writes the app frame once, where the rule and the re
     const reviewer = flat(await read(".qfai/assistant/agent/product-surface-reviewer.md"));
     expect(step).toContain("one UI contract, the app frame, holds them");
     expect(step).toContain(
-      "A once-per-application part the project leaves out gets its reason in the frame.",
+      "A once-per-application part the project leaves out, the shell included, gets its reason in the frame.",
     );
-    expect(rule).toContain("its reason goes in the UI contract that holds the app shell");
-    expect(reviewer).toContain(
-      "for a once-per-application part in the UI contract that holds the app shell",
-    );
+    expect(rule).toContain("its reason goes in the app frame");
+    expect(reviewer).toContain("(for a once-per-application part, in the app frame)");
   });
 });

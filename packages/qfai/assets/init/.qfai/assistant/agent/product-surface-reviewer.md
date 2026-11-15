@@ -70,8 +70,8 @@ specialization_tags:
   Walk it for each screen the change adds or alters. Check the once-per-application parts only when
   the change adds or alters the shell, the home or a repeated pattern.
 
-  A listed part with no reason recorded in the screen's UI contract, or for a once-per-application
-  part in the UI contract that holds the app shell, is a blocking finding that traces to
+  A listed part with no reason recorded in the screen's UI contract (for a once-per-application
+  part, in the app frame) is a blocking finding that traces to
   `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` when it is missing from a
   screen the change adds, missing from a list, state, action that changes data, shell, home or
   repeated-pattern part the change adds or alters (a new list with no pagination, a new save with no feedback), or removed by the change. The rule
