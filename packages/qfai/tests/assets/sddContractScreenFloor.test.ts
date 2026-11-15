@@ -38,3 +38,33 @@ describe("sdd-contract writes the business-screen parts into a UI contract", () 
     expect(section).toContain("needs no example of its own unless it carries a business rule");
   });
 });
+
+// QFAI:EX-0001-0305-02
+describe("sdd-contract writes the app frame once", () => {
+  it("holds the shell, role navigation and home in one UI contract that other screens name", async () => {
+    const step = flat(await read(".qfai/assistant/step/sdd-contract/STEP.md"));
+    const section = step.slice(
+      step.indexOf("## UI contracts"),
+      step.indexOf("## A named contract"),
+    );
+    expect(section).toContain(
+      "The app shell, the navigation for each role and the home belong to no single flow, so one UI contract, the app frame, holds them.",
+    );
+    expect(section).toContain(
+      "When no UI contract holds the shell or records why the application has none, write the frame with the flow at hand",
+    );
+    expect(section).toContain(
+      "Every other application screen that renders inside the shell names the frame's shell screen in `navigation.shell`; a screen with no frame, such as a sign-in page, says so.",
+    );
+    expect(section).toContain(
+      "A once-per-application part the project leaves out, the shell included, gets its reason in the frame.",
+    );
+    expect(section).toContain(
+      "Settings, member management and notifications become frame screens only when a story needs them; this step adds none on its own.",
+    );
+    const guide = flat(
+      await read(".qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md"),
+    );
+    expect(guide).toContain("`shell` names the frame's shell screen.");
+  });
+});

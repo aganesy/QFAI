@@ -1597,11 +1597,15 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     // repair.
     const [first] = reachable;
     const rest = reachable.length - 1;
+    // A standing state of the checkout, not damage: on a Windows `git worktree`
+    // git can store a directory wrapper as a file symlink, and the instructions
+    // are all in the tree. It is named once, at info, so it no longer buries new
+    // warnings on every run.
     issues.push(
       issue(
         "QFAI-LINK-001",
-        `${String(reachable.length)} wrapper(s) in the assistant integration directories resolve through a symlink the OS will not follow: ${first?.relative ?? ""}${rest > 0 ? ` (and ${String(rest)} more)` : ""}. The canonical documents behind them read fine, so the instructions are in this tree; only this path does not reach them.`,
-        "warning",
+        `${String(reachable.length)} wrapper(s) in the assistant integration directories resolve through a symlink the OS will not follow: ${first?.relative ?? ""}${rest > 0 ? ` (and ${String(rest)} more)` : ""}. The canonical documents behind them read fine, so the instructions are in this tree; only this path does not reach them, so the host does not load these skills from this checkout.`,
+        "info",
         first?.relative,
         "integrationSurface.links",
         reachable.map((entry) => entry.relative),
