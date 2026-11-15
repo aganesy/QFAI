@@ -1120,9 +1120,11 @@ export function ruleListBullet(existing: string, master: string): string | undef
  *
  * The project keeps what the shipped text does not know, as it does in
  * `AGENTS.md`: a list item in the rule list that cites no master the shipped
- * list cites, and a section whose heading the shipped text does not have. An
- * item goes after the last shipped rule bullet, in the project's order, and a
- * section goes at the end of the file. Every other line sits in a section the
+ * list cites, a section whose heading the shipped text does not have, and a
+ * deeper subsection under a shipped section whose heading the shipped text does
+ * not have. An item goes after the last shipped rule bullet, in the project's
+ * order, a subsection right after the shipped text, and a section at the end of
+ * the file. Every other line sits in a section the
  * shipped text owns and is replaced by it, so a line there that the result does
  * not hold is returned for the run to name.
  */

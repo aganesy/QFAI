@@ -401,9 +401,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.github/copilot-instructions.md`.** A `###` or deeper heading the shipped
   text does not have, written under a section QFAI owns, was replaced with that
   section, so project notes below the rule list were lost on an upgrade. Such
-  a subsection now stays, with its own text and bullets, right after the
-  shipped text and before the project's own sections. A shipped line or a
-  shipped rule bullet inside it is still replaced, and named when reworded.
+  a subsection now stays, with its own text and bullets. It moves to the end
+  of the shipped text, before the project's own sections. A shipped line
+  inside it stays the shipped text's, and a shipped rule bullet inside it is
+  replaced, and named when reworded.
 
 - **`qfai session-review` finds a Claude Code session that moved into the
   project after it started.** A session the desktop app opened in a scratch
