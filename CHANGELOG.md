@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **A UI review without captures is `PENDING`, never `PASS`.** For a
+  UI-affecting change, the product-surface reviewer requires a capture of each
+  changed screen at the reviewed revision. Passing tests or a clean `validate`
+  do not stand in for it, and the reviewer does not start the app itself: it
+  stops before a verdict and names what is missing, the review is recorded
+  `PENDING`, and it is dispatched again once the captures exist.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
@@ -117,13 +126,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the key, whatever its value, is ignored.
 
 ### Changed
-
-- **A UI review without captures is `PENDING`, never `PASS`.** For a
-  UI-affecting change, the product-surface reviewer requires a capture of each
-  changed screen at the reviewed revision. Passing tests or a clean `validate`
-  do not stand in for it, and the reviewer does not start the app itself: it
-  stops before a verdict and names what is missing, the review is recorded
-  `PENDING`, and it is dispatched again once the captures exist.
 
 - **The interface-clarity cut is judged with production-sized data.** The test
   in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
