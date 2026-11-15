@@ -193,14 +193,21 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     expect(await atddFindingCodes()).toEqual([]);
   });
 
-  it("leaves the layer token set at its five members", async () => {
+  it("leaves the layer token set at its six members", async () => {
     const crosswalk = await readFile(
       path.join(getInitAssetsDir(), ".qfai", "assistant", "rule", "test-layers.md"),
       "utf-8",
     );
     const tokens = [...crosswalk.matchAll(/`layer-([a-z0-9]+)`/g)].map((match) => match[1] ?? "");
-    expect([...new Set(tokens)].sort()).toEqual(["api", "component", "e2e", "integration", "unit"]);
-    // …and the guidance introduces no sixth. A heading naming a layer is how a
+    expect([...new Set(tokens)].sort()).toEqual([
+      "accessibility",
+      "api",
+      "component",
+      "e2e",
+      "integration",
+      "unit",
+    ]);
+    // …and the guidance introduces no seventh. A heading naming a layer is how a
     // reference artifact would grow one without touching the crosswalk.
     for (const heading of guidance.match(/^#{1,6} .*$/gm) ?? []) {
       expect(heading, `the guidance declares a layer heading: ${heading}`).not.toMatch(

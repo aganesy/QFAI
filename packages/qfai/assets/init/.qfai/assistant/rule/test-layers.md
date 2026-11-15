@@ -7,13 +7,14 @@ story tree and the selected test files. The project's Standard commands in
 
 ## Layer vocabulary crosswalk
 
-| Code | Layer       | Tag                 | Typical location            | Story-tree obligation       |
-| ---- | ----------- | ------------------- | --------------------------- | --------------------------- |
-| L1   | Unit        | `layer-unit`        | project convention          | EX                          |
-| L2   | Component   | `layer-component`   | project convention          | EX                          |
-| L3   | Integration | `layer-integration` | `<testsDir>/integration/**` | AC, and EX when appropriate |
-| L4   | API         | `layer-api`         | `<testsDir>/api/**`         | AC, and EX when appropriate |
-| L5   | E2E         | `layer-e2e`         | `<testsDir>/e2e/**`         | BF                          |
+| Code | Layer         | Tag                   | Typical location            | Story-tree obligation       |
+| ---- | ------------- | --------------------- | --------------------------- | --------------------------- |
+| L1   | Unit          | `layer-unit`          | project convention          | EX                          |
+| L2   | Component     | `layer-component`     | project convention          | EX                          |
+| L3   | Integration   | `layer-integration`   | `<testsDir>/integration/**` | AC, and EX when appropriate |
+| L4   | API           | `layer-api`           | `<testsDir>/api/**`         | AC, and EX when appropriate |
+| L5   | E2E           | `layer-e2e`           | `<testsDir>/e2e/**`         | BF                          |
+| L6   | Accessibility | `layer-accessibility` | `<testsDir>/e2e/**`         | none                        |
 
 `<testsDir>` is `paths.testsDir` in `qfai.config.yaml`. The default is
 `tests`. Unit and component locations follow the project's conventions.
@@ -74,6 +75,36 @@ role: sign in as that role, then reach every screen the UI contracts declare
 for that role through the app's own links and controls only, never by typing a
 URL. It proves
 reachability rather than one flow, so it carries no BF annotation.
+
+### L6 Accessibility
+
+Check the built app with axe through Playwright (`@axe-core/playwright`),
+limited to the WCAG 2.2 A and AA rules: the axe tags `wcag2a`, `wcag2aa`,
+`wcag21a`, `wcag21aa` and `wcag22aa`. The layer applies to a project whose UI
+contracts declare a screen with a web route, one that starts with `/`. Check
+every such route as each role that can reach it, signed in through the E2E
+layer's sign-in for that role. Check a route a visitor reaches before signing
+in with no session.
+
+- Report each violation by route and rule: the route, the role, the axe rule
+  ID and the number of elements it found.
+- A violation fails the test unless the spec waives it with an entry that
+  names the route, the rule and the reason the violation stays. An entry with
+  no reason waives nothing.
+- Axe cannot judge keyboard order or whether the name a screen reader
+  announces says what a control does. The screen review checks both by hand,
+  as
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#states-and-accessibility`
+  lists them.
+- The spec carries no annotation. It proves the routes, not one flow or
+  example.
+
+`implement-scaffold` writes the spec from
+`.qfai/assistant/skill/qfai-implement/references/accessibility-check.md`.
+`npx qfai validate` warns with `QFAI-AXE-001` when the layer applies and no
+selected test file calls axe. A missing spec is reported by that warning, not
+as an UNRUN lane: the accessibility gate runs only in a project that has the
+spec.
 
 ## Annotation routing
 
@@ -190,8 +221,9 @@ per-level routing. Place test annotations only in paths scanned by
 
 The project chooses its CI job names. Route Unit and Component tests to a
 fast test job, Integration and API tests to jobs with their required services,
-and E2E tests to a journey job. The full verification gate runs every
-applicable lane and `npx qfai validate --profile verify --fail-on error`.
+and E2E tests to a journey job, which also runs the Accessibility tests. The
+full verification gate runs every applicable lane and
+`npx qfai validate --profile verify --fail-on error`.
 A missing lane or an unrun command is UNRUN, not PASS. Record exact commands,
 results, and revisions in the stage report.
 

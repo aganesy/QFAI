@@ -26,6 +26,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-CONTRACT-052` at error. The rule, the UI contract guide and template,
   the `sdd-contract` step and the product-surface reviewer point at the list.
 
+- **The built app is checked for accessibility on every route.**
+  `test-layers.md` gains an accessibility layer: axe through
+  `@axe-core/playwright`, limited to the WCAG 2.2 A and AA rules, on every web
+  route (one starting with `/`) the UI contracts declare, as each role that can
+  reach it. A violation fails unless the spec waives it with a reason, and
+  keyboard order and screen-reader names stay in the screen review. In a UI
+  project `implement-scaffold` installs `@axe-core/playwright` as the project's
+  dev dependency and writes the spec from a shipped template, `verify-repo-gate`
+  runs it through the `Test` command, and `verify-qfai-gate` records whether it
+  exists. `qfai validate`
+  warns with `QFAI-AXE-001` in the verify and full profiles when a project with
+  web screens has no test that calls axe. QFAI itself takes no axe dependency.
+  Closes #4309.
+
 - **The contract step writes the app frame once.** The app shell, the
   navigation for each role and the home belong to no single flow, so
   `sdd-contract` writes them as the screens of one UI contract, the app frame,
@@ -250,6 +264,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
+
+- **The prototype reviewer prompt fits the 500-line ceiling again.** The
+  business-screen floor passages are re-wrapped and tightened with the same
+  rules, so the shipped prompt stays within the size an agent reads in one
+  pass.
 
 - **E2E tests wait until a server-rendered page is interactive.** A test that
   filled a field before the page hydrated lost the value and failed some runs.
