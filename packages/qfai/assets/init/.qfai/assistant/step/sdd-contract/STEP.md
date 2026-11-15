@@ -99,9 +99,9 @@ error and success states and the feedback after a change. Add each part that
 applies and is missing: navigation in the screen's `navigation`, the list
 behaviour in the `list` of the list or table element, and the rest
 as elements, actions and `supplements` entries with their `when`. Such a part needs no example of its own unless it carries a
-business rule. A part of one screen left out gets its reason in that screen's
-contract, as the rule says; a once-per-application part's goes in the app frame
-below.
+business rule. A part left out gets a `{ part, reason }` entry in that screen's `omitted`
+list, and a once-per-application part one in the app frame below, as the rule
+says.
 
 The app shell, the navigation for each role and the home belong to no single
 flow, so one UI contract, the app frame, holds them. When no UI contract holds
@@ -114,7 +114,7 @@ application screen that renders inside the shell names the frame's shell screen
 in `navigation.shell`; a screen with no frame, such as a sign-in page, says so.
 A later flow adds its entry points to the frame's navigation and leaves the
 rest of the frame as it is. A once-per-application part the project leaves out,
-the shell included, gets its reason in the frame. Settings, member management
+the shell included, gets its entry in the frame's `omitted` list. Settings, member management
 and notifications become frame screens only when a story needs them; this step
 adds none on its own.
 
@@ -130,7 +130,9 @@ inform, such as a home, audience, pricing, guide, about or legal page, declares
 the business types above. Name the entry for each of its sections in
 `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` instead,
 write the parts it needs into the contract the same way, and record each
-image's source and licence. Its `states` combine the states of its sections.
+image's source and licence. A required notice it leaves out gets a
+`{ part, reason }` entry in its `omitted` list, as the rule and the UI contract
+guide say. Its `states` combine the states of its sections.
 
 Check every text element the discussion or the story proposes against the
 screen's tasks and the information the user needs at that point. A text that
