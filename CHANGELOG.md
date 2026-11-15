@@ -113,6 +113,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   floor) and how a table behaves at a narrow width (`stack` or `scroll`), so a
   responsive check reads them from one place. A file without it still parses.
 
+- **A UI contract screen names its business screen type by ID.** The screen
+  types of `qfai-sdd`'s `references/business-ui-patterns.md` now carry the IDs
+  `list`, `detail`, `form`, `settings`, `members` and `dashboard`, and an
+  application screen may declare its type as `pattern: <id>`, which the
+  `sdd-contract` step writes. `qfai validate` reports any other value as
+  `QFAI-CONTRACT-056`, at error; a screen without the key is asked nothing,
+  and a marketing screen leaves it out.
+
 ### Changed
 
 - The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
