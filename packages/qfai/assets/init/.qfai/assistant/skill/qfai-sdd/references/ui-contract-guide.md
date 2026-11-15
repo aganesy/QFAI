@@ -243,9 +243,10 @@ row unsorted:
 An entry is never left out: one the element does without, such as
 `pagination` on a list of a few fixed items shown at once, is a mapping with
 `none` and the reason, as a state that cannot be reached is in `states`. The
-Behaviour list of the List type in
-`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` applies to
-what these entries set; an entry that departs from it says so with the reason.
+List screen type that `.qfai/assistant/step/sdd-contract/STEP.md` names
+carries a Behaviour list, such as list state kept in the screen's address and
+paging on the server for a list that can outgrow one page. It applies to what
+these entries set; an entry that departs from it says so with the reason.
 `npx qfai validate` does not check this key; it describes the element for the
 implementer and the reviewer.
 
