@@ -101,7 +101,7 @@ describe("text that names, labels or reports is not checked", () => {
   it("raises nothing for a data value in a cell, and still checks a sentence there", async () => {
     const root = await projectWith({
       "src/a.html":
-        "<table><tr><td>-</td><td>あり</td></tr></table>\n<table><tr><td>Ships once the payment clears.</td></tr></table>\n",
+        "<table><tr><td>-</td><td>\u3042\u308a</td></tr></table>\n<table><tr><td>Ships once the payment clears.</td></tr></table>\n",
     });
     expect((await uitext(root)).map((item) => [item.code, item.loc?.line])).toEqual([
       ["QFAI-UITEXT-001", 2],

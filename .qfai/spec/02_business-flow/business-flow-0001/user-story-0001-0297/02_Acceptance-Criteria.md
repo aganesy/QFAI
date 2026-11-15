@@ -61,9 +61,9 @@ Feature: Every plain text on a screen states why it is there
 
   # AC-0001-0297-08
   Scenario: One reason covers every plain text inside an element
-    Given a `qfai-text` comment directly before an element, or as its first child, with only whitespace between
+    Given a `qfai-text` comment directly before an element, or as its first child followed by text, with only whitespace between
     When `qfai validate` runs in the `prototyping`, `saas-package`, `verify` or `full` profile
     Then every plain text inside that element that has no closer `qfai-text` comment takes that reason, so a paragraph a link splits, a list or a table needs one reason
     And a malformed reason raises one `QFAI-UITEXT-002` for all the texts it covers
-    And a comment that is the first child of `body` covers only the element it stands before, and a comment before one element covers no sibling after it
+    And a comment that is the first child of `body` or of a component's top-level JSX fragment covers only what it stands before, and a comment before one element, a first-child comment included, covers no sibling after it
 ```

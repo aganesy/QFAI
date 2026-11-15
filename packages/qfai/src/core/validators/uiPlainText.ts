@@ -62,10 +62,11 @@ const DATA_CELL_LAST_WORD = "cell";
 const DATA_VALUE_LENGTH = 20;
 /**
  * A mark that ends a sentence: `.`, `!` or `?` at the end of the text or before whitespace, so
- * `1.5` and `v2.0` are not sentences, or a full-width or CJK full stop, exclamation or question
- * mark anywhere.
+ * `1.5` and `ORD.42` are not sentences, or anywhere a CJK full stop (U+3002), a full-width
+ * exclamation mark (U+FF01), question mark (U+FF1F) or full stop (U+FF0E), or a half-width
+ * ideographic full stop (U+FF61).
  */
-const SENTENCE_END = /[.!?](?:\s|$)|[。！？｡．]/u;
+const SENTENCE_END = /[.!?](?:\s|$)|[\u3002\uFF01\uFF1F\uFF61\uFF0E]/u;
 /** Elements a comment before or inside stands for the whole file; `qfai-text-file` does that. */
 const FILE_LEVEL_ELEMENTS = new Set(["html", "body"]);
 const REASON_MARK = "qfai-text:";
@@ -423,13 +424,23 @@ async function markupCandidates(markup: string): Promise<Candidate[]> {
   };
   const commentBefore = (node: Node): Reason | null =>
     reasonFrom(node.previousSibling, (current) => current.previousSibling);
+  // A first-child comment that stands directly before an element is that element's reason, not
+  // the container's; it covers the container only when text follows it.
+  const firstChildReason = (element: Element): Reason | null => {
+    const found = reasonFrom(element.firstChild, (child) => child.nextSibling);
+    if (!found || !(found.source instanceof dom.window.Node)) return null;
+    let next = found.source.nextSibling;
+    while (next && next.nodeType === Node.TEXT_NODE && (next.textContent ?? "").trim() === "") {
+      next = next.nextSibling;
+    }
+    return next?.nodeType === Node.ELEMENT_NODE ? null : found;
+  };
   // The nearest enclosing element with a reason directly before it or as its first child, up to
   // `body`, whose first comment would stand for the whole file.
   const elementReason = (element: Element | null): Reason | null => {
     for (let current = element; current; current = current.parentElement) {
       if (FILE_LEVEL_ELEMENTS.has(current.localName)) return null;
-      const found =
-        commentBefore(current) ?? reasonFrom(current.firstChild, (child) => child.nextSibling);
+      const found = commentBefore(current) ?? firstChildReason(current);
       if (found) return found;
     }
     return null;
@@ -578,13 +589,27 @@ function jsxCandidates(ts: TsApi, source: string, file: string): Candidate[] {
     }
     return commentChildReason(previous);
   };
-  // The first child of an element or fragment, between its opening and closing tags.
-  const firstChildReason = (element: TsNode): Reason | null =>
-    commentChildReason(
-      childrenOf(element)
-        .slice(1, -1)
-        .find((child) => !isBlankText(child)),
-    );
+  // The first child of an element or fragment, between its opening and closing tags. As in
+  // markup, a comment that stands directly before an element is that element's reason only, so
+  // it covers the container only when text follows it.
+  const firstChildReason = (element: TsNode): Reason | null => {
+    const children = childrenOf(element)
+      .slice(1, -1)
+      .filter((child) => !isBlankText(child));
+    const next = children[1];
+    const isElement =
+      next !== undefined && (isJsxElement(next) || next.kind === k.JsxSelfClosingElement);
+    return isElement ? null : commentChildReason(children[0]);
+  };
+  // A fragment no JSX encloses is a component's top level, as `body` is a page's: a comment before
+  // it or first inside it would stand for the whole component.
+  const isTopFragment = (node: TsNode): boolean => {
+    if (node.kind !== k.JsxFragment) return false;
+    for (let current = node.parent; current; current = current.parent) {
+      if (isJsxElement(current)) return false;
+    }
+    return true;
+  };
   // The trivia between the node's full start and its first token. The compiler's
   // comment-range helpers leave out a comment on the same line as the token
   // before it, as in `return (/* qfai-text: ... */ <p>`, so the trivia is read directly.
@@ -602,6 +627,7 @@ function jsxCandidates(ts: TsApi, source: string, file: string): Candidate[] {
     if (own !== null) return own;
     for (let current = node.parent; current; current = current.parent) {
       if (!isJsxElement(current)) continue;
+      if (isTopFragment(current)) return null;
       const found = siblingReason(current) ?? leadingReason(current) ?? firstChildReason(current);
       if (found) return found;
     }

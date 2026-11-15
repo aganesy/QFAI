@@ -417,10 +417,12 @@ describe("a data value is not plain text", () => {
   it("exempts a short non-sentence in a data cell and as an expression literal", async () => {
     const issues = await run({
       "src/a.html":
-        "<table><tr><td>ORD-1042</td><td>-</td><td>あり</td><td>1.5 kg</td></tr></table>\n<dl><dd>2026-11-15</dd></dl>\n",
+        "<table><tr><td>ORD-1042</td><td>-</td><td>\u3042\u308a</td><td>1.5 kg</td></tr></table>\n<dl><dd>2026-11-15</dd></dl>\n",
       "src/b.tsx":
-        "export const B = ({ ok }: { ok: boolean }) => (\n  <div>\n    <table><tbody><tr><td>{'-'}</td><td>{ok ? 'あり' : 'なし'}</td><td><span>Paid</span></td></tr></tbody></table>\n    <TableCell>Paid</TableCell>\n    <p>{\"Saved\"}</p>\n    <p>{`3 items`}</p>\n  </div>\n);\n",
-      "src/c.vue": "<template>\n  <table><tr><td>済</td></tr></table>\n</template>\n",
+        "export const B = ({ ok }: { ok: boolean }) => (\n  <div>\n    <table><tbody><tr><td>{'-'}</td><td>{ok ? '\u3042\u308a' : '\u306a\u3057'}</td><td><span>Paid</span></td></tr></tbody></table>\n    <TableCell>Paid</TableCell>\n    <p>{\"Saved\"}</p>\n    <p>{`3 items`}</p>\n  </div>\n);\n",
+      "src/c.vue": "<template>\n  <table><tr><td>\u6e08</td></tr></table>\n</template>\n",
+      "src/d.svelte":
+        "<table><tr><td>-</td><td>{total}</td></tr></table>\n<dl><dd>\u6e08</dd></dl>\n",
     });
     expect(issues).toEqual([]);
   });
@@ -430,7 +432,8 @@ describe("a data value is not plain text", () => {
       "src/a.html": [
         "<table><tr>",
         "<td>Ships once the payment clears.</td>",
-        "<td>支払い後に発送します。</td>",
+        // A Japanese sentence that ends in U+3002.
+        "<td>\u652f\u6255\u3044\u5f8c\u306b\u767a\u9001\u3057\u307e\u3059\u3002</td>",
         "<td>Pending approval from the finance team</td>",
         "<td>Paid! Thanks</td>",
         "</tr></table>",
@@ -468,12 +471,38 @@ describe("one reason covers every plain text inside an element", () => {
         "</ul>",
         "</div>",
       ].join("\n"),
-      "src/B.tsx": `export const B = () => (\n  <div>\n    <h2>Orders</h2>\n    ${JSX_REASON}\n    <p>Check the <Link href="/orders">order page</Link> for the status of each line.</p>\n    <ul>\n      ${JSX_REASON}\n      <li>Exports include tax.</li>\n      <li>Totals update nightly.</li>\n    </ul>\n  </div>\n);\n`,
+      "src/B.tsx": `export const B = () => (\n  <div>\n    <h2>Orders</h2>\n    ${JSX_REASON}\n    <p>Check the <Link href="/orders">order page</Link> for the status of each line.</p>\n    ${JSX_REASON}\n    <ul>\n      <li>Exports include tax.</li>\n      <li>Totals update nightly.</li>\n    </ul>\n  </div>\n);\n`,
       "src/C.jsx":
         "export const C = ({ rows }) => (/* qfai-text: why=Orders sync once a night; without=Users expect live totals */ <section>\n  <p>Totals update nightly.</p>\n  {rows.map((row) => <div key={row}>Exports include tax.</div>)}\n</section>);\n",
       "src/d.vue": `<template>\n  <div>\n    <h2>Orders</h2>\n    ${REASON}\n    <p>Check the <RouterLink to="/orders">order page</RouterLink> for each line.</p>\n  </div>\n</template>\n`,
+      // A first-child comment that text follows covers its whole element.
+      "src/e.html": `<p>${REASON} Check the <a href="/orders">order page</a> for each line.</p>\n`,
+      "src/F.tsx": `export const F = () => (\n  <div>\n    <p>${JSX_REASON}Check the <Link href="/orders">order page</Link> for each line.</p>\n  </div>\n);\n`,
     });
     expect(issues).toEqual([]);
+  });
+
+  it("lets a first-child comment before an element cover that element only", async () => {
+    const issues = await run({
+      "src/a.html": `<section>${REASON}\n<p>Exports include tax.</p>\n<p>Refunds take a week.</p>\n</section>\n`,
+      "src/B.tsx": `export const B = () => (\n  <div>\n    ${JSX_REASON}\n    <p>Exports include tax.</p>\n    <p>Refunds take a week.</p>\n  </div>\n);\n`,
+    });
+    expect(issues.map((found) => `${found.file}:${found.loc?.line} ${found.code}`)).toEqual([
+      "src/B.tsx:5 QFAI-UITEXT-001",
+      "src/a.html:3 QFAI-UITEXT-001",
+    ]);
+  });
+
+  it("stops at a component's top-level fragment, as markup stops at body", async () => {
+    const issues = await run({
+      "src/A.tsx": `export const A = () => (\n  <>\n    ${JSX_REASON}\n    Totals update nightly.\n    <p>Refunds take a week.</p>\n  </>\n);\n`,
+      "src/B.tsx":
+        "export const B = () => (/* qfai-text: why=Orders sync once a night; without=Users expect live totals */ <>\n  <p>Exports include tax.</p>\n</>);\n",
+    });
+    expect(issues.map((found) => `${found.file}:${found.loc?.line} ${found.code}`)).toEqual([
+      "src/A.tsx:5 QFAI-UITEXT-001",
+      "src/B.tsx:2 QFAI-UITEXT-001",
+    ]);
   });
 
   it("does not let a comment at the top of a file cover it, and reports a malformed one once", async () => {
