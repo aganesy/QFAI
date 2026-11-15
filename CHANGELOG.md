@@ -298,6 +298,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The `DESIGN.md` step says where a flow's surfaces come from.** It
+  decided whether to run from `primary_surface` and `secondary_surfaces`, fields
+  nothing has defined since 2.5.0. It now reads the surfaces the deliberation record
+  settles, the `tech.md` `Surface` row and the UI contracts linked to the
+  flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
+
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
   derived-value declaration covered both a value the DB stores and a value
   the API does not require, the two remedy sentences ran together with no
@@ -314,6 +320,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one
   pass.
+
+- **The `tech.md` template shows each item in the shape validation accepts.**
+  The template held placeholders such as `<package>`, so a project filling it
+  in guessed the shapes and needed several validate rounds. Every value is now
+  a filled example to replace, such as `<example: pnpm build>`, inside the
+  backticks, list marks and table cells the schema checks. Replacing each
+  example with the project's value, and replacing or deleting the two optional
+  lines marked `<optional example: ...>`, gives a `tech.md` that passes on the
+  first run. An example left in place is still reported by `QFAI-ASSETS-003`,
+  and a Turn-end check line left as shipped turns on no turn-end check. A
+  missing required line, such as the Format command, is now reported with an
+  example line in place of a regular expression. Closes #4404.
 
 - **E2E tests wait until a server-rendered page is interactive.** A test that
   filled a field before the page hydrated lost the value and failed some runs.
