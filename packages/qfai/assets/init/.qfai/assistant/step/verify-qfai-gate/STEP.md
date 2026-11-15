@@ -70,6 +70,15 @@ needs an E2E test, an AC an integration or API test, and an EX a selected
 non-E2E test. Record each uncovered ID and its flow. `QFAI-SCAN-002` means the
 scan cannot prove coverage; a missing layer is never a passing scan.
 
+## Accessibility layer
+
+In a project whose UI contracts declare a screen with a route that starts with
+`/`, record whether the accessibility layer
+`.qfai/assistant/rule/test-layers.md#l6-accessibility` defines exists: a
+selected test file that calls axe. `QFAI-AXE-001` (`warning`) reports that no
+selected test file does. Record the layer as present or missing in the stage
+report, so the missing accessibility gate in `verify-repo-gate` has its reason.
+
 ## Waivers
 
 - A waiver covers a `warning` or `info` finding only. A waiver that suppresses
@@ -85,4 +94,5 @@ scan cannot prove coverage; a missing layer is never a passing scan.
 The step is done when:
 
 - validation ran in the profile the scope names, and its result is recorded;
-- `error=0` for a pass, or the failing findings are recorded for the fix loop.
+- `error=0` for a pass, or the failing findings are recorded for the fix loop;
+- where the accessibility layer applies, it is recorded as present or missing.

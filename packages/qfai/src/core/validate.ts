@@ -51,6 +51,7 @@ import {
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateComponentCatalog } from "./validators/componentCatalog.js";
 import { validateUiPlainText } from "./validators/uiPlainText.js";
+import { validateUiAccessibilityLayer } from "./validators/uiAccessibilityLayer.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDiagramBudget } from "./validators/diagramBudget.js";
 import { validateDeliberationRecords } from "./validators/deliberationRecord.js";
@@ -761,6 +762,11 @@ async function runStoryProfileValidators(
           ...(await runPrototypingValidators(root, config, timings, platformOption)),
           ...(await atdd()),
           ...(await tdd(false, false)),
+          // Whether a project with web screens checks them for accessibility at all. Only a
+          // full scan reads both the UI contracts and every selected test file.
+          ...(await timed(timings, "accessibility-layer", () =>
+            validateUiAccessibilityLayer(root, config),
+          )),
           ...(await timed(timings, "prototyping-skill", () =>
             validatePrototypingSkill(root, config),
           )),

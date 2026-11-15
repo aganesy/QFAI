@@ -40,6 +40,7 @@ export { validateUiContractParse } from "./contracts.js";
 export { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 export { validateUiScreenSurface } from "./uiScreenSurface.js";
+export { validateUiAccessibilityLayer } from "./uiAccessibilityLayer.js";
 export { validateAgentDefinition } from "./agentDefinition.js";
 export { validateStepTree } from "./stepTree.js";
 export { validateDesignAudit } from "./designAudit.js";

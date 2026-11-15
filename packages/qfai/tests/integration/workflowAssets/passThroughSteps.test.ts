@@ -236,7 +236,7 @@ describe("a step that may pass with evidence", () => {
     expect(section).toMatch(/an AC or BF annotation counts anywhere in such a file/i);
     expect(section).toMatch(/change no existing test in the file/i);
     expect(section).toMatch(
-      /the step then passes as Passes when states\. Procedure items 1, 4 and 5 still apply\./i,
+      /the step then passes as Passes when states\. Procedure items 1, 4, 5 and 6 still apply\./i,
     );
     const procedure = flat(
       sectionOf(await readShipped("step/implement-scaffold/STEP.md"), "## Procedure"),

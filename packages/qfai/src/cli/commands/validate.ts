@@ -322,6 +322,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-COMP-*",
   ],
   "prototyping-skill": ["QFAI-PROTOSKILL-*"],
+  "accessibility-layer": ["QFAI-AXE-*"],
   "test-stubs": ["QFAI-TEST-*"],
   drift: ["QFAI-DRIFT-*", "QFAI-STORY-010"],
   "saas-package-profile": [ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE],
@@ -1213,6 +1214,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
   "QFAI-CONTRACT-051":
     "Every `surface` a UI contract screen declares is `application` or `marketing`, so the screen is built and reviewed against a pattern list that exists. A screen that declares no surface is an application screen.",
+  "QFAI-AXE-001":
+    "A project whose UI contracts declare a screen with a web route has a selected test file that calls axe (`AxeBuilder` or an `@axe-core/` package), so its routes are checked against the WCAG 2.2 A and AA rules.",
   "QFAI-UITEXT-001":
     "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert or the like) or has a `qfai-text` comment with `why` and `without` directly before it or before its parent element, or a `qfai-text-file` comment in its file gives it one.",
   "QFAI-UITEXT-002":
