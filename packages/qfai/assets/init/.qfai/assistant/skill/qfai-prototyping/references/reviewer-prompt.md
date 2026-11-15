@@ -357,28 +357,49 @@ mandatory input.
 
 On an application screen, one whose UI contract declares no `surface` or
 `surface: application`, the business-screen floor also decides what blocks:
-`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`, with
-`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md#every-screen`
-for how each part shows on a screen. Check three of its parts on each screen
-you review in full: an app shell whose navigation shows where the user is, a
-way back from a screen below the top level, and the empty, loading, error and
-success states, the empty one saying what to do next. The rule already makes
-each part an obligation, so a missing one is a defect that traces to it,
-whether or not the UI contract names the part, and not an observation that the
-screen could be better.
+`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`.
+Check three of its parts: an app shell
+whose navigation shows where the user is, a way back from a screen below the
+top level, and the empty, loading, error and success states, the empty one
+saying what to do next. The rule already makes each part an obligation, so a
+missing one is a defect that traces to it, whether or not the UI contract
+names the part, and not an observation that the screen could be better. A
+part the UI contract leaves out with a reason is not a finding.
 
-- A part with no reason recorded in the screen's UI contract is a blocking
-  finding when it is missing from a screen the run adds or changes, or when
-  the run removes it. Name the screen, the missing part and the trace.
-- A part that was already missing before the run is critique: it goes in
-  `proseCritique`, naming the screen and the part. Before the run means where
-  the run started from: the confirmed `final/index.html` a scoped run copies,
-  or the live route as it ran before a `restyle`. An unscoped `prototype` run
-  adds or changes every screen it reviews.
-- A part the UI contract leaves out with a reason is not a finding.
+The finding blocks only where the run made the gap. Before the run means
+what the run started from:
 
-A render-check screen is checked only as [Inputs](#inputs) says, and a screen
+- a scoped run: the confirmed `final/index.html` its first iteration copies;
+- a `restyle`: each route's baseline,
+  `.qfai/prototype/baseline/<ui-contract-id>/<screen>.txt`, and the audit
+  lines `progress.md` records before iteration 00. A part they do not show
+  counts as already missing; only a part the baseline shows and the restyle
+  drops blocks;
+- an unscoped `prototype` run: nothing, so every screen it reviews and its
+  shell are the run's own.
+
+The way back and the states are judged on each screen you review in full. A
+part with no reason recorded in the screen's UI contract is a blocking finding
+when it is missing from a screen the run adds or changes, or when the run
+removes it. Name the screen, the missing part and the trace. A part that was
+already missing before the run is critique: it goes in `proseCritique`,
+naming the screen and the part.
+
+The app shell is judged once for the application, not on each screen: a
+scoped run builds no part outside its scope, so it cannot add a shell the
+application lacks. A missing or broken shell blocks only when the run adds or
+alters the shell, or removes one `final/index.html` had. When the prototype
+the run started from had no shell, its absence is critique, naming every
+screen it affects, the ones the run adds included, unless a shell component
+is in the run scope.
+
+A missing state counts once: record it as a
+`lap-007-state-not-represented` detection, not also as a blocking finding,
+and a missing way back as a `lap-008-no-back-affordance` detection. A
+render-check screen is checked only as [Inputs](#inputs) says, and a screen
 whose UI contract declares `surface: marketing` is not held to this floor.
+The floor's other parts, such as feedback after a change and how a list
+behaves, are left to the `product-surface-reviewer` at implementation review.
 
 Outside these cases, an observation that something could be better is not a
 finding. It goes in `proseCritique`, where it informs the next iteration. Whether the
@@ -409,11 +430,9 @@ Report what fails, not what is familiar.
 ### `lap-007-state-not-represented`
 
 The interface fails to visually represent critical application states
-(loading, empty, error, success) as distinct, unambiguous affordances.
-At minimum, the final iteration must include explicit visual treatment
-for at least two modal states (e.g., loading spinner + empty state, or
-error alert + success confirmation) that differ meaningfully from the
-default state in color, typography, or layout.
+(loading, empty, error, success) as distinct, unambiguous affordances: a
+state a screen must show has to differ meaningfully from the default state
+in color, typography, or layout.
 
 Its authority is the business-screen floor
 (`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`): on an

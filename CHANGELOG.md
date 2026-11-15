@@ -8,10 +8,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The prototype reviewer checks the business-screen floor, not only what
   the UI contract declares.** On an application screen the run adds or
-  changes, a missing app-shell navigation, way back, or empty, loading, error
-  or success state with no reason recorded in the UI contract is a blocking
-  finding. A gap that was already there before the run goes in the critique.
-  `lap-007-state-not-represented` now rests on the same floor. Closes #4129.
+  changes, a missing way back, or empty, loading, error or success state with
+  no reason recorded in the UI contract blocks, as does one the run removes. A
+  gap that was already there before the run goes in the critique. The app
+  shell is judged once for the application: it blocks only when the run adds,
+  alters or removes it, so a scoped run is never blocked by a shell it may not
+  build. `lap-007-state-not-represented` now rests on the same floor. Closes
+  #4129.
 
 ## [2.5.0] - 2026-11-15
 
