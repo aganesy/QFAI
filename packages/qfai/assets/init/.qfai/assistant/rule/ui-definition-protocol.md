@@ -20,7 +20,9 @@ A downstream skill reads the UI definition in this order.
    - `business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md`
 
 2. **UI Contracts** (`<paths.contractsDir>/ui/*.yaml`, default `.qfai/spec/03_contract/ui/*.yaml`):
-   the contracts whose rules cite the flow's examples
+   the contracts whose rules cite the flow's examples, and the app frame, the UI
+   contract that holds the app shell and the home, which every application flow
+   renders inside
    - contract ID (`UI-NNNN`, in a file named `ui-NNNN-<slug>.yaml`)
    - screen ID
    - route
