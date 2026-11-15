@@ -17,6 +17,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **A UI contract list or table element says how it is shown and narrowed.**
+  The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
+  artifact rules and the `sdd-contract` step give every `type: list` or
+  `type: table` element a `list` key: `columns`, `search`, `filters`, `sort`
+  and `pagination`, each set or `none` with the reason the element does
+  without it, the same shape as `states`. The business UI pattern reference
+  now says a List behaviour applies to what `list` sets and the entry it
+  concerns records a departure. Validate does not check the key yet.
+  Closes #4109.
+
 ### Changed
 
 - **The parts of a business screen outrank the minimal-scope article.**
