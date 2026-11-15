@@ -40,6 +40,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Settled work that adds screens gets the design and prototype stages.**
+  The extraction has a new qualifier, `new-screens`, for a settled change that
+  adds new UI contracts or new routes users see: an approved record with a
+  task, a settled upstream design, or an order. Such a change now routes
+  `apply-settled-prototype` instead of `apply-settled`. Before, it went straight
+  to implementation with no design or prototype stage. A new feature with no
+  settled record is covered by `visual-open`.
+
 - **The parts of a business screen outrank the minimal-scope article.**
   Article VII of the shipped constitution now names the list under
   `## What a business screen always has` in `interface-clarity.md` among what
@@ -98,6 +106,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
+
+- **E2E tests wait until a server-rendered page is interactive.** A test that
+  filled a field before the page hydrated lost the value and failed some runs.
+  The guidance now has the app shell set `data-qfai-ready` on `<html>` once it
+  is interactive, and the test wait for it after each page load. The
+  `/qfai-implement` Playwright recipe shows a `waitForAppReady` helper, the
+  wait for a new page after a click, and the shell code for React and plain
+  DOM. The test layers rule and the scaffold and acceptance steps forbid a
+  fixed sleep or a blind retry in its place.
 
 - **A `Derived (not stored)` declaration for a value no DB column holds is
   accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
