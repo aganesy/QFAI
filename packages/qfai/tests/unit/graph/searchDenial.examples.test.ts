@@ -1251,6 +1251,7 @@ async function outsideSearchLayout() {
   await writeFile(path.join(project, "src", "a.ts"), "export const foo = 1;\n");
   await writeFile(path.join(nested, ".git"), "gitdir: elsewhere\n");
   await writeFile(path.join(outside, "notes.txt"), "foo\n");
+  await writeFile(path.join(outside, "sub", "other.txt"), "foo\n");
   await symlink(
     project,
     path.join(outside, "link"),
@@ -1271,16 +1272,15 @@ async function outsideSearchLayout() {
 // Mutation: packages/qfai/src/core/graph/hooks.ts `if (readsOnlyOutside(context, searchOperands(operation, words.slice(1))))` -> `if (false)` fails "allows a search whose every literal operand lies outside the project"
 it("allows a search whose every literal operand lies outside the project", async () => {
   vi.stubEnv("RIPGREP_CONFIG_PATH", "");
+  vi.stubEnv("GREP_OPTIONS", "");
   vi.stubEnv("CDPATH", "");
   const layout = await outsideSearchLayout();
   const { out, project, outside } = layout;
   try {
     for (const event of [
       { tool: "Bash", cwd: project, command: `grep -n foo ${out}/notes.txt` },
-      { tool: "Bash", cwd: project, command: `rg foo ${out}` },
-      { tool: "Bash", cwd: project, command: `rg -n -- foo ${out}/notes.txt ${out}/sub` },
-      { tool: "Bash", cwd: project, command: `cd src && grep -rn foo ${out}/sub` },
-      { tool: "Bash", cwd: project, command: `git grep --no-index foo -- ${out}/notes.txt` },
+      { tool: "Bash", cwd: project, command: `rg -n -- foo ${out}/notes.txt ${out}/sub/other.txt` },
+      { tool: "Bash", cwd: project, command: `cd src && grep -rn foo ${out}/sub/other.txt` },
       { tool: "Bash", cwd: outside, command: "grep -n foo notes.txt" },
       { tool: "PowerShell", cwd: outside, command: "findstr /n foo notes.txt" },
       {
@@ -1300,9 +1300,10 @@ it("allows a search whose every literal operand lies outside the project", async
 });
 
 // QFAI:EX-0001-0235-31
-// Mutation: packages/qfai/src/core/graph/hooks.ts `(root) => apart(root, lexical) && apart(root, real) && apartOnDisk(root, real),` -> `() => true,` fails "denies a search whose operands are not provably outside the project"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `roots.every((root) => apart(root, file) && apart(root, real) && apartOnDisk(root, real))` -> `true` fails "denies a search whose operands are not provably outside the project"
 it("denies a search whose operands are not provably outside the project", async () => {
   vi.stubEnv("RIPGREP_CONFIG_PATH", "");
+  vi.stubEnv("GREP_OPTIONS", "");
   const layout = await outsideSearchLayout();
   const { base, out, inside, project, nested, outside } = layout;
   try {
@@ -1310,6 +1311,19 @@ it("denies a search whose operands are not provably outside the project", async 
       // A link outside that leads back into the project.
       [{ tool: "Bash", cwd: project, command: `grep -n foo ${out}/link/src/a.ts` }, [project]],
       [{ tool: "Bash", cwd: project, command: `rg foo ${out}/link` }, [project]],
+      // A directory, which a search may recurse through to reach the project.
+      [{ tool: "Bash", cwd: project, command: `rg foo ${out}` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep -rn foo ${out}` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep -rn foo ${out}/sub` }, [project]],
+      // findstr reads `C:/a/b.txt` as the drive-relative `C:b.txt`, inside the working directory.
+      [{ tool: "PowerShell", cwd: project, command: `findstr foo ${out}/notes.txt` }, [project]],
+      // git grep, which may recurse or fall back to the working tree, is never exempt.
+      [
+        { tool: "Bash", cwd: project, command: `git grep --no-index foo -- ${out}/notes.txt` },
+        [project],
+      ],
+      // A file the kernel synthesises.
+      [{ tool: "Bash", cwd: project, command: "grep foo /proc/self/environ" }, [project]],
       // One operand outside and one inside.
       [{ tool: "Bash", cwd: project, command: `grep foo ${out}/notes.txt ${inside}` }, [project]],
       [{ tool: "Bash", cwd: project, command: `grep foo ${out}/notes.txt src/a.ts` }, [project]],
@@ -1353,14 +1367,16 @@ it("denies a search whose operands are not provably outside the project", async 
         "deny",
       );
     }
+    // An environment that adds arguments the command text does not show.
     vi.stubEnv("RIPGREP_CONFIG_PATH", path.join(outside, "rgrc"));
-    expect(
-      classifyGraphExploration(
-        { tool: "Bash", cwd: project, command: `rg foo ${out}/notes.txt` },
-        undefined,
-        [project],
-      ).decision,
-    ).toBe("deny");
+    vi.stubEnv("GREP_OPTIONS", "-r");
+    for (const command of [`rg foo ${out}/notes.txt`, `grep foo ${out}/notes.txt`]) {
+      expect(
+        classifyGraphExploration({ tool: "Bash", cwd: project, command }, undefined, [project])
+          .decision,
+        command,
+      ).toBe("deny");
+    }
   } finally {
     await layout.dispose();
   }

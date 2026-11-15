@@ -604,12 +604,6 @@ function classifyCommand(
     }
   }
   if (operation === "git" && words[gitCommand]?.toLowerCase() === "grep") {
-    if (
-      gitCommand === 1 &&
-      words[1] === "grep" &&
-      readsOnlyOutside(context, searchOperands("git grep", words.slice(2)))
-    )
-      return outsideProject();
     const paths = words.indexOf("--");
     const targets = paths >= 0 ? words.slice(paths + 1) : [];
     const eligible =
@@ -868,15 +862,15 @@ function outsideProject(): GraphHookDecision {
 
 /**
  * The switches each search may carry before its pattern when it is checked for reading only
- * files outside the project. None follows a link, reads a file list or a pattern file, or takes
- * a value. Ceiling: any other option keeps the search denied; lift when an option is shown to
- * read nothing beyond the operands.
+ * files outside the project. None reads a file list or a pattern file, or takes a value. Every
+ * operand must be a regular file, so no switch can recurse into a directory. Ceiling: any other
+ * option keeps the search denied; lift when an option is shown to read nothing beyond the
+ * operands.
  */
 const OUTSIDE_SWITCHES: Readonly<Record<string, RegExp>> = {
   grep: /^-[inlHhsvwxcFoqrE]+$/,
   rg: /^-[inlHsvwxcFoq]+$/,
   findstr: /^\/[IVNLXBEMOPR]+$/i,
-  "git grep": /^(?:-[inlwvFcoh]+|--no-index)$/,
 };
 
 /**
@@ -887,24 +881,32 @@ const OUTSIDE_SWITCHES: Readonly<Record<string, RegExp>> = {
 const EXPANDING = /[$`~%*?[\]{}()<>|;&,!@^'"#]/;
 
 /**
- * The file operands of a grep, rg, findstr or git grep whose words are all known: switches
- * from `OUTSIDE_SWITCHES`, then a literal pattern, then the operands. Options are read only
- * before the pattern, since BSD grep and POSIXLY_CORRECT read a later `-x` as a file. git grep
- * needs `--` before its operands, so none of them is read as a revision of this repository.
- * `undefined` when the shape is any other.
+ * The file operands of a grep, rg or findstr whose words are all known: switches from
+ * `OUTSIDE_SWITCHES`, then a literal pattern, then the operands. Options are read only before
+ * the pattern, since BSD grep and POSIXLY_CORRECT read a later `-x` as a file. `undefined` when
+ * the shape is any other.
+ *
+ * Ceiling: `RIPGREP_CONFIG_PATH` and `GREP_OPTIONS` add arguments the command text does not
+ * show, and the hook reads its own environment, so a value only the agent's shell profile sets,
+ * or an alias or function defined outside the event, is not seen. Lift when a host reports the
+ * shell environment in the pre-tool event.
  */
 function searchOperands(operation: string, args: string[]): string[] | undefined {
   const switches = OUTSIDE_SWITCHES[operation];
-  // A ripgrep configuration file adds arguments the command text does not show.
-  if (!switches || (operation === "rg" && process.env.RIPGREP_CONFIG_PATH)) return undefined;
+  if (
+    !switches ||
+    (operation === "rg" && process.env.RIPGREP_CONFIG_PATH) ||
+    (operation === "grep" && process.env.GREP_OPTIONS)
+  )
+    return undefined;
   let index = 0;
   while (switches.test(args[index] ?? "")) index += 1;
-  if ((operation === "grep" || operation === "rg") && args[index] === "--") index += 1;
+  if (operation !== "findstr" && args[index] === "--") index += 1;
   const [pattern, ...rest] = args.slice(index);
   if (pattern === undefined || pattern.startsWith("-") || EXPANDING.test(pattern)) return undefined;
-  if (operation === "git grep") return rest[0] === "--" ? rest.slice(1) : undefined;
-  // findstr reads a `/` word anywhere as an option, such as `/S` or `/F:list`.
-  if (operation === "findstr" && args.slice(index).some((word) => word.startsWith("/")))
+  // findstr reads a `/` word anywhere as an option, such as `/S` or `/F:list`, and reads
+  // `C:/a/b.txt` as the drive-relative `C:b.txt`, so no word after its switches may hold a `/`.
+  if (operation === "findstr" && args.slice(index).some((word) => word.includes("/")))
     return undefined;
   return rest;
 }
@@ -938,36 +940,53 @@ function selectStringOperands(args: string[]): string[] | undefined {
 }
 
 /**
- * Whether every operand of a search provably names an existing path outside the project:
- * read from a known directory, by a command no part of the event redefines, as a literal path
- * that, lexically and after resolving symbolic links, neither lies inside nor contains any of
- * the worktrees. No operand, or one that cannot be resolved, proves nothing, so the search
- * stays denied. A `..` segment is refused: the shell resolves it through a symbolic link where
- * a lexical reading does not. This reads the file system only; it queries no graph.
+ * Whether every operand of a search provably names a regular file outside the project: read
+ * from a known directory, by a command no part of the event redefines, as a literal path that,
+ * lexically and after resolving symbolic links, neither lies inside nor contains any of the
+ * worktrees. A directory is refused, since a search recursing into it may reach the project
+ * through a link, a junction or a mount below it. No operand, or one that cannot be resolved,
+ * proves nothing, so the search stays denied. A `..` segment is refused: the shell resolves it
+ * through a symbolic link where a lexical reading does not. Every operand is checked lexically
+ * before any is resolved, so a search with a project operand is denied without reading the
+ * disk. This reads the file system only; it queries no graph.
  *
  * Ceiling: the check sees the file system when the hook runs, so a link another command of
- * the same event makes, or a hard link to a project file, is not seen. Recursion into an
- * outside directory follows no link below it, because no accepted option follows links.
- * Lift when a host reports the files a command opened.
+ * the same event makes, or a hard link to a project file, is not seen. A sibling worktree of the
+ * same repository outside the checkout is not part of the project here, so its files are
+ * allowed. Resolving a path on a mapped network drive or a network mount is a file-system call
+ * that may reach the network; network paths written as `\\server` or `//server` are refused
+ * before they are resolved. Lift when a host reports the files a command opened.
  */
 function readsOnlyOutside(context: CommandContext, operands: string[] | undefined): boolean {
   const { location, directory, worktrees, redefined, shell } = context;
   if (!operands?.length || redefined || location === "unknown" || !directory || !worktrees.length)
     return false;
   const base = location === "observed" ? directory : location.directory;
+  const lexicalRoots = worktrees.map((root) => path.resolve(root));
+  const lexical = operands.map((operand) => path.resolve(base, operand));
+  if (
+    !operands.every((operand) => literalPath(operand, shell)) ||
+    !lexical.every((file) => !systemPath(file) && lexicalRoots.every((root) => apart(root, file)))
+  )
+    return false;
   try {
-    const roots = worktrees.flatMap((root) => [path.resolve(root), realpathSync.native(root)]);
-    return operands.every((operand) => {
-      if (!literalPath(operand, shell)) return false;
-      const lexical = path.resolve(base, operand);
-      const real = realpathSync.native(lexical);
-      return roots.every(
-        (root) => apart(root, lexical) && apart(root, real) && apartOnDisk(root, real),
+    const roots = [...lexicalRoots, ...worktrees.map((root) => realpathSync.native(root))];
+    return lexical.every((file) => {
+      const real = realpathSync.native(file);
+      return (
+        !systemPath(real) &&
+        statSync(real).isFile() &&
+        roots.every((root) => apart(root, file) && apart(root, real) && apartOnDisk(root, real))
       );
     });
   } catch {
     return false;
   }
+}
+
+/** A path under `/proc`, `/dev` or `/sys`, whose entries are not ordinary files. */
+function systemPath(file: string): boolean {
+  return /^\/(?:proc|dev|sys)(?:\/|$)/.test(file.split(path.sep).join("/"));
 }
 
 /**
