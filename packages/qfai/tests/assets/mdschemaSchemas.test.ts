@@ -556,7 +556,7 @@ describe("a table-only section holds its template's columns and nothing above th
 describe("the technology document holds only its three sections, each in its shape", () => {
   const TECH_TEMPLATE = path.join(TEMPLATE_ROOT, "03_contract/tech.md");
   const TECH_SCHEMA = path.join(SCHEMA_ROOT, "story/03_contract/tech.mdschema.yml");
-  const PACKAGE = "- `<package>`\n  - `<what the project uses it for>`";
+  const PACKAGE = "- `<example: yaml>`\n  - <example: Parses the configuration file.>";
 
   function check(text: string): { status: number | null; output: string } {
     const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-tech-"));
@@ -580,18 +580,18 @@ describe("the technology document holds only its three sections, each in its sha
     ["a Stack table without a Platform row", "| Platform ", "| Hosts    ", "[required-text]"],
     ["a Stack table without a Surface row", "| Surface ", "| Screens ", "[required-text]"],
     ["prose in Stack", "## Stack\n\n", "## Stack\n\nThe stack.\n\n", "[forbidden-text]"],
-    ["a dependency with no nested reason", PACKAGE, "- `<package>`", "[forbidden-text]"],
+    ["a dependency with no nested reason", PACKAGE, "- `<example: yaml>`", "[forbidden-text]"],
     [
       "a dependency with its reason inline",
       PACKAGE,
-      "- `<package>` for parsing",
+      "- `<example: yaml>` for parsing",
       "[forbidden-text]",
     ],
     ["`None.` beside a package", PACKAGE, `${PACKAGE}\n- None.`, "[forbidden-text]"],
     ["a command list without Skeleton", "- Skeleton:", "- Smoke:", "[required-text]"],
     [
       "a command not in backticks",
-      "- Lint: `<lint command>`",
+      "- Lint: `<example: pnpm eslint .>`",
       "- Lint: run lint",
       "[forbidden-text]",
     ],
@@ -616,7 +616,7 @@ describe("the technology document holds only its three sections, each in its sha
   ];
 
   /** The template's lowest layer row, which each Architecture case rewrites. */
-  const LAYER_ROW = /^\| <lower layer> .*$/m;
+  const LAYER_ROW = /^\| <example: Core> .*$/m;
   /** The template's diagram, and its table, each with the blank line after it. */
   const DIAGRAM = /```mermaid\n[^`]*```\n\n/;
   const TABLE = /\| Layer [^#]*\n\n/;
@@ -631,7 +631,7 @@ describe("the technology document holds only its three sections, each in its sha
     ],
     [
       "an Architecture table with no layer row",
-      (text) => text.replace(/^\| <(?:upper|lower) layer> .*\n/gm, ""),
+      (text) => text.replace(/^\| <example: (?:Commands|Core)> .*\n/gm, ""),
       "[forbidden-text]",
     ],
     ["no diagram", (text) => text.replace(DIAGRAM, ""), "[codeblock]"],
@@ -712,7 +712,7 @@ describe("the technology document holds only its three sections, each in its sha
         DIAGRAM,
         "```mermaid\nflowchart TD\n  CLI --> Core\n  CLI --> Shared\n  Core --> Shared\n```\n\n",
       )
-      .replace(/^\| <upper layer> .*\n/m, "")
+      .replace(/^\| <example: Commands> .*\n/m, "")
       .replace(
         LAYER_ROW,
         "| CLI | Parses arguments and composes Core | Core, Shared |\n| Core | Validates the tree and/or reports on it | Shared |\n| Shared | I/O, UI/UX, read/write and HTTP/gRPC helpers | - |",

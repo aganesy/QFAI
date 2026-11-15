@@ -471,7 +471,7 @@ describe("migration catalog move", () => {
     const result = await run(context);
     expect(result.code).toBe(3);
     const tech = await readFile(path.join(context.contractsDir, "tech.md"), "utf8");
-    expect(tech).toContain("| <upper layer> |");
+    expect(tech).toContain("| <example: Commands> |");
     expect(tech).not.toContain("Parses arguments");
     const source = ".qfai/assistant/catalog/structure.md";
     expect(result.output).toContain(
@@ -645,14 +645,14 @@ describe("migration catalog move", () => {
     expect(tech).toContain("- Test: `pnpm test`\n");
     expect(tech).toContain("- Skeleton: `api` -> `pnpm smoke`\n");
     expect(tech).toContain("- Build: `pnpm build`\n");
-    expect(tech).toContain("- Install: `<install command>`\n");
+    expect(tech).toContain("- Install: `<example: pnpm install --frozen-lockfile>`\n");
     expect(tech).not.toContain("Smoke");
     expect(tech.indexOf("## Stack")).toBeLessThan(tech.indexOf("## Architecture"));
     expect(tech.indexOf("## Architecture")).toBeLessThan(tech.indexOf("## Dependencies"));
     expect(tech.indexOf("## Dependencies")).toBeLessThan(
       tech.indexOf("## Standard commands (copy-paste)"),
     );
-    expect(tech).toContain("| <upper layer> |");
+    expect(tech).toContain("| <example: Commands> |");
     expect(schemaCheck("03_contract/tech", path.join(context.contractsDir, "tech.md"))).toContain(
       "No violations",
     );

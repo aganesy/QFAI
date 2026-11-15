@@ -19,4 +19,11 @@ Feature: Parallel Slice Dispatch
     Then it gives each of two or more self-contained questions to a `fullstack-engineer` with no owned paths, which writes nothing and returns a cited answer
     And a question that needs another question's answer runs serially in the session agent
     And the session agent frames the questions and reads the answers into its own work
+
+  # AC-0001-0093-03
+  Scenario: A lookup answer a decision uses outlives the conversation
+    Given a delegated lookup whose answer a decision of the session agent uses
+    When the session agent takes the answer into that decision
+    Then it first writes the answer with its citations to a file under the report directory
+    And the decision cites that file, not the delegation's result message
 ```

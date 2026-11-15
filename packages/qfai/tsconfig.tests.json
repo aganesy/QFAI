@@ -509,6 +509,7 @@
     "tests/integration/diagramBudget.test.ts",
     "tests/integration/shippedCheckerCallers.test.ts",
     "tests/integration/storyTreePolicy.test.ts",
+    "tests/integration/techTemplateExamples.test.ts",
     "tests/integration/storyTreeValidateAcceptance.test.ts",
     "tests/integration/storyTreeValidateLayout.test.ts",
     "tests/integration/storyTreeCiRelease.test.ts",
