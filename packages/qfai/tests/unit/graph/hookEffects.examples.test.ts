@@ -33,7 +33,7 @@ vi.mock("../../../src/core/graph/documents.js", () => ({
 vi.mock("../../../src/core/graph/runner.js", () => ({ queryPreparedGraph: effects.analysis }));
 
 // QFAI:EX-0001-0235-23
-// Mutation: packages/qfai/src/core/graph/hooks.ts `export function enforceGraphExploration(input: unknown, configuration: unknown): GraphHookDecision {` -> `import { execFileSync } from "node:child_process"; export function enforceGraphExploration(input: unknown, configuration: unknown): GraphHookDecision { execFileSync(process.execPath, ["--version"]);` fails "denies ordinary exploration without network model or analysis effects"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `return event ? classifyGraphExploration(event, undefined, root) : failedGraphHook("input");` -> `return event ? (process.getBuiltinModule("node:child_process").execFileSync(process.execPath, ["--version"]), classifyGraphExploration(event, undefined, root)) : failedGraphHook("input");` fails "denies ordinary exploration without network model or analysis effects"
 it("denies ordinary exploration without network model or analysis effects", async () => {
   const result = enforceGraphExploration(
     { tool_name: "Bash", tool_input: { command: "grep -R policy .qfai/spec" } },
@@ -51,7 +51,7 @@ it("denies ordinary exploration without network model or analysis effects", asyn
     );
     const denial = await installedGraphHookResult(root, {
       tool_name: "Bash",
-      tool_input: { command: "grep -R policy .qfai/spec" },
+      tool_input: { command: "grep -R policy .qfai/spec/*.md" },
       cwd: root,
       session_id: "ordinary-hook-session",
     });
@@ -70,7 +70,7 @@ it("denies ordinary exploration without network model or analysis effects", asyn
     expect(JSON.parse(text)).toMatchObject({
       kind: "pending",
       domain: "documents",
-      target: ".qfai/spec",
+      target: ".qfai/spec/*.md",
       operation: "grep",
       worktree: root,
       session: "ordinary-hook-session",

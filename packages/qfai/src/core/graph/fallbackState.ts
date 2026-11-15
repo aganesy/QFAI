@@ -28,7 +28,7 @@ export async function classifyStoredGraphExploration(
   root: string,
   event: GraphHookEvent,
 ): Promise<GraphHookDecision> {
-  const decision = classifyGraphExploration(event);
+  const decision = classifyGraphExploration(event, undefined, root);
   if (decision.decision !== "deny" || decision.state !== "configured") return decision;
   if (decision.exceptionEligible === false)
     return decision.fallbackUnavailable
@@ -62,27 +62,32 @@ export async function classifyStoredGraphExploration(
   return withGraphLock<GraphHookDecision>(root, "state", async () => {
     const directory = await graphStateDirectory(root);
     const records = await readGraphSearchRecords(root, directory);
-    const classified = classifyGraphExploration(event, (candidate) => {
-      if (candidate.decision !== "deny" || candidate.exceptionEligible === false) return candidate;
-      const grant = records.find(
-        (item) =>
-          !item.draft &&
-          item.record.kind === "grant" &&
-          item.record.target === candidate.target &&
-          item.record.operation === candidate.operation &&
-          item.record.domain === candidate.domain &&
-          item.record.worktree === worktree &&
-          item.record.session === session &&
-          Date.now() < item.record.expiresAt,
-      );
-      return grant?.record.kind === "grant"
-        ? {
-            ...candidate,
-            decision: "allow",
-            message: `AI-decided search fallback: ${grant.record.reason}`,
-          }
-        : candidate;
-    });
+    const classified = classifyGraphExploration(
+      event,
+      (candidate) => {
+        if (candidate.decision !== "deny" || candidate.exceptionEligible === false)
+          return candidate;
+        const grant = records.find(
+          (item) =>
+            !item.draft &&
+            item.record.kind === "grant" &&
+            item.record.target === candidate.target &&
+            item.record.operation === candidate.operation &&
+            item.record.domain === candidate.domain &&
+            item.record.worktree === worktree &&
+            item.record.session === session &&
+            Date.now() < item.record.expiresAt,
+        );
+        return grant?.record.kind === "grant"
+          ? {
+              ...candidate,
+              decision: "allow",
+              message: `AI-decided search fallback: ${grant.record.reason}`,
+            }
+          : candidate;
+      },
+      root,
+    );
     if (
       classified.decision !== "deny" ||
       classified.state !== "configured" ||
