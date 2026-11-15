@@ -167,6 +167,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   no longer reads a shell reason recorded on the app frame as missing.
   Closes #4389.
 
+- **`verify-repo-gate` no longer escalates a gate whose only failures are
+  pending test obligations.** Its fix loop still stops and escalates a failing
+  gate it has no fix list for, except when the only failures are the
+  missing-test errors a `testsPending` scope leaves pending for the implement
+  stage. Part of #4379.
+
 - **A UI pattern repeated across screens becomes a shared component.**
   `minimal-implementation.md` no longer counts a region that several screens
   repeat as "an operation done once": it follows rung 1 of `ui-procurement.md`
