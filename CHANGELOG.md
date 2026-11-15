@@ -181,6 +181,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
   is unchanged.
 
+- **The parts of a business screen outrank the minimal-scope article.**
+  Article VII of the shipped constitution now names the list under
+  `## What a business screen always has` in `interface-clarity.md` among what
+  outranks it, beside the safety floor. Navigation, list behaviour, states and
+  feedback are no longer cut as scope beyond the minimum; how they are built
+  is still held to the article.
+
 - **A plain text the user needs stays, with its reason.** The implementation
   UI guidance now holds the one copy of the procedure for a plain text in UI
   source, and the `fullstack-engineer` card and the prototyping generator
