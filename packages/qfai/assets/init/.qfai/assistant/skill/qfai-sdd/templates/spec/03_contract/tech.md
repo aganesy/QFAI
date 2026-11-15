@@ -2,46 +2,46 @@
 
 ## Stack
 
-| Component           | Choice                                     |
-| ------------------- | ------------------------------------------ |
-| Runtime             | `<language runtime and supported version>` |
-| Platform            | `<supported operating systems>`            |
-| Surface             | `<surfaces the product targets>`           |
-| CI                  | `<CI service>`                             |
-| Language            | `<language and version>`                   |
-| Package manager     | `<package manager and version>`            |
-| Build tool          | `<build tool>`                             |
-| Test runner         | `<test runner>`                            |
-| Lint / format       | `<linter and formatter>`                   |
-| CSS framework       | `<CSS framework, or none>`                 |
-| Component catalogue | `<primary component catalogue, or none>`   |
+| Component           | Choice                                |
+| ------------------- | ------------------------------------- |
+| Runtime             | `<example: Node.js 22>`               |
+| Platform            | `<example: Linux, macOS and Windows>` |
+| Surface             | `<example: cli>`                      |
+| CI                  | `<example: GitHub Actions>`           |
+| Language            | `<example: TypeScript 5>`             |
+| Package manager     | `<example: pnpm 9>`                   |
+| Build tool          | `<example: tsup>`                     |
+| Test runner         | `<example: Vitest>`                   |
+| Lint / format       | `<example: ESLint and Prettier>`      |
+| CSS framework       | `<example: none>`                     |
+| Component catalogue | `<example: none>`                     |
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-  Upper["<upper layer>"] --> Lower["<lower layer>"]
+  Upper["<example: Commands>"] --> Lower["<example: Core>"]
 ```
 
-| Layer         | Responsibility                      | Depends on    |
-| ------------- | ----------------------------------- | ------------- |
-| <upper layer> | <what the layer is responsible for> | <lower layer> |
-| <lower layer> | <what the layer is responsible for> | -             |
+| Layer               | Responsibility                                                 | Depends on      |
+| ------------------- | -------------------------------------------------------------- | --------------- |
+| <example: Commands> | <example: Parses the arguments of each command and calls Core> | <example: Core> |
+| <example: Core>     | <example: Reads and checks the project files>                  | -               |
 
 ## Dependencies
 
-- `<package>`
-  - `<what the project uses it for>`
+- `<example: yaml>`
+  - <example: Parses the configuration file.>
 
 ## Standard commands (copy-paste)
 
-- Install: `<install command>`
-- Format: `<format check command>`
-- Test: `<test command>`
-- Lint: `<lint command>`
-- Typecheck: `<typecheck command>`
-- Build: `<build command>`
-- Skeleton: `<smallest command that proves the application entrypoint starts>`
-- Validate: `<qfai validate command>`
-- Pack / distribution: `<package or artifact check command, or remove this line>`
-- Turn-end check: `<labels of the commands above, comma-separated, fast enough to run whenever an agent ends its turn, or remove this line>`
+- Install: `<example: pnpm install --frozen-lockfile>`
+- Format: `<example: pnpm prettier --check .>`
+- Test: `<example: pnpm vitest run>`
+- Lint: `<example: pnpm eslint .>`
+- Typecheck: `<example: pnpm tsc --noEmit>`
+- Build: `<example: pnpm build>`
+- Skeleton: `<example: node dist/cli.js --help>`
+- Validate: `<example: npx qfai validate>`
+- Pack / distribution: `<optional example: pnpm pack --dry-run>`
+- Turn-end check: `<optional example: Format, Lint, Typecheck>`
