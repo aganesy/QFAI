@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **Research has a UI research brief.** Research for a screen type or a
+  component the project does not have yet fills
+  `rule/references/ui-research-brief.md`: one entry per axis (design-system
+  pattern, accessibility, catalogue, domain analogues, framework idioms,
+  locale), each with its sources or a reason it does not apply. The visual
+  reference survey still decides the visual direction; the brief decides what
+  the screen contains.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
