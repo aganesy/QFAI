@@ -425,6 +425,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A `Derived (not stored)` declaration for a value no DB column holds is
+  accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
+  credits each declared value that the API contract requires through an `enum`
+  on the field, as the reference describes for a status computed at read time.
+  A value only in a description is still reported, and the message now says the
+  API contract declares no `enum` for it.
+
 - **The search-protection hook ends a PowerShell statement at a lone carriage
   return.** PowerShell ends a statement and a `#` line comment at a carriage
   return as well as at a line feed, so `Write-Output x` followed by a lone
