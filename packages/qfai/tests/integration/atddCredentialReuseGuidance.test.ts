@@ -386,4 +386,53 @@ describe("the optional test runner recipes ship beside the rule set", () => {
     expect(time).toMatch(/immutable while that profile is active/);
     expect(time).toMatch(/one report per profile[\s\S]*worker\s+count[\s\S]*skips/);
   });
+
+  // QFAI:EX-0001-0074-06
+  it("waits for the app shell's readiness marker, pointed to by the test layers rule and both steps", async () => {
+    const ready = section(await read(RECIPES_REL), "Playwright: wait until the app is ready");
+    expect(ready, "the recipe has no readiness helper").toContain(
+      "export async function waitForAppReady(page: Page): Promise<void> {",
+    );
+    expect(ready).toContain(
+      'await page.locator("html[data-qfai-ready]").waitFor({ state: "attached" });',
+    );
+    // The helper sits between the navigation and the first interaction.
+    expect(ready, "the helper is not called after page.goto").toMatch(
+      /await page\.goto\([^)]*\);\s*await waitForAppReady\(page\);\s*await page\.getByLabel/,
+    );
+    expect(ready, "the React shell does not set the marker after mount").toMatch(
+      /useEffect\(\(\) => \{\s*document\.documentElement\.dataset\.qfaiReady = "true";\s*\}, \[\]\);/,
+    );
+    expect(ready, "the recipe has no plain DOM shell code").toMatch(
+      /\/\/ app shell \(plain DOM\)[^\n]*\ndocument\.documentElement\.dataset\.qfaiReady = "true";/,
+    );
+    expect(ready).toMatch(
+      /Do not wait a fixed time, and do not wrap an interaction in a blind retry/,
+    );
+
+    const layers = await read(path.join(".qfai", "assistant", "rule", "test-layers.md"));
+    const e2e = layers.split(/^### /m).find((body) => body.startsWith("L5 E2E\n")) ?? "";
+    expect(e2e, "the L5 E2E section does not require a readiness wait").toMatch(
+      /waits for readiness after each navigation, before its first\s+interaction/,
+    );
+    expect(e2e).toContain("`data-qfai-ready`");
+    expect(e2e, "the L5 E2E section allows a sleep or a blind retry").toMatch(
+      /Never use a fixed sleep, and\s+never retry an interaction blindly/,
+    );
+    expect(e2e, "the L5 E2E section does not give the marker to the shell").toMatch(
+      /The app shell owns setting the marker/,
+    );
+    expect(e2e).toContain(RECIPES_REL);
+
+    for (const step of ["implement-scaffold", "implement-acceptance"]) {
+      const body = await read(path.join(".qfai", "assistant", "step", step, "STEP.md"));
+      expect(body, `${step} does not name the readiness marker`).toContain("`data-qfai-ready`");
+      expect(body, `${step} does not say the shell sets the marker`).toMatch(
+        /app shell sets\s+(?:`data-qfai-ready`|the marker)/,
+      );
+      expect(body, `${step} does not say the E2E test waits`).toMatch(
+        /waits for (?:readiness|the app shell's `data-qfai-ready` marker)/,
+      );
+    }
+  });
 });

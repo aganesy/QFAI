@@ -54,6 +54,15 @@ annotation counts here. AC and EX annotations do not belong in E2E tests. A
 flow may need more than one journey test to prove its branches; one annotation
 is not a substitute for the required assertions.
 
+A server-rendered page can show its content before it reacts to input. So an
+E2E test waits for readiness after each navigation, before its first
+interaction: the app shell sets `data-qfai-ready` on `<html>` once it is
+interactive, and the test waits for that marker. Never use a fixed sleep, and
+never retry an interaction blindly (for example with `toPass`) to cover
+hydration. The app shell owns setting the marker; the Playwright recipe in
+`.qfai/assistant/skill/qfai-implement/references/test-runner-recipes.md`
+shows the helper and the shell code.
+
 A flow's journey can open each screen directly by its URL, so passing every
 journey does not show that a user can reach the screens. Where the app has its
 own navigation (a shell, a menu, a home screen), add one navigation journey per

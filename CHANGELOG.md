@@ -12,6 +12,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
+- **E2E tests wait until a server-rendered page is interactive.** A test that
+  filled a field before the page hydrated lost the value and failed some runs.
+  The app shell now sets `data-qfai-ready` on `<html>` once it is interactive,
+  and the test waits for it after each navigation. The `/qfai-implement`
+  Playwright recipe ships a `waitForAppReady` helper and the shell code for
+  React and plain DOM. The test layers rule and the scaffold and acceptance
+  steps forbid a fixed sleep or a blind retry in its place.
 
 ## [2.5.0] - 2026-11-15
 

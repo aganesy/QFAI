@@ -11,6 +11,7 @@ stay the obligation; a recipe is one way to meet them.
 - The run-owned session directory
 - Vitest: one session per pool slot and actor
 - Playwright: one account and storage state per worker
+- Playwright: wait until the app is ready
 - Business data each file owns
 - Database hooks only where a group needs them
 - Shared and exclusive access to a common database or server
@@ -290,6 +291,57 @@ teardown("delete the run's accounts and storage states", async () => {
 A test whose subject is the session itself (login, logout, expiry, password change) starts from an
 empty storage state with `test.use({ storageState: { cookies: [], origins: [] } })` and creates its own
 subject. When the suite runs once per clock profile, each profile runs its own setup and teardown.
+
+## Playwright: wait until the app is ready
+
+A server-rendered page shows its content before it reacts to input. A test that fills a field
+before the page is interactive loses the value when the framework takes over, so the test fails
+some runs and passes others. The fix is one marker that does not depend on the framework: the app
+shell sets `data-qfai-ready` on `<html>` once it is interactive, and the test waits for it after
+every navigation, before its first interaction.
+
+The app shell owns the marker. In React, set it in an effect of the root layout or shell
+component, which runs after mount:
+
+```tsx
+// app shell (React): runs once the shell is mounted and interactive
+import { useEffect } from "react";
+
+export function useAppReadyMarker(): void {
+  useEffect(() => {
+    document.documentElement.dataset.qfaiReady = "true";
+  }, []);
+}
+```
+
+Without a framework, set it once the script that wires the page has run:
+
+```ts
+// app shell (plain DOM): after the event handlers are attached
+document.documentElement.dataset.qfaiReady = "true";
+```
+
+The test waits for the marker with one helper:
+
+```ts
+// ready.ts
+import type { Page } from "@playwright/test";
+
+export async function waitForAppReady(page: Page): Promise<void> {
+  await page.locator("html[data-qfai-ready]").waitFor({ state: "attached" });
+}
+```
+
+```ts
+// checkout.spec.ts: call the helper after every page.goto, before the first interaction
+await page.goto("/checkout");
+await waitForAppReady(page);
+await page.getByLabel("Email").fill("member@example.test");
+```
+
+Do not wait a fixed time, and do not wrap an interaction in a blind retry such as `toPass` to
+cover hydration: both hide the cause and still fail on a slow run. A navigation the test triggers
+by a click that loads a new document is waited for the same way.
 
 ## Business data each file owns
 

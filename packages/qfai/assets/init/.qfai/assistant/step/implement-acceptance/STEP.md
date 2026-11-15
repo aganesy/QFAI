@@ -20,7 +20,7 @@ step writes the assertions those bodies owe.
   contracts, under `paths.contractsDir`.
 - The worker session setup `implement-credentials` wrote, when a test needs an
   authenticated actor.
-- When a test depends on business time, shares a database or server with
+- When an E2E test drives a browser, or a test depends on business time, shares a database or server with
   other workers, or feeds a required CI check:
   `.qfai/assistant/skill/qfai-implement/references/test-runner-recipes.md`.
 
@@ -43,7 +43,12 @@ contract IDs are not coverage annotations.
 ## Procedure
 
 1. Write the assertions the test's BF or AC states, against observable
-   behaviour.
+   behaviour. An E2E test waits for the app shell's `data-qfai-ready` marker
+   after each navigation, before its first interaction, as
+   `.qfai/assistant/rule/test-layers.md` § L5 E2E says. The app shell sets
+   the marker, not the test: a shell that does not set it is a product
+   defect, reported as item 4 says. No fixed sleep, and no blind retry of an
+   interaction.
 2. Run each test with the Test command `common-gate-run` names, and confirm it
    passes.
 3. The behaviour already exists, so prove each assertion can fail: change the
