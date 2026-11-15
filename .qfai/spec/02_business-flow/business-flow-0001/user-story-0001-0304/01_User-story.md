@@ -6,5 +6,5 @@ As a project lead whose agents build business screens, I want the product-surfac
 
 ## Non-goals
 
-- A change to which findings may block a review.
+- A change to which findings may block a review, other than tracing a failed accessibility criterion or widget pattern to the accessibility item of the safety floor.
 - A new anti-pattern entry.
