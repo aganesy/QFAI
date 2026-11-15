@@ -60,6 +60,10 @@ files. A plain text there is a literal text node, non-empty after trimming and s
 `ButtonLink`, `router-link` or `SubmitButton`), `legend`, `th`, `caption`, `option`,
 `summary`, `title`, `script`, `style` and an element with `role="alert"` or `role="status"`. Attribute values
 and expressions are never plain text; a string literal that is a whole JSX child is.
+The check reads only that literal text, so it does not see copy held in a constant, a prop, a template
+literal with substitutions or an attribute value. Moving a sentence there is not compliance: the text is
+still copy the user reads, the product-surface reviewer judges it as such, and the procedure below applies to
+it as to any plain text.
 
 A project component that renders one of those elements counts as that element once `uiText.elements` in
 qfai.config.yaml maps it, as `TableHead: th`, `CardTitle: h3`, `NavLink: a` or `StatusRegion: status`. The

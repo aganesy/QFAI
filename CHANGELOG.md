@@ -107,6 +107,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   concerns records a departure. Validate does not check the key yet.
   Closes #4109.
 
+- **`DESIGN.md` can hold its layout values.** An optional `visual.layout`
+  section takes the breakpoints, the content width of a reading page, an app
+  page and a form, the minimum tap target (at least 24 px, the WCAG 2.5.8
+  floor) and how a table behaves at a narrow width (`stack` or `scroll`), so a
+  responsive check reads them from one place. A file without it still parses.
+
 ### Changed
 
 - The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
@@ -253,6 +259,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - `.agents/rules/interface-clarity.md` cuts development notation, such as
     code, spec IDs or test syntax, from screens visitors read.
   - A figure or claim shown on more than one page comes from one source.
+
+- **`QFAI-UITEXT-001` says what it reads.** The finding's fix text and the
+  implementer guidance say that the check reads only literal text, and that
+  moving a sentence into a constant, a prop or an attribute value is not a fix:
+  the product-surface review still judges that copy.
 
 - **A UI review without captures is `PENDING`, never `PASS`.** For a
   UI-affecting change, the product-surface reviewer requires a capture of each
