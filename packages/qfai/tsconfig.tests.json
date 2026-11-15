@@ -89,6 +89,7 @@
     "tests/integration/graph/US-0001-0235/AC-0001-0235-04.test.ts",
     "tests/integration/graph/US-0001-0235/AC-0001-0235-05.test.ts",
     "tests/integration/graph/US-0001-0235/AC-0001-0235-06.test.ts",
+    "tests/integration/graph/US-0001-0235/AC-0001-0235-07.test.ts",
     "tests/integration/graph/US-0001-0236/AC-0001-0236-01.test.ts",
     "tests/integration/graph/US-0001-0236/AC-0001-0236-02.test.ts",
     "tests/integration/graph/US-0001-0236/AC-0001-0236-03.test.ts",

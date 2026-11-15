@@ -4,6 +4,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The search-protection hook lets a search of files outside the project
+  run.** A grep, rg, findstr, Select-String or git grep whose literal pattern
+  and file operands all name existing paths outside the project worktree and
+  the checkout the hook belongs to, before and after symbolic links, is no
+  longer denied, so `grep -n foo /etc/hosts` runs. A search with no file
+  operand, a project operand beside an outside one, a glob, `~`, variable or
+  `..` operand, a link back into the project, an option that follows links or
+  reads another file, or an operand that does not exist stays denied. Fixes
+  #4179.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

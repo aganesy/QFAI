@@ -1,3 +1,4 @@
+import { realpathSync, statSync } from "node:fs";
 import path from "node:path";
 
 export type GraphHookHost = "claude" | "codex" | "copilot" | "vscode";
@@ -48,6 +49,8 @@ interface ShellScope {
   authorize: GraphSearchAuthorization;
   shell: GraphShell;
   directory?: string;
+  /** The project worktree and the checkout the hook belongs to: a search of neither is not denied. */
+  worktrees: readonly string[];
 }
 
 interface CommandContext extends ShellScope {
@@ -58,6 +61,7 @@ interface CommandContext extends ShellScope {
 export function classifyGraphExploration(
   event: GraphHookEvent,
   authorize: GraphSearchAuthorization = (decision) => decision,
+  worktrees: readonly string[] = [],
 ): GraphHookDecision {
   if (event.tool === "write_stdin") return outsideBoundary();
   if (
@@ -77,7 +81,7 @@ export function classifyGraphExploration(
   return (
     classifyShellText(
       event.command ?? "",
-      { authorize, shell, ...(directory ? { directory } : {}) },
+      { authorize, shell, worktrees, ...(directory ? { directory } : {}) },
       0,
       false,
       "observed",
@@ -561,6 +565,7 @@ function classifyCommand(
       {
         authorize: context.authorize,
         shell,
+        worktrees: context.worktrees,
         ...(context.directory ? { directory: context.directory } : {}),
       },
       depth + 1,
@@ -570,6 +575,8 @@ function classifyCommand(
   }
   if (!redefined && pipeFilter(words) && printsText(upstream)) return undefined;
   if (operation === "rg" || operation === "grep" || operation === "findstr") {
+    if (readsOnlyOutside(context, searchOperands(operation, words.slice(1))))
+      return outsideProject();
     let offset = 1;
     while (
       /^(?:-[RrinlIHsvwxcFoq]+|--(?:hidden|line-number|ignore-case|fixed-strings|recursive)|\/[SIMOPVNLR]+)$/i.test(
@@ -597,6 +604,12 @@ function classifyCommand(
     }
   }
   if (operation === "git" && words[gitCommand]?.toLowerCase() === "grep") {
+    if (
+      gitCommand === 1 &&
+      words[1] === "grep" &&
+      readsOnlyOutside(context, searchOperands("git grep", words.slice(2)))
+    )
+      return outsideProject();
     const paths = words.indexOf("--");
     const targets = paths >= 0 ? words.slice(paths + 1) : [];
     const eligible =
@@ -613,6 +626,7 @@ function classifyCommand(
     });
   }
   if (operation === "select-string") {
+    if (readsOnlyOutside(context, selectStringOperands(words.slice(1)))) return outsideProject();
     const path = words.findIndex((word) => /^-(?:literalpath|path)$/i.test(word));
     const targets: string[] = [];
     for (let offset = path + 1; path >= 0 && offset < words.length; offset += 1) {
@@ -842,6 +856,171 @@ function outsideBoundary(): GraphHookDecision {
     message:
       "Search inside scripts, aliases or continuing input is not verified by this pre-tool boundary.",
   };
+}
+
+function outsideProject(): GraphHookDecision {
+  return {
+    decision: "allow",
+    state: "configured",
+    message: "The search reads only files outside this project worktree.",
+  };
+}
+
+/**
+ * The switches each search may carry before its pattern when it is checked for reading only
+ * files outside the project. None follows a link, reads a file list or a pattern file, or takes
+ * a value. Ceiling: any other option keeps the search denied; lift when an option is shown to
+ * read nothing beyond the operands.
+ */
+const OUTSIDE_SWITCHES: Readonly<Record<string, RegExp>> = {
+  grep: /^-[inlHhsvwxcFoqrE]+$/,
+  rg: /^-[inlHsvwxcFoq]+$/,
+  findstr: /^\/[IVNLXBEMOPR]+$/i,
+  "git grep": /^(?:-[inlwvFcoh]+|--no-index)$/,
+};
+
+/**
+ * A character a shell may expand, split, quote or redirect, so the words the program receives
+ * cannot be read from the text. The tokenizer drops quotes, so a quoted glob is refused too.
+ * Ceiling: `grep -n "a.*b" file` stays denied; lift when words keep their quote marks.
+ */
+const EXPANDING = /[$`~%*?[\]{}()<>|;&,!@^'"#]/;
+
+/**
+ * The file operands of a grep, rg, findstr or git grep whose words are all known: switches
+ * from `OUTSIDE_SWITCHES`, then a literal pattern, then the operands. Options are read only
+ * before the pattern, since BSD grep and POSIXLY_CORRECT read a later `-x` as a file. git grep
+ * needs `--` before its operands, so none of them is read as a revision of this repository.
+ * `undefined` when the shape is any other.
+ */
+function searchOperands(operation: string, args: string[]): string[] | undefined {
+  const switches = OUTSIDE_SWITCHES[operation];
+  // A ripgrep configuration file adds arguments the command text does not show.
+  if (!switches || (operation === "rg" && process.env.RIPGREP_CONFIG_PATH)) return undefined;
+  let index = 0;
+  while (switches.test(args[index] ?? "")) index += 1;
+  if ((operation === "grep" || operation === "rg") && args[index] === "--") index += 1;
+  const [pattern, ...rest] = args.slice(index);
+  if (pattern === undefined || pattern.startsWith("-") || EXPANDING.test(pattern)) return undefined;
+  if (operation === "git grep") return rest[0] === "--" ? rest.slice(1) : undefined;
+  // findstr reads a `/` word anywhere as an option, such as `/S` or `/F:list`.
+  if (operation === "findstr" && args.slice(index).some((word) => word.startsWith("/")))
+    return undefined;
+  return rest;
+}
+
+/**
+ * The file operands of a Select-String whose words are all known: `-Pattern`, `-Path` and
+ * `-LiteralPath` with a value, switches that read no other file, and positional words, the
+ * first of which is the pattern when `-Pattern` is absent. `undefined` for any other shape.
+ */
+function selectStringOperands(args: string[]): string[] | undefined {
+  let pattern: string | undefined;
+  const operands: string[] = [];
+  const positional: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const word = args[index] ?? "";
+    if (/^-(?:pattern|path|literalpath)$/i.test(word)) {
+      index += 1;
+      const value = args[index];
+      if (value === undefined || value.startsWith("-")) return undefined;
+      if (!/^-pattern$/i.test(word)) operands.push(value);
+      else if (pattern === undefined) pattern = value;
+      else return undefined;
+    } else if (word.startsWith("-")) {
+      if (!/^-(?:simplematch|casesensitive|notmatch|allmatches|list|quiet|noemphasis)$/i.test(word))
+        return undefined;
+    } else positional.push(word);
+  }
+  pattern ??= positional.shift();
+  if (pattern === undefined || EXPANDING.test(pattern)) return undefined;
+  return [...operands, ...positional];
+}
+
+/**
+ * Whether every operand of a search provably names an existing path outside the project:
+ * read from a known directory, by a command no part of the event redefines, as a literal path
+ * that, lexically and after resolving symbolic links, neither lies inside nor contains any of
+ * the worktrees. No operand, or one that cannot be resolved, proves nothing, so the search
+ * stays denied. A `..` segment is refused: the shell resolves it through a symbolic link where
+ * a lexical reading does not. This reads the file system only; it queries no graph.
+ *
+ * Ceiling: the check sees the file system when the hook runs, so a link another command of
+ * the same event makes, or a hard link to a project file, is not seen. Recursion into an
+ * outside directory follows no link below it, because no accepted option follows links.
+ * Lift when a host reports the files a command opened.
+ */
+function readsOnlyOutside(context: CommandContext, operands: string[] | undefined): boolean {
+  const { location, directory, worktrees, redefined, shell } = context;
+  if (!operands?.length || redefined || location === "unknown" || !directory || !worktrees.length)
+    return false;
+  const base = location === "observed" ? directory : location.directory;
+  try {
+    const roots = worktrees.flatMap((root) => [path.resolve(root), realpathSync.native(root)]);
+    return operands.every((operand) => {
+      if (!literalPath(operand, shell)) return false;
+      const lexical = path.resolve(base, operand);
+      const real = realpathSync.native(lexical);
+      return roots.every(
+        (root) => apart(root, lexical) && apart(root, real) && apartOnDisk(root, real),
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether an operand is a path the shell passes as written. A colon is allowed only after a
+ * drive letter, so a provider drive, a URL or a pathspec is refused, and a network path is
+ * refused before it is resolved. A POSIX shell reads a backslash as an escape, and on Windows
+ * maps a path from `/` through its own mount table.
+ */
+function literalPath(operand: string, shell: GraphShell): boolean {
+  return !(
+    operand.startsWith("-") ||
+    EXPANDING.test(operand) ||
+    !/^(?:[A-Za-z]:[\\/])?[^:]*$/.test(operand) ||
+    /^[\\/]{2}/.test(operand) ||
+    operand.split(/[\\/]/).includes("..") ||
+    (shell === "posix" && operand.includes("\\")) ||
+    (shell === "posix" && process.platform === "win32" && operand.startsWith("/"))
+  );
+}
+
+/** Neither path lies inside the other, compared without case or Unicode form. */
+function apart(first: string, second: string): boolean {
+  const one = first.normalize("NFC").toLowerCase();
+  const other = second.normalize("NFC").toLowerCase();
+  return outside(one, other) && outside(other, one);
+}
+
+/**
+ * Neither directory holds the other by file identity, which a bind mount or a second name
+ * for the same directory cannot hide. A file system that reports no identity, such as FAT,
+ * gives every entry the same one, so the search stays denied there.
+ */
+function apartOnDisk(root: string, target: string): boolean {
+  const rootChain = identities(root);
+  const targetChain = identities(target);
+  const [rootId] = rootChain;
+  const [targetId] = targetChain;
+  return (
+    rootId !== undefined &&
+    targetId !== undefined &&
+    !targetChain.includes(rootId) &&
+    !rootChain.includes(targetId)
+  );
+}
+
+/** The device and file identity of a path and of each directory above it. */
+function identities(file: string): string[] {
+  const chain: string[] = [];
+  for (let current = file; ; current = path.dirname(current)) {
+    const { dev, ino } = statSync(current, { bigint: true });
+    chain.push(`${dev}:${ino}`);
+    if (path.dirname(current) === current) return chain;
+  }
 }
 
 /**
@@ -1705,7 +1884,15 @@ export function failedGraphHook(failure: GraphHookFailure): GraphHookDecision {
   return { decision: "deny", state: "failed", message: FAILURE_MESSAGES[failure] };
 }
 
-export function enforceGraphExploration(input: unknown, configuration: unknown): GraphHookDecision {
+/**
+ * Classify a host event under a configuration. A search that reads only files outside every one
+ * of `worktrees` is not denied; with none given, no search is exempt.
+ */
+export function enforceGraphExploration(
+  input: unknown,
+  configuration: unknown,
+  worktrees: readonly string[] = [],
+): GraphHookDecision {
   if (
     !object(configuration) ||
     Object.keys(configuration).length !== 2 ||
@@ -1714,7 +1901,7 @@ export function enforceGraphExploration(input: unknown, configuration: unknown):
   )
     return failedGraphHook("configuration");
   const event = decodeGraphHookEvent(input);
-  return event ? classifyGraphExploration(event) : failedGraphHook("input");
+  return event ? classifyGraphExploration(event, undefined, worktrees) : failedGraphHook("input");
 }
 
 export function graphHookOutput(
