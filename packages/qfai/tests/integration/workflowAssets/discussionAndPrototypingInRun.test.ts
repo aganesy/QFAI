@@ -12,6 +12,9 @@ import { flat, readShipped, sectionOf } from "../../helpers/shippedAssistant.js"
 
 const PROTOTYPING_SCOPE_STEP = "step/prototyping-grill/STEP.md";
 const UI_RESEARCH = "## UI research for uncovered screens";
+const LOOP_STEP = "step/prototyping-loop/STEP.md";
+const GENERATOR_PROMPT = "skill/qfai-prototyping/references/generator-prompt.md";
+const REVIEWER_PROMPT = "skill/qfai-prototyping/references/reviewer-prompt.md";
 const ENTRY_CHECK =
   "`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`";
 
@@ -142,5 +145,46 @@ describe("qfai-prototyping in a workflow run", () => {
     expect(text).toContain("A `restyle` loop adds no screen and skips this section.");
     const trigger = await section("rule/research-first-protocol.md", "## Trigger");
     expect(trigger).toContain("A run whose screens they all cover runs no research.");
+  });
+
+  // QFAI:AC-0001-0204-06
+  // QFAI:EX-0001-0204-07
+  it("builds and reviews each lineage from the UI research the grill applied for it", async () => {
+    const findings = await section(LOOP_STEP, "## UI research findings");
+    expect(findings).toContain(
+      "The loop passes on the `finding` of each `reflection` entry whose `action` is `apply`, and nothing else from the summary. A `reject` or `defer` entry, such as a finding that contradicts root `DESIGN.md` or one nobody verified, reaches neither role, even where it shares a source with an applied one.",
+    );
+    expect(findings).toContain(
+      "only the findings that name a gap its own line names; a screen whose line names no gap gets none.",
+    );
+    expect(findings).toContain(
+      "The generator builds to those findings, and the reviewer receives the same findings.",
+    );
+    expect(findings).toContain(
+      "With no gap, and in a `restyle` loop, which adds no screen, there is no summary and the loop reads none.",
+    );
+    expect(await section(LOOP_STEP, "## Reads")).toContain(
+      "The UI research `prototyping-grill` recorded in this run's stage report",
+    );
+    expect(await section(LOOP_STEP, "## Procedure")).toContain(
+      "the [UI research findings](#ui-research-findings) when the grill recorded any",
+    );
+    expect(await section(LOOP_STEP, "## Evaluator Inputs")).toContain(
+      "The applied findings of the [UI research findings](#ui-research-findings) for this lineage",
+    );
+    expect(await section(GENERATOR_PROMPT, "## Read order")).toContain(
+      "UI research, only when the session agent passes it: the findings the grill applied for this lineage's screen type or components",
+    );
+    const reviewer = await section(REVIEWER_PROMPT, "## Inputs");
+    expect(reviewer).toContain(
+      "They are the reference for those parts alone, beside `## Session`, never over it",
+    );
+    expect(reviewer).toContain("A session row wins where the two disagree.");
+    expect(reviewer).toContain(
+      "That rule chooses among the grilling rows; the UI research below is a separate reference, for its own parts.",
+    );
+    expect(await section(PROTOTYPING_SCOPE_STEP, UI_RESEARCH)).toContain(
+      "Each `reflection` entry's `finding` names each gap it answers, the screen type or the component as the check's line names it",
+    );
   });
 });

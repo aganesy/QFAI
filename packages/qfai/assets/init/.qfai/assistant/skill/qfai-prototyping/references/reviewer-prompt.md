@@ -80,7 +80,15 @@ transition-pass percentages as a substitute for the qualitative review.
   lineage per UI contract and screen, and another screen's answer is not this one's bar.
   Grade against `## Session` only. An `## Escalated` row is a question nobody
   has answered, so scoring a prototype against one marks it down for failing a
-  bar that was never set.
+  bar that was never set. That rule chooses among the grilling rows; the UI
+  research below is a separate reference, for its own parts.
+- UI research, only when the session agent passes it: the findings the grill
+  applied for this lineage's screen type or components, which the project had
+  no pattern for. They are the reference for those parts alone, beside
+  `## Session`, never over it: a part that goes against an applied
+  finding, where that finding fits a declared primary task, is a finding in the
+  axis it affects. A session row wins where
+  the two disagree. With none passed, grade as above.
 
 ## Outputs — two files, two schemas
 
