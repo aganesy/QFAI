@@ -94,7 +94,7 @@ describe("a part a screen leaves out is recorded in one place", () => {
     for (const text of [rule, card]) {
       const flat = text.replace(/\s+/g, " ");
       expect(flat).toContain("`omitted` list");
-      expect(flat).toContain("home screen's contract until an app-level UI contract exists");
+      expect(flat).toContain("app frame");
     }
   });
 });

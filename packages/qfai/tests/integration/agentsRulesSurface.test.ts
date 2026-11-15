@@ -903,6 +903,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /A home whose one question/,
         /One shared component per repeated pattern/,
         /needs a reason recorded in the `omitted` list/,
+        /its entry goes in the app frame/,
         /counts as asked for/,
       ]) {
         expect(text).toMatch(part);
@@ -932,7 +933,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         "Check the once-per-application parts only when the change adds or alters the shell, the home or a repeated pattern.",
       );
       expect(card).toContain(
-        "A listed part with no reason recorded in the UI contract is a blocking finding that traces to `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` when it is missing from a screen the change adds",
+        "A listed part with no reason recorded in the screen's UI contract (for a once-per-application part, in the app frame) is a blocking finding that traces to `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` when it is missing from a screen the change adds",
       );
       expect(card).toContain("or removed by the change.");
       expect(card).toContain("A part the contract leaves out with a reason is not a finding.");

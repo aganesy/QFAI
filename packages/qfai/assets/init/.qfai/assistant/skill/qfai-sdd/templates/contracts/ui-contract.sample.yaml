@@ -49,8 +49,8 @@ screens:
     # `reason` says why the screen does without it. A part left out with no
     # entry here is a defect. A state the screen cannot be in is recorded with
     # `none` under `states`, not here. The once-per-application parts (app
-    # shell, home, shared component) are listed on the home screen's contract
-    # until an app-level UI contract exists. An entry with no `part` or no
+    # shell, home, shared component) are listed on the app frame's
+    # contract. An entry with no `part` or no
     # `reason` is QFAI-CONTRACT-052.
     omitted:
       - part: feedback after every change

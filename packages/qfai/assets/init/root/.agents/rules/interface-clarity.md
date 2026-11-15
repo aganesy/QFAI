@@ -161,8 +161,9 @@ Leaving one of these out needs a reason recorded in the `omitted` list of the
 UI contract of the screen it is missing from: one entry naming the part and
 the reason. A state the screen cannot be in is recorded under that contract's
 `states` instead. A once-per-application part belongs to no single screen, so
-its entry goes in the home screen's contract until an app-level UI contract
-exists. A part left out without an entry is a defect, not a cut.
+its entry goes in the app frame: the UI contract that holds the app shell and
+the home, or that records why the application has none. A part left out
+without an entry is a defect, not a cut.
 
 These parts apply to application screens: a screen whose UI contract declares
 no `surface`, or `surface: application`. A marketing screen, one a visitor sees

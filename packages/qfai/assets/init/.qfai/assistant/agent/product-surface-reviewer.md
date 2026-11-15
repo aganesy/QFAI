@@ -71,12 +71,11 @@ specialization_tags:
   the change adds or alters the shell, the home or a repeated pattern.
 
   The recorded reason for leaving a listed part out is an entry naming the part in the `omitted` list of
-  the screen's UI contract; for a state the screen cannot be in, its `none` under `states`. Read the
-  once-per-application parts' entries from the home screen's contract until an app-level UI contract
-  exists. A reason written anywhere else is not a recorded reason, and an entry whose reason does not
+  the screen's UI contract; for a state the screen cannot be in, its `none` under `states`. Read the once-per-application parts' entries from the app frame. A reason written anywhere else is not a recorded reason, and an entry whose reason does not
   hold for the screen counts as none.
 
-  A listed part with no reason recorded in the UI contract is a blocking finding that traces to
+  A listed part with no reason recorded in the screen's UI contract (for a once-per-application
+  part, in the app frame) is a blocking finding that traces to
   `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` when it is missing from a
   screen the change adds, missing from a list, state, action that changes data, shell, home or
   repeated-pattern part the change adds or alters (a new list with no pagination, a new save with no feedback), or removed by the change. The rule

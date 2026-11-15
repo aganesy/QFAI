@@ -1,6 +1,6 @@
 /**
  * The reason a screen leaves a business-screen part out has one place: the
- * `omitted` list of its UI contract, and the home screen's contract for the
+ * `omitted` list of its UI contract, and the app frame for the
  * once-per-application parts. The rule, the guide, the template, the contract
  * step and the reviewer card all point at it.
  */
@@ -29,13 +29,13 @@ function isMapping(value: unknown): value is Record<string, unknown> {
 
 // QFAI:EX-0001-0305-03
 describe("the rule, guide, template and contract step say where the reason goes", () => {
-  it("the rule puts the reason in the screen's omitted list and app-level parts on the home", async () => {
+  it("the rule puts the reason in the screen's omitted list and app-level parts in the app frame", async () => {
     const rule = flat(await read("root/.agents/rules/interface-clarity.md"));
     expect(rule).toContain(
       "Leaving one of these out needs a reason recorded in the `omitted` list of the UI contract of the screen it is missing from",
     );
     expect(rule).toContain(
-      "its entry goes in the home screen's contract until an app-level UI contract exists",
+      "its entry goes in the app frame",
     );
     expect(rule).toContain("a notice in its `omitted` list");
   });
@@ -48,7 +48,7 @@ describe("the rule, guide, template and contract step say where the reason goes"
     expect(guide).toContain("## Parts left out: `omitted`");
     expect(guide).toContain("| `part` |");
     expect(guide).toContain("| `reason` |");
-    expect(guide).toContain("on the home screen's contract until an app-level UI contract exists");
+    expect(guide).toContain("on the app frame's contract");
     expect(guide).toContain("`QFAI-CONTRACT-052`");
   });
 
@@ -79,14 +79,14 @@ describe("the rule, guide, template and contract step say where the reason goes"
 
 // QFAI:EX-0001-0305-04
 describe("the product-surface reviewer reads the omitted list as the recorded reason", () => {
-  it("names the omitted list, the states key and the home screen's contract", async () => {
+  it("names the omitted list, the states key and the app frame", async () => {
     const card = flat(await read(".qfai/assistant/agent/product-surface-reviewer.md"));
     expect(card).toContain(
       "The recorded reason for leaving a listed part out is an entry naming the part in the `omitted` list of the screen's UI contract",
     );
     expect(card).toContain("its `none` under `states`");
     expect(card).toContain(
-      "Read the once-per-application parts' entries from the home screen's contract until an app-level UI contract exists.",
+      "Read the once-per-application parts' entries from the app frame.",
     );
     expect(card).toContain("A reason written anywhere else is not a recorded reason");
   });

@@ -37,7 +37,8 @@ pagination where a list can outgrow one screen, feedback after every change,
 and the loading, empty, error and success states. The contract need not repeat
 these parts, and their absence from the contract is no reason to leave them
 out of the screen. Leaving one out needs a reason recorded in the screen's
-`omitted` list, or for a state, `none` under `states`, as that rule says.
+`omitted` list, or for a state, `none` under `states`, as that rule says; a
+once-per-application part's entry goes in the app frame.
 
 That list is for application screens. A marketing screen, declared with
 `surface: marketing`, carries the parts of its section entries in the marketing
@@ -100,14 +101,16 @@ Every screen states why it exists and where it sits in the app, so it is built
 inside the app rather than as a standalone page reached through a list of
 links.
 
-| Key                       | Holds                                                          |
-| ------------------------- | -------------------------------------------------------------- |
-| `purpose`                 | why the screen exists, in one sentence                         |
-| `navigation.shell`        | the app frame the screen renders inside, such as the app shell |
-| `navigation.entry_points` | the screens, menus or actions that lead to it, at least one    |
-| `navigation.back_to`      | the route the user returns to from it                          |
+| Key                       | Holds                                                           |
+| ------------------------- | --------------------------------------------------------------- |
+| `purpose`                 | why the screen exists, in one sentence                          |
+| `navigation.shell`        | the shell screen the screen renders inside, or that it has none |
+| `navigation.entry_points` | the screens, menus or actions that lead to it, at least one     |
+| `navigation.back_to`      | the route the user returns to from it                           |
 
-A screen with no frame, such as a sign-in page, says so in `shell`. A top-level
+The shell, the navigation for each role and the home are written once, as the
+screens of one UI contract, the app frame, and `shell` names the frame's shell
+screen. A screen with no frame, such as a sign-in page, says so in `shell`. A top-level
 screen with nowhere to return to says so in `back_to`. `npx qfai validate` does
 not check these keys; they describe the screen for the implementer and the
 reviewer.
@@ -151,9 +154,7 @@ omitted:
 - A state the screen cannot be in is recorded with `none` under `states`, not
   here.
 - The once-per-application parts, the app shell with navigation, the home and
-  one shared component per repeated pattern, belong to no single screen. List
-  one the application leaves out on the home screen's contract until an
-  app-level UI contract exists; the entries then move there.
+  one shared component per repeated pattern, belong to no single screen. List one the application leaves out on the app frame's contract.
 - On a marketing screen, list a required notice it leaves out here in the same
   way.
 - A part left out with no entry is a defect, not a cut.
@@ -394,7 +395,7 @@ For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by 
 - [ ] Every UI-bearing contract has one full declared ID, at least one screen, and a matching `contracts.md` row.
 - [ ] Every screen states its `purpose` and its `navigation`: shell, entry points and where back leads.
 - [ ] Every screen a visitor sees before signing in declares `surface: marketing`; every other screen leaves the key out or writes `application`.
-- [ ] Every part of the business-screen list a screen leaves out has a `{ part, reason }` entry in its `omitted` list, and the once-per-application parts are listed on the home screen's contract.
+- [ ] Every part of the business-screen list a screen leaves out has a `{ part, reason }` entry in its `omitted` list, and the once-per-application parts are listed on the app frame's contract.
 - [ ] Screen IDs, routes, primary tasks, labels, markers, and actions are stable and testable.
 - [ ] Every declared action has an observable effect, including relevant failure states.
 - [ ] Every screen lists all five `states`, each with what renders and the next action, or `none` with a reason.
