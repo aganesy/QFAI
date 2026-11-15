@@ -1,11 +1,12 @@
 /**
  * The `states` and the `navigation` an application screen of a UI contract
- * declares.
+ * declares, and the `list` block of each list or table element on it.
  *
  * A screen built from its contract holds what the contract lists. One that
  * names no states is built without its empty, loading, error and success
- * states, and one that names no navigation is built as a page outside the app.
- * Both are standard parts of a screen, so a missing one is reported.
+ * states, one that names no navigation is built as a page outside the app, and
+ * a list whose behaviour nobody named is built as an unpaged, unsorted dump.
+ * Each is a standard part of a screen, so a missing one is reported.
  *
  * ## What is asked, and of whom
  *
@@ -22,9 +23,12 @@
  *   holds nothing. A screen that deliberately sits in no navigation writes
  *   `navigation: { none: <reason> }`; a `none` with an empty reason states
  *   nothing.
+ * - `QFAI-CONTRACT-055`: an element of `type: list` or `type: table` has no
+ *   `list` mapping, or one that holds nothing. An element that deliberately
+ *   has no list behaviour writes `list: { none: <reason> }`, in the same form.
  *
  * What an entry holds beyond its id, and which navigation keys are set, is the
- * reviewer's to judge.
+ * reviewer's to judge, as are the five entries of a `list` block.
  *
  * ## Severity
  *
@@ -42,6 +46,10 @@ import { issue } from "./utils.js";
 
 export const UI_SCREEN_STATES_RULE_ID = "QFAI-CONTRACT-053";
 export const UI_SCREEN_NAVIGATION_RULE_ID = "QFAI-CONTRACT-054";
+export const UI_ELEMENT_LIST_RULE_ID = "QFAI-CONTRACT-055";
+
+/** The element types whose rows a `list` block says how to show and narrow. */
+export const LIST_ELEMENT_TYPES = ["list", "table"] as const;
 
 /** The states every application screen lists, in the order the guide writes them. */
 export const SCREEN_STATE_IDS = ["default", "empty", "loading", "error", "success"] as const;
@@ -73,11 +81,13 @@ function missingStateIds(entry: Readonly<Record<string, unknown>>): string[] | u
   return SCREEN_STATE_IDS.filter((id) => !listed.has(id));
 }
 
-/** Whether a screen's `navigation` places it in the app or says why it is in none. */
-function declaresNavigation(entry: Readonly<Record<string, unknown>>): boolean {
-  const navigation = entry.navigation;
-  if (!isMapping(navigation)) return false;
-  return Object.entries(navigation).some(([key, value]) =>
+/**
+ * Whether a block such as `navigation` or `list` sets something, or says with
+ * `none: <reason>` why it sets nothing. A `none` with an empty reason sets nothing.
+ */
+function declaresBlock(block: unknown): boolean {
+  if (!isMapping(block)) return false;
+  return Object.entries(block).some(([key, value]) =>
     key === "none" ? typeof value === "string" && value.trim().length > 0 : isFilled(value),
   );
 }
@@ -126,7 +136,7 @@ function statesFinding(screen: ScreenEntry): Issue | undefined {
 }
 
 function navigationFinding(screen: ScreenEntry): Issue | undefined {
-  if (declaresNavigation(screen.entry)) return undefined;
+  if (declaresBlock(screen.entry.navigation)) return undefined;
   return issue(
     UI_SCREEN_NAVIGATION_RULE_ID,
     `UI contract ${whereOf(screen)} declares no \`navigation\`, so the screen is built without its place in the app.`,
@@ -137,6 +147,32 @@ function navigationFinding(screen: ScreenEntry): Issue | undefined {
     "canonical",
     "Write `navigation` with the `shell` the screen renders inside, its `entry_points` and `back_to`, or `navigation: { none: <reason> }` for a screen that is in no navigation on purpose. A marketing screen sets `surface: marketing` instead.",
   );
+}
+
+function listFindings(screen: ScreenEntry): Issue[] {
+  const elements: unknown[] = Array.isArray(screen.entry.elements) ? screen.entry.elements : [];
+  return elements.flatMap((element, index) => {
+    if (!isMapping(element)) return [];
+    const type = element.type;
+    if (!LIST_ELEMENT_TYPES.some((listType) => listType === type)) return [];
+    if (declaresBlock(element.list)) return [];
+    const elementId = typeof element.id === "string" ? element.id.trim() : "";
+    const which = elementId
+      ? `element '${elementId}' (\`elements[${String(index)}]\`)`
+      : `\`elements[${String(index)}]\``;
+    return [
+      issue(
+        UI_ELEMENT_LIST_RULE_ID,
+        `UI contract ${whereOf(screen)} has the \`type: ${String(type)}\` ${which} with no \`list\`, so the list is built without deciding how it is searched, filtered, sorted and paged.`,
+        "warning",
+        screen.file,
+        "contracts.ui.list",
+        [screen.screenId, elementId].filter((ref) => ref.length > 0),
+        "canonical",
+        "Give the element a `list` with `columns`, `search`, `filters`, `sort` and `pagination`, each set or `none` with the reason, or `list: { none: <reason> }` for an element that has no list behaviour on purpose. A marketing screen sets `surface: marketing` instead.",
+      ),
+    ];
+  });
 }
 
 export async function validateUiScreenCompleteness(
@@ -155,5 +191,6 @@ export async function validateUiScreenCompleteness(
   return [
     ...screens.flatMap((screen) => statesFinding(screen) ?? []),
     ...screens.flatMap((screen) => navigationFinding(screen) ?? []),
+    ...screens.flatMap(listFindings),
   ];
 }

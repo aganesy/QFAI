@@ -48,8 +48,9 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
   (`QFAI-CONTRACT-053`).
 - Every `type: list` or `type: table` element carries `list`: its
   `columns`, `search`, `filters`, `sort` and `pagination`, each set or
-  `none` with the reason the element does without it. Validate does not check
-  this key.
+  `none` with the reason the element does without it, or `none` with the
+  reason for an element with no list behaviour. Validate warns about such an
+  element of an application screen with no `list` (`QFAI-CONTRACT-055`).
 - A screen may describe its copy in the optional `supplements` and `structure`.
   Check each proposed text against the screen's tasks and the information the
   user needs there. A text that only repeats a heading, an action or a
