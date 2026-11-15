@@ -300,6 +300,11 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-040",
     "QFAI-CONTRACT-041",
     "QFAI-CONTRACT-051",
+    "QFAI-CONTRACT-052",
+    "QFAI-CONTRACT-053",
+    "QFAI-CONTRACT-054",
+    "QFAI-CONTRACT-055",
+    "QFAI-CONTRACT-056",
     "QFAI-DB-*",
   ],
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
@@ -322,6 +327,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-COMP-*",
   ],
   "prototyping-skill": ["QFAI-PROTOSKILL-*"],
+  "accessibility-layer": ["QFAI-AXE-*"],
   "test-stubs": ["QFAI-TEST-*"],
   drift: ["QFAI-DRIFT-*", "QFAI-STORY-010"],
   "saas-package-profile": [ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE],
@@ -744,11 +750,13 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
   }
   const parts: string[] = [];
   if (timings.uiuxMs > timings.uiuxBudgetMs) {
-    // The group's validators run side by side, so the slowest two are the ones to look at.
+    // The slowest two are the ones to look at. Side by side their times overlap and say only
+    // where to look; one after another (`--timings`) each is that validator's own work.
     const slowest = timings.uiuxParts
       .slice(0, 2)
       .map((part) => `${part.name} ${Math.round(part.ms)}ms`);
-    const where = slowest.length > 0 ? `; slowest, overlapping: ${slowest.join(", ")}` : "";
+    const run = timings.uiuxPartsRun === "one-after-another" ? "one after another" : "overlapping";
+    const where = slowest.length > 0 ? `; slowest, ${run}: ${slowest.join(", ")}` : "";
     parts.push(
       `uiux=${formatOverrunMs(timings.uiuxMs, timings.uiuxBudgetMs)}ms ` +
         `(budget ${timings.uiuxBudgetMs}ms${where})`,
@@ -768,8 +776,9 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
 
 /**
  * The `--timings` line: each finding family with its time, slowest first, or `null` when the run
- * was not asked for it. The UI/UX group's checks run side by side, so their times follow
- * separately, as the over-budget line marks them: they overlap and do not add to the rest.
+ * was not asked for it. The UI/UX group is one entry `uiux`; its checks, which `--timings` runs one
+ * after another, follow as its breakdown. The shared Markdown read and the html-mock parser's
+ * one-off load belong to no check, so they follow on their own, as part of `uiux` and not extra.
  */
 export function formatFamilyTimings(families: ValidationFamilyTimings | undefined): string | null {
   if (!families) {
@@ -777,11 +786,16 @@ export function formatFamilyTimings(families: ValidationFamilyTimings | undefine
   }
   const list = (entries: ValidationFamilyTimings["sequential"]): string =>
     entries.map((entry) => `${entry.family} ${Math.round(entry.ms)}ms`).join(", ");
-  const overlapping =
-    families.overlapping.length > 0
-      ? `; side by side, overlapping: ${list(families.overlapping)}`
-      : "";
-  return `timings: by family ${list(families.sequential)}${overlapping}`;
+  const uiux = families.uiux.length > 0 ? `; uiux one after another: ${list(families.uiux)}` : "";
+  const shared = [
+    ["shared Markdown read", families.sharedMarkdownReadMs],
+    ["html mock parser load", families.htmlMockLoadMs],
+  ] as const;
+  const ofWhich = shared
+    .filter(([, ms]) => ms > 0)
+    .map(([name, ms]) => `${name} ${Math.round(ms)}ms`);
+  const load = ofWhich.length > 0 ? `; of which ${ofWhich.join(", ")}` : "";
+  return `timings: by family ${list(families.sequential)}${uiux}${load}`;
 }
 
 const MAX_OVERRUN_DECIMALS = 9;
@@ -1213,6 +1227,18 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
   "QFAI-CONTRACT-051":
     "Every `surface` a UI contract screen declares is `application` or `marketing`, so the screen is built and reviewed against a pattern list that exists. A screen that declares no surface is an application screen.",
+  "QFAI-CONTRACT-052":
+    "Every `omitted` list a UI contract screen declares is a list of mappings, each with a non-blank `part` naming a part the screen leaves out and a non-blank `reason` saying why, so a reviewer can tell a deliberate omission from a missing part.",
+  "QFAI-AXE-001":
+    "A project whose UI contracts declare a screen with a web route has a selected test file that calls axe (`AxeBuilder` or an `@axe-core/` package), so its routes are checked against the WCAG 2.2 A and AA rules.",
+  "QFAI-CONTRACT-053":
+    "Every application screen of a UI contract lists `states` with an entry for each of `default`, `empty`, `loading`, `error` and `success`, a state it cannot reach carrying `none` with the reason, so each state is built rather than assumed. A `surface: marketing` screen is asked nothing.",
+  "QFAI-CONTRACT-054":
+    "Every application screen of a UI contract declares `navigation`: its shell, entry points and where back leads, or `none` with the reason it sits in no navigation, so the screen is built inside the app. A `surface: marketing` screen is asked nothing.",
+  "QFAI-CONTRACT-055":
+    "Every `type: list` or `type: table` element of an application screen in a UI contract carries `list`: its columns, search, filters, sort and pagination, or `none` with the reason it has no list behaviour, so the list is built searchable, sortable and paged where it needs to be. A `surface: marketing` screen is asked nothing.",
+  "QFAI-CONTRACT-056":
+    "Every `pattern` a UI contract screen declares is the ID of a screen type in the shipped business UI pattern reference (`list`, `detail`, `form`, `settings`, `members` or `dashboard`), so the screen is built and reviewed against a type that exists. A screen that declares no pattern is asked nothing.",
   "QFAI-UITEXT-001":
     "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert or the like) or has a `qfai-text` comment with `why` and `without` directly before it or before its parent element, or a `qfai-text-file` comment in its file gives it one.",
   "QFAI-UITEXT-002":
@@ -1228,6 +1254,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A surface file renders no raw `<button>`, `<input>` or `<select>` when the component catalogue lists a component whose `@pattern` is that element, outside that component's own file; a hidden input is not counted.",
   "QFAI-COMP-004":
     "The committed component catalogue parses and is the file `qfai catalog components` writes for the current source.",
+  "QFAI-COMP-005":
+    'Where a component catalogue is installed, no surface file writes `role="dialog"`, `role="menu"`, `role="tablist"` or `aria-modal` by hand outside the file of a component procured from a catalogue.',
+  "QFAI-COMP-006":
+    "Every catalogued component whose `@pattern` is an interactive widget the procurement rule lists records its WAI-ARIA pattern and keyboard behaviour in `@a11y`.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —

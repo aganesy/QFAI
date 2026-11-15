@@ -41,6 +41,14 @@ classified by the taxonomy below before any response.
   IDs, the owned paths (none for a lookup) and the answer's shape. A unit whose
   brief would have to retell the conversation is not a unit; the session agent
   does that work itself.
+- **A lookup answer a decision uses is kept in a file.** Before it uses a
+  delegated lookup's answer in a decision, the session agent writes the answer
+  with its citations to `<paths.outDir>/research/<YYYYMMDDhhmmss>-<slug>.md`:
+  the time in UTC and a slug naming the question. The decision cites that file,
+  never the result message: a result message lives only in the conversation,
+  and compaction shortens it to a line. An answer no decision uses is not
+  written. The file is local evidence, ignored by git, so a tracked record that
+  cites it also keeps the answer's source URLs.
 - The session agent is not required to wait while a sub-agent runs. Where the
   host starts a delegation and returns at once, delivers the finished result
   later as a message, and lets the session agent wait for a result on purpose,

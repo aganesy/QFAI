@@ -18,7 +18,9 @@ resolved stops this step: report the missing source.
 
 Read first: the flow's examples and the tests that annotate them. The step
 passes when every example has an annotating test, so no example needs a Red,
-Green and Refactor cycle. The pass names the examples and their tests.
+Green and Refactor cycle, and, for a UI-affecting flow, its screens are already
+assembled and captured as `## Assemble the flow's screens` says. The pass names
+the examples and their tests.
 
 The step also passes when the work order names no flow because it carries
 only a delegated release's hand-made edit: the extraction names the `release`
@@ -40,6 +42,11 @@ names no flow resolves its flow as this step says, or stops.
   `<paths.contractsDir>/ui/`, before changing the surface.
 - The references this step cites, under
   `.qfai/assistant/skill/qfai-implement/references/`.
+- When the specification or `tech.md` states the product's locale, the
+  locale's reference under `.qfai/assistant/rule/references/`, such as
+  `.qfai/assistant/rule/references/locale/ja.md` for Japanese, before building a
+  field or screen it covers: each format and input rule is one shared helper
+  or component that every screen calls.
 
 ## Scope
 
@@ -230,6 +237,27 @@ code review reads the recorded Red and Green results, and reads each
 `.qfai/assistant/skill/qfai-implement/references/finding-classification.md`
 says. A record correction follows `.qfai/assistant/rule/drift-protocol.md`.
 
+## Assemble the flow's screens
+
+For a UI-affecting flow, once its examples are green, the screens it adds or
+changes are put together into the product rather than left as separate pages:
+
+1. Place each screen in the shell its UI contract's `navigation.shell` names,
+   with the shell's navigation showing it where its role reaches it.
+2. Link each of its entry points the contract's `navigation` names, so the user
+   reaches the screen through the app's own links, not only by its URL.
+3. Make each part the flow's screens repeat one shared component, a
+   catalogued one or one you extract, as
+   `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#component-catalogue`
+   says. A part used once stays where it is.
+4. Capture each changed route as
+   `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md` § Evidence
+   sets out, at the revision the review will read.
+
+The shell itself, its navigation by role and the home screen are not designed
+here: a part the contracts do not name is raised as drift under
+`.qfai/assistant/rule/drift-protocol.md`.
+
 ## Align the other surfaces
 
 Where the run recorded which of two disagreeing surfaces owns the truth, the
@@ -252,6 +280,8 @@ Change nothing on the surface that owns the truth.
 The stage report gives each example its own `### EX-NNNN-NNNN-NN` section with
 the obligation, test path and selector,
 RED, GREEN, and Refactor commands and observed results, and open findings.
+For a UI-affecting flow it also gives each screen's shell placement, its
+entry-point links, and its capture with the revision it shows.
 For each focused phase, include the selected-case execution receipt above;
 command, exit and aggregate counts alone do not establish behavior execution.
 For a `ci-deferred` phase, the test path, its selector and the check name take
@@ -265,4 +295,5 @@ The step is done for an example when its RED, GREEN and Refactor results are
 observed and recorded, or recorded `ci-deferred` where the Test entry is
 `CI only: <check name>` or the user's instruction for this run delegates that
 gate to a named CI check. It is done for the flow when every example the
-selection listed is done.
+selection listed is done and, for a UI-affecting flow, its screens are
+assembled and captured as `## Assemble the flow's screens` says.

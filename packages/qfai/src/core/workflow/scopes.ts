@@ -10,6 +10,10 @@ export interface PlanScope {
   scope: ScopeName;
   stages: string[];
   recommended: boolean;
+  // Present, and true, when the scope writes the specification and leaves out an implement stage
+  // the route has: the tests the specification asks for come with that stage, so the QFAI gate lists
+  // their missing-test errors as pending, and the local commit is still made.
+  testsPending?: true;
 }
 
 // The artifacts a stage of each kind writes. A kind not named here writes none. A stage's `serves`
@@ -145,6 +149,16 @@ function carriesRestyle(stages: readonly PlanStage[], scope: readonly string[]):
   return stages.some((stage) => stage.kind === "implement" && scope.includes(stage.id));
 }
 
+// Whether a run of `scope` writes the specification and leaves out an implement stage the route
+// has, so the tests the specification asks for are not written in it.
+function leavesTestsPending(stages: readonly PlanStage[], scope: readonly string[]): boolean {
+  const runs = (stage: PlanStage) => scope.includes(stage.id);
+  return (
+    stages.some((stage) => runs(stage) && writtenBy(stage).includes("spec")) &&
+    stages.some((stage) => stage.kind === "implement" && !runs(stage))
+  );
+}
+
 // The plan's distinct scopes, narrowest first, the narrowest recommended. `restyle` says the
 // reading that reached the route carries the qualifier of that name.
 export function scopesOf(
@@ -193,5 +207,9 @@ export function scopesOf(
       wider.stages.some((id) => !candidate.stages.includes(id) && !passesThrough.has(id))
     );
   });
-  return offered.map((candidate, index) => ({ ...candidate, recommended: index === 0 }));
+  return offered.map((candidate, index) => {
+    const scope: PlanScope = { ...candidate, recommended: index === 0 };
+    if (leavesTestsPending(stages, candidate.stages)) scope.testsPending = true;
+    return scope;
+  });
 }
