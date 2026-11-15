@@ -46,9 +46,9 @@ function tokenAt(design: DesignMd, at: string): unknown {
   return node;
 }
 
-// QFAI:AC-0001-0311-01
+// QFAI:AC-0001-0312-01
 describe("the token file and the theme", () => {
-  // QFAI:EX-0001-0311-01
+  // QFAI:EX-0001-0312-01
   it("states each token in the 2025.10 format and in the theme", async () => {
     const design = await sampleDesign();
     expect(tokenAt(design, "color.primary")).toEqual({
@@ -104,7 +104,7 @@ describe("the token file and the theme", () => {
     expect(renderDesignTokens(design)).toBe(renderDesignTokens(await sampleDesign()));
   });
 
-  // QFAI:EX-0001-0311-02
+  // QFAI:EX-0001-0312-02
   it("keeps a value no token type states as its CSS text", async () => {
     const design = await sampleDesign((text) =>
       text
@@ -121,9 +121,9 @@ describe("the token file and the theme", () => {
   });
 });
 
-// QFAI:AC-0001-0311-02
+// QFAI:AC-0001-0312-02
 describe("layout and data display tokens", () => {
-  // QFAI:EX-0001-0311-03
+  // QFAI:EX-0001-0312-03
   it("writes the layout lengths as tokens and the density and formats as group text", async () => {
     const design = await sampleDesign((text) =>
       text.replace(
@@ -160,9 +160,9 @@ describe("layout and data display tokens", () => {
   });
 });
 
-// QFAI:AC-0001-0311-06
+// QFAI:AC-0001-0312-06
 describe("hex literals in source", () => {
-  // QFAI:EX-0001-0311-09
+  // QFAI:EX-0001-0312-09
   it("reads each hex colour literal with its line, and skips anchors and longer names", () => {
     const found = findRawHexes(
       [

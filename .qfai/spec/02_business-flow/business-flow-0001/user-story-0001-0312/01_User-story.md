@@ -1,4 +1,4 @@
-# US-0001-0311: Derive the design tokens and the theme from DESIGN.md
+# US-0001-0312: Derive the design tokens and the theme from DESIGN.md
 
 ## User Story
 

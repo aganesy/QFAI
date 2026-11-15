@@ -90,9 +90,9 @@ async function dcat(root: string, profile: ValidationProfile = "prototyping"): P
   return result.issues.filter((found) => found.code.startsWith("QFAI-DCAT-"));
 }
 
-// QFAI:AC-0001-0311-01
+// QFAI:AC-0001-0312-01
 describe("the command writes the token file and the theme from DESIGN.md", () => {
-  // QFAI:EX-0001-0311-01
+  // QFAI:EX-0001-0312-01
   it("writes both files byte-stably and prints one summary line", async () => {
     const root = await projectWith();
     const first = await cli(["catalog", "design", "--root", root]);
@@ -112,9 +112,9 @@ describe("the command writes the token file and the theme from DESIGN.md", () =>
   });
 });
 
-// QFAI:AC-0001-0311-03
+// QFAI:AC-0001-0312-03
 describe("the check mode compares and writes nothing", () => {
-  // QFAI:EX-0001-0311-05
+  // QFAI:EX-0001-0312-05
   it("passes on current files, ignores line ends, and names each stale or missing file", async () => {
     const root = await projectWith();
     await cli(["catalog", "design", "--root", root]);
@@ -143,9 +143,9 @@ describe("the check mode compares and writes nothing", () => {
   });
 });
 
-// QFAI:AC-0001-0311-04
+// QFAI:AC-0001-0312-04
 describe("no DESIGN.md, or one that does not parse, writes nothing", () => {
-  // QFAI:EX-0001-0311-06
+  // QFAI:EX-0001-0312-06
   it("exits 1 with one line and writes neither file", async () => {
     const absent = await projectWith({ "DESIGN.md": null });
     for (const args of [[], ["--check"]]) {
@@ -167,9 +167,9 @@ describe("no DESIGN.md, or one that does not parse, writes nothing", () => {
   });
 });
 
-// QFAI:AC-0001-0311-05
+// QFAI:AC-0001-0312-05
 describe("a design catalogue out of date with DESIGN.md is a warning", () => {
-  // QFAI:EX-0001-0311-07
+  // QFAI:EX-0001-0312-07
   it("warns about a stale or missing file and asks nothing of a project without one", async () => {
     const root = await projectWith();
     await cli(["catalog", "design", "--root", root]);
@@ -192,7 +192,7 @@ describe("a design catalogue out of date with DESIGN.md is a warning", () => {
     expect(await dcat(await projectWith())).toEqual([]);
   });
 
-  // QFAI:EX-0001-0311-08
+  // QFAI:EX-0001-0312-08
   it("runs in the prototyping, saas-package, verify and full profiles only", async () => {
     const root = await projectWith();
     await cli(["catalog", "design", "--root", root]);
@@ -206,9 +206,9 @@ describe("a design catalogue out of date with DESIGN.md is a warning", () => {
   });
 });
 
-// QFAI:AC-0001-0311-06
+// QFAI:AC-0001-0312-06
 describe("a hex colour in UI source that matches no token is a warning", () => {
-  // QFAI:EX-0001-0311-09
+  // QFAI:EX-0001-0312-09
   it("warns at the line of each unknown colour only", async () => {
     const root = await projectWith({
       "src/page.tsx": [
@@ -229,9 +229,9 @@ describe("a hex colour in UI source that matches no token is a warning", () => {
   });
 });
 
-// QFAI:AC-0001-0311-07
+// QFAI:AC-0001-0312-07
 describe("the implementer uses the theme instead of copying values", () => {
-  // QFAI:EX-0001-0311-10
+  // QFAI:EX-0001-0312-10
   it("ships the design catalogue in the UI guidance and the sections in the DESIGN.md spec", async () => {
     const guidance = await readFile(
       path.join(ASSISTANT, "skill", "qfai-implement", "references", "ui-affecting.md"),

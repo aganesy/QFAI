@@ -1217,7 +1217,7 @@ function sampleWithSections(lines: readonly string[]): string {
   return [...front.slice(0, -1), ...lines, "---", VALID_BODY].join("\n");
 }
 
-// QFAI:AC-0001-0311-02
+// QFAI:AC-0001-0312-02
 describe("parseDesignMd: layout and data_display", () => {
   it("reads the layout and data display values when they are stated", () => {
     const result = parseDesignMd(
@@ -1249,7 +1249,7 @@ describe("parseDesignMd: layout and data_display", () => {
     expect(result.data.data_display).toBeUndefined();
   });
 
-  // QFAI:EX-0001-0311-04
+  // QFAI:EX-0001-0312-04
   it.each([
     [["layout:", '  gutter: "1rem"'], "layout.gutter"],
     [["layout:", '  breakpoints: { Wide: "80rem" }'], "layout.breakpoints.Wide"],
