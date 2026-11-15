@@ -138,7 +138,7 @@ function widgetMarkupFindings(scan: ComponentScan, listed: readonly CatalogCompo
     .map((found) =>
       issue(
         "QFAI-COMP-005",
-        `Hand-written ${found.markup.map((markup) => `\`${markup}\``).join(" and ")} in a project with a component catalogue installed.`,
+        `Hand-written ${found.markup.map(codeSpan).join(" and ")} in a project with a component catalogue installed.`,
         "warning",
         found.file,
         RULE,
@@ -148,6 +148,10 @@ function widgetMarkupFindings(scan: ComponentScan, listed: readonly CatalogCompo
         { loc: { line: found.line } },
       ),
     );
+}
+
+function codeSpan(text: string): string {
+  return `\`${text}\``;
 }
 
 /** A listed interactive widget whose `@a11y` records nothing. */
