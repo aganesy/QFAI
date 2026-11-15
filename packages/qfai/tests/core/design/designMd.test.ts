@@ -959,6 +959,32 @@ describe("parseDesignMd visual.layout", () => {
     expect(result.error.code).toBe(expectedCode);
   });
 
+  it("accepts a target at the WCAG floor of 24", () => {
+    const result = parseDesignMd(withLayout("    target_min_px: 24"));
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.data.visual.layout?.target_min_px).toBe(24);
+  });
+
+  it.each([
+    [
+      "breakpoints that are not a mapping",
+      "    breakpoints: [40, 64]",
+      "visual.layout.breakpoints",
+    ],
+    [
+      "a length that is not a string",
+      "    breakpoints:\n      sm: 40",
+      "visual.layout.breakpoints.sm",
+    ],
+  ])("rejects %s as invalid-type", (_label, layout, expectedPath) => {
+    const result = parseDesignMd(withLayout(layout));
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.path).toBe(expectedPath);
+    expect(result.error.code).toBe("invalid-type");
+  });
+
   it("rejects a layout that is not a mapping", () => {
     const result = parseDesignMd(
       VALID_FRONT_MATTER.replace(lastShadowLine, `${lastShadowLine}\n  layout: "responsive"`),

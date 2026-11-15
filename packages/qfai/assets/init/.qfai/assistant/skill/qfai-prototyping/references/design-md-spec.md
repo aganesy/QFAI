@@ -146,6 +146,9 @@ token the gate compares.
 - Unknown keys at any level are rejected.
 - All 12 color keys, 3 font families, 4 radius keys, and 3 shadow keys
   listed above are required.
+- `visual.layout` is optional. Its lengths are strings taken verbatim;
+  `target_min_px` is a number of at least 24; `table_narrow` is `stack` or
+  `scroll`.
 
 ## Issue shape
 
