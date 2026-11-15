@@ -49,6 +49,7 @@ import {
   type AssistantVersionMismatch,
 } from "./assistantVersion.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
+import { validateComponentCatalog } from "./validators/componentCatalog.js";
 import { validateUiPlainText } from "./validators/uiPlainText.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDiagramBudget } from "./validators/diagramBudget.js";
@@ -849,6 +850,7 @@ async function runPrototypingValidators(
       validateConfigReferenceIntegrity(root, config),
     )),
     ...(await timed(timings, "ui-plain-text", () => validateUiPlainText(root, config))),
+    ...(await timed(timings, "component-catalog", () => validateComponentCatalog(root, config))),
   ];
 }
 

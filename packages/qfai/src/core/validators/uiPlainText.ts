@@ -79,16 +79,44 @@ export type UiPlainTextOptions = {
 /** One literal text and the comment that stands before it, if any. */
 type Candidate = { line: number; text: string; reason: string | null };
 
-/** The subset of the TypeScript compiler API this check calls. */
-type TsNode = {
+/**
+ * The subset of the TypeScript compiler API this check and the component catalogue call. The
+ * optional fields are the node properties the catalogue reads; a node kind that has none leaves
+ * them out.
+ */
+export type TsNode = {
   kind: number;
   pos: number;
   parent?: TsNode;
   getStart(): number;
   getText(): string;
   getChildren(): TsNode[];
+  name?: TsNode;
+  type?: TsNode;
+  types?: readonly TsNode[];
+  typeName?: TsNode;
+  tagName?: TsNode;
+  initializer?: TsNode;
+  modifiers?: readonly TsNode[];
+  parameters?: readonly TsNode[];
+  members?: readonly TsNode[];
+  elements?: readonly TsNode[];
+  typeArguments?: readonly TsNode[];
+  arguments?: readonly TsNode[];
+  dotDotDotToken?: TsNode;
+  propertyName?: TsNode;
+  declarationList?: { declarations: readonly TsNode[] };
+  statements?: readonly TsNode[];
+  expression?: TsNode;
+  exportClause?: TsNode;
+  moduleSpecifier?: TsNode;
+  importClause?: TsNode;
+  namedBindings?: TsNode;
+  heritageClauses?: readonly TsNode[];
+  attributes?: TsNode;
+  properties?: readonly TsNode[];
 };
-type TsApi = {
+export type TsApi = {
   createSourceFile(
     name: string,
     text: string,
@@ -185,17 +213,30 @@ async function selectFiles(root: string, surfacePaths: readonly string[]): Promi
     const page = path.join(PROTOTYPE_DIR, dir, "index.html");
     if (await isFile(path.join(root, page))) selected.add(toPosix(page));
   }
-  if (surfacePaths.length > 0) {
-    const matched = await fg([...surfacePaths], {
-      cwd: root,
-      onlyFiles: true,
-      ignore: ["**/node_modules/**"],
-    });
-    for (const file of matched) {
-      if (!SOURCE_EXTENSIONS.has(path.extname(file))) continue;
-      if (NON_SOURCE_NAME.test(path.basename(file))) continue;
-      selected.add(toPosix(path.normalize(file)));
-    }
+  for (const file of await selectSurfaceFiles(root, surfacePaths)) selected.add(file);
+  return [...selected].sort();
+}
+
+/**
+ * The UI source files the `uiux.surfacePaths` globs select from the root, repository-relative,
+ * posix and sorted: the `.html`, `.tsx`, `.jsx`, `.vue` and `.svelte` files outside
+ * `node_modules` that are not test, spec or story files.
+ */
+export async function selectSurfaceFiles(
+  root: string,
+  surfacePaths: readonly string[],
+): Promise<string[]> {
+  if (surfacePaths.length === 0) return [];
+  const matched = await fg([...surfacePaths], {
+    cwd: root,
+    onlyFiles: true,
+    ignore: ["**/node_modules/**"],
+  });
+  const selected = new Set<string>();
+  for (const file of matched) {
+    if (!SOURCE_EXTENSIONS.has(path.extname(file))) continue;
+    if (NON_SOURCE_NAME.test(path.basename(file))) continue;
+    selected.add(toPosix(path.normalize(file)));
   }
   return [...selected].sort();
 }
@@ -219,7 +260,8 @@ function toPosix(file: string): string {
   return file.split(path.sep).join("/");
 }
 
-function loadTs(root: string, load: UiPlainTextOptions["loadTypescript"]): TsApi | null {
+/** The project's own `typescript` compiler API, or `null` when the root cannot load one. */
+export function loadTs(root: string, load: UiPlainTextOptions["loadTypescript"]): TsApi | null {
   try {
     const loaded: unknown = load
       ? load(root)

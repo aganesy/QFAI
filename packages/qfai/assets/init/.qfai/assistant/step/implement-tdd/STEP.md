@@ -208,7 +208,11 @@ ordinary success. Existing approved alternative RED routes remain available.
 
 For UI-affecting work, follow
 `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`; source code
-alone does not prove the user-visible result. Read each screen's type in
+alone does not prove the user-visible result. Reuse a component the catalogue
+lists, and give a shared component you author its doc comment and refresh the
+catalogue, as
+`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#component-catalogue`
+says. Read each screen's type in
 `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`, or, for a
 screen whose contract declares `surface: marketing`, its section entries in
 `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`: build

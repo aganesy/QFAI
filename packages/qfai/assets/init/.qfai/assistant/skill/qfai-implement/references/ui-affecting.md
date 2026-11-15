@@ -7,6 +7,32 @@ When a prototyping loop ran in this checkout, read its handoff at .qfai/prototyp
 When `.qfai/prototype/progress.md` records `iterationKind` `restyle` with `restyleLevel` `none` and no handoff was written, the restyle stopped with nothing to fix: implement makes no change to the screens it covered.
 Read the flow, story, acceptance criterion, and example that the implementation changes.
 
+## Component catalogue
+
+`.qfai/catalog/components.yaml` lists the components the `uiux.surfacePaths` files export, with their
+props and what their doc comments say. `npx qfai catalog components` writes it; commit the result.
+
+- Before writing a region, read the catalogue. Reuse a listed component whose `pattern` is that region,
+  extending it if it lacks what the screen needs, rather than writing the region again.
+- When you author a shared component, give it a doc comment, then run the command:
+
+```tsx
+/**
+ * @source shadcn/ui button@2.1
+ * @states default, disabled, loading
+ * @pattern button
+ * @a11y APG button; Enter and Space activate
+ */
+export function Button(props: ButtonProps) {
+```
+
+`@source` is the catalogue item and version, or `authored` with `@reason` saying why nothing on the
+procurement ladder served. `@pattern` names the region it realises; one component per pattern.
+A page or layout that no other surface file imports needs no doc comment. `npx qfai validate` warns
+about a missing source on a component that has a tag or that another surface file imports, a pattern two components claim, a raw `<button>`,
+`<input>` or `<select>` where a listed component has that pattern, and a catalogue out of date
+(`QFAI-COMP-001` to `QFAI-COMP-004`). `npx qfai catalog components --check` fails CI on the last.
+
 ## Plain text in UI source
 
 `npx qfai validate` reads `.qfai/prototype/final/index.html`, the `index.html` of the latest `iter-NN/`, and the

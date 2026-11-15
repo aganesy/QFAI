@@ -1,4 +1,5 @@
 import { runAtddScaffold } from "./commands/atddScaffold.js";
+import { runCatalogComponents } from "./commands/catalog.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
 import { runInit } from "./commands/init.js";
@@ -56,6 +57,7 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "session-review",
   "sdd",
   "atdd",
+  "catalog",
   "workflow",
 ]);
 
@@ -332,6 +334,13 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
     case "workflow":
       process.exitCode = await workflowEntry(false, undefined, options);
       return;
+    case "catalog":
+      // parseArgs already rejected a missing or invalid subcommand (invalidReason).
+      process.exitCode = await runCatalogComponents({
+        root: await resolveRoot(options),
+        ...(options.catalogCheck ? { check: true } : {}),
+      });
+      return;
 
     default:
       // Normally unreachable: an unknown command name is rejected before the
@@ -435,6 +444,7 @@ Commands:
   sdd merge-docs               Merge each conflicted story-tree document from the index by table row and sentence, leave what it cannot settle between conflict markers, and check the result's document schema
   atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
   atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
+  catalog components           Write .qfai/catalog/components.yaml from the components the uiux.surfacePaths files export (--check compares and writes nothing)
   workflow plan                Print the route plan for a request extraction (--in <path|->), a route (--route <route>, with --in for a chosen candidate's extraction), or an operation on finished work (--order)
 
 Options:
@@ -462,6 +472,7 @@ Options:
   --fail-on <error|warning|never>  sdd preflight: failure threshold (never exits 0 even when blocked; preflight has no warning tier, so warning means the same as error)
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
   --timings                     validate: print the time each finding family took, slowest first
+  --check                       catalog components: exit 1 when the committed catalogue is missing, does not parse, or is out of date, without writing it
   --out <path>                  report/doctor/session-review: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)
   --run-validate                report: run validate first, then generate the report
