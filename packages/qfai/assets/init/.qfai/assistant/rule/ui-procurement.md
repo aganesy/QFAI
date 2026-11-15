@@ -34,8 +34,8 @@ Per screen region, stop at the first rung that holds.
    component catalogue lists what exists
    (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#component-catalogue`). When
    two or more UI contracts name the same region, extract a shared component at
-   the region's first use. When a region no second contract names appears on a
-   second screen and no shared component realises it, extract one then. Either
+   the region's first use. When only one UI contract names a region and it then
+   appears on a second screen that no shared component serves, extract one then. Either
    way, wrap whatever rung 2, 3 or 4 supplied and use it on every screen,
    rather than authoring the region again.
 2. **Does a native platform element do it?** Examples on the web are
