@@ -739,17 +739,29 @@ function classifyCommand(
   if (operation === "}" || operation === "esac") return undefined;
   if (operation === "env" || operation === "command" || operation === "builtin") {
     let offset = 1;
+    let split: string[] = [];
     while (offset < words.length) {
-      const redirection = redirectionLength(words[offset]);
+      const word = words[offset] ?? "";
+      const redirection = redirectionLength(word);
       if (redirection) offset += redirection;
-      else if (
-        words[offset]?.startsWith("-") ||
-        /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")
-      )
-        offset += 1;
+      else if (operation === "env" && /^(?:-S|--split-string)(?:=|$)|^-S./.test(word)) {
+        // `env -S 'rg foo /'` runs the split string as the command and its arguments.
+        const separate = word === "-S" || word === "--split-string";
+        const value = separate
+          ? (words[offset + 1] ?? "")
+          : word.startsWith("--")
+            ? word.slice(word.indexOf("=") + 1)
+            : word.slice(2);
+        split = value.split(/\s+/).filter((part) => part.length > 0);
+        offset += separate ? 2 : 1;
+        break;
+      } else if (operation === "env" && /^(?:-C|-u|--chdir|--unset)$/.test(word)) {
+        // These options take the next word as their value, not as the command.
+        offset += 2;
+      } else if (word.startsWith("-") || /^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) offset += 1;
       else break;
     }
-    return classifyCommand(words.slice(offset), context, depth + 1);
+    return classifyCommand([...split, ...words.slice(offset)], context, depth + 1);
   }
   if (["bash", "sh", "zsh", "pwsh", "powershell", "cmd"].includes(operation ?? "")) {
     const switchIndex = words.findIndex((word) => /^(?:-[a-z]*c|\/c|-command)$/i.test(word));
