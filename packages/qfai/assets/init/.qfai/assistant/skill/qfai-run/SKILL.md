@@ -67,7 +67,8 @@ values plan nothing.
    and run only its stages. With one scope, no scopes, or a branch destination's plan, ask
    nothing and run every stage.
 4. **Announce.** Before the first stage, give the goal, the chosen stages in order in plain words,
-   and the files the work may change. Ask nothing. Then run `common-policy-check` once, unless the
+   and the files the work may change. Ask nothing. On a route that changes files, then search once for open work on the same problem
+   before any edit, as `references/operator-screens.md` says, and on a match wait for the user. Then run `common-policy-check` once, unless the
    plan's one step is `triage-answer` or `triage-operate`. On a route that changes no file, one that
    closes, answers or asks, it reads and reports and writes nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in

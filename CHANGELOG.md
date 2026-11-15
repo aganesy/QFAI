@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A run that changes files first looks for open work on the same problem.**
+  A fix could run every step, reviews and full suite included, while an open
+  issue or pull request already covered the same problem, and the work was
+  thrown away when the other change merged first. After its announcement and
+  before any edit, `qfai-run` now makes one REST search of the forge for open
+  issues and pull requests naming the request's files or symptom, leaving out
+  the one the request itself names. On a match it writes nothing and asks the
+  user whether to continue or to leave the problem to that work. Without a
+  forge remote or API access it says so in the announcement and continues;
+  under a no-question mode it continues and the final report lists the match.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date

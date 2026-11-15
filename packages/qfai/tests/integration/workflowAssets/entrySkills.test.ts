@@ -462,6 +462,35 @@ describe("qfai-run", () => {
     expect(flat(await readShipped(RUN))).toMatch(/add, drop or reorder a step the plan names/i);
   });
 
+  // QFAI:AC-0001-0224-01
+  // QFAI:EX-0001-0224-55
+  it("searches once for open work on the same problem before any edit, and waits on a match", async () => {
+    const work = flat(sectionOf(await readShipped(RUN), "## The work"));
+    expect(work).toMatch(
+      /on a route that changes files, then search once for open work on the same problem before any edit, as `references\/operator-screens\.md` says, and on a match wait for the user\. then run `common-policy-check`/i,
+    );
+    const screens = await readShipped(SCREENS);
+    expect(sectionOf(screens, "## Contents")).toContain("- Open work on the same problem\n");
+    const search = flat(sectionOf(screens, "## Open work on the same problem"));
+    expect(search).toMatch(/runs once per run, before the policy check and before any edit/i);
+    expect(search).toMatch(
+      /without either, the announcement adds one line saying that no search for open work was made and why, and the work continues/i,
+    );
+    expect(search).toMatch(
+      /ask the forge's REST issue search once, as `\.agents\/rules\/api-budget\.md` says, for open issues and pull requests/i,
+    );
+    expect(search).toMatch(/make no second call and no call per term/i);
+    expect(search).toMatch(
+      /the issue or pull request the request itself names, and the one the current branch's work is for/i,
+    );
+    expect(search).toMatch(
+      /a match\.\*\* write nothing, and put the open-work question as `## Questions` says\. continue only on the user's answer/i,
+    );
+    expect(rowOf(sectionOf(screens, "## Questions"), "| Open work on the same problem")).toMatch(
+      /each match by number, title and link, and the options to continue anyway, or to stop and leave the problem to that work/i,
+    );
+  });
+
   // QFAI:AC-0001-0229-02
   // QFAI:AC-0001-0229-03
   // QFAI:AC-0001-0229-04

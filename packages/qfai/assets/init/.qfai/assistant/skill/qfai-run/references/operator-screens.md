@@ -10,6 +10,7 @@ What the user sees while a request is worked, and how a question reaches them.
 - Executing a step
 - The scope question
 - The announcement
+- Open work on the same problem
 - Questions
 - Repair found by a question-only stage
 - A step only a person can take
@@ -108,22 +109,50 @@ Once the plan and its scope are known, and before the first stage:
 - the files the work may change.
 
 The announcement asks nothing and lists no skipped stage. Continue with the
-policy check, where the route runs one, and the first stage in the same turn
-without waiting for a reply.
+open-work search and the policy check, where the route runs them, and the first
+stage in the same turn without waiting for a reply, unless the search finds a
+match.
 Text that is not a request gets no plan and no announcement.
+
+## Open work on the same problem
+
+Read this section after the announcement of a route that changes files. The
+search runs once per run, before the policy check and before any edit; a branch
+move does not repeat it.
+
+- **When it runs.** The project has a forge remote and the session reaches the
+  forge's API, through a signed-in CLI or a token. Without either, the
+  announcement adds one line saying that no search for open work was made and
+  why, and the work continues.
+- **One call.** Ask the forge's REST issue search once, as
+  `.agents/rules/api-budget.md` says, for open issues and pull requests of this
+  repository together. Search for the file names the request names, or else the
+  few words that name its symptom, joined with `OR`. On GitHub:
+  `gh api -X GET search/issues -f q='repo:<owner>/<name> is:open <terms>'`. Make
+  no second call and no call per term.
+- **Not a match.** The issue or pull request the request itself names, and the
+  one the current branch's work is for.
+- **No match, or a failed call.** Continue without a question. A failed call is
+  one line in the final report.
+- **A match.** Write nothing, and put the open-work question as `## Questions`
+  says. Continue only on the user's answer; on `stop`, end the work as for any
+  `stop`.
+- **Under a no-question mode.** Continue, and the final report lists each match
+  first, as an assumption the mode took.
 
 ## Questions
 
 Put each question in the form `.agents/rules/user-questions.md` sets out.
 Independent questions go in one round; a dependent one waits for its answer.
 
-| Question               | How it is put                                                                                                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The candidate question | One single-select option per candidate, one to three. Each is a short label and one sentence on what that route will change and check, with no route identifier |
-| A critical decision    | The finding in at most two sentences, naming the specification, contract or recorded decision it touches, each option with its effect, and a recommendation     |
-| A release approval     | What would be released, the options to approve it or not, and that approving pushes, merges, tags and publishes nothing                                         |
-| A third branch move    | The destination in plain words, the options to move there or `stop`                                                                                             |
-| A missing fact         | A choice where the candidates can be listed, a plain request where they cannot. No recommendation                                                               |
+| Question                      | How it is put                                                                                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The candidate question        | One single-select option per candidate, one to three. Each is a short label and one sentence on what that route will change and check, with no route identifier |
+| A critical decision           | The finding in at most two sentences, naming the specification, contract or recorded decision it touches, each option with its effect, and a recommendation     |
+| A release approval            | What would be released, the options to approve it or not, and that approving pushes, merges, tags and publishes nothing                                         |
+| A third branch move           | The destination in plain words, the options to move there or `stop`                                                                                             |
+| A missing fact                | A choice where the candidates can be listed, a plain request where they cannot. No recommendation                                                               |
+| Open work on the same problem | Each match by number, title and link, and the options to continue anyway, or to stop and leave the problem to that work. No recommendation                      |
 
 - The candidate options come in the order `plan` returns them, and the
   recommendation, the main reading, stands on a line of its own.
