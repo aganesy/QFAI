@@ -288,6 +288,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     code, spec IDs or test syntax, from screens visitors read.
   - A figure or claim shown on more than one page comes from one source.
 
+- **A delegated lookup answer a decision uses is kept in a file.** Before the
+  session agent uses a delegated lookup's answer in a decision, it now writes
+  the answer with its citations to `<paths.outDir>/research/`, and the decision
+  cites that file. Before, the answer lived only in the result message, which
+  context compaction shortened to a line. Closes #4407.
+
 - **`QFAI-UITEXT-001` says what it reads.** The finding's fix text and the
   implementer guidance say that the check reads only literal text, and that
   moving a sentence into a constant, a prop or an attribute value is not a fix:
@@ -319,6 +325,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one
   pass.
+
+- **The `tech.md` template shows each item in the shape validation accepts.**
+  The template held placeholders such as `<package>`, so a project filling it
+  in guessed the shapes and needed several validate rounds. Every value is now
+  a filled example to replace, such as `<example: pnpm build>`, inside the
+  backticks, list marks and table cells the schema checks. Replacing each
+  example with the project's value, and replacing or deleting the two optional
+  lines marked `<optional example: ...>`, gives a `tech.md` that passes on the
+  first run. An example left in place is still reported by `QFAI-ASSETS-003`,
+  and a Turn-end check line left as shipped turns on no turn-end check. A
+  missing required line, such as the Format command, is now reported with an
+  example line in place of a regular expression. Closes #4404.
 
 - **E2E tests wait until a server-rendered page is interactive.** A test that
   filled a field before the page hydrated lost the value and failed some runs.
