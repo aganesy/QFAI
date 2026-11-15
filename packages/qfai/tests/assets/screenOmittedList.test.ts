@@ -27,16 +27,14 @@ function isMapping(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// QFAI:EX-0001-0305-03
+// QFAI:EX-0001-0305-06
 describe("the rule, guide, template and contract step say where the reason goes", () => {
   it("the rule puts the reason in the screen's omitted list and app-level parts in the app frame", async () => {
     const rule = flat(await read("root/.agents/rules/interface-clarity.md"));
     expect(rule).toContain(
       "Leaving one of these out needs a reason recorded in the `omitted` list of the UI contract of the screen it is missing from",
     );
-    expect(rule).toContain(
-      "its entry goes in the app frame",
-    );
+    expect(rule).toContain("its entry goes in the app frame");
     expect(rule).toContain("a notice in its `omitted` list");
   });
 
@@ -77,7 +75,7 @@ describe("the rule, guide, template and contract step say where the reason goes"
   });
 });
 
-// QFAI:EX-0001-0305-04
+// QFAI:EX-0001-0305-07
 describe("the product-surface reviewer reads the omitted list as the recorded reason", () => {
   it("names the omitted list, the states key and the app frame", async () => {
     const card = flat(await read(".qfai/assistant/agent/product-surface-reviewer.md"));
@@ -85,9 +83,7 @@ describe("the product-surface reviewer reads the omitted list as the recorded re
       "The recorded reason for leaving a listed part out is an entry naming the part in the `omitted` list of the screen's UI contract",
     );
     expect(card).toContain("its `none` under `states`");
-    expect(card).toContain(
-      "Read the once-per-application parts' entries from the app frame.",
-    );
+    expect(card).toContain("Read the once-per-application parts' entries from the app frame.");
     expect(card).toContain("A reason written anywhere else is not a recorded reason");
   });
 });

@@ -81,6 +81,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   on the field, as the reference describes for a status computed at read time.
   A value only in a description is still reported, and the message now says the
   API contract declares no `enum` for it.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

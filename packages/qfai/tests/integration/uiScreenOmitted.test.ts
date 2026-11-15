@@ -80,7 +80,7 @@ describe("validate shape-checks the omitted list of each UI contract screen", ()
   });
 });
 
-// QFAI:AC-0001-0305-03
+// QFAI:AC-0001-0305-05
 describe("a part a screen leaves out is recorded in one place", () => {
   it("the rule and the reviewer card both name the omitted list", async () => {
     const rule = await readFile(

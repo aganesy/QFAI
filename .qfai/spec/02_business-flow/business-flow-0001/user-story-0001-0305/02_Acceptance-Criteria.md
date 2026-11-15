@@ -20,7 +20,7 @@ Feature: Write the standard parts of a business screen into its UI contract
     And a once-per-application part left out gets its reason in the frame
     And settings, member management and notifications are frame screens only when a story needs them
 
-  # AC-0001-0305-03
+  # AC-0001-0305-05
   Scenario: A part a screen leaves out is recorded in its omitted list
     Given a screen that leaves out a part of the business-screen list in `interface-clarity.md`
     When the contract step writes its UI contract, or the product-surface reviewer reviews the screen
