@@ -698,6 +698,82 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
       });
     });
 
+    /**
+     * The case the reference describes: a status computed at read time that no
+     * column holds at all. With nothing on the DB side to compare, the
+     * declaration is read against the API contract that requires the values.
+     */
+    describe("a derived value no DB column holds", () => {
+      const EVENTS_DB = [
+        "-- Derived (not stored): acceptance_status = not_open, open, ended from acceptance_start, acceptance_end, JST clock",
+        "CREATE TABLE events (",
+        "  id uuid PRIMARY KEY,",
+        "  status TEXT NOT NULL CHECK (status IN ('draft', 'published')),",
+        "  acceptance_start timestamptz,",
+        "  acceptance_end timestamptz",
+        ");",
+        "",
+      ].join("\n");
+
+      function eventsApi(acceptanceStatus: string): string {
+        return [
+          "openapi: 3.0.3",
+          "components:",
+          "  schemas:",
+          "    Event:",
+          "      type: object",
+          "      properties:",
+          "        status:",
+          "          type: string",
+          "          enum: [draft, published]",
+          "        acceptance_status:",
+          "          type: string",
+          `          ${acceptanceStatus}`,
+          "",
+        ].join("\n");
+      }
+
+      it("is not reported when the API contract requires every declared value", async () => {
+        const { api, dbs } = await seedMany(eventsApi("enum: [not_open, open, ended]"), {
+          "db-0004-events.sql": EVENTS_DB,
+        });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        expect(issues).toEqual([]);
+      });
+
+      it("reports a declared value the API contract does not require", async () => {
+        const { api, dbs } = await seedMany(eventsApi("enum: [not_open, open]"), {
+          "db-0004-events.sql": EVENTS_DB,
+        });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain("declares an `enum` on the field with: ended");
+        expect(declaration[0]?.message).not.toContain("not_open");
+      });
+
+      it("says the API declares no enum when the values are only in a description", async () => {
+        const { api, dbs } = await seedMany(
+          eventsApi("description: One of not_open, open or ended."),
+          { "db-0004-events.sql": EVENTS_DB },
+        );
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain(
+          "no API contract declares an `enum` on the field with: ended, not_open, open",
+        );
+        expect(declaration[0]?.message).not.toContain("the API contract does not require");
+        expect(declaration[0]?.suggested_action).toContain("No DB contract stores this field");
+      });
+    });
+
     it("keeps the single-contract message flat", async () => {
       const { api, dbs } = await seedMany(SIM_LINE_API, {
         "db-0003-sim-lines.sql": SIM_LINES_DB,
