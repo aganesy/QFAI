@@ -268,7 +268,7 @@ describe("the Graphify document corpus", () => {
       );
       const event = {
         tool_name: "Bash",
-        tool_input: { command: "rg legacy packages/" },
+        tool_input: { command: "rg legacy" },
         session_id: "unusable-config-session",
         cwd: fixture.root,
       };

@@ -59,6 +59,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The search-protection hook allows a search scoped inside the project.** A
+  grep, rg, git grep, Select-String, findstr or native search call that names
+  at least one path, every one inside the project root, now runs. A search with
+  no path, one over the project root itself (such as `.`), and one whose path
+  the hook cannot place inside the project are still redirected to the graph:
+  a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
+  home prefix or a `..` segment. A findstr with `/s` and a native search scoped
+  only by an include glob are also redirected.
+
 - **Settled work that adds screens gets the design and prototype stages.**
   The extraction has a new qualifier, `new-screens`, for a settled change that
   adds new UI contracts or new routes users see: an approved record with a
@@ -81,6 +90,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shell its UI contract names, linked from its entry points, built from shared
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
+
+- **A checkout that did not reinstall after a qfai upgrade is caught.** When
+  the running qfai is the project's own copy and the lockfile
+  (`package-lock.json`, `pnpm-lock.yaml` or `yarn.lock`) pins another version,
+  every command prints one stderr line naming both versions and the install
+  command, and `qfai validate`, `qfai sdd preflight` and `qfai workflow plan`
+  stop with exit 1. A `workflow plan` refusal carries the new reason
+  `stale-install`. The upgrade guide now tells every checkout and worktree to
+  run its install after pulling a qfai upgrade.
 
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that

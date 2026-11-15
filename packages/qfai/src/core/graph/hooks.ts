@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import path from "node:path";
 
 export type GraphHookHost = "claude" | "codex" | "copilot" | "vscode";
@@ -6,6 +7,8 @@ export interface GraphHookEvent {
   tool: string;
   command?: string;
   path?: string;
+  /** The host gave `path` as an include glob, such as VS Code's `includePattern`, not a path. */
+  pathIsPattern?: true;
   session?: string;
   cwd?: string;
   workdir?: string;
@@ -48,21 +51,34 @@ interface ShellScope {
   authorize: GraphSearchAuthorization;
   shell: GraphShell;
   directory?: string;
+  /** The project root a scoped search must stay inside; without one no search is scoped. */
+  root?: string;
 }
 
 interface CommandContext extends ShellScope {
   location: ShellLocation;
   redefined: boolean;
+  /**
+   * Whether this command is the whole command text, alone or with pipeline stages after it.
+   * Only then is a scoped search placed: any command before it, a nested shell, a
+   * substitution or a wrapper can move the shell in ways the directory tracker does not
+   * follow (`Push-Location`, `cd..`, a script block, `env --chdir`, `pwsh -WorkingDirectory`).
+   */
+  placeable?: boolean;
 }
 
 export function classifyGraphExploration(
   event: GraphHookEvent,
   authorize: GraphSearchAuthorization = (decision) => decision,
+  root?: string,
 ): GraphHookDecision {
   if (event.tool === "write_stdin") return outsideBoundary();
   if (
     ["rg", "grep", "grep_search", "search_files", "file_search"].includes(event.tool.toLowerCase())
   ) {
+    const base = event.cwd ? path.resolve(event.cwd) : undefined;
+    if (event.path !== undefined && !event.pathIsPattern && insideProject(root, base, [event.path]))
+      return scopedSearch();
     return authorize(denyExploration(event.tool, event.path ?? "."));
   }
   const shell: GraphShell =
@@ -77,7 +93,7 @@ export function classifyGraphExploration(
   return (
     classifyShellText(
       event.command ?? "",
-      { authorize, shell, ...(directory ? { directory } : {}) },
+      { authorize, shell, ...(directory ? { directory } : {}), ...(root ? { root } : {}) },
       0,
       false,
       "observed",
@@ -211,6 +227,10 @@ function classifyCommands(
   // Inside a `case`, a command that starts with a word ending in `)`, such as `y)`
   // or `"a b")`, is an arm: its pattern is not a command.
   let openCases = 0;
+  const sole =
+    depth === 0 &&
+    substitutions.length === 0 &&
+    commands.every((command, index) => index === 0 || command.join === "|");
   for (const [index, command] of commands.entries()) {
     const words =
       openCases > 0 && command.words[0]?.endsWith(")") ? command.words.slice(1) : command.words;
@@ -230,7 +250,13 @@ function classifyCommands(
     // `git log | { grep fix; } < .env` the group reads `.env`.
     const upstream =
       words[0] === "{" && !groupClosesBare(commands, index) ? undefined : command.upstream;
-    const decision = classifyCommand(words, { ...scope, location, redefined }, depth, upstream);
+    const placeable = sole && index === 0;
+    const decision = classifyCommand(
+      words,
+      { ...scope, location, redefined, placeable },
+      depth,
+      upstream,
+    );
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
@@ -413,6 +439,185 @@ function movedLocation(
   return { directory };
 }
 
+/** The directory a search's relative paths resolve from, when the text tells it. */
+function searchBase(context: CommandContext): string | undefined {
+  const { location, directory } = context;
+  if (location === "unknown") return undefined;
+  return location === "observed" ? directory : location.directory;
+}
+
+/**
+ * Whether a search names at least one path and every path it names lies inside the
+ * project root, below it. The root itself, as `.` or by its own path, is the whole
+ * repository and is no scope. A path the text cannot place is not inside: one with a
+ * `..` segment, which may resolve through a symbolic link, an expansion, a glob, a home
+ * or provider prefix, or a list. A parenthesis, `@` or `!` marks a PowerShell
+ * subexpression or array, such as `(Get-Location)` or `@('.')`, or a Bash extended glob
+ * such as `!(node_modules)`, so its value is unknown.
+ *
+ * SIMPLIFIED: a glob such as `src/*.ts` stays denied, though it only names project
+ * files; a leading-dot glob or a brace can name `..`. Lift when: globs are expanded
+ * against the project tree before the decision.
+ */
+function insideProject(
+  root: string | undefined,
+  base: string | undefined,
+  paths: string[] | undefined,
+): boolean {
+  if (!root || !base || !paths || paths.length === 0) return false;
+  return paths.every((operand) => {
+    if (
+      !operand.trim() ||
+      /[$`%<>~*?[\]{},()@!]/.test(operand) ||
+      (operand.includes(":") && !/^[A-Za-z]:[\\/]/.test(operand)) ||
+      operand.split(/[\\/]/).includes("..")
+    )
+      return false;
+    const target = path.resolve(base, operand);
+    if (path.relative(root, target) === "" || outside(root, target)) return false;
+    // A symbolic link or junction inside the project may point outside it.
+    const real = realPath(target);
+    const realRoot = realPath(root);
+    return real === undefined || realRoot === undefined || !outside(realRoot, real);
+  });
+}
+
+/** The path with every link resolved, or `undefined` when it cannot be resolved. */
+function realPath(target: string): string | undefined {
+  try {
+    return realpathSync.native(target);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether a grep or rg command follows symbolic links it finds below the paths it names. */
+function followsLinks(words: string[]): boolean {
+  const name = commandName(words);
+  return words
+    .slice(1)
+    .some((word) =>
+      name === "rg"
+        ? word === "--follow" || /^-[A-Za-z]*L/.test(word)
+        : name === "grep" && (word === "--dereference-recursive" || /^-[A-Za-z]*R/.test(word)),
+    );
+}
+
+function scopedSearch(): GraphHookDecision {
+  return {
+    decision: "allow",
+    state: "configured",
+    message: "Scoped search allowed: every path it names lies inside the project.",
+  };
+}
+
+/**
+ * The paths a grep, rg, findstr, Select-String or git grep command names, read only
+ * from a shape known option by option. `undefined` when the command is no such search,
+ * or holds a word the shell may expand, an unknown option, an option missing its value,
+ * or, for git grep, a revision or no `--` before its paths.
+ */
+function searchPaths(words: string[]): string[] | undefined {
+  if (/[\\/=]/.test(words[0] ?? "")) return undefined;
+  const name = commandName(words);
+  const args = words.slice(1);
+  if (args.some((word) => unparsedWord(word))) return undefined;
+  if (name === "grep" || name === "rg") return grepPaths(name, args);
+  if (name === "findstr") return findstrPaths(args);
+  if (name === "select-string") return selectStringPaths(args);
+  if (name === "git" && args[0]?.toLowerCase() === "grep") return gitGrepPaths(args.slice(1));
+  return undefined;
+}
+
+/** rg options that take the next word as their value. */
+const rgValueOptions = /^(?:-[gtT]|--(?:glob|type|type-not))$/;
+const scopedGrepSwitches = /^-[ivncowxEFGPqsHhIyzZLlbUarR]+$/;
+
+function grepPaths(name: "grep" | "rg", args: string[]): string[] | undefined {
+  let patternGiven = false;
+  const operands: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const word = args[index] ?? "";
+    if (word === "--") {
+      operands.push(...args.slice(index + 1));
+      break;
+    }
+    if (!word.startsWith("-")) operands.push(word);
+    else if (valueOptions.test(word) || (name === "rg" && rgValueOptions.test(word))) {
+      if (word === "-e" || word === "--regexp") patternGiven = true;
+      index += 1;
+      if (index >= args.length) return undefined;
+    } else if (
+      attachedValueOptions.test(word) ||
+      /^--(?:include|exclude|glob|type)=.+$/.test(word)
+    ) {
+      if (/^(?:-e|--regexp=)/.test(word)) patternGiven = true;
+    } else if (
+      !(name === "grep" ? scopedGrepSwitches : rgSwitches).test(word) &&
+      !longSwitches.has(word) &&
+      word !== "--recursive" &&
+      word !== "--hidden"
+    )
+      return undefined;
+  }
+  return patternGiven ? operands : operands.slice(1);
+}
+
+/** With `/s`, findstr searches every directory below the current one for each file name. */
+function findstrPaths(args: string[]): string[] | undefined {
+  let patternGiven = false;
+  const operands: string[] = [];
+  for (const word of args) {
+    if (/^\/c:./i.test(word)) patternGiven = true;
+    else if (word.startsWith("/")) {
+      if (!/^\/[ivnxbelrmop]+$/i.test(word)) return undefined;
+    } else if (word.startsWith("-")) return undefined;
+    else operands.push(word);
+  }
+  return patternGiven ? operands : operands.slice(1);
+}
+
+/** Select-String binds its first free positional word to Pattern and the next to Path. */
+function selectStringPaths(args: string[]): string[] | undefined {
+  let patternGiven = false;
+  const named: string[] = [];
+  const positional: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const word = args[index] ?? "";
+    if (!word.startsWith("-")) positional.push(word);
+    else if (/^-(?:pattern|path|literalpath|context|encoding)$/i.test(word)) {
+      const value = args[index + 1];
+      if (value === undefined) return undefined;
+      index += 1;
+      if (/^-pattern$/i.test(word)) patternGiven = true;
+      else if (/path$/i.test(word)) named.push(value);
+    } else if (
+      !/^-(?:simplematch|casesensitive|notmatch|allmatches|list|quiet|raw|noemphasis)$/i.test(word)
+    )
+      return undefined;
+  }
+  const rest = patternGiven ? positional : positional.slice(1);
+  if (rest.length > 1 || (named.length > 0 && rest.length > 0)) return undefined;
+  return [...named, ...rest];
+}
+
+function gitGrepPaths(args: string[]): string[] | undefined {
+  const separator = args.indexOf("--");
+  if (separator < 0) return undefined;
+  let patternGiven = false;
+  const operands: string[] = [];
+  for (let index = 0; index < separator; index += 1) {
+    const word = args[index] ?? "";
+    if (!word.startsWith("-")) operands.push(word);
+    else if (word === "-e") {
+      patternGiven = true;
+      index += 1;
+      if (index >= separator) return undefined;
+    } else if (!/^-[nilwvcEFPIhH]+$/.test(word) && !longSwitches.has(word)) return undefined;
+  }
+  return operands.length === (patternGiven ? 0 : 1) ? args.slice(separator + 1) : undefined;
+}
+
 function outside(root: string, target: string): boolean {
   const relative = path.relative(root, target);
   return relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
@@ -534,17 +739,29 @@ function classifyCommand(
   if (operation === "}" || operation === "esac") return undefined;
   if (operation === "env" || operation === "command" || operation === "builtin") {
     let offset = 1;
+    let split: string[] = [];
     while (offset < words.length) {
-      const redirection = redirectionLength(words[offset]);
+      const word = words[offset] ?? "";
+      const redirection = redirectionLength(word);
       if (redirection) offset += redirection;
-      else if (
-        words[offset]?.startsWith("-") ||
-        /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[offset] ?? "")
-      )
-        offset += 1;
+      else if (operation === "env" && /^(?:-S|--split-string)(?:=|$)|^-S./.test(word)) {
+        // `env -S 'rg foo /'` runs the split string as the command and its arguments.
+        const separate = word === "-S" || word === "--split-string";
+        const value = separate
+          ? (words[offset + 1] ?? "")
+          : word.startsWith("--")
+            ? word.slice(word.indexOf("=") + 1)
+            : word.slice(2);
+        split = value.split(/\s+/).filter((part) => part.length > 0);
+        offset += separate ? 2 : 1;
+        break;
+      } else if (operation === "env" && /^(?:-C|-u|--chdir|--unset)$/.test(word)) {
+        // These options take the next word as their value, not as the command.
+        offset += 2;
+      } else if (word.startsWith("-") || /^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) offset += 1;
       else break;
     }
-    return classifyCommand(words.slice(offset), context, depth + 1);
+    return classifyCommand([...split, ...words.slice(offset)], context, depth + 1);
   }
   if (["bash", "sh", "zsh", "pwsh", "powershell", "cmd"].includes(operation ?? "")) {
     const switchIndex = words.findIndex((word) => /^(?:-[a-z]*c|\/c|-command)$/i.test(word));
@@ -562,6 +779,7 @@ function classifyCommand(
         authorize: context.authorize,
         shell,
         ...(context.directory ? { directory: context.directory } : {}),
+        ...(context.root ? { root: context.root } : {}),
       },
       depth + 1,
       redefined,
@@ -569,6 +787,15 @@ function classifyCommand(
     );
   }
   if (!redefined && pipeFilter(words) && printsText(upstream)) return undefined;
+  if (
+    !redefined &&
+    depth === 0 &&
+    context.placeable === true &&
+    !followsLinks(words) &&
+    !(context.shell === "powershell" && words.some((word) => word.startsWith("@"))) &&
+    insideProject(context.root, searchBase(context), searchPaths(words))
+  )
+    return scopedSearch();
   if (operation === "rg" || operation === "grep" || operation === "findstr") {
     let offset = 1;
     while (
@@ -1619,7 +1846,7 @@ function denyExploration(operation: string, target: string): GraphHookDecision {
     operation,
     target,
     domain,
-    message: `Exploration redirected: ${operation} over ${JSON.stringify(target)} was denied. Use ${domain === "code" ? 'CodeGraph for symbols, callers and change impact: node .qfai/tools/graph-cli.mjs code "<question>"' : 'Graphify for document concepts and rationale: node .qfai/tools/graph-cli.mjs documents "<question>"'}. Prepare the required analysis through the CLI. For AI-decided scoped search, run node .qfai/tools/graph-cli.mjs fallback --attempt-id <observed-UUID> --question "<unresolved question>" --reason "<graph limitation>". The fallback command attempts the relevant graph before granting a matching search. Human approval is not required for this search.`,
+    message: `Exploration redirected: ${operation} over ${JSON.stringify(target)} was denied. Use ${domain === "code" ? 'CodeGraph for symbols, callers and change impact: node .qfai/tools/graph-cli.mjs code "<question>"' : 'Graphify for document concepts and rationale: node .qfai/tools/graph-cli.mjs documents "<question>"'}. Prepare the required analysis through the CLI. For AI-decided scoped search, run node .qfai/tools/graph-cli.mjs fallback --attempt-id <observed-UUID> --question "<unresolved question>" --reason "<graph limitation>". The fallback command attempts the relevant graph before granting a matching search. Human approval is not required for this search. A search that names explicit project paths, with no glob, expansion or \`..\`, is not denied.`,
   };
 }
 
@@ -1675,6 +1902,7 @@ export function decodeGraphHookEvent(input: unknown): GraphHookEvent | undefined
     tool,
     ...(typeof command === "string" ? { command } : {}),
     ...(typeof target === "string" ? { path: target } : {}),
+    ...(typeof target === "string" && payload.path === undefined ? { pathIsPattern: true } : {}),
     ...(typeof workdir === "string" ? { workdir } : {}),
     ...(typeof shell === "string" ? { shell } : {}),
     ...(typeof input.cwd === "string" ? { cwd: input.cwd } : {}),
@@ -1705,7 +1933,11 @@ export function failedGraphHook(failure: GraphHookFailure): GraphHookDecision {
   return { decision: "deny", state: "failed", message: FAILURE_MESSAGES[failure] };
 }
 
-export function enforceGraphExploration(input: unknown, configuration: unknown): GraphHookDecision {
+export function enforceGraphExploration(
+  input: unknown,
+  configuration: unknown,
+  root?: string,
+): GraphHookDecision {
   if (
     !object(configuration) ||
     Object.keys(configuration).length !== 2 ||
@@ -1714,7 +1946,7 @@ export function enforceGraphExploration(input: unknown, configuration: unknown):
   )
     return failedGraphHook("configuration");
   const event = decodeGraphHookEvent(input);
-  return event ? classifyGraphExploration(event) : failedGraphHook("input");
+  return event ? classifyGraphExploration(event, undefined, root) : failedGraphHook("input");
 }
 
 export function graphHookOutput(

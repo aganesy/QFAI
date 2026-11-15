@@ -25,7 +25,7 @@ it("permits scoped search from the AI judgment without human approval", async ()
     const invoke = async () => {
       const hook = await installedGraphHookResult(fixture.root, {
         tool_name: "Bash",
-        tool_input: { command: "rg auth packages/" },
+        tool_input: { command: "rg auth" },
         session_id: session,
         cwd: fixture.root,
       });
@@ -56,7 +56,7 @@ it("permits scoped search from the AI judgment without human approval", async ()
       status: "ready",
       permitted: true,
       scope: {
-        target: "packages/",
+        target: ".",
         operation: "rg",
         worktree: fixture.root,
         session,
@@ -93,7 +93,7 @@ it("rejects fallback without a graph limitation reason or complete matching scop
     );
     const event = {
       tool_name: "Bash",
-      tool_input: { command: "rg auth packages/" },
+      tool_input: { command: "rg auth" },
       session_id: session,
       cwd: fixture.root,
     };
@@ -148,7 +148,7 @@ it("denies AI fallback reuse outside its exact operation path worktree or sessio
     );
     const event = {
       tool_name: "Bash",
-      tool_input: { command: "rg auth packages/" },
+      tool_input: { command: "rg auth" },
       session_id: session,
       cwd: fixture.root,
     };
@@ -169,20 +169,20 @@ it("denies AI fallback reuse outside its exact operation path worktree or sessio
     );
     expect(grant.value).toMatchObject({ permitted: true });
     for (const input of [
-      { ...event, tool_input: { command: "rg auth docs/" } },
-      { ...event, tool_input: { command: "grep -R auth packages/" } },
+      { ...event, tool_input: { command: "rg auth docs/*.md" } },
+      { ...event, tool_input: { command: "grep -R auth" } },
       { ...event, session_id: "another-session" },
       { ...event, cwd: path.resolve("another-worktree") },
-      { ...event, tool_input: { command: "rg auth private/ packages/" } },
-      { ...event, tool_input: { command: "rg -e auth private/ packages/" } },
-      { ...event, tool_input: { command: "rg --glob '*.ts' auth private/ packages/" } },
+      { ...event, tool_input: { command: "rg auth private/ ../packages/" } },
+      { ...event, tool_input: { command: "rg -e auth private/ ../packages/" } },
+      { ...event, tool_input: { command: "rg --glob '*.ts' auth private/ ../packages/" } },
       { ...event, tool_input: { command: "git -C other-worktree grep auth -- packages/" } },
       {
         ...event,
         tool_name: "PowerShell",
         tool_input: { command: "Select-String -Pattern auth -Path packages/ private/" },
       },
-      { ...event, tool_input: { command: "rg auth packages/; grep -R policy docs/" } },
+      { ...event, tool_input: { command: "rg auth; grep -R policy docs/*.md" } },
       { ...event, tool_input: { command: "cd ../other-worktree; rg auth packages/" } },
       { ...event, tool_input: { command: "command cd ../other-worktree; rg auth packages/" } },
       { ...event, tool_input: { command: "builtin cd ../other-worktree; rg auth packages/" } },
@@ -206,7 +206,7 @@ it("denies AI fallback reuse outside its exact operation path worktree or sessio
     }
     const unscoped = await installedGraphHookResult(fixture.root, {
       ...event,
-      tool_input: { command: "rg auth private/ packages/" },
+      tool_input: { command: "rg auth private/ ../packages/" },
     });
     expect(unscoped.output).toContain("cannot be scoped");
     expect(unscoped.output).not.toContain("fallback --attempt-id");
@@ -217,13 +217,13 @@ it("denies AI fallback reuse outside its exact operation path worktree or sessio
         await installedGraphHookResult(fixture.root, {
           ...event,
           tool_name: "exec_command",
-          tool_input: { cmd: "rg auth packages/", workdir: fixture.root },
+          tool_input: { cmd: "rg auth", workdir: fixture.root },
         })
       ).output,
     ).toBe("");
     const compound = {
       ...event,
-      tool_input: { command: "rg auth packages/; grep -R policy docs/" },
+      tool_input: { command: "rg auth; grep -R policy docs/*.md" },
     };
     const remaining = await installedGraphHookResult(fixture.root, compound);
     const secondId = /Observed attempt: ([a-f0-9-]{36})/.exec(remaining.output)?.[1];
@@ -243,7 +243,7 @@ it("denies AI fallback reuse outside its exact operation path worktree or sessio
     expect(secondGrant.value).toMatchObject({
       permitted: true,
       domain: "documents",
-      scope: { operation: "grep", target: "docs/" },
+      scope: { operation: "grep", target: "docs/*.md" },
     });
     expect((await installedGraphHookResult(fixture.root, compound)).output).toBe("");
   } finally {
@@ -266,7 +266,7 @@ async function checkStoredExpiry(expiredAt: number): Promise<void> {
     );
     const event = {
       tool_name: "Bash",
-      tool_input: { command: "rg auth packages/" },
+      tool_input: { command: "rg auth" },
       session_id: session,
       cwd: fixture.root,
     };

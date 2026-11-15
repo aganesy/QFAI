@@ -45,6 +45,28 @@ describe("AC-0001-0235-03", () => {
         expect(denied.output).toContain('"permissionDecision":"deny"');
         expect(await readFile(effect, "utf8")).toBe(command);
       }
+      for (const tool_input of [
+        { command: "grep -n Known known.ts" },
+        { command: "rg Known known.ts docs/" },
+      ]) {
+        const scoped = await installedGraphHookResult(project.root, {
+          tool_name: "Bash",
+          tool_input,
+          cwd: project.root,
+          session_id: "scoped-search-session",
+        });
+        expect(scoped.output, tool_input.command).toBe("");
+        expect(scoped.failures, tool_input.command).toBe(0);
+      }
+      for (const tool_input of [{ command: "rg Known" }, { command: "rg Known ." }]) {
+        const unscoped = await installedGraphHookResult(project.root, {
+          tool_name: "Bash",
+          tool_input,
+          cwd: project.root,
+          session_id: "scoped-search-session",
+        });
+        expect(unscoped.output, tool_input.command).toContain('"permissionDecision":"deny"');
+      }
       const hidden = classifyGraphExploration({ tool: "Bash", command: "./hidden-search.sh" });
       expect(hidden.state).toBe("outside-boundary");
       expect(hidden.message).toContain("not verified");

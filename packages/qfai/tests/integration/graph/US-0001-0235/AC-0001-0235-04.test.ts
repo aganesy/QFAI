@@ -14,7 +14,7 @@ describe("AC-0001-0235-04", () => {
     const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
     const event = {
       tool_name: "Bash",
-      tool_input: { command: "rg checkout packages/" },
+      tool_input: { command: "rg checkout" },
       cwd: fixture.root,
       session_id: "acceptance-session",
     };
@@ -43,7 +43,7 @@ describe("AC-0001-0235-04", () => {
       expect(permitted.value).toMatchObject({
         permitted: true,
         scope: {
-          target: "packages/",
+          target: ".",
           operation: "rg",
           worktree: fixture.root,
           session: "acceptance-session",
@@ -55,8 +55,8 @@ describe("AC-0001-0235-04", () => {
       for (const changed of [
         { ...event, session_id: "other-session" },
         { ...event, cwd: path.join(fixture.root, "other-worktree") },
-        { ...event, tool_input: { command: "rg checkout docs/" } },
-        { ...event, tool_input: { command: "grep -R checkout packages/" } },
+        { ...event, tool_input: { command: "rg checkout docs/*.md" } },
+        { ...event, tool_input: { command: "grep -R checkout" } },
       ])
         expect((await installedGraphHookResult(fixture.root, changed)).output).toContain("deny");
       await writeFile(
