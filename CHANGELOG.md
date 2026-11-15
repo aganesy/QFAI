@@ -29,6 +29,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **Interactive widgets come from a catalogue, and `qfai validate` warns
+  about hand-written ones.** `ui-procurement.md` lists the widgets that are
+  not hand-authored when a catalogue or headless library is available, from
+  dialog and menu to date picker and accordion, each with its WAI-ARIA
+  Authoring Practices pattern. An authored one records that pattern and its
+  keyboard behaviour in its `@a11y` tag, with a test. Where a catalogue is
+  installed, `qfai validate` warns about a hand-written `role="dialog"`,
+  `role="menu"`, `role="tablist"` or `aria-modal` outside a catalogue item's
+  own file (`QFAI-COMP-005`), and about a catalogued widget with no `@a11y`
+  (`QFAI-COMP-006`). Closes #4299.
+
 - **The implement steps now write the per-role navigation journey.** Where an
   app has navigation of its own, `implement-scaffold` adds an empty journey
   test for each role a flow adds a screen to, and records the roles that sign
@@ -49,18 +60,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   concerns records a departure. Validate does not check the key yet.
   Closes #4109.
 
-- **Interactive widgets come from a catalogue, and `qfai validate` warns
-  about hand-written ones.** `ui-procurement.md` lists the widgets that are
-  not hand-authored when a catalogue or headless library is available, from
-  dialog and menu to date picker and accordion, each with its WAI-ARIA
-  Authoring Practices pattern. An authored one records that pattern and its
-  keyboard behaviour in its `@a11y` tag, with a test. Where a catalogue is
-  installed, `qfai validate` warns about a hand-written `role="dialog"`,
-  `role="menu"`, `role="tablist"` or `aria-modal` outside a catalogue item's
-  own file (`QFAI-COMP-005`), and about a catalogued widget with no `@a11y`
-  (`QFAI-COMP-006`). Closes #4299.
-
 ### Changed
+
+- **The search-protection hook allows a search scoped inside the project.** A
+  grep, rg, git grep, Select-String, findstr or native search call that names
+  at least one path, every one inside the project root, now runs. A search with
+  no path, one over the project root itself (such as `.`), and one whose path
+  the hook cannot place inside the project are still redirected to the graph:
+  a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
+  home prefix or a `..` segment. A findstr with `/s` and a native search scoped
+  only by an include glob are also redirected.
 
 - **Settled work that adds screens gets the design and prototype stages.**
   The extraction has a new qualifier, `new-screens`, for a settled change that
@@ -79,11 +88,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   architecture, product-surface and requirements reviewers refuse such a cut;
   how a part is built remains subject to the article.
 
+- **A run that adds screens researches what the project has no pattern for.**
+  Before its session, `prototyping-grill` now checks each screen the run adds:
+  its type against the business UI patterns, and each element and `structure`
+  group its UI contract declares against the component catalogue `tech.md`
+  names. For a screen type or a component neither covers, it runs the
+  research-first protocol, scoped to UI and to those gaps alone, and the grill
+  session starts from that research. A run whose screens they all cover runs
+  no research. Before, only `/qfai-discussion` ran the protocol. Closes #4293.
+
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the
   shell its UI contract names, linked from its entry points, built from shared
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
+
+- **A checkout that did not reinstall after a qfai upgrade is caught.** When
+  the running qfai is the project's own copy and the lockfile
+  (`package-lock.json`, `pnpm-lock.yaml` or `yarn.lock`) pins another version,
+  every command prints one stderr line naming both versions and the install
+  command, and `qfai validate`, `qfai sdd preflight` and `qfai workflow plan`
+  stop with exit 1. A `workflow plan` refusal carries the new reason
+  `stale-install`. The upgrade guide now tells every checkout and worktree to
+  run its install after pulling a qfai upgrade.
 
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
