@@ -62,9 +62,9 @@ annotation and gains none.
    `.qfai/assistant/rule/test-layers.md` § L5 E2E says. The app shell sets
    the marker, not the test: a shell that does not set it is a product
    defect, reported as item 5 says. No fixed sleep, and no blind retry of an
-   interaction. A browser test locates elements and injects failures as
-   `.qfai/assistant/rule/test-layers.md` § Browser test locators and fault
-   injection says.
+   interaction. A test that drives a browser locates elements and injects
+   failures as `.qfai/assistant/rule/test-layers.md` § Browser test locators
+   and fault injection says.
 2. For the navigation journey's test of each role this flow adds a screen
    to, start signed in as that role through the session `implement-credentials`
    serves, or signed out for a visitor role. Then reach every screen the UI

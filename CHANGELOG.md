@@ -45,13 +45,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   tests tied to class names, CSS values and the module files a page loads broke
   when the screens were rebuilt, and the failure-state cases could not be run
   at all once a bundler merged those modules. `test-layers.md` gains a section
-  for every test that drives a browser: locate an element by accessible role
-  and name or by a declared `data-qfai` marker, never by class name, CSS value
-  or DOM path; check design tokens once against `DESIGN.md`; inject a failure by
-  intercepting the network request or through a test-only fault seam, never
-  through a module file the page loads. `implement-acceptance` points to it, and
-  the implementation reviewer flags a browser test that imports or reroutes an
-  application module. Closes #4292.
+  for every test that drives a browser: locate an element by what a user
+  perceives (accessible role and name, label or visible text) or by a declared
+  `data-qfai` marker, never by class name, CSS value or DOM path; where a root
+  `DESIGN.md` exists, check its design tokens in a test of their own, and
+  assert no CSS value in a behaviour case; inject a failure by intercepting the
+  network request or through a test-only fault seam a production build does
+  not carry, never through a module file the page loads. `implement-scaffold`,
+  `implement-acceptance` and `implement-tdd` point to it, and the
+  implementation reviewer flags a browser test that reroutes or replaces an
+  application module file or reads a global such a module sets, and a
+  behaviour case that asserts a CSS value. Closes #4292.
 
 - **The contract step writes the app frame once.** The app shell, the
   navigation for each role and the home belong to no single flow, so
