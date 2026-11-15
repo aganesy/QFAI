@@ -137,6 +137,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   home prefix or a `..` segment. A findstr with `/s` and a native search scoped
   only by an include glob are also redirected.
 
+- **A merge waits for every check of its head commit.** Step 3 of the shipped
+  `triage-operate` step now says that the checks still running before a merge
+  are every check run of the pull request's head commit that is queued or in
+  progress, including checks branch protection does not require. The merge
+  waits until none is left, or stops and reports them, and a failed check stops
+  it too until a rerun clears it. The report of a merge names, next to the
+  merge commit, each check run of the head commit with its conclusion when it
+  merged. Part of #4399.
+
 - **Settled work that adds screens gets the design and prototype stages.**
   The extraction has a new qualifier, `new-screens`, for a settled change that
   adds new UI contracts or new routes users see: an approved record with a
