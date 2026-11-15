@@ -357,10 +357,6 @@ pattern in _Copy in the UI_: never write one.
   differs from element to element.
 - Alt text, ARIA labels and keyboard navigation are missing, and clickable
   `div` elements stand in for buttons.
-- Keyboard focus moves in an order the screen is not read in, or the name a
-  screen reader announces does not say what the control does. The automated
-  accessibility check cannot judge either, so the screen review checks both by
-  hand.
 - Animation has no `prefers-reduced-motion` fallback.
 - Touch targets are undersized on mobile.
 

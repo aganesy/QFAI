@@ -53,6 +53,9 @@ export async function validateUiAccessibilityLayer(
   const first = screens[0];
   if (first === undefined) return [];
 
+  // A third read of the selected test files in a full scan, after the two the
+  // obligation checks make. Accepted: it runs only once a web screen exists,
+  // and sharing one scan would thread it through every profile runner.
   let scan: Awaited<ReturnType<typeof readStoryTests>>;
   try {
     scan = await readStoryTests(root, config);
@@ -72,7 +75,7 @@ export async function validateUiAccessibilityLayer(
       "uiux.accessibilityLayer",
       screens.map((screen) => screen.screenId),
       "canonical",
-      "Add the accessibility spec `implement-scaffold` writes from `.qfai/assistant/skill/qfai-implement/references/accessibility-check.md`: axe through `@axe-core/playwright` with the WCAG 2.2 A and AA tags, over every route the UI contracts declare, for each role that can reach it.",
+      "Add the accessibility spec `implement-scaffold` writes from `.qfai/assistant/skill/qfai-implement/references/accessibility-check.md`: axe through `@axe-core/playwright` with the WCAG 2.2 A and AA tags, over every route the UI contracts declare, for each role that can reach it. A spec outside `<testsDir>` counts only when `validation.traceability.testFileGlobs` selects it.",
     ),
   ];
 }

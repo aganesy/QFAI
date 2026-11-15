@@ -89,7 +89,9 @@ in with no session.
 `implement-scaffold` writes the spec from
 `.qfai/assistant/skill/qfai-implement/references/accessibility-check.md`.
 `npx qfai validate` warns with `QFAI-AXE-001` when the layer applies and no
-selected test file calls axe.
+selected test file calls axe. A missing spec is reported by that warning, not
+as an UNRUN lane: the accessibility gate runs only in a project that has the
+spec.
 
 ## Annotation routing
 
@@ -206,8 +208,9 @@ per-level routing. Place test annotations only in paths scanned by
 
 The project chooses its CI job names. Route Unit and Component tests to a
 fast test job, Integration and API tests to jobs with their required services,
-and E2E tests to a journey job, which also runs the Accessibility tests. The full verification gate runs every
-applicable lane and `npx qfai validate --profile verify --fail-on error`.
+and E2E tests to a journey job, which also runs the Accessibility tests. The
+full verification gate runs every applicable lane and
+`npx qfai validate --profile verify --fail-on error`.
 A missing lane or an unrun command is UNRUN, not PASS. Record exact commands,
 results, and revisions in the stage report.
 

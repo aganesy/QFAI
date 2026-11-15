@@ -64,7 +64,11 @@ describe("implement-scaffold writes the accessibility check from the shipped tem
     expect(setup).toMatch(/install it as one with the project's package manager/);
     expect(setup).toContain("references/accessibility-check.md");
     expect(setup).toMatch(/each role with every route that role can reach/);
-    expect(setup).toMatch(/E2E layer's sign-in for each role/);
+    expect(setup).toMatch(/E2E layer's sign-in for each role other than a visitor/);
+    expect(setup).toMatch(
+      /When the spec already exists, add to its route map each route starting with `\/` that the current flow's UI contracts declare and the map lacks/,
+    );
+    expect(setup).toMatch(/does not run Playwright for JavaScript or TypeScript/);
     expect(step).toMatch(/6\. Set up the accessibility check as § Accessibility check says/);
     expect(section(step, "## Gate")).toMatch(/§ Accessibility check needs no setup/);
   });
@@ -78,6 +82,11 @@ describe("implement-scaffold writes the accessibility check from the shipped tem
     expect(template).toContain('["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]');
     expect(template).toContain("for (const [role, routes] of Object.entries(ROUTES_BY_ROLE))");
     expect(template).toContain("test.use({ role });");
+    expect(template).toContain(
+      "export function statePath(directory: string, role: string, slot: number): string {",
+    );
+    expect(template).toContain("for (const role of SIGNED_IN_ROLES) {");
+    expect(flat(template)).toMatch(/one session per worker index and role/);
     expect(template).toContain(".withTags(WCAG_22_A_AA).analyze()");
     expect(template).toMatch(/entry\.reason\.trim\(\) !== ""/);
     expect(template).toContain("expect(open).toEqual([]);");
@@ -94,6 +103,7 @@ describe("the verify gates run the layer and note whether it exists", () => {
     expect(gate).toMatch(/FAIL, naming each route, role and axe rule/);
     expect(gate).toMatch(/a violation the spec does not waive with a reason/);
     expect(gate).toMatch(/the gate stays out of `gates` with that reason/);
+    expect(gate).toMatch(/is not an UNRUN lane/);
   });
 
   it("records the layer as present or missing in the QFAI gate", async () => {
@@ -108,8 +118,8 @@ describe("the verify gates run the layer and note whether it exists", () => {
       await read("skill", "qfai-sdd", "references", "design-anti-patterns.md"),
       "## States and accessibility",
     );
-    expect(checklist).toMatch(/Keyboard focus moves in an order the screen is not read in/);
-    expect(checklist).toMatch(/the name a screen reader announces/);
-    expect(checklist).toMatch(/the screen review checks both by hand/);
+    expect(checklist).toMatch(/Alt text, ARIA labels and keyboard navigation are missing/);
+    const layer = section(await read("rule", "test-layers.md"), "### L6 Accessibility");
+    expect(layer).toMatch(/The screen review checks both by hand/);
   });
 });

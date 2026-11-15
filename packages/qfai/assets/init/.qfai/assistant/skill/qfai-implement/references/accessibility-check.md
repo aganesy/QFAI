@@ -77,14 +77,56 @@ and the rule's help text.
 
 ## The role fixture
 
-The spec sets `role` with `test.use`. The E2E layer's fixture file picks the storage state by that
-role and by the worker, as `.qfai/assistant/skill/qfai-implement/references/credential-reuse.md`
-keys a session by the pair of worker index and actor.
-Where the fixture file has no `role` option yet, add one:
+The spec sets `role` with `test.use`. Keep one session per worker index and role: two workers never
+share an account, and two roles never share a session. A visitor signs in nowhere and runs with an
+empty storage state, so it needs no account.
+
+The setup project signs one account in per worker for each role the spec names other than
+`visitor`, and saves its storage state under a path keyed by both. The path helper lives in its own module, so
+the fixture file can import it without loading the setup test:
+
+```ts
+// <testsDir>/e2e/sessions.ts
+import path from "node:path";
+
+/** Every role the accessibility spec names that signs in. */
+export const SIGNED_IN_ROLES = ["member"] as const;
+
+export function statePath(directory: string, role: string, slot: number): string {
+  return path.join(directory, `${role}-${String(slot)}.json`);
+}
+```
+
+```ts
+// <testsDir>/e2e/auth.setup.ts
+import { chmod } from "node:fs/promises";
+import { test as setup } from "@playwright/test";
+
+import { SIGNED_IN_ROLES, statePath } from "./sessions";
+
+setup("sign in one account per worker and role", async ({ browser }) => {
+  const directory = ownedSessionDirectory();
+  for (const role of SIGNED_IN_ROLES) {
+    for (let slot = 0; slot < setup.info().config.workers; slot++) {
+      const account = await createAccount(role, String(slot));
+      await recordCreated(directory, account.id);
+      const context = await browser.newContext();
+      await signIn(await context.newPage(), account);
+      await context.storageState({ path: statePath(directory, role, slot) });
+      await chmod(statePath(directory, role, slot), 0o600);
+      await context.close();
+    }
+  }
+});
+```
+
+The fixture file picks the storage state by the role and the worker's parallel index:
 
 ```ts
 // <testsDir>/e2e/fixtures.ts
 import { test as base } from "@playwright/test";
+
+import { statePath } from "./sessions";
 
 export const test = base.extend<{ role: string }>({
   role: ["member", { option: true }],
@@ -100,8 +142,10 @@ export const test = base.extend<{ role: string }>({
 export { expect } from "@playwright/test";
 ```
 
-`statePath` and `ownedSessionDirectory` are the E2E layer's own helpers. The setup project signs one
-account in per worker for each role the spec names.
+`ownedSessionDirectory`, `createAccount`, `recordCreated` and `signIn` are the E2E layer's own
+helpers; the teardown that deletes the run's accounts removes every role's states with them. Where
+the E2E layer already keys its sessions by worker only, replace its `statePath` and setup loop with
+these two rather than keeping both.
 
 ## Waiving a violation
 

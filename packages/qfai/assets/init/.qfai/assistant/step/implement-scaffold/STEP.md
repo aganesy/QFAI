@@ -127,27 +127,35 @@ with `/`.
 
 Otherwise:
 
-1. Where the E2E layer does not run Playwright, install and write nothing,
-   and report it, so whoever owns tech.md can choose how the layer runs.
+1. Where the E2E layer does not run Playwright for JavaScript or TypeScript,
+   install and write nothing, and report it, so whoever owns tech.md can
+   choose how the layer runs.
 2. When `@axe-core/playwright` is not a dev dependency in the project's
    package manifest, install it as one with the project's package manager.
 3. When no selected test file calls axe, write the spec
    `.qfai/assistant/skill/qfai-implement/references/accessibility-check.md`
    gives under `<testsDir>/e2e/`. Fill its route map from the UI contracts:
    each role with every route that role can reach.
-4. The spec signs in through the E2E layer's sign-in for each role. Record
-   that it needs an authenticated actor, as § Procedure item 4 says.
+4. When the spec already exists, add to its route map each route starting
+   with `/` that the current flow's UI contracts declare and the map lacks,
+   under every role that can reach it.
+5. The spec signs in through the E2E layer's sign-in for each role other
+   than a visitor, which signs in nowhere. Record that it needs an
+   authenticated actor when it names such a role, as § Procedure item 4 says.
 
-The check needs no setup when the dependency is installed and a selected test
-file calls axe, or when a run already reported that the E2E layer does not run
-Playwright and the layer has not changed since.
+The check needs no setup when the dependency is installed, a selected test
+file calls axe, and its route map holds every route starting with `/` that
+the current flow's UI contracts declare, or when a run already reported that
+the E2E layer does not run Playwright for JavaScript or TypeScript and the
+layer has not changed since.
 
 ## Passes when
 
 Read first: the BF and AC items of the flow that no `Test exception:` row
 names, and the tests that annotate them. The step passes when every one
 already has an annotating test at its layer, § Component catalogue needs no
-setup and § Accessibility check needs no setup. The pass names the test for each item.
+setup and § Accessibility check needs no setup. The pass names the test for
+each item.
 
 The step also passes when the work order names no flow because it carries
 only a delegated release's hand-made edit: the extraction names the `release`
@@ -160,5 +168,6 @@ names no flow still stops this step.
 
 PASS when every BF and AC of the flow that no `Test exception:` row names
 has an annotating test at its layer, § Component catalogue needs no setup,
-§ Accessibility check needs no setup, and `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
+§ Accessibility check needs no setup, and
+`npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
 error owned by this flow.

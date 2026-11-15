@@ -62,19 +62,18 @@ to run it and provide the output. Never assume PASS without evidence.
 
 ### Accessibility tests
 
-The accessibility gate is in scope where
-`.qfai/assistant/rule/test-layers.md#l6-accessibility` applies: the UI
-contracts declare a screen whose route starts with `/`, and the project has
-its spec. The spec runs through
-the `Test` command with the E2E tests, and the gate records its result apart
-from theirs.
+The accessibility gate's condition is that the project has the accessibility
+spec `.qfai/assistant/rule/test-layers.md#l6-accessibility` defines. The spec
+runs through the `Test` command with the E2E tests, and the gate records its
+result apart from theirs.
 
 - FAIL, naming each route, role and axe rule, when a route has a violation the
   spec does not waive with a reason.
 - PASS when every route the spec checks has no violation left open.
-- Where the layer applies and the project has no spec, the gate stays out of
-  `gates` with that reason, as `common-gate-run` step 1 says for a condition
-  that is false. `verify-qfai-gate` records the missing layer.
+- Where the project has no spec, the condition is false: the gate stays out
+  of `gates` with that reason, as `common-gate-run` step 1 says, and is not an
+  UNRUN lane. `QFAI-AXE-001` reports the missing spec in a project the layer
+  applies to, and `verify-qfai-gate` records it.
 
 ### Visual check of a UI change
 

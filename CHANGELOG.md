@@ -8,8 +8,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The built app is checked for accessibility on every route.**
   `test-layers.md` gains an accessibility layer: axe through
-  `@axe-core/playwright`, limited to the WCAG 2.2 A and AA rules, on every route
-  the UI contracts declare, as each role that can reach it. A violation fails
+  `@axe-core/playwright`, limited to the WCAG 2.2 A and AA rules, on every web
+  route (one starting with `/`) the UI contracts declare, as each role that can
+  reach it. A violation fails
   unless the spec waives it with a reason, and keyboard order and screen-reader
   names stay in the screen review. In a UI project `implement-scaffold` installs
   `@axe-core/playwright` as the project's dev dependency and writes the spec
