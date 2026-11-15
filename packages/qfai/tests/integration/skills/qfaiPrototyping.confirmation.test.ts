@@ -569,7 +569,9 @@ describe.each(TREES)("%s", (tree) => {
   // QFAI:EX-0001-0116-06
   it("blocks on a floor part the run's screen lacks and keeps an earlier gap as critique", async () => {
     const prompt = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
-    expect(prompt).toContain("`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`");
+    expect(prompt).toContain(
+      "`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`",
+    );
     expect(prompt).toContain(
       "`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md#every-screen`",
     );
