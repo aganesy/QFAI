@@ -119,21 +119,26 @@ export async function locateToolAgainstProject(
  *
  * The copy is the project's own when it lies under the nearest declaring
  * directory (npm's `node_modules/qfai`, pnpm's store, a hoist to a workspace
- * root that declares it), when it is reached through that directory's linked
- * `node_modules`, or when that directory's `node_modules/qfai` is a link to it
- * (`npm link`, a workspace package). Only then does the project's lockfile say
- * which version should be running.
+ * root that declares it) or is reached through that directory's linked
+ * `node_modules`. Only then does the project's lockfile say which version
+ * should be running. A copy that directory's `node_modules/qfai` links to is
+ * not counted: `npm link` and `yarn link` leave the lockfile pinning the
+ * registry version, so a local build tried that way would always differ.
+ *
+ * `toolPackageDir` stands in for the running copy's directory, which a test
+ * cannot move; it defaults to that directory.
  */
-export async function findOwnCopyProjectDir(root: string): Promise<string | null> {
-  const packageDir = await resolveToolPackageDir();
+export async function findOwnCopyProjectDir(
+  root: string,
+  toolPackageDir?: string | null,
+): Promise<string | null> {
+  const packageDir = toolPackageDir === undefined ? await resolveToolPackageDir() : toolPackageDir;
   if (packageDir === null) return null;
   const declaringDir = await findDeclaringDir(path.resolve(root));
   if (declaringDir === null) return null;
   const realPackageDir = await toRealPath(packageDir);
   if (!classifyAgainstDeclaration(declaringDir, realPackageDir)) return declaringDir;
-  if (await resolvesThroughOwnNodeModules(declaringDir, realPackageDir)) return declaringDir;
-  const linked = await realPathOrNull(path.join(declaringDir, "node_modules", PACKAGE_NAME));
-  return linked === realPackageDir ? declaringDir : null;
+  return (await resolvesThroughOwnNodeModules(declaringDir, realPackageDir)) ? declaringDir : null;
 }
 
 /**

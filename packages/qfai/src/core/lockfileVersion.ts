@@ -1,8 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parse as parseYaml } from "yaml";
-
 import { findOwnCopyProjectDir, resolveToolVersion } from "./version.js";
 
 /** The package manager a lockfile belongs to. */
@@ -86,26 +84,48 @@ export function npmPinnedVersion(text: string): string | null {
   return registryVersion(field(entry, "version"));
 }
 
+const PNPM_DEPENDENCY_FIELDS = new Set(["dependencies", "devDependencies", "optionalDependencies"]);
+
 /**
- * pnpm: the `qfai` dependency of the importer `.`, in any dependency field.
- * Its `version` is `x.y.z` for a registry install and `link:<path>` for a
- * workspace package.
+ * pnpm: the `version` of the `qfai` dependency of the importer `.`, in any
+ * dependency field. It is `x.y.z` for a registry install and `link:<path>` for
+ * a workspace package.
  *
- * SIMPLIFIED: a lockfile older than pnpm 7, which has no `importers` map for a
- * single-package project, is not read. Lift when: such a project needs the
- * comparison.
+ * Scanned line by line rather than parsed: the check runs before every
+ * command, and a lockfile can run to megabytes. The importers come before the
+ * packages, so the scan stops once it leaves them.
+ *
+ * SIMPLIFIED: only lockfile version 6 (pnpm 8) or later is read, whose
+ * importer dependencies are maps of `specifier` and `version`. Lift when: a
+ * project on an older lockfile needs the comparison.
  */
 export function pnpmPinnedVersion(text: string): string | null {
-  let parsed: unknown;
-  try {
-    parsed = parseYaml(text);
-  } catch {
-    return null;
-  }
-  const importer = field(field(parsed, "importers"), ".");
-  for (const dependencies of ["dependencies", "devDependencies", "optionalDependencies"]) {
-    const entry = field(field(importer, dependencies), "qfai");
-    if (entry !== undefined) return registryVersion(field(entry, "version"));
+  const keys: string[] = [];
+  const indents: number[] = [];
+  let leftImporters = false;
+  for (const line of text.split(/\r?\n/)) {
+    const match = /^(\s*)(['"]?)([^'":#]+)\2:(?:\s+(.*))?$/.exec(line);
+    if (match === null) continue;
+    const indent = (match[1] ?? "").length;
+    const key = (match[3] ?? "").trim();
+    while ((indents.at(-1) ?? -1) >= indent) {
+      indents.pop();
+      if (keys.pop() === "importers") leftImporters = true;
+    }
+    if (leftImporters) return null;
+    indents.push(indent);
+    keys.push(key);
+    const [top, importer, dependencies, name, leaf] = keys;
+    if (
+      keys.length === 5 &&
+      top === "importers" &&
+      importer === "." &&
+      PNPM_DEPENDENCY_FIELDS.has(dependencies ?? "") &&
+      name === "qfai" &&
+      leaf === "version"
+    ) {
+      return registryVersion((match[4] ?? "").replace(/^['"]|['"]$/g, ""));
+    }
   }
   return null;
 }
@@ -158,16 +178,33 @@ export type StaleInstall = {
  *
  * The lockfile is read once, and only when the copy is the project's own: a
  * copy from elsewhere is not the one the lockfile installs, which
- * `qfai validate` reports on its own.
+ * `qfai validate` reports on its own. Build metadata (`+...`) does not make
+ * two versions differ.
+ *
+ * SIMPLIFIED: the lockfile is looked for only in the directory that declares
+ * qfai, so the check is off in a workspace sub-package that declares qfai,
+ * which has no lockfile of its own. Lift when: a monorepo needs it, by walking
+ * up to the workspace root's lockfile and reading that sub-package's importer.
+ *
+ * `tool` stands in for the running copy, which a test cannot move; it defaults
+ * to that copy.
  */
-export async function findStaleInstall(root: string): Promise<StaleInstall | null> {
-  const dir = await findOwnCopyProjectDir(root);
+export async function findStaleInstall(
+  root: string,
+  tool?: { readonly packageDir: string | null; readonly version: string },
+): Promise<StaleInstall | null> {
+  const dir = await findOwnCopyProjectDir(root, tool?.packageDir);
   if (dir === null) return null;
   const pin = await readLockfilePin(dir);
   if (pin === null) return null;
-  const running = await resolveToolVersion();
-  if (running === "unknown" || running === pin.version) return null;
+  const running = tool?.version ?? (await resolveToolVersion());
+  if (running === "unknown" || withoutBuild(running) === withoutBuild(pin.version)) return null;
   return { running, pin, dir };
+}
+
+/** A version without its `+build` metadata, which semver precedence ignores. */
+function withoutBuild(version: string): string {
+  return version.split("+")[0] ?? version;
 }
 
 /** The one line a stale install prints on stderr, ending with what to do. */

@@ -58,7 +58,7 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
       `${EXIT_CODES.ok} = success,`,
       `${EXIT_CODES.findings} = the --fail-on threshold was reached, or a runtime error`,
       "      (an output I/O exception: a failed validate JSON write, a failed doctor --out write),",
-      `      and validate stops with ${EXIT_CODES.findings} when the installed qfai is not the version the lockfile pins`,
+      `      and validate stops with ${EXIT_CODES.findings} when the installed qfai is not the version the lockfile pins, even under --fail-on never`,
     ],
   },
   {
@@ -134,7 +134,8 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     label: "other commands",
     lines: [
       `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,
-      `${EXIT_CODES.findings} = a runtime error`,
+      `${EXIT_CODES.findings} = a runtime error, or for sdd preflight an installed qfai that is not`,
+      "      the version the lockfile pins (even under --fail-on never)",
       "(discussion)",
     ],
   },

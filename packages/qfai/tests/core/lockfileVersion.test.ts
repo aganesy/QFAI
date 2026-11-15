@@ -71,6 +71,35 @@ describe("pnpmPinnedVersion", () => {
     expect(pnpmPinnedVersion(workspace)).toBeNull();
     expect(pnpmPinnedVersion("importers:\n  .:\n    dependencies: {}\n")).toBeNull();
   });
+
+  it("reads a quoted importer key and stops at the end of the importers", () => {
+    const quoted = [
+      "importers:",
+      "",
+      "  '.':",
+      "    dependencies:",
+      "      qfai:",
+      "        specifier: 2.4.0",
+      "        version: '2.4.0'",
+      "",
+    ].join("\n");
+    const onlyInPackages = [
+      "importers:",
+      "  .:",
+      "    dependencies: {}",
+      "packages:",
+      "  qfai@2.4.0:",
+      "    resolution: {integrity: sha512-x}",
+      "importers2:",
+      "  .:",
+      "    dependencies:",
+      "      qfai:",
+      "        version: 2.4.0",
+      "",
+    ].join("\n");
+    expect(pnpmPinnedVersion(quoted)).toBe("2.4.0");
+    expect(pnpmPinnedVersion(onlyInPackages)).toBeNull();
+  });
 });
 
 // QFAI:EX-0001-0313-03

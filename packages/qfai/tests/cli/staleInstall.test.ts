@@ -1,27 +1,52 @@
 import { mkdir, mkdtemp, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { run } from "../../src/cli/main.js";
-import { findStaleInstall } from "../../src/core/lockfileVersion.js";
-import { resolveToolVersion } from "../../src/core/version.js";
+import type * as LockfileModule from "../../src/core/lockfileVersion.js";
+import { findStaleInstall, type StaleInstall } from "../../src/core/lockfileVersion.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
-const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+// The gate tests hand `main.ts` a stale install directly: the running copy is
+// this source tree, which no temp project can hold as its own install.
+const stale = vi.hoisted(() => ({ value: null as StaleInstall | null }));
+vi.mock("../../src/core/lockfileVersion.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof LockfileModule>();
+  return {
+    ...actual,
+    findStaleInstall: async (...args: Parameters<typeof actual.findStaleInstall>) =>
+      stale.value ?? (args[1] === undefined ? null : actual.findStaleInstall(...args)),
+  };
+});
+
 const roots: string[] = [];
 
 afterEach(async () => {
+  stale.value = null;
   vi.restoreAllMocks();
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
-/** A project whose `node_modules/qfai` links to the package under test, and whose npm lockfile pins `pinned`. */
-async function linkedProject(pinned: string | null, linked = true): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-stale-"));
-  roots.push(root);
+/**
+ * A project declaring qfai, whose npm lockfile pins `pinned`, and the
+ * directory of the qfai copy it holds: an installed copy under its own
+ * `node_modules`, or, for `npm-link`, a copy elsewhere that
+ * `node_modules/qfai` links to, as `npm link` leaves it.
+ */
+async function project(
+  pinned: string | null,
+  layout: "installed" | "npm-link" = "installed",
+): Promise<{ root: string; packageDir: string }> {
+  const base = await mkdtemp(path.join(os.tmpdir(), "qfai-stale-"));
+  roots.push(base);
+  const root = path.join(base, "project");
+  const installed = path.join(root, "node_modules", "qfai");
+  const elsewhere = path.join(base, "checkout", "qfai");
+  const packageDir = layout === "installed" ? installed : elsewhere;
+  await mkdir(packageDir, { recursive: true });
+  await writeFile(path.join(packageDir, "package.json"), JSON.stringify({ name: "qfai" }), "utf-8");
   await writeFile(
     path.join(root, "package.json"),
     JSON.stringify({ name: "p", devDependencies: { qfai: "^0.0.1" } }),
@@ -31,15 +56,10 @@ async function linkedProject(pinned: string | null, linked = true): Promise<stri
     const lock = { packages: { "": {}, "node_modules/qfai": { version: pinned } } };
     await writeFile(path.join(root, "package-lock.json"), JSON.stringify(lock), "utf-8");
   }
-  if (linked) {
-    await mkdir(path.join(root, "node_modules"), { recursive: true });
-    await symlink(
-      packageRoot,
-      path.join(root, "node_modules", "qfai"),
-      process.platform === "win32" ? "junction" : "dir",
-    );
+  if (layout === "npm-link") {
+    await symlink(elsewhere, installed, process.platform === "win32" ? "junction" : "dir");
   }
-  return root;
+  return { root, packageDir };
 }
 
 type Captured = { stdout: string; stderr: string; exitCode: number | undefined };
@@ -69,25 +89,36 @@ async function cli(argv: string[], cwd: string): Promise<Captured> {
 
 // QFAI:EX-0001-0313-05
 describe("a stale install", () => {
+  it("is found for the project's installed copy at another version than the lockfile pins", async () => {
+    const { root, packageDir } = await project("0.0.1");
+
+    const found = await findStaleInstall(root, { packageDir, version: "2.5.0" });
+
+    expect(found).toMatchObject({
+      running: "2.5.0",
+      pin: { manager: "npm", file: "package-lock.json", version: "0.0.1" },
+    });
+  });
+
   it("warns on a command that is not a gate, naming both versions and the install command", async () => {
-    const root = await linkedProject("0.0.1");
-    const running = await resolveToolVersion();
+    const { root, packageDir } = await project("0.0.1");
+    stale.value = await findStaleInstall(root, { packageDir, version: "2.5.0" });
 
     const result = await cli(["report", "--root", root], root);
 
     const lines = result.stderr.split("\n").filter((line) => line.includes("pins"));
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toContain(`the installed qfai is ${running}`);
-    expect(lines[0]).toContain("package-lock.json pins 0.0.1");
+    expect(lines[0]).toContain("the installed qfai is 2.5.0, but package-lock.json pins 0.0.1");
     expect(lines[0]).toContain("`npm ci`");
     expect(lines[0]).not.toContain("This command stops");
   });
 
-  it("stops validate and sdd preflight with exit 1 before they run", async () => {
-    const root = await linkedProject("0.0.1");
+  it("stops validate and sdd preflight with exit 1 before they run, even under --fail-on never", async () => {
+    const { root, packageDir } = await project("0.0.1");
+    stale.value = await findStaleInstall(root, { packageDir, version: "2.5.0" });
 
-    const validate = await cli(["validate", "--root", root], root);
-    const preflight = await cli(["sdd", "preflight", "--root", root], root);
+    const validate = await cli(["validate", "--root", root, "--fail-on", "never"], root);
+    const preflight = await cli(["sdd", "preflight", "--root", root, "--fail-on", "never"], root);
 
     for (const result of [validate, preflight]) {
       expect(result.exitCode).toBe(1);
@@ -97,7 +128,8 @@ describe("a stale install", () => {
   });
 
   it("refuses workflow plan with a stale-install reason naming the lockfile", async () => {
-    const root = await linkedProject("0.0.1");
+    const { root, packageDir } = await project("0.0.1");
+    stale.value = await findStaleInstall(root, { packageDir, version: "2.5.0" });
 
     const result = await cli(["workflow", "plan", "--order", "--root", root], root);
 
@@ -112,26 +144,31 @@ describe("a stale install", () => {
 
 // QFAI:EX-0001-0313-06
 describe("no stale install", () => {
-  it("is found for a matching pin, a workspace pin, no lockfile or a copy that is not the project's", async () => {
-    const running = await resolveToolVersion();
-    const workspace = await linkedProject(null);
+  it("is found for a matching pin, build metadata, a workspace pin, no lockfile or a copy elsewhere", async () => {
+    const tool = (packageDir: string) => ({ packageDir, version: "2.5.0" });
+    const matching = await project("2.5.0");
+    const build = await project("2.5.0+build.1");
+    const none = await project(null);
+    const workspace = await project(null);
     await writeFile(
-      path.join(workspace, "pnpm-lock.yaml"),
+      path.join(workspace.root, "pnpm-lock.yaml"),
       "importers:\n  .:\n    devDependencies:\n      qfai:\n        specifier: workspace:*\n        version: link:packages/qfai\n",
       "utf-8",
     );
+    const elsewhere = await project("0.0.1");
 
-    expect(await findStaleInstall(await linkedProject(running))).toBeNull();
-    expect(await findStaleInstall(workspace)).toBeNull();
-    expect(await findStaleInstall(await linkedProject(null))).toBeNull();
-    expect(await findStaleInstall(await linkedProject("0.0.1", false))).toBeNull();
+    expect(await findStaleInstall(matching.root, tool(matching.packageDir))).toBeNull();
+    expect(await findStaleInstall(build.root, tool(build.packageDir))).toBeNull();
+    expect(await findStaleInstall(none.root, tool(none.packageDir))).toBeNull();
+    expect(await findStaleInstall(workspace.root, tool(workspace.packageDir))).toBeNull();
+    expect(
+      await findStaleInstall(elsewhere.root, tool(path.join(os.tmpdir(), "elsewhere", "qfai"))),
+    ).toBeNull();
   });
 
-  it("prints no warning on a command when the pin matches", async () => {
-    const root = await linkedProject(await resolveToolVersion());
+  it("is not found for a copy that node_modules/qfai links to, as npm link leaves it", async () => {
+    const { root, packageDir } = await project("0.0.1", "npm-link");
 
-    const result = await cli(["report", "--root", root], root);
-
-    expect(result.stderr).not.toContain("pins");
+    expect(await findStaleInstall(root, { packageDir, version: "2.5.0" })).toBeNull();
   });
 });
