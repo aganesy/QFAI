@@ -31,6 +31,21 @@ describe("the contract step checks each screen against the business-screen list"
   });
 });
 
+// QFAI:AC-0001-0305-02
+describe("the contract step writes the app frame once, where the rule and the reviewer read it", () => {
+  it("puts a left-out once-per-application part's reason in the contract the rule and the reviewer name", async () => {
+    const step = flat(await read(".qfai/assistant/step/sdd-contract/STEP.md"));
+    const rule = flat(await read("root/.agents/rules/interface-clarity.md"));
+    const reviewer = flat(await read(".qfai/assistant/agent/product-surface-reviewer.md"));
+    expect(step).toContain("one UI contract, the app frame, holds them");
+    expect(step).toContain(
+      "A once-per-application part the project leaves out, the shell included, gets its reason in the frame.",
+    );
+    expect(rule).toContain("its reason goes in the app frame");
+    expect(reviewer).toContain("(for a once-per-application part, in the app frame)");
+  });
+});
+
 // QFAI:AC-0001-0305-03
 describe("the contract step names each application screen's type by its ID", () => {
   it("writes `pattern: <id>` with an ID the business UI pattern reference gives", async () => {
