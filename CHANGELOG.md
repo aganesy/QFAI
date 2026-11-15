@@ -29,6 +29,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Settled work that adds screens gets the design and prototype stages.**
+  The extraction has a new qualifier, `new-screens`, for a settled change that
+  adds new UI contracts or new routes users see: an approved record with a
+  task, a settled upstream design, or an order. Such a change now routes
+  `apply-settled-prototype` instead of `apply-settled`. Before, it went straight
+  to implementation with no design or prototype stage. A new feature with no
+  settled record is covered by `visual-open`.
+
 - **The parts of a business screen outrank the minimal-scope article.**
   Article VII of the shipped constitution now names the list under
   `## What a business screen always has` in `interface-clarity.md` among what
