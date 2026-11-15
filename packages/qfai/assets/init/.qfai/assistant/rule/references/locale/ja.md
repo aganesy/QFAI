@@ -8,9 +8,9 @@ Write each format below into the contract that owns the field or screen, and rec
 
 ## Input normalisation
 
-- Search and comparison use a key made with `value.normalize("NFKC")` on both sides: the stored value and the query. NFKC turns full-width Latin letters and digits (`ＡＢＣ１２３`) into ASCII and half-width katakana (`ｶﾀｶﾅ`) into full-width katakana.
-- Store what the user typed and compare the normalised key. NFKC also rewrites characters such as `①` to `1` and `㈱` to `(株)`, which a display must not lose.
-- NFKC does not change letter case and does not fold hiragana into katakana. Lower-case the key with `toLowerCase()` after NFKC. Where `あ` must match `ア`, map hiragana U+3041 to U+3096 to katakana by adding 0x60 to each code point, on both sides.
+- Search and comparison use a key made with `value.normalize("NFKC")` on both sides: the stored value and the query. NFKC turns full-width Latin letters and digits (U+FF21 to U+FF3A, U+FF41 to U+FF5A, U+FF10 to U+FF19) into ASCII and half-width katakana (U+FF66 to U+FF9F) into full-width katakana.
+- Store what the user typed and compare the normalised key. NFKC also rewrites characters such as the circled digit one (U+2460) to `1` and the parenthesised ideograph for a stock company (U+3231) to three characters, `(`, U+682A and `)`, which a display must not lose.
+- NFKC does not change letter case and does not fold hiragana into katakana. Lower-case the key with `toLowerCase()` after NFKC. Where a hiragana letter must match its katakana (U+3042 and U+30A2, for example), map hiragana U+3041 to U+3096 to katakana by adding 0x60 to each code point, on both sides.
 - Trim the normalised key. A browser's `trim()` removes the full-width space U+3000 either way, but SQL `TRIM` and many server-side trims remove only ASCII spaces; NFKC turns U+3000 into an ASCII space first, so every trim treats it alike.
 - A database search applies the same key. Store it in its own column, or normalise in the query the same way; do not normalise only in the browser.
 
@@ -24,17 +24,17 @@ Japanese is typed through an input method: the user types kana, converts it, and
 
 ## Currency and numbers
 
-- Format yen with `new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" })`. JPY has no minor unit, so the output has no decimal places; do not store or show sen. The symbol is the full-width `￥` (U+FFE5), not `¥` (U+00A5), which a test or snapshot must match.
-- Many business screens show amounts as a number followed by `円`. Where the contract chooses that form, format the number with `new Intl.NumberFormat("ja-JP")` and append `円`. The contract names one form and every screen uses it.
+- Format yen with `new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" })`. JPY has no minor unit, so the output has no decimal places; do not store or show sen. The symbol is the full-width yen sign U+FFE5, not U+00A5, which a test or snapshot must match.
+- Many business screens show amounts as a number followed by the yen character U+5186. Where the contract chooses that form, format the number with `new Intl.NumberFormat("ja-JP")` and append U+5186. The contract names one form and every screen uses it.
 - Keep money in integers of yen. Round tax with the rule the contract states (round down, round half up or round up) at the point the contract states, per line or per invoice.
-- `notation: "compact"` with `ja-JP` groups large numbers by 万 and 億. Use it only where the contract allows an approximate figure.
+- `notation: "compact"` with `ja-JP` groups large numbers by ten thousand (U+4E07) and a hundred million (U+5104). Use it only where the contract allows an approximate figure.
 - Parse a typed amount after NFKC, then remove the grouping commas. Reject what is still not a whole number.
 
 ## Dates and eras
 
-- Format dates with `Intl.DateTimeFormat` and the `ja-JP` locale, for example `{ dateStyle: "long" }` for `2026年11月15日`. Do not build date strings by hand per screen.
+- Format dates with `Intl.DateTimeFormat` and the `ja-JP` locale, for example `{ dateStyle: "long" }` for 2026, U+5E74, 11, U+6708, 15, U+65E5 (year, month and day marks after each number). Do not build date strings by hand per screen.
 - Set `timeZone: "Asia/Tokyo"` where a date is shown or a day boundary is computed. A server or CI runtime is often in UTC, and a time near midnight then falls on the wrong day.
-- Japanese era years use the locale `ja-JP-u-ca-japanese` with `{ era: "long", year: "numeric" }`, which formats 2026 as 令和8年. The first year of an era prints as `1` or as `元` depending on the runtime; where the product shows 元年, test it on the target runtime.
+- Japanese era years use the locale `ja-JP-u-ca-japanese` with `{ era: "long", year: "numeric" }`, which formats 2026 as the Reiwa era name (U+4EE4 U+548C), 8 and the year mark U+5E74. The first year of an era prints as `1` or as the character U+5143 depending on the runtime; where the product shows U+5143 for the first year, test it on the target runtime.
 - An era date the user types is converted to a Gregorian date before it is stored. Store dates in ISO 8601 and convert only for display.
 - The contract states which screens show era years. A government form often requires them; most other screens do not.
 

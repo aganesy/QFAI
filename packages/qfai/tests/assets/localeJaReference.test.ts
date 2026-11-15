@@ -61,7 +61,7 @@ describe("the Japanese locale reference covers each settled point", () => {
       "`word-break: keep-all`",
       "runs once more on `compositionend`",
       "has 10 or 11 digits",
-      "`￥` (U+FFE5)",
+      "full-width yen sign U+FFE5",
     ]) {
       expect(text, phrase).toContain(phrase);
     }
