@@ -16,6 +16,8 @@ import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "../core/logger.js";
 import { findConfigRoot } from "../core/config.js";
+import { describeStaleInstall, findStaleInstall } from "../core/lockfileVersion.js";
+import { refusal } from "../core/workflow/plan.js";
 import {
   compareInstalledToDeclared,
   readDeclaredQfaiRange,
@@ -119,6 +121,28 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     return;
   }
 
+  // A pulled qfai upgrade leaves a checkout that has not reinstalled running
+  // the old copy, and nothing else in the run says so. Every command warns;
+  // the gates stop, because their verdict would come from the wrong version.
+  const stale = await findStaleInstall(options.root);
+  if (stale !== null) {
+    const stops = isGate(command, options);
+    error(describeStaleInstall(stale, stops));
+    if (command === "workflow") {
+      process.exitCode = emitPlanDocument(
+        refusal(
+          `The installed qfai is ${stale.running}, but ${stale.pin.file} pins ${stale.pin.version}, so run the project's install command and try again.`,
+          [{ reason: "stale-install", subject: stale.pin.file }],
+        ),
+      );
+      return;
+    }
+    if (stops) {
+      process.exitCode = EXIT_CODES.findings;
+      return;
+    }
+  }
+
   // Every command except `validate` sends a filesystem fault straight to
   // `cli/index.ts`, which writes `err.message` and exits 1 — a line naming the
   // errno and the path but not the command, and not saying that the run is
@@ -148,6 +172,15 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     // trap for the next edit.
     throw describeIncompleteRun(thrown, command) ?? thrown;
   }
+}
+
+/** The commands a stale install stops: `workflow plan` and the gates `validate` and `sdd preflight`. */
+function isGate(command: string, options: ParsedArgs["options"]): boolean {
+  return (
+    command === "workflow" ||
+    command === "validate" ||
+    (command === "sdd" && options.sddAction === "preflight")
+  );
 }
 
 function requiredFileFailure(thrown: unknown): boolean {

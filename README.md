@@ -942,6 +942,11 @@ To upgrade by hand:
    and a reason if you keep your own version.
 6. Run `npx qfai doctor` and `npx qfai validate`, and fix what they report.
 7. Commit the result in one change.
+8. After the change is merged, every other checkout and worktree of the
+   project runs its install once it pulls the change, for example `npm ci`.
+   Until it does, its `node_modules` keeps the old qfai: every command warns
+   with both versions, and `npx qfai validate`, `npx qfai sdd preflight` and
+   `npx qfai workflow plan` stop.
 
 An agent asked to upgrade `qfai` follows these steps as a dependency update.
 

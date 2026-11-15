@@ -12,6 +12,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
+- **A checkout that did not reinstall after a qfai upgrade is caught.** When
+  the running qfai is the project's own copy and the lockfile
+  (`package-lock.json`, `pnpm-lock.yaml` or `yarn.lock`) pins another version,
+  every command prints one stderr line naming both versions and the install
+  command, and `qfai validate`, `qfai sdd preflight` and `qfai workflow plan`
+  stop with exit 1. A `workflow plan` refusal carries the new reason
+  `stale-install`. The upgrade guide now tells every checkout and worktree to
+  run its install after pulling a qfai upgrade.
 
 ## [2.5.0] - 2026-11-15
 

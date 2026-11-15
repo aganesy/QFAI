@@ -183,3 +183,4 @@
 | US-0001-0306 | Validate warns when tech.md names a catalogue no registry serves                       | `user-story-0001-0306/` |
 | US-0001-0307 | Catalogue the components a project already has                                         | `user-story-0001-0307/` |
 | US-0001-0308 | Write, build and review a marketing page against its own patterns                      | `user-story-0001-0308/` |
+| US-0001-0313 | A checkout that did not reinstall after a qfai upgrade is caught                       | `user-story-0001-0313/` |
