@@ -98,15 +98,16 @@ business rule. A part left out gets its reason in that screen's contract, as
 the rule says.
 
 Then name each screen's type in
-`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` and write
-the parts of that type the screen needs into its contract the same way, with
-the reason for each part it leaves out.
+`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` as
+`pattern: <id>` with the type's ID, such as `pattern: list`, and write the parts
+of that type the screen needs into its contract the same way, with the reason
+for each part it leaves out. A screen that fits no type leaves `pattern` out.
 
 A screen a visitor sees before signing in that exists to explain, persuade or
 inform, such as a home, audience, pricing, guide, about or legal page, declares
 `surface: marketing`; any other screen leaves the key out, or writes
 `surface: application`. A marketing screen skips the business-screen list and
-the business types above. Name the entry for each of its sections in
+the business types above and takes no `pattern`. Name the entry for each of its sections in
 `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` instead,
 write the parts it needs into the contract the same way, and record each
 image's source and licence. Its `states` combine the states of its sections.

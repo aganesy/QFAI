@@ -26,6 +26,7 @@ import { validateContractConsistency } from "./contractConsistency.js";
 import { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 import { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 import { validateUiPrototypeMode } from "./uiPrototypeMode.js";
+import { validateUiScreenPattern } from "./uiScreenPattern.js";
 import { validateUiScreenSurface } from "./uiScreenSurface.js";
 import { validateUiScreenEntries } from "./uiScreenEntries.js";
 import { issue } from "./utils.js";
@@ -121,6 +122,9 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   // The surface kind decides which pattern list a screen is built and reviewed
   // against, so a word outside the vocabulary points at a list that does not exist.
   issues.push(...(await validateUiScreenSurface(root, config)));
+  // The screen type names the entry of the business pattern reference a screen
+  // is built and reviewed against, so an unknown ID points at no entry.
+  issues.push(...(await validateUiScreenPattern(root, config)));
 
   return issues;
 }

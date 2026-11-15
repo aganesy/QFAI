@@ -10,6 +10,7 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 - Recommended ceiling: at most 7
 - Screen purpose and navigation: `purpose` and `navigation`
 - Surface kind: `surface`
+- Screen type: `pattern`
 - `elements[].id` naming policy
 - `elements[].label` is inspection-target text
 - `data-qfai` marker convention
@@ -127,6 +128,25 @@ screen is checked against the business-screen list and its business type; a
 marketing screen against its section entries in the marketing pattern
 reference. `npx qfai validate` reports any other value as `QFAI-CONTRACT-051`,
 at error.
+
+## Screen type: `pattern`
+
+An application screen names its type in the business UI pattern reference, so
+the author, the implementer and the reviewer read the same entry.
+
+| Value       | Type in the business UI pattern reference |
+| ----------- | ----------------------------------------- |
+| `list`      | List                                      |
+| `detail`    | Detail                                    |
+| `form`      | Create and edit form                      |
+| `settings`  | Settings                                  |
+| `members`   | Member management                         |
+| `dashboard` | Dashboard                                 |
+
+The key is optional. A screen that fits no type leaves it out and still gets
+the parts under "Every screen". A marketing screen leaves it out too: its
+sections are named against the marketing pattern reference. `npx qfai validate`
+reports any other value as `QFAI-CONTRACT-052`, at error.
 
 ## `elements[].id` naming policy
 
@@ -360,6 +380,7 @@ For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by 
 - [ ] Every UI-bearing contract has one full declared ID, at least one screen, and a matching `contracts.md` row.
 - [ ] Every screen states its `purpose` and its `navigation`: shell, entry points and where back leads.
 - [ ] Every screen a visitor sees before signing in declares `surface: marketing`; every other screen leaves the key out or writes `application`.
+- [ ] Every application screen of a business type names it as `pattern: <id>`.
 - [ ] Screen IDs, routes, primary tasks, labels, markers, and actions are stable and testable.
 - [ ] Every declared action has an observable effect, including relevant failure states.
 - [ ] Every screen lists all five `states`, each with what renders and the next action, or `none` with a reason.

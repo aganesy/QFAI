@@ -44,6 +44,8 @@ inline alert.
 
 ## List
 
+ID: `list`.
+
 Standard parts:
 
 - a title with the primary action that creates an item;
@@ -80,6 +82,8 @@ search, sort and paging run on the server for a list that can outgrow one page.
 
 ## Detail
 
+ID: `detail`.
+
 Standard parts:
 
 - the item's name and status at the top, with the actions that apply to it;
@@ -95,6 +99,8 @@ there are two of them; a deleted item whose page stays open with no notice.
 Catalogue: a description list, a page header with actions, an activity feed.
 
 ## Create and edit form
+
+ID: `form`.
 
 Standard parts:
 
@@ -114,6 +120,8 @@ Catalogue: a form layout with field, error and button components.
 
 ## Settings
 
+ID: `settings`.
+
 Standard parts:
 
 - sections a user can find by name, with a navigation between them when there
@@ -131,6 +139,8 @@ zone.
 
 ## Member management
 
+ID: `members`.
+
 Standard parts:
 
 - a list of members with name, role and status, searchable;
@@ -147,6 +157,8 @@ Catalogue: a list with avatars and role selectors, an invite dialog.
 
 ## Dashboard
 
+ID: `dashboard`.
+
 Standard parts:
 
 - the one question the screen answers: what needs this user's attention now;
@@ -162,9 +174,11 @@ Catalogue: stat cards, a task list, an activity feed.
 
 ## Using this reference
 
-- **Writing a UI contract.** For each screen, name its type here, then write
-  in the contract the parts this screen needs, and the reason for a part it
-  leaves out. A behaviour in its type's Behaviour list applies without being
+- **Writing a UI contract.** For each screen, name its type here as
+  `pattern: <id>` with the type's ID, such as `pattern: list`, then write in
+  the contract the parts this screen needs, and the reason for a part it
+  leaves out. `qfai validate` reports an ID this reference does not have as
+  `QFAI-CONTRACT-052`. A behaviour in its type's Behaviour list applies without being
   named; the contract records only a behaviour the screen leaves out, with
   the reason, such as a fixed list of a few items paged on the client.
 - **Implementing.** Build what the contract names. A part of the screen's type
@@ -177,4 +191,5 @@ Catalogue: stat cards, a task list, an activity feed.
   For a type with a Behaviour list, a behaviour the screen breaks with no
   recorded reason is a finding in the same way.
 
-A screen that fits no type here still gets the parts under "Every screen".
+A screen that fits no type here leaves `pattern` out and still gets the parts
+under "Every screen".

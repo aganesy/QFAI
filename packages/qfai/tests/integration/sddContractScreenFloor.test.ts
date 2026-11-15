@@ -30,3 +30,16 @@ describe("the contract step checks each screen against the business-screen list"
     expect(step).toContain(`check the screen against \`${LIST}\``);
   });
 });
+
+// QFAI:AC-0001-0305-03
+describe("the contract step names each application screen's type by its ID", () => {
+  it("writes `pattern: <id>` with an ID the business UI pattern reference gives", async () => {
+    const step = flat(await read(".qfai/assistant/step/sdd-contract/STEP.md"));
+    const reference = await read(
+      ".qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md",
+    );
+    expect(step).toContain("`pattern: <id>`");
+    expect(step).toContain("`pattern: list`");
+    expect(reference.split(/\r?\n/)).toContain("ID: `list`.");
+  });
+});

@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A UI contract screen names its business screen type by ID.** The screen
+  types of `qfai-sdd`'s `references/business-ui-patterns.md` now carry the IDs
+  `list`, `detail`, `form`, `settings`, `members` and `dashboard`, and an
+  application screen may declare its type as `pattern: <id>`, which the
+  `sdd-contract` step writes. `qfai validate` reports any other value as
+  `QFAI-CONTRACT-052`, at error; a screen without the key is asked nothing,
+  and a marketing screen leaves it out.
+
 ### Fixed
 
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
