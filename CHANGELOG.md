@@ -422,6 +422,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A value only in a description is still reported, and the message now says the
   API contract declares no `enum` for it.
 
+- **A `Derived (not stored)` declaration that does not parse is reported with
+  the form it needs.** The `QFAI-CONTRACT-041` message said only that the line
+  did not parse, so authors rewrote it by trial. It now quotes the expected form
+  `-- Derived (not stored): <column> = <value>[, <value>...] from <input>[, <input>...]`,
+  one declaration that parses, and the reference section that defines the
+  grammar. That section now states the grammar in full, and the DB contract
+  template carries a commented example. Fixes #4402.
+
 - **`qfai validate --timings` times each UI/UX check on its own.** The six
   UI/UX checks ran side by side, so a check that waited on file reads was
   charged for the others' work and the `slowest` names could point at a check

@@ -648,6 +648,40 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
         expect(domain[0]?.message).toContain("powered_off, standby");
       });
 
+      // QFAI:EX-0001-0039-47
+      it("names the expected form, a valid example and the reference in the message", async () => {
+        // Both lines were rewritten by trial when the message said only that
+        // they did not parse: a comma before `from`, and prose after the key.
+        const failing = [
+          "-- Derived (not stored): status = standby, powered_off, from enabled, connection_status and the JST clock.",
+          "-- Derived (not stored): a line is on standby when enabled = false; see the runbook",
+        ];
+        const { api, dbs } = await seedMany(SIM_LINE_API, {
+          "db-0003-sim-lines.sql": DERIVED_DB.replace(
+            "-- Derived (not stored): status = standby, powered_off from enabled, connection_status, JST clock",
+            failing.join("\n"),
+          ),
+        });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(2);
+        // The example is the declaration the first test of this group proves
+        // readable, so the message cannot quote a line that would fail too.
+        const valid = DERIVED_DB.split("\n")[0] ?? "";
+        for (const [index, entry] of declaration.entries()) {
+          expect(entry.message).toContain(failing[index]);
+          expect(entry.message).toContain(
+            "`-- Derived (not stored): <column> = <value>[, <value>...] from <input>[, <input>...]`",
+          );
+          expect(entry.message).toContain(`\`${valid}\``);
+          expect(entry.message).toContain(
+            ".qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md#derived-not-stored",
+          );
+        }
+      });
+
       it("reports a declaration covering a value the DB stores anyway", async () => {
         // A contradiction, not a redundancy: the line says the value is not
         // stored and the domain says it is.
