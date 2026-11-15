@@ -24,9 +24,10 @@ import {
   findRedefinitions,
   parseSqlContract,
 } from "../../src/core/sqlContract.js";
+import type { Issue } from "../../src/core/types.js";
 import { validateContracts } from "../../src/core/validators/contracts.js";
 
-async function runOn(sql: string): Promise<Array<{ code: string; severity: string }>> {
+async function runOn(sql: string): Promise<Issue[]> {
   const root = path.join(
     os.tmpdir(),
     `qfai-sql-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -38,8 +39,7 @@ async function runOn(sql: string): Promise<Array<{ code: string; severity: strin
       sql,
       "utf-8",
     );
-    const issues = await validateContracts(root, defaultConfig);
-    return issues.map((i) => ({ code: i.code, severity: i.severity }));
+    return await validateContracts(root, defaultConfig);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -202,7 +202,7 @@ describe("the existing DB checks are unchanged", () => {
     const finding = issues.find((i) => i.code === "QFAI-DB-001");
     expect(finding?.message).toContain("Dangerous SQL operation found: TRUNCATE");
     expect(finding?.message).toContain("applying this statement destroys data or structure");
-    expect(finding?.suggested_action).toContain("move a data reset to test support");
+    expect(finding?.suggested_action).toContain("move a data reset to test setup or fixtures");
     expect(finding?.suggested_action).toContain(".qfai/waivers.yml");
   });
 
