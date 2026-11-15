@@ -242,7 +242,7 @@ only after reading what it depends on.
 - `docs-answerable`, with `question-help`: The documents or the code already answer it. Read what answers it first.
 - `known-duplicate`, with any intent: An existing item is the same request. Read the item first.
 - `mixed-bundle`, with `bundle`: The bundled findings differ in kind. Findings that share one intent take that intent instead.
-  A request to fix several named items, such as review leftovers, whose causes and fixes are each already settled is not a bundle to sort again: extract it as one request, neither `follow-up` nor `mixed-bundle`.
+  A request to fix several named items, such as review leftovers, whose causes and fixes are each already settled is not one to sort again: extract it as one request, keeping `bundle` but setting neither `follow-up` nor `mixed-bundle`.
   Take the intent the items share, or the implementing intent that fits them, such as `defect`; set the entry flags `cause` and `fix`, and list the union of the items' artifacts. The plan then routes it to one implementing route. A bundle with any item whose cause or fix is still open keeps `mixed-bundle`.
 - `human-run`, with `order`: Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold.
 - `owned-temporary-cleanup`, with `order`: Existing user authority permits deleting specific repository-local, Git-ignored temporary directories the current task owns, without a tracked change or files still needed for a deliverable.
