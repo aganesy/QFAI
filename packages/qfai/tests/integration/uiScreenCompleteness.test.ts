@@ -1,6 +1,7 @@
 /**
  * `qfai validate` warns about an application screen of a UI contract that
- * declares no states or no navigation, and asks a marketing screen for neither.
+ * declares no states or no navigation, or has a list with no list behaviour,
+ * and asks a marketing screen for none of them.
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -69,5 +70,33 @@ describe("validate warns about a screen with no states or no navigation", () => 
     expect(states?.message).toContain("`empty`, `error`, `success`");
     expect(states?.file).toBe(CONTRACT.split(path.sep).join("/"));
     expect(navigation?.suggested_action).toContain("`navigation: { none: <reason> }`");
+  });
+});
+
+// QFAI:AC-0001-0039-08
+describe("validate warns about a list or table element with no list behaviour", () => {
+  it("warns for the application screen's table and asks the marketing screen's table for nothing", async () => {
+    await contract(
+      "  - id: orders",
+      "    route: /orders",
+      "    elements:",
+      "      - { id: orders_table, type: table }",
+      "      - id: steps_list",
+      "        type: list",
+      "        list: { none: the three fixed checkout steps are always shown together }",
+      "  - id: pricing",
+      "    route: /pricing",
+      "    surface: marketing",
+      "    elements:",
+      "      - { id: plans_table, type: table }",
+    );
+
+    const { issues } = await validateProject(root, undefined, { profile: "sdd" });
+    const findings = issues.filter((item) => item.code === "QFAI-CONTRACT-055");
+
+    expect(findings.map((item) => [item.severity, item.refs])).toEqual([
+      ["warning", ["orders", "orders_table"]],
+    ]);
+    expect(findings[0]?.suggested_action).toContain("`list: { none: <reason> }`");
   });
 });

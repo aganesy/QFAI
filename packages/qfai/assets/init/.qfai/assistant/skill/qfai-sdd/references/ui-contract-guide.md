@@ -137,8 +137,9 @@ guide, an about page with a contact form, and legal notices. An application
 screen is checked against the business-screen list and its business type; a
 marketing screen against its section entries in the marketing pattern
 reference. `npx qfai validate` reports any other value as `QFAI-CONTRACT-051`,
-at error. A marketing screen is not asked for `states` or `navigation` by
-`QFAI-CONTRACT-053` and `QFAI-CONTRACT-054`.
+at error. A marketing screen is not asked for `states`, `navigation` or a
+list element's `list` by `QFAI-CONTRACT-053`, `QFAI-CONTRACT-054` and
+`QFAI-CONTRACT-055`.
 
 ## Parts left out: `omitted`
 
@@ -288,7 +289,11 @@ List screen type that `.qfai/assistant/step/sdd-contract/STEP.md` names
 carries a Behaviour list, such as list state kept in the screen's address and
 paging on the server for a list that can outgrow one page. It applies to what
 these entries set; an entry that departs from it says so with the reason.
-`npx qfai validate` does not check this key; it describes the element for the
+An element that has no list behaviour on purpose, such as a fixed set of steps
+always shown together, writes `list: { none: <reason> }` instead of the five
+entries. `npx qfai validate` warns, as `QFAI-CONTRACT-055`, about a list or
+table element of an application screen whose `list` is missing or holds
+nothing, a `none` with no reason included; what the entries say is for the
 implementer and the reviewer.
 
 ## Purposeful copy: `supplements` and `structure`

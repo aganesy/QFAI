@@ -154,7 +154,9 @@ that needs explaining before adding text for it. Each screen lists its
 state the screen cannot reach; `npx qfai validate` warns about an application
 screen with no `states` or without one of the five (`QFAI-CONTRACT-053`). Each `list` or `table` element carries `list`:
 its `columns`, `search`, `filters`, `sort` and `pagination`, each set or
-`none` with the reason; `npx qfai validate` does not check this key. A screen may describe the copy that stays in its optional
+`none` with the reason, or `list: { none: <reason> }` for an element with no
+list behaviour; `npx qfai validate` warns about such an element of an
+application screen with no `list` (`QFAI-CONTRACT-055`). A screen may describe the copy that stays in its optional
 `supplements` and `structure`; `npx qfai validate` does not check them, and the
 reason that counts is the `qfai-text` comment written in the UI source.
 
