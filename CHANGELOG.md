@@ -123,6 +123,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`QFAI-DB-001` says why the SQL is flagged and how to resolve it.** The
+  warning now says that applying the statement destroys data or structure, and
+  its suggested action moves a data reset to test setup or fixtures and a destructive
+  change to its migration. A reviewed statement that should stay is waived
+  for its file in `.qfai/waivers.yml`, with its reason, evidence and expiry
+  date.
+
 - The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
 
 - **A scope that stops before implementation can reach its own commit.** In
@@ -278,6 +285,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   implementer guidance say that the check reads only literal text, and that
   moving a sentence into a constant, a prop or an attribute value is not a fix:
   the product-surface review still judges that copy.
+
+- **A UI review without captures is `PENDING`, never `PASS`.** For a
+  UI-affecting change, the product-surface reviewer requires a capture of each
+  changed screen at the reviewed revision. Passing tests or a clean `validate`
+  do not stand in for it, and the reviewer does not start the app itself: it
+  stops before a verdict and names what is missing, the review is recorded
+  `PENDING`, and it is dispatched again once the captures exist.
 
 ### Removed
 
