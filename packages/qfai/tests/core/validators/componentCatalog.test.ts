@@ -64,9 +64,11 @@ async function warnings(root: string): Promise<Issue[]> {
 
 describe("validate warns from the component catalogue", () => {
   // QFAI:EX-0001-0307-07
-  it("warns about a component with no source and an authored one with no reason", async () => {
+  // QFAI:EX-0001-0307-15
+  it("warns about a shared component with no source and an authored one with no reason, not a page", async () => {
     const root = await catalogued({
       "src/card.tsx": component("Card", []),
+      "src/pages/home.tsx": `import { Card } from "../card";\n${component("Home", [], "<Card />")}`,
       "src/banner.tsx": component("Banner", ["@source authored"]),
       "src/badge.tsx": component("Badge", ["@source Authored", "@reason No item fits"]),
       "src/button.tsx": component("Button", ["@source shadcn/ui button@2.1"]),
@@ -129,6 +131,31 @@ describe("validate warns from the component catalogue", () => {
     expect(found[0]?.severity).toBe("warning");
     expect(found[0]?.message).toContain("`Button` (src/ui/button.tsx)");
     expect(found[0]?.suggested_action).toContain("`Button`");
+  });
+
+  // QFAI:EX-0001-0307-16
+  it("skips a hidden input and reports any other input type", async () => {
+    const root = await catalogued({
+      "src/ui/field.tsx": component(
+        "Field",
+        ["@source shadcn/ui input@2.1", "@pattern input"],
+        "<input />",
+      ),
+      "src/pages/form.tsx": [
+        "export const form = (",
+        "  <form>",
+        '    <input type="hidden" />',
+        '    <input type={"hidden"} />',
+        '    <input type="checkbox" />',
+        "  </form>",
+        ");",
+        "",
+      ].join("\n"),
+    });
+    const found = await warnings(root);
+    expect(found.map((item) => [item.code, item.file, item.loc?.line])).toEqual([
+      ["QFAI-COMP-003", "src/pages/form.tsx", 5],
+    ]);
   });
 
   // QFAI:EX-0001-0307-10

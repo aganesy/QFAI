@@ -48,14 +48,25 @@ export async function validateComponentCatalog(
       ),
     ];
   }
+  // Ceiling: the surface files are parsed here a second time beside the plain-text check in the
+  // same run; sharing one parse per file between the two checks lifts it.
+  const scan = await scanComponents(root, config, options);
+  // A shared component is one another surface file imports by name. Ceiling: without the
+  // project's `typescript` the source cannot be read, so only tagged entries are asked for a
+  // source and the raw-element and freshness warnings are not given; the plain-text check in the
+  // same profiles already reports the missing package. Installing `typescript` lifts it.
+  const importers = new Map<string, Set<string>>();
+  for (const imported of scan.readable ? scan.imports : []) {
+    importers.set(imported.name, (importers.get(imported.name) ?? new Set()).add(imported.file));
+  }
+  const shared = (component: CatalogComponent): boolean =>
+    [...(importers.get(component.name) ?? [])].some((file) => file !== component.file);
   const issues = [
-    ...catalog.components.flatMap(sourceFindings),
+    ...catalog.components
+      .filter((component) => isTagged(component) || shared(component))
+      .flatMap(sourceFindings),
     ...sharedPatternFindings(catalog.components),
   ];
-  // Ceiling: without the project's `typescript` the source cannot be read, so the raw-element
-  // and freshness warnings are not given; the plain-text check in the same profiles already
-  // reports the missing package. Installing `typescript` lifts it.
-  const scan = await scanComponents(root, config, options);
   if (!scan.readable) return issues;
   const byPattern = componentsByPattern(catalog.components);
   for (const raw of scan.rawElements) {
@@ -94,6 +105,13 @@ export async function validateComponentCatalog(
 
 function named(component: CatalogComponent): string {
   return `\`${component.name}\` (${component.file})`;
+}
+
+/** Whether the doc comment gives the entry any catalogue tag. */
+function isTagged(component: CatalogComponent): boolean {
+  return (["source", "reason", "states", "pattern", "a11y"] as const).some(
+    (tag) => component[tag] !== undefined,
+  );
 }
 
 function sourceFindings(component: CatalogComponent): Issue[] {

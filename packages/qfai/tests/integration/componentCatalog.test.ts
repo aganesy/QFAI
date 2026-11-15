@@ -137,6 +137,19 @@ describe("the command lists every exported component", () => {
   });
 });
 
+// QFAI:AC-0001-0307-01
+describe("the summary says when no JSX file is selected", () => {
+  // QFAI:EX-0001-0307-17
+  it("writes an empty catalogue and names the reason", async () => {
+    const root = await projectWith({ "src/page.vue": "<template><p /></template>\n" });
+    const result = await cli(["catalog", "components", "--root", root]);
+    expect(result.code).toBe(0);
+    expect(result.out).toBe(
+      "Wrote .qfai/catalog/components.yaml: 0 component(s); uiux.surfacePaths selects no .tsx or .jsx file.\n",
+    );
+  });
+});
+
 // QFAI:AC-0001-0307-02
 describe("the check mode compares and writes nothing", () => {
   // QFAI:EX-0001-0307-05

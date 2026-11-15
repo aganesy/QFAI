@@ -28,7 +28,8 @@ export function Button(props: ButtonProps) {
 
 `@source` is the catalogue item and version, or `authored` with `@reason` saying why nothing on the
 procurement ladder served. `@pattern` names the region it realises; one component per pattern.
-`npx qfai validate` warns about a missing source, a pattern two components claim, a raw `<button>`,
+A page or layout that no other surface file imports needs no doc comment. `npx qfai validate` warns
+about a missing source on a component that has a tag or that another surface file imports, a pattern two components claim, a raw `<button>`,
 `<input>` or `<select>` where a listed component has that pattern, and a catalogue out of date
 (`QFAI-COMP-001` to `QFAI-COMP-004`). `npx qfai catalog components --check` fails CI on the last.
 

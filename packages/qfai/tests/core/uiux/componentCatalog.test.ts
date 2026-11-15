@@ -149,6 +149,60 @@ describe("the scanner lists exported components", () => {
     expect(text).not.toContain("source");
   });
 
+  // QFAI:EX-0001-0307-13
+  it("follows an export list and a default export, and reads forwardRef props and extended interfaces", async () => {
+    const found = await components({
+      "src/ui/button.tsx": [
+        'import * as React from "react";',
+        "interface BaseProps { variant?: string }",
+        "interface ButtonProps extends BaseProps { asChild?: boolean }",
+        "/** @source shadcn/ui button@2.1 */",
+        "const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => (",
+        "  <button ref={ref} />",
+        "));",
+        "const buttonVariants = () => 'btn';",
+        "export { Button, buttonVariants };",
+        "",
+      ].join("\n"),
+      "src/ui/card.tsx": "function Card() {\n  return <div />;\n}\nexport default Card;\n",
+    });
+    expect(found).toEqual([
+      {
+        name: "Button",
+        file: "src/ui/button.tsx",
+        props: ["asChild", "variant"],
+        source: "shadcn/ui button@2.1",
+      },
+      { name: "Card", file: "src/ui/card.tsx" },
+    ]);
+  });
+
+  // QFAI:EX-0001-0307-14
+  it("keeps a scoped package line inside the tag and reads past trailing line comments", async () => {
+    const found = await components({
+      "src/ui/dialog.tsx": [
+        "/**",
+        " * @source shadcn/ui dialog@2.1",
+        " *   @radix-ui/react-dialog@1.1",
+        " * @param props the props",
+        " *   the dialog",
+        " */",
+        "// eslint-disable-next-line react/display-name",
+        "export function Dialog() {",
+        "  return <dialog />;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+    expect(found).toEqual([
+      {
+        name: "Dialog",
+        file: "src/ui/dialog.tsx",
+        source: "shadcn/ui dialog@2.1 @radix-ui/react-dialog@1.1",
+      },
+    ]);
+  });
+
   it("keeps the key order fixed and omits empty tags", () => {
     const text = renderCatalog([
       { name: "Badge", file: "src/badge.tsx", props: [], source: "authored", reason: "No item" },

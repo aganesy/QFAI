@@ -8,9 +8,9 @@ Feature: Catalogue the components a project already has
   Scenario: The command lists every exported component
     Given `.tsx` and `.jsx` files that `uiux.surfacePaths` selects, holding exported components with and without doc comments, test files and exports that are not components
     When `qfai catalog components` runs
-    Then it writes `.qfai/catalog/components.yaml` listing each exported function or `const` whose name starts with an upper-case letter and that holds JSX, with its name, file, props when they can be read, and the `@source`, `@reason`, `@states`, `@pattern` and `@a11y` its doc comment gives
+    Then it writes `.qfai/catalog/components.yaml` listing each top-level function or `const` whose name starts with an upper-case letter and that holds JSX, exported on its declaration, through an `export { ... }` list or as `export default` of its name, with its name, file, props when they can be read, and the `@source`, `@reason`, `@states`, `@pattern` and `@a11y` its doc comment gives
     And it lists nothing from a test, spec or story file and no export that is not a component
-    And the list is sorted by file and then by name, two runs over the same source write the same bytes, and the command prints one summary line and exits 0
+    And the list is sorted by file and then by name, two runs over the same source write the same bytes, and the command prints one summary line, saying so when no `.tsx` or `.jsx` file is selected, and exits 0
 
   # AC-0001-0307-02
   Scenario: The check mode compares and writes nothing
@@ -29,7 +29,8 @@ Feature: Catalogue the components a project already has
   Scenario: A component with no source, and two components for one pattern, are warnings
     Given a committed catalogue
     When `qfai validate` runs in the `prototyping`, `saas-package`, `verify` or `full` profile
-    Then it raises `QFAI-COMP-001` at warning for each component with no `@source`, or with `@source authored` and no `@reason`, naming the component and its file
+    Then it raises `QFAI-COMP-001` at warning for each component with no `@source`, or with `@source authored` and no `@reason`, that carries another catalogue tag or that another surface file imports by name, naming the component and its file
+    And a component with no tag that no other surface file imports, such as a page, raises none
     And it raises one `QFAI-COMP-002` at warning for each `@pattern` two or more components name, naming each of them
 
   # AC-0001-0307-05
@@ -37,7 +38,7 @@ Feature: Catalogue the components a project already has
     Given a committed catalogue listing a component whose `@pattern` is `button`, `input` or `select`
     When `qfai validate` runs in one of those profiles over a selected surface file that renders that raw element
     Then it raises `QFAI-COMP-003` at warning at the element's line, naming the component to use
-    And the component's own file raises none, and an element no listed component replaces raises none
+    And the component's own file raises none, an `<input>` whose literal `type` is `hidden` raises none, and an element no listed component replaces raises none
 
   # AC-0001-0307-06
   Scenario: A stale catalogue is a warning, and no catalogue asks nothing

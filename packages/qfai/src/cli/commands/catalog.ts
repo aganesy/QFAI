@@ -56,6 +56,10 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
   const file = path.join(root, COMPONENT_CATALOG_PATH);
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, text, "utf-8");
+  if (scan.files === 0) {
+    info(`Wrote ${target}: 0 component(s); uiux.surfacePaths selects no .tsx or .jsx file.`);
+    return EXIT_CODES.ok;
+  }
   const files = new Set(scan.components.map((component) => component.file)).size;
   const unsourced = scan.components.filter((component) => component.source === undefined).length;
   info(

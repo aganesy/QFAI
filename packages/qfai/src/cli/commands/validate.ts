@@ -1219,10 +1219,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // The component catalogue warnings read `.qfai/catalog/components.yaml` and are asked of
   // nothing until a project writes it with `qfai catalog components`.
   "QFAI-COMP-001":
-    "Every component in the component catalogue records its `@source`: a catalogue item and version, or `authored` with a `@reason`.",
+    "Every catalogued component that carries a catalogue tag, or that another surface file imports, records its `@source`: a catalogue item and version, or `authored` with a `@reason`.",
   "QFAI-COMP-002": "No two components in the component catalogue realise the same `@pattern`.",
   "QFAI-COMP-003":
-    "A surface file renders no raw `<button>`, `<input>` or `<select>` when the component catalogue lists a component whose `@pattern` is that element, outside that component's own file.",
+    "A surface file renders no raw `<button>`, `<input>` or `<select>` when the component catalogue lists a component whose `@pattern` is that element, outside that component's own file; a `type="hidden"` input is not counted.",
   "QFAI-COMP-004":
     "The committed component catalogue parses and is the file `qfai catalog components` writes for the current source.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each

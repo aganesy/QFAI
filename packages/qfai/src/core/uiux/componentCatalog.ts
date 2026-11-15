@@ -49,8 +49,18 @@ export type CatalogComponent = {
 /** A raw `<button>`, `<input>` or `<select>` in a surface file. */
 export type RawElement = { file: string; line: number; element: ReplaceableElement };
 
+/** A name a surface file imports, and that file. */
+export type ImportedName = { file: string; name: string };
+
 export type ComponentScan =
-  | { readable: true; components: CatalogComponent[]; rawElements: RawElement[] }
+  | {
+      readable: true;
+      /** How many `.tsx`/`.jsx` files were read. */
+      files: number;
+      components: CatalogComponent[];
+      rawElements: RawElement[];
+      imports: ImportedName[];
+    }
   /** `unread` `.tsx`/`.jsx` files were selected but the project's `typescript` cannot be loaded. */
   | { readable: false; unread: number };
 
@@ -79,18 +89,22 @@ export async function scanComponents(
   const files = (await selectSurfaceFiles(root, config.uiux?.surfacePaths ?? [])).filter((file) =>
     [".tsx", ".jsx"].includes(path.extname(file)),
   );
-  if (files.length === 0) return { readable: true, components: [], rawElements: [] };
+  if (files.length === 0) {
+    return { readable: true, files: 0, components: [], rawElements: [], imports: [] };
+  }
   const ts = loadTs(root, options.loadTypescript);
   if (!ts) return { readable: false, unread: files.length };
   const components: CatalogComponent[] = [];
   const rawElements: RawElement[] = [];
+  const imports: ImportedName[] = [];
   for (const file of files) {
     const read = componentsOfFile(ts, file, await readSafe(path.join(root, file)));
     components.push(...read.components);
     rawElements.push(...read.rawElements);
+    imports.push(...read.imports);
   }
   components.sort((a, b) => compare(a.file, b.file) || compare(a.name, b.name));
-  return { readable: true, components, rawElements };
+  return { readable: true, files: files.length, components, rawElements, imports };
 }
 
 /** The catalogue file's text for a list of components, byte-identical for the same list. */
@@ -181,12 +195,12 @@ function compare(a: string, b: string): number {
   return a < b ? -1 : 1;
 }
 
-/** The components and raw elements of one file. */
+/** The components, raw elements and imported names of one file. */
 function componentsOfFile(
   ts: TsApi,
   file: string,
   source: string,
-): { components: CatalogComponent[]; rawElements: RawElement[] } {
+): { components: CatalogComponent[]; rawElements: RawElement[]; imports: ImportedName[] } {
   const kind = path.extname(file) === ".jsx" ? ts.ScriptKind.JSX : ts.ScriptKind.TSX;
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, kind);
   const k = ts.SyntaxKind;
@@ -219,16 +233,36 @@ function componentsOfFile(
     }
     return undefined;
   };
-  // The member names of a props type: a literal, an interface or type alias the same file
-  // declares, or an intersection of those. Ceiling: a type imported from another module, or a
-  // part of an intersection declared elsewhere, contributes no names; resolving it through a
-  // type checker over the whole program lifts this.
+  // The last type argument of the outermost wrapping call that has any, as the `Props` of
+  // `forwardRef<Ref, Props>(...)`.
+  const callTypeArgument = (node: TsNode | undefined): TsNode | undefined => {
+    if (!node || node.kind !== k.CallExpression) return undefined;
+    const own = node.typeArguments ?? [];
+    if (own.length > 0) return own[own.length - 1];
+    for (const argument of node.arguments ?? []) {
+      const found = callTypeArgument(argument);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  // The member names of a props type: a literal, an interface (with the members of the local
+  // interfaces it extends) or type alias the same file declares, or an intersection of those.
+  // Ceiling: a type imported from another module, or a part declared elsewhere, contributes no
+  // names; resolving it through a type checker over the whole program lifts this.
   const membersOf = (type: TsNode | undefined, seen: Set<string>): string[] | undefined => {
     if (!type) return undefined;
     if (type.kind === k.TypeLiteral || type.kind === k.InterfaceDeclaration) {
-      return (type.members ?? [])
+      const own = (type.members ?? [])
         .map((member) => member.name?.getText().replace(/^["']|["']$/g, ""))
         .filter((name): name is string => name !== undefined && name !== "");
+      const inherited = (type.heritageClauses ?? [])
+        .flatMap((clause) => clause.types ?? [])
+        .flatMap((base) => {
+          const name = base.expression?.getText();
+          if (name === undefined || seen.has(name)) return [];
+          return membersOf(localTypes.get(name), new Set([...seen, name])) ?? [];
+        });
+      return [...own, ...inherited];
     }
     if (type.kind === k.TypeReference && type.typeName) {
       const name = type.typeName.getText();
@@ -242,7 +276,11 @@ function componentsOfFile(
     }
     return undefined;
   };
-  const propsOf = (fn: TsNode | undefined, declared: TsNode | undefined): string[] | undefined => {
+  const propsOf = (
+    fn: TsNode | undefined,
+    declared: TsNode | undefined,
+    initializer: TsNode | undefined,
+  ): string[] | undefined => {
     const parameter = fn?.parameters?.[0];
     const fromParameter = membersOf(parameter?.type, new Set());
     if (fromParameter) return fromParameter;
@@ -254,48 +292,97 @@ function componentsOfFile(
         .filter((name) => name !== "");
     }
     // `const Button: FC<ButtonProps> = ...` names the props as the annotation's type argument.
-    return membersOf(declared?.typeArguments?.[0], new Set());
+    return (
+      membersOf(declared?.typeArguments?.[0], new Set()) ??
+      membersOf(callTypeArgument(initializer), new Set())
+    );
   };
   const isExported = (statement: TsNode): boolean =>
     (statement.modifiers ?? []).some((modifier) => modifier.kind === k.ExportKeyword);
 
+  /** A top-level function or `const` that can be a component, by its local name. */
+  type Candidate = {
+    statement: TsNode;
+    fn: TsNode | undefined;
+    declared?: TsNode;
+    initializer?: TsNode;
+  };
+  const candidates = new Map<string, Candidate>();
+  const exported = new Set<string>();
+  for (const statement of statements) {
+    const direct = isExported(statement);
+    if (statement.kind === k.FunctionDeclaration && statement.name) {
+      const name = statement.name.getText();
+      candidates.set(name, { statement, fn: statement });
+      if (direct) exported.add(name);
+    } else if (statement.kind === k.VariableStatement) {
+      for (const declaration of statement.declarationList?.declarations ?? []) {
+        const name = declaration.name;
+        if (!name || name.kind !== k.Identifier) continue;
+        candidates.set(name.getText(), {
+          statement,
+          fn: functionOf(declaration.initializer),
+          ...(declaration.type ? { declared: declaration.type } : {}),
+          ...(declaration.initializer ? { initializer: declaration.initializer } : {}),
+        });
+        if (direct) exported.add(name.getText());
+      }
+    } else if (statement.kind === k.ExportDeclaration && !statement.moduleSpecifier) {
+      // `export { Button, buttonVariants }`: the local declaration each name refers to.
+      for (const specifier of statement.exportClause?.elements ?? []) {
+        const local = (specifier.propertyName ?? specifier.name)?.getText();
+        if (local) exported.add(local);
+      }
+    } else if (statement.kind === k.ExportAssignment) {
+      // `export default Button` of a local declaration.
+      const target = statement.expression;
+      if (target && target.kind === k.Identifier) exported.add(target.getText());
+    }
+  }
+  // Ceiling: a class component is not listed; reading `render` methods lifts it.
   const components: CatalogComponent[] = [];
-  const add = (
-    statement: TsNode,
-    name: string | undefined,
-    fn: TsNode | undefined,
-    declared?: TsNode,
-  ): void => {
-    if (!name || !/^[A-Z]/.test(name) || !containsJsx(fn)) return;
-    const props = propsOf(fn, declared);
+  for (const name of exported) {
+    const candidate = candidates.get(name);
+    if (!candidate || !/^[A-Z]/.test(name) || !containsJsx(candidate.fn)) continue;
+    const props = propsOf(candidate.fn, candidate.declared, candidate.initializer);
+    const { statement } = candidate;
     components.push({
       name,
       file,
       ...(props ? { props } : {}),
       ...docFields(source.slice(statement.pos, statement.getStart())),
     });
-  };
-  // Ceiling: a component exported by a separate `export { Name }` or `export default Name`
-  // statement, and a class component, are not listed. Following the export list to its
-  // declaration lifts the first; reading `render` methods lifts the second.
+  }
+
+  const imports: ImportedName[] = [];
   for (const statement of statements) {
-    if (!isExported(statement)) continue;
-    if (statement.kind === k.FunctionDeclaration) {
-      add(statement, statement.name?.getText(), statement);
-    } else if (statement.kind === k.VariableStatement) {
-      for (const declaration of statement.declarationList?.declarations ?? []) {
-        const name = declaration.name;
-        if (!name || name.kind !== k.Identifier) continue;
-        add(statement, name.getText(), functionOf(declaration.initializer), declaration.type);
-      }
+    if (statement.kind !== k.ImportDeclaration) continue;
+    const clause = statement.importClause;
+    if (clause?.name) imports.push({ file, name: clause.name.getText() });
+    for (const element of clause?.namedBindings?.elements ?? []) {
+      const name = (element.propertyName ?? element.name)?.getText();
+      if (name) imports.push({ file, name });
     }
   }
 
+  // The string value of a JSX attribute, given as `"..."` or `{"..."}`, or `undefined`.
+  const literalAttribute = (element: TsNode, name: string): string | undefined => {
+    for (const attribute of element.attributes?.properties ?? []) {
+      if (attribute.kind !== k.JsxAttribute || attribute.name?.getText() !== name) continue;
+      const value = attribute.initializer;
+      const literal = value && value.kind === k.JsxExpression ? value.expression : value;
+      if (literal && literal.kind === k.StringLiteral) return literal.getText().slice(1, -1);
+      return undefined;
+    }
+    return undefined;
+  };
   const rawElements: RawElement[] = [];
   const visit = (node: TsNode): void => {
     if (node.kind === k.JsxOpeningElement || node.kind === k.JsxSelfClosingElement) {
       const element = REPLACEABLE_ELEMENTS.find((name) => name === node.tagName?.getText());
-      if (element) {
+      // Ceiling: only a literal `type="hidden"` input is skipped. A file, checkbox or radio input
+      // is still reported; recording the input types a component realises lifts it.
+      if (element && !(element === "input" && literalAttribute(node, "type") === "hidden")) {
         const line = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
         rawElements.push({ file, line, element });
       }
@@ -303,26 +390,34 @@ function componentsOfFile(
     for (const child of node.getChildren()) visit(child);
   };
   visit(sourceFile);
-  return { components, rawElements };
+  return { components, rawElements, imports };
 }
 
+const DOC_TAG_LINE = new RegExp(`^@(${DOC_TAGS.join("|")})(?:\\s+(.*))?$`);
+
 /**
- * The catalogue fields the last `/** ... *\/` block before a declaration supplies. A tag runs
- * from `@name` to the next tag or the end of the block, its lines joined by single spaces;
- * `@states` is a comma list. Other tags and the description are not read.
+ * The catalogue fields the last `/** ... *\/` block before a declaration supplies, `//` line
+ * comments after it aside. A line opening with one of the five tags and then a space or its end
+ * starts that tag; any other `@word` followed by a space or the line's end, such as `@param`,
+ * ends it; every other line, such as `@radix-ui/react-dialog@1.1`, continues the current tag.
+ * A tag's lines are joined by single spaces, and `@states` is a comma list.
  */
 function docFields(trivia: string): Partial<CatalogComponent> {
-  const block = /\/\*\*((?:(?!\*\/)[\s\S])*)\*\/\s*$/.exec(trivia);
+  const block = /\/\*\*((?:(?!\*\/)[\s\S])*)\*\/(?:\s|\/\/[^\n]*)*$/.exec(trivia);
   if (!block) return {};
   const values = new Map<string, string>();
   let current: string | null = null;
   for (const rawLine of (block[1] ?? "").split(/\r?\n/)) {
     const line = rawLine.replace(/^\s*\*?\s?/, "").trim();
-    const tag = /^@(\w+)\s*(.*)$/.exec(line);
+    const tag = DOC_TAG_LINE.exec(line);
     if (tag) {
-      current = tag[1] ?? null;
-      if (current !== null && !values.has(current)) values.set(current, tag[2] ?? "");
-      else current = null;
+      const name = tag[1] ?? "";
+      current = values.has(name) ? null : name;
+      if (current !== null) values.set(current, tag[2] ?? "");
+      continue;
+    }
+    if (/^@\w+(?:\s|$)/.test(line)) {
+      current = null;
       continue;
     }
     if (current !== null && line !== "") {

@@ -107,6 +107,14 @@ export type TsNode = {
   propertyName?: TsNode;
   declarationList?: { declarations: readonly TsNode[] };
   statements?: readonly TsNode[];
+  expression?: TsNode;
+  exportClause?: TsNode;
+  moduleSpecifier?: TsNode;
+  importClause?: TsNode;
+  namedBindings?: TsNode;
+  heritageClauses?: readonly TsNode[];
+  attributes?: TsNode;
+  properties?: readonly TsNode[];
 };
 export type TsApi = {
   createSourceFile(
