@@ -143,9 +143,8 @@ describe("integration.links", () => {
   });
 
   it("keeps the warning severity when the canonical document still reads", async () => {
-    // The shape a Windows `git worktree` produces, and the one this check exists
-    // for: the link cannot be followed while the documents behind it are intact,
-    // which the validator reports as a `warning`. Hard-coding `error` here would
+    // The severity is carried from the validator, whatever it is: a finding the
+    // validator raised as a `warning` stays one here. Hard-coding `error` here would
     // put `doctor` on the far side of `--fail-on error` from `validate` on the
     // most common case of all — the mismatch this check was added to end.
     await withProject(async (root) => {
