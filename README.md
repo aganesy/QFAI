@@ -370,7 +370,7 @@ flowchart LR
     `--session` names no session of the project), 1 (a transcript, `.agents/rules/reminders.json`
     or the `--out` file could not be read or written, or `reminders.json` is not a JSON object).
 - `npx qfai catalog components`
-  - Writes `.qfai/catalog/components.yaml`, the list of components the `.tsx` and `.jsx` files
+  - Writes `components.yaml` under `.qfai/catalog/`, the list of components the `.tsx` and `.jsx` files
     `uiux.surfacePaths` selects export: each with its file, its props, and the `@source`, `@reason`,
     `@states`, `@pattern` and `@a11y` tags of its doc comment. The file is sorted and byte-stable, so
     commit it. `--check` writes nothing and exits 1 when the committed file is missing or out of date.
