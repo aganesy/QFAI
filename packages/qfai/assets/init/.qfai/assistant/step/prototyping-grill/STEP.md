@@ -40,7 +40,9 @@ Inside an `npx qfai workflow` run the work order narrows that set:
 
 - The run works only on the UI-bearing UI contracts that serve the business
   flow the work order's `target` binds. A contract serves a flow when one of its
-  rules cites an example of one of that flow's stories.
+  rules cites an example of one of that flow's stories. The app frame, the UI
+  contract that holds the app shell and the home, serves no flow and is read
+  with every one, so the prototype renders the flow's screens inside the shell.
 - It settles the one visual decision the plan needs within the existing root
   `DESIGN.md` and those contracts. It changes no UI contract that serves only
   another flow, and creates no contract.
