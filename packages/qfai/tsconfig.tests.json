@@ -29,6 +29,8 @@
     "means adding it here."
   ],
   "include": [
+    "tests/assets/surfaceReviewChecklist.test.ts",
+    "tests/integration/surfaceReviewChecklist.test.ts",
     "tests/core/sqlContractStructure.test.ts",
     "tests/assets/uiProcurementCompatibility.test.ts",
     "tests/assets/implementAntiPatternSections.test.ts",

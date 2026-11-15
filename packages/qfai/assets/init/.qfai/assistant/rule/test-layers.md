@@ -95,7 +95,8 @@ in with no session.
   announces says what a control does. The screen review checks both by hand,
   as
   `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#states-and-accessibility`
-  lists them.
+  lists them, through the accessibility criteria and widget patterns of
+  `.qfai/assistant/rule/references/surface-review-checklist.md`.
 - The spec carries no annotation. It proves the routes, not one flow or
   example.
 
