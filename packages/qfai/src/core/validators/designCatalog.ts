@@ -11,12 +11,15 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import type { DesignMd } from "../design/designMd.js";
 import {
   DESIGN_THEME_PATH,
   DESIGN_TOKENS_PATH,
   ROOT_DESIGN_MD,
   findRawHexes,
   readDesignSource,
+  type DesignSource,
+  type GeneratedRead,
   readGenerated,
   renderDesignTokens,
   renderTheme,
@@ -36,26 +39,35 @@ export async function validateDesignCatalog(root: string, config: QfaiConfig): P
   if (tokens.state === "absent" && theme.state === "absent") return [];
   const source = await readDesignSource(root);
   if (source.state === "invalid") return [];
-  const outputs = [
-    { code: "QFAI-DCAT-001", file: DESIGN_TOKENS_PATH, read: tokens, render: renderDesignTokens },
-    { code: "QFAI-DCAT-002", file: DESIGN_THEME_PATH, read: theme, render: renderTheme },
-  ];
   const issues: Issue[] = [];
-  for (const output of outputs) {
-    const file = output.file.split(path.sep).join("/");
-    let message: string | null = null;
-    if (source.state === "absent") {
-      if (output.read.state === "read") {
-        message = `${file} has no ${ROOT_DESIGN_MD} at the project root to come from.`;
-      }
-    } else if (output.read.state === "absent") {
-      message = `${file} does not exist beside the other design catalogue file.`;
-    } else if (!sameGeneratedText(output.read.text, output.render(source.design))) {
-      message = `${file} is out of date with ${ROOT_DESIGN_MD}.`;
-    }
-    if (message === null) continue;
+  const staleTokens = staleMessage(source, tokens, DESIGN_TOKENS_PATH, renderDesignTokens);
+  if (staleTokens !== null) {
     issues.push(
-      issue(output.code, message, "warning", file, RULE, undefined, "canonical", REGENERATE),
+      issue(
+        "QFAI-DCAT-001",
+        staleTokens.message,
+        "warning",
+        staleTokens.file,
+        RULE,
+        undefined,
+        "canonical",
+        REGENERATE,
+      ),
+    );
+  }
+  const staleTheme = staleMessage(source, theme, DESIGN_THEME_PATH, renderTheme);
+  if (staleTheme !== null) {
+    issues.push(
+      issue(
+        "QFAI-DCAT-002",
+        staleTheme.message,
+        "warning",
+        staleTheme.file,
+        RULE,
+        undefined,
+        "canonical",
+        REGENERATE,
+      ),
     );
   }
   if (source.state !== "read") return issues;
@@ -79,4 +91,30 @@ export async function validateDesignCatalog(root: string, config: QfaiConfig): P
     }
   }
   return issues;
+}
+
+/**
+ * Why one generated file is stale, or null when it matches. The caller emits the finding with
+ * its own literal rule code, so the code stays visible to the rule-ownership scan.
+ */
+function staleMessage(
+  source: DesignSource,
+  read: GeneratedRead,
+  generatedPath: string,
+  render: (design: DesignMd) => string,
+): { file: string; message: string } | null {
+  const file = generatedPath.split(path.sep).join("/");
+  if (source.state === "absent") {
+    return read.state === "read"
+      ? { file, message: `${file} has no ${ROOT_DESIGN_MD} at the project root to come from.` }
+      : null;
+  }
+  if (source.state !== "read") return null;
+  if (read.state === "absent") {
+    return { file, message: `${file} does not exist beside the other design catalogue file.` };
+  }
+  if (!sameGeneratedText(read.text, render(source.design))) {
+    return { file, message: `${file} is out of date with ${ROOT_DESIGN_MD}.` };
+  }
+  return null;
 }

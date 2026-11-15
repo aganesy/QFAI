@@ -4,6 +4,7 @@
 
 - Inputs
 - Component catalogue
+- Design catalogue
 - Plain text in UI source
 - Repeated figures and claims
 - Routing
