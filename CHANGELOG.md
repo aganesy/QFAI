@@ -119,9 +119,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **A UI review without captures is `PENDING`, never `PASS`.** For a
   UI-affecting change, the product-surface reviewer requires a capture of each
   changed screen at the reviewed revision. Passing tests or a clean `validate`
-  do not stand in for it, and the reviewer does not start the app itself: a
-  missing capture stops the review, names what is missing, and the work is not
-  done until it arrives.
+  do not stand in for it, and the reviewer does not start the app itself: it
+  stops before a verdict and names what is missing, the review is recorded
+  `PENDING`, and it is dispatched again once the captures exist.
 
 - **`ui-procurement.md` checks runtime compatibility and tries a native
   element first.** A new rung before the design system asks whether a native

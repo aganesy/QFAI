@@ -71,7 +71,10 @@ them; it is the procedure that applies them.
   change: each changed screen at the reviewed revision, as
   `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md` § Evidence
   sets out. A passing test or a clean `validate` is not that evidence. Without
-  the captures that review is `PENDING`, never `PASS`, and the stage is not done.
+  the captures the reviewer stops before a verdict and names each missing
+  capture; the session agent records that review `PENDING`, never `PASS`. The
+  review has not happened yet: once the captures exist it is dispatched again,
+  and that response is the reviewer's one response.
 - **Answers an earlier stage recorded**, when an earlier stage's review already
   answered findings on the same artifact.
 
@@ -96,8 +99,7 @@ them; it is the procedure that applies them.
    recommended a decision in the reviewed artifact is not its independent
    reviewer. The session report names its authors, editors and decision
    recommenders, and the independent reviewers.
-   Each reviewer returns a verdict, `PASS` or `REVISE` (or `PENDING` from
-   `product-surface-reviewer` when the captures are missing), its findings, and
+   Each reviewer returns a verdict, `PASS` or `REVISE`, its findings, and
    the Domain Responsibilities of its card it checked, naming each one it
    found not applicable to the target and why, in the shared reviewer
    response template. A response that leaves a responsibility unaccounted for
@@ -136,7 +138,8 @@ Every required reviewer responded once, each behaviour fix had its one focused
 re-review, every finding is fixed or answered, and
 the stage report names each verdict and each answer, or says why the review
 dispatched no reviewer. Each response accounted for every Domain
-Responsibility of the reviewer's card. For a code review skipped as a small literal-only
+Responsibility of the reviewer's card. No review is `PENDING` for missing
+captures. For a code review skipped as a small literal-only
 change, the stage report names the skip, the changed lines and why, and records
 the skip for the final report. A finding the author
 cannot fix is in the stage's final report, and a critical decision has gone to
