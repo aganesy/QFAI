@@ -39,6 +39,19 @@ export type RadiusKey = (typeof RADIUS_KEYS)[number];
 export const SHADOW_KEYS = ["sm", "md", "lg"] as const;
 export type ShadowKey = (typeof SHADOW_KEYS)[number];
 
+export const LAYOUT_BREAKPOINT_KEYS = ["sm", "md", "lg", "xl"] as const;
+export const LAYOUT_WIDTH_KEYS = ["reading", "app", "form"] as const;
+export const TABLE_NARROW_VALUES = ["stack", "scroll"] as const;
+/** WCAG 2.2 SC 2.5.8, the floor a project's own minimum may not go under. */
+export const TARGET_MIN_PX_FLOOR = 24;
+
+export type DesignMdLayout = {
+  breakpoints?: Partial<Record<(typeof LAYOUT_BREAKPOINT_KEYS)[number], string>>;
+  content_max_width?: Partial<Record<(typeof LAYOUT_WIDTH_KEYS)[number], string>>;
+  target_min_px?: number;
+  table_narrow?: (typeof TABLE_NARROW_VALUES)[number];
+};
+
 /**
  * Every key the front matter admits, by the section that holds it. The parser
  * rejects any other key at each level, and a design direction proposed before
@@ -49,7 +62,7 @@ export const DESIGN_MD_KEYS = {
   brand: ["name", "archetype", "voice", "theme"],
   audience: ["emotion", "do_not_look_like"],
   accessibility: ["contrast_ratio_min", "motion"],
-  visual: ["colors", "typography", "radius", "shadow", "spacing"],
+  visual: ["colors", "typography", "radius", "shadow", "spacing", "layout"],
   "visual.colors": COLOR_KEYS,
   "visual.typography": [...FONT_KEYS, "scale", "weight"],
   "visual.typography.scale": ["xs", "sm", "base", "lg", "xl", "2xl", "3xl"],
@@ -57,6 +70,9 @@ export const DESIGN_MD_KEYS = {
   "visual.radius": RADIUS_KEYS,
   "visual.shadow": SHADOW_KEYS,
   "visual.spacing": ["base", "scale"],
+  "visual.layout": ["breakpoints", "content_max_width", "target_min_px", "table_narrow"],
+  "visual.layout.breakpoints": LAYOUT_BREAKPOINT_KEYS,
+  "visual.layout.content_max_width": LAYOUT_WIDTH_KEYS,
 } as const satisfies Readonly<Record<string, readonly string[]>>;
 
 export type DesignMdColors = Record<ColorKey, string>;
@@ -114,6 +130,8 @@ export type DesignMd = {
     };
     radius: DesignMdRadius;
     shadow: DesignMdShadow;
+    /** Optional, so a file written before the section existed still parses. */
+    layout?: DesignMdLayout;
   };
   accessibility?: {
     contrast_ratio_min?: number;
@@ -850,7 +868,127 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     }
     value.spacing = sp;
   }
+  if ("layout" in raw && raw.layout !== undefined) {
+    const layout = parseLayout(raw.layout);
+    if ("error" in layout) return { error: layout.error };
+    value.layout = layout.value;
+  }
   return { value };
+}
+
+function layoutError(path: string, code: string, message: string): { error: ParseError } {
+  return { error: { path, code, message } };
+}
+
+/** A CSS length token, taken verbatim by token readers: non-empty and unpadded. */
+function parseLength(value: unknown, path: string): { value: string } | { error: ParseError } {
+  if (typeof value !== "string") {
+    return layoutError(path, "invalid-type", `'${path}' must be a string.`);
+  }
+  if (value.length === 0 || value.trim() !== value) {
+    return layoutError(
+      path,
+      "invalid-format",
+      `'${path}' must be a non-empty string with no leading / trailing whitespace.`,
+    );
+  }
+  return { value };
+}
+
+function parseLengthMap(
+  raw: unknown,
+  path: string,
+  keys: readonly string[],
+): { value: Record<string, string> } | { error: ParseError } {
+  if (!isRecord(raw)) {
+    return layoutError(
+      path,
+      "invalid-type",
+      `'${path}' must be a mapping (got ${describeValueShape(raw)}).`,
+    );
+  }
+  const unknown = rejectUnknownKeys(raw, new Set<string>(keys), {
+    kind: "section",
+    name: path,
+    path,
+  });
+  if (unknown) return { error: unknown };
+  const out: Record<string, string> = {};
+  for (const [key, entry] of Object.entries(raw)) {
+    const length = parseLength(entry, `${path}.${key}`);
+    if ("error" in length) return length;
+    out[key] = length.value;
+  }
+  return { value: out };
+}
+
+/**
+ * `visual.layout`: breakpoints, content widths, the minimum tap target and how a
+ * table behaves at a narrow width, in one place a responsive check can read.
+ */
+function parseLayout(raw: unknown): { value: DesignMdLayout } | { error: ParseError } {
+  if (!isRecord(raw)) {
+    return layoutError(
+      "visual.layout",
+      "invalid-type",
+      `'visual.layout' must be a mapping (got ${describeValueShape(raw)}).`,
+    );
+  }
+  const unknown = rejectUnknownKeys(raw, new Set<string>(DESIGN_MD_KEYS["visual.layout"]), {
+    kind: "section",
+    name: "visual.layout",
+    path: "visual.layout",
+  });
+  if (unknown) return { error: unknown };
+  const layout: DesignMdLayout = {};
+  if (raw.breakpoints !== undefined) {
+    const map = parseLengthMap(
+      raw.breakpoints,
+      "visual.layout.breakpoints",
+      LAYOUT_BREAKPOINT_KEYS,
+    );
+    if ("error" in map) return map;
+    layout.breakpoints = map.value;
+  }
+  if (raw.content_max_width !== undefined) {
+    const map = parseLengthMap(
+      raw.content_max_width,
+      "visual.layout.content_max_width",
+      LAYOUT_WIDTH_KEYS,
+    );
+    if ("error" in map) return map;
+    layout.content_max_width = map.value;
+  }
+  if (raw.target_min_px !== undefined) {
+    const target = raw.target_min_px;
+    if (typeof target !== "number" || !Number.isFinite(target)) {
+      return layoutError(
+        "visual.layout.target_min_px",
+        "invalid-type",
+        `'visual.layout.target_min_px' must be a finite number (got ${describeValueShape(target)}).`,
+      );
+    }
+    if (target < TARGET_MIN_PX_FLOOR) {
+      return layoutError(
+        "visual.layout.target_min_px",
+        "invalid-format",
+        `'visual.layout.target_min_px' must be at least ${TARGET_MIN_PX_FLOOR}, the WCAG 2.5.8 minimum target size (got ${target}).`,
+      );
+    }
+    layout.target_min_px = target;
+  }
+  if (raw.table_narrow !== undefined) {
+    const mode = TABLE_NARROW_VALUES.find((value) => value === raw.table_narrow);
+    if (mode === undefined) {
+      return layoutError(
+        "visual.layout.table_narrow",
+        "invalid-enum",
+        `'visual.layout.table_narrow' must be one of ${TABLE_NARROW_VALUES.join(", ")} (got ${describeValueShape(raw.table_narrow)}).`,
+      );
+    }
+    layout.table_narrow = mode;
+  }
+  return { value: layout };
 }
 
 /**

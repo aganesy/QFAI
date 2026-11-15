@@ -107,6 +107,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   concerns records a departure. Validate does not check the key yet.
   Closes #4109.
 
+- **`DESIGN.md` can hold its layout values.** An optional `visual.layout`
+  section takes the breakpoints, the content width of a reading page, an app
+  page and a form, the minimum tap target (at least 24 px, the WCAG 2.5.8
+  floor) and how a table behaves at a narrow width (`stack` or `scroll`), so a
+  responsive check reads them from one place. A file without it still parses.
+
 - **Research has a UI research brief.** Research for a screen type or a
   component the project does not have yet fills
   `rule/references/ui-research-brief.md`: one entry per axis (design-system
