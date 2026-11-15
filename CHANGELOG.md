@@ -9,12 +9,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The contract step writes the app frame once.** The app shell, the
   navigation for each role and the home belong to no single flow, so
   `sdd-contract` writes them as the screens of one UI contract, the app frame,
-  when no UI contract holds the shell yet. Every other screen's
-  `navigation.shell` names the frame's shell screen. A once-per-application
+  when no UI contract holds the shell or records why the application has none.
+  Every application screen inside the shell names the frame's shell screen in
+  `navigation.shell`, and prototyping reads the frame with every flow. A once-per-application
   part the project leaves out records its reason in the frame, and
   `interface-clarity.md` and `product-surface-reviewer` read the reason there.
   Settings, member management and notifications are added only when a story
   needs them.
+
+### Fixed
+
+- **Wrappers a Windows worktree stored as file symlinks are reported once, at
+  info.** On a Windows `git worktree`, git can store a directory wrapper as a
+  file symlink the OS will not follow. The canonical documents behind it read
+  fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
+  buried new warnings. That one finding is now at info. Its action is
+  unchanged: `qfai init` relinks the wrappers.
 
 ## [2.5.0] - 2026-11-15
 
@@ -129,6 +139,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the key, whatever its value, is ignored.
 
 ### Changed
+
+- **The interface-clarity cut is judged with production-sized data.** The test
+  in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
+  user is worse off) is asked with the volume of data the screen will hold in
+  production, not the test fixture, so a list control is not cut because a
+  five-row fixture does not need it.
 
 - **`ui-procurement.md` checks runtime compatibility and tries a native
   element first.** A new rung before the design system asks whether a native
@@ -425,6 +441,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the project would adopt.
 
 ### Fixed
+
+- **A `Derived (not stored)` declaration for a value no DB column holds is
+  accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
+  credits each declared value that the API contract requires through an `enum`
+  on the field, as the reference describes for a status computed at read time.
+  A value only in a description is still reported, and the message now says the
+  API contract declares no `enum` for it.
 
 - **The search-protection hook ends a PowerShell statement at a lone carriage
   return.** PowerShell ends a statement and a `#` line comment at a carriage
