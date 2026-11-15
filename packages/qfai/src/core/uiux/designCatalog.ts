@@ -276,7 +276,7 @@ function spacingTokens(design: DesignMd): Token[] {
       // A token name may not hold a `.`, so a step of 0.5 is named `0-5`.
       path: ["spacing", String(step).replace(".", "-")],
       type: "dimension",
-      value: { value: round(unit.value * step), unit: unit.unit },
+      value: { value: withoutFloatNoise(unit.value * step), unit: unit.unit },
     });
   }
   return tokens;
@@ -394,7 +394,7 @@ function colorValue(rgba: Rgba): Record<string, unknown> {
   return {
     colorSpace: "srgb",
     components: [rgba.r, rgba.g, rgba.b].map((value) => round(value / 255)),
-    ...(rgba.a === 1 ? {} : { alpha: round(rgba.a) }),
+    ...(rgba.a === 1 ? {} : { alpha: rgba.a }),
     hex: hexOf({ ...rgba, a: 1 }),
   };
 }
@@ -506,6 +506,14 @@ function fontStack(stack: string): string[] {
 
 function hyphen(key: string): string {
   return key.replace(/_/g, "-");
+}
+
+/**
+ * A computed number without the noise of binary floating point, so 0.1 times 3 is 0.3, while a
+ * real small value such as 0.00001 keeps its digits.
+ */
+function withoutFloatNoise(value: number): number {
+  return Number(value.toPrecision(12));
 }
 
 function round(value: number): number {

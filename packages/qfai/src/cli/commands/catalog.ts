@@ -2,7 +2,7 @@
  * `qfai catalog components` and `qfai catalog design`: write the project's component catalogue
  * or its design catalogue, or with `--check` say whether the committed files are current.
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
@@ -23,6 +23,7 @@ import {
   renderDesignTokens,
   renderTheme,
   sameGeneratedText,
+  type GeneratedRead,
 } from "../../core/uiux/designCatalog.js";
 import type { UiPlainTextOptions } from "../../core/validators/uiPlainText.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
@@ -117,11 +118,55 @@ export async function runCatalogDesign(options: CatalogDesignOptions): Promise<n
     info(`${targets.join(" and ")} are up to date with DESIGN.md.`);
     return EXIT_CODES.ok;
   }
-  for (const output of outputs) {
-    const file = path.join(root, output.file);
-    await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(file, output.text, "utf-8");
+  const failure = await writePair(root, outputs);
+  if (failure !== null) {
+    error(
+      `qfai catalog design: could not write the design catalogue, so both files are as they were: ${failure}`,
+    );
+    return EXIT_CODES.findings;
   }
   info(`Wrote ${targets.join(" and ")}: ${countTokens(source.design)} token(s) from DESIGN.md.`);
   return EXIT_CODES.ok;
+}
+
+/**
+ * Writes the token file and the theme as a pair: each goes to a temporary file beside it, then
+ * each is renamed into place. When a step fails, the temporary files are removed and a file
+ * already renamed gets its earlier text back, so the pair is never left out of step. Returns the
+ * failure's message, or null.
+ */
+async function writePair(
+  root: string,
+  outputs: readonly { file: string; text: string }[],
+): Promise<string | null> {
+  const files = outputs.map((output) => path.join(root, output.file));
+  const temporaries = files.map((file) => `${file}.${process.pid}.tmp`);
+  // A target that cannot be read, such as a directory in its place, has no text to put back; its
+  // rename fails below and the pair is restored from the other file's earlier text.
+  const earlier = await Promise.all(
+    outputs.map((output) =>
+      readGenerated(root, output.file).catch((): GeneratedRead => ({ state: "absent" })),
+    ),
+  );
+  let renamed = 0;
+  try {
+    for (const [index, output] of outputs.entries()) {
+      const temporary = temporaries[index] ?? "";
+      await mkdir(path.dirname(temporary), { recursive: true });
+      await writeFile(temporary, output.text, "utf-8");
+    }
+    for (const [index, file] of files.entries()) {
+      await rename(temporaries[index] ?? "", file);
+      renamed += 1;
+    }
+    return null;
+  } catch (caught) {
+    await Promise.all(temporaries.map((temporary) => rm(temporary, { force: true })));
+    for (const [index, file] of files.slice(0, renamed).entries()) {
+      const before = earlier[index];
+      if (before?.state === "read") await writeFile(file, before.text, "utf-8");
+      else await rm(file, { force: true });
+    }
+    return caught instanceof Error ? caught.message : String(caught);
+  }
 }

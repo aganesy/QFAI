@@ -4,7 +4,7 @@
  * `DESIGN.md`.
  */
 
-import { mkdir, mkdtemp, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -109,6 +109,22 @@ describe("the command writes the token file and the theme from DESIGN.md", () =>
     expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
     expect(await readAt(root, TOKENS)).toBe(tokens);
     expect(await readAt(root, THEME)).toBe(theme);
+  });
+
+  // QFAI:EX-0001-0312-01
+  it("leaves both files as they were when one of them cannot be written", async () => {
+    const root = await projectWith();
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    const tokens = await readAt(root, TOKENS);
+    await changePrimary(root);
+    await unlink(path.join(root, ...THEME.split("/")));
+    await mkdir(path.join(root, ...THEME.split("/")));
+    const failed = await cli(["catalog", "design", "--root", root]);
+    expect(failed.code).toBe(1);
+    expect(failed.err).toContain("both files are as they were");
+    expect(await readAt(root, TOKENS)).toBe(tokens);
+    const catalogDir = path.join(root, ".qfai", "catalog");
+    expect((await readdir(catalogDir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
 });
 

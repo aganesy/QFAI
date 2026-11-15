@@ -123,6 +123,19 @@ describe("the token file and the theme", () => {
   });
 
   // QFAI:EX-0001-0312-02
+  it("keeps a small spacing step and the overlay alpha as written, without float noise", async () => {
+    const design = await sampleDesign((text) =>
+      text
+        .replace(/base: "0\.25rem"/, 'base: "0.00001rem"')
+        .replace("scale: [0, 1, 2, 3, 4, 6, 8, 12, 16, 24]", "scale: [1, 3]")
+        .replace('overlay:        "rgba(0,0,0,0.5)"', 'overlay:        "rgba(0,0,0,0.123456)"'),
+    );
+    expect(tokenAt(design, "spacing.1.$value")).toEqual({ value: 0.00001, unit: "rem" });
+    expect(tokenAt(design, "spacing.3.$value")).toEqual({ value: 0.00003, unit: "rem" });
+    expect(tokenAt(design, "color.overlay.$value")).toMatchObject({ alpha: 0.123456 });
+  });
+
+  // QFAI:EX-0001-0312-02
   it("reads a negative shadow offset or spread, and leaves a negative blur to the theme", async () => {
     const spread = await sampleDesign((text) =>
       text.replace('sm: "0 1px 2px rgba(15,23,42,0.05)"', 'sm: "0 -2px 4px -1px #0a0a0a"'),
