@@ -277,6 +277,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     code, spec IDs or test syntax, from screens visitors read.
   - A figure or claim shown on more than one page comes from one source.
 
+- **A delegated lookup answer a decision uses is kept in a file.** Before the
+  session agent uses a delegated lookup's answer in a decision, it now writes
+  the answer with its citations to `<paths.outDir>/research/`, and the decision
+  cites that file. Before, the answer lived only in the result message, which
+  context compaction shortened to a line. Closes #4407.
+
 - **`QFAI-UITEXT-001` says what it reads.** The finding's fix text and the
   implementer guidance say that the check reads only literal text, and that
   moving a sentence into a constant, a prop or an attribute value is not a fix:
