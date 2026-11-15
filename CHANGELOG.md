@@ -29,6 +29,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **The implement steps now write the per-role navigation journey.** Where an
+  app has navigation of its own, `implement-scaffold` adds an empty journey
+  test for each role a flow adds a screen to, and records the roles that sign
+  in. `implement-credentials` serves one session per such role, and
+  `implement-acceptance` writes or extends each role's test: it reaches every
+  screen of that role through the app's own links and controls. Until UI
+  contracts name the roles of each screen, a role's screens are those of the
+  flows whose stories name it as their actor. `qfai validate` does not report
+  the journey, so each step names its file.
+
 - **A UI contract list or table element says how it is shown and narrowed.**
   The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
   artifact rules and the `sdd-contract` step give every `type: list` or
