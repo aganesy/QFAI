@@ -37,6 +37,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `navigation: { none: <reason> }`, and a `surface: marketing` screen is asked
   for neither. The UI contract guide, the contract artifact rules, the
   `sdd-contract` step and the shipped sample say so. Part of #4119.
+
 - **The implement steps now write the per-role navigation journey.** Where an
   app has navigation of its own, `implement-scaffold` adds an empty journey
   test for each role a flow adds a screen to, and records the roles that sign
@@ -46,6 +47,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contracts name the roles of each screen, a role's screens are those of the
   flows whose stories name it as their actor. `qfai validate` does not report
   the journey, so each step names its file.
+
+- **Validate warns about a list or table with no list behaviour.** A
+  `type: list` or `type: table` element of an application screen in a UI
+  contract with no `list` raises `QFAI-CONTRACT-055` at warning. An element
+  with no list behaviour on purpose writes `list: { none: <reason> }`, and a
+  `surface: marketing` screen is asked nothing. The UI contract guide, the
+  contract artifact rules, the `sdd-contract` step and the shipped sample say
+  so. Part of #4119.
 
 - **A UI contract list or table element says how it is shown and narrowed.**
   The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
