@@ -155,10 +155,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The search-protection hook reads a search that a program runner or a piped
   shell runs.** `nohup`, `setsid`, `nice`, `ionice`, `stdbuf`, `timeout` and
   `xargs` are unwrapped like `env`, so `nohup rg foo /` and
-  `rg -l foo src | xargs grep -r bar /` are denied as searches. A pipeline
+  `git ls-files | xargs grep -r bar /` are denied as searches. A pipeline
   stage that runs its input as a shell, such as `| sh`, `| bash -s` or
   `| pwsh -Command -`, is denied with a message saying the hook cannot read
-  the commands that shell runs.
+  the commands that shell runs. Closes #4384.
 
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
   derived-value declaration covered both a value the DB stores and a value

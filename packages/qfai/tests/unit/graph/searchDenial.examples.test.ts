@@ -781,7 +781,7 @@ it("denies a search a program runner or a piped shell runs", () => {
   for (const [command, operation] of [
     ["nohup rg foo /", "rg"],
     ["xargs rg foo src", "rg"],
-    ["rg -l foo src | xargs grep -r bar /", "grep"],
+    ["git ls-files | xargs grep -r bar /", "grep"],
     ["git log | xargs -I {} grep -r {} /", "grep"],
     ["timeout 5 rg foo /", "rg"],
     ["timeout -s KILL 5s grep -r foo /", "grep"],
