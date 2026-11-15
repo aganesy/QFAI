@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
+  lists what a product whose locale is Japanese needs from its contracts and
+  code: NFKC input normalisation, IME composition on Enter, yen, number, date
+  and era formats, postcode, phone, corporate and invoice numbers, line
+  breaking, line height and font loading. `sdd-contract` and `implement-tdd`
+  read it when the specification or `tech.md` states the locale, so these are
+  settled once instead of found screen by screen as bugs.
+
 - **A part a screen leaves out has one place for its reason.** The rule said
   leaving out a part every business screen has needs a reason in the screen's
   UI contract, but named no field for it, and the app shell, the home and the
