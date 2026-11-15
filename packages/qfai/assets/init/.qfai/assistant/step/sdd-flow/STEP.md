@@ -52,7 +52,11 @@ states.
    commands, one labelled item each, only in the Standard commands section of
    `tech.md`. Other documents point there. `tech.md` holds no rules and no
    constraints: a rule goes to the contract that enforces it, a constraint to
-   `01_policy/constraint.md`.
+   `01_policy/constraint.md`. The template shows each item in the shape its
+   schema accepts: replace each `<example: ...>` with the project's value,
+   keeping the backticks and list marks around it, add or remove rows and items
+   of the same shape, and delete an `<optional example: ...>` line the project
+   does not need.
 
    Write `## Architecture` from the technical decisions the deliberation record
    settles and, in an existing codebase, from its module layout and import

@@ -2,9 +2,10 @@
 
 How `/qfai-sdd` writes the root `DESIGN.md` for a UI-bearing flow.
 
-Applies only to a UI-bearing target — one whose classified surface set names
-`web`, `mobile`, `desktop` or `mixed`. A cli-only target has no root
-`DESIGN.md`.
+Applies only to a UI-bearing target — one whose surface set, read from the
+surfaces the deliberation record settles, the `03_contract/tech.md` `Surface`
+row and the UI contracts linked to the flow, names `web`, `mobile`, `desktop`
+or `mixed`. A cli-only target has no root `DESIGN.md`.
 
 ## Contents
 

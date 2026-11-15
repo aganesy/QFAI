@@ -145,6 +145,34 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       expect(trigger).toContain("`.qfai/assistant/rule/references/visual-reference-survey.md`");
     });
 
+    const briefPath = path.join(path.dirname(protocolPath), "references", "ui-research-brief.md");
+    it(`${path.relative(repoRoot, protocolPath)}: a new screen type fills the UI research brief on every axis`, async () => {
+      const trigger = section(await readFile(protocolPath, "utf-8"), "## Trigger").replace(
+        /\s+/g,
+        " ",
+      );
+      expect(trigger).toContain("`.qfai/assistant/rule/references/ui-research-brief.md`");
+      const brief = await readFile(briefPath, "utf-8");
+      for (const axis of [
+        "pattern",
+        "accessibility",
+        "catalogue",
+        "domain-analogues",
+        "framework-idioms",
+        "locale",
+      ]) {
+        expect(section(brief, "## Record"), axis).toMatch(new RegExp(`[|:] ${axis}( |$)`, "m"));
+      }
+      const flat = brief.replace(/\s+/g, " ");
+      expect(flat).toContain("A product screenshot is not a source for this axis.");
+      expect(flat).toContain("Never a visual direction");
+      expect(flat).toContain("An axis left out is a gap the research has not closed.");
+      expect(flat).toContain("A finding nothing was checked against is `defer`.");
+      expect(flat).toContain(
+        "Axis 3 is not applicable when the `Component catalogue` row of `tech.md` names no catalogue.",
+      );
+    });
+
     it(`${path.relative(repoRoot, surveyPath)}: samples by stratum, grades acclaim, dedupes, and lands each finding`, async () => {
       const survey = await readFile(surveyPath, "utf-8");
       const flat = survey.replace(/\s+/g, " ");

@@ -150,6 +150,30 @@ describe("turn-end hook", () => {
     expect(await hook({ session_id: "s1" })).toBe("");
   });
 
+  // QFAI:EX-0001-0244-17
+  it("marks no command while the Turn-end check item still holds a template slot", async () => {
+    const shipped = (
+      await readFile(
+        path.join(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "../../../assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md",
+        ),
+        "utf-8",
+      )
+    ).replace(/\r\n/g, "\n");
+    expect(shipped).toContain("- Turn-end check: `<optional example:");
+    const examplesReplaced = shipped.replace(/<example: ([^<>\n]+)>/g, "$1");
+    const everyReplaced = shipped.replace(/<(?:optional )?example: ([^<>\n]+)>/g, "$1");
+
+    expect(readTurnEndChecks(shipped)).toEqual([]);
+    expect(readTurnEndChecks(examplesReplaced)).toEqual([]);
+    expect(readTurnEndChecks(everyReplaced).map((check) => check.label)).toEqual([
+      "Format",
+      "Lint",
+      "Typecheck",
+    ]);
+  });
+
   // QFAI:EX-0001-0244-07
   it("prints nothing outside a QFAI project", async () => {
     expect(await hook({ session_id: "s1" })).toBe("");
