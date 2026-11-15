@@ -46,6 +46,8 @@ async function project(
   const elsewhere = path.join(base, "checkout", "qfai");
   const packageDir = layout === "installed" ? installed : elsewhere;
   await mkdir(packageDir, { recursive: true });
+  // The project and its node_modules exist in both layouts; only the copy moves.
+  await mkdir(path.dirname(installed), { recursive: true });
   await writeFile(path.join(packageDir, "package.json"), JSON.stringify({ name: "qfai" }), "utf-8");
   await writeFile(
     path.join(root, "package.json"),
