@@ -294,20 +294,19 @@ subject. When the suite runs once per clock profile, each profile runs its own s
 
 ## Playwright: wait until the app is ready
 
-A server-rendered page shows its content before it reacts to input. A test that fills a field
-before the page is interactive loses the value when the framework takes over, so the test fails
-some runs and passes others. The fix is one marker that does not depend on the framework: the app
-shell sets `data-qfai-ready` on `<html>` once it is interactive, and the test waits for it after
-every page load, before its first interaction.
+A server-rendered page shows its content before it reacts to input, so a test that fills a field
+too early loses the value when the framework takes over, and fails some runs. The app shell sets
+`data-qfai-ready` on `<html>` once it is interactive, and the test waits for it after every page
+load, before its first interaction. Do not wait a fixed time, and do not wrap an interaction in a
+blind retry such as `toPass`: both hide the cause and still fail on a slow run.
 
-The marker covers a page load only. A client-side route change keeps the same `<html>`, so the
-marker is still set from the earlier load and says nothing about the new route. After a client-side
-route change, the test waits for that route's own content instead, for example a heading the route
-renders.
+The marker covers a page load only: a client-side route change keeps the same `<html>`, with the
+marker still set. After a client-side route change, the test waits for that route's own content
+instead, such as its heading. Content inside a `<Suspense>` boundary can hydrate after the shell
+too, so a test waits for that content itself.
 
-The app shell owns the marker. In React, set it in an effect of a component that wraps every page
-and runs in the browser. In the Next.js App Router the root layout is a Server Component, so put
-the hook in a component marked `"use client"` that the root layout renders around its children:
+In React, an effect sets it in a `"use client"` component the root layout renders around every
+page, since the Next.js App Router root layout is a Server Component:
 
 ```tsx
 // app-ready.tsx (React): a client component the root layout renders around the page
@@ -322,17 +321,13 @@ export function AppReady({ children }: { children: ReactNode }) {
 }
 ```
 
-Content inside a `<Suspense>` boundary can hydrate after the shell. The marker does not cover it: a
-test that interacts with such content first waits for that content itself.
-
-Without a framework, set it once the script that wires the page has run:
-
 ```ts
 // app shell (plain DOM): after the event handlers are attached
 document.documentElement.dataset.qfaiReady = "true";
 ```
 
-The test waits for the marker with one helper:
+The test waits with one helper. A click that loads a new document leaves the old page and its
+marker in place until the new document arrives, so it waits for the new URL first:
 
 ```ts
 // ready.ts
@@ -341,29 +336,15 @@ import type { Page } from "@playwright/test";
 export async function waitForAppReady(page: Page): Promise<void> {
   await page.locator("html[data-qfai-ready]").waitFor({ state: "attached" });
 }
-```
 
-```ts
-// checkout.spec.ts: call the helper after every page.goto, before the first interaction
+// checkout.spec.ts: after every page load, before the first interaction
 await page.goto("/checkout");
 await waitForAppReady(page);
 await page.getByLabel("Email").fill("member@example.test");
-```
-
-A click that loads a new document leaves the old page, and its marker, in place until the new
-document arrives, so the helper alone can return too early. Wait for the new URL first, then for
-the marker:
-
-```ts
-// a click that loads a new document: wait for the new page, then for its marker
 await page.getByRole("link", { name: "Pay" }).click();
 await page.waitForURL("**/payment");
 await waitForAppReady(page);
-await page.getByLabel("Card number").fill("4242 4242 4242 4242");
 ```
-
-Do not wait a fixed time, and do not wrap an interaction in a blind retry such as `toPass` to
-cover hydration: both hide the cause and still fail on a slow run.
 
 ## Business data each file owns
 
