@@ -12,8 +12,9 @@ runs before any decision is taken.
 
 ## Reads
 
-- `.qfai/assistant/rule/research-first-protocol.md`, with the visual reference
-  survey and the UI research brief it calls for.
+- `.qfai/assistant/rule/research-first-protocol.md`, with the references its
+  Trigger calls for: `.qfai/assistant/rule/references/visual-reference-survey.md`
+  and `.qfai/assistant/rule/references/ui-research-brief.md`.
 - The inputs `.qfai/assistant/skill/qfai-discussion/SKILL.md#inputs-priority`
   orders.
 - `.agents/rules/untrusted-content.md`, when the request, a report or a fetched page carries

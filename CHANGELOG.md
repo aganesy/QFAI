@@ -4,7 +4,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Changed
+### Added
 
 - **Research has a UI research brief.** Research for a screen type or a
   component the project does not have yet fills

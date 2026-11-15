@@ -33,9 +33,10 @@ Fill one entry per axis for each new screen type or component.
 6. **Locale.** The input, formatting and typography conventions of the
    project's language.
 
-Axes 3, 5 and 6 are recorded as not applicable, with that reason, until the
-project has a catalogue of screen patterns, framework guidance and locale
-guidance to check them against.
+Axis 3 is not applicable when the `Component catalogue` row of `tech.md` names
+no catalogue. Axes 5 and 6 are recorded as not applicable, with the reason,
+until QFAI ships guidance for framework idioms and for locale to check them
+against; a project that keeps its own such guidance fills them from it.
 
 ## Record
 
@@ -47,12 +48,16 @@ ui_research_brief:
         finding: string # what it contains, in the analyst's own words
         source_ids: [string] # the summary's sources it rests on
         not_applicable: string # instead of finding and source_ids: why the axis does not apply
+        action: adopt | reject | defer # what the screen does with the finding
+        reason: string # what was checked against the repository
 ```
 
 - Each subject has one entry for each of the six axes: a finding with its
   sources, or `not_applicable` with its reason. An axis left out is a gap the
   research has not closed.
 - A finding is checked against the repository before it is applied, as the
-  protocol's rule for an external source says.
+  protocol's rule for an external source says: its `action` and `reason` say
+  what was read. A finding nothing was checked against is `defer`.
 - The brief is reported with the research summary and stored where the summary
-  is stored.
+  is stored. What outlives the run is what each adopted finding lands in: a
+  part, state or behaviour of the screen's UI contract.

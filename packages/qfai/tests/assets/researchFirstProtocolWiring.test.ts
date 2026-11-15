@@ -161,12 +161,16 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
         "framework-idioms",
         "locale",
       ]) {
-        expect(section(brief, "## Record"), axis).toContain(axis);
+        expect(section(brief, "## Record"), axis).toMatch(new RegExp(`[|:] ${axis}( |$)`, "m"));
       }
       const flat = brief.replace(/\s+/g, " ");
       expect(flat).toContain("A product screenshot is not a source for this axis.");
       expect(flat).toContain("Never a visual direction");
       expect(flat).toContain("An axis left out is a gap the research has not closed.");
+      expect(flat).toContain("A finding nothing was checked against is `defer`.");
+      expect(flat).toContain(
+        "Axis 3 is not applicable when the `Component catalogue` row of `tech.md` names no catalogue.",
+      );
     });
 
     it(`${path.relative(repoRoot, surveyPath)}: samples by stratum, grades acclaim, dedupes, and lands each finding`, async () => {
