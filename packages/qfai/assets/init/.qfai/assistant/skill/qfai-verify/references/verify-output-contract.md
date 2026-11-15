@@ -31,6 +31,7 @@ new JSON field or table inside `summary`. Empty-body exemptions, verdicts and
 completion rules stay unchanged.
 
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
+Under a `testsPending` plan scope, `summary` also names each `QFAI-STORY-006` obligation the QFAI gate listed as pending; the gate and `status` stay `"FAIL"`, and `verify-commit` decides whether that failure stops the commit.
 
 ## Per-gate results
 

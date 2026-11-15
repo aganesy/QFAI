@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
+  lists what a product whose locale is Japanese needs from its contracts and
+  code: NFKC input normalisation, IME composition on Enter, yen, number, date
+  and era formats, postcode, phone, corporate and invoice numbers, line
+  breaking, line height and font loading. `sdd-contract` and `implement-tdd`
+  read it when the specification or `tech.md` states the locale, so these are
+  settled once instead of found screen by screen as bugs.
+
 - **A part a screen leaves out has one place for its reason.** The rule said
   leaving out a part every business screen has needs a reason in the screen's
   UI contract, but named no field for it, and the app shell, the home and the
@@ -29,6 +37,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **Validate warns about a screen with no states or no navigation.** An
+  application screen of a UI contract with no `states`, or without one of
+  `default`, `empty`, `loading`, `error` and `success`, raises
+  `QFAI-CONTRACT-053` at warning, and one with no `navigation` raises
+  `QFAI-CONTRACT-054`. A screen in no navigation on purpose writes
+  `navigation: { none: <reason> }`, and a `surface: marketing` screen is asked
+  for neither. The UI contract guide, the contract artifact rules, the
+  `sdd-contract` step and the shipped sample say so. Part of #4119.
 - **The implement steps now write the per-role navigation journey.** Where an
   app has navigation of its own, `implement-scaffold` adds an empty journey
   test for each role a flow adds a screen to, and records the roles that sign
@@ -51,13 +67,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **A UI pattern repeated across screens becomes a shared component.**
-  `minimal-implementation.md` no longer counts a region that several screens
-  repeat as "an operation done once": it follows rung 1 of `ui-procurement.md`
-  and the business-screen floor. When two or more UI contracts name the same
-  region, rung 1 now extracts the shared component at its first use instead of
-  waiting for the second screen. A shared component that no UI contract names is
-  still not built in advance. Closes #4099.
+- **A scope that stops before implementation can reach its own commit.** In
+  `npx qfai workflow plan`, a scope that writes the specification and leaves
+  out the route's implement stage, such as `medium` of `add-feature`, now holds
+  `testsPending: true`. In such a run the QFAI gate still runs the full scan and
+  still fails on any error, but lists as pending each missing-test error
+  (`QFAI-STORY-006`) for an ID the run's specification stage wrote. The
+  repository gate's fix loop leaves those alone instead of writing the tests.
+  When those are its only errors, the local commit is made and its report lists the
+  pending tests for the implement stage. The
+  scope question says so for that option. Other scopes are printed as before.
 
 - **The search-protection hook allows a search scoped inside the project.** A
   grep, rg, git grep, Select-String, findstr or native search call that names
@@ -99,6 +118,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   shell its UI contract names, linked from its entry points, built from shared
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
+
+- **A UI pattern repeated across screens becomes a shared component.**
+  `minimal-implementation.md` no longer counts a region that several screens
+  repeat as "an operation done once": it follows rung 1 of `ui-procurement.md`
+  and the business-screen floor. When two or more UI contracts name the same
+  region, rung 1 now extracts the shared component at its first use instead of
+  waiting for the second screen. A shared component that no UI contract names is
+  still not built in advance. Closes #4099.
 
 - **A checkout that did not reinstall after a qfai upgrade is caught.** When
   the running qfai is the project's own copy and the lockfile
