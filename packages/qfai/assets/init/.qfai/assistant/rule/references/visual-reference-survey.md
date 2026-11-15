@@ -18,6 +18,7 @@ names it as undated.
 
 ## Contents
 
+- Inventory first
 - Sample
 - Acclaim
 - Dedupe before counting
@@ -25,6 +26,14 @@ names it as undated.
 - Findings
 - Where findings land
 - Storage
+
+## Inventory first
+
+A whole-site redesign opens with an inventory of what the current surface
+shows: the logo, imagery and banners, copy, figures, claims and contact routes.
+Each item is kept, changed or removed, and the user decides every removal
+before the survey starts. An item the redesign drops without that decision is a
+defect of the redesign, not a finding of the survey.
 
 ## Sample
 
@@ -116,7 +125,13 @@ visual_survey:
   the brand departs from competitors, it does not copy them.
 - A finding is applied only after it is checked, as the protocol's rule for an
   external source says. Its `reason` names what was read: the adopted theme,
-  the current `DESIGN.md`, the current screens or UI contracts. A finding
+  the current `DESIGN.md`, the current screens or UI contracts. Every finding
+  to adopt is also checked against
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md`, its
+  _Displacement_ section included, and against `DESIGN.md`'s
+  `audience.do_not_look_like`: a match is a `reject`, or an `adopt` whose
+  `reason` names the brand direction that asks for it. A pattern common on
+  well-known sites is not exempt. A finding
   nothing was checked against is `defer`. Something a site does that the
   product must not do is a `reject` of the matching kind.
 

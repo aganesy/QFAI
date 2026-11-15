@@ -116,6 +116,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **UI research and design close gaps a redesign exposed.**
+  - The product-surface reviewer also checks built screens against the
+    _Components_, _Layout and composition_ and _Displacement_ anti-patterns,
+    such as serial numbers on cards and all-caps eyebrow labels.
+  - The visual reference survey opens a whole-site redesign with an inventory
+    of the current surface, and the user decides every removal. Each finding to
+    adopt is checked against the anti-pattern list and `do_not_look_like`.
+  - `.agents/rules/interface-clarity.md` cuts development notation, such as
+    code, spec IDs or test syntax, from screens visitors read.
+  - A figure or claim shown on more than one page comes from one source.
+
 - **`ui-procurement.md` checks runtime compatibility and tries a native
   element first.** A new rung before the design system asks whether a native
   element such as `details` or `dialog` does the job. A catalogue, and each item

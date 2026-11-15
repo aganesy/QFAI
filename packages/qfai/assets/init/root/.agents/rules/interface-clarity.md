@@ -75,6 +75,9 @@ adds no meaning. It carries its `qfai-text` or `qfai-text-file` reason.
   in `## What a business screen always has` counts as asked for, and so does a
   part of a marketing screen's pattern entry that its UI contract names.
 - Decoration that displaces signal.
+- Development notation on a screen visitors read: code, a spec ID, a test
+  scenario or an assertion shown as decoration. Say it in the visitor's words,
+  unless the audience is developers and that content is the product.
 - The second place the same thing is said.
 
 The test is the one `documentation-clarity.md` uses. Remove it, and ask whether

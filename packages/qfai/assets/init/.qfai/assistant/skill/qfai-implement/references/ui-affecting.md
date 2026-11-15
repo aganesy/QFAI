@@ -43,6 +43,10 @@ files. A plain text there is a literal text node, non-empty after trimming and s
 `summary`, `title`, `script`, `style` and an element with `role="alert"` or `role="status"`. Attribute values
 and expressions are never plain text; a string literal that is a whole JSX child is.
 
+A figure, label or claim shown on more than one page comes from one source, such as one data module or content
+entry, and a test asserts that every page that shows it reads that source, so a correction made in one place
+reaches every page.
+
 Each plain text needs a reason comment directly before it, or before its parent element, with only whitespace
 between. A missing reason is `QFAI-UITEXT-001` and a malformed one `QFAI-UITEXT-002`; `QFAI-UITEXT-003` means a `.tsx` or `.jsx` file is selected but `typescript` cannot be resolved from the project root. All three are errors and cannot be waived.
 
