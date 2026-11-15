@@ -902,8 +902,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /Feedback after every change/,
         /A home whose one question/,
         /One shared component per repeated pattern/,
-        /needs a reason recorded in the UI contract/,
-        /its reason goes in the app frame/,
+        /needs a reason recorded in the `omitted` list/,
+        /its entry goes in the app frame/,
         /counts as asked for/,
       ]) {
         expect(text).toMatch(part);
