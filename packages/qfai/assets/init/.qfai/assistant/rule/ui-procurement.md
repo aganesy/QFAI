@@ -88,7 +88,7 @@ naming the item is checked against the installed version before the item is
 tried. A new incompatibility goes in the region's procurement record with a link to
 the report filed with the catalogue's maintainers, and is reported to QFAI so a
 later release adds it to that table. The shipped table is not edited in the
-project: `qfai init` replaces it.
+project: `npx qfai init` replaces it.
 
 A registry entry is a name pointing at a URL template carrying `{name}`,
 which is where the component name goes. That shape is not owned by any
