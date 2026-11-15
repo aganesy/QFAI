@@ -22,6 +22,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+### Changed
+
+- **Parallel screen units start from a shared foundation.** Disjoint writes no
+  longer let two or more parallel story units that build application screens
+  each author their own list toolbar, page header, back link and status
+  badges. Before they fan out, the session agent lands a foundation unit: the
+  app shell, a page template for each screen type the units build, the status
+  map and the shared list behaviour, from the component catalogue or extracted
+  once. A new parallel-unit gate condition, G7, fails a screen unit whose
+  screen type has no template yet, and each screen unit's brief names the
+  templates and catalogue entries it uses. A split with fewer than two screen
+  units is unaffected. Closes #4306.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
