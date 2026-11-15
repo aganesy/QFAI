@@ -876,6 +876,100 @@ describe("parseDesignMd (TC-1.1.x)", () => {
   });
 });
 
+describe("parseDesignMd visual.layout", () => {
+  const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+  const withLayout = (layout: string): string =>
+    VALID_FRONT_MATTER.replace(lastShadowLine, `${lastShadowLine}\n  layout:\n${layout}`);
+
+  it("is optional: a file without it still parses", () => {
+    const result = parseDesignMd(VALID_FRONT_MATTER);
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.data.visual.layout).toBeUndefined();
+  });
+
+  it("reads breakpoints, content widths, the minimum target and the narrow-table mode", () => {
+    const result = parseDesignMd(
+      withLayout(
+        [
+          "    breakpoints:",
+          '      sm: "40rem"',
+          '      lg: "64rem"',
+          "    content_max_width:",
+          '      reading: "42rem"',
+          '      app: "80rem"',
+          "    target_min_px: 44",
+          "    table_narrow: stack",
+        ].join("\n"),
+      ),
+    );
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.data.visual.layout).toEqual({
+      breakpoints: { sm: "40rem", lg: "64rem" },
+      content_max_width: { reading: "42rem", app: "80rem" },
+      target_min_px: 44,
+      table_narrow: "stack",
+    });
+  });
+
+  it.each([
+    [
+      "a target under the WCAG 2.5.8 floor",
+      "    target_min_px: 20",
+      "visual.layout.target_min_px",
+      "invalid-format",
+    ],
+    [
+      "a target that is not a number",
+      '    target_min_px: "44px"',
+      "visual.layout.target_min_px",
+      "invalid-type",
+    ],
+    [
+      "an unknown narrow-table mode",
+      "    table_narrow: hide",
+      "visual.layout.table_narrow",
+      "invalid-enum",
+    ],
+    ["an unknown layout key", '    gutter: "1rem"', "visual.layout.gutter", "unknown-key"],
+    [
+      "an unknown breakpoint",
+      '    breakpoints:\n      xxl: "96rem"',
+      "visual.layout.breakpoints.xxl",
+      "unknown-key",
+    ],
+    [
+      "an unknown content width",
+      '    content_max_width:\n      wide: "90rem"',
+      "visual.layout.content_max_width.wide",
+      "unknown-key",
+    ],
+    [
+      "a padded width",
+      '    content_max_width:\n      form: " 32rem "',
+      "visual.layout.content_max_width.form",
+      "invalid-format",
+    ],
+  ])("rejects %s", (_label, layout, expectedPath, expectedCode) => {
+    const result = parseDesignMd(withLayout(layout));
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.path).toBe(expectedPath);
+    expect(result.error.code).toBe(expectedCode);
+  });
+
+  it("rejects a layout that is not a mapping", () => {
+    const result = parseDesignMd(
+      VALID_FRONT_MATTER.replace(lastShadowLine, `${lastShadowLine}\n  layout: "responsive"`),
+    );
+    expect("error" in result).toBe(true);
+    if (!("error" in result)) return;
+    expect(result.error.path).toBe("visual.layout");
+    expect(result.error.code).toBe("invalid-type");
+  });
+});
+
 // ---------------------------------------------------------------------------
 // TC-1.2.x validateDesignMd
 // ---------------------------------------------------------------------------
