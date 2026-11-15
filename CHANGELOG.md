@@ -6,6 +6,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A part a screen leaves out has one place for its reason.** The rule said
+  leaving out a part every business screen has needs a reason in the screen's
+  UI contract, but named no field for it, and the app shell, the home and the
+  shared components belong to no single screen. A reviewer could not tell a
+  deliberate omission from a missing part. A UI contract screen now takes an
+  optional `omitted` list of `{ part, reason }` entries, and the parts once per
+  application are listed on the home screen's contract until an app-level UI
+  contract exists. `qfai validate` reports an `omitted` that is not a list, an
+  entry that is not a mapping, and an entry with no `part` or no `reason`, as
+  `QFAI-CONTRACT-052` at error. The rule, the UI contract guide and template,
+  the `sdd-contract` step and the product-surface reviewer point at the list.
+
 - **The contract step writes the app frame once.** The app shell, the
   navigation for each role and the home belong to no single flow, so
   `sdd-contract` writes them as the screens of one UI contract, the app frame,
@@ -16,6 +28,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `interface-clarity.md` and `product-surface-reviewer` read the reason there.
   Settings, member management and notifications are added only when a story
   needs them.
+
+- **The implement steps now write the per-role navigation journey.** Where an
+  app has navigation of its own, `implement-scaffold` adds an empty journey
+  test for each role a flow adds a screen to, and records the roles that sign
+  in. `implement-credentials` serves one session per such role, and
+  `implement-acceptance` writes or extends each role's test: it reaches every
+  screen of that role through the app's own links and controls. Until UI
+  contracts name the roles of each screen, a role's screens are those of the
+  flows whose stories name it as their actor. `qfai validate` does not report
+  the journey, so each step names its file.
 
 - **A UI contract list or table element says how it is shown and narrowed.**
   The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
