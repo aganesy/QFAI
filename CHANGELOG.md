@@ -245,6 +245,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **The prototype reviewer prompt fits the 500-line ceiling again.** The
+  business-screen floor passages are re-wrapped and tightened with the same
+  rules, so the shipped prompt stays within the size an agent reads in one
+  pass.
+
 - **E2E tests wait until a server-rendered page is interactive.** A test that
   filled a field before the page hydrated lost the value and failed some runs.
   The guidance now has the app shell set `data-qfai-ready` on `<html>` once it
