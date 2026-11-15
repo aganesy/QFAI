@@ -36,7 +36,8 @@ pagination where a list can outgrow one screen, feedback after every change,
 and the loading, empty, error and success states. The contract need not repeat
 these parts, and their absence from the contract is no reason to leave them
 out of the screen. Leaving one out needs a reason recorded in the screen's UI
-contract, as that rule says.
+contract, as that rule says; a once-per-application part's reason goes in the
+app frame.
 
 That list is for application screens. A marketing screen, declared with
 `surface: marketing`, carries the parts of its section entries in the marketing
@@ -99,14 +100,16 @@ Every screen states why it exists and where it sits in the app, so it is built
 inside the app rather than as a standalone page reached through a list of
 links.
 
-| Key                       | Holds                                                          |
-| ------------------------- | -------------------------------------------------------------- |
-| `purpose`                 | why the screen exists, in one sentence                         |
-| `navigation.shell`        | the app frame the screen renders inside, such as the app shell |
-| `navigation.entry_points` | the screens, menus or actions that lead to it, at least one    |
-| `navigation.back_to`      | the route the user returns to from it                          |
+| Key                       | Holds                                                           |
+| ------------------------- | --------------------------------------------------------------- |
+| `purpose`                 | why the screen exists, in one sentence                          |
+| `navigation.shell`        | the shell screen the screen renders inside, or that it has none |
+| `navigation.entry_points` | the screens, menus or actions that lead to it, at least one     |
+| `navigation.back_to`      | the route the user returns to from it                           |
 
-A screen with no frame, such as a sign-in page, says so in `shell`. A top-level
+The shell, the navigation for each role and the home are written once, as the
+screens of one UI contract, the app frame, and `shell` names the frame's shell
+screen. A screen with no frame, such as a sign-in page, says so in `shell`. A top-level
 screen with nowhere to return to says so in `back_to`. `npx qfai validate` does
 not check these keys; they describe the screen for the implementer and the
 reviewer.
