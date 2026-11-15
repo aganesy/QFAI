@@ -184,3 +184,4 @@
 | US-0001-0307 | Catalogue the components a project already has                                         | `user-story-0001-0307/` |
 | US-0001-0308 | Write, build and review a marketing page against its own patterns                      | `user-story-0001-0308/` |
 | US-0001-0309 | Keep the parts of a business screen out of minimal-scope cuts                          | `user-story-0001-0309/` |
+| US-0001-0313 | A checkout that did not reinstall after a qfai upgrade is caught                       | `user-story-0001-0313/` |

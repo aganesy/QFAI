@@ -19,7 +19,7 @@ Feature: Redirect observable exploratory searches through hooks
 
   # AC-0001-0235-03
   Scenario: Permit known reads and internal operations
-    Given a known-file read or an ordinary quality or graph-engine operation
+    Given a known-file read, a direct search whose every path lies inside the project, or an ordinary quality or graph-engine operation
     When the agent executes it
     Then it remains usable without permitting general exploration
 
@@ -45,5 +45,5 @@ Feature: Redirect observable exploratory searches through hooks
   Scenario: Leave a search of files outside the project alone
     Given a direct search whose every file operand is a literal path
     When each operand resolves outside the project worktree and the checkout the hook belongs to, before and after symbolic links
-    Then the search is not denied, and a search with any operand that is not provably outside stays denied
+    Then the search is not denied, and a search that names a path outside the project with any operand that is not provably outside stays denied
 ```

@@ -16,7 +16,13 @@ import { withSpecStage } from "./specStage.js";
 import { stepPath } from "./steps.js";
 
 export type PlanReason =
-  "invalid-input" | "schema" | "unknown-route" | "plan-invalid" | "artifact-unserved" | "io-error";
+  | "invalid-input"
+  | "schema"
+  | "unknown-route"
+  | "plan-invalid"
+  | "artifact-unserved"
+  | "io-error"
+  | "stale-install";
 
 export interface PlanReasonEntry {
   reason: PlanReason;

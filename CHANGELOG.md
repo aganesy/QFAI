@@ -29,6 +29,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **Validate warns about a screen with no states or no navigation.** An
+  application screen of a UI contract with no `states`, or without one of
+  `default`, `empty`, `loading`, `error` and `success`, raises
+  `QFAI-CONTRACT-053` at warning, and one with no `navigation` raises
+  `QFAI-CONTRACT-054`. A screen in no navigation on purpose writes
+  `navigation: { none: <reason> }`, and a `surface: marketing` screen is asked
+  for neither. The UI contract guide, the contract artifact rules, the
+  `sdd-contract` step and the shipped sample say so. Part of #4119.
 - **The implement steps now write the per-role navigation journey.** Where an
   app has navigation of its own, `implement-scaffold` adds an empty journey
   test for each role a flow adds a screen to, and records the roles that sign
@@ -51,6 +59,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The search-protection hook allows a search scoped inside the project.** A
+  grep, rg, git grep, Select-String, findstr or native search call that names
+  at least one path, every one inside the project root, now runs. A search with
+  no path, one over the project root itself (such as `.`), and one whose path
+  the hook cannot place inside the project are still redirected to the graph:
+  a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
+  home prefix or a `..` segment. A findstr with `/s` and a native search scoped
+  only by an include glob are also redirected.
+
 - **Settled work that adds screens gets the design and prototype stages.**
   The extraction has a new qualifier, `new-screens`, for a settled change that
   adds new UI contracts or new routes users see: an approved record with a
@@ -68,11 +85,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   architecture, product-surface and requirements reviewers refuse such a cut;
   how a part is built remains subject to the article.
 
+- **A run that adds screens researches what the project has no pattern for.**
+  Before its session, `prototyping-grill` now checks each screen the run adds:
+  its type against the business UI patterns, and each element and `structure`
+  group its UI contract declares against the component catalogue `tech.md`
+  names. For a screen type or a component neither covers, it runs the
+  research-first protocol, scoped to UI and to those gaps alone, and the grill
+  session starts from that research. A run whose screens they all cover runs
+  no research. Before, only `/qfai-discussion` ran the protocol. Closes #4293.
+
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the
   shell its UI contract names, linked from its entry points, built from shared
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
+
+- **A checkout that did not reinstall after a qfai upgrade is caught.** When
+  the running qfai is the project's own copy and the lockfile
+  (`package-lock.json`, `pnpm-lock.yaml` or `yarn.lock`) pins another version,
+  every command prints one stderr line naming both versions and the install
+  command, and `qfai validate`, `qfai sdd preflight` and `qfai workflow plan`
+  stop with exit 1. A `workflow plan` refusal carries the new reason
+  `stale-install`. The upgrade guide now tells every checkout and worktree to
+  run its install after pulling a qfai upgrade.
 
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
@@ -127,6 +162,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   DOM. The test layers rule and the scaffold and acceptance steps forbid a
   fixed sleep or a blind retry in its place.
 
+- **The search-protection hook lets a search of one file outside the project
+  run.** A search the hook did not already allow as scoped inside the project
+  is no longer denied when it is a grep, rg, findstr or Select-String that is
+  the only command of its event, with no pipeline stage, whose literal pattern
+  names no existing file and whose one absolute file operand names an existing
+  single-link regular file outside the project worktree and the checkout the
+  hook belongs to, before and after symbolic links, so
+  `grep -n foo /etc/hosts` runs. An outside directory or relative operand, a
+  second operand, git grep, an outside file beside another command or
+  pipeline stage, a search that mixes project and outside paths, a glob, `~`,
+  variable or `..` operand, a link, hard link, MSYS link file or shortcut, an
+  option that reads another file, `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH` set,
+  or an operand that does not exist stays denied. Fixes #4179.
+
 - **A `Derived (not stored)` declaration for a value no DB column holds is
   accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
   credits each declared value that the API contract requires through an `enum`
@@ -143,19 +192,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   own, as part of the group's time. A run without `--timings` still runs them
   side by side, and the findings and counts are the same either way.
   Fixes #4279.
-
-- **The search-protection hook lets a search of files outside the project
-  run.** A grep, rg, findstr or Select-String that is the only command of its
-  event, with no pipeline stage, whose literal pattern names no existing file
-  and whose one absolute file operand names an existing single-link regular
-  file outside the project worktree and the checkout the hook belongs to,
-  before and after symbolic links, is no longer denied, so
-  `grep -n foo /etc/hosts` runs. A directory or relative operand, a second
-  operand, git grep, a search beside another command or pipeline stage, a
-  search with no file operand, a project operand beside an outside one, a glob, `~`,
-  variable or `..` operand, a link, hard link, MSYS link file or shortcut, an
-  option that reads another file, `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH` set,
-  or an operand that does not exist stays denied. Fixes #4179.
 
 ## [2.5.0] - 2026-11-15
 
