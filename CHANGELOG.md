@@ -116,6 +116,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`QFAI-UITEXT-001` says what it reads.** The finding's fix text and the
+  implementer guidance say that the check reads only literal text, and that
+  moving a sentence into a constant, a prop or an attribute value is not a fix:
+  the product-surface review still judges that copy.
+
 - **`ui-procurement.md` checks runtime compatibility and tries a native
   element first.** A new rung before the design system asks whether a native
   element such as `details` or `dialog` does the job. A catalogue, and each item

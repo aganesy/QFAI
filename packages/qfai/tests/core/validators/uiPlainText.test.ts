@@ -78,6 +78,11 @@ describe("a plain text without a reason fails", () => {
     );
     expect(order.every((at) => at >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // Moving copy out of the markup clears the finding without a reason, so the
+    // fix says that is not one.
+    expect(fix).toContain(
+      "Moving the text into a constant, a prop or an attribute value is not a fix",
+    );
   });
 });
 
