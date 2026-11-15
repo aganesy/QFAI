@@ -34,6 +34,7 @@ export { validateMermaidScreenFlow } from "./mermaidScreenFlow.js";
 export { detectPlatform } from "./platformDetection.js";
 export { validateUiDefinitionConsistency } from "./uiDefinitionConsistency.js";
 export { validateComponentCatalog } from "./componentCatalog.js";
+export { validateDesignCatalog } from "./designCatalog.js";
 export { validateUiPlainText } from "./uiPlainText.js";
 export { validateUiScreenEntries } from "./uiScreenEntries.js";
 export { validateUiContractParse } from "./contracts.js";

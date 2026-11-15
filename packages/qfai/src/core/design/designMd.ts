@@ -39,16 +39,22 @@ export type RadiusKey = (typeof RADIUS_KEYS)[number];
 export const SHADOW_KEYS = ["sm", "md", "lg"] as const;
 export type ShadowKey = (typeof SHADOW_KEYS)[number];
 
+/** How tightly a screen packs its content, as `layout.density` states it. */
+export const DENSITIES = ["compact", "comfortable", "spacious"] as const;
+export type Density = (typeof DENSITIES)[number];
+
 /**
  * Every key the front matter admits, by the section that holds it. The parser
  * rejects any other key at each level, and a design direction proposed before
  * the file exists is read against the same tree.
  */
 export const DESIGN_MD_KEYS = {
-  root: ["brand", "visual", "audience", "accessibility"],
+  root: ["brand", "visual", "audience", "accessibility", "layout", "data_display"],
   brand: ["name", "archetype", "voice", "theme"],
   audience: ["emotion", "do_not_look_like"],
   accessibility: ["contrast_ratio_min", "motion"],
+  layout: ["breakpoints", "widths", "density", "target_min"],
+  data_display: ["locale", "currency", "number", "date"],
   visual: ["colors", "typography", "radius", "shadow", "spacing"],
   "visual.colors": COLOR_KEYS,
   "visual.typography": [...FONT_KEYS, "scale", "weight"],
@@ -119,6 +125,20 @@ export type DesignMd = {
     contrast_ratio_min?: number;
     motion?: string;
   };
+  /** Breakpoints, content widths, density and the smallest pointer target, when stated. */
+  layout?: {
+    breakpoints?: Record<string, string>;
+    widths?: Record<string, string>;
+    density?: Density;
+    target_min?: string;
+  };
+  /** How numbers, money and dates are written on screen, when stated. */
+  data_display?: {
+    locale?: string;
+    currency?: string;
+    number?: string;
+    date?: string;
+  };
 };
 
 export type ParseError = {
@@ -147,6 +167,8 @@ const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/;
 const RGBA_OVERLAY_RE =
   /^rgba\(\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\s*,\s*(?:0|1(?:\.0+)?|0?\.\d+)\s*\)$/;
 const RADIUS_VALUE_RE = /^(?:0|\d+(?:\.\d+)?(?:px|rem|em|%)|9999px)$/;
+const LAYOUT_LENGTH_RE = /^(?:0|\d+(?:\.\d+)?(?:px|rem|em|ch|vw|%))$/;
+const LAYOUT_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 // ---------------------------------------------------------------------------
 // Front-matter extraction
@@ -502,7 +524,150 @@ function buildDesignMd(raw: unknown): BuildResult {
     }
     data.accessibility = acc;
   }
+  if ("layout" in raw && raw.layout !== undefined) {
+    const layout = readLayout(raw.layout);
+    if ("error" in layout) return { error: layout.error };
+    data.layout = layout.value;
+  }
+  if ("data_display" in raw && raw.data_display !== undefined) {
+    const display = readDataDisplay(raw.data_display);
+    if ("error" in display) return { error: display.error };
+    data.data_display = display.value;
+  }
   return { data };
+}
+
+/**
+ * The optional `layout` section: named breakpoints and widths, a density and the smallest
+ * pointer target. Names become CSS custom property names, so they are lower-case words joined
+ * by hyphens; every length is a single CSS length.
+ */
+function readLayout(
+  raw: unknown,
+): { value: NonNullable<DesignMd["layout"]> } | { error: ParseError } {
+  if (!isRecord(raw)) {
+    return {
+      error: {
+        path: "layout",
+        code: "invalid-type",
+        message: `'layout' must be a mapping (got ${describeValueShape(raw)}).`,
+      },
+    };
+  }
+  const keyError = rejectUnknownKeys(raw, new Set<string>(DESIGN_MD_KEYS.layout), {
+    kind: "section",
+    name: "layout",
+    path: "layout",
+  });
+  if (keyError) return { error: keyError };
+  const value: NonNullable<DesignMd["layout"]> = {};
+  for (const field of ["breakpoints", "widths"] as const) {
+    const entry = raw[field];
+    if (entry === undefined) continue;
+    const lengths = readNamedLengths(entry, `layout.${field}`);
+    if ("error" in lengths) return lengths;
+    value[field] = lengths.value;
+  }
+  if (raw.density !== undefined) {
+    const density = DENSITIES.find((known) => known === raw.density);
+    if (density === undefined) {
+      return {
+        error: {
+          path: "layout.density",
+          code: "invalid-enum",
+          message: `'layout.density' must be one of: ${DENSITIES.join(", ")}.`,
+        },
+      };
+    }
+    value.density = density;
+  }
+  if (raw.target_min !== undefined) {
+    const length = readLength(raw.target_min, "layout.target_min");
+    if ("error" in length) return length;
+    value.target_min = length.value;
+  }
+  return { value };
+}
+
+function readNamedLengths(
+  raw: unknown,
+  sectionPath: string,
+): { value: Record<string, string> } | { error: ParseError } {
+  if (!isRecord(raw)) {
+    return {
+      error: {
+        path: sectionPath,
+        code: "invalid-type",
+        message: `'${sectionPath}' must be a mapping of names to CSS lengths (got ${describeValueShape(raw)}).`,
+      },
+    };
+  }
+  const out: Record<string, string> = {};
+  for (const [name, entry] of Object.entries(raw)) {
+    if (!LAYOUT_NAME_RE.test(name)) {
+      return {
+        error: {
+          path: `${sectionPath}.${name}`,
+          code: "invalid-format",
+          message: `'${sectionPath}.${name}': a name is lower-case letters and digits joined by hyphens.`,
+        },
+      };
+    }
+    const length = readLength(entry, `${sectionPath}.${name}`);
+    if ("error" in length) return length;
+    out[name] = length.value;
+  }
+  return { value: out };
+}
+
+function readLength(raw: unknown, fieldPath: string): { value: string } | { error: ParseError } {
+  if (typeof raw !== "string" || !LAYOUT_LENGTH_RE.test(raw)) {
+    return {
+      error: {
+        path: fieldPath,
+        code: "invalid-format",
+        message: `'${fieldPath}' must be one CSS length in px, rem, em, ch, vw or %, or 0 (got ${describeValueShape(raw)}).`,
+      },
+    };
+  }
+  return { value: raw };
+}
+
+/** The optional `data_display` section: the locale and the number, money and date formats. */
+function readDataDisplay(
+  raw: unknown,
+): { value: NonNullable<DesignMd["data_display"]> } | { error: ParseError } {
+  if (!isRecord(raw)) {
+    return {
+      error: {
+        path: "data_display",
+        code: "invalid-type",
+        message: `'data_display' must be a mapping (got ${describeValueShape(raw)}).`,
+      },
+    };
+  }
+  const keyError = rejectUnknownKeys(raw, new Set<string>(DESIGN_MD_KEYS.data_display), {
+    kind: "section",
+    name: "data_display",
+    path: "data_display",
+  });
+  if (keyError) return { error: keyError };
+  const value: NonNullable<DesignMd["data_display"]> = {};
+  for (const field of DESIGN_MD_KEYS.data_display) {
+    const entry = raw[field];
+    if (entry === undefined) continue;
+    if (typeof entry !== "string" || entry.trim() === "" || entry.trim() !== entry) {
+      return {
+        error: {
+          path: `data_display.${field}`,
+          code: "invalid-type",
+          message: `'data_display.${field}' must be a non-empty string with no leading / trailing whitespace.`,
+        },
+      };
+    }
+    value[field] = entry;
+  }
+  return { value };
 }
 
 function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseError } {

@@ -1206,3 +1206,59 @@ describe("isUnreplacedDesignMdSample", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// The optional `layout` and `data_display` sections
+// ---------------------------------------------------------------------------
+
+/** The valid sample with extra front-matter lines added before the closing delimiter. */
+function sampleWithSections(lines: readonly string[]): string {
+  const front = VALID_FRONT_MATTER.split("\n");
+  return [...front.slice(0, -1), ...lines, "---", VALID_BODY].join("\n");
+}
+
+// QFAI:AC-0001-0311-02
+describe("parseDesignMd: layout and data_display", () => {
+  it("reads the layout and data display values when they are stated", () => {
+    const result = parseDesignMd(
+      sampleWithSections([
+        "layout:",
+        '  breakpoints: { sm: "40rem", 2xl: "96rem" }',
+        '  widths: { content: "72rem" }',
+        "  density: compact",
+        '  target_min: "44px"',
+        "data_display:",
+        '  locale: "ja-JP"',
+        '  date: "YYYY-MM-DD"',
+      ]),
+    );
+    if ("error" in result) throw new Error(result.error.message);
+    expect(result.data.layout).toEqual({
+      breakpoints: { sm: "40rem", "2xl": "96rem" },
+      widths: { content: "72rem" },
+      density: "compact",
+      target_min: "44px",
+    });
+    expect(result.data.data_display).toEqual({ locale: "ja-JP", date: "YYYY-MM-DD" });
+  });
+
+  it("leaves both absent when the file does not state them", () => {
+    const result = parseDesignMd(VALID_SAMPLE);
+    if ("error" in result) throw new Error(result.error.message);
+    expect(result.data.layout).toBeUndefined();
+    expect(result.data.data_display).toBeUndefined();
+  });
+
+  // QFAI:EX-0001-0311-04
+  it.each([
+    [["layout:", '  gutter: "1rem"'], "layout.gutter"],
+    [["layout:", '  breakpoints: { Wide: "80rem" }'], "layout.breakpoints.Wide"],
+    [["layout:", "  density: dense"], "layout.density"],
+    [["layout:", '  target_min: "44 px"'], "layout.target_min"],
+    [["data_display:", '  date: ""'], "data_display.date"],
+    [["layout: compact"], "layout"],
+  ])("rejects %j at %s", (lines, at) => {
+    const result = parseDesignMd(sampleWithSections(lines));
+    expect("error" in result && result.error.path).toBe(at);
+  });
+});

@@ -4,6 +4,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **`qfai catalog design` derives the design tokens and the Tailwind theme
+  from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
+  Design Tokens Community Group 2025.10 format, with the colours, their
+  semantic surface, text, border, primary and status aliases, and the type,
+  spacing, radius and shadow tokens, and `.qfai/catalog/theme.css`, the same
+  tokens as one Tailwind 4 `@theme` block. `DESIGN.md` gains the optional
+  `layout` section (breakpoints, widths, density, smallest target) and
+  `data_display` section (locale and number, money and date formats).
+  `--check` exits 1 when a committed file is missing or out of date. Once
+  either file exists, `qfai validate` warns in the `prototyping`,
+  `saas-package`, `verify` and `full` profiles when the token file or the
+  theme is out of date (`QFAI-DCAT-001`, `QFAI-DCAT-002`) and about a hex
+  colour in a `uiux.surfacePaths` file that matches no colour of `DESIGN.md`
+  (`QFAI-DCAT-003`).
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

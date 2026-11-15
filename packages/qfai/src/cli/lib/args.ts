@@ -116,9 +116,9 @@ export type ParsedArgs = {
     atddAction?: "scaffold";
     atddStoryId?: string;
     atddFlowId?: string;
-    /** Subcommand for `qfai catalog <components>`. */
-    catalogAction?: "components";
-    /** `--check` for `qfai catalog components`: compare with the committed file, write nothing. */
+    /** Subcommand for `qfai catalog <components|design>`. */
+    catalogAction?: "components" | "design";
+    /** `--check` for `qfai catalog`: compare with the committed files, write nothing. */
     catalogCheck?: boolean;
     /** `--flow <BF-NNNN>` values for `qfai validate`. */
     validateFlowIds: string[];
@@ -315,11 +315,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
-  // `qfai catalog <subcommand>` — currently only `components` is supported.
+  // `qfai catalog <subcommand>`: `components` or `design`.
   if (command === "catalog") {
     const candidate = args[0];
     if (isSubcommandToken(candidate)) {
-      if (candidate === "components") {
+      if (candidate === "components" || candidate === "design") {
         options.catalogAction = candidate;
       } else {
         options.unknownSubcommand = candidate;
@@ -885,7 +885,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 /** The set of subcommands accepted by `qfai <command> <subcommand>`. */
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["atdd", "scaffold"],
-  ["catalog", "components"],
+  ["catalog", "components|design"],
   ["sdd", "preflight|next-id|merge-docs"],
   ["workflow", WORKFLOW_OPERATIONS.join("|")],
 ]);

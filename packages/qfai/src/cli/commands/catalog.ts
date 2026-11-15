@@ -1,6 +1,6 @@
 /**
- * `qfai catalog components`: write the project's component catalogue, or with `--check` say
- * whether the committed one is current.
+ * `qfai catalog components` and `qfai catalog design`: write the project's component catalogue
+ * or its design catalogue, or with `--check` say whether the committed files are current.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -14,6 +14,16 @@ import {
   sameCatalogText,
   scanComponents,
 } from "../../core/uiux/componentCatalog.js";
+import {
+  DESIGN_THEME_PATH,
+  DESIGN_TOKENS_PATH,
+  countTokens,
+  readDesignSource,
+  readGenerated,
+  renderDesignTokens,
+  renderTheme,
+  sameGeneratedText,
+} from "../../core/uiux/designCatalog.js";
 import type { UiPlainTextOptions } from "../../core/validators/uiPlainText.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 
@@ -65,5 +75,53 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
   info(
     `Wrote ${target}: ${scan.components.length} component(s) in ${files} file(s), ${unsourced} with no @source.`,
   );
+  return EXIT_CODES.ok;
+}
+
+export type CatalogDesignOptions = {
+  root: string;
+  /** Compare with the committed files and write nothing. */
+  check?: boolean;
+};
+
+/** Writes the token file and the Tailwind 4 theme from root `DESIGN.md`. */
+export async function runCatalogDesign(options: CatalogDesignOptions): Promise<number> {
+  const root = path.resolve(options.root);
+  const source = await readDesignSource(root);
+  if (source.state !== "read") {
+    error(
+      source.state === "absent"
+        ? "qfai catalog design: DESIGN.md does not exist at the project root. Write it first; the design catalogue is derived from it."
+        : `qfai catalog design: DESIGN.md does not parse: ${source.message}`,
+    );
+    return EXIT_CODES.findings;
+  }
+  const outputs = [
+    { file: DESIGN_TOKENS_PATH, text: renderDesignTokens(source.design) },
+    { file: DESIGN_THEME_PATH, text: renderTheme(source.design) },
+  ];
+  const targets = outputs.map((output) => output.file.split(path.sep).join("/"));
+  if (options.check) {
+    let stale = 0;
+    for (const [index, output] of outputs.entries()) {
+      const committed = await readGenerated(root, output.file);
+      if (committed.state === "read" && sameGeneratedText(committed.text, output.text)) continue;
+      stale += 1;
+      error(
+        committed.state === "absent"
+          ? `${targets[index]} does not exist. Run \`qfai catalog design\` and commit it.`
+          : `${targets[index]} is out of date with DESIGN.md. Run \`qfai catalog design\` and commit it.`,
+      );
+    }
+    if (stale > 0) return EXIT_CODES.findings;
+    info(`${targets.join(" and ")} are up to date with DESIGN.md.`);
+    return EXIT_CODES.ok;
+  }
+  for (const output of outputs) {
+    const file = path.join(root, output.file);
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, output.text, "utf-8");
+  }
+  info(`Wrote ${targets.join(" and ")}: ${countTokens(source.design)} token(s) from DESIGN.md.`);
   return EXIT_CODES.ok;
 }

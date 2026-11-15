@@ -33,6 +33,23 @@ about a missing source on a component that has a tag or that another surface fil
 `<input>` or `<select>` where a listed component has that pattern, and a catalogue out of date
 (`QFAI-COMP-001` to `QFAI-COMP-004`). `npx qfai catalog components --check` fails CI on the last.
 
+## Design catalogue
+
+Root `DESIGN.md` is the brand source a person edits. `npx qfai catalog design` derives two files from
+it; commit both, and never edit them by hand:
+
+- `.qfai/catalog/design.tokens.json`: the tokens in the Design Tokens Community Group format: the
+  colours, their semantic aliases (`semantic.surface`, `text`, `border`, `primary`, `status`), the type,
+  spacing, radius and shadow tokens, and the `layout` and `data_display` values when `DESIGN.md` states them.
+- `.qfai/catalog/theme.css`: the same tokens as a Tailwind 4 `@theme` block. Import it from the app's
+  stylesheet and use its utilities or variables, such as `bg-surface` or `var(--color-status-danger)`,
+  instead of copying a value.
+
+Once either file exists, `npx qfai validate` warns when the token file or the theme is out of date with
+`DESIGN.md` (`QFAI-DCAT-001`, `QFAI-DCAT-002`), and about each hex colour in a `uiux.surfacePaths` file
+that matches no colour of `DESIGN.md` (`QFAI-DCAT-003`). `npx qfai catalog design --check` fails CI on
+the first two.
+
 ## Plain text in UI source
 
 `npx qfai validate` reads `.qfai/prototype/final/index.html`, the `index.html` of the latest `iter-NN/`, and the

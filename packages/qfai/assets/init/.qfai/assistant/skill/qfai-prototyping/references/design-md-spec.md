@@ -17,6 +17,7 @@ A reference copy is shipped in this skill at
 - `brand.archetype` allowed values
 - `brand.theme`
 - `accessibility` allowed keys
+- `layout` and `data_display`
 - Validation rules
 - Issue shape
 
@@ -24,7 +25,7 @@ A reference copy is shipped in this skill at
 
 ```markdown
 ---
-<YAML front-matter: brand, audience, visual, accessibility>
+<YAML front-matter: brand, audience, visual, accessibility, layout, data_display>
 ---
 
 # Brand Philosophy
@@ -78,6 +79,16 @@ visual:
 accessibility:
   contrast_ratio_min: number
   motion: string
+layout: # optional
+  breakpoints: map # name -> CSS length, e.g. { sm: "40rem", lg: "64rem" }
+  widths: map # name -> CSS length, e.g. { content: "72rem" }
+  density: enum # compact | comfortable | spacious
+  target_min: string # smallest pointer target, e.g. "44px"
+data_display: # optional
+  locale: string # e.g. "ja-JP"
+  currency: string # how money is written
+  number: string # how numbers are written
+  date: string # how dates are written
 ```
 
 ## `brand.archetype` allowed values
@@ -116,6 +127,13 @@ A new accessibility obligation does not go here. Put it in the
 `# Brand Philosophy` body, or in a screen contract's
 `observable_outcome`, where it is prose a reviewer reads rather than a
 token the gate compares.
+
+## `layout` and `data_display`
+
+Both sections are optional and closed. A `layout.breakpoints` or `layout.widths` name is lower-case
+letters and digits joined by hyphens, because it becomes a CSS custom property name; each value is one
+CSS length in `px`, `rem`, `em`, `ch`, `vw` or `%`, or `0`. Every `data_display` value is a non-empty
+string. `qfai catalog design` writes these into the token file and the theme with the other tokens.
 
 ## Validation rules
 

@@ -377,6 +377,14 @@ flowchart LR
     It reads JSX with the project's own `typescript`. Once the file exists, `qfai validate` warns about
     a component with no source, two components for one pattern, a raw `<button>`, `<input>` or
     `<select>` a listed component replaces, and a stale catalogue (`QFAI-COMP-001` to `QFAI-COMP-004`).
+- `npx qfai catalog design`
+  - Writes `design.tokens.json` and `theme.css` under `.qfai/catalog/` from root `DESIGN.md`: the
+    tokens in the Design Tokens Community Group 2025.10 format, and the same tokens as a Tailwind 4
+    `@theme` block for the app to import. Edit `DESIGN.md`, run the command and commit both files.
+    `--check` writes nothing and exits 1 when either is missing or out of date; a missing or unparsable
+    `DESIGN.md` exits 1. Once either file exists, `qfai validate` warns when one is out of date with
+    `DESIGN.md` and about a hex colour in UI source that matches no token (`QFAI-DCAT-001` to
+    `QFAI-DCAT-003`).
 - `npx qfai workflow plan`
   - The route planning behind the free-text entry. `--in <path>`, or `--in -` for standard input,
     reads a request's extraction; `--route <route>` names a route instead. It prints one JSON
