@@ -796,7 +796,7 @@ function assetLineBudgetNextActions(
  * Asks the question `validate` asks, through the same code and at the severity
  * that code chose, so the two cannot disagree about one tree.
  *
- * Severity is carried, not decided here. `QFAI-LINK-001` is a `warning` when the
+ * Severity is carried, not decided here. `QFAI-LINK-001` is an `info` when the
  * canonical document is readable and an `error` when it is not, and choosing one
  * of them for both would put this check and the gate on opposite sides of
  * `--fail-on error` for the same tree.
@@ -901,7 +901,7 @@ async function buildIntegrationLinksCheck(root: string): Promise<DoctorCheck> {
   const paths = broken.flatMap((issue) => issue.refs ?? []);
   // The worst severity anything in this run carries — the wrapper findings and
   // the waiver pass's own. The validator reports the damage classes separately
-  // (a readable canonical document is a `warning`, an unreadable one an
+  // (a readable canonical document is an `info`, an unreadable one an
   // `error`) and a waiver can downgrade either to `info` without suppressing
   // it, so collapsing everything short of `error` to `warning` put this check
   // on the far side of `validation.failOn: warning` from a `validate` that
