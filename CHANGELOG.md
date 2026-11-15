@@ -13,6 +13,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stops before a verdict and names what is missing, the review is recorded
   `PENDING`, and it is dispatched again once the captures exist.
 
+### Fixed
+
+- **Wrappers a Windows worktree stored as file symlinks are reported once, at
+  info.** On a Windows `git worktree`, git can store a directory wrapper as a
+  file symlink the OS will not follow. The canonical documents behind it read
+  fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
+  buried new warnings. That one finding is now at info. Its action is
+  unchanged: `qfai init` relinks the wrappers.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

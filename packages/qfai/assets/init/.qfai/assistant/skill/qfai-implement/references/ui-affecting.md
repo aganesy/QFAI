@@ -92,7 +92,8 @@ product-surface-reviewer. Do not infer that a change has no UI effect from its d
 
 ## Evidence
 
-For a UI affecting example, report the screen state, action, expected and observed result, and a capture or rendered artifact. The artifact must identify the source revision. In the review that reads the change, product-surface-reviewer judges each UI affecting example, its UI contracts, and its captured state. The review verdict refers to that revision. A changed screen with no capture at that revision leaves that review `PENDING`, never `PASS`: passing tests and a clean `validate` do not stand in for it.
+For a UI affecting example, report the screen state, action, expected and observed result, and a capture or rendered artifact. The artifact must identify the source revision. In the review that reads the change, product-surface-reviewer judges each UI affecting example, its UI contracts, and its captured state. The review verdict refers to that revision.
+A changed screen with no capture at that revision leaves that review `PENDING`, never `PASS`: passing tests and a clean `validate` do not stand in for it.
 
 A fix made for a finding of that review refreshes the capture it changes, and a fix that changes behaviour gets its one focused re-review (`.qfai/assistant/rule/review-convergence.md#one-review`). A passing code test cannot substitute for the visual and interaction evidence that the acceptance criterion requires.
 
