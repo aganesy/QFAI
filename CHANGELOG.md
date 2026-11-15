@@ -79,6 +79,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
+
 - **A scope that stops before implementation can reach its own commit.** In
   `npx qfai workflow plan`, a scope that writes the specification and leaves
   out the route's implement stage, such as `medium` of `add-feature`, now holds
