@@ -107,6 +107,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   concerns records a departure. Validate does not check the key yet.
   Closes #4109.
 
+- **`DESIGN.md` can hold its layout values.** An optional `visual.layout`
+  section takes the breakpoints, the content width of a reading page, an app
+  page and a form, the minimum tap target (at least 24 px, the WCAG 2.5.8
+  floor) and how a table behaves at a narrow width (`stack` or `scroll`), so a
+  responsive check reads them from one place. A file without it still parses.
+
 - **A UI contract screen names its business screen type by ID.** The screen
   types of `qfai-sdd`'s `references/business-ui-patterns.md` now carry the IDs
   `list`, `detail`, `form`, `settings`, `members` and `dashboard`, and an
@@ -250,6 +256,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   beside the grill session's rows. A finding the grill rejected or deferred reaches neither. Before, the
   findings reached the prototype only through what the grill session settled.
   Closes #4387.
+
+- **UI research and design close gaps a redesign exposed.**
+  - The product-surface reviewer also checks built screens against the
+    _Components_, _Layout and composition_ and _Displacement_ anti-patterns,
+    such as serial numbers on cards and all-caps eyebrow labels.
+  - The visual reference survey opens a whole-site redesign with an inventory
+    of the current surface, and the user decides every removal. Each finding to
+    adopt is checked against the anti-pattern list and `do_not_look_like`.
+  - `.agents/rules/interface-clarity.md` cuts development notation, such as
+    code, spec IDs or test syntax, from screens visitors read.
+  - A figure or claim shown on more than one page comes from one source.
 
 ### Fixed
 
