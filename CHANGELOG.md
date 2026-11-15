@@ -12,6 +12,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
 
+### Fixed
+
+- **Wrappers a Windows worktree stored as file symlinks are reported once, at
+  info.** On a Windows `git worktree`, git can store a directory wrapper as a
+  file symlink the OS will not follow. The canonical documents behind it read
+  fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
+  buried new warnings. That one finding is now at info. Its action is
+  unchanged: `qfai init` relinks the wrappers.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
