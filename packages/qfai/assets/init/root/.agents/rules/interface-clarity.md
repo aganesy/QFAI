@@ -81,7 +81,9 @@ adds no meaning. It carries its `qfai-text` or `qfai-text-file` reason.
 - The second place the same thing is said.
 
 The test is the one `documentation-clarity.md` uses. Remove it, and ask whether
-the user is worse off. If not, it goes.
+the user is worse off. If not, it goes. Ask it with the volume of data the
+screen will hold in production, not with the test fixture: a list control that
+looks unneeded with five fixture rows is the only way through five thousand.
 
 ## 4. Use the conventional pattern
 
