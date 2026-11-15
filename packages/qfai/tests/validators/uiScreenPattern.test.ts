@@ -46,7 +46,7 @@ afterEach(async () => {
   }
 });
 
-// QFAI:EX-0001-0039-36
+// QFAI:EX-0001-0039-38
 describe("the pattern a screen declares", () => {
   it("is each ID the business UI pattern reference gives a screen type", async () => {
     const text = await readFile(REFERENCE, "utf-8");
@@ -72,8 +72,8 @@ describe("the pattern a screen declares", () => {
   });
 });
 
-// QFAI:EX-0001-0039-36
-// QFAI:EX-0001-0039-37
+// QFAI:EX-0001-0039-38
+// QFAI:EX-0001-0039-39
 describe("validate and the pattern key", () => {
   it("accepts every type ID and an absent or empty key", async () => {
     const root = await rootWithContract(

@@ -73,7 +73,7 @@ describe("validate reads the surface kind of each UI contract screen", () => {
   });
 });
 
-// QFAI:AC-0001-0039-05
+// QFAI:AC-0001-0039-06
 describe("validate reads the business screen type of each UI contract screen", () => {
   it("raises nothing for a type ID or an absent pattern, and one error for another value", async () => {
     await contract(

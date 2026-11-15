@@ -20,7 +20,7 @@ Feature: Write the standard parts of a business screen into its UI contract
     And a once-per-application part left out gets its reason in the frame
     And settings, member management and notifications are frame screens only when a story needs them
 
-  # AC-0001-0305-03
+  # AC-0001-0305-04
   Scenario: The contract step names each application screen's type by its ID
     Given the shipped `sdd-contract` step and `business-ui-patterns.md`
     When the step names the type of an application screen in its UI contract

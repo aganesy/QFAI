@@ -83,7 +83,7 @@ describe("business UI pattern reference", () => {
       expect(missing).toEqual([]);
     });
 
-    // QFAI:EX-0001-0305-03
+    // QFAI:EX-0001-0305-05
     it(`${tree}: each screen type has an ID the contract names as its pattern`, async () => {
       const text = await readFile(path.join(root, REFERENCE), "utf-8");
       const sections = text.split(/^## /m).slice(3, 2 + SCREEN_TYPES.length);
@@ -100,7 +100,7 @@ describe("business UI pattern reference", () => {
     });
   }
 
-  // QFAI:EX-0001-0305-03
+  // QFAI:EX-0001-0305-05
   it("the UI contract template names the pattern of its screen", async () => {
     const template = await readFile(
       path.join(

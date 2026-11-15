@@ -46,7 +46,7 @@ describe("the contract step writes the app frame once, where the rule and the re
   });
 });
 
-// QFAI:AC-0001-0305-03
+// QFAI:AC-0001-0305-04
 describe("the contract step names each application screen's type by its ID", () => {
   it("writes `pattern: <id>` with an ID the business UI pattern reference gives", async () => {
     const step = flat(await read(".qfai/assistant/step/sdd-contract/STEP.md"));
