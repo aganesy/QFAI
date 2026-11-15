@@ -1,5 +1,6 @@
 /**
- * `qfai validate` reads the surface kind of each UI contract screen, and the
+ * `qfai validate` reads the surface kind and the business screen type of each
+ * UI contract screen, and the
  * shipped steps, card and rule read a marketing screen against its own floor.
  */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -69,6 +70,28 @@ describe("validate reads the surface kind of each UI contract screen", () => {
     expect(reported[0]?.severity).toBe("error");
     expect(reported[0]?.message).toContain("`surface: landing`");
     expect(ISSUE_EXPECTED_BY_CODE[CODE]).toContain("`application` or `marketing`");
+  });
+});
+
+// QFAI:AC-0001-0039-06
+describe("validate reads the business screen type of each UI contract screen", () => {
+  it("raises nothing for a type ID or an absent pattern, and one error for another value", async () => {
+    await contract(
+      "  - id: orders",
+      "    route: /orders",
+      "    pattern: list",
+      "  - id: welcome",
+      "    route: /welcome",
+      "  - id: report",
+      "    route: /report",
+      "    pattern: table",
+    );
+    const { issues } = await validateProject(root, undefined, { profile: "sdd" });
+    const reported = issues.filter((item) => item.code === "QFAI-CONTRACT-056");
+    expect(reported).toHaveLength(1);
+    expect(reported[0]?.severity).toBe("error");
+    expect(reported[0]?.message).toContain("screen 'report'");
+    expect(reported[0]?.message).toContain("`pattern: table`");
   });
 });
 

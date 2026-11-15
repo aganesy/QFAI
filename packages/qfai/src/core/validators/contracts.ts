@@ -28,6 +28,7 @@ import { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 import { validateUiPrototypeMode } from "./uiPrototypeMode.js";
 import { validateUiScreenCompleteness } from "./uiScreenCompleteness.js";
 import { validateUiScreenOmitted } from "./uiScreenOmitted.js";
+import { validateUiScreenPattern } from "./uiScreenPattern.js";
 import { validateUiScreenSurface } from "./uiScreenSurface.js";
 import { validateUiScreenEntries } from "./uiScreenEntries.js";
 import { issue } from "./utils.js";
@@ -129,6 +130,9 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   // A screen built from a contract that names no states or no navigation is
   // built without them.
   issues.push(...(await validateUiScreenCompleteness(root, config)));
+  // The screen type names the entry of the business pattern reference a screen
+  // is built and reviewed against, so an unknown ID points at no entry.
+  issues.push(...(await validateUiScreenPattern(root, config)));
 
   return issues;
 }

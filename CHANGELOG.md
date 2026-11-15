@@ -113,6 +113,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   floor) and how a table behaves at a narrow width (`stack` or `scroll`), so a
   responsive check reads them from one place. A file without it still parses.
 
+- **A UI contract screen names its business screen type by ID.** The screen
+  types of `qfai-sdd`'s `references/business-ui-patterns.md` now carry the IDs
+  `list`, `detail`, `form`, `settings`, `members` and `dashboard`, and an
+  application screen may declare its type as `pattern: <id>`, which the
+  `sdd-contract` step writes. `qfai validate` reports any other value as
+  `QFAI-CONTRACT-056`, at error; a screen without the key is asked nothing,
+  and a marketing screen leaves it out.
+
 ### Changed
 
 - **`QFAI-DB-001` says why the SQL is flagged and how to resolve it.** The
@@ -142,6 +150,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
   home prefix or a `..` segment. A findstr with `/s` and a native search scoped
   only by an include glob are also redirected.
+
+- **A merge waits for every check of its head commit.** Step 3 of the shipped
+  `triage-operate` step now says that the checks still running before a merge
+  are every check run of the pull request's head commit that is queued or in
+  progress, including checks branch protection does not require. The merge
+  waits until none is left, or stops and reports them, and a failed check stops
+  it too until a rerun clears it. The report of a merge names, next to the
+  merge commit, each check run of the head commit with its conclusion when it
+  merged. Part of #4399.
 
 - **Settled work that adds screens gets the design and prototype stages.**
   The extraction has a new qualifier, `new-screens`, for a settled change that

@@ -484,6 +484,7 @@
     "tests/validators/uiPrototypeMode.test.ts",
     "tests/validators/uiScreenSurface.test.ts",
     "tests/validators/uiAccessibilityLayer.test.ts",
+    "tests/validators/uiScreenPattern.test.ts",
     "tests/integration/uiScreenSurface.test.ts",
     "tests/validators/uiScreenCompleteness.test.ts",
     "tests/integration/uiScreenCompleteness.test.ts",
