@@ -4,6 +4,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The parts of a business screen outrank the minimal-scope article.**
+  Article VII of the shipped constitution now names the list under
+  `## What a business screen always has` in `interface-clarity.md` among what
+  outranks it, beside the safety floor. On an application screen whose UI
+  contract records no reason to leave a part out, navigation, list behaviour,
+  states and feedback are no longer cut as scope beyond the minimum, and the
+  architecture, product-surface and requirements reviewers refuse such a cut;
+  how a part is built remains subject to the article.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
@@ -131,15 +142,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `01_policy/constraint.md`, and an item that breaks one is recorded with the
   region's procurement. The prototype review no longer blocks a native element
   chosen over a catalogue item.
-
-- **The parts of a business screen outrank the minimal-scope article.**
-  Article VII of the shipped constitution now names the list under
-  `## What a business screen always has` in `interface-clarity.md` among what
-  outranks it, beside the safety floor. On an application screen whose UI
-  contract records no reason to leave a part out, navigation, list behaviour,
-  states and feedback are no longer cut as scope beyond the minimum, and the
-  architecture, product-surface and requirements reviewers refuse such a cut;
-  how a part is built remains subject to the article.
 
 - **The business UI pattern list says where search, sort and paging run.**
   The List entry gains a Behaviour list: list state in the screen's address,
