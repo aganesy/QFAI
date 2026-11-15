@@ -141,6 +141,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
 
+- **A UI pattern repeated across screens becomes a shared component.**
+  `minimal-implementation.md` no longer counts a region that several screens
+  repeat as "an operation done once": it follows rung 1 of `ui-procurement.md`
+  and the business-screen floor. When two or more UI contracts name the same
+  region, rung 1 now extracts the shared component at its first use instead of
+  waiting for the second screen. A shared component that no UI contract names is
+  still not built in advance. Closes #4099.
+
 - **A checkout that did not reinstall after a qfai upgrade is caught.** When
   the running qfai is the project's own copy and the lockfile
   (`package-lock.json`, `pnpm-lock.yaml` or `yarn.lock`) pins another version,
