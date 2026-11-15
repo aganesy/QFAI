@@ -112,6 +112,45 @@ describe("the command writes the token file and the theme from DESIGN.md", () =>
   });
 });
 
+// QFAI:AC-0001-0312-02
+describe("layout and data display values reach the token file when DESIGN.md states them", () => {
+  // QFAI:EX-0001-0312-03
+  it("writes the layout tokens and theme properties, and refuses a value outside the schema", async () => {
+    const sample = await readFile(SAMPLE, "utf-8");
+    const sections = [
+      "layout:",
+      '  breakpoints: { sm: "40rem" }',
+      '  widths: { content: "72rem" }',
+      "  density: compact",
+      '  target_min: "44px"',
+      "data_display:",
+      '  locale: "ja-JP"',
+      "accessibility:",
+    ].join("\n");
+    const root = await projectWith({ "DESIGN.md": sample.replace("accessibility:", sections) });
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    expect(JSON.parse(await readAt(root, TOKENS))).toMatchObject({
+      layout: {
+        breakpoint: { sm: { $type: "dimension", $value: { value: 40, unit: "rem" } } },
+        "target-min": { $value: { value: 44, unit: "px" } },
+        $extensions: { qfai: { density: "compact" } },
+      },
+      "data-display": { $extensions: { qfai: { locale: "ja-JP" } } },
+    });
+    const theme = await readAt(root, THEME);
+    expect(theme).toContain("  --breakpoint-sm: 40rem;\n");
+    expect(theme).toContain("  --container-content: 72rem;\n");
+
+    // QFAI:EX-0001-0312-04
+    const invalid = await projectWith({
+      "DESIGN.md": sample.replace("accessibility:", "layout:\n  density: dense\naccessibility:"),
+    });
+    const refused = await cli(["catalog", "design", "--root", invalid]);
+    expect(refused.code).toBe(1);
+    expect(refused.err).toContain("layout.density");
+  });
+});
+
 // QFAI:AC-0001-0312-03
 describe("the check mode compares and writes nothing", () => {
   // QFAI:EX-0001-0312-05
