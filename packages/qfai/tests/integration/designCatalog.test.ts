@@ -98,7 +98,7 @@ describe("the command writes the token file and the theme from DESIGN.md", () =>
     const first = await cli(["catalog", "design", "--root", root]);
     expect(first).toMatchObject({
       code: 0,
-      out: "Wrote .qfai/catalog/design.tokens.json and .qfai/catalog/theme.css: 53 token(s) from DESIGN.md.\n",
+      out: "Wrote .qfai/catalog/design.tokens.json and .qfai/catalog/theme.css: 61 token(s) from DESIGN.md.\n",
     });
     const tokens = await readAt(root, TOKENS);
     const theme = await readAt(root, THEME);
@@ -117,37 +117,29 @@ describe("layout and data display values reach the token file when DESIGN.md sta
   // QFAI:EX-0001-0312-03
   it("writes the layout tokens and theme properties, and refuses a value outside the schema", async () => {
     const sample = await readFile(SAMPLE, "utf-8");
-    const sections = [
-      "layout:",
-      '  breakpoints: { sm: "40rem" }',
-      '  widths: { content: "72rem" }',
-      "  density: compact",
-      '  target_min: "44px"',
-      "data_display:",
-      '  locale: "ja-JP"',
-      "accessibility:",
-    ].join("\n");
+    const sections = ["data_display:", '  locale: "ja-JP"', "accessibility:"].join("\n");
     const root = await projectWith({ "DESIGN.md": sample.replace("accessibility:", sections) });
     expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
     expect(JSON.parse(await readAt(root, TOKENS))).toMatchObject({
       layout: {
         breakpoint: { sm: { $type: "dimension", $value: { value: 40, unit: "rem" } } },
+        "content-max-width": { app: { $type: "dimension", $value: { value: 80, unit: "rem" } } },
         "target-min": { $value: { value: 44, unit: "px" } },
-        $extensions: { "dev.qfai": { density: "compact" } },
       },
       "data-display": { $extensions: { "dev.qfai": { locale: "ja-JP" } } },
     });
     const theme = await readAt(root, THEME);
     expect(theme).toContain("  --breakpoint-sm: 40rem;\n");
-    expect(theme).toContain("  --container-content: 72rem;\n");
+    expect(theme).toContain("  --container-app: 80rem;\n");
+    expect(theme).toContain("  --spacing-target-min: 44px;\n");
 
     // QFAI:EX-0001-0312-04
     const invalid = await projectWith({
-      "DESIGN.md": sample.replace("accessibility:", "layout:\n  density: dense\naccessibility:"),
+      "DESIGN.md": sample.replace("target_min_px: 44", "target_min_px: 20"),
     });
     const refused = await cli(["catalog", "design", "--root", invalid]);
     expect(refused.code).toBe(1);
-    expect(refused.err).toContain("layout.density");
+    expect(refused.err).toContain("visual.layout.target_min_px");
     const injected = await projectWith({
       "DESIGN.md": sample.replace(/family_sans: .*$/m, 'family_sans: "Inter; } body { color: red"'),
     });
@@ -299,6 +291,6 @@ describe("the implementer uses the theme instead of copying values", () => {
       path.join(ASSISTANT, "skill", "qfai-prototyping", "references", "design-md-spec.md"),
       "utf-8",
     );
-    for (const text of ["layout:", "target_min", "data_display:"]) expect(spec).toContain(text);
+    for (const text of ["layout:", "target_min_px", "data_display:"]) expect(spec).toContain(text);
   });
 });

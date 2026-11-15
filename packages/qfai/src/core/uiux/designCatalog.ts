@@ -226,16 +226,29 @@ function tokensOf(design: DesignMd): Token[] {
   for (const [name, shadow] of Object.entries(visual.shadow)) {
     tokens.push(shadowToken(["shadow", name], shadow, `--shadow-${name}`));
   }
-  const layout = design.layout ?? {};
+  tokens.push(...layoutTokens(design));
+  return tokens;
+}
+
+/**
+ * `visual.layout` as tokens: each breakpoint and content width, and the smallest target in px.
+ * `table_narrow` says how a table behaves, which no token type states, so it is left out.
+ */
+function layoutTokens(design: DesignMd): Token[] {
+  const layout = design.visual.layout;
+  if (layout === undefined) return [];
+  const tokens: Token[] = [];
   for (const [name, width] of Object.entries(layout.breakpoints ?? {})) {
     tokens.push(dimensionToken(["layout", "breakpoint", name], width, `--breakpoint-${name}`));
   }
-  for (const [name, width] of Object.entries(layout.widths ?? {})) {
-    tokens.push(dimensionToken(["layout", "width", name], width, `--container-${name}`));
-  }
-  if (layout.target_min !== undefined) {
+  for (const [name, width] of Object.entries(layout.content_max_width ?? {})) {
     tokens.push(
-      dimensionToken(["layout", "target-min"], layout.target_min, "--spacing-target-min"),
+      dimensionToken(["layout", "content-max-width", name], width, `--container-${name}`),
+    );
+  }
+  if (layout.target_min_px !== undefined) {
+    tokens.push(
+      dimensionToken(["layout", "target-min"], `${layout.target_min_px}px`, "--spacing-target-min"),
     );
   }
   return tokens;
@@ -261,19 +274,11 @@ function spacingTokens(design: DesignMd): Token[] {
 }
 
 /**
- * What DESIGN.md states that no token type holds: the density and the data display formats.
- * Each rides as text on its group, where a reader of the token file finds it beside the tokens.
+ * What DESIGN.md states that no token type holds: the data display formats.
+ * They ride as text on their group, where a reader of the token file finds them beside the tokens.
  */
 function notesOf(design: DesignMd): GroupNote[] {
   const notes: GroupNote[] = [];
-  const density = design.layout?.density;
-  if (density !== undefined) {
-    notes.push({
-      path: ["layout"],
-      description: `Layout tokens from DESIGN.md. Screens are laid out at ${density} density.`,
-      extensions: { density },
-    });
-  }
   const display = design.data_display;
   if (display !== undefined && Object.keys(display).length > 0) {
     const extensions: Record<string, string> = {};

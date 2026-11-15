@@ -14,10 +14,10 @@ Feature: Derive the design tokens and the theme from DESIGN.md
 
   # AC-0001-0312-02
   Scenario: Layout and data display values reach the token file when DESIGN.md states them
-    Given a root `DESIGN.md` with the optional `layout` and `data_display` sections
+    Given a root `DESIGN.md` with the optional `visual.layout` and `data_display` sections
     When `qfai catalog design` runs
-    Then the breakpoints, widths and smallest target become dimension tokens and theme properties, and the density and the data display formats ride as text on their token groups
-    And a `layout` or `data_display` key, name or value outside the schema fails the parse of `DESIGN.md`
+    Then the breakpoints, content widths and minimum target of `visual.layout` become dimension tokens and theme properties, `table_narrow` stays out of both, and the data display formats ride as text on their token group
+    And a `visual.layout` or `data_display` key or value outside the schema, or a layout length holding `;`, `{` or `}`, fails the parse of `DESIGN.md`
 
   # AC-0001-0312-03
   Scenario: The check mode compares and writes nothing
@@ -51,5 +51,5 @@ Feature: Derive the design tokens and the theme from DESIGN.md
     Given a project initialised by `qfai init`
     When an agent reads the shipped implementation UI guidance and the DESIGN.md specification
     Then the UI guidance names both files, says to import the theme and use its variables instead of copying a value, and names `qfai catalog design` and the three warnings
-    And the DESIGN.md specification lists the `layout` and `data_display` sections
+    And the DESIGN.md specification says what the command writes from `visual.layout` and lists the `data_display` section
 ```

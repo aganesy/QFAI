@@ -59,7 +59,7 @@ it; commit both, and never edit them by hand:
 
 - `.qfai/catalog/design.tokens.json`: the tokens in the Design Tokens Community Group format: the
   colours, their semantic aliases (`semantic.surface`, `text`, `border`, `primary`, `status`), the type,
-  spacing, radius and shadow tokens, and the `layout` and `data_display` values when `DESIGN.md` states them.
+  spacing, radius and shadow tokens, and the `visual.layout` and `data_display` values when `DESIGN.md` states them.
 - `.qfai/catalog/theme.css`: the same tokens as a Tailwind 4 `@theme` block. Import it from the app's
   stylesheet and use its utilities or variables, such as `bg-surface` or `var(--color-status-danger)`,
   instead of copying a value.

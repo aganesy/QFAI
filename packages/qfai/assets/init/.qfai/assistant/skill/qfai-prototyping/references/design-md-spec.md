@@ -18,7 +18,7 @@ A reference copy is shipped in this skill at
 - `brand.theme`
 - `visual.layout`
 - `accessibility` allowed keys
-- `layout` and `data_display`
+- `data_display`
 - Validation rules
 - Issue shape
 
@@ -26,7 +26,7 @@ A reference copy is shipped in this skill at
 
 ```markdown
 ---
-<YAML front-matter: brand, audience, visual, accessibility, layout, data_display>
+<YAML front-matter: brand, audience, visual, accessibility, data_display>
 ---
 
 # Brand Philosophy
@@ -85,11 +85,6 @@ visual:
 accessibility:
   contrast_ratio_min: number
   motion: string
-layout: # optional
-  breakpoints: map # name -> CSS length, e.g. { sm: "40rem", lg: "64rem" }
-  widths: map # name -> CSS length, e.g. { content: "72rem" }
-  density: enum # compact | comfortable | spacious
-  target_min: string # smallest pointer target, e.g. "44px"
 data_display: # optional
   locale: string # e.g. "ja-JP"
   currency: string # how money is written
@@ -127,7 +122,9 @@ target, and how a table behaves at a narrow width (`stack` into cards, or
 before it existed still parses. `target_min_px` is at least 24, the WCAG 2.5.8
 floor; the project's own minimum may be higher. Like the other `visual` values,
 these come from the adopted theme where it defines them. Each level is closed:
-an unknown key fails the parse.
+an unknown key fails the parse. `qfai catalog design` writes each breakpoint and
+content width, and `target_min_px` in `px`, into the token file and the theme;
+`table_narrow` describes behaviour, so it stays out of both.
 
 ## `accessibility` allowed keys
 
@@ -145,12 +142,11 @@ A new accessibility obligation does not go here. Put it in the
 `observable_outcome`, where it is prose a reviewer reads rather than a
 token the gate compares.
 
-## `layout` and `data_display`
+## `data_display`
 
-Both sections are optional and closed. A `layout.breakpoints` or `layout.widths` name is lower-case
-letters and digits joined by hyphens, because it becomes a CSS custom property name; each value is one
-CSS length in `px`, `rem`, `em`, `ch`, `vw` or `%`, or `0`. Every `data_display` value is a non-empty
-string. `qfai catalog design` writes these into the token file and the theme with the other tokens.
+An optional, closed section: `locale`, `currency`, `number` and `date`, each a non-empty string
+saying how that value is written on screen. `qfai catalog design` writes them as text on the token
+file's `data-display` group; no CSS variable carries them.
 
 ## Validation rules
 
@@ -165,7 +161,8 @@ string. `qfai catalog design` writes these into the token file and the theme wit
 - Unknown keys at any level are rejected.
 - All 12 color keys, 3 font families, 4 radius keys, and 3 shadow keys
   listed above are required.
-- `visual.layout` is optional. Its lengths are strings taken verbatim;
+- `visual.layout` is optional. Its lengths are strings taken verbatim and
+  hold no `;`, `{` or `}`;
   `target_min_px` is a number of at least 24; `table_narrow` is `stack` or
   `scroll`.
 

@@ -1328,7 +1328,7 @@ describe("isUnreplacedDesignMdSample", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The optional `layout` and `data_display` sections
+// The optional `data_display` section, and `visual.layout` values the design catalogue refuses
 // ---------------------------------------------------------------------------
 
 /** The valid sample with extra front-matter lines added before the closing delimiter. */
@@ -1337,47 +1337,42 @@ function sampleWithSections(lines: readonly string[]): string {
   return [...front.slice(0, -1), ...lines, "---", VALID_BODY].join("\n");
 }
 
-describe("parseDesignMd: layout and data_display", () => {
-  it("reads the layout and data display values when they are stated", () => {
+/** The valid sample with `visual.layout` holding the given lines. */
+function sampleWithLayout(lines: readonly string[]): string {
+  const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+  return VALID_FRONT_MATTER.replace(
+    lastShadowLine,
+    [lastShadowLine, "  layout:", ...lines.map((line) => `    ${line}`)].join("\n"),
+  );
+}
+
+describe("parseDesignMd: data_display", () => {
+  it("reads the data display values when they are stated", () => {
     const result = parseDesignMd(
-      sampleWithSections([
-        "layout:",
-        '  breakpoints: { sm: "40rem", 2xl: "96rem" }',
-        '  widths: { content: "72rem" }',
-        "  density: compact",
-        '  target_min: "44px"',
-        "data_display:",
-        '  locale: "ja-JP"',
-        '  date: "YYYY-MM-DD"',
-      ]),
+      sampleWithSections(["data_display:", '  locale: "ja-JP"', '  date: "YYYY-MM-DD"']),
     );
     if ("error" in result) throw new Error(result.error.message);
-    expect(result.data.layout).toEqual({
-      breakpoints: { sm: "40rem", "2xl": "96rem" },
-      widths: { content: "72rem" },
-      density: "compact",
-      target_min: "44px",
-    });
     expect(result.data.data_display).toEqual({ locale: "ja-JP", date: "YYYY-MM-DD" });
   });
 
-  it("leaves both absent when the file does not state them", () => {
+  it("leaves it absent when the file does not state it", () => {
     const result = parseDesignMd(VALID_SAMPLE);
     if ("error" in result) throw new Error(result.error.message);
-    expect(result.data.layout).toBeUndefined();
     expect(result.data.data_display).toBeUndefined();
   });
 
   // QFAI:EX-0001-0312-04
   it.each([
-    [["layout:", '  gutter: "1rem"'], "layout.gutter"],
-    [["layout:", '  breakpoints: { Wide: "80rem" }'], "layout.breakpoints.Wide"],
-    [["layout:", "  density: dense"], "layout.density"],
-    [["layout:", '  target_min: "44 px"'], "layout.target_min"],
-    [["data_display:", '  date: ""'], "data_display.date"],
-    [["layout: compact"], "layout"],
-  ])("rejects %j at %s", (lines, at) => {
-    const result = parseDesignMd(sampleWithSections(lines));
+    [sampleWithLayout(['gutter: "1rem"']), "visual.layout.gutter"],
+    [sampleWithLayout(["breakpoints:", '  xxl: "96rem"']), "visual.layout.breakpoints.xxl"],
+    [sampleWithLayout(["target_min_px: 20"]), "visual.layout.target_min_px"],
+    [
+      sampleWithLayout(["content_max_width:", '  app: "80rem; } body { color: red"']),
+      "visual.layout.content_max_width.app",
+    ],
+    [sampleWithSections(["data_display:", '  date: ""']), "data_display.date"],
+  ])("rejects a value outside the schema at %#", (text, at) => {
+    const result = parseDesignMd(text);
     expect("error" in result && result.error.path).toBe(at);
   });
 });
