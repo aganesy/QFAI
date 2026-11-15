@@ -47,6 +47,21 @@ describe("the product-surface reviewer checks structure and states", () => {
     );
   });
 
+  it("also checks the identity and layout sections on built screens", async () => {
+    const card = await read("agent/product-surface-reviewer.md");
+    const reference = await read(ANTI_PATTERNS);
+    const headings = Array.from(reference.matchAll(/^## (.+)$/gm), (match) =>
+      anchor(match[1] ?? ""),
+    );
+    for (const section of ["components", "layout-and-composition", "displacement"]) {
+      expect(headings).toContain(section);
+      expect(card).toContain(`.qfai/assistant/${ANTI_PATTERNS}#${section}`);
+    }
+    expect(card.replace(/\s+/g, " ")).toContain(
+      "unless root `DESIGN.md`'s brand direction asks for it",
+    );
+  });
+
   it("leaves each finding's severity to the reviewer findings rule", async () => {
     const card = await read("agent/product-surface-reviewer.md");
     const bullet = card.slice(card.indexOf("#information-architecture-and-flow"));
