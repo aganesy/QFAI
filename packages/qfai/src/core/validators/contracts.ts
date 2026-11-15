@@ -283,8 +283,8 @@ export function lintSql(text: string, file: string): Issue[] {
           file,
           "contracts.db.sql",
           undefined,
-          "change",
-          "Keep the contract to the schema: move a data reset to test setup or fixtures and a destructive change to the migration that makes it. If the statement was reviewed and stays, waive QFAI-DB-001 for this file in .qfai/waivers.yml with its reason.",
+          "canonical",
+          "Keep the contract to the schema: move a data reset to test setup or fixtures and a destructive change to the migration that makes it. If the statement was reviewed and stays, waive QFAI-DB-001 for this file in .qfai/waivers.yml with its reason, evidence and expiry date.",
         ),
       );
     }

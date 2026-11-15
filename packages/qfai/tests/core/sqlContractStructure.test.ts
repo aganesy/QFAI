@@ -204,6 +204,8 @@ describe("the existing DB checks are unchanged", () => {
     expect(finding?.message).toContain("applying this statement destroys data or structure");
     expect(finding?.suggested_action).toContain("move a data reset to test setup or fixtures");
     expect(finding?.suggested_action).toContain(".qfai/waivers.yml");
+    expect(finding?.suggested_action).toContain("reason, evidence and expiry date");
+    expect(finding?.category).toBe("canonical");
   });
 
   it("still requires the contract id declaration", async () => {
