@@ -5,6 +5,7 @@ import { access, lstat, open, readdir, readlink, realpath, stat } from "node:fs/
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { gitStdout } from "../gitChanges.js";
 import type { Issue } from "../types.js";
 import { isInside, issue } from "./utils.js";
 import { isEperm } from "../fs/errno.js";
@@ -1597,20 +1598,36 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     // repair.
     const [first] = reachable;
     const rest = reachable.length - 1;
+    // With `core.symlinks` false, git itself writes every link as a file, so the
+    // state is the checkout's setting, not damage: it is named once, at info,
+    // with the setting that clears it, instead of a warning on every run.
+    const linksAsFiles = gitStoresLinksAsFiles(root);
     issues.push(
       issue(
         "QFAI-LINK-001",
         `${String(reachable.length)} wrapper(s) in the assistant integration directories resolve through a symlink the OS will not follow: ${first?.relative ?? ""}${rest > 0 ? ` (and ${String(rest)} more)` : ""}. The canonical documents behind them read fine, so the instructions are in this tree; only this path does not reach them.`,
-        "warning",
+        linksAsFiles ? "info" : "warning",
         first?.relative,
         "integrationSurface.links",
         reachable.map((entry) => entry.relative),
         "change",
-        "On Windows, a Git worktree checkout can store a directory wrapper as a file symlink. Run `qfai init` in this checkout to relink the wrappers it owns; creating links may need Windows Developer Mode.",
+        linksAsFiles
+          ? "Git stores links as plain files in this checkout because `core.symlinks` is false. Run `git config core.symlinks true`, then `qfai init` in this checkout to relink the wrappers."
+          : "On Windows, a Git worktree checkout can store a directory wrapper as a file symlink. Run `qfai init` in this checkout to relink the wrappers it owns; creating links may need Windows Developer Mode.",
         { relatedFiles: reachable.slice(1).map((entry) => entry.relative) },
       ),
     );
   }
 
   return { issues, unwalkable };
+}
+
+/**
+ * Whether the git work tree at `root` stores symbolic links as plain files, its effective
+ * `core.symlinks` being false. Outside a work tree the answer is no: a global setting alone says
+ * nothing about how this tree was checked out.
+ */
+function gitStoresLinksAsFiles(root: string): boolean {
+  if (gitStdout(root, ["rev-parse", "--is-inside-work-tree"])?.trim() !== "true") return false;
+  return gitStdout(root, ["config", "--bool", "--get", "core.symlinks"])?.trim() === "false";
 }

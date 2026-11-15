@@ -13,6 +13,7 @@
  * would otherwise apply to every case in that file.
  */
 
+import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -306,6 +307,47 @@ describe("a structurally broken target is a finding, not a crash", () => {
       expect([...(finding?.refs ?? [])].sort()).toEqual(
         names.map((name) => `.claude/skills/${name}`).sort(),
       );
+    });
+  });
+
+  // QFAI:EX-0001-0039-36
+  it("names the wrappers once at info, with the setting, when git stores links as files", async () => {
+    await withProject(async (root) => {
+      // A checkout whose git writes links as plain files: `core.symlinks` is false here.
+      execFileSync("git", ["init", "-q"], { cwd: root, stdio: "ignore" });
+      execFileSync("git", ["config", "core.symlinks", "false"], { cwd: root, stdio: "ignore" });
+      const names = ["qfai-implement", "qfai-verify"];
+      const wrappers = names.map((name) => path.join(root, ".claude", "skills", name));
+      await mkdir(path.join(root, ".claude", "skills"), { recursive: true });
+      for (const name of names) {
+        const dir = path.join(root, ".qfai", "assistant", "skill", name);
+        await mkdir(dir, { recursive: true });
+        await writeFile(path.join(dir, "SKILL.md"), "# skill\n", "utf-8");
+        await symlink(
+          `../../.qfai/assistant/skill/${name}`,
+          path.join(root, ".claude", "skills", name),
+          "dir",
+        );
+      }
+      const unfollowable = new Set(wrappers.map((wrapper) => path.resolve(wrapper)));
+      statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        unfollowable.has(path.resolve(String(target)))
+          ? Promise.reject(errno("EPERM"))
+          : actual.stat(target, ...rest),
+      );
+
+      const issues = await validateIntegrationSurface(root);
+
+      const links = issues.filter(
+        (entry) =>
+          entry.code === "QFAI-LINK-001" && entry.refs?.includes(".claude/skills/qfai-verify"),
+      );
+      expect(links).toHaveLength(1);
+      const [finding] = links;
+      expect(finding?.severity).toBe("info");
+      expect(finding?.suggested_action).toContain("git config core.symlinks true");
+      expect(finding?.suggested_action).toContain("`qfai init`");
+      expect(finding?.suggested_action).not.toContain("\n");
     });
   });
 
