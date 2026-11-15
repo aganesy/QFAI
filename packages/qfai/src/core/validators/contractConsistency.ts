@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { parseStructuredContract } from "../contracts.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
+import { assistantLayerDir } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -290,8 +291,8 @@ export const DERIVED_DECLARATION_FORM =
 const DERIVED_DECLARATION_EXAMPLE =
   "-- Derived (not stored): status = standby, powered_off from enabled, connection_status, JST clock";
 
-const DERIVED_DECLARATION_REFERENCE =
-  ".qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md#derived-not-stored";
+/** Shown to the reader, so written with `/` on every platform. */
+const DERIVED_DECLARATION_REFERENCE = `${assistantLayerDir("skill")}/qfai-sdd/references/contract-artifact-rules.md#derived-not-stored`;
 
 /**
  * A line carrying the key that does not parse as a declaration.
