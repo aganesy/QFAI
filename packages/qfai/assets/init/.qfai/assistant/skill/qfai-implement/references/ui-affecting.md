@@ -5,6 +5,7 @@
 - Inputs
 - Component catalogue
 - Plain text in UI source
+- Repeated figures and claims
 - Routing
 - Evidence
 
@@ -105,6 +106,11 @@ text, ask first whether the user needs it at that point:
 ```
 
 Vue and Svelte use the HTML form. Both keys are required and non-empty, no other key is allowed, and `why` and `without` must say different things. The reason names the specific failure the text prevents; "helps the user" is not a reason.
+
+## Repeated figures and claims
+
+A figure, label or claim shown on more than one page comes from one source, such as one data module or content
+entry, so a correction made in one place reaches every page.
 
 ## Routing
 
