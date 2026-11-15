@@ -133,9 +133,9 @@ describe("layout and data display values reach the token file when DESIGN.md sta
       layout: {
         breakpoint: { sm: { $type: "dimension", $value: { value: 40, unit: "rem" } } },
         "target-min": { $value: { value: 44, unit: "px" } },
-        $extensions: { qfai: { density: "compact" } },
+        $extensions: { "dev.qfai": { density: "compact" } },
       },
-      "data-display": { $extensions: { qfai: { locale: "ja-JP" } } },
+      "data-display": { $extensions: { "dev.qfai": { locale: "ja-JP" } } },
     });
     const theme = await readAt(root, THEME);
     expect(theme).toContain("  --breakpoint-sm: 40rem;\n");
@@ -148,6 +148,12 @@ describe("layout and data display values reach the token file when DESIGN.md sta
     const refused = await cli(["catalog", "design", "--root", invalid]);
     expect(refused.code).toBe(1);
     expect(refused.err).toContain("layout.density");
+    const injected = await projectWith({
+      "DESIGN.md": sample.replace(/family_sans: .*$/m, 'family_sans: "Inter; } body { color: red"'),
+    });
+    const blocked = await cli(["catalog", "design", "--root", injected]);
+    expect(blocked.code).toBe(1);
+    expect(blocked.err).toContain("visual.typography.family_sans");
   });
 });
 
@@ -256,6 +262,9 @@ describe("a hex colour in UI source that matches no token is a warning", () => {
         'export const c = "#FFF";',
         'export const d = <a href="#add">x</a>;',
         'export const e = "#00000080";',
+        "// TODO(#123)",
+        "export const f = <p>Order #1234</p>;",
+        'export const g = <path fill="url(#fade)" />;',
         "",
       ].join("\n"),
     });

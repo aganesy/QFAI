@@ -57,17 +57,22 @@ export async function readGenerated(root: string, relative: string): Promise<Gen
   return text === null ? { state: "absent" } : { state: "read", text };
 }
 
+/** The vendor namespace of the token file's `$extensions`, in reverse-domain form. */
+export const EXTENSION_KEY = "dev.qfai";
+
 /** How many tokens the token file holds for this design. */
 export function countTokens(design: DesignMd): number {
-  return tokensOf(design).length;
+  return tokensOf(design).filter((token) => token.type !== undefined).length;
 }
 
 /** The token file's text, byte-identical for the same `DESIGN.md` front matter. */
 export function renderDesignTokens(design: DesignMd): string {
   const tree: Record<string, unknown> = { $description: GENERATED };
   for (const token of tokensOf(design)) {
-    const node: Record<string, unknown> = {};
-    if (token.type !== undefined) node.$type = token.type;
+    // A value no token type of the format states stays out of the file: a strict reader
+    // rejects a token whose type it cannot work out. The theme still carries it.
+    if (token.type === undefined) continue;
+    const node: Record<string, unknown> = { $type: token.type };
     node.$value = token.value;
     if (token.description !== undefined) node.$description = token.description;
     setAt(tree, token.path, node);
@@ -75,7 +80,7 @@ export function renderDesignTokens(design: DesignMd): string {
   for (const note of notesOf(design)) {
     const group = groupAt(tree, note.path);
     group.$description = note.description;
-    group.$extensions = { qfai: note.extensions };
+    group.$extensions = { [EXTENSION_KEY]: note.extensions };
   }
   return `${JSON.stringify(tree, null, 2)}\n`;
 }
@@ -106,26 +111,52 @@ export function tokenHexes(design: DesignMd): Set<string> {
 /** A hex colour written in source text: its line, as written, and its normalised form. */
 export type RawHex = { line: number; written: string; hex: string };
 
-// A `#` that starts a hex literal: not inside a word, an entity or a URL path, and not followed
-// by more of a name. Ceiling: an in-page anchor such as `href="#add"` is skipped only when the
-// attribute is `href` or `to`; another attribute holding a fragment of hex letters is read as a
-// colour.
+// A `#` that starts a hex literal: not inside a word, an entity, a URL path or a `url(#id)`
+// reference, and not followed by more of a name.
 const RAW_HEX_RE =
-  /(?<![\w&#/])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![\w-])/g;
-const ANCHOR_BEFORE_RE = /\b(?:href|to)\s*=\s*\{?\s*["'`]$/;
+  /(?<![\w&#/(])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![\w-])/g;
+// Comments hold prose such as `// see #123`, so they are blanked before the scan. The `//` form
+// is not read after a `:`, so the path of a URL such as `https://` is not taken for a comment.
+const COMMENT_RE = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<!:)\/\/[^\n]*/g;
+/** An attribute whose value is a colour: `style="color: #fff"`, `fill="#fff"`. */
+const COLOR_ATTRIBUTE_RE =
+  /\b(?:style|fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*\{?\s*["'`][^"'`]*$/i;
+/** Any other attribute's value, such as `aria-controls="#bad"`: never a colour place. */
+const OTHER_ATTRIBUTE_RE = /[\w-]+\s*=\s*\{?\s*["'`][^"'`]*$/;
+/** A CSS declaration value: a `:` since the last `;`, `{` or `}` on the line. */
+const DECLARATION_RE = /:[^:;{}]*$/;
 
-/** Every hex colour literal in a source file's text. */
+/**
+ * Every hex colour literal in a source file's text that sits where a colour goes: a CSS
+ * declaration value, a colour attribute, or a whole string literal. A hex in prose, a comment,
+ * an id selector or another attribute's value is not read as a colour.
+ */
 export function findRawHexes(text: string): RawHex[] {
+  const scanned = text.replace(COMMENT_RE, (comment) => comment.replace(/[^\n]/g, " "));
   const found: RawHex[] = [];
-  for (const match of text.matchAll(RAW_HEX_RE)) {
-    const before = text.slice(Math.max(0, match.index - 40), match.index);
-    if (ANCHOR_BEFORE_RE.test(before)) continue;
+  let line = 1;
+  let counted = 0;
+  for (const match of scanned.matchAll(RAW_HEX_RE)) {
+    for (; counted < match.index; counted += 1) if (scanned[counted] === "\n") line += 1;
+    const lineStart = scanned.lastIndexOf("\n", match.index - 1) + 1;
+    const before = scanned.slice(lineStart, match.index);
+    const end = match.index + match[0].length;
+    const after = scanned.slice(end, end + 16);
+    if (!colorPlace(before, after)) continue;
     const rgba = parseHex(match[0]);
     if (!rgba) continue;
-    const line = text.slice(0, match.index).split("\n").length;
     found.push({ line, written: match[0], hex: hexOf(rgba) });
   }
   return found;
+}
+
+/** Whether a hex sits where a colour goes, from the text before it on its line and after it. */
+function colorPlace(before: string, after: string): boolean {
+  if (COLOR_ATTRIBUTE_RE.test(before)) return true;
+  if (OTHER_ATTRIBUTE_RE.test(before)) return false;
+  if (/^\s*\{/.test(after)) return false;
+  if (DECLARATION_RE.test(before)) return true;
+  return /["'`]$/.test(before) && /^["'`]/.test(after);
 }
 
 // ---------------------------------------------------------------------------

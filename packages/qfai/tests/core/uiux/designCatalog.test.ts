@@ -104,17 +104,14 @@ describe("the token file and the theme", () => {
   });
 
   // QFAI:EX-0001-0312-02
-  it("keeps a value no token type states as its CSS text", async () => {
+  it("leaves a value no token type states out of the token file and keeps it in the theme", async () => {
     const design = await sampleDesign((text) =>
       text
         .replace('md:   "0.5rem"', 'md:   "0.5em"')
         .replace("scale: [0, 1, 2, 3, 4, 6, 8, 12, 16, 24]", "scale: [0.5]"),
     );
-    const radius = tokenAt(design, "radius.md");
-    expect(radius).toEqual({
-      $value: "0.5em",
-      $description: "Kept as the CSS text DESIGN.md gives: no token type of the format states it.",
-    });
+    expect(tokenAt(design, "radius.md")).toBeUndefined();
+    expect(tokenAt(design, "radius.sm")).toMatchObject({ $type: "dimension" });
     expect(renderTheme(design)).toContain("  --radius-md: 0.5em;\n");
     expect(tokenAt(design, "spacing.0-5.$value")).toEqual({ value: 0.125, unit: "rem" });
   });
