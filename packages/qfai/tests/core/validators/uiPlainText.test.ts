@@ -540,6 +540,26 @@ describe("a data value is not plain text", () => {
     ]);
   });
 
+  it("leaves the text of a button, a link or a status out of a cell's whole text", async () => {
+    const issues = await run({
+      "src/a.html": [
+        "<table><tr>",
+        "<td><span>Pending</span> <button>Approve request</button></td>",
+        '<td><span role="status">Awaiting the finance review</span> <a href="/orders/1042">Open the order</a> <span>Due</span></td>',
+        "</tr></table>",
+      ].join("\n"),
+      "src/b.tsx": [
+        "export const B = () => (",
+        "  <tr>",
+        "    <td><span>Pending</span> <button>Approve request</button></td>",
+        '    <td><span role="status">Awaiting the finance review</span> <Link href="/">Open the order</Link> {"Due"}</td>',
+        "  </tr>",
+        ");",
+      ].join("\n"),
+    });
+    expect(issues).toEqual([]);
+  });
+
   it("reads a data cell the same way under a uiText.elements map", async () => {
     const root = await projectWith({
       "src/a.tsx": [

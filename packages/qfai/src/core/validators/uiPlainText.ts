@@ -445,7 +445,7 @@ async function markupCandidates(markup: string, mapped: MappedNames): Promise<Ca
     if (insideExempt(node.parentElement, mapped)) continue;
     // A cell is judged by its whole text, so a sentence a nested element splits is still read.
     const cell = dataCellOf(node.parentElement);
-    if (cell && isDataValue(cell.textContent)) continue;
+    if (cell && isDataValue(markupCellText(cell, mapped))) continue;
     const location = dom.nodeLocation(node);
     const leading = raw.slice(0, raw.length - raw.trimStart().length);
     const line = (location?.startLine ?? 1) + (leading.match(/\n/g)?.length ?? 0);
@@ -454,6 +454,17 @@ async function markupCandidates(markup: string, mapped: MappedNames): Promise<Ca
   }
   dom.window.close();
   return candidates;
+}
+
+/**
+ * A cell's whole text: every text node inside it in order, except one an exempt element such as a
+ * button, a link or a `role="status"` holds, since that text is never plain.
+ */
+function markupCellText(node: Node, mapped: MappedNames): string {
+  if (node.nodeType === node.TEXT_NODE) {
+    return insideExempt(node.parentElement, mapped) ? "" : (node.textContent ?? "");
+  }
+  return Array.from(node.childNodes, (child) => markupCellText(child, mapped)).join("");
 }
 
 /** The nearest enclosing data cell, or `null` when no data cell encloses the element. */
@@ -621,12 +632,12 @@ function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNa
       inner.kind === k.StringLiteral || inner.kind === k.NoSubstitutionTemplateLiteral;
     return literal ? inner.getText().slice(1, -1) : null;
   };
-  // A cell's whole text, as an HTML parser's `textContent` reads it: every JSX text and literal
-  // child inside it, in order; another expression adds nothing.
+  // A cell's whole text: every JSX text and literal child inside it, in order, except one an exempt
+  // element such as a button, a link or a `role="status"` holds; another expression adds nothing.
   const cellText = (node: TsNode): string => {
-    if (node.kind === k.JsxText) return jsxText(node);
+    if (node.kind === k.JsxText) return exempt(node) ? "" : jsxText(node);
     const literal = literalChild(node);
-    if (literal !== null) return literal;
+    if (literal !== null) return exempt(node) ? "" : literal;
     return childrenOf(node)
       .filter((child) => child.kind !== k.JsxOpeningElement && child.kind !== k.JsxClosingElement)
       .map(cellText)

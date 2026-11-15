@@ -77,8 +77,9 @@ U+FF1F, U+FF61 and U+FF0E. It is exempt in a data cell (`td`, `dd`, or a compone
 `Cell`, such as `TableCell`) and as a whole JSX string literal child anywhere, as in `<td>ORD-1042</td>`,
 `<td>{'-'}</td>` or `<td>{paid ? 'Yes' : 'No'}</td>`. A sentence or a longer text in a
 cell, such as `<td>Ships once the payment clears.</td>`, is plain text and needs its reason. A cell is judged
-by its whole text, so `<td>Ships in <b>3</b> days once paid</td>` is one sentence that needs a reason, not
-three short values. An ellipsis or an
+by its whole text, so `<td>Ships in <b>3</b> days once paid</td>` is one sentence that needs a reason, not three short values. The text of a button, a link or another
+element above that a cell holds is left out, so `<td><span>Pending</span> <button>Approve</button></td>` is the
+value `Pending`. An ellipsis or an
 abbreviation counts as that mark where its last `.` ends the text or comes before a space, so a short text
 such as `Loading...` or `Inc.` still needs its reason.
 
