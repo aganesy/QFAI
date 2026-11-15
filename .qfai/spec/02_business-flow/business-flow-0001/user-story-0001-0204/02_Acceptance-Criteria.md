@@ -37,6 +37,7 @@ Feature: Settle one visual decision as a stage of a route
   Scenario: The prototype loop builds and reviews from the UI research the grill recorded
     Given a prototype stage whose grill recorded a research summary for screen types or components the project does not cover
     When qfai-prototyping runs its loop
-    Then the generator reads that summary's best practices and anti-patterns for the screens and components they name
-    And the reviewer receives the same two lists
+    Then the generator of each lineage reads the best practices and anti-patterns the grill applied for that lineage's gaps
+    And the reviewer receives the same entries
+    And a finding the grill rejected or deferred reaches neither
 ```

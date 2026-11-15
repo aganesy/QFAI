@@ -175,11 +175,21 @@ When the gap check of `prototyping-grill` found a screen type or a component
 the project does not cover, its stage report holds a `research_summary` for
 those gaps. The loop reads that summary itself, not only through the grilling
 session and `grilling.md`, which keep what the session decided but not every
-practice the research found. The generator applies its `best_practices` and
-avoids its `anti_patterns` on the screens and components each one names, and
-the reviewer receives the same two lists. A finding the grill rejected because
-it contradicts root `DESIGN.md` stays rejected. With no gap, and in a `restyle`
-loop, which adds no screen, there is no summary and the loop reads none.
+practice the research found.
+
+- **Only what the grill applied.** The loop passes on the `reflection` entries
+  whose `action` is `apply`, with the `best_practices` and `anti_patterns` of
+  their sources. A `reject` or `defer` entry, such as a finding that
+  contradicts root `DESIGN.md` or one nobody verified, reaches neither role.
+- **Only this lineage's gaps.** The stage report holds one gap-check line per
+  added screen. The session agent passes a lineage, `<ui-contract-id>/<screen>`,
+  only the entries for the gaps its own line names; a screen whose line names
+  no gap gets none.
+- **Both roles.** The generator applies those `best_practices` and avoids those
+  `anti_patterns`, and the reviewer receives the same entries.
+
+With no gap, and in a `restyle` loop, which adds no screen, there is no summary
+and the loop reads none.
 
 ## Procedure
 
@@ -291,10 +301,10 @@ confirmation.
   better, and what is out of bounds. The four axes are fixed and say nothing
   about this prototype's purpose, so a reviewer without that file grades every
   prototype against the same generic bar.
-- The `best_practices` and `anti_patterns` of the
-  [UI research findings](#ui-research-findings), when the grill recorded a
-  `research_summary`. A screen type or component the project had no pattern
-  for has no other reference to be graded against.
+- The applied `best_practices` and `anti_patterns` of the
+  [UI research findings](#ui-research-findings) for this lineage, when the
+  grill recorded a `research_summary`. The reviewer prompt says how they are
+  graded.
 - A screenshot or HTML snapshot, only when one was taken. A finding names any
   mandatory input that is missing.
 
