@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
+  examples are green, each screen the flow adds or changes is placed in the
+  shell its UI contract names, linked from its entry points, built from shared
+  components for the parts the screens repeat, and captured. The flow is not
+  done until that is so.
+
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
   no confirmed prototype covers, even when the request asks no design question.
