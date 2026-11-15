@@ -7,6 +7,13 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 
 const skillDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "skill", "qfai-implement");
 const policyPath = path.join(skillDir, "references", "parallelization-policy.md");
+const baselinePath = path.join(
+  getInitAssetsDir(),
+  ".qfai",
+  "assistant",
+  "rule",
+  "shared-skill-delegation-baseline.md",
+);
 
 /** The policy with every run of whitespace collapsed, so a sentence can span a wrapped line. */
 async function policy(): Promise<string> {
@@ -165,5 +172,18 @@ describe("parallel read-only lookups", () => {
     expect(gate).toContain("fans out only when every condition holds for every pair of units");
     expect(gate).toContain("| G5 | No unit needs another unit's output |");
     expect(text).toContain("the framing of research and the reading of its answers");
+  });
+
+  // QFAI:AC-0001-0093-03
+  // QFAI:EX-0001-0093-11
+  it("keeps a lookup answer a decision uses in a file the decision cites", async () => {
+    const baseline = (await readFile(baselinePath, "utf-8")).replace(/\s+/g, " ");
+    expect(baseline).toContain(
+      "Before it uses a delegated lookup's answer in a decision, the session agent writes the answer with its citations to `<paths.outDir>/research/<YYYYMMDDhhmmss>-<slug>.md`",
+    );
+    expect(baseline).toContain(
+      "The decision cites that file, never the result message: a result message lives only in the conversation, and compaction shortens it to a line.",
+    );
+    expect(baseline).toContain("An answer no decision uses is not written.");
   });
 });
