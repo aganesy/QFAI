@@ -667,6 +667,22 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
         );
       });
 
+      it("separates the two remedies when a declaration is stale both ways", async () => {
+        const both = DERIVED_DB.replace(
+          "status = standby, powered_off from",
+          "status = active, retired from",
+        );
+        const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": both });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.suggested_action).toContain(
+          "remove the value from the DB domain. The API contract does not require",
+        );
+      });
+
       it("reports a declaration covering a value the API never asks for", async () => {
         const unasked = DERIVED_DB.replace("powered_off from", "retired from");
         const { api, dbs } = await seedMany(SIM_LINE_API, { "db-0003-sim-lines.sql": unasked });
@@ -695,6 +711,126 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
         expect(issues.filter((entry) => entry.code === "QFAI-CONTRACT-041")).toEqual([]);
         const domain = issues.filter((entry) => entry.code === "QFAI-CONTRACT-040");
         expect(domain[0]?.message).toContain("powered_off, standby");
+      });
+    });
+
+    /**
+     * The case the reference describes: a status computed at read time that no
+     * column holds at all. With nothing on the DB side to compare, the
+     * declaration is read against the API contract that requires the values.
+     */
+    describe("a derived value no DB column holds", () => {
+      const EVENTS_DB = [
+        "-- Derived (not stored): acceptance_status = not_open, open, ended from acceptance_start, acceptance_end, JST clock",
+        "CREATE TABLE events (",
+        "  id uuid PRIMARY KEY,",
+        "  status TEXT NOT NULL CHECK (status IN ('draft', 'published')),",
+        "  acceptance_start timestamptz,",
+        "  acceptance_end timestamptz",
+        ");",
+        "",
+      ].join("\n");
+
+      function eventsApi(acceptanceStatus: string): string {
+        return [
+          "openapi: 3.0.3",
+          "components:",
+          "  schemas:",
+          "    Event:",
+          "      type: object",
+          "      properties:",
+          "        status:",
+          "          type: string",
+          "          enum: [draft, published]",
+          "        acceptance_status:",
+          "          type: string",
+          `          ${acceptanceStatus}`,
+          "",
+        ].join("\n");
+      }
+
+      it("is not reported when the API contract requires every declared value", async () => {
+        const { api, dbs } = await seedMany(eventsApi("enum: [not_open, open, ended]"), {
+          "db-0004-events.sql": EVENTS_DB,
+        });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        expect(issues).toEqual([]);
+      });
+
+      it("reports a declared value the API contract does not require", async () => {
+        const { api, dbs } = await seedMany(eventsApi("enum: [not_open, open]"), {
+          "db-0004-events.sql": EVENTS_DB,
+        });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain(
+          "no API contract's `enum` on acceptance_status includes: ended",
+        );
+        expect(declaration[0]?.message).not.toContain("not_open");
+      });
+
+      it("says the API declares no enum when the values are only in a description", async () => {
+        const { api, dbs } = await seedMany(
+          eventsApi("description: One of not_open, open or ended."),
+          { "db-0004-events.sql": EVENTS_DB },
+        );
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain(
+          "no API contract's `enum` on acceptance_status includes: ended, not_open, open",
+        );
+        expect(declaration[0]?.message).not.toContain("the API contract does not require");
+        expect(declaration[0]?.suggested_action).toContain("No DB contract stores this field");
+      });
+
+      // The tests above keep a `status` CHECK in the contract. Without any state
+      // domain at all, the declaration is still read against the API.
+      const NO_DOMAIN_DB = EVENTS_DB.replace(
+        "  status TEXT NOT NULL CHECK (status IN ('draft', 'published')),\n",
+        "",
+      );
+
+      it("is still checked when no DB contract bounds any state column", async () => {
+        const { api, dbs } = await seedMany(
+          eventsApi("description: One of not_open, open or ended."),
+          { "db-0004-events.sql": NO_DOMAIN_DB },
+        );
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain("includes: ended, not_open, open");
+      });
+
+      it("credits values with no state domain anywhere, whatever their case", async () => {
+        const { api, dbs } = await seedMany(eventsApi("enum: [NOT_OPEN, Open, ended]"), {
+          "db-0004-events.sql": NO_DOMAIN_DB,
+        });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        expect(issues).toEqual([]);
+      });
+
+      it("credits a value another API contract requires", async () => {
+        const { api, dbs } = await seedMany(eventsApi("enum: [not_open, open]"), {
+          "db-0004-events.sql": EVENTS_DB,
+        });
+        const second = path.join(path.dirname(api), "api-0004-events-admin.yaml");
+        await writeFile(second, eventsApi("enum: [ended]"), "utf-8");
+
+        const issues = await validateContractConsistency([api, second], dbs);
+
+        expect(issues).toEqual([]);
       });
     });
 
