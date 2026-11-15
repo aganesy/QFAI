@@ -4,6 +4,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **`QFAI-UITEXT-001` says what it reads.** The finding's fix text and the
+  implementer guidance say that the check reads only literal text, and that
+  moving a sentence into a constant, a prop or an attribute value is not a fix:
+  the product-surface review still judges that copy.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
@@ -117,11 +124,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the key, whatever its value, is ignored.
 
 ### Changed
-
-- **`QFAI-UITEXT-001` says what it reads.** The finding's fix text and the
-  implementer guidance say that the check reads only literal text, and that
-  moving a sentence into a constant, a prop or an attribute value is not a fix:
-  the product-surface review still judges that copy.
 
 - **The interface-clarity cut is judged with production-sized data.** The test
   in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
