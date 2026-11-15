@@ -15,6 +15,7 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 - `data-qfai` marker convention
 - Prototype metadata
 - Screen states: `states`
+- List behaviour: `elements[].list`
 - Purposeful copy: `supplements` and `structure`
 - Screen contract rules
 - Template
@@ -33,9 +34,11 @@ The built screen also carries the parts that
 `.agents/rules/interface-clarity.md` lists under "What a business screen
 always has": the app shell and its navigation, list search, sort and
 pagination where a list can outgrow one screen, feedback after every change,
-and the loading, empty, error and success states. The contract need not repeat
-these parts, and their absence from the contract is no reason to leave them
-out of the screen. Leaving one out needs a reason recorded in the screen's UI
+and the loading, empty, error and success states. A `list` or `table` element
+names its list behaviour in its `list` entry, and the screen names its states in
+`states`; the contract need not repeat the shell or the feedback after a
+change, and their absence from the contract is no reason to leave them out of
+the screen. Leaving one out needs a reason recorded in the screen's UI
 contract, as that rule says; a once-per-application part's reason goes in the
 app frame.
 
@@ -225,6 +228,31 @@ default" is not a `renders`; name what the user sees. A supplement's `when`
 names one of these states. `npx qfai validate` does not check this key; it
 describes the screen for the implementer and the reviewer.
 
+## List behaviour: `elements[].list`
+
+An element of `type: list` or `type: table` carries `list`, with one entry for
+each of `columns`, `search`, `filters`, `sort` and `pagination`, so an
+implementer builds how the list is shown and narrowed rather than dumping every
+row unsorted:
+
+| Key          | Holds                                                       |
+| ------------ | ----------------------------------------------------------- |
+| `columns`    | the columns or row fields shown, in order                   |
+| `search`     | what a keyword is matched against                           |
+| `filters`    | the attributes the user narrows the list by                 |
+| `sort`       | the default order and what the user can sort by             |
+| `pagination` | the page size or incremental loading, and where paging runs |
+
+An entry is never left out: one the element does without, such as
+`pagination` on a list of a few fixed items shown at once, is a mapping with
+`none` and the reason, as a state that cannot be reached is in `states`. The
+List screen type that `.qfai/assistant/step/sdd-contract/STEP.md` names
+carries a Behaviour list, such as list state kept in the screen's address and
+paging on the server for a list that can outgrow one page. It applies to what
+these entries set; an entry that departs from it says so with the reason.
+`npx qfai validate` does not check this key; it describes the element for the
+implementer and the reviewer.
+
 ## Purposeful copy: `supplements` and `structure`
 
 Two optional keys, beside `primary_tasks`, `elements` and `actions`, describe the
@@ -310,6 +338,7 @@ judgement, not a validate finding.
 | `type`        | `input`, `table`, `button`, …           |
 | `required`    | boolean                                 |
 | `validations` | simple rule strings                     |
+| `list`        | for a `list` or `table`: its behaviour  |
 
 `screens[].actions[]` are the minimum interactions:
 
@@ -366,5 +395,6 @@ For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by 
 - [ ] Screen IDs, routes, primary tasks, labels, markers, and actions are stable and testable.
 - [ ] Every declared action has an observable effect, including relevant failure states.
 - [ ] Every screen lists all five `states`, each with what renders and the next action, or `none` with a reason.
+- [ ] Every `list` or `table` element carries `list` with `columns`, `search`, `filters`, `sort` and `pagination`, each set or `none` with a reason.
 - [ ] No supplement restates a label, heading or action the screen already shows, and none is development commentary.
 - [ ] Prototyping coverage uses full contract IDs and the current cycle-0 fields.
