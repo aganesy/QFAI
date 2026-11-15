@@ -304,6 +304,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-053",
     "QFAI-CONTRACT-054",
     "QFAI-CONTRACT-055",
+    "QFAI-CONTRACT-056",
     "QFAI-DB-*",
   ],
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
@@ -1236,6 +1237,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every application screen of a UI contract declares `navigation`: its shell, entry points and where back leads, or `none` with the reason it sits in no navigation, so the screen is built inside the app. A `surface: marketing` screen is asked nothing.",
   "QFAI-CONTRACT-055":
     "Every `type: list` or `type: table` element of an application screen in a UI contract carries `list`: its columns, search, filters, sort and pagination, or `none` with the reason it has no list behaviour, so the list is built searchable, sortable and paged where it needs to be. A `surface: marketing` screen is asked nothing.",
+  "QFAI-CONTRACT-056":
+    "Every `pattern` a UI contract screen declares is the ID of a screen type in the shipped business UI pattern reference (`list`, `detail`, `form`, `settings`, `members` or `dashboard`), so the screen is built and reviewed against a type that exists. A screen that declares no pattern is asked nothing.",
   "QFAI-UITEXT-001":
     "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert or the like) or has a `qfai-text` comment with `why` and `without` directly before it or before its parent element, or a `qfai-text-file` comment in its file gives it one.",
   "QFAI-UITEXT-002":
