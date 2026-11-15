@@ -460,7 +460,7 @@ it("A settled behaviour change that asks to change the prototype applies its rec
   ]);
 });
 
-// QFAI:EX-0001-0211-62
+// QFAI:EX-0001-0211-63
 it("A settled change that adds screens applies its record, then designs and prototypes", async () => {
   const settled = {
     entryFlags: ["upstream" as const],
@@ -494,7 +494,7 @@ it("A settled change that adds screens applies its record, then designs and prot
   ]);
 });
 
-// QFAI:EX-0001-0211-63
+// QFAI:EX-0001-0211-64
 it("A feature or behaviour change that adds screens prototypes, unless a choice is open", async () => {
   expect([
     await decided({ intent: "feature", qualifiers: ["new-screens"] }),

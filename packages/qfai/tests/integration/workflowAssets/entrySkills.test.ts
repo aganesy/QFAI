@@ -693,7 +693,7 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0211-05
-  // QFAI:EX-0001-0211-64
+  // QFAI:EX-0001-0211-65
   it("reads a change that adds screens as new screens, which design and prototype first", async () => {
     const reference = await readShipped(EXTRACTION);
     expect(itemOf(sectionOf(reference, "## Qualifiers"), "new-screens")).toContain(
