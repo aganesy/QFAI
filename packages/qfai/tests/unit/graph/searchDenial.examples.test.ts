@@ -1759,3 +1759,38 @@ it("denies a search that mixes inside and outside paths, or an outside file with
     await layout.dispose();
   }
 });
+
+// QFAI:EX-0001-0235-31
+// Mutation: packages/qfai/src/core/graph/hooks.ts `operation === "env" ? { ...context, alone: false } : context,` -> `context,` fails "denies a search of an outside file behind an env wrapper"
+it("denies a search of an outside file behind an env wrapper", async () => {
+  vi.stubEnv("RIPGREP_CONFIG_PATH", "");
+  vi.stubEnv("GREP_OPTIONS", "");
+  const layout = await outsideSearchLayout();
+  const { out, project } = layout;
+  const src = `${project.split(path.sep).join("/")}/src`;
+  try {
+    for (const command of [
+      // A split string can set a variable, such as a config that makes rg recurse.
+      `env -S "RIPGREP_CONFIG_PATH=/tmp/rgcfg rg qfai" ${out}/notes.txt`,
+      `env -iS "GREP_OPTIONS=-r grep foo" ${out}/notes.txt`,
+      `env --split-string="rg foo" ${out}/notes.txt`,
+      `/usr/bin/env -S "RIPGREP_CONFIG_PATH=/tmp/rgcfg rg qfai" ${out}/notes.txt`,
+      // A directory change moves the base the pattern word is checked from.
+      `env -C ${src} -S "rg foo" ${out}/notes.txt`,
+      `env --chdir=${src} rg foo ${out}/notes.txt`,
+      `env -C ${src} rg foo ${out}/notes.txt`,
+      // Any env wrapper, even with no option.
+      `env rg foo ${out}/notes.txt`,
+      // The inside-project rule does not allow a search behind env either.
+      `env -S "RIPGREP_CONFIG_PATH=/tmp/rgcfg rg foo" src`,
+      `env -C ${src} rg foo lib`,
+    ]) {
+      expect(
+        classifyOutside({ tool: "Bash", cwd: project, command }, [project]).decision,
+        command,
+      ).toBe("deny");
+    }
+  } finally {
+    await layout.dispose();
+  }
+});

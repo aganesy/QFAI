@@ -190,9 +190,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   hook belongs to, before and after symbolic links, so
   `grep -n foo /etc/hosts` runs. An outside directory or relative operand, a
   second operand, git grep, an outside file beside another command or
-  pipeline stage, a search that mixes project and outside paths, a glob, `~`,
-  variable or `..` operand, a link, hard link, MSYS link file or shortcut, an
-  option that reads another file, `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH` set,
+  pipeline stage or behind `env`, a search that mixes project and outside
+  paths, a glob, `~`, variable or `..` operand, a link, hard link, MSYS link
+  file or shortcut, an option that reads another file, `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH` set,
   or an operand that does not exist stays denied. Fixes #4179.
 
 - **A `Derived (not stored)` declaration for a value no DB column holds is

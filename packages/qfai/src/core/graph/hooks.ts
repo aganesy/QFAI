@@ -290,6 +290,12 @@ function classifyCommands(
 }
 
 /**
+ * An `env` option that splits its value into a command line: `-S`, `-S<value>`, a cluster of
+ * argument-free short options ending in `S` such as `-iS`, and `--split-string[=<value>]`.
+ */
+const envSplitOption = /^-[i0v]*S|^--split-string(?:=|$)/;
+
+/**
  * Whether a command defines a function or alias, or sets a variable a later
  * command may read, so a name in the same event may not run the program it names.
  */
@@ -302,9 +308,13 @@ function redefinesCommands(words: string[]): boolean {
     if (redirection) offset += redirection;
     // A group's `{` defines nothing itself; the command it opens is read instead.
     else if (words[offset] === "{") offset += 1;
-    else if (["builtin", "command", "env"].includes(words[offset]?.toLowerCase() ?? "")) {
+    else if (["builtin", "command", "env"].includes(commandName(words.slice(offset)) ?? "")) {
+      const wrapper = commandName(words.slice(offset));
       offset += 1;
       while (words[offset]?.startsWith("-")) {
+        // `env -S` runs its value as a new command line, which may set a variable or name
+        // another program; the words after it are not the command this loop would find.
+        if (wrapper === "env" && envSplitOption.test(words[offset] ?? "")) return true;
         offset += /^-[uCS]$|^--(?:unset|chdir|split-string)$/.test(words[offset] ?? "") ? 2 : 1;
       }
     } else break;
@@ -776,14 +786,14 @@ function classifyCommand(
       const word = words[offset] ?? "";
       const redirection = redirectionLength(word);
       if (redirection) offset += redirection;
-      else if (operation === "env" && /^(?:-S|--split-string)(?:=|$)|^-S./.test(word)) {
+      else if (operation === "env" && envSplitOption.test(word)) {
         // `env -S 'rg foo /'` runs the split string as the command and its arguments.
-        const separate = word === "-S" || word === "--split-string";
+        const separate = /^-[i0v]*S$/.test(word) || word === "--split-string";
         const value = separate
           ? (words[offset + 1] ?? "")
           : word.startsWith("--")
             ? word.slice(word.indexOf("=") + 1)
-            : word.slice(2);
+            : word.slice(word.indexOf("S") + 1);
         split = value.split(/\s+/).filter((part) => part.length > 0);
         offset += separate ? 2 : 1;
         break;
@@ -793,7 +803,13 @@ function classifyCommand(
       } else if (word.startsWith("-") || /^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) offset += 1;
       else break;
     }
-    return classifyCommand([...split, ...words.slice(offset)], context, depth + 1);
+    // `env` can change the directory (`-C`), the environment (an assignment, `-u`, `-i`) or the
+    // command line (`-S`) of what it runs, so a search behind it is never an outside read.
+    return classifyCommand(
+      [...split, ...words.slice(offset)],
+      operation === "env" ? { ...context, alone: false } : context,
+      depth + 1,
+    );
   }
   if (["bash", "sh", "zsh", "pwsh", "powershell", "cmd"].includes(operation ?? "")) {
     const switchIndex = words.findIndex((word) => /^(?:-[a-z]*c|\/c|-command)$/i.test(word));
