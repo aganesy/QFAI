@@ -90,7 +90,7 @@ const NAMED_TYPE_DB = [
   "",
 ].join("\n");
 
-// QFAI:EX-0001-0039-48
+// QFAI:EX-0001-0039-52
 describe("collectApiStateEnums — local $ref resolution", () => {
   it("keys a $ref'd enum by the referencing field name", () => {
     const doc = {
@@ -173,7 +173,7 @@ describe("collectApiStateEnums — local $ref resolution", () => {
   });
 });
 
-// QFAI:EX-0001-0039-48
+// QFAI:EX-0001-0039-52
 describe("collectSqlEnumDomains — named enum type usage", () => {
   it("carries a CREATE TYPE domain onto the column declared with it", () => {
     const domains = collectSqlEnumDomains(NAMED_TYPE_DB);
