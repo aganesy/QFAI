@@ -1,0 +1,18 @@
+# CLI-0025: `qfai catalog components`
+
+## Ownership boundary
+
+This contract decides which files `qfai catalog components` reads, what it counts as a component, which fields it records, the file it writes, its `--check` mode and how it exits. It also decides what the shipped implementation guidance tells an agent about the catalogue.
+
+The warnings `qfai validate` raises from the committed catalogue belong to the `qfai validate` contract (CLI-0014). Where a screen region comes from belongs to the shipped procurement rule.
+
+## Business rules
+
+| BR-ID | Statement | Examples |
+| --- | --- | --- |
+| BR-0025-0001 | `qfai catalog components` takes `--check` and `--root`. It reads the `.tsx` and `.jsx` files the `uiux.surfacePaths` globs select from the root, except under `node_modules` and except a file whose name holds `.test.`, `.spec.` or `.stories.`, with the `typescript` package resolved from the project root. A component is a top-level `export function` or `export const` whose name starts with an upper-case letter and whose function, or the first function a wrapping call such as `memo(...)` receives, holds a JSX element or fragment. A component exported only through a separate `export { ... }` or `export default` statement, and a class component, are not listed. | EX-0001-0307-01, EX-0001-0307-02, EX-0001-0307-03 |
+| BR-0025-0002 | Each component records `name`, its repository-relative `file` with forward slashes, and `props`: the member names, in declaration order, of the first parameter's type when that type is a literal, an interface or type alias the same file declares, or an intersection of those, else the names an object destructuring of the first parameter binds, rest element aside, else the members of the first type argument of the `const`'s own annotation. A props type nothing in the file declares gives no `props` key. The last `/** ... */` block before the declaration supplies `source`, `reason`, `states` (split on `,`), `pattern` and `a11y` from the tags `@source`, `@reason`, `@states`, `@pattern` and `@a11y`; a tag runs to the next tag or the end of the block, its lines joined by single spaces, and an empty tag gives no key. | EX-0001-0307-01, EX-0001-0307-02 |
+| BR-0025-0003 | The command writes `.qfai/catalog/components.yaml`: two header comment lines, then `components:` as a list sorted by `file` and then by `name`, each entry's keys in the order `name`, `file`, `props`, `source`, `reason`, `states`, `pattern`, `a11y`, with no timestamp, so the same source gives the same bytes. It prints one line naming the file, the number of components and files and the number with no `@source`, and exits 0. A read or write failure exits 1. | EX-0001-0307-04 |
+| BR-0025-0004 | With `--check` the command writes nothing. It exits 0 when the committed file holds the text it would write, CRLF line ends read as LF, and otherwise exits 1 with one line naming the file and saying it does not exist or is out of date, with the command to run. | EX-0001-0307-05 |
+| BR-0025-0005 | When a `.tsx` or `.jsx` file is selected and `typescript` cannot be resolved, fails to load, or offers no `createSourceFile`, the command prints one line naming `typescript` and the number of files it could not read, writes nothing, and exits 1. | EX-0001-0307-06 |
+| BR-0025-0006 | The shipped implementation UI guidance tells the implementer to read `.qfai/catalog/components.yaml` before writing a region, to reuse a listed component that realises it, and, on authoring a shared component, to write its doc comment with the five tags and run `qfai catalog components`. The procurement ladder's reuse rung and the test-first implementation step point to that guidance. | EX-0001-0307-12 |

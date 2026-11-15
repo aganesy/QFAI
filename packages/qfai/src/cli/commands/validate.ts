@@ -318,6 +318,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-PLATFORM-*",
     "QFAI-CFG-LINK-*",
     "QFAI-UITEXT-*",
+    "QFAI-COMP-*",
   ],
   "prototyping-skill": ["QFAI-PROTOSKILL-*"],
   "test-stubs": ["QFAI-TEST-*"],
@@ -1215,6 +1216,15 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `qfai-text` comment before a plain text, and every `qfai-text-file` comment, holds exactly a non-empty `why` and a non-empty `without` that say different things.",
   "QFAI-UITEXT-003":
     "When `uiux.surfacePaths` selects `.tsx` or `.jsx` files, the project installs `typescript` so the plain-text check can read them.",
+  // The component catalogue warnings read `.qfai/catalog/components.yaml` and are asked of
+  // nothing until a project writes it with `qfai catalog components`.
+  "QFAI-COMP-001":
+    "Every component in the component catalogue records its `@source`: a catalogue item and version, or `authored` with a `@reason`.",
+  "QFAI-COMP-002": "No two components in the component catalogue realise the same `@pattern`.",
+  "QFAI-COMP-003":
+    "A surface file renders no raw `<button>`, `<input>` or `<select>` when the component catalogue lists a component whose `@pattern` is that element, outside that component's own file.",
+  "QFAI-COMP-004":
+    "The committed component catalogue parses and is the file `qfai catalog components` writes for the current source.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —

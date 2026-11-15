@@ -116,6 +116,10 @@ export type ParsedArgs = {
     atddAction?: "scaffold";
     atddStoryId?: string;
     atddFlowId?: string;
+    /** Subcommand for `qfai catalog <components>`. */
+    catalogAction?: "components";
+    /** `--check` for `qfai catalog components`: compare with the committed file, write nothing. */
+    catalogCheck?: boolean;
     /** `--flow <BF-NNNN>` values for `qfai validate`. */
     validateFlowIds: string[];
     /** `--flow <BF-NNNN>` values for `qfai report`. */
@@ -124,7 +128,7 @@ export type ParsedArgs = {
     workflowAction?: WorkflowOperation;
     /** The first option whose value or placement the parser refused. */
     invalidOption?: string;
-    /** A token in the subcommand position of `qfai sdd`, `atdd` or `workflow` that names none. */
+    /** A token in the subcommand position of `qfai sdd`, `atdd`, `catalog` or `workflow` that names none. */
     unknownSubcommand?: string;
     /** `--route <route>` for `qfai workflow plan`. */
     workflowRoute?: string;
@@ -306,6 +310,20 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       } else {
         options.unknownSubcommand = candidate;
         markInvalid(subcommandReason("workflow", candidate));
+      }
+      args.shift();
+    }
+  }
+
+  // `qfai catalog <subcommand>` — currently only `components` is supported.
+  if (command === "catalog") {
+    const candidate = args[0];
+    if (isSubcommandToken(candidate)) {
+      if (candidate === "components") {
+        options.catalogAction = candidate;
+      } else {
+        options.unknownSubcommand = candidate;
+        markInvalid(subcommandReason("catalog", candidate));
       }
       args.shift();
     }
@@ -590,6 +608,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
+      case "--check":
+        if (command === "catalog") {
+          options.catalogCheck = true;
+        } else {
+          markInvalid(notValidHere("--check"));
+        }
+        break;
       case "--order":
         if (command === "workflow") {
           if (options.workflowOrder === true) {
@@ -800,7 +825,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
               `qfai sdd next-id: unexpected argument: ${arg}. Expected: ${NEXT_ID_USAGE}`,
             );
         } else if (
-          (command === "workflow" || (command === "sdd" && options.sddAction === "merge-docs")) &&
+          (command === "workflow" ||
+            command === "catalog" ||
+            (command === "sdd" && options.sddAction === "merge-docs")) &&
           arg !== undefined
         ) {
           // These subcommands take no positional arguments.
@@ -829,6 +856,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   ) {
     markInvalid("qfai session-review: give --session or --since, not both.");
   }
+  if (command === "catalog" && !options.help && !options.catalogAction) {
+    markInvalid(subcommandReason("catalog", null));
+  }
   if (command === "atdd" && !options.help && !options.atddAction) {
     markInvalid(subcommandReason("atdd", null));
   }
@@ -855,6 +885,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 /** The set of subcommands accepted by `qfai <command> <subcommand>`. */
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["atdd", "scaffold"],
+  ["catalog", "components"],
   ["sdd", "preflight|next-id|merge-docs"],
   ["workflow", WORKFLOW_OPERATIONS.join("|")],
 ]);

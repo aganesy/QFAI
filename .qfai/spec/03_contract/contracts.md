@@ -26,3 +26,4 @@
 | UI-0022 | Graph exploration terminal surfaces | `.qfai/spec/03_contract/ui/ui-0022-graph-exploration.yaml` | - | CLI-0009, CLI-0021 | CLI preparation, preview, denial, pending-attempt recovery and query-result presentation. |
 | CLI-0023 | `qfai sdd merge-docs` | `.qfai/spec/03_contract/cli/cli-0023-qfai-sdd-merge-docs.md` | - | - | Sentence-level merge of conflicted story-tree documents. |
 | CLI-0024 | `qfai session-review` | `.qfai/spec/03_contract/cli/cli-0024-qfai-session-review.md` | - | - | Local transcript counts for the session review. |
+| CLI-0025 | `qfai catalog components` | `.qfai/spec/03_contract/cli/cli-0025-qfai-catalog-components.md` | - | - | The component catalogue written from the UI source, and how the implementer keeps it. |

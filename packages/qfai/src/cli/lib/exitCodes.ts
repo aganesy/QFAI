@@ -105,6 +105,14 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
+    label: "catalog components",
+    lines: [
+      `${EXIT_CODES.ok} = the catalogue was written, or --check found it up to date,`,
+      `${EXIT_CODES.findings} = --check found it missing or out of date, typescript cannot be loaded,`,
+      "      or a read or write failure",
+    ],
+  },
+  {
     label: "workflow",
     lines: [
       `${EXIT_CODES.ok} = a plan or candidate routes,`,

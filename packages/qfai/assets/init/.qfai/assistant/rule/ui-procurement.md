@@ -28,7 +28,9 @@ its owner rather than a choice made here.
 
 Per screen region, stop at the first rung that holds.
 
-1. **Does the project already have a component for it?** Reuse it. When the
+1. **Does the project already have a component for it?** Reuse it. The
+   component catalogue lists what exists
+   (`.qfai/assistant/skill/qfai-implement/references/ui-affecting.md#component-catalogue`). When the
    same region appears on a second screen and no shared component realises it,
    extract one, wrapping whatever rung 2, 3 or 4 supplied, and use it on both,
    rather than authoring the region again.
