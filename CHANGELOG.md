@@ -4,18 +4,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **`validate.json` names the UI/UX check times for how they ran.**
+  `familyTimings.overlapping` becomes `familyTimings.uiux`, with
+  `familyTimings.sharedMarkdownReadMs` and `familyTimings.htmlMockLoadMs`
+  beside it, and `timings.uiuxPartsRun` says whether the parts ran
+  `side-by-side` or `one-after-another`. Closes #4279.
+
 ### Fixed
 
 - **`qfai validate --timings` times each UI/UX check on its own.** The six
   UI/UX checks ran side by side, so a check that waited on file reads was
   charged for the others' work and the `slowest` names could point at a check
   that did almost nothing. Under `--timings` they now run one after another,
-  the line says `slowest, one after another`, and the html-mock parser's
-  one-off load is reported once, on its own. In `validate.json`,
-  `familyTimings.overlapping` becomes `familyTimings.uiux` with
-  `familyTimings.htmlMockLoadMs`, and `timings.uiuxPartsRun` says how the
-  parts ran. A run without `--timings` still runs them side by side, and the
-  findings and counts are the same either way. Fixes #4279.
+  the line says `slowest, one after another`, and the shared Markdown read
+  and the html-mock parser's one-off load are each reported once, on their
+  own, as part of the group's time. A run without `--timings` still runs them
+  side by side, and the findings and counts are the same either way.
+  Fixes #4279.
 
 ## [2.5.0] - 2026-11-15
 

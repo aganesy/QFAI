@@ -145,9 +145,10 @@ describe("the --timings line of each finding family", () => {
           ]),
         ),
         htmlMockLoadMs: 912.4,
+        sharedMarkdownReadMs: 30.2,
       }),
     ).toBe(
-      "timings: by family document-schema 8071ms, STORY 4021ms, TEST 2235ms; uiux one after another: MOCK 876ms, design tokens 5ms; html mock parser load 912ms",
+      "timings: by family document-schema 8071ms, STORY 4021ms, TEST 2235ms; uiux one after another: MOCK 876ms, design tokens 5ms; of which shared Markdown read 30ms, html mock parser load 912ms",
     );
   });
 
@@ -179,6 +180,7 @@ describe("the --timings line of each finding family", () => {
         ],
         uiux: [],
         htmlMockLoadMs: 0,
+        sharedMarkdownReadMs: 0,
       }),
     ).toBe("timings: by family CONTRACT 3ms, LINK 3ms");
     expect(formatFamilyTimings(undefined)).toBeNull();
@@ -253,9 +255,11 @@ describe("the --timings line of each finding family", () => {
       const parts = (asked.timings?.uiuxParts ?? []).reduce((sum, part) => sum + part.ms, 0);
       expect(asked.timings?.uiuxParts).toHaveLength(6);
       expect(group).toBeDefined();
-      expect(parts + (asked.familyTimings?.htmlMockLoadMs ?? 0)).toBeLessThanOrEqual(
-        group?.ms ?? 0,
-      );
+      const load = asked.familyTimings?.htmlMockLoadMs ?? -1;
+      const read = asked.familyTimings?.sharedMarkdownReadMs ?? -1;
+      expect(load).toBeGreaterThanOrEqual(0);
+      expect(read).toBeGreaterThanOrEqual(0);
+      expect(parts + load + read).toBeLessThanOrEqual(group?.ms ?? 0);
 
       const plain = await validateProject(root, undefined, { profile: "prototyping" });
       expect(plain.timings?.uiuxPartsRun).toBe("side-by-side");

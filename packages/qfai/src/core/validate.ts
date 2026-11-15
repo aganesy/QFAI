@@ -24,6 +24,7 @@ import { validateStoryPolicyPlaceholders } from "./validators/assistantAssets.js
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { issue } from "./validators/utils.js";
+import { mockMarkdownGlobs } from "./validators/htmlMockBlocks.js";
 import { sharedMarkdownFileReader } from "./validators/markdownFiles.js";
 import type {
   Issue,
@@ -102,6 +103,7 @@ type TimingsSink = {
   sequential: CheckClock;
   uiux: CheckClock;
   htmlMockLoadMs: number;
+  sharedMarkdownReadMs: number;
   /** `--timings`: run the UI/UX checks one after another, so each time is that check's own work. */
   uiuxOneAfterAnother: boolean;
 };
@@ -115,7 +117,13 @@ type TimingsSink = {
 type CheckClock = Map<string, { ms: number; families: Set<string> }>;
 
 function newTimingsSink(uiuxOneAfterAnother: boolean): TimingsSink {
-  return { sequential: new Map(), uiux: new Map(), htmlMockLoadMs: 0, uiuxOneAfterAnother };
+  return {
+    sequential: new Map(),
+    uiux: new Map(),
+    htmlMockLoadMs: 0,
+    sharedMarkdownReadMs: 0,
+    uiuxOneAfterAnother,
+  };
 }
 
 /** The family a finding code belongs to, as users read it: `QFAI-CFG-LINK-002` is `CFG-LINK`. */
@@ -299,6 +307,7 @@ export async function validateProject(
             sequential: labelCheckTimings(timingsSink.sequential),
             uiux: labelCheckTimings(timingsSink.uiux),
             htmlMockLoadMs: timingsSink.htmlMockLoadMs,
+            sharedMarkdownReadMs: timingsSink.sharedMarkdownReadMs,
           },
         }
       : {}),
@@ -1011,6 +1020,11 @@ async function runUiuxValidators(
   // groups are kept in declaration order.
   const uiuxIssueGroups: Issue[][] = [];
   if (timings.uiuxOneAfterAnother) {
+    // Run one after another, the first check to ask for the shared Markdown would be charged for
+    // the read the others reuse, so the read is done first and reported on its own.
+    const readStart = performance.now();
+    await readMarkdown(mockMarkdownGlobs(root, config));
+    timings.sharedMarkdownReadMs += performance.now() - readStart;
     for (const part of uiuxValidators) uiuxIssueGroups.push(await runPart(part));
   } else {
     uiuxIssueGroups.push(...(await Promise.all(uiuxValidators.map(runPart))));

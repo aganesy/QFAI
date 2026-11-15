@@ -771,8 +771,8 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
 /**
  * The `--timings` line: each finding family with its time, slowest first, or `null` when the run
  * was not asked for it. The UI/UX group is one entry `uiux`; its checks, which `--timings` runs one
- * after another, follow as its breakdown, and the html-mock parser's one-off load follows on its
- * own because it belongs to no check.
+ * after another, follow as its breakdown. The shared Markdown read and the html-mock parser's
+ * one-off load belong to no check, so they follow on their own, as part of `uiux` and not extra.
  */
 export function formatFamilyTimings(families: ValidationFamilyTimings | undefined): string | null {
   if (!families) {
@@ -781,10 +781,14 @@ export function formatFamilyTimings(families: ValidationFamilyTimings | undefine
   const list = (entries: ValidationFamilyTimings["sequential"]): string =>
     entries.map((entry) => `${entry.family} ${Math.round(entry.ms)}ms`).join(", ");
   const uiux = families.uiux.length > 0 ? `; uiux one after another: ${list(families.uiux)}` : "";
-  const load =
-    families.htmlMockLoadMs > 0
-      ? `; html mock parser load ${Math.round(families.htmlMockLoadMs)}ms`
-      : "";
+  const shared = [
+    ["shared Markdown read", families.sharedMarkdownReadMs],
+    ["html mock parser load", families.htmlMockLoadMs],
+  ] as const;
+  const ofWhich = shared
+    .filter(([, ms]) => ms > 0)
+    .map(([name, ms]) => `${name} ${Math.round(ms)}ms`);
+  const load = ofWhich.length > 0 ? `; of which ${ofWhich.join(", ")}` : "";
   return `timings: by family ${list(families.sequential)}${uiux}${load}`;
 }
 

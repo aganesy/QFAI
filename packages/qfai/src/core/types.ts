@@ -154,8 +154,17 @@ export type ValidationFamilyTimings = {
    * check's own work. The html-mock check leaves out the one-off load of its parser.
    */
   uiux: readonly ValidationFamilyTiming[];
-  /** The one-off load of the html-mock parser, 0 when no mock block needed it. */
+  /**
+   * The one-off load of the html-mock parser, 0 when no mock block needed it. Part of the `uiux`
+   * entry of `sequential` and of no check in `uiux`.
+   */
   htmlMockLoadMs: number;
+  /**
+   * The read of the Markdown under `paths.specsDir` that the html-mock and UI definition checks
+   * share, done once before the checks run. Part of the `uiux` entry of `sequential` and of no
+   * check in `uiux`.
+   */
+  sharedMarkdownReadMs: number;
 };
 
 export type ValidationResult = {
