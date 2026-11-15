@@ -1258,8 +1258,6 @@ it("allows a direct search scoped to a path inside the project", () => {
   for (const [tool, command] of [
     ["Bash", "grep -n foo packages/qfai/src"],
     ["Bash", "grep -rn foo packages/qfai/src"],
-    ["Bash", "command grep -n foo packages/qfai/src"],
-    ["Bash", "cd ./packages && rg foo qfai/src"],
     ["Bash", "git grep -n foo -- packages/qfai/src"],
     ["PowerShell", "Select-String -Pattern foo -Path packages/qfai/src/index.ts"],
     ["PowerShell", "findstr /N foo packages\\qfai\\src\\index.ts"],
@@ -1338,8 +1336,8 @@ it("denies a search over the project root itself or over a path it cannot read",
 });
 
 // QFAI:EX-0001-0235-40
-// Mutation: packages/qfai/src/core/graph/hooks.ts `context.placeable !== false &&` -> `` fails "denies a scoped search after a command that may move the shell unseen"
-it("denies a scoped search after a command that may move the shell unseen", () => {
+// Mutation: packages/qfai/src/core/graph/hooks.ts `context.placeable === true &&` -> `` fails "denies a scoped search that is not the whole command text"
+it("denies a scoped search that is not the whole command text", () => {
   for (const [tool, command] of [
     ["PowerShell", "Push-Location ..; rg foo src"],
     ["PowerShell", "Push-Location /; rg foo Windows"],
@@ -1348,12 +1346,21 @@ it("denies a scoped search after a command that may move the shell unseen", () =
     ["PowerShell", "1 | % { cd .. }; rg foo src"],
     ["Bash", "shopt -s cdable_vars; cd HOME && rg foo src"],
     ["Bash", "echo start; rg foo src"],
+    ["Bash", "cd src && rg foo lib"],
+    ["Bash", "cd ./packages && rg foo qfai/src"],
+    ["Bash", "command grep -n foo packages/qfai/src"],
+    ["Bash", "env --chdir=.. rg foo src"],
+    ["Bash", "env -C / rg foo src"],
+    ["Bash", "bash -c 'rg foo src'"],
+    ["Bash", "echo $(rg foo src)"],
+    ["PowerShell", "Push-Location ..; pwsh -Command 'rg foo src'"],
+    ["PowerShell", "pwsh -WorkingDirectory .. -Command 'rg foo src'"],
+    ["PowerShell", "cd..; Write-Output (rg foo src)"],
   ] as const) {
     expect(classifyInProject({ tool, command }).decision, command).toBe("deny");
   }
-  expect(classifyInProject({ tool: "Bash", command: "cd src && rg foo lib" }).decision).toBe(
-    "allow",
-  );
+  // Pipeline stages after the search do not move it.
+  expect(classifyInProject({ tool: "Bash", command: "rg foo src | head" }).decision).toBe("allow");
 });
 
 // QFAI:EX-0001-0235-40

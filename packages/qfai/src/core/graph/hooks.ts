@@ -59,9 +59,10 @@ interface CommandContext extends ShellScope {
   location: ShellLocation;
   redefined: boolean;
   /**
-   * Whether every command before this one is a directory move the tracker reads. Only then
-   * can a scoped search be placed: `Push-Location`, `cd..`, a script block or `shopt` can
-   * move the shell in ways the tracker does not follow.
+   * Whether this command is the whole command text, alone or with pipeline stages after it.
+   * Only then is a scoped search placed: any command before it, a nested shell, a
+   * substitution or a wrapper can move the shell in ways the directory tracker does not
+   * follow (`Push-Location`, `cd..`, a script block, `env --chdir`, `pwsh -WorkingDirectory`).
    */
   placeable?: boolean;
 }
@@ -226,7 +227,10 @@ function classifyCommands(
   // Inside a `case`, a command that starts with a word ending in `)`, such as `y)`
   // or `"a b")`, is an arm: its pattern is not a command.
   let openCases = 0;
-  let onlyMoves = true;
+  const sole =
+    depth === 0 &&
+    substitutions.length === 0 &&
+    commands.every((command, index) => index === 0 || command.join === "|");
   for (const [index, command] of commands.entries()) {
     const words =
       openCases > 0 && command.words[0]?.endsWith(")") ? command.words.slice(1) : command.words;
@@ -246,8 +250,7 @@ function classifyCommands(
     // `git log | { grep fix; } < .env` the group reads `.env`.
     const upstream =
       words[0] === "{" && !groupClosesBare(commands, index) ? undefined : command.upstream;
-    const placeable = onlyMoves;
-    if (operand === undefined || operand === null) onlyMoves = false;
+    const placeable = sole && index === 0;
     const decision = classifyCommand(
       words,
       { ...scope, location, redefined, placeable },
@@ -774,7 +777,8 @@ function classifyCommand(
   if (!redefined && pipeFilter(words) && printsText(upstream)) return undefined;
   if (
     !redefined &&
-    context.placeable !== false &&
+    depth === 0 &&
+    context.placeable === true &&
     !followsLinks(words) &&
     !(context.shell === "powershell" && words.some((word) => word.startsWith("@"))) &&
     insideProject(context.root, searchBase(context), searchPaths(words))
