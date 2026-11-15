@@ -155,7 +155,7 @@
 | US-0001-0232 | Find forbidden identifiers in the tracked worktree                                     | `user-story-0001-0232/` |
 | US-0001-0233 | Report acceptance scaffold evidence and follow-up                                      | `user-story-0001-0233/` |
 | US-0001-0234 | Choose the graph CLI that answers the exploration question                             | `user-story-0001-0234/` |
-| US-0001-0235 | Redirect observable exploratory searches through hooks                                 | `user-story-0001-0235/` |
+| US-0001-0235 | Steer exploratory searches to the graph CLIs                                           | `user-story-0001-0235/` |
 | US-0001-0236 | Reuse completed analysis safely across worktrees                                       | `user-story-0001-0236/` |
 | US-0001-0237 | Prepare project-local graph CLIs through init                                          | `user-story-0001-0237/` |
 | US-0001-0238 | Merge conflicted story-tree documents by sentence                                      | `user-story-0001-0238/` |

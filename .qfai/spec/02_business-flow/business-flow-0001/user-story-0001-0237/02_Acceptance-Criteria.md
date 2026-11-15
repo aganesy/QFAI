@@ -12,16 +12,16 @@ Feature: Prepare project-local graph CLIs through init
     Then both selected runtimes and the managed CLI are prepared locally or their failed preparation step is reported without registering or launching a graph MCP server
 
   # AC-0001-0237-02
-  Scenario: Preserve project settings and reminders
-    Given existing project-local host settings
-    When init composes graph integration
-    Then existing MCP settings and unrelated settings are preserved with existing reminder behavior and no graph MCP entry is added
+  Scenario: Preserve project settings
+    Given existing project-local MCP and host settings
+    When init prepares graph integration
+    Then existing MCP settings are preserved, an adopter-edited graph entrypoint is retained with a conflict, and no graph MCP entry or user-global configuration is added
 
   # AC-0001-0237-03
   Scenario: Repeat preparation safely
     Given a compatible completed installation
     When I rerun init
-    Then verified tools are reused and missing managed components are repaired without duplicate integration entries
+    Then verified tools are reused and missing managed components are repaired
 
   # AC-0001-0237-04
   Scenario: Keep usable preparation after failure
