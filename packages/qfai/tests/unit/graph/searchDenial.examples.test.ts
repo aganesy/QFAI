@@ -1175,7 +1175,7 @@ it("allows a pipe filter inside a group", () => {
 });
 
 // QFAI:EX-0001-0235-27
-// Mutation: packages/qfai/src/core/graph/hooks.ts `withoutPowerShellComments(powershellHereStrings(text))` -> `withoutPowerShellComments(text)` fails "reads a PowerShell here-string as one string"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `withoutPowerShellComments(powershellHereStrings(powerShellLines(text)))` -> `withoutPowerShellComments(powerShellLines(text))` fails "reads a PowerShell here-string as one string"
 it("reads a PowerShell here-string as one string", () => {
   for (const command of [
     "$body = @'\nIt's done (rg auth packages)\n'@\ngh pr create --body $body",
