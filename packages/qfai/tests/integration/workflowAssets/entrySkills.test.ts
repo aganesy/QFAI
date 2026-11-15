@@ -696,7 +696,7 @@ describe("qfai-run", () => {
   it("reads a request that adds screens no confirmed prototype covers as an open visual decision", async () => {
     const reference = await readShipped(EXTRACTION);
     expect(itemOf(sectionOf(reference, "## Qualifiers"), "visual-open")).toContain(
-      "with `feature`: A visual or interaction decision is still open. A request that adds a screen or a UI surface that no confirmed prototype covers leaves one open, even when it asks no design question, as a request to build the system or a new section of it does. A control added to an existing screen in that screen's style does not.",
+      "with `feature`: A visual or interaction decision is still open. A request that adds a screen or a UI surface that no confirmed prototype covers leaves one open, even when it asks no design question. A control added to an existing screen in that screen's style does not leave one open by itself.",
     );
     const line = sectionOf(reference, "## Examples")
       .split("\n")
