@@ -51,9 +51,8 @@ out, the session agent lands a foundation unit itself, from the component
 catalogue where an entry fits and extracted once where none does:
 
 - the app shell;
-- a page template for each screen type the units build, from the types of
-  `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` such as
-  list, detail, form, settings and dashboard, and no other;
+- a page template for each screen type the units build, such as list, detail,
+  form, settings and dashboard, and no other;
 - the status map that gives each status its label and badge;
 - the list behaviour the list screens share: search or filter, sort, the count
   and pagination.
