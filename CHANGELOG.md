@@ -15,6 +15,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
+  derived-value declaration covered both a value the DB stores and a value
+  the API does not require, the two remedy sentences ran together with no
+  space. They are now separated by one.
+
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
   info.** On a Windows `git worktree`, git can store a directory wrapper as a
   file symlink the OS will not follow. The canonical documents behind it read
