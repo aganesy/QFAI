@@ -35,6 +35,6 @@ describe("the business-screen list outranks Article VII", () => {
     expect(rule.split(/\r?\n/)).toContain(FLOOR);
     const article = await articleSeven();
     expect(article).toContain(FLOOR);
-    expect(article).toContain("how it is built still is");
+    expect(article).toContain("how it is built remains subject to this article");
   });
 });

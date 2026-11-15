@@ -38,6 +38,18 @@ describe("Article VII ranks the business-screen floor above itself", () => {
     );
     expect(ranking).toContain(`\`${FLOOR}\` in \`.agents/rules/interface-clarity.md\``);
     expect(ranking.indexOf("§ 2")).toBeLessThan(ranking.indexOf(FLOOR));
-    expect(article).toContain("A part on that list is never scope beyond the minimum");
+    expect(article).toContain(
+      "whose UI contract records no reason to leave it out, is never scope beyond the minimum",
+    );
+    expect(article).toContain("how it is built remains subject to this article");
+    for (const card of [
+      "architecture-reviewer",
+      "product-surface-reviewer",
+      "requirements-reviewer",
+    ]) {
+      const text = flat(await read(`.qfai/assistant/agent/${card}.md`));
+      const refusal = text.slice(text.indexOf("Refuse it when the cut"));
+      expect(refusal.slice(0, 400)).toContain(FLOOR);
+    }
   });
 });

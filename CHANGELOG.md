@@ -124,6 +124,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   region's procurement. The prototype review no longer blocks a native element
   chosen over a catalogue item.
 
+- **The parts of a business screen outrank the minimal-scope article.**
+  Article VII of the shipped constitution now names the list under
+  `## What a business screen always has` in `interface-clarity.md` among what
+  outranks it, beside the safety floor. On an application screen whose UI
+  contract records no reason to leave a part out, navigation, list behaviour,
+  states and feedback are no longer cut as scope beyond the minimum, and the
+  architecture, product-surface and requirements reviewers refuse such a cut;
+  how a part is built remains subject to the article.
+
 - **The business UI pattern list says where search, sort and paging run.**
   The List entry gains a Behaviour list: list state in the screen's address,
   search, filters, sort and paging on the server for a list that can outgrow
@@ -180,13 +189,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing, or took no agent decision, keeps that section's heading with an
   empty table. The `QFAI-DELIB-001` fix text says the same. The check itself
   is unchanged.
-
-- **The parts of a business screen outrank the minimal-scope article.**
-  Article VII of the shipped constitution now names the list under
-  `## What a business screen always has` in `interface-clarity.md` among what
-  outranks it, beside the safety floor. Navigation, list behaviour, states and
-  feedback are no longer cut as scope beyond the minimum; how they are built
-  is still held to the article.
 
 - **A plain text the user needs stays, with its reason.** The implementation
   UI guidance now holds the one copy of the procedure for a plain text in UI
