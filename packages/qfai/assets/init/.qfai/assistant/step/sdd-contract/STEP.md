@@ -84,7 +84,9 @@ surface also needs the root `DESIGN.md`, which `common-design-md` writes and
 validates after this step. A CLI-only surface does not require one. Do not
 adopt a sample design. Each screen states its `purpose` and its `navigation`:
 the shell it renders in, the entry points that lead to it, and where back
-leads.
+leads. A screen that is in no navigation on purpose writes
+`navigation: { none: <reason> }`. `npx qfai validate` warns about an
+application screen with no `navigation` (`QFAI-CONTRACT-054`).
 
 Examples describe business behaviour, so they rarely name pagination or a save
 confirmation. After deriving a screen's elements and actions from the examples,
@@ -143,7 +145,8 @@ so one that only restates its heading is left out. Fix a control
 that needs explaining before adding text for it. Each screen lists its
 `states`: what renders in `default`, `empty`, `loading`, `error` and
 `success`, and the next action from each, or `none` with the reason for a
-state the screen cannot reach. Each `list` or `table` element carries `list`:
+state the screen cannot reach; `npx qfai validate` warns about an application
+screen with no `states` or without one of the five (`QFAI-CONTRACT-053`). Each `list` or `table` element carries `list`:
 its `columns`, `search`, `filters`, `sort` and `pagination`, each set or
 `none` with the reason; `npx qfai validate` does not check this key. A screen may describe the copy that stays in its optional
 `supplements` and `structure`; `npx qfai validate` does not check them, and the

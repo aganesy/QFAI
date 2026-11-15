@@ -30,4 +30,12 @@ Feature: Deterministic validation gate
     When `qfai validate` runs the contract checks
     Then a screen that writes no `surface`, leaves it empty, or writes `application` or `marketing` raises nothing, and one that writes none is an application screen
     And any other value raises `QFAI-CONTRACT-051` at error, naming the contract, the screen, the value and the vocabulary
+
+  # AC-0001-0039-07
+  Scenario: Validate warns about an application screen that declares no states or no navigation
+    Given a UI contract whose screens declare `states` and `navigation` or leave them out
+    When `qfai validate` runs the contract checks
+    Then an application screen with no `states`, or without one of the five state ids, raises `QFAI-CONTRACT-053` at warning
+    And an application screen with no `navigation`, and no `navigation.none` with a reason, raises `QFAI-CONTRACT-054` at warning
+    And a `surface: marketing` screen and the shipped UI contract sample raise neither
 ```

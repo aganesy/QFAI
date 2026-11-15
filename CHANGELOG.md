@@ -17,6 +17,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **Validate warns about a screen with no states or no navigation.** An
+  application screen of a UI contract with no `states`, or without one of
+  `default`, `empty`, `loading`, `error` and `success`, raises
+  `QFAI-CONTRACT-053` at warning, and one with no `navigation` raises
+  `QFAI-CONTRACT-054`. A screen in no navigation on purpose writes
+  `navigation: { none: <reason> }`, and a `surface: marketing` screen is asked
+  for neither. The UI contract guide, the contract artifact rules, the
+  `sdd-contract` step and the shipped sample say so. Part of #4119.
+
 - **A UI contract list or table element says how it is shown and narrowed.**
   The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
   artifact rules and the `sdd-contract` step give every `type: list` or
