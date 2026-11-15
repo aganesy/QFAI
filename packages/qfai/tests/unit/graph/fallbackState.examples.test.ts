@@ -15,7 +15,7 @@ async function pendingFixture() {
   );
   const event = {
     tool_name: "Bash",
-    tool_input: { command: "rg legacy packages/" },
+    tool_input: { command: "rg legacy" },
     session_id: "state-session",
     cwd: fixture.root,
   };

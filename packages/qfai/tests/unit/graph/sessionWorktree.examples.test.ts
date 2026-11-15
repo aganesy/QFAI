@@ -18,7 +18,7 @@ async function initialise(worktree: string, git: "directory" | "file") {
 function search(cwd: string) {
   return {
     tool_name: "Bash",
-    tool_input: { command: "rg auth packages/" },
+    tool_input: { command: "rg auth" },
     session_id: "worktree-session",
     cwd,
   };
