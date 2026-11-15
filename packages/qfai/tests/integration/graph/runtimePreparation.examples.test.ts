@@ -48,16 +48,14 @@ it("prepares through the package API without overwriting a package-owned assista
     const fixture = graphProcessFixture();
     const result = await prepareGraphIntegration(root, fixture.run);
     expect(result.runtime).toBe("installed");
-    for (const file of ["graph-cli.mjs", "graph-hook.mjs", "graph-enforcement.json"])
-      await expect(access(path.join(root, ".qfai", "tools", file))).resolves.toBeUndefined();
+    await expect(
+      access(path.join(root, ".qfai", "tools", "graph-cli.mjs")),
+    ).resolves.toBeUndefined();
     await expect(access(path.join(root, ".mcp.json"))).rejects.toMatchObject({ code: "ENOENT" });
     await expect(
       access(path.join(root, ".qfai", "tools", "graph-manager.mjs")),
     ).rejects.toMatchObject({ code: "ENOENT" });
     expect(await readFile(path.join(root, ".gitignore"), "utf8")).toContain("/.qfai/tools/");
-    expect(
-      await readFile(path.join(root, ".qfai", "tools", "graph-enforcement.json"), "utf8"),
-    ).toContain('"denyExploration":true');
     expect(await readFile(sourceConstitution)).toEqual(before);
     await expect(
       readFile(path.join(assets, "root", ".agents", "rules", "graph-exploration.md"), "utf8"),
@@ -210,7 +208,7 @@ it("keeps installation targets project-local and preserves the caller environmen
 });
 
 // QFAI:EX-0001-0237-03
-// Mutation: packages/qfai/src/cli/commands/init.ts `info(renderGraphPreparation(preparation, preparation.hosts));` -> `info(renderGraphPreparation(preparation, []));` fails "prepares graph tools when an older adopter reruns init"
+// Mutation: packages/qfai/src/cli/commands/init.ts `info(renderGraphPreparation(preparation));` -> `` fails "prepares graph tools when an older adopter reruns init"
 it("prepares graph tools when an older adopter reruns init", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-upgrade-"));
   try {
@@ -224,10 +222,7 @@ it("prepares graph tools when an older adopter reruns init", async () => {
       ),
     );
     expect(output).toContain("Graph tools");
-    for (const host of ["claude", "codex", "copilot", "vscode"])
-      expect(output).toContain(`${host} (`);
-    expect(output).toContain("unsupported");
-    expect(output).not.toContain("runtime-verified");
+    expect(output).toContain("CodeGraph: installed");
     await expect(access(graphRuntimePaths(root).codegraph)).resolves.toBeUndefined();
     await expect(access(graphRuntimePaths(root).python)).resolves.toBeUndefined();
   } finally {

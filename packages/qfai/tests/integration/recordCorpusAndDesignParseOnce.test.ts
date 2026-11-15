@@ -24,7 +24,6 @@ import {
   completedDocumentSnapshotFixture,
   localCodeGenerationProcess,
 } from "../helpers/graphReuse.js";
-import { graphCliResult, installedGraphHookResult } from "../helpers/graphCli.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const roots: string[] = [];
@@ -254,52 +253,6 @@ describe("the Graphify document corpus", () => {
       } finally {
         await fixture.dispose();
       }
-    }
-  });
-
-  // QFAI:AC-0001-0234-08
-  // QFAI:EX-0001-0234-20
-  it("grants no fallback when the configuration gives no usable deliberation directory", async () => {
-    const fixture = await codeAnalysisFixture();
-    try {
-      await writeFile(
-        path.join(fixture.root, ".qfai", "tools", "graph-enforcement.json"),
-        '{"kind":"graph-enforcement","denyExploration":true}',
-      );
-      const event = {
-        tool_name: "Bash",
-        tool_input: { command: "rg legacy packages/" },
-        session_id: "unusable-config-session",
-        cwd: fixture.root,
-      };
-      const observed = await installedGraphHookResult(fixture.root, event);
-      const attemptId = /Observed attempt: ([a-f0-9-]{36})/.exec(observed.output)?.[1] ?? "";
-      await put(fixture.root, "qfai.config.yaml", "paths: [unclosed\n");
-      const result = await graphCliResult(
-        fixture.root,
-        [
-          "fallback",
-          "--attempt-id",
-          attemptId,
-          "--question",
-          "legacy callers",
-          "--reason",
-          "Graph scope is incomplete.",
-        ],
-        fixture.run,
-      );
-      expect(result.value).toMatchObject({
-        status: "failed",
-        permitted: false,
-        failure: unusableConfigs["paths: [unclosed\n"],
-        recovery,
-      });
-      expect(fixture.calls.some((call) => call.args.includes("context"))).toBe(false);
-      expect((await installedGraphHookResult(fixture.root, event)).output).toContain(
-        '"permissionDecision":"deny"',
-      );
-    } finally {
-      await fixture.dispose();
     }
   });
 

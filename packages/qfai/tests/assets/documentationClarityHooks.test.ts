@@ -176,7 +176,7 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
 
   beforeAll(async () => {
     const text = await readFile(path.join(repoRoot, rel), "utf-8");
-    hooks = readHooks(rel === ".claude/settings.json" ? reminderSettings(text, "claude") : text);
+    hooks = readHooks(rel === ".claude/settings.json" ? reminderSettings(text) : text);
     catalog = JSON.parse(await readFile(path.join(repoRoot, SHIPPED_MESSAGES), "utf-8"));
   });
 
@@ -655,6 +655,6 @@ describe("shipped template and this repository agree", () => {
       };
     };
 
-    expect(shared(reminderSettings(own ?? "", "claude"))).toEqual(shared(shipped ?? ""));
+    expect(shared(reminderSettings(own ?? ""))).toEqual(shared(shipped ?? ""));
   });
 });

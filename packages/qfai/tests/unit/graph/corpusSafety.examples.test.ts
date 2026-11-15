@@ -5,9 +5,7 @@ import { expect, it } from "vitest";
 import { mirrorGraphCorpus } from "../../../src/core/graph/analysis.js";
 import { exploreGraph } from "../../../src/core/graph/query.js";
 import { documentAnalysisFixture, graphifyExtractionFixture } from "../../helpers/graphAnalysis.js";
-import { composeGraphDenialHooks } from "../../../src/core/graph/hostSettings.js";
 import { prepareDocumentAnalysis } from "../../../src/core/graph/documents.js";
-import { inspectInstalledGraphHosts } from "../../../src/core/graph/hostConfiguration.js";
 
 // QFAI:EX-0001-0234-17
 // Mutation: packages/qfai/src/core/graph/analysis.ts `/\.(?:pem|key|p12|pfx|keystore)$/i.test(name)` -> `false` fails "excludes secret inputs and linked aliases from both corpora without writing outside storage"
@@ -74,32 +72,13 @@ it("excludes secret inputs and linked aliases from both corpora without writing 
 });
 
 // QFAI:EX-0001-0234-18
-// Mutation: packages/qfai/src/core/graph/hostSettings.ts `export function hasOpaqueCredentials(value: unknown): boolean {` -> `export function hasOpaqueCredentials(value: unknown): boolean { return false;` fails "keeps credentials out of integration settings, processing definitions and generated storage"
-it("keeps credentials out of integration settings, processing definitions and generated storage", async () => {
+// Mutation: packages/qfai/src/core/graph/documents.ts `Object.keys(processing).some((key) => !allowed.has(key)) ||` -> `false ||` fails "keeps credentials out of processing definitions and generated storage"
+it("keeps credentials out of processing definitions and generated storage", async () => {
   const fixture = await documentAnalysisFixture();
   const previousKey = process.env.QFAI_TEST_SELECTED_KEY;
   try {
     const key = "fixture-explicit-selected-credential";
-    const userCredential = "fixture-adopter-setting-credential";
-    const hosts = await inspectInstalledGraphHosts(fixture.root, () =>
-      Promise.resolve({ exitCode: 0, stdout: userCredential }),
-    );
-    expect(JSON.stringify(hosts)).not.toContain(userCredential);
-    expect(hosts.every((host) => host.version === undefined)).toBe(true);
     process.env.QFAI_TEST_SELECTED_KEY = key;
-    const mcpText = JSON.stringify({
-      mcpServers: { adopter: { command: "adopter-tool", env: { TOKEN: userCredential } } },
-    });
-    const claudeText = JSON.stringify({ env: { SECRET_TOKEN: userCredential } });
-    await writeFile(path.join(fixture.root, ".mcp.json"), mcpText);
-    await mkdir(path.join(fixture.root, ".claude"));
-    await writeFile(path.join(fixture.root, ".claude", "settings.json"), claudeText);
-    const hooks = await composeGraphDenialHooks(fixture.root);
-    expect(hooks.conflicts.join(" ")).toContain("credential");
-    expect(await readFile(path.join(fixture.root, ".mcp.json"), "utf8")).toBe(mcpText);
-    expect(await readFile(path.join(fixture.root, ".claude", "settings.json"), "utf8")).toBe(
-      claudeText,
-    );
     const definition = path.join(fixture.root, ".qfai", "graph-processing.json");
     await writeFile(
       definition,
@@ -119,8 +98,7 @@ it("keeps credentials out of integration settings, processing definitions and ge
       "utf8",
     );
     expect(metadata).not.toContain(key);
-    expect(JSON.stringify({ hooks, result })).not.toContain(key);
-    expect(JSON.stringify({ hooks, result })).not.toContain(userCredential);
+    expect(JSON.stringify(result)).not.toContain(key);
     await expect(
       readFile(path.join(fixture.documentAnalysis, ".qfai", "graph-processing.json")),
     ).rejects.toMatchObject({ code: "ENOENT" });

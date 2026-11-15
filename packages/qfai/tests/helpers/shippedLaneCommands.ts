@@ -1273,7 +1273,6 @@ export function fileDigest(raw: Buffer): string {
  */
 export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/copilot-instructions.md",
-  ".github/hooks/qfai-graph.json",
   ".github/workflows/qfai-docs.yml",
   ".github/workflows/qfai-tests.yml",
   ".github/workflows/qfai-validate.yml",
@@ -1308,15 +1307,6 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * silent edit to it changes how every other pinned file is checked out.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
-  // The generated shared denial hook is pinned independently of workflow templates.
-  // Re-pinned when every graph hook command began with a `node -e` guard that reads and discards
-  // stdin, then exits 0 with one line naming `qfai init`, where the git-ignored script is
-  // missing, and otherwise imports it. Derived by serialising the composed file as the composition code does; the unguarded command
-  // reproduces `e807d0ca…` byte for byte.
-  [
-    ".github/hooks/qfai-graph.json",
-    "c9a207d6a31ca4ccd146eeea9953c801ddd7a65bb870aff373b1c3cda08bd004",
-  ],
   [
     // Re-pinned when the cross-AI rules block was restated for the tree it is written into. Three
     // prose lines now say the masters are seeded by `qfai init` rather than assumed to exist, and the
@@ -1387,8 +1377,11 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // session-feedback bullet naming overlay proposals and the corrections it proposes to the
     // project, and one more bullet naming `.agents/rules/delegation-steering.md`. Derived by
     // `pnpm pins:entry`; reverting all three reproduces `c6f0a6a9…` byte for byte.
+    // Re-pinned when the graph-exploration bullet stopped naming search protection and said to
+    // prefer the graph CLIs with ordinary search still acceptable. Derived by running `qfai init`
+    // into a temp root; the previous digest was `ce9391e5…`.
     ".github/copilot-instructions.md",
-    "ce9391e5de0c7aa8ee435849f217c384e45b0b4b4c9d317f05d3265ad5c935b1",
+    "3a47d46ccb66eb40c5d9ec88039d701a0c77d7a33d9ce114e673e0a4f6cc8694",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1533,7 +1526,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // template's other events. Removing both groups reproduces `583f9448…`.
   // Re-pinned when the install check started skipping a prompt with the notification markers the
   // other two prompt reminders skip. Restoring the program reproduces `9da3dc80…`.
-  [".claude/settings.json", "e400fd79fdd4a6a6feea1035141895be10b436c245b7eea05030930d166d32eb"],
+  // Re-pinned when init stopped appending the graph hook group. Derived by running `qfai init`
+  // into a temp root; the previous digest was `e400fd79…`.
+  [".claude/settings.json", "495f83c3c174acbee53183aae46cd4376ce14c8e4f527a6aae07613da56f1bef"],
   // Inside `.codex/`, and pinned for the reason `.claude/settings.json` is: its commands are a
   // program an adopter's agent runs. Two `UserPromptSubmit` groups, structured-question and
   // free-text entry. Codex takes one command string, so each runs the same `node -e` reader
@@ -1586,7 +1581,9 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // `a3cb9f3f…`.
   // Re-pinned for the same turn-end check groups as `.claude/settings.json`, one line each with
   // no character a hook shell expands. Removing both groups reproduces `939d6969…`.
-  [".codex/hooks.json", "9fedc6167f58ac3b77d69b83bda33f3b2ea436c20ba5acc39d527f03df5479df"],
+  // Re-pinned for the same removal of the graph hook group as `.claude/settings.json`. Derived the
+  // same way; the previous digest was `9fedc616…`.
+  [".codex/hooks.json", "366842df60e0d252d75f483abfd48ac355e7d3be8fa3880e7a228c305b2dce40"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

@@ -29,11 +29,6 @@ describe("AC-0001-0237-02", () => {
       expect(composed.permissions.allow).toContain("Read");
       expect(composed.permissions.deny).toEqual(["Bash(rm:*)"]);
       expect(composed.hooks.PreToolUse[0]).toEqual(reminder);
-      expect(
-        composed.hooks.PreToolUse.some((group: unknown) =>
-          JSON.stringify(group).includes("graph-hook.mjs"),
-        ),
-      ).toBe(true);
       const servers = JSON.parse(await readFile(mcp, "utf8")).mcpServers;
       expect(servers.adopter).toEqual({ command: "keep-me" });
       expect(Object.keys(servers)).toEqual(["adopter"]);

@@ -8,11 +8,9 @@ import { completedCodeSnapshotFixture } from "../../../helpers/graphReuse.js";
 import { restoreCompletedCodeAnalysis } from "../../../../src/core/graph/reuse.js";
 import { graphAnalysisRoot, graphRuntimePaths } from "../../../../src/core/graph/layout.js";
 import { codegraphEnvironment } from "../../../../src/core/graph/process.js";
-import { classifyStoredGraphExploration } from "../../../../src/core/graph/fallbackState.js";
-import { graphCliResult } from "../../../helpers/graphCli.js";
 
 describe("AC-0001-0236-02", () => {
-  it("keeps concurrent worktree copies and search permissions independent and separates Windows from WSL paths", async () => {
+  it("keeps concurrent worktree copies independent and separates Windows from WSL paths", async () => {
     const fixture = await completedCodeSnapshotFixture();
     const other = await mkdtemp(path.join(os.tmpdir(), "qfai-independent-worktree-"));
     try {
@@ -43,32 +41,6 @@ describe("AC-0001-0236-02", () => {
           "utf8",
         ),
       ).toBe("Process-port DB marker");
-      const event = {
-        tool: "Bash",
-        command: "rg checkout packages/",
-        cwd: fixture.root,
-        session: "session",
-      };
-      const denied = await classifyStoredGraphExploration(fixture.root, event);
-      const attemptId = /Observed attempt: ([a-f0-9-]{36})/.exec(denied.message)?.[1];
-      const grant = await graphCliResult(
-        fixture.root,
-        [
-          "fallback",
-          "--attempt-id",
-          attemptId ?? "",
-          "--question",
-          "unresolved legacy caller",
-          "--reason",
-          "Graph cannot identify the legacy caller",
-        ],
-        fixture.run,
-      );
-      expect(grant.value).toMatchObject({ permitted: true });
-      expect((await classifyStoredGraphExploration(fixture.root, event)).decision).toBe("allow");
-      expect((await classifyStoredGraphExploration(other, { ...event, cwd: other })).decision).toBe(
-        "deny",
-      );
       const windows = { platform: "win32", architecture: "x64" };
       const wsl = { platform: "linux", architecture: "x64" };
       expect(graphRuntimePaths(fixture.root, windows).directory).not.toBe(
