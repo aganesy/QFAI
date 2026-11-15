@@ -184,6 +184,8 @@
     "tests/assets/sddInstructionConsistency.test.ts",
     "tests/integration/sddRecordAnswerMapping.test.ts",
     "tests/assets/reviewWalkthroughCriteria.test.ts",
+    "tests/assets/constitutionScreenFloor.test.ts",
+    "tests/integration/constitutionScreenFloor.test.ts",
     "tests/assets/reviewerScreenStructure.test.ts",
     "tests/assets/sddContractScreenFloor.test.ts",
     "tests/integration/reviewerScreenStructure.test.ts",
