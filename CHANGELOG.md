@@ -4,6 +4,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Removed
+
+- **Breaking: no hook blocks a direct search any more.** `qfai init` no longer
+  writes the graph search-denial hooks into `.claude/settings.json`,
+  `.codex/hooks.json` or `.github/hooks/qfai-graph.json`, no longer installs
+  `.qfai/tools/graph-hook.mjs` or `graph-enforcement.json`, and no longer prints
+  a Protection section. The `graph-cli.mjs fallback` command and its pending and
+  grant state are gone, and `qfai doctor` no longer checks for the hook script.
+  `.agents/rules/graph-exploration.md` now says to prefer the graph CLIs for
+  searching, exploring and investigating, and that ordinary search is
+  acceptable. Hook entries an earlier init wrote stay in your settings, and they
+  run a hook script whose code is no longer shipped: delete the graph entries
+  from `.claude/settings.json` and `.codex/hooks.json`, and delete
+  `.github/hooks/qfai-graph.json`, `.qfai/tools/graph-hook.mjs`,
+  `.qfai/tools/graph-enforcement.json` and the `*.pending.json`, `*.draft.json`
+  and `*.grant.json` files under `.qfai/tools/state/`.
+
 ### Fixed
 
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
@@ -119,21 +136,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   in `interface-clarity.md` now applies to application screens only.
 
 ### Removed
-
-- **Breaking: no hook blocks a direct search any more.** `qfai init` no longer
-  writes the graph search-denial hooks into `.claude/settings.json`,
-  `.codex/hooks.json` or `.github/hooks/qfai-graph.json`, no longer installs
-  `.qfai/tools/graph-hook.mjs` or `graph-enforcement.json`, and no longer prints
-  a Protection section. The `graph-cli.mjs fallback` command and its pending and
-  grant state are gone, and `qfai doctor` no longer checks for the hook script.
-  `.agents/rules/graph-exploration.md` now says to prefer the graph CLIs for
-  searching, exploring and investigating, and that ordinary search is
-  acceptable. Hook entries an earlier init wrote stay in your settings, and they
-  run a hook script whose code is no longer shipped: delete the graph entries
-  from `.claude/settings.json` and `.codex/hooks.json`, and delete
-  `.github/hooks/qfai-graph.json`, `.qfai/tools/graph-hook.mjs`,
-  `.qfai/tools/graph-enforcement.json` and the `*.pending.json`, `*.draft.json`
-  and `*.grant.json` files under `.qfai/tools/state/`.
 
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are
   removed.** Validate parsed the setting but never read it, and no code read
