@@ -251,10 +251,16 @@ describe("shipped ui-contract.sample.yaml gives every list its behaviour", () =>
       expect(Object.keys(list).sort()).toEqual(LIST_KEYS);
       for (const key of LIST_KEYS) {
         const entry = list[key];
-        if (typeof entry === "object" && entry !== null && !Array.isArray(entry)) {
+        const filled = (value: unknown): boolean =>
+          typeof value === "string" && value.trim() !== "";
+        if (Array.isArray(entry)) {
+          expect(entry.length).toBeGreaterThan(0);
+          expect(entry.every(filled)).toBe(true);
+        } else if (typeof entry === "object" && entry !== null) {
           expect(Object.keys(entry)).toEqual(["none"]);
+          expect(filled(Reflect.get(entry, "none"))).toBe(true);
         } else {
-          expect(entry === undefined || entry === null || entry === "").toBe(false);
+          expect(filled(entry)).toBe(true);
         }
       }
     }

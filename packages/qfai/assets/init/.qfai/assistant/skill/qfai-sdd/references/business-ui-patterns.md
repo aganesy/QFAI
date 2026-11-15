@@ -171,8 +171,9 @@ Catalogue: stat cards, a task list, an activity feed.
   leaves out. A behaviour in its type's Behaviour list applies to what the
   contract sets without being restated; a list's `list` entry names its
   columns, search, filters, sort and pagination, and the entry a behaviour
-  concerns records a departure from it, with the reason, such as
-  `pagination` paged on the client for a fixed list of a few items.
+  concerns records a departure from it, with the reason, such as a
+  `search` whose keyword is not kept in the address because the list is a
+  picker in a dialog.
 - **Implementing.** Build what the contract names. A part of the screen's type
   that the contract neither names nor excludes with a reason is drift: raise
   it to the contract stage under `.qfai/assistant/rule/drift-protocol.md`

@@ -35,9 +35,10 @@ The built screen also carries the parts that
 always has": the app shell and its navigation, list search, sort and
 pagination where a list can outgrow one screen, feedback after every change,
 and the loading, empty, error and success states. A `list` or `table` element
-names its search, sort and pagination in its `list` entry; the contract need not
-repeat the other parts, and their absence from the contract is no reason to
-leave them out of the screen. Leaving one out needs a reason recorded in the screen's UI
+names its list behaviour in its `list` entry, and the screen names its states in
+`states`; the contract need not repeat the shell or the feedback after a
+change, and their absence from the contract is no reason to leave them out of
+the screen. Leaving one out needs a reason recorded in the screen's UI
 contract, as that rule says.
 
 That list is for application screens. A marketing screen, declared with

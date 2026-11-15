@@ -186,6 +186,10 @@ screens:
         label: New order
         kind: navigate
         effect: navigates to /orders/new
+      - id: open_order
+        label: Order number
+        kind: navigate
+        effect: navigates to the order's detail at /orders/:id
     states:
       - id: default
         renders: the first page of orders, newest first, with the total count
