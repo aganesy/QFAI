@@ -33,7 +33,9 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
 
 - Keep contract files minimal: only what flows, stories, and tests actually reference.
 - Every entry in a UI contract's `screens[]` states its `purpose` and its
-  `navigation`: the shell it renders in, its entry points and where back leads.
+  `navigation`: the shell it renders in, its entry points and where back leads,
+  or `none` with the reason for a screen in no navigation on purpose. Validate
+  warns about an application screen with no `navigation` (`QFAI-CONTRACT-054`).
 - Every entry in a UI contract's `screens[]` carries at least one
   `primary_task`. An empty `primary_tasks` array blocks `/qfai-prototyping` at
   the validate lane, under `QFAI-AUD-001`. The shipped `ui-contract.sample.yaml`
@@ -41,7 +43,14 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
   emptying the list.
 - Every screen lists its `states`: `default`, `empty`, `loading`, `error` and
   `success`, each with what renders and the next action, or `none` with the
-  reason for a state the screen cannot reach.
+  reason for a state the screen cannot reach. Validate warns about an
+  application screen with no `states` or without one of the five
+  (`QFAI-CONTRACT-053`).
+- Every `type: list` or `type: table` element carries `list`: its
+  `columns`, `search`, `filters`, `sort` and `pagination`, each set or
+  `none` with the reason the element does without it, or `none` with the
+  reason for an element with no list behaviour. Validate warns about such an
+  element of an application screen with no `list` (`QFAI-CONTRACT-055`).
 - A screen may describe its copy in the optional `supplements` and `structure`.
   Check each proposed text against the screen's tasks and the information the
   user needs there. A text that only repeats a heading, an action or a
@@ -72,6 +81,11 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
 - **A screen's `surface` is a closed word.** A screen is `application`, the
   default when the key is left out, or `marketing`, a page a visitor sees before
   signing in. `QFAI-CONTRACT-051` reports any other value at error.
+- **A part a screen leaves out is listed with its reason.** A screen's
+  `omitted` list holds one `{ part, reason }` entry for each part of the
+  business-screen list in `.agents/rules/interface-clarity.md` it leaves out.
+  `QFAI-CONTRACT-052` reports, at error, an `omitted` that is not a list and an
+  entry with no `part` or no `reason`.
 - **A contract's ID comes from its directory.** `api/` holds `API` contracts,
   `db/` `DB` and `ui/` `UI`; the QFAI repository's own `cli/` holds `CLI`
   contracts. The ID is `<KIND>-NNNN`.

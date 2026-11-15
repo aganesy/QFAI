@@ -1,14 +1,14 @@
 ---
 name: verify-repo-gate
 owner: qfai-verify
-purpose: "Run the repository's quality gates, repair failures until every gate in scope passes, and report the result and write the verdict."
+purpose: "Run the repository's quality gates, repair failures until every gate in scope passes or fails only on pending test obligations, and report the result and write the verdict."
 requires: [common-gate-run]
 ---
 
 # verify-repo-gate
 
-The repository gates, the fix loop over every failing gate, and the two
-outputs: the evidence a person reads and the verdict downstream gates read.
+The repository gates, the fix loop over every failing gate except the test
+obligations a `testsPending` scope leaves pending, and the two outputs: the evidence a person reads and the verdict downstream gates read.
 
 ## Reads
 
@@ -40,8 +40,9 @@ commands entry named after the colon:
 4. unit and component tests: `Test`
 5. integration and API tests: `Test`
 6. E2E tests: `Test`
-7. build/package (if relevant): `Build`
-8. pack/verify (if distributed): `Pack / distribution`
+7. accessibility tests (if the layer applies): `Test`
+8. build/package (if relevant): `Build`
+9. pack/verify (if distributed): `Pack / distribution`
 
 Run listed commands and record outputs. A gate that looks unrelated to the
 change is still run and its result recorded; `verify.json` has no status for a
@@ -58,6 +59,21 @@ local environment failure alone creates no delegation, and the agent never
 delegates a gate on its own judgment. Retain observed FAIL or
 UNRUN results. Where the environment cannot run any other command, ask the user
 to run it and provide the output. Never assume PASS without evidence.
+
+### Accessibility tests
+
+The accessibility gate's condition is that the project has the accessibility
+spec `.qfai/assistant/rule/test-layers.md#l6-accessibility` defines. The spec
+runs through the `Test` command with the E2E tests, and the gate records its
+result apart from theirs.
+
+- FAIL, naming each route, role and axe rule, when a route has a violation the
+  spec does not waive with a reason.
+- PASS when every route the spec checks has no violation left open.
+- Where the project has no spec, the condition is false: the gate stays out
+  of `gates` with that reason, as `common-gate-run` step 1 says, and is not an
+  UNRUN lane. `QFAI-AXE-001` reports the missing spec in a project the layer
+  applies to, and `verify-qfai-gate` records it.
 
 ### Visual check of a UI change
 
@@ -90,7 +106,13 @@ after the code review, and the user sees it there. Invoked by name, the run's
 one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 
 - If failing, produce an actionable fix list (not vague). Stop and escalate
-  when a gate fails without one.
+  when a gate fails without one, unless its only failures are the pending
+  obligations the next item leaves alone.
+- Under a `testsPending` scope, the `QFAI-STORY-006` obligations
+  `verify-qfai-gate` lists as `PENDING` are not repaired: the loop neither
+  writes their tests, reruns a gate for them nor escalates them, since the
+  implement stage the scope leaves out writes those tests. Every other failure,
+  of the QFAI gate included, keeps the loop.
 - Before attributing a failure to the change, run the gate on the base commit,
   as `common-gate-run`'s `## A failure that predates the change` says. A
   failure that is the same there is reported with its baseline and is not

@@ -335,6 +335,19 @@ describe("the minimal-implementation rule names the four shapes an addition take
     expect(flat).toContain("A helper for an operation done once");
     expect(flat).toContain("or one extracted for length alone");
     expect(flat).toContain("A design for a requirement nobody has.");
+    // Built one example at a time, each screen's button or table looks like
+    // an operation done once; without this carve-out no shared component forms.
+    expect(flat).toContain("A UI region repeated across screens is not an operation done once.");
+    expect(flat).toContain("rung 1 of `.qfai/assistant/rule/ui-procurement.md#the-ladder`");
+    expect(flat).toContain(
+      "and, on an application screen, the business-screen floor in `interface-clarity.md#what-a-business-screen-always-has`",
+    );
+    expect(flat).toContain(
+      "When two or more UI contracts name the same region, the shared component is extracted at its first use.",
+    );
+    expect(flat).toContain(
+      "A shared component no UI contract names yet stays out; installing the catalogue `tech.md` names is not one.",
+    );
     expect(flat).toContain("where the logic is not self-evident");
     expect(flat).toContain("Nothing here removes what § 2 keeps");
     expect(flat).toContain("Article VII of `.qfai/assistant/rule/constitution.md`");
@@ -902,8 +915,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /Feedback after every change/,
         /A home whose one question/,
         /One shared component per repeated pattern/,
-        /needs a reason recorded in the UI contract/,
-        /its reason goes in the app frame/,
+        /needs a reason recorded in the `omitted` list/,
+        /its entry goes in the app frame/,
         /counts as asked for/,
       ]) {
         expect(text).toMatch(part);
