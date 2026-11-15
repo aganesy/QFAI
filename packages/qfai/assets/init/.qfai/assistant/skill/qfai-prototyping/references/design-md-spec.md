@@ -16,6 +16,7 @@ A reference copy is shipped in this skill at
 - Front-matter schema
 - `brand.archetype` allowed values
 - `brand.theme`
+- `visual.layout`
 - `accessibility` allowed keys
 - Validation rules
 - Issue shape
