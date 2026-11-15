@@ -13,29 +13,25 @@
  * The key is optional and defaults to `application`, so a contract that never
  * writes it is asked nothing. Only a value outside the vocabulary is reported,
  * because the reviewer and the implementer would read the screen against a
- * pattern list that does not exist. An empty `surface:` is a slot nobody has
- * filled yet and reads as the default.
+ * pattern list that does not exist. An empty `surface:`, or an empty string, is
+ * a slot nobody has filled yet and reads as the default.
  *
- * Only an entry another rule does not already report is read: a `screens` that
- * is not a list, or an entry that is not a mapping, is `QFAI-CONTRACT-042`.
+ * A `screens` that is not a list, and an entry that is not a mapping, are left
+ * to `QFAI-CONTRACT-042`, which reports them; this rule reads every mapping
+ * entry, including one that has no `id` or `route`.
  *
  * ## Severity
  *
  * An error, as for the other closed vocabularies of a UI contract.
  */
 
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parse as parseYaml } from "yaml";
-
 import type { QfaiConfig } from "../config.js";
-import { resolvePath } from "../config.js";
-import { collectUiContractFiles } from "../discovery.js";
+import { readUiContractDocuments } from "../contracts/screenContracts.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-/** Waivable as `QFAI-CONTRACT-051`. */
 export const UI_SCREEN_SURFACE_RULE_ID = "QFAI-CONTRACT-051";
 
 /** The surface kinds a screen can declare; the first is the default. */
@@ -59,7 +55,7 @@ export function screenSurfaceOf(
   entry: Readonly<Record<string, unknown>>,
 ): ScreenSurface | undefined {
   const value = entry.surface;
-  if (value === undefined || value === null) {
+  if (value === undefined || value === null || value === "") {
     return DEFAULT_SCREEN_SURFACE;
   }
   return isScreenSurface(value) ? value : undefined;
@@ -92,13 +88,15 @@ function unknownSurfacesIn(parsed: unknown, file: string): UnknownSurface[] {
 }
 
 export async function validateUiScreenSurface(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const uiRoot = path.join(resolvePath(root, config, "contractsDir"), "ui");
-  const contractFiles = await collectUiContractFiles(uiRoot);
-  const unknown: UnknownSurface[] = [];
-  for (const file of contractFiles.slice().sort()) {
-    const parsed = parseSafe(await readSafe(file));
-    unknown.push(...unknownSurfacesIn(parsed, path.relative(root, file).split(path.sep).join("/")));
-  }
+  // The same walk `QFAI-CONTRACT-042` and the screen reader use, so this rule
+  // sees exactly the contract files they see.
+  const uiDir = path.resolve(root, config.paths.contractsDir, "ui");
+  const documents = (await readUiContractDocuments(uiDir, root))
+    .slice()
+    .sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+  const unknown = documents.flatMap(({ relativePath, parsed }) =>
+    unknownSurfacesIn(parsed, relativePath),
+  );
 
   const vocabulary = SCREEN_SURFACES.map((surface) => `\`${surface}\``).join(" or ");
   return unknown.map(({ file, index, screenId, value }) => {
@@ -116,22 +114,4 @@ export async function validateUiScreenSurface(root: string, config: QfaiConfig):
       `Set \`surface\` to ${vocabulary}, or drop the key for an application screen. A marketing screen is one a visitor sees before signing in that exists to explain, persuade or inform.`,
     );
   });
-}
-
-/** A file that does not parse is `QFAI-CONTRACT-021`; it contributes nothing here. */
-function parseSafe(text: string): unknown {
-  try {
-    return parseYaml(text);
-  } catch {
-    return undefined;
-  }
-}
-
-/** A file this rule cannot read contributes nothing rather than failing the run. */
-async function readSafe(file: string): Promise<string> {
-  try {
-    return await readFile(file, "utf-8");
-  } catch {
-    return "";
-  }
 }

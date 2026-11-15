@@ -60,11 +60,18 @@ list is empty are the same clause. An empty state says what to do next: the
 action, or a short sentence naming it, that leads out of it, such as widening
 the search or adding the first item.
 
+A marketing page's copy is not interface explanation. On a screen whose UI
+contract declares `surface: marketing`, a text that fills a part of its
+section's marketing pattern entry, such as a hero's supporting sentence, a
+feature's short description or an FAQ answer, is content the page needs. It
+still carries its `qfai-text` or `qfai-text-file` reason.
+
 ## 3. Cut
 
 - A label that restates the control beside it.
 - A control nobody asked for, and every state it brings with it. A part listed
-  in `## What a business screen always has` counts as asked for.
+  in `## What a business screen always has` counts as asked for, and so does a
+  part of a marketing screen's pattern entry, including the text that fills it.
 - Decoration that displaces signal.
 - The second place the same thing is said.
 
@@ -152,8 +159,35 @@ These parts apply to application screens: a screen whose UI contract declares
 no `surface`, or `surface: application`. A marketing screen, one a visitor sees
 before signing in that exists to explain, persuade or inform, declares
 `surface: marketing`. It is checked against its entries in
-`.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` instead,
-and a part of this list missing from it is not a defect.
+`.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` and the
+section below instead, and a part of this list missing from it is not a defect.
+
+## What a marketing screen always has
+
+A screen whose UI contract declares `surface: marketing` has these whether or
+not its UI contract names them.
+
+- **No invented proof.** A figure, customer count, testimonial, quote or logo
+  the page shows is read from the product or confirmed by the project's owner,
+  and a figure shows the time it was counted. An agent never writes one. A
+  claim already on the page, or in material the user supplied, that nothing
+  confirms is put to the user as
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#claims-nobody-has-confirmed`
+  says, not deleted or rewritten.
+- **Examples labelled.** A product image or mock-up that shows made-up data, or
+  a screen the product does not have yet, is labelled as an example where it is
+  shown.
+- **Images sourced.** Each image records where it came from and the licence it
+  is used under. An image with neither is not used.
+- **States of what it sends or reads.** A section that sends something, such as
+  a contact form, or reads data when the page is viewed, such as live figures
+  or prices, has its loading, error and success states.
+- **Required notices.** The legal notices the jurisdiction requires are linked
+  from every page and from the point of sign-up or payment.
+
+Leaving out a state or a notice needs a reason recorded in the screen's UI
+contract. Invented proof, an unlabelled example and an unsourced image have no
+such reason.
 
 ## Related
 

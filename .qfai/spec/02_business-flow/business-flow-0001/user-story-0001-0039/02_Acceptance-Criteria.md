@@ -23,4 +23,11 @@ Feature: Deterministic validation gate
     When `qfai validate` runs the `verify` or `full` profile
     Then each is reported at warning, naming the file and the limit it exceeds
     And the files `qfai init` writes raise none of them
+
+  # AC-0001-0039-04
+  Scenario: Validate reads the surface kind of each UI contract screen
+    Given a UI contract whose screens declare `surface` or leave it out
+    When `qfai validate` runs the contract checks
+    Then a screen that writes no `surface`, leaves it empty, or writes `application` or `marketing` raises nothing, and one that writes none is an application screen
+    And any other value raises `QFAI-CONTRACT-051` at error, naming the contract, the screen, the value and the vocabulary
 ```

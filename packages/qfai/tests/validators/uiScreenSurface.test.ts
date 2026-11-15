@@ -41,12 +41,13 @@ afterEach(async () => {
   }
 });
 
-// QFAI:EX-0001-0305-02
+// QFAI:EX-0001-0039-34
 describe("the surface a screen reads as", () => {
   it("is application when the entry writes none or leaves it empty", () => {
     expect(DEFAULT_SCREEN_SURFACE).toBe("application");
     expect(screenSurfaceOf({ id: "orders" })).toBe("application");
     expect(screenSurfaceOf({ id: "orders", surface: null })).toBe("application");
+    expect(screenSurfaceOf({ id: "orders", surface: "" })).toBe("application");
   });
 
   it("is the declared kind for application and marketing", () => {
@@ -60,8 +61,8 @@ describe("the surface a screen reads as", () => {
   });
 });
 
-// QFAI:EX-0001-0305-02
-// QFAI:EX-0001-0305-03
+// QFAI:EX-0001-0039-34
+// QFAI:EX-0001-0039-35
 describe("validate and the surface key", () => {
   it("accepts application, marketing and an absent key", async () => {
     const root = await rootWithContract(
@@ -76,6 +77,9 @@ describe("validate and the surface key", () => {
       "  - id: pricing",
       "    route: /pricing",
       "    surface:",
+      "  - id: guide",
+      "    route: /guide",
+      '    surface: ""',
     );
 
     expect(await validateUiScreenSurface(root, defaultConfig)).toEqual([]);

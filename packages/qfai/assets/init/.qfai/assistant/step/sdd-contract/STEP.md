@@ -19,7 +19,9 @@ Stage 4 of the story tree: contracts and the business rules they enforce.
 - For UI work, `.qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md`,
   `.qfai/assistant/skill/qfai-sdd/references/ui-design-contract-normalization.md`
   and `## What a business screen always has` in
-  `.agents/rules/interface-clarity.md`.
+  `.agents/rules/interface-clarity.md`; for a marketing screen,
+  `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` and
+  `## What a marketing screen always has` in the same rule.
 - The paired templates under
   `.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/` and
   `.qfai/assistant/skill/qfai-sdd/templates/contracts/`.
@@ -107,14 +109,17 @@ inform, such as a home, audience, pricing, guide, about or legal page, declares
 the business types above. Name the entry for each of its sections in
 `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` instead,
 write the parts it needs into the contract the same way, and record each
-image's source and licence.
+image's source and licence. Its `states` combine the states of its sections.
 
 Check every text element the discussion or the story proposes against the
 screen's tasks and the information the user needs at that point. A text that
 repeats a heading, an action, or a condition the user already has is left out;
 one that carries a condition, cost, destination, result, recovery step or
 consequence stays, with its reason, and so does an empty state's next step:
-the action, or a short sentence naming it, that leads out of it. Fix a control
+the action, or a short sentence naming it, that leads out of it. On a marketing
+screen, a text that fills a part of a section's marketing pattern entry, such
+as a hero's supporting sentence, a feature's short description or an FAQ
+answer, is content the page needs and stays, with its reason. Fix a control
 that needs explaining before adding text for it. Each screen lists its
 `states`: what renders in `default`, `empty`, `loading`, `error` and
 `success`, and the next action from each, or `none` with the reason for a

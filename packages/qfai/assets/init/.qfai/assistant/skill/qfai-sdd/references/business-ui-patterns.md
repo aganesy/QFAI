@@ -3,7 +3,9 @@
 What a standard business screen contains. A UI contract lists what is specific
 to a screen; this reference lists what a screen of its type has anyway, so the
 contract is not mistaken for the whole screen. The contract author, the
-implementer and the screen reviewer read the same entry.
+implementer and the screen reviewer read the same entry. It covers application
+screens: a screen whose UI contract declares `surface: marketing` is none of
+these types.
 
 The parts every business application has are
 `.agents/rules/interface-clarity.md#what-a-business-screen-always-has`; this

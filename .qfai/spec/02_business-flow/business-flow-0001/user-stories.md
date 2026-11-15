@@ -181,3 +181,4 @@
 | US-0001-0304 | Review an implemented screen for missing states and a weak structure                   | `user-story-0001-0304/` |
 | US-0001-0305 | Write the standard parts of a business screen into its UI contract                     | `user-story-0001-0305/` |
 | US-0001-0306 | Validate warns when tech.md names a catalogue no registry serves                       | `user-story-0001-0306/` |
+| US-0001-0308 | Write, build and review a marketing page against its own patterns                      | `user-story-0001-0308/` |

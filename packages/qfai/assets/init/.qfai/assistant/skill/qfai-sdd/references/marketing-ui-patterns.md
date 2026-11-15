@@ -10,7 +10,10 @@ A UI contract lists what is specific to a page; this reference lists what a
 section of its kind has anyway. The contract author, the implementer and the
 screen reviewer read the same entry. The business-screen floor in
 `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` applies
-to application screens, not to these. A part of an entry counts as asked for
+to application screens, not to these; what every marketing screen has is
+`.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`. The
+entries are kinds of section, not an order: a page has the sections its reader
+needs, in the order that reader decides in. A part of an entry counts as asked for
 once the page's UI contract names it: the contract author writes it there or
 records why the page leaves it out. Where a part comes from is
 `.qfai/assistant/rule/ui-procurement.md`.
@@ -38,7 +41,8 @@ records why the page leaves it out. Where a part comes from is
 - **Standard parts.** A site header with the sign-in and the primary call to
   action, and a footer with the legal pages and contact.
 - **States.** `default` for the content; `error` and `success` only where the
-  page sends something, such as a form.
+  page sends something, such as a form. The page's `states` combine the states
+  of its sections.
 
 Anti-patterns: a claim nobody verified; a page that links to the application
 with no way back to the site; a cookie or consent banner that hides refusal.
@@ -152,7 +156,8 @@ consent; a success message with no reply time.
 - **Purpose.** Publish the notices the jurisdiction requires before a visitor
   signs up or pays.
 - **Standard parts.** The notices the jurisdiction requires, such as the
-  specified commercial transactions notice in Japan, a privacy policy and the
+  specified commercial transactions notice where the business sells online in
+  Japan, a privacy policy and the
   terms of service; each with its effective date, linked from the footer of
   every page and from the point of sign-up or payment.
 - **States.** `default` only.
