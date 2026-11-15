@@ -227,8 +227,8 @@ describe("Project context is populated from evidence", () => {
     );
     expect(section(content, "Step 3")).toContain("Do not invent facts.");
     const tech = await readFile(path.join(SPEC_TEMPLATES, "03_contract", "tech.md"), "utf-8");
-    expect(tech).toMatch(/^\| Runtime\s+\| `<language runtime and supported version>`\s+\|$/m);
-    expect(tech).toMatch(/^\| Test runner\s+\| `<test runner>`\s+\|$/m);
+    expect(tech).toMatch(/^\| Runtime\s+\| `<example: [^`>]+>`\s+\|$/m);
+    expect(tech).toMatch(/^\| Test runner\s+\| `<example: [^`>]+>`\s+\|$/m);
   });
 });
 
@@ -353,8 +353,6 @@ describe("Minimum Runnable Path Is Documented", () => {
     );
 
     const tech = await readFile(path.join(SPEC_TEMPLATES, "03_contract", "tech.md"), "utf-8");
-    expect(tech).toContain(
-      "- Skeleton: `<smallest command that proves the application entrypoint starts>`",
-    );
+    expect(tech).toContain("- Skeleton: `<example: node dist/cli.js --help>`");
   });
 });

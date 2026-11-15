@@ -40,4 +40,10 @@ Feature: Story-tree layout described by mdschema
     And `qfai validate` reports it as one `QFAI-DOCSCHEMA-001` error naming the file
     And a spelling of `paths.specsDir` or `paths.contractsDir` that `qfai validate` resolves to the same directory covers the same files
     And the lane and `qfai validate` read a `\` in either key as `/` on every platform, so one value names one directory for both
+  # AC-0001-0011-06
+  Scenario: The tech.md template and its schema's findings show the line to write
+    Given the `tech.md` template, which writes every value as an example to replace, `<example: value>`, in the shape its schema accepts
+    When each example is replaced by its value, or a line a required-text rule asks for is left out
+    Then the document raises no `QFAI-DOCSCHEMA-001`, no `QFAI-ASSETS-003` and no `QFAI-STORY-013`
+    And a missing line is reported with the example line the rule gives in place of its pattern, and a rule that gives none keeps its pattern
 ```
