@@ -276,9 +276,12 @@ function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): 
   );
 }
 
-/** The grammar {@link DERIVED_NOT_STORED_RE} reads, as the message quotes it. */
-const DERIVED_DECLARATION_FORM =
-  "-- Derived (not stored): <column> = <value>, <value> from <input>, <input>";
+/**
+ * The grammar {@link DERIVED_NOT_STORED_RE} reads, as the message and the
+ * rule catalog quote it, so the form is written in one place.
+ */
+export const DERIVED_DECLARATION_FORM =
+  "-- Derived (not stored): <column> = <value>[, <value>...] from <input>[, <input>...]";
 
 /**
  * One declaration {@link DERIVED_NOT_STORED_RE} reads, quoted whole so that an
@@ -316,14 +319,10 @@ function unreadableDerivedDeclaration(
     "contracts.crossContract.derivedNotStored",
     [line],
     "canonical",
-    "Write the column as one name, then `=`, then the values separated by commas with " +
-      "nothing empty between them and no comma before `from`, then `from` and what the " +
-      "values are computed from. The `from` clause is required; without it the line is not " +
-      "read as a declaration at all, because a marker that needs only the values would be a " +
-      "way to silence this rule rather than a way to answer it. One empty element in the " +
-      "value list invalidates the whole declaration, so that a half-written one is never read " +
-      "as finished. Prose about the derivation goes on a comment line that does not start " +
-      "with the key.",
+    // Only what the form above does not show.
+    "The `from` clause is required. No element of the value list may be empty, so put no " +
+      "comma before `from`. Prose about the derivation goes on its own comment line, one " +
+      "that does not start with the key.",
   );
 }
 

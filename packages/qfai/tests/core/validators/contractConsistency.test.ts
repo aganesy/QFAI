@@ -673,7 +673,7 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
         for (const [index, entry] of declaration.entries()) {
           expect(entry.message).toContain(failing[index]);
           expect(entry.message).toContain(
-            "`-- Derived (not stored): <column> = <value>, <value> from <input>, <input>`",
+            "`-- Derived (not stored): <column> = <value>[, <value>...] from <input>[, <input>...]`",
           );
           expect(entry.message).toContain(`\`${valid}\``);
           expect(entry.message).toContain(

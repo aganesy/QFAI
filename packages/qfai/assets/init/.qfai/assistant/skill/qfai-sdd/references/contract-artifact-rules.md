@@ -233,18 +233,18 @@ Declare it in the **DB** contract, which is the artifact that owns storage, on o
 this form:
 
 ```text
--- Derived (not stored): <column> = <value>, <value> from <input>, <input>
+-- Derived (not stored): <column> = <value>[, <value>...] from <input>[, <input>...]
 ```
 
 ```sql
 -- Derived (not stored): status = standby, powered_off from enabled, connection_status, health_status, JST clock
 ```
 
-- **`<column>` is one name** of letters, digits and underscores, followed by `=`. A sentence after
-  the key does not parse.
+- **`<column>` is one name** of letters, digits and underscores, not starting with a digit, followed
+  by `=`. Anything other than a column name and `=` right after the key does not parse.
 - **The values are separated by commas**, with no comma before `from`.
-- **`from` and at least one input end the line.** The inputs are free text, so a clock or a column
-  of another table can be named.
+- **`from` and at least one input end the line.** The first `from`, in any letter case, ends the
+  value list. The inputs are free text, so a clock or a column of another table can be named.
 - **The comment marker is required and the key starts the line**, as with `-- Depends on:`, so prose
   _about_ a derivation is not itself a declaration. Write that prose on its own comment line.
 - **The `from` clause is required.** Naming the inputs is what makes the claim reviewable; without
