@@ -68,7 +68,7 @@ it("denies invalid classifier input and enforcement configuration with repair gu
 });
 
 // QFAI:EX-0001-0235-22
-// Mutation: packages/qfai/src/core/graph/hooks.ts `if (!commands) return failedGraphHook("quote");` -> `if (!commands) return failedGraphHook("depth");` fails "names what it could not read instead of asking to repair a valid configuration"
+// Mutation: packages/qfai/src/core/graph/hooks.ts `return substitution ? undefined : failedGraphHook("quote");` -> `return substitution ? undefined : failedGraphHook("depth");` fails "names what it could not read instead of asking to repair a valid configuration"
 it("names what it could not read instead of asking to repair a valid configuration", async () => {
   const unclosed = enforceGraphExploration(
     { tool_name: "Bash", tool_input: { command: 'echo "unclosed' } },
