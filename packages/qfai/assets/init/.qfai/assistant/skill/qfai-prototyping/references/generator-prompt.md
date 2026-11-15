@@ -33,10 +33,9 @@ identity.
    makes it answerable and leave it open — treating it as a settled constraint
    decides on the user's behalf the one kind of question this loop exists to
    return to them.
-5. UI research, only when the session agent passes it: the `best_practices`
-   and `anti_patterns` the grill applied for this lineage's screen type or
-   components, which the project had no pattern for. Build those parts to the
-   best practices and away from the anti-patterns, within the `DESIGN.md`
+5. UI research, only when the session agent passes it: the findings the grill
+   applied for this lineage's screen type or components, which the project had
+   no pattern for. Build those parts to the findings, within the `DESIGN.md`
    tokens. A `## Session` row wins where the two disagree.
 6. From the run's second iteration on: the user's last answer in this run,
    `iter-(NN-1)/review.json` (critique, scores,

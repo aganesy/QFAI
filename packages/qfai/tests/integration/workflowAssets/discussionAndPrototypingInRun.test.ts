@@ -152,13 +152,13 @@ describe("qfai-prototyping in a workflow run", () => {
   it("builds and reviews each lineage from the UI research the grill applied for it", async () => {
     const findings = await section(LOOP_STEP, "## UI research findings");
     expect(findings).toContain(
-      "The loop passes on the `reflection` entries whose `action` is `apply`, with the `best_practices` and `anti_patterns` of their sources. A `reject` or `defer` entry, such as a finding that contradicts root `DESIGN.md` or one nobody verified, reaches neither role.",
+      "The loop passes on the `finding` of each `reflection` entry whose `action` is `apply`, and nothing else from the summary. A `reject` or `defer` entry, such as a finding that contradicts root `DESIGN.md` or one nobody verified, reaches neither role, even where it shares a source with an applied one.",
     );
     expect(findings).toContain(
-      "only the entries for the gaps its own line names; a screen whose line names no gap gets none.",
+      "only the findings whose gap its own line names; a screen whose line names no gap gets none.",
     );
     expect(findings).toContain(
-      "The generator applies those `best_practices` and avoids those `anti_patterns`, and the reviewer receives the same entries.",
+      "The generator builds to those findings, and the reviewer receives the same findings.",
     );
     expect(findings).toContain(
       "With no gap, and in a `restyle` loop, which adds no screen, there is no summary and the loop reads none.",
@@ -170,15 +170,21 @@ describe("qfai-prototyping in a workflow run", () => {
       "the [UI research findings](#ui-research-findings) when the grill recorded any",
     );
     expect(await section(LOOP_STEP, "## Evaluator Inputs")).toContain(
-      "The applied `best_practices` and `anti_patterns` of the [UI research findings](#ui-research-findings) for this lineage",
+      "The applied findings of the [UI research findings](#ui-research-findings) for this lineage",
     );
     expect(await section(GENERATOR_PROMPT, "## Read order")).toContain(
-      "UI research, only when the session agent passes it: the `best_practices` and `anti_patterns` the grill applied for this lineage's screen type or components",
+      "UI research, only when the session agent passes it: the findings the grill applied for this lineage's screen type or components",
     );
     const reviewer = await section(REVIEWER_PROMPT, "## Inputs");
     expect(reviewer).toContain(
       "They are the reference for those parts alone, beside `## Session`, never over it",
     );
     expect(reviewer).toContain("A session row wins where the two disagree.");
+    expect(reviewer).toContain(
+      "That rule chooses among the grilling rows; the UI research below is a separate reference, for its own parts.",
+    );
+    expect(await section(PROTOTYPING_SCOPE_STEP, UI_RESEARCH)).toContain(
+      "Each `reflection` entry's `finding` names the gap it answers, the screen type or the component as the check's line names it",
+    );
   });
 });

@@ -177,16 +177,17 @@ those gaps. The loop reads that summary itself, not only through the grilling
 session and `grilling.md`, which keep what the session decided but not every
 practice the research found.
 
-- **Only what the grill applied.** The loop passes on the `reflection` entries
-  whose `action` is `apply`, with the `best_practices` and `anti_patterns` of
-  their sources. A `reject` or `defer` entry, such as a finding that
-  contradicts root `DESIGN.md` or one nobody verified, reaches neither role.
-- **Only this lineage's gaps.** The stage report holds one gap-check line per
-  added screen. The session agent passes a lineage, `<ui-contract-id>/<screen>`,
-  only the entries for the gaps its own line names; a screen whose line names
-  no gap gets none.
-- **Both roles.** The generator applies those `best_practices` and avoids those
-  `anti_patterns`, and the reviewer receives the same entries.
+- **Only what the grill applied.** The loop passes on the `finding` of each
+  `reflection` entry whose `action` is `apply`, and nothing else from the
+  summary. A `reject` or `defer` entry, such as a finding that contradicts
+  root `DESIGN.md` or one nobody verified, reaches neither role, even where it
+  shares a source with an applied one.
+- **Only this lineage's gaps.** Each applied finding names the gap it answers,
+  and the stage report holds one gap-check line per added screen. The session
+  agent passes a lineage, `<ui-contract-id>/<screen>`, only the findings whose
+  gap its own line names; a screen whose line names no gap gets none.
+- **Both roles.** The generator builds to those findings, and the reviewer
+  receives the same findings.
 
 With no gap, and in a `restyle` loop, which adds no screen, there is no summary
 and the loop reads none.
@@ -301,7 +302,7 @@ confirmation.
   better, and what is out of bounds. The four axes are fixed and say nothing
   about this prototype's purpose, so a reviewer without that file grades every
   prototype against the same generic bar.
-- The applied `best_practices` and `anti_patterns` of the
+- The applied findings of the
   [UI research findings](#ui-research-findings) for this lineage, when the
   grill recorded a `research_summary`. The reviewer prompt says how they are
   graded.

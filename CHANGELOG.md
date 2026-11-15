@@ -184,8 +184,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `prototyping-grill` researched screen types or components the project has no
   pattern for, `prototyping-loop` now reads that research summary itself. Each
   screen lineage receives the findings the grill applied for its own gaps: the
-  generator builds to their best practices and away from their anti-patterns,
-  and the reviewer grades those parts against them, beside the grill session's
+  generator builds to them, and the reviewer grades those parts against them, beside the grill session's
   rows. A finding the grill rejected or deferred reaches neither. Before, the
   findings reached the prototype only through what the grill session settled.
   Closes #4387.
