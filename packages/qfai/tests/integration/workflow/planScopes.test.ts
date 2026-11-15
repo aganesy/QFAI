@@ -1,6 +1,7 @@
 // QFAI:AC-0001-0229-01
 // QFAI:AC-0001-0229-03
 // QFAI:AC-0001-0229-07
+// QFAI:AC-0001-0229-08
 
 import { rm } from "node:fs/promises";
 import path from "node:path";
@@ -52,8 +53,13 @@ it("A spec-and-prototype request offers the prototype stage as its narrowest sco
     route: "prototype-feature",
   });
   expect(field(planned.json, "scopes")).toEqual([
-    { scope: "narrow", stages: ["sdd", "prototype"], recommended: true },
-    { scope: "medium", stages: ["sdd", "prototype", "note", "verify"], recommended: false },
+    { scope: "narrow", stages: ["sdd", "prototype"], recommended: true, testsPending: true },
+    {
+      scope: "medium",
+      stages: ["sdd", "prototype", "note", "verify"],
+      recommended: false,
+      testsPending: true,
+    },
     { scope: "broad", stages: stageIds(planned.json), recommended: false },
   ]);
 });
@@ -126,8 +132,13 @@ it("A restyle prototype offers only the scopes that carry its edits through impl
   );
   expect(field(noPrototype.json, "route")).toBe("repair-consistency");
   expect(field(noPrototype.json, "scopes")).toEqual([
-    { scope: "narrow", stages: ["diagnose", "sdd"], recommended: true },
-    { scope: "medium", stages: ["diagnose", "sdd", "note", "verify"], recommended: false },
+    { scope: "narrow", stages: ["diagnose", "sdd"], recommended: true, testsPending: true },
+    {
+      scope: "medium",
+      stages: ["diagnose", "sdd", "note", "verify"],
+      recommended: false,
+      testsPending: true,
+    },
     {
       scope: "broad",
       stages: ["diagnose", "sdd", "implement", "note", "verify"],
@@ -159,8 +170,8 @@ it("An artifact no stage writes counts for nothing", async () => {
 
   expect(field(planned.json, "route")).toBe("add-feature");
   expect(field(planned.json, "scopes")).toEqual([
-    { scope: "narrow", stages: ["sdd"], recommended: true },
-    { scope: "medium", stages: ["sdd", "note", "verify"], recommended: false },
+    { scope: "narrow", stages: ["sdd"], recommended: true, testsPending: true },
+    { scope: "medium", stages: ["sdd", "note", "verify"], recommended: false, testsPending: true },
     { scope: "broad", stages: stageIds(planned.json), recommended: false },
   ]);
 });
@@ -207,7 +218,7 @@ it("A scope is not offered when the next wider one adds only pass-through stages
   ];
 
   expect(scopesOf(stages, ["spec"])).toEqual([
-    { scope: "medium", stages: ["sdd", "note"], recommended: true },
+    { scope: "medium", stages: ["sdd", "note"], recommended: true, testsPending: true },
     { scope: "broad", stages: ["sdd", "implement", "note"], recommended: false },
   ]);
 
@@ -215,8 +226,8 @@ it("A scope is not offered when the next wider one adds only pass-through stages
     each.id === "note" ? { ...each, review: "code" as const } : each,
   );
   expect(scopesOf(reviewed, ["spec"])).toEqual([
-    { scope: "narrow", stages: ["sdd"], recommended: true },
-    { scope: "medium", stages: ["sdd", "note"], recommended: false },
+    { scope: "narrow", stages: ["sdd"], recommended: true, testsPending: true },
+    { scope: "medium", stages: ["sdd", "note"], recommended: false, testsPending: true },
     { scope: "broad", stages: ["sdd", "implement", "note"], recommended: false },
   ]);
 
@@ -224,7 +235,7 @@ it("A scope is not offered when the next wider one adds only pass-through stages
     each.id === "implement" ? { ...each, steps: [passing("implement-tdd")] } : each,
   );
   expect(scopesOf(passingImplement, ["spec"])).toEqual([
-    { scope: "medium", stages: ["sdd", "note"], recommended: true },
+    { scope: "medium", stages: ["sdd", "note"], recommended: true, testsPending: true },
     { scope: "broad", stages: ["sdd", "implement", "note"], recommended: false },
   ]);
 });
@@ -235,8 +246,8 @@ it("A spec-only settled request keeps the scope that stops before pass-through i
 
   expect(field(planned.json, "route")).toBe("apply-settled");
   expect(field(planned.json, "scopes")).toEqual([
-    { scope: "narrow", stages: ["spec"], recommended: true },
-    { scope: "medium", stages: ["spec", "note", "verify"], recommended: false },
+    { scope: "narrow", stages: ["spec"], recommended: true, testsPending: true },
+    { scope: "medium", stages: ["spec", "note", "verify"], recommended: false, testsPending: true },
     { scope: "broad", stages: ["spec", "implement", "note", "verify"], recommended: false },
   ]);
 });
@@ -284,8 +295,13 @@ it("An implement stage that writes nothing requested stays out of the narrower s
 
   expect(field(planned.json, "route")).toBe("add-feature");
   expect(field(planned.json, "scopes")).toEqual([
-    { scope: "narrow", stages: ["sdd", "docs"], recommended: true },
-    { scope: "medium", stages: ["sdd", "docs", "note", "verify"], recommended: false },
+    { scope: "narrow", stages: ["sdd", "docs"], recommended: true, testsPending: true },
+    {
+      scope: "medium",
+      stages: ["sdd", "docs", "note", "verify"],
+      recommended: false,
+      testsPending: true,
+    },
     { scope: "broad", stages: stageIds(planned.json), recommended: false },
   ]);
 });
@@ -301,8 +317,18 @@ it("A later documentation stage does not pull unrequested implementation in", as
   );
 
   expect(field(planned.json, "scopes")).toEqual([
-    { scope: "narrow", stages: ["sdd", "prototype", "docs"], recommended: true },
-    { scope: "medium", stages: ["sdd", "prototype", "docs", "note", "verify"], recommended: false },
+    {
+      scope: "narrow",
+      stages: ["sdd", "prototype", "docs"],
+      recommended: true,
+      testsPending: true,
+    },
+    {
+      scope: "medium",
+      stages: ["sdd", "prototype", "docs", "note", "verify"],
+      recommended: false,
+      testsPending: true,
+    },
     { scope: "broad", stages: stageIds(planned.json), recommended: false },
   ]);
 });
@@ -529,8 +555,13 @@ it("A UI-only consistency repair reaches its actual design authoring step", asyn
     ["sdd-cycle", true],
   ]);
   expect(field(planned.json, "scopes")).toEqual([
-    { scope: "narrow", stages: ["diagnose", "sdd"], recommended: true },
-    { scope: "medium", stages: ["diagnose", "sdd", "note", "verify"], recommended: false },
+    { scope: "narrow", stages: ["diagnose", "sdd"], recommended: true, testsPending: true },
+    {
+      scope: "medium",
+      stages: ["diagnose", "sdd", "note", "verify"],
+      recommended: false,
+      testsPending: true,
+    },
     {
       scope: "broad",
       stages: ["diagnose", "sdd", "implement", "note", "verify"],
@@ -597,3 +628,56 @@ it.each([[["release", "spec"] as const], [["release"] as const]])(
     expect(field(planned.json, "scopes")).toEqual(broadOnly(planned.json));
   },
 );
+
+// BR-0015-0336
+// QFAI:EX-0001-0229-34
+it("A scope that writes the specification and leaves out the implement stage says its tests are pending", async () => {
+  const planned = await planFor(extraction({ intent: "feature", artifacts: ["spec"] }));
+
+  expect(field(planned.json, "route")).toBe("add-feature");
+  expect(field(planned.json, "scopes")).toEqual([
+    { scope: "narrow", stages: ["sdd"], recommended: true, testsPending: true },
+    { scope: "medium", stages: ["sdd", "note", "verify"], recommended: false, testsPending: true },
+    { scope: "broad", stages: stageIds(planned.json), recommended: false },
+  ]);
+  const scopes = field(planned.json, "scopes");
+  const broad = Array.isArray(scopes) ? scopes.at(-1) : undefined;
+  expect(Object.hasOwn(Object(broad), "testsPending")).toBe(false);
+
+  const stage = (id: string, kind: string, serves?: PlanStage["serves"]): PlanStage => ({
+    id,
+    kind,
+    steps: [{ name: id + "-step" }],
+    after: [],
+    ...(serves === undefined ? {} : { serves }),
+  });
+  const gates = stage("verify", "verify");
+  const withoutImplement = [stage("sdd", "sdd"), stage("docs", "documentation"), gates];
+  const servesSpec = [
+    stage("edit", "maintenance", ["spec"]),
+    stage("implement", "implement"),
+    gates,
+  ];
+  const writesNoSpec = [stage("docs", "documentation"), stage("implement", "implement"), gates];
+
+  expect(
+    [
+      scopesOf(withoutImplement, ["spec"]),
+      scopesOf(servesSpec, ["spec"]),
+      scopesOf(writesNoSpec, ["docs"]),
+    ].map((list) => list.map((each) => [each.scope, each.testsPending ?? false])),
+  ).toEqual([
+    [
+      ["narrow", false],
+      ["broad", false],
+    ],
+    [
+      ["narrow", true],
+      ["broad", false],
+    ],
+    [
+      ["narrow", false],
+      ["broad", false],
+    ],
+  ]);
+});
