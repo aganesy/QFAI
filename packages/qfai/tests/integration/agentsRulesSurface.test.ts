@@ -922,7 +922,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         )
       ).replace(/\s*\n\s*/g, " ");
       expect(card).toContain(
-        "Check that each screen is complete, not only that it holds no excess.",
+        "Check that each application screen is complete, not only that it holds no excess.",
       );
       expect(card).toContain(
         "`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`",

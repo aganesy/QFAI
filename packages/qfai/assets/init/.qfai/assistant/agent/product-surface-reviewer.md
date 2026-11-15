@@ -64,7 +64,7 @@ specialization_tags:
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Require more work only on what `.qfai/assistant/rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of` admits, and report any other gap as advisory.
-- Check that each screen is complete, not only that it holds no excess. Walk every part
+- Check that each application screen is complete, not only that it holds no excess. Walk every part
   `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` lists against the rendered
   surface: the running app, the prototype, or the UI contract when reviewing a specification.
   Walk it for each screen the change adds or alters. Check the once-per-application parts only when
@@ -81,10 +81,16 @@ specialization_tags:
   part missing elsewhere. Never file the presence of a listed part as excess; how it is built stays
   under the excess route above.
 
-- Check each screen against its type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`.
+- Check each application screen against its type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`.
   A part of that type the UI contract names and the screen lacks is a blocking finding. A part the contract
   neither names nor leaves out with a reason is an `advisory` finding for the contract stage, naming the
   part and the type.
+- Check a screen whose UI contract declares `surface: marketing` against its section entries in
+  `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`, not against the business-screen
+  list or the business types. Findings follow the same split: a named part missing is blocking, and an
+  unnamed one is `advisory` for the contract stage. An anti-pattern that entry lists, such as a fake
+  testimonial, an invented figure or an unlabelled mock-up, and an image with no recorded source and
+  licence, are blocking findings on a page the change adds or alters.
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Where the `Component catalogue` row of `<paths.contractsDir>/tech.md#stack` names a catalogue, report a
   screen that hand-builds a control that catalogue has, and name the catalogue item. A named catalogue that

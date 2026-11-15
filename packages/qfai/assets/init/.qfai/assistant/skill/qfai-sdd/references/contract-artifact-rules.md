@@ -69,6 +69,9 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
   not only where the attribute is written out — a framework that builds the
   attribute from a variable still writes the marker somewhere.
 - **Every entry under `screens` is a screen, once.** Each UI-bearing contract declares one full `UI-NNNN` ID and a nonempty `screens[]` list. Each screen has an ID and route, unique within its contract. The prototyping cycle covers all declared UI-bearing contract IDs; filenames do not select a legacy spec tier. `QFAI-CONTRACT-042` names malformed screen entries.
+- **A screen's `surface` is a closed word.** A screen is `application`, the
+  default when the key is left out, or `marketing`, a page a visitor sees before
+  signing in. `QFAI-CONTRACT-051` reports any other value at error.
 - **A contract's ID comes from its directory.** `api/` holds `API` contracts,
   `db/` `DB` and `ui/` `UI`; the QFAI repository's own `cli/` holds `CLI`
   contracts. The ID is `<KIND>-NNNN`.

@@ -148,6 +148,13 @@ On every screen it applies to:
 Leaving one of these out needs a reason recorded in the UI contract of the
 screen it is missing from. A part left out without one is a defect, not a cut.
 
+These parts apply to application screens: a screen whose UI contract declares
+no `surface`, or `surface: application`. A marketing screen, one a visitor sees
+before signing in that exists to explain, persuade or inform, declares
+`surface: marketing`. It is checked against its entries in
+`.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` instead,
+and a part of this list missing from it is not a defect.
+
 ## Related
 
 - The same standard for prose: `documentation-clarity.md`
@@ -158,3 +165,5 @@ screen it is missing from. A part left out without one is a defect, not a cut.
   `.qfai/assistant/rule/ui-procurement.md`
 - What each type of business screen contains:
   `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`
+- What each section of a marketing page contains:
+  `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`

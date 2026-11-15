@@ -100,6 +100,15 @@ Then name each screen's type in
 the parts of that type the screen needs into its contract the same way, with
 the reason for each part it leaves out.
 
+A screen a visitor sees before signing in that exists to explain, persuade or
+inform, such as a home, audience, pricing, guide, about or legal page, declares
+`surface: marketing`; any other screen leaves the key out, or writes
+`surface: application`. A marketing screen skips the business-screen list and
+the business types above. Name the entry for each of its sections in
+`.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` instead,
+write the parts it needs into the contract the same way, and record each
+image's source and licence.
+
 Check every text element the discussion or the story proposes against the
 screen's tasks and the information the user needs at that point. A text that
 repeats a heading, an action, or a condition the user already has is left out;

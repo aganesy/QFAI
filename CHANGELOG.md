@@ -80,6 +80,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the user as one question, that land as Do and Don't points in root
   `DESIGN.md` or as structure and elements of a UI contract.
 
+- **Marketing pages have their own surface kind and pattern reference.** A UI
+  contract screen may declare `surface: marketing` for a page a visitor sees
+  before signing in that exists to explain, persuade or inform, such as a home,
+  pricing, guide or legal page; a screen without the key is an application
+  screen. `qfai validate` reports any other value as `QFAI-CONTRACT-051`, at
+  error. `qfai-sdd` ships `references/marketing-ui-patterns.md`, which gives
+  the hero, proof, audience page, feature section, how it works, pricing
+  table, FAQ, final call to action, contact form and legal pages their
+  purpose, standard parts, states and anti-patterns, and asks each image for
+  its source and licence and each mock-up for an example label. The
+  `sdd-contract` and `implement-tdd` steps and the product-surface reviewer
+  read a marketing screen against those entries, and the business-screen list
+  in `interface-clarity.md` now applies to application screens only.
+
 ### Removed
 
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are

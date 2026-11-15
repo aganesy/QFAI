@@ -9,6 +9,7 @@ The flows a UI contract serves are the flows whose examples its rules cite; the 
 - `screens[].primary_tasks` shape
 - Recommended ceiling: at most 7
 - Screen purpose and navigation: `purpose` and `navigation`
+- Surface kind: `surface`
 - `elements[].id` naming policy
 - `elements[].label` is inspection-target text
 - `data-qfai` marker convention
@@ -36,6 +37,10 @@ and the loading, empty, error and success states. The contract need not repeat
 these parts, and their absence from the contract is no reason to leave them
 out of the screen. Leaving one out needs a reason recorded in the screen's UI
 contract, as that rule says.
+
+That list is for application screens. A marketing screen, declared with
+`surface: marketing`, carries the parts of its section entries in the marketing
+pattern reference instead.
 
 ## `screens[].primary_tasks` shape
 
@@ -105,6 +110,23 @@ A screen with no frame, such as a sign-in page, says so in `shell`. A top-level
 screen with nowhere to return to says so in `back_to`. `npx qfai validate` does
 not check these keys; they describe the screen for the implementer and the
 reviewer.
+
+## Surface kind: `surface`
+
+A screen states which surface it belongs to, because the two are built and
+reviewed against different patterns.
+
+| Value         | The screen                                                                                   |
+| ------------- | -------------------------------------------------------------------------------------------- |
+| `application` | is used by a member after signing in; the default when the key is left out                   |
+| `marketing`   | is seen by a visitor before signing in and exists to explain, persuade or inform the visitor |
+
+Marketing screens are the home page, audience pages, how it works, pricing, a
+guide, an about page with a contact form, and legal notices. An application
+screen is checked against the business-screen list and its business type; a
+marketing screen against its section entries in the marketing pattern
+reference. `npx qfai validate` reports any other value as `QFAI-CONTRACT-051`,
+at error.
 
 ## `elements[].id` naming policy
 
@@ -337,6 +359,7 @@ For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by 
 
 - [ ] Every UI-bearing contract has one full declared ID, at least one screen, and a matching `contracts.md` row.
 - [ ] Every screen states its `purpose` and its `navigation`: shell, entry points and where back leads.
+- [ ] Every screen a visitor sees before signing in declares `surface: marketing`; every other screen leaves the key out or writes `application`.
 - [ ] Screen IDs, routes, primary tasks, labels, markers, and actions are stable and testable.
 - [ ] Every declared action has an observable effect, including relevant failure states.
 - [ ] Every screen lists all five `states`, each with what renders and the next action, or `none` with a reason.
