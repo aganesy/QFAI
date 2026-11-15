@@ -32,7 +32,7 @@ import { readUiContractDocuments } from "../contracts/screenContracts.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-export const UI_SCREEN_PATTERN_RULE_ID = "QFAI-CONTRACT-052";
+export const UI_SCREEN_PATTERN_RULE_ID = "QFAI-CONTRACT-056";
 
 /** The screen type IDs of the shipped business UI pattern reference. */
 export const SCREEN_PATTERNS = [

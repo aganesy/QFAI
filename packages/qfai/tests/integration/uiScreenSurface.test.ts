@@ -87,7 +87,7 @@ describe("validate reads the business screen type of each UI contract screen", (
       "    pattern: table",
     );
     const { issues } = await validateProject(root, undefined, { profile: "sdd" });
-    const reported = issues.filter((item) => item.code === "QFAI-CONTRACT-052");
+    const reported = issues.filter((item) => item.code === "QFAI-CONTRACT-056");
     expect(reported).toHaveLength(1);
     expect(reported[0]?.severity).toBe("error");
     expect(reported[0]?.message).toContain("screen 'report'");

@@ -149,7 +149,7 @@ the author, the implementer and the reviewer read the same entry.
 The key is optional. A screen that fits no type leaves it out and still gets
 the parts under "Every screen". A marketing screen leaves it out too: its
 sections are named against the marketing pattern reference. `npx qfai validate`
-reports any other value as `QFAI-CONTRACT-052`, at error.
+reports any other value as `QFAI-CONTRACT-056`, at error.
 
 ## `elements[].id` naming policy
 

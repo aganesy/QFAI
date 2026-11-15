@@ -178,7 +178,7 @@ Catalogue: stat cards, a task list, an activity feed.
   `pattern: <id>` with the type's ID, such as `pattern: list`, then write in
   the contract the parts this screen needs, and the reason for a part it
   leaves out. `npx qfai validate` reports an ID this reference does not have as
-  `QFAI-CONTRACT-052`. A behaviour in its type's Behaviour list applies without being
+  `QFAI-CONTRACT-056`. A behaviour in its type's Behaviour list applies without being
   named; the contract records only a behaviour the screen leaves out, with
   the reason, such as a fixed list of a few items paged on the client.
 - **Implementing.** Build what the contract names. A part of the screen's type

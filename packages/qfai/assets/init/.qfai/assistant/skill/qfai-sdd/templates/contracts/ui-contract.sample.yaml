@@ -39,7 +39,7 @@ screens:
     # pattern: the screen's type in the business UI pattern reference, by its
     # ID: `list`, `detail`, `form`, `settings`, `members` or `dashboard`. Leave
     # it out for a screen that fits no type and for a marketing screen. Any
-    # other value is QFAI-CONTRACT-052.
+    # other value is QFAI-CONTRACT-056.
     pattern: form
     purpose: Record a customer's order so it can be fulfilled or finished later.
     navigation:

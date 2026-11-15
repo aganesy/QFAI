@@ -123,7 +123,7 @@ describe("validate and the pattern key", () => {
     expect(issues).toHaveLength(1);
     const [finding] = issues;
     expect(finding?.code).toBe(UI_SCREEN_PATTERN_RULE_ID);
-    expect(finding?.code).toBe("QFAI-CONTRACT-052");
+    expect(finding?.code).toBe("QFAI-CONTRACT-056");
     expect(finding?.severity).toBe("error");
     expect(finding?.file).toBe(CONTRACT);
     expect(finding?.message).toContain("screen 'orders'");
@@ -131,7 +131,7 @@ describe("validate and the pattern key", () => {
     expect(finding?.message).toContain(
       "`list`, `detail`, `form`, `settings`, `members`, `dashboard`",
     );
-    expect(ISSUE_EXPECTED_BY_CODE["QFAI-CONTRACT-052"]).toContain("`pattern`");
+    expect(ISSUE_EXPECTED_BY_CODE["QFAI-CONTRACT-056"]).toContain("`pattern`");
   });
 
   it("reports a value that is not a string as written", async () => {
@@ -155,6 +155,6 @@ describe("validate and the pattern key", () => {
 
     const codes = (await validateContracts(root, defaultConfig)).map((issue) => issue.code);
 
-    expect(codes).toContain("QFAI-CONTRACT-052");
+    expect(codes).toContain("QFAI-CONTRACT-056");
   });
 });

@@ -36,5 +36,5 @@ Feature: Deterministic validation gate
     Given a UI contract whose screens declare `pattern` or leave it out
     When `qfai validate` runs the contract checks
     Then a screen that writes no `pattern`, leaves it empty, or writes `list`, `detail`, `form`, `settings`, `members` or `dashboard` raises nothing
-    And any other value raises `QFAI-CONTRACT-052` at error, naming the contract, the screen, the value and the vocabulary
+    And any other value raises `QFAI-CONTRACT-056` at error, naming the contract, the screen, the value and the vocabulary
 ```

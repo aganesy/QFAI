@@ -11,7 +11,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `list`, `detail`, `form`, `settings`, `members` and `dashboard`, and an
   application screen may declare its type as `pattern: <id>`, which the
   `sdd-contract` step writes. `qfai validate` reports any other value as
-  `QFAI-CONTRACT-052`, at error; a screen without the key is asked nothing,
+  `QFAI-CONTRACT-056`, at error; a screen without the key is asked nothing,
   and a marketing screen leaves it out.
 
 - **The contract step writes the app frame once.** The app shell, the

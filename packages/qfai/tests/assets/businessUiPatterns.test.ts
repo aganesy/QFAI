@@ -111,6 +111,6 @@ describe("business UI pattern reference", () => {
     );
 
     expect(template).toContain("    pattern: form\n");
-    expect(template).toContain("QFAI-CONTRACT-052");
+    expect(template).toContain("QFAI-CONTRACT-056");
   });
 });
