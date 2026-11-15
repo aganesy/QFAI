@@ -126,8 +126,7 @@ visual_survey:
 - A finding is applied only after it is checked, as the protocol's rule for an
   external source says. Its `reason` names what was read: the adopted theme,
   the current `DESIGN.md`, the current screens or UI contracts. Every finding
-  to adopt is also checked against
-  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md`, its
+  to adopt is also checked against the design anti-pattern list, its
   _Displacement_ section included, and against `DESIGN.md`'s
   `audience.do_not_look_like`: a match is a `reject`, or an `adopt` whose
   `reason` names the brand direction that asks for it. A pattern common on

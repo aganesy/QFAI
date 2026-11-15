@@ -139,12 +139,15 @@ specialization_tags:
 - Check every implemented screen against the identity and layout sections
   `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#components`,
   `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#layout-and-composition` and
-  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#displacement`, such as serial numbers on cards and lists, all-caps eyebrow labels or an
-  arrow after every text link. Report each match with the pattern it matches and the change that removes it,
-  unless root `DESIGN.md`'s brand direction asks for it, as that list's _Using the list_ says; on a marketing
-  screen, the list's _Where the list stops_ exceptions apply. Declare each finding's severity and trace as
-  `.qfai/assistant/rule/references/reviewer-findings.md` says. Inside the prototyping loop,
-  `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md` sets which sections apply.
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#displacement`, such as 01 / 02 / 03
+  numbering on content that is not a sequence, all-caps eyebrow labels or an arrow after every text link.
+  Report each match with the pattern it matches and the change that removes it, unless root `DESIGN.md`'s
+  brand direction asks for it, as that list's _Using the list_ says; on a marketing screen, the list's _Where the
+  list stops_ exceptions apply. The list governs visual identity, not behaviour, so such a finding traces to
+  root `DESIGN.md` or the screen's UI contract where the screen departs from them, and is `advisory`
+  otherwise.
+- Inside the prototyping loop,
+  `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md` sets which of these sections apply.
 
 ## Inputs you must read
 

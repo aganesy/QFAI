@@ -176,9 +176,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       const inventory = section(survey, "## Inventory first").replace(/\s+/g, " ");
       expect(inventory).toContain("the user decides every removal before the survey starts");
       const findings = section(survey, "## Findings").replace(/\s+/g, " ");
-      expect(findings).toContain(
-        "`.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md`",
-      );
+      expect(findings).toContain("checked against the design anti-pattern list");
       expect(findings).toContain("_Displacement_ section included");
       expect(findings).toContain("`audience.do_not_look_like`");
       expect(findings).toContain("A pattern common on well-known sites is not exempt.");
