@@ -4,6 +4,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **A known catalogue incompatibility reaches the next project.** QFAI ships
+  `rule/references/catalogue-compatibility.md`, a dated table of catalogue items
+  that broke a project's constraints. `ui-procurement.md` reads it before an
+  item is installed and adds a new incompatibility to it; a row is a hint to
+  check against the installed version, not a verdict.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

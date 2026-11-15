@@ -82,7 +82,11 @@ Three things decide it, and none is taste:
 The same check applies to each item procured from the catalogue. An item that
 breaks a constraint is not installed, and the ladder moves to its next rung.
 The region's procurement record names the item and the constraint it breaks, so
-the next procurement for that region does not try it again.
+the next procurement for that region does not try it again. Before installing an
+item, read `.qfai/assistant/rule/references/catalogue-compatibility.md`: a row
+naming the item is checked against the installed version before the item is
+tried. A new incompatibility is added there with the report filed with the
+catalogue's maintainers, so the next project that adopts the catalogue sees it.
 
 A registry entry is a name pointing at a URL template carrying `{name}`,
 which is where the component name goes. That shape is not owned by any
