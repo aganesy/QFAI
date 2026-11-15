@@ -4,14 +4,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Changed
+### Added
 
-- **A UI review without captures is `PENDING`, never `PASS`.** For a
-  UI-affecting change, the product-surface reviewer requires a capture of each
-  changed screen at the reviewed revision. Passing tests or a clean `validate`
-  do not stand in for it, and the reviewer does not start the app itself: it
-  stops before a verdict and names what is missing, the review is recorded
-  `PENDING`, and it is dispatched again once the captures exist.
+- **The contract step writes the app frame once.** The app shell, the
+  navigation for each role and the home belong to no single flow, so
+  `sdd-contract` writes them as the screens of one UI contract, the app frame,
+  when no UI contract holds the shell or records why the application has none.
+  Every application screen inside the shell names the frame's shell screen in
+  `navigation.shell`, and prototyping reads the frame with every flow. A once-per-application
+  part the project leaves out records its reason in the frame, and
+  `interface-clarity.md` and `product-surface-reviewer` read the reason there.
+  Settings, member management and notifications are added only when a story
+  needs them.
+
+### Changed
 
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the
@@ -42,6 +48,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   user is worse off) is asked with the volume of data the screen will hold in
   production, not the test fixture, so a list control is not cut because a
   five-row fixture does not need it.
+
+- **A UI review without captures is `PENDING`, never `PASS`.** For a
+  UI-affecting change, the product-surface reviewer requires a capture of each
+  changed screen at the reviewed revision. Passing tests or a clean `validate`
+  do not stand in for it, and the reviewer does not start the app itself: it
+  stops before a verdict and names what is missing, the review is recorded
+  `PENDING`, and it is dispatched again once the captures exist.
 
 ### Fixed
 
