@@ -1,5 +1,14 @@
 # UI Affecting Examples
 
+## Contents
+
+- Inputs
+- Component catalogue
+- Plain text in UI source
+- Repeated figures and claims
+- Routing
+- Evidence
+
 ## Inputs
 
 Read the UI surface paths `uiux.surfacePaths` declares in qfai.config.yaml, and resolve paths.contractsDir from the same file. Read every UI contract under its ui/ directory, and the root DESIGN.md if present for the brand tokens.
@@ -30,8 +39,17 @@ export function Button(props: ButtonProps) {
 procurement ladder served. `@pattern` names the region it realises; one component per pattern.
 A page or layout that no other surface file imports needs no doc comment. `npx qfai validate` warns
 about a missing source on a component that has a tag or that another surface file imports, a pattern two components claim, a raw `<button>`,
-`<input>` or `<select>` where a listed component has that pattern, and a catalogue out of date
-(`QFAI-COMP-001` to `QFAI-COMP-004`). `npx qfai catalog components --check` fails CI on the last.
+`<input>` or `<select>` where a listed component has that pattern, a catalogue out of date, a
+hand-written `role="dialog"`, `role="menu"`, `role="tablist"` or `aria-modal` where a catalogue is
+installed, and a component whose `@pattern` is an interactive widget `ui-procurement.md` lists with no
+`@a11y` (`QFAI-COMP-001` to `QFAI-COMP-006`). `npx qfai catalog components --check` fails CI on an
+out-of-date catalogue.
+
+The widget `@pattern` names it reads, compared without case, spaces, hyphens or underscores, are
+`dialog`, `alert dialog`, `drawer`, `sheet`, `menu`, `menu button`, `tabs`, `combobox`,
+`autocomplete`, `listbox`, `select`, `tooltip`, `popover`, `toast`, `date picker`, `disclosure` and
+`accordion`. A component with one of them and a filled `@a11y` spares its own file the hand-written
+markup warning.
 
 ## Design catalogue
 
@@ -59,6 +77,16 @@ files. A plain text there is a literal text node, non-empty after trimming and s
 `ButtonLink`, `router-link` or `SubmitButton`), `legend`, `th`, `caption`, `option`,
 `summary`, `title`, `script`, `style` and an element with `role="alert"` or `role="status"`. Attribute values
 and expressions are never plain text; a string literal that is a whole JSX child is.
+The check reads only that literal text, so it does not see copy held in a constant, a prop, a template
+literal with substitutions or an attribute value. Moving a sentence there is not compliance: the text is
+still copy the user reads, the product-surface reviewer judges it as such, and the procedure below applies to
+it as to any plain text.
+
+A project component that renders one of those elements counts as that element once `uiText.elements` in
+qfai.config.yaml maps it, as `TableHead: th`, `CardTitle: h3`, `NavLink: a` or `StatusRegion: status`. The
+value is one of the elements above, or `status` or `alert` for the role. A key matches the component's whole
+name or the last `.`-separated part of it, word by word, so `TableHead` also matches `UI.TableHead` and
+`table-head`. Only component tags are mapped: a native `<header>` stays plain even with a `Header` key. Map the component once instead of writing a reason that only says what the component renders.
 
 Each plain text needs a reason comment directly before it, or before its parent element, with only whitespace
 between. A missing reason is `QFAI-UITEXT-001` and a malformed one `QFAI-UITEXT-002`; `QFAI-UITEXT-003` means a `.tsx` or `.jsx` file is selected but `typescript` cannot be resolved from the project root. All three are errors and cannot be waived.
@@ -95,6 +123,11 @@ text, ask first whether the user needs it at that point:
 ```
 
 Vue and Svelte use the HTML form. Both keys are required and non-empty, no other key is allowed, and `why` and `without` must say different things. The reason names the specific failure the text prevents; "helps the user" is not a reason.
+
+## Repeated figures and claims
+
+A figure, label or claim shown on more than one page comes from one source, such as one data module or content
+entry, so a correction made in one place reaches every page.
 
 ## Routing
 

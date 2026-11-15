@@ -20,7 +20,7 @@ import path from "node:path";
 
 import fg from "fast-glob";
 
-import type { QfaiConfig } from "../config.js";
+import { type QfaiConfig, UI_TEXT_EXEMPT_ELEMENTS, UI_TEXT_EXEMPT_ROLES } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -28,29 +28,11 @@ const RULE = "uiux.plainText";
 const PROTOTYPE_DIR = path.join(".qfai", "prototype");
 const SOURCE_EXTENSIONS = new Set([".html", ".tsx", ".jsx", ".vue", ".svelte"]);
 const NON_SOURCE_NAME = /\.(test|spec|stories)\./;
-const EXEMPT_ELEMENTS = new Set([
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "label",
-  "button",
-  "a",
-  "legend",
-  "th",
-  "caption",
-  "option",
-  "summary",
-  "title",
-  "script",
-  "style",
-]);
+const EXEMPT_ELEMENTS: ReadonlySet<string> = new Set(UI_TEXT_EXEMPT_ELEMENTS);
 const LINK_ALIASES = new Set(["routerlink", "nuxtlink"]);
 /** The last word of a component name that marks it as a link or a button, whatever words precede it. */
 const EXEMPT_LAST_WORDS = new Set(["link", "button"]);
-const EXEMPT_ROLES = new Set(["alert", "status"]);
+const EXEMPT_ROLES: ReadonlySet<string> = new Set(UI_TEXT_EXEMPT_ROLES);
 const REASON_MARK = "qfai-text:";
 const EXCERPT_LENGTH = 40;
 const VOID_ELEMENTS = new Set([
@@ -69,12 +51,19 @@ const VOID_ELEMENTS = new Set([
   "wbr",
 ]);
 const REMEDIES =
-  "If the user needs this text here (a result, a cost, a condition, a consequence, a destination, a recovery step, or an empty state's next step), keep it and write the reason before it: `<!-- qfai-text: why=<why it must exist>; without=<what goes wrong without it> -->`, or `{/* qfai-text: ... */}` in JSX. Otherwise delete it, replace it with another component (an icon with an accessible name, a state, a badge), or move its job to an existing element (a label, a heading, the button wording). If none of these works without losing what the user needs, keep it and write its reason.";
+  "If the user needs this text here (a result, a cost, a condition, a consequence, a destination, a recovery step, or an empty state's next step), keep it and write the reason before it: `<!-- qfai-text: why=<why it must exist>; without=<what goes wrong without it> -->`, or `{/* qfai-text: ... */}` in JSX. Otherwise delete it, replace it with another component (an icon with an accessible name, a state, a badge), or move its job to an existing element (a label, a heading, the button wording). If none of these works without losing what the user needs, keep it and write its reason. Moving the text into a constant, a prop or an attribute value is not a fix: this check reads only literal text, and the product-surface review still judges that copy.";
 
 export type UiPlainTextOptions = {
   /** Loads the project's `typescript`; the default resolves it from the project root. */
   loadTypescript?: (root: string) => unknown;
 };
+
+/**
+ * The names of the components `uiText.elements` maps to an element, each in the form `wordsOf`
+ * gives. Every element the map may name is exempt, so a mapped component is exempt whichever one
+ * it names.
+ */
+type MappedNames = ReadonlySet<string>;
 
 /** One literal text and the comment that stands before it, if any. */
 type Candidate = { line: number; text: string; reason: string | null };
@@ -138,15 +127,16 @@ export async function validateUiPlainText(
   const issues: Issue[] = [];
   const jsxFiles = files.filter((file) => [".tsx", ".jsx"].includes(path.extname(file)));
   const ts = jsxFiles.length > 0 ? loadTs(root, options.loadTypescript) : null;
+  const mapped: MappedNames = new Set(Object.keys(config.uiText?.elements ?? {}).map(wordsOf));
   for (const file of files) {
     const extension = path.extname(file);
     const source = await readSafe(path.join(root, file));
     let candidates: Candidate[];
     if (extension === ".tsx" || extension === ".jsx") {
       if (!ts) continue;
-      candidates = jsxCandidates(ts, source, file);
+      candidates = jsxCandidates(ts, source, file, mapped);
     } else {
-      candidates = await markupCandidates(markupOf(source, extension));
+      candidates = await markupCandidates(markupOf(source, extension), mapped);
     }
     // A valid file reason stands for every text the file gives no reason of its own. A prototype
     // page holds every screen, so one comment there would clear them all: it is not read.
@@ -375,7 +365,7 @@ function closeSelfClosing(markup: string): string {
   );
 }
 
-async function markupCandidates(markup: string): Promise<Candidate[]> {
+async function markupCandidates(markup: string, mapped: MappedNames): Promise<Candidate[]> {
   if (markup.trim() === "") return [];
   const { loadJsdom } = await import("../uiux/htmlMockDom.js");
   const { JSDOM } = await loadJsdom();
@@ -386,7 +376,7 @@ async function markupCandidates(markup: string): Promise<Candidate[]> {
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const raw = node.textContent ?? "";
     if (raw.trim() === "") continue;
-    if (insideExempt(node.parentElement)) continue;
+    if (insideExempt(node.parentElement, mapped)) continue;
     const location = dom.nodeLocation(node);
     const leading = raw.slice(0, raw.length - raw.trimStart().length);
     const line = (location?.startLine ?? 1) + (leading.match(/\n/g)?.length ?? 0);
@@ -399,9 +389,10 @@ async function markupCandidates(markup: string): Promise<Candidate[]> {
   return candidates;
 }
 
-function insideExempt(element: Element | null): boolean {
+function insideExempt(element: Element | null, mapped: MappedNames): boolean {
   for (let current = element; current; current = current.parentElement) {
     if (isExemptName(current.localName)) return true;
+    if (isMappedName(markupComponentName(current.localName), mapped)) return true;
     const role = current.getAttribute("role")?.trim().toLowerCase();
     if (role && EXEMPT_ROLES.has(role)) return true;
   }
@@ -421,6 +412,40 @@ function isExemptName(name: string): boolean {
   if (isExemptByName(segment)) return true;
   const lastWord = hyphenateWords(segment).split("-").pop()?.toLowerCase() ?? "";
   return EXEMPT_LAST_WORDS.has(lastWord);
+}
+
+/**
+ * Whether `uiText.elements` maps the component: the words of its whole name, or of its last
+ * `.`-separated segment, are those of a mapped name, so `TableHead`, `UI.TableHead` and
+ * `table-head` all match the key `TableHead`.
+ */
+function isMappedName(name: string | null, mapped: MappedNames): boolean {
+  if (name === null || mapped.size === 0) return false;
+  const words = wordsOf(name);
+  return mapped.has(words) || mapped.has(words.split(".").pop() ?? "");
+}
+
+/**
+ * The component name a markup element was written with, or `null` for a native element, which
+ * the map never names: `renameComponents` put `c.` before a capitalised, mixed-case or dotted
+ * name, and a name with a `-` is a kebab-case component or a custom element.
+ */
+function markupComponentName(localName: string): string | null {
+  if (localName.startsWith("c.")) return localName.slice(2);
+  return localName.includes("-") ? localName : null;
+}
+
+/** The component name a JSX tag was written with, or `null` for a native element such as `<header>`. */
+function jsxComponentName(tag: string): string | null {
+  return /^[A-Z]/.test(tag) || tag.includes(".") || tag.includes("-") ? tag : null;
+}
+
+/** A name's `.`-separated segments, each split into words at `-` and case changes, in lower case. */
+function wordsOf(name: string): string {
+  return name
+    .split(".")
+    .map((segment) => hyphenateWords(segment).toLowerCase())
+    .join(".");
 }
 
 function isExemptByName(segment: string): boolean {
@@ -443,7 +468,7 @@ function reasonBody(comment: string): string | null {
   return trimmed.startsWith(REASON_MARK) ? trimmed.slice(REASON_MARK.length) : null;
 }
 
-function jsxCandidates(ts: TsApi, source: string, file: string): Candidate[] {
+function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNames): Candidate[] {
   const kind = path.extname(file) === ".jsx" ? ts.ScriptKind.JSX : ts.ScriptKind.TSX;
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, kind);
   const k = ts.SyntaxKind;
@@ -481,7 +506,13 @@ function jsxCandidates(ts: TsApi, source: string, file: string): Candidate[] {
   const exempt = (node: TsNode): boolean => {
     for (let current = node.parent; current; current = current.parent) {
       if (current.kind !== k.JsxElement) continue;
-      if (isExemptName(tagName(current)) || EXEMPT_ROLES.has(roleOf(current))) return true;
+      const name = tagName(current);
+      if (
+        isExemptName(name) ||
+        isMappedName(jsxComponentName(name), mapped) ||
+        EXEMPT_ROLES.has(roleOf(current))
+      )
+        return true;
     }
     return false;
   };

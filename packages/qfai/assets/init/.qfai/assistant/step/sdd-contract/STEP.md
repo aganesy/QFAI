@@ -22,6 +22,10 @@ Stage 4 of the story tree: contracts and the business rules they enforce.
   `.agents/rules/interface-clarity.md`; for a marketing screen,
   `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` and
   `## What a marketing screen always has` in the same rule.
+- When the specification or `tech.md` states the product's locale, the
+  locale's reference under `.qfai/assistant/rule/references/`, such as
+  `.qfai/assistant/rule/references/locale/ja.md` for Japanese: the formats and
+  input rules it lists go into the contracts that own those fields and screens.
 - The paired templates under
   `.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/` and
   `.qfai/assistant/skill/qfai-sdd/templates/contracts/`.
@@ -84,7 +88,9 @@ surface also needs the root `DESIGN.md`, which `common-design-md` writes and
 validates after this step. A CLI-only surface does not require one. Do not
 adopt a sample design. Each screen states its `purpose` and its `navigation`:
 the shell it renders in, the entry points that lead to it, and where back
-leads.
+leads. A screen that is in no navigation on purpose writes
+`navigation: { none: <reason> }`. `npx qfai validate` warns about an
+application screen with no `navigation` (`QFAI-CONTRACT-054`).
 
 Examples describe business behaviour, so they rarely name pagination or a save
 confirmation. After deriving a screen's elements and actions from the examples,
@@ -92,24 +98,44 @@ check the screen against `## What a business screen always has` in
 `.agents/rules/interface-clarity.md`: the app shell, navigation and home once
 per application, and on each screen the list behaviour, the empty, loading,
 error and success states and the feedback after a change. Add each part that
-applies and is missing: navigation in the screen's `navigation`, and the rest
+applies and is missing: navigation in the screen's `navigation`, the list
+behaviour in the `list` of the list or table element, and the rest
 as elements, actions and `supplements` entries with their `when`. Such a part needs no example of its own unless it carries a
-business rule. A part left out gets its reason in that screen's contract, as
-the rule says.
+business rule. A part left out gets a `{ part, reason }` entry in that screen's `omitted`
+list, and a once-per-application part one in the app frame below, as the rule
+says.
+
+The app shell, the navigation for each role and the home belong to no single
+flow, so one UI contract, the app frame, holds them. When no UI contract holds
+the shell or records why the application has none, write the frame with the
+flow at hand: the shell with its navigation for each role as one screen and the
+home as another, each with its `purpose`, `navigation`, `primary_tasks` and
+`states` like any screen. The shell screen says `none` in its own `shell`; the
+home's type is Dashboard, and the shell has no business type. Every other
+application screen that renders inside the shell names the frame's shell screen
+in `navigation.shell`; a screen with no frame, such as a sign-in page, says so.
+A later flow adds its entry points to the frame's navigation and leaves the
+rest of the frame as it is. A once-per-application part the project leaves out,
+the shell included, gets its entry in the frame's `omitted` list. Settings, member management
+and notifications become frame screens only when a story needs them; this step
+adds none on its own.
 
 Then name each screen's type in
-`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` and write
-the parts of that type the screen needs into its contract the same way, with
-the reason for each part it leaves out.
+`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` as
+`pattern: <id>` with the type's ID, such as `pattern: list`, and write the parts
+of that type the screen needs into its contract the same way, with the reason
+for each part it leaves out. A screen that fits no type leaves `pattern` out.
 
 A screen a visitor sees before signing in that exists to explain, persuade or
 inform, such as a home, audience, pricing, guide, about or legal page, declares
 `surface: marketing`; any other screen leaves the key out, or writes
 `surface: application`. A marketing screen skips the business-screen list and
-the business types above. Name the entry for each of its sections in
+the business types above and takes no `pattern`. Name the entry for each of its sections in
 `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md` instead,
 write the parts it needs into the contract the same way, and record each
-image's source and licence. Its `states` combine the states of its sections.
+image's source and licence. A required notice it leaves out gets a
+`{ part, reason }` entry in its `omitted` list, as the rule and the UI contract
+guide say. Its `states` combine the states of its sections.
 
 Check every text element the discussion or the story proposes against the
 screen's tasks and the information the user needs at that point. A text that
@@ -126,7 +152,12 @@ so one that only restates its heading is left out. Fix a control
 that needs explaining before adding text for it. Each screen lists its
 `states`: what renders in `default`, `empty`, `loading`, `error` and
 `success`, and the next action from each, or `none` with the reason for a
-state the screen cannot reach. A screen may describe the copy that stays in its optional
+state the screen cannot reach; `npx qfai validate` warns about an application
+screen with no `states` or without one of the five (`QFAI-CONTRACT-053`). Each `list` or `table` element carries `list`:
+its `columns`, `search`, `filters`, `sort` and `pagination`, each set or
+`none` with the reason, or `list: { none: <reason> }` for an element with no
+list behaviour; `npx qfai validate` warns about such an element of an
+application screen with no `list` (`QFAI-CONTRACT-055`). A screen may describe the copy that stays in its optional
 `supplements` and `structure`; `npx qfai validate` does not check them, and the
 reason that counts is the `qfai-text` comment written in the UI source.
 

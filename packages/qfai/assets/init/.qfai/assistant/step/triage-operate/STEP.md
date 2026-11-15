@@ -29,9 +29,14 @@ operation. This step runs it and reports what happened.
 2. Check what the operation needs first: the pull request's checks and reviews,
    the branch's state, the target environment.
 3. Wait for checks still running before a merge, and for the checks a push or
-   a new pull request starts when the user asked to see them pass. Poll no
-   faster than the checks change. A failing check that a rerun does not clear
-   stops the operation as a tracked change it needs, as below.
+   a new pull request starts when the user asked to see them pass. Checks still
+   running means every check run of the pull request's head commit that is
+   queued or in progress, including checks branch protection does not require.
+   A merge waits until none is left, or stops and reports the checks still
+   running; it never goes ahead because the host would allow it. A failed check
+   stops the merge too, until a rerun clears it. Poll no faster than the checks
+   change. A failing check that a rerun does not clear stops the operation as a
+   tracked change it needs, as below.
 4. Never enable a host's auto-merge. Before a merge, merge the base branch into
    the pull request's branch locally (`git merge origin/<base>`), push, and
    wait for the checks that push starts; only then merge. A conflict the host
@@ -48,7 +53,9 @@ operation. This step runs it and reports what happened.
    requires it, the checks the project runs on that branch pass. A failure
    there is reported as `needs-change`, naming the merge commit, since the
    merge itself stands.
-7. Report the result as observed, including a failure.
+7. Report the result as observed, including a failure. A report of a merge
+   names the merge commit and, next to it, the state of the head commit's
+   checks when it merged: each check run and its conclusion.
 
 Before creating an issue, search the tracker for a matching open issue with the
 forge CLI's issue search and key terms from the title. When one request files

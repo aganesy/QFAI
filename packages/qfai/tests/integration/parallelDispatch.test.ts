@@ -7,6 +7,13 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 
 const skillDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "skill", "qfai-implement");
 const policyPath = path.join(skillDir, "references", "parallelization-policy.md");
+const baselinePath = path.join(
+  getInitAssetsDir(),
+  ".qfai",
+  "assistant",
+  "rule",
+  "shared-skill-delegation-baseline.md",
+);
 
 /** The policy with every run of whitespace collapsed, so a sentence can span a wrapped line. */
 async function policy(): Promise<string> {
@@ -31,7 +38,15 @@ describe("parallel dispatch by story, under the gate the session agent applies",
     expect(gate).toContain(
       "It decides alone, records the result in the stage report, and asks the user nothing.",
     );
-    for (const condition of ["| G1 |", "| G2 |", "| G3 |", "| G4 |", "| G5 |", "| G6 |"]) {
+    for (const condition of [
+      "| G1 |",
+      "| G2 |",
+      "| G3 |",
+      "| G4 |",
+      "| G5 |",
+      "| G6 |",
+      "| G7 |",
+    ]) {
       expect(gate, condition).toContain(condition);
     }
   });
@@ -92,6 +107,41 @@ describe("parallel dispatch by story, under the gate the session agent applies",
     );
   });
 
+  // QFAI:EX-0001-0093-10
+  it("lands a foundation unit before screen units fan out, and fails a screen type with no template", async () => {
+    const text = await policy();
+    expect(section(text, "Parallel-unit gate")).toContain(
+      "| G7 | Where two or more units are screen units, each builds only screen types that already have a page template,",
+    );
+    const screens = section(text, "Screen units");
+    expect(screens).toContain(
+      "Before two or more screen units fan out, the session agent lands a foundation unit itself, from the component catalogue where an entry fits and extracted once where none does:",
+    );
+    for (const part of [
+      "- the app shell;",
+      "list, detail, form, settings and dashboard, and no other;",
+      "- the status map",
+      "- the list behaviour the list screens share",
+    ]) {
+      expect(screens, part).toContain(part);
+    }
+    expect(screens).toContain(
+      "Among two or more screen units, one whose screen type has no page template yet fails G7.",
+    );
+    expect(screens).toContain(
+      "A parallel split with no screen unit, or with one screen unit, needs no foundation unit.",
+    );
+    expect(screens).toContain(
+      "The session agent lands the foundation before the fan-out, so it is neither a parallel unit under G1 nor another unit's output under G5.",
+    );
+    expect(screens).toContain(
+      "Landing the missing template in the foundation clears that failure;",
+    );
+    expect(section(text, "Briefing a unit")).toContain(
+      "A screen unit's brief also names the page templates and the `.qfai/catalog/components.yaml` entries it uses;",
+    );
+  });
+
   // QFAI:EX-0001-0093-09
   it("stops the fan-out and repairs serially when the combination fails", async () => {
     expect(section(await policy(), "Integration gate")).toContain(
@@ -122,5 +172,21 @@ describe("parallel read-only lookups", () => {
     expect(gate).toContain("fans out only when every condition holds for every pair of units");
     expect(gate).toContain("| G5 | No unit needs another unit's output |");
     expect(text).toContain("the framing of research and the reading of its answers");
+  });
+
+  // QFAI:AC-0001-0093-03
+  // QFAI:EX-0001-0093-11
+  it("keeps a lookup answer a decision uses in a file the decision cites", async () => {
+    const baseline = (await readFile(baselinePath, "utf-8")).replace(/\s+/g, " ");
+    expect(baseline).toContain(
+      "Before it uses a delegated lookup's answer in a decision, the session agent writes the answer with its citations to `<paths.outDir>/research/<YYYYMMDDhhmmss>-<slug>.md`",
+    );
+    expect(baseline).toContain(
+      "The decision cites that file, never the result message: a result message lives only in the conversation, and compaction shortens it to a line.",
+    );
+    expect(baseline).toContain("An answer no decision uses is not written.");
+    expect(baseline).toContain(
+      "The file is local evidence, ignored by git, so a tracked record that cites it also keeps the answer's source URLs.",
+    );
   });
 });

@@ -19,7 +19,7 @@ it("attempts the relevant graph before granting fallback after incomplete failed
       const event = {
         tool_name: "Bash",
         tool_input: {
-          command: domain === "code" ? "rg legacy packages/" : "grep -R rationale docs/",
+          command: domain === "code" ? "rg legacy" : "grep -R rationale docs/*.md",
         },
         session_id: "fallback-session",
         cwd: fixture.root,
@@ -83,7 +83,7 @@ it("keeps the committed scope when CLI response delivery fails", async () => {
     );
     const event = {
       tool_name: "Bash",
-      tool_input: { command: "rg legacy packages/" },
+      tool_input: { command: "rg legacy" },
       session_id: "response-session",
       cwd: fixture.root,
     };

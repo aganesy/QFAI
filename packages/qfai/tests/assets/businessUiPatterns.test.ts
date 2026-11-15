@@ -70,7 +70,9 @@ describe("business UI pattern reference", () => {
       expect(text).toContain("the values it is matched against are normalised the same way");
       expect(text).toContain("validated and capped");
       expect(text).toContain("a behaviour the screen breaks with no recorded reason is a finding");
-      expect(text).toContain("applies without being named");
+      expect(text).toContain("applies to what the contract sets without being restated");
+      expect(text).toContain("UI contract `list` entry");
+      expect(text).not.toContain("applies without being named");
       expect(text).not.toContain("the last page or the empty state");
     });
 
@@ -82,5 +84,35 @@ describe("business UI pattern reference", () => {
       }
       expect(missing).toEqual([]);
     });
+
+    // QFAI:EX-0001-0305-05
+    it(`${tree}: each screen type has an ID the contract names as its pattern`, async () => {
+      const text = await readFile(path.join(root, REFERENCE), "utf-8");
+      const sections = text.split(/^## /m).slice(3, 2 + SCREEN_TYPES.length);
+      const ids = sections.map((section) => /^ID: `([a-z]+)`\./m.exec(section)?.[1]);
+      const step = (await readFile(path.join(root, "step/sdd-contract/STEP.md"), "utf-8")).replace(
+        /\s+/g,
+        " ",
+      );
+
+      expect(ids).toEqual(["list", "detail", "form", "settings", "members", "dashboard"]);
+      expect(text.replace(/\s+/g, " ")).toContain("as `pattern: <id>` with the type's ID");
+      expect(step).toContain("as `pattern: <id>` with the type's ID");
+      expect(step).toContain("takes no `pattern`");
+    });
   }
+
+  // QFAI:EX-0001-0305-05
+  it("the UI contract template names the pattern of its screen", async () => {
+    const template = await readFile(
+      path.join(
+        repoRoot,
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/contracts/ui-contract.sample.yaml",
+      ),
+      "utf-8",
+    );
+
+    expect(template).toContain("    pattern: form\n");
+    expect(template).toContain("QFAI-CONTRACT-056");
+  });
 });

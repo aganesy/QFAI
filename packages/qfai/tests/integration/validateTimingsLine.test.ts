@@ -22,6 +22,7 @@ describe("the timings line of a UI/UX group over its budget", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 4,
         htmlMockBudgetMs: 2000,
+        uiuxPartsRun: "side-by-side",
         uiuxParts: [
           { name: "UI definition consistency", ms: 8300.2 },
           { name: "design audit", ms: 1100.7 },
@@ -35,6 +36,26 @@ describe("the timings line of a UI/UX group over its budget", () => {
 
   // QFAI:AC-0001-0039-02
   // QFAI:EX-0001-0039-18
+  it("says the slowest validators ran one after another when --timings ran them so", () => {
+    expect(
+      formatTimingOverruns({
+        uiuxMs: 10120.4,
+        uiuxBudgetMs: 2000,
+        htmlMockMs: 4,
+        htmlMockBudgetMs: 2000,
+        uiuxPartsRun: "one-after-another",
+        uiuxParts: [
+          { name: "UI definition consistency", ms: 8300.2 },
+          { name: "design audit", ms: 1100.7 },
+        ],
+      }),
+    ).toBe(
+      "timings: over budget uiux=10120ms (budget 2000ms; slowest, one after another: UI definition consistency 8300ms, design audit 1101ms); a target, not a gate: no finding is raised",
+    );
+  });
+
+  // QFAI:AC-0001-0039-02
+  // QFAI:EX-0001-0039-18
   it("prints no line for a group within its budget, whatever its parts took", () => {
     expect(
       formatTimingOverruns({
@@ -42,6 +63,7 @@ describe("the timings line of a UI/UX group over its budget", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 4,
         htmlMockBudgetMs: 2000,
+        uiuxPartsRun: "side-by-side",
         uiuxParts: [{ name: "design audit", ms: 9 }],
       }),
     ).toBeNull();
@@ -56,6 +78,7 @@ describe("the timings line of a UI/UX group over its budget", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 4,
         htmlMockBudgetMs: 2000,
+        uiuxPartsRun: "side-by-side",
         uiuxParts: [],
       }),
     ).toBe(
@@ -105,7 +128,7 @@ describe("the timings line of a UI/UX group over its budget", () => {
 
 describe("the --timings line of each finding family", () => {
   // QFAI:EX-0001-0039-23
-  it("lists the families slowest first, then the side-by-side group apart", () => {
+  it("lists the families slowest first, then the UI/UX checks and the parser load apart", () => {
     expect(
       formatFamilyTimings({
         sequential: labelCheckTimings(
@@ -115,15 +138,17 @@ describe("the --timings line of each finding family", () => {
             ["test-stubs", { ms: 2235, families: new Set(["TEST"]) }],
           ]),
         ),
-        overlapping: labelCheckTimings(
+        uiux: labelCheckTimings(
           new Map([
             ["design tokens", { ms: 5, families: new Set<string>() }],
             ["html mock", { ms: 876.3, families: new Set(["MOCK"]) }],
           ]),
         ),
+        htmlMockLoadMs: 912.4,
+        sharedMarkdownReadMs: 30.2,
       }),
     ).toBe(
-      "timings: by family document-schema 8071ms, STORY 4021ms, TEST 2235ms; side by side, overlapping: MOCK 876ms, design tokens 5ms",
+      "timings: by family document-schema 8071ms, STORY 4021ms, TEST 2235ms; uiux one after another: MOCK 876ms, design tokens 5ms; of which shared Markdown read 30ms, html mock parser load 912ms",
     );
   });
 
@@ -146,14 +171,16 @@ describe("the --timings line of each finding family", () => {
   });
 
   // QFAI:EX-0001-0039-23
-  it("prints no side-by-side part when no group ran side by side, and no line when not asked", () => {
+  it("prints no UI/UX part or parser load when neither ran, and no line when not asked", () => {
     expect(
       formatFamilyTimings({
         sequential: [
           { family: "CONTRACT", ms: 3 },
           { family: "LINK", ms: 3 },
         ],
-        overlapping: [],
+        uiux: [],
+        htmlMockLoadMs: 0,
+        sharedMarkdownReadMs: 0,
       }),
     ).toBe("timings: by family CONTRACT 3ms, LINK 3ms");
     expect(formatFamilyTimings(undefined)).toBeNull();
@@ -180,17 +207,64 @@ describe("the --timings line of each finding family", () => {
         familyTimings: true,
       });
       const sequential = (asked.familyTimings?.sequential ?? []).map((entry) => entry.family);
-      const overlapping = (asked.familyTimings?.overlapping ?? []).map((entry) => entry.family);
+      const uiux = (asked.familyTimings?.uiux ?? []).map((entry) => entry.family);
       expect(sequential).toContain("uiux");
       expect(sequential).toContain("integration-surface");
-      expect(overlapping).toHaveLength(6);
-      expect(overlapping).toContain("DT");
-      expect(overlapping).toContain("html mock");
+      expect(uiux).toHaveLength(6);
+      expect(uiux).toContain("DT");
+      expect(uiux).toContain("html mock");
       const ms = (asked.familyTimings?.sequential ?? []).map((entry) => entry.ms);
       expect(ms).toEqual([...ms].sort((left, right) => right - left));
 
       const unasked = await validateProject(root, undefined, { profile: "prototyping" });
       expect(unasked.familyTimings).toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0039-23
+  it("runs the UI/UX checks one after another under --timings, with the same findings", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-timings-one-after-another-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+      await mkdir(path.join(root, "tokens"), { recursive: true });
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "uiux:\n  designTokensDir: tokens\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "tokens", "design-tokens.yaml"),
+        "primitive:\n  color: [unclosed\n",
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, ".qfai", "spec", "mock.md"),
+        "# mock\n\n```html\n<div>box</div>\n```\n",
+        "utf-8",
+      );
+      const asked = await validateProject(root, undefined, {
+        profile: "prototyping",
+        familyTimings: true,
+      });
+      expect(asked.timings?.uiuxPartsRun).toBe("one-after-another");
+      // One after another, the parts and the parser load add up to no more than the group's wall
+      // clock. Side by side they did not: each part's clock also ran while the others worked.
+      const group = asked.familyTimings?.sequential.find((entry) => entry.family === "uiux");
+      const parts = (asked.timings?.uiuxParts ?? []).reduce((sum, part) => sum + part.ms, 0);
+      expect(asked.timings?.uiuxParts).toHaveLength(6);
+      expect(group).toBeDefined();
+      const load = asked.familyTimings?.htmlMockLoadMs ?? -1;
+      const read = asked.familyTimings?.sharedMarkdownReadMs ?? -1;
+      expect(load).toBeGreaterThanOrEqual(0);
+      expect(read).toBeGreaterThanOrEqual(0);
+      expect(parts + load + read).toBeLessThanOrEqual(group?.ms ?? 0);
+
+      const plain = await validateProject(root, undefined, { profile: "prototyping" });
+      expect(plain.timings?.uiuxPartsRun).toBe("side-by-side");
+      expect(plain.counts).toEqual(asked.counts);
+      expect(plain.issues).toEqual(asked.issues);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

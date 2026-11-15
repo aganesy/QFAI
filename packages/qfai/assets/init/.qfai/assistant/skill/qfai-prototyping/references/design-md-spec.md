@@ -16,6 +16,7 @@ A reference copy is shipped in this skill at
 - Front-matter schema
 - `brand.archetype` allowed values
 - `brand.theme`
+- `visual.layout`
 - `accessibility` allowed keys
 - `layout` and `data_display`
 - Validation rules
@@ -76,6 +77,11 @@ visual:
     sm: string
     md: string
     lg: string
+  layout: # optional
+    breakpoints: map # sm/md/lg/xl, CSS lengths
+    content_max_width: map # reading/app/form, CSS lengths
+    target_min_px: number # at least 24 (WCAG 2.5.8)
+    table_narrow: enum # stack | scroll
 accessibility:
   contrast_ratio_min: number
   motion: string
@@ -111,6 +117,17 @@ values from that theme rather than composing them.
 Everything downstream treats these numbers as exact: every literal in
 every prototype is checked against them. Without this field there was nothing underneath
 the exactness.
+
+## `visual.layout`
+
+The responsive values, in one place a check can read: the breakpoints, the
+content width of a reading page, an app page and a form, the minimum tap
+target, and how a table behaves at a narrow width (`stack` into cards, or
+`scroll` inside its own container). The section is optional, so a file written
+before it existed still parses. `target_min_px` is at least 24, the WCAG 2.5.8
+floor; the project's own minimum may be higher. Like the other `visual` values,
+these come from the adopted theme where it defines them. Each level is closed:
+an unknown key fails the parse.
 
 ## `accessibility` allowed keys
 
@@ -148,6 +165,9 @@ string. `qfai catalog design` writes these into the token file and the theme wit
 - Unknown keys at any level are rejected.
 - All 12 color keys, 3 font families, 4 radius keys, and 3 shadow keys
   listed above are required.
+- `visual.layout` is optional. Its lengths are strings taken verbatim;
+  `target_min_px` is a number of at least 24; `table_narrow` is `stack` or
+  `scroll`.
 
 ## Issue shape
 

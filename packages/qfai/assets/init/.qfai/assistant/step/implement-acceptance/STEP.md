@@ -1,7 +1,7 @@
 ---
 name: implement-acceptance
 owner: qfai-implement
-purpose: "Write the bodies of a business flow's empty acceptance tests, keeping each test's annotation and file."
+purpose: "Write the bodies of a business flow's empty acceptance tests, keeping each test's annotation and file, and write or extend the per-role navigation journey for the roles the flow adds a screen to."
 requires: [common-gate-run]
 ---
 
@@ -11,22 +11,33 @@ The quality phase of acceptance testing. `implement-scaffold` left an E2E test
 for each business flow and an integration test for each acceptance criterion,
 each with an empty body. An API test an acceptance criterion already had is
 worked the same way. Once the system's shape has settled, this
-step writes the assertions those bodies owe.
+step writes the assertions those bodies owe. It also writes or extends the
+per-role navigation journey's test of each role this flow adds a screen to.
 
 ## Reads
 
 - The flow's acceptance tests whose bodies are empty.
+- The navigation journey's test of each role this flow adds a screen to,
+  empty or not, and the roles `implement-scaffold` recorded for it.
+- `.qfai/assistant/rule/test-layers.md` § L5 E2E, for what the navigation
+  journey proves, and the UI contracts under `paths.contractsDir`, for the
+  screens each role reaches. Until UI contracts name the roles of each
+  screen, a role's screens are the screens of the flows whose stories name
+  that role as their actor.
 - The BF or AC each test annotates, under `paths.specsDir`, and its owning
   contracts, under `paths.contractsDir`.
 - The worker session setup `implement-credentials` wrote, when a test needs an
   authenticated actor.
-- When a test depends on business time, shares a database or server with
-  other workers, or feeds a required CI check:
+- When an E2E test drives a browser, or a test depends on business time,
+  shares a database or server with other workers, or feeds a required CI
+  check:
   `.qfai/assistant/skill/qfai-implement/references/test-runner-recipes.md`.
 
 ## Writes
 
 - The body of each empty acceptance test in scope.
+- The body of the navigation journey's test of each role this flow adds a
+  screen to: written when empty, extended with this flow's screens when not.
 
 ## Ownership and annotation
 
@@ -38,21 +49,36 @@ step writes the assertions those bodies owe.
 
 Each test keeps its annotation and its file. No annotation is added, moved or
 removed. Contract references and business rules define assertions, but
-contract IDs are not coverage annotations.
+contract IDs are not coverage annotations. The navigation journey carries no
+annotation and gains none.
 
 ## Procedure
 
 1. Write the assertions the test's BF or AC states, against observable
-   behaviour.
-2. Run each test with the Test command `common-gate-run` names, and confirm it
+   behaviour. An E2E test waits for the app shell's `data-qfai-ready` marker
+   after each page load, before its first interaction; after a click that
+   loads a new document it first waits for the new page, and after a
+   client-side route change it waits for that route's own content, as
+   `.qfai/assistant/rule/test-layers.md` § L5 E2E says. The app shell sets
+   the marker, not the test: a shell that does not set it is a product
+   defect, reported as item 5 says. No fixed sleep, and no blind retry of an
+   interaction.
+2. For the navigation journey's test of each role this flow adds a screen
+   to, start signed in as that role through the session `implement-credentials`
+   serves, or signed out for a visitor role. Then reach every screen the UI
+   contracts declare for that role through the app's own links and controls
+   only, never by typing a URL, and assert that each screen rendered. Where
+   the test already has a body, extend it with this flow's screens and keep
+   the screens it already reaches.
+3. Run each test with the Test command `common-gate-run` names, and confirm it
    passes.
-3. The behaviour already exists, so prove each assertion can fail: change the
+4. The behaviour already exists, so prove each assertion can fail: change the
    production predicate it checks, observe that assertion fail, restore the
    predicate, and observe the test pass again. Report the command, the
    mutation and both results. A
    syntax error, a deleted export or a bare throw is not a discriminating
    mutation.
-4. A test that fails because the product is wrong is not repaired here: report
+5. A test that fails because the product is wrong is not repaired here: report
    it as a defect for `implement-tdd` or a fix route. A test that cannot be
    written because the story or contract is wrong is a specification change under
    `.qfai/assistant/rule/drift-protocol.md`.
@@ -60,6 +86,9 @@ contract IDs are not coverage annotations.
 ## Gate
 
 PASS when every test in scope has a body that asserts its BF or AC, keeps its
-annotation and file, passes, and
+annotation and file, passes, the navigation journey reaches each role's
+screens through the app's own navigation or the app has no navigation of its
+own, and
 `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no
-error owned by this flow.
+error owned by this flow. The report names the navigation journey's file, or
+the reason the app has none, and the role-to-screen mapping it used.

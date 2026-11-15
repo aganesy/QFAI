@@ -16,6 +16,8 @@ import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
 import { describeIncompleteRun } from "./lib/warnings.js";
 import { error, info, warn } from "../core/logger.js";
 import { findConfigRoot } from "../core/config.js";
+import { describeStaleInstall, findStaleInstall } from "../core/lockfileVersion.js";
+import { refusal } from "../core/workflow/plan.js";
 import {
   compareInstalledToDeclared,
   readDeclaredQfaiRange,
@@ -119,6 +121,28 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     return;
   }
 
+  // A pulled qfai upgrade leaves a checkout that has not reinstalled running
+  // the old copy, and nothing else in the run says so. Every command warns;
+  // the gates stop, because their verdict would come from the wrong version.
+  const stale = await findStaleInstall(options.root);
+  if (stale !== null) {
+    const stops = isGate(command, options);
+    error(describeStaleInstall(stale, stops));
+    if (command === "workflow") {
+      process.exitCode = emitPlanDocument(
+        refusal(
+          `The installed qfai is ${stale.running}, but ${stale.pin.file} pins ${stale.pin.version}, so run the project's install command and try again.`,
+          [{ reason: "stale-install", subject: stale.pin.file }],
+        ),
+      );
+      return;
+    }
+    if (stops) {
+      process.exitCode = EXIT_CODES.findings;
+      return;
+    }
+  }
+
   // Every command except `validate` sends a filesystem fault straight to
   // `cli/index.ts`, which writes `err.message` and exits 1 — a line naming the
   // errno and the path but not the command, and not saying that the run is
@@ -148,6 +172,15 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     // trap for the next edit.
     throw describeIncompleteRun(thrown, command) ?? thrown;
   }
+}
+
+/** The commands a stale install stops: `workflow plan` and the gates `validate` and `sdd preflight`. */
+function isGate(command: string, options: ParsedArgs["options"]): boolean {
+  return (
+    command === "workflow" ||
+    command === "validate" ||
+    (command === "sdd" && options.sddAction === "preflight")
+  );
 }
 
 function requiredFileFailure(thrown: unknown): boolean {
@@ -472,9 +505,9 @@ Options:
   --profile <prototyping|<skill>>  doctor: prototyping-specific preflight diagnosis, or a skill manifest runtimeDependencies probe
   --fail-on <error|warning|never>  validate/report: failure threshold (takes precedence over --strict)
   --fail-on <error|warning|never>  doctor: failure threshold (defaults to validation.failOn; the shipped default is error)
-  --fail-on <error|warning|never>  sdd preflight: failure threshold (never exits 0 even when blocked; preflight has no warning tier, so warning means the same as error)
+  --fail-on <error|warning|never>  sdd preflight: failure threshold (never exits 0 even when blocked; preflight has no warning tier, so warning means the same as error; a stale install, an installed qfai that is not the version the lockfile pins, makes sdd preflight and validate exit 1 even under --fail-on never)
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
-  --timings                     validate: print the time each finding family took, slowest first
+  --timings                     validate: print the time each finding family took, slowest first; runs the UI/UX checks one after another
   --check                       catalog components / design: exit 1 when a committed catalogue file is missing, does not parse, or is out of date, without writing it
   --out <path>                  report/doctor/session-review: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)

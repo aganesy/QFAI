@@ -79,8 +79,11 @@ three intent fields, so those come first.
   defaults seed `visual.*` only for a file with no `brand.theme`: where a theme
   is named, the theme's published values are the source and a prose tendency
   cannot overrule them. `visual.*` accepts only
-  `colors | typography | radius | shadow | spacing`, so a `visual.motion` or
-  `visual.interaction` key fails DESIGN.md validation.
+  `colors | typography | radius | shadow | spacing | layout`, so a
+  `visual.motion` or `visual.interaction` key fails DESIGN.md validation.
+  `visual.layout` is optional: its breakpoints and content widths come from the
+  theme where it publishes them, and `target_min_px` from the project's
+  accessibility target, never under 24.
 - The theme itself → `brand.theme`, named so a reader can install it, and the
   source of every value below.
 - Visual decisions (color, typography, radius, shadow) → the `visual.*` token

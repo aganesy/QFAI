@@ -39,6 +39,11 @@ visual:
     sm: "0 1px 2px rgba(15,23,42,0.05)"
     md: "0 4px 6px rgba(15,23,42,0.08)"
     lg: "0 12px 24px rgba(15,23,42,0.10)"
+  layout:
+    breakpoints: { sm: "40rem", md: "48rem", lg: "64rem", xl: "80rem" }
+    content_max_width: { reading: "42rem", app: "80rem", form: "36rem" }
+    target_min_px: 44
+    table_narrow: stack
 accessibility:
   contrast_ratio_min: 4.5
   motion: "respect-reduced-motion"

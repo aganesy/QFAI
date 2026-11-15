@@ -45,7 +45,7 @@ Feature: Catalogue the components a project already has
     Given a project with selected `.tsx` components
     When `qfai validate` runs in one of those profiles
     Then a committed catalogue that differs from what `qfai catalog components` would write, or does not parse as a list of components, raises one `QFAI-COMP-004` at warning naming the file and the command
-    And a project with no catalogue file raises no `QFAI-COMP` finding, and the other profiles raise none
+    And a project with no catalogue file raises no `QFAI-COMP` finding other than `QFAI-COMP-005` where a registry is declared, and the other profiles raise none
 
   # AC-0001-0307-07
   Scenario: The implementer reads the catalogue and keeps it current
