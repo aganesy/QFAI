@@ -157,7 +157,7 @@ describe("hex literals in source", () => {
     const found = findRawHexes(
       [
         'const a = "#1f2937";',
-        "<div style={{ color: '#123456' }} />",
+        "<div style={{ color: '#12ab56' }} />",
         "color: #FFF;",
         '<a href="#add">x</a>',
         "background: #00000080;",
@@ -166,7 +166,7 @@ describe("hex literals in source", () => {
     );
     expect(found).toEqual([
       { line: 1, written: "#1f2937", hex: "#1f2937" },
-      { line: 2, written: "#123456", hex: "#123456" },
+      { line: 2, written: "#12ab56", hex: "#12ab56" },
       { line: 3, written: "#FFF", hex: "#ffffff" },
       { line: 5, written: "#00000080", hex: "#00000080" },
     ]);
@@ -177,6 +177,6 @@ describe("hex literals in source", () => {
     for (const hex of ["#1f2937", "#ffffff", "#00000080", "#0f172a0d"]) {
       expect(hexes.has(hex)).toBe(true);
     }
-    expect(hexes.has("#123456")).toBe(false);
+    expect(hexes.has("#12ab56")).toBe(false);
   });
 });

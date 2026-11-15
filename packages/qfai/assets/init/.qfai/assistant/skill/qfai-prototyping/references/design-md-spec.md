@@ -158,11 +158,14 @@ file's `data-display` group; no CSS variable carries them.
   rejected so the gate can do strict equality comparison.
 - `visual.colors.overlay`: must be an `rgba(...)` value.
 - All token strings reject leading/trailing whitespace.
+- No colour, font family stack, `typography.scale` size, `spacing.base`,
+  radius, shadow, breakpoint or content width may hold `;`, `{` or `}`:
+  `qfai catalog design` writes each into a CSS declaration of the theme,
+  where one would end it.
 - Unknown keys at any level are rejected.
 - All 12 color keys, 3 font families, 4 radius keys, and 3 shadow keys
   listed above are required.
-- `visual.layout` is optional. Its lengths are strings taken verbatim and
-  hold no `;`, `{` or `}`;
+- `visual.layout` is optional. Its lengths are strings taken verbatim;
   `target_min_px` is a number of at least 24; `table_narrow` is `stack` or
   `scroll`.
 

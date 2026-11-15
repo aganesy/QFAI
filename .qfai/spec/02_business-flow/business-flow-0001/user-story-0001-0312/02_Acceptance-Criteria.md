@@ -17,7 +17,7 @@ Feature: Derive the design tokens and the theme from DESIGN.md
     Given a root `DESIGN.md` with the optional `visual.layout` and `data_display` sections
     When `qfai catalog design` runs
     Then the breakpoints, content widths and minimum target of `visual.layout` become dimension tokens and theme properties, `table_narrow` stays out of both, and the data display formats ride as text on their token group
-    And a `visual.layout` or `data_display` key or value outside the schema, or a layout length holding `;`, `{` or `}`, fails the parse of `DESIGN.md`
+    And a `visual.layout` or `data_display` key or value outside the schema, or any value the theme writes holding `;`, `{` or `}`, fails the parse of `DESIGN.md`
 
   # AC-0001-0312-03
   Scenario: The check mode compares and writes nothing

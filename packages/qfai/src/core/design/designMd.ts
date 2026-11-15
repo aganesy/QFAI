@@ -712,18 +712,6 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
       typeof typographyRaw.family_display === "string" ? typographyRaw.family_display : "",
     family_mono: typeof typographyRaw.family_mono === "string" ? typographyRaw.family_mono : "",
   };
-  // A family stack is written into a CSS declaration, so `;`, `{` and `}` would end it.
-  for (const key of FONT_KEYS) {
-    if (/[;{}]/.test(typography[key])) {
-      return {
-        error: {
-          path: `visual.typography.${key}`,
-          code: "invalid-font-family",
-          message: `visual.typography.${key} holds ";", "{" or "}", which a font family stack cannot contain.`,
-        },
-      };
-    }
-  }
   // The distributed DESIGN.md spec fixes the type-scale and weight
   // tokens. Allow the canonical names only — anything else is rejected
   // at parse time so an authored extra (`scale.hero`, `weight.black`)
@@ -935,7 +923,44 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     if ("error" in layout) return { error: layout.error };
     value.layout = layout.value;
   }
+  const breaker = findCssBreaker(value);
+  if (breaker) return { error: breaker };
   return { value };
+}
+
+/** Each `visual` string `qfai catalog design` writes into a `theme.css` declaration, by path. */
+function themeBoundValues(visual: DesignMd["visual"]): Array<[string, string]> {
+  const values: Array<[string, string]> = [];
+  const add = (section: string, record: Readonly<Record<string, string>> | undefined): void => {
+    for (const [key, text] of Object.entries(record ?? {}))
+      values.push([`${section}.${key}`, text]);
+  };
+  add("visual.colors", visual.colors);
+  for (const key of FONT_KEYS) values.push([`visual.typography.${key}`, visual.typography[key]]);
+  add("visual.typography.scale", visual.typography.scale);
+  if (visual.spacing?.base !== undefined) values.push(["visual.spacing.base", visual.spacing.base]);
+  add("visual.radius", visual.radius);
+  add("visual.shadow", visual.shadow);
+  add("visual.layout.breakpoints", visual.layout?.breakpoints);
+  add("visual.layout.content_max_width", visual.layout?.content_max_width);
+  return values;
+}
+
+/**
+ * The first theme-bound value holding `;`, `{` or `}`. Each value is written as the value of a
+ * custom property in the theme's `@theme` block, where any of the three would end the declaration
+ * or the block and let the rest of the value run as CSS of its own.
+ */
+function findCssBreaker(visual: DesignMd["visual"]): ParseError | null {
+  for (const [at, text] of themeBoundValues(visual)) {
+    if (!/[;{}]/.test(text)) continue;
+    return {
+      path: at,
+      code: "invalid-css-value",
+      message: `'${at}' holds ";", "{" or "}", which a value written into a CSS declaration cannot contain.`,
+    };
+  }
+  return null;
 }
 
 function layoutError(path: string, code: string, message: string): { error: ParseError } {
@@ -952,14 +977,6 @@ function parseLength(value: unknown, path: string): { value: string } | { error:
       path,
       "invalid-format",
       `'${path}' must be a non-empty string with no leading / trailing whitespace.`,
-    );
-  }
-  // `qfai catalog design` writes the length into a CSS declaration, so `;`, `{` and `}` would end it.
-  if (/[;{}]/.test(value)) {
-    return layoutError(
-      path,
-      "invalid-format",
-      `'${path}' holds ";", "{" or "}", which a CSS length cannot contain.`,
     );
   }
   return { value };

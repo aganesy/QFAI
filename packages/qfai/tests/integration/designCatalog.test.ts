@@ -146,6 +146,16 @@ describe("layout and data display values reach the token file when DESIGN.md sta
     const blocked = await cli(["catalog", "design", "--root", injected]);
     expect(blocked.code).toBe(1);
     expect(blocked.err).toContain("visual.typography.family_sans");
+    const shadowed = await projectWith({
+      "DESIGN.md": sample.replace(
+        /^(\s*sm: )"0 1px 2px [^"]*"/m,
+        '$1"0 1px 2px #0a0a0a; } body { background: url(https://x/t) } @theme {"',
+      ),
+    });
+    const shadowBlocked = await cli(["catalog", "design", "--root", shadowed]);
+    expect(shadowBlocked.code).toBe(1);
+    expect(shadowBlocked.err).toContain("visual.shadow.sm");
+    expect(await exists(shadowed, THEME)).toBe(false);
   });
 });
 
@@ -250,12 +260,12 @@ describe("a hex colour in UI source that matches no token is a warning", () => {
     const root = await projectWith({
       "src/page.tsx": [
         'export const a = "#1f2937";',
-        'export const b = "#123456";',
+        'export const b = "#12ab56";',
         'export const c = "#FFF";',
         'export const d = <a href="#add">x</a>;',
         'export const e = "#00000080";',
-        "// TODO(#123)",
-        "export const f = <p>Order #1234</p>;",
+        "// see #12ab",
+        "export const f = <p>Order #12ab</p>;",
         'export const g = <path fill="url(#fade)" />;',
         "",
       ].join("\n"),
@@ -265,7 +275,7 @@ describe("a hex colour in UI source that matches no token is a warning", () => {
     expect(found.map((item) => [item.code, item.severity, item.file, item.loc?.line])).toEqual([
       ["QFAI-DCAT-003", "warning", "src/page.tsx", 2],
     ]);
-    expect(found[0]?.message).toContain("`#123456`");
+    expect(found[0]?.message).toContain("`#12ab56`");
   });
 });
 

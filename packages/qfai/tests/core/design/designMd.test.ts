@@ -1366,13 +1366,54 @@ describe("parseDesignMd: data_display", () => {
     [sampleWithLayout(['gutter: "1rem"']), "visual.layout.gutter"],
     [sampleWithLayout(["breakpoints:", '  xxl: "96rem"']), "visual.layout.breakpoints.xxl"],
     [sampleWithLayout(["target_min_px: 20"]), "visual.layout.target_min_px"],
-    [
-      sampleWithLayout(["content_max_width:", '  app: "80rem; } body { color: red"']),
-      "visual.layout.content_max_width.app",
-    ],
     [sampleWithSections(["data_display:", '  date: ""']), "data_display.date"],
   ])("rejects a value outside the schema at %#", (text, at) => {
     const result = parseDesignMd(text);
     expect("error" in result && result.error.path).toBe(at);
+  });
+
+  // QFAI:EX-0001-0312-04
+  // A value the theme writes into a CSS declaration may not end it.
+  const BREAKER = "; } body { background: red } @theme {";
+  const withValue = (line: string, edited: string): string => VALID_SAMPLE.replace(line, edited);
+  it.each([
+    [
+      "visual.colors.primary",
+      withValue('primary:        "#1F2937"', `primary: "#1F2937${BREAKER}"`),
+    ],
+    [
+      "visual.typography.family_sans",
+      withValue('family_sans:    "Inter, system-ui, sans-serif"', `family_sans: "Inter${BREAKER}"`),
+    ],
+    [
+      "visual.typography.scale.base",
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem${BREAKER}"`,
+      ),
+    ],
+    [
+      "visual.spacing.base",
+      withValue(
+        '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+        `    lg: "0 12px 24px rgba(15,23,42,0.10)"\n  spacing:\n    base: "0.25rem${BREAKER}"`,
+      ),
+    ],
+    ["visual.radius.md", withValue('md:   "0.5rem"', `md:   "0.5rem${BREAKER}"`)],
+    [
+      "visual.shadow.sm",
+      withValue('sm: "0 1px 2px rgba(15,23,42,0.05)"', `sm: "0 1px 2px #0a0a0a${BREAKER}"`),
+    ],
+    ["visual.layout.breakpoints.sm", sampleWithLayout(["breakpoints:", `  sm: "40rem${BREAKER}"`])],
+    [
+      "visual.layout.content_max_width.app",
+      sampleWithLayout(["content_max_width:", `  app: "80rem${BREAKER}"`]),
+    ],
+  ])("rejects ; { or } in %s", (at, text) => {
+    const result = parseDesignMd(text);
+    expect("error" in result && result.error).toMatchObject({
+      path: at,
+      code: "invalid-css-value",
+    });
   });
 });

@@ -115,7 +115,7 @@ export type RawHex = { line: number; written: string; hex: string };
 // reference, and not followed by more of a name.
 const RAW_HEX_RE =
   /(?<![\w&#/(])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![\w-])/g;
-// Comments hold prose such as `// see #123`, so they are blanked before the scan. The `//` form
+// Comments hold prose such as `// see #12ab`, so they are blanked before the scan. The `//` form
 // is not read after a `:`, so the path of a URL such as `https://` is not taken for a comment.
 const COMMENT_RE = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<!:)\/\/[^\n]*/g;
 /** An attribute whose value is a colour: `style="color: #fff"`, `fill="#fff"`. */

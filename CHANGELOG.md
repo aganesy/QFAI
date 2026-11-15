@@ -19,7 +19,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `saas-package`, `verify` and `full` profiles when the token file or the
   theme is out of date (`QFAI-DCAT-001`, `QFAI-DCAT-002`) and about a hex
   colour in a `uiux.surfacePaths` file that matches no colour of `DESIGN.md`
-  (`QFAI-DCAT-003`).
+  (`QFAI-DCAT-003`). The `DESIGN.md` parse is stricter: a colour, font family
+  stack, type-scale size, `spacing.base`, radius, shadow, breakpoint or content
+  width holding `;`, `{` or `}` now fails it, since the theme writes each into a
+  CSS declaration.
 
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
