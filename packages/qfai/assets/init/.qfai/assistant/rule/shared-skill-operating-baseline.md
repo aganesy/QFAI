@@ -293,7 +293,12 @@ Read `.qfai/assistant/rule/references/context-summary.md` when you hand work to 
 
 ## Locale References
 
-Read the product locale's reference under `.qfai/assistant/rule/references/locale/` when the specification or `tech.md` states the product's locale and the run writes contracts for, or builds, a field or screen that shows or takes text, numbers, dates or identifiers. `.qfai/assistant/rule/references/locale/ja.md` covers Japanese: input normalisation, IME composition, currency, dates and eras, identifier fields, line breaking, line height and fonts. Not needed when no locale is stated or the run touches no such field or screen.
+Read the product locale's reference under `.qfai/assistant/rule/references/locale/` when the
+specification or `tech.md` states the product's locale and the run writes contracts for, or builds,
+a field or screen that shows or takes text, numbers, dates or identifiers.
+`.qfai/assistant/rule/references/locale/ja.md` covers Japanese: input normalisation, IME
+composition, currency, dates and eras, identifier fields, line breaking, line height and fonts. Not
+needed when no locale is stated or the run touches no such field or screen.
 
 ## Completion Contract (Shared)
 
