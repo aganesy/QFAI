@@ -13,6 +13,12 @@ includes UI. For a whole-site redesign, a new product that carries UI and has no
 theme, or a survey the user asks for, also run
 `.qfai/assistant/rule/references/visual-reference-survey.md`.
 
+`prototyping-grill` also triggers it, scoped to UI, when a run adds a screen
+type or a region the project's pattern references, component catalogue and
+root `DESIGN.md` do not cover. It then researches those gaps alone, as
+`.qfai/assistant/step/prototyping-grill/STEP.md#ui-research-for-uncovered-screens`
+says. A run whose screens they all cover runs no research.
+
 ## Output Schema
 
 ```yaml

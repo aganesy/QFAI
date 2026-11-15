@@ -18,6 +18,9 @@ settles, by talking, the questions that do not need a prototype to answer.
 - `.qfai/prototype/grilling.md`, where an earlier run left one.
 - `.qfai/prototype/final/index.html` and `final/handoff.json`, when the request
   scopes the run (see [Run scope](#run-scope)).
+- For the screens the run adds, the pattern references, catalogues and
+  protocol [UI research for uncovered screens](#ui-research-for-uncovered-screens)
+  names.
 
 ## Writes
 
@@ -27,6 +30,9 @@ settles, by talking, the questions that do not need a prototype to answer.
   the session adopted, and one Interview row for each question put to the user.
   The step writes the record and never reads one: no file under
   `paths.deliberationDir` is an input.
+- In the stage report, the gap check and, when it finds a gap, the
+  `research_summary` of
+  [UI research for uncovered screens](#ui-research-for-uncovered-screens).
 
 ## Scope
 
@@ -83,6 +89,30 @@ needs a route in `final/index.html` and a `procurement` row. Add each screen
 that lacks either to the scope; when the scope would then hold every screen,
 run the whole product instead.
 
+## UI research for uncovered screens
+
+A screen the run adds is one in scope that has no route in
+`.qfai/prototype/final/index.html`. A `restyle` loop adds no screen and skips
+this section.
+
+Check each screen the run adds against what the project already has:
+
+- its type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`,
+  or, for a marketing screen, the entry for each of its sections in
+  `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`;
+- each region its contract names, against the component catalogue the
+  `Component catalogue` row of `<paths.contractsDir>/tech.md` names and the
+  components `.qfai/catalog/components.yaml` lists;
+- root `DESIGN.md`.
+
+A gap is a screen type with no entry in those references, or a region that
+neither catalogue nor root `DESIGN.md` covers. With one gap or more, run
+`.qfai/assistant/rule/research-first-protocol.md` before the session, scoped
+to UI and to the gaps alone: it researches no screen type and no region the
+project already covers. The session reads its `best_practices` and
+`anti_patterns` before its first question. With no gap, run no research, and
+name in the stage report the entry that covers each screen the run adds.
+
 ## What is grilled, and what is prototyped
 
 This skill exists for the questions talking cannot settle. "How should this
@@ -123,12 +153,15 @@ user's behalf — with more evidence than before, and still not the user's answe
 1. Resolve the scope above. With no UI-bearing contract at all, there is nothing
    to grill: go on to `prototyping-preflight`, whose deterministic no-op ends
    the run.
-2. **Only what the inputs leave open.** The specs, the UI contracts in scope
+2. Run the gap check of
+   [UI research for uncovered screens](#ui-research-for-uncovered-screens),
+   and the research it calls for.
+3. **Only what the inputs leave open.** The specs, the UI contracts in scope
    and `DESIGN.md` are read first, and a question they answer is not on the
    frontier: the method reads a fact rather than asking about it, and a session
    that re-opens a frozen requirement produces an answer that drifts from it.
    What is left is what the session is for.
-3. Run the session. **It is delegated** (`.agents/rules/grilling.md` § Two
+4. Run the session. **It is delegated** (`.agents/rules/grilling.md` § Two
    kinds of session). The session agent starts the griller, never a stage
    worker. The griller interviews the session agent, which generates the
    prototype; the evaluator is not interviewed. Each decision that is not critical takes its
@@ -138,8 +171,8 @@ user's behalf — with more evidence than before, and still not the user's answe
    The method is `.agents/rules/grilling.md`, and the session's own decisions
    are classified there rather than in this skill's buckets — they are the
    session's operations, not this one's.
-4. Write the record (see [The record](#the-record)).
-5. Apply the gate below before `prototyping-preflight` starts.
+5. Write the record (see [The record](#the-record)).
+6. Apply the gate below before `prototyping-preflight` starts.
 
 ## Autopilot
 
@@ -203,7 +236,8 @@ this gate's subject — those are what the loop exists to make answerable, and
 they are open by design until the user has something to react to.
 
 Otherwise the step passes when `.qfai/prototype/grilling.md` exists
-with both sections and every row carries a `Scope`. Every `## Run scope`
+with both sections and every row carries a `Scope`, and the stage report holds
+the gap check, with a `research_summary` when it found a gap. Every `## Run scope`
 entry names a declared screen, or a component (by existing path or
 `procurement` item) that at least one screen in `final/index.html` renders.
 Any other entry stops the run before the first iteration, naming it.
