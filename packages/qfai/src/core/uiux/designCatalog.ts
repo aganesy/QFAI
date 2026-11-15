@@ -119,13 +119,13 @@ const RAW_HEX_RE =
 // is not read after a `:`, so the path of a URL such as `https://` is not taken for a comment.
 const COMMENT_RE = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<!:)\/\/[^\n]*/g;
 /**
- * An attribute whose value is a colour: `style="color: #fff"`, `fill="#fff"`, or one Vue binds,
- * `:fill="'#fff'"`. The name starts the line or follows whitespace, so `data-color="#fff"` is
+ * An attribute whose value is a colour: `style="color: #fff"`, `fill="#fff"`, React's
+ * `stopColor="#fff"`, or one Vue binds, `:fill="'#fff'"`. The name starts the line or follows whitespace, so `data-color="#fff"` is
  * another attribute. The value runs to the quote that opened it, so a quoted expression inside a
  * bound value is still part of it.
  */
 const COLOR_ATTRIBUTE_RE =
-  /(?:^|\s)(?::|v-bind:)?(?:style|fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*\{?\s*(["'`])(?:(?!\1).)*$/i;
+  /(?:^|\s)(?::|v-bind:)?(?:style|fill|stroke|color|stop-?color|flood-?color|lighting-?color)\s*=\s*\{?\s*(["'`])(?:(?!\1).)*$/i;
 /**
  * Any other attribute's value, such as `aria-controls="#bad"` or Vue's `:href="'#bad'"`: never a
  * colour place. Markup writes no space around an attribute's `=`, which keeps
@@ -475,11 +475,33 @@ function splitOutsideParens(text: string, separator: string): string[] {
   return parts;
 }
 
+/**
+ * A font stack's family names, split on the commas outside quotes, with each name's quotes and
+ * escapes taken off: `"ACME, Inc", sans-serif` is two names.
+ */
 function fontStack(stack: string): string[] {
-  return stack
-    .split(",")
-    .map((family) => family.trim().replace(/^["']|["']$/g, ""))
-    .filter((family) => family !== "");
+  const families: string[] = [];
+  let current = "";
+  let quote: string | null = null;
+  for (let index = 0; index < stack.length; index += 1) {
+    const character = stack.charAt(index);
+    if (character === "\\") {
+      current += stack.charAt(index + 1);
+      index += 1;
+    } else if (quote !== null) {
+      if (character === quote) quote = null;
+      else current += character;
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === ",") {
+      families.push(current.trim());
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+  families.push(current.trim());
+  return families.filter((family) => family !== "");
 }
 
 function hyphen(key: string): string {

@@ -949,8 +949,9 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
 }
 
 /**
- * The first theme-bound value holding a number too long to read as one, such as a length of
- * hundreds of digits. The token file would state it as no number at all.
+ * The first number the token file would state as no number at all: one written in a theme-bound
+ * value too long to read, such as hundreds of digits, or a spacing step's length, the base times
+ * the step, too large to compute. Every dimension the token file states is one of these.
  */
 function findOverflowingNumber(visual: DesignMd["visual"]): ParseError | null {
   for (const [at, text] of themeBoundValues(visual)) {
@@ -960,6 +961,16 @@ function findOverflowingNumber(visual: DesignMd["visual"]): ParseError | null {
       path: at,
       code: "invalid-format",
       message: `'${at}' holds a number too large to read.`,
+    };
+  }
+  const base = Number(/^\d*\.?\d+/.exec(visual.spacing?.base ?? "")?.[0] ?? "0");
+  const steps = visual.spacing?.scale ?? [];
+  for (let index = 0; index < steps.length; index += 1) {
+    if (Number.isFinite(base * (steps[index] ?? 0))) continue;
+    return {
+      path: `visual.spacing.scale[${index}]`,
+      code: "invalid-format",
+      message: `'visual.spacing.scale[${index}]' times 'visual.spacing.base' is too large to compute.`,
     };
   }
   return null;

@@ -104,6 +104,24 @@ describe("the token file and the theme", () => {
     expect(renderDesignTokens(design)).toBe(renderDesignTokens(await sampleDesign()));
   });
 
+  // QFAI:EX-0001-0312-01
+  it("splits a font stack on the commas outside quotes, and drops each name's quotes", async () => {
+    const design = await sampleDesign((text) =>
+      text.replace(
+        /family_sans: .*$/m,
+        `family_sans: '"ACME, Inc", "Noto \\"Sans\\"", sans-serif'`,
+      ),
+    );
+    expect(tokenAt(design, "font.family.sans.$value")).toEqual([
+      "ACME, Inc",
+      'Noto "Sans"',
+      "sans-serif",
+    ]);
+    expect(renderTheme(design)).toContain(
+      '  --font-sans: "ACME, Inc", "Noto \\"Sans\\"", sans-serif;\n',
+    );
+  });
+
   // QFAI:EX-0001-0312-02
   it("reads a negative shadow offset or spread, and leaves a negative blur to the theme", async () => {
     const spread = await sampleDesign((text) =>
@@ -181,6 +199,18 @@ describe("hex literals in source", () => {
       ].join("\n"),
     );
     expect(found.map((hex) => hex.line)).toEqual([3, 4]);
+  });
+
+  // QFAI:EX-0001-0312-09
+  it("reads React's camelCase colour attributes as colour places", () => {
+    const found = findRawHexes(
+      [
+        '<stop stopColor="#12ab56" />',
+        '<feFlood floodColor="#12ab56" />',
+        '<feDiffuseLighting lightingColor="#12ab56" />',
+      ].join("\n"),
+    );
+    expect(found.map((hex) => hex.line)).toEqual([1, 2, 3]);
   });
 
   // QFAI:EX-0001-0312-09

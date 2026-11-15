@@ -1477,6 +1477,20 @@ describe("parseDesignMd: data_display", () => {
   });
 
   // QFAI:EX-0001-0312-04
+  it("rejects a spacing step whose length, the base times the step, is too large to compute", () => {
+    const result = parseDesignMd(
+      withValue(
+        '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+        `    lg: "0 12px 24px rgba(15,23,42,0.10)"\n  spacing:\n    base: "100000000000000000000px"\n    scale: [1e308]`,
+      ),
+    );
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.spacing.scale[0]",
+      code: "invalid-format",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
   it("rejects a repeated spacing step, which would name two tokens alike", () => {
     const result = parseDesignMd(
       withValue(
