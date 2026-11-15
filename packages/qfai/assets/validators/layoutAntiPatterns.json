@@ -3,7 +3,7 @@
     "id": "lap-007-state-not-represented",
     "regex": "(?!).*",
     "scope": "semantic",
-    "source": "the screen contract's required_states: a state the contract declares and the screen does not show"
+    "source": "the business-screen floor in interface-clarity.md, What a business screen always has: an empty, loading, error or success state an application screen does not show and its UI contract does not record as `none` under `states`; or a state the screen contract declares and the screen does not show"
   },
   {
     "id": "lap-008-no-back-affordance",

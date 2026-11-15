@@ -4,6 +4,123 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
+  lists what a product whose locale is Japanese needs from its contracts and
+  code: NFKC input normalisation, IME composition on Enter, yen, number, date
+  and era formats, postcode, phone, corporate and invoice numbers, line
+  breaking, line height and font loading. `sdd-contract` and `implement-tdd`
+  read it when the specification or `tech.md` states the locale, so these are
+  settled once instead of found screen by screen as bugs.
+
+- **A part a screen leaves out has one place for its reason.** The rule said
+  leaving out a part every business screen has needs a reason in the screen's
+  UI contract, but named no field for it, and the app shell, the home and the
+  shared components belong to no single screen. A reviewer could not tell a
+  deliberate omission from a missing part. A UI contract screen now takes an
+  optional `omitted` list of `{ part, reason }` entries, and the parts once per
+  application are listed on the home screen's contract until an app-level UI
+  contract exists. `qfai validate` reports an `omitted` that is not a list, an
+  entry that is not a mapping, and an entry with no `part` or no `reason`, as
+  `QFAI-CONTRACT-052` at error. The rule, the UI contract guide and template,
+  the `sdd-contract` step and the product-surface reviewer point at the list.
+
+- **The built app is checked for accessibility on every route.**
+  `test-layers.md` gains an accessibility layer: axe through
+  `@axe-core/playwright`, limited to the WCAG 2.2 A and AA rules, on every web
+  route (one starting with `/`) the UI contracts declare, as each role that can
+  reach it. A violation fails unless the spec waives it with a reason, and
+  keyboard order and screen-reader names stay in the screen review. In a UI
+  project `implement-scaffold` installs `@axe-core/playwright` as the project's
+  dev dependency and writes the spec from a shipped template, `verify-repo-gate`
+  runs it through the `Test` command, and `verify-qfai-gate` records whether it
+  exists. `qfai validate`
+  warns with `QFAI-AXE-001` in the verify and full profiles when a project with
+  web screens has no test that calls axe. QFAI itself takes no axe dependency.
+  Closes #4309.
+
+- **The contract step writes the app frame once.** The app shell, the
+  navigation for each role and the home belong to no single flow, so
+  `sdd-contract` writes them as the screens of one UI contract, the app frame,
+  when no UI contract holds the shell or records why the application has none.
+  Every application screen inside the shell names the frame's shell screen in
+  `navigation.shell`, and prototyping reads the frame with every flow. A once-per-application
+  part the project leaves out records its reason in the frame, and
+  `interface-clarity.md` and `product-surface-reviewer` read the reason there.
+  Settings, member management and notifications are added only when a story
+  needs them.
+
+- **`uiText.elements` lets the plain-text check read a project component as the
+  element it renders.** In `qfai.config.yaml`, map a component to an element
+  `QFAI-UITEXT-001` already exempts, or to `status` or `alert` for a live
+  region, as `TableHead: th` or `StatusRegion: status`. A text inside the
+  component then needs no `qfai-text` reason, in `.tsx`, `.jsx`, `.vue`,
+  `.svelte` and `.html` files alike. A key that is not a component name, or a
+  value outside that list, is reported as `QFAI-CFG-002`. Closes #4329.
+
+- **Validate warns about a screen with no states or no navigation.** An
+  application screen of a UI contract with no `states`, or without one of
+  `default`, `empty`, `loading`, `error` and `success`, raises
+  `QFAI-CONTRACT-053` at warning, and one with no `navigation` raises
+  `QFAI-CONTRACT-054`. A screen in no navigation on purpose writes
+  `navigation: { none: <reason> }`, and a `surface: marketing` screen is asked
+  for neither. The UI contract guide, the contract artifact rules, the
+  `sdd-contract` step and the shipped sample say so. Part of #4119.
+
+- **Interactive widgets come from a catalogue, and `qfai validate` warns
+  about hand-written ones.** `ui-procurement.md` lists the widgets that are
+  not hand-authored when a catalogue or headless library is available, from
+  dialog and menu to date picker and accordion, each with its WAI-ARIA
+  Authoring Practices pattern. An authored one records that pattern and its
+  keyboard behaviour in its `@a11y` tag, with a test. Where a catalogue is
+  installed, `qfai validate` warns about a hand-written `role="dialog"`,
+  `role="menu"`, `role="tablist"` or `aria-modal` outside a catalogue item's
+  own file (`QFAI-COMP-005`), and about a catalogued widget with no `@a11y`
+  (`QFAI-COMP-006`). Closes #4299.
+
+- **The implement steps now write the per-role navigation journey.** Where an
+  app has navigation of its own, `implement-scaffold` adds an empty journey
+  test for each role a flow adds a screen to, and records the roles that sign
+  in. `implement-credentials` serves one session per such role, and
+  `implement-acceptance` writes or extends each role's test: it reaches every
+  screen of that role through the app's own links and controls. Until UI
+  contracts name the roles of each screen, a role's screens are those of the
+  flows whose stories name it as their actor. `qfai validate` does not report
+  the journey, so each step names its file.
+
+- **Validate warns about a list or table with no list behaviour.** A
+  `type: list` or `type: table` element of an application screen in a UI
+  contract with no `list` raises `QFAI-CONTRACT-055` at warning. An element
+  with no list behaviour on purpose writes `list: { none: <reason> }`, and a
+  `surface: marketing` screen is asked nothing. The UI contract guide, the
+  contract artifact rules, the `sdd-contract` step and the shipped sample say
+  so. Part of #4119.
+
+- **A UI contract list or table element says how it is shown and narrowed.**
+  The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
+  artifact rules and the `sdd-contract` step give every `type: list` or
+  `type: table` element a `list` key: `columns`, `search`, `filters`, `sort`
+  and `pagination`, each set or `none` with the reason the element does
+  without it, the same shape as `states`. The business UI pattern reference
+  now says a List behaviour applies to what `list` sets and the entry it
+  concerns records a departure. Validate does not check the key yet.
+  Closes #4109.
+
+- **`DESIGN.md` can hold its layout values.** An optional `visual.layout`
+  section takes the breakpoints, the content width of a reading page, an app
+  page and a form, the minimum tap target (at least 24 px, the WCAG 2.5.8
+  floor) and how a table behaves at a narrow width (`stack` or `scroll`), so a
+  responsive check reads them from one place. A file without it still parses.
+
+- **A UI contract screen names its business screen type by ID.** The screen
+  types of `qfai-sdd`'s `references/business-ui-patterns.md` now carry the IDs
+  `list`, `detail`, `form`, `settings`, `members` and `dashboard`, and an
+  application screen may declare its type as `pattern: <id>`, which the
+  `sdd-contract` step writes. `qfai validate` reports any other value as
+  `QFAI-CONTRACT-056`, at error; a screen without the key is asked nothing,
+  and a marketing screen leaves it out.
+
 ### Changed
 
 - **Data values need no `qfai-text` reason, and one reason covers a whole
@@ -21,7 +138,185 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   top of `body` or of a component's top-level JSX fragment covers only what
   it stands before.
 
+- The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
+
+- **A scope that stops before implementation can reach its own commit.** In
+  `npx qfai workflow plan`, a scope that writes the specification and leaves
+  out the route's implement stage, such as `medium` of `add-feature`, now holds
+  `testsPending: true`. In such a run the QFAI gate still runs the full scan and
+  still fails on any error, but lists as pending each missing-test error
+  (`QFAI-STORY-006`) for an ID the run's specification stage wrote. The
+  repository gate's fix loop leaves those alone instead of writing the tests.
+  When those are its only errors, the local commit is made and its report lists the
+  pending tests for the implement stage. The
+  scope question says so for that option. Other scopes are printed as before.
+
+- **The search-protection hook allows a search scoped inside the project.** A
+  grep, rg, git grep, Select-String, findstr or native search call that names
+  at least one path, every one inside the project root, now runs. A search with
+  no path, one over the project root itself (such as `.`), and one whose path
+  the hook cannot place inside the project are still redirected to the graph:
+  a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
+  home prefix or a `..` segment. A findstr with `/s` and a native search scoped
+  only by an include glob are also redirected.
+
+- **A merge waits for every check of its head commit.** Step 3 of the shipped
+  `triage-operate` step now says that the checks still running before a merge
+  are every check run of the pull request's head commit that is queued or in
+  progress, including checks branch protection does not require. The merge
+  waits until none is left, or stops and reports them, and a failed check stops
+  it too until a rerun clears it. The report of a merge names, next to the
+  merge commit, each check run of the head commit with its conclusion when it
+  merged. Part of #4399.
+
+- **Settled work that adds screens gets the design and prototype stages.**
+  The extraction has a new qualifier, `new-screens`, for a settled change that
+  adds new UI contracts or new routes users see: an approved record with a
+  task, a settled upstream design, or an order. Such a change now routes
+  `apply-settled-prototype` instead of `apply-settled`. Before, it went straight
+  to implementation with no design or prototype stage. A new feature with no
+  settled record is covered by `visual-open`.
+
+- **The parts of a business screen outrank the minimal-scope article.**
+  Article VII of the shipped constitution now names the list under
+  `## What a business screen always has` in `interface-clarity.md` among what
+  outranks it, beside the safety floor. On an application screen whose UI
+  contract records no reason to leave a part out, navigation, list behaviour,
+  states and feedback are no longer cut as scope beyond the minimum, and the
+  architecture, product-surface and requirements reviewers refuse such a cut;
+  how a part is built remains subject to the article.
+
+- **A run that adds screens researches what the project has no pattern for.**
+  Before its session, `prototyping-grill` now checks each screen the run adds:
+  its type against the business UI patterns, and each element and `structure`
+  group its UI contract declares against the component catalogue `tech.md`
+  names. For a screen type or a component neither covers, it runs the
+  research-first protocol, scoped to UI and to those gaps alone, and the grill
+  session starts from that research. A run whose screens they all cover runs
+  no research. Before, only `/qfai-discussion` ran the protocol. Closes #4293.
+
+- **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
+  examples are green, each screen the flow adds or changes is placed in the
+  shell its UI contract names, linked from its entry points, built from shared
+  components for the parts the screens repeat, and captured. The flow is not
+  done until that is so.
+
+- **The prototype reviewer checks the business-screen floor, not only what
+  the UI contract declares.** On an application screen the run adds or
+  changes, a missing way back, or empty, loading, error or success state with
+  no reason recorded in the UI contract blocks, as does one the run removes. A
+  gap that was already there before the run goes in the critique. The app
+  shell is judged once for the application: it blocks only when the run adds,
+  alters or removes it, so a scoped run is never blocked by a shell it may not
+  build. `lap-007-state-not-represented` now rests on the same floor. Closes
+  #4129.
+
+- **The prototype reviewer looks for a left-out part's reason where the UI
+  contract guide puts it.** A part a screen leaves out is excused by an entry
+  in the `omitted` list of that screen's UI contract, a state the screen
+  cannot be in by `none` under its `states`, and a once-per-application part
+  such as the app shell by an entry on the app frame's contract. The reviewer
+  no longer reads a shell reason recorded on the app frame as missing.
+  Closes #4389.
+
+- **`verify-repo-gate` no longer escalates a gate whose only failures are
+  pending test obligations.** Its fix loop still stops and escalates a failing
+  gate it has no fix list for, except when the only failures are the
+  missing-test errors a `testsPending` scope leaves pending for the implement
+  stage. Part of #4379.
+
+- **A UI pattern repeated across screens becomes a shared component.**
+  `minimal-implementation.md` no longer counts a region that several screens
+  repeat as "an operation done once": it follows rung 1 of `ui-procurement.md`
+  and the business-screen floor. When two or more UI contracts name the same
+  region, rung 1 now extracts the shared component at its first use instead of
+  waiting for the second screen. A shared component that no UI contract names is
+  still not built in advance. Closes #4099.
+
+- **A checkout that did not reinstall after a qfai upgrade is caught.** When
+  the running qfai is the project's own copy and the lockfile
+  (`package-lock.json`, `pnpm-lock.yaml` or `yarn.lock`) pins another version,
+  every command prints one stderr line naming both versions and the install
+  command, and `qfai validate`, `qfai sdd preflight` and `qfai workflow plan`
+  stop with exit 1. A `workflow plan` refusal carries the new reason
+  `stale-install`. The upgrade guide now tells every checkout and worktree to
+  run its install after pulling a qfai upgrade.
+
+- **A request for new screens plans the prototype loop.** `qfai-run` now sets
+  the qualifier `visual-open` when a request adds a screen or a UI surface that
+  no confirmed prototype covers, even when the request asks no design question.
+  Such a feature routes `prototype-feature`. A control added to an existing
+  screen in that screen's style still routes `add-feature` unless the request
+  leaves its look open.
+
+- **Parallel screen units start from a shared foundation.** Disjoint writes no
+  longer let two or more parallel story units that build application screens
+  each author their own list toolbar, page header, back link and status
+  badges. Before they fan out, the session agent lands a foundation unit: the
+  app shell, a page template for each screen type the units build, the status
+  map and the shared list behaviour, from the component catalogue or extracted
+  once. A new parallel-unit gate condition, G7, fails a screen unit whose
+  screen type has no template yet, and each screen unit's brief names the
+  templates and catalogue entries it uses. A split with fewer than two screen
+  units is unaffected. Closes #4306.
+
+- **The interface-clarity cut is judged with production-sized data.** The test
+  in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
+  user is worse off) is asked with the volume of data the screen will hold in
+  production, not the test fixture, so a list control is not cut because a
+  five-row fixture does not need it.
+
+- **`validate.json` names the UI/UX check times for how they ran.**
+  `familyTimings.overlapping` becomes `familyTimings.uiux`, with
+  `familyTimings.sharedMarkdownReadMs` and `familyTimings.htmlMockLoadMs`
+  beside it, and `timings.uiuxPartsRun` says whether the parts ran
+  `side-by-side` or `one-after-another`. Closes #4279.
+
+- **The prototype loop builds and reviews from the UI research.** When
+  `prototyping-grill` researched screen types or components the project has no
+  pattern for, `prototyping-loop` now reads that research summary itself. Each
+  screen lineage receives the findings the grill applied for its own gaps: the
+  generator builds to them, and the reviewer grades those parts against them,
+  beside the grill session's rows. A finding the grill rejected or deferred reaches neither. Before, the
+  findings reached the prototype only through what the grill session settled.
+  Closes #4387.
+
+- **UI research and design close gaps a redesign exposed.**
+  - The product-surface reviewer also checks built screens against the
+    _Components_, _Layout and composition_ and _Displacement_ anti-patterns,
+    such as serial numbers on cards and all-caps eyebrow labels.
+  - The visual reference survey opens a whole-site redesign with an inventory
+    of the current surface, and the user decides every removal. Each finding to
+    adopt is checked against the anti-pattern list and `do_not_look_like`.
+  - `.agents/rules/interface-clarity.md` cuts development notation, such as
+    code, spec IDs or test syntax, from screens visitors read.
+  - A figure or claim shown on more than one page comes from one source.
+
+- **A delegated lookup answer a decision uses is kept in a file.** Before the
+  session agent uses a delegated lookup's answer in a decision, it now writes
+  the answer with its citations to `<paths.outDir>/research/`, and the decision
+  cites that file. Before, the answer lived only in the result message, which
+  context compaction shortened to a line. Closes #4407.
+
+- **`QFAI-UITEXT-001` says what it reads.** The finding's fix text and the
+  implementer guidance say that the check reads only literal text, and that
+  moving a sentence into a constant, a prop or an attribute value is not a fix:
+  the product-surface review still judges that copy.
+
 ### Fixed
+
+- **The search-protection hook reads a search that a program runner or a piped
+  shell runs.** `nohup`, `setsid`, `nice`, `ionice`, `stdbuf`, `timeout` and
+  `xargs` are unwrapped like `env`, so `nohup rg foo /` and
+  `git ls-files | xargs grep -r bar /` are denied as searches. A pipeline
+  stage that runs its input as a shell, such as `| sh`, `| bash -s` or
+  `| pwsh -Command -`, is denied with a message saying the hook cannot read
+  the commands that shell runs. Closes #4384.
+
+- **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
+  derived-value declaration covered both a value the DB stores and a value
+  the API does not require, the two remedy sentences ran together with no
+  space. They are now separated by one.
 
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
   info.** On a Windows `git worktree`, git can store a directory wrapper as a
@@ -29,6 +324,51 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
+
+- **The prototype reviewer prompt fits the 500-line ceiling again.** The
+  business-screen floor passages are re-wrapped and tightened with the same
+  rules, so the shipped prompt stays within the size an agent reads in one
+  pass.
+
+- **E2E tests wait until a server-rendered page is interactive.** A test that
+  filled a field before the page hydrated lost the value and failed some runs.
+  The guidance now has the app shell set `data-qfai-ready` on `<html>` once it
+  is interactive, and the test wait for it after each page load. The
+  `/qfai-implement` Playwright recipe shows a `waitForAppReady` helper, the
+  wait for a new page after a click, and the shell code for React and plain
+  DOM. The test layers rule and the scaffold and acceptance steps forbid a
+  fixed sleep or a blind retry in its place.
+
+- **The search-protection hook lets a search of one file outside the project
+  run.** A search the hook did not already allow as scoped inside the project
+  is no longer denied when it is a grep, rg, findstr or Select-String that is
+  the only command of its event, with no pipeline stage, whose literal pattern
+  names no existing file and whose one absolute file operand names an existing
+  single-link regular file outside the project worktree and the checkout the
+  hook belongs to, before and after symbolic links, so
+  `grep -n foo /etc/hosts` runs. An outside directory or relative operand, a
+  second operand, git grep, an outside file beside another command or
+  pipeline stage or behind `env`, a search that mixes project and outside
+  paths, a glob, `~`, variable or `..` operand, a link, hard link, MSYS link
+  file or shortcut, an option that reads another file, `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH` set,
+  or an operand that does not exist stays denied. Fixes #4179.
+
+- **A `Derived (not stored)` declaration for a value no DB column holds is
+  accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
+  credits each declared value that the API contract requires through an `enum`
+  on the field, as the reference describes for a status computed at read time.
+  A value only in a description is still reported, and the message now says the
+  API contract declares no `enum` for it.
+
+- **`qfai validate --timings` times each UI/UX check on its own.** The six
+  UI/UX checks ran side by side, so a check that waited on file reads was
+  charged for the others' work and the `slowest` names could point at a check
+  that did almost nothing. Under `--timings` they now run one after another,
+  the line says `slowest, one after another`, and the shared Markdown read
+  and the html-mock parser's one-off load are each reported once, on their
+  own, as part of the group's time. A run without `--timings` still runs them
+  side by side, and the findings and counts are the same either way.
+  Fixes #4279.
 
 ## [2.5.0] - 2026-11-15
 
@@ -143,12 +483,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the key, whatever its value, is ignored.
 
 ### Changed
-
-- **The interface-clarity cut is judged with production-sized data.** The test
-  in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
-  user is worse off) is asked with the volume of data the screen will hold in
-  production, not the test fixture, so a list control is not cut because a
-  five-row fixture does not need it.
 
 - **`ui-procurement.md` checks runtime compatibility and tries a native
   element first.** A new rung before the design system asks whether a native
@@ -445,13 +779,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version the project would adopt.
 
 ### Fixed
-
-- **A `Derived (not stored)` declaration for a value no DB column holds is
-  accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
-  credits each declared value that the API contract requires through an `enum`
-  on the field, as the reference describes for a status computed at read time.
-  A value only in a description is still reported, and the message now says the
-  API contract declares no `enum` for it.
 
 - **The search-protection hook ends a PowerShell statement at a lone carriage
   return.** PowerShell ends a statement and a `#` line comment at a carriage

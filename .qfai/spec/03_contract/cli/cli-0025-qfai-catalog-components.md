@@ -2,7 +2,7 @@
 
 ## Ownership boundary
 
-This contract decides which files `qfai catalog components` reads, what it counts as a component, which fields it records, the file it writes, its `--check` mode and how it exits. It also decides what the shipped implementation guidance tells an agent about the catalogue.
+This contract decides which files `qfai catalog components` reads, what it counts as a component, which fields it records, the file it writes, its `--check` mode and how it exits. It also decides what the shipped implementation guidance tells an agent about the catalogue, and which interactive widgets the shipped procurement rule asks to record their accessibility behaviour in it.
 
 The warnings `qfai validate` raises from the committed catalogue belong to the `qfai validate` contract (CLI-0014). Where a screen region comes from belongs to the shipped procurement rule.
 
@@ -16,3 +16,4 @@ The warnings `qfai validate` raises from the committed catalogue belong to the `
 | BR-0025-0004 | With `--check` the command writes nothing. It exits 0 when the committed file holds the text it would write, CRLF line ends read as LF, and otherwise exits 1 with one line naming the file and saying it does not exist or is out of date, with the command to run. | EX-0001-0307-05 |
 | BR-0025-0005 | When a `.tsx` or `.jsx` file is selected and `typescript` cannot be resolved, fails to load, or offers no `createSourceFile`, the command prints one line naming `typescript` and the number of files it could not read, writes nothing, and exits 1. | EX-0001-0307-06 |
 | BR-0025-0006 | The shipped implementation UI guidance tells the implementer to read `.qfai/catalog/components.yaml` before writing a region, to reuse a listed component that realises it, and, on authoring a shared component, to write its doc comment with the five tags and run `qfai catalog components`. The procurement ladder's reuse rung and the test-first implementation step point to that guidance. | EX-0001-0307-12 |
+| BR-0025-0007 | The shipped procurement rule lists the interactive widgets that come from a catalogue or headless library when one is available, skipping the rung that composes from primitives: dialog, alert dialog, drawer or sheet, menu and menu button, tabs, combobox and autocomplete, listbox and select, tooltip, popover, toast, date picker, and disclosure and accordion, each with its WAI-ARIA Authoring Practices pattern. It says that such a widget, when authored, records that pattern and the keyboard behaviour it implements in its component's `@a11y` tag, with a test covering that behaviour, and that the region's procurement record names them. | EX-0001-0310-06 |

@@ -66,4 +66,12 @@ Feature: Every plain text on a screen states why it is there
     Then every plain text inside that element that has no closer `qfai-text` comment takes that reason, so a paragraph a link splits, a list or a table needs one reason
     And a malformed reason raises one `QFAI-UITEXT-002` for all the texts it covers
     And a comment that is the first child of `body` or of a component's top-level JSX fragment covers only what it stands before, and a comment before one element, a first-child comment included, covers no sibling after it
+
+  # AC-0001-0297-09
+  Scenario: A project maps its components to the elements they render
+    Given `uiText.elements` in `qfai.config.yaml` maps project components such as `TableHead` to `th`, `CardTitle` to `h3`, `NavLink` to `a` and `StatusRegion` to `status`
+    When `qfai validate` runs in the `prototyping`, `saas-package`, `verify` or `full` profile
+    Then a text inside a mapped component, in a `.tsx`, `.jsx`, `.vue`, `.svelte` or `.html` file, raises no `QFAI-UITEXT` finding, as it would inside the element the component renders
+    And a text inside a component the map does not name, or inside a native element such as `<header>` whose name a key also spells, is read as before
+    And a key that is not a component name, or a value that is not an exempt element, `status` or `alert`, raises `QFAI-CFG-002` and maps nothing, while the other entries still apply
 ```
