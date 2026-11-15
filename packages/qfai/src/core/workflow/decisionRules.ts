@@ -43,6 +43,11 @@ const signalled = (input: RuleInput, ...names: string[]) =>
 const prototypeChange = (input: RuleInput) =>
   is("behaviour-change")(input) && qualified(input, "prototype-requested");
 
+// A settled change that adds screens gains the design and prototype stages before
+// implementation. A new feature that adds screens reads as `visual-open` instead.
+const addsScreens = (input: RuleInput) => qualified(input, "new-screens");
+const throughPrototype = (input: RuleInput) => prototypeChange(input) || addsScreens(input);
+
 const envWithoutRepro = (input: RuleInput) => flag(input, "env") && !flag(input, "repro");
 
 const rule = (number: number, ...clauses: Clause[]): DecisionRule => ({ rule: number, clauses });
@@ -53,7 +58,7 @@ export const DECISION_RULES: readonly DecisionRule[] = [
   rule(
     2,
     clause(
-      (input) => signalled(input, "approved-record-task") && prototypeChange(input),
+      (input) => signalled(input, "approved-record-task") && throughPrototype(input),
       "apply-settled-prototype",
     ),
     clause((input) => signalled(input, "approved-record-task"), "apply-settled"),
@@ -139,7 +144,8 @@ export const DECISION_RULES: readonly DecisionRule[] = [
     ),
     clause(
       (input) =>
-        flag(input, "upstream") && qualified(input, "settled-design") && prototypeChange(input),
+        ((flag(input, "upstream") && qualified(input, "settled-design")) || is("order")(input)) &&
+        throughPrototype(input),
       "apply-settled-prototype",
     ),
     // An order that names nothing to change only carries out an operation.
