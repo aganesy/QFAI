@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { runInstalledGraphHook } from "../../../src/cli/graphHook.js";
@@ -8,6 +8,7 @@ import {
   classifyGraphExploration,
   decodeGraphHookEvent,
   graphHookOutput,
+  type GraphHookEvent,
 } from "../../../src/core/graph/hooks.js";
 
 // QFAI:EX-0001-0235-01
@@ -1282,6 +1283,265 @@ it("ends a PowerShell statement and line comment at a lone carriage return", () 
   expect(classifyGraphExploration({ tool: "PowerShell", command: quoted }).decision).toBe("allow");
 });
 
+/**
+ * Classify with `worktrees` as the installed hook passes them: the first is the checkout the hook
+ * belongs to, the second, when given, the session worktree nested in it. With none, the hook knows
+ * no checkout, so no search is exempt as an outside read.
+ */
+function classifyOutside(event: GraphHookEvent, worktrees: readonly string[]) {
+  const [checkout, session] = worktrees;
+  return classifyGraphExploration(event, undefined, session ?? checkout, checkout);
+}
+
+/**
+ * A project worktree with a worktree nested in it, and a directory beside it holding a file, a
+ * subdirectory and a link back into the project. Paths use forward slashes, which every
+ * supported shell reads as a path on every platform.
+ */
+async function outsideSearchLayout() {
+  const base = await realpath(await mkdtemp(path.join(os.tmpdir(), "qfai-outside-search-")));
+  const slash = (file: string) => file.split(path.sep).join("/");
+  const project = path.join(base, "project");
+  const nested = path.join(project, ".claude", "worktrees", "nested");
+  const outside = path.join(base, "outside");
+  await mkdir(path.join(project, "src"), { recursive: true });
+  await mkdir(nested, { recursive: true });
+  await mkdir(path.join(outside, "sub"), { recursive: true });
+  await writeFile(path.join(project, "src", "a.ts"), "export const foo = 1;\n");
+  // A project file with one name, so only its location keeps a search through a link denied.
+  await writeFile(path.join(project, "src", "b.ts"), "export const foo = 2;\n");
+  await writeFile(path.join(nested, ".git"), "gitdir: elsewhere\n");
+  await writeFile(path.join(outside, "notes.txt"), "foo\n");
+  await writeFile(path.join(outside, "sub", "other.txt"), "foo\n");
+  // A hard link to a project file, and files a Cygwin or MSYS shell follows as links.
+  await link(path.join(project, "src", "a.ts"), path.join(outside, "hard.txt"));
+  await writeFile(
+    path.join(outside, "sys.txt"),
+    Buffer.concat([
+      Buffer.from("!<symlink>"),
+      Buffer.from(String.fromCharCode(0xfeff) + project, "utf16le"),
+    ]),
+  );
+  await writeFile(path.join(outside, "interix.txt"), Buffer.from("IntxLNK\x01", "latin1"));
+  await writeFile(
+    path.join(outside, "shortcut.txt"),
+    Buffer.from([0x4c, 0x00, 0x00, 0x00, 0x01, 0x14, 0x02, 0x00, 0, 0, 0, 0, 0, 0, 0, 0]),
+  );
+  await writeFile(path.join(outside, "project.lnk"), "foo\n");
+  await symlink(
+    project,
+    path.join(outside, "link"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  return {
+    base: slash(base),
+    project,
+    nested,
+    outside,
+    out: slash(outside),
+    inside: slash(path.join(project, "src", "a.ts")),
+    dispose: () => rm(base, { recursive: true, force: true }),
+  };
+}
+
+// QFAI:EX-0001-0235-30
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (readsOnlyOutside(context, searchOperands(operation, words.slice(1))))` -> `if (false)` fails "allows a search whose every literal operand lies outside the project"
+it("allows a search whose every literal operand lies outside the project", async () => {
+  vi.stubEnv("RIPGREP_CONFIG_PATH", "");
+  vi.stubEnv("GREP_OPTIONS", "");
+  vi.stubEnv("CDPATH", "");
+  const layout = await outsideSearchLayout();
+  const { out, project, outside } = layout;
+  try {
+    for (const event of [
+      { tool: "Bash", cwd: project, command: `grep -n foo ${out}/notes.txt` },
+      { tool: "Bash", cwd: project, command: `rg -n -- foo ${out}/notes.txt` },
+      { tool: "Bash", cwd: outside, command: `grep -rn foo ${out}/sub/other.txt` },
+      {
+        tool: "PowerShell",
+        cwd: project,
+        command: `Select-String -Pattern foo -LiteralPath ${out}/notes.txt`,
+      },
+      { tool: "PowerShell", cwd: outside, command: `sls foo ${out}/notes.txt` },
+      { tool: "Bash", cwd: project, command: `bash -c "grep -n foo ${out}/notes.txt"` },
+      // findstr takes an absolute operand only as a Windows path with backslashes.
+      ...(process.platform === "win32"
+        ? [
+            {
+              tool: "PowerShell",
+              cwd: project,
+              command: `findstr /n foo ${path.join(outside, "notes.txt")}`,
+            },
+          ]
+        : []),
+    ]) {
+      const result = classifyOutside(event, [project]);
+      expect(result.decision, event.command).toBe("allow");
+    }
+  } finally {
+    await layout.dispose();
+  }
+});
+
+// QFAI:EX-0001-0235-31
+// Mutation: packages/qfai/src/core/graph/hooks.ts `roots.every((root) => apart(root, file) && apart(root, real) && apartOnDisk(root, real))` -> `true` fails "denies a search whose operands are not provably outside the project"
+it("denies a search whose operands are not provably outside the project", async () => {
+  vi.stubEnv("RIPGREP_CONFIG_PATH", "");
+  vi.stubEnv("GREP_OPTIONS", "");
+  const layout = await outsideSearchLayout();
+  const { base, out, inside, project, nested, outside } = layout;
+  try {
+    const denied: [event: GraphHookEvent, worktrees: string[]][] = [
+      // A link outside that leads back into the project.
+      [{ tool: "Bash", cwd: project, command: `grep -n foo ${out}/link/src/b.ts` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `rg foo ${out}/link` }, [project]],
+      // A directory, which a search may recurse through to reach the project.
+      [{ tool: "Bash", cwd: project, command: `rg foo ${out}` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep -rn foo ${out}` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep -rn foo ${out}/sub` }, [project]],
+      // findstr reads `C:/a/b.txt` as the drive-relative `C:b.txt`, inside the working directory.
+      [{ tool: "PowerShell", cwd: project, command: `findstr foo ${out}/notes.txt` }, [project]],
+      // git grep, which may recurse or fall back to the working tree, is never exempt.
+      [
+        { tool: "Bash", cwd: project, command: `git grep --no-index foo -- ${out}/notes.txt` },
+        [project],
+      ],
+      // A file the kernel synthesises.
+      [{ tool: "Bash", cwd: project, command: "grep foo /proc/self/environ" }, [project]],
+      // A hard link to a project file, an MSYS or Interix link file, a shortcut and a .lnk name.
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/hard.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/sys.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/interix.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/shortcut.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/project.lnk` }, [project]],
+      // A second operand, during whose read a slow first one lets another process swap it, and
+      // a later pipeline stage, which runs beside the search and may swap its file.
+      [
+        {
+          tool: "Bash",
+          cwd: project,
+          command: `rg -n -- foo ${out}/notes.txt ${out}/sub/other.txt`,
+        },
+        [project],
+      ],
+      [{ tool: "Bash", cwd: outside, command: `grep -rn foo ${out}/notes.txt | sort` }, [project]],
+      [
+        {
+          tool: "Bash",
+          cwd: outside,
+          command: `grep foo ${out}/notes.txt | sh -c "rm ${out}/sub/other.txt && sort"`,
+        },
+        [project],
+      ],
+      // A command earlier in the event, which may make the link the search reads.
+      [
+        { tool: "Bash", cwd: project, command: `cd src && grep -n foo ${out}/notes.txt` },
+        [project],
+      ],
+      [{ tool: "Bash", cwd: project, command: `echo x; grep -n foo ${out}/notes.txt` }, [project]],
+      [
+        {
+          tool: "Bash",
+          cwd: project,
+          command: `ln -s ${project} ${out}/made && grep -n foo ${out}/notes.txt`,
+        },
+        [project],
+      ],
+      // An environment variable set in the same PowerShell event.
+      [
+        {
+          tool: "PowerShell",
+          cwd: project,
+          command: `Set-Content env:GREP_OPTIONS '-e x'; grep foo ${out}/notes.txt`,
+        },
+        [project],
+      ],
+      [
+        {
+          tool: "PowerShell",
+          cwd: project,
+          command: `Rename-Item env:FOO RIPGREP_CONFIG_PATH; rg foo ${out}/notes.txt`,
+        },
+        [project],
+      ],
+      [
+        {
+          tool: "PowerShell",
+          cwd: project,
+          command: `[Environment]::SetEnvironmentVariable('GREP_OPTIONS', '-e x'); grep foo ${out}/notes.txt`,
+        },
+        [project],
+      ],
+      // A pattern word that names a file, which an added `-e` would turn into an operand.
+      [{ tool: "Bash", cwd: project, command: `grep src ${out}/notes.txt` }, [project]],
+      // A relative operand, which depends on the shell's directory.
+      [{ tool: "Bash", cwd: outside, command: "grep -n foo notes.txt" }, [project]],
+      [{ tool: "PowerShell", cwd: outside, command: "findstr /n foo notes.txt" }, [project]],
+      // One operand outside and one inside.
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/notes.txt ${inside}` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/notes.txt src/a.ts` }, [project]],
+      // No file operand: the search reads the working directory.
+      [{ tool: "Bash", cwd: outside, command: "rg foo" }, [project]],
+      [{ tool: "Bash", cwd: project, command: "grep -rn foo" }, [project]],
+      // Words the shell expands.
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/*.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: "grep foo ~/x" }, [project]],
+      [{ tool: "Bash", cwd: project, command: "grep foo $HOME/x" }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/{notes,a}.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo* ${out}/notes.txt` }, [project]],
+      // A `..` segment, here one that resolves inside, and a path that does not exist.
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/../project/src/a.ts` }, [project]],
+      [{ tool: "Bash", cwd: outside, command: "grep foo ../project/src/a.ts" }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/missing.txt` }, [project]],
+      // An operand that contains the project.
+      [{ tool: "Bash", cwd: project, command: `rg foo ${base}` }, [project]],
+      // A session worktree nested in the checkout: the rest of the checkout is still the project.
+      [{ tool: "Bash", cwd: nested, command: `grep foo ${inside}` }, [project, nested]],
+      // Options that follow links or read other files, or an option after the operands.
+      [{ tool: "Bash", cwd: project, command: `grep -R foo ${out}/sub` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `rg -L foo ${out}/sub` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep -f ${inside} ${out}/notes.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `grep foo ${out}/notes.txt -r` }, [project]],
+      [{ tool: "PowerShell", cwd: outside, command: "findstr /s foo notes.txt" }, [project]],
+      [{ tool: "PowerShell", cwd: outside, command: "findstr /f:list.txt foo" }, [project]],
+      [{ tool: "Bash", cwd: project, command: `git grep foo ${out}/notes.txt` }, [project]],
+      // No known directory, a directory change the text cannot follow, or a redefined command.
+      [{ tool: "Bash", command: `grep -n foo ${out}/notes.txt` }, [project]],
+      [{ tool: "Bash", cwd: project, command: `cd $X && grep -n foo ${out}/notes.txt` }, [project]],
+      [
+        { tool: "Bash", cwd: project, command: `alias x=y; grep -n foo ${out}/notes.txt` },
+        [project],
+      ],
+      // No worktree to compare against.
+      [{ tool: "Bash", cwd: project, command: `grep -n foo ${out}/notes.txt` }, []],
+    ];
+    for (const [event, worktrees] of denied) {
+      expect(classifyOutside(event, worktrees).decision, event.command).toBe("deny");
+    }
+    // Setting an environment variable redefines what a later search reads, so a pipe filter
+    // after it is no longer exempt either.
+    for (const command of [
+      "Set-Content env:GREP_OPTIONS x; git status | grep x",
+      "[Environment]::SetEnvironmentVariable('GREP_OPTIONS', 'x'); git status | grep x",
+    ]) {
+      expect(classifyGraphExploration({ tool: "PowerShell", command }).decision, command).toBe(
+        "deny",
+      );
+    }
+    // An environment that adds arguments the command text does not show.
+    vi.stubEnv("RIPGREP_CONFIG_PATH", path.join(outside, "rgrc"));
+    vi.stubEnv("GREP_OPTIONS", "-r");
+    for (const command of [`rg foo ${out}/notes.txt`, `grep foo ${out}/notes.txt`]) {
+      expect(
+        classifyOutside({ tool: "Bash", cwd: project, command }, [project]).decision,
+        command,
+      ).toBe("deny");
+    }
+  } finally {
+    await layout.dispose();
+  }
+});
+
 const projectRoot = path.resolve("project-root");
 
 function classifyInProject(event: { tool: string; command?: string; path?: string }) {
@@ -1483,4 +1743,90 @@ it("denies a native search whose scope is an include glob rather than a path", (
   const result = classifyGraphExploration(decoded, undefined, projectRoot);
   expect(result.decision).toBe("deny");
   expect(result.target).toBe("packages");
+});
+
+// QFAI:EX-0001-0235-30
+// Mutation: packages/qfai/src/core/graph/hooks.ts `if (readsOnlyOutside(context, searchOperands(operation, words.slice(1))))` -> `if (false)` fails "allows both a search scoped inside the project and a search of one file outside it"
+it("allows both a search scoped inside the project and a search of one file outside it", async () => {
+  vi.stubEnv("RIPGREP_CONFIG_PATH", "");
+  vi.stubEnv("GREP_OPTIONS", "");
+  const layout = await outsideSearchLayout();
+  const { out, project } = layout;
+  try {
+    for (const command of [
+      // A relative path inside the project, with and without a pipeline stage after it.
+      "grep -n foo src/a.ts",
+      "rg foo src | head",
+      // One absolute regular file outside the project.
+      `grep -n foo ${out}/notes.txt`,
+    ]) {
+      expect(
+        classifyOutside({ tool: "Bash", cwd: project, command }, [project]).decision,
+        command,
+      ).toBe("allow");
+    }
+  } finally {
+    await layout.dispose();
+  }
+});
+
+// QFAI:EX-0001-0235-31
+// Mutation: packages/qfai/src/core/graph/hooks.ts `!alone ||` -> `false ||` fails "denies a search that mixes inside and outside paths, or an outside file with a pipeline stage"
+it("denies a search that mixes inside and outside paths, or an outside file with a pipeline stage", async () => {
+  vi.stubEnv("RIPGREP_CONFIG_PATH", "");
+  vi.stubEnv("GREP_OPTIONS", "");
+  const layout = await outsideSearchLayout();
+  const { out, project } = layout;
+  try {
+    for (const command of [
+      // Neither exception covers a search over one path inside and one outside.
+      `grep -n foo src/a.ts ${out}/notes.txt`,
+      `rg foo src ${out}/notes.txt`,
+      // The inside-project rule keeps pipeline stages; the outside-file case takes none.
+      `grep -n foo ${out}/notes.txt | head`,
+      `rg foo ${out}/notes.txt | sort`,
+    ]) {
+      expect(
+        classifyOutside({ tool: "Bash", cwd: project, command }, [project]).decision,
+        command,
+      ).toBe("deny");
+    }
+  } finally {
+    await layout.dispose();
+  }
+});
+
+// QFAI:EX-0001-0235-31
+// Mutation: packages/qfai/src/core/graph/hooks.ts `operation === "env" ? { ...context, alone: false } : context,` -> `context,` fails "denies a search of an outside file behind an env wrapper"
+it("denies a search of an outside file behind an env wrapper", async () => {
+  vi.stubEnv("RIPGREP_CONFIG_PATH", "");
+  vi.stubEnv("GREP_OPTIONS", "");
+  const layout = await outsideSearchLayout();
+  const { out, project } = layout;
+  const src = `${project.split(path.sep).join("/")}/src`;
+  try {
+    for (const command of [
+      // A split string can set a variable, such as a config that makes rg recurse.
+      `env -S "RIPGREP_CONFIG_PATH=/tmp/rgcfg rg qfai" ${out}/notes.txt`,
+      `env -iS "GREP_OPTIONS=-r grep foo" ${out}/notes.txt`,
+      `env --split-string="rg foo" ${out}/notes.txt`,
+      `/usr/bin/env -S "RIPGREP_CONFIG_PATH=/tmp/rgcfg rg qfai" ${out}/notes.txt`,
+      // A directory change moves the base the pattern word is checked from.
+      `env -C ${src} -S "rg foo" ${out}/notes.txt`,
+      `env --chdir=${src} rg foo ${out}/notes.txt`,
+      `env -C ${src} rg foo ${out}/notes.txt`,
+      // Any env wrapper, even with no option.
+      `env rg foo ${out}/notes.txt`,
+      // The inside-project rule does not allow a search behind env either.
+      `env -S "RIPGREP_CONFIG_PATH=/tmp/rgcfg rg foo" src`,
+      `env -C ${src} rg foo lib`,
+    ]) {
+      expect(
+        classifyOutside({ tool: "Bash", cwd: project, command }, [project]).decision,
+        command,
+      ).toBe("deny");
+    }
+  } finally {
+    await layout.dispose();
+  }
 });

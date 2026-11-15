@@ -40,4 +40,10 @@ Feature: Redirect observable exploratory searches through hooks
     Given a supported pre-tool event
     When the hook denies search or cannot apply valid enforcement
     Then direct exploration is not automatically allowed, invalid fallback state grants nothing and the hook performs no graph query, preparation, network or model call
+
+  # AC-0001-0235-07
+  Scenario: Leave a search of files outside the project alone
+    Given a direct search whose every file operand is a literal path
+    When each operand resolves outside the project worktree and the checkout the hook belongs to, before and after symbolic links
+    Then the search is not denied, and a search that names a path outside the project with any operand that is not provably outside stays denied
 ```

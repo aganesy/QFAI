@@ -229,6 +229,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   DOM. The test layers rule and the scaffold and acceptance steps forbid a
   fixed sleep or a blind retry in its place.
 
+- **The search-protection hook lets a search of one file outside the project
+  run.** A search the hook did not already allow as scoped inside the project
+  is no longer denied when it is a grep, rg, findstr or Select-String that is
+  the only command of its event, with no pipeline stage, whose literal pattern
+  names no existing file and whose one absolute file operand names an existing
+  single-link regular file outside the project worktree and the checkout the
+  hook belongs to, before and after symbolic links, so
+  `grep -n foo /etc/hosts` runs. An outside directory or relative operand, a
+  second operand, git grep, an outside file beside another command or
+  pipeline stage or behind `env`, a search that mixes project and outside
+  paths, a glob, `~`, variable or `..` operand, a link, hard link, MSYS link
+  file or shortcut, an option that reads another file, `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH` set,
+  or an operand that does not exist stays denied. Fixes #4179.
+
 - **A `Derived (not stored)` declaration for a value no DB column holds is
   accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
   credits each declared value that the API contract requires through an `enum`
