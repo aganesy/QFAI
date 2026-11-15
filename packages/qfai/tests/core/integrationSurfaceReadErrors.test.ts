@@ -228,9 +228,10 @@ describe("a structurally broken target is a finding, not a crash", () => {
     });
   });
 
-  it("reports a wrapper the OS will not follow as a warning, not an error", async () => {
+  it("reports a wrapper the OS will not follow at info, not as an error", async () => {
     // A readable canonical and an unfollowable host wrapper are separate
-    // states. The warning must offer the supported repair for the named path.
+    // states. The finding must offer the supported repair for the named path,
+    // at info: it is a standing state of a Windows worktree, not damage.
     await withProject(async (root) => {
       await seedCanonical(root);
       const wrapper = path.join(root, ".claude", "skills", "qfai-implement");
@@ -244,7 +245,7 @@ describe("a structurally broken target is a finding, not a crash", () => {
 
       const issues = await validateIntegrationSurface(root);
       const unfollowable = issues.find((entry) => entry.message.includes("will not follow"));
-      expect(unfollowable?.severity).toBe("warning");
+      expect(unfollowable?.severity).toBe("info");
       // And it says so rather than repeating the claim it cannot make: the
       // document is in the tree, this path does not reach it.
       expect(unfollowable?.message).toContain("the instructions are in this tree");
@@ -263,7 +264,7 @@ describe("a structurally broken target is a finding, not a crash", () => {
   });
 
   // QFAI:EX-0001-0039-19
-  it("shows the warning for several such wrappers once, in one line, with every path in refs", async () => {
+  it("shows several such wrappers once, at info, in one line, with every path in refs", async () => {
     await withProject(async (root) => {
       const names = ["qfai-implement", "qfai-verify", "qfai-sdd"];
       const wrappers = names.map((name) => path.join(root, ".claude", "skills", name));
@@ -288,15 +289,23 @@ describe("a structurally broken target is a finding, not a crash", () => {
       const issues = await validateIntegrationSurface(root);
 
       // The directories this project never got are a separate error; the three
-      // wrappers are one warning, not three.
-      const warnings = issues.filter((entry) => entry.severity === "warning");
-      expect(warnings).toHaveLength(1);
-      const [finding] = warnings;
+      // wrappers are one finding, not three, and at info: a standing state of
+      // the checkout must not raise a warning on every run.
+      const links = issues.filter(
+        (entry) =>
+          entry.code === "QFAI-LINK-001" && entry.refs?.includes(".claude/skills/qfai-sdd"),
+      );
+      expect(links).toHaveLength(1);
+      const [finding] = links;
+      expect(finding?.severity).toBe("info");
+      expect(issues.filter((entry) => entry.severity === "warning")).toEqual([]);
       expect(finding?.code).toBe("QFAI-LINK-001");
       // One line each, and short: the standing state must not bury the counts.
       expect(finding?.message).not.toContain("\n");
       expect(finding?.message.length).toBeLessThan(500);
       expect(finding?.message).toContain("3 wrapper(s)");
+      // At info the consequence must still be on the line, or nobody runs the repair.
+      expect(finding?.message).toContain("the host does not load these skills from this checkout");
       expect(finding?.message).toContain("(and 2 more)");
       expect(finding?.message).not.toContain("->");
       expect(finding?.suggested_action).not.toContain("\n");

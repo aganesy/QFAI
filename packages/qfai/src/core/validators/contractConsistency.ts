@@ -42,7 +42,9 @@ export async function validateContractConsistency(
     issues.push(unreadableDerivedDeclaration(file, line, declarationSeverity));
   }
 
-  if (collected.domains.size === 0) {
+  // A declaration is still read with no state domain anywhere: a status no
+  // column holds is checked against the API contracts alone.
+  if (collected.domains.size === 0 && collected.derived.size === 0) {
     return issues;
   }
 
@@ -337,23 +339,35 @@ function staleDerivedDeclarations(
             unused.join(", ") +
             (stored.length > 0 ? ` (the DB can store: ${stored.join(", ")})` : "") +
             (unasked.length > 0
-              ? ` (the API contract does not require: ${unasked.join(", ")})`
+              ? domain === undefined
+                ? ` (no API contract's \`enum\` on ${declaration.fieldName} includes: ${unasked.join(", ")})`
+                : ` (the API contract does not require: ${unasked.join(", ")})`
               : ""),
           declarationSeverity,
           declaration.file,
           "contracts.crossContract.derivedNotStored",
           [declaration.fieldName, ...unused],
           "canonical",
-          (stored.length > 0
-            ? "The DB domain can store that value, which contradicts the claim that it is " +
-              "not stored - drop the declaration, or, if it really is not stored, remove the " +
-              "value from the DB domain."
-            : "") +
-            (unasked.length > 0
-              ? "The API contract does not require that value, so the declaration exempts " +
-                "nothing. Keep it if the value is about to be added to the API; otherwise " +
-                "drop it."
-              : ""),
+          // One remedy per kind of staleness, separated like the sentences they are.
+          [
+            stored.length > 0
+              ? "The DB domain can store that value, which contradicts the claim that it is " +
+                "not stored - drop the declaration, or, if it really is not stored, remove the " +
+                "value from the DB domain."
+              : "",
+            unasked.length > 0
+              ? domain === undefined
+                ? "No DB contract stores this field, so the declaration is read against the " +
+                  "API contracts: declare the values as an `enum` on the API field, or drop " +
+                  "the declaration. Only a field named like a state or status is read on " +
+                  "the API side."
+                : "The API contract does not require that value, so the declaration exempts " +
+                  "nothing. Keep it if the value is about to be added to the API; otherwise " +
+                  "drop it."
+              : "",
+          ]
+            .filter((remedy) => remedy !== "")
+            .join(" "),
         ),
       );
     }
@@ -379,10 +393,21 @@ async function validateApiFileAgainstDb(
   const issues: Issue[] = [];
   for (const [normalized, api] of collectApiStateEnums(doc).entries()) {
     const db = dbDomains.get(normalized);
+    const declarations = collected.derived.get(normalized) ?? [];
     if (!db) {
+      // No DB contract bounds this field at all: the value is computed at read
+      // time and no column holds it, which is the case `Derived (not stored)`
+      // describes. QFAI-CONTRACT-040 has nothing to compare here, so a declared
+      // value is credited when the API requires it, and the claim is still
+      // checked against the side that makes the demand.
+      for (const value of api.values) {
+        const lower = value.toLowerCase();
+        for (const entry of declarations.filter((candidate) => candidate.values.has(lower))) {
+          honoured.add(derivedKey(entry, lower));
+        }
+      }
       continue;
     }
-    const declarations = collected.derived.get(normalized) ?? [];
     // Subtracted, not exempted wholesale. A value nobody declared still fires,
     // or the marker would be a way to silence the rule rather than a way to
     // answer it — and the declaration is credited only for a value the DB
