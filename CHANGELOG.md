@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Wrappers a Windows worktree stored as file symlinks are reported once, at
+  info.** On a Windows `git worktree`, git can store a directory wrapper as a
+  file symlink the OS will not follow. The canonical documents behind it read
+  fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
+  buried new warnings. That one finding is now at info. Its action is
+  unchanged: `qfai init` relinks the wrappers.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
@@ -439,13 +448,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `#>` fails closed. Where the start of a token is not certain, the comment
   markers separate commands, so what lies between and after them is still
   read. A search that appears only in a comment is not denied.
-
-- **Wrappers a Windows worktree stored as file symlinks are reported once, at
-  info.** On a Windows `git worktree`, git can store a directory wrapper as a
-  file symlink the OS will not follow. The canonical documents behind it read
-  fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
-  buried new warnings. That one finding is now at info. Its action is
-  unchanged: `qfai init` relinks the wrappers.
 
 - **`qfai init --force` keeps the subsections a project added to
   `.github/copilot-instructions.md`.** A `###` or deeper heading the shipped
