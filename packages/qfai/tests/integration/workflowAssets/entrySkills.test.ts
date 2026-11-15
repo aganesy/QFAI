@@ -697,7 +697,10 @@ describe("qfai-run", () => {
   it("reads a settled change that adds screens as new screens, which design and prototype first", async () => {
     const reference = await readShipped(EXTRACTION);
     expect(itemOf(sectionOf(reference, "## Qualifiers"), "new-screens")).toContain(
-      "with `approved-record-task`, with `upstream` and `settled-design`, or with `order`: The settled change adds screens: new UI contracts, or new routes users see. A change to screens that already exist does not set it. The plan then runs the design and prototype stages before implementation. A new feature that adds screens sets `visual-open` instead.",
+      "with `approved-record-task`, with `upstream` and `settled-design`, or with `order`: The settled change adds screens that no confirmed prototype covers: new UI contracts, or new routes users see. A change to screens that already exist, or to screens a confirmed prototype already covers, does not set it.",
+    );
+    expect(sectionOf(reference, "## Qualifiers")).toContain(
+      "does not set it.\n  The plan then runs the design and prototype stages before implementation. A new feature with no settled record that adds screens sets `visual-open` instead.",
     );
     const line = sectionOf(reference, "## Examples")
       .split("\n")

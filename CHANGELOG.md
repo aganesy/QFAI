@@ -11,8 +11,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   adds new UI contracts or new routes users see: an approved record with a
   task, a settled upstream design, or an order. Such a change now routes
   `apply-settled-prototype` instead of `apply-settled`. Before, it went straight
-  to implementation with no design or prototype stage. A new feature that adds
-  screens reads as `visual-open` and routes `prototype-feature`.
+  to implementation with no design or prototype stage. A new feature with no
+  settled record is covered by `visual-open`.
 
 ### Fixed
 
