@@ -42,7 +42,9 @@ export async function validateContractConsistency(
     issues.push(unreadableDerivedDeclaration(file, line, declarationSeverity));
   }
 
-  if (collected.domains.size === 0) {
+  // A declaration is still read with no state domain anywhere: a status no
+  // column holds is checked against the API contracts alone.
+  if (collected.domains.size === 0 && collected.derived.size === 0) {
     return issues;
   }
 
@@ -338,7 +340,7 @@ function staleDerivedDeclarations(
             (stored.length > 0 ? ` (the DB can store: ${stored.join(", ")})` : "") +
             (unasked.length > 0
               ? domain === undefined
-                ? ` (no API contract declares an \`enum\` on the field with: ${unasked.join(", ")})`
+                ? ` (no API contract's \`enum\` on ${declaration.fieldName} includes: ${unasked.join(", ")})`
                 : ` (the API contract does not require: ${unasked.join(", ")})`
               : ""),
           declarationSeverity,
@@ -355,7 +357,8 @@ function staleDerivedDeclarations(
               ? domain === undefined
                 ? "No DB contract stores this field, so the declaration is read against the " +
                   "API contracts: declare the values as an `enum` on the API field, or drop " +
-                  "the declaration."
+                  "the declaration. Only a field named like a state or status is read on " +
+                  "the API side."
                 : "The API contract does not require that value, so the declaration exempts " +
                   "nothing. Keep it if the value is about to be added to the API; otherwise " +
                   "drop it."

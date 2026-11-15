@@ -752,7 +752,9 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
 
         const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
         expect(declaration).toHaveLength(1);
-        expect(declaration[0]?.message).toContain("declares an `enum` on the field with: ended");
+        expect(declaration[0]?.message).toContain(
+          "no API contract's `enum` on acceptance_status includes: ended",
+        );
         expect(declaration[0]?.message).not.toContain("not_open");
       });
 
@@ -767,10 +769,52 @@ describe("validateContractConsistency (QFAI-CONTRACT-040)", () => {
         const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
         expect(declaration).toHaveLength(1);
         expect(declaration[0]?.message).toContain(
-          "no API contract declares an `enum` on the field with: ended, not_open, open",
+          "no API contract's `enum` on acceptance_status includes: ended, not_open, open",
         );
         expect(declaration[0]?.message).not.toContain("the API contract does not require");
         expect(declaration[0]?.suggested_action).toContain("No DB contract stores this field");
+      });
+
+      // The tests above keep a `status` CHECK in the contract. Without any state
+      // domain at all, the declaration is still read against the API.
+      const NO_DOMAIN_DB = EVENTS_DB.replace(
+        "  status TEXT NOT NULL CHECK (status IN ('draft', 'published')),\n",
+        "",
+      );
+
+      it("is still checked when no DB contract bounds any state column", async () => {
+        const { api, dbs } = await seedMany(
+          eventsApi("description: One of not_open, open or ended."),
+          { "db-0004-events.sql": NO_DOMAIN_DB },
+        );
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        const declaration = issues.filter((entry) => entry.code === "QFAI-CONTRACT-041");
+        expect(declaration).toHaveLength(1);
+        expect(declaration[0]?.message).toContain("includes: ended, not_open, open");
+      });
+
+      it("credits values with no state domain anywhere, whatever their case", async () => {
+        const { api, dbs } = await seedMany(eventsApi("enum: [NOT_OPEN, Open, ended]"), {
+          "db-0004-events.sql": NO_DOMAIN_DB,
+        });
+
+        const issues = await validateContractConsistency([api], dbs);
+
+        expect(issues).toEqual([]);
+      });
+
+      it("credits a value another API contract requires", async () => {
+        const { api, dbs } = await seedMany(eventsApi("enum: [not_open, open]"), {
+          "db-0004-events.sql": EVENTS_DB,
+        });
+        const second = path.join(path.dirname(api), "api-0004-events-admin.yaml");
+        await writeFile(second, eventsApi("enum: [ended]"), "utf-8");
+
+        const issues = await validateContractConsistency([api, second], dbs);
+
+        expect(issues).toEqual([]);
       });
     });
 
