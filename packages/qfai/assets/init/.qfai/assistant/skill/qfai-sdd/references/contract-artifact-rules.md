@@ -76,6 +76,11 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
 - **A screen's `surface` is a closed word.** A screen is `application`, the
   default when the key is left out, or `marketing`, a page a visitor sees before
   signing in. `QFAI-CONTRACT-051` reports any other value at error.
+- **A part a screen leaves out is listed with its reason.** A screen's
+  `omitted` list holds one `{ part, reason }` entry for each part of the
+  business-screen list in `.agents/rules/interface-clarity.md` it leaves out.
+  `QFAI-CONTRACT-052` reports, at error, an `omitted` that is not a list and an
+  entry with no `part` or no `reason`.
 - **A contract's ID comes from its directory.** `api/` holds `API` contracts,
   `db/` `DB` and `ui/` `UI`; the QFAI repository's own `cli/` holds `CLI`
   contracts. The ID is `<KIND>-NNNN`.
