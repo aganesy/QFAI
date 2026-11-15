@@ -71,7 +71,7 @@ naming the pattern is what works.
 - On a screen whose UI contract declares `surface: marketing`, a part the
   screen's UI contract names from its marketing pattern entry, such as a hero,
   feature cards, a recommended pricing tier or text beside a labelled product
-  image, is not one of these patterns; only its default styling can be. What
+  image, is not one of these patterns; only its default styling and its wording can be. What
   such a screen always has is
   `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`.
 - The reviewer inside the prototyping loop does not apply the sections about

@@ -169,8 +169,8 @@ has not approved.
 ## Images
 
 - **Source and licence.** Each image records where it came from and the licence
-  it is used under, in the page's UI contract or beside the image file. An
-  image with neither is not used.
+  it is used under, in the page's UI contract or beside the image file. A new image with neither is not used; one already on the page with neither
+  is put to the user, not removed.
 - **Examples labelled.** A product image or mock-up that shows made-up data, or
   a screen the product does not have yet, is labelled as an example where it is
   shown.

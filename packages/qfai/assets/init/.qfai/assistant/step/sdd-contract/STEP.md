@@ -119,7 +119,10 @@ consequence stays, with its reason, and so does an empty state's next step:
 the action, or a short sentence naming it, that leads out of it. On a marketing
 screen, a text that fills a part of a section's marketing pattern entry, such
 as a hero's supporting sentence, a feature's short description or an FAQ
-answer, is content the page needs and stays, with its reason. Fix a control
+answer, is content the page needs and stays, with its reason; its wording is still
+judged against
+`.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`,
+so one that only restates its heading is left out. Fix a control
 that needs explaining before adding text for it. Each screen lists its
 `states`: what renders in `default`, `empty`, `loading`, `error` and
 `success`, and the next action from each, or `none` with the reason for a

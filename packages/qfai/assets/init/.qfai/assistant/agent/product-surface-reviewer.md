@@ -89,7 +89,7 @@ specialization_tags:
   `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`, not against the business-screen
   list or the business types. Findings follow the same split: a named part missing is blocking, and an
   unnamed one is `advisory` for the contract stage. A state or notice the marketing floor lists that is
-  missing from a section the change adds or alters, or that the change removes, is a blocking finding
+  missing from a section, page or sign-up or payment point the change adds or alters, or that the change removes, is a blocking finding
   that traces to `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`; one that was
   already missing is `advisory`. Invented proof, an unlabelled example mock-up and an
   image with no recorded source and licence that the change introduces are blocking findings that trace

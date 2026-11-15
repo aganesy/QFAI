@@ -111,7 +111,9 @@ describe("marketing UI pattern reference", () => {
       expect(images).toContain(
         "Each image records where it came from and the licence it is used under",
       );
-      expect(images).toContain("An image with neither is not used.");
+      expect(images).toContain(
+        "A new image with neither is not used; one already on the page with neither is put to the user, not removed.",
+      );
       expect(images).toContain("is labelled as an example where it is shown");
     });
   }
@@ -165,7 +167,7 @@ describe("a marketing screen is read against its own entries", () => {
         "that its UI contract names, such as a hero's supporting sentence, a feature's short description or an FAQ answer, is not excess; its wording is still judged against",
       );
       expect(card).toContain(
-        "missing from a section the change adds or alters, or that the change removes, is a blocking finding that traces to `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`; one that was already missing is `advisory`.",
+        "missing from a section, page or sign-up or payment point the change adds or alters, or that the change removes, is a blocking finding that traces to `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`; one that was already missing is `advisory`.",
       );
     });
 
@@ -205,7 +207,7 @@ describe("a marketing screen is read against its own entries", () => {
         ".agents/rules/interface-clarity.md#what-a-marketing-screen-always-has",
       );
       expect(antiPatterns).toContain(
-        "a part the screen's UI contract names from its marketing pattern entry, such as a hero, feature cards, a recommended pricing tier or text beside a labelled product image, is not one of these patterns; only its default styling can be.",
+        "a part the screen's UI contract names from its marketing pattern entry, such as a hero, feature cards, a recommended pricing tier or text beside a labelled product image, is not one of these patterns; only its default styling and its wording can be.",
       );
     });
 
@@ -217,7 +219,7 @@ describe("a marketing screen is read against its own entries", () => {
       expect(reads).toContain("`## What a marketing screen always has`");
       expect(step).toContain("Its `states` combine the states of its sections.");
       expect(step).toContain(
-        "is content the page needs and stays, with its reason. Fix a control that needs explaining",
+        "is content the page needs and stays, with its reason; its wording is still judged against `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`, so one that only restates its heading is left out. Fix a control that needs explaining",
       );
     });
 
