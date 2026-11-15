@@ -160,11 +160,15 @@ file's `data-display` group; no CSS variable carries them.
 - All token strings reject leading/trailing whitespace.
 - No colour, font family stack, `typography.scale` size, `spacing.base`,
   radius, shadow, breakpoint or content width may hold `;`, `{`, `}`, `/*`
-  or `*/`, or leave a parenthesis, bracket or quote open: `qfai catalog
+  or `*/`, end in a backslash, or leave a parenthesis, bracket or quote open: `qfai catalog
 design` writes each into a CSS declaration of the theme, where one would
   end it or swallow what follows.
 - `visual.typography.weight.*`: a number from 1 to 1000, the font weights the
   Design Tokens Community Group 2025.10 format states.
+- `visual.spacing.scale` names each step once, since each step becomes a token
+  named after it.
+- `visual.layout.target_min_px` is small enough to write without an exponent,
+  since the theme writes it as a CSS length.
 - Unknown keys at any level are rejected.
 - All 12 color keys, 3 font families, 4 radius keys, and 3 shadow keys
   listed above are required.

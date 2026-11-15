@@ -922,6 +922,16 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
             },
           };
         }
+        // Each step becomes the token `spacing.<step>`, so a repeated step would name two tokens alike.
+        if (validated.includes(entry)) {
+          return {
+            error: {
+              path: `visual.spacing.scale[${i}]`,
+              code: "invalid-format",
+              message: `'visual.spacing.scale[${i}]' repeats the step ${entry}.`,
+            },
+          };
+        }
         validated.push(entry);
       }
       sp.scale = validated;
@@ -967,13 +977,16 @@ function findCssBreaker(visual: DesignMd["visual"]): ParseError | null {
     return {
       path: at,
       code: "invalid-css-value",
-      message: `'${at}' holds ";", "{", "}", "/*" or "*/", or leaves a bracket or quote open, which a value written into a CSS declaration cannot.`,
+      message: `'${at}' holds ";", "{", "}", "/*" or "*/", ends in "\\", or leaves a bracket or quote open, which a value written into a CSS declaration cannot.`,
     };
   }
   return null;
 }
 
-/** Whether a value holds `;`, `{`, `}` or a comment marker, or does not close its brackets and quotes. */
+/**
+ * Whether a value holds `;`, `{`, `}` or a comment marker, ends in a backslash, or does not close
+ * its brackets and quotes.
+ */
 function breaksDeclaration(text: string): boolean {
   if (/[;{}]/.test(text) || text.includes("/*") || text.includes("*/")) return true;
   const closers: string[] = [];
@@ -981,6 +994,8 @@ function breaksDeclaration(text: string): boolean {
   for (let index = 0; index < text.length; index += 1) {
     const character = text.charAt(index);
     if (character === "\\") {
+      // A backslash at the end would escape the `;` the theme writes after the value.
+      if (index === text.length - 1) return true;
       index += 1;
       continue;
     }
@@ -1093,6 +1108,14 @@ function parseLayout(raw: unknown): { value: DesignMdLayout } | { error: ParseEr
         "visual.layout.target_min_px",
         "invalid-format",
         `'visual.layout.target_min_px' must be at least ${TARGET_MIN_PX_FLOOR}, the WCAG 2.5.8 minimum target size (got ${target}).`,
+      );
+    }
+    // The theme writes the number as a CSS length, which has no exponent form such as `1e+21`.
+    if (/e/i.test(String(target))) {
+      return layoutError(
+        "visual.layout.target_min_px",
+        "invalid-format",
+        `'visual.layout.target_min_px' must be small enough to write without an exponent (got ${target}).`,
       );
     }
     layout.target_min_px = target;

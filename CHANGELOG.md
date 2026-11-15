@@ -21,9 +21,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   colour in a `uiux.surfacePaths` file that matches no colour of `DESIGN.md`
   (`QFAI-DCAT-003`). The `DESIGN.md` parse is stricter: a colour, font family
   stack, type-scale size, `spacing.base`, radius, shadow, breakpoint or content
-  width holding `;`, `{`, `}`, `/*` or `*/`, or leaving a bracket or quote
-  open, now fails it, since the theme writes each into a CSS declaration, and
-  so does a font weight outside 1 to 1000.
+  width holding `;`, `{`, `}`, `/*` or `*/`, ending in a backslash, or leaving
+  a bracket or quote open, now fails it, since the theme writes each into a CSS
+  declaration. So do a font weight outside 1 to 1000, a spacing step given
+  twice and a `target_min_px` too large to write without an exponent.
 
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and

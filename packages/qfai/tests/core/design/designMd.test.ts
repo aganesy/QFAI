@@ -1448,6 +1448,7 @@ describe("parseDesignMd: data_display", () => {
     ["a stray closing parenthesis", "1rem)"],
     ["an unclosed bracket", "1rem [a"],
     ["an unclosed quote", "1rem 'a"],
+    ["a trailing backslash", "1rem\\"],
   ])("rejects %s in a theme-bound value", (_label, size) => {
     const result = parseDesignMd(
       withValue(
@@ -1458,6 +1459,37 @@ describe("parseDesignMd: data_display", () => {
     expect("error" in result && result.error).toMatchObject({
       path: "visual.typography.scale.base",
       code: "invalid-css-value",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
+  it("rejects a repeated spacing step, which would name two tokens alike", () => {
+    const result = parseDesignMd(
+      withValue(
+        '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+        `    lg: "0 12px 24px rgba(15,23,42,0.10)"\n  spacing:\n    base: "0.25rem"\n    scale: [0, 1, 1]`,
+      ),
+    );
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.spacing.scale[2]",
+      code: "invalid-format",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
+  it.each([
+    [44, true],
+    [1e20, true],
+    [1e21, false],
+  ])("visual.layout.target_min_px %d can be written without an exponent: %s", (target, ok) => {
+    const result = parseDesignMd(sampleWithLayout([`target_min_px: ${String(target)}`]));
+    if (ok) {
+      expect("error" in result).toBe(false);
+      return;
+    }
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.layout.target_min_px",
+      code: "invalid-format",
     });
   });
 
