@@ -80,6 +80,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the user as one question, that land as Do and Don't points in root
   `DESIGN.md` or as structure and elements of a UI contract.
 
+- **`qfai catalog components` lists the components a project already has.**
+  It reads the `.tsx` and `.jsx` files `uiux.surfacePaths` selects and writes
+  `.qfai/catalog/components.yaml`: each exported component with its file, its
+  props, and the `@source`, `@reason`, `@states`, `@pattern` and `@a11y` tags
+  of its doc comment, sorted and byte-stable so it can be committed.
+  `--check` exits 1 when the committed file is out of date. Once the file
+  exists, `qfai validate` warns in the `prototyping`, `saas-package`, `verify`
+  and `full` profiles about a component with no source (`QFAI-COMP-001`), two
+  components for one pattern (`QFAI-COMP-002`), a raw `<button>`, `<input>`
+  or `<select>` where a listed component has that pattern (`QFAI-COMP-003`),
+  and a stale catalogue (`QFAI-COMP-004`). The implementation UI guidance
+  tells the implementer to read the catalogue before writing a region.
+
 ### Removed
 
 - **`uiux.audit.maxPrimaryCtas` and the unused banned-patterns list are

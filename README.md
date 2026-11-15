@@ -369,6 +369,14 @@ flowchart LR
     transcripts are looked for. Exit codes: 0 (a report, or no session found), 2 (a usage error, or
     `--session` names no session of the project), 1 (a transcript, `.agents/rules/reminders.json`
     or the `--out` file could not be read or written, or `reminders.json` is not a JSON object).
+- `npx qfai catalog components`
+  - Writes `components.yaml` under `.qfai/catalog/`, the list of components the `.tsx` and `.jsx` files
+    `uiux.surfacePaths` selects export: each with its file, its props, and the `@source`, `@reason`,
+    `@states`, `@pattern` and `@a11y` tags of its doc comment. The file is sorted and byte-stable, so
+    commit it. `--check` writes nothing and exits 1 when the committed file is missing or out of date.
+    It reads JSX with the project's own `typescript`. Once the file exists, `qfai validate` warns about
+    a component with no source, two components for one pattern, a raw `<button>`, `<input>` or
+    `<select>` a listed component replaces, and a stale catalogue (`QFAI-COMP-001` to `QFAI-COMP-004`).
 - `npx qfai workflow plan`
   - The route planning behind the free-text entry. `--in <path>`, or `--in -` for standard input,
     reads a request's extraction; `--route <route>` names a route instead. It prints one JSON
