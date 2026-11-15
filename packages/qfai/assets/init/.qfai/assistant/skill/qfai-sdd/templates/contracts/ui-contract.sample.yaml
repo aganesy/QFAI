@@ -148,3 +148,56 @@ screens:
         when: error
         text: Not saved. Your entries are still here. Try again.
         why: A failed save leaves the user unsure whether work was lost and what to do; the label says nothing about failure.
+  - id: order_list
+    title: Orders
+    route: /orders
+    surface: application
+    purpose: Find an order and see where it stands, so the next step on it can be taken.
+    navigation:
+      shell: main app shell with the role's navigation
+      entry_points:
+        - Orders item in the main navigation
+      back_to: nowhere; the screen is top level and reached from the main navigation
+    primary_tasks:
+      - id: t1
+        label: Find an order
+        acceptance: a search or filter shows the order and the count of matching orders
+      - id: t2
+        label: Start a new order
+        acceptance: New order opens /orders/new
+    elements:
+      - id: orders_table
+        label: Orders
+        type: table
+        # list: how a `list` or `table` element is shown and narrowed. Each of
+        # columns, search, filters, sort and pagination is set, or carries
+        # `none` with the reason the element does without it, such as
+        # `pagination: { none: at most 12 fixed plans are all shown at once }`.
+        # No entry is left out. This key describes the element; validate does
+        # not check it.
+        list:
+          columns: [order number, customer, status, created at]
+          search: order number and customer name, normalised the same way on both sides
+          filters: [status, created at range]
+          sort: created at, newest first by default; every column is sortable
+          pagination: 25 rows per page on the server, with the total count from the same query
+    actions:
+      - id: new_order
+        label: New order
+        kind: navigate
+        effect: navigates to /orders/new
+    states:
+      - id: default
+        renders: the first page of orders, newest first, with the total count
+        next: search, filter or open an order; or start a new order
+      - id: empty
+        renders: no orders yet, with New order; a search or filter with no match offers to clear it
+        next: start a new order, or clear the search and filters
+      - id: loading
+        renders: the table keeps its columns and shows progress in place of the rows
+        next: wait; the search and filters stay as entered
+      - id: error
+        renders: an inline alert that the orders could not be loaded, with a retry
+        next: retry; the search, filters, sort and page are kept
+      - id: success
+        none: the list changes nothing, so no change of the user's is confirmed here

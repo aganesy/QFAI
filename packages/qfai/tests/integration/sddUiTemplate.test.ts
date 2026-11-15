@@ -224,3 +224,60 @@ describe("shipped ui-contract.sample.yaml lists every screen state", () => {
     expect(step).toContain("Each screen lists its `states`");
   });
 });
+
+const LIST_KEYS = ["columns", "filters", "pagination", "search", "sort"];
+
+// A list nobody said how to narrow was built as an unpaged, unsorted dump of
+// every row: the shipped template gives every list or table element its
+// columns, search, filters, sort and pagination, or the reason it has none.
+describe("shipped ui-contract.sample.yaml gives every list its behaviour", () => {
+  it("gives each list or table element all five list entries, each set or set to none", async () => {
+    const parsed = parseYaml(await readFile(TEMPLATE_PATH, "utf-8")) as ParsedScreens;
+    const lists: Array<Record<string, unknown>> = [];
+    for (const screen of parsed.screens ?? []) {
+      const elements: unknown[] = Array.isArray(screen.elements) ? screen.elements : [];
+      for (const element of elements) {
+        if (typeof element !== "object" || element === null) continue;
+        const type: unknown = Reflect.get(element, "type");
+        const list: unknown = Reflect.get(element, "list");
+        if (type === "list" || type === "table") {
+          lists.push(typeof list === "object" && list !== null ? { ...list } : {});
+        }
+      }
+    }
+    expect(lists.length).toBeGreaterThan(0);
+
+    for (const list of lists) {
+      expect(Object.keys(list).sort()).toEqual(LIST_KEYS);
+      for (const key of LIST_KEYS) {
+        const entry = list[key];
+        if (typeof entry === "object" && entry !== null && !Array.isArray(entry)) {
+          expect(Object.keys(entry)).toEqual(["none"]);
+        } else {
+          expect(entry === undefined || entry === null || entry === "").toBe(false);
+        }
+      }
+    }
+  });
+
+  it("documents the list key in the guide, the rules and the contract step", async () => {
+    const flat = (text: string): string => text.replace(/\s+/g, " ");
+    const guide = flat(
+      await readFile(path.join(SDD_SKILL_DIR, "references", "ui-contract-guide.md"), "utf-8"),
+    );
+    expect(guide).toContain("## List behaviour: `elements[].list`");
+    expect(guide).toContain("An entry is never left out");
+    expect(guide).toMatch(/\| `list` +\|/);
+
+    const rules = flat(await readFile(AGENT_GUIDE_PATH, "utf-8"));
+    expect(rules).toContain("Every `type: list` or `type: table` element carries `list`");
+
+    const step = flat(
+      await readFile(
+        path.join(SDD_SKILL_DIR, "..", "..", "step", "sdd-contract", "STEP.md"),
+        "utf-8",
+      ),
+    );
+    expect(step).toContain("Each `list` or `table` element carries `list`");
+  });
+});
