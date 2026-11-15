@@ -29,6 +29,7 @@
     "means adding it here."
   ],
   "include": [
+    "tests/core/sqlContractStructure.test.ts",
     "tests/assets/uiProcurementCompatibility.test.ts",
     "tests/assets/implementAntiPatternSections.test.ts",
     "tests/assets/uiProcurementStates.test.ts",
@@ -508,6 +509,7 @@
     "tests/integration/diagramBudget.test.ts",
     "tests/integration/shippedCheckerCallers.test.ts",
     "tests/integration/storyTreePolicy.test.ts",
+    "tests/integration/techTemplateExamples.test.ts",
     "tests/integration/storyTreeValidateAcceptance.test.ts",
     "tests/integration/storyTreeValidateLayout.test.ts",
     "tests/integration/storyTreeCiRelease.test.ts",
