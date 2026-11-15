@@ -142,7 +142,7 @@ it("The installed design step reads the surface set from the tech.md Surface row
 
   for (const text of [step, authoring]) {
     expect(text).toMatch(
-      /`03_contract\/tech\.md` `Surface` row, the surfaces the deliberation record settles and the UI contracts linked to the flow/,
+      /the surfaces the deliberation record settles, the `03_contract\/tech\.md` `Surface` row and the UI contracts linked to the flow/,
     );
   }
 });
