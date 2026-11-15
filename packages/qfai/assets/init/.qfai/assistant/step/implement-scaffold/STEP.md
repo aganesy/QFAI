@@ -45,7 +45,11 @@ the system's shape has settled.
    test.
 2. Unless § Purpose-named test files applies, when the flow is still on that
    list, run `npx qfai atdd scaffold --flow BF-NNNN`. It writes
-   `<testsDir>/e2e/<BF-ID>.test.<ext>`.
+   `<testsDir>/e2e/<BF-ID>.test.<ext>`. The body `implement-acceptance`
+   writes there waits for readiness after each page load: the app shell sets
+   `data-qfai-ready` on `<html>` once it is interactive. After a client-side
+   route change it waits for that route's own content instead, as
+   `.qfai/assistant/rule/test-layers.md` § L5 E2E says.
 3. Under the same condition, for each story with an acceptance criterion still on that list, run
    `npx qfai atdd scaffold --story US-NNNN-NNNN`. It writes one test per
    criterion under `<testsDir>/integration/<US-ID>/`, so delete each test it
