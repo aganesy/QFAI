@@ -158,7 +158,10 @@ On every screen it applies to:
 - Feedback after every change.
 
 Leaving one of these out needs a reason recorded in the UI contract of the
-screen it is missing from. A part left out without one is a defect, not a cut.
+screen it is missing from. A once-per-application part belongs to no single
+screen, so its reason goes in the app frame: the UI contract that holds the app
+shell and the home, or that records why the application has none. A part
+left out without one is a defect, not a cut.
 
 These parts apply to application screens: a screen whose UI contract declares
 no `surface`, or `surface: application`. A marketing screen, one a visitor sees
