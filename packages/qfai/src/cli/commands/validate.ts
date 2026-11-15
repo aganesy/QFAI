@@ -21,6 +21,7 @@ import {
   unevaluatedPackageSelfGovernanceFamilies,
 } from "../../core/validators/packageSelfGovernance.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
+import { DERIVED_DECLARATION_FORM } from "../../core/validators/contractConsistency.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
 import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
@@ -1221,8 +1222,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `prototype.mode` a UI contract declares is one this tooling knows, so the contract's own words say what kind of prototype the review is walking. A contract that declares no mode is asked nothing.",
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM), unless a DB contract declares it `Derived (not stored)`. Pairing is by normalized field name, not by an explicit pair declaration, so the finding is an error only when every such contract bounds the field with an ENUM.",
-  "QFAI-CONTRACT-041":
-    "Every `-- Derived (not stored): <field> = <values> from <inputs>` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. Where no DB contract declares the field at all, a value the API contract requires through an `enum` on it is enough. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.",
+  "QFAI-CONTRACT-041": `Every \`${DERIVED_DECLARATION_FORM}\` declaration in a DB contract parses, and every value it names is one the paired API contract requires and the DB domain cannot store. Where no DB contract declares the field at all, a value the API contract requires through an \`enum\` on it is enough. A declaration that does not parse was not read, and one that covers a stored or unrequested value is a claim about the schema that is not true of it.`,
   "QFAI-CONTRACT-042":
     "`screens` in a UI contract is a list, every entry in it is a mapping with an `id` and a `route`, no two entries of one contract share an `id` (each spec's own contract is one), and contracts sharing an `id` state it with the same `title`, `route` and `primary_tasks`, so each entry is a screen every consumer reads.",
   "QFAI-CONTRACT-051":

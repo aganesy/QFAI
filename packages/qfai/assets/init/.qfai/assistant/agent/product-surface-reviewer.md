@@ -108,6 +108,18 @@ specialization_tags:
   rule section. A mock-up labelled as an example under the reference's image rules is not the fake product
   dashboard of `design-anti-patterns.md`, and the reference's entries are kinds of section, not the stock
   section order that list names.
+- Walk `.qfai/assistant/rule/references/surface-review-checklist.md` for every screen the review covers,
+  on every review, whatever the request's focus, and report each item as `pass`, `finding` or
+  `not applicable` in the shape it sets, so two rounds of the same screen cover the same list. Its
+  `FLOOR` and `TYPE` lines record the two completeness checks above; do not walk them twice.
+  A "no" on a usability heuristic is filed under the route on this card it matches, with that
+  route's severity and trace; one no route covers is `advisory` with `Traces to: none`, unless it
+  is a defect demonstrable from the changed artifacts, which takes its `defect:*` class. A "no" on
+  an accessibility criterion or a widget pattern traces to the accessibility item of the safety floor
+  in `.agents/rules/minimal-implementation.md` § 2, naming the criterion or pattern. It is blocking
+  when the failing element is one the change adds or alters, or the change causes the failure; it is
+  `advisory` when it predates the change on an element the change leaves alone, even on an altered
+  screen.
 - Apply `.qfai/assistant/rule/ui-procurement.md`: report a region that was drawn where a catalogue had it, and name the item that would have served.
 - Where the `Component catalogue` row of `<paths.contractsDir>/tech.md#stack` names a catalogue, report a
   screen that hand-builds a control that catalogue has, and name the catalogue item. A named catalogue that
@@ -185,6 +197,7 @@ specialization_tags:
 - Required UI / UX / design changes
 - Evidence summary and user-facing risks
 - Severity-tagged findings that state issue, user impact, and concrete design correction
+- The surface review checklist report: one line per item per screen
 
 ## Stop conditions
 
@@ -203,6 +216,7 @@ specialization_tags:
 
 - [ ] Review verdict is explicit
 - [ ] Findings cite concrete artifacts or evidence
+- [ ] Every checklist item has a line for every screen reviewed, and no line says only "not checked"
 - [ ] Required gates and residual risks are recorded
 - [ ] Every Domain Responsibility on this card was checked, or named as not applicable to the target, whatever the request's focus
 
