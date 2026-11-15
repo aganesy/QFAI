@@ -98,29 +98,46 @@ describe("qfai-prototyping in a workflow run", () => {
       "`.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`",
       "`Component catalogue` row of `<paths.contractsDir>/tech.md`",
       "`.qfai/catalog/components.yaml`",
-      "root `DESIGN.md`",
     ]) {
       expect(text, catalogue).toContain(catalogue);
     }
     expect(text).toContain(
-      "With one gap or more, run `.qfai/assistant/rule/research-first-protocol.md` before the session, scoped to UI and to the gaps alone: it researches no screen type and no region the project already covers.",
+      "Each element and `structure` group the screen's UI contract declares is checked against the component catalogue",
+    );
+    expect(text).toContain("A screen or section that matches no entry is a gap.");
+    expect(text).toContain(
+      "A row that reads `none` or still holds its template placeholder, or a missing `components.yaml`, covers nothing.",
+    );
+    expect(text).toContain(
+      "With one gap or more, run `.qfai/assistant/rule/research-first-protocol.md` before the session, scoped to UI and to the gaps alone: it researches no screen type and no component the project already covers.",
+    );
+    expect(text).toContain(
+      "records the check as one line per screen the run adds: `<ui-contract-id>/<screen>`, its type, and the entry or component that covers it or the gap.",
     );
     const procedure = await section(PROTOTYPING_SCOPE_STEP, "## Procedure");
     expect(procedure.indexOf("Run the gap check")).toBeLessThan(
       procedure.indexOf("Run the session."),
     );
+    expect(await section(PROTOTYPING_SCOPE_STEP, "## Writes")).toContain(
+      "the gap check and, when it finds a gap, the `research_summary` of",
+    );
+    expect(await section(PROTOTYPING_SCOPE_STEP, "## Gate")).toContain(
+      "the stage report holds the gap check (or says the run adds no screen, as a `restyle` loop does), with a `research_summary` when it found a gap.",
+    );
     const trigger = await section("rule/research-first-protocol.md", "## Trigger");
     expect(trigger).toContain(
-      "`prototyping-grill` also triggers it, scoped to UI, when a run adds a screen type or a region",
+      "`prototyping-grill` also triggers it, scoped to UI, when a run adds a screen whose type the project's pattern references do not cover, or that needs a component the project's component catalogues do not list.",
     );
+    expect(trigger).toContain("the visual reference survey does not apply");
   });
 
   // QFAI:AC-0001-0204-05
   // QFAI:EX-0001-0204-06
   it("runs no research when the catalogues cover every screen the run adds", async () => {
     const text = await section(PROTOTYPING_SCOPE_STEP, UI_RESEARCH);
+    expect(text).toContain("With no gap, run no research.");
     expect(text).toContain(
-      "With no gap, run no research, and name in the stage report the entry that covers each screen the run adds.",
+      "Root `DESIGN.md` holds the brand and its tokens and specifies no screen type or component, so it closes no gap;",
     );
     expect(text).toContain("A `restyle` loop adds no screen and skips this section.");
     const trigger = await section("rule/research-first-protocol.md", "## Trigger");

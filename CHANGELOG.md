@@ -47,13 +47,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   how a part is built remains subject to the article.
 
 - **A run that adds screens researches what the project has no pattern for.**
-  Before its session, `prototyping-grill` now checks each screen the run adds
-  against the business UI patterns, the component catalogue `tech.md` names
-  and root `DESIGN.md`. For a screen type or a region none of them covers, it
-  runs the research-first protocol, scoped to UI and to those gaps alone, so
-  the prototype and the implementation start from researched practice. A run
-  whose screens they all cover runs no research. Before, only
-  `/qfai-discussion` ran the protocol. Closes #4293.
+  Before its session, `prototyping-grill` now checks each screen the run adds:
+  its type against the business UI patterns, and each element and `structure`
+  group its UI contract declares against the component catalogue `tech.md`
+  names. For a screen type or a component neither covers, it runs the
+  research-first protocol, scoped to UI and to those gaps alone, and the grill
+  session starts from that research. A run whose screens they all cover runs
+  no research. Before, only `/qfai-discussion` ran the protocol. Closes #4293.
 
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the

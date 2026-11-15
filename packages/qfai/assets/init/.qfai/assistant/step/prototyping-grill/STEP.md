@@ -30,8 +30,8 @@ settles, by talking, the questions that do not need a prototype to answer.
   the session adopted, and one Interview row for each question put to the user.
   The step writes the record and never reads one: no file under
   `paths.deliberationDir` is an input.
-- In the stage report, the gap check and, when it finds a gap, the
-  `research_summary` of
+- In the stage report, the session report in a standalone invocation, the gap
+  check and, when it finds a gap, the `research_summary` of
   [UI research for uncovered screens](#ui-research-for-uncovered-screens).
 
 ## Scope
@@ -92,26 +92,40 @@ run the whole product instead.
 ## UI research for uncovered screens
 
 A screen the run adds is one in scope that has no route in
-`.qfai/prototype/final/index.html`. A `restyle` loop adds no screen and skips
-this section.
+`.qfai/prototype/final/index.html`. With no `final/index.html`, as before a
+first prototype, it is a screen the change adds, not one the project already
+ships. A `restyle` loop adds no screen and skips this section.
 
 Check each screen the run adds against what the project already has:
 
-- its type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`,
-  or, for a marketing screen, the entry for each of its sections in
-  `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`;
-- each region its contract names, against the component catalogue the
+- **Its type.** An application screen's type is the entry of
+  `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md` that
+  `sdd-contract` named for it, or, where its contract names none, the closest
+  entry the agent judges. For a screen of `surface: marketing`, each of its
+  sections takes its entry in
+  `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`
+  instead. A screen or section that matches no entry is a gap.
+- **Each component the screen needs.** Each element and `structure` group the
+  screen's UI contract declares is checked against the component catalogue the
   `Component catalogue` row of `<paths.contractsDir>/tech.md` names and the
-  components `.qfai/catalog/components.yaml` lists;
-- root `DESIGN.md`.
+  components `.qfai/catalog/components.yaml` lists. One neither lists is a gap.
+  A row that reads `none` or still holds its template placeholder, or a missing
+  `components.yaml`, covers nothing.
 
-A gap is a screen type with no entry in those references, or a region that
-neither catalogue nor root `DESIGN.md` covers. With one gap or more, run
-`.qfai/assistant/rule/research-first-protocol.md` before the session, scoped
-to UI and to the gaps alone: it researches no screen type and no region the
-project already covers. The session reads its `best_practices` and
-`anti_patterns` before its first question. With no gap, run no research, and
-name in the stage report the entry that covers each screen the run adds.
+Root `DESIGN.md` holds the brand and its tokens and specifies no screen type or
+component, so it closes no gap; the research reads it, and a finding that
+contradicts it is `reject`.
+
+With one gap or more, run `.qfai/assistant/rule/research-first-protocol.md`
+before the session, scoped to UI and to the gaps alone: it researches no
+screen type and no component the project already covers. The session reads
+its `best_practices` and `anti_patterns` before its first question. With no
+gap, run no research.
+
+The stage report, the session report in a standalone invocation, records the
+check as one line per screen the run adds: `<ui-contract-id>/<screen>`, its
+type, and the entry or component that covers it or the gap. A run that adds no
+screen says so instead.
 
 ## What is grilled, and what is prototyped
 
@@ -237,7 +251,8 @@ they are open by design until the user has something to react to.
 
 Otherwise the step passes when `.qfai/prototype/grilling.md` exists
 with both sections and every row carries a `Scope`, and the stage report holds
-the gap check, with a `research_summary` when it found a gap. Every `## Run scope`
+the gap check (or says the run adds no screen, as a `restyle` loop does), with
+a `research_summary` when it found a gap. Every `## Run scope`
 entry names a declared screen, or a component (by existing path or
 `procurement` item) that at least one screen in `final/index.html` renders.
 Any other entry stops the run before the first iteration, naming it.
