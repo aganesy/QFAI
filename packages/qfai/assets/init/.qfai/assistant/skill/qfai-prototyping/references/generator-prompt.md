@@ -267,8 +267,11 @@ The generator must express every styled surface as one of:
 
 `npx qfai validate` reads `final/index.html` and the latest `iter-NN/index.html`
 under `.qfai/prototype/` and reports, as an error, a plain text with no reason
-comment directly before it or before its parent element. Sample data in a
-static page is plain text too. Plain text is a literal text node outside a heading, `label`,
+comment directly before it, or directly before or first inside an element that
+holds it; one reason before a paragraph, a list or a table covers every text in
+it. Sample data in a static page is plain text too, except a data value: a text
+of at most 20 characters in a `td` or `dd` that is not a sentence, such as
+`ORD-1042` or `-`. Plain text is a literal text node outside a heading, `label`,
 `button`, `a`, `legend`, `th`, `caption`, `option`, `summary`, `title`,
 `script`, `style` and `role="alert"` or `role="status"`. Decide each text by
 the plain-text procedure in the implementation UI guidance, which the

@@ -1214,7 +1214,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-051":
     "Every `surface` a UI contract screen declares is `application` or `marketing`, so the screen is built and reviewed against a pattern list that exists. A screen that declares no surface is an application screen.",
   "QFAI-UITEXT-001":
-    "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert or the like) or has a `qfai-text` comment with `why` and `without` directly before it or before its parent element, or a `qfai-text-file` comment in its file gives it one.",
+    "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert, a short data value that is not a sentence, or the like) or has a `qfai-text` comment with `why` and `without` directly before it, or directly before or first inside an element that holds it, or a `qfai-text-file` comment in its file gives it one.",
   "QFAI-UITEXT-002":
     "Every `qfai-text` comment before a plain text, and every `qfai-text-file` comment, holds exactly a non-empty `why` and a non-empty `without` that say different things.",
   "QFAI-UITEXT-003":

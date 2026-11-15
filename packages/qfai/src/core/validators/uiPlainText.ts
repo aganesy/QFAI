@@ -6,7 +6,10 @@
  * with `why` (why the text must exist) and `without` (what goes wrong when it
  * is gone), or the text fails the run. Text that names, labels or reports —
  * headings, labels, buttons, links, alerts — is exempt, and expressions are
- * data, not copy.
+ * data, not copy. So is a data value: a short text that is not a sentence, in a
+ * table cell or a description value, or as a JSX string literal. One reason
+ * before an element, or as its first child, covers every text inside it, so a
+ * sentence a link splits needs one reason.
  *
  * It reads the current prototype pages and the files `uiux.surfacePaths`
  * selects. HTML, Vue and Svelte go through jsdom; JSX goes through the
@@ -51,6 +54,20 @@ const LINK_ALIASES = new Set(["routerlink", "nuxtlink"]);
 /** The last word of a component name that marks it as a link or a button, whatever words precede it. */
 const EXEMPT_LAST_WORDS = new Set(["link", "button"]);
 const EXEMPT_ROLES = new Set(["alert", "status"]);
+/** Elements whose content is a data value: a table cell and a description list's value. */
+const DATA_CELL_ELEMENTS = new Set(["td", "dd"]);
+/** The last word of a component name that marks it as a data cell, as in `TableCell`. */
+const DATA_CELL_LAST_WORD = "cell";
+/** The most code points a data value holds, inner whitespace collapsed. */
+const DATA_VALUE_LENGTH = 20;
+/**
+ * A mark that ends a sentence: `.`, `!` or `?` at the end of the text or before whitespace, so
+ * `1.5` and `v2.0` are not sentences, or a full-width or CJK full stop, exclamation or question
+ * mark anywhere.
+ */
+const SENTENCE_END = /[.!?](?:\s|$)|[。！？｡．]/u;
+/** Elements a comment before or inside stands for the whole file; `qfai-text-file` does that. */
+const FILE_LEVEL_ELEMENTS = new Set(["html", "body"]);
 const REASON_MARK = "qfai-text:";
 const EXCERPT_LENGTH = 40;
 const VOID_ELEMENTS = new Set([
@@ -69,15 +86,18 @@ const VOID_ELEMENTS = new Set([
   "wbr",
 ]);
 const REMEDIES =
-  "If the user needs this text here (a result, a cost, a condition, a consequence, a destination, a recovery step, or an empty state's next step), keep it and write the reason before it: `<!-- qfai-text: why=<why it must exist>; without=<what goes wrong without it> -->`, or `{/* qfai-text: ... */}` in JSX. Otherwise delete it, replace it with another component (an icon with an accessible name, a state, a badge), or move its job to an existing element (a label, a heading, the button wording). If none of these works without losing what the user needs, keep it and write its reason.";
+  "If the user needs this text here (a result, a cost, a condition, a consequence, a destination, a recovery step, or an empty state's next step), keep it and write the reason before it: `<!-- qfai-text: why=<why it must exist>; without=<what goes wrong without it> -->`, or `{/* qfai-text: ... */}` in JSX. One reason before an element, or as its first child, covers every text inside it, such as a paragraph a link splits, a list or a table. Otherwise delete it, replace it with another component (an icon with an accessible name, a state, a badge), or move its job to an existing element (a label, a heading, the button wording). If none of these works without losing what the user needs, keep it and write its reason.";
 
 export type UiPlainTextOptions = {
   /** Loads the project's `typescript`; the default resolves it from the project root. */
   loadTypescript?: (root: string) => unknown;
 };
 
-/** One literal text and the comment that stands before it, if any. */
-type Candidate = { line: number; text: string; reason: string | null };
+/** A `qfai-text` body and the comment it came from, which one finding names however many texts it covers. */
+type Reason = { body: string; source: object };
+
+/** One literal text and the comment that gives it its reason, if any. */
+type Candidate = { line: number; text: string; reason: Reason | null };
 
 /**
  * The subset of the TypeScript compiler API this check and the component catalogue call. The
@@ -167,7 +187,10 @@ export async function validateUiPlainText(
         ),
       );
     }
-    const shared = recorded && defect === null ? recorded.body : null;
+    const shared: Reason | null =
+      recorded && defect === null ? { body: recorded.body, source: recorded } : null;
+    // A malformed reason is reported once, at the first text it covers.
+    const judged = new Set<object>();
     issues.push(
       ...candidates.flatMap((candidate) =>
         findingsFor(
@@ -175,6 +198,7 @@ export async function validateUiPlainText(
             ? { ...candidate, reason: shared }
             : candidate,
           file,
+          judged,
         ),
       ),
     );
@@ -383,20 +407,73 @@ async function markupCandidates(markup: string): Promise<Candidate[]> {
   const { document, Node } = dom.window;
   const candidates: Candidate[] = [];
   const walker = document.createTreeWalker(document, dom.window.NodeFilter.SHOW_TEXT);
+  // The `qfai-text` comment found from `start` on, stepping past whitespace text only.
+  const reasonFrom = (start: Node | null, step: (node: Node) => Node | null): Reason | null => {
+    let current = start;
+    while (
+      current &&
+      current.nodeType === Node.TEXT_NODE &&
+      (current.textContent ?? "").trim() === ""
+    ) {
+      current = step(current);
+    }
+    if (!current || current.nodeType !== Node.COMMENT_NODE) return null;
+    const body = reasonBody(current.textContent ?? "");
+    return body === null ? null : { body, source: current };
+  };
+  const commentBefore = (node: Node): Reason | null =>
+    reasonFrom(node.previousSibling, (current) => current.previousSibling);
+  // The nearest enclosing element with a reason directly before it or as its first child, up to
+  // `body`, whose first comment would stand for the whole file.
+  const elementReason = (element: Element | null): Reason | null => {
+    for (let current = element; current; current = current.parentElement) {
+      if (FILE_LEVEL_ELEMENTS.has(current.localName)) return null;
+      const found =
+        commentBefore(current) ?? reasonFrom(current.firstChild, (child) => child.nextSibling);
+      if (found) return found;
+    }
+    return null;
+  };
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const raw = node.textContent ?? "";
     if (raw.trim() === "") continue;
     if (insideExempt(node.parentElement)) continue;
+    if (insideDataCell(node.parentElement) && isDataValue(raw)) continue;
     const location = dom.nodeLocation(node);
     const leading = raw.slice(0, raw.length - raw.trimStart().length);
     const line = (location?.startLine ?? 1) + (leading.match(/\n/g)?.length ?? 0);
-    const reason =
-      commentBefore(node, Node.COMMENT_NODE, Node.TEXT_NODE) ??
-      (node.parentNode ? commentBefore(node.parentNode, Node.COMMENT_NODE, Node.TEXT_NODE) : null);
+    const reason = commentBefore(node) ?? elementReason(node.parentElement);
     candidates.push({ line, text: raw, reason });
   }
   dom.window.close();
   return candidates;
+}
+
+function insideDataCell(element: Element | null): boolean {
+  for (let current = element; current; current = current.parentElement) {
+    if (isDataCellName(current.localName)) return true;
+  }
+  return false;
+}
+
+/**
+ * Whether an element or component name is a data cell: its last `.`-separated segment is `td`
+ * or `dd`, or that segment's last word, split as `isExemptName` splits it, is `cell`, as in
+ * `TableCell`, `Table.Cell` or `data-cell`.
+ */
+function isDataCellName(name: string): boolean {
+  const segment = name.split(".").pop() ?? "";
+  if (DATA_CELL_ELEMENTS.has(segment.toLowerCase())) return true;
+  return hyphenateWords(segment).split("-").pop()?.toLowerCase() === DATA_CELL_LAST_WORD;
+}
+
+/**
+ * Whether a text is a data value rather than a sentence: at most `DATA_VALUE_LENGTH` code points
+ * with inner whitespace collapsed, and no mark that ends a sentence.
+ */
+function isDataValue(text: string): boolean {
+  const value = text.replace(/\s+/g, " ").trim();
+  return Array.from(value).length <= DATA_VALUE_LENGTH && !SENTENCE_END.test(value);
 }
 
 function insideExempt(element: Element | null): boolean {
@@ -426,16 +503,6 @@ function isExemptName(name: string): boolean {
 function isExemptByName(segment: string): boolean {
   const lower = segment.toLowerCase();
   return EXEMPT_ELEMENTS.has(lower) || LINK_ALIASES.has(lower);
-}
-
-/** The `qfai-text` body of the comment directly before `node`, whitespace aside. */
-function commentBefore(node: Node, commentType: number, textType: number): string | null {
-  let previous = node.previousSibling;
-  while (previous && previous.nodeType === textType && (previous.textContent ?? "").trim() === "") {
-    previous = previous.previousSibling;
-  }
-  if (!previous || previous.nodeType !== commentType) return null;
-  return reasonBody(previous.textContent ?? "");
 }
 
 function reasonBody(comment: string): string | null {
@@ -485,7 +552,21 @@ function jsxCandidates(ts: TsApi, source: string, file: string): Candidate[] {
     }
     return false;
   };
-  const siblingReason = (node: TsNode): string | null => {
+  const inDataCell = (node: TsNode): boolean => {
+    for (let current = node.parent; current; current = current.parent) {
+      if (current.kind === k.JsxElement && isDataCellName(tagName(current))) return true;
+    }
+    return false;
+  };
+  // The reason a `{/* qfai-text: ... */}` child holds.
+  const commentChildReason = (node: TsNode | undefined): Reason | null => {
+    if (!node || node.kind !== k.JsxExpression) return null;
+    const body = node.getText().slice(1, -1).trim();
+    if (!/^\/\*[\s\S]*\*\/$/.test(body)) return null;
+    const reason = reasonBody(body.slice(2, -2));
+    return reason === null ? null : { body: reason, source: node };
+  };
+  const siblingReason = (node: TsNode): Reason | null => {
     const parent = node.parent;
     if (!isJsxElement(parent)) return null;
     const siblings = childrenOf(parent);
@@ -495,35 +576,48 @@ function jsxCandidates(ts: TsApi, source: string, file: string): Candidate[] {
       index -= 1;
       previous = siblings[index];
     }
-    if (!previous || previous.kind !== k.JsxExpression) return null;
-    const body = previous.getText().slice(1, -1).trim();
-    if (!/^\/\*[\s\S]*\*\/$/.test(body)) return null;
-    return reasonBody(body.slice(2, -2));
+    return commentChildReason(previous);
   };
+  // The first child of an element or fragment, between its opening and closing tags.
+  const firstChildReason = (element: TsNode): Reason | null =>
+    commentChildReason(
+      childrenOf(element)
+        .slice(1, -1)
+        .find((child) => !isBlankText(child)),
+    );
   // The trivia between the node's full start and its first token. The compiler's
   // comment-range helpers leave out a comment on the same line as the token
   // before it, as in `return (/* qfai-text: ... */ <p>`, so the trivia is read directly.
-  const leadingReason = (node: TsNode): string | null => {
+  const leadingReason = (node: TsNode): Reason | null => {
     const comment = /\/\*((?:(?!\*\/)[\s\S])*)\*\/\s*$/.exec(
       source.slice(node.pos, node.getStart()),
     );
-    return comment ? reasonBody(comment[1] ?? "") : null;
+    const reason = comment ? reasonBody(comment[1] ?? "") : null;
+    return reason === null ? null : { body: reason, source: node };
   };
-  const reasonFor = (node: TsNode): string | null => {
+  // The text's own comment, else the nearest enclosing element or fragment with a reason before
+  // it or as its first child.
+  const reasonFor = (node: TsNode): Reason | null => {
     const own = siblingReason(node);
     if (own !== null) return own;
-    const parent = node.parent;
-    if (!parent || parent.kind !== k.JsxElement) return null;
-    return siblingReason(parent) ?? leadingReason(parent);
+    for (let current = node.parent; current; current = current.parent) {
+      if (!isJsxElement(current)) continue;
+      const found = siblingReason(current) ?? leadingReason(current) ?? firstChildReason(current);
+      if (found) return found;
+    }
+    return null;
   };
 
   const visit = (node: TsNode): void => {
     let text: string | null = null;
+    // A data value is exempt as a string literal child anywhere, and as a text in a data cell.
+    let dataValue = false;
     // For a JSX text the compiler's start already skips leading whitespace.
     const start = node.getStart();
     if (node.kind === k.JsxText) {
       // An entity that only spaces, as `&nbsp;`, is whitespace, as an HTML parser reads it.
       text = node.getText().replace(/&(nbsp|#160|#xa0);/gi, " ");
+      dataValue = isDataValue(text) && inDataCell(node);
     } else if (node.kind === k.JsxExpression && isJsxElement(node.parent)) {
       const inner = childrenOf(node).find(
         (child) => child.kind === k.StringLiteral || child.kind === k.NoSubstitutionTemplateLiteral,
@@ -532,8 +626,9 @@ function jsxCandidates(ts: TsApi, source: string, file: string): Candidate[] {
         (child) => child.kind !== k.OpenBraceToken && child.kind !== k.CloseBraceToken,
       );
       if (inner && meaningful.length === 1) text = inner.getText().slice(1, -1);
+      dataValue = text !== null && isDataValue(text);
     }
-    if (text !== null && text.trim() !== "" && !exempt(node)) {
+    if (text !== null && text.trim() !== "" && !dataValue && !exempt(node)) {
       const line = sourceFile.getLineAndCharacterOfPosition(start).line + 1;
       candidates.push({ line, text, reason: reasonFor(node) });
     }
@@ -543,7 +638,7 @@ function jsxCandidates(ts: TsApi, source: string, file: string): Candidate[] {
   return candidates;
 }
 
-function findingsFor(candidate: Candidate, file: string): Issue[] {
+function findingsFor(candidate: Candidate, file: string, judged: Set<object>): Issue[] {
   // Code points, as the contract counts them.
   const excerpt = Array.from(candidate.text.replace(/\s+/g, " ").trim())
     .slice(0, EXCERPT_LENGTH)
@@ -564,8 +659,9 @@ function findingsFor(candidate: Candidate, file: string): Issue[] {
       ),
     ];
   }
-  const defect = reasonDefect(candidate.reason);
-  if (defect === null) return [];
+  const defect = reasonDefect(candidate.reason.body);
+  if (defect === null || judged.has(candidate.reason.source)) return [];
+  judged.add(candidate.reason.source);
   return [
     issue(
       "QFAI-UITEXT-002",

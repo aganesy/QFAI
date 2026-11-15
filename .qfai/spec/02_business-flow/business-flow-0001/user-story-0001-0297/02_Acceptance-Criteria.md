@@ -7,7 +7,7 @@ Feature: Every plain text on a screen states why it is there
   # AC-0001-0297-01
   Scenario: A plain text without a reason fails
     Given a prototype page or a file `uiux.surfacePaths` selects, holding a literal text outside every exempt element, sample data included
-    And no `qfai-text` comment comes directly before the text or before its parent element
+    And no `qfai-text` comment comes directly before the text, or directly before or as the first child of an element that holds it
     And no valid `qfai-text-file` comment in a selected surface file gives the text a reason
     When `qfai validate` runs in the `prototyping`, `saas-package`, `verify` or `full` profile
     Then it raises `QFAI-UITEXT-001` at error, naming the file, the line and the first 40 characters of the text
@@ -23,9 +23,10 @@ Feature: Every plain text on a screen states why it is there
 
   # AC-0001-0297-03
   Scenario: Text that names, labels or reports is not checked
-    Given UI source whose literal text sits only in `h1` to `h6`, `label`, `button`, `a`, a component whose name ends in the word `Link` or `Button`, `legend`, `th`, `caption`, `option`, `summary`, `title`, `script` or `style`, in an element with `role="alert"` or `role="status"`, in an attribute value, or in an expression
+    Given UI source whose literal text sits only in `h1` to `h6`, `label`, `button`, `a`, a component whose name ends in the word `Link` or `Button`, `legend`, `th`, `caption`, `option`, `summary`, `title`, `script` or `style`, in an element with `role="alert"` or `role="status"`, in an attribute value, in an expression, or is a data value: a text of at most 20 code points with no sentence-ending mark, inside a `td`, a `dd` or a component whose name ends in the word `Cell`, or as a whole JSX string literal child
     When `qfai validate` runs
     Then it raises no `QFAI-UITEXT` finding
+    And a sentence or a longer text inside a data cell is still plain text
 
   # AC-0001-0297-04
   Scenario: The files read are the current prototype and the declared surface
@@ -57,4 +58,12 @@ Feature: Every plain text on a screen states why it is there
     And a text with its own `qfai-text` comment is still checked against that comment
     And a body that a `qfai-text` comment would fail raises `QFAI-UITEXT-002` at error, naming the file, the comment's line and the defect, and gives no text a reason
     And a `qfai-text-file` comment in a prototype page gives no text a reason
+
+  # AC-0001-0297-08
+  Scenario: One reason covers every plain text inside an element
+    Given a `qfai-text` comment directly before an element, or as its first child, with only whitespace between
+    When `qfai validate` runs in the `prototyping`, `saas-package`, `verify` or `full` profile
+    Then every plain text inside that element that has no closer `qfai-text` comment takes that reason, so a paragraph a link splits, a list or a table needs one reason
+    And a malformed reason raises one `QFAI-UITEXT-002` for all the texts it covers
+    And a comment that is the first child of `body` covers only the element it stands before, and a comment before one element covers no sibling after it
 ```

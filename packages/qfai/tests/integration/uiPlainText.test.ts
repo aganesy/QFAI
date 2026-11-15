@@ -97,6 +97,28 @@ describe("text that names, labels or reports is not checked", () => {
     });
     expect(await uitext(root)).toEqual([]);
   });
+
+  it("raises nothing for a data value in a cell, and still checks a sentence there", async () => {
+    const root = await projectWith({
+      "src/a.html":
+        "<table><tr><td>-</td><td>あり</td></tr></table>\n<table><tr><td>Ships once the payment clears.</td></tr></table>\n",
+    });
+    expect((await uitext(root)).map((item) => [item.code, item.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", 2],
+    ]);
+  });
+});
+
+// QFAI:AC-0001-0297-08
+describe("one reason covers every plain text inside an element", () => {
+  it("clears a sentence a link splits, and leaves the next element unreasoned", async () => {
+    const root = await projectWith({
+      "src/a.html": `<div>\n<h2>Orders</h2>\n${REASON}\n<p>Check the <a href="/orders">order page</a> for the status of each line.</p>\n<p>Refunds take a week.</p>\n</div>\n`,
+    });
+    expect((await uitext(root)).map((item) => [item.code, item.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", 5],
+    ]);
+  });
 });
 
 // QFAI:AC-0001-0297-04
