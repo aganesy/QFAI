@@ -101,6 +101,13 @@ reviews it instead, and the pull request merges when that review holds no P0 or
 P1 finding. Dependency updates that Renovate merges follow
 `.github/renovate.json5`.
 
+A P0 or P1 finding from either review is fixed on the pull request before it
+merges. A finding of P2 or lower does not hold the merge and does not start
+another fix-and-review round on the pull request: answer it, resolve its
+thread, and file all such findings of the pull request together as one
+follow-up issue. A stage review that ran inside a `qfai-run` route does not
+replace the review above.
+
 ## Severity Prefixes
 
 Use the following severity prefixes on every comment:
