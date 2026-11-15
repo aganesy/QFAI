@@ -745,11 +745,13 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
   }
   const parts: string[] = [];
   if (timings.uiuxMs > timings.uiuxBudgetMs) {
-    // The group's validators run side by side, so the slowest two are the ones to look at.
+    // The slowest two are the ones to look at. Side by side their times overlap and say only
+    // where to look; one after another (`--timings`) each is that validator's own work.
     const slowest = timings.uiuxParts
       .slice(0, 2)
       .map((part) => `${part.name} ${Math.round(part.ms)}ms`);
-    const where = slowest.length > 0 ? `; slowest, overlapping: ${slowest.join(", ")}` : "";
+    const run = timings.uiuxPartsRun === "one-after-another" ? "one after another" : "overlapping";
+    const where = slowest.length > 0 ? `; slowest, ${run}: ${slowest.join(", ")}` : "";
     parts.push(
       `uiux=${formatOverrunMs(timings.uiuxMs, timings.uiuxBudgetMs)}ms ` +
         `(budget ${timings.uiuxBudgetMs}ms${where})`,
@@ -769,8 +771,9 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
 
 /**
  * The `--timings` line: each finding family with its time, slowest first, or `null` when the run
- * was not asked for it. The UI/UX group's checks run side by side, so their times follow
- * separately, as the over-budget line marks them: they overlap and do not add to the rest.
+ * was not asked for it. The UI/UX group is one entry `uiux`; its checks, which `--timings` runs one
+ * after another, follow as its breakdown. The shared Markdown read and the html-mock parser's
+ * one-off load belong to no check, so they follow on their own, as part of `uiux` and not extra.
  */
 export function formatFamilyTimings(families: ValidationFamilyTimings | undefined): string | null {
   if (!families) {
@@ -778,11 +781,16 @@ export function formatFamilyTimings(families: ValidationFamilyTimings | undefine
   }
   const list = (entries: ValidationFamilyTimings["sequential"]): string =>
     entries.map((entry) => `${entry.family} ${Math.round(entry.ms)}ms`).join(", ");
-  const overlapping =
-    families.overlapping.length > 0
-      ? `; side by side, overlapping: ${list(families.overlapping)}`
-      : "";
-  return `timings: by family ${list(families.sequential)}${overlapping}`;
+  const uiux = families.uiux.length > 0 ? `; uiux one after another: ${list(families.uiux)}` : "";
+  const shared = [
+    ["shared Markdown read", families.sharedMarkdownReadMs],
+    ["html mock parser load", families.htmlMockLoadMs],
+  ] as const;
+  const ofWhich = shared
+    .filter(([, ms]) => ms > 0)
+    .map(([name, ms]) => `${name} ${Math.round(ms)}ms`);
+  const load = ofWhich.length > 0 ? `; of which ${ofWhich.join(", ")}` : "";
+  return `timings: by family ${list(families.sequential)}${uiux}${load}`;
 }
 
 const MAX_OVERRUN_DECIMALS = 9;
