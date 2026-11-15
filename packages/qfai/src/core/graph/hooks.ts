@@ -246,6 +246,7 @@ function classifyCommands(
   let location = start;
   let boundary: GraphHookDecision | undefined;
   let allowed: GraphHookDecision | undefined;
+  let unreadable: GraphHookDecision | undefined;
   // Inside a `case`, a command that starts with a word ending in `)`, such as `y)`
   // or `"a b")`, is an arm: its pattern is not a command.
   let openCases = 0;
@@ -282,11 +283,14 @@ function classifyCommands(
       depth,
       upstream,
     );
-    if (decision?.decision === "deny") return decision;
-    if (decision?.state === "outside-boundary") boundary = decision;
+    // A command the hook cannot read is denied, but a later search it can name is reported
+    // in its place, so the denial says what was found.
+    if (decision?.state === "failed") unreadable ??= decision;
+    else if (decision?.decision === "deny") return decision;
+    else if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
   }
-  return boundary ?? allowed;
+  return unreadable ?? boundary ?? allowed;
 }
 
 /**
@@ -739,6 +743,25 @@ function arithmeticForBody(words: string[]): string[] | undefined {
   return undefined;
 }
 
+/**
+ * Programs that run another program from their arguments. `valued` matches an option that
+ * takes the next word as its value; `operands` counts the words before the program, such as
+ * the duration of `timeout`.
+ */
+const PROGRAM_RUNNERS: Record<string, { valued: RegExp; operands: number }> = {
+  nohup: { valued: /^$/u, operands: 0 },
+  setsid: { valued: /^$/u, operands: 0 },
+  nice: { valued: /^(?:-n|--adjustment)$/u, operands: 0 },
+  ionice: { valued: /^(?:-c|-n|-p|-P|-u|--class|--classdata)$/u, operands: 0 },
+  stdbuf: { valued: /^(?:-i|-o|-e|--input|--output|--error)$/u, operands: 0 },
+  timeout: { valued: /^(?:-s|-k|--signal|--kill-after)$/u, operands: 1 },
+  xargs: {
+    valued:
+      /^(?:-I|-n|-P|-L|-d|-E|-s|-a|--max-args|--max-procs|--max-lines|--delimiter|--eof|--max-chars|--arg-file|--replace)$/u,
+    operands: 0,
+  },
+};
+
 function classifyCommand(
   words: string[],
   context: CommandContext,
@@ -811,9 +834,34 @@ function classifyCommand(
       depth + 1,
     );
   }
+  const runner = PROGRAM_RUNNERS[operation ?? ""];
+  if (runner) {
+    let offset = 1;
+    while (offset < words.length) {
+      const word = words[offset] ?? "";
+      const redirection = redirectionLength(word);
+      if (redirection) offset += redirection;
+      else if (word === "--") {
+        offset += 1;
+        break;
+      } else if (runner.valued.test(word)) offset += 2;
+      else if (word.startsWith("-")) offset += 1;
+      else break;
+    }
+    // `xargs` passes its input as arguments, so the program it runs reads no piped text.
+    const input = operation === "xargs" ? undefined : upstream;
+    return classifyCommand(words.slice(offset + runner.operands), context, depth + 1, input);
+  }
   if (["bash", "sh", "zsh", "pwsh", "powershell", "cmd"].includes(operation ?? "")) {
     const switchIndex = words.findIndex((word) => /^(?:-[a-z]*c|\/c|-command)$/i.test(word));
     const inner = switchIndex >= 0 ? words[switchIndex + 1] : undefined;
+    // A shell given no command and no script, or `-Command -`, runs the text piped into it,
+    // which the hook cannot read.
+    const operands = words
+      .slice(1)
+      .filter((word) => !word.startsWith("-") && !redirectionLength(word));
+    if (upstream && (inner === "-" || (!inner && operands.length === 0)))
+      return failedGraphHook("piped-shell");
     if (!inner) return outsideBoundary();
     const shell =
       operation === "pwsh" || operation === "powershell"
@@ -2213,7 +2261,7 @@ export function decodeGraphHookEvent(input: unknown): GraphHookEvent | undefined
 
 /** Why the hook could not decide: what it names, and what the user does next. */
 export type GraphHookFailure =
-  "configuration" | "input" | "state" | "quote" | "substitution" | "depth";
+  "configuration" | "input" | "state" | "quote" | "substitution" | "piped-shell" | "depth";
 
 const FAILURE_MESSAGES: Record<GraphHookFailure, string> = {
   configuration:
@@ -2224,6 +2272,8 @@ const FAILURE_MESSAGES: Record<GraphHookFailure, string> = {
     "Graph protection failed: the hook could not read its local search state. Retry, and run qfai doctor if it repeats.",
   quote:
     "Graph protection failed: the hook could not match the quotes in the command. Retry without an unmatched quote, heredoc or here-string.",
+  "piped-shell":
+    "Graph protection failed: the command pipes text into a shell, so the hook cannot read the commands that shell runs. Run those commands directly and retry.",
   substitution:
     "Graph protection failed: the hook could not find where a $(...), (...) or backtick substitution in the command ends. Close it, move any comment out of it, or run its inner command directly.",
   depth:

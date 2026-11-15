@@ -1,10 +1,11 @@
 /**
  * The `states` and `navigation` every application screen of a UI contract
- * declares.
+ * declares, and the `list` block of each list or table element on it.
  *
  * A screen without them is built with only its elements and actions: no empty,
- * loading, error or success state, and no place in the app. A marketing screen
- * is read against its own pattern reference and is asked for neither.
+ * loading, error or success state, no place in the app, and lists with no
+ * search, sort or paging. A marketing screen is read against its own pattern
+ * reference and is asked for none of them.
  */
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -17,7 +18,9 @@ import { ISSUE_EXPECTED_BY_CODE } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateContracts } from "../../src/core/validators/contracts.js";
 import {
+  LIST_ELEMENT_TYPES,
   SCREEN_STATE_IDS,
+  UI_ELEMENT_LIST_RULE_ID,
   UI_SCREEN_NAVIGATION_RULE_ID,
   UI_SCREEN_STATES_RULE_ID,
   validateUiScreenCompleteness,
@@ -184,9 +187,100 @@ describe("a screen whose navigation is missing", () => {
   });
 });
 
+// QFAI:EX-0001-0039-44
+describe("a list or table element that declares its list behaviour", () => {
+  it("raises nothing, nor does `list: none` with a reason or a table on a marketing screen", async () => {
+    const root = await rootWithContract(
+      "  - id: orders",
+      "    route: /orders",
+      ...NAVIGATION,
+      ...ALL_STATES,
+      "    elements:",
+      "      - id: orders_table",
+      "        type: table",
+      "        list:",
+      "          columns: [order number, status]",
+      "          search: order number",
+      "          filters: [status]",
+      "          sort: newest first",
+      "          pagination: 25 rows per page on the server",
+      "      - id: steps_list",
+      "        type: list",
+      "        list:",
+      "          none: the three fixed steps of the checkout are always shown together",
+      "      - id: order_search_input",
+      "        type: input",
+      "  - id: pricing",
+      "    route: /pricing",
+      "    surface: marketing",
+      "    elements:",
+      "      - id: plans_table",
+      "        type: table",
+    );
+
+    expect(await validateUiScreenCompleteness(root, defaultConfig)).toEqual([]);
+  });
+
+  it("reads list and table elements only", () => {
+    expect(LIST_ELEMENT_TYPES).toEqual(["list", "table"]);
+  });
+});
+
+// QFAI:EX-0001-0039-45
+describe("a list or table element whose list behaviour is missing", () => {
+  it("warns for no `list` and for a `none` with no reason, naming the screen and the element", async () => {
+    const root = await rootWithContract(
+      "  - id: orders",
+      "    route: /orders",
+      ...NAVIGATION,
+      ...ALL_STATES,
+      "    elements:",
+      "      - id: orders_table",
+      "        type: table",
+      "      - id: recent_list",
+      "        type: list",
+      "        list:",
+      '          none: ""',
+    );
+
+    const issues = await validateUiScreenCompleteness(root, defaultConfig);
+
+    expect(issues.map((finding) => finding.code)).toEqual([
+      UI_ELEMENT_LIST_RULE_ID,
+      UI_ELEMENT_LIST_RULE_ID,
+    ]);
+    expect(UI_ELEMENT_LIST_RULE_ID).toBe("QFAI-CONTRACT-055");
+    const [table, list] = issues;
+    expect(table?.severity).toBe("warning");
+    expect(table?.file).toBe(CONTRACT);
+    expect(table?.refs).toEqual(["orders", "orders_table"]);
+    expect(table?.message).toContain("screen 'orders'");
+    expect(table?.message).toContain("`type: table` element 'orders_table'");
+    expect(list?.message).toContain("`type: list` element 'recent_list'");
+    expect(list?.suggested_action).toContain("`list: { none: <reason> }`");
+  });
+
+  it("runs with the contract checks", async () => {
+    const root = await rootWithContract(
+      "  - id: orders",
+      "    route: /orders",
+      ...NAVIGATION,
+      ...ALL_STATES,
+      "    elements:",
+      "      - { id: orders_table, type: table }",
+    );
+
+    const codes = (await validateContracts(root, defaultConfig)).map((finding) => finding.code);
+
+    expect(codes).toContain("QFAI-CONTRACT-055");
+    expect(ISSUE_EXPECTED_BY_CODE["QFAI-CONTRACT-055"]).toBeDefined();
+  });
+});
+
 // QFAI:EX-0001-0039-43
+// QFAI:EX-0001-0039-46
 describe("the shipped UI contract sample", () => {
-  it("raises neither warning", async () => {
+  it("raises none of the warnings", async () => {
     const root = await tempRoot();
     await copyFile(SAMPLE, path.join(root, CONTRACT));
 
@@ -204,8 +298,11 @@ describe("the shipped UI contract sample", () => {
     for (const text of documents) {
       expect(text).toContain("`QFAI-CONTRACT-053`");
       expect(text).toContain("`QFAI-CONTRACT-054`");
+      expect(text).toContain("`QFAI-CONTRACT-055`");
     }
     expect(documents[0]).toContain("`navigation: { none: <reason> }`");
     expect(documents[2]).toContain("`navigation: { none: <reason> }`");
+    expect(documents[0]).toContain("`list: { none: <reason> }`");
+    expect(documents[2]).toContain("`list: { none: <reason> }`");
   });
 });

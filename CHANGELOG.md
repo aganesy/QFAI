@@ -46,6 +46,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   for neither. The UI contract guide, the contract artifact rules, the
   `sdd-contract` step and the shipped sample say so. Part of #4119.
 
+- **Interactive widgets come from a catalogue, and `qfai validate` warns
+  about hand-written ones.** `ui-procurement.md` lists the widgets that are
+  not hand-authored when a catalogue or headless library is available, from
+  dialog and menu to date picker and accordion, each with its WAI-ARIA
+  Authoring Practices pattern. An authored one records that pattern and its
+  keyboard behaviour in its `@a11y` tag, with a test. Where a catalogue is
+  installed, `qfai validate` warns about a hand-written `role="dialog"`,
+  `role="menu"`, `role="tablist"` or `aria-modal` outside a catalogue item's
+  own file (`QFAI-COMP-005`), and about a catalogued widget with no `@a11y`
+  (`QFAI-COMP-006`). Closes #4299.
+
 - **The implement steps now write the per-role navigation journey.** Where an
   app has navigation of its own, `implement-scaffold` adds an empty journey
   test for each role a flow adds a screen to, and records the roles that sign
@@ -55,6 +66,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contracts name the roles of each screen, a role's screens are those of the
   flows whose stories name it as their actor. `qfai validate` does not report
   the journey, so each step names its file.
+
+- **Validate warns about a list or table with no list behaviour.** A
+  `type: list` or `type: table` element of an application screen in a UI
+  contract with no `list` raises `QFAI-CONTRACT-055` at warning. An element
+  with no list behaviour on purpose writes `list: { none: <reason> }`, and a
+  `surface: marketing` screen is asked nothing. The UI contract guide, the
+  contract artifact rules, the `sdd-contract` step and the shipped sample say
+  so. Part of #4119.
 
 - **A UI contract list or table element says how it is shown and narrowed.**
   The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
@@ -122,6 +141,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
 
+- **A UI pattern repeated across screens becomes a shared component.**
+  `minimal-implementation.md` no longer counts a region that several screens
+  repeat as "an operation done once": it follows rung 1 of `ui-procurement.md`
+  and the business-screen floor. When two or more UI contracts name the same
+  region, rung 1 now extracts the shared component at its first use instead of
+  waiting for the second screen. A shared component that no UI contract names is
+  still not built in advance. Closes #4099.
+
 - **A checkout that did not reinstall after a qfai upgrade is caught.** When
   the running qfai is the project's own copy and the lockfile
   (`package-lock.json`, `pnpm-lock.yaml` or `yarn.lock`) pins another version,
@@ -162,6 +189,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `side-by-side` or `one-after-another`. Closes #4279.
 
 ### Fixed
+
+- **The search-protection hook reads a search that a program runner or a piped
+  shell runs.** `nohup`, `setsid`, `nice`, `ionice`, `stdbuf`, `timeout` and
+  `xargs` are unwrapped like `env`, so `nohup rg foo /` and
+  `git ls-files | xargs grep -r bar /` are denied as searches. A pipeline
+  stage that runs its input as a shell, such as `| sh`, `| bash -s` or
+  `| pwsh -Command -`, is denied with a message saying the hook cannot read
+  the commands that shell runs. Closes #4384.
 
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
   derived-value declaration covered both a value the DB stores and a value
