@@ -14,11 +14,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   unchanged: `qfai init` relinks the wrappers.
 - **E2E tests wait until a server-rendered page is interactive.** A test that
   filled a field before the page hydrated lost the value and failed some runs.
-  The app shell now sets `data-qfai-ready` on `<html>` once it is interactive,
-  and the test waits for it after each navigation. The `/qfai-implement`
-  Playwright recipe ships a `waitForAppReady` helper and the shell code for
-  React and plain DOM. The test layers rule and the scaffold and acceptance
-  steps forbid a fixed sleep or a blind retry in its place.
+  The guidance now has the app shell set `data-qfai-ready` on `<html>` once it
+  is interactive, and the test wait for it after each page load. The
+  `/qfai-implement` Playwright recipe shows a `waitForAppReady` helper, the
+  wait for a new page after a click, and the shell code for React and plain
+  DOM. The test layers rule and the scaffold and acceptance steps forbid a
+  fixed sleep or a blind retry in its place.
 
 ## [2.5.0] - 2026-11-15
 

@@ -403,6 +403,19 @@ describe("the optional test runner recipes ship beside the rule set", () => {
     expect(ready, "the React shell does not set the marker after mount").toMatch(
       /useEffect\(\(\) => \{\s*document\.documentElement\.dataset\.qfaiReady = "true";\s*\}, \[\]\);/,
     );
+    expect(ready, "the React hook is not in a client component").toMatch(
+      /\/\/ app-ready\.tsx[^\n]*\n"use client";/,
+    );
+    expect(ready, "the Suspense caveat is missing").toMatch(
+      /inside a `<Suspense>` boundary can hydrate after the shell/,
+    );
+    expect(ready, "the marker is said to cover client-side route changes").toMatch(
+      /The marker covers a page load only\.[\s\S]*After a client-side\s+route change, the test waits for that route's own content/,
+    );
+    // A click that loads a new document waits for the new URL before the marker.
+    expect(ready, "a click-triggered navigation trusts the old page's marker").toMatch(
+      /\.click\(\);\s*await page\.waitForURL\([^)]*\);\s*await waitForAppReady\(page\);/,
+    );
     expect(ready, "the recipe has no plain DOM shell code").toMatch(
       /\/\/ app shell \(plain DOM\)[^\n]*\ndocument\.documentElement\.dataset\.qfaiReady = "true";/,
     );
@@ -413,11 +426,17 @@ describe("the optional test runner recipes ship beside the rule set", () => {
     const layers = await read(path.join(".qfai", "assistant", "rule", "test-layers.md"));
     const e2e = layers.split(/^### /m).find((body) => body.startsWith("L5 E2E\n")) ?? "";
     expect(e2e, "the L5 E2E section does not require a readiness wait").toMatch(
-      /waits for readiness after each navigation, before its first\s+interaction/,
+      /waits for readiness after each page load, before its first\s+interaction/,
     );
     expect(e2e).toContain("`data-qfai-ready`");
     expect(e2e, "the L5 E2E section allows a sleep or a blind retry").toMatch(
-      /Never use a fixed sleep, and\s+never retry an interaction blindly/,
+      /Never use a fixed\s+sleep, and never retry an interaction blindly/,
+    );
+    expect(e2e, "the L5 E2E section trusts the old page's marker after a click").toMatch(
+      /After a click that loads a\s+new document, the test first waits for the new page/,
+    );
+    expect(e2e, "the L5 E2E section lets the marker cover client-side route changes").toMatch(
+      /The marker\s+covers a page load only: `<html>` survives a client-side route change, so\s+after one the test waits for that route's own content/,
     );
     expect(e2e, "the L5 E2E section does not give the marker to the shell").toMatch(
       /The app shell owns setting the marker/,
@@ -432,6 +451,9 @@ describe("the optional test runner recipes ship beside the rule set", () => {
       );
       expect(body, `${step} does not say the E2E test waits`).toMatch(
         /waits for (?:readiness|the app shell's `data-qfai-ready` marker)/,
+      );
+      expect(body, `${step} does not cover client-side route changes`).toMatch(
+        /client-side\s+route change it waits for that route's own content/,
       );
     }
   });

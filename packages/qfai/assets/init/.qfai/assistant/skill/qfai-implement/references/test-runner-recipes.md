@@ -298,21 +298,32 @@ A server-rendered page shows its content before it reacts to input. A test that 
 before the page is interactive loses the value when the framework takes over, so the test fails
 some runs and passes others. The fix is one marker that does not depend on the framework: the app
 shell sets `data-qfai-ready` on `<html>` once it is interactive, and the test waits for it after
-every navigation, before its first interaction.
+every page load, before its first interaction.
 
-The app shell owns the marker. In React, set it in an effect of the root layout or shell
-component, which runs after mount:
+The marker covers a page load only. A client-side route change keeps the same `<html>`, so the
+marker is still set from the earlier load and says nothing about the new route. After a client-side
+route change, the test waits for that route's own content instead, for example a heading the route
+renders.
+
+The app shell owns the marker. In React, set it in an effect of a component that wraps every page
+and runs in the browser. In the Next.js App Router the root layout is a Server Component, so put
+the hook in a component marked `"use client"` that the root layout renders around its children:
 
 ```tsx
-// app shell (React): runs once the shell is mounted and interactive
-import { useEffect } from "react";
+// app-ready.tsx (React): a client component the root layout renders around the page
+"use client";
+import { useEffect, type ReactNode } from "react";
 
-export function useAppReadyMarker(): void {
+export function AppReady({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.dataset.qfaiReady = "true";
   }, []);
+  return children;
 }
 ```
+
+Content inside a `<Suspense>` boundary can hydrate after the shell. The marker does not cover it: a
+test that interacts with such content first waits for that content itself.
 
 Without a framework, set it once the script that wires the page has run:
 
@@ -339,9 +350,20 @@ await waitForAppReady(page);
 await page.getByLabel("Email").fill("member@example.test");
 ```
 
+A click that loads a new document leaves the old page, and its marker, in place until the new
+document arrives, so the helper alone can return too early. Wait for the new URL first, then for
+the marker:
+
+```ts
+// a click that loads a new document: wait for the new page, then for its marker
+await page.getByRole("link", { name: "Pay" }).click();
+await page.waitForURL("**/payment");
+await waitForAppReady(page);
+await page.getByLabel("Card number").fill("4242 4242 4242 4242");
+```
+
 Do not wait a fixed time, and do not wrap an interaction in a blind retry such as `toPass` to
-cover hydration: both hide the cause and still fail on a slow run. A navigation the test triggers
-by a click that loads a new document is waited for the same way.
+cover hydration: both hide the cause and still fail on a slow run.
 
 ## Business data each file owns
 
