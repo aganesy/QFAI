@@ -82,7 +82,8 @@ question. With two or more, put one single-select question before the first
 stage:
 
 - one option per scope, narrowest first and recommended, each naming the stages
-  it runs in plain words;
+  it runs in plain words; the option for a scope with `testsPending` also says
+  that its tests are written later, by the implementation stage it leaves out;
 - the host's free-text answer for any other choice.
 
 Run only the chosen scope's stages, in plan order.
