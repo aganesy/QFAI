@@ -142,7 +142,8 @@ for changes that touch another flow and
 for independently owned
 story units. Work one EX at a time by default. Stories with no test yet may
 run in parallel only when the parallel-unit gate passes, which the session
-agent decides and records.
+agent decides and records. Two or more stories that each build screens wait
+for the foundation unit that policy describes.
 
 ## Red, Green, Refactor
 
