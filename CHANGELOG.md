@@ -180,6 +180,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   beside it, and `timings.uiuxPartsRun` says whether the parts ran
   `side-by-side` or `one-after-another`. Closes #4279.
 
+- **The prototype loop builds and reviews from the UI research.** When
+  `prototyping-grill` researched screen types or components the project has no
+  pattern for, `prototyping-loop` now reads that research summary itself: the
+  generator applies its best practices and avoids its anti-patterns, and the
+  reviewer grades against the same two lists. Before, the findings reached the
+  prototype only through what the grill session settled. Closes #4387.
+
 ### Fixed
 
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a

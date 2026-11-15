@@ -12,6 +12,7 @@ import { flat, readShipped, sectionOf } from "../../helpers/shippedAssistant.js"
 
 const PROTOTYPING_SCOPE_STEP = "step/prototyping-grill/STEP.md";
 const UI_RESEARCH = "## UI research for uncovered screens";
+const LOOP_STEP = "step/prototyping-loop/STEP.md";
 const ENTRY_CHECK =
   "`.qfai/assistant/rule/shared-skill-operating-baseline.md#workflow-run-entry-check`";
 
@@ -142,5 +143,26 @@ describe("qfai-prototyping in a workflow run", () => {
     expect(text).toContain("A `restyle` loop adds no screen and skips this section.");
     const trigger = await section("rule/research-first-protocol.md", "## Trigger");
     expect(trigger).toContain("A run whose screens they all cover runs no research.");
+  });
+
+  // QFAI:AC-0001-0204-06
+  // QFAI:EX-0001-0204-07
+  it("builds and reviews each iteration from the UI research the grill recorded", async () => {
+    const findings = await section(LOOP_STEP, "## UI research findings");
+    expect(findings).toContain(
+      "The generator applies its `best_practices` and avoids its `anti_patterns` on the screens and components each one names, and the reviewer receives the same two lists.",
+    );
+    expect(findings).toContain(
+      "With no gap, and in a `restyle` loop, which adds no screen, there is no summary and the loop reads none.",
+    );
+    expect(await section(LOOP_STEP, "## Reads")).toContain(
+      "The UI research `prototyping-grill` recorded in this run's stage report",
+    );
+    expect(await section(LOOP_STEP, "## Procedure")).toContain(
+      "the [UI research findings](#ui-research-findings) when the grill recorded any",
+    );
+    expect(await section(LOOP_STEP, "## Evaluator Inputs")).toContain(
+      "The `best_practices` and `anti_patterns` of the [UI research findings](#ui-research-findings), when the grill recorded a `research_summary`.",
+    );
   });
 });

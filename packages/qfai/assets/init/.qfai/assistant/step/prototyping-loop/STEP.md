@@ -16,6 +16,9 @@ command, score or check decides that the loop is done.
 ## Reads
 
 - `.qfai/prototype/grilling.md`, which `prototyping-grill` wrote.
+- The UI research `prototyping-grill` recorded in this run's stage report, the
+  session report in a standalone invocation, as
+  [UI research findings](#ui-research-findings) says.
 - The UI contracts in scope and root `DESIGN.md` (read-only).
 - The references below.
 
@@ -166,14 +169,27 @@ when it is open and where each variant's review goes. Only that first
 iteration has variants: set `variants` to `none` before the next iteration,
 which builds one prototype from the user's answer.
 
+## UI research findings
+
+When the gap check of `prototyping-grill` found a screen type or a component
+the project does not cover, its stage report holds a `research_summary` for
+those gaps. The loop reads that summary itself, not only through the grilling
+session and `grilling.md`, which keep what the session decided but not every
+practice the research found. The generator applies its `best_practices` and
+avoids its `anti_patterns` on the screens and components each one names, and
+the reviewer receives the same two lists. A finding the grill rejected because
+it contradicts root `DESIGN.md` stays rejected. With no gap, and in a `restyle`
+loop, which adds no screen, there is no summary and the loop reads none.
+
 ## Procedure
 
 Run these for iteration `NN`: the next index after the iterations already
 under `.qfai/prototype/`, or `00` when there are none.
 
 1. **Generator** (the session agent). Reads the contracts,
-   `.qfai/prototype/grilling.md`, the generator prompt, the `DESIGN.md` tokens
-   and, from the run's second iteration on, this run's latest reviews and the
+   `.qfai/prototype/grilling.md`, the generator prompt, the `DESIGN.md` tokens,
+   the [UI research findings](#ui-research-findings) when the grill recorded
+   any, and, from the run's second iteration on, this run's latest reviews and the
    user's last answer. In a scoped run it also reads `runScope` in `progress.md` and
    `.qfai/prototype/final/index.html`, every iteration. It starts from the
    primary UI contract preflight resolved: the one the request names, else
@@ -275,6 +291,10 @@ confirmation.
   better, and what is out of bounds. The four axes are fixed and say nothing
   about this prototype's purpose, so a reviewer without that file grades every
   prototype against the same generic bar.
+- The `best_practices` and `anti_patterns` of the
+  [UI research findings](#ui-research-findings), when the grill recorded a
+  `research_summary`. A screen type or component the project had no pattern
+  for has no other reference to be graded against.
 - A screenshot or HTML snapshot, only when one was taken. A finding names any
   mandatory input that is missing.
 
