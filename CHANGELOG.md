@@ -4,6 +4,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **UI research and design close gaps a redesign exposed.**
+  - The product-surface reviewer also checks built screens against the
+    _Components_, _Layout and composition_ and _Displacement_ anti-patterns,
+    such as serial numbers on cards and all-caps eyebrow labels.
+  - The visual reference survey opens a whole-site redesign with an inventory
+    of the current surface, and the user decides every removal. Each finding to
+    adopt is checked against the anti-pattern list and `do_not_look_like`.
+  - `.agents/rules/interface-clarity.md` cuts development notation, such as
+    code, spec IDs or test syntax, from screens visitors read.
+  - A figure or claim shown on more than one page comes from one source.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
@@ -117,17 +130,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the key, whatever its value, is ignored.
 
 ### Changed
-
-- **UI research and design close gaps a redesign exposed.**
-  - The product-surface reviewer also checks built screens against the
-    _Components_, _Layout and composition_ and _Displacement_ anti-patterns,
-    such as serial numbers on cards and all-caps eyebrow labels.
-  - The visual reference survey opens a whole-site redesign with an inventory
-    of the current surface, and the user decides every removal. Each finding to
-    adopt is checked against the anti-pattern list and `do_not_look_like`.
-  - `.agents/rules/interface-clarity.md` cuts development notation, such as
-    code, spec IDs or test syntax, from screens visitors read.
-  - A figure or claim shown on more than one page comes from one source.
 
 - **The interface-clarity cut is judged with production-sized data.** The test
   in `.agents/rules/interface-clarity.md` §3 (remove it, and ask whether the
