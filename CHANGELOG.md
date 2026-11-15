@@ -134,6 +134,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`QFAI-DB-001` says why the SQL is flagged and how to resolve it.** The
+  warning now says that applying the statement destroys data or structure, and
+  its suggested action moves a data reset to test setup or fixtures and a destructive
+  change to its migration. A reviewed statement that should stay is waived
+  for its file in `.qfai/waivers.yml`, with its reason, evidence and expiry
+  date.
+
 - The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
 
 - **A scope that stops before implementation can reach its own commit.** In
@@ -300,6 +307,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the product-surface review still judges that copy.
 
 ### Fixed
+
+- **The `DESIGN.md` step says where a flow's surfaces come from.** It
+  decided whether to run from `primary_surface` and `secondary_surfaces`, fields
+  nothing has defined since 2.5.0. It now reads the surfaces the deliberation record
+  settles, the `tech.md` `Surface` row and the UI contracts linked to the
+  flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
 
 - **The search-protection hook reads a search that a program runner or a piped
   shell runs.** `nohup`, `setsid`, `nice`, `ionice`, `stdbuf`, `timeout` and
