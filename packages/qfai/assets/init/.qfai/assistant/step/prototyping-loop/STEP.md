@@ -182,10 +182,10 @@ practice the research found.
   summary. A `reject` or `defer` entry, such as a finding that contradicts
   root `DESIGN.md` or one nobody verified, reaches neither role, even where it
   shares a source with an applied one.
-- **Only this lineage's gaps.** Each applied finding names the gap it answers,
+- **Only this lineage's gaps.** Each applied finding names each gap it answers,
   and the stage report holds one gap-check line per added screen. The session
-  agent passes a lineage, `<ui-contract-id>/<screen>`, only the findings whose
-  gap its own line names; a screen whose line names no gap gets none.
+  agent passes a lineage, `<ui-contract-id>/<screen>`, only the findings that
+  name a gap its own line names; a screen whose line names no gap gets none.
 - **Both roles.** The generator builds to those findings, and the reviewer
   receives the same findings.
 

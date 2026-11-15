@@ -85,8 +85,9 @@ transition-pass percentages as a substitute for the qualitative review.
 - UI research, only when the session agent passes it: the findings the grill
   applied for this lineage's screen type or components, which the project had
   no pattern for. They are the reference for those parts alone, beside
-  `## Session`, never over it: a screen that goes against one where it fits a
-  declared primary task is a finding in the axis it affects. A session row wins where
+  `## Session`, never over it: a part that goes against an applied
+  finding, where that finding fits a declared primary task, is a finding in the
+  axis it affects. A session row wins where
   the two disagree. With none passed, grade as above.
 
 ## Outputs — two files, two schemas

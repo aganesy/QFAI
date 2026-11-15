@@ -155,7 +155,7 @@ describe("qfai-prototyping in a workflow run", () => {
       "The loop passes on the `finding` of each `reflection` entry whose `action` is `apply`, and nothing else from the summary. A `reject` or `defer` entry, such as a finding that contradicts root `DESIGN.md` or one nobody verified, reaches neither role, even where it shares a source with an applied one.",
     );
     expect(findings).toContain(
-      "only the findings whose gap its own line names; a screen whose line names no gap gets none.",
+      "only the findings that name a gap its own line names; a screen whose line names no gap gets none.",
     );
     expect(findings).toContain(
       "The generator builds to those findings, and the reviewer receives the same findings.",
@@ -184,7 +184,7 @@ describe("qfai-prototyping in a workflow run", () => {
       "That rule chooses among the grilling rows; the UI research below is a separate reference, for its own parts.",
     );
     expect(await section(PROTOTYPING_SCOPE_STEP, UI_RESEARCH)).toContain(
-      "Each `reflection` entry's `finding` names the gap it answers, the screen type or the component as the check's line names it",
+      "Each `reflection` entry's `finding` names each gap it answers, the screen type or the component as the check's line names it",
     );
   });
 });

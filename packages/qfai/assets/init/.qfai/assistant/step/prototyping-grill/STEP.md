@@ -120,7 +120,7 @@ With one gap or more, run `.qfai/assistant/rule/research-first-protocol.md`
 before the session, scoped to UI and to the gaps alone: it researches no
 screen type and no component the project already covers. The session reads
 its `best_practices` and `anti_patterns` before its first question. Each
-`reflection` entry's `finding` names the gap it answers, the screen type or
+`reflection` entry's `finding` names each gap it answers, the screen type or
 the component as the check's line names it, so that `prototyping-loop` can
 pass each screen only its own findings. With no gap, run no research.
 
