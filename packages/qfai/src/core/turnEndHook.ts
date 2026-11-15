@@ -31,6 +31,8 @@ const EXIT_GRACE_MS = 1000;
 const MAX_CONTINUED_BLOCKS = 3;
 const COMMANDS_HEADING = /^##\s+Standard commands\b/i;
 const TURN_END_LABEL = "turn-end check";
+/** An unreplaced template slot, such as `<optional example: Format, Lint>`. */
+const TEMPLATE_SLOT = /<[^<>\n]+>/;
 
 /**
  * The commands the Standard commands section of a tech.md marks for turn end, in the order its
@@ -51,10 +53,14 @@ export function readTurnEndChecks(techText: string): TurnEndCheck[] {
     const label = (item[1] ?? "").trim();
     const rest = item[2] ?? "";
     if (label.toLowerCase() === TURN_END_LABEL) {
-      marked = rest
-        .split(",")
-        .map((name) => name.replace(/`/g, "").trim())
-        .filter((name) => name !== "");
+      // A value still holding a template slot, such as the shipped `<optional example: ...>`,
+      // marks nothing: a project opts into the hook only by writing its own labels.
+      marked = TEMPLATE_SLOT.test(rest)
+        ? []
+        : rest
+            .split(",")
+            .map((name) => name.replace(/`/g, "").trim())
+            .filter((name) => name !== "");
       continue;
     }
     const command = /`([^`]+)`/.exec(rest)?.[1];

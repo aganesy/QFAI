@@ -13,10 +13,12 @@ checks every literal of every iteration against them.
 
 ## When it applies
 
-Only to a flow on a visual prototyping surface: its classified surface set —
-`primary_surface` and every `secondary_surfaces` entry — names `web`, `mobile`,
-`desktop` or `mixed`. A cli-only target writes no root `DESIGN.md` and leaves
-any existing file unchanged; skip this step for it.
+Only to a flow on a visual prototyping surface: its surface set names `web`,
+`mobile`, `desktop` or `mixed`. Read the set from the surfaces the
+deliberation record settles, the `03_contract/tech.md` `Surface` row and the
+UI contracts linked to the flow; for an imported tree, from the surface the
+import source names, or the user's answer. A cli-only target writes no root
+`DESIGN.md` and leaves any existing file unchanged; skip this step for it.
 
 ## Reads
 
@@ -96,8 +98,8 @@ built from the validated result.
 
 ## Passes when
 
-Read first: the flow's classified surface set and root `DESIGN.md`. The step
-passes when the flow is not on a visual prototyping surface, or when root
+Read first: the flow's surface set, as § When it applies reads it, and root
+`DESIGN.md`. The step passes when the flow is not on a visual prototyping surface, or when root
 `DESIGN.md` exists, is not the unreplaced sample, and parses and validates with
 no issue and shows no listed pattern that the recorded direction does not ask
 for. The pass names the surface set and the validation result.

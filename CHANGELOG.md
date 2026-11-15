@@ -143,6 +143,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`QFAI-DB-001` says why the SQL is flagged and how to resolve it.** The
+  warning now says that applying the statement destroys data or structure, and
+  its suggested action moves a data reset to test setup or fixtures and a destructive
+  change to its migration. A reviewed statement that should stay is waived
+  for its file in `.qfai/waivers.yml`, with its reason, evidence and expiry
+  date.
+
 - The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
 
 - **A scope that stops before implementation can reach its own commit.** In
@@ -308,7 +315,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   moving a sentence into a constant, a prop or an attribute value is not a fix:
   the product-surface review still judges that copy.
 
+- **A UI review without captures is `PENDING`, never `PASS`.** For a
+  UI-affecting change, the product-surface reviewer requires a capture of each
+  changed screen at the reviewed revision. Passing tests or a clean `validate`
+  do not stand in for it, and the reviewer does not start the app itself: it
+  stops before a verdict and names what is missing, the review is recorded
+  `PENDING`, and it is dispatched again once the captures exist.
+
 ### Fixed
+
+- **The `DESIGN.md` step says where a flow's surfaces come from.** It
+  decided whether to run from `primary_surface` and `secondary_surfaces`, fields
+  nothing has defined since 2.5.0. It now reads the surfaces the deliberation record
+  settles, the `tech.md` `Surface` row and the UI contracts linked to the
+  flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
 
 - **The search-protection hook reads a search that a program runner or a piped
   shell runs.** `nohup`, `setsid`, `nice`, `ionice`, `stdbuf`, `timeout` and
@@ -334,6 +354,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one
   pass.
+
+- **The `tech.md` template shows each item in the shape validation accepts.**
+  The template held placeholders such as `<package>`, so a project filling it
+  in guessed the shapes and needed several validate rounds. Every value is now
+  a filled example to replace, such as `<example: pnpm build>`, inside the
+  backticks, list marks and table cells the schema checks. Replacing each
+  example with the project's value, and replacing or deleting the two optional
+  lines marked `<optional example: ...>`, gives a `tech.md` that passes on the
+  first run. An example left in place is still reported by `QFAI-ASSETS-003`,
+  and a Turn-end check line left as shipped turns on no turn-end check. A
+  missing required line, such as the Format command, is now reported with an
+  example line in place of a regular expression. Closes #4404.
 
 - **E2E tests wait until a server-rendered page is interactive.** A test that
   filled a field before the page hydrated lost the value and failed some runs.
