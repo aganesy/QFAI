@@ -41,6 +41,9 @@ describe("a scope that leaves out the implement stage leaves its test obligation
       expect(flat(repo)).toMatch(
         /Under a `testsPending` scope, the `QFAI-STORY-006` obligations `verify-qfai-gate` lists as `PENDING` are not repaired: the loop neither writes their tests, reruns a gate for them nor escalates them.*Every other failure, of the QFAI gate included, keeps the loop\./,
       );
+      expect(flat(repo)).toContain(
+        "Stop and escalate when a gate fails without one, unless its only failures are the pending obligations the next item leaves alone.",
+      );
       expect(flat(gate)).toContain(
         "runs the fix loop over every failure except the test obligations this gate lists as pending",
       );

@@ -106,7 +106,8 @@ after the code review, and the user sees it there. Invoked by name, the run's
 one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 
 - If failing, produce an actionable fix list (not vague). Stop and escalate
-  when a gate fails without one.
+  when a gate fails without one, unless its only failures are the pending
+  obligations the next item leaves alone.
 - Under a `testsPending` scope, the `QFAI-STORY-006` obligations
   `verify-qfai-gate` lists as `PENDING` are not repaired: the loop neither
   writes their tests, reruns a gate for them nor escalates them, since the
