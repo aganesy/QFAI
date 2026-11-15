@@ -80,6 +80,7 @@ describe("formatTimingOverruns", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 4,
         htmlMockBudgetMs: 2000,
+        uiuxPartsRun: "side-by-side",
         uiuxParts: [],
       }),
     ).toBeNull();
@@ -92,6 +93,7 @@ describe("formatTimingOverruns", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 4,
         htmlMockBudgetMs: 2000,
+        uiuxPartsRun: "side-by-side",
         uiuxParts: [],
       }),
     ).toBe(
@@ -103,6 +105,7 @@ describe("formatTimingOverruns", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 2100.6,
         htmlMockBudgetMs: 2000,
+        uiuxPartsRun: "side-by-side",
         uiuxParts: [],
       }),
     ).toBe(
@@ -119,6 +122,7 @@ describe("formatTimingOverruns", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 4,
         htmlMockBudgetMs: 2000,
+        uiuxPartsRun: "side-by-side",
         uiuxParts: [],
       }),
     ).toBe(
@@ -130,6 +134,7 @@ describe("formatTimingOverruns", () => {
         uiuxBudgetMs: 2000,
         htmlMockMs: 0.05,
         htmlMockBudgetMs: 0.000001,
+        uiuxPartsRun: "side-by-side",
         uiuxParts: [],
       }),
     ).toBe(

@@ -17,6 +17,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **A UI contract list or table element says how it is shown and narrowed.**
+  The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
+  artifact rules and the `sdd-contract` step give every `type: list` or
+  `type: table` element a `list` key: `columns`, `search`, `filters`, `sort`
+  and `pagination`, each set or `none` with the reason the element does
+  without it, the same shape as `states`. The business UI pattern reference
+  now says a List behaviour applies to what `list` sets and the entry it
+  concerns records a departure. Validate does not check the key yet.
+  Closes #4109.
+
 ### Changed
 
 - **A scope that stops before implementation can reach its own commit.** In
@@ -29,6 +39,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   When those are its only errors, the local commit is made and its report lists the
   pending tests for the implement stage. The
   scope question says so for that option. Other scopes are printed as before.
+
+- **Settled work that adds screens gets the design and prototype stages.**
+  The extraction has a new qualifier, `new-screens`, for a settled change that
+  adds new UI contracts or new routes users see: an approved record with a
+  task, a settled upstream design, or an order. Such a change now routes
+  `apply-settled-prototype` instead of `apply-settled`. Before, it went straight
+  to implementation with no design or prototype stage. A new feature with no
+  settled record is covered by `visual-open`.
+
+- **The parts of a business screen outrank the minimal-scope article.**
+  Article VII of the shipped constitution now names the list under
+  `## What a business screen always has` in `interface-clarity.md` among what
+  outranks it, beside the safety floor. On an application screen whose UI
+  contract records no reason to leave a part out, navigation, list behaviour,
+  states and feedback are no longer cut as scope beyond the minimum, and the
+  architecture, product-surface and requirements reviewers refuse such a cut;
+  how a part is built remains subject to the article.
 
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the
@@ -60,6 +87,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   production, not the test fixture, so a list control is not cut because a
   five-row fixture does not need it.
 
+- **`validate.json` names the UI/UX check times for how they ran.**
+  `familyTimings.overlapping` becomes `familyTimings.uiux`, with
+  `familyTimings.sharedMarkdownReadMs` and `familyTimings.htmlMockLoadMs`
+  beside it, and `timings.uiuxPartsRun` says whether the parts ran
+  `side-by-side` or `one-after-another`. Closes #4279.
+
 ### Fixed
 
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
@@ -74,12 +107,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **E2E tests wait until a server-rendered page is interactive.** A test that
+  filled a field before the page hydrated lost the value and failed some runs.
+  The guidance now has the app shell set `data-qfai-ready` on `<html>` once it
+  is interactive, and the test wait for it after each page load. The
+  `/qfai-implement` Playwright recipe shows a `waitForAppReady` helper, the
+  wait for a new page after a click, and the shell code for React and plain
+  DOM. The test layers rule and the scaffold and acceptance steps forbid a
+  fixed sleep or a blind retry in its place.
+
 - **A `Derived (not stored)` declaration for a value no DB column holds is
   accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
   credits each declared value that the API contract requires through an `enum`
   on the field, as the reference describes for a status computed at read time.
   A value only in a description is still reported, and the message now says the
   API contract declares no `enum` for it.
+
+- **`qfai validate --timings` times each UI/UX check on its own.** The six
+  UI/UX checks ran side by side, so a check that waited on file reads was
+  charged for the others' work and the `slowest` names could point at a check
+  that did almost nothing. Under `--timings` they now run one after another,
+  the line says `slowest, one after another`, and the shared Markdown read
+  and the html-mock parser's one-off load are each reported once, on their
+  own, as part of the group's time. A run without `--timings` still runs them
+  side by side, and the findings and counts are the same either way.
+  Fixes #4279.
 
 ## [2.5.0] - 2026-11-15
 
