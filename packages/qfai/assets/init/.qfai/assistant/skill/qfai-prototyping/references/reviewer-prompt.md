@@ -266,6 +266,12 @@ judge:
   the user a result, a cost, a condition, a consequence, a destination, a
   recovery step or an empty state's next step: such a text stays with its
   reason.
+- On a screen whose UI contract declares `surface: marketing`, a part of a
+  section's marketing pattern entry that the UI contract names, such as a
+  hero's supporting sentence, a feature's short description or an FAQ answer,
+  is not excess and is not the paragraph introducing the page. Its wording is
+  still judged. What such a screen always has is
+  `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`.
 - Judge whether the copy the UI contract describes (`supplements`, group
   headings) is needed at all.
 

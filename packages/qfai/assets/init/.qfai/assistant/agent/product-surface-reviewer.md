@@ -88,7 +88,10 @@ specialization_tags:
 - Check a screen whose UI contract declares `surface: marketing` against its section entries in
   `.qfai/assistant/skill/qfai-sdd/references/marketing-ui-patterns.md`, not against the business-screen
   list or the business types. Findings follow the same split: a named part missing is blocking, and an
-  unnamed one is `advisory` for the contract stage. Invented proof, an unlabelled example mock-up and an
+  unnamed one is `advisory` for the contract stage. A state or notice the marketing floor lists that is
+  missing from a section the change adds or alters, or that the change removes, is a blocking finding
+  that traces to `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`; one that was
+  already missing is `advisory`. Invented proof, an unlabelled example mock-up and an
   image with no recorded source and licence that the change introduces are blocking findings that trace
   to `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`; one already on an altered
   page is `advisory`. A claim already on the page, or supplied by the user, that nothing confirms follows
@@ -108,9 +111,11 @@ specialization_tags:
   replaced by another component or moved into a label, heading, button wording or empty state is
   excess even with a reason, unless it tells the user a result, a cost, a condition, a consequence, a
   destination, a recovery step or an empty state's next step: such a text stays with its reason. On a
-  marketing screen, a text that fills a part of its section's marketing pattern entry, such as a hero's
-  supporting sentence, a feature's short description or an FAQ answer, is content the page needs and is
-  never filed as excess; only the strength of its reason is judged.
+  marketing screen, a part of its section's marketing pattern entry that its UI contract names, such as a
+  hero's supporting sentence, a feature's short description or an FAQ answer, is not excess; its wording
+  is still judged against
+  `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`, so a
+  supporting sentence that only restates the headline is still reported.
 - Judge whether the copy a UI contract describes (`supplements`, group headings) is needed at all.
   Name the screen, the task or state, the duplicated meaning or unmet need, and the text to remove or the control or structure to repair.
   Apply `.qfai/assistant/skill/qfai-sdd/references/design-anti-patterns.md#copy-that-adds-no-meaning`.
@@ -127,7 +132,8 @@ specialization_tags:
   pattern matched and the state or structure to add. Where the entry is about behaviour, trace the
   finding to `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` or the spec, as
   that list's _Where the list stops_ says; for a marketing screen, trace it to
-  `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has` or the screen's UI contract, and do not report a part whose UI contract records a
+  `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has` or the screen's UI contract, with
+  the severity the marketing check above sets, and do not report a part whose UI contract records a
   reason for leaving it out. Declare each finding's severity and trace as
   `.qfai/assistant/rule/references/reviewer-findings.md` says. Inside the prototyping loop,
   `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md` sets which sections apply.

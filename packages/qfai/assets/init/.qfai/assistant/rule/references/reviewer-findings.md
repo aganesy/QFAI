@@ -42,7 +42,9 @@ work: that rule already makes the part an obligation, so the gap is a defect tha
 `.qfai/assistant/agent/product-surface-reviewer.md` says when the finding blocks and when it is
 `advisory`. The same holds for a part missing from the marketing-screen floor
 (`.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`) on a screen whose UI
-contract declares `surface: marketing`.
+contract declares `surface: marketing`: a floor state or notice missing from a section the change
+adds or alters, or removed by the change, is `blocking` with that trace, and one already missing is
+`advisory`.
 
 This bounds what a reviewer may require, never what a reviewer may report. A demand the table does
 not admit, such as one for another business rule, is recorded as `advisory` and cannot force

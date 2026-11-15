@@ -10,7 +10,8 @@ parameter the thing underneath happens to expose.
 
 The user arrived to do one task and has read nothing about the product. Leave
 what that person needs, and nothing else. What that person needs includes the
-standard parts of a business screen, listed near the end of this rule.
+standard parts of a business or a marketing screen, listed near the end of this
+rule.
 
 ## Scope
 
@@ -61,17 +62,18 @@ action, or a short sentence naming it, that leads out of it, such as widening
 the search or adding the first item.
 
 A marketing page's copy is not interface explanation. On a screen whose UI
-contract declares `surface: marketing`, a text that fills a part of its
-section's marketing pattern entry, such as a hero's supporting sentence, a
-feature's short description or an FAQ answer, is content the page needs. It
-still carries its `qfai-text` or `qfai-text-file` reason.
+contract declares `surface: marketing`, a part of its section's marketing
+pattern entry that its UI contract names, such as a hero's supporting sentence,
+a feature's short description or an FAQ answer, is content the page needs, not
+excess. Its wording is still judged: a sentence that only restates its heading
+adds no meaning. It carries its `qfai-text` or `qfai-text-file` reason.
 
 ## 3. Cut
 
 - A label that restates the control beside it.
 - A control nobody asked for, and every state it brings with it. A part listed
   in `## What a business screen always has` counts as asked for, and so does a
-  part of a marketing screen's pattern entry, including the text that fills it.
+  part of a marketing screen's pattern entry that its UI contract names.
 - Decoration that displaces signal.
 - The second place the same thing is said.
 
@@ -113,7 +115,8 @@ way, from the first command to the result.
 Anything you have to read twice is a defect in the control it sits under. A step
 you cannot reach, a record you cannot find or an action whose result you cannot
 tell is a gap in the surface. A gap that a part listed in `## What a business
-screen always has` closes is a defect to fix. Raise any other gap on a job no
+screen always has` or `## What a marketing screen always has` closes is a
+defect to fix. Raise any other gap on a job no
 contract names with the owner of the spec, rather than building what the spec
 does not ask for.
 
@@ -178,7 +181,8 @@ not its UI contract names them.
   a screen the product does not have yet, is labelled as an example where it is
   shown.
 - **Images sourced.** Each image records where it came from and the licence it
-  is used under. An image with neither is not used.
+  is used under. A new image with neither is not used. One already on the page
+  with neither is put to the user, not removed.
 - **States of what it sends or reads.** A section that sends something, such as
   a contact form, or reads data when the page is viewed, such as live figures
   or prices, has its loading, error and success states.
@@ -186,8 +190,8 @@ not its UI contract names them.
   from every page and from the point of sign-up or payment.
 
 Leaving out a state or a notice needs a reason recorded in the screen's UI
-contract. Invented proof, an unlabelled example and an unsourced image have no
-such reason.
+contract. Invented proof, an unlabelled example and a new unsourced image have
+no such reason.
 
 ## Related
 

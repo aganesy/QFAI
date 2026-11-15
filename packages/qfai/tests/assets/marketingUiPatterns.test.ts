@@ -161,7 +161,12 @@ describe("a marketing screen is read against its own entries", () => {
       expect(card).toContain(
         "for a marketing screen, trace it to `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has` or the screen's UI contract",
       );
-      expect(card).toContain("is content the page needs and is never filed as excess");
+      expect(card).toContain(
+        "that its UI contract names, such as a hero's supporting sentence, a feature's short description or an FAQ answer, is not excess; its wording is still judged against",
+      );
+      expect(card).toContain(
+        "missing from a section the change adds or alters, or that the change removes, is a blocking finding that traces to `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`; one that was already missing is `advisory`.",
+      );
     });
 
     it(`${tree}: a marketing-floor gap is a traceable defect, not a demand for more work`, async () => {
@@ -171,6 +176,36 @@ describe("a marketing screen is read against its own entries", () => {
 
       expect(findings).toContain(
         "The same holds for a part missing from the marketing-screen floor (`.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has`)",
+      );
+      expect(findings).toContain(
+        "is `blocking` with that trace, and one already missing is `advisory`.",
+      );
+    });
+
+    // The prototyping reviewer and the anti-pattern list would otherwise cut or
+    // flag the parts a marketing page is required to have.
+    it(`${tree}: the prototype review and the anti-pattern list keep a contract-named marketing part`, async () => {
+      const prompt = flat(
+        await readFile(
+          path.join(root, "skill/qfai-prototyping/references/reviewer-prompt.md"),
+          "utf-8",
+        ),
+      );
+      const antiPatterns = flat(
+        await readFile(
+          path.join(root, "skill/qfai-sdd/references/design-anti-patterns.md"),
+          "utf-8",
+        ),
+      );
+
+      expect(prompt).toContain(
+        "is not excess and is not the paragraph introducing the page. Its wording is still judged.",
+      );
+      expect(prompt).toContain(
+        ".agents/rules/interface-clarity.md#what-a-marketing-screen-always-has",
+      );
+      expect(antiPatterns).toContain(
+        "a part the screen's UI contract names from its marketing pattern entry, such as a hero, feature cards, a recommended pricing tier or text beside a labelled product image, is not one of these patterns; only its default styling can be.",
       );
     });
 
@@ -228,12 +263,18 @@ describe("a marketing screen is read against its own entries", () => {
     }
     expect(floor).toContain("a figure shows the time it was counted. An agent never writes one.");
     expect(floor).toContain("design-anti-patterns.md#claims-nobody-has-confirmed");
-    expect(floor).toContain("An image with neither is not used.");
+    expect(flat(section(text, "6. Walk it"))).toContain(
+      "`## What a business screen always has` or `## What a marketing screen always has` closes is a defect to fix.",
+    );
+    expect(floor).toContain("A new image with neither is not used.");
+    expect(floor).toContain(
+      "One already on the page with neither is put to the user, not removed.",
+    );
     expect(flat(section(text, "2. Do not explain the interface"))).toContain(
-      "is content the page needs. It still carries its `qfai-text` or `qfai-text-file` reason.",
+      "that its UI contract names, such as a hero's supporting sentence, a feature's short description or an FAQ answer, is content the page needs, not excess. Its wording is still judged",
     );
     expect(flat(section(text, "3. Cut"))).toContain(
-      "and so does a part of a marketing screen's pattern entry, including the text that fills it.",
+      "and so does a part of a marketing screen's pattern entry that its UI contract names.",
     );
   });
 
