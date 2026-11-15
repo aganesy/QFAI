@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import path from "node:path";
 
 export type GraphHookHost = "claude" | "codex" | "copilot" | "vscode";
@@ -57,6 +58,12 @@ interface ShellScope {
 interface CommandContext extends ShellScope {
   location: ShellLocation;
   redefined: boolean;
+  /**
+   * Whether every command before this one is a directory move the tracker reads. Only then
+   * can a scoped search be placed: `Push-Location`, `cd..`, a script block or `shopt` can
+   * move the shell in ways the tracker does not follow.
+   */
+  placeable?: boolean;
 }
 
 export function classifyGraphExploration(
@@ -219,6 +226,7 @@ function classifyCommands(
   // Inside a `case`, a command that starts with a word ending in `)`, such as `y)`
   // or `"a b")`, is an arm: its pattern is not a command.
   let openCases = 0;
+  let onlyMoves = true;
   for (const [index, command] of commands.entries()) {
     const words =
       openCases > 0 && command.words[0]?.endsWith(")") ? command.words.slice(1) : command.words;
@@ -238,7 +246,14 @@ function classifyCommands(
     // `git log | { grep fix; } < .env` the group reads `.env`.
     const upstream =
       words[0] === "{" && !groupClosesBare(commands, index) ? undefined : command.upstream;
-    const decision = classifyCommand(words, { ...scope, location, redefined }, depth, upstream);
+    const placeable = onlyMoves;
+    if (operand === undefined || operand === null) onlyMoves = false;
+    const decision = classifyCommand(
+      words,
+      { ...scope, location, redefined, placeable },
+      depth,
+      upstream,
+    );
     if (decision?.decision === "deny") return decision;
     if (decision?.state === "outside-boundary") boundary = decision;
     else if (decision) allowed = decision;
@@ -456,8 +471,33 @@ function insideProject(
     )
       return false;
     const target = path.resolve(base, operand);
-    return path.relative(root, target) !== "" && !outside(root, target);
+    if (path.relative(root, target) === "" || outside(root, target)) return false;
+    // A symbolic link or junction inside the project may point outside it.
+    const real = realPath(target);
+    const realRoot = realPath(root);
+    return real === undefined || realRoot === undefined || !outside(realRoot, real);
   });
+}
+
+/** The path with every link resolved, or `undefined` when it cannot be resolved. */
+function realPath(target: string): string | undefined {
+  try {
+    return realpathSync.native(target);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether a grep or rg command follows symbolic links it finds below the paths it names. */
+function followsLinks(words: string[]): boolean {
+  const name = commandName(words);
+  return words
+    .slice(1)
+    .some((word) =>
+      name === "rg"
+        ? word === "--follow" || /^-[A-Za-z]*L/.test(word)
+        : name === "grep" && (word === "--dereference-recursive" || /^-[A-Za-z]*R/.test(word)),
+    );
 }
 
 function scopedSearch(): GraphHookDecision {
@@ -732,7 +772,13 @@ function classifyCommand(
     );
   }
   if (!redefined && pipeFilter(words) && printsText(upstream)) return undefined;
-  if (!redefined && insideProject(context.root, searchBase(context), searchPaths(words)))
+  if (
+    !redefined &&
+    context.placeable !== false &&
+    !followsLinks(words) &&
+    !(context.shell === "powershell" && words.some((word) => word.startsWith("@"))) &&
+    insideProject(context.root, searchBase(context), searchPaths(words))
+  )
     return scopedSearch();
   if (operation === "rg" || operation === "grep" || operation === "findstr") {
     let offset = 1;

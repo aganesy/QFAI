@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { runInstalledGraphHook } from "../../../src/cli/graphHook.js";
@@ -1334,6 +1334,57 @@ it("denies a search over the project root itself or over a path it cannot read",
     { tool: "PowerShell", command: "Select-String -Pattern foo -Path src/a.ts,../b.ts" },
   ]) {
     expect(classifyInProject(event).decision, event.command ?? event.path).toBe("deny");
+  }
+});
+
+// QFAI:EX-0001-0235-40
+// Mutation: packages/qfai/src/core/graph/hooks.ts `context.placeable !== false &&` -> `` fails "denies a scoped search after a command that may move the shell unseen"
+it("denies a scoped search after a command that may move the shell unseen", () => {
+  for (const [tool, command] of [
+    ["PowerShell", "Push-Location ..; rg foo src"],
+    ["PowerShell", "Push-Location /; rg foo Windows"],
+    ["PowerShell", "cd..; rg foo src"],
+    ["PowerShell", "try { cd .. } finally { }; rg foo src"],
+    ["PowerShell", "1 | % { cd .. }; rg foo src"],
+    ["Bash", "shopt -s cdable_vars; cd HOME && rg foo src"],
+    ["Bash", "echo start; rg foo src"],
+  ] as const) {
+    expect(classifyInProject({ tool, command }).decision, command).toBe("deny");
+  }
+  expect(classifyInProject({ tool: "Bash", command: "cd src && rg foo lib" }).decision).toBe(
+    "allow",
+  );
+});
+
+// QFAI:EX-0001-0235-40
+// Mutation: packages/qfai/src/core/graph/hooks.ts `!followsLinks(words) &&` -> `` fails "denies a scoped search that follows links, or that a PowerShell splat extends"
+it("denies a scoped search that follows links, or that a PowerShell splat extends", () => {
+  for (const [tool, command] of [
+    ["Bash", "rg -L foo src"],
+    ["Bash", "rg --follow foo src"],
+    ["Bash", "grep -R foo src"],
+    ["Bash", "grep -rnR foo src"],
+    ["PowerShell", "rg @a src"],
+  ] as const) {
+    expect(classifyInProject({ tool, command }).decision, command).toBe("deny");
+  }
+});
+
+// QFAI:EX-0001-0235-40
+// Mutation: packages/qfai/src/core/graph/hooks.ts `return real === undefined || realRoot === undefined || !outside(realRoot, real);` -> `return true;` fails "denies a scoped search through a link inside the project that points outside it"
+it("denies a scoped search through a link inside the project that points outside it", async () => {
+  const base = await mkdtemp(path.join(os.tmpdir(), "qfai-scoped-link-"));
+  try {
+    const root = path.join(base, "project");
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await mkdir(path.join(base, "elsewhere"), { recursive: true });
+    await symlink(path.join(base, "elsewhere"), path.join(root, "out"), "junction");
+    const classify = (command: string) =>
+      classifyGraphExploration({ tool: "Bash", command, cwd: root }, undefined, root).decision;
+    expect(classify("rg foo out")).toBe("deny");
+    expect(classify("rg foo src")).toBe("allow");
+  } finally {
+    await rm(base, { recursive: true, force: true });
   }
 });
 
