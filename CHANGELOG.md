@@ -4,6 +4,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **`uiText.elements` lets the plain-text check read a project component as the
+  element it renders.** In `qfai.config.yaml`, map a component to an element
+  `QFAI-UITEXT-001` already exempts, or to `status` or `alert` for a live
+  region, as `TableHead: th` or `StatusRegion: status`. A text inside the
+  component then needs no `qfai-text` reason, in `.tsx`, `.jsx`, `.vue`,
+  `.svelte` and `.html` files alike. A key that is not a component name, or a
+  value outside that list, is reported as `QFAI-CFG-002`. Closes #4329.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

@@ -249,6 +249,66 @@ describe("uiux.registries", () => {
   });
 });
 
+// QFAI:EX-0001-0297-17
+describe("uiText.elements", () => {
+  async function loadWith(body: string): Promise<Awaited<ReturnType<typeof loadConfig>>> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-ui-text-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), body, "utf-8");
+      return await loadConfig(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  it("keeps each component mapped to an exempt element or role", async () => {
+    const { config, issues } = await loadWith(
+      "uiText:\n  elements:\n    TableHead: th\n    Card.Title: h3\n    nav-link: a\n    StatusRegion: status\n    Toast: alert\n",
+    );
+    expect(issues).toEqual([]);
+    expect(config.uiText?.elements).toEqual({
+      TableHead: "th",
+      "Card.Title": "h3",
+      "nav-link": "a",
+      StatusRegion: "status",
+      Toast: "alert",
+    });
+  });
+
+  it("reports an unknown value and a malformed key, and keeps the other entries", async () => {
+    const { config, issues } = await loadWith(
+      'uiText:\n  elements:\n    TableHead: th\n    Panel: div\n    div: status\n    "Bad Name": h2\n    Count: 3\n',
+    );
+    expect(issues.map((found) => [found.code, found.message])).toEqual([
+      ["QFAI-CFG-002", expect.stringContaining("uiText.elements.Panel must be one of h1|")],
+      [
+        "QFAI-CFG-002",
+        expect.stringContaining('uiText.elements key "div" is not a component name'),
+      ],
+      [
+        "QFAI-CFG-002",
+        expect.stringContaining('uiText.elements key "Bad Name" is not a component name'),
+      ],
+      ["QFAI-CFG-002", expect.stringContaining("uiText.elements.Count must be one of")],
+    ]);
+    expect(config.uiText?.elements).toEqual({ TableHead: "th" });
+  });
+
+  it("reports a section or a map that is not a mapping, and an unknown key", async () => {
+    const notMap = await loadWith("uiText:\n  elements: [TableHead]\n");
+    expect(notMap.issues.map((found) => found.message)).toEqual([
+      "uiText.elements must be an object.",
+    ]);
+    expect(notMap.config.uiText).toBeUndefined();
+    const notSection = await loadWith("uiText: th\n");
+    expect(notSection.issues.map((found) => found.message)).toEqual(["uiText must be an object."]);
+    const unknown = await loadWith("uiText:\n  components:\n    TableHead: th\n");
+    expect(unknown.issues.map((found) => found.message)).toEqual([
+      "uiText.components is not a setting.",
+    ]);
+  });
+});
+
 describe("retired validation.traceability keys", () => {
   it("reports every retired key still present as deprecated and inert", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-retired-"));

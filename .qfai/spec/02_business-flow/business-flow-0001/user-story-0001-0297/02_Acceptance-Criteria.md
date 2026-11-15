@@ -57,4 +57,12 @@ Feature: Every plain text on a screen states why it is there
     And a text with its own `qfai-text` comment is still checked against that comment
     And a body that a `qfai-text` comment would fail raises `QFAI-UITEXT-002` at error, naming the file, the comment's line and the defect, and gives no text a reason
     And a `qfai-text-file` comment in a prototype page gives no text a reason
+
+  # AC-0001-0297-08
+  Scenario: A project maps its components to the elements they render
+    Given `uiText.elements` in `qfai.config.yaml` maps project components such as `TableHead` to `th`, `CardTitle` to `h3`, `NavLink` to `a` and `StatusRegion` to `status`
+    When `qfai validate` runs in the `prototyping`, `saas-package`, `verify` or `full` profile
+    Then a text inside a mapped component, in a `.tsx`, `.jsx`, `.vue`, `.svelte` or `.html` file, raises no `QFAI-UITEXT` finding, as it would inside the element the component renders
+    And a text inside a component the map does not name is read as before
+    And a key that is not a component name, or a value that is not an exempt element, `status` or `alert`, raises `QFAI-CFG-002` and maps nothing, while the other entries still apply
 ```

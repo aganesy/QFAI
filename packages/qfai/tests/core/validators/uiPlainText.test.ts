@@ -399,6 +399,47 @@ describe("a component whose name ends in the word Link or Button is exempt", () 
   });
 });
 
+// QFAI:EX-0001-0297-16
+describe("uiText.elements reads a project component as the element it renders", () => {
+  it("exempts a mapped component by its whole name or last segment, and checks the rest", async () => {
+    const root = await projectWith({
+      "src/a.tsx":
+        'export const A = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <UI.CardTitle>Recent orders</UI.CardTitle>\n    <NavItem href="/">Home</NavItem>\n    <StatusRegion>Saved</StatusRegion>\n    <Ui.Banner>Welcome</Ui.Banner>\n    <TableCell>ORD-1042</TableCell>\n  </div>\n);\n',
+      "src/b.vue":
+        "<template>\n  <TableHead>Order</TableHead>\n  <table-head>Total</table-head>\n  <StatusRegion>Saved</StatusRegion>\n  <TableCell>ORD-1042</TableCell>\n</template>\n",
+      "src/c.svelte":
+        "<CardTitle>Recent orders</CardTitle>\n<Ui.Banner>Welcome</Ui.Banner>\n<Banner>Hello</Banner>\n",
+    });
+    const config: QfaiConfig = {
+      ...configWith(["src/**"]),
+      uiText: {
+        elements: {
+          TableHead: "th",
+          CardTitle: "h3",
+          NavItem: "a",
+          StatusRegion: "status",
+          "Ui.Banner": "alert",
+        },
+      },
+    };
+    const issues = await validateUiPlainText(root, config, { loadTypescript: realTypescript });
+    expect(issues.map((found) => [found.code, found.file, found.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", "src/a.tsx", 8],
+      ["QFAI-UITEXT-001", "src/b.vue", 5],
+      ["QFAI-UITEXT-001", "src/c.svelte", 3],
+    ]);
+  });
+
+  it("reads the same components as plain text when the map is absent", async () => {
+    const issues = await run({
+      "src/a.tsx": "export const A = () => <TableHead>Order</TableHead>;\n",
+      "src/b.vue": "<template>\n  <StatusRegion>Saved</StatusRegion>\n</template>\n",
+      "src/c.svelte": "<CardTitle>Recent orders</CardTitle>\n",
+    });
+    expect(codes(issues)).toEqual(["QFAI-UITEXT-001", "QFAI-UITEXT-001", "QFAI-UITEXT-001"]);
+  });
+});
+
 // QFAI:EX-0001-0297-12
 describe("the default loader resolves typescript from the project root", () => {
   it("raises 003 when the project installs no typescript", async () => {
