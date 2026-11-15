@@ -37,4 +37,19 @@ Feature: Deterministic validation gate
     When `qfai validate` runs the contract checks
     Then a screen that writes no `omitted`, leaves it empty, or lists only entries with a non-blank `part` and `reason` raises nothing
     And each list that is not a list, entry that is not a mapping and entry with no `part` or no `reason` raises `QFAI-CONTRACT-052` at error, naming the contract, the screen and the defect
+
+  # AC-0001-0039-07
+  Scenario: Validate warns about an application screen that declares no states or no navigation
+    Given a UI contract whose screens declare `states` and `navigation` or leave them out
+    When `qfai validate` runs the contract checks
+    Then an application screen with no `states`, or without one of the five state ids, raises `QFAI-CONTRACT-053` at warning
+    And an application screen with no `navigation`, and no `navigation.none` with a reason, raises `QFAI-CONTRACT-054` at warning
+    And a `surface: marketing` screen and the shipped UI contract sample raise neither
+
+  # AC-0001-0039-08
+  Scenario: Validate warns about a list or table element of an application screen with no list behaviour
+    Given a UI contract whose `type: list` and `type: table` elements declare `list` or leave it out
+    When `qfai validate` runs the contract checks
+    Then such an element of an application screen with no `list`, and no `list.none` with a reason, raises `QFAI-CONTRACT-055` at warning, naming the screen and the element
+    And an element of a `surface: marketing` screen and the shipped UI contract sample raise none
 ```

@@ -39,6 +39,7 @@ export { validateUiScreenEntries } from "./uiScreenEntries.js";
 export { validateUiContractParse } from "./contracts.js";
 export { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 export { validateUiPrototypeMode } from "./uiPrototypeMode.js";
+export { validateUiScreenCompleteness } from "./uiScreenCompleteness.js";
 export { validateUiScreenSurface } from "./uiScreenSurface.js";
 export { validateUiScreenOmitted } from "./uiScreenOmitted.js";
 export { validateUiAccessibilityLayer } from "./uiAccessibilityLayer.js";

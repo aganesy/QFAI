@@ -1,14 +1,14 @@
 ---
 name: verify-repo-gate
 owner: qfai-verify
-purpose: "Run the repository's quality gates, repair failures until every gate in scope passes, and report the result and write the verdict."
+purpose: "Run the repository's quality gates, repair failures until every gate in scope passes or fails only on pending test obligations, and report the result and write the verdict."
 requires: [common-gate-run]
 ---
 
 # verify-repo-gate
 
-The repository gates, the fix loop over every failing gate, and the two
-outputs: the evidence a person reads and the verdict downstream gates read.
+The repository gates, the fix loop over every failing gate except the test
+obligations a `testsPending` scope leaves pending, and the two outputs: the evidence a person reads and the verdict downstream gates read.
 
 ## Reads
 
@@ -107,6 +107,11 @@ one code review reads the repair, as `qfai-verify`'s `## Review` section says.
 
 - If failing, produce an actionable fix list (not vague). Stop and escalate
   when a gate fails without one.
+- Under a `testsPending` scope, the `QFAI-STORY-006` obligations
+  `verify-qfai-gate` lists as `PENDING` are not repaired: the loop neither
+  writes their tests, reruns a gate for them nor escalates them, since the
+  implement stage the scope leaves out writes those tests. Every other failure,
+  of the QFAI gate included, keeps the loop.
 - Before attributing a failure to the change, run the gate on the base commit,
   as `common-gate-run`'s `## A failure that predates the change` says. A
   failure that is the same there is reported with its baseline and is not

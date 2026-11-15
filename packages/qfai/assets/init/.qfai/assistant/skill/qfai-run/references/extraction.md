@@ -185,7 +185,7 @@ surface exposes.
 - `dependency`: A dependency or toolchain is raised or pinned, a scanner finding answered by a bump included, or a request to update `qfai` itself and run `init`, including a contract edit the updated checks then call for. No behaviour change is intended.
 - `release`: Release notes, a changelog, a version, a backport, signing, a package, a distribution incident, or a manual test plan.
 - `order`: The request names an approved action to carry out and holds no design of its own. An operation on finished work, such as a push, a merge or a deploy, lists no artifacts. A behaviour change whose design a parent settled keeps that change's intent with `upstream`.
-- `follow-up`: Leftovers of earlier work, of mixed kinds: unresolved review findings, handover notes, a backlog to sort again. Members that share one intent take it with `bundle`.
+- `follow-up`: Leftovers of earlier work, of mixed kinds: unresolved review findings, handover notes, a backlog to sort again. Members that share one intent take it with `bundle`. Leftovers whose causes and fixes are all settled are one implementing request, as `mixed-bundle` says.
 
 ### When two intents fit equally
 
@@ -242,6 +242,8 @@ only after reading what it depends on.
 - `docs-answerable`, with `question-help`: The documents or the code already answer it. Read what answers it first.
 - `known-duplicate`, with any intent: An existing item is the same request. Read the item first.
 - `mixed-bundle`, with `bundle`: The bundled findings differ in kind. Findings that share one intent take that intent instead.
+  A request to fix several named items, such as review leftovers, whose causes and fixes are each already settled is not one to sort again: extract it as one request, keeping `bundle` but setting neither `follow-up` nor `mixed-bundle`.
+  Take the intent the items share, or the implementing intent that fits them, such as `defect`; set the entry flags `cause` and `fix`, and list the union of the items' artifacts. The plan then routes it to one implementing route. A bundle with any item whose cause or fix is still open keeps `mixed-bundle`.
 - `human-run`, with `order`: Only a person can run the operation: it is paid, bound to a host, or needs credentials the session does not hold.
 - `owned-temporary-cleanup`, with `order`: Existing user authority permits deleting specific repository-local, Git-ignored temporary directories the current task owns, without a tracked change or files still needed for a deliverable.
 - `meaning-preserving`, with `stale-record` or `order`: The change keeps every record's meaning. It only resolves the conflicts of a merge or a branch update, or gives a story-tree item the branch added a free ID when the base took the same ID, and adds no content neither side had.
@@ -374,6 +376,7 @@ refuses it. `flows` and `alternatives` stay absent when unused: `plan` refuses a
 - "Rename workspace to project everywhere: the specification, the code, the screens and the tests." → `{ intent: behaviour-change, qualifiers: [rename-requested], artifacts: [spec, contract, ui, code, tests, docs], confidence: high }`
 - "Remove the configuration key nothing reads." → `{ intent: unenforced, qualifiers: [mechanism-inert, removal-requested], artifacts: [code, tests, config], risks: [breaking], confidence: high }`
 - An approved decision cited with a task section and a done-when block → `{ intent: order, entryFlags: [upstream], qualifiers: [settled-design], signals: [approved-record-task], artifacts: [spec, contract], confidence: high }`
+- "Fix these six review leftovers", each naming the faulty line and the edit that fixes it, in code and its tests and in one document → `{ intent: defect, entryFlags: [bundle, cause, fix], artifacts: [code, tests, docs], confidence: high }`
 - "The import fails and the `catch` logs nothing, so the cause cannot be read; log the error there." → `{ intent: defect, entryFlags: [cause, fix, expect], artifacts: [code, tests], confidence: high }`
 - "Merging main left conflicts in our story files; give our colliding story the next free ID and keep both sides." → `{ intent: stale-record, qualifiers: [meaning-preserving], artifacts: [spec], confidence: high }`
 - "Take main's shared fix into the branches feature-a and feature-b, keeping what each side means.", read once for each named branch and run one after another → `{ intent: order, qualifiers: [meaning-preserving], artifacts: [spec, docs], confidence: high }`

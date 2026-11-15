@@ -6,6 +6,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
+  lists what a product whose locale is Japanese needs from its contracts and
+  code: NFKC input normalisation, IME composition on Enter, yen, number, date
+  and era formats, postcode, phone, corporate and invoice numbers, line
+  breaking, line height and font loading. `sdd-contract` and `implement-tdd`
+  read it when the specification or `tech.md` states the locale, so these are
+  settled once instead of found screen by screen as bugs.
+
 - **A part a screen leaves out has one place for its reason.** The rule said
   leaving out a part every business screen has needs a reason in the screen's
   UI contract, but named no field for it, and the app shell, the home and the
@@ -43,6 +51,34 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Settings, member management and notifications are added only when a story
   needs them.
 
+- **`uiText.elements` lets the plain-text check read a project component as the
+  element it renders.** In `qfai.config.yaml`, map a component to an element
+  `QFAI-UITEXT-001` already exempts, or to `status` or `alert` for a live
+  region, as `TableHead: th` or `StatusRegion: status`. A text inside the
+  component then needs no `qfai-text` reason, in `.tsx`, `.jsx`, `.vue`,
+  `.svelte` and `.html` files alike. A key that is not a component name, or a
+  value outside that list, is reported as `QFAI-CFG-002`. Closes #4329.
+
+- **Validate warns about a screen with no states or no navigation.** An
+  application screen of a UI contract with no `states`, or without one of
+  `default`, `empty`, `loading`, `error` and `success`, raises
+  `QFAI-CONTRACT-053` at warning, and one with no `navigation` raises
+  `QFAI-CONTRACT-054`. A screen in no navigation on purpose writes
+  `navigation: { none: <reason> }`, and a `surface: marketing` screen is asked
+  for neither. The UI contract guide, the contract artifact rules, the
+  `sdd-contract` step and the shipped sample say so. Part of #4119.
+
+- **Interactive widgets come from a catalogue, and `qfai validate` warns
+  about hand-written ones.** `ui-procurement.md` lists the widgets that are
+  not hand-authored when a catalogue or headless library is available, from
+  dialog and menu to date picker and accordion, each with its WAI-ARIA
+  Authoring Practices pattern. An authored one records that pattern and its
+  keyboard behaviour in its `@a11y` tag, with a test. Where a catalogue is
+  installed, `qfai validate` warns about a hand-written `role="dialog"`,
+  `role="menu"`, `role="tablist"` or `aria-modal` outside a catalogue item's
+  own file (`QFAI-COMP-005`), and about a catalogued widget with no `@a11y`
+  (`QFAI-COMP-006`). Closes #4299.
+
 - **The implement steps now write the per-role navigation journey.** Where an
   app has navigation of its own, `implement-scaffold` adds an empty journey
   test for each role a flow adds a screen to, and records the roles that sign
@@ -52,6 +88,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contracts name the roles of each screen, a role's screens are those of the
   flows whose stories name it as their actor. `qfai validate` does not report
   the journey, so each step names its file.
+
+- **Validate warns about a list or table with no list behaviour.** A
+  `type: list` or `type: table` element of an application screen in a UI
+  contract with no `list` raises `QFAI-CONTRACT-055` at warning. An element
+  with no list behaviour on purpose writes `list: { none: <reason> }`, and a
+  `surface: marketing` screen is asked nothing. The UI contract guide, the
+  contract artifact rules, the `sdd-contract` step and the shipped sample say
+  so. Part of #4119.
 
 - **A UI contract list or table element says how it is shown and narrowed.**
   The shipped `ui-contract.sample.yaml`, the UI contract guide, the contract
@@ -64,6 +108,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Closes #4109.
 
 ### Changed
+
+- The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
+
+- **A scope that stops before implementation can reach its own commit.** In
+  `npx qfai workflow plan`, a scope that writes the specification and leaves
+  out the route's implement stage, such as `medium` of `add-feature`, now holds
+  `testsPending: true`. In such a run the QFAI gate still runs the full scan and
+  still fails on any error, but lists as pending each missing-test error
+  (`QFAI-STORY-006`) for an ID the run's specification stage wrote. The
+  repository gate's fix loop leaves those alone instead of writing the tests.
+  When those are its only errors, the local commit is made and its report lists the
+  pending tests for the implement stage. The
+  scope question says so for that option. Other scopes are printed as before.
+
+- **The search-protection hook allows a search scoped inside the project.** A
+  grep, rg, git grep, Select-String, findstr or native search call that names
+  at least one path, every one inside the project root, now runs. A search with
+  no path, one over the project root itself (such as `.`), and one whose path
+  the hook cannot place inside the project are still redirected to the graph:
+  a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
+  home prefix or a `..` segment. A findstr with `/s` and a native search scoped
+  only by an include glob are also redirected.
 
 - **Settled work that adds screens gets the design and prototype stages.**
   The extraction has a new qualifier, `new-screens`, for a settled change that
@@ -82,11 +148,47 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   architecture, product-surface and requirements reviewers refuse such a cut;
   how a part is built remains subject to the article.
 
+- **A run that adds screens researches what the project has no pattern for.**
+  Before its session, `prototyping-grill` now checks each screen the run adds:
+  its type against the business UI patterns, and each element and `structure`
+  group its UI contract declares against the component catalogue `tech.md`
+  names. For a screen type or a component neither covers, it runs the
+  research-first protocol, scoped to UI and to those gaps alone, and the grill
+  session starts from that research. A run whose screens they all cover runs
+  no research. Before, only `/qfai-discussion` ran the protocol. Closes #4293.
+
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
   examples are green, each screen the flow adds or changes is placed in the
   shell its UI contract names, linked from its entry points, built from shared
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
+
+- **The prototype reviewer checks the business-screen floor, not only what
+  the UI contract declares.** On an application screen the run adds or
+  changes, a missing way back, or empty, loading, error or success state with
+  no reason recorded in the UI contract blocks, as does one the run removes. A
+  gap that was already there before the run goes in the critique. The app
+  shell is judged once for the application: it blocks only when the run adds,
+  alters or removes it, so a scoped run is never blocked by a shell it may not
+  build. `lap-007-state-not-represented` now rests on the same floor. Closes
+  #4129.
+
+- **A UI pattern repeated across screens becomes a shared component.**
+  `minimal-implementation.md` no longer counts a region that several screens
+  repeat as "an operation done once": it follows rung 1 of `ui-procurement.md`
+  and the business-screen floor. When two or more UI contracts name the same
+  region, rung 1 now extracts the shared component at its first use instead of
+  waiting for the second screen. A shared component that no UI contract names is
+  still not built in advance. Closes #4099.
+
+- **A checkout that did not reinstall after a qfai upgrade is caught.** When
+  the running qfai is the project's own copy and the lockfile
+  (`package-lock.json`, `pnpm-lock.yaml` or `yarn.lock`) pins another version,
+  every command prints one stderr line naming both versions and the install
+  command, and `qfai validate`, `qfai sdd preflight` and `qfai workflow plan`
+  stop with exit 1. A `workflow plan` refusal carries the new reason
+  `stale-install`. The upgrade guide now tells every checkout and worktree to
+  run its install after pulling a qfai upgrade.
 
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
@@ -120,6 +222,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The search-protection hook reads a search that a program runner or a piped
+  shell runs.** `nohup`, `setsid`, `nice`, `ionice`, `stdbuf`, `timeout` and
+  `xargs` are unwrapped like `env`, so `nohup rg foo /` and
+  `git ls-files | xargs grep -r bar /` are denied as searches. A pipeline
+  stage that runs its input as a shell, such as `| sh`, `| bash -s` or
+  `| pwsh -Command -`, is denied with a message saying the hook cannot read
+  the commands that shell runs. Closes #4384.
+
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
   derived-value declaration covered both a value the DB stores and a value
   the API does not require, the two remedy sentences ran together with no
@@ -140,6 +250,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   wait for a new page after a click, and the shell code for React and plain
   DOM. The test layers rule and the scaffold and acceptance steps forbid a
   fixed sleep or a blind retry in its place.
+
+- **The search-protection hook lets a search of one file outside the project
+  run.** A search the hook did not already allow as scoped inside the project
+  is no longer denied when it is a grep, rg, findstr or Select-String that is
+  the only command of its event, with no pipeline stage, whose literal pattern
+  names no existing file and whose one absolute file operand names an existing
+  single-link regular file outside the project worktree and the checkout the
+  hook belongs to, before and after symbolic links, so
+  `grep -n foo /etc/hosts` runs. An outside directory or relative operand, a
+  second operand, git grep, an outside file beside another command or
+  pipeline stage or behind `env`, a search that mixes project and outside
+  paths, a glob, `~`, variable or `..` operand, a link, hard link, MSYS link
+  file or shortcut, an option that reads another file, `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH` set,
+  or an operand that does not exist stays denied. Fixes #4179.
 
 - **A `Derived (not stored)` declaration for a value no DB column holds is
   accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`

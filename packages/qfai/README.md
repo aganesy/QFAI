@@ -345,6 +345,7 @@ flowchart LR
   - Validates the story tree, contracts and test obligations, writes `.qfai/report/validate.json`,
     and appends run logs to `.qfai/report/run-*/`; use `--fail-on error` (or `--fail-on warning`) to turn it into a CI gate,
     and `--format github` to emit GitHub-friendly annotations.
+    When the installed qfai is not the version the lockfile pins, it stops with exit 1 before it runs, even under `--fail-on never`.
     Use `--flow BF-0001` to scope a run to one business flow.
     Use `--profile discussion|sdd|prototyping|atdd|tdd|verify` for local skill-owned checks; CI should use default/full validation (or `verify` / `tdd` for the dedicated CI gates).
 - `npx qfai report`
@@ -376,7 +377,9 @@ flowchart LR
     commit it. `--check` writes nothing and exits 1 when the committed file is missing or out of date.
     It reads JSX with the project's own `typescript`. Once the file exists, `qfai validate` warns about
     a component with no source, two components for one pattern, a raw `<button>`, `<input>` or
-    `<select>` a listed component replaces, and a stale catalogue (`QFAI-COMP-001` to `QFAI-COMP-004`).
+    `<select>` a listed component replaces, a stale catalogue, a hand-written `role="dialog"`,
+    `role="menu"`, `role="tablist"` or `aria-modal` where a catalogue is installed, and a listed
+    interactive widget with no `@a11y` (`QFAI-COMP-001` to `QFAI-COMP-006`).
 - `npx qfai workflow plan`
   - The route planning behind the free-text entry. `--in <path>`, or `--in -` for standard input,
     reads a request's extraction; `--route <route>` names a route instead. It prints one JSON
@@ -391,6 +394,7 @@ flowchart LR
     then refreshes `<paths.outDir>/preflight_summary.md` as the latest-run pointer. Exits 1 when the result is
     `blocked` (use `--fail-on never` to report without failing); `--format json` emits the machine-readable
     result on stdout.
+    When the installed qfai is not the version the lockfile pins, it exits 1 before it runs, even under `--fail-on never`.
   - The source is the deliberation record `--record <path>` names: the run's own record, the one the work
     order names, or the one the user names. A bare record name is read against `paths.deliberationDir` first,
     then the project root; a name with a path separator is read against the project root. Without
@@ -942,6 +946,11 @@ To upgrade by hand:
    and a reason if you keep your own version.
 6. Run `npx qfai doctor` and `npx qfai validate`, and fix what they report.
 7. Commit the result in one change.
+8. After the change is merged, every other checkout and worktree of the
+   project runs its install once it pulls the change, for example `npm ci`.
+   Until it does, its `node_modules` keeps the old qfai: every command warns
+   with both versions, and `npx qfai validate`, `npx qfai sdd preflight` and
+   `npx qfai workflow plan` stop.
 
 An agent asked to upgrade `qfai` follows these steps as a dependency update.
 

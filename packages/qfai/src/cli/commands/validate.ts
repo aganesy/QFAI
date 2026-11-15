@@ -301,6 +301,9 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-041",
     "QFAI-CONTRACT-051",
     "QFAI-CONTRACT-052",
+    "QFAI-CONTRACT-053",
+    "QFAI-CONTRACT-054",
+    "QFAI-CONTRACT-055",
     "QFAI-DB-*",
   ],
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
@@ -1227,6 +1230,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every `omitted` list a UI contract screen declares is a list of mappings, each with a non-blank `part` naming a part the screen leaves out and a non-blank `reason` saying why, so a reviewer can tell a deliberate omission from a missing part.",
   "QFAI-AXE-001":
     "A project whose UI contracts declare a screen with a web route has a selected test file that calls axe (`AxeBuilder` or an `@axe-core/` package), so its routes are checked against the WCAG 2.2 A and AA rules.",
+  "QFAI-CONTRACT-053":
+    "Every application screen of a UI contract lists `states` with an entry for each of `default`, `empty`, `loading`, `error` and `success`, a state it cannot reach carrying `none` with the reason, so each state is built rather than assumed. A `surface: marketing` screen is asked nothing.",
+  "QFAI-CONTRACT-054":
+    "Every application screen of a UI contract declares `navigation`: its shell, entry points and where back leads, or `none` with the reason it sits in no navigation, so the screen is built inside the app. A `surface: marketing` screen is asked nothing.",
+  "QFAI-CONTRACT-055":
+    "Every `type: list` or `type: table` element of an application screen in a UI contract carries `list`: its columns, search, filters, sort and pagination, or `none` with the reason it has no list behaviour, so the list is built searchable, sortable and paged where it needs to be. A `surface: marketing` screen is asked nothing.",
   "QFAI-UITEXT-001":
     "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert or the like) or has a `qfai-text` comment with `why` and `without` directly before it or before its parent element, or a `qfai-text-file` comment in its file gives it one.",
   "QFAI-UITEXT-002":
@@ -1242,6 +1251,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A surface file renders no raw `<button>`, `<input>` or `<select>` when the component catalogue lists a component whose `@pattern` is that element, outside that component's own file; a hidden input is not counted.",
   "QFAI-COMP-004":
     "The committed component catalogue parses and is the file `qfai catalog components` writes for the current source.",
+  "QFAI-COMP-005":
+    'Where a component catalogue is installed, no surface file writes `role="dialog"`, `role="menu"`, `role="tablist"` or `aria-modal` by hand outside the file of a component procured from a catalogue.',
+  "QFAI-COMP-006":
+    "Every catalogued component whose `@pattern` is an interactive widget the procurement rule lists records its WAI-ARIA pattern and keyboard behaviour in `@a11y`.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —

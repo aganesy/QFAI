@@ -110,13 +110,17 @@ links.
 | `navigation.shell`        | the shell screen the screen renders inside, or that it has none |
 | `navigation.entry_points` | the screens, menus or actions that lead to it, at least one     |
 | `navigation.back_to`      | the route the user returns to from it                           |
+| `navigation.none`         | instead of the keys above: why the screen is in no navigation   |
 
 The shell, the navigation for each role and the home are written once, as the
 screens of one UI contract, the app frame, and `shell` names the frame's shell
 screen. A screen with no frame, such as a sign-in page, says so in `shell`. A top-level
-screen with nowhere to return to says so in `back_to`. `npx qfai validate` does
-not check these keys; they describe the screen for the implementer and the
-reviewer.
+screen with nowhere to return to says so in `back_to`. A screen that is in no
+navigation on purpose, such as a print view opened in its own window, writes
+`navigation: { none: <reason> }`. `npx qfai validate` warns, as
+`QFAI-CONTRACT-054`, about an application screen whose `navigation` is missing
+or holds nothing, a `none` with no reason included; what the keys say is for
+the implementer and the reviewer.
 
 ## Surface kind: `surface`
 
@@ -133,7 +137,9 @@ guide, an about page with a contact form, and legal notices. An application
 screen is checked against the business-screen list and its business type; a
 marketing screen against its section entries in the marketing pattern
 reference. `npx qfai validate` reports any other value as `QFAI-CONTRACT-051`,
-at error.
+at error. A marketing screen is not asked for `states`, `navigation` or a
+list element's `list` by `QFAI-CONTRACT-053`, `QFAI-CONTRACT-054` and
+`QFAI-CONTRACT-055`.
 
 ## Parts left out: `omitted`
 
@@ -257,8 +263,9 @@ state rather than assuming it. The rule behind `next` is
 A state is never left out: one the screen cannot reach, such as `empty` on a
 form that starts blank, carries `none` with the reason. "The design system
 default" is not a `renders`; name what the user sees. A supplement's `when`
-names one of these states. `npx qfai validate` does not check this key; it
-describes the screen for the implementer and the reviewer.
+names one of these states. `npx qfai validate` warns, as `QFAI-CONTRACT-053`,
+about an application screen with no `states` list or with no entry for one of
+the five ids; what an entry says is for the implementer and the reviewer.
 
 ## List behaviour: `elements[].list`
 
@@ -282,7 +289,11 @@ List screen type that `.qfai/assistant/step/sdd-contract/STEP.md` names
 carries a Behaviour list, such as list state kept in the screen's address and
 paging on the server for a list that can outgrow one page. It applies to what
 these entries set; an entry that departs from it says so with the reason.
-`npx qfai validate` does not check this key; it describes the element for the
+An element that has no list behaviour on purpose, such as a fixed set of steps
+always shown together, writes `list: { none: <reason> }` instead of the five
+entries. `npx qfai validate` warns, as `QFAI-CONTRACT-055`, about a list or
+table element of an application screen whose `list` is missing or holds
+nothing, a `none` with no reason included; what the entries say is for the
 implementer and the reviewer.
 
 ## Purposeful copy: `supplements` and `structure`

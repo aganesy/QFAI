@@ -26,6 +26,7 @@ import { validateContractConsistency } from "./contractConsistency.js";
 import { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 import { validateUiMarkerPresence } from "./uiMarkerPresence.js";
 import { validateUiPrototypeMode } from "./uiPrototypeMode.js";
+import { validateUiScreenCompleteness } from "./uiScreenCompleteness.js";
 import { validateUiScreenOmitted } from "./uiScreenOmitted.js";
 import { validateUiScreenSurface } from "./uiScreenSurface.js";
 import { validateUiScreenEntries } from "./uiScreenEntries.js";
@@ -125,6 +126,9 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   // A reviewer reads `omitted` to tell a deliberate omission from a missing
   // part, so an entry without a part or a reason records nothing it can read.
   issues.push(...(await validateUiScreenOmitted(root, config)));
+  // A screen built from a contract that names no states or no navigation is
+  // built without them.
+  issues.push(...(await validateUiScreenCompleteness(root, config)));
 
   return issues;
 }
