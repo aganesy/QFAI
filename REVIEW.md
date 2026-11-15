@@ -104,9 +104,11 @@ P1 finding. Dependency updates that Renovate merges follow
 A P0 or P1 finding from either review is fixed on the pull request before it
 merges. A finding of P2 or lower does not hold the merge and does not start
 another fix-and-review round on the pull request: answer it, resolve its
-thread, and file all such findings of the pull request together as one
-follow-up issue. A stage review that ran inside a `qfai-run` route does not
-replace the review above.
+thread where it has one, and file all such findings of the pull request
+together as one follow-up issue. Under § Severity Prefixes, `[BLOCKER]` and
+`[MAJOR]` count as P0 or P1, and `[MINOR]` and below as P2 or lower. A stage
+review that ran inside a `qfai-run` route does not replace the Codex review or
+the independent review.
 
 ## Severity Prefixes
 
