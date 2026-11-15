@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **A request for new screens plans the prototype loop.** `qfai-run` now sets
+  the qualifier `visual-open` when a request adds a screen or a UI surface that
+  no confirmed prototype covers, even when the request asks no design question.
+  Such a feature routes `prototype-feature`. A control added to an existing
+  screen in that screen's style still routes `add-feature` unless the request
+  leaves its look open.
+
 ### Removed
 
 - **Breaking: no hook blocks a direct search any more.** `qfai init` no longer
@@ -29,6 +38,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
+
+### Changed
+
+- **Parallel screen units start from a shared foundation.** Disjoint writes no
+  longer let two or more parallel story units that build application screens
+  each author their own list toolbar, page header, back link and status
+  badges. Before they fan out, the session agent lands a foundation unit: the
+  app shell, a page template for each screen type the units build, the status
+  map and the shared list behaviour, from the component catalogue or extracted
+  once. A new parallel-unit gate condition, G7, fails a screen unit whose
+  screen type has no template yet, and each screen unit's brief names the
+  templates and catalogue entries it uses. A split with fewer than two screen
+  units is unaffected. Closes #4306.
 
 ## [2.5.0] - 2026-11-15
 
