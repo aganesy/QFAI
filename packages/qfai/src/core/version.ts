@@ -114,6 +114,34 @@ export async function locateToolAgainstProject(
 }
 
 /**
+ * The directory whose `package.json` declares qfai, when the running copy is
+ * that project's own; otherwise `null`.
+ *
+ * The copy is the project's own when it lies under the nearest declaring
+ * directory (npm's `node_modules/qfai`, pnpm's store, a hoist to a workspace
+ * root that declares it) or is reached through that directory's linked
+ * `node_modules`. Only then does the project's lockfile say which version
+ * should be running. A copy that directory's `node_modules/qfai` links to is
+ * not counted: `npm link` and `yarn link` leave the lockfile pinning the
+ * registry version, so a local build tried that way would always differ.
+ *
+ * `toolPackageDir` stands in for the running copy's directory, which a test
+ * cannot move; it defaults to that directory.
+ */
+export async function findOwnCopyProjectDir(
+  root: string,
+  toolPackageDir?: string | null,
+): Promise<string | null> {
+  const packageDir = toolPackageDir === undefined ? await resolveToolPackageDir() : toolPackageDir;
+  if (packageDir === null) return null;
+  const declaringDir = await findDeclaringDir(path.resolve(root));
+  if (declaringDir === null) return null;
+  const realPackageDir = await toRealPath(packageDir);
+  if (!classifyAgainstDeclaration(declaringDir, realPackageDir)) return declaringDir;
+  return (await resolvesThroughOwnNodeModules(declaringDir, realPackageDir)) ? declaringDir : null;
+}
+
+/**
  * Whether a `qfai` dependency is declared and the running copy is not it.
  *
  * This is the intent signal `outside` cannot carry. A path comparison says the

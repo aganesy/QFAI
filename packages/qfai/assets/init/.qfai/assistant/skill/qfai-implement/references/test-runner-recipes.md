@@ -11,6 +11,7 @@ stay the obligation; a recipe is one way to meet them.
 - The run-owned session directory
 - Vitest: one session per pool slot and actor
 - Playwright: one account and storage state per worker
+- Playwright: wait until the app is ready
 - Business data each file owns
 - Database hooks only where a group needs them
 - Shared and exclusive access to a common database or server
@@ -290,6 +291,59 @@ teardown("delete the run's accounts and storage states", async () => {
 A test whose subject is the session itself (login, logout, expiry, password change) starts from an
 empty storage state with `test.use({ storageState: { cookies: [], origins: [] } })` and creates its own
 subject. When the suite runs once per clock profile, each profile runs its own setup and teardown.
+
+## Playwright: wait until the app is ready
+
+A server-rendered page shows its content before it reacts to input, so a test that fills a field
+too early loses the value when the framework takes over, and fails some runs. The app shell sets
+`data-qfai-ready` on `<html>` once it is interactive; the test waits for it after each page load.
+Do not wait a fixed time, and do not wrap an interaction in a blind retry such as `toPass`: both
+hide the cause and still fail on a slow run.
+
+The marker covers a page load only. `<html>` survives a route change. After a client-side
+route change, the test waits for that route's own content, such as its heading. Content
+inside a `<Suspense>` boundary can hydrate after the shell, so the test waits for it too.
+
+In React, an effect sets it in a `"use client"` component the root layout renders around every
+page, since the Next.js App Router root layout is a Server Component:
+
+```tsx
+// app-ready.tsx (React): a client component the root layout renders around the page
+"use client";
+import { useEffect, type ReactNode } from "react";
+
+export function AppReady({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    document.documentElement.dataset.qfaiReady = "true";
+  }, []);
+  return children;
+}
+```
+
+```ts
+// app shell (plain DOM): after the event handlers are attached
+document.documentElement.dataset.qfaiReady = "true";
+```
+
+One helper waits. After a click that loads a new document, the old page and its marker stay until
+the new document arrives, so the test waits for the new URL first:
+
+```ts
+// ready.ts
+import type { Page } from "@playwright/test";
+
+export async function waitForAppReady(page: Page): Promise<void> {
+  await page.locator("html[data-qfai-ready]").waitFor({ state: "attached" });
+}
+
+// checkout.spec.ts: after every page load, before the first interaction
+await page.goto("/checkout");
+await waitForAppReady(page);
+await page.getByLabel("Email").fill("member@example.test");
+await page.getByRole("link", { name: "Pay" }).click();
+await page.waitForURL("**/payment");
+await waitForAppReady(page);
+```
 
 ## Business data each file owns
 

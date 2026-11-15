@@ -20,6 +20,13 @@ Feature: Write the standard parts of a business screen into its UI contract
     And a once-per-application part left out gets its reason in the frame
     And settings, member management and notifications are frame screens only when a story needs them
 
+  # AC-0001-0305-05
+  Scenario: A part a screen leaves out is recorded in its omitted list
+    Given a screen that leaves out a part of the business-screen list in `interface-clarity.md`
+    When the contract step writes its UI contract, or the product-surface reviewer reviews the screen
+    Then the reason is a `{ part, reason }` entry in that screen's `omitted` list, and for a once-per-application part in the app frame
+    And the reviewer reads that list, and a state's `none` under `states`, as the recorded reason
+
   # AC-0001-0305-04
   Scenario: The contract step names each application screen's type by its ID
     Given the shipped `sdd-contract` step and `business-ui-patterns.md`

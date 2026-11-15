@@ -59,6 +59,10 @@ Standard parts:
 - an empty state that says what to do next, distinct from "no results" for a
   search or filter, which offers to clear it.
 
+A list or table element writes its columns, search, filters, sort and
+pagination in its UI contract `list` entry, each set or `none` with the
+reason.
+
 Behaviour:
 
 - the list state (keyword, filters, sort and page) lives in the screen's
@@ -177,10 +181,13 @@ Catalogue: stat cards, a task list, an activity feed.
 - **Writing a UI contract.** For each screen, name its type here as
   `pattern: <id>` with the type's ID, such as `pattern: list`, then write in
   the contract the parts this screen needs, and the reason for a part it
-  leaves out. `npx qfai validate` reports an ID this reference does not have as
-  `QFAI-CONTRACT-056`. A behaviour in its type's Behaviour list applies without being
-  named; the contract records only a behaviour the screen leaves out, with
-  the reason, such as a fixed list of a few items paged on the client.
+  leaves out. A behaviour in its type's Behaviour list applies to what the
+  contract sets without being restated; a list's `list` entry names its
+  columns, search, filters, sort and pagination, and the entry a behaviour
+  concerns records a departure from it, with the reason, such as a
+  `search` whose keyword is not kept in the address because the list is a
+  picker in a dialog. `npx qfai validate` reports an ID this reference does
+  not have as `QFAI-CONTRACT-056`.
 - **Implementing.** Build what the contract names. A part of the screen's type
   that the contract neither names nor excludes with a reason is drift: raise
   it to the contract stage under `.qfai/assistant/rule/drift-protocol.md`

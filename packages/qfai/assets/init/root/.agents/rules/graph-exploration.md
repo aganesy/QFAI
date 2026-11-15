@@ -115,7 +115,15 @@ out of tracked integration settings, logs and reusable analysis.
 ## Direct search and result limits
 
 Supported pre-tool hooks deny direct exploratory search and display the
-appropriate graph CLI command and a pending attempt UUID. Build, test, lint and
+appropriate graph CLI command and a pending attempt UUID. A direct search is
+exploratory when it names no path, names the project root itself (such as
+`.`), or names a path the hook cannot place inside the project: one with a
+glob, an expansion or PowerShell subexpression, a home prefix or a `..`
+segment. A search with an unknown option, or one whose command an alias,
+function or variable may redefine, is also exploratory, as are findstr with
+`/s` and a native search scoped only by an include glob. A search whose every
+path lies inside the project, such as `grep -n name src/module` or
+`rg name src/a.ts docs/`, is allowed. A command the hook cannot read stays denied. Build, test, lint and
 graph-engine internals remain permitted. Hooks only classify, deny and save
 bounded pending state; they perform no graph query, preparation, network
 request or model call. The graph CLI never runs raw search itself.

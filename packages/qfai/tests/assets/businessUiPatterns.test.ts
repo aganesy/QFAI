@@ -70,7 +70,9 @@ describe("business UI pattern reference", () => {
       expect(text).toContain("the values it is matched against are normalised the same way");
       expect(text).toContain("validated and capped");
       expect(text).toContain("a behaviour the screen breaks with no recorded reason is a finding");
-      expect(text).toContain("applies without being named");
+      expect(text).toContain("applies to what the contract sets without being restated");
+      expect(text).toContain("UI contract `list` entry");
+      expect(text).not.toContain("applies without being named");
       expect(text).not.toContain("the last page or the empty state");
     });
 

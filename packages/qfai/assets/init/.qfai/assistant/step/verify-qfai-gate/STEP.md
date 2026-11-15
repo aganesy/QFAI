@@ -9,7 +9,8 @@ requires: [common-gate-run]
 
 The binding QFAI gate. Per-stage validate runs in the other skills are
 signals; this one decides. It records failures and repairs none of them:
-`verify-repo-gate` runs the fix loop over every failing gate.
+`verify-repo-gate` runs the fix loop over every failure except the test
+obligations this gate lists as pending.
 
 ## Reads
 
@@ -19,6 +20,8 @@ signals; this one decides. It records failures and repairs none of them:
 - `.qfai/report/validate.json`. Its keys are in
   `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`.
 - `.qfai/waivers.yml`, where the project has one.
+- In a route, whether the plan scope the session chose at the scope question
+  carries `testsPending`, as `qfai-run`'s `references/plan.md` `## Scopes` says.
 
 ## Writes
 
@@ -70,6 +73,29 @@ needs an E2E test, an AC an integration or API test, and an EX a selected
 non-E2E test. Record each uncovered ID and its flow. `QFAI-SCAN-002` means the
 scan cannot prove coverage; a missing layer is never a passing scan.
 
+### Test obligations a scope leaves pending
+
+When the chosen plan scope carries `testsPending`, the run writes the
+specification and leaves out the implement stage that writes its tests. The
+scan stays full, and the gate is still `FAIL` when validation reports any
+error. Its result lists as `PENDING` each `QFAI-STORY-006` error for a BF, AC
+or EX the run's specification stage wrote, with its uncovered ID and its flow:
+its test comes with the implement stage. Only those are pending. A
+`QFAI-STORY-006` error for an ID the run did not write, and every other error,
+is an ordinary failure, and an older one is handled as `common-gate-run`'s
+`## A failure that predates the change` says. A scope without `testsPending`
+leaves no obligation pending. Whether a `FAIL` whose only errors are pending
+obligations stops the commit is decided by `verify-commit`.
+
+## Accessibility layer
+
+In a project whose UI contracts declare a screen with a route that starts with
+`/`, record whether the accessibility layer
+`.qfai/assistant/rule/test-layers.md#l6-accessibility` defines exists: a
+selected test file that calls axe. `QFAI-AXE-001` (`warning`) reports that no
+selected test file does. Record the layer as present or missing in the stage
+report, so the missing accessibility gate in `verify-repo-gate` has its reason.
+
 ## Waivers
 
 - A waiver covers a `warning` or `info` finding only. A waiver that suppresses
@@ -85,4 +111,7 @@ scan cannot prove coverage; a missing layer is never a passing scan.
 The step is done when:
 
 - validation ran in the profile the scope names, and its result is recorded;
-- `error=0` for a pass, or the failing findings are recorded for the fix loop.
+- `error=0` for a pass; otherwise the failing findings are recorded for the
+  fix loop, and under a `testsPending` scope the result lists each pending
+  test obligation as `PENDING`;
+- where the accessibility layer applies, it is recorded as present or missing.
