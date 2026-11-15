@@ -38,7 +38,7 @@ it("initializes managed graph tools and completes graph-first exploration with a
     ).rejects.toMatchObject({ code: "ENOENT" });
     const event = {
       tool_name: "Bash",
-      tool_input: { command: "rg checkout packages/" },
+      tool_input: { command: "rg checkout" },
       cwd: fixture.root,
       session_id: "flow-session",
     };
