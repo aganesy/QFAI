@@ -37,7 +37,6 @@ describe("the product-surface reviewer walks the same sourced checklist on every
         (body) => body.startsWith(`${name}\n`) || body.startsWith(`${name}\r\n`),
       );
       expect(section, name).toMatch(/^Source: .+/m);
-      expect(section, name).toMatch(/<https:\/\/[^>]+>/);
     }
     expect(checklist.match(/^\| `H\d+` +\|/gm) ?? []).toHaveLength(10);
     expect(checklist.match(/^\| `WCAG \d+\.\d+\.\d+` +\|/gm) ?? []).toHaveLength(12);

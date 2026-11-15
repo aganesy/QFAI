@@ -37,20 +37,29 @@ function itemIds(markdown: string): string[] {
   return Array.from(markdown.matchAll(/^\| `([^`]+)` +\|/gm), (match) => match[1] ?? "");
 }
 
+/** Each criterion's number, its title and its level, as WCAG 2.2 gives them. */
 const WCAG = [
-  ["1.3.1", "info-and-relationships"],
-  ["1.4.3", "contrast-minimum"],
-  ["1.4.10", "reflow"],
-  ["1.4.11", "non-text-contrast"],
-  ["2.1.1", "keyboard"],
-  ["2.4.3", "focus-order"],
-  ["2.4.7", "focus-visible"],
-  ["2.4.11", "focus-not-obscured-minimum"],
-  ["2.5.8", "target-size-minimum"],
-  ["3.3.1", "error-identification"],
-  ["3.3.2", "labels-or-instructions"],
-  ["4.1.2", "name-role-value"],
+  ["1.3.1", "Info and Relationships (A)"],
+  ["1.4.3", "Contrast (Minimum) (AA)"],
+  ["1.4.10", "Reflow (AA)"],
+  ["1.4.11", "Non-text Contrast (AA)"],
+  ["2.1.1", "Keyboard (A)"],
+  ["2.4.3", "Focus Order (A)"],
+  ["2.4.7", "Focus Visible (AA)"],
+  ["2.4.11", "Focus Not Obscured (Minimum) (AA)"],
+  ["2.5.8", "Target Size (Minimum) (AA)"],
+  ["3.3.1", "Error Identification (A)"],
+  ["3.3.2", "Labels or Instructions (A)"],
+  ["4.1.2", "Name, Role, Value (A)"],
 ] as const;
+
+/** The first two cells of a criterion's row, with the padding prettier adds removed. */
+function criterionCells(row: string): string[] {
+  return row
+    .split("|")
+    .slice(1, 3)
+    .map((cell) => cell.trim());
+}
 
 // QFAI:EX-0001-0304-02
 describe("the surface review checklist lists sourced items in a fixed order", () => {
@@ -79,14 +88,22 @@ describe("the surface review checklist lists sourced items in a fixed order", ()
     ]);
   });
 
-  it("names a source for each section and each criterion's Understanding page", async () => {
+  // The rule tree ships no URL, so each source is named by its title and each
+  // criterion by the number and title its Understanding document carries.
+  it("names a source for each section and each criterion by number and title", async () => {
     const text = await read(CHECKLIST);
-    expect(text).toContain("<https://www.nngroup.com/articles/ten-usability-heuristics/>");
-    expect(text).toContain("<https://www.w3.org/TR/WCAG22/>");
-    expect(text).toContain("<https://www.w3.org/WAI/ARIA/apg/patterns/>");
-    for (const [criterion, slug] of WCAG) {
+    const flatText = flat(text);
+    expect(flatText).toContain(
+      'Source: Jakob Nielsen, "10 Usability Heuristics for User Interface Design", Nielsen Norman Group.',
+    );
+    expect(flatText).toContain(
+      "Source: Web Content Accessibility Guidelines (WCAG) 2.2, W3C Recommendation.",
+    );
+    expect(flatText).toContain("Source: WAI-ARIA Authoring Practices Guide (APG), W3C");
+    expect(text).not.toMatch(/https?:\/\//);
+    for (const [criterion, title] of WCAG) {
       const row = text.split(/\r?\n/).find((line) => line.startsWith(`| \`WCAG ${criterion}\``));
-      expect(row, criterion).toContain(`<https://www.w3.org/WAI/WCAG22/Understanding/${slug}>`);
+      expect(criterionCells(row ?? ""), criterion).toEqual([`\`WCAG ${criterion}\``, title]);
     }
   });
 
