@@ -185,6 +185,25 @@ failures sets the bill more than the number of tests does.
 
 These are review signals, not gates. No validator reads them.
 
+## Browser test locators and fault injection
+
+A browser test that reads the page's markup or the application's module layout
+breaks when the screens are rebuilt, even if every behaviour stays the same.
+This applies to every test that drives a browser, at any layer.
+
+- **Locate an element as a user finds it:** by its accessible role and name,
+  or by a `data-qfai` marker its UI contract declares. Never by a class name, a
+  CSS value or the DOM path.
+- **Check style once, not in every case.** Check the design tokens against the
+  project's `DESIGN.md` in a test of their own. A behaviour case asserts no CSS
+  value.
+- **Inject a failure at a stable boundary:** intercept the HTTP request at the
+  network (for example with the runner's route interception), or call a
+  test-only fault seam the application exposes on purpose. Never reroute or
+  replace a module file the page loads, and never read a global such a module
+  sets. A bundler merges those files, so a rebuild leaves the test nothing to
+  reroute.
+
 ## Test stub detection
 
 A test is incomplete if its body contains a placeholder, skips the
