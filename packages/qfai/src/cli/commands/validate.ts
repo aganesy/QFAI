@@ -1228,6 +1228,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A surface file renders no raw `<button>`, `<input>` or `<select>` when the component catalogue lists a component whose `@pattern` is that element, outside that component's own file; a hidden input is not counted.",
   "QFAI-COMP-004":
     "The committed component catalogue parses and is the file `qfai catalog components` writes for the current source.",
+  "QFAI-COMP-005":
+    'Where a component catalogue is installed, no surface file writes `role="dialog"`, `role="menu"`, `role="tablist"` or `aria-modal` by hand outside the file of a component procured from a catalogue.',
+  "QFAI-COMP-006":
+    "Every catalogued component whose `@pattern` is an interactive widget the procurement rule lists records its WAI-ARIA pattern and keyboard behaviour in `@a11y`.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —

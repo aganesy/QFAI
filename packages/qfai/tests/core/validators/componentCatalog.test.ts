@@ -181,6 +181,94 @@ describe("validate warns from the component catalogue", () => {
     expect(await warnings(await projectWith(files))).toEqual([]);
   });
 
+  // QFAI:EX-0001-0310-01
+  it("warns about hand-written dialog, menu and tab list markup where a registry is declared", async () => {
+    const root = await projectWith({
+      "src/pages/settings.tsx": [
+        "export const Settings = () => (",
+        "  <main>",
+        '    <div role="dialog" aria-modal="true">',
+        '      <ul role="menu" />',
+        '      <div role={"tablist"} />',
+        '      <Panel role="dialog" />',
+        '      <div role="alert">Saved</div>',
+        "    </div>",
+        "  </main>",
+        ");",
+        "",
+      ].join("\n"),
+    });
+    const withRegistry: QfaiConfig = {
+      ...config,
+      uiux: { ...config.uiux, registries: { shadcn: "https://ui.shadcn.com/r/{name}.json" } },
+    };
+    const found = await validateComponentCatalog(root, withRegistry, {
+      loadTypescript: realTypescript,
+    });
+    expect(found.map((item) => [item.code, item.severity, item.file, item.loc?.line])).toEqual([
+      ["QFAI-COMP-005", "warning", "src/pages/settings.tsx", 3],
+      ["QFAI-COMP-005", "warning", "src/pages/settings.tsx", 4],
+      ["QFAI-COMP-005", "warning", "src/pages/settings.tsx", 5],
+    ]);
+    expect(found[0]?.message).toContain('`role="dialog"` and `aria-modal`');
+    expect(found[1]?.message).toContain('`role="menu"`');
+    expect(found[2]?.message).toContain('`role="tablist"`');
+    expect(found[0]?.suggested_action).toContain("ui-procurement.md");
+  });
+
+  // QFAI:EX-0001-0310-02
+  it("treats a catalogue item as an installed catalogue and spares that item's own file", async () => {
+    const root = await catalogued({
+      "src/ui/dialog.tsx": component(
+        "Dialog",
+        [
+          "@source shadcn/ui dialog@2.1",
+          "@a11y APG Dialog (Modal); Escape closes, focus is trapped",
+        ],
+        '<div role="dialog" />',
+      ),
+      "src/pages/home.tsx": component("Home", [], '<div role="dialog" />'),
+    });
+    const found = await warnings(root);
+    expect(found.map((item) => [item.code, item.file])).toEqual([
+      ["QFAI-COMP-005", "src/pages/home.tsx"],
+    ]);
+  });
+
+  // QFAI:EX-0001-0310-03
+  it("asks nothing of hand-written dialog markup where no catalogue is installed", async () => {
+    const files = {
+      "src/pages/home.tsx": component("Home", [], '<div role="dialog" />'),
+      "src/ui/badge.tsx": component("Badge", ["@source authored", "@reason No item fits"]),
+    };
+    expect(await warnings(await catalogued(files))).toEqual([]);
+    expect(await warnings(await projectWith(files))).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0310-04
+  it("warns about a listed interactive widget with no @a11y", async () => {
+    const root = await catalogued({
+      "src/ui/confirm.tsx": component("ConfirmDialog", [
+        "@source authored",
+        "@reason The confirm step needs its own layout",
+        "@pattern Alert-Dialog",
+      ]),
+      "src/ui/account.tsx": component("AccountMenu", [
+        "@source shadcn/ui dropdown-menu@2.1",
+        "@pattern menu button",
+        "@a11y APG Menu Button; Enter, Space and ArrowDown open the menu",
+      ]),
+      "src/ui/card.tsx": component("Card", ["@source shadcn/ui card@2.1", "@pattern card"]),
+    });
+    const found = await warnings(root);
+    expect(found.map((item) => [item.code, item.severity, item.file])).toEqual([
+      ["QFAI-COMP-006", "warning", "src/ui/confirm.tsx"],
+    ]);
+    expect(found[0]?.message).toContain("`ConfirmDialog`");
+    expect(found[0]?.message).toContain("`Alert-Dialog`");
+    expect(found[0]?.suggested_action).toContain("@a11y");
+  });
+
   it("reads a catalogue with CRLF line ends as current", async () => {
     const root = await catalogued({ "src/a.tsx": component("Alpha", ["@source x@1"]) });
     const file = path.join(root, ...CATALOG.split("/"));

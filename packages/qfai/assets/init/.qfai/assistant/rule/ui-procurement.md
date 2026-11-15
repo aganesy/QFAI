@@ -44,6 +44,40 @@ Per screen region, stop at the first rung that holds.
 5. **Can it be composed from primitives already present?**
 6. **Only then author it**, and record why.
 
+## Widgets that are not hand-authored
+
+An interactive widget is correct only with its focus handling, keyboard
+behaviour, `aria-*` state, dismissal and scroll locking, and a hand-written one
+usually misses some of them. When a catalogue or a headless library is
+available, these widgets come from it and skip rung 5, composing from
+primitives. Each is named with its WAI-ARIA Authoring Practices (APG) pattern.
+
+| Widget                    | APG pattern                       |
+| ------------------------- | --------------------------------- |
+| Dialog                    | Dialog (Modal)                    |
+| Alert dialog              | Alert and Message Dialogs         |
+| Drawer or sheet           | Dialog (Modal)                    |
+| Menu and menu button      | Menu and Menubar, Menu Button     |
+| Tabs                      | Tabs                              |
+| Combobox and autocomplete | Combobox                          |
+| Listbox and select        | Listbox, Select-Only Combobox     |
+| Tooltip                   | Tooltip                           |
+| Popover                   | Disclosure (Show/Hide)            |
+| Toast                     | Alert                             |
+| Date picker               | Date Picker Dialog                |
+| Disclosure and accordion  | Disclosure (Show/Hide), Accordion |
+
+A native element that does the whole job, such as `dialog` or `details`, is
+still rung 2. When none of the rungs before 6 serves and such a widget must be
+authored, its component's `@a11y` tag in the component catalogue records the
+APG pattern and the keyboard behaviour it implements, and a test covers that
+behaviour.
+
+`npx qfai validate` warns about a hand-written `role="dialog"`, `role="menu"`,
+`role="tablist"` or `aria-modal` in a project with a catalogue installed, and
+about a catalogued component whose `@pattern` is one of these widgets with no
+`@a11y`.
+
 ## What the prototype does not answer
 
 Responsive behaviour, dark mode, focus and hover states, keyboard order, the
@@ -93,7 +127,10 @@ has, in the same field.
 
 Each screen region names what realises it: a native element, a catalogue item,
 a component the project already has, or authored code with the reason. A
-catalogue item also names the constraints it was checked against. An
+catalogue item also names the constraints it was checked against. An authored
+widget from "Widgets that are not hand-authored" also names its APG pattern and
+the keyboard behaviour it implements, in its `@a11y` tag, and the test that
+covers that behaviour. An
 implementer then installs rather than reconstructs, and a reviewer has
 something to check instead of a resemblance to judge.
 

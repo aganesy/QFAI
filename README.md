@@ -376,7 +376,9 @@ flowchart LR
     commit it. `--check` writes nothing and exits 1 when the committed file is missing or out of date.
     It reads JSX with the project's own `typescript`. Once the file exists, `qfai validate` warns about
     a component with no source, two components for one pattern, a raw `<button>`, `<input>` or
-    `<select>` a listed component replaces, and a stale catalogue (`QFAI-COMP-001` to `QFAI-COMP-004`).
+    `<select>` a listed component replaces, a stale catalogue, a hand-written `role="dialog"`,
+    `role="menu"`, `role="tablist"` or `aria-modal` where a catalogue is installed, and a listed
+    interactive widget with no `@a11y` (`QFAI-COMP-001` to `QFAI-COMP-006`).
 - `npx qfai workflow plan`
   - The route planning behind the free-text entry. `--in <path>`, or `--in -` for standard input,
     reads a request's extraction; `--route <route>` names a route instead. It prints one JSON

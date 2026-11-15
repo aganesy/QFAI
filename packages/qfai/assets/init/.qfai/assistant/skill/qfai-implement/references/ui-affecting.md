@@ -30,8 +30,11 @@ export function Button(props: ButtonProps) {
 procurement ladder served. `@pattern` names the region it realises; one component per pattern.
 A page or layout that no other surface file imports needs no doc comment. `npx qfai validate` warns
 about a missing source on a component that has a tag or that another surface file imports, a pattern two components claim, a raw `<button>`,
-`<input>` or `<select>` where a listed component has that pattern, and a catalogue out of date
-(`QFAI-COMP-001` to `QFAI-COMP-004`). `npx qfai catalog components --check` fails CI on the last.
+`<input>` or `<select>` where a listed component has that pattern, a catalogue out of date, a
+hand-written `role="dialog"`, `role="menu"`, `role="tablist"` or `aria-modal` where a catalogue is
+installed, and a component whose `@pattern` is an interactive widget `ui-procurement.md` lists with no
+`@a11y` (`QFAI-COMP-001` to `QFAI-COMP-006`). `npx qfai catalog components --check` fails CI on an
+out-of-date catalogue.
 
 ## Plain text in UI source
 

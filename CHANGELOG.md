@@ -4,6 +4,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Interactive widgets come from a catalogue, and `qfai validate` warns
+  about hand-written ones.** `ui-procurement.md` lists the widgets that are
+  not hand-authored when a catalogue or headless library is available, from
+  dialog and menu to date picker and accordion, each with its WAI-ARIA
+  Authoring Practices pattern. An authored one records that pattern and its
+  keyboard behaviour in its `@a11y` tag, with a test. Where a catalogue is
+  installed, `qfai validate` warns about a hand-written `role="dialog"`,
+  `role="menu"`, `role="tablist"` or `aria-modal` outside a catalogue item's
+  own file (`QFAI-COMP-005`), and about a catalogued widget with no `@a11y`
+  (`QFAI-COMP-006`). Closes #4299.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added

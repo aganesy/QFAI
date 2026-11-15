@@ -5,7 +5,9 @@
  * Parallel agents and later screens re-create a region that already exists when nothing lists
  * what exists. `qfai catalog components` writes the list as a committed file, and
  * `qfai validate` reads it back to warn about a component with no source, two components
- * realising one pattern, a raw element a listed component replaces, and a list out of date.
+ * realising one pattern, a raw element a listed component replaces, a list out of date, a
+ * hand-written dialog, menu or tab list where a catalogue is installed, and a listed interactive
+ * widget with no accessibility notes.
  *
  * The source is read with the `typescript` package the project installs, as the plain-text
  * check reads it, so qfai carries no JSX parser of its own.
@@ -33,6 +35,39 @@ export const COMPONENT_CATALOG_PATH = path.join(".qfai", "catalog", "components.
 export const REPLACEABLE_ELEMENTS = ["button", "input", "select"] as const;
 type ReplaceableElement = (typeof REPLACEABLE_ELEMENTS)[number];
 
+/**
+ * The interactive widget patterns `ui-procurement.md` lists as never hand-authored where a
+ * catalogue or headless library is available, as a `@pattern` names them once case, spaces,
+ * hyphens and underscores are removed.
+ */
+export const INTERACTIVE_WIDGET_PATTERNS: ReadonlySet<string> = new Set([
+  "dialog",
+  "alertdialog",
+  "drawer",
+  "sheet",
+  "menu",
+  "menubutton",
+  "tabs",
+  "combobox",
+  "autocomplete",
+  "listbox",
+  "select",
+  "tooltip",
+  "popover",
+  "toast",
+  "datepicker",
+  "disclosure",
+  "accordion",
+]);
+
+/** The `role` values that mark a hand-written dialog, menu or tab list. */
+const WIDGET_ROLES: ReadonlySet<string> = new Set(["dialog", "menu", "tablist"]);
+
+/** A `@pattern` reduced to the form `INTERACTIVE_WIDGET_PATTERNS` holds. */
+export function widgetPatternKey(pattern: string): string {
+  return pattern.toLowerCase().replace(/[\s_-]+/g, "");
+}
+
 /** One exported component, as the catalogue lists it. */
 export type CatalogComponent = {
   name: string;
@@ -49,6 +84,12 @@ export type CatalogComponent = {
 /** A raw `<button>`, `<input>` or `<select>` in a surface file. */
 export type RawElement = { file: string; line: number; element: ReplaceableElement };
 
+/**
+ * An intrinsic element in a surface file carrying `role="dialog"`, `role="menu"`,
+ * `role="tablist"` or `aria-modal`; `markup` names what it carries, as `role="dialog"`.
+ */
+export type WidgetMarkup = { file: string; line: number; markup: string[] };
+
 /** A name a surface file imports, and that file. */
 export type ImportedName = { file: string; name: string };
 
@@ -59,6 +100,7 @@ export type ComponentScan =
       files: number;
       components: CatalogComponent[];
       rawElements: RawElement[];
+      widgetMarkup: WidgetMarkup[];
       imports: ImportedName[];
     }
   /** `unread` `.tsx`/`.jsx` files were selected but the project's `typescript` cannot be loaded. */
@@ -90,21 +132,30 @@ export async function scanComponents(
     [".tsx", ".jsx"].includes(path.extname(file)),
   );
   if (files.length === 0) {
-    return { readable: true, files: 0, components: [], rawElements: [], imports: [] };
+    return {
+      readable: true,
+      files: 0,
+      components: [],
+      rawElements: [],
+      widgetMarkup: [],
+      imports: [],
+    };
   }
   const ts = loadTs(root, options.loadTypescript);
   if (!ts) return { readable: false, unread: files.length };
   const components: CatalogComponent[] = [];
   const rawElements: RawElement[] = [];
+  const widgetMarkup: WidgetMarkup[] = [];
   const imports: ImportedName[] = [];
   for (const file of files) {
     const read = componentsOfFile(ts, file, await readSafe(path.join(root, file)));
     components.push(...read.components);
     rawElements.push(...read.rawElements);
+    widgetMarkup.push(...read.widgetMarkup);
     imports.push(...read.imports);
   }
   components.sort((a, b) => compare(a.file, b.file) || compare(a.name, b.name));
-  return { readable: true, files: files.length, components, rawElements, imports };
+  return { readable: true, files: files.length, components, rawElements, widgetMarkup, imports };
 }
 
 /** The catalogue file's text for a list of components, byte-identical for the same list. */
@@ -200,7 +251,12 @@ function componentsOfFile(
   ts: TsApi,
   file: string,
   source: string,
-): { components: CatalogComponent[]; rawElements: RawElement[]; imports: ImportedName[] } {
+): {
+  components: CatalogComponent[];
+  rawElements: RawElement[];
+  widgetMarkup: WidgetMarkup[];
+  imports: ImportedName[];
+} {
   const kind = path.extname(file) === ".jsx" ? ts.ScriptKind.JSX : ts.ScriptKind.TSX;
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, kind);
   const k = ts.SyntaxKind;
@@ -376,9 +432,29 @@ function componentsOfFile(
     }
     return undefined;
   };
+  // What marks an intrinsic element as a hand-written dialog, menu or tab list. Ceiling: only
+  // `.tsx` and `.jsx` files are read, and a role given through a spread or a non-literal
+  // expression is not seen; reading the other surface formats and resolving the expression lift it.
+  const widgetMarkupOf = (element: TsNode): string[] => {
+    const tag = element.tagName?.getText() ?? "";
+    if (!/^[a-z][\w-]*$/.test(tag)) return [];
+    const roles = (literalAttribute(element, "role") ?? "").trim().split(/\s+/);
+    const markup = roles.filter((role) => WIDGET_ROLES.has(role)).map((role) => `role="${role}"`);
+    const modal = (element.attributes?.properties ?? []).some(
+      (attribute) =>
+        attribute.kind === k.JsxAttribute && attribute.name?.getText() === "aria-modal",
+    );
+    return modal ? [...markup, "aria-modal"] : markup;
+  };
   const rawElements: RawElement[] = [];
+  const widgetMarkup: WidgetMarkup[] = [];
   const visit = (node: TsNode): void => {
     if (node.kind === k.JsxOpeningElement || node.kind === k.JsxSelfClosingElement) {
+      const markup = widgetMarkupOf(node);
+      if (markup.length > 0) {
+        const line = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
+        widgetMarkup.push({ file, line, markup });
+      }
       const element = REPLACEABLE_ELEMENTS.find((name) => name === node.tagName?.getText());
       // Ceiling: only a literal `type="hidden"` input is skipped. A file, checkbox or radio input
       // is still reported; recording the input types a component realises lifts it.
@@ -390,7 +466,7 @@ function componentsOfFile(
     for (const child of node.getChildren()) visit(child);
   };
   visit(sourceFile);
-  return { components, rawElements, imports };
+  return { components, rawElements, widgetMarkup, imports };
 }
 
 const DOC_TAG_LINE = new RegExp(`^@(${DOC_TAGS.join("|")})(?:\\s+(.*))?$`);
