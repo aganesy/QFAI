@@ -67,6 +67,14 @@ them; it is the procedure that applies them.
   from, so the code and tests earlier stages wrote are read with the change note.
 - **The latest results the run recorded**, such as the test runs and gate
   results. The review runs no gate of its own.
+- **The captures**, when `product-surface-reviewer` reads a UI-affecting
+  change: each changed screen at the reviewed revision, as
+  `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md` § Evidence
+  sets out. A passing test or a clean `validate` is not that evidence. Without
+  the captures the reviewer stops before a verdict and names each missing
+  capture; the session agent records that review `PENDING`, never `PASS`. The
+  review has not happened yet: once the captures exist it is dispatched again,
+  and that response is the reviewer's one response.
 - **Answers an earlier stage recorded**, when an earlier stage's review already
   answered findings on the same artifact.
 
@@ -130,7 +138,8 @@ Every required reviewer responded once, each behaviour fix had its one focused
 re-review, every finding is fixed or answered, and
 the stage report names each verdict and each answer, or says why the review
 dispatched no reviewer. Each response accounted for every Domain
-Responsibility of the reviewer's card. For a code review skipped as a small literal-only
+Responsibility of the reviewer's card. No review is `PENDING` for missing
+captures. For a code review skipped as a small literal-only
 change, the stage report names the skip, the changed lines and why, and records
 the skip for the final report. A finding the author
 cannot fix is in the stage's final report, and a critical decision has gone to
