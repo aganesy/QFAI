@@ -27,7 +27,10 @@ export function emitPlanDocument(document: PlanDocument): number {
   process.stdout.write(`${JSON.stringify(document, null, 2)}\n`);
   if (document.ok) return EXIT_CODES.ok;
   const unreadable = document.reasons.some(
-    (each) => each.reason === "plan-invalid" || each.reason === "io-error",
+    (each) =>
+      each.reason === "plan-invalid" ||
+      each.reason === "io-error" ||
+      each.reason === "stale-install",
   );
   return unreadable ? EXIT_CODES.findings : EXIT_CODES.inputError;
 }

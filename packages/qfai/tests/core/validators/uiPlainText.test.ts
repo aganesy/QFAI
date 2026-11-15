@@ -404,6 +404,55 @@ describe("a component whose name ends in the word Link or Button is exempt", () 
   });
 });
 
+// QFAI:EX-0001-0297-18
+describe("uiText.elements reads a project component as the element it renders", () => {
+  const files = {
+    "src/a.tsx":
+      'export const A = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <UI.CardTitle>Recent orders</UI.CardTitle>\n    <NavItem href="/">Home</NavItem>\n    <StatusRegion>Saved</StatusRegion>\n    <Ui.Banner>Welcome</Ui.Banner>\n    <TableCell>ORD-1042</TableCell>\n    <header>Plain</header>\n  </div>\n);\n',
+    "src/b.vue":
+      "<template>\n  <TableHead>Order</TableHead>\n  <table-head>Total</table-head>\n  <StatusRegion>Saved</StatusRegion>\n  <TableCell>ORD-1042</TableCell>\n  <header>Plain</header>\n</template>\n",
+    "src/c.svelte":
+      "<CardTitle>Recent orders</CardTitle>\n<Ui.Banner>Welcome</Ui.Banner>\n<Banner>Hello</Banner>\n",
+    "src/d.jsx":
+      "export const D = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <Header>Top</Header>\n    <TableCell>ORD-1042</TableCell>\n  </div>\n);\n",
+    "src/e.html":
+      "<table-head>Total</table-head>\n<TableHead>Order</TableHead>\n<header>Plain</header>\n",
+  };
+
+  it("exempts a mapped component by its whole name or last segment, and checks the rest", async () => {
+    const root = await projectWith(files);
+    const config: QfaiConfig = {
+      ...configWith(["src/**"]),
+      uiText: {
+        elements: {
+          TableHead: "th",
+          CardTitle: "h3",
+          NavItem: "a",
+          StatusRegion: "status",
+          "Ui.Banner": "alert",
+          Header: "h2",
+        },
+      },
+    };
+    const issues = await validateUiPlainText(root, config, { loadTypescript: realTypescript });
+    expect(issues.map((found) => [found.code, found.file, found.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", "src/a.tsx", 8],
+      ["QFAI-UITEXT-001", "src/a.tsx", 9],
+      ["QFAI-UITEXT-001", "src/b.vue", 5],
+      ["QFAI-UITEXT-001", "src/b.vue", 6],
+      ["QFAI-UITEXT-001", "src/c.svelte", 3],
+      ["QFAI-UITEXT-001", "src/d.jsx", 5],
+      ["QFAI-UITEXT-001", "src/e.html", 2],
+      ["QFAI-UITEXT-001", "src/e.html", 3],
+    ]);
+  });
+
+  it("reads every text of the same files as plain text when the map is absent", async () => {
+    const issues = await run(files);
+    expect(codes(issues)).toEqual(Array.from({ length: 21 }, () => "QFAI-UITEXT-001"));
+  });
+});
+
 // QFAI:EX-0001-0297-12
 describe("the default loader resolves typescript from the project root", () => {
   it("raises 003 when the project installs no typescript", async () => {

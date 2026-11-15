@@ -157,8 +157,13 @@ On every screen it applies to:
   next.
 - Feedback after every change.
 
-Leaving one of these out needs a reason recorded in the UI contract of the
-screen it is missing from. A part left out without one is a defect, not a cut.
+Leaving one of these out needs a reason recorded in the `omitted` list of the
+UI contract of the screen it is missing from: one entry naming the part and
+the reason. A state the screen cannot be in is recorded under that contract's
+`states` instead. A once-per-application part belongs to no single screen, so
+its entry goes in the app frame: the UI contract that holds the app shell and
+the home, or that records why the application has none. A part left out
+without an entry is a defect, not a cut.
 
 These parts apply to application screens: a screen whose UI contract declares
 no `surface`, or `surface: application`. A marketing screen, one a visitor sees
@@ -192,7 +197,7 @@ not its UI contract names them.
   from every page and from the point of sign-up or payment.
 
 Leaving out a state or a notice needs a reason recorded in the screen's UI
-contract. Invented proof, an unlabelled example and a new unsourced image have
+contract: a state under its `states`, a notice in its `omitted` list. Invented proof, an unlabelled example and a new unsourced image have
 no such reason.
 
 ## Related

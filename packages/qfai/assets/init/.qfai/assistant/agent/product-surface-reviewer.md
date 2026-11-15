@@ -60,7 +60,9 @@ specialization_tags:
   and what replaces it. `delete` also covers replacement by code already present.
   For controls, settings and copy, use `.agents/rules/interface-clarity.md`.
   Refuse it when the cut removes or weakens an obligation in the safety floor at
-  `.agents/rules/minimal-implementation.md` § 2.
+  `.agents/rules/minimal-implementation.md` § 2, or a part
+  `## What a business screen always has` in `.agents/rules/interface-clarity.md`
+  requires of an application screen whose UI contract does not exclude it.
   Use this route only where the installed Article VII governs the artifact.
   Otherwise report unsupported Article VII excess as advisory and follow the installed constitution.
 - Require more work only on what `.qfai/assistant/rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of` admits, and report any other gap as advisory.
@@ -70,7 +72,13 @@ specialization_tags:
   Walk it for each screen the change adds or alters. Check the once-per-application parts only when
   the change adds or alters the shell, the home or a repeated pattern.
 
-  A listed part with no reason recorded in the UI contract is a blocking finding that traces to
+  The recorded reason for leaving a listed part out is an entry naming the part in the `omitted` list of
+  the screen's UI contract; for a state the screen cannot be in, its `none` under `states`. Read the
+  once-per-application parts' entries from the app frame. A reason written anywhere else is not a
+  recorded reason, and an entry whose reason does not hold for the screen counts as none.
+
+  A listed part with no reason recorded in the screen's UI contract (for a once-per-application
+  part, in the app frame) is a blocking finding that traces to
   `.agents/rules/interface-clarity.md#what-a-business-screen-always-has` when it is missing from a
   screen the change adds, missing from a list, state, action that changes data, shell, home or
   repeated-pattern part the change adds or alters (a new list with no pagination, a new save with no feedback), or removed by the change. The rule
@@ -134,7 +142,7 @@ specialization_tags:
   that list's _Where the list stops_ says; for a marketing screen, trace it to
   `.agents/rules/interface-clarity.md#what-a-marketing-screen-always-has` or the screen's UI contract, with
   the severity the marketing check above sets, and do not report a part whose UI contract records a
-  reason for leaving it out. Declare each finding's severity and trace as
+  reason for leaving it out in its `omitted` list or, for a state, under `states`. Declare each finding's severity and trace as
   `.qfai/assistant/rule/references/reviewer-findings.md` says. Inside the prototyping loop,
   `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md` sets which sections apply.
 

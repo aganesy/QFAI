@@ -11,7 +11,7 @@ describe("AC-0001-0234-06", () => {
     const fixture = await codeAnalysisFixture();
     const event = {
       tool_name: "Bash",
-      tool_input: { command: "rg checkout packages/" },
+      tool_input: { command: "rg checkout" },
       cwd: fixture.root,
       session_id: "acceptance-session",
     };
@@ -50,7 +50,7 @@ describe("AC-0001-0234-06", () => {
       );
       expect(permitted.value).toMatchObject({
         permitted: true,
-        scope: { session: "acceptance-session", target: "packages/" },
+        scope: { session: "acceptance-session", target: "." },
       });
       expect(
         fixture.calls.filter((call) =>

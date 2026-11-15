@@ -61,12 +61,12 @@ export function screenSurfaceOf(
   return isScreenSurface(value) ? value : undefined;
 }
 
-function isMapping(value: unknown): value is Record<string, unknown> {
+export function isMapping(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** The `screens` list of a parsed contract, or nothing when it holds none. */
-function screensOf(parsed: unknown): unknown[] {
+export function screensOf(parsed: unknown): unknown[] {
   if (!isMapping(parsed)) {
     return [];
   }
