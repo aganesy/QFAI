@@ -4,6 +4,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The contract step writes the app frame once.** The app shell, the
+  navigation for each role and the home belong to no single flow, so
+  `sdd-contract` writes them as the screens of one UI contract, the app frame,
+  when no UI contract holds the shell or records why the application has none.
+  Every application screen inside the shell names the frame's shell screen in
+  `navigation.shell`, and prototyping reads the frame with every flow. A once-per-application
+  part the project leaves out records its reason in the frame, and
+  `interface-clarity.md` and `product-surface-reviewer` read the reason there.
+  Settings, member management and notifications are added only when a story
+  needs them.
+
 ### Changed
 
 - **`implement-tdd` assembles a UI-affecting flow's screens.** Once the
