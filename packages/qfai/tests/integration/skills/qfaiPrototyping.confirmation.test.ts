@@ -564,6 +564,33 @@ describe.each(TREES)("%s", (tree) => {
     );
     expect(prompt).toContain("An unreachable entry is critique there, not a blocking finding.");
   });
+
+  // QFAI:AC-0001-0116-03
+  // QFAI:EX-0001-0116-06
+  it("blocks on a floor part the run's screen lacks and keeps an earlier gap as critique", async () => {
+    const prompt = flat(await read(tree, "skill/qfai-prototyping/references/reviewer-prompt.md"));
+    expect(prompt).toContain("`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`");
+    expect(prompt).toContain(
+      "`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md#every-screen`",
+    );
+    expect(prompt).toContain(
+      "an app shell whose navigation shows where the user is, a way back from a screen below the top level, and the empty, loading, error and success states",
+    );
+    expect(prompt).toContain("whether or not the UI contract names the part");
+    expect(prompt).toContain(
+      "A part with no reason recorded in the screen's UI contract is a blocking finding when it is missing from a screen the run adds or changes, or when the run removes it.",
+    );
+    expect(prompt).toContain(
+      "A part that was already missing before the run is critique: it goes in `proseCritique`, naming the screen and the part.",
+    );
+    expect(prompt).toContain("A part the UI contract leaves out with a reason is not a finding.");
+    expect(prompt).toContain(
+      "Outside these cases, an observation that something could be better is not a finding.",
+    );
+    expect(prompt).toContain(
+      "The business-screen floor requires the state, or the screen contract declares it",
+    );
+  });
 });
 
 describe("the qfai command", () => {

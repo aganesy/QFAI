@@ -327,7 +327,8 @@ the ordinal score in `proseCritique`.
   scannable?
 - **navigationFlow** — screen-to-screen traversal, back/return paths,
   current-location indication, deep-link consistency. Can the user
-  always tell where they are and how to retreat? Menu reachability is part
+  always tell where they are and how to retreat? A missing shell navigation
+  or way back is judged as [What blocks](#what-blocks) says. Menu reachability is part
   of this axis, not a fifth one: exercise every primary menu entry the UI
   contract declares at least once in your Playwright session, and record what
   each entry reached in `menuReachabilityFeel`. An unreachable entry is
@@ -354,8 +355,33 @@ the screen shows instead. A restyle keeps the screens, fields and behaviour it
 found, so this needs no other authority. A missing baseline is a missing
 mandatory input.
 
-An observation that something could be better is not a finding. It goes
-in `proseCritique`, where it informs the next iteration. Whether the
+On an application screen, one whose UI contract declares no `surface` or
+`surface: application`, the business-screen floor also decides what blocks:
+`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`, with
+`.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md#every-screen`
+for how each part shows on a screen. Check three of its parts on each screen
+you review in full: an app shell whose navigation shows where the user is, a
+way back from a screen below the top level, and the empty, loading, error and
+success states, the empty one saying what to do next. The rule already makes
+each part an obligation, so a missing one is a defect that traces to it,
+whether or not the UI contract names the part, and not an observation that the
+screen could be better.
+
+- A part with no reason recorded in the screen's UI contract is a blocking
+  finding when it is missing from a screen the run adds or changes, or when
+  the run removes it. Name the screen, the missing part and the trace.
+- A part that was already missing before the run is critique: it goes in
+  `proseCritique`, naming the screen and the part. Before the run means where
+  the run started from: the confirmed `final/index.html` a scoped run copies,
+  or the live route as it ran before a `restyle`. An unscoped `prototype` run
+  adds or changes every screen it reviews.
+- A part the UI contract leaves out with a reason is not a finding.
+
+A render-check screen is checked only as [Inputs](#inputs) says, and a screen
+whose UI contract declares `surface: marketing` is not held to this floor.
+
+Outside these cases, an observation that something could be better is not a
+finding. It goes in `proseCritique`, where it informs the next iteration. Whether the
 prototype is done is the user's decision, not a score's.
 
 ## Layout anti-pattern matching (`lap-*`)
@@ -365,10 +391,10 @@ Apply the registry the package ships to each screen and fill
 iteration's HTML, a `semantic` entry by your own judgement. Any entry in
 `layoutAntiPatternsDetected[]` caps `informationArchitecture` at `acceptable`.
 
-| ID                              | Scope    | Detection                            | What makes it a defect                        |
-| ------------------------------- | -------- | ------------------------------------ | --------------------------------------------- |
-| `lap-007-state-not-represented` | semantic | reviewer judgement (criterion below) | The screen contract declares the state        |
-| `lap-008-no-back-affordance`    | semantic | reviewer judgement (criterion below) | Nielsen heuristic 3, user control and freedom |
+| ID                              | Scope    | Detection                            | What makes it a defect                                                           |
+| ------------------------------- | -------- | ------------------------------------ | -------------------------------------------------------------------------------- |
+| `lap-007-state-not-represented` | semantic | reviewer judgement (criterion below) | The business-screen floor requires the state, or the screen contract declares it |
+| `lap-008-no-back-affordance`    | semantic | reviewer judgement (criterion below) | Nielsen heuristic 3, user control and freedom                                    |
 
 Every entry names what makes it a defect, and that is never this project's
 opinion: a published heuristic, an accessibility criterion, or the contract
@@ -389,6 +415,14 @@ for at least two modal states (e.g., loading spinner + empty state, or
 error alert + success confirmation) that differ meaningfully from the
 default state in color, typography, or layout.
 
+Its authority is the business-screen floor
+(`.agents/rules/interface-clarity.md#what-a-business-screen-always-has`): on an
+application screen, an empty, loading, error or success state the screen does
+not show is a detection whether or not the screen contract declares it, unless
+the contract records the reason it is left out. A state the screen contract
+declares counts on any screen. A state that was already missing before the run
+is critique, not a detection, as [What blocks](#what-blocks) says.
+
 ### `lap-008-no-back-affordance`
 
 The interface lacks a persistent or contextual back/navigation
@@ -397,6 +431,9 @@ design includes multi-step flows, modals, or nested navigation, there
 must be a visually obvious and accessible way to return to the prior
 screen (e.g., back button, close icon, breadcrumb). A single Back
 button in the browser is not sufficient for app-like interfaces.
+On an application screen below the top level, the way back is also part of
+the business-screen floor, and one that was already missing before the run is
+critique, not a detection, as [What blocks](#what-blocks) says.
 
 ## pivotDirective rules
 

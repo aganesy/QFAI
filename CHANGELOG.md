@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- **The prototype reviewer checks the business-screen floor, not only what
+  the UI contract declares.** On an application screen the run adds or
+  changes, a missing app-shell navigation, way back, or empty, loading, error
+  or success state with no reason recorded in the UI contract is a blocking
+  finding. A gap that was already there before the run goes in the critique.
+  `lap-007-state-not-represented` now rests on the same floor. Closes #4129.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
