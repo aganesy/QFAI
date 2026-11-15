@@ -22,7 +22,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   (`QFAI-DCAT-003`). The `DESIGN.md` parse is stricter: a colour, font family
   stack, type-scale size, `spacing.base`, radius, shadow, breakpoint or content
   width holding `;`, `{` or `}` now fails it, since the theme writes each into a
-  CSS declaration.
+  CSS declaration, and so does a font weight outside 1 to 1000.
 
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and

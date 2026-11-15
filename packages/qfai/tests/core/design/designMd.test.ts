@@ -742,6 +742,29 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.data.visual.typography.weight).toEqual({ regular: 400, bold: 700 });
   });
 
+  // QFAI:EX-0001-0312-04
+  it.each([
+    [0, false],
+    [1, true],
+    [1000, true],
+    [1001, false],
+  ])("visual.typography.weight %d is inside the 1 to 1000 font weight range: %s", (weight, ok) => {
+    const result = parseDesignMd(
+      VALID_FRONT_MATTER.replace(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      bold: ${weight}`,
+      ),
+    );
+    if (ok) {
+      expect("error" in result).toBe(false);
+      return;
+    }
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.typography.weight.bold",
+      code: "invalid-format",
+    });
+  });
+
   it("visual.spacing.base with leading whitespace is rejected at parse-time", () => {
     // `" 0.25rem "` is structurally a CSS-invalid token
     // (every CSS engine rejects `padding: " 0.25rem ";`). Catching

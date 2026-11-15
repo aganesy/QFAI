@@ -816,6 +816,16 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
           },
         };
       }
+      // The Design Tokens Community Group 2025.10 format states a numeric font weight as 1 to 1000.
+      if (v < 1 || v > 1000) {
+        return {
+          error: {
+            path: `visual.typography.weight.${k}`,
+            code: "invalid-format",
+            message: `'visual.typography.weight.${k}' must be from 1 to 1000 (got ${v}).`,
+          },
+        };
+      }
       weights[k] = v;
     }
     typography.weight = weights;

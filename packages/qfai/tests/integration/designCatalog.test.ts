@@ -236,6 +236,17 @@ describe("a design catalogue out of date with DESIGN.md is a warning", () => {
     expect(missing.map((found) => found.code)).toEqual(["QFAI-DCAT-002"]);
     expect(missing[0]?.message).toContain("does not exist");
 
+    await cli(["catalog", "design", "--root", root]);
+    await unlink(path.join(root, "DESIGN.md"));
+    await unlink(path.join(root, ...TOKENS.split("/")));
+    const orphan = await dcat(root);
+    expect(orphan.map((found) => [found.code, found.file])).toEqual([
+      ["QFAI-DCAT-001", TOKENS],
+      ["QFAI-DCAT-002", THEME],
+    ]);
+    expect(orphan[0]?.message).toContain("does not exist");
+    expect(orphan[1]?.message).toContain("DESIGN.md");
+
     expect(await dcat(await projectWith())).toEqual([]);
   });
 
@@ -267,6 +278,7 @@ describe("a hex colour in UI source that matches no token is a warning", () => {
         "// see #12ab",
         "export const f = <p>Order #12ab</p>;",
         'export const g = <path fill="url(#fade)" />;',
+        'export const h = <rect data-color="#12ab56" />;',
         "",
       ].join("\n"),
     });

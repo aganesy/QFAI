@@ -104,15 +104,14 @@ function staleMessage(
   render: (design: DesignMd) => string,
 ): { file: string; message: string } | null {
   const file = generatedPath.split(path.sep).join("/");
-  if (source.state === "absent") {
-    return read.state === "read"
-      ? { file, message: `${file} has no ${ROOT_DESIGN_MD} at the project root to come from.` }
-      : null;
-  }
-  if (source.state !== "read") return null;
+  // The caller asks only when one of the two files exists, so a missing one has a partner.
   if (read.state === "absent") {
     return { file, message: `${file} does not exist beside the other design catalogue file.` };
   }
+  if (source.state === "absent") {
+    return { file, message: `${file} has no ${ROOT_DESIGN_MD} at the project root to come from.` };
+  }
+  if (source.state !== "read") return null;
   if (!sameGeneratedText(read.text, render(source.design))) {
     return { file, message: `${file} is out of date with ${ROOT_DESIGN_MD}.` };
   }

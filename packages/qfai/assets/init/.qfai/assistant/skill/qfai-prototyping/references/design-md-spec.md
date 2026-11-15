@@ -162,6 +162,8 @@ file's `data-display` group; no CSS variable carries them.
   radius, shadow, breakpoint or content width may hold `;`, `{` or `}`:
   `qfai catalog design` writes each into a CSS declaration of the theme,
   where one would end it.
+- `visual.typography.weight.*`: a number from 1 to 1000, the font weights the
+  Design Tokens Community Group 2025.10 format states.
 - Unknown keys at any level are rejected.
 - All 12 color keys, 3 font families, 4 radius keys, and 3 shadow keys
   listed above are required.

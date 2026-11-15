@@ -118,11 +118,17 @@ const RAW_HEX_RE =
 // Comments hold prose such as `// see #12ab`, so they are blanked before the scan. The `//` form
 // is not read after a `:`, so the path of a URL such as `https://` is not taken for a comment.
 const COMMENT_RE = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<!:)\/\/[^\n]*/g;
-/** An attribute whose value is a colour: `style="color: #fff"`, `fill="#fff"`. */
+/**
+ * An attribute whose value is a colour: `style="color: #fff"`, `fill="#fff"`. The name starts the
+ * line or follows whitespace, so `data-color="#fff"` is another attribute.
+ */
 const COLOR_ATTRIBUTE_RE =
-  /\b(?:style|fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*\{?\s*["'`][^"'`]*$/i;
-/** Any other attribute's value, such as `aria-controls="#bad"`: never a colour place. */
-const OTHER_ATTRIBUTE_RE = /[\w-]+\s*=\s*\{?\s*["'`][^"'`]*$/;
+  /(?:^|\s)(?:style|fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*\{?\s*["'`][^"'`]*$/i;
+/**
+ * Any other attribute's value, such as `aria-controls="#bad"`: never a colour place. Markup writes
+ * no space around an attribute's `=`, which keeps `const accent = "#fff"` a whole string literal.
+ */
+const OTHER_ATTRIBUTE_RE = /(?:^|\s)[\w-]+=\{?\s*["'`][^"'`]*$/;
 /** A CSS declaration value: a `:` since the last `;`, `{` or `}` on the line. */
 const DECLARATION_RE = /:[^:;{}]*$/;
 

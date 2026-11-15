@@ -153,6 +153,19 @@ describe("layout and data display tokens", () => {
 
 describe("hex literals in source", () => {
   // QFAI:EX-0001-0312-09
+  it("reads a colour attribute only by its whole name", () => {
+    const found = findRawHexes(
+      [
+        '<rect data-color="#12ab56" />',
+        '<rect data-fill="#12ab56" data-style="#12ab56" />',
+        '<rect fill="#12ab56" />',
+        'stroke="#12ab56"',
+      ].join("\n"),
+    );
+    expect(found.map((hex) => hex.line)).toEqual([3, 4]);
+  });
+
+  // QFAI:EX-0001-0312-09
   it("reads each hex colour literal with its line, and skips anchors and longer names", () => {
     const found = findRawHexes(
       [
