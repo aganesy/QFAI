@@ -6,6 +6,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Screen reviews walk one sourced checklist.** Review rounds of the same
+  screen raised different classes of issue, because nothing fixed what a round
+  covers. `.qfai/assistant/rule/references/surface-review-checklist.md` lists
+  the screen completeness checks the reviewer already makes, Nielsen's ten
+  usability heuristics as questions about the screen, the WCAG 2.2 criteria a
+  business screen touches most (1.3.1, 1.4.3, 1.4.10, 1.4.11, 2.1.1, 2.4.3,
+  2.4.7, 2.4.11, 2.5.8, 3.3.1, 3.3.2 and 4.1.2) and the WAI-ARIA APG pattern of
+  each interactive widget, each with its source. The product-surface reviewer
+  walks it for every screen on every review and reports each item as pass,
+  finding or not applicable, so a gap in coverage shows.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
