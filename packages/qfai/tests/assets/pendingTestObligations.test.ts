@@ -26,19 +26,25 @@ describe("a scope that leaves out the implement stage leaves its test obligation
       const pending = flat(sectionOf(gate, "### Test obligations a scope leaves pending"));
 
       expect(flat(sectionOf(gate, "## What this gate is"))).toMatch(/This gate is full-scan/);
-      expect(pending).toContain("The scan stays full.");
-      expect(pending).toMatch(
-        /Record each `QFAI-STORY-006` through `QFAI-STORY-009` error as `PENDING`, with its uncovered ID and its flow, not as a failure/,
+      expect(pending).toContain(
+        "The scan stays full, and the gate is still `FAIL` when validation reports any error.",
       );
-      expect(pending).toContain("Every other error still fails the gate");
+      expect(pending).toMatch(
+        /lists as `PENDING` each `QFAI-STORY-006` error for a BF, AC or EX the run's specification stage wrote, with its uncovered ID and its flow/,
+      );
+      expect(pending).toMatch(
+        /A `QFAI-STORY-006` error for an ID the run did not write, and every other error, is an ordinary failure/,
+      );
+      expect(pending).not.toMatch(/`PASS`|QFAI-STORY-00[789]/);
+      expect(flat(sectionOf(gate, "## Gate"))).not.toContain("testsPending` scope, no error");
       expect(flat(sectionOf(commit, "## Procedure"))).toMatch(
-        /only errors are the test obligations it recorded `PENDING` under a `testsPending` scope.*does not stop the commit\. Any other error of that gate still stops it\./,
+        /A QFAI gate `FAIL` whose only errors are the `QFAI-STORY-006` obligations it listed `PENDING` under a `testsPending` scope.*does not stop the commit\. The gate stays `FAIL` in the report\. Any other error of that gate still stops the commit\./,
       );
       expect(flat(sectionOf(commit, "## Gate"))).toMatch(
-        /recorded `PENDING` is listed in the final report as pending, saying that its test comes with the implement stage/,
+        /Each `QFAI-STORY-006` obligation the QFAI gate listed `PENDING` appears in the final report as pending, saying that its test comes with the implement stage/,
       );
       expect(flat(output)).toMatch(
-        /except a test obligation the QFAI gate recorded pending under a `testsPending` plan scope/,
+        /the gate and `status` stay `"FAIL"`, and `verify-commit` decides whether that failure stops the commit/,
       );
     });
 

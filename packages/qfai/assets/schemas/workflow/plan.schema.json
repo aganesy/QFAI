@@ -426,7 +426,7 @@
           "type": "boolean"
         },
         "testsPending": {
-          "description": "Present when the scope writes the specification and leaves out an implement stage of the route: the QFAI gate records the test obligations as pending.",
+          "description": "Present when the scope writes the specification and leaves out an implement stage of the route: the QFAI gate lists the missing tests for the IDs the run wrote as pending.",
           "const": true
         }
       }

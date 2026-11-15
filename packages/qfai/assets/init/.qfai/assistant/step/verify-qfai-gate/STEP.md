@@ -76,11 +76,15 @@ scan cannot prove coverage; a missing layer is never a passing scan.
 
 When the chosen plan scope carries `testsPending`, the run writes the
 specification and leaves out the implement stage that writes its tests. The
-scan stays full. Record each `QFAI-STORY-006` through `QFAI-STORY-009` error as
-`PENDING`, with its uncovered ID and its flow, not as a failure: the tests come
-with the implement stage. Every other error still fails the gate, and a scope
-without `testsPending` leaves no obligation pending. A gate whose only errors
-are pending obligations is recorded `PASS`, and its result names each one.
+scan stays full, and the gate is still `FAIL` when validation reports any
+error. Its result lists as `PENDING` each `QFAI-STORY-006` error for a BF, AC
+or EX the run's specification stage wrote, with its uncovered ID and its flow:
+its test comes with the implement stage. Only those are pending. A
+`QFAI-STORY-006` error for an ID the run did not write, and every other error,
+is an ordinary failure, and an older one is handled as `common-gate-run`'s
+`## A failure that predates the change` says. A scope without `testsPending`
+leaves no obligation pending. Whether a `FAIL` whose only errors are pending
+obligations stops the commit is decided by `verify-commit`.
 
 ## Waivers
 
@@ -97,6 +101,6 @@ are pending obligations is recorded `PASS`, and its result names each one.
 The step is done when:
 
 - validation ran in the profile the scope names, and its result is recorded;
-- `error=0` for a pass, or, under a `testsPending` scope, no error other than
-  the pending test obligations, each recorded `PENDING`; otherwise the failing
-  findings are recorded for the fix loop.
+- `error=0` for a pass; otherwise the failing findings are recorded for the
+  fix loop, and under a `testsPending` scope the result lists each pending
+  test obligation as `PENDING`.

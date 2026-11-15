@@ -61,6 +61,6 @@ Feature: Choose how far the work on a request goes before it starts
     Given a plan whose scope writes the specification and leaves out the route's implement stage
     When `npx qfai workflow plan --in <path>` returns the plan and the session runs that scope
     Then that scope says its tests are pending, and the scope question's option for it says the implement stage writes them later
-    And the QFAI gate still runs the full scan and records the missing test obligations as pending, failing on any other error
-    And the commit is made, and the final report lists each pending obligation
+    And the QFAI gate still runs the full scan, fails, and lists as pending the missing tests of the IDs the run wrote
+    And when those are its only errors the commit is made, and the final report lists each pending obligation
 ```

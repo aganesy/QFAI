@@ -11,8 +11,8 @@ export interface PlanScope {
   stages: string[];
   recommended: boolean;
   // Present, and true, when the scope writes the specification and leaves out an implement stage
-  // the route has: the tests the specification asks for come with that stage, so the QFAI gate
-  // records their obligations as pending rather than failing.
+  // the route has: the tests the specification asks for come with that stage, so the QFAI gate lists
+  // their missing-test errors as pending, and the local commit is still made.
   testsPending?: true;
 }
 
