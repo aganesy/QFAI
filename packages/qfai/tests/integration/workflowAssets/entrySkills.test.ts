@@ -692,6 +692,33 @@ describe("qfai-run", () => {
   });
 
   // QFAI:AC-0001-0211-05
+  // QFAI:EX-0001-0211-61
+  it("reads a request that adds screens no confirmed prototype covers as an open visual decision", async () => {
+    const reference = await readShipped(EXTRACTION);
+    expect(itemOf(sectionOf(reference, "## Qualifiers"), "visual-open")).toContain(
+      "with `feature`: A visual or interaction decision is still open. A request that adds a screen or a UI surface that no confirmed prototype covers leaves one open, even when it asks no design question, as a request to build the system or a new section of it does. A control added to an existing screen in that screen's style does not.",
+    );
+    const line = sectionOf(reference, "## Examples")
+      .split("\n")
+      .find((each) =>
+        each.startsWith(
+          '- "Add a supplier management section with its list and detail screens.", with no confirmed prototype for them → ',
+        ),
+      );
+    const parsed: unknown = parse(/→ `(\{.*\})`$/.exec(line ?? "")?.[1] ?? "null");
+    expect(parsed).toEqual({
+      intent: "feature",
+      qualifiers: ["visual-open"],
+      artifacts: ["spec", "contract", "ui", "code", "tests"],
+      confidence: "high",
+    });
+    const pinned: unknown = { ...extraction(), ...(isRecord(parsed) ? parsed : {}) };
+    if (!isExtraction(pinned)) throw new Error("the pinned example is not an extraction");
+    const outcome = routingOutcome(pinned);
+    expect("taken" in outcome ? outcome.taken.route : undefined).toBe("prototype-feature");
+  });
+
+  // QFAI:AC-0001-0211-05
   it("reads an explicit request to file follow-up issues as an operation, not leftovers to sort", async () => {
     const reference = await readShipped(EXTRACTION);
     expect(flat(sectionOf(reference, "## Intent"))).toContain(
