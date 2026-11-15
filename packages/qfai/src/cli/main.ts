@@ -504,7 +504,7 @@ Options:
   --fail-on <error|warning|never>  doctor: failure threshold (defaults to validation.failOn; the shipped default is error)
   --fail-on <error|warning|never>  sdd preflight: failure threshold (never exits 0 even when blocked; preflight has no warning tier, so warning means the same as error; a stale install, an installed qfai that is not the version the lockfile pins, makes sdd preflight and validate exit 1 even under --fail-on never)
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
-  --timings                     validate: print the time each finding family took, slowest first
+  --timings                     validate: print the time each finding family took, slowest first; runs the UI/UX checks one after another
   --check                       catalog components: exit 1 when the committed catalogue is missing, does not parse, or is out of date, without writing it
   --out <path>                  report/doctor/session-review: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)
