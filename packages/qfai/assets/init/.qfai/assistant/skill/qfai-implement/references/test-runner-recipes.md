@@ -296,14 +296,13 @@ subject. When the suite runs once per clock profile, each profile runs its own s
 
 A server-rendered page shows its content before it reacts to input, so a test that fills a field
 too early loses the value when the framework takes over, and fails some runs. The app shell sets
-`data-qfai-ready` on `<html>` once it is interactive, and the test waits for it after every page
-load, before its first interaction. Do not wait a fixed time, and do not wrap an interaction in a
-blind retry such as `toPass`: both hide the cause and still fail on a slow run.
+`data-qfai-ready` on `<html>` once it is interactive; the test waits for it after each page load.
+Do not wait a fixed time, and do not wrap an interaction in a blind retry such as `toPass`: both
+hide the cause and still fail on a slow run.
 
-The marker covers a page load only: a client-side route change keeps the same `<html>`, with the
-marker still set. After a client-side route change, the test waits for that route's own content
-instead, such as its heading. Content inside a `<Suspense>` boundary can hydrate after the shell
-too, so a test waits for that content itself.
+The marker covers a page load only. `<html>` survives a route change. After a client-side
+route change, the test waits for that route's own content, such as its heading. Content
+inside a `<Suspense>` boundary can hydrate after the shell, so the test waits for it too.
 
 In React, an effect sets it in a `"use client"` component the root layout renders around every
 page, since the Next.js App Router root layout is a Server Component:
@@ -326,8 +325,8 @@ export function AppReady({ children }: { children: ReactNode }) {
 document.documentElement.dataset.qfaiReady = "true";
 ```
 
-The test waits with one helper. A click that loads a new document leaves the old page and its
-marker in place until the new document arrives, so it waits for the new URL first:
+One helper waits. After a click that loads a new document, the old page and its marker stay until
+the new document arrives, so the test waits for the new URL first:
 
 ```ts
 // ready.ts
