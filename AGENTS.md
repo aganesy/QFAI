@@ -54,8 +54,9 @@ document often exists in two trees. **Edit the one the package carries.**
   QFAI writes into a consuming project; `api/`, `db/` and `ui/` beside it belong to the shipped
   `qfai-sdd` skill (`packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`). Each contract is Markdown with no `QFAI-CONTRACT-ID`, declares `# CLI-NNNN: <title>`
   in its H1, is named `cli-NNNN-<slug>.md`, and has one row in `.qfai/spec/03_contract/contracts.md`.
-  The number is unique across every contract kind and never reused. `qfai validate` reports a
-  contract whose ID, file name and index row disagree.
+  Each kind numbers its contracts in its own sequence, and a number is never reused within its
+  kind. A business rule names its contract's kind and number, as `BR-CLI-0014-0281`. `qfai validate`
+  reports a contract whose ID, file name and index row disagree.
 
 ## Code and checks
 

@@ -89,7 +89,7 @@ function indexIds(text: string, column: "BF-ID" | "US-ID"): string[] {
 }
 
 const RESERVED_ID =
-  /\b(?:BF-\d{4}|US-\d{4}-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2}|BR-\d{4}-\d{4}(?![\w-])|(?:DEC|OQ)-(?:\d{14}|\d{4}))(?![\d-])/g;
+  /\b(?:BF-\d{4}|US-\d{4}-\d{4}|AC-\d{4}-\d{4}-\d{2}|EX-\d{4}-\d{4}-\d{2}|BR-(?:CLI|API|DB|UI)-\d{4}-\d{4}(?![\w-])|(?:DEC|OQ)-(?:\d{14}|\d{4}))(?![\d-])/g;
 
 /**
  * Allocates a BF, US, AC, EX or BR ID after every declaration and every ID named in a decision

@@ -18,7 +18,7 @@ const ID_PATTERNS: Record<StoryTreeIdKind, RegExp> = {
   US: /^US-\d{4}-\d{4}$/,
   AC: /^AC-\d{4}-\d{4}-\d{2}$/,
   EX: /^EX-\d{4}-\d{4}-\d{2}$/,
-  BR: /^BR-\d{4}-\d{4}$/,
+  BR: /^BR-(?:CLI|API|DB|UI)-\d{4}-\d{4}$/,
   DEC: /^DEC-(?:\d{4}|\d{14})$/,
   OQ: /^OQ-(?:\d{4}|\d{14})$/,
 };
@@ -51,7 +51,7 @@ export function isTimestampRecordId(id: string): boolean {
   return digits !== undefined && isUtcTimestamp(digits);
 }
 
-/** A contract ID: the kind its directory names, then a number unique across kinds. */
+/** A contract ID: the kind its directory names, then a number unique within that kind. */
 const CONTRACT_ID = /^(?:CLI|API|DB|UI)-(\d{4})$/;
 
 /** The contract kind each directory under `paths.contractsDir` holds. */
@@ -71,9 +71,9 @@ export function contractNumber(contractId: string): string | null {
   return CONTRACT_ID.exec(contractId)?.[1] ?? null;
 }
 
-/** The contract number a `BR-NNNN-NNNN` carries, or `null` for any other value. */
-export function ruleContractNumber(ruleId: string): string | null {
-  return /^BR-(\d{4})-\d{4}$/.exec(ruleId)?.[1] ?? null;
+/** The contract ID a `BR-<KIND>-NNNN-NNNN` names, or `null` for any other value. */
+export function ruleContractId(ruleId: string): string | null {
+  return /^BR-((?:CLI|API|DB|UI)-\d{4})-\d{4}$/.exec(ruleId)?.[1] ?? null;
 }
 
 export const STORY_TEST_ANNOTATIONS = {
@@ -114,9 +114,9 @@ function allocationScope(
     );
   }
   if (kind === "BR") {
-    const number = contractNumber(parentId ?? "");
-    if (!number) throw new TypeError("BR requires a valid contract parent ID");
-    return { prefix: `BR-${number}-`, width: 4 };
+    if (!isContractId(parentId ?? ""))
+      throw new TypeError("BR requires a valid contract parent ID");
+    return { prefix: `BR-${parentId}-`, width: 4 };
   }
   const nested = kind === "US" || kind === "AC" || kind === "EX";
   const parentKind = kind === "US" ? "BF" : "US";

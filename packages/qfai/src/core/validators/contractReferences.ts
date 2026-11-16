@@ -157,20 +157,19 @@ function contractFileProblems(
   return problems;
 }
 
-/** Contract numbers are unique across kinds. */
+/** Contract numbers are unique within a kind: `CLI-0001` and `DB-0001` are two contracts. */
 function duplicateContractNumbers(model: StoryTreeModel): Issue[] {
-  const byNumber = new Map<string, string[]>();
+  const byId = new Map<string, string[]>();
   for (const { id, file } of model.contracts) {
-    const number = contractNumber(id) ?? id;
-    byNumber.set(number, [...(byNumber.get(number) ?? []), file]);
+    byId.set(id, [...(byId.get(id) ?? []), file]);
   }
-  return [...byNumber.entries()]
+  return [...byId.entries()]
     .filter(([, files]) => files.length > 1)
-    .map(([number, files]) =>
+    .map(([id, files]) =>
       indexIssue(
-        `Contract number ${number} is declared by more than one contract: ${files.join(", ")}`,
+        `Contract ID ${id} is declared by more than one contract: ${[...files].sort().join(", ")}`,
         files[0] ?? "",
-        [number],
+        [id],
       ),
     );
 }
