@@ -66,8 +66,8 @@ it; commit both, and never edit them by hand:
 
 Once either file exists, `npx qfai validate` warns when the token file or the theme is out of date with
 `DESIGN.md` (`QFAI-DCAT-001`, `QFAI-DCAT-002`), and about each hex colour in a `.html`, `.tsx`, `.jsx`, `.vue` or `.svelte` file `uiux.surfacePaths` selects
-that matches no colour of `DESIGN.md` (`QFAI-DCAT-003`). `npx qfai catalog design --check` fails CI on
-the first two.
+that matches no colour of `DESIGN.md` (`QFAI-DCAT-003`). A stylesheet is not read, so keep colours
+there on the theme's variables yourself. `npx qfai catalog design --check` fails CI on the first two.
 
 ## Plain text in UI source
 

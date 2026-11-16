@@ -96,9 +96,24 @@ export function renderTheme(design: DesignMd): string {
   return [`/* ${GENERATED} */`, "@theme {", ...lines, "}", ""].join("\n");
 }
 
-/** Whether two generated texts are the same, line ends aside. */
+/**
+ * Whether two generated texts are the same, line ends aside. Two JSON texts are compared as the
+ * values they hold, so a formatter that rewraps the token file does not make it stale.
+ */
 export function sameGeneratedText(a: string, b: string): boolean {
+  const left = jsonValue(a);
+  const right = jsonValue(b);
+  if (left !== undefined && right !== undefined) return left === right;
   return a.replace(/\r\n/g, "\n") === b.replace(/\r\n/g, "\n");
+}
+
+/** The JSON a text holds, re-serialised without formatting, or undefined when it is not JSON. */
+function jsonValue(text: string): string | undefined {
+  try {
+    return JSON.stringify(JSON.parse(text));
+  } catch {
+    return undefined;
+  }
 }
 
 /** Every colour the tokens hold, as lower-case `#rrggbb` or `#rrggbbaa`. */
@@ -115,20 +130,23 @@ export function tokenHexes(design: DesignMd): Set<string> {
 export type RawHex = { line: number; written: string; hex: string };
 
 // A `#` that starts a hex literal: not inside a word, an entity, a URL path or a `url(#id)`
-// reference, and not followed by more of a name.
+// reference, and not followed by more of a name. A `(` of any other function, such as
+// `linear-gradient(#123456, #fff)`, does not hide it.
 const RAW_HEX_RE =
-  /(?<![\w&#/(])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![\w-])/g;
+  /(?<![\w&#/])(?<!url\()#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![\w-])/g;
 // Comments hold prose such as `// see #12ab`, so they are blanked before the scan. The `//` form
-// is not read after a `:`, so the path of a URL such as `https://` is not taken for a comment.
-const COMMENT_RE = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<!:)\/\/[^\n]*/g;
+// is not read after a `:`, a `(`, a quote or a `=`, so a URL such as `https://`,
+// `url(//cdn.example/x.png)` or `src="//cdn.example/x.js"` is not taken for a comment.
+const COMMENT_RE = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<![:("'`=])\/\/[^\n]*/g;
 /**
  * The open value of an attribute at the end of a tag's text: the name, `=` with any spaces, then
- * a quoted value not yet closed, or a `{…}` expression not yet closed with one level of inner
- * braces allowed, as in `href={on ? "#bad" : "#add"}`. A name may carry a binding or directive
- * prefix: Vue's `:href` and `v-bind:href`, `@click`, Svelte's `bind:value` or `style:color`.
+ * a quoted value not yet closed, a `{…}` expression not yet closed with one level of inner
+ * braces allowed, as in `href={on ? "#bad" : "#add"}`, or nothing yet, for an unquoted value
+ * such as `fill=#12ab56`. A name may carry a binding or directive prefix: Vue's `:href` and
+ * `v-bind:href`, `@click`, Svelte's `bind:value` or `style:color`.
  */
 const OPEN_ATTRIBUTE_RE =
-  /\s([:@]?[\w.-]+(?::[\w.-]+)?)\s*=\s*(?:\{(?:[^{}]|\{[^{}]*\})*|(["'`])(?:(?!\2)[^\n])*)$/;
+  /\s([:@]?[\w.-]+(?::[\w.-]+)?)\s*=\s*(?:\{(?:[^{}]|\{[^{}]*\})*|(["'`])(?:(?!\2)[^\n])*|)$/;
 /**
  * An attribute name whose value is a colour: `style`, `fill`, `stroke`, `color`, the SVG colour
  * attributes in their hyphenated or React form, Vue's bindings of them, and Svelte's `style:`
@@ -158,8 +176,10 @@ export function findRawHexes(text: string): RawHex[] {
     const lineStart = scanned.lastIndexOf("\n", match.index - 1) + 1;
     const before = scanned.slice(lineStart, match.index);
     const end = match.index + match[0].length;
-    const after = scanned.slice(end, end + 16);
-    if (!colorPlace(openAttribute(scanned, match.index), before, after)) continue;
+    const lineEnd = scanned.indexOf("\n", end);
+    const after = scanned.slice(end, lineEnd < 0 ? undefined : lineEnd);
+    const context = /^\s*$/.test(before) ? lineBefore(scanned, lineStart) : before;
+    if (!colorPlace(openAttribute(scanned, match.index), context, after)) continue;
     const rgba = parseHex(match[0]);
     if (!rgba) continue;
     found.push({ line, written: match[0], hex: hexOf(rgba) });
@@ -184,15 +204,32 @@ function openAttribute(text: string, index: number): string | null {
 }
 
 /**
- * Whether a hex sits where a colour goes: in a colour attribute's value and not in another
- * attribute's; outside a tag, in a CSS declaration value or as a whole string literal, read from
- * the text before it on its line and after it.
+ * The last line before `lineStart` that holds more than spaces, for a hex that starts its line:
+ * a declaration may put its value on the line after its `color:`.
+ */
+function lineBefore(text: string, lineStart: number): string {
+  const lines = text.slice(0, lineStart).split("\n");
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index] ?? "";
+    if (line.trim() !== "") return line;
+  }
+  return "";
+}
+
+/**
+ * Whether a hex sits where a colour goes, read from the text before it on its line, or on the
+ * line before when it starts its line, and from the rest of its line. A Tailwind arbitrary value
+ * such as `bg-[#123456]` is one wherever it is written. Otherwise it is one in a colour
+ * attribute's value and not in another attribute's; outside a tag, as a whole string literal, or
+ * in a CSS declaration value, though not in a selector, whose `{` follows on the line before any
+ * `;` or `}`.
  */
 function colorPlace(attribute: string | null, before: string, after: string): boolean {
+  if (/-\[$/.test(before) && /^\]/.test(after)) return true;
   if (attribute !== null) return COLOR_ATTRIBUTE_NAME_RE.test(attribute);
-  if (/^\s*\{/.test(after)) return false;
-  if (DECLARATION_RE.test(before)) return true;
-  return /["'`]$/.test(before) && /^["'`]/.test(after);
+  if (/["'`]$/.test(before) && /^["'`]/.test(after)) return true;
+  if (/^[^;{}]*\{/.test(after)) return false;
+  return DECLARATION_RE.test(before);
 }
 
 // ---------------------------------------------------------------------------

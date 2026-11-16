@@ -15,6 +15,7 @@ import {
   findRawHexes,
   renderDesignTokens,
   renderTheme,
+  sameGeneratedText,
   tokenHexes,
 } from "../../../src/core/uiux/designCatalog.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
@@ -345,6 +346,57 @@ describe("hex literals in source", () => {
       { line: 3, written: "#FFF", hex: "#ffffff" },
       { line: 5, written: "#00000080", hex: "#00000080" },
     ]);
+  });
+
+  // QFAI:EX-0001-0312-11
+  it("reads Tailwind arbitrary values, colours inside CSS functions, unquoted attributes and a value on the next line", () => {
+    const found = findRawHexes(
+      [
+        '<div className="p-2 bg-[#123451]" />',
+        'const tone = cn("text-[#123452]/50");',
+        "background: linear-gradient(#123453, #fff);",
+        "filter: drop-shadow(#123454 0 1px);",
+        "background: url(//cdn.example/x.png) #123455;",
+        "<rect fill=#123456 />",
+        "color:",
+        "  #123457;",
+        '<script src="//cdn.example/x.js"></script> <rect fill="#123458" />',
+      ].join("\n"),
+    );
+    expect(found.map((hex) => [hex.line, hex.written])).toEqual([
+      [1, "#123451"],
+      [2, "#123452"],
+      [3, "#123453"],
+      [3, "#fff"],
+      [4, "#123454"],
+      [5, "#123455"],
+      [6, "#123456"],
+      [8, "#123457"],
+      [9, "#123458"],
+    ]);
+  });
+
+  // QFAI:EX-0001-0312-12
+  it("skips a hex in a selector, even after a pseudo-class or on the line after its comma", () => {
+    const found = findRawHexes(
+      [
+        "a:hover #fab .x {",
+        "a:focus,",
+        "#cab {",
+        "<a href=#bad>x</a>",
+        'fill="url(#fade)"',
+        "url(#abc)",
+      ].join("\n"),
+    );
+    expect(found).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0312-14
+  it("compares JSON as the value it holds, and other text with its line ends aside", () => {
+    expect(sameGeneratedText('{\n  "a": [\n    1,\n    2\n  ]\n}\n', '{"a": [1, 2]}')).toBe(true);
+    expect(sameGeneratedText('{"a": [1, 2]}', '{"a": [2, 1]}')).toBe(false);
+    expect(sameGeneratedText("a {\r\n}\r\n", "a {\n}\n")).toBe(true);
+    expect(sameGeneratedText("a { }", "a {}")).toBe(false);
   });
 
   it("knows every colour and shadow colour DESIGN.md states", async () => {
