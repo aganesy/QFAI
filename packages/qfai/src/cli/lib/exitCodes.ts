@@ -114,6 +114,14 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
+    label: "catalog design",
+    lines: [
+      `${EXIT_CODES.ok} = the token file and theme were written, or --check found both up to date,`,
+      `${EXIT_CODES.findings} = --check found one missing or out of date, DESIGN.md is missing or`,
+      "      does not parse, or a read or write failure",
+    ],
+  },
+  {
     label: "workflow",
     lines: [
       `${EXIT_CODES.ok} = a plan or candidate routes,`,

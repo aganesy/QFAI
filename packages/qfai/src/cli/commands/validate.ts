@@ -326,6 +326,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CFG-LINK-*",
     "QFAI-UITEXT-*",
     "QFAI-COMP-*",
+    "QFAI-DCAT-*",
   ],
   "prototyping-skill": ["QFAI-PROTOSKILL-*"],
   "accessibility-layer": ["QFAI-AXE-*"],
@@ -1258,6 +1259,15 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     'Where a component catalogue is installed, no surface file writes `role="dialog"`, `role="menu"`, `role="tablist"` or `aria-modal` by hand outside the file of a component procured from a catalogue.',
   "QFAI-COMP-006":
     "Every catalogued component whose `@pattern` is an interactive widget the procurement rule lists records its WAI-ARIA pattern and keyboard behaviour in `@a11y`.",
+  // The design catalogue warnings read `.qfai/catalog/design.tokens.json` and
+  // `.qfai/catalog/theme.css`, and are asked of nothing until a project writes them with
+  // `qfai catalog design`.
+  "QFAI-DCAT-001":
+    "The committed design token file is the file `qfai catalog design` writes for the current root DESIGN.md.",
+  "QFAI-DCAT-002":
+    "The committed Tailwind theme is the file `qfai catalog design` writes for the current root DESIGN.md.",
+  "QFAI-DCAT-003":
+    "A surface file writes no hex colour that matches none of the colours root DESIGN.md states.",
   // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
   // rung raises an even code when the `Parent` is absent and the odd one above
   // it when the `Parent` is there but names nothing the level above defines —

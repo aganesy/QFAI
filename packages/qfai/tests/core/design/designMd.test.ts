@@ -742,6 +742,29 @@ describe("parseDesignMd (TC-1.1.x)", () => {
     expect(result.data.visual.typography.weight).toEqual({ regular: 400, bold: 700 });
   });
 
+  // QFAI:EX-0001-0312-04
+  it.each([
+    [0, false],
+    [1, true],
+    [1000, true],
+    [1001, false],
+  ])("visual.typography.weight %d is inside the 1 to 1000 font weight range: %s", (weight, ok) => {
+    const result = parseDesignMd(
+      VALID_FRONT_MATTER.replace(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    weight:\n      bold: ${weight}`,
+      ),
+    );
+    if (ok) {
+      expect("error" in result).toBe(false);
+      return;
+    }
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.typography.weight.bold",
+      code: "invalid-format",
+    });
+  });
+
   it("visual.spacing.base with leading whitespace is rejected at parse-time", () => {
     // `" 0.25rem "` is structurally a CSS-invalid token
     // (every CSS engine rejects `padding: " 0.25rem ";`). Catching
@@ -1324,5 +1347,271 @@ describe("isUnreplacedDesignMdSample", () => {
     for (const value of [undefined, null, 42, {}, [], Buffer.from("x")]) {
       expect(isUnreplacedDesignMdSample(value)).toBe(false);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The optional `data_display` section, and `visual.layout` values the design catalogue refuses
+// ---------------------------------------------------------------------------
+
+/** The valid sample with extra front-matter lines added before the closing delimiter. */
+function sampleWithSections(lines: readonly string[]): string {
+  const front = VALID_FRONT_MATTER.split("\n");
+  return [...front.slice(0, -1), ...lines, "---", VALID_BODY].join("\n");
+}
+
+/** The valid sample with `visual.layout` holding the given lines. */
+function sampleWithLayout(lines: readonly string[]): string {
+  const lastShadowLine = '    lg: "0 12px 24px rgba(15,23,42,0.10)"';
+  return VALID_FRONT_MATTER.replace(
+    lastShadowLine,
+    [lastShadowLine, "  layout:", ...lines.map((line) => `    ${line}`)].join("\n"),
+  );
+}
+
+describe("parseDesignMd: data_display", () => {
+  it("reads the data display values when they are stated", () => {
+    const result = parseDesignMd(
+      sampleWithSections(["data_display:", '  locale: "ja-JP"', '  date: "YYYY-MM-DD"']),
+    );
+    if ("error" in result) throw new Error(result.error.message);
+    expect(result.data.data_display).toEqual({ locale: "ja-JP", date: "YYYY-MM-DD" });
+  });
+
+  it("leaves it absent when the file does not state it", () => {
+    const result = parseDesignMd(VALID_SAMPLE);
+    if ("error" in result) throw new Error(result.error.message);
+    expect(result.data.data_display).toBeUndefined();
+  });
+
+  // QFAI:EX-0001-0312-04
+  it.each([
+    [sampleWithLayout(['gutter: "1rem"']), "visual.layout.gutter"],
+    [sampleWithLayout(["breakpoints:", '  xxl: "96rem"']), "visual.layout.breakpoints.xxl"],
+    [sampleWithLayout(["target_min_px: 20"]), "visual.layout.target_min_px"],
+    [sampleWithSections(["data_display:", '  date: ""']), "data_display.date"],
+  ])("rejects a value outside the schema at %#", (text, at) => {
+    const result = parseDesignMd(text);
+    expect("error" in result && result.error.path).toBe(at);
+  });
+
+  // QFAI:EX-0001-0312-04
+  // A value the theme writes into a CSS declaration may not end it.
+  const BREAKER = "; } body { background: red } @theme {";
+  const withValue = (line: string, edited: string): string => VALID_SAMPLE.replace(line, edited);
+  it.each([
+    [
+      "visual.colors.primary",
+      withValue('primary:        "#1F2937"', `primary: "#1F2937${BREAKER}"`),
+    ],
+    [
+      "visual.typography.family_sans",
+      withValue('family_sans:    "Inter, system-ui, sans-serif"', `family_sans: "Inter${BREAKER}"`),
+    ],
+    [
+      "visual.typography.scale.base",
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "1rem${BREAKER}"`,
+      ),
+    ],
+    [
+      "visual.spacing.base",
+      withValue(
+        '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+        `    lg: "0 12px 24px rgba(15,23,42,0.10)"\n  spacing:\n    base: "0.25rem${BREAKER}"`,
+      ),
+    ],
+    ["visual.radius.md", withValue('md:   "0.5rem"', `md:   "0.5rem${BREAKER}"`)],
+    [
+      "visual.shadow.sm",
+      withValue('sm: "0 1px 2px rgba(15,23,42,0.05)"', `sm: "0 1px 2px #0a0a0a${BREAKER}"`),
+    ],
+  ])("rejects ; { or } in %s", (at, text) => {
+    const result = parseDesignMd(text);
+    expect("error" in result && result.error).toMatchObject({
+      path: at,
+      code: "invalid-css-value",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
+  it.each([
+    ["an opening comment marker", "1rem /*"],
+    ["a closing comment marker", "1rem */"],
+    ["an unclosed parenthesis", "calc(1rem + 2px"],
+    ["a stray closing parenthesis", "1rem)"],
+    ["an unclosed bracket", "1rem [a"],
+    ["an unclosed quote", "1rem 'a"],
+    ["a trailing backslash", "1rem\\"],
+  ])("rejects %s in a theme-bound value", (_label, size) => {
+    const result = parseDesignMd(
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: ${JSON.stringify(size)}`,
+      ),
+    );
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.typography.scale.base",
+      code: "invalid-css-value",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
+  it("rejects a theme-bound number too long to read as one", () => {
+    const result = parseDesignMd(
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "${"9".repeat(400)}rem"`,
+      ),
+    );
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.typography.scale.base",
+      code: "invalid-format",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
+  it.each([
+    ["9007199254740993px", false],
+    ["9007199254740992px", true],
+    ["0.0000001rem", true],
+    ["0.10rem", true],
+  ])("reads the size %s exactly, or refuses it: %s", (size, ok) => {
+    const result = parseDesignMd(
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "${size}"`,
+      ),
+    );
+    if (ok) {
+      expect("error" in result).toBe(false);
+      return;
+    }
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.typography.scale.base",
+      code: "invalid-format",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
+  it.each([
+    ["breakpoints", "sm", "wide", false],
+    ["content_max_width", "app", "auto", false],
+    ["content_max_width", "app", "80", false],
+    ["breakpoints", "sm", "40em", true],
+    ["content_max_width", "reading", "65ch", true],
+    ["content_max_width", "app", "100%", true],
+  ])(
+    "reads visual.layout.%s.%s %s as a CSS length, or refuses it: %s",
+    (section, key, length, ok) => {
+      const result = parseDesignMd(sampleWithLayout([`${section}:`, `  ${key}: "${length}"`]));
+      if (ok) {
+        expect("error" in result).toBe(false);
+        return;
+      }
+      expect("error" in result && result.error).toMatchObject({
+        path: `visual.layout.${section}.${key}`,
+        code: "invalid-format",
+      });
+    },
+  );
+
+  // QFAI:EX-0001-0312-04
+  it.each([
+    [
+      "visual.spacing.base",
+      withValue(
+        '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+        `    lg: "0 12px 24px rgba(15,23,42,0.10)"\n  spacing:\n    base: "wide"`,
+      ),
+      "invalid-format",
+    ],
+    [
+      "visual.typography.scale.base",
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "large"`,
+      ),
+      "invalid-format",
+    ],
+    ["visual.radius.md", withValue('md:   "0.5rem"', 'md:   "round"'), "invalid-format"],
+    [
+      "visual.layout.breakpoints.sm",
+      sampleWithLayout(["breakpoints:", '  sm: "40rem; } body { color: red }"']),
+      "invalid-css-value",
+    ],
+  ])("refuses %s that is not one CSS length", (at, text, code) => {
+    const result = parseDesignMd(text);
+    expect("error" in result && result.error).toMatchObject({ path: at, code });
+  });
+
+  // QFAI:EX-0001-0312-04
+  it("rejects a spacing step whose finite length a number cannot state exactly", () => {
+    const result = parseDesignMd(
+      withValue(
+        '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+        `    lg: "0 12px 24px rgba(15,23,42,0.10)"\n  spacing:\n    base: "9007199254740991px"\n    scale: [1, 3]`,
+      ),
+    );
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.spacing.scale[1]",
+      code: "invalid-format",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
+  it("rejects a spacing step whose length, the base times the step, is too large to compute", () => {
+    const result = parseDesignMd(
+      withValue(
+        '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+        `    lg: "0 12px 24px rgba(15,23,42,0.10)"\n  spacing:\n    base: "100000000000000000000px"\n    scale: [1e308]`,
+      ),
+    );
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.spacing.scale[0]",
+      code: "invalid-format",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
+  it("rejects a repeated spacing step, which would name two tokens alike", () => {
+    const result = parseDesignMd(
+      withValue(
+        '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+        `    lg: "0 12px 24px rgba(15,23,42,0.10)"\n  spacing:\n    base: "0.25rem"\n    scale: [0, 1, 1]`,
+      ),
+    );
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.spacing.scale[2]",
+      code: "invalid-format",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
+  it.each([
+    [44, true],
+    [1e20, true],
+    [1e21, false],
+  ])("visual.layout.target_min_px %d can be written without an exponent: %s", (target, ok) => {
+    const result = parseDesignMd(sampleWithLayout([`target_min_px: ${String(target)}`]));
+    if (ok) {
+      expect("error" in result).toBe(false);
+      return;
+    }
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.layout.target_min_px",
+      code: "invalid-format",
+    });
+  });
+
+  it("accepts balanced quotes and the rgba() shadows in theme-bound values", () => {
+    const result = parseDesignMd(
+      withValue(
+        'family_sans:    "Inter, system-ui, sans-serif"',
+        `family_sans: "'Inter Variable', system-ui, sans-serif"`,
+      ),
+    );
+    expect("error" in result).toBe(false);
   });
 });

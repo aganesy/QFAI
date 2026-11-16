@@ -107,7 +107,9 @@ describe("design-system validator slices", () => {
   it("are reached through validate alone, and nothing names the removed full-harness runtime", async () => {
     const commands = listedCommands(await captureHelp());
     expect(commands).toEqual(expect.arrayContaining(["init", "validate", "report", "doctor"]));
-    for (const command of commands) {
+    // `catalog design` writes the token file and theme from DESIGN.md and runs no design-system
+    // harness, so it is the one listed command allowed to name "design".
+    for (const command of commands.filter((listed) => listed !== "catalog design")) {
       expect(command, command).not.toMatch(/token|audit|design|harness/i);
     }
 

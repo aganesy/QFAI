@@ -6,6 +6,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **`qfai catalog design` derives the design tokens and the Tailwind theme
+  from `DESIGN.md`.** It writes `.qfai/catalog/design.tokens.json` in the
+  Design Tokens Community Group 2025.10 format, with the colours, their
+  semantic surface, text, border, primary and status aliases, the type,
+  spacing, radius and shadow tokens, and the breakpoints, content widths and
+  minimum target of `visual.layout`. It also writes `.qfai/catalog/theme.css`,
+  the same tokens as one Tailwind 4 `@theme` block. `DESIGN.md` gains the optional
+  `data_display` section (locale and number, money and date formats).
+  `--check` exits 1 when a committed file is missing or out of date. Once
+  either file exists, `qfai validate` warns in the `prototyping`,
+  `saas-package`, `verify` and `full` profiles when the token file or the
+  theme is out of date (`QFAI-DCAT-001`, `QFAI-DCAT-002`) and about a hex
+  colour in a `uiux.surfacePaths` file that matches no colour of `DESIGN.md`
+  (`QFAI-DCAT-003`). The `DESIGN.md` parse is stricter: a colour, font family
+  stack, type-scale size, `spacing.base`, radius, shadow, breakpoint or content
+  width holding `;`, `{`, `}`, `/*` or `*/`, ending in a backslash, or leaving
+  a bracket or quote open, now fails it, since the theme writes each into a CSS
+  declaration. So do a type-scale size, `spacing.base`, radius, breakpoint or content width that is not one CSS length, a number too long to read or compute, or too precise to read exactly, a font weight outside 1 to
+  1000, a spacing step given twice and a `target_min_px` too large to write without an exponent.
+
 - **Screen reviews walk one sourced checklist.** Review rounds of the same
   screen raised different classes of issue, because nothing fixed what a round
   covers. `.qfai/assistant/rule/references/surface-review-checklist.md` lists
