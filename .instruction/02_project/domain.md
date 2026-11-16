@@ -44,7 +44,7 @@ one AC; each BR lives in a contract and cites one or more EX IDs.
 | `US-NNNN-NNNN` | `business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.md` |
 | `AC-…-NN`      | `user-story-NNNN-NNNN/02_Acceptance-Criteria.md`           |
 | `EX-…-NN`      | `user-story-NNNN-NNNN/03_Example.md`                       |
-| `BR-NNNN`      | a contract under `.qfai/spec/03_contract/`                 |
+| `BR-KIND-…`    | a contract under `.qfai/spec/03_contract/`                 |
 
 Tests annotate BF in E2E, AC in integration or API, and EX in a selected
 non-E2E test. `validate` checks IDs, links, layers and uncovered obligations.

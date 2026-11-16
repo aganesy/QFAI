@@ -1091,7 +1091,7 @@ describe("assets guardrails", () => {
     expect(stepContent).toContain("references/contract-artifact-rules.md");
   });
 
-  it("states that API, DB and UI contracts share one number sequence where a contract is numbered", async () => {
+  it("states that each contract kind has its own number sequence where a contract is numbered", async () => {
     const skillDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-sdd");
     const [step, rules, samples] = await Promise.all([
       readFile(path.join(templateQfaiDir, "assistant", "step", "sdd-contract", "STEP.md"), "utf-8"),
@@ -1104,17 +1104,22 @@ describe("assets guardrails", () => {
     ]);
     const flat = (text: string): string => text.replace(/\s*\n\s*(?:#|--)?\s*/g, " ");
 
-    expect(flat(step)).toContain("The number is shared by every kind");
-    expect(flat(step)).toContain("the next DB contract is `DB-0005`, not `DB-0003`");
+    expect(flat(step)).toContain("Each kind has its own number sequence");
     expect(flat(step)).toContain(
-      "`npx qfai validate --profile sdd` reports two contracts that share a number as `QFAI-CONTRACT-034`",
+      "the next DB contract is `DB-0003` and the next UI contract `UI-0005`",
     );
+    expect(flat(step)).toContain(
+      "`npx qfai validate --profile sdd` reports two contracts of one kind that share a number as `QFAI-CONTRACT-034`",
+    );
+    expect(flat(step)).toContain("`BR-<KIND>-<contract number>-NNNN`");
     expect(flat(step)).toContain("the `discussion` profile does not check contracts");
-    expect(flat(rules)).toContain("not only the directory the new contract goes in");
+    expect(flat(rules)).toContain("one more than the highest number of its own kind");
+    expect(flat(rules)).toContain("`BR-API-0006-0001` is the first rule of `API-0006`");
     expect(flat(rules)).toContain("`QFAI-CONTRACT-034`");
     for (const sample of samples) {
-      expect(flat(sample)).toContain("API, DB and UI share one number sequence");
+      expect(flat(sample)).toContain("Each kind has its own number sequence");
       expect(flat(sample)).toContain("in contracts.md and the contract file names");
+      expect(sample).toMatch(/\bBR-(?:API|DB|UI)-\d{4}-(?:\d{4}|NNNN)\b/);
     }
   });
 

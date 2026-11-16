@@ -42,8 +42,9 @@ function oneLine(value: string): string {
   return value.replace(/[^\S\r\n]*\r?\n\s*/g, " ").trim();
 }
 
+/** The rule IDs a value names: an old one, `BR-NNNN-NNNN`, or a new one, `BR-<KIND>-NNNN-NNNN`. */
 function ruleIds(value: string): string[] {
-  return [...new Set(value.match(/BR-\d{4}-\d{4}/g) ?? [])];
+  return [...new Set(value.match(/BR-(?:(?:CLI|API|DB|UI)-)?\d{4}-\d{4}/g) ?? [])];
 }
 
 /** A statement with each old ID it names replaced through the ID map. */
@@ -114,7 +115,9 @@ function structuredRules(values: readonly unknown[]): Map<string, Rule | null> {
 
 function sqlRules(original: string): Map<string, Rule | null> {
   const current = new Map<string, Rule | null>();
-  const headers = [...original.matchAll(/^-- Rule (BR-\d{4}-\d{4})(?::([^\r\n]*)|[ \t]*$)/gm)];
+  const headers = [
+    ...original.matchAll(/^-- Rule (BR-(?:CLI|API|DB|UI)-\d{4}-\d{4})(?::([^\r\n]*)|[ \t]*$)/gm),
+  ];
   for (const [index, header] of headers.entries()) {
     const id = header[1] ?? "";
     const block = original.slice(header.index, headers[index + 1]?.index).split(/\r?\n/);
@@ -144,7 +147,9 @@ function sqlRules(original: string): Map<string, Rule | null> {
  */
 function repairMultiLineSqlRules(original: string, ids: ReadonlySet<string>): string {
   const newline = original.includes("\r\n") ? "\r\n" : "\n";
-  const headers = [...original.matchAll(/^-- Rule (BR-\d{4}-\d{4}):([^\r\n]*)/gm)];
+  const headers = [
+    ...original.matchAll(/^-- Rule (BR-(?:CLI|API|DB|UI)-\d{4}-\d{4}):([^\r\n]*)/gm),
+  ];
   let repaired = original;
   for (const [index, header] of [...headers.entries()].reverse()) {
     const id = header[1] ?? "";
@@ -168,7 +173,7 @@ function repairMultiLineSqlRules(original: string, ids: ReadonlySet<string>): st
 function markdownRules(original: string): Map<string, Rule | null> {
   const current = new Map<string, Rule | null>();
   for (const line of original.split(/\r?\n/)) {
-    if (!/^\|\s*BR-\d{4}-\d{4}\s*\|/.test(line)) continue;
+    if (!/^\|\s*BR-(?:CLI|API|DB|UI)-\d{4}-\d{4}\s*\|/.test(line)) continue;
     const cells = splitMarkdownRow(line);
     const id = cells[0] ?? "";
     rememberRule(

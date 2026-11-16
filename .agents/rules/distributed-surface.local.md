@@ -23,30 +23,30 @@ the identifier does not belong in it.
 
 ## The shapes that must not appear
 
-| Kind                         | Shape                                                       | Example                  |
-| ---------------------------- | ----------------------------------------------------------- | ------------------------ |
-| Internal spec ID             | `spec-0010` and above                                       | `spec-0011`, `spec-0042` |
-| Internal capability ID       | `CAP-0010` and above                                        | `CAP-0013`               |
-| Internal decision ID         | `DEC-NNNN-NNNN`                                             | `DEC-0001-0042`          |
-| Internal design-rationale ID | `DR-NNNN`                                                   | `DR-0007`                |
-| Internal open-question ID    | `OQ-NNNN-NNNN`                                              | `OQ-0012-0006`           |
-| Story decision ID            | `DEC-NNNN`                                                  | `DEC-0010`               |
-| Story open-question ID       | `OQ-NNNN`                                                   | `OQ-0010`                |
-| Timestamp decision ID        | `DEC-yyyymmddhhMMss`                                        | `DEC-20261105120000`     |
-| Timestamp open-question ID   | `OQ-yyyymmddhhMMss`                                         | `OQ-20261105120000`      |
-| Story business-flow ID       | `BF-NNNN`                                                   | `BF-0010`                |
-| Story user-story ID          | `US-NNNN-NNNN`                                              | `US-0001-0010`           |
-| Story acceptance ID          | `AC-NNNN-NNNN-NN`                                           | `AC-0001-0001-10`        |
-| Story example ID             | `EX-NNNN-NNNN-NN`                                           | `EX-0001-0010-01`        |
-| Story business-rule ID       | `BR-NNNN-NNNN`                                              | `BR-0001-0010`           |
-| Story contract ID            | `CLI-NNNN`, `API-NNNN`, `DB-NNNN`, `UI-NNNN`, `DESIGN-NNNN` | `CLI-0010`, `UI-0100`    |
-| Contract file name           | `cli-NNNN`, `api-NNNN`, `db-NNNN`, `ui-NNNN`                | `cli-0011-qfai-init.md`  |
-| Retired business-rule ID     | `BR-NNNN`                                                   | `BR-0010`                |
-| Retired contract ID          | `CON-<KIND>-NNNN`                                           | `CON-UI-0010`            |
-| Internal change ID           | `CHG-NNN`                                                   | `CHG-003`                |
-| Retired trace prefix         | `QFAI-PROT2-NNN`                                            |                          |
-| Private version marker       | `vN.M`, `vN.M.P`, `v1.x`                                    | `v2.0`, `v3.0`           |
-| Private schema marker        | `"schemaVersion"`, `schemaVersion:`                         |                          |
+| Kind                         | Shape                                                       | Example                   |
+| ---------------------------- | ----------------------------------------------------------- | ------------------------- |
+| Internal spec ID             | `spec-0010` and above                                       | `spec-0011`, `spec-0042`  |
+| Internal capability ID       | `CAP-0010` and above                                        | `CAP-0013`                |
+| Internal decision ID         | `DEC-NNNN-NNNN`                                             | `DEC-0001-0042`           |
+| Internal design-rationale ID | `DR-NNNN`                                                   | `DR-0007`                 |
+| Internal open-question ID    | `OQ-NNNN-NNNN`                                              | `OQ-0012-0006`            |
+| Story decision ID            | `DEC-NNNN`                                                  | `DEC-0010`                |
+| Story open-question ID       | `OQ-NNNN`                                                   | `OQ-0010`                 |
+| Timestamp decision ID        | `DEC-yyyymmddhhMMss`                                        | `DEC-20261105120000`      |
+| Timestamp open-question ID   | `OQ-yyyymmddhhMMss`                                         | `OQ-20261105120000`       |
+| Story business-flow ID       | `BF-NNNN`                                                   | `BF-0010`                 |
+| Story user-story ID          | `US-NNNN-NNNN`                                              | `US-0001-0010`            |
+| Story acceptance ID          | `AC-NNNN-NNNN-NN`                                           | `AC-0001-0001-10`         |
+| Story example ID             | `EX-NNNN-NNNN-NN`                                           | `EX-0001-0010-01`         |
+| Story business-rule ID       | `BR-<KIND>-NNNN-NNNN`                                       | `BR-CLI-0001-0010`        |
+| Story contract ID            | `CLI-NNNN`, `API-NNNN`, `DB-NNNN`, `UI-NNNN`, `DESIGN-NNNN` | `CLI-0010`, `UI-0100`     |
+| Contract file name           | `cli-NNNN`, `api-NNNN`, `db-NNNN`, `ui-NNNN`                | `cli-0011-qfai-init.md`   |
+| Retired business-rule ID     | `BR-NNNN`, `BR-NNNN-NNNN`                                   | `BR-0010`, `BR-0001-0010` |
+| Retired contract ID          | `CON-<KIND>-NNNN`                                           | `CON-UI-0010`             |
+| Internal change ID           | `CHG-NNN`                                                   | `CHG-003`                 |
+| Retired trace prefix         | `QFAI-PROT2-NNN`                                            |                           |
+| Private version marker       | `vN.M`, `vN.M.P`, `v1.x`                                    | `v2.0`, `v3.0`            |
+| Private schema marker        | `"schemaVersion"`, `schemaVersion:`                         |                           |
 
 ### Three exceptions
 

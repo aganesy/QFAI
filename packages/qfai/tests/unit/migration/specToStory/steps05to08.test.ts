@@ -61,7 +61,7 @@ async function fixture(): Promise<MigrationContext> {
           "TC-0001-0001": "EX-0001-0001-02",
           "TC-0001-0002": "EX-0001-0001-01",
           "TC-0001-0006": "EX-0001-0001-03",
-          "BR-0001-0001": "BR-0002-0001",
+          "BR-0001-0001": "BR-API-0002-0001",
         },
       },
       placements: { [spec]: { "US-0001-0001": "Checkout", "BR-0001-0001": "api/orders.yaml" } },
@@ -454,7 +454,7 @@ describe("migration steps 5 to 8", () => {
     ).toMatchObject({
       "x-qfai-rules": [
         {
-          id: "BR-0002-0001",
+          id: "BR-API-0002-0001",
           statement: "An order total is never negative.",
           examples: ["EX-0001-0001-01"],
         },
@@ -485,7 +485,7 @@ describe("migration steps 5 to 8", () => {
     await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
     expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
     const contract = await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8");
-    expect(contract).toContain("BR-0002-0001");
+    expect(contract).toContain("BR-API-0002-0001");
     expect(contract).toContain("The total MUST be nonnegative.");
     await expect(
       readFile(path.join(context.specsDir, spec, "04_Business-Rules.md")),
@@ -496,22 +496,22 @@ describe("migration steps 5 to 8", () => {
     {
       contract: "api/orders.yaml",
       render: (statement: string, examples: string[]) =>
-        `openapi: 3.0.0\nx-qfai-rules:\n  - id: BR-0002-0001\n    statement: ${statement}\n    examples: [${examples.join(", ")}]\n`,
+        `openapi: 3.0.0\nx-qfai-rules:\n  - id: BR-API-0002-0001\n    statement: ${statement}\n    examples: [${examples.join(", ")}]\n`,
     },
     {
       contract: "api/orders.json",
       render: (statement: string, examples: string[]) =>
-        `${JSON.stringify({ "x-qfai-rules": [{ id: "BR-0002-0001", statement, examples }] }, null, 2)}\n`,
+        `${JSON.stringify({ "x-qfai-rules": [{ id: "BR-API-0002-0001", statement, examples }] }, null, 2)}\n`,
     },
     {
       contract: "db/orders.sql",
       render: (statement: string, examples: string[]) =>
-        `CREATE TABLE orders (id INT);\n\n-- Rule BR-0002-0001: ${statement}\n-- Examples: ${examples.join(", ")}\n`,
+        `CREATE TABLE orders (id INT);\n\n-- Rule BR-API-0002-0001: ${statement}\n-- Examples: ${examples.join(", ")}\n`,
     },
     {
       contract: "cli/orders.md",
       render: (statement: string, examples: string[]) =>
-        `# Orders\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0002-0001 | ${statement} | ${examples.join(", ")} |\n`,
+        `# Orders\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-API-0002-0001 | ${statement} | ${examples.join(", ")} |\n`,
     },
   ] as const;
 
@@ -522,7 +522,7 @@ describe("migration steps 5 to 8", () => {
       "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
-        ids: { [spec]: { "BR-0001-0001": "BR-0002-0001", "EX-0001-0001": "EX-0001-0001-01" } },
+        ids: { [spec]: { "BR-0001-0001": "BR-API-0002-0001", "EX-0001-0001": "EX-0001-0001-01" } },
         placements: { [spec]: { "BR-0001-0001": contract } },
         retiredPacks: {},
       }),
@@ -566,7 +566,7 @@ describe("migration steps 5 to 8", () => {
         const { context, source } = await existingRuleFixture(format.contract, original);
         const report = capture();
         expect(await executePlannedStep(step07, context, false, report.io)).toBe(2);
-        expect(report.error.join("")).toContain("conflicting rule BR-0002-0001");
+        expect(report.error.join("")).toContain("conflicting rule BR-API-0002-0001");
         expect(await readFile(path.join(context.contractsDir, format.contract), "utf8")).toBe(
           original,
         );
@@ -588,8 +588,8 @@ describe("migration steps 5 to 8", () => {
         ids: {
           [spec]: {
             "EX-0001-0001": "EX-0001-0001-01",
-            "BR-0001-0001": "BR-0002-0001",
-            "BR-0001-0002": "BR-0002-0002",
+            "BR-0001-0001": "BR-DB-0002-0001",
+            "BR-0001-0002": "BR-CLI-0002-0002",
           },
         },
         placements: { [spec]: {} },
@@ -619,10 +619,10 @@ describe("migration steps 5 to 8", () => {
     await put(context.root, ".qfai/spec/03_contract/cli/orders.md", "# Orders\n");
     expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
     expect(await readFile(path.join(context.contractsDir, "db/orders.sql"), "utf8")).toContain(
-      "-- Rule BR-0002-0001: SQL rule.\n-- Examples: EX-0001-0001-01",
+      "-- Rule BR-DB-0002-0001: SQL rule.\n-- Examples: EX-0001-0001-01",
     );
     expect(await readFile(path.join(context.contractsDir, "cli/orders.md"), "utf8")).toContain(
-      "| BR-0002-0002 | Markdown rule. | EX-0001-0001-01 |",
+      "| BR-CLI-0002-0002 | Markdown rule. | EX-0001-0001-01 |",
     );
     expect(await readFile(path.join(context.contractsDir, "cli/orders.md"), "utf8")).toContain(
       "## Business rules\n\n| BR-ID | Statement | Examples |",
@@ -645,7 +645,7 @@ describe("migration steps 5 to 8", () => {
           [spec]: {
             "EX-0001-0001": "EX-0001-0001-01",
             "EX-0001-0002": "EX-0001-0001-02",
-            "BR-0001-0001": "BR-0002-0001",
+            "BR-0001-0001": "BR-DB-0002-0001",
           },
         },
         placements: { [spec]: { "BR-0001-0001": "db/orders.sql" } },
@@ -674,7 +674,7 @@ describe("migration steps 5 to 8", () => {
     );
     expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
     expect(await readFile(path.join(context.contractsDir, "db/orders.sql"), "utf8")).toContain(
-      "-- Rule BR-0002-0001: An order total is never negative.\n-- Examples: EX-0001-0001-01, EX-0001-0001-02",
+      "-- Rule BR-DB-0002-0001: An order total is never negative.\n-- Examples: EX-0001-0001-01, EX-0001-0001-02",
     );
   });
 
@@ -686,7 +686,7 @@ describe("migration steps 5 to 8", () => {
       "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
-        ids: { [spec]: { "BR-0001-0001": "BR-0002-0001", "EX-0001-0001": "EX-0001-0001-01" } },
+        ids: { [spec]: { "BR-0001-0001": "BR-API-0002-0001", "EX-0001-0001": "EX-0001-0001-01" } },
         placements: { [spec]: { "BR-0001-0001": "api/missing.yaml" } },
         retiredPacks: {},
       }),
@@ -724,8 +724,8 @@ describe("migration steps 5 to 8", () => {
         version: 1,
         ids: {
           [spec]: {
-            "BR-0001-0001": "BR-0002-0001",
-            "BR-0001-0002": "BR-0002-0002",
+            "BR-0001-0001": "BR-API-0002-0001",
+            "BR-0001-0002": "BR-API-0002-0002",
             "EX-0001-0001": "EX-0001-0001-01",
             "EX-0001-0002": "EX-0001-0001-02",
           },
@@ -771,7 +771,7 @@ describe("migration steps 5 to 8", () => {
       parseYaml(await readFile(path.join(context.contractsDir, "api/later.yaml"), "utf8")),
     ).toMatchObject({
       "x-qfai-rules": [
-        { id: "BR-0002-0002", statement: "A later rule.", examples: ["EX-0001-0001-02"] },
+        { id: "BR-API-0002-0002", statement: "A later rule.", examples: ["EX-0001-0001-02"] },
       ],
     });
     expect(
@@ -779,7 +779,7 @@ describe("migration steps 5 to 8", () => {
     ).toMatchObject({
       "x-qfai-rules": [
         {
-          id: "BR-0002-0001",
+          id: "BR-API-0002-0001",
           statement: "An order total is never negative.",
           examples: ["EX-0001-0001-01"],
         },
@@ -795,7 +795,7 @@ describe("migration steps 5 to 8", () => {
       "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
-        ids: { [spec]: { "BR-0001-0001": "BR-0002-0001" } },
+        ids: { [spec]: { "BR-0001-0001": "BR-API-0002-0001" } },
         placements: { [spec]: { "BR-0001-0001": "api/orders.yaml" } },
         retiredPacks: {},
       }),
@@ -837,7 +837,7 @@ describe("migration steps 5 to 8", () => {
       openapi: "3.0.0",
       "x-qfai-rules": [
         {
-          id: "BR-0002-0001",
+          id: "BR-API-0002-0001",
           statement: "An order total is never negative.",
           examples: ["EX-0001-0001-01"],
         },
@@ -847,7 +847,7 @@ describe("migration steps 5 to 8", () => {
 
   // QFAI:EX-0004-0009-11
   it("adds a placed rule as one row of an existing Markdown Rules table", async () => {
-    const oldRow = "| BR-0002-0002 | A cart holds one currency. | EX-0001-0002-01 |";
+    const oldRow = "| BR-API-0002-0002 | A cart holds one currency. | EX-0001-0002-01 |";
     const { context } = await existingRuleFixture(
       "cli/orders.md",
       `# Orders\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n${oldRow}\n`,
@@ -855,9 +855,9 @@ describe("migration steps 5 to 8", () => {
     expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
     const contract = await readFile(path.join(context.contractsDir, "cli/orders.md"), "utf8");
     expect(contract.match(/^## Business rules$/gm)).toHaveLength(1);
-    expect(contract.split("\n").filter((line) => /^\| BR-\d{4}-\d{4} \|/.test(line))).toEqual([
+    expect(contract.split("\n").filter((line) => /^\| BR-API-\d{4}-\d{4} \|/.test(line))).toEqual([
       oldRow,
-      "| BR-0002-0001 | An order total is never negative. | EX-0001-0001-01 |",
+      "| BR-API-0002-0001 | An order total is never negative. | EX-0001-0001-01 |",
     ]);
   });
 
@@ -869,7 +869,7 @@ describe("migration steps 5 to 8", () => {
       "tmp/qfai-migration/id-map.json",
       serializeIdMap({
         version: 1,
-        ids: { [spec]: { "BR-0001-0001": "BR-0002-0001", "EX-0001-0001": "EX-0001-0001-01" } },
+        ids: { [spec]: { "BR-0001-0001": "BR-API-0002-0001", "EX-0001-0001": "EX-0001-0001-01" } },
         placements: { [spec]: { "BR-0001-0001": "api/orders.yaml" } },
         retiredPacks: {},
       }),
@@ -897,7 +897,7 @@ describe("migration steps 5 to 8", () => {
       openapi: "3.0.0",
       "x-qfai-rules": [
         {
-          id: "BR-0002-0001",
+          id: "BR-API-0002-0001",
           statement: "An order total is never negative.",
           examples: ["EX-0001-0001-01"],
         },
@@ -935,8 +935,8 @@ describe("migration steps 5 to 8", () => {
         version: 1,
         ids: {
           [spec]: {
-            "BR-0001-0001": "BR-0002-0001",
-            "BR-0001-0002": "BR-0002-0002",
+            "BR-0001-0001": "BR-API-0002-0001",
+            "BR-0001-0002": "BR-DB-0002-0002",
             "EX-0001-0001": "EX-0001-0001-01",
             "EX-0001-0002": "EX-0001-0001-02",
           },
@@ -979,10 +979,10 @@ describe("migration steps 5 to 8", () => {
     expect(output).toContain("Applicable NFR: - P95 under 200 ms");
     expect(output).toContain("contracts: api/orders.yaml, db/orders.sql");
     expect(await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8")).toContain(
-      "BR-0002-0001",
+      "BR-API-0002-0001",
     );
     expect(await readFile(path.join(context.contractsDir, "db/orders.sql"), "utf8")).toContain(
-      "BR-0002-0002",
+      "BR-DB-0002-0002",
     );
   });
 
@@ -1165,7 +1165,7 @@ describe("migration steps 5 to 8", () => {
     expect(contract).toMatchObject({
       "x-qfai-rules": [
         {
-          id: "BR-0002-0001",
+          id: "BR-API-0002-0001",
           statement: expect.stringContaining("The total MUST be nonnegative."),
         },
       ],
@@ -1240,8 +1240,8 @@ async function ruleProject(source: string): Promise<MigrationContext> {
       ids: {
         [spec]: {
           "EX-0001-0001": "EX-0001-0001-01",
-          "BR-0001-0001": "BR-0002-0001",
-          "BR-0001-0002": "BR-0002-0002",
+          "BR-0001-0001": "BR-API-0002-0001",
+          "BR-0001-0002": "BR-API-0002-0002",
         },
       },
       placements: { [spec]: {} },
@@ -1309,7 +1309,7 @@ describe("migration step 7 writes the Rule value of a rule written as a section"
   it("writes a section rule as the table row of the same rule would be written", async () => {
     // QFAI:EX-0004-0009-18
     const sqlLine = (rule: string) => [
-      `-- Rule BR-0002-0001: ${rule}`,
+      `-- Rule BR-API-0002-0001: ${rule}`,
       "-- Examples: EX-0001-0001-01",
     ];
     const written = async (source: string) => {
@@ -1322,16 +1322,19 @@ describe("migration step 7 writes the Rule value of a rule written as a section"
     };
 
     const table = await written(tableRules);
-    expect(ruleComment(table.sql, "BR-0002-0001")).toEqual(sqlLine(orderRule));
+    expect(ruleComment(table.sql, "BR-API-0002-0001")).toEqual(sqlLine(orderRule));
     expect(table.yaml).toHaveLength(1);
-    expect(table.yaml[0]).toMatchObject({ id: "BR-0002-0002", examples: ["EX-0001-0001-01"] });
+    expect(table.yaml[0]).toMatchObject({ id: "BR-API-0002-0002", examples: ["EX-0001-0001-01"] });
     expect(oneLine(table.yaml[0]?.statement)).toBe(limitRule);
 
     const section = await written(sectionRules);
-    expect(ruleComment(section.sql, "BR-0002-0001")).toEqual(sqlLine(orderRule));
+    expect(ruleComment(section.sql, "BR-API-0002-0001")).toEqual(sqlLine(orderRule));
     expect(section.sql).not.toMatch(/Notes|NFR|\*\*|Order total|DB-0001/);
     expect(section.yaml).toHaveLength(1);
-    expect(section.yaml[0]).toMatchObject({ id: "BR-0002-0002", examples: ["EX-0001-0001-01"] });
+    expect(section.yaml[0]).toMatchObject({
+      id: "BR-API-0002-0002",
+      examples: ["EX-0001-0001-01"],
+    });
     expect(oneLine(section.yaml[0]?.statement)).toBe(limitRule);
   });
 
@@ -1359,11 +1362,11 @@ describe("migration step 7 writes the Rule value of a rule written as a section"
     await put(
       context.root,
       path.relative(context.root, target),
-      `CREATE TABLE orders (id INT);\n\n-- Rule BR-0002-0001: ${words.slice(0, half).join(" ")}\n--   ${words.slice(half).join(" ")}\n-- Examples: EX-0001-0001-01\n`,
+      `CREATE TABLE orders (id INT);\n\n-- Rule BR-API-0002-0001: ${words.slice(0, half).join(" ")}\n--   ${words.slice(half).join(" ")}\n-- Examples: EX-0001-0001-01\n`,
     );
     expect(await executePlannedStep(step07, context, false, capture().io)).toBe(0);
-    expect(ruleComment(await readFile(target, "utf8"), "BR-0002-0001")).toEqual([
-      `-- Rule BR-0002-0001: ${orderRule}`,
+    expect(ruleComment(await readFile(target, "utf8"), "BR-API-0002-0001")).toEqual([
+      `-- Rule BR-API-0002-0001: ${orderRule}`,
       "-- Examples: EX-0001-0001-01",
     ]);
   });
@@ -1380,8 +1383,8 @@ describe("migration step 7 writes the Rule value of a rule written as a section"
     expect(await executePlannedStep(step07, context, false, first.io)).toBe(3);
     expect(first.output.join("")).toContain("contract db/later.sql does not exist");
     const written = await readFile(path.join(context.contractsDir, "db/orders.sql"), "utf8");
-    expect(ruleComment(written, "BR-0002-0001")).toEqual([
-      `-- Rule BR-0002-0001: ${orderRule}`,
+    expect(ruleComment(written, "BR-API-0002-0001")).toEqual([
+      `-- Rule BR-API-0002-0001: ${orderRule}`,
       "-- Examples: EX-0001-0001-01",
     ]);
 
@@ -1397,9 +1400,9 @@ describe("migration step 7 writes the Rule value of a rule written as a section"
     expect(
       ruleComment(
         await readFile(path.join(context.contractsDir, "db/later.sql"), "utf8"),
-        "BR-0002-0002",
+        "BR-API-0002-0002",
       ),
-    ).toEqual([`-- Rule BR-0002-0002: ${limitRule}`, "-- Examples: EX-0001-0001-01"]);
+    ).toEqual([`-- Rule BR-API-0002-0002: ${limitRule}`, "-- Examples: EX-0001-0001-01"]);
   });
 });
 

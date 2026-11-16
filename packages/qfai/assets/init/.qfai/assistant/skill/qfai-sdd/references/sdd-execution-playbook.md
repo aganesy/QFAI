@@ -68,8 +68,8 @@ record unresolved questions in open-questions.md. In --auto, ask nothing and sto
 ## Stage 4: enforcing contracts
 
 1. Write the 03_contract/ view and each contract file from its paired template or contract-specific template. tech.md holds the stack, the runtime dependencies and, in its Standard commands section, the only quality-gate command definitions. It holds no BR.
-2. Put each BR inside the contract that enforces it, numbered `BR-<contract number>-NNNN`. Cite at least one EX already written. Every EX is cited by at least one BR. A shared rule has one authoritative definition, and no other contract cites it.
-3. Give each new contract the next contract number, declare its `<KIND>-NNNN` ID, name the file `<kind>-NNNN-<slug>.<ext>`, and add its row to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by the contract artifact rules.
+2. Put each BR inside the contract that enforces it, numbered `BR-<KIND>-<contract number>-NNNN`. Cite at least one EX already written. Every EX is cited by at least one BR. A shared rule has one authoritative definition, and no other contract cites it.
+3. Give each new contract the next number of its kind, declare its `<KIND>-NNNN` ID, name the file `<kind>-NNNN-<slug>.<ext>`, and add its row to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by the contract artifact rules.
 4. For a visual UI surface, the root DESIGN.md is written and validated by .qfai/assistant/step/common-design-md/STEP.md. A CLI-only surface does not require one.
 
 ## Concrete-abstract cycle

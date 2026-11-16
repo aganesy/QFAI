@@ -170,7 +170,7 @@ describe("BF-0004 migration outcomes", () => {
       statement: "An empty order has no receipt screen.",
       examples: [ids["EX-0001-0002"]],
     });
-    const sql = await text(root, ".qfai/spec/03_contract/db/db-0002-orders.sql");
+    const sql = await text(root, ".qfai/spec/03_contract/db/db-0001-orders.sql");
     expect(sql).toContain(
       `-- Rule ${ids["BR-0001-0002"]}: An accepted order keeps its identifier.\n-- Examples: ${ids["EX-0001-0001"]}, ${ids["EX-0001-0003"]}`,
     );

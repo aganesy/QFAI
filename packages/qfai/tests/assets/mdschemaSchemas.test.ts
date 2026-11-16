@@ -393,6 +393,7 @@ describe("the policy layer holds the sections the deliberation record fills", ()
     expect(text).toContain(head);
     for (const row of [
       `| ${prefix}-01 | Answers within \`2s\` | Users wait |\n`,
+      `| ${prefix}-01 | BR-CLI-0003-0001 holds | Users wait |\n`,
       `| ${prefix}-01 | BR-0003-0001 holds | Users wait |\n`,
     ]) {
       const result = check("constraint", text.replace(head, `${head}${row}`));
@@ -801,7 +802,8 @@ describe("the constraint document states each limit in plain words", () => {
 
   const refused: ReadonlyArray<readonly [string, string]> = [
     ["a file name in backticks", `${TECHNICAL}| TC-01 | Paths use \`node:path\` | Portable |\n`],
-    ["a business rule ID", `${TECHNICAL}| TC-01 | BR-0003-0001 holds | Portable |\n`],
+    ["a business rule ID", `${TECHNICAL}| TC-01 | BR-CLI-0003-0001 holds | Portable |\n`],
+    ["an old-form rule ID", `${TECHNICAL}| TC-01 | BR-0003-0001 holds | Portable |\n`],
     ["an example ID", `${TECHNICAL}| TC-01 | Deterministic | EX-0001-0039-01 |\n`],
     ["an acceptance-criterion ID", `${TECHNICAL}| TC-01 | Deterministic | AC-0001-0039-01 |\n`],
     ["a contract ID", `${TECHNICAL}| TC-01 | CLI-0014 decides it | Reproducible |\n`],
@@ -936,6 +938,62 @@ describe("every schema's findings name what to write", () => {
       expect(passed.status).toBe(0);
       if (removed !== null) {
         expect(check(schema, removed).output).toContain("[required-text]");
+      }
+    },
+  );
+});
+
+describe("the CLI contract refuses a rule ID outside its rules' own cells", () => {
+  const schema = path.join(SCHEMA_ROOT, "story/03_contract/cli/cli-NNNN-title.mdschema.yml");
+  const contract = (ownership: string, statement: string): string =>
+    [
+      "# CLI-0006: Example command",
+      "",
+      "## Ownership boundary",
+      "",
+      ownership,
+      "",
+      "## Business rules",
+      "",
+      "| BR-ID            | Statement | Examples        |",
+      "| ---------------- | --------- | --------------- |",
+      `| BR-CLI-0006-0001 | ${statement} | EX-0001-0001-01 |`,
+      "",
+    ].join("\n");
+
+  function check(text: string): { status: number | null; output: string } {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-cli-"));
+    try {
+      const file = path.join(dir, "cli-0006-example.md");
+      writeFileSync(file, text, "utf-8");
+      const result = spawnSync(
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", schema, file],
+        {
+          cwd: REPO_ROOT,
+          encoding: "utf-8",
+        },
+      );
+      return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("accepts an ownership boundary and a statement that name no rule", () => {
+    expect(check(contract("This contract decides the command.", "Lists orders")).status).toBe(0);
+  });
+
+  it.each(["BR-CLI-0003-0001", "BR-0003-0001"])(
+    "refuses %s in the ownership boundary or in a statement",
+    (id) => {
+      for (const text of [
+        contract(`This contract decides what ${id} leaves open.`, "Lists orders"),
+        contract("This contract decides the command.", `Lists orders as ${id} says`),
+      ]) {
+        const result = check(text);
+        expect(result.output).toContain("[forbidden-text]");
+        expect(result.status).not.toBe(0);
       }
     },
   );

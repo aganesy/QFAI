@@ -87,6 +87,8 @@ STORY_ID_RE="$STORY_ID_RE|\b(DEC|OQ)-[0-9]{14}\b"
 STORY_ID_RE="$STORY_ID_RE|\bUS-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b"
 STORY_ID_RE="$STORY_ID_RE|\b(AC|EX)-($OUTSIDE_FOUR-[0-9]{4}-[0-9]{2}|[0-9]{4}-$OUTSIDE_FOUR-[0-9]{2}|[0-9]{4}-[0-9]{4}-$OUTSIDE_TWO)\b"
 STORY_ID_RE="$STORY_ID_RE|\bBR-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b"
+# A business rule names its contract's kind: `BR-<KIND>-NNNN-NNNN`.
+STORY_ID_RE="$STORY_ID_RE|\bBR-(CLI|API|DB|UI)-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b"
 # A contract ID stands alone: ERE has no lookbehind, so the character before it
 # is matched instead. The retired `CON-<KIND>-NNNN` form is matched as a whole
 # rather than read as `<KIND>-NNNN`. The lower-case `cli-NNNN` form is the start

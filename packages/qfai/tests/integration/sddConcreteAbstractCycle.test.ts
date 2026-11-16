@@ -100,7 +100,7 @@ function storyTree(registers: { decisions?: string; openQuestions?: string }) {
     ],
     [
       `${SPECS}/03_contract/api/orders.yaml`,
-      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: An order above 10 000 needs approval\n    examples: [EX-0001-0001-01]",
+      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-API-0001-0001\n    statement: An order above 10 000 needs approval\n    examples: [EX-0001-0001-01]",
     ],
     [`${SPECS}/decisions.md`, registers.decisions ?? empty],
     [`${SPECS}/open-questions.md`, registers.openQuestions ?? empty],
@@ -195,7 +195,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     const open = validateStoryTreeStructureModel(
       storyTree({
         openQuestions: register(
-          "| OQ-0001 | Unadjudicated: is an unapproved order above 10 000 refused or queued? BR-0001-0001 | Ask the user |",
+          "| OQ-0001 | Unadjudicated: is an unapproved order above 10 000 refused or queued? BR-API-0001-0001 | Ask the user |",
         ),
       }),
     );

@@ -27,7 +27,7 @@
  * ## The first two rows
  *
  * `TC-0017-0074` and `TC-0017-0075` are about retiring the repository's own duplicate of the
- * validate workflow it ships. `BR-0016-0060` allows that deletion only with a structural
+ * validate workflow it ships. `BR-CLI-0016-0060` allows that deletion only with a structural
  * contract gate over the shipped set present at or before it, and requires the recorded cost
  * to be **the loss of the manual cross-check** — explicitly not the absence of a mirror,
  * because the two files had already diverged on the profile they ran, so no mirror existed to
@@ -57,7 +57,7 @@ interface DecisionRef {
 const RETIREMENT: DecisionRef = { row: "DEC-0333", key: "DR-0017-0007" };
 
 /**
- * The gate `BR-0016-0060` requires to exist at or before the deletion, as a repository path.
+ * The gate `BR-CLI-0016-0060` requires to exist at or before the deletion, as a repository path.
  *
  * A literal, and asserted to exist below. The rule is about a specific instrument being in
  * place; a path read out of the decision record would let the record name anything.
@@ -113,7 +113,7 @@ function expectRowCites(decision: DecisionRef, ids: readonly string[], subject: 
 // QFAI:EX-0002-0020-04
 describe("TC-0017-0074 (TDD-0074): deleting the copy with no shipped-set gate is rejected", () => {
   it("records the retirement, citing its decision key, the gate's path and these two cases", () => {
-    // `BR-0016-0060` asks which gate the deletion relies on, so the row cites the gate by path.
+    // `BR-CLI-0016-0060` asks which gate the deletion relies on, so the row cites the gate by path.
     // That the gate exists and runs is TC-0017-0075's half, read from the tree.
     expectRowCites(
       RETIREMENT,
@@ -191,7 +191,7 @@ const PARALLELISM: DecisionRef = { row: "DEC-0335", key: "DR-0017-0009" };
 /**
  * Files that would BE a bump configuration.
  *
- * `BR-0016-0023` forbids creating one without the user, so the row asserts their absence — and
+ * `BR-CLI-0016-0023` forbids creating one without the user, so the row asserts their absence — and
  * the list is enumerated rather than pattern-matched, because "a bump configuration" is not a
  * shape a glob can recognise. These are the three a maintainer would reach for.
  */
@@ -203,7 +203,7 @@ const BUMP_CONFIGS = [
 
 describe("TC-0017-0025 (TDD-0025): a durable repository artifact names the pin bump owner", () => {
   it("records the owner, citing the capability that owns the pins and the criteria it discharges", () => {
-    // `BR-0016-0022` makes the pins unsatisfied until a durable artifact says who bumps them. The
+    // `BR-CLI-0016-0022` makes the pins unsatisfied until a durable artifact says who bumps them. The
     // row cites the capability whose maintainer role owns them and the two criteria it discharges.
     expectRowCites(PIN_OWNER, ["CAP-0017", "AC-0017-0010", "AC-0017-0011"], "the pin bump owner");
   });
@@ -211,7 +211,7 @@ describe("TC-0017-0025 (TDD-0025): a durable repository artifact names the pin b
 
 describe("TC-0017-0026 (TDD-0026): no root bump configuration, and the owner is recorded anyway", () => {
   it("keeps the repository free of a bump configuration while the obligation stays discharged", () => {
-    // CLAIM 1 — none of the three exists. `BR-0016-0023` forbids creating one without the
+    // CLAIM 1 — none of the three exists. `BR-CLI-0016-0023` forbids creating one without the
     // user, and `OC-3` is why: it is a root-level addition.
     const present = BUMP_CONFIGS.filter((rel) => existsSync(path.join(REPO_ROOT, rel)));
     expect.soft(present, "a bump configuration may not be created without the user").toEqual([]);
@@ -239,7 +239,7 @@ describe("TC-0017-0052 (TDD-0052): shipped coverage never precedes the shipped h
 describe("TC-0017-0066 (TDD-0066): a slower or flakier higher value keeps the lower one", () => {
   // QFAI:EX-0002-0019-04
   it("records the flakiness episode, citing the examples it answers and this case", () => {
-    // `BR-0016-0049` says a flakier higher value means the lower one is kept; here the higher value
+    // `BR-CLI-0016-0049` says a flakier higher value means the lower one is kept; here the higher value
     // was kept and the cause removed instead, and the row recording that cites the examples and
     // cases of both rules it answers.
     expectRowCites(
@@ -253,7 +253,7 @@ describe("TC-0017-0066 (TDD-0066): a slower or flakier higher value keeps the lo
 describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs the sign-off", () => {
   it("records the refused revision in a row citing this case, and the value did not move", () => {
     // The rule's negative direction, and this repository has an actual instance of it: a
-    // revision was proposed on the strength of a measurement and refused. `BR-0016-0050` says
+    // revision was proposed on the strength of a measurement and refused. `BR-CLI-0016-0050` says
     // "no agent may substitute a different starting value on the strength of its own
     // measurement", so the interesting artifact is the refusal, recorded in the row that cites
     // this case.

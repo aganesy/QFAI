@@ -192,16 +192,19 @@ describe("next free ID public CLI", () => {
   // QFAI:EX-0001-0008-29
   it("reads a BR from a contracts directory outside the story tree", async () => {
     await put("qfai.config.yaml", `paths:\n  specsDir: ${specs}\n  contractsDir: contracts\n`);
-    await put("contracts/cli/cli-0003-check.md", contract(["BR-0003-0001"]));
+    await put("contracts/cli/cli-0003-check.md", contract(["BR-CLI-0003-0001"]));
     await branchFromMain();
     git("checkout", "main");
-    await put("contracts/cli/cli-0003-check.md", contract(["BR-0003-0001", "BR-0003-0002"]));
+    await put(
+      "contracts/cli/cli-0003-check.md",
+      contract(["BR-CLI-0003-0001", "BR-CLI-0003-0002"]),
+    );
     git("add", ".");
     git("commit", "-m", "base rule");
     git("checkout", "topic");
     const result = await invoke(["BR", "CLI-0003", "--base", "main"]);
     expect(result.code).toBe(0);
-    expect(result.stdout.trim()).toBe("BR-0003-0003");
+    expect(result.stdout.trim()).toBe("BR-CLI-0003-0003");
   });
 
   // QFAI:EX-0001-0008-30
@@ -222,7 +225,7 @@ describe("next free ID public CLI", () => {
   // QFAI:EX-0001-0008-29
   it("reads a base whose story tree is the repository root", async () => {
     await put("decisions.md", table + "| DEC-0001 | Root | Keep |\n");
-    await put("03_contract/cli/cli-0003-check.md", contract(["BR-0003-0001"]));
+    await put("03_contract/cli/cli-0003-check.md", contract(["BR-CLI-0003-0001"]));
     git("add", ".");
     git("commit", "-m", "root story tree");
     const { model } = await readStoryTreeAtRef({
@@ -232,7 +235,7 @@ describe("next free ID public CLI", () => {
       contractsDir: "03_contract",
     });
     expect(nextStoryTreeId(model, "BF")).toBe("BF-0001");
-    expect(nextStoryTreeId(model, "BR", "CLI-0003")).toBe("BR-0003-0002");
+    expect(nextStoryTreeId(model, "BR", "CLI-0003")).toBe("BR-CLI-0003-0002");
   });
 
   // QFAI:EX-0001-0008-30

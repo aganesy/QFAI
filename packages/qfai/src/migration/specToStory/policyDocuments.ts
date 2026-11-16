@@ -47,10 +47,11 @@ const CONSTRAINT_SECTIONS: Readonly<Record<string, string>> = {
 /**
  * What a constraint row may not hold: a backtick, which marks a file name, a command or a
  * configuration key, and a business rule, example, acceptance-criterion or contract ID.
- * Policy states a limit in plain words and cites nothing below it.
+ * Policy states a limit in plain words and cites nothing below it. A rule ID is caught in the
+ * old form the migrated document still holds and in the form a rule takes after migration.
  */
 const CONCRETE_CONSTRAINT =
-  /`|(?:^|[^A-Za-z0-9_-])(?:BR-\d{4}|EX-\d{4}-|AC-\d{4}-|(?:CLI|API|DB|UI)-\d{4})/;
+  /`|(?:^|[^A-Za-z0-9_-])(?:BR-(?:(?:CLI|API|DB|UI)-)?\d{4}|EX-\d{4}-|AC-\d{4}-|(?:CLI|API|DB|UI)-\d{4})/;
 
 const RULES: Readonly<Record<PolicyDocument, PolicyRules>> = {
   "objective.md": {

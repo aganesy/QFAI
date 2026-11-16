@@ -6,11 +6,10 @@ import { extractH2Sections } from "../parse/markdown.js";
 import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { architectureProblems, MERMAID_FENCE } from "../storyTree/architecture.js";
 import {
-  contractNumber,
   isStoryTreeId,
   RECORD_ID_SOURCE,
   itemIdMatchesStory,
-  ruleContractNumber,
+  ruleContractId,
   storyIdMatchesFlow,
   type StoryTreeIdKind,
 } from "../storyTree/ids.js";
@@ -283,7 +282,7 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   for (const error of model.errors) {
     issues.push(finding("QFAI-STORY-005", error, ""));
   }
-  issues.push(...validateRuleContractNumbers(model));
+  issues.push(...validateRuleContractIds(model));
   issues.push(...validateRecordCitations(model));
   issues.push(...validateDecisionLengths(model));
   return issues;
@@ -315,19 +314,19 @@ function citationHint(
   return general;
 }
 
-/** A `BR-NNNN-NNNN` carries the number of the contract that declares it. */
-function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
+/** A `BR-<KIND>-NNNN-NNNN` names the kind and number of the contract that declares it. */
+function validateRuleContractIds(model: StoryTreeModel): Issue[] {
   const contractByFile = new Map(model.contracts.map(({ id, file }) => [file, id]));
   const issues: Issue[] = [];
   for (const rule of model.rules) {
-    const number = ruleContractNumber(rule.id);
-    if (number === null) continue;
+    const named = ruleContractId(rule.id);
+    if (named === null) continue;
     const contractId = contractByFile.get(rule.file);
-    if (contractId && contractNumber(contractId) === number) continue;
+    if (contractId === named) continue;
     issues.push(
       finding(
         "QFAI-STORY-005",
-        `${rule.id} does not carry the number of its contract ${contractId ?? "(no contract ID)"} in ${rule.file}`,
+        `${rule.id} does not name its contract ${contractId ?? "(no contract ID)"} in ${rule.file}`,
         rule.file,
         [rule.id],
       ),

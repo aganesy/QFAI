@@ -76,16 +76,16 @@ The table holds no rule. A behaviour a layer must show is a BR in the contract t
 
 ## Identifier scopes
 
-| Kind                 | Format             | Scope                                                 |
-| -------------------- | ------------------ | ----------------------------------------------------- |
-| Business flow        | BF-NNNN            | All business flows                                    |
-| User story           | US-NNNN-NNNN       | Its BF; first number equals the BF number             |
-| Acceptance criterion | AC-NNNN-NNNN-NN    | Its US                                                |
-| Example              | EX-NNNN-NNNN-NN    | Its US                                                |
-| Contract             | KIND-NNNN          | All contracts of every kind; its directory names KIND |
-| Business rule        | BR-NNNN-NNNN       | Its contract; first number equals the contract number |
-| Decision             | DEC-yyyymmddhhMMss | decisions.md                                          |
-| Open question        | OQ-yyyymmddhhMMss  | open-questions.md                                     |
+| Kind                 | Format             | Scope                                               |
+| -------------------- | ------------------ | --------------------------------------------------- |
+| Business flow        | BF-NNNN            | All business flows                                  |
+| User story           | US-NNNN-NNNN       | Its BF; first number equals the BF number           |
+| Acceptance criterion | AC-NNNN-NNNN-NN    | Its US                                              |
+| Example              | EX-NNNN-NNNN-NN    | Its US                                              |
+| Contract             | KIND-NNNN          | All contracts of its KIND; its directory names KIND |
+| Business rule        | BR-KIND-NNNN-NNNN  | Its contract; `KIND-NNNN` equals the contract ID    |
+| Decision             | DEC-yyyymmddhhMMss | decisions.md                                        |
+| Open question        | OQ-yyyymmddhhMMss  | open-questions.md                                   |
 
 Use highest existing number plus one in the scope. A decision or question row instead takes the UTC time it is written; a legacy `DEC-NNNN` or `OQ-NNNN` row keeps its ID.
 Count IDs named in decision rows, `Retired:` rows among them, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Take the number from `npx qfai sdd next-id`, which reads the working tree and a fetched base and reserves no ID.

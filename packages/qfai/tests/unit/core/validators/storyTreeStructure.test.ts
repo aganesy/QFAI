@@ -39,7 +39,7 @@ function model(overrides: Record<string, string> = {}) {
     ],
     [
       `${contracts}/api/checkout.yaml`,
-      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: Paid checkout\n    examples: [EX-0001-0001-01]",
+      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-API-0001-0001\n    statement: Paid checkout\n    examples: [EX-0001-0001-01]",
     ],
     [`${specs}/decisions.md`, "| ID | Content | Approach |\n| --- | --- | --- |"],
     [`${specs}/open-questions.md`, "| ID | Content | Approach |\n| --- | --- | --- |"],
@@ -403,7 +403,7 @@ describe("story-tree structure", () => {
   // QFAI:EX-0001-0053-07
   it("reports a cited decision or superseded decision that no row declares", () => {
     const rule = (statement: string) =>
-      `# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: ${statement}\n    examples: [EX-0001-0001-01]`;
+      `# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-API-0001-0001\n    statement: ${statement}\n    examples: [EX-0001-0001-01]`;
     const register = (rows: string) => `| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
     const dangling = validateStoryTreeStructureModel(
       model({
@@ -414,8 +414,8 @@ describe("story-tree structure", () => {
       }),
     ).filter((item) => item.code === "QFAI-STORY-003");
     expect(dangling.map((item) => item.refs)).toEqual([
-      ["BR-0001-0001", "DEC-0008"],
-      ["BR-0001-0001", "OQ-0002"],
+      ["BR-API-0001-0001", "DEC-0008"],
+      ["BR-API-0001-0001", "OQ-0002"],
       ["DEC-0001", "DEC-0009"],
     ]);
     expect(dangling.every((item) => item.severity === "error")).toBe(true);
@@ -456,7 +456,7 @@ describe("story-tree structure", () => {
   // QFAI:EX-0001-0053-33
   it("reads cited and narrowed decisions in the timestamp form", () => {
     const rule = (statement: string) =>
-      `# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: ${statement}\n    examples: [EX-0001-0001-01]`;
+      `# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-API-0001-0001\n    statement: ${statement}\n    examples: [EX-0001-0001-01]`;
     const register = (rows: string) => `| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
     const contract = rule("Approved by DEC-20261105093000 and asked in OQ-20261105093000");
     const narrowing = "| DEC-0001 | Narrower | Narrows DEC-20261104120000 |";
@@ -467,8 +467,8 @@ describe("story-tree structure", () => {
       }),
     ).filter((item) => item.code === "QFAI-STORY-003");
     expect(dangling.map((item) => item.refs)).toEqual([
-      ["BR-0001-0001", "DEC-20261105093000"],
-      ["BR-0001-0001", "OQ-20261105093000"],
+      ["BR-API-0001-0001", "DEC-20261105093000"],
+      ["BR-API-0001-0001", "OQ-20261105093000"],
       ["DEC-0001", "DEC-20261104120000"],
     ]);
     expect(ISSUE_EXPECTED_BY_CODE["QFAI-STORY-003"]).toContain(

@@ -192,6 +192,36 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Breaking: each contract kind has its own number sequence, and a business
+  rule ID names its contract's kind.** A project with five DB contracts and
+  two API contracts can number them `DB-0001` to `DB-0005` and `API-0001` to
+  `API-0002`, instead of sharing one sequence across kinds. A rule ID is now
+  `BR-<KIND>-<contract number>-NNNN`, such as `BR-DB-0003-0001` for the first
+  rule of `DB-0003`, so contracts of different kinds that share a number never
+  declare the same rule ID.
+  - `qfai validate --profile sdd` reports a rule written as `BR-NNNN-NNNN` as
+    a malformed ID (`QFAI-STORY-002`), a rule whose kind or number is not its
+    contract's (`QFAI-STORY-005`), and two contracts that declare the same
+    contract ID (`QFAI-CONTRACT-034`); `DB-0001` and `UI-0001` no longer
+    collide.
+  - `qfai sdd next-id BR <contract-ID>` prints the next rule of that contract
+    in the new form, and a decision row reserves a rule ID only in that form.
+  - The `qfai-sdd` skill, its contract templates and the document schemas
+    state the per-kind sequence and the new rule ID, and the
+    `qfai-migration-v1-to-v2` steps number each kind's contracts from `0001`
+    and write rules in the new form.
+  - To adopt this version, rename every rule ID in your contracts, examples,
+    decision rows and test or code comments from `BR-NNNN-NNNN` to
+    `BR-<KIND>-NNNN-NNNN`, taking the kind from the contract that declares the
+    rule: `BR-0003-0001` in `api/api-0003-orders.yaml` becomes
+    `BR-API-0003-0001`. Contract IDs and file names stay valid as they are;
+    renumbering a kind to start from `0001` is optional, and if you do it,
+    rename the contract file, its `contracts.md` row and the rule IDs together.
+  - A v1-to-v2 migration already started with an earlier QFAI is finished
+    with that version, and its rule IDs are then renamed by hand as above. A
+    migration not yet past step 3 can instead start over: delete
+    `tmp/qfai-migration/` and run it again from step 1 with this version.
+
 - **Data values need no `qfai-text` reason, and one reason covers a whole
   element.** `QFAI-UITEXT-001` stays an error but no longer reports a short
   value that is not a sentence (at most 20 characters, with no sentence-ending

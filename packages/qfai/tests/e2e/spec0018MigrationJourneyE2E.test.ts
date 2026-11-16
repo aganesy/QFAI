@@ -484,11 +484,11 @@ describe("spec-0018: one shipped-script migration journey", () => {
 
   it("places each rule in the selected contract with its example", async () => {
     const api = await textAt(journey.root, ".qfai/spec/03_contract/api/api-0001-order.yaml");
-    const db = await textAt(journey.root, ".qfai/spec/03_contract/db/db-0002-orders.sql");
-    expect(api).toContain("BR-0001-0001");
-    expect(api).toContain("BR-0001-0002");
+    const db = await textAt(journey.root, ".qfai/spec/03_contract/db/db-0001-orders.sql");
+    expect(api).toContain("BR-API-0001-0001");
+    expect(api).toContain("BR-API-0001-0002");
     expect(api).toContain("EX-0001-0001-01");
-    expect(db).toContain("BR-0002-0001");
+    expect(db).toContain("BR-DB-0001-0001");
   });
 
   it("rewrites mapped annotations outside E2E, keeps a test-case annotation in E2E, and reports an integration US and contract annotation", async () => {

@@ -605,7 +605,7 @@ describe("migration steps 1 to 4", () => {
         "EX-0001-0001": "EX-0001-0001-01",
         "TC-0001-0001": "EX-0001-0001-01",
         "TC-0001-0002": "EX-0001-0001-02",
-        "BR-0001-0001": "BR-0002-0001",
+        "BR-0001-0001": "BR-API-0002-0001",
       });
       expect(map.contracts).toEqual(contracts);
       expect(

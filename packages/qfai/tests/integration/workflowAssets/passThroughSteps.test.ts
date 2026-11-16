@@ -325,7 +325,7 @@ describe("a step that may pass with evidence", () => {
     expect(frontMatterOf(acceptance).purpose).toMatch(/the per-role navigation journey/i);
   });
 
-  // BR-0002-0016
+  // BR-CLI-0002-0016
   // QFAI:EX-0001-0216-11
   it("runs implement-settled-edit first in apply-settled, and passes on any request that is not a delegated release", async () => {
     const plan = (await loadBuiltInPlans()).find((each) => each.route === "apply-settled");
@@ -344,7 +344,7 @@ describe("a step that may pass with evidence", () => {
     );
   });
 
-  // BR-0002-0016
+  // BR-CLI-0002-0016
   // QFAI:AC-0001-0216-05
   // QFAI:EX-0001-0216-12
   it("has implement-settled-edit set each field a delegated release names, by a quoted rule where one applies, and nothing else", async () => {
@@ -367,7 +367,7 @@ describe("a step that may pass with evidence", () => {
     );
   });
 
-  // BR-0002-0016
+  // BR-CLI-0002-0016
   // QFAI:AC-0001-0216-05
   // QFAI:EX-0001-0216-14
   it("stops implement-settled-edit before any edit on a source, value or file it cannot confirm", async () => {
@@ -388,7 +388,7 @@ describe("a step that may pass with evidence", () => {
     );
   });
 
-  // BR-0002-0016
+  // BR-CLI-0002-0016
   // QFAI:EX-0001-0216-13
   it("lets implement-scaffold and implement-tdd pass only on a delegated release's hand-made edit", async () => {
     for (const step of ["implement-scaffold", "implement-tdd"]) {
