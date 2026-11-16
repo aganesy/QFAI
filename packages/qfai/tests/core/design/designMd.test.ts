@@ -1547,6 +1547,20 @@ describe("parseDesignMd: data_display", () => {
   });
 
   // QFAI:EX-0001-0312-04
+  it("rejects a spacing step whose finite length a number cannot state exactly", () => {
+    const result = parseDesignMd(
+      withValue(
+        '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+        `    lg: "0 12px 24px rgba(15,23,42,0.10)"\n  spacing:\n    base: "9007199254740991px"\n    scale: [1, 3]`,
+      ),
+    );
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.spacing.scale[1]",
+      code: "invalid-format",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
   it("rejects a spacing step whose length, the base times the step, is too large to compute", () => {
     const result = parseDesignMd(
       withValue(

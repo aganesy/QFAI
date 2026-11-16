@@ -2,7 +2,7 @@
  * `qfai catalog components` and `qfai catalog design`: write the project's component catalogue
  * or its design catalogue, or with `--check` say whether the committed files are current.
  */
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
@@ -23,7 +23,6 @@ import {
   renderDesignTokens,
   renderTheme,
   sameGeneratedText,
-  type GeneratedRead,
 } from "../../core/uiux/designCatalog.js";
 import type { UiPlainTextOptions } from "../../core/validators/uiPlainText.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
@@ -130,10 +129,12 @@ export async function runCatalogDesign(options: CatalogDesignOptions): Promise<n
 }
 
 /**
- * Writes the token file and the theme as a pair: each goes to a temporary file beside it, then
- * each is renamed into place. When a step fails, the temporary files are removed and a file
- * already renamed gets its earlier text back, so the pair is never left out of step. Returns the
- * failure's message, or null.
+ * Writes the token file and the theme as a pair. Each is written to a temporary file beside it;
+ * then each existing file is moved aside by rename and the temporary file renamed into place.
+ * When a step fails, every file placed is removed and every file moved aside is renamed back, so
+ * the pair, its links and modes included, is as it was. On success the moved-aside files are
+ * removed. A target that exists but is not a file or a link, such as a directory, stops the
+ * command before anything is written. Returns the failure's message, or null.
  */
 async function writePair(
   root: string,
@@ -141,29 +142,49 @@ async function writePair(
 ): Promise<string | null> {
   const files = outputs.map((output) => path.join(root, output.file));
   const temporaries = files.map((file) => `${file}.${process.pid}.tmp`);
-  let earlier: GeneratedRead[] = [];
-  let renamed = 0;
+  const asides = files.map((file) => `${file}.${process.pid}.old`);
+  const movedAside: number[] = [];
+  const placed: number[] = [];
   try {
-    // A target that exists but cannot be read, such as a directory in its place, has no text to
-    // put back, so nothing is written.
-    earlier = await Promise.all(outputs.map((output) => readGenerated(root, output.file)));
+    for (const file of files) {
+      const found = await lstat(file).catch(() => null);
+      if (found !== null && !found.isFile() && !found.isSymbolicLink()) {
+        throw new Error(`${file} is not a file.`);
+      }
+    }
     for (const [index, output] of outputs.entries()) {
       const temporary = temporaries[index] ?? "";
       await mkdir(path.dirname(temporary), { recursive: true });
       await writeFile(temporary, output.text, "utf-8");
     }
     for (const [index, file] of files.entries()) {
+      if ((await lstat(file).catch(() => null)) !== null) {
+        await rename(file, asides[index] ?? "");
+        movedAside.push(index);
+      }
       await rename(temporaries[index] ?? "", file);
-      renamed += 1;
+      placed.push(index);
     }
-    return null;
   } catch (caught) {
-    await Promise.all(temporaries.map((temporary) => rm(temporary, { force: true })));
-    for (const [index, file] of files.slice(0, renamed).entries()) {
-      const before = earlier[index];
-      if (before?.state === "read") await writeFile(file, before.text, "utf-8");
-      else await rm(file, { force: true });
-    }
+    await restorePair(files, temporaries, asides, placed, movedAside);
     return caught instanceof Error ? caught.message : String(caught);
+  }
+  await Promise.all(movedAside.map((index) => rm(asides[index] ?? "", { force: true })));
+  return null;
+}
+
+/** Puts the pair back after a failed write: placed files out, moved-aside files back, temporaries gone. */
+async function restorePair(
+  files: readonly string[],
+  temporaries: readonly string[],
+  asides: readonly string[],
+  placed: readonly number[],
+  movedAside: readonly number[],
+): Promise<void> {
+  for (const index of placed) await rm(files[index] ?? "", { force: true });
+  for (const index of movedAside) await rename(asides[index] ?? "", files[index] ?? "");
+  for (const temporary of temporaries) {
+    const found = await lstat(temporary).catch(() => null);
+    if (found?.isFile()) await rm(temporary, { force: true });
   }
 }

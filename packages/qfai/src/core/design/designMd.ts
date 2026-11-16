@@ -984,17 +984,49 @@ function findOverflowingNumber(visual: DesignMd["visual"]): ParseError | null {
       message: `'${at}' holds a number too large, or with too many digits, to read exactly.`,
     };
   }
-  const base = Number(/^\d*\.?\d+/.exec(visual.spacing?.base ?? "")?.[0] ?? "0");
+  const base = /^\d*\.?\d+/.exec(visual.spacing?.base ?? "")?.[0] ?? "0";
   const steps = visual.spacing?.scale ?? [];
   for (let index = 0; index < steps.length; index += 1) {
-    if (Number.isFinite(base * (steps[index] ?? 0))) continue;
+    if (readsExactly(decimalProductText(base, steps[index] ?? 0))) continue;
     return {
       path: `visual.spacing.scale[${index}]`,
       code: "invalid-format",
-      message: `'visual.spacing.scale[${index}]' times 'visual.spacing.base' is too large to compute.`,
+      message: `'visual.spacing.scale[${index}]' times 'visual.spacing.base' is too large, or has too many digits, to state exactly.`,
     };
   }
   return null;
+}
+
+/**
+ * The product of a written decimal and a step as decimal text, computed on their digits, so 0.1
+ * times 3 is `0.3` and 0.123456789012345 times 1 keeps every digit.
+ */
+export function decimalProductText(written: string, step: number): string {
+  const left = scaledDecimal(written === "" ? "0" : written);
+  const right = scaledDecimal(String(step));
+  if (left === null || right === null) return String(Number(written) * step);
+  const places = left.places + right.places;
+  const product = left.digits * right.digits;
+  const digits = (product < 0n ? -product : product).toString();
+  const padded = digits.padStart(places + 1, "0");
+  const whole = padded.slice(0, padded.length - places);
+  const fraction = padded.slice(padded.length - places);
+  return `${product < 0n ? "-" : ""}${whole}${fraction === "" ? "" : `.${fraction}`}`;
+}
+
+/** A decimal as whole digits and the number of places after its point, `1.25` as 125 and 2. */
+function scaledDecimal(written: string): { digits: bigint; places: number } | null {
+  const match = /^(-?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(written);
+  if (!match) return null;
+  const [, sign = "", whole = "", fraction = "", exponent = "0"] = match;
+  const unsigned = `${whole}${fraction}` === "" ? "0" : `${whole}${fraction}`;
+  let digits = BigInt(`${sign}${unsigned}`);
+  let places = fraction.length - Number(exponent);
+  if (places < 0) {
+    digits *= 10n ** BigInt(-places);
+    places = 0;
+  }
+  return { digits, places };
 }
 
 /** Each `visual` value the theme writes as a length, by path. */

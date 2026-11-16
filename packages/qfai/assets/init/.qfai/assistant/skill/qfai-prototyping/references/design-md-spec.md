@@ -167,7 +167,8 @@ design` writes each into a CSS declaration of the theme, where one would
   Design Tokens Community Group 2025.10 format states.
 - No theme-bound value holds a number too long to read as one, or with more
   digits than a number states exactly (`9007199254740993`), and no
-  `visual.spacing.scale` step times `spacing.base` is too large to compute.
+  `visual.spacing.scale` step times `spacing.base` is a length a number cannot
+  state exactly.
 - `visual.spacing.scale` names each step once, since each step becomes a token
   named after it.
 - `visual.layout.target_min_px` is small enough to write without an exponent,

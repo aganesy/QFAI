@@ -152,6 +152,14 @@ describe("the token file and the theme", () => {
     });
   });
 
+  // QFAI:EX-0001-0312-01
+  it("decodes a CSS hex escape in a font family name", async () => {
+    const design = await sampleDesign((text) =>
+      text.replace(/family_sans: .*$/m, `family_sans: '"\\41 CME", "\\000042 eta", sans-serif'`),
+    );
+    expect(tokenAt(design, "font.family.sans.$value")).toEqual(["ACME", "Beta", "sans-serif"]);
+  });
+
   // QFAI:EX-0001-0312-02
   it("reads a length unit in any case as the lower-case token unit", async () => {
     const design = await sampleDesign((text) => text.replace('sm: "40rem"', 'sm: "40REM"'));
@@ -236,6 +244,20 @@ describe("hex literals in source", () => {
       ].join("\n"),
     );
     expect(found.map((hex) => hex.line)).toEqual([3, 4]);
+  });
+
+  // QFAI:EX-0001-0312-09
+  it("reads a Svelte directive as one attribute, and a style directive as a colour place", () => {
+    const found = findRawHexes(
+      [
+        '<input bind:value="#bad" />',
+        '<div use:action="#bad">x</div>',
+        '<button on:click="#bad">x</button>',
+        '<div class:active="#bad">x</div>',
+        '<div style:color="#12ab56">x</div>',
+      ].join("\n"),
+    );
+    expect(found.map((hex) => hex.line)).toEqual([5]);
   });
 
   // QFAI:EX-0001-0312-09

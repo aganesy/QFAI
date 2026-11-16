@@ -11,7 +11,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { COLOR_KEYS, parseDesignMd, type DesignMd } from "../design/designMd.js";
+import {
+  COLOR_KEYS,
+  decimalProductText,
+  parseDesignMd,
+  type DesignMd,
+} from "../design/designMd.js";
 
 /** Where the token file and the theme are written and read, relative to the project root. */
 export const DESIGN_TOKENS_PATH = path.join(".qfai", "catalog", "design.tokens.json");
@@ -118,20 +123,21 @@ const RAW_HEX_RE =
 const COMMENT_RE = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<!:)\/\/[^\n]*/g;
 /**
  * An attribute whose value is a colour: `style="color: #fff"`, `fill="#fff"`, React's
- * `stopColor="#fff"`, or one Vue binds, `:fill="'#fff'"`. The name starts the line or follows whitespace, so `data-color="#fff"` is
+ * `stopColor="#fff"`, one Vue binds, `:fill="'#fff'"`, or a Svelte style directive,
+ * `style:color="#fff"`. The name starts the line or follows whitespace, so `data-color="#fff"` is
  * another attribute. The value runs to the quote that opened it, so a quoted expression inside a
  * bound value is still part of it.
  */
 const COLOR_ATTRIBUTE_RE =
-  /(?:^|\s)(?::|v-bind:)?(?:style|fill|stroke|color|stop-?color|flood-?color|lighting-?color)\s*=\s*\{?\s*(["'`])(?:(?!\1).)*$/i;
+  /(?:^|\s)(?:(?::|v-bind:)?(?:style|fill|stroke|color|stop-?color|flood-?color|lighting-?color)|style:[\w-]+)\s*=\s*\{?\s*(["'`])(?:(?!\1).)*$/i;
 /**
- * Any other attribute's value, such as `aria-controls="#bad"` or Vue's `:href="'#bad'"`: never a
- * colour place. Written with no space around its `=`, a name reads as an attribute anywhere; with
+ * Any other attribute's value, such as `aria-controls="#bad"`, Vue's `:href="'#bad'"` or a
+ * Svelte directive such as `use:action="#bad"`: never a colour place. Written with no space around its `=`, a name reads as an attribute anywhere; with
  * spaces, as in `href = "#bad"`, only inside a tag opened on the same line, which keeps
  * `const accent = "#fff"` a whole string literal.
  */
 const OTHER_ATTRIBUTE_RE =
-  /(?:(?:^|\s)(?::|@|v-[\w-]+:)?[\w-]+=|<[A-Za-z][\w.:-]*(?:\s[^<>]*)?\s(?::|@|v-[\w-]+:)?[\w-]+\s*=\s*)\{?\s*(["'`])(?:(?!\1).)*$/;
+  /(?:(?:^|\s)(?::|@|[\w-]+:)?[\w-]+=|<[A-Za-z][\w.:-]*(?:\s[^<>]*)?\s(?::|@|[\w-]+:)?[\w-]+\s*=\s*)\{?\s*(["'`])(?:(?!\1).)*$/;
 /** A CSS declaration value: a `:` since the last `;`, `{` or `}` on the line. */
 const DECLARATION_RE = /:[^:;{}]*$/;
 
@@ -277,7 +283,7 @@ function spacingTokens(design: DesignMd): Token[] {
       path: ["spacing", String(step).replace(".", "-")],
       type: "dimension",
       value: {
-        value: decimalProduct(base.trim().slice(0, -unit.unit.length), step),
+        value: Number(decimalProductText(base.trim().slice(0, -unit.unit.length), step)),
         unit: unit.unit,
       },
     });
@@ -489,8 +495,9 @@ function fontStack(stack: string): string[] {
   for (let index = 0; index < stack.length; index += 1) {
     const character = stack.charAt(index);
     if (character === "\\") {
-      current += stack.charAt(index + 1);
-      index += 1;
+      const escape = cssEscape(stack, index + 1);
+      current += escape.text;
+      index = escape.end - 1;
     } else if (quote !== null) {
       if (character === quote) quote = null;
       else current += character;
@@ -507,38 +514,24 @@ function fontStack(stack: string): string[] {
   return families.filter((family) => family !== "");
 }
 
+/**
+ * The character a CSS escape after a backslash stands for, and where the escape ends: up to six
+ * hex digits name a code point and take one following white space with them, as `\41 CME` is
+ * `ACME`; any other character stands for itself.
+ */
+function cssEscape(text: string, start: number): { text: string; end: number } {
+  const hex = /^[0-9a-fA-F]{1,6}/.exec(text.slice(start))?.[0];
+  if (hex === undefined) return { text: text.charAt(start), end: start + 1 };
+  let end = start + hex.length;
+  if (text.startsWith("\r\n", end)) end += 2;
+  else if (/^[ \t\n\r\f]/.test(text.charAt(end))) end += 1;
+  const point = Number.parseInt(hex, 16);
+  const valid = point > 0 && point <= 0x10ffff && (point < 0xd800 || point > 0xdfff);
+  return { text: String.fromCodePoint(valid ? point : 0xfffd), end };
+}
+
 function hyphen(key: string): string {
   return key.replace(/_/g, "-");
-}
-
-/**
- * The product of a written decimal and a step, computed on their decimal digits and read as a
- * number only at the end, so 0.1 times 3 is 0.3 and 0.123456789012345 times 1 keeps every digit.
- */
-function decimalProduct(written: string, step: number): number {
-  const left = scaledDecimal(written === "" ? "0" : written);
-  const right = scaledDecimal(String(step));
-  if (left === null || right === null) return Number(written) * step;
-  const places = left.places + right.places;
-  const digits = (left.digits * right.digits).toString().replace("-", "");
-  const negative = left.digits * right.digits < 0n;
-  const padded = digits.padStart(places + 1, "0");
-  const text = `${padded.slice(0, padded.length - places)}.${padded.slice(padded.length - places)}`;
-  return Number(`${negative ? "-" : ""}${text}`);
-}
-
-/** A decimal as whole digits and the number of places after its point, `1.25` as 125 and 2. */
-function scaledDecimal(written: string): { digits: bigint; places: number } | null {
-  const match = /^(-?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(written);
-  if (!match) return null;
-  const [, sign = "", whole = "", fraction = "", exponent = "0"] = match;
-  let digits = BigInt(`${sign}${whole}${fraction}` === sign ? "0" : `${sign}${whole}${fraction}`);
-  let places = fraction.length - Number(exponent);
-  if (places < 0) {
-    digits *= 10n ** BigInt(-places);
-    places = 0;
-  }
-  return { digits, places };
 }
 
 function round(value: number): number {
