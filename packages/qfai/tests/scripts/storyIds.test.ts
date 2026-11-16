@@ -38,7 +38,7 @@ describe("scopes", () => {
     ["BR-CLI-0016", { kind: "BR", parentId: "CLI-0016" }],
     ["BR-API-0001", { kind: "BR", parentId: "API-0001" }],
     ["BR-DB-0001", { kind: "BR", parentId: "DB-0001" }],
-    ["BR-UI-0022", { kind: "BR", parentId: "UI-0022" }],
+    ["BR-UI-0001", { kind: "BR", parentId: "UI-0001" }],
   ])("%s allocates under its parent", (scope, expected) => {
     expect(parseScope(scope)).toEqual(expected);
   });
