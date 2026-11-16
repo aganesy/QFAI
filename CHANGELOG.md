@@ -175,8 +175,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **Pending tests are promised only where a later stage writes them.** A
   scope that leaves out a stage which only repairs existing tests is not
   marked `testsPending`, so a missing test for an ID a record restatement
-  wrote fails the QFAI gate as an ordinary error, and the gate says that no
-  stage of the route writes it. A free-text scope answer that stops before
+  wrote fails the QFAI gate as an ordinary error, which the repository gate's
+  fix loop handles like any other. A free-text scope answer that stops before
   implementation runs no gate, like `narrow`, and its final report says the
   tests come with the implementation it left out.
 

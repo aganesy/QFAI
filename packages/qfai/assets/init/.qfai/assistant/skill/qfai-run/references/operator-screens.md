@@ -90,10 +90,11 @@ stage:
 Run only the chosen scope's stages, in plan order.
 
 - A free-text answer runs the stages up to the last one it names, followed by
-  the verify stages the narrowest scope would add to them. A run that stops
-  before the route's implement stage gets no verify stage, as `narrow` gets
-  none, so no test obligation is pending in it; the final report says its
-  tests come with the implementation stage it left out.
+  the verify stages the narrowest scope would add to them. A run that writes
+  the specification and holds no implementation or test stage gets no verify
+  stage, as `narrow` gets none, so no gate runs and nothing is listed as
+  `PENDING`; the final report says its tests come with the implementation
+  stage it left out.
 - An answer asking for work no stage of the plan does stops the work before the
   first stage, naming that work.
 - One scope, a plan with no scopes, and a branch destination's plan, however
