@@ -13,6 +13,7 @@ import path from "node:path";
 
 import {
   COLOR_KEYS,
+  breaksDeclaration,
   decimalProductText,
   parseDesignMd,
   type DesignMd,
@@ -88,11 +89,19 @@ export function renderDesignTokens(design: DesignMd): string {
   return `${JSON.stringify(tree, null, 2)}\n`;
 }
 
-/** The Tailwind 4 theme's text: one `@theme` block of the tokens' custom properties. */
+/**
+ * The Tailwind 4 theme's text: one `@theme` block of the tokens' custom properties. A value that
+ * would break out of its declaration is refused here as well as by the parser, so a design built
+ * without the parser cannot inject CSS.
+ */
 export function renderTheme(design: DesignMd): string {
-  const lines = tokensOf(design).flatMap((token) =>
-    token.css ? [`  ${token.css.name}: ${token.css.value};`] : [],
-  );
+  const lines = tokensOf(design).flatMap((token) => {
+    if (!token.css) return [];
+    if (breaksDeclaration(token.css.value)) {
+      throw new Error(`The theme value of ${token.css.name} would break its CSS declaration.`);
+    }
+    return [`  ${token.css.name}: ${token.css.value};`];
+  });
   return [`/* ${GENERATED} */`, "@theme {", ...lines, "}", ""].join("\n");
 }
 
@@ -107,13 +116,22 @@ export function sameGeneratedText(a: string, b: string): boolean {
   return a.replace(/\r\n/g, "\n") === b.replace(/\r\n/g, "\n");
 }
 
-/** The JSON a text holds, re-serialised without formatting, or undefined when it is not JSON. */
+/**
+ * The JSON a text holds, re-serialised without formatting and with each object's keys sorted, or
+ * undefined when it is not JSON. A formatter that sorts keys changes no value.
+ */
 function jsonValue(text: string): string | undefined {
+  let value: unknown;
   try {
-    return JSON.stringify(JSON.parse(text));
+    value = JSON.parse(text);
   } catch {
     return undefined;
   }
+  return JSON.stringify(value, (_key, inner: unknown) =>
+    isRecord(inner)
+      ? Object.fromEntries(Object.entries(inner).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : inner,
+  );
 }
 
 /** Every colour the tokens hold, as lower-case `#rrggbb` or `#rrggbbaa`. */
@@ -129,15 +147,17 @@ export function tokenHexes(design: DesignMd): Set<string> {
 /** A hex colour written in source text: its line, as written, and its normalised form. */
 export type RawHex = { line: number; written: string; hex: string };
 
-// A `#` that starts a hex literal: not inside a word, an entity, a URL path or a `url(#id)`
-// reference, and not followed by more of a name. A `(` of any other function, such as
-// `linear-gradient(#123456, #fff)`, does not hide it.
+// A `#` that starts a hex literal: not inside a word, an entity, a URL path, a `url(#id)`
+// reference in any case or a selector function such as `:not(#id)`, and not followed by more of a
+// name. A `(` of any other function, such as `linear-gradient(#123456, #fff)`, does not hide it.
 const RAW_HEX_RE =
-  /(?<![\w&#/])(?<!url\()#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![\w-])/g;
+  /(?<![\w&#/])(?<!url\()(?<!:(?:not|is|where|has|matches|any)\()#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{4}|[0-9a-f]{3})(?![\w-])/gi;
 // Comments hold prose such as `// see #12ab`, so they are blanked before the scan. The `//` form
-// is not read after a `:`, a `(`, a quote or a `=`, so a URL such as `https://`,
-// `url(//cdn.example/x.png)` or `src="//cdn.example/x.js"` is not taken for a comment.
-const COMMENT_RE = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<![:("'`=])\/\/[^\n]*/g;
+// is not read after a `:`, so the path of a URL such as `https://` is not taken for a comment, nor
+// after a `(`, a quote or a `=` when a host follows, as in `url(//cdn.example/x.png)` or
+// `src="//cdn.example/x.js"`; `foo(// note` is still a comment.
+const COMMENT_RE =
+  /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<!:)(?<![("'`=](?=\/\/[\w-]+(?:\.[\w-]+)+))\/\/[^\n]*/g;
 /**
  * The open value of an attribute at the end of a tag's text: the name, `=` with any spaces, then
  * a quoted value not yet closed, a `{…}` expression not yet closed with one level of inner
@@ -160,6 +180,8 @@ const TAG_OPEN_RE = /<[A-Za-z][\w.:-]*/g;
 const TAG_REACH = 4000;
 /** A CSS declaration value: a `:` since the last `;`, `{` or `}` on the line. */
 const DECLARATION_RE = /:[^:;{}]*$/;
+/** A line that holds only a property name and its `:`, whose value goes on the next line. */
+const DECLARATION_HEAD_RE = /^\s*[-\w]+\s*:\s*$/;
 
 /**
  * Every hex colour literal in a source file's text that sits where a colour goes: a CSS
@@ -178,7 +200,8 @@ export function findRawHexes(text: string): RawHex[] {
     const end = match.index + match[0].length;
     const lineEnd = scanned.indexOf("\n", end);
     const after = scanned.slice(end, lineEnd < 0 ? undefined : lineEnd);
-    const context = /^\s*$/.test(before) ? lineBefore(scanned, lineStart) : before;
+    const head = /^\s*$/.test(before) ? lineBefore(scanned, lineStart) : "";
+    const context = DECLARATION_HEAD_RE.test(head) ? head : before;
     if (!colorPlace(openAttribute(scanned, match.index), context, after)) continue;
     const rgba = parseHex(match[0]);
     if (!rgba) continue;
@@ -208,27 +231,29 @@ function openAttribute(text: string, index: number): string | null {
  * a declaration may put its value on the line after its `color:`.
  */
 function lineBefore(text: string, lineStart: number): string {
-  const lines = text.slice(0, lineStart).split("\n");
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    const line = lines[index] ?? "";
+  let end = lineStart - 1;
+  while (end > 0) {
+    const start = text.lastIndexOf("\n", end - 1) + 1;
+    const line = text.slice(start, end);
     if (line.trim() !== "") return line;
+    end = start - 1;
   }
   return "";
 }
 
 /**
- * Whether a hex sits where a colour goes, read from the text before it on its line, or on the
- * line before when it starts its line, and from the rest of its line. A Tailwind arbitrary value
- * such as `bg-[#123456]` is one wherever it is written. Otherwise it is one in a colour
- * attribute's value and not in another attribute's; outside a tag, as a whole string literal, or
- * in a CSS declaration value, though not in a selector, whose `{` follows on the line before any
- * `;` or `}`.
+ * Whether a hex sits where a colour goes, read from the text before it on its line, or from the
+ * last non-blank line before when that line is a property name and its `:`, and from the rest of
+ * its line. A hex that is the whole of a Tailwind arbitrary value, as in `bg-[#123456]`, is one
+ * wherever it is written. Otherwise it is one in a colour attribute's value and not in another
+ * attribute's; outside a tag, as a whole string literal, or in a CSS declaration value, though not
+ * in a selector, whose `{` follows on the line before any `;` or `}` and is not a template's `${`.
  */
 function colorPlace(attribute: string | null, before: string, after: string): boolean {
   if (/-\[$/.test(before) && /^\]/.test(after)) return true;
   if (attribute !== null) return COLOR_ATTRIBUTE_NAME_RE.test(attribute);
   if (/["'`]$/.test(before) && /^["'`]/.test(after)) return true;
-  if (/^[^;{}]*\{/.test(after)) return false;
+  if (/^[^;{}]*(?<!\$)\{/.test(after)) return false;
   return DECLARATION_RE.test(before);
 }
 

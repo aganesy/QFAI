@@ -189,7 +189,10 @@ async function restorePair(
   }
 }
 
-/** The first line of a message, so a YAML error's code frame does not spread over the terminal. */
+/**
+ * The first line of a message, without the `:` that introduces a YAML error's code frame, so the
+ * frame does not spread over the terminal.
+ */
 function firstLine(message: string): string {
-  return message.split(/\r?\n/, 1)[0] ?? message;
+  return (message.split(/\r?\n/, 1)[0] ?? message).replace(/:\s*$/, "");
 }

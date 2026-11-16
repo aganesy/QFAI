@@ -278,6 +278,7 @@ describe("no DESIGN.md, or one that does not parse, writes nothing", () => {
     expect(result.err).toContain("DESIGN.md does not parse:");
     expect(result.err.trim().split("\n")).toHaveLength(1);
     expect(await exists(broken, TOKENS)).toBe(false);
+    expect(await exists(broken, THEME)).toBe(false);
   });
 });
 

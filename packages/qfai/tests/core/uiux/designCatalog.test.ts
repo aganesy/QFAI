@@ -361,6 +361,7 @@ describe("hex literals in source", () => {
         "color:",
         "  #123457;",
         '<script src="//cdn.example/x.js"></script> <rect fill="#123458" />',
+        "const Box = styled.div`color: #123459 ${(p) => p.x};`;",
       ].join("\n"),
     );
     expect(found.map((hex) => [hex.line, hex.written])).toEqual([
@@ -373,19 +374,32 @@ describe("hex literals in source", () => {
       [6, "#123456"],
       [8, "#123457"],
       [9, "#123458"],
+      [10, "#123459"],
     ]);
   });
 
   // QFAI:EX-0001-0312-12
-  it("skips a hex in a selector, even after a pseudo-class or on the line after its comma", () => {
+  it("skips a hex in a selector, a reference, a comment or prose on the line after a colon", () => {
     const found = findRawHexes(
       [
         "a:hover #fab .x {",
         "a:focus,",
         "#cab {",
+        "button:not(#cab),",
+        ".x {",
+        "a:focus,",
+        "#cab,",
+        ".y {",
         "<a href=#bad>x</a>",
         'fill="url(#fade)"',
-        "url(#abc)",
+        "background: URL(#fade);",
+        "foo(// colour: #abcdef",
+        "x=// colour: #abcdef",
+        '<a href="https://example.com/issues">',
+        "  #123",
+        "</a>",
+        "<p>Note:",
+        "#abc is the issue number</p>",
       ].join("\n"),
     );
     expect(found).toEqual([]);
@@ -394,9 +408,22 @@ describe("hex literals in source", () => {
   // QFAI:EX-0001-0312-14
   it("compares JSON as the value it holds, and other text with its line ends aside", () => {
     expect(sameGeneratedText('{\n  "a": [\n    1,\n    2\n  ]\n}\n', '{"a": [1, 2]}')).toBe(true);
+    expect(
+      sameGeneratedText('{"a": 1, "b": {"c": 2, "d": 3}}', '{"b": {"d": 3, "c": 2}, "a": 1}'),
+    ).toBe(true);
     expect(sameGeneratedText('{"a": [1, 2]}', '{"a": [2, 1]}')).toBe(false);
     expect(sameGeneratedText("a {\r\n}\r\n", "a {\n}\n")).toBe(true);
     expect(sameGeneratedText("a { }", "a {}")).toBe(false);
+  });
+
+  // QFAI:EX-0001-0312-16
+  it("refuses to write a theme value that breaks its declaration, whatever built the design", async () => {
+    const design = await sampleDesign();
+    const injected: DesignMd = {
+      ...design,
+      visual: { ...design.visual, colors: { ...design.visual.colors, primary: "red; } body {" } },
+    };
+    expect(() => renderTheme(injected)).toThrow(/--color-primary/);
   });
 
   it("knows every colour and shadow colour DESIGN.md states", async () => {

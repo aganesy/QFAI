@@ -429,17 +429,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
 
 - **The colour warning reads more of the places a colour is written.**
-  `QFAI-DCAT-003` now reads a Tailwind arbitrary value such as
-  `bg-[#123456]`, a hex inside a CSS function such as `linear-gradient(`, an
-  unquoted colour attribute such as `fill=#123456`, a declaration whose value
-  starts on the next line, and the rest of a line after `url(//cdn…)` or
-  `src="//cdn…"`. A hex in a selector with a pseudo-class, such as
-  `a:hover #fab .x {`, is no longer reported. A whole string literal of hex
-  letters, such as `"#add"`, is still read as a colour, and the contract
-  records that limit; the UI guidance now says a stylesheet is not read.
+  `QFAI-DCAT-003` now reads a hex that is a whole Tailwind arbitrary value,
+  such as `bg-[#123456]`, a hex inside a CSS function such as
+  `linear-gradient(`, an unquoted colour attribute such as `fill=#123456`, a
+  value on the line after a lone `color:`, and the rest of a line after
+  `url(//cdn…)` or `src="//cdn…"`. A hex in a selector, such as
+  `a:hover #fab .x {` or `button:not(#cab)`, is no longer reported. The
+  contract records what it still cannot tell: a whole string literal of hex
+  letters such as `"#add"`, prose after a `:` on its line, and a hex inside a
+  longer arbitrary value. The UI guidance now says a stylesheet is not read.
   `qfai catalog design --check` and `QFAI-DCAT-001` compare the token file as
-  the JSON it holds, so a formatter that rewraps it no longer makes it stale,
-  and a `DESIGN.md` YAML syntax error is printed on one line.
+  the JSON it holds, so a formatter that rewraps it or sorts its keys no
+  longer makes it stale; a `DESIGN.md` YAML syntax error is printed on one
+  line; and the theme writer refuses a value that would break its
+  declaration even when the design did not come through the parser.
 
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
   derived-value declaration covered both a value the DB stores and a value

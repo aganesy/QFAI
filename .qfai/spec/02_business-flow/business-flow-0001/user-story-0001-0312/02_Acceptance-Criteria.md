@@ -23,7 +23,7 @@ Feature: Derive the design tokens and the theme from DESIGN.md
   Scenario: The check mode compares and writes nothing
     Given a project with a root `DESIGN.md`
     When `qfai catalog design --check` runs
-    Then it exits 0 when both committed files are the files the command would write, line ends aside, and the token file read as the JSON it holds, so its formatting aside
+    Then it exits 0 when both committed files are the files the command would write, the theme with its line ends aside and the token file read as the JSON it holds, so its formatting and key order aside
     And it exits 1 with one line for each file that is missing or differs, naming it, and leaves the files as they were
 
   # AC-0001-0312-04
@@ -36,7 +36,7 @@ Feature: Derive the design tokens and the theme from DESIGN.md
   Scenario: A token file or theme out of date with DESIGN.md is a warning, and no design catalogue asks nothing
     Given a project with a root `DESIGN.md`
     When `qfai validate` runs in the `prototyping`, `saas-package`, `verify` or `full` profile
-    Then a token file that is missing beside a theme, or differs from what the command would write, read as the JSON it holds, raises one `QFAI-DCAT-001` at warning naming the file and the command, and the theme likewise raises `QFAI-DCAT-002`
+    Then a token file that is missing beside a theme, or differs from what the command would write, read as the JSON it holds whatever its formatting or key order, raises one `QFAI-DCAT-001` at warning naming the file and the command, and the theme likewise raises `QFAI-DCAT-002`
     And a project with neither file raises no `QFAI-DCAT` finding, and the other profiles raise none
 
   # AC-0001-0312-06
