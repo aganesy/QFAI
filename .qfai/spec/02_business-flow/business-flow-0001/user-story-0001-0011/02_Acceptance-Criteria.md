@@ -52,4 +52,5 @@ Feature: Story-tree layout described by mdschema
     When it leaves out a line a required-text rule asks for, or a heading the schema requires
     Then the finding shows the rule's example line, which passes the schema in the rule's template, in place of the pattern
     And a missing heading whose pattern accepts one fixed line is named by that line, and any other heading keeps its pattern
+    And every section of a shipped schema gives a description, which a forbidden-text finding states in place of its pattern
 ```

@@ -71,16 +71,16 @@ unchanged; synchronization runs no install, build or test.
 
 ## Writing a schema for mdschema 0.15.7
 
-| Fact                                                                           | Consequence                                                                     |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| `max: 0` means no upper limit                                                  | Forbid an element with `forbidden_text` instead                                 |
-| A section's text excludes its own heading line and includes its child sections | Forbid `\A\s*[^#\s]` to keep the text under H1 empty                            |
-| A nested list counts as two lists                                              | Count lists with that in mind                                                   |
-| A double-quoted YAML string interprets escapes                                 | Write regular expressions in single quotes                                      |
-| A heading pattern matches the whole line                                       | Include the `#` characters in the pattern                                       |
-| A table with only its header row counts as one table                           | A required table may have no data row                                           |
-| A `required_text` finding prints its pattern, and mdschema ignores `example:`  | Give the item an `example:` line, which the checker prints instead              |
-| A missing heading is printed as its pattern                                    | Write a fixed heading as `^<heading>$`, which the checker prints as the heading |
+| Fact                                                                           | Consequence                                                                                                                    |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `max: 0` means no upper limit                                                  | Forbid an element with `forbidden_text` instead                                                                                |
+| A section's text excludes its own heading line and includes its child sections | Forbid `\A\s*[^#\s]` to keep the text under H1 empty                                                                           |
+| A nested list counts as two lists                                              | Count lists with that in mind                                                                                                  |
+| A double-quoted YAML string interprets escapes                                 | Write regular expressions in single quotes                                                                                     |
+| A heading pattern matches the whole line                                       | Include the `#` characters in the pattern                                                                                      |
+| A table with only its header row counts as one table                           | A required table may have no data row                                                                                          |
+| A `required_text` finding prints its pattern, and mdschema ignores `example:`  | Give the item an `example:` line, which the checker prints instead                                                             |
+| A missing heading is printed as its pattern                                    | Write a fixed heading as `^<heading>$` with each regex metacharacter escaped with `\`, which the checker prints as the heading |
 
 ## Excluding a Mermaid diagram
 

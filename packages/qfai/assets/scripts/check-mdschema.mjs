@@ -520,6 +520,10 @@ export function firstHeading(text) {
  * further until they agree — because a reader who is not told that will read
  * the absence of other lines as the rest of the document being sound.
  *
+ * The required heading is named by its text where its pattern accepts one
+ * fixed line, and by its pattern where the pattern admits more, or where the
+ * module flag `showPatterns` (`--show-patterns`) asks for every pattern.
+ *
  * @param {string} schemaText
  * @param {string} text
  * @returns {string}
@@ -1264,7 +1268,8 @@ const HEADING_PATTERN_MESSAGE =
  * quote a heading pattern, so each names the heading line to write where the
  * pattern is one fixed line: `^## Standard commands \(copy-paste\)$` becomes
  * `## Standard commands (copy-paste)`. A pattern that admits more than one line
- * is kept, because it is all there is to say.
+ * is kept, because it is all there is to say. A missing one is called a
+ * required heading either way: mdschema's structure elements are headings.
  *
  * @param {string} output
  * @returns {string}
@@ -1276,9 +1281,10 @@ export function explainHeadings(output) {
       const found = VIOLATION_LINE.exec(line);
       const quoted =
         found !== null && found[3] === "structure" ? HEADING_PATTERN_MESSAGE.exec(found[4]) : null;
-      const heading = quoted === null ? null : plainHeading(goUnquote(quoted[2]));
-      if (found === null || quoted === null || heading === null) return line;
-      const message = `${quoted[1].replace(/^Required element /u, "Required heading ")}${JSON.stringify(heading)}${quoted[3]}`;
+      if (found === null || quoted === null) return line;
+      const heading = plainHeading(goUnquote(quoted[2]));
+      const expected = heading === null ? quoted[2] : JSON.stringify(heading);
+      const message = `${quoted[1].replace(/^Required element /u, "Required heading ")}${expected}${quoted[3]}`;
       return `  ✗ ${found[1]}:${found[2]} [structure] ${message}`;
     })
     .join("\n");

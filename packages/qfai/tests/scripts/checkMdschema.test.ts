@@ -1529,11 +1529,15 @@ describe("a heading finding", () => {
   // QFAI:EX-0001-0011-23
   it("keeps a pattern that accepts more than one heading", () => {
     const story = missing(`"^# US-[0-9]{4}-[0-9]{4}: .+$"`);
-    expect(explainHeadings(story)).toBe(story);
+    expect(explainHeadings(story)).toBe(story.replace("Required element", "Required heading"));
     expect(plainHeading("^## Stack$")).toBe("## Stack");
     expect(plainHeading("## Stack")).toBeNull();
     expect(plainHeading(String.raw`^## Stack\d$`)).toBeNull();
+    expect(plainHeading(String.raw`^## Stack\b$`)).toBeNull();
     expect(plainHeading("^## Stack|Other$")).toBeNull();
+    expect(plainHeading("^## a.b$")).toBeNull();
+    expect(plainHeading(String.raw`^## Foo\$$`)).toBe("## Foo$");
+    expect(plainHeading(String.raw`^## A\-B$`)).toBe("## A-B");
   });
 
   // QFAI:EX-0001-0011-23
@@ -1563,6 +1567,31 @@ describe("a heading finding", () => {
       'Required heading "## Standard commands (copy-paste)" not found within "Technology"',
     );
     expect(raw.stderr).toContain(`Required element ${COMMANDS}`);
+  });
+
+  // QFAI:EX-0001-0011-23
+  it("names the root heading the schema requires, and its pattern behind --show-patterns", async () => {
+    const root = await newTempDir();
+    const objective = readFileSync(
+      path.join(
+        REPO_ROOT,
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/01_policy/objective.md",
+      ),
+      "utf-8",
+    ).replace(/^# Objective$/m, "# Objectives");
+    const dir = path.join(root, ".qfai", "specs", "01_policy");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "objective.md"), objective, "utf-8");
+    const file = ".qfai/specs/01_policy/objective.md";
+
+    const explained = runDriver(["--root", root, "--scope", "files", file]);
+    const raw = runDriver(["--root", root, "--scope", "files", "--show-patterns", file]);
+
+    expect(explained.status).toBe(1);
+    expect(explained.stderr).toContain(
+      'Root heading is "# Objectives", but the schema requires "# Objective";',
+    );
+    expect(raw.stderr).toContain('the schema requires "^# Objective$"');
   });
 });
 
