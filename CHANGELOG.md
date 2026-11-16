@@ -464,7 +464,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `linear-gradient(`, an unquoted colour attribute such as `fill=#123456`, a
   value on the line after a lone `color:`, and the rest of a line after
   `url(//cdn…)` or `src="//cdn…"`. A hex in a selector, such as
-  `a:hover #fab .x {` or `button:not(#cab)`, is no longer reported. The
+  `a:hover #fab .x {`, or anywhere in the arguments of a selector function
+  open on its line, such as `button:not(#cab)` or `a:has(> #cab)`, is no
+  longer reported. The
   contract records what it still cannot tell: a whole string literal of hex
   letters such as `"#add"`, prose after a `:` on its line, and a hex inside a
   longer arbitrary value. The UI guidance now says a stylesheet is not read.

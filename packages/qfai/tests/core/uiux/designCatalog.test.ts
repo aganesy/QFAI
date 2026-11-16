@@ -362,6 +362,9 @@ describe("hex literals in source", () => {
         "  #123457;",
         '<script src="//cdn.example/x.js"></script> <rect fill="#123458" />',
         "const Box = styled.div`color: #123459 ${(p) => p.x};`;",
+        "a:not(.b) { color: #12345a }",
+        'a:not([title="("]) { color: #12345b }',
+        '<rect className="a:not(" fill="#12345c" />',
       ].join("\n"),
     );
     expect(found.map((hex) => [hex.line, hex.written])).toEqual([
@@ -375,6 +378,9 @@ describe("hex literals in source", () => {
       [8, "#123457"],
       [9, "#123458"],
       [10, "#123459"],
+      [11, "#12345a"],
+      [12, "#12345b"],
+      [13, "#12345c"],
     ]);
   });
 
@@ -386,6 +392,12 @@ describe("hex literals in source", () => {
         "a:focus,",
         "#cab {",
         "button:not(#cab),",
+        ".x {",
+        "a:not(.a, #cab),",
+        ".x {",
+        "a:has(> #cab),",
+        ".x {",
+        "a:is(:nth-child(2), #cab),",
         ".x {",
         "a:focus,",
         "#cab,",
