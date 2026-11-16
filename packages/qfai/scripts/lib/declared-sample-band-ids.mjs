@@ -20,8 +20,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const BR_ROW = /^\|\s*(BR-000[1-9]-000[1-9])\s*\|/gm;
-const BR_YAML = /^\s*-?\s*id:\s*(BR-000[1-9]-000[1-9])\s*$/gm;
+const BR_ROW = /^\|\s*(BR-(?:CLI|API|DB|UI)-000[1-9]-000[1-9])\s*\|/gm;
+const BR_YAML = /^\s*-?\s*id:\s*(BR-(?:CLI|API|DB|UI)-000[1-9]-000[1-9])\s*$/gm;
 const CONTRACT_NAME = /^((?:cli|api|db|ui)-000[1-9]-[A-Za-z0-9][A-Za-z0-9-]*)\.[a-z]+$/;
 
 /** The repository root, found from this module's own location. */

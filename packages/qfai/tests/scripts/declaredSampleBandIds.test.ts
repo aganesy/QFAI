@@ -15,9 +15,10 @@ describe("declaredSampleBandIds", () => {
 
   it("lists the business rules and contract names the spec tree declares inside the band", () => {
     const { businessRules, contractNames } = declaredSampleBandIds(root);
-    expect(businessRules).toContain("BR-0001-0001");
-    expect(businessRules).not.toContain("BR-0006-0001");
-    expect(businessRules).not.toContain("BR-0010-0001");
+    expect(businessRules).toContain("BR-CLI-0001-0001");
+    expect(businessRules).not.toContain("BR-CLI-0006-0001");
+    expect(businessRules).not.toContain("BR-CLI-0010-0001");
+    expect(businessRules.every((id) => /^BR-(?:CLI|API|DB|UI)-/.test(id))).toBe(true);
     expect(contractNames).toContain("cli-0009-qfai-init");
     expect(contractNames).not.toContain("cli-0010-qfai-migration-v1-to-v2");
   });
@@ -28,8 +29,9 @@ describe("declaredSampleBandIds", () => {
     const pattern = declaredSampleBandPattern(root);
     expect(pattern).not.toBeNull();
     const re = new RegExp(pattern ?? "");
-    expect(re.test("see BR-0001-0001 for the rule")).toBe(true);
-    expect(re.test("see BR-0006-0001 for the rule")).toBe(false);
+    expect(re.test("see BR-CLI-0001-0001 for the rule")).toBe(true);
+    expect(re.test("see BR-CLI-0006-0001 for the rule")).toBe(false);
+    expect(re.test("see BR-API-0001-0001 for the rule")).toBe(false);
     expect(re.test("contracts/cli/cli-0009-qfai-init.md")).toBe(true);
     expect(re.test("contracts/cli/cli-0009-checkout.md")).toBe(false);
     expect(re.test("sub-cli-0009-qfai-init")).toBe(false);
