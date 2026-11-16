@@ -943,7 +943,7 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     if ("error" in layout) return { error: layout.error };
     value.layout = layout.value;
   }
-  const breaker = findCssBreaker(value) ?? findOverflowingNumber(value);
+  const breaker = findCssBreaker(value) ?? findNonLength(value) ?? findOverflowingNumber(value);
   if (breaker) return { error: breaker };
   return { value };
 }
@@ -992,6 +992,34 @@ function findOverflowingNumber(visual: DesignMd["visual"]): ParseError | null {
       path: `visual.spacing.scale[${index}]`,
       code: "invalid-format",
       message: `'visual.spacing.scale[${index}]' times 'visual.spacing.base' is too large to compute.`,
+    };
+  }
+  return null;
+}
+
+/** Each `visual` value the theme writes as a length, by path. */
+function lengthValues(visual: DesignMd["visual"]): Array<[string, string]> {
+  const values: Array<[string, string]> = [];
+  const add = (section: string, record: Readonly<Record<string, string>> | undefined): void => {
+    for (const [key, text] of Object.entries(record ?? {}))
+      values.push([`${section}.${key}`, text]);
+  };
+  add("visual.typography.scale", visual.typography.scale);
+  if (visual.spacing?.base !== undefined) values.push(["visual.spacing.base", visual.spacing.base]);
+  add("visual.radius", visual.radius);
+  add("visual.layout.breakpoints", visual.layout?.breakpoints);
+  add("visual.layout.content_max_width", visual.layout?.content_max_width);
+  return values;
+}
+
+/** The first length-valued field that is not one CSS length, such as `spacing.base: "wide"`. */
+function findNonLength(visual: DesignMd["visual"]): ParseError | null {
+  for (const [at, text] of lengthValues(visual)) {
+    if (CSS_LENGTH_RE.test(text)) continue;
+    return {
+      path: at,
+      code: "invalid-format",
+      message: `'${at}' must be one CSS length, a number with a unit such as px, rem, em, % or vw, or 0 (got ${text}).`,
     };
   }
   return null;
@@ -1074,13 +1102,6 @@ function parseLength(value: unknown, path: string): { value: string } | { error:
       path,
       "invalid-format",
       `'${path}' must be a non-empty string with no leading / trailing whitespace.`,
-    );
-  }
-  if (!CSS_LENGTH_RE.test(value)) {
-    return layoutError(
-      path,
-      "invalid-format",
-      `'${path}' must be one CSS length, a number with a unit such as px, rem, em, % or vw, or 0 (got ${value}).`,
     );
   }
   return { value };

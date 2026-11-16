@@ -23,7 +23,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stack, type-scale size, `spacing.base`, radius, shadow, breakpoint or content
   width holding `;`, `{`, `}`, `/*` or `*/`, ending in a backslash, or leaving
   a bracket or quote open, now fails it, since the theme writes each into a CSS
-  declaration. So do a `visual.layout` breakpoint or content width that is not one CSS length, a number too long to read or compute, or too precise to read exactly, a font weight outside 1 to
+  declaration. So do a type-scale size, `spacing.base`, radius, breakpoint or content width that is not one CSS length, a number too long to read or compute, or too precise to read exactly, a font weight outside 1 to
   1000, a spacing step given twice and a `target_min_px` too large to write without an exponent.
 
 - **Screen reviews walk one sourced checklist.** Review rounds of the same

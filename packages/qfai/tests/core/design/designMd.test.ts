@@ -1499,7 +1499,6 @@ describe("parseDesignMd: data_display", () => {
     ["breakpoints", "sm", "wide", false],
     ["content_max_width", "app", "auto", false],
     ["content_max_width", "app", "80", false],
-    ["breakpoints", "sm", "40rem; } body { color: red }", false],
     ["breakpoints", "sm", "40em", true],
     ["content_max_width", "reading", "65ch", true],
     ["content_max_width", "app", "100%", true],
@@ -1517,6 +1516,35 @@ describe("parseDesignMd: data_display", () => {
       });
     },
   );
+
+  // QFAI:EX-0001-0312-04
+  it.each([
+    [
+      "visual.spacing.base",
+      withValue(
+        '    lg: "0 12px 24px rgba(15,23,42,0.10)"',
+        `    lg: "0 12px 24px rgba(15,23,42,0.10)"\n  spacing:\n    base: "wide"`,
+      ),
+      "invalid-format",
+    ],
+    [
+      "visual.typography.scale.base",
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "large"`,
+      ),
+      "invalid-format",
+    ],
+    ["visual.radius.md", withValue('md:   "0.5rem"', 'md:   "round"'), "invalid-format"],
+    [
+      "visual.layout.breakpoints.sm",
+      sampleWithLayout(["breakpoints:", '  sm: "40rem; } body { color: red }"']),
+      "invalid-css-value",
+    ],
+  ])("refuses %s that is not one CSS length", (at, text, code) => {
+    const result = parseDesignMd(text);
+    expect("error" in result && result.error).toMatchObject({ path: at, code });
+  });
 
   // QFAI:EX-0001-0312-04
   it("rejects a spacing step whose length, the base times the step, is too large to compute", () => {

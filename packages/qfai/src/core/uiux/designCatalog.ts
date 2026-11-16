@@ -31,7 +31,6 @@ type Token = {
   value: TokenValue;
   /** The `@theme` custom property and its CSS value; absent for a token the theme does not carry. */
   css?: { name: string; value: string };
-  description?: string;
 };
 
 /** A group-level `$description` and `$extensions`, for what DESIGN.md states but no token holds. */
@@ -74,7 +73,6 @@ export function renderDesignTokens(design: DesignMd): string {
     if (token.type === undefined) continue;
     const node: Record<string, unknown> = { $type: token.type };
     node.$value = token.value;
-    if (token.description !== undefined) node.$description = token.description;
     setAt(tree, token.path, node);
   }
   for (const note of notesOf(design)) {
@@ -128,10 +126,12 @@ const COLOR_ATTRIBUTE_RE =
   /(?:^|\s)(?::|v-bind:)?(?:style|fill|stroke|color|stop-?color|flood-?color|lighting-?color)\s*=\s*\{?\s*(["'`])(?:(?!\1).)*$/i;
 /**
  * Any other attribute's value, such as `aria-controls="#bad"` or Vue's `:href="'#bad'"`: never a
- * colour place. Markup writes no space around an attribute's `=`, which keeps
+ * colour place. Written with no space around its `=`, a name reads as an attribute anywhere; with
+ * spaces, as in `href = "#bad"`, only inside a tag opened on the same line, which keeps
  * `const accent = "#fff"` a whole string literal.
  */
-const OTHER_ATTRIBUTE_RE = /(?:^|\s)(?::|@|v-[\w-]+:)?[\w-]+=\{?\s*(["'`])(?:(?!\1).)*$/;
+const OTHER_ATTRIBUTE_RE =
+  /(?:(?:^|\s)(?::|@|v-[\w-]+:)?[\w-]+=|<[A-Za-z][\w.:-]*(?:\s[^<>]*)?\s(?::|@|v-[\w-]+:)?[\w-]+\s*=\s*)\{?\s*(["'`])(?:(?!\1).)*$/;
 /** A CSS declaration value: a `:` since the last `;`, `{` or `}` on the line. */
 const DECLARATION_RE = /:[^:;{}]*$/;
 
@@ -334,7 +334,7 @@ function shadowToken(tokenPath: string[], css: string, cssName: string): Token {
 
 /**
  * A value the 2025.10 types cannot state, such as a length in `em` or `%`: kept as its CSS
- * text with no `$type`, so the theme still carries it and a reader is told why.
+ * text with no `$type`, so the theme still carries it and the token file leaves it out.
  */
 function unrepresented(
   tokenPath: string[],
@@ -345,7 +345,6 @@ function unrepresented(
     path: tokenPath,
     value: css,
     css: property,
-    description: "Kept as the CSS text DESIGN.md gives: no token type of the format states it.",
   };
 }
 
@@ -404,9 +403,10 @@ function colorValue(rgba: Rgba): Record<string, unknown> {
 
 function parseDimension(css: string): Dimension | null {
   if (css.trim() === "0") return { value: 0, unit: "px" };
-  const match = /^(\d+(?:\.\d+)?|\.\d+)(px|rem)$/.exec(css.trim());
+  // CSS units are case-insensitive, so `40REM` is the token `40 rem`.
+  const match = /^(\d+(?:\.\d+)?|\.\d+)(px|rem)$/i.exec(css.trim());
   const amount = match?.[1];
-  const unit = match?.[2];
+  const unit = match?.[2]?.toLowerCase();
   if (amount === undefined || (unit !== "px" && unit !== "rem")) return null;
   const value = Number(amount);
   return Number.isFinite(value) ? { value, unit } : null;

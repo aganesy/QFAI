@@ -153,6 +153,13 @@ describe("the token file and the theme", () => {
   });
 
   // QFAI:EX-0001-0312-02
+  it("reads a length unit in any case as the lower-case token unit", async () => {
+    const design = await sampleDesign((text) => text.replace('sm: "40rem"', 'sm: "40REM"'));
+    expect(tokenAt(design, "layout.breakpoint.sm.$value")).toEqual({ value: 40, unit: "rem" });
+    expect(renderTheme(design)).toContain("  --breakpoint-sm: 40REM;\n");
+  });
+
+  // QFAI:EX-0001-0312-02
   it("reads a negative shadow offset or spread, and leaves a negative blur to the theme", async () => {
     const spread = await sampleDesign((text) =>
       text.replace('sm: "0 1px 2px rgba(15,23,42,0.05)"', 'sm: "0 -2px 4px -1px #0a0a0a"'),
@@ -241,6 +248,16 @@ describe("hex literals in source", () => {
       ].join("\n"),
     );
     expect(found.map((hex) => hex.line)).toEqual([1, 2, 3]);
+  });
+
+  // QFAI:EX-0001-0312-09
+  it("reads an attribute written with spaces around its = inside a tag", () => {
+    const found = findRawHexes(
+      ['<a href = "#bad">x</a>', '<path fill = "#12ab56" />', 'const accent = "#12ab56";'].join(
+        "\n",
+      ),
+    );
+    expect(found.map((hex) => hex.line)).toEqual([2, 3]);
   });
 
   // QFAI:EX-0001-0312-09
