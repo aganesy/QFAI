@@ -6,6 +6,6 @@
 
 ## Business rules
 
-| BR-ID        | Statement    | Examples        |
-| ------------ | ------------ | --------------- |
-| BR-0006-0001 | Example rule | EX-0001-0001-01 |
+| BR-ID            | Statement    | Examples        |
+| ---------------- | ------------ | --------------- |
+| BR-CLI-0006-0001 | Example rule | EX-0001-0001-01 |

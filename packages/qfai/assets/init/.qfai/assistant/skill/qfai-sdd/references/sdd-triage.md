@@ -149,7 +149,7 @@ A retirement touches every place the ID is written. Do all of them in one change
 ## ID allocation
 
 Read all IDs of the kind in the relevant scope, including IDs named by decision rows, `Retired:` rows among them. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US.
-A contract number spans every contract kind, and a BR is numbered inside its contract.
+A contract number is counted within its kind, and a BR is numbered inside its contract, whose kind and number its ID carries.
 Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a change was declined.
 Take the number from `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` right before writing it: a US names its BF, an AC or EX its US, and a BR its contract.
 It reads the working tree and the base ref's commit, a fetched ref such as `origin/main`, and prints the number after the highest of both, wherever a row sits. It writes nothing and does not see open pull requests.

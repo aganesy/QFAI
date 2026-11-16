@@ -387,7 +387,7 @@ describe("the policy layer holds the sections the deliberation record fills", ()
     expect(text).toContain(head);
     for (const row of [
       `| ${prefix}-01 | Answers within \`2s\` | Users wait |\n`,
-      `| ${prefix}-01 | BR-0003-0001 holds | Users wait |\n`,
+      `| ${prefix}-01 | BR-CLI-0003-0001 holds | Users wait |\n`,
     ]) {
       const result = check("constraint", text.replace(head, `${head}${row}`));
       expect(result.output).toContain("[forbidden-text]");
@@ -795,7 +795,7 @@ describe("the constraint document states each limit in plain words", () => {
 
   const refused: ReadonlyArray<readonly [string, string]> = [
     ["a file name in backticks", `${TECHNICAL}| TC-01 | Paths use \`node:path\` | Portable |\n`],
-    ["a business rule ID", `${TECHNICAL}| TC-01 | BR-0003-0001 holds | Portable |\n`],
+    ["a business rule ID", `${TECHNICAL}| TC-01 | BR-CLI-0003-0001 holds | Portable |\n`],
     ["an example ID", `${TECHNICAL}| TC-01 | Deterministic | EX-0001-0039-01 |\n`],
     ["an acceptance-criterion ID", `${TECHNICAL}| TC-01 | Deterministic | AC-0001-0039-01 |\n`],
     ["a contract ID", `${TECHNICAL}| TC-01 | CLI-0014 decides it | Reproducible |\n`],

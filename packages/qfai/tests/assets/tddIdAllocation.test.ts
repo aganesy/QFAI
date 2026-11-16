@@ -20,7 +20,7 @@ describe("story-tree identifiers are allocated without reuse", () => {
         "US-NNNN-NNNN",
         "AC-NNNN-NNNN-NN",
         "EX-NNNN-NNNN-NN",
-        "BR-NNNN",
+        "BR-KIND-NNNN-NNNN",
         "DEC-NNNN",
         "OQ-NNNN",
       ]) {

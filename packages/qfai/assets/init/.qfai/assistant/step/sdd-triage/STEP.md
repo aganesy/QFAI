@@ -203,8 +203,8 @@ this step took it or the operator answered it.
 Allocate each new BF, US, AC, EX or BR ID from the highest ID of its kind in
 scope plus one, including retired IDs named in decisions rows. BF scope is
 project-wide; US scope is its BF; AC and EX scope is their US; a contract
-number's scope is every contract of every kind; BR scope is its contract, whose
-number the BR carries (`BR-0006-0001` belongs to `API-0006`). Empty scopes begin
+number's scope is every contract of its kind; BR scope is its contract, whose
+kind and number the BR carries (`BR-API-0006-0001` belongs to `API-0006`). Empty scopes begin
 at `0001`, or `01` for AC and EX tails. Take each new ID from
 `npx qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>` with a fetched
 base: it prints the number after the highest of the working tree and the base.

@@ -40,16 +40,17 @@ Stage 4 of the story tree: contracts and the business rules they enforce.
   `Reconciled With` and `Purpose`.
 
 A new contract takes its kind from its directory (`cli/`, `api/`, `db/` or
-`ui/`) and the next contract number. The number is shared by every kind: the
-next one is one more than the highest number in any `ID` of the
-`contracts.md` index and in any file name under the contract directories,
-whatever its kind. With `UI-0004` and `DB-0002` present, the next DB contract
-is `DB-0005`, not `DB-0003`. A number is never reused. The file is
-`<kind>-NNNN-<slug>.<ext>`, and it declares its ID once: in the H1 of a
-Markdown contract (`# CLI-0001: <title>`), or on a `QFAI-CONTRACT-ID: API-0002`
-line in YAML or SQL. `npx qfai validate --profile sdd` reports two contracts
-that share a number as `QFAI-CONTRACT-034`; the `discussion` profile does not
-check contracts, so run the `sdd` profile after writing one.
+`ui/`) and the next number of that kind. Each kind has its own number
+sequence: the next number is one more than the highest number of that kind in
+any `ID` of the `contracts.md` index and in any file name under that kind's
+directory. With `UI-0004` and `DB-0002` present, the next DB contract is
+`DB-0003` and the next UI contract `UI-0005`. A number is never reused within
+its kind. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares its ID once:
+in the H1 of a Markdown contract (`# CLI-0001: <title>`), or on a
+`QFAI-CONTRACT-ID: API-0002` line in YAML or SQL.
+`npx qfai validate --profile sdd` reports two contracts of one kind that share
+a number as `QFAI-CONTRACT-034`; the `discussion` profile does not check
+contracts, so run the `sdd` profile after writing one.
 
 Write only the triaged scope, as
 `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#critical-decisions-and-no-question-mode`
@@ -65,7 +66,8 @@ states.
    full EX ID, and nothing but EX IDs; every EX is cited by at least one BR.
    The relation may be many-to-many.
 3. Put each BR in the contract that enforces it, numbered
-   `BR-<contract number>-NNNN`: `x-qfai-rules` in YAML or JSON, `-- Rule` and
+   `BR-<KIND>-<contract number>-NNNN`, such as `BR-API-0002-0001` for the
+   first rule of `API-0002`: `x-qfai-rules` in YAML or JSON, `-- Rule` and
    `-- Examples:` in SQL, and a `## Business rules` table in Markdown.
 4. Define a rule shared by contracts once, in its authoritative contract. No
    other contract restates or cites it: only code and tests cite a BR.

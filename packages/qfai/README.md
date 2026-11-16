@@ -289,9 +289,10 @@ QFAI keeps policy, behavior and enforcing contracts in one story tree under `.qf
   story has `01_User-story.md`, `02_Acceptance-Criteria.md` and `03_Example.md`.
 - `03_contract/` holds the contract index and API, DB, UI and CLI contracts.
   The directory sets a contract's kind, and its ID is `<KIND>-NNNN`, such as
-  `API-0002`, with a number no other contract of any kind uses. The file is
-  named `<kind>-NNNN-<slug>.<ext>`. A BR is defined in the contract that
-  enforces it, as `BR-<contract number>-NNNN`. The brand design is the
+  `API-0002`, with a number no other contract of that kind uses: each kind
+  counts from `0001` on its own. The file is named
+  `<kind>-NNNN-<slug>.<ext>`. A BR is defined in the contract that enforces
+  it, as `BR-<KIND>-<contract number>-NNNN`, such as `BR-API-0002-0001`. The brand design is the
   repository's root `DESIGN.md`, and each screen is a `ui/` contract.
 - `decisions.md` and `open-questions.md` record project decisions and open
   questions in append-only four-column tables.

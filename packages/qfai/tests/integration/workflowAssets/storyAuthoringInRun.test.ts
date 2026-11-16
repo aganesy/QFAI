@@ -216,12 +216,12 @@ describe("qfai-sdd writes the story tree", () => {
   // QFAI:EX-0001-0147-09
   it("writes each rule inside the contract that enforces it, in that file type's form", async () => {
     expect(await section(CONTRACT_STEP, "## Procedure")).toContain(
-      "Put each BR in the contract that enforces it, numbered `BR-<contract number>-NNNN`: `x-qfai-rules` in YAML or JSON, `-- Rule` and `-- Examples:` in SQL, and a `## Business rules` table in Markdown.",
+      "Put each BR in the contract that enforces it, numbered `BR-<KIND>-<contract number>-NNNN`, such as `BR-API-0002-0001` for the first rule of `API-0002`: `x-qfai-rules` in YAML or JSON, `-- Rule` and `-- Examples:` in SQL, and a `## Business rules` table in Markdown.",
     );
     const samples: [string, RegExp][] = [
-      [path.join("contracts", "api-contract.sample.yaml"), /^# QFAI-CONTRACT-ID: API-(\d{4})$/m],
-      [path.join("contracts", "db-contract.sample.sql"), /^-- QFAI-CONTRACT-ID: DB-(\d{4})$/m],
-      [path.join("spec", "03_contract", "cli", "cli-NNNN-title.md"), /^# CLI-(\d{4}):/m],
+      [path.join("contracts", "api-contract.sample.yaml"), /^# QFAI-CONTRACT-ID: (API-\d{4})$/m],
+      [path.join("contracts", "db-contract.sample.sql"), /^-- QFAI-CONTRACT-ID: (DB-\d{4})$/m],
+      [path.join("spec", "03_contract", "cli", "cli-NNNN-title.md"), /^# (CLI-\d{4}):/m],
     ];
     for (const [relative, declaration] of samples) {
       const text = await readFile(path.join(TEMPLATES, relative), "utf-8");
