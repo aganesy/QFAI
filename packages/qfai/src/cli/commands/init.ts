@@ -601,7 +601,7 @@ export async function runInit(
   if (!options.dryRun) {
     const preparation = await prepareGraphIntegration(destRoot, graphProcess);
     if (preparation.files.includes(".gitignore")) await ensureRootGitignoreEntries(destRoot, false);
-    info(renderGraphPreparation(preparation, preparation.hosts));
+    info(renderGraphPreparation(preparation));
     for (const conflict of preparation.conflicts) warn(conflict);
     if (preparation.failedStep) {
       throw new Error(
@@ -2697,7 +2697,7 @@ function buildCopilotInstructions(): string {
     "- `.agents/rules/ai-readable-markdown.md` — read when you write Markdown an agent reads, a skill body or a reference pointer: a file stays at or under 500 lines and a `SKILL.md` body at or under 20,000 characters, and every pointer says when to read the file it names.",
     "- `.agents/rules/session-feedback.md` — read when every task the user gave is complete, never at a pause: review the session for problems in QFAI itself, ask whether to file them with QFAI, and propose overlay items and where to keep a correction given twice.",
     "- `.agents/rules/delegation-steering.md` — read when you delegate a task while the user is present: check its first actions and restart it from a rewritten brief after two corrections that do not land.",
-    "- `.agents/rules/graph-exploration.md` — read before exploring code or documents; when the graph tools are ready, use the matching graph engine, current analysis and supported search protection, and until then follow its opening section on searching without them.",
+    "- `.agents/rules/graph-exploration.md` — read before searching, exploring or investigating code or documents: prefer the matching graph CLI first; ordinary search stays acceptable, and no tool blocks it.",
     "",
   ].join("\n");
 }

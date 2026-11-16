@@ -192,15 +192,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending tests for the implement stage. The
   scope question says so for that option. Other scopes are printed as before.
 
-- **The search-protection hook allows a search scoped inside the project.** A
-  grep, rg, git grep, Select-String, findstr or native search call that names
-  at least one path, every one inside the project root, now runs. A search with
-  no path, one over the project root itself (such as `.`), and one whose path
-  the hook cannot place inside the project are still redirected to the graph:
-  a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
-  home prefix or a `..` segment. A findstr with `/s` and a native search scoped
-  only by an include glob are also redirected.
-
 - **A merge waits for every check of its head commit.** Step 3 of the shipped
   `triage-operate` step now says that the checks still running before a merge
   are every check run of the pull request's head commit that is queued or in
@@ -358,6 +349,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not a verdict. A project records a new incompatibility in its procurement
   record and reports it to QFAI.
 
+### Removed
+
+- **Breaking: no hook blocks a direct search any more.** `qfai init` no longer
+  writes the graph search-denial hooks into `.claude/settings.json`,
+  `.codex/hooks.json` or `.github/hooks/qfai-graph.json`, no longer installs
+  `.qfai/tools/graph-hook.mjs` or `graph-enforcement.json`, and no longer prints
+  a Protection section. The `graph-cli.mjs fallback` command and its pending and
+  grant state are gone, and `qfai doctor` no longer checks for the hook script.
+  `.agents/rules/graph-exploration.md` now says to prefer the graph CLIs for
+  searching, exploring and investigating, and that ordinary search is
+  acceptable. Hook entries an earlier init wrote stay in your settings, and they
+  run a hook script whose code is no longer shipped: delete the graph entries
+  from `.claude/settings.json` and `.codex/hooks.json`, and delete
+  `.github/hooks/qfai-graph.json`, `.qfai/tools/graph-hook.mjs`,
+  `.qfai/tools/graph-enforcement.json` and the `*.pending.json`, `*.draft.json`
+  and `*.grant.json` files under `.qfai/tools/state/`.
+
 ### Fixed
 
 - **The `DESIGN.md` step says where a flow's surfaces come from.** It
@@ -365,14 +373,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing has defined since 2.5.0. It now reads the surfaces the deliberation record
   settles, the `tech.md` `Surface` row and the UI contracts linked to the
   flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
-
-- **The search-protection hook reads a search that a program runner or a piped
-  shell runs.** `nohup`, `setsid`, `nice`, `ionice`, `stdbuf`, `timeout` and
-  `xargs` are unwrapped like `env`, so `nohup rg foo /` and
-  `git ls-files | xargs grep -r bar /` are denied as searches. A pipeline
-  stage that runs its input as a shell, such as `| sh`, `| bash -s` or
-  `| pwsh -Command -`, is denied with a message saying the hook cannot read
-  the commands that shell runs. Closes #4384.
 
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
   derived-value declaration covered both a value the DB stores and a value
@@ -411,20 +411,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   wait for a new page after a click, and the shell code for React and plain
   DOM. The test layers rule and the scaffold and acceptance steps forbid a
   fixed sleep or a blind retry in its place.
-
-- **The search-protection hook lets a search of one file outside the project
-  run.** A search the hook did not already allow as scoped inside the project
-  is no longer denied when it is a grep, rg, findstr or Select-String that is
-  the only command of its event, with no pipeline stage, whose literal pattern
-  names no existing file and whose one absolute file operand names an existing
-  single-link regular file outside the project worktree and the checkout the
-  hook belongs to, before and after symbolic links, so
-  `grep -n foo /etc/hosts` runs. An outside directory or relative operand, a
-  second operand, git grep, an outside file beside another command or
-  pipeline stage or behind `env`, a search that mixes project and outside
-  paths, a glob, `~`, variable or `..` operand, a link, hard link, MSYS link
-  file or shortcut, an option that reads another file, `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH` set,
-  or an operand that does not exist stays denied. Fixes #4179.
 
 - **A `Derived (not stored)` declaration for a value no DB column holds is
   accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`

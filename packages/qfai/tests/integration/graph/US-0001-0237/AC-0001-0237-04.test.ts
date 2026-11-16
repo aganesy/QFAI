@@ -25,9 +25,7 @@ describe("AC-0001-0237-04", () => {
       expect(await readFile(runtimes.codegraph)).toEqual(priorCode);
       expect(result.failedStep).toBe("Graphify download");
       expect(result.runtime).toBe("not-ready");
-      expect(renderGraphPreparation(result, result.hosts)).toContain(
-        "Previous installation: retained",
-      );
+      expect(renderGraphPreparation(result)).toContain("Previous installation: retained");
     } finally {
       await project.dispose();
     }

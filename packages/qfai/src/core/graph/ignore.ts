@@ -4,7 +4,12 @@ import { isEnoent } from "../fs/errno.js";
 import { findUnsafeHostFileComponent } from "../init/fsGuards.js";
 import { isPathIgnored } from "../gitignore.js";
 import type { GraphProcess } from "./process.js";
-import type { GraphSettingsComposition } from "./hostSettings.js";
+
+/** The files a graph preparation step wrote, and the conflicts it left for the adopter. */
+export interface GraphSettingsComposition {
+  files: string[];
+  conflicts: string[];
+}
 
 export const GRAPH_IGNORE_MARKER = "# QFAI graph analysis (local)";
 

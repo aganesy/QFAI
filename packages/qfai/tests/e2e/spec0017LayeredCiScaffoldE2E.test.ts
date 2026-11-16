@@ -641,13 +641,8 @@ describe(
         const bytes = await readFile(full);
         const mode = (await stat(full)).mode;
         const reviewed = graphFiles.get(file);
-        const sharedHook =
-          file === ".github/hooks/qfai-graph.json" &&
-          fileDigest(bytes) === ALLOWED_INIT_CONTENT.get(file) &&
-          (mode & 0o100) === 0;
-        const why = sharedHook
-          ? undefined
-          : reviewed === undefined
+        const why =
+          reviewed === undefined
             ? initMustNotShip(file, bytes, mode)
             : bytes.toString("utf8") === reviewed && (mode & 0o100) === 0
               ? undefined
