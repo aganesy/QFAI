@@ -87,7 +87,7 @@ describe("a scope that leaves out the implement stage leaves its test obligation
       ]);
 
       expect(flat(sectionOf(gate, "### Test obligations a scope leaves pending"))).toContain(
-        "A left-out stage of kind `test_fix` sets no `testsPending`: it repairs tests and writes none for a new ID, so a `QFAI-STORY-006` error for an ID such a run wrote is an ordinary failure, which `verify-repo-gate`'s fix loop handles like any other.",
+        "A left-out stage of kind `test_fix` sets no `testsPending`: it repairs tests and writes none for a new ID, so in a scope without `testsPending` a `QFAI-STORY-006` error for an ID the run wrote is an ordinary failure, which `verify-repo-gate`'s fix loop handles like any other.",
       );
       expect(flat(repo)).toContain(
         "Every other failure, of the QFAI gate included, keeps the loop.",
@@ -103,7 +103,7 @@ describe("a scope that leaves out the implement stage leaves its test obligation
       const screens = await read(tree, "assistant/skill/qfai-run/references/operator-screens.md");
 
       expect(flat(sectionOf(screens, "## The scope question"))).toContain(
-        "A run that writes the specification and holds no implementation or test stage gets no verify stage, as `narrow` gets none, so no gate runs and nothing is listed as `PENDING`; the final report says its tests come with the implementation stage it left out.",
+        "A run that writes the specification and stops before the first implementation stage of a route that has one gets no verify stage, as `narrow` gets none, so no gate runs and nothing is listed as `PENDING`; the final report says its tests come with the implementation stage it left out.",
       );
     });
   }

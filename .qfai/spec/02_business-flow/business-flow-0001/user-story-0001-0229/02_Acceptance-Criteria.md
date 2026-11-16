@@ -41,7 +41,7 @@ Feature: Choose how far the work on a request goes before it starts
     When the answer names stages of the plan
     Then the session runs the stages up to the last one it names, in plan order
     And when it asks for work no stage of the plan does, the session stops and names that work
-    And a run that writes the specification and stops before implementation gets no verify stage, and its final report says its tests come with the implementation stage it left out
+    And a run that writes the specification and stops before the implementation stage of a route that has one gets no verify stage, and its final report says its tests come with the implementation stage it left out
 
   # AC-0001-0229-06
   Scenario: A request that ends before implementation lists no tests
