@@ -365,6 +365,7 @@ describe("hex literals in source", () => {
         "a:not(.b) { color: #12345a }",
         'a:not([title="("]) { color: #12345b }',
         '<rect className="a:not(" fill="#12345c" />',
+        'const s = ":is("; const c = "#12345d";',
       ].join("\n"),
     );
     expect(found.map((hex) => [hex.line, hex.written])).toEqual([
@@ -381,6 +382,7 @@ describe("hex literals in source", () => {
       [11, "#12345a"],
       [12, "#12345b"],
       [13, "#12345c"],
+      [14, "#12345d"],
     ]);
   });
 

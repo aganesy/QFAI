@@ -252,14 +252,15 @@ function lineBefore(text: string, lineStart: number): string {
  * wherever it is written. Otherwise it is one in a colour attribute's value and not in another
  * attribute's; outside a tag, as a whole string literal, or in a CSS declaration value, though not
  * in a selector, whose `{` follows on the line before any `;` or `}` and is not a template's `${`.
- * Outside a tag, a hex inside a selector function still open before it on its line, such as
+ * Outside a tag and a whole string literal, a hex inside a selector function still open before it
+ * on its line, such as
  * `:not(.a, #id` or `:has(> #id`, is a selector wherever it sits in the argument list.
  */
 function colorPlace(attribute: string | null, before: string, after: string): boolean {
   if (/-\[$/.test(before) && /^\]/.test(after)) return true;
   if (attribute !== null) return COLOR_ATTRIBUTE_NAME_RE.test(attribute);
-  if (insideSelectorFunction(before)) return false;
   if (/["'`]$/.test(before) && /^["'`]/.test(after)) return true;
+  if (insideSelectorFunction(before)) return false;
   if (/^[^;{}]*(?<!\$)\{/.test(after)) return false;
   return DECLARATION_RE.test(before);
 }
