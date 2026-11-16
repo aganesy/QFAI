@@ -7,7 +7,7 @@ async function main() {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   try {
     const result = await prepareGraphIntegration(root);
-    process.stdout.write(renderGraphPreparation(result, result.hosts) + "\n");
+    process.stdout.write(renderGraphPreparation(result) + "\n");
     for (const conflict of result.conflicts) process.stderr.write(conflict + "\n");
     if (result.failedStep) process.exitCode = 1;
   } catch (cause) {

@@ -5,7 +5,7 @@ import { getInitAssetsDir } from "../../shared/assets.js";
 import { isEnoent } from "../fs/errno.js";
 import { findUnsafeHostFileComponent, readPinnedRegularFile } from "../init/fsGuards.js";
 import { assertGraphStoragePath } from "./storage.js";
-import type { GraphSettingsComposition } from "./hostSettings.js";
+import type { GraphSettingsComposition } from "./ignore.js";
 
 export async function installGraphEntrypoints(root: string): Promise<GraphSettingsComposition> {
   const directory = path.join(root, ".qfai", "tools");
@@ -13,9 +13,6 @@ export async function installGraphEntrypoints(root: string): Promise<GraphSettin
   const bundle = path.resolve(getInitAssetsDir(), "..", "..", "dist", "graph");
   const sources: Record<string, string> = {
     "graph-cli.mjs": wrapper(path.join(bundle, "cli.mjs"), "runInstalledGraphCli"),
-    "graph-hook.mjs": wrapper(path.join(bundle, "hook.mjs"), "runInstalledGraphHook"),
-    "graph-enforcement.json":
-      JSON.stringify({ kind: "graph-enforcement", denyExploration: true }) + "\n",
   };
   const record = "graph-entrypoints.json";
   const names = [...Object.keys(sources), record];
@@ -41,9 +38,7 @@ export async function installGraphEntrypoints(root: string): Promise<GraphSettin
     )
       return conflict();
     const recorded = parsed.sources;
-    if (
-      Object.keys(recorded).some((name) => !(name in sources) || typeof recorded[name] !== "string")
-    )
+    if (Object.values(recorded).some((source: unknown) => typeof source !== "string"))
       return conflict();
     previous = recorded;
   } catch (cause: unknown) {
@@ -97,7 +92,7 @@ function conflict(): GraphSettingsComposition {
   return {
     files: [],
     conflicts: [
-      "Retain edited graph entrypoints. Review .qfai/tools before repairing graph protection.",
+      "Retain edited graph entrypoints. Review .qfai/tools before repairing the graph CLI.",
     ],
   };
 }

@@ -119,7 +119,7 @@ describe("the prompt-time reminder hooks", () => {
     await withEmptyRepo(async (root) => {
       const output = await initQuietly(root);
 
-      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"), "codex")).toBe(
+      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"))).toBe(
         await readFile(path.join(packageRoot, "assets", "init", CODEX), "utf-8"),
       );
       expect(await promptMarkers(root, CODEX)).toEqual([
@@ -205,16 +205,12 @@ describe("the prompt-time reminder hooks", () => {
 
       const first = await initQuietly(root);
 
-      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"), "codex")).toBe(
-        templateText,
-      );
+      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"))).toBe(templateText);
       expect(trustLines(first)).toEqual([TRUST_LINE]);
 
       const second = await initQuietly(root);
 
-      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"), "codex")).toBe(
-        templateText,
-      );
+      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"))).toBe(templateText);
       expect(trustLines(second)).toEqual([]);
     });
   });
@@ -234,17 +230,13 @@ describe("the prompt-time reminder hooks", () => {
 
       const first = await initQuietly(root);
 
-      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"), "codex")).toBe(
-        templateText,
-      );
+      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"))).toBe(templateText);
       expect(first).not.toContain("(edited here)");
       expect(trustLines(first)).toEqual([TRUST_LINE]);
 
       const second = await initQuietly(root);
 
-      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"), "codex")).toBe(
-        templateText,
-      );
+      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"))).toBe(templateText);
       expect(trustLines(second)).toEqual([]);
     });
   });
@@ -279,7 +271,7 @@ describe("the prompt-time reminder hooks", () => {
 
       const output = await initQuietly(root);
 
-      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"), "codex")).toBe(
+      expect(reminderSettings(await readFile(path.join(root, CODEX), "utf-8"))).toBe(
         await readFile(path.join(packageRoot, "assets", "init", CODEX), "utf-8"),
       );
       expect(output).not.toContain("(edited here)");

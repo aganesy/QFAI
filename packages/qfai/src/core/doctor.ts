@@ -57,7 +57,6 @@ import {
 import { checkAssistantDrift } from "./doctor/assistantDrift.js";
 import { checkAssistantVersion } from "./doctor/assistantVersion.js";
 import { checkDocsLane } from "./doctor/docsLane.js";
-import { checkGraphHookScript } from "./doctor/graphHook.js";
 import { checkMutationProofs } from "./doctor/mutationProofs.js";
 import { checkMdschemaBinary } from "./doctor/mdschemaBinary.js";
 import { checkWorkflowCost } from "./doctor/workflowCost.js";
@@ -331,8 +330,6 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     addCheck(checks, { ...mutationProofs, message: escapeForMessage(mutationProofs.message) });
   addCheck(checks, await checkMdschemaBinary());
   for (const check of await checkWorkflowPreconditions(root)) addCheck(checks, check);
-  const graphHook = await checkGraphHookScript(root);
-  if (graphHook) addCheck(checks, graphHook);
 
   if (options.profile === "prototyping") {
     checks.push(...(await buildPrototypingDoctorChecks(root, config, options.targetUrl)));
