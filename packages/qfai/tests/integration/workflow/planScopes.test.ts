@@ -681,3 +681,20 @@ it("A scope that writes the specification and leaves out the implement stage say
     ],
   ]);
 });
+
+// BR-0015-0336
+// QFAI:EX-0001-0229-37
+it("A scope that leaves out only a test-repairing stage leaves no tests pending", async () => {
+  const planned = await planFor(extraction({ intent: "stale-record", artifacts: ["spec"] }));
+
+  expect(field(planned.json, "route")).toBe("restate-records");
+  const stages = field(planned.json, "stages");
+  const kinds = Array.isArray(stages) ? stages.map((stage) => field(stage, "kind")) : [];
+  expect(kinds).toContain("test_fix");
+  expect(kinds).not.toContain("implement");
+  expect(field(planned.json, "scopes")).toEqual([
+    { scope: "narrow", stages: ["diagnose", "spec"], recommended: true },
+    { scope: "medium", stages: ["diagnose", "spec", "note", "verify"], recommended: false },
+    { scope: "broad", stages: stageIds(planned.json), recommended: false },
+  ]);
+});

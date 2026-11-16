@@ -208,6 +208,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending tests for the implement stage. The
   scope question says so for that option. Other scopes are printed as before.
 
+- **Pending tests are promised only where a later stage writes them.** A
+  scope that leaves out a stage which only repairs existing tests is not
+  marked `testsPending`, so a missing test for an ID a record restatement
+  wrote fails the QFAI gate as an ordinary error, which the repository gate's
+  fix loop handles like any other. A free-text scope answer that stops before
+  implementation runs no gate, like `narrow`, and its final report says the
+  tests come with the implementation it left out.
+
 - **A merge waits for every check of its head commit.** Step 3 of the shipped
   `triage-operate` step now says that the checks still running before a merge
   are every check run of the pull request's head commit that is queued or in

@@ -174,7 +174,9 @@ it leaves out a stage of kind `implement` the route has; no other scope holds
 the key. The tests that specification asks for come with the implement stage,
 so in that scope `verify-qfai-gate` lists the `QFAI-STORY-006` errors for the
 IDs the run wrote as pending, and `verify-commit` still commits when those are
-the only errors.
+the only errors. A left-out stage of kind `test_fix` does not set the key: it
+repairs a test under the IDs it already annotates and writes no test for a new
+ID.
 
 - `narrow` runs the stages up to the last one that writes an artifact the
   extraction names, less any implementation that writes none of them. When those stages include implementation or a test fix, the
