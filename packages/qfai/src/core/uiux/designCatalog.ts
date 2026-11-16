@@ -148,10 +148,14 @@ export function tokenHexes(design: DesignMd): Set<string> {
 export type RawHex = { line: number; written: string; hex: string };
 
 // A `#` that starts a hex literal: not inside a word, an entity, a URL path, a `url(#id)`
-// reference in any case or a selector function such as `:not(#id)`, and not followed by more of a
-// name. A `(` of any other function, such as `linear-gradient(#123456, #fff)`, does not hide it.
+// reference in any case or straight after a selector function's `(`, as in `:not(#id)`, and not
+// followed by more of a name. A `(` of any other function, such as
+// `linear-gradient(#123456, #fff)`, does not hide it. Outside a tag, `insideSelectorFunction`
+// also skips an id later in a selector function's arguments.
 const RAW_HEX_RE =
   /(?<![\w&#/])(?<!url\()(?<!:(?:not|is|where|has|matches|any)\()#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{4}|[0-9a-f]{3})(?![\w-])/gi;
+/** The opening of a selector function, whose arguments are selectors. */
+const SELECTOR_FUNCTION_RE = /:(?:not|is|where|has|matches|any)\(/gi;
 // Comments hold prose such as `// see #12ab`, so they are blanked before the scan. The `//` form
 // is not read after a `:`, so the path of a URL such as `https://` is not taken for a comment, nor
 // after a `(`, a quote or a `=` when a host follows, as in `url(//cdn.example/x.png)` or
@@ -248,13 +252,40 @@ function lineBefore(text: string, lineStart: number): string {
  * wherever it is written. Otherwise it is one in a colour attribute's value and not in another
  * attribute's; outside a tag, as a whole string literal, or in a CSS declaration value, though not
  * in a selector, whose `{` follows on the line before any `;` or `}` and is not a template's `${`.
+ * Outside a tag and a whole string literal, a hex inside a selector function still open before it
+ * on its line, such as `:not(.a, #id` or `:has(> #id`, is a selector wherever it sits in the
+ * argument list.
  */
 function colorPlace(attribute: string | null, before: string, after: string): boolean {
   if (/-\[$/.test(before) && /^\]/.test(after)) return true;
   if (attribute !== null) return COLOR_ATTRIBUTE_NAME_RE.test(attribute);
   if (/["'`]$/.test(before) && /^["'`]/.test(after)) return true;
+  if (insideSelectorFunction(before)) return false;
   if (/^[^;{}]*(?<!\$)\{/.test(after)) return false;
   return DECLARATION_RE.test(before);
+}
+
+/**
+ * Whether a selector function opens in `before` and its `(` is not closed by the end of it. A
+ * parenthesis inside a quoted attribute selector, as in `:not([title="("])`, is not counted.
+ */
+function insideSelectorFunction(before: string): boolean {
+  for (const opening of before.matchAll(SELECTOR_FUNCTION_RE)) {
+    let depth = 1;
+    let quote: string | null = null;
+    for (const char of before.slice(opening.index + opening[0].length)) {
+      if (quote !== null) {
+        if (char === quote) quote = null;
+        continue;
+      }
+      if (char === '"' || char === "'") quote = char;
+      else if (char === "(") depth += 1;
+      else if (char === ")") depth -= 1;
+      if (depth === 0) break;
+    }
+    if (depth > 0) return true;
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------
