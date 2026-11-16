@@ -870,7 +870,6 @@ describe("reviewed init content copied from the asset root", () => {
     ".claude/settings.json",
     ".codex/hooks.json",
     ".github/copilot-instructions.md",
-    ".github/hooks/qfai-graph.json",
     ".gitignore",
   ]);
   const CHECKED_ABOVE = new Set(["AGENTS.md"]);

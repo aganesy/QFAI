@@ -1,18 +1,22 @@
 # Graph exploration
 
-Use the project graph CLIs for exploratory searches once they are ready. Run
-`qfai init` to prepare or repair the project-local runtimes, CLI and denial
-hooks. This integration registers and launches no graph MCP server.
+For searching, exploring and investigating code or documents, prefer the
+project graph CLIs first. Run `qfai init` to prepare or repair the
+project-local runtimes and CLI. This integration registers and launches no
+graph MCP server.
+
+Ordinary search (`grep`, `rg`, `git grep`, `findstr`, `Select-String`) is
+acceptable, and no tool blocks it. Reach for it when the graph tools are not
+ready, when the graph cannot answer the question, or when you already know the
+exact text or file you need. Do not repeat a search you already ran just to
+route it through the graph.
 
 ## While the graph tools are not ready
 
 When `qfai init` or the graph CLI reports an engine as not ready, use ordinary
-search for the questions that engine answers. Do the same when search
-protection is reported as unsupported for your host. Say in your report that
-the graph was not used and why. When a supported hook denies the search, use
-the fallback command in "Direct search and result limits" below. Retry once
-the cause is fixed; for a failed download, run the command `qfai init` names to
-see the cause.
+search for the questions that engine answers, and say in your report that the
+graph was not used and why. Retry once the cause is fixed; for a failed
+download, run the command `qfai init` names to see the cause.
 
 ## Choose the first engine
 
@@ -32,17 +36,17 @@ The CLI checks native freshness, prepares required analysis where possible and
 retries its query. Each command exits after returning evidence or an actionable
 failure; it uses no daemon or IPC.
 
-Read an exact known source path directly. A known-file read grants no general
-search exception. Use a second engine only for a specific unresolved question
-that crosses from code to documents or documents to code. A complete answer
-needs no second engine, watcher or continuous synchronization.
+Read an exact known source path directly. Use a second engine only for a
+specific unresolved question that crosses from code to documents or documents
+to code. A complete answer needs no second engine, watcher or continuous
+synchronization.
 
 ## Processing and readiness
 
-Installed tools do not establish current analysis or search protection.
-Inspect code, document and host readiness separately. Configure document
-processing explicitly before extraction. Ambient API credentials choose no
-provider and authorize no external transmission or paid processing.
+Installed tools do not establish current analysis. Inspect code and document
+readiness separately. Configure document processing explicitly before
+extraction. Ambient API credentials choose no provider and authorize no
+external transmission or paid processing.
 
 Local processing is the default. An external destination requires explicit
 human approval of that destination and document scope. A completed, compatible,
@@ -106,52 +110,12 @@ Review the displayed worktree, destination, backend, model and document scope
 before answering. The AI must not supply this approval or pipe a response.
 An omitted or refusing authorization callback starts no external processing.
 After preparation succeeds, retry the documents CLI. A changed scope requiring
-new external processing needs this review again. Search fallback grants no
-document-transmission permission.
+new external processing needs this review again.
 
 Exclude secret files from both engines and generated storage. Keep credentials
 out of tracked integration settings, logs and reusable analysis.
 
-## Direct search and result limits
-
-Supported pre-tool hooks deny direct exploratory search and display the
-appropriate graph CLI command and a pending attempt UUID. A direct search is
-exploratory when it names no path, names the project root itself (such as
-`.`), or names a path the hook cannot place inside the project: one with a
-glob, an expansion or PowerShell subexpression, a home prefix or a `..`
-segment. A search with an unknown option, or one whose command an alias,
-function or variable may redefine, is also exploratory, as are findstr with
-`/s` and a native search scoped only by an include glob. A search whose every
-path lies inside the project, such as `grep -n name src/module` or
-`rg name src/a.ts docs/`, is allowed. A command the hook cannot read stays denied. Build, test, lint and
-graph-engine internals remain permitted. Hooks only classify, deny and save
-bounded pending state; they perform no graph query, preparation, network
-request or model call. The graph CLI never runs raw search itself.
-
-When the AI judges that the graph cannot answer, run the fallback command with
-the pending UUID displayed by the denied action:
-
-```sh
-node .qfai/tools/graph-cli.mjs fallback --attempt-id "UUID-from-denial" --question "unresolved question" --reason "why the graph cannot answer"
-```
-
-The CLI derives immutable target, operation, worktree, session and domain from
-the pending attempt. It attempts the relevant graph itself, prepares required
-analysis where possible and requeries before saving permission. Partial,
-not-ready or failed results can still leave an unresolved question. State the
-actual limitation; the CLI does not verify the reason's semantic truth.
-
-Permission lasts exactly 60 seconds and matches only the observed target and
-operation in the same worktree and session, strictly before expiry. No human
-search approval is needed. Manual scope overrides and missing, invalid,
-expired or mismatched state grant nothing. State-management failures grant
-nothing. Correct the reported cause and retry the denied action when a new
-pending attempt is required. Search fallback authorizes no external document
-transmission.
-
-Configuration alone proves no blocking. Trust and runtime behavior are checked
-per host, version and event set. Hidden scripts, aliases and continuing shell
-input remain outside the proven boundary unless separately demonstrated.
+## Reading results
 
 Report unparsed, unsupported, unreadable and incomplete scope separately from
 no matches. Label inferred relationships and retain source locations. Incomplete

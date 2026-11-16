@@ -2,17 +2,14 @@
 x-qfai-depends-on: []
 x-qfai-rules:
   - id: BR-0022-0001
-    statement: The preparation summary names each tool, runtime readiness, analysis readiness and host protection state separately; installation is never presented as verified analysis or protection.
-    examples: [EX-0001-0237-01, EX-0001-0237-20, EX-0001-0237-21, EX-0001-0235-19, EX-0001-0235-20, EX-0001-0235-21]
+    statement: The preparation summary names each tool, runtime readiness and analysis readiness separately; installation is never presented as verified analysis.
+    examples: [EX-0001-0237-01, EX-0001-0237-20, EX-0001-0237-21]
   - id: BR-0022-0002
     statement: A preparation failure names the failed step and a recovery action and states whether a prior usable installation was retained; an absent document backend is shown as documents-not-ready with the configuration action.
     examples: [EX-0001-0237-05, EX-0001-0237-14, EX-0001-0237-20, EX-0001-0234-07]
   - id: BR-0022-0003
     statement: A dry-run displays the proposed tool actions and observed states under a preview title with an explicit no-changes notice; it does not label planned installation as completed.
     examples: [EX-0001-0237-17]
-  - id: BR-0022-0004
-    statement: A denied exploration message names the attempted action, the reason, the relevant graph CLI command, the bounded pending attempt UUID and preparation or AI-decided scoped fallback; failed and unsupported protection are distinguished visibly.
-    examples: [EX-0001-0235-01, EX-0001-0235-02, EX-0001-0235-21, EX-0001-0235-22, EX-0001-0234-15]
   - id: BR-0022-0005
     statement: Graph-query results show the requested scope, its readiness and coverage limits alongside source references, and label inferred relationships separately from facts. Invalid or incomplete arguments and failed queries show the failure cause and concrete recovery; lock contention shows retry and an abandoned lock shows manual recovery without automatic deletion.
     examples: [EX-0001-0234-13, EX-0001-0234-14, EX-0001-0234-16, EX-0001-0236-15, EX-0001-0236-20]
@@ -31,8 +28,8 @@ screens:
         label: Prepare project graph tools
         acceptance: Both tool outcomes and any failed preparation step are visible.
       - id: inspect_readiness
-        label: Check analysis and host readiness
-        acceptance: Runtime, code, documents and each host have separate status values.
+        label: Check analysis readiness
+        acceptance: Runtime, code and documents have separate status values.
       - id: recover_preparation
         label: Recover failed preparation
         acceptance: The failed step and a concrete next action are visible without a false success claim.
@@ -42,9 +39,6 @@ screens:
         type: output
       - id: graph_prepare_analysis_status
         label: Analysis
-        type: output
-      - id: graph_prepare_host_status
-        label: Protection
         type: output
       - id: graph_prepare_failed_step
         label: Failed step
@@ -66,18 +60,18 @@ screens:
         effect: Applies an explicitly selected upstream processing destination to the managed process before document analysis.
     states:
       - id: default
-        renders: the Tools, Analysis and Protection status lines, each with its own value, and the notices that configuration does not verify protection and that .qfai/tools/ is local to this checkout
-        next: check trust and runtime verification for each host, and run qfai init in each other clone or worktree
+        renders: the Tools and Analysis status lines, each with its own value, and the notice that .qfai/tools/ is local to this checkout
+        next: run qfai init in each other clone or worktree
       - id: empty
-        renders: Analysis shows documents not ready, or Protection shows that the host cannot enforce the search denial
-        next: configure document processing; an unsupported host stays without search protection
+        renders: Analysis shows documents not ready
+        next: configure document processing
       - id: loading
         none: the summary is printed once when preparation ends; nothing of it renders while preparation runs
       - id: error
         renders: the Failed step, its Recovery and whether the Previous installation was retained
         next: fix the cause, then run qfai init again
       - id: success
-        renders: every tool and the analysis report ready with no failed step; each host shows its configured protection with the notice that configuration does not verify it
+        renders: every tool and the analysis report ready with no failed step
         next: query the graph with node .qfai/tools/graph-cli.mjs code or documents
     supplements:
       - id: graph_prepare_documents_missing
@@ -90,21 +84,11 @@ screens:
         when: error
         text: Preparation failed. Fix the cause, then run qfai init again.
         why: The failed step needs a recovery action. Installer output is not shown because it can carry credentials, so a failed download names the command to rerun by hand to see the cause, and a failed version check, which carries none, names its exit code and first error lines or the version it printed; the previous installation field records whether usable state was retained.
-      - id: graph_prepare_unverified
-        near: graph_prepare_host_status
-        when: default
-        text: Configuration alone does not verify search protection. Check trust and runtime verification for each host.
-        why: A settings entry cannot prove the host accepted it or blocked a search.
       - id: graph_prepare_local
-        near: graph_prepare_host_status
+        near: graph_prepare_tool_status
         when: default
         text: ".qfai/tools/ is local to this checkout: run qfai init in each other clone or worktree."
-        why: The host settings that run the graph hook are committed while the tools directory is git-ignored, so another clone or worktree has the entries without the script.
-      - id: graph_prepare_unsupported
-        near: graph_prepare_host_status
-        when: empty
-        text: This host cannot enforce the required search denial.
-        why: An unsupported event cannot be presented as a blocked search or verified protection.
+        why: The tools directory is git-ignored, so another clone or worktree has no graph CLI until init runs there.
   - id: graph_preview
     title: Graph tools preview
     route: qfai init --dry-run
@@ -148,86 +132,6 @@ screens:
         when: default
         text: Preview only. No files, downloads, analysis or processes were changed.
         why: The user must distinguish proposed preparation from completed installation.
-  - id: graph_search_denied
-    title: Exploration redirected
-    route: Supported pre-tool exploratory-search event
-    purpose: Redirect an exploratory search to the graph operation that answers it, and say how to proceed when the graph cannot.
-    navigation:
-      shell: the assistant host's tool-call result, shown to the agent that attempted the search
-      entry_points:
-        - an exploratory search the host's pre-tool hook denies
-      back_to: none; the agent continues its task with the named graph command or the scoped fallback
-    primary_tasks:
-      - id: follow_graph_redirect
-        label: Follow the graph operation
-        acceptance: The attempted action, denial reason, graph CLI command and bounded pending attempt UUID are visible.
-      - id: recover_exploration
-        label: Prepare missing analysis or state why the graph cannot answer
-        acceptance: The next action is visible and scoped fallback requires no human approval.
-    elements:
-      - id: graph_search_denied_action
-        label: Attempted action
-        type: output
-      - id: graph_search_denied_reason
-        label: Reason
-        type: output
-      - id: graph_search_denied_operation
-        label: Graph CLI command
-        type: output
-      - id: graph_search_denied_attempt
-        label: Pending attempt
-        type: output
-      - id: graph_search_denied_capability
-        label: Protection status
-        type: output
-    actions:
-      - id: graph_search_use_graph
-        label: Run the suggested graph CLI command
-        kind: command
-        effect: Queries the appropriate engine after confirming the requested scope is current and ready.
-      - id: graph_search_prepare
-        label: Prepare required analysis
-        kind: command
-        effect: Prepares the missing requested scope through the selected native engine.
-      - id: graph_search_exception
-        label: Use scoped search when the graph cannot answer
-        kind: request
-        effect: Runs the fallback CLI with pending attempt UUID, unresolved question and AI reason; attempts the relevant graph and permits only the immutable observed target, operation, worktree and session for 60 seconds without human search approval.
-    states:
-      - id: default
-        renders: the Attempted action, the Reason, the Graph CLI command and the Pending attempt, with the notice that exploratory search was denied
-        next: run the suggested graph CLI command
-      - id: empty
-        renders: the notice that the required analysis is not ready, with the preparation and fallback commands
-        next: prepare the analysis, or run the fallback command with the pending attempt, unresolved question and reason
-      - id: loading
-        none: the denial is printed once when the event is decided; nothing of it renders before
-      - id: error
-        renders: Protection status shows that search protection failed, or the notice that the pending attempt cannot grant search permission
-        next: repair the reported configuration, or correct the reported cause and retry the denied action
-      - id: success
-        none: the screen shows only a denial; a permitted search is never redirected here
-    supplements:
-      - id: graph_search_redirect
-        near: graph_search_denied_operation
-        when: default
-        text: Exploratory search denied. Run the suggested CLI command for code structure or document concepts.
-        why: The user needs the graph selection rule to recover from the blocked action.
-      - id: graph_search_missing
-        near: graph_search_prepare
-        when: empty
-        text: Required analysis is not ready. Run the graph CLI, or use its fallback command with the pending attempt, unresolved question and reason.
-        why: The AI can continue a necessary investigation without waiting for human approval while keeping graph-first exploration.
-      - id: graph_search_failed
-        near: graph_search_denied_capability
-        when: error
-        text: Search protection failed. Repair the reported configuration before direct exploration.
-        why: A classifier failure must be visible and cannot be mistaken for permission to search.
-      - id: graph_search_invalid_attempt
-        near: graph_search_exception
-        when: error
-        text: This pending attempt cannot grant search permission. Correct the reported cause and retry the denied action.
-        why: Invalid, missing or expired pending state and state-management failures require a new valid attempt rather than a manual scope override.
   - id: graph_query_result
     title: Graph evidence
     route: node .qfai/tools/graph-cli.mjs code or documents
@@ -236,7 +140,6 @@ screens:
       shell: the terminal or agent tool call that runs the graph CLI
       entry_points:
         - node .qfai/tools/graph-cli.mjs code or documents with a query
-        - the graph command named by a redirected search
       back_to: none; the command ends and the caller continues
     primary_tasks:
       - id: assess_graph_evidence

@@ -1,42 +1,31 @@
 // QFAI:AC-0001-0235-01
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { graphProject } from "../../../helpers/graphProject.js";
-import { installedGraphHookResult } from "../../../helpers/graphCli.js";
+
+const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+const RULE = path.join(
+  PACKAGE_ROOT,
+  "assets",
+  "init",
+  "root",
+  ".agents",
+  "rules",
+  "graph-exploration.md",
+);
 
 describe("AC-0001-0235-01", () => {
-  it("prevents controlled pre-tool search effects and directs code and document events to their graph", async () => {
-    const project = await graphProject();
-    try {
-      await project.initialize();
-      const sentinel = path.join(project.root, "search-effect.txt");
-      for (const [event, operation] of [
-        [
-          { tool_name: "Bash", tool_input: { command: "rg checkout packages/" } },
-          "node .qfai/tools/graph-cli.mjs code",
-        ],
-        [
-          { tool_name: "Bash", tool_input: { command: "grep -R policy .qfai/spec" } },
-          "node .qfai/tools/graph-cli.mjs documents",
-        ],
-        [
-          { tool_name: "Grep", tool_input: { pattern: "checkout", path: "packages/" } },
-          "node .qfai/tools/graph-cli.mjs code",
-        ],
-      ] as const) {
-        const result = await installedGraphHookResult(project.root, event);
-        if (!result.output && result.failures === 0)
-          await writeFile(sentinel, "Search executed.\n");
-        await expect(readFile(sentinel)).rejects.toMatchObject({ code: "ENOENT" });
-        expect(result.output).toContain('"permissionDecision":"deny"');
-        expect(result.output).toContain(operation);
-        expect(result.errors).toEqual([]);
-        expect(result.failures).toBe(0);
-      }
-    } finally {
-      await project.dispose();
-    }
+  // QFAI:EX-0001-0235-01
+  it("names the graph CLIs first and keeps ordinary search acceptable", async () => {
+    const text = (await readFile(RULE, "utf8")).replace(/\s+/g, " ");
+    const opening = text.split(" ## ")[0] ?? "";
+    expect(opening).toContain(
+      "For searching, exploring and investigating code or documents, prefer the project graph CLIs first.",
+    );
+    expect(opening).toContain("is acceptable, and no tool blocks it.");
+    expect(text).toContain('node .qfai/tools/graph-cli.mjs code "your code question"');
+    expect(text).toContain('node .qfai/tools/graph-cli.mjs documents "your document question"');
   });
 });

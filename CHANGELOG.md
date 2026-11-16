@@ -6,6 +6,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- **Screen reviews walk one sourced checklist.** Review rounds of the same
+  screen raised different classes of issue, because nothing fixed what a round
+  covers. `.qfai/assistant/rule/references/surface-review-checklist.md` lists
+  the screen completeness checks the reviewer already makes, Nielsen's ten
+  usability heuristics as questions about the screen, the WCAG 2.2 criteria a
+  business screen touches most (1.3.1, 1.4.3, 1.4.10, 1.4.11, 2.1.1, 2.4.3,
+  2.4.7, 2.4.11, 2.5.8, 3.3.1, 3.3.2 and 4.1.2) and the WAI-ARIA APG pattern of
+  each interactive widget, each with its source. The product-surface reviewer
+  walks it for every screen on every review and reports each item as pass,
+  finding or not applicable, so a gap in coverage shows.
+
+- **A run that changes files first looks for open work on the same problem.**
+  A fix could run every step, reviews and full suite included, while an open
+  issue or pull request already covered the same problem, and the work was
+  thrown away when the other change merged first. After its announcement and
+  before any edit, `qfai-run` now makes one REST search of the forge for open
+  issues and pull requests naming the request's files or symptom, leaving out
+  the one the request itself names. A match is a result that describes the
+  same problem, not one that only shares words. On a match it writes nothing
+  and asks the user, with at most three matches, whether to continue or to
+  leave the problem to that work. Without a
+  forge remote or API access it says so in the announcement and continues;
+  under a no-question mode it continues and the final report lists the match.
+
 - **A Japanese locale reference.** `.qfai/assistant/rule/references/locale/ja.md`
   lists what a product whose locale is Japanese needs from its contracts and
   code: NFKC input normalisation, IME composition on Enter, yen, number, date
@@ -39,6 +63,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   warns with `QFAI-AXE-001` in the verify and full profiles when a project with
   web screens has no test that calls axe. QFAI itself takes no axe dependency.
   Closes #4309.
+
+- **Browser tests survive a rebuild that keeps the behaviour.** QFAI said
+  nothing about how a browser test finds an element or injects a failure, so
+  tests tied to class names, CSS values and the module files a page loads broke
+  when the screens were rebuilt, and the failure-state cases could not be run
+  at all once a bundler merged those modules. `test-layers.md` gains a section
+  for every test that drives a browser: locate an element by what a user
+  perceives (accessible role and name, label or visible text) or by a declared
+  `data-qfai` marker, never by class name, CSS value or DOM path; where a root
+  `DESIGN.md` exists, check its design tokens in a test of their own, and
+  assert no CSS value in a behaviour case; inject a failure by intercepting the
+  network request or through a test-only fault seam a production build does
+  not carry, never through a module file the page loads. `implement-scaffold`,
+  `implement-acceptance` and `implement-tdd` point to it, and the
+  implementation reviewer flags a browser test that reroutes or replaces an
+  application module file or reads a global such a module sets, and a
+  behaviour case that asserts a CSS value. Closes #4292.
 
 - **The contract step writes the app frame once.** The app shell, the
   navigation for each role and the home belong to no single flow, so
@@ -121,7 +162,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-CONTRACT-056`, at error; a screen without the key is asked nothing,
   and a marketing screen leaves it out.
 
+- **Research has a UI research brief.** Research for a screen type or a
+  component the project does not have yet fills
+  `rule/references/ui-research-brief.md`: one entry per axis (design-system
+  pattern, accessibility, catalogue, domain analogues, framework idioms,
+  locale), each with its sources or a reason it does not apply. The visual
+  reference survey still decides the visual direction; the brief decides what
+  the screen contains.
+
 ### Changed
+
+- **`QFAI-DB-001` says why the SQL is flagged and how to resolve it.** The
+  warning now says that applying the statement destroys data or structure, and
+  its suggested action moves a data reset to test setup or fixtures and a destructive
+  change to its migration. A reviewed statement that should stay is waived
+  for its file in `.qfai/waivers.yml`, with its reason, evidence and expiry
+  date.
 
 - The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
 
@@ -135,15 +191,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   When those are its only errors, the local commit is made and its report lists the
   pending tests for the implement stage. The
   scope question says so for that option. Other scopes are printed as before.
-
-- **The search-protection hook allows a search scoped inside the project.** A
-  grep, rg, git grep, Select-String, findstr or native search call that names
-  at least one path, every one inside the project root, now runs. A search with
-  no path, one over the project root itself (such as `.`), and one whose path
-  the hook cannot place inside the project are still redirected to the graph:
-  a glob, an expansion, a PowerShell subexpression such as `(Get-Location)`, a
-  home prefix or a `..` segment. A findstr with `/s` and a native search scoped
-  only by an include glob are also redirected.
 
 - **A merge waits for every check of its head commit.** Step 3 of the shipped
   `triage-operate` step now says that the checks still running before a merge
@@ -288,15 +335,44 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   moving a sentence into a constant, a prop or an attribute value is not a fix:
   the product-surface review still judges that copy.
 
+- **A UI review without captures is `PENDING`, never `PASS`.** For a
+  UI-affecting change, the product-surface reviewer requires a capture of each
+  changed screen at the reviewed revision. Passing tests or a clean `validate`
+  do not stand in for it, and the reviewer does not start the app itself: it
+  stops before a verdict and names what is missing, the review is recorded
+  `PENDING`, and it is dispatched again once the captures exist.
+
+- **A known catalogue incompatibility reaches the next project.** QFAI ships
+  `rule/references/catalogue-compatibility.md`, a dated table of catalogue items
+  that broke a project's constraints. `ui-procurement.md` reads it before an
+  item is installed; a row is a hint to check against the installed version,
+  not a verdict. A project records a new incompatibility in its procurement
+  record and reports it to QFAI.
+
+### Removed
+
+- **Breaking: no hook blocks a direct search any more.** `qfai init` no longer
+  writes the graph search-denial hooks into `.claude/settings.json`,
+  `.codex/hooks.json` or `.github/hooks/qfai-graph.json`, no longer installs
+  `.qfai/tools/graph-hook.mjs` or `graph-enforcement.json`, and no longer prints
+  a Protection section. The `graph-cli.mjs fallback` command and its pending and
+  grant state are gone, and `qfai doctor` no longer checks for the hook script.
+  `.agents/rules/graph-exploration.md` now says to prefer the graph CLIs for
+  searching, exploring and investigating, and that ordinary search is
+  acceptable. Hook entries an earlier init wrote stay in your settings, and they
+  run a hook script whose code is no longer shipped: delete the graph entries
+  from `.claude/settings.json` and `.codex/hooks.json`, and delete
+  `.github/hooks/qfai-graph.json`, `.qfai/tools/graph-hook.mjs`,
+  `.qfai/tools/graph-enforcement.json` and the `*.pending.json`, `*.draft.json`
+  and `*.grant.json` files under `.qfai/tools/state/`.
+
 ### Fixed
 
-- **The search-protection hook reads a search that a program runner or a piped
-  shell runs.** `nohup`, `setsid`, `nice`, `ionice`, `stdbuf`, `timeout` and
-  `xargs` are unwrapped like `env`, so `nohup rg foo /` and
-  `git ls-files | xargs grep -r bar /` are denied as searches. A pipeline
-  stage that runs its input as a shell, such as `| sh`, `| bash -s` or
-  `| pwsh -Command -`, is denied with a message saying the hook cannot read
-  the commands that shell runs. Closes #4384.
+- **The `DESIGN.md` step says where a flow's surfaces come from.** It
+  decided whether to run from `primary_surface` and `secondary_surfaces`, fields
+  nothing has defined since 2.5.0. It now reads the surfaces the deliberation record
+  settles, the `tech.md` `Surface` row and the UI contracts linked to the
+  flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
 
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
   derived-value declaration covered both a value the DB stores and a value
@@ -315,6 +391,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rules, so the shipped prompt stays within the size an agent reads in one
   pass.
 
+- **The `tech.md` template shows each item in the shape validation accepts.**
+  The template held placeholders such as `<package>`, so a project filling it
+  in guessed the shapes and needed several validate rounds. Every value is now
+  a filled example to replace, such as `<example: pnpm build>`, inside the
+  backticks, list marks and table cells the schema checks. Replacing each
+  example with the project's value, and replacing or deleting the two optional
+  lines marked `<optional example: ...>`, gives a `tech.md` that passes on the
+  first run. An example left in place is still reported by `QFAI-ASSETS-003`,
+  and a Turn-end check line left as shipped turns on no turn-end check. A
+  missing required line, such as the Format command, is now reported with an
+  example line in place of a regular expression. Closes #4404.
+
 - **E2E tests wait until a server-rendered page is interactive.** A test that
   filled a field before the page hydrated lost the value and failed some runs.
   The guidance now has the app shell set `data-qfai-ready` on `<html>` once it
@@ -324,26 +412,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   DOM. The test layers rule and the scaffold and acceptance steps forbid a
   fixed sleep or a blind retry in its place.
 
-- **The search-protection hook lets a search of one file outside the project
-  run.** A search the hook did not already allow as scoped inside the project
-  is no longer denied when it is a grep, rg, findstr or Select-String that is
-  the only command of its event, with no pipeline stage, whose literal pattern
-  names no existing file and whose one absolute file operand names an existing
-  single-link regular file outside the project worktree and the checkout the
-  hook belongs to, before and after symbolic links, so
-  `grep -n foo /etc/hosts` runs. An outside directory or relative operand, a
-  second operand, git grep, an outside file beside another command or
-  pipeline stage or behind `env`, a search that mixes project and outside
-  paths, a glob, `~`, variable or `..` operand, a link, hard link, MSYS link
-  file or shortcut, an option that reads another file, `GREP_OPTIONS` or `RIPGREP_CONFIG_PATH` set,
-  or an operand that does not exist stays denied. Fixes #4179.
-
 - **A `Derived (not stored)` declaration for a value no DB column holds is
   accepted.** When no DB contract declares the field at all, `QFAI-CONTRACT-041`
   credits each declared value that the API contract requires through an `enum`
   on the field, as the reference describes for a status computed at read time.
   A value only in a description is still reported, and the message now says the
   API contract declares no `enum` for it.
+
+- **A `Derived (not stored)` declaration that does not parse is reported with
+  the form it needs.** The `QFAI-CONTRACT-041` message said only that the line
+  did not parse, so authors rewrote it by trial. It now quotes the expected form
+  `-- Derived (not stored): <column> = <value>[, <value>...] from <input>[, <input>...]`,
+  one declaration that parses, and the reference section that defines the
+  grammar. That section now states the grammar in full, and the DB contract
+  template carries a commented example. Fixes #4402.
 
 - **`qfai validate --timings` times each UI/UX check on its own.** The six
   UI/UX checks ran side by side, so a check that waited on file reads was

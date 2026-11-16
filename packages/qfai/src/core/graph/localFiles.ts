@@ -28,17 +28,8 @@ export async function graphStateDirectory(root: string): Promise<string> {
 
 export function invalidGraphState(): GraphLocalStateError {
   return new GraphLocalStateError(
-    "Project graph permission state is invalid.",
-    "Retain the local state and repair .qfai/tools/state before retrying the graph CLI or hook.",
-  );
-}
-
-export function graphStateText(value: unknown, maximum: number): value is string {
-  return (
-    typeof value === "string" &&
-    value.trim().length > 0 &&
-    value.length <= maximum &&
-    !value.includes("\0")
+    "Project graph state is invalid.",
+    "Retain the local state and repair .qfai/tools/state before retrying the graph CLI.",
   );
 }
 

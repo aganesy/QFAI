@@ -13,6 +13,10 @@
 --   A reference resolved at run time (a deferred FK, a view a later query
 --   reads) is NOT an apply-order dependency: the apply graph is acyclic by
 --   construction, the runtime graph need not be.
+-- A state value the API requires that is computed at read time and never
+-- stored is declared on a line of its own. Remove the leading `--   ` from
+-- the line below and change the names to use it:
+--   -- Derived (not stored): status = expired from created_at, JST clock
 
 CREATE TABLE order_drafts (
   id TEXT PRIMARY KEY,

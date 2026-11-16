@@ -10,6 +10,7 @@ What the user sees while a request is worked, and how a question reaches them.
 - Executing a step
 - The scope question
 - The announcement
+- Open work on the same problem
 - Questions
 - Repair found by a question-only stage
 - A step only a person can take
@@ -108,22 +109,59 @@ Once the plan and its scope are known, and before the first stage:
 - the files the work may change.
 
 The announcement asks nothing and lists no skipped stage. Continue with the
-policy check, where the route runs one, and the first stage in the same turn
-without waiting for a reply.
+open-work search and the policy check, where the route runs them, and the first
+stage in the same turn without waiting for a reply, unless the search finds a
+match.
 Text that is not a request gets no plan and no announcement.
+
+## Open work on the same problem
+
+Read this section after the announcement of a route that changes files. The
+search runs once per run, at the first announcement of a route that changes
+files, a branch destination's included, before the policy check and before any
+edit. Once made, a later branch move does not repeat it.
+
+- **When it runs.** The project has a forge remote and the session reaches the
+  forge's API. Judge this without a call, from the remote URL and from a
+  signed-in CLI or a token being present. Without either, the announcement adds
+  one line saying that no search for open work was made and why, and the work
+  continues.
+- **One call.** Ask the forge's REST issue search once, as
+  `.agents/rules/api-budget.md` says, for this repository's open issues and pull
+  requests together where the forge's search covers both in one call; otherwise
+  search open issues only. Make no second call and no call per term.
+- **The terms.** The file names the request names, or else the few words that
+  name its symptom, at most five, joined with `OR`. Each term is a bare word of
+  letters, digits, `.`, `-`, `_` or `/`; drop any other character, so no quote
+  or shell metacharacter reaches the query. GitHub allows at most five `OR`
+  operators and 256 characters in a query. On GitHub:
+  `gh api -X GET search/issues -f q='repo:<owner>/<name> is:open <terms>'`.
+- **What a match is.** A returned issue or pull request whose title or body
+  describes the same problem, as the session judges from the result. A hit that
+  only shares words is not a match. Neither is the issue or pull request the
+  request itself names, nor the one the current branch's work is for.
+- **No match, or a failed call.** Unrelated hits and an empty result continue
+  without a question. A search refused for authentication counts as a failed
+  call. A failed call is one line in the final report.
+- **A match.** Write nothing, and put the open-work question as `## Questions`
+  says, with the best three matches at most. Continue only on the user's answer;
+  on `stop`, end the work as for any `stop`.
+- **Under a no-question mode.** Continue, and the final report lists each match
+  first, as an assumption the mode took.
 
 ## Questions
 
 Put each question in the form `.agents/rules/user-questions.md` sets out.
 Independent questions go in one round; a dependent one waits for its answer.
 
-| Question               | How it is put                                                                                                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The candidate question | One single-select option per candidate, one to three. Each is a short label and one sentence on what that route will change and check, with no route identifier |
-| A critical decision    | The finding in at most two sentences, naming the specification, contract or recorded decision it touches, each option with its effect, and a recommendation     |
-| A release approval     | What would be released, the options to approve it or not, and that approving pushes, merges, tags and publishes nothing                                         |
-| A third branch move    | The destination in plain words, the options to move there or `stop`                                                                                             |
-| A missing fact         | A choice where the candidates can be listed, a plain request where they cannot. No recommendation                                                               |
+| Question                      | How it is put                                                                                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The candidate question        | One single-select option per candidate, one to three. Each is a short label and one sentence on what that route will change and check, with no route identifier |
+| A critical decision           | The finding in at most two sentences, naming the specification, contract or recorded decision it touches, each option with its effect, and a recommendation     |
+| A release approval            | What would be released, the options to approve it or not, and that approving pushes, merges, tags and publishes nothing                                         |
+| A third branch move           | The destination in plain words, the options to move there or `stop`                                                                                             |
+| A missing fact                | A choice where the candidates can be listed, a plain request where they cannot. No recommendation                                                               |
+| Open work on the same problem | Each match, three at most, by number, title and link, and the options to continue anyway, or to stop and leave the problem to that work. No recommendation      |
 
 - The candidate options come in the order `plan` returns them, and the
   recommendation, the main reading, stands on a line of its own.

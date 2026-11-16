@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { parseStructuredContract } from "../contracts.js";
 import { stripContractDeclarationLines } from "../contractsDecl.js";
+import { assistantLayerDir } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -277,11 +278,31 @@ function mixedRemedy(enumOnly: boolean, dbFiles: string[], fromEnum: string[]): 
 }
 
 /**
+ * The grammar {@link DERIVED_NOT_STORED_RE} reads, as the message and the
+ * rule catalog quote it, so the form is written in one place.
+ */
+export const DERIVED_DECLARATION_FORM =
+  "-- Derived (not stored): <column> = <value>[, <value>...] from <input>[, <input>...]";
+
+/**
+ * One declaration {@link DERIVED_NOT_STORED_RE} reads, quoted whole so that an
+ * author can copy it and change the names.
+ */
+const DERIVED_DECLARATION_EXAMPLE =
+  "-- Derived (not stored): status = standby, powered_off from enabled, connection_status, JST clock";
+
+/** Shown to the reader, so written with `/` on every platform. */
+const DERIVED_DECLARATION_REFERENCE = `${assistantLayerDir("skill")}/qfai-sdd/references/contract-artifact-rules.md#derived-not-stored`;
+
+/**
  * A line carrying the key that does not parse as a declaration.
  *
  * What this adds is the one thing the author cannot see otherwise: the marker
  * they wrote was not read, so the finding they were answering is still standing
- * for the reason it always was.
+ * for the reason it always was. The message itself carries the expected form,
+ * a readable example and the reference that defines the grammar: the line was
+ * otherwise rewritten by trial, since the message is what an author reads first
+ * and a JSON consumer may read nothing else.
  */
 function unreadableDerivedDeclaration(
   file: string,
@@ -290,18 +311,19 @@ function unreadableDerivedDeclaration(
 ): Issue {
   return issue(
     "QFAI-CONTRACT-041",
-    `A \`Derived (not stored):\` declaration does not parse: ${line}`,
+    `A \`Derived (not stored):\` declaration does not parse: \`${line}\`. ` +
+      `Expected \`${DERIVED_DECLARATION_FORM}\`, ` +
+      `for example \`${DERIVED_DECLARATION_EXAMPLE}\`. ` +
+      `The grammar is in ${DERIVED_DECLARATION_REFERENCE}.`,
     declarationSeverity,
     file,
     "contracts.crossContract.derivedNotStored",
     [line],
     "canonical",
-    "The form is `-- Derived (not stored): <column> = <value>, <value> from <inputs>`. " +
-      "The `from` clause - what the values are computed from - is required; without it the " +
-      "line is not read as a declaration at all, because a marker that needs only the values " +
-      "would be a way to silence this rule rather than a way to answer it. One empty element " +
-      "in the value list invalidates the whole declaration, so that a half-written one is " +
-      "never read as finished.",
+    // Only what the form above does not show.
+    "The `from` clause is required. No element of the value list may be empty, so put no " +
+      "comma before `from`. Prose about the derivation goes on its own comment line, one " +
+      "that does not start with the key.",
   );
 }
 

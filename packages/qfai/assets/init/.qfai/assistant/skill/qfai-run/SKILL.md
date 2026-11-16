@@ -67,7 +67,8 @@ values plan nothing.
    and run only its stages. With one scope, no scopes, or a branch destination's plan, ask
    nothing and run every stage.
 4. **Announce.** Before the first stage, give the goal, the chosen stages in order in plain words,
-   and the files the work may change. Ask nothing. Then run `common-policy-check` once, unless the
+   and the files the work may change. Ask nothing. On a route that changes files, a branch destination's included, then search once per run for open work on the same problem
+   before any edit, as `references/operator-screens.md` says, and on a match wait for the user. Then run `common-policy-check` once, unless the
    plan's one step is `triage-answer` or `triage-operate`. On a route that changes no file, one that
    closes, answers or asks, it reads and reports and writes nothing.
 5. **Run the stages.** Run each stage in plan order, and each of its steps in
@@ -96,7 +97,7 @@ values plan nothing.
 ## Under a no-question mode
 
 Nothing is asked. The plan's narrowest scope, or the first candidate and its narrowest scope, is taken and reported as an assumption.
-An uncovered question-only move to tracked-file repair instead stops that target
+An open-work match is taken as continue and listed first in the report as an assumption. An uncovered question-only move to tracked-file repair instead stops that target
 with a report and no tracked open question, as `references/stage-points.md` says.
 A critical decision or a release point becomes one `open-questions.md` row,
 the step stops before the change that depends on it, and the report lists the
@@ -128,7 +129,7 @@ When parts ran in parallel, use the summary in `references/operator-screens.md`.
   - equivalent-option pick
 - ask-user:
   - each critical decision at a decision point, and each release point
-  - the candidate question, the scope question, a third branch move, and any branch move from a narrower scope
+  - the candidate question, the scope question, a third branch move, any branch move from a narrower scope, and an open-work match
 - hard-required:
   - change request (the user's own words; an empty request is asked for, never guessed)
 
