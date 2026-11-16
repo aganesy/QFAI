@@ -172,6 +172,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Data values need no `qfai-text` reason, and one reason covers a whole
+  element.** `QFAI-UITEXT-001` stays an error but no longer reports a short
+  value that is not a sentence (at most 20 characters, with no sentence-ending
+  `.`, `!` or `?`, and none of the CJK marks U+3002, U+FF01, U+FF1F, U+FF61 and
+  U+FF0E) in a `td`, a `dd` or a `*Cell` component, or
+  as a whole JSX string literal child, such as `<td>ORD-1042</td>` or
+  `<td>{'-'}</td>`. A cell is judged by its whole text, so a sentence in a cell
+  still needs its reason even when a nested element splits it. A `qfai-text`
+  comment directly before an element, or as its first child with text after
+  it, now gives its reason to every plain text inside it, so a paragraph that
+  a link splits, a list or a table needs one comment instead of one per
+  fragment; a malformed one raises one `QFAI-UITEXT-002`. A first-child
+  comment before an element covers that element only, and a comment at the
+  top of `body` or of a component's top-level JSX fragment covers only what
+  it stands before.
+
 - **`QFAI-DB-001` says why the SQL is flagged and how to resolve it.** The
   warning now says that applying the statement destroys data or structure, and
   its suggested action moves a data reset to test setup or fixtures and a destructive

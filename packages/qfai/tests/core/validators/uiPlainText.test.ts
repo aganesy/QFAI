@@ -88,11 +88,13 @@ describe("a plain text without a reason fails", () => {
 
 // QFAI:EX-0001-0297-02
 describe("plain text in JSX and in sample data fails", () => {
-  it("reports a nested JSX text and a prototype table cell", async () => {
+  it("reports a nested JSX text and a sentence in a prototype table cell", async () => {
     const issues = await run({
       "src/Tip.tsx":
         "export const Tip = () => (\n  <div>\n    <span>Tip: drag rows to reorder</span>\n  </div>\n);\n",
-      ".qfai/prototype/final/index.html": page("<table><tr><td>ORD-1042</td></tr></table>"),
+      ".qfai/prototype/final/index.html": page(
+        "<table><tr><td>Ships once the payment clears.</td></tr></table>",
+      ),
     });
     expect(codes(issues)).toEqual(["QFAI-UITEXT-001", "QFAI-UITEXT-001"]);
     expect(issues.map((found) => found.file).sort()).toEqual([
@@ -200,15 +202,17 @@ describe("a file reason clears every text the file gives no reason of its own", 
 });
 
 // QFAI:EX-0001-0297-06
-describe("a reason counts only before the text or its parent", () => {
-  it("ignores a reason before an exempt element and one two levels up", async () => {
+describe("a reason counts only for the text or the element it stands before", () => {
+  it("ignores a reason before an exempt element or before a sibling element", async () => {
     const issues = await run({
       ".qfai/prototype/final/index.html": page(
-        `${REASON}\n<button>Save</button>\n${REASON}\n<div>\n<p>Totals update nightly.</p>\n</div>`,
+        `${REASON}\n<button>Save</button>\n<p>Totals update nightly.</p>\n${REASON}\n<p>Exports include tax.</p>\n<p>Refunds take a week.</p>`,
       ),
     });
-    expect(codes(issues)).toEqual(["QFAI-UITEXT-001"]);
-    expect(issues[0]?.message).toContain("Totals update nightly.");
+    expect(issues.map((found) => [found.code, found.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", 7],
+      ["QFAI-UITEXT-001", 10],
+    ]);
   });
 });
 
@@ -250,13 +254,13 @@ describe("literal text in a component or in HTML braces is plain text", () => {
   it("reports a component that matches no exempt element, a string child and HTML braces", async () => {
     const issues = await run({
       "src/d.tsx":
-        'export const D = () => (\n  <div>\n    <Card>Welcome back!</Card>\n    <p>{"Saved"}</p>\n  </div>\n);\n',
+        'export const D = () => (\n  <div>\n    <Card>Welcome back!</Card>\n    <p>{"Your changes are saved."}</p>\n  </div>\n);\n',
       ".qfai/prototype/final/index.html": page("<p>{draft}</p>"),
     });
     expect(codes(issues)).toEqual(["QFAI-UITEXT-001", "QFAI-UITEXT-001", "QFAI-UITEXT-001"]);
     const messages = issues.map((found) => found.message).join("\n");
     expect(messages).toContain("Welcome back!");
-    expect(messages).toContain("Saved");
+    expect(messages).toContain("Your changes are saved.");
     expect(messages).toContain("{draft}");
   });
 
@@ -406,15 +410,17 @@ describe("a component whose name ends in the word Link or Button is exempt", () 
 
 // QFAI:EX-0001-0297-18
 describe("uiText.elements reads a project component as the element it renders", () => {
+  // The unmapped component is a `Card`, not a data cell: a short value in a `TableCell` is a data
+  // value and exempt on its own, so it would not show that an unmapped component is still checked.
   const files = {
     "src/a.tsx":
-      'export const A = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <UI.CardTitle>Recent orders</UI.CardTitle>\n    <NavItem href="/">Home</NavItem>\n    <StatusRegion>Saved</StatusRegion>\n    <Ui.Banner>Welcome</Ui.Banner>\n    <TableCell>ORD-1042</TableCell>\n    <header>Plain</header>\n  </div>\n);\n',
+      'export const A = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <UI.CardTitle>Recent orders</UI.CardTitle>\n    <NavItem href="/">Home</NavItem>\n    <StatusRegion>Saved</StatusRegion>\n    <Ui.Banner>Welcome</Ui.Banner>\n    <Card>Ships once paid.</Card>\n    <header>Plain</header>\n  </div>\n);\n',
     "src/b.vue":
-      "<template>\n  <TableHead>Order</TableHead>\n  <table-head>Total</table-head>\n  <StatusRegion>Saved</StatusRegion>\n  <TableCell>ORD-1042</TableCell>\n  <header>Plain</header>\n</template>\n",
+      "<template>\n  <TableHead>Order</TableHead>\n  <table-head>Total</table-head>\n  <StatusRegion>Saved</StatusRegion>\n  <Card>Ships once paid.</Card>\n  <header>Plain</header>\n</template>\n",
     "src/c.svelte":
       "<CardTitle>Recent orders</CardTitle>\n<Ui.Banner>Welcome</Ui.Banner>\n<Banner>Hello</Banner>\n",
     "src/d.jsx":
-      "export const D = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <Header>Top</Header>\n    <TableCell>ORD-1042</TableCell>\n  </div>\n);\n",
+      "export const D = () => (\n  <div>\n    <TableHead>Order</TableHead>\n    <Header>Top</Header>\n    <Card>Ships once paid.</Card>\n  </div>\n);\n",
     "src/e.html":
       "<table-head>Total</table-head>\n<TableHead>Order</TableHead>\n<header>Plain</header>\n",
   };
@@ -459,5 +465,205 @@ describe("the default loader resolves typescript from the project root", () => {
     const root = await projectWith({ "src/a.tsx": "export const A = () => <p>Hi</p>;\n" });
     const issues = await validateUiPlainText(root, configWith(["src/**"]));
     expect(codes(issues)).toEqual(["QFAI-UITEXT-003"]);
+  });
+});
+
+// QFAI:EX-0001-0297-16
+describe("a data value is not plain text", () => {
+  it("exempts a short non-sentence in a data cell and as an expression literal", async () => {
+    const issues = await run({
+      "src/a.html":
+        "<table><tr><td>ORD-1042</td><td>-</td><td>\u3042\u308a</td><td>1.5 kg</td></tr></table>\n<dl><dd>2026-11-15</dd></dl>\n",
+      "src/b.tsx":
+        "export const B = ({ ok }: { ok: boolean }) => (\n  <div>\n    <table><tbody><tr><td>{'-'}</td><td>{ok ? '\u3042\u308a' : '\u306a\u3057'}</td><td><span>Paid</span></td></tr></tbody></table>\n    <TableCell>Paid</TableCell>\n    <p>{\"Saved\"}</p>\n    <p>{`3 items`}</p>\n  </div>\n);\n",
+      "src/c.vue": "<template>\n  <table><tr><td>\u6e08</td></tr></table>\n</template>\n",
+      "src/d.svelte":
+        "<table><tr><td>-</td><td>{total}</td></tr></table>\n<dl><dd>\u6e08</dd></dl>\n",
+    });
+    expect(issues).toEqual([]);
+  });
+
+  it("still checks a sentence or a long text in a cell, and a sentence literal", async () => {
+    const issues = await run({
+      "src/a.html": [
+        "<table><tr>",
+        "<td>Ships once the payment clears.</td>",
+        // A Japanese sentence that ends in U+3002.
+        "<td>\u652f\u6255\u3044\u5f8c\u306b\u767a\u9001\u3057\u307e\u3059\u3002</td>",
+        "<td>Pending approval from the finance team</td>",
+        "<td>Paid! Thanks</td>",
+        "</tr></table>",
+        "<p>ORD-1042</p>",
+      ].join("\n"),
+      "src/b.tsx":
+        'export const B = () => (\n  <div>\n    <p>{"Your changes are saved."}</p>\n    <td>{"Sent? Check your inbox"}</td>\n  </div>\n);\n',
+    });
+    expect(issues.map((found) => [found.code, found.file, found.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", "src/a.html", 2],
+      ["QFAI-UITEXT-001", "src/a.html", 3],
+      ["QFAI-UITEXT-001", "src/a.html", 4],
+      ["QFAI-UITEXT-001", "src/a.html", 5],
+      ["QFAI-UITEXT-001", "src/a.html", 7],
+      ["QFAI-UITEXT-001", "src/b.tsx", 3],
+      ["QFAI-UITEXT-001", "src/b.tsx", 4],
+    ]);
+  });
+
+  it("judges a cell by its whole text, so a sentence a nested element splits is still read", async () => {
+    const issues = await run({
+      "src/a.html": [
+        "<table><tr>",
+        "<td>Ships in <b>3</b> days once paid</td>",
+        "<td>Order <b>ORD-1042</b></td>",
+        "</tr></table>",
+      ].join("\n"),
+      "src/b.tsx": [
+        "export const B = () => (",
+        "  <tr>",
+        "    <td>Ships in <b>3</b> days once paid</td>",
+        '    <td>{"Ships in "}<b>3</b>{" days once paid"}</td>',
+        "    <td>Order <b>ORD-1042</b></td>",
+        "  </tr>",
+        ");",
+      ].join("\n"),
+    });
+    expect(issues.map((found) => [found.file, found.loc?.line])).toEqual([
+      ["src/a.html", 2],
+      ["src/a.html", 2],
+      ["src/a.html", 2],
+      ["src/b.tsx", 3],
+      ["src/b.tsx", 3],
+      ["src/b.tsx", 3],
+      ["src/b.tsx", 4],
+      ["src/b.tsx", 4],
+      ["src/b.tsx", 4],
+    ]);
+  });
+
+  it("leaves the text of a button, a link or a status out of a cell's whole text", async () => {
+    const issues = await run({
+      "src/a.html": [
+        "<table><tr>",
+        "<td><span>Pending</span> <button>Approve request</button></td>",
+        '<td><span role="status">Awaiting the finance review</span> <a href="/orders/1042">Open the order</a> <span>Due</span></td>',
+        "</tr></table>",
+      ].join("\n"),
+      "src/b.tsx": [
+        "export const B = () => (",
+        "  <tr>",
+        "    <td><span>Pending</span> <button>Approve request</button></td>",
+        '    <td><span role="status">Awaiting the finance review</span> <Link href="/">Open the order</Link> {"Due"}</td>',
+        "  </tr>",
+        ");",
+      ].join("\n"),
+    });
+    expect(issues).toEqual([]);
+  });
+
+  it("judges the text a JSX reference or a literal escape shows, not its source", async () => {
+    const issues = await run({
+      "src/b.tsx": [
+        "export const B = () => (",
+        "  <tr>",
+        "    <td>Saved&#46;</td>",
+        "    <td>Paid&excl;</td>",
+        "    <td>A&amp;B&amp;C&amp;D&amp;E&amp;F</td>",
+        '    <td>{"Saved\\u002E"}</td>',
+        '    <td>{"\\u0041\\u0042\\u0043\\u0044\\u0045"}</td>',
+        '    <p>{"Saved\\u002E"}</p>',
+        '    <p>{"\\u0041\\u0042\\u0043\\u0044\\u0045"}</p>',
+        "  </tr>",
+        ");",
+      ].join("\n"),
+    });
+    expect(issues.map((found) => found.loc?.line)).toEqual([3, 4, 6, 8]);
+    expect(issues[0]?.message).toContain('"Saved."');
+  });
+
+  it("reads a data cell the same way under a uiText.elements map", async () => {
+    const root = await projectWith({
+      "src/a.tsx": [
+        "export const A = () => (",
+        "  <tr>",
+        "    <td><StatusBadge>Paid in full after the finance review</StatusBadge></td>",
+        "    <TableCell>ORD-1042</TableCell>",
+        "    <TableCell>Ships once paid.</TableCell>",
+        "  </tr>",
+        ");",
+      ].join("\n"),
+    });
+    const config: QfaiConfig = {
+      ...configWith(["src/**"]),
+      uiText: { elements: { StatusBadge: "status" } },
+    };
+    const issues = await validateUiPlainText(root, config, { loadTypescript: realTypescript });
+    expect(issues.map((found) => [found.code, found.file, found.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", "src/a.tsx", 5],
+    ]);
+  });
+});
+
+// QFAI:EX-0001-0297-17
+describe("one reason covers every plain text inside an element", () => {
+  it("clears a sentence split by a link, a table and a list with one reason each", async () => {
+    const issues = await run({
+      "src/a.html": [
+        "<div>",
+        "<h2>Orders</h2>",
+        REASON,
+        '<p>Check the <a href="/orders">order page</a> for the status of each line.</p>',
+        `<table>${REASON}<tr><td>Ships once the payment clears.</td><td>Refunds take a week.</td></tr></table>`,
+        REASON,
+        "<ul>",
+        "  <li>Exports include tax.</li>",
+        "  <li><p>Totals update nightly.</p></li>",
+        "</ul>",
+        "</div>",
+      ].join("\n"),
+      "src/B.tsx": `export const B = () => (\n  <div>\n    <h2>Orders</h2>\n    ${JSX_REASON}\n    <p>Check the <Link href="/orders">order page</Link> for the status of each line.</p>\n    ${JSX_REASON}\n    <ul>\n      <li>Exports include tax.</li>\n      <li>Totals update nightly.</li>\n    </ul>\n  </div>\n);\n`,
+      "src/C.jsx":
+        "export const C = ({ rows }) => (/* qfai-text: why=Orders sync once a night; without=Users expect live totals */ <section>\n  <p>Totals update nightly.</p>\n  {rows.map((row) => <div key={row}>Exports include tax.</div>)}\n</section>);\n",
+      "src/d.vue": `<template>\n  <div>\n    <h2>Orders</h2>\n    ${REASON}\n    <p>Check the <RouterLink to="/orders">order page</RouterLink> for each line.</p>\n  </div>\n</template>\n`,
+      // A first-child comment that text follows covers its whole element.
+      "src/e.html": `<p>${REASON} Check the <a href="/orders">order page</a> for each line.</p>\n`,
+      "src/F.tsx": `export const F = () => (\n  <div>\n    <p>${JSX_REASON}Check the <Link href="/orders">order page</Link> for each line.</p>\n  </div>\n);\n`,
+    });
+    expect(issues).toEqual([]);
+  });
+
+  it("lets a first-child comment before an element cover that element only", async () => {
+    const issues = await run({
+      "src/a.html": `<section>${REASON}\n<p>Exports include tax.</p>\n<p>Refunds take a week.</p>\n</section>\n`,
+      "src/B.tsx": `export const B = () => (\n  <div>\n    ${JSX_REASON}\n    <p>Exports include tax.</p>\n    <p>Refunds take a week.</p>\n  </div>\n);\n`,
+    });
+    expect(issues.map((found) => `${found.file}:${found.loc?.line} ${found.code}`)).toEqual([
+      "src/B.tsx:5 QFAI-UITEXT-001",
+      "src/a.html:3 QFAI-UITEXT-001",
+    ]);
+  });
+
+  it("stops at a component's top-level fragment, as markup stops at body", async () => {
+    const issues = await run({
+      "src/A.tsx": `export const A = () => (\n  <>\n    ${JSX_REASON}\n    Totals update nightly.\n    <p>Refunds take a week.</p>\n  </>\n);\n`,
+      "src/B.tsx":
+        "export const B = () => (/* qfai-text: why=Orders sync once a night; without=Users expect live totals */ <>\n  <p>Exports include tax.</p>\n</>);\n",
+    });
+    expect(issues.map((found) => `${found.file}:${found.loc?.line} ${found.code}`)).toEqual([
+      "src/A.tsx:5 QFAI-UITEXT-001",
+      "src/B.tsx:2 QFAI-UITEXT-001",
+    ]);
+  });
+
+  it("does not let a comment at the top of a file cover it, and reports a malformed one once", async () => {
+    const issues = await run({
+      "src/a.html": `${REASON}\n<p>Exports include tax.</p>\n<p>Totals update nightly.</p>\n`,
+      "src/b.html":
+        "<div>\n<h2>Orders</h2>\n<!-- qfai-text: why=Needed -->\n<ul>\n  <li>Exports include tax.</li>\n  <li>Totals update nightly.</li>\n</ul>\n<p>Refunds take a week.</p>\n</div>\n",
+    });
+    expect(issues.map((found) => `${found.file}:${found.loc?.line} ${found.code}`)).toEqual([
+      "src/a.html:3 QFAI-UITEXT-001",
+      "src/b.html:5 QFAI-UITEXT-002",
+      "src/b.html:8 QFAI-UITEXT-001",
+    ]);
   });
 });

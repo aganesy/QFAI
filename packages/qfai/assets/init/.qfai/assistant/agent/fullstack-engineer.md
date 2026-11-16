@@ -80,7 +80,8 @@ script, style and `role="alert"` or `role="status"`. Decide each text as
 `.qfai/assistant/skill/qfai-implement/references/ui-affecting.md`
 `## Plain text in UI source` says: a text the user needs, such as a result, a
 cost, a consequence or an empty state's next step, stays with its reason,
-directly before the text or its element; any other text is first deleted,
+directly before the text or an element that holds it, one reason covering the
+whole element; any other text is first deleted,
 replaced or moved, and kept with a reason only when none of those works.
 
 ```html
