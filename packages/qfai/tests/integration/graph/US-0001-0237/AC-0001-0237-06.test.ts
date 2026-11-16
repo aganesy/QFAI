@@ -28,12 +28,6 @@ describe("AC-0001-0237-06", () => {
         const result = await prepareGraphIntegration(project.root, project.fixture.run);
         expect(result.runtime).toBe("installed");
         expect(result.conflicts).toEqual([]);
-        expect(result.hosts.map((host) => host.host)).toEqual([
-          "claude",
-          "codex",
-          "copilot",
-          "vscode",
-        ]);
         wrappers.push(
           await readFile(path.join(project.root, ".qfai", "tools", "graph-cli.mjs"), "utf8"),
         );

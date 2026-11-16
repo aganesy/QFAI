@@ -39,7 +39,7 @@ Feature: Choose the graph CLI that answers the exploration question
   Scenario: Recover without automatic raw search
     Given missing or stale required analysis
     When I attempt exploration
-    Then the short-lived CLI attempts native preparation where needed and reports recovery, and the AI may use the fallback CLI with a pending attempt and unresolved reason without human approval
+    Then the short-lived CLI attempts native preparation where needed and reports recovery without running raw search itself
 
   # AC-0001-0234-07
   Scenario: Exclude secrets from analysis and its outputs

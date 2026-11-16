@@ -1,15 +1,9 @@
 import { prepareGraphRuntimes, type GraphPreparation } from "./prepare.js";
 import { runGraphProcess, type GraphProcess } from "./process.js";
 import { installGraphEntrypoints } from "./entrypoints.js";
-import { ensureGraphGitignore } from "./ignore.js";
-import { inspectInstalledGraphHosts } from "./hostConfiguration.js";
-import type { GraphHostProtection } from "./hosts.js";
-import { composeGraphDenialHooks, type GraphSettingsComposition } from "./hostSettings.js";
+import { ensureGraphGitignore, type GraphSettingsComposition } from "./ignore.js";
 
-export type GraphIntegrationPreparation = GraphPreparation &
-  GraphSettingsComposition & {
-    hosts: GraphHostProtection[];
-  };
+export type GraphIntegrationPreparation = GraphPreparation & GraphSettingsComposition;
 
 export async function prepareGraphIntegration(
   root: string,
@@ -20,25 +14,11 @@ export async function prepareGraphIntegration(
   const ignore = await ensureGraphGitignore(root, run);
   const preparation = await prepareGraphRuntimes(root, run);
   if (preparation.failedStep)
-    return {
-      ...preparation,
-      files: ignore.files,
-      conflicts: ignore.conflicts,
-      hosts: await inspectInstalledGraphHosts(root, run),
-    };
+    return { ...preparation, files: ignore.files, conflicts: ignore.conflicts };
   const entries = await installGraphEntrypoints(root);
-  if (entries.conflicts.length > 0)
-    return {
-      ...preparation,
-      files: ignore.files,
-      conflicts: [...ignore.conflicts, ...entries.conflicts],
-      hosts: await inspectInstalledGraphHosts(root, run),
-    };
-  const hooks = await composeGraphDenialHooks(root);
   return {
     ...preparation,
-    files: [...ignore.files, ...entries.files, ...hooks.files],
-    conflicts: [...ignore.conflicts, ...hooks.conflicts],
-    hosts: await inspectInstalledGraphHosts(root, run),
+    files: [...ignore.files, ...entries.files],
+    conflicts: [...ignore.conflicts, ...entries.conflicts],
   };
 }

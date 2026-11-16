@@ -5,9 +5,6 @@ import { pathToFileURL } from "node:url";
 export function reviewedGraphInitFiles(packageRoot: string): ReadonlyMap<string, string> {
   const sources = {
     "graph-cli.mjs": reviewedWrapper(packageRoot, "cli", "runInstalledGraphCli"),
-    "graph-hook.mjs": reviewedWrapper(packageRoot, "hook", "runInstalledGraphHook"),
-    "graph-enforcement.json":
-      JSON.stringify({ kind: "graph-enforcement", denyExploration: true }) + "\n",
   };
   const runtime = `.qfai/tools/runtimes/${process.platform}-${process.arch}`;
   return new Map([

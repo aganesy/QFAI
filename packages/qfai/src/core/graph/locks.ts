@@ -13,7 +13,7 @@ import {
 
 export async function withGraphLock<T>(
   root: string,
-  kind: "analysis" | "state",
+  kind: "analysis",
   action: () => Promise<T>,
 ): Promise<T> {
   const directory = await graphStateDirectory(root);

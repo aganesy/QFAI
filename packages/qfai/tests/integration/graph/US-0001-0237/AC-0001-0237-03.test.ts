@@ -28,25 +28,13 @@ describe("AC-0001-0237-03", () => {
         project.fixture.calls.some((call) => call.args.includes("@colbymchenry/codegraph@1.6.2")),
       ).toBe(false);
       expect(project.fixture.calls.some((call) => call.args[0] === "venv")).toBe(true);
-      const settings = JSON.parse(
-        await readFile(path.join(project.root, ".claude", "settings.json"), "utf8"),
-      );
-      expect(
-        settings.hooks.PreToolUse.filter((group: unknown) =>
-          JSON.stringify(group).includes("graph-hook.mjs"),
-        ),
-      ).toHaveLength(1);
       expect(
         await readFile(path.join(project.root, ".qfai", "tools", "graph-cli.mjs"), "utf8"),
       ).toContain("runInstalledGraphCli");
       const entries = JSON.parse(
         await readFile(path.join(project.root, ".qfai", "tools", "graph-entrypoints.json"), "utf8"),
       );
-      expect(Object.keys(entries.sources)).toEqual([
-        "graph-cli.mjs",
-        "graph-hook.mjs",
-        "graph-enforcement.json",
-      ]);
+      expect(Object.keys(entries.sources)).toEqual(["graph-cli.mjs"]);
       await expect(readFile(path.join(project.root, ".mcp.json"))).rejects.toMatchObject({
         code: "ENOENT",
       });

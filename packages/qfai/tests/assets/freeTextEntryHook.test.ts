@@ -320,7 +320,7 @@ describe("the Codex hook file", () => {
     const [shipped, own] = await Promise.all(
       [SHIPPED_CODEX, OWN_CODEX].map((rel) => readFile(path.join(repoRoot, rel), "utf-8")),
     );
-    expect(reminderSettings(own ?? "", "codex")).toBe(shipped);
+    expect(reminderSettings(own ?? "")).toBe(shipped);
   });
 
   it("carries the three prompt-time reminders", async () => {

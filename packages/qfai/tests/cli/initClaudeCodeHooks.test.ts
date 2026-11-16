@@ -443,7 +443,7 @@ describe("qfai init and the reminder hooks", () => {
       );
       if (typeof messages !== "object" || messages === null) throw new Error("no message table");
       expectNoEmbeddedReminderText(text, messages);
-      const entries = entriesOf(JSON.parse(reminderSettings(text, "claude")));
+      const entries = entriesOf(JSON.parse(reminderSettings(text)));
       expect(entries.length).toBeGreaterThan(0);
       for (const { entry } of entries) {
         // The turn-end check runs the package's hook, not a reminder (`turnEndHook.test.ts`).
@@ -474,7 +474,7 @@ describe("qfai init and the reminder hooks", () => {
         JSON.parse(await readFile(path.join(assetsRoot, ".claude", "settings.json"), "utf-8")),
       ).map(({ event, entry }) => JSON.stringify({ event, entry }));
       for (const { event, entry } of entriesOf(
-        JSON.parse(reminderSettings(JSON.stringify(settings), "claude")),
+        JSON.parse(reminderSettings(JSON.stringify(settings))),
       )) {
         expect(shipped).toContain(JSON.stringify({ event, entry }));
       }
@@ -549,9 +549,7 @@ describe("qfai init and the reminder hooks", () => {
       await initInto(root);
 
       const settings = await readSettings(root);
-      const merged = readHookGroups(
-        JSON.parse(reminderSettings(JSON.stringify(settings), "claude")),
-      );
+      const merged = readHookGroups(JSON.parse(reminderSettings(JSON.stringify(settings))));
       expect(merged.length).toBe(preToolUse.length);
       for (const marker of [
         GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,

@@ -23,9 +23,9 @@ describe("graph exploration rule", () => {
       "Ambient API credentials",
       "human approval of that destination and document scope",
       ".qfai/graph-processing.json",
-      "No human search approval is needed.",
+      "prefer the project graph CLIs first",
+      "is acceptable, and no tool blocks it.",
       "for a failed download, run the command `qfai init` names to see the cause.",
-      "Hidden scripts",
       "Incomplete coverage does not establish absence",
       "independent writable copies",
       "outside Git",
@@ -53,9 +53,7 @@ describe("graph exploration rule", () => {
     const opening = rule.split(/^## /m)[1]?.replace(/\s+/g, " ");
     for (const clause of [
       "reports an engine as not ready, use ordinary search",
-      "search protection is reported as unsupported",
-      "Say in your report that the graph was not used and why.",
-      "When a supported hook denies the search, use",
+      "say in your report that the graph was not used and why.",
     ])
       expect(opening).toContain(clause);
     for (const entry of [
@@ -64,7 +62,7 @@ describe("graph exploration rule", () => {
       "packages/qfai/src/cli/commands/init.ts",
     ])
       expect(await readFile(path.join(ROOT, entry), "utf8")).toContain(
-        "when the graph tools are ready, use the matching graph engine",
+        "prefer the matching graph CLI first; ordinary search stays acceptable",
       );
   });
 });

@@ -694,10 +694,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     ]);
     const merged = await readFile(path.join(root, ".claude/settings.json"), "utf8");
     expect(merged).toBe(
-      reminderSettings(
-        await readFile(path.join(byInit, ".claude/settings.json"), "utf8"),
-        "claude",
-      ),
+      reminderSettings(await readFile(path.join(byInit, ".claude/settings.json"), "utf8")),
     );
     expect(merged).toContain('"our-own-question"');
     expect(merged).toContain("QFAI free-text entry reminder");
