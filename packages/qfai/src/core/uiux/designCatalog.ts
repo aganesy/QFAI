@@ -91,8 +91,8 @@ export function renderDesignTokens(design: DesignMd): string {
 
 /**
  * The Tailwind 4 theme's text: one `@theme` block of the tokens' custom properties. A value that
- * would break out of its declaration is refused here as well as by the parser, so a design built
- * without the parser cannot inject CSS.
+ * would break out of its declaration is refused here as well as by the parser, so a value from a
+ * design built without the parser cannot add CSS. The property names come from fixed keys.
  */
 export function renderTheme(design: DesignMd): string {
   const lines = tokensOf(design).flatMap((token) => {
