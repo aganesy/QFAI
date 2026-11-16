@@ -47,6 +47,17 @@ async function projectWith(files: Readonly<Record<string, string | null>> = {}):
   return root;
 }
 
+/** Rewrites the token file as a formatter might: four-space indents and short arrays on one line. */
+async function rewrapTokens(root: string): Promise<void> {
+  const file = path.join(root, ...TOKENS.split("/"));
+  const value: unknown = JSON.parse(await readFile(file, "utf-8"));
+  const rewrapped = JSON.stringify(value, null, 4).replace(
+    /\[\s+([^[\]{}]*?)\s+\]/g,
+    (_whole, items: string) => `[${items.replace(/,\s+/g, ", ")}]`,
+  );
+  await writeFile(file, `${rewrapped}\n`, "utf-8");
+}
+
 /** Runs the CLI and returns its exit code with what it wrote to each stream. */
 async function cli(args: string[]): Promise<{ code: number; out: string; err: string }> {
   const out: string[] = [];
@@ -223,6 +234,14 @@ describe("the check mode compares and writes nothing", () => {
       ".qfai/catalog/design.tokens.json does not exist. Run `qfai catalog design` and commit it.\n",
     );
   });
+
+  // QFAI:EX-0001-0312-14
+  it("reads the token file as JSON, so a formatter's rewrapping keeps it up to date", async () => {
+    const root = await projectWith();
+    await cli(["catalog", "design", "--root", root]);
+    await rewrapTokens(root);
+    expect((await cli(["catalog", "design", "--check", "--root", root])).code).toBe(0);
+  });
 });
 
 // QFAI:AC-0001-0312-04
@@ -246,6 +265,20 @@ describe("no DESIGN.md, or one that does not parse, writes nothing", () => {
       expect(await exists(root, TOKENS)).toBe(false);
       expect(await exists(root, THEME)).toBe(false);
     }
+  });
+
+  // QFAI:EX-0001-0312-13
+  it("prints one line for a YAML syntax error", async () => {
+    const sample = await readFile(SAMPLE, "utf-8");
+    const broken = await projectWith({
+      "DESIGN.md": sample.replace("archetype: tech", "archetype: [tech"),
+    });
+    const result = await cli(["catalog", "design", "--root", broken]);
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("DESIGN.md does not parse:");
+    expect(result.err.trim().split("\n")).toHaveLength(1);
+    expect(await exists(broken, TOKENS)).toBe(false);
+    expect(await exists(broken, THEME)).toBe(false);
   });
 });
 
@@ -283,6 +316,14 @@ describe("a design catalogue out of date with DESIGN.md is a warning", () => {
     expect(orphan[1]?.message).toContain("DESIGN.md");
 
     expect(await dcat(await projectWith())).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0312-15
+  it("raises no QFAI-DCAT-001 for a token file a formatter rewrapped", async () => {
+    const root = await projectWith();
+    await cli(["catalog", "design", "--root", root]);
+    await rewrapTokens(root);
+    expect(await dcat(root)).toEqual([]);
   });
 
   // QFAI:EX-0001-0312-08
@@ -342,6 +383,7 @@ describe("the implementer uses the theme instead of copying values", () => {
       "npx qfai catalog design",
       "QFAI-DCAT-001",
       "QFAI-DCAT-003",
+      "A stylesheet is not read",
     ]) {
       expect(guidance).toContain(text);
     }

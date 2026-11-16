@@ -1096,7 +1096,7 @@ function findCssBreaker(visual: DesignMd["visual"]): ParseError | null {
  * Whether a value holds `;`, `{`, `}` or a comment marker, ends in a backslash, or does not close
  * its brackets and quotes.
  */
-function breaksDeclaration(text: string): boolean {
+export function breaksDeclaration(text: string): boolean {
   if (/[;{}]/.test(text) || text.includes("/*") || text.includes("*/")) return true;
   const closers: string[] = [];
   let quote: string | null = null;

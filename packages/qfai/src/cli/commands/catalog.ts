@@ -92,7 +92,7 @@ export async function runCatalogDesign(options: CatalogDesignOptions): Promise<n
     error(
       source.state === "absent"
         ? "qfai catalog design: DESIGN.md does not exist at the project root. Write it first; the design catalogue is derived from it."
-        : `qfai catalog design: DESIGN.md does not parse: ${source.message}`,
+        : `qfai catalog design: DESIGN.md does not parse: ${firstLine(source.message)}`,
     );
     return EXIT_CODES.findings;
   }
@@ -187,4 +187,12 @@ async function restorePair(
     const found = await lstat(temporary).catch(() => null);
     if (found?.isFile()) await rm(temporary, { force: true });
   }
+}
+
+/**
+ * The first line of a message, without the `:` that introduces a YAML error's code frame, so the
+ * frame does not spread over the terminal.
+ */
+function firstLine(message: string): string {
+  return (message.split(/\r?\n/, 1)[0] ?? message).replace(/:\s*$/, "");
 }
