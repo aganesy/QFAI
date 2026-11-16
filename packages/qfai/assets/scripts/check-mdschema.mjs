@@ -85,7 +85,7 @@
  *   node scripts/check-mdschema.mjs --scope all --summary
  *   node scripts/check-mdschema.mjs --base <ref>         # ratchet against <ref>
  *   node scripts/check-mdschema.mjs --scope files a.md b.md
- *   node scripts/check-mdschema.mjs --scope all --show-patterns  # the pattern behind each forbidden-text and required-text finding
+ *   node scripts/check-mdschema.mjs --scope all --show-patterns  # the pattern behind each forbidden-text, required-text and heading finding
  *   node scripts/check-mdschema.mjs --root <dir> --scope all   # another tree
  *   node scripts/check-mdschema.mjs --tools <dir> --scope all  # mdschema installed under <dir>
  *
@@ -526,7 +526,8 @@ export function firstHeading(text) {
  */
 export function rootMismatchMessage(schemaText, text) {
   const verdict = rootHeadingVerdict(schemaText, text);
-  const expected = verdict?.expected ?? "";
+  const pattern = verdict?.expected ?? "";
+  const expected = showPatterns ? pattern : (plainHeading(pattern) ?? pattern);
   const actual = verdict?.actual;
   const found = actual === null || actual === undefined ? "no heading" : `"${actual.trim()}"`;
   return `Root heading is ${found}, but the schema requires "${expected}"; every section is graded against the heading above it, so this document is not checked further until the root heading matches`;
@@ -1068,7 +1069,7 @@ const FORBIDDEN_TEXT_MESSAGE = /^Forbidden text '(.*)' found in section '([^']*)
  * beyond the root devDependencies is installed. A description is a plain value
  * or a folded or literal block. An example is the optional `example:` key of a
  * `required_text` item, a quoted or plain value on one line; mdschema ignores
- * the key.
+ * the key. An item starts at its `- ` mark, and its keys may come in any order.
  *
  * A key belongs to the heading entry read last, so a schema writes a section's
  * own keys before its `children:`.
@@ -1098,14 +1099,12 @@ export function sectionDescriptions(schemaText) {
       continue;
     }
     if (requiredIndent >= 0) {
-      const item = /^\s*-\s+pattern:\s*(.*?)\s*$/.exec(raw);
-      if (item !== null) {
-        current.examples.push({ pattern: yamlScalar(item[1]), example: "" });
-        continue;
-      }
-      const example = /^\s+example:\s*(.*?)\s*$/.exec(raw);
+      // An item starts at its `- ` mark, whichever of its keys it writes first.
+      const item = /^\s*-\s+(.*)$/.exec(raw);
+      if (item !== null) current.examples.push({ pattern: "", example: "" });
+      const value = /^(pattern|example):\s*(.*?)\s*$/.exec(item === null ? raw.trim() : item[1]);
       const last = current.examples.at(-1);
-      if (example !== null && last !== undefined) last.example = yamlScalar(example[1]);
+      if (value !== null && last !== undefined) last[value[1]] = yamlScalar(value[2]);
       continue;
     }
     const pattern = /^\s+pattern:\s*(?:"([^"]*)"|'([^']*)'|(\S+))\s*$/.exec(raw);
@@ -1242,14 +1241,77 @@ export function explainRequiredText(output, schemaText) {
 
 /**
  * One batch of `mdschema check` output with each forbidden-text and
- * required-text finding stated in the schema's own words.
+ * required-text finding stated in the schema's own words, and each heading
+ * finding naming the heading it expects.
  *
  * @param {string} output
  * @param {string} schemaText
  * @returns {string}
  */
 export function explainFindings(output, schemaText) {
-  return explainRequiredText(explainForbiddenText(output, schemaText), schemaText);
+  return explainHeadings(explainRequiredText(explainForbiddenText(output, schemaText), schemaText));
+}
+
+/**
+ * A structure finding that quotes the heading pattern it expected, in the Go
+ * quoting mdschema prints: a missing heading, or a first heading that is not it.
+ */
+const HEADING_PATTERN_MESSAGE =
+  /^(Required element |First heading under "[^"]*" is "(?:[^"\\]|\\.)*" but expected )("(?:[^"\\]|\\.)*")(.*)$/u;
+
+/**
+ * Rewrites the structure findings in one batch of `mdschema check` output that
+ * quote a heading pattern, so each names the heading line to write where the
+ * pattern is one fixed line: `^## Standard commands \(copy-paste\)$` becomes
+ * `## Standard commands (copy-paste)`. A pattern that admits more than one line
+ * is kept, because it is all there is to say.
+ *
+ * @param {string} output
+ * @returns {string}
+ */
+export function explainHeadings(output) {
+  return output
+    .split(/\r?\n/)
+    .map((line) => {
+      const found = VIOLATION_LINE.exec(line);
+      const quoted =
+        found !== null && found[3] === "structure" ? HEADING_PATTERN_MESSAGE.exec(found[4]) : null;
+      const heading = quoted === null ? null : plainHeading(goUnquote(quoted[2]));
+      if (found === null || quoted === null || heading === null) return line;
+      const message = `${quoted[1].replace(/^Required element /u, "Required heading ")}${JSON.stringify(heading)}${quoted[3]}`;
+      return `  ✗ ${found[1]}:${found[2]} [structure] ${message}`;
+    })
+    .join("\n");
+}
+
+/**
+ * The text of a Go-quoted string as mdschema prints it, or the text as written
+ * when it is not one JSON reads.
+ *
+ * @param {string} quoted
+ * @returns {string}
+ */
+function goUnquote(quoted) {
+  try {
+    return JSON.parse(quoted);
+  } catch {
+    return quoted;
+  }
+}
+
+/**
+ * The one heading line a heading pattern accepts, or `null`.
+ *
+ * A pattern accepts one line when it is anchored at both ends and every other
+ * character is literal: a letter, a digit, a space or `#`, or punctuation
+ * escaped with `\`.
+ *
+ * @param {string} pattern
+ * @returns {string | null}
+ */
+export function plainHeading(pattern) {
+  const body = /^\^(#{1,6} (?:[^\\.[\]{}()*+?|^$]|\\[^A-Za-z0-9])+)\$$/u.exec(pattern);
+  return body === null ? null : body[1].replace(/\\(.)/gu, "$1");
 }
 
 /**

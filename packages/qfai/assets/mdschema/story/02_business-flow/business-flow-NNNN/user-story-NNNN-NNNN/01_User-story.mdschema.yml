@@ -24,6 +24,7 @@ structure:
           # The migration's story-sentence test, with a wrapped line read as one space.
           - pattern: '(?s)\A\s*As\s+an?\s+[^,]+,\s+I\s+want\s+.+,\s+so\s+that\s+.+\.\s*\z'
             regex: true
+            example: "As a maintainer, I want release notes built from merged changes, so that users read them on release day."
       - heading:
           pattern: "^## Non-goals$"
           regex: true

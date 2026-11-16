@@ -46,4 +46,10 @@ Feature: Story-tree layout described by mdschema
     When each example is replaced by its value, or a line a required-text rule asks for is left out
     Then the document raises no `QFAI-DOCSCHEMA-001`, no `QFAI-ASSETS-003` and no `QFAI-STORY-013`
     And a missing line is reported with the example line the rule gives in place of its pattern, and a rule that gives none keeps its pattern
+  # AC-0001-0011-07
+  Scenario: Every schema's findings name the line or heading to write
+    Given a story-tree document checked against its shipped schema
+    When it leaves out a line a required-text rule asks for, or a heading the schema requires
+    Then the finding shows the rule's example line, which passes the schema in the rule's template, in place of the pattern
+    And a missing heading whose pattern accepts one fixed line is named by that line, and any other heading keeps its pattern
 ```

@@ -368,6 +368,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Every document-schema finding names the line or heading to write.** A
+  missing required line in a policy file, a story, its acceptance criteria or
+  the decision page list was reported as a regular expression; every such rule
+  now gives an example line, which the finding shows instead. A missing or
+  misplaced heading is named by its text, such as `## Non-goals`, rather than
+  by the pattern `^## Non-goals$`; a heading that may vary, such as a story's
+  title, keeps its pattern. The `tech.md` Surface example is now the bare row,
+  and the checker reads a rule's example whatever order its keys are written
+  in. `--show-patterns` still prints every pattern. Closes #4416.
+
 - **The `DESIGN.md` step says where a flow's surfaces come from.** It
   decided whether to run from `primary_surface` and `secondary_surfaces`, fields
   nothing has defined since 2.5.0. It now reads the surfaces the deliberation record

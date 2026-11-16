@@ -47,6 +47,8 @@ import {
   patternToRegExp,
   explainForbiddenText,
   explainRequiredText,
+  explainHeadings,
+  plainHeading,
   offendingLine,
   sectionDescriptions,
   rootHeadingPattern,
@@ -1475,6 +1477,92 @@ describe("a required-text finding", () => {
     expect(explained.stderr).toContain("for example: - Format: `pnpm prettier --check .`");
     expect(explained.stderr).not.toContain("Required text");
     expect(raw.stderr).toContain("Required text '(?m)^- Format: `'");
+  });
+
+  // QFAI:EX-0001-0011-24
+  it("reads an item's example whichever of its keys the item writes first", () => {
+    const schema = [
+      "structure:",
+      "  - heading:",
+      '      pattern: "^## Commands$"',
+      "      regex: true",
+      "    description: The commands.",
+      "    required_text:",
+      "      - regex: true",
+      '        pattern: "(?m)^- Install: `"',
+      '        example: "- Install: `pnpm install`"',
+      '      - example: "- Test: `pnpm test`"',
+      "        regex: true",
+      '        pattern: "(?m)^- Test: `"',
+      "      # A rule with no example.",
+      '      - pattern: "(?m)^- Build: `"',
+      "        regex: true",
+    ].join("\n");
+
+    expect(sectionDescriptions(schema)[0]?.examples).toEqual([
+      { pattern: "(?m)^- Install: `", example: "- Install: `pnpm install`" },
+      { pattern: "(?m)^- Test: `", example: "- Test: `pnpm test`" },
+      { pattern: "(?m)^- Build: `", example: "" },
+    ]);
+  });
+});
+
+describe("a heading finding", () => {
+  const COMMANDS = String.raw`"^## Standard commands \\(copy-paste\\)$"`;
+  const missing = (quoted: string): string =>
+    `  ✗ 1:3 [structure] Required element ${quoted} not found within "Technology"`;
+
+  // QFAI:EX-0001-0011-23
+  it("names the heading to write where the pattern accepts one line", () => {
+    expect(explainHeadings(missing(COMMANDS))).toBe(
+      '  ✗ 1:3 [structure] Required heading "## Standard commands (copy-paste)" not found within "Technology"',
+    );
+    expect(
+      explainHeadings(
+        '  ✗ 3:4 [structure] First heading under "Acceptance Criteria" is "## Crit" but expected "^## Criteria$"',
+      ),
+    ).toBe(
+      '  ✗ 3:4 [structure] First heading under "Acceptance Criteria" is "## Crit" but expected "## Criteria"',
+    );
+  });
+
+  // QFAI:EX-0001-0011-23
+  it("keeps a pattern that accepts more than one heading", () => {
+    const story = missing(`"^# US-[0-9]{4}-[0-9]{4}: .+$"`);
+    expect(explainHeadings(story)).toBe(story);
+    expect(plainHeading("^## Stack$")).toBe("## Stack");
+    expect(plainHeading("## Stack")).toBeNull();
+    expect(plainHeading(String.raw`^## Stack\d$`)).toBeNull();
+    expect(plainHeading("^## Stack|Other$")).toBeNull();
+  });
+
+  // QFAI:EX-0001-0011-23
+  it("is reported by the lane as the heading, and as the pattern behind --show-patterns", async () => {
+    const root = await newTempDir();
+    const template = readFileSync(
+      path.join(
+        REPO_ROOT,
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md",
+      ),
+      "utf-8",
+    ).replace(/\r\n/g, "\n");
+    const dir = path.join(root, ".qfai", "contracts");
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "tech.md"),
+      template.replace("## Standard commands (copy-paste)", "## Standard commands"),
+      "utf-8",
+    );
+    const file = ".qfai/contracts/tech.md";
+
+    const explained = runDriver(["--root", root, "--scope", "files", file]);
+    const raw = runDriver(["--root", root, "--scope", "files", "--show-patterns", file]);
+
+    expect(explained.status).toBe(1);
+    expect(explained.stderr).toContain(
+      'Required heading "## Standard commands (copy-paste)" not found within "Technology"',
+    );
+    expect(raw.stderr).toContain(`Required element ${COMMANDS}`);
   });
 });
 

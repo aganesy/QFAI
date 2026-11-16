@@ -22,6 +22,12 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  offendingLine,
+  plainHeading,
+  sectionDescriptions,
+} from "../../assets/scripts/check-mdschema.mjs";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/assets -> tests -> packages/qfai -> packages -> repo root
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
@@ -820,4 +826,117 @@ describe("the constraint document states each limit in plain words", () => {
     expect(result.output).toContain("No violations");
     expect(result.status).toBe(0);
   });
+});
+
+describe("every schema's findings name what to write", () => {
+  interface Rule {
+    pattern: string;
+    example: string;
+  }
+  interface Section {
+    pattern: string;
+    regex: boolean;
+    description: string;
+    examples: Rule[];
+  }
+  const readSections = (schema: string): Section[] =>
+    sectionDescriptions(readFileSync(path.join(SCHEMA_ROOT, schema), "utf-8"));
+
+  function check(schema: string, text: string): { status: number | null; output: string } {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-example-"));
+    try {
+      const file = path.join(dir, path.basename(schema).replace(/\.mdschema\.yml$/, ".md"));
+      writeFileSync(file, text, "utf-8");
+      const result = spawnSync(
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", path.join(SCHEMA_ROOT, schema), file],
+        { cwd: REPO_ROOT, encoding: "utf-8" },
+      );
+      return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  /**
+   * The template with the line `rule` matches in `section` replaced by the
+   * rule's example, and the template with that line removed; or, where the
+   * template leaves the optional section out, the section holding only the
+   * example, written before the first second-level heading.
+   */
+  function withExample(
+    template: string,
+    section: Section,
+    rule: Rule,
+  ): { written: string; removed: string | null } {
+    const lines = template.split("\n");
+    const heading = lines.findIndex((line) => new RegExp(section.pattern, "u").test(line));
+    if (heading === -1) {
+      const before = lines.findIndex((line) => line.startsWith("## "));
+      const added = [plainHeading(section.pattern) ?? "", "", rule.example, ""];
+      return {
+        written: [...lines.slice(0, before), ...added, ...lines.slice(before)].join("\n"),
+        removed: null,
+      };
+    }
+    const at = offendingLine(template, heading + 1, rule.pattern);
+    expect(at, `${section.pattern} holds no line of ${rule.pattern}`).not.toBeNull();
+    const index = (at ?? 0) - 1;
+    return {
+      written: [...lines.slice(0, index), rule.example, ...lines.slice(index + 1)].join("\n"),
+      removed: [...lines.slice(0, index), ...lines.slice(index + 1)].join("\n"),
+    };
+  }
+
+  // QFAI:EX-0001-0011-22
+  it("gives every section a description", () => {
+    const bare = schemas.flatMap((schema) =>
+      readSections(schema)
+        .filter((section) => section.description === "")
+        .map((section) => `${schema} ${section.pattern}`),
+    );
+
+    expect(bare).toEqual([]);
+  });
+
+  const rules = schemas.flatMap((schema) =>
+    readSections(schema).flatMap((section) =>
+      section.examples.map((rule) => ({ schema, section, rule })),
+    ),
+  );
+
+  // QFAI:EX-0001-0011-22
+  it("gives the Surface rule the bare row, its allowed values in the section description", () => {
+    const stack = readSections("story/03_contract/tech.mdschema.yml").find(
+      (section) => section.pattern === "^## Stack$",
+    );
+    const surface = stack?.examples.find((rule) => rule.pattern.includes("Surface"));
+
+    expect(surface?.example).toBe("| Surface | `cli` |");
+    expect(stack?.description).toContain("web, mobile, desktop, mixed, cli and non-ui");
+  });
+
+  it("reads the required-text rules of the shipped schemas", () => {
+    expect(rules.length).toBeGreaterThan(10);
+  });
+
+  // QFAI:EX-0001-0011-22
+  it.each(rules.map((entry) => [`${entry.schema} ${entry.rule.pattern}`, entry] as const))(
+    "gives %s an example line that passes in its template",
+    (_label, { schema, section, rule }) => {
+      expect(rule.example).not.toBe("");
+      expect(rule.example).not.toMatch(/\n|<[^>]*>/u);
+      const template = templateFor(schema);
+      expect(template).toBeDefined();
+      const text = readFileSync(template ?? "", "utf-8").replace(/\r\n/g, "\n");
+      const { written, removed } = withExample(text, section, rule);
+
+      const passed = check(schema, written);
+      expect(passed.output).toContain("No violations");
+      expect(passed.status).toBe(0);
+      if (removed !== null) {
+        expect(check(schema, removed).output).toContain("[required-text]");
+      }
+    },
+  );
 });

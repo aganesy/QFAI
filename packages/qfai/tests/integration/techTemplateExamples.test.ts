@@ -96,3 +96,31 @@ describe("the tech.md template's examples", () => {
     expect(messages[0]).not.toContain("(?m)");
   });
 });
+
+describe("every schema's findings name what to write", () => {
+  // QFAI:AC-0001-0011-07
+  it("names the missing line by its example and the missing heading by its text", async () => {
+    const objective = (
+      await readFile(path.resolve(path.dirname(TEMPLATE), "../01_policy/objective.md"), "utf8")
+    ).replace(/\r\n/g, "\n");
+    const policyDir = path.join(root, ".qfai", "spec", "01_policy");
+    await mkdir(policyDir, { recursive: true });
+    await writeFile(
+      path.join(policyDir, "objective.md"),
+      objective.replace(/^- Evidence: .*\n/m, "").replace(/^## Non-goals\n[\s\S]*$/m, ""),
+      "utf8",
+    );
+    const { config } = await loadConfig(root);
+
+    const messages = (await validateDocumentSchema(root, config))
+      .filter((found) => found.file?.endsWith("objective.md") ?? false)
+      .map((found) => found.message);
+
+    expect(messages).toEqual([
+      expect.stringContaining('Required heading "## Non-goals" not found within "Objective"'),
+      expect.stringContaining(
+        "Section 'Objective' lacks a line the schema requires, for example: - Evidence: Support tickets show release notes arrive a week late",
+      ),
+    ]);
+  });
+});
