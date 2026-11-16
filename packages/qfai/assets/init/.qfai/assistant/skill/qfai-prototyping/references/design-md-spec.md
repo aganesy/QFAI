@@ -18,6 +18,7 @@ A reference copy is shipped in this skill at
 - `brand.theme`
 - `visual.layout`
 - `accessibility` allowed keys
+- `data_display`
 - Validation rules
 - Issue shape
 
@@ -25,7 +26,7 @@ A reference copy is shipped in this skill at
 
 ```markdown
 ---
-<YAML front-matter: brand, audience, visual, accessibility>
+<YAML front-matter: brand, audience, visual, accessibility, data_display>
 ---
 
 # Brand Philosophy
@@ -84,6 +85,11 @@ visual:
 accessibility:
   contrast_ratio_min: number
   motion: string
+data_display: # optional
+  locale: string # e.g. "ja-JP"
+  currency: string # how money is written
+  number: string # how numbers are written
+  date: string # how dates are written
 ```
 
 ## `brand.archetype` allowed values
@@ -116,7 +122,9 @@ target, and how a table behaves at a narrow width (`stack` into cards, or
 before it existed still parses. `target_min_px` is at least 24, the WCAG 2.5.8
 floor; the project's own minimum may be higher. Like the other `visual` values,
 these come from the adopted theme where it defines them. Each level is closed:
-an unknown key fails the parse.
+an unknown key fails the parse. `qfai catalog design` writes each breakpoint and
+content width, and `target_min_px` in `px`, into the token file and the theme;
+`table_narrow` describes behaviour, so it stays out of both.
 
 ## `accessibility` allowed keys
 
@@ -134,6 +142,12 @@ A new accessibility obligation does not go here. Put it in the
 `observable_outcome`, where it is prose a reviewer reads rather than a
 token the gate compares.
 
+## `data_display`
+
+An optional, closed section: `locale`, `currency`, `number` and `date`, each a non-empty string
+saying how that value is written on screen. `qfai catalog design` writes them as text on the token
+file's `data-display` group; no CSS variable carries them.
+
 ## Validation rules
 
 - `accessibility`: only `contrast_ratio_min` and `motion` (see above).
@@ -144,10 +158,28 @@ token the gate compares.
   rejected so the gate can do strict equality comparison.
 - `visual.colors.overlay`: must be an `rgba(...)` value.
 - All token strings reject leading/trailing whitespace.
+- No colour, font family stack, `typography.scale` size, `spacing.base`,
+  radius, shadow, breakpoint or content width may hold `;`, `{`, `}`, `/*`
+  or `*/`, end in a backslash, or leave a parenthesis, bracket or quote open: `qfai catalog
+design` writes each into a CSS declaration of the theme, where one would
+  end it or swallow what follows.
+- `visual.typography.weight.*`: a number from 1 to 1000, the font weights the
+  Design Tokens Community Group 2025.10 format states.
+- No theme-bound value holds a number too long to read as one, or with more
+  digits than a number states exactly (`9007199254740993`), and no
+  `visual.spacing.scale` step times `spacing.base` is a length a number cannot
+  state exactly.
+- `visual.spacing.scale` names each step once, since each step becomes a token
+  named after it.
+- `visual.layout.target_min_px` is small enough to write without an exponent,
+  since the theme writes it as a CSS length.
 - Unknown keys at any level are rejected.
 - All 12 color keys, 3 font families, 4 radius keys, and 3 shadow keys
   listed above are required.
-- `visual.layout` is optional. Its lengths are strings taken verbatim;
+- Each `typography.scale` size, `spacing.base`, radius, breakpoint and content
+  width is one CSS length, `0` or a number with a length unit such as `px`,
+  `rem`, `em`, `%` or `vw`, written verbatim into the theme.
+- `visual.layout` is optional;
   `target_min_px` is a number of at least 24; `table_narrow` is `stack` or
   `scroll`.
 

@@ -58,10 +58,11 @@ export type DesignMdLayout = {
  * the file exists is read against the same tree.
  */
 export const DESIGN_MD_KEYS = {
-  root: ["brand", "visual", "audience", "accessibility"],
+  root: ["brand", "visual", "audience", "accessibility", "data_display"],
   brand: ["name", "archetype", "voice", "theme"],
   audience: ["emotion", "do_not_look_like"],
   accessibility: ["contrast_ratio_min", "motion"],
+  data_display: ["locale", "currency", "number", "date"],
   visual: ["colors", "typography", "radius", "shadow", "spacing", "layout"],
   "visual.colors": COLOR_KEYS,
   "visual.typography": [...FONT_KEYS, "scale", "weight"],
@@ -136,6 +137,13 @@ export type DesignMd = {
   accessibility?: {
     contrast_ratio_min?: number;
     motion?: string;
+  };
+  /** How numbers, money and dates are written on screen, when stated. */
+  data_display?: {
+    locale?: string;
+    currency?: string;
+    number?: string;
+    date?: string;
   };
 };
 
@@ -520,7 +528,49 @@ function buildDesignMd(raw: unknown): BuildResult {
     }
     data.accessibility = acc;
   }
+  if ("data_display" in raw && raw.data_display !== undefined) {
+    const display = readDataDisplay(raw.data_display);
+    if ("error" in display) return { error: display.error };
+    data.data_display = display.value;
+  }
   return { data };
+}
+
+/** The optional `data_display` section: the locale and the number, money and date formats. */
+function readDataDisplay(
+  raw: unknown,
+): { value: NonNullable<DesignMd["data_display"]> } | { error: ParseError } {
+  if (!isRecord(raw)) {
+    return {
+      error: {
+        path: "data_display",
+        code: "invalid-type",
+        message: `'data_display' must be a mapping (got ${describeValueShape(raw)}).`,
+      },
+    };
+  }
+  const keyError = rejectUnknownKeys(raw, new Set<string>(DESIGN_MD_KEYS.data_display), {
+    kind: "section",
+    name: "data_display",
+    path: "data_display",
+  });
+  if (keyError) return { error: keyError };
+  const value: NonNullable<DesignMd["data_display"]> = {};
+  for (const field of DESIGN_MD_KEYS.data_display) {
+    const entry = raw[field];
+    if (entry === undefined) continue;
+    if (typeof entry !== "string" || entry.trim() === "" || entry.trim() !== entry) {
+      return {
+        error: {
+          path: `data_display.${field}`,
+          code: "invalid-type",
+          message: `'data_display.${field}' must be a non-empty string with no leading / trailing whitespace.`,
+        },
+      };
+    }
+    value[field] = entry;
+  }
+  return { value };
 }
 
 function readBrand(raw: unknown): { value: DesignMd["brand"] } | { error: ParseError } {
@@ -766,6 +816,16 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
           },
         };
       }
+      // The Design Tokens Community Group 2025.10 format states a numeric font weight as 1 to 1000.
+      if (v < 1 || v > 1000) {
+        return {
+          error: {
+            path: `visual.typography.weight.${k}`,
+            code: "invalid-format",
+            message: `'visual.typography.weight.${k}' must be from 1 to 1000 (got ${v}).`,
+          },
+        };
+      }
       weights[k] = v;
     }
     typography.weight = weights;
@@ -862,6 +922,16 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
             },
           };
         }
+        // Each step becomes the token `spacing.<step>`, so a repeated step would name two tokens alike.
+        if (validated.includes(entry)) {
+          return {
+            error: {
+              path: `visual.spacing.scale[${i}]`,
+              code: "invalid-format",
+              message: `'visual.spacing.scale[${i}]' repeats the step ${entry}.`,
+            },
+          };
+        }
         validated.push(entry);
       }
       sp.scale = validated;
@@ -873,7 +943,181 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
     if ("error" in layout) return { error: layout.error };
     value.layout = layout.value;
   }
+  const breaker = findCssBreaker(value) ?? findNonLength(value) ?? findOverflowingNumber(value);
+  if (breaker) return { error: breaker };
   return { value };
+}
+
+/**
+ * Whether a written decimal reads as a number that states it exactly: finite, and the same
+ * decimal when written back with as many places. `9007199254740993` reads as ...992, so the token
+ * would disagree with the theme.
+ */
+function readsExactly(written: string): boolean {
+  const value = Number(written);
+  if (!Number.isFinite(value)) return false;
+  const places = written.split(".")[1]?.length ?? 0;
+  if (places > 100) return false;
+  return plainDecimal(value.toFixed(places)) === plainDecimal(written);
+}
+
+/** A decimal without leading zeros before its point and trailing zeros after it. */
+function plainDecimal(written: string): string {
+  const [whole = "", fraction = ""] = written.split(".");
+  const integer = whole.replace(/^0+(?=\d)/, "") || "0";
+  const decimals = fraction.replace(/0+$/, "");
+  return decimals === "" ? integer : `${integer}.${decimals}`;
+}
+
+/**
+ * The first number the token file would state as no number at all, or not exactly: one written in a theme-bound
+ * value too long to read, such as hundreds of digits, or a spacing step's length, the base times
+ * the step, too large to compute. Every dimension the token file states is one of these.
+ */
+function findOverflowingNumber(visual: DesignMd["visual"]): ParseError | null {
+  for (const [at, text] of themeBoundValues(visual)) {
+    const numbers = text.match(/\d*\.?\d+/g) ?? [];
+    if (numbers.every(readsExactly)) continue;
+    return {
+      path: at,
+      code: "invalid-format",
+      message: `'${at}' holds a number too large, or with too many digits, to read exactly.`,
+    };
+  }
+  const base = /^\d*\.?\d+/.exec(visual.spacing?.base ?? "")?.[0] ?? "0";
+  const steps = visual.spacing?.scale ?? [];
+  for (let index = 0; index < steps.length; index += 1) {
+    if (readsExactly(decimalProductText(base, steps[index] ?? 0))) continue;
+    return {
+      path: `visual.spacing.scale[${index}]`,
+      code: "invalid-format",
+      message: `'visual.spacing.scale[${index}]' times 'visual.spacing.base' is too large, or has too many digits, to state exactly.`,
+    };
+  }
+  return null;
+}
+
+/**
+ * The product of a written decimal and a step as decimal text, computed on their digits, so 0.1
+ * times 3 is `0.3` and 0.123456789012345 times 1 keeps every digit.
+ */
+export function decimalProductText(written: string, step: number): string {
+  const left = scaledDecimal(written === "" ? "0" : written);
+  const right = scaledDecimal(String(step));
+  if (left === null || right === null) return String(Number(written) * step);
+  const places = left.places + right.places;
+  const product = left.digits * right.digits;
+  const digits = (product < 0n ? -product : product).toString();
+  const padded = digits.padStart(places + 1, "0");
+  const whole = padded.slice(0, padded.length - places);
+  const fraction = padded.slice(padded.length - places);
+  return `${product < 0n ? "-" : ""}${whole}${fraction === "" ? "" : `.${fraction}`}`;
+}
+
+/** A decimal as whole digits and the number of places after its point, `1.25` as 125 and 2. */
+function scaledDecimal(written: string): { digits: bigint; places: number } | null {
+  const match = /^(-?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(written);
+  if (!match) return null;
+  const [, sign = "", whole = "", fraction = "", exponent = "0"] = match;
+  const unsigned = `${whole}${fraction}` === "" ? "0" : `${whole}${fraction}`;
+  let digits = BigInt(`${sign}${unsigned}`);
+  let places = fraction.length - Number(exponent);
+  if (places < 0) {
+    digits *= 10n ** BigInt(-places);
+    places = 0;
+  }
+  return { digits, places };
+}
+
+/** Each `visual` value the theme writes as a length, by path. */
+function lengthValues(visual: DesignMd["visual"]): Array<[string, string]> {
+  const values: Array<[string, string]> = [];
+  const add = (section: string, record: Readonly<Record<string, string>> | undefined): void => {
+    for (const [key, text] of Object.entries(record ?? {}))
+      values.push([`${section}.${key}`, text]);
+  };
+  add("visual.typography.scale", visual.typography.scale);
+  if (visual.spacing?.base !== undefined) values.push(["visual.spacing.base", visual.spacing.base]);
+  add("visual.radius", visual.radius);
+  add("visual.layout.breakpoints", visual.layout?.breakpoints);
+  add("visual.layout.content_max_width", visual.layout?.content_max_width);
+  return values;
+}
+
+/** The first length-valued field that is not one CSS length, such as `spacing.base: "wide"`. */
+function findNonLength(visual: DesignMd["visual"]): ParseError | null {
+  for (const [at, text] of lengthValues(visual)) {
+    if (CSS_LENGTH_RE.test(text)) continue;
+    return {
+      path: at,
+      code: "invalid-format",
+      message: `'${at}' must be one CSS length, a number with a unit such as px, rem, em, % or vw, or 0 (got ${text}).`,
+    };
+  }
+  return null;
+}
+
+/** Each `visual` string `qfai catalog design` writes into a `theme.css` declaration, by path. */
+function themeBoundValues(visual: DesignMd["visual"]): Array<[string, string]> {
+  const values: Array<[string, string]> = [];
+  const add = (section: string, record: Readonly<Record<string, string>> | undefined): void => {
+    for (const [key, text] of Object.entries(record ?? {}))
+      values.push([`${section}.${key}`, text]);
+  };
+  add("visual.colors", visual.colors);
+  for (const key of FONT_KEYS) values.push([`visual.typography.${key}`, visual.typography[key]]);
+  add("visual.typography.scale", visual.typography.scale);
+  if (visual.spacing?.base !== undefined) values.push(["visual.spacing.base", visual.spacing.base]);
+  add("visual.radius", visual.radius);
+  add("visual.shadow", visual.shadow);
+  add("visual.layout.breakpoints", visual.layout?.breakpoints);
+  add("visual.layout.content_max_width", visual.layout?.content_max_width);
+  return values;
+}
+
+/**
+ * The first theme-bound value that could end its declaration. Each value is written as the value
+ * of a custom property in the theme's `@theme` block, where a `;`, `{` or `}`, a comment marker, or
+ * a bracket or quote left open would end the declaration or the block, or swallow what follows.
+ */
+function findCssBreaker(visual: DesignMd["visual"]): ParseError | null {
+  for (const [at, text] of themeBoundValues(visual)) {
+    if (!breaksDeclaration(text)) continue;
+    return {
+      path: at,
+      code: "invalid-css-value",
+      message: `'${at}' holds ";", "{", "}", "/*" or "*/", ends in "\\", or leaves a bracket or quote open, which a value written into a CSS declaration cannot.`,
+    };
+  }
+  return null;
+}
+
+/**
+ * Whether a value holds `;`, `{`, `}` or a comment marker, ends in a backslash, or does not close
+ * its brackets and quotes.
+ */
+function breaksDeclaration(text: string): boolean {
+  if (/[;{}]/.test(text) || text.includes("/*") || text.includes("*/")) return true;
+  const closers: string[] = [];
+  let quote: string | null = null;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text.charAt(index);
+    if (character === "\\") {
+      // A backslash at the end would escape the `;` the theme writes after the value.
+      if (index === text.length - 1) return true;
+      index += 1;
+      continue;
+    }
+    if (quote !== null) {
+      if (character === quote) quote = null;
+      continue;
+    }
+    if (character === '"' || character === "'") quote = character;
+    else if (character === "(") closers.push(")");
+    else if (character === "[") closers.push("]");
+    else if ((character === ")" || character === "]") && closers.pop() !== character) return true;
+  }
+  return quote !== null || closers.length > 0;
 }
 
 function layoutError(path: string, code: string, message: string): { error: ParseError } {
@@ -894,6 +1138,10 @@ function parseLength(value: unknown, path: string): { value: string } | { error:
   }
   return { value };
 }
+
+/** One CSS length: `0`, or a number and a length unit, as the theme writes it into a declaration. */
+const CSS_LENGTH_RE =
+  /^(?:0|(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|ex|ch|ic|lh|rlh|cap|%|vw|vh|vi|vb|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc))$/i;
 
 function parseLengthMap(
   raw: unknown,
@@ -973,6 +1221,14 @@ function parseLayout(raw: unknown): { value: DesignMdLayout } | { error: ParseEr
         "visual.layout.target_min_px",
         "invalid-format",
         `'visual.layout.target_min_px' must be at least ${TARGET_MIN_PX_FLOOR}, the WCAG 2.5.8 minimum target size (got ${target}).`,
+      );
+    }
+    // The theme writes the number as a CSS length, which has no exponent form such as `1e+21`.
+    if (/e/i.test(String(target))) {
+      return layoutError(
+        "visual.layout.target_min_px",
+        "invalid-format",
+        `'visual.layout.target_min_px' must be small enough to write without an exponent (got ${target}).`,
       );
     }
     layout.target_min_px = target;

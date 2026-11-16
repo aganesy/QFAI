@@ -4,6 +4,7 @@
 
 - Inputs
 - Component catalogue
+- Design catalogue
 - Plain text in UI source
 - Repeated figures and claims
 - Routing
@@ -50,6 +51,23 @@ The widget `@pattern` names it reads, compared without case, spaces, hyphens or 
 `autocomplete`, `listbox`, `select`, `tooltip`, `popover`, `toast`, `date picker`, `disclosure` and
 `accordion`. A component with one of them and a filled `@a11y` spares its own file the hand-written
 markup warning.
+
+## Design catalogue
+
+Root `DESIGN.md` is the brand source a person edits. `npx qfai catalog design` derives two files from
+it; commit both, and never edit them by hand:
+
+- `.qfai/catalog/design.tokens.json`: the tokens in the Design Tokens Community Group format: the
+  colours, their semantic aliases (`semantic.surface`, `text`, `border`, `primary`, `status`), the type,
+  spacing, radius and shadow tokens, and the `visual.layout` and `data_display` values when `DESIGN.md` states them.
+- `.qfai/catalog/theme.css`: the same tokens as a Tailwind 4 `@theme` block. Import it from the app's
+  stylesheet and use its utilities or variables, such as `bg-surface` or `var(--color-status-danger)`,
+  instead of copying a value.
+
+Once either file exists, `npx qfai validate` warns when the token file or the theme is out of date with
+`DESIGN.md` (`QFAI-DCAT-001`, `QFAI-DCAT-002`), and about each hex colour in a `.html`, `.tsx`, `.jsx`, `.vue` or `.svelte` file `uiux.surfacePaths` selects
+that matches no colour of `DESIGN.md` (`QFAI-DCAT-003`). `npx qfai catalog design --check` fails CI on
+the first two.
 
 ## Plain text in UI source
 
