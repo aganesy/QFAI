@@ -22,8 +22,10 @@ structure:
         required_text:
           - pattern: "(?m)^- Summary: "
             regex: true
+            example: "- Summary: A command-line tool that publishes release notes"
           - pattern: "(?m)^- Value: "
             regex: true
+            example: "- Value: Maintainers publish notes without editing them by hand"
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
@@ -73,8 +75,10 @@ structure:
         required_text:
           - pattern: "(?m)^- Compatibility: "
             regex: true
+            example: "- Compatibility: Existing command options keep working within a major release"
           - pattern: "(?m)^- Change: "
             regex: true
+            example: "- Change: An option changes only in a major release, with a migration note"
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true

@@ -1,6 +1,7 @@
 # Document schema: <contractsDir>/tech.md
 # A required_text item may carry `example:`, a line of the shape the rule
-# requires; the checker shows it in place of the pattern when the line is missing.
+# requires and that can be pasted as it is; the checker shows it in place of the
+# pattern when the line is missing.
 heading_rules:
   no_skip_levels: true
   max_depth: 2
@@ -33,7 +34,7 @@ structure:
           # One surface, optionally in backticks, or the template's placeholder.
           - pattern: '(?m)^\|[ \t]*Surface[ \t]*\|[ \t]*`?(?:web|mobile|desktop|mixed|cli|non-ui|<[^>|\n]*>)`?[ \t]*\|'
             regex: true
-            example: "| Surface | `cli` |, where Surface holds one of web, mobile, desktop, mixed, cli or non-ui"
+            example: "| Surface | `cli` |"
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true

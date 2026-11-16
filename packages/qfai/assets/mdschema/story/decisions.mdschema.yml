@@ -24,6 +24,7 @@ structure:
         required_text:
           - pattern: '\A(?:[ \t]*\r?\n)*- decisions/page-[0-9]{4}\.md(?:\r?\n(?:[ \t]*\r?\n)*- decisions/page-[0-9]{4}\.md)*(?:\r?\n[ \t]*)*\r?\z'
             regex: true
+            example: "- decisions/page-0001.md"
       - heading:
           pattern: "^## Decisions$"
           regex: true
