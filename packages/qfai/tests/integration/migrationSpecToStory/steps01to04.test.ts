@@ -1152,7 +1152,6 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
-
   it("rejects a criterion added after the first ID map was written", async () => {
     await withProject(async (root) => {
       await putMinimalPack(root);
