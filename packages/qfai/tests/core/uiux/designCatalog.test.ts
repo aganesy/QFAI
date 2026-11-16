@@ -153,6 +153,17 @@ describe("the token file and the theme", () => {
   });
 
   // QFAI:EX-0001-0312-01
+  it("reads a backslash before a line break in a font family name as nothing", async () => {
+    const design = await sampleDesign((text) =>
+      text.replace(
+        /family_sans: .*$/m,
+        String.raw`family_sans: "\"AC\\\nME\", \"B\\\r\nE\", \"C\\\fD\", sans-serif"`,
+      ),
+    );
+    expect(tokenAt(design, "font.family.sans.$value")).toEqual(["ACME", "BE", "CD", "sans-serif"]);
+  });
+
+  // QFAI:EX-0001-0312-01
   it("decodes a CSS hex escape in a font family name", async () => {
     const design = await sampleDesign((text) =>
       text.replace(/family_sans: .*$/m, `family_sans: '"\\41 CME", "\\000042 eta", sans-serif'`),
@@ -244,6 +255,27 @@ describe("hex literals in source", () => {
       ].join("\n"),
     );
     expect(found.map((hex) => hex.line)).toEqual([3, 4]);
+  });
+
+  // QFAI:EX-0001-0312-09
+  it("reads an attribute only inside a tag, to the end of its quoted or {…} value", () => {
+    const found = findRawHexes(
+      [
+        'const accent="#12ab56";',
+        '<a href={on ? "#bad" : "#add"}>x</a>',
+        '<path fill={on ? "#12ab56" : "#fff"} />',
+        "<a",
+        '  href="#bad"',
+        ">x</a>",
+        'const fallback = useState<string>("#12ab56");',
+      ].join("\n"),
+    );
+    expect(found.map((hex) => [hex.line, hex.written])).toEqual([
+      [1, "#12ab56"],
+      [3, "#12ab56"],
+      [3, "#fff"],
+      [7, "#12ab56"],
+    ]);
   });
 
   // QFAI:EX-0001-0312-09

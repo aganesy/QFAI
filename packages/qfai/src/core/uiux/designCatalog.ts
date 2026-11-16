@@ -122,22 +122,24 @@ const RAW_HEX_RE =
 // is not read after a `:`, so the path of a URL such as `https://` is not taken for a comment.
 const COMMENT_RE = /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|(?<!:)\/\/[^\n]*/g;
 /**
- * An attribute whose value is a colour: `style="color: #fff"`, `fill="#fff"`, React's
- * `stopColor="#fff"`, one Vue binds, `:fill="'#fff'"`, or a Svelte style directive,
- * `style:color="#fff"`. The name starts the line or follows whitespace, so `data-color="#fff"` is
- * another attribute. The value runs to the quote that opened it, so a quoted expression inside a
- * bound value is still part of it.
+ * The open value of an attribute at the end of a tag's text: the name, `=` with any spaces, then
+ * a quoted value not yet closed, or a `{…}` expression not yet closed with one level of inner
+ * braces allowed, as in `href={on ? "#bad" : "#add"}`. A name may carry a binding or directive
+ * prefix: Vue's `:href` and `v-bind:href`, `@click`, Svelte's `bind:value` or `style:color`.
  */
-const COLOR_ATTRIBUTE_RE =
-  /(?:^|\s)(?:(?::|v-bind:)?(?:style|fill|stroke|color|stop-?color|flood-?color|lighting-?color)|style:[\w-]+)\s*=\s*\{?\s*(["'`])(?:(?!\1).)*$/i;
+const OPEN_ATTRIBUTE_RE =
+  /\s([:@]?[\w.-]+(?::[\w.-]+)?)\s*=\s*(?:\{(?:[^{}]|\{[^{}]*\})*|(["'`])(?:(?!\2)[^\n])*)$/;
 /**
- * Any other attribute's value, such as `aria-controls="#bad"`, Vue's `:href="'#bad'"` or a
- * Svelte directive such as `use:action="#bad"`: never a colour place. Written with no space around its `=`, a name reads as an attribute anywhere; with
- * spaces, as in `href = "#bad"`, only inside a tag opened on the same line, which keeps
- * `const accent = "#fff"` a whole string literal.
+ * An attribute name whose value is a colour: `style`, `fill`, `stroke`, `color`, the SVG colour
+ * attributes in their hyphenated or React form, Vue's bindings of them, and Svelte's `style:`
+ * directives. `data-color` is another attribute.
  */
-const OTHER_ATTRIBUTE_RE =
-  /(?:(?:^|\s)(?::|@|[\w-]+:)?[\w-]+=|<[A-Za-z][\w.:-]*(?:\s[^<>]*)?\s(?::|@|[\w-]+:)?[\w-]+\s*=\s*)\{?\s*(["'`])(?:(?!\1).)*$/;
+const COLOR_ATTRIBUTE_NAME_RE =
+  /^(?:(?::|v-bind:)?(?:style|fill|stroke|color|stop-?color|flood-?color|lighting-?color)|style:[\w-]+)$/i;
+/** The opening of a tag: `<` and a name. */
+const TAG_OPEN_RE = /<[A-Za-z][\w.:-]*/g;
+/** How far back, in characters, a tag may open and still hold the hex. */
+const TAG_REACH = 4000;
 /** A CSS declaration value: a `:` since the last `;`, `{` or `}` on the line. */
 const DECLARATION_RE = /:[^:;{}]*$/;
 
@@ -157,7 +159,7 @@ export function findRawHexes(text: string): RawHex[] {
     const before = scanned.slice(lineStart, match.index);
     const end = match.index + match[0].length;
     const after = scanned.slice(end, end + 16);
-    if (!colorPlace(before, after)) continue;
+    if (!colorPlace(openAttribute(scanned, match.index), before, after)) continue;
     const rgba = parseHex(match[0]);
     if (!rgba) continue;
     found.push({ line, written: match[0], hex: hexOf(rgba) });
@@ -165,10 +167,29 @@ export function findRawHexes(text: string): RawHex[] {
   return found;
 }
 
-/** Whether a hex sits where a colour goes, from the text before it on its line and after it. */
-function colorPlace(before: string, after: string): boolean {
-  if (COLOR_ATTRIBUTE_RE.test(before)) return true;
-  if (OTHER_ATTRIBUTE_RE.test(before)) return false;
+/**
+ * The name of the attribute whose value holds a point, when the point sits inside a tag that is
+ * still open there: the last `<name` before it has no `>` after it, an arrow's `=>` aside. A tag
+ * may open on an earlier line, as a formatter writes one attribute per line. Outside a tag, such
+ * as `const accent="#fff"` or `useState<string>("#fff")`, there is no attribute.
+ */
+function openAttribute(text: string, index: number): string | null {
+  const window = text.slice(Math.max(0, index - TAG_REACH), index);
+  let tagStart = -1;
+  for (const tag of window.matchAll(TAG_OPEN_RE)) tagStart = tag.index;
+  if (tagStart < 0) return null;
+  const inside = window.slice(tagStart);
+  if (/(?<!=)>/.test(inside)) return null;
+  return OPEN_ATTRIBUTE_RE.exec(inside)?.[1] ?? null;
+}
+
+/**
+ * Whether a hex sits where a colour goes: in a colour attribute's value and not in another
+ * attribute's; outside a tag, in a CSS declaration value or as a whole string literal, read from
+ * the text before it on its line and after it.
+ */
+function colorPlace(attribute: string | null, before: string, after: string): boolean {
+  if (attribute !== null) return COLOR_ATTRIBUTE_NAME_RE.test(attribute);
   if (/^\s*\{/.test(after)) return false;
   if (DECLARATION_RE.test(before)) return true;
   return /["'`]$/.test(before) && /^["'`]/.test(after);
@@ -517,9 +538,13 @@ function fontStack(stack: string): string[] {
 /**
  * The character a CSS escape after a backslash stands for, and where the escape ends: up to six
  * hex digits name a code point and take one following white space with them, as `\41 CME` is
- * `ACME`; any other character stands for itself.
+ * `ACME`; a line break after it is a continuation and stands for nothing; any other character
+ * stands for itself.
  */
 function cssEscape(text: string, start: number): { text: string; end: number } {
+  // A backslash before a line break continues the string on the next line and stands for nothing.
+  if (text.startsWith("\r\n", start)) return { text: "", end: start + 2 };
+  if (/^[\n\r\f]/.test(text.charAt(start))) return { text: "", end: start + 1 };
   const hex = /^[0-9a-fA-F]{1,6}/.exec(text.slice(start))?.[0];
   if (hex === undefined) return { text: text.charAt(start), end: start + 1 };
   let end = start + hex.length;
