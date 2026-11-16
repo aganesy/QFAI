@@ -84,7 +84,11 @@ its test comes with the implement stage. Only those are pending. A
 `QFAI-STORY-006` error for an ID the run did not write, and every other error,
 is an ordinary failure, and an older one is handled as `common-gate-run`'s
 `## A failure that predates the change` says. A scope without `testsPending`
-leaves no obligation pending. Whether a `FAIL` whose only errors are pending
+leaves no obligation pending. A left-out stage of kind `test_fix` sets no
+`testsPending`: it repairs tests and writes none for a new ID, so in a
+scope without `testsPending` a `QFAI-STORY-006` error for an ID the run wrote is
+an ordinary failure, which
+`verify-repo-gate`'s fix loop handles like any other. Whether a `FAIL` whose only errors are pending
 obligations stops the commit is decided by `verify-commit`.
 
 ## Accessibility layer
