@@ -276,7 +276,10 @@ function spacingTokens(design: DesignMd): Token[] {
       // A token name may not hold a `.`, so a step of 0.5 is named `0-5`.
       path: ["spacing", String(step).replace(".", "-")],
       type: "dimension",
-      value: { value: withoutFloatNoise(unit.value * step), unit: unit.unit },
+      value: {
+        value: decimalProduct(base.trim().slice(0, -unit.unit.length), step),
+        unit: unit.unit,
+      },
     });
   }
   return tokens;
@@ -509,11 +512,33 @@ function hyphen(key: string): string {
 }
 
 /**
- * A computed number without the noise of binary floating point, so 0.1 times 3 is 0.3, while a
- * real small value such as 0.00001 keeps its digits.
+ * The product of a written decimal and a step, computed on their decimal digits and read as a
+ * number only at the end, so 0.1 times 3 is 0.3 and 0.123456789012345 times 1 keeps every digit.
  */
-function withoutFloatNoise(value: number): number {
-  return Number(value.toPrecision(12));
+function decimalProduct(written: string, step: number): number {
+  const left = scaledDecimal(written === "" ? "0" : written);
+  const right = scaledDecimal(String(step));
+  if (left === null || right === null) return Number(written) * step;
+  const places = left.places + right.places;
+  const digits = (left.digits * right.digits).toString().replace("-", "");
+  const negative = left.digits * right.digits < 0n;
+  const padded = digits.padStart(places + 1, "0");
+  const text = `${padded.slice(0, padded.length - places)}.${padded.slice(padded.length - places)}`;
+  return Number(`${negative ? "-" : ""}${text}`);
+}
+
+/** A decimal as whole digits and the number of places after its point, `1.25` as 125 and 2. */
+function scaledDecimal(written: string): { digits: bigint; places: number } | null {
+  const match = /^(-?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(written);
+  if (!match) return null;
+  const [, sign = "", whole = "", fraction = "", exponent = "0"] = match;
+  let digits = BigInt(`${sign}${whole}${fraction}` === sign ? "0" : `${sign}${whole}${fraction}`);
+  let places = fraction.length - Number(exponent);
+  if (places < 0) {
+    digits *= 10n ** BigInt(-places);
+    places = 0;
+  }
+  return { digits, places };
 }
 
 function round(value: number): number {

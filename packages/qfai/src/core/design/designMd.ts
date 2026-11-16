@@ -1076,8 +1076,19 @@ function parseLength(value: unknown, path: string): { value: string } | { error:
       `'${path}' must be a non-empty string with no leading / trailing whitespace.`,
     );
   }
+  if (!CSS_LENGTH_RE.test(value)) {
+    return layoutError(
+      path,
+      "invalid-format",
+      `'${path}' must be one CSS length, a number with a unit such as px, rem, em, % or vw, or 0 (got ${value}).`,
+    );
+  }
   return { value };
 }
+
+/** One CSS length: `0`, or a number and a length unit, as the theme writes it into a declaration. */
+const CSS_LENGTH_RE =
+  /^(?:0|(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|ex|ch|ic|lh|rlh|cap|%|vw|vh|vi|vb|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc))$/i;
 
 function parseLengthMap(
   raw: unknown,

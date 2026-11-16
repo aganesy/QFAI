@@ -136,6 +136,23 @@ describe("the token file and the theme", () => {
   });
 
   // QFAI:EX-0001-0312-02
+  it.each([
+    ["0.123456789012345rem", 1, 0.123456789012345],
+    ["0.1rem", 3, 0.3],
+    ["0.25rem", 0.5, 0.125],
+  ])("computes %s times %d on its decimal digits", async (base, step, expected) => {
+    const design = await sampleDesign((text) =>
+      text
+        .replace(/base: "0\.25rem"/, `base: "${base}"`)
+        .replace("scale: [0, 1, 2, 3, 4, 6, 8, 12, 16, 24]", `scale: [${step}]`),
+    );
+    expect(tokenAt(design, `spacing.${String(step).replace(".", "-")}.$value`)).toEqual({
+      value: expected,
+      unit: "rem",
+    });
+  });
+
+  // QFAI:EX-0001-0312-02
   it("reads a negative shadow offset or spread, and leaves a negative blur to the theme", async () => {
     const spread = await sampleDesign((text) =>
       text.replace('sm: "0 1px 2px rgba(15,23,42,0.05)"', 'sm: "0 -2px 4px -1px #0a0a0a"'),

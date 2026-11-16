@@ -175,7 +175,9 @@ design` writes each into a CSS declaration of the theme, where one would
 - Unknown keys at any level are rejected.
 - All 12 color keys, 3 font families, 4 radius keys, and 3 shadow keys
   listed above are required.
-- `visual.layout` is optional. Its lengths are strings taken verbatim;
+- `visual.layout` is optional. Each breakpoint and content width is one CSS
+  length, `0` or a number with a length unit such as `px`, `rem`, `em`, `%` or
+  `vw`, written verbatim into the theme;
   `target_min_px` is a number of at least 24; `table_narrow` is `stack` or
   `scroll`.
 

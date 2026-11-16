@@ -1427,11 +1427,6 @@ describe("parseDesignMd: data_display", () => {
       "visual.shadow.sm",
       withValue('sm: "0 1px 2px rgba(15,23,42,0.05)"', `sm: "0 1px 2px #0a0a0a${BREAKER}"`),
     ],
-    ["visual.layout.breakpoints.sm", sampleWithLayout(["breakpoints:", `  sm: "40rem${BREAKER}"`])],
-    [
-      "visual.layout.content_max_width.app",
-      sampleWithLayout(["content_max_width:", `  app: "80rem${BREAKER}"`]),
-    ],
   ])("rejects ; { or } in %s", (at, text) => {
     const result = parseDesignMd(text);
     expect("error" in result && result.error).toMatchObject({
@@ -1498,6 +1493,30 @@ describe("parseDesignMd: data_display", () => {
       code: "invalid-format",
     });
   });
+
+  // QFAI:EX-0001-0312-04
+  it.each([
+    ["breakpoints", "sm", "wide", false],
+    ["content_max_width", "app", "auto", false],
+    ["content_max_width", "app", "80", false],
+    ["breakpoints", "sm", "40rem; } body { color: red }", false],
+    ["breakpoints", "sm", "40em", true],
+    ["content_max_width", "reading", "65ch", true],
+    ["content_max_width", "app", "100%", true],
+  ])(
+    "reads visual.layout.%s.%s %s as a CSS length, or refuses it: %s",
+    (section, key, length, ok) => {
+      const result = parseDesignMd(sampleWithLayout([`${section}:`, `  ${key}: "${length}"`]));
+      if (ok) {
+        expect("error" in result).toBe(false);
+        return;
+      }
+      expect("error" in result && result.error).toMatchObject({
+        path: `visual.layout.${section}.${key}`,
+        code: "invalid-format",
+      });
+    },
+  );
 
   // QFAI:EX-0001-0312-04
   it("rejects a spacing step whose length, the base times the step, is too large to compute", () => {
