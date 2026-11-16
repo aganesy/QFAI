@@ -141,15 +141,12 @@ async function writePair(
 ): Promise<string | null> {
   const files = outputs.map((output) => path.join(root, output.file));
   const temporaries = files.map((file) => `${file}.${process.pid}.tmp`);
-  // A target that cannot be read, such as a directory in its place, has no text to put back; its
-  // rename fails below and the pair is restored from the other file's earlier text.
-  const earlier = await Promise.all(
-    outputs.map((output) =>
-      readGenerated(root, output.file).catch((): GeneratedRead => ({ state: "absent" })),
-    ),
-  );
+  let earlier: GeneratedRead[] = [];
   let renamed = 0;
   try {
+    // A target that exists but cannot be read, such as a directory in its place, has no text to
+    // put back, so nothing is written.
+    earlier = await Promise.all(outputs.map((output) => readGenerated(root, output.file)));
     for (const [index, output] of outputs.entries()) {
       const temporary = temporaries[index] ?? "";
       await mkdir(path.dirname(temporary), { recursive: true });

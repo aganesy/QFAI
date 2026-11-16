@@ -1477,6 +1477,29 @@ describe("parseDesignMd: data_display", () => {
   });
 
   // QFAI:EX-0001-0312-04
+  it.each([
+    ["9007199254740993px", false],
+    ["9007199254740992px", true],
+    ["0.0000001rem", true],
+    ["0.10rem", true],
+  ])("reads the size %s exactly, or refuses it: %s", (size, ok) => {
+    const result = parseDesignMd(
+      withValue(
+        '    family_mono:    "JetBrains Mono, ui-monospace, monospace"',
+        `    family_mono:    "JetBrains Mono, ui-monospace, monospace"\n    scale:\n      base: "${size}"`,
+      ),
+    );
+    if (ok) {
+      expect("error" in result).toBe(false);
+      return;
+    }
+    expect("error" in result && result.error).toMatchObject({
+      path: "visual.typography.scale.base",
+      code: "invalid-format",
+    });
+  });
+
+  // QFAI:EX-0001-0312-04
   it("rejects a spacing step whose length, the base times the step, is too large to compute", () => {
     const result = parseDesignMd(
       withValue(

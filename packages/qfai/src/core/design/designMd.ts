@@ -949,18 +949,39 @@ function readVisual(raw: unknown): { value: DesignMd["visual"] } | { error: Pars
 }
 
 /**
- * The first number the token file would state as no number at all: one written in a theme-bound
+ * Whether a written decimal reads as a number that states it exactly: finite, and the same
+ * decimal when written back with as many places. `9007199254740993` reads as ...992, so the token
+ * would disagree with the theme.
+ */
+function readsExactly(written: string): boolean {
+  const value = Number(written);
+  if (!Number.isFinite(value)) return false;
+  const places = written.split(".")[1]?.length ?? 0;
+  if (places > 100) return false;
+  return plainDecimal(value.toFixed(places)) === plainDecimal(written);
+}
+
+/** A decimal without leading zeros before its point and trailing zeros after it. */
+function plainDecimal(written: string): string {
+  const [whole = "", fraction = ""] = written.split(".");
+  const integer = whole.replace(/^0+(?=\d)/, "") || "0";
+  const decimals = fraction.replace(/0+$/, "");
+  return decimals === "" ? integer : `${integer}.${decimals}`;
+}
+
+/**
+ * The first number the token file would state as no number at all, or not exactly: one written in a theme-bound
  * value too long to read, such as hundreds of digits, or a spacing step's length, the base times
  * the step, too large to compute. Every dimension the token file states is one of these.
  */
 function findOverflowingNumber(visual: DesignMd["visual"]): ParseError | null {
   for (const [at, text] of themeBoundValues(visual)) {
     const numbers = text.match(/\d*\.?\d+/g) ?? [];
-    if (numbers.every((written) => Number.isFinite(Number(written)))) continue;
+    if (numbers.every(readsExactly)) continue;
     return {
       path: at,
       code: "invalid-format",
-      message: `'${at}' holds a number too large to read.`,
+      message: `'${at}' holds a number too large, or with too many digits, to read exactly.`,
     };
   }
   const base = Number(/^\d*\.?\d+/.exec(visual.spacing?.base ?? "")?.[0] ?? "0");
