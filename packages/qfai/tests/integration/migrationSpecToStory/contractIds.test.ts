@@ -575,6 +575,24 @@ describe("migration CLI contract shape", () => {
     ]);
   });
 
+  // QFAI:EX-0004-0006-35
+  it("sends an ownership boundary or a rules table naming a rule in the old form to a person", async () => {
+    const root = await project();
+    const old =
+      "# Contract: Orders command\n\n## Ownership boundary\n\nOrders follow BR-0001-0001.\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | List newest first. | EX-0001-0001-01 |\n";
+    await put(root, OLD, old);
+    const result = await run(step03, root);
+    expect(result.code).toBe(3);
+    expect(await text(root, NEW)).toBe(
+      `# CLI-0001: Orders command\n\n## Ownership boundary\n\n${PLACEHOLDER}\n\n${EMPTY_RULES}`,
+    );
+    const kept = "by hand";
+    expect(forAPerson(result.output).filter((item) => item.startsWith(NEW))).toEqual([
+      `${NEW} ## Ownership boundary: rewrite "## Ownership boundary" of ${OLD} ${kept}`,
+      `${NEW} ## Business rules: rewrite "## Business rules" of ${OLD} ${kept}`,
+    ]);
+  });
+
   // QFAI:EX-0004-0006-23
   it("leaves a contract that passes the CLI schema once its rules are written", async () => {
     const root = await project();
