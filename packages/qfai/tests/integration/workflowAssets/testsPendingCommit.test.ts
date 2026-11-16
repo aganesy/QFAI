@@ -15,7 +15,7 @@ async function section(step: string, heading: string): Promise<string> {
   return text;
 }
 
-// BR-0015-0336
+// BR-CLI-0015-0336
 // QFAI:AC-0001-0229-08
 it("a testsPending scope fails the full-scan gate, lists its missing tests pending, and still commits", async () => {
   const pending = await section("verify-qfai-gate", "### Test obligations a scope leaves pending");

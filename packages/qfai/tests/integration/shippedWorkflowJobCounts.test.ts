@@ -2,7 +2,7 @@
  * Integration: what the header of each shipped workflow says about jobs and the required check.
  *
  * Covers the header rows of the shipped-workflows contract
- * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0121). GitHub bills each job
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-CLI-0018-0121). GitHub bills each job
  * as at least a minute, so the number of jobs a pull request event starts is the cost an adopter
  * pays, and the header is where they read it. A number typed into a header goes stale without
  * anything failing, so the rows are held against the jobs the file declares.

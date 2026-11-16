@@ -180,14 +180,14 @@ describe("story-tree layout dispatch", () => {
       `# Decisions\n\n## Decisions\n\n| ID | Content | Approach |\n| --- | --- | --- |\n${rows}`;
     await put(
       `${specs}/03_contract/cli/check.md`,
-      "# CLI-0001: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | Approved by DEC-0008 | EX-0001-0001-01 |\n",
+      "# CLI-0001: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-CLI-0001-0001 | Approved by DEC-0008 | EX-0001-0001-01 |\n",
     );
     await put(`${specs}/decisions.md`, register("| DEC-0001 | New | Supersedes DEC-0009 |\n"));
 
     const open = await validateProject(root, configured(), { profile: "sdd" });
     const reported = open.issues.filter((item) => item.code === "QFAI-STORY-003");
     expect(reported.map((item) => [item.severity, item.refs])).toEqual([
-      ["error", ["BR-0001-0001", "DEC-0008"]],
+      ["error", ["BR-CLI-0001-0001", "DEC-0008"]],
       ["error", ["DEC-0001", "DEC-0009"]],
     ]);
 

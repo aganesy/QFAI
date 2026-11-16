@@ -587,8 +587,8 @@ const conflictResolution = (
   artifacts: WorkflowExtraction["artifacts"],
 ) => extraction({ intent, qualifiers: ["meaning-preserving"], artifacts });
 
-// BR-0015-0303
-// BR-0015-0322
+// BR-CLI-0015-0303
+// BR-CLI-0015-0322
 // QFAI:EX-0001-0229-32
 it("A conflict resolution in spec and contract files plans, and one in code is refused", async () => {
   const staleRecord = await planFor(conflictResolution("stale-record", ["spec", "contract"]));
@@ -604,8 +604,8 @@ it("A conflict resolution in spec and contract files plans, and one in code is r
   expect(reasonsOf(code.json)).toEqual([{ reason: "artifact-unserved", subject: "code" }]);
 });
 
-// BR-0015-0296
-// BR-0002-0016
+// BR-CLI-0015-0296
+// BR-CLI-0002-0016
 // QFAI:EX-0001-0229-33
 it.each([[["release", "spec"] as const], [["release"] as const]])(
   "A delegated release's version edit naming %j plans apply-settled with one scope that makes it",
@@ -629,7 +629,7 @@ it.each([[["release", "spec"] as const], [["release"] as const]])(
   },
 );
 
-// BR-0015-0336
+// BR-CLI-0015-0336
 // QFAI:EX-0001-0229-34
 it("A scope that writes the specification and leaves out the implement stage says its tests are pending", async () => {
   const planned = await planFor(extraction({ intent: "feature", artifacts: ["spec"] }));

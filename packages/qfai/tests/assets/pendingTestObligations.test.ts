@@ -15,7 +15,7 @@ const read = (tree: string, rel: string): Promise<string> =>
 // the specification asks for, so its gate and its commit treat those obligations as pending.
 describe("a scope that leaves out the implement stage leaves its test obligations pending", () => {
   for (const tree of TREES) {
-    // BR-0015-0336
+    // BR-CLI-0015-0336
     // QFAI:EX-0001-0229-35
     it(`${tree}: the QFAI gate records the obligations pending, and the commit is made`, async () => {
       const [gate, repo, commit, output] = await Promise.all([
@@ -61,7 +61,7 @@ describe("a scope that leaves out the implement stage leaves its test obligation
       );
     });
 
-    // BR-0015-0336
+    // BR-CLI-0015-0336
     // QFAI:EX-0001-0229-36
     it(`${tree}: the scope question says a testsPending scope's tests come later`, async () => {
       const [screens, plan] = await Promise.all([

@@ -79,7 +79,7 @@ Read the ownership boundary and relevant business-rule rows when investigating
 one known CLI contract. If the BR-ID is known, select its complete row:
 
 ```sh
-rg -n --fixed-strings -- '| BR-0009-0098 |' .qfai/spec/03_contract/cli/cli-0009-qfai-init.md
+rg -n --fixed-strings -- '| BR-CLI-0009-0098 |' .qfai/spec/03_contract/cli/cli-0009-qfai-init.md
 ```
 
 If the BR-ID is unknown, search for a topic in the same known file:

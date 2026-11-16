@@ -66,7 +66,7 @@ function contract(statement: string[]): string {
     "",
     "| BR-ID | Statement | Examples |",
     "| --- | --- | --- |",
-    `| BR-0001-0001 | ${statement.join(" ")} | EX-0001-0001-01 |`,
+    `| BR-CLI-0001-0001 | ${statement.join(" ")} | EX-0001-0001-01 |`,
     "",
   ].join("\n");
 }

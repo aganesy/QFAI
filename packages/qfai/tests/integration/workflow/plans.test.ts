@@ -186,7 +186,7 @@ const loadRefusals: [string, (text: string) => string][] = [
 ];
 
 for (const [reason, change] of loadRefusals) {
-  // BR-0020-0016
+  // BR-CLI-0020-0016
   it(reason, async () => {
     const reasons = (await refusalsOf("edit-text", change)).map((refusal) => refusal.reason);
 
@@ -209,7 +209,7 @@ const stepRefusals: [string, string, string][] = [
 ];
 
 for (const [title, steps, reason] of stepRefusals) {
-  // BR-0020-0016
+  // BR-CLI-0020-0016
   it(title, async () => {
     const reasons = (await refusalsOf("edit-text", (text) => text.replace(EDIT_STEPS, steps))).map(
       (refusal) => refusal.reason,
@@ -229,7 +229,7 @@ const retiredNames: [string, string][] = [
 ];
 
 for (const [title, to] of retiredNames) {
-  // BR-0020-0016
+  // BR-CLI-0020-0016
   // QFAI:EX-0001-0218-01
   it(title, async () => {
     const refusals = await refusalsOf("edit-text", (text) => text.replace("kind: maintenance", to));
@@ -362,8 +362,8 @@ it("A code review after the edit stage, a review of another value, and two on a 
   });
 });
 
-// BR-0020-0011
-// BR-0020-0016
+// BR-CLI-0020-0011
+// BR-CLI-0020-0016
 // QFAI:EX-0001-0218-10
 it("A stage serving spec, an unknown artifact, none, spec twice, and what its kind writes", async () => {
   const serving = (value: string) => (text: string) =>
