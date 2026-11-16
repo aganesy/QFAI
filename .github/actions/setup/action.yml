@@ -64,6 +64,8 @@ inputs:
       approval.
     # SHIPPED-CI: not-applicable
     # Because: the description cites a business rule of this repository's own contracts, which the shipped templates do not carry.
+    # SHIPPED-CI: not-applicable
+    # Because: the rule ID in the description changes to the kind-named form of this repository's own contracts, which no shipped template cites.
     required: false
     default: "false"
 
