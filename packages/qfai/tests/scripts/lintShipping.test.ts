@@ -485,8 +485,8 @@ describe("lint-shipping fixture — detection rules", () => {
 
   it("does NOT flag two-segment AC or TC trace IDs in JSDoc", async () => {
     // `AC-NNNN-NNNN` and `TC-NNNN-NNNN` are not in the forbidden set of
-    // `.agents/rules/distributed-surface.local.md`. `BR-NNNN-NNNN` is: it is the
-    // contract-scoped business-rule ID.
+    // `.agents/rules/distributed-surface.local.md`. `BR-<KIND>-NNNN-NNNN` is: it is
+    // the contract-scoped business-rule ID.
     const root = await newTempDir();
     await mkdir(path.join(root, "src/foo"), { recursive: true });
     await writeFile(

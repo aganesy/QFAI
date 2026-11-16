@@ -31,9 +31,9 @@ The one example a diagnosed missing test needs is appended by the implement stag
 
 ## Contracts and business rules
 
-- Every BR lives in the contract that enforces it, is numbered `BR-<contract number>-NNNN`, and cites at least one existing full EX ID and nothing else.
+- Every BR lives in the contract that enforces it, is numbered `BR-<KIND>-<contract number>-NNNN`, and cites at least one existing full EX ID and nothing else.
 - Every EX is cited by at least one BR. Shared rules are defined once, and no other contract cites them.
-- Every contract declares a `<KIND>-NNNN` ID of its directory's kind, with a number no other contract uses, in a file named `<kind>-NNNN-<slug>.<ext>`.
+- Every contract declares a `<KIND>-NNNN` ID of its directory's kind, with a number no other contract of that kind uses, in a file named `<kind>-NNNN-<slug>.<ext>`.
 - No contract names an implementation file.
 - Every written contract file has a contracts.md index row in the same change, with the columns `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`.
 - Contract state, errors, and persisted attributes can realize the AC and EX outcomes, including required joins.

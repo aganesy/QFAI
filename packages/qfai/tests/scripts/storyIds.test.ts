@@ -35,32 +35,49 @@ describe("scopes", () => {
     ["US-0001", { kind: "US", parentId: "BF-0001" }],
     ["AC-0001-0054", { kind: "AC", parentId: "US-0001-0054" }],
     ["EX-0001-0054", { kind: "EX", parentId: "US-0001-0054" }],
-    ["BR-0016", { kind: "BR", parentId: "CLI-0016" }],
+    ["BR-CLI-0016", { kind: "BR", parentId: "CLI-0016" }],
+    ["BR-API-0001", { kind: "BR", parentId: "API-0001" }],
+    ["BR-DB-0001", { kind: "BR", parentId: "DB-0001" }],
+    ["BR-UI-0001", { kind: "BR", parentId: "UI-0001" }],
   ])("%s allocates under its parent", (scope, expected) => {
     expect(parseScope(scope)).toEqual(expected);
   });
 
   // A decision or question row takes the time it is written, not a candidate.
-  it.each(["", "DEC", "OQ", "DECISION", "BR", "EX-0001", "US-0001-0001", "CLI", "dec"])(
-    "refuses the scope %j",
-    (scope) => {
-      expect(parseScope(scope)).toBeUndefined();
-    },
-  );
+  // A rule's scope names its contract's kind: `BR-0016` names none.
+  it.each([
+    "",
+    "DEC",
+    "OQ",
+    "DECISION",
+    "BR",
+    "BR-0016",
+    "BR-DESIGN-0001",
+    "BR-cli-0016",
+    "EX-0001",
+    "US-0001-0001",
+    "CLI",
+    "dec",
+  ])("refuses the scope %j", (scope) => {
+    expect(parseScope(scope)).toBeUndefined();
+  });
 });
 
 describe("allocation", () => {
   const named = {
-    declarations: ["DEC-0989", "EX-0001-0054-08", "BR-0016-0101"].map((id) => ({ id, file: "" })),
-    decisions: { rows: [{ content: "Change request: x", approach: "retires BR-0016-0105" }] },
+    declarations: ["DEC-0989", "EX-0001-0054-08", "BR-CLI-0016-0101"].map((id) => ({
+      id,
+      file: "",
+    })),
+    decisions: { rows: [{ content: "Change request: x", approach: "retires BR-CLI-0016-0105" }] },
   };
 
   it("counts what a decision row names, and hands out a repeated scope twice", () => {
-    const scopes = ["EX-0001-0054", "EX-0001-0054", "BR-0016"].map(parseScope);
+    const scopes = ["EX-0001-0054", "EX-0001-0054", "BR-CLI-0016"].map(parseScope);
     expect(allocateAll(scopes, named, nextStoryTreeId)).toEqual([
       "EX-0001-0054-09",
       "EX-0001-0054-10",
-      "BR-0016-0106",
+      "BR-CLI-0016-0106",
     ]);
   });
 
@@ -71,19 +88,19 @@ describe("allocation", () => {
 });
 
 describe("collisions", () => {
-  const base = new Set(["DEC-0989", "BR-0016-0099"]);
+  const base = new Set(["DEC-0989", "BR-CLI-0016-0099"]);
 
   it("names an ID this branch adds that another head adds too", () => {
-    const mine = added(new Set(["DEC-0989", "DEC-20261105120000", "BR-0016-0100"]), base);
+    const mine = added(new Set(["DEC-0989", "DEC-20261105120000", "BR-CLI-0016-0100"]), base);
     const others = [
       { label: "main", ids: added(new Set(["DEC-0989", "DEC-20261105120000"]), base) },
       {
         label: "#12 (feature)",
-        ids: added(new Set(["DEC-20261105120000", "BR-0016-0100"]), base),
+        ids: added(new Set(["DEC-20261105120000", "BR-CLI-0016-0100"]), base),
       },
     ];
     expect(collisions(mine, others)).toEqual([
-      { id: "BR-0016-0100", heads: ["#12 (feature)"] },
+      { id: "BR-CLI-0016-0100", heads: ["#12 (feature)"] },
       { id: "DEC-20261105120000", heads: ["main", "#12 (feature)"] },
     ]);
   });
@@ -94,7 +111,7 @@ describe("collisions", () => {
     expect(register).toMatch(/new timestamp ID/);
     expect(register).toMatch(/never renumber a row another branch holds/);
     expect(register).not.toMatch(/next <scope>/);
-    const story = collisionGuidance([{ id: "BR-0016-0100", heads: ["main"] }]);
+    const story = collisionGuidance([{ id: "BR-CLI-0016-0100", heads: ["main"] }]);
     expect(story).toMatch(/next <scope>/);
     expect(story).not.toMatch(/timestamp/);
   });

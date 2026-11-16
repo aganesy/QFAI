@@ -8,8 +8,18 @@ const RULES = "Business rules";
 const RULE_COLUMNS = ["BR-ID", "Statement", "Examples"] as const;
 /** An old section whose content belongs under `## Business rules` once a person rewrites it. */
 const RULES_HEADING = /^(?:business )?rules$/i;
+/**
+ * A rule ID in the form a 1.x contract may still hold, `BR-NNNN-NNNN`, or in the
+ * kind-named form, `BR-<KIND>-NNNN-NNNN`. Either one in the migration's input is
+ * left for a person: an old one names no kind, and a new one cannot be cited here.
+ */
+const ANY_RULE_ID = String.raw`BR-(?:(?:CLI|API|DB|UI)-)?\d{4}-\d{4}`;
 /** A rule ID anywhere in a table row after its first cell, which the CLI schema refuses. */
-const RULE_ID_AFTER_FIRST_CELL = /^\|[^|\n]*\|[^\n]*BR-\d{4}-\d{4}/m;
+const RULE_ID_AFTER_FIRST_CELL = new RegExp(String.raw`^\|[^|\n]*\|[^\n]*${ANY_RULE_ID}`, "m");
+/** A rule ID of either form anywhere in a text. */
+const ANY_RULE_ID_IN_TEXT = new RegExp(ANY_RULE_ID);
+/** A row whose first cell is a rule ID in the old form, which names no kind. */
+const OLD_RULE_ID_ROW = /^\|\s*BR-\d{4}-\d{4}\s*\|/m;
 
 /** Where a contract is written, and where it was read from. */
 export type CliContractPaths = { target: string; source: string };
@@ -53,13 +63,13 @@ function splitContract(text: string): {
 /** One to three paragraphs of prose naming no rule, as the schema's Ownership boundary takes. */
 function ownershipBody(body: string): string | null {
   const paragraphs = paragraphsOf(body);
-  if (!paragraphs || paragraphs.length > 3 || /BR-\d{4}-\d{4}/.test(body)) return null;
+  if (!paragraphs || paragraphs.length > 3 || ANY_RULE_ID_IN_TEXT.test(body)) return null;
   return paragraphs.join("\n\n");
 }
 
 /**
- * One `BR-ID | Statement | Examples` table whose rows open with a pipe and name no
- * other rule, kept as written.
+ * One `BR-ID | Statement | Examples` table whose rows open with a pipe, name no
+ * other rule and declare no rule in the old form, kept as written.
  */
 function rulesBody(body: string): string | null {
   if (body.split("\n").some((line) => !line.startsWith("|"))) return null;
@@ -68,7 +78,7 @@ function rulesBody(body: string): string | null {
   if (!table || table.dropped.length > 0 || header.join("|") !== RULE_COLUMNS.join("|")) {
     return null;
   }
-  return RULE_ID_AFTER_FIRST_CELL.test(body) ? null : body;
+  return RULE_ID_AFTER_FIRST_CELL.test(body) || OLD_RULE_ID_ROW.test(body) ? null : body;
 }
 
 /**

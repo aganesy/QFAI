@@ -2297,6 +2297,7 @@ describe("rule overlays", () => {
         "EX-NNNN-NNNN-NN",
         "BR-NNNN",
         "BR-NNNN-NNNN",
+        "BR-<KIND>-NNNN-NNNN",
         "DESIGN-NNNN",
         "`cli-NNNN`, `api-NNNN`",
         "every four-digit segment",

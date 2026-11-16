@@ -164,7 +164,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     await put(
       root,
       `${spec}/03_contract/cli/cli-0001-checkout.md`,
-      `# CLI-0001: Checkout\n\n## Ownership boundary\n\nThis contract decides how a cart total is calculated.\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | The total is the sum of item prices. | ${exampleId} |\n`,
+      `# CLI-0001: Checkout\n\n## Ownership boundary\n\nThis contract decides how a cart total is calculated.\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-CLI-0001-0001 | The total is the sum of item prices. | ${exampleId} |\n`,
     );
     await put(
       root,
@@ -303,7 +303,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
       ),
     ) as { nodes: Array<{ id: string }> };
     expect(graph.nodes.map((node) => node.id)).toEqual(
-      expect.arrayContaining([flowId, storyId, criterionId, exampleId, "BR-0001-0001"]),
+      expect.arrayContaining([flowId, storyId, criterionId, exampleId, "BR-CLI-0001-0001"]),
     );
   });
 });

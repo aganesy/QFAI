@@ -41,7 +41,7 @@ structure:
           - pattern: "`"
             regex: true
           # A business rule, example, acceptance criterion or contract ID.
-          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
+          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-(?:(?:CLI|API|DB|UI)-)?[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
             regex: true
       - heading:
           pattern: "^## Operational Constraints$"
@@ -63,7 +63,7 @@ structure:
             regex: true
           - pattern: "`"
             regex: true
-          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
+          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-(?:(?:CLI|API|DB|UI)-)?[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
             regex: true
       - heading:
           pattern: "^## Business Constraints$"
@@ -85,7 +85,7 @@ structure:
             regex: true
           - pattern: "`"
             regex: true
-          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
+          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-(?:(?:CLI|API|DB|UI)-)?[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
             regex: true
       - heading:
           pattern: "^## Quality targets$"
@@ -107,7 +107,7 @@ structure:
             regex: true
           - pattern: "`"
             regex: true
-          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
+          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-(?:(?:CLI|API|DB|UI)-)?[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
             regex: true
       - heading:
           pattern: "^## Legal and Compliance Constraints$"
@@ -129,5 +129,5 @@ structure:
             regex: true
           - pattern: "`"
             regex: true
-          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
+          - pattern: "(?:^|[^A-Za-z0-9_-])(?:BR-(?:(?:CLI|API|DB|UI)-)?[0-9]{4}|EX-[0-9]{4}-|AC-[0-9]{4}-|(?:CLI|API|DB|UI)-[0-9]{4})"
             regex: true

@@ -2,7 +2,7 @@
  * Integration: shipped orchestrator change detection and verdict.
  *
  * Covers the detection/verdict half of the shipped-workflows contract
- * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-0018-0012 to BR-0018-0014): the
+ * (`.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md`, BR-CLI-0018-0012 to BR-CLI-0018-0014): the
  * orchestrator's change-detection shell is self-contained (name-only diff
  * + JSON filtering, no third-party action), selects the minimal lane set
  * for docs-only diffs and the full one for source diffs, fails OPEN to the
@@ -44,7 +44,7 @@ const ORCHESTRATOR = "qfai-tests.yml";
 /** The validation workflow, whose one job also carries the check name. */
 const VALIDATE_FILE = "qfai-validate.yml";
 
-/** The full lane superset (value SSOT in the suite per BR-0018-0023). */
+/** The full lane superset (value SSOT in the suite per BR-CLI-0018-0023). */
 const FULL_LANES: readonly string[] = ["unit", "component", "integration", "api", "e2e"];
 
 const newTempDir = useTempDirPool("qfai-wfdetect-");

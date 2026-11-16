@@ -8,7 +8,7 @@ Feature: ID grammar
   Scenario: Each ID has the shape of its kind and is declared once
     Given a project on the story tree
     When every declared ID is collected
-    Then each has one of the shapes `BF-NNNN`, `US-NNNN-NNNN`, `AC-NNNN-NNNN-NN`, `EX-NNNN-NNNN-NN`, `BR-<contract number>-NNNN`, `DEC-yyyymmddhhMMss` or `DEC-NNNN`, and `OQ-yyyymmddhhMMss` or `OQ-NNNN`
+    Then each has one of the shapes `BF-NNNN`, `US-NNNN-NNNN`, `AC-NNNN-NNNN-NN`, `EX-NNNN-NNNN-NN`, `BR-<KIND>-<contract number>-NNNN`, `DEC-yyyymmddhhMMss` or `DEC-NNNN`, and `OQ-yyyymmddhhMMss` or `OQ-NNNN`
     And no ID is declared twice in the tree
 
   # AC-0001-0008-02
@@ -32,8 +32,10 @@ Feature: ID grammar
   Scenario: A contract numbers its own business rules
     Given a contract under a kind directory of `paths.contractsDir` on the story tree, declaring a contract ID `<KIND>-NNNN`
     When the business rules it declares are read, or its next rule ID is chosen
-    Then a rule takes the ID `BR-<contract number>-NNNN`, and one whose first segment is not the number of the contract that declares it is an error
-    And the next rule ID of that contract is the highest `BR-<contract number>-NNNN` the tree names, every row of the decision register included, plus one
+    Then a rule takes the ID `BR-<KIND>-<contract number>-NNNN`, and one that does not name the kind and number of the contract that declares it is an error
+    And a rule ID that names no kind, such as `BR-0003-0001`, is an ID-grammar error
+    And contracts of different kinds may share a number, and their rules stay apart: `BR-CLI-0001-0001` and `BR-DB-0001-0001` are two rules
+    And the next rule ID of that contract is the highest `BR-<KIND>-<contract number>-NNNN` the tree names, every row of the decision register included, plus one
 
   # AC-0001-0008-09
   Scenario: Planned AC and EX additions fit the retired-inclusive capacity

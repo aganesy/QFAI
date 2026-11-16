@@ -93,12 +93,12 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
 - **A contract's ID comes from its directory.** `api/` holds `API` contracts,
   `db/` `DB` and `ui/` `UI`; the QFAI repository's own `cli/` holds `CLI`
   contracts. The ID is `<KIND>-NNNN`.
-  Its number is one more than the highest contract number of any kind, so
-  `API-0002` and `DB-0002` cannot both exist. Find it by reading every `ID` in
-  `contracts.md` and every file name under `api/`, `db/`, `ui/` and `cli/`
-  together, not only the directory the new contract goes in. A number is never
-  reused, even after its contract is removed. `npx qfai validate --profile sdd`
-  reports two contracts that share a number as `QFAI-CONTRACT-034`.
+  Its number is one more than the highest number of its own kind, so each kind
+  starts at `0001` and `API-0002` and `DB-0002` are two different contracts.
+  Find it by reading every `ID` of that kind in `contracts.md` and every file
+  name under that kind's directory. A number is never reused within its kind,
+  even after its contract is removed. `npx qfai validate --profile sdd` reports
+  two contracts of one kind that share a number as `QFAI-CONTRACT-034`.
 - **The file is named after the ID**: `<kind>-NNNN-<slug>.<ext>`, such as
   `api/api-0002-orders.yaml` or `db/db-0003-orders.sql`.
 - **The ID is declared once, in the file.** A Markdown contract declares it in
@@ -107,7 +107,8 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
   `api/`, `db/` or `ui/` is not a contract, whatever its H1 says:
   `QFAI-CONTRACT-034` reports it, and no other check counts it.
 - **Rules are numbered after their contract.** A business rule's ID is
-  `BR-<contract number>-NNNN`: `BR-0006-0001` is the first rule of `API-0006`.
+  `BR-<KIND>-<contract number>-NNNN`: `BR-API-0006-0001` is the first rule of
+  `API-0006`, and `BR-DB-0006-0001` the first rule of `DB-0006`.
   Only that contract declares it: under `x-qfai-rules` in YAML or JSON, on
   `-- Rule` and `-- Examples:` lines in SQL, and in the `## Business rules`
   table (`BR-ID`, `Statement`, `Examples`) of a Markdown contract.

@@ -57,7 +57,7 @@ function validTree(): Map<string, string> {
     ],
     [
       `${contract}/cli/cli-0001-check.md`,
-      "# CLI-0001: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | A paid cart has a receipt | EX-0001-0001-01 |\n",
+      "# CLI-0001: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-CLI-0001-0001 | A paid cart has a receipt | EX-0001-0001-01 |\n",
     ],
     [`${specs}/decisions.md`, register("Decisions", COLUMNS)],
     [`${specs}/open-questions.md`, register("Open Questions", COLUMNS)],
@@ -305,7 +305,7 @@ describe("story-tree validation acceptance", () => {
         [`${story}/02_Acceptance-Criteria.md`]: `${criterion("AC-0001-0001-01")}\n${criterion("AC-0001-0001-02")}`,
         [`${story}/03_Example.md`]: examples(...rows),
         [`${contract}/cli/cli-0001-check.md`]: rules([
-          "BR-0001-0001",
+          "BR-CLI-0001-0001",
           "EX-0001-0001-01, EX-0001-0001-02, EX-0001-0001-03",
         ]),
       });
@@ -373,26 +373,26 @@ describe("story-tree validation acceptance", () => {
 
     const passing = await validateTree(
       files(
-        ["BR-0001-0001", "EX-0001-0001-01, EX-0001-0001-02"],
-        ["BR-0001-0002", "EX-0001-0001-02, EX-0001-0001-03"],
+        ["BR-CLI-0001-0001", "EX-0001-0001-01, EX-0001-0001-02"],
+        ["BR-CLI-0001-0002", "EX-0001-0001-02, EX-0001-0001-03"],
       ),
     );
     expect(errors(passing.issues)).toEqual([]);
 
     const noExamples = await validateTree(
       files(
-        ["BR-0001-0001", "EX-0001-0001-01, EX-0001-0001-02, EX-0001-0001-03"],
-        ["BR-0001-0002", ""],
+        ["BR-CLI-0001-0001", "EX-0001-0001-01, EX-0001-0001-02, EX-0001-0001-03"],
+        ["BR-CLI-0001-0002", ""],
       ),
     );
-    const noExamplesReport = errorsNaming(noExamples.issues, "QFAI-STORY-005", "BR-0001-0002");
+    const noExamplesReport = errorsNaming(noExamples.issues, "QFAI-STORY-005", "BR-CLI-0001-0002");
     expect(noExamplesReport).toHaveLength(1);
     expect(posix(noExamplesReport[0]?.file)).toBe(
       posix(path.join(noExamples.root, contract, "cli/cli-0001-check.md")),
     );
 
     const uncited = await validateTree(
-      files(["BR-0001-0001", "EX-0001-0001-01"], ["BR-0001-0002", "EX-0001-0001-02"]),
+      files(["BR-CLI-0001-0001", "EX-0001-0001-01"], ["BR-CLI-0001-0002", "EX-0001-0001-02"]),
     );
     const uncitedReport = errorsNaming(uncited.issues, "QFAI-STORY-005", "EX-0001-0001-03");
     expect(uncitedReport).toHaveLength(1);
@@ -402,11 +402,11 @@ describe("story-tree validation acceptance", () => {
 
     const unknown = await validateTree(
       files(
-        ["BR-0001-0001", "EX-0001-0001-01, EX-0001-0001-02, EX-0001-0001-03"],
-        ["BR-0001-0002", "EX-0001-0001-99"],
+        ["BR-CLI-0001-0001", "EX-0001-0001-01, EX-0001-0001-02, EX-0001-0001-03"],
+        ["BR-CLI-0001-0002", "EX-0001-0001-99"],
       ),
     );
-    const unknownReport = errorsNaming(unknown.issues, "QFAI-STORY-005", "BR-0001-0002");
+    const unknownReport = errorsNaming(unknown.issues, "QFAI-STORY-005", "BR-CLI-0001-0002");
     expect(unknownReport).toHaveLength(1);
     expect(unknownReport[0]?.message).toContain("cites unknown EX-0001-0001-99");
   });
@@ -474,9 +474,9 @@ describe("story-tree validation acceptance", () => {
           ["EX-0001-0001-03", "AC-0001-0001-01"],
         ),
         [`${contract}/api/api-0002-orders.yaml`]:
-          "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-0002-0001\n    statement: An order has a total\n    examples: [EX-0001-0001-02]\n",
+          "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-API-0002-0001\n    statement: An order has a total\n    examples: [EX-0001-0001-02]\n",
         [`${contract}/db/db-0003-orders.sql`]:
-          "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: An order row is saved\n-- Examples: EX-0001-0001-03\nSELECT 1;\n",
+          "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-DB-0003-0001: An order row is saved\n-- Examples: EX-0001-0001-03\nSELECT 1;\n",
       }),
     );
 
@@ -486,13 +486,13 @@ describe("story-tree validation acceptance", () => {
         .map(({ id, statement, examples: cited }) => ({ id, statement, cited }))
         .sort((left, right) => left.id.localeCompare(right.id)),
     ).toEqual([
+      { id: "BR-API-0002-0001", statement: "An order has a total", cited: ["EX-0001-0001-02"] },
       {
-        id: "BR-0001-0001",
+        id: "BR-CLI-0001-0001",
         statement: "A paid cart has a receipt",
         cited: ["EX-0001-0001-01"],
       },
-      { id: "BR-0002-0001", statement: "An order has a total", cited: ["EX-0001-0001-02"] },
-      { id: "BR-0003-0001", statement: "An order row is saved", cited: ["EX-0001-0001-03"] },
+      { id: "BR-DB-0003-0001", statement: "An order row is saved", cited: ["EX-0001-0001-03"] },
     ]);
     expect(only(issues, "QFAI-STORY-005")).toEqual([]);
   });
@@ -513,7 +513,7 @@ describe("story-tree validation acceptance", () => {
     expect(uncited).toHaveLength(1);
     expect(uncited[0]?.file).toBe(posix(path.join(root, story, "03_Example.md")));
     expect(uncited[0]?.message).toContain(
-      `Cite it in the Examples of the contract rule that enforces it, such as BR-0001-0001 in ${posix(path.join(root, contract, "cli/cli-0001-check.md"))}, which cites EX-0001-0001-01 of the same AC-0001-0001-01.`,
+      `Cite it in the Examples of the contract rule that enforces it, such as BR-CLI-0001-0001 in ${posix(path.join(root, contract, "cli/cli-0001-check.md"))}, which cites EX-0001-0001-01 of the same AC-0001-0001-01.`,
     );
   });
 
@@ -544,30 +544,30 @@ describe("story-tree validation acceptance", () => {
   it("names a rule that has no example or cites one the tree does not define", async () => {
     const { root, issues } = await validateTree(
       changed({
-        [`${contract}/cli/cli-0001-check.md`]: rules(["BR-0001-0001", ""]),
+        [`${contract}/cli/cli-0001-check.md`]: rules(["BR-CLI-0001-0001", ""]),
         [`${contract}/api/api-0002-orders.yaml`]:
-          "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-0002-0001\n    statement: An order has a total\n    examples: [EX-0001-0001-99]\n",
+          "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-API-0002-0001\n    statement: An order has a total\n    examples: [EX-0001-0001-99]\n",
         [`${contract}/db/db-0003-orders.sql`]:
-          "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: An order row is saved\nSELECT 1;\n",
+          "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-DB-0003-0001: An order row is saved\nSELECT 1;\n",
       }),
     );
 
     for (const [rule, file] of [
-      ["BR-0001-0001", "cli/cli-0001-check.md"],
-      ["BR-0002-0001", "api/api-0002-orders.yaml"],
-      ["BR-0003-0001", "db/db-0003-orders.sql"],
+      ["BR-CLI-0001-0001", "cli/cli-0001-check.md"],
+      ["BR-API-0002-0001", "api/api-0002-orders.yaml"],
+      ["BR-DB-0003-0001", "db/db-0003-orders.sql"],
     ] as const) {
       const reported = errorsNaming(issues, "QFAI-STORY-005", rule);
       expect(reported).toHaveLength(1);
       expect(posix(reported[0]?.file)).toBe(posix(path.join(root, contract, file)));
     }
-    expect(errorsNaming(issues, "QFAI-STORY-005", "BR-0001-0001")[0]?.message).toContain(
+    expect(errorsNaming(issues, "QFAI-STORY-005", "BR-CLI-0001-0001")[0]?.message).toContain(
       "has no examples",
     );
-    expect(errorsNaming(issues, "QFAI-STORY-005", "BR-0002-0001")[0]?.message).toContain(
+    expect(errorsNaming(issues, "QFAI-STORY-005", "BR-API-0002-0001")[0]?.message).toContain(
       "cites unknown EX-0001-0001-99",
     );
-    expect(errorsNaming(issues, "QFAI-STORY-005", "BR-0003-0001")[0]?.message).toContain(
+    expect(errorsNaming(issues, "QFAI-STORY-005", "BR-DB-0003-0001")[0]?.message).toContain(
       "has no examples",
     );
   });
@@ -584,28 +584,28 @@ describe("story-tree validation acceptance", () => {
         changed({
           [`${contract}/cli/cli-0001-check.md`]: null,
           [file]:
-            "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: An order row\n-- is saved\n-- Examples: EX-0001-0001-01\nSELECT 1;\n",
+            "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-DB-0003-0001: An order row\n-- is saved\n-- Examples: EX-0001-0001-01\nSELECT 1;\n",
         }),
       );
       const model = await readStoryTreeModel(root, config);
       expect(model.rules).toMatchObject([
         {
-          id: "BR-0003-0001",
+          id: "BR-DB-0003-0001",
           statement: "An order row",
           examples: [],
           file: posix(path.join(root, file)),
         },
       ]);
-      const missing = errorsNaming(issues, "QFAI-STORY-005", "BR-0003-0001");
+      const missing = errorsNaming(issues, "QFAI-STORY-005", "BR-DB-0003-0001");
       expect(missing).toHaveLength(1);
       expect(missing[0]).toMatchObject({
         code: "QFAI-STORY-005",
         severity: "error",
-        refs: ["BR-0003-0001"],
+        refs: ["BR-DB-0003-0001"],
         file: posix(path.join(root, file)),
       });
       expect(missing[0]?.message).toContain(
-        `BR-0003-0001 has no examples in ${posix(path.join(root, file))}`,
+        `BR-DB-0003-0001 has no examples in ${posix(path.join(root, file))}`,
       );
       expect(missing[0]?.message.endsWith(hint)).toBe(true);
       const uncited = errorsNaming(issues, "QFAI-STORY-005", "EX-0001-0001-01");
@@ -622,12 +622,16 @@ describe("story-tree validation acceptance", () => {
         changed({
           [`${contract}/cli/cli-0001-check.md`]: null,
           [file]:
-            "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: An order row is saved\n-- Examples: EX-0001-0001-01\nSELECT 1;\n",
+            "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-DB-0003-0001: An order row is saved\n-- Examples: EX-0001-0001-01\nSELECT 1;\n",
         }),
       );
       const repairedModel = await readStoryTreeModel(repaired.root, repaired.config);
       expect(repairedModel.rules).toMatchObject([
-        { id: "BR-0003-0001", statement: "An order row is saved", examples: ["EX-0001-0001-01"] },
+        {
+          id: "BR-DB-0003-0001",
+          statement: "An order row is saved",
+          examples: ["EX-0001-0001-01"],
+        },
       ]);
       expect(only(repaired.issues, "QFAI-STORY-005")).toEqual([]);
     },
@@ -640,18 +644,18 @@ describe("story-tree validation acceptance", () => {
       const file = `${contract}/db/db-0003-orders.sql`;
       const { root, issues } = await validateTree(
         changed({
-          [file]: `-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: An order row is saved\n${examplesLine}SELECT 1;\n`,
+          [file]: `-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-DB-0003-0001: An order row is saved\n${examplesLine}SELECT 1;\n`,
         }),
       );
-      const reported = errorsNaming(issues, "QFAI-STORY-005", "BR-0003-0001");
+      const reported = errorsNaming(issues, "QFAI-STORY-005", "BR-DB-0003-0001");
       expect(reported).toHaveLength(1);
       expect(reported[0]).toMatchObject({
         code: "QFAI-STORY-005",
         severity: "error",
-        refs: ["BR-0003-0001"],
+        refs: ["BR-DB-0003-0001"],
         file: posix(path.join(root, file)),
       });
-      expect(reported[0]?.message).toContain("BR-0003-0001 has no examples");
+      expect(reported[0]?.message).toContain("BR-DB-0003-0001 has no examples");
       expect(
         reported[0]?.message.endsWith(
           "Keep the Rule statement on one line and put -- Examples: on the immediately following line.",
@@ -662,23 +666,25 @@ describe("story-tree validation acceptance", () => {
 
   // QFAI:AC-0001-0055-04
   it.each([
-    ["cli/cli-0001-check.md", "BR-0001-0001", rules(["BR-0001-0001", ""])],
+    ["cli/cli-0001-check.md", "BR-CLI-0001-0001", rules(["BR-CLI-0001-0001", ""])],
     [
       "api/api-0002-orders.yaml",
-      "BR-0002-0001",
-      "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-0002-0001\n    statement: An order has a total\n    examples: []\n",
+      "BR-API-0002-0001",
+      "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-API-0002-0001\n    statement: An order has a total\n    examples: []\n",
     ],
     [
       "api/api-0002-orders.json",
-      "BR-0002-0001",
+      "BR-API-0002-0001",
       JSON.stringify({
-        "x-qfai-rules": [{ id: "BR-0002-0001", statement: "An order has a total", examples: [] }],
+        "x-qfai-rules": [
+          { id: "BR-API-0002-0001", statement: "An order has a total", examples: [] },
+        ],
       }),
     ],
     [
       "db/db-0003-orders.sql",
-      "BR-0003-0001",
-      "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: An order row is saved\n-- Examples: EX-0001-0001-99\nSELECT 1;\n",
+      "BR-DB-0003-0001",
+      "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-DB-0003-0001: An order row is saved\n-- Examples: EX-0001-0001-99\nSELECT 1;\n",
     ],
   ])("keeps unrelated rule diagnostics unchanged for %s", async (relative, rule, text) => {
     const { root, issues } = await validateTree(changed({ [`${contract}/${relative}`]: text }));
@@ -770,7 +776,7 @@ describe("story-tree validation acceptance", () => {
       changed({
         [`${contract}/cli/cli-0001-check.md`]: null,
         [yaml]:
-          "x-qfai-rules:\n  - id: BR-0001-0001\n    statement: A rule\n    examples: EX-0001-0001-01\n",
+          "x-qfai-rules:\n  - id: BR-CLI-0001-0001\n    statement: A rule\n    examples: EX-0001-0001-01\n",
       }),
     );
 
@@ -785,7 +791,7 @@ describe("story-tree validation acceptance", () => {
   // QFAI:EX-0001-0055-07
   it("still reports an uncited example when every contract file loaded its rules", async () => {
     const { issues } = await validateTree(
-      changed({ [`${contract}/cli/cli-0001-check.md`]: rules(["BR-0001-0001", ""]) }),
+      changed({ [`${contract}/cli/cli-0001-check.md`]: rules(["BR-CLI-0001-0001", ""]) }),
     );
 
     expect(errorsNaming(issues, "QFAI-STORY-005", "EX-0001-0001-01")).toHaveLength(1);

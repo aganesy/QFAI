@@ -38,13 +38,14 @@ place unresolved content through `/qfai-sdd` in the new tree instead of
 changing the plan.
 
 Step 3 gives every contract a 2.x contract ID and renames its file to match:
-`api/api-0001-orders.yaml`, declaring `CON-API-0001`, can become
-`api/api-0002-orders.yaml` declaring `API-0002`. Numbers are unique across
-contract kinds. The old and new IDs and paths are recorded in
+`cli/orders.md` can become `cli/cli-0001-orders.md` declaring `CLI-0001`, and
+`api/api-0001-orders.yaml`, declaring `CON-API-0001`, can come to declare
+`API-0001`. Each kind is numbered in its own sequence, so `CLI-0001` and
+`API-0001` are two contracts. The old and new IDs and paths are recorded in
 `tmp/qfai-migration/contract-map.json` and then in the ID
 map. Later steps rewrite the old IDs in dependency declarations, rule
 statements and test annotations, and number each contract's rules from its own
-number, such as `BR-0006-0001`. A Markdown contract takes its rules as rows of
+kind and number, such as `BR-API-0006-0001`. A Markdown contract takes its rules as rows of
 a `## Business rules` table. `contracts.md` becomes one index table.
 
 Two kinds of 1.x file are not 2.0.0 contracts. Step 3 gives them no ID and

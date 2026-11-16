@@ -239,7 +239,7 @@ describe("the policy and contract layers of an initialized project", () => {
 
     const concrete: [string, string][] = [
       ["a file name in backticks", "Reads `src/config.ts` first"],
-      ["a business rule ID", "Follows BR-0001-0001 exactly"],
+      ["a business rule ID", "Follows BR-CLI-0001-0001 exactly"],
       ["an example ID", "Is shown by EX-0001-0001-01"],
       ["an acceptance criterion ID", "Is judged by AC-0001-0001-01"],
       ["a contract ID", "Obeys CLI-0001 on every run"],

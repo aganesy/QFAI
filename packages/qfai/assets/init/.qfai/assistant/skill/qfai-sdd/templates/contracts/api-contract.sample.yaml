@@ -1,12 +1,11 @@
 # QFAI-CONTRACT-ID: API-0001
-# Replace the sample IDs: the contract takes the next contract number, its
-# rules are numbered under it, and its examples come from the story tree.
-# API, DB and UI share one number sequence: take one more than the highest
-# number of any kind in contracts.md and the contract file names, not of this
-# kind alone.
+# Replace the sample IDs: the contract takes the next number of its kind, its
+# rules are numbered under its kind and number, and its examples come from the
+# story tree. Each kind has its own number sequence: take one more than the
+# highest number of this kind in contracts.md and the contract file names.
 x-qfai-depends-on: []
 x-qfai-rules:
-  - id: BR-0001-NNNN
+  - id: BR-API-0001-NNNN
     statement: A valid order draft request creates one draft.
     examples: [EX-NNNN-NNNN-NN]
 openapi: "3.1.0"

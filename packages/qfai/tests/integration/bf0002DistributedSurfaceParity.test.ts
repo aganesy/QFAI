@@ -304,7 +304,7 @@ describe("BF-0002 distributed-surface guard parity", () => {
       ["US-0001-0010", "us"],
       ["AC-0001-0001-10", "ac"],
       ["EX-0001-0010-01", "ex"],
-      ["BR-0001-0010", "br"],
+      ["BR-API-0001-0010", "br"],
     ] as const;
     const inside = ["DEC-0009", "OQ-0009", "BF-0009", "US-0009-0009", "AC-0009-0009-09"];
     const lines = [

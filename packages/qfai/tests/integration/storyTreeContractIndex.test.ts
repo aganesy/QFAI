@@ -90,7 +90,7 @@ describe("story-tree contract index", () => {
     );
     await put(
       `${base}/design/ui-0001-tokens.md`,
-      "# UI-0001: Tokens\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | Tokens | EX-0001-0001-01 |\n",
+      "# UI-0001: Tokens\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-UI-0001-0001 | Tokens | EX-0001-0001-01 |\n",
     );
     const model = await readStoryTreeModel(root, config);
     const findings = await validateStoryTreeContractReferences(root, config, model);

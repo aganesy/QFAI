@@ -52,7 +52,7 @@ const FIXTURE_FLOW: Record<string, string> = {
   [`${STORY}/03_Example.md`]:
     "# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| ----- | ------ | ----- | -------- |\n| EX-0001-0001-01 | AC-0001-0001-01 | A valid order | Accepted |\n",
   [CONTRACT]:
-    "# CLI-0001: Orders\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| ----- | --------- | -------- |\n| BR-0001-0001 | An order is validated | EX-0001-0001-01 |\n",
+    "# CLI-0001: Orders\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| ----- | --------- | -------- |\n| BR-CLI-0001-0001 | An order is validated | EX-0001-0001-01 |\n",
 };
 
 // Writes the fixture flow once; a later fact adds to it.

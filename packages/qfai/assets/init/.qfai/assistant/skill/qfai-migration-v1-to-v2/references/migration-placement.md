@@ -126,11 +126,12 @@ the file to match:
 | Old contract               | Declares       | New ID   | New file                   |
 | -------------------------- | -------------- | -------- | -------------------------- |
 | `cli/orders.md`            | nothing        | CLI-0001 | `cli/cli-0001-orders.md`   |
-| `api/api-0001-orders.yaml` | `CON-API-0001` | API-0002 | `api/api-0002-orders.yaml` |
-| `db/db-0001-orders.sql`    | `CON-DB-0001`  | DB-0003  | `db/db-0003-orders.sql`    |
+| `api/api-0001-orders.yaml` | `CON-API-0001` | API-0001 | `api/api-0001-orders.yaml` |
+| `db/db-0001-orders.sql`    | `CON-DB-0001`  | DB-0001  | `db/db-0001-orders.sql`    |
 
-- Numbers run across all contracts, in the order CLI, API, DB, UI, then by
-  the old number, then by path. No two contracts share a number.
+- Each kind is numbered in its own sequence from `0001`, or from the highest
+  number a contract of that kind already declares, by the old number, then by
+  path. No two contracts of one kind share a number.
 - The new ID replaces the old one in the file's declaration: the H1 of a
   Markdown contract, as `# CLI-0001: <title>`, and the `QFAI-CONTRACT-ID` line
   of any other. The old IDs in `-- Depends on:` and `x-qfai-depends-on` become
@@ -174,15 +175,16 @@ new one, such as a changed constraint ID. A group with no item is not printed.
 
 ## Business rules
 
-Rules are numbered per contract, `BR-<contract number>-NNNN` from `0001` in plan
-order: the first rule step 4 places in API-0006 is BR-0006-0001. Step 7 writes
+Rules are numbered per contract, `BR-<KIND>-<contract number>-NNNN` from `0001`
+in plan order: the first rule step 4 places in API-0006 is BR-API-0006-0001.
+Step 7 writes
 each rule into its contract in the form the contract's format takes:
 
-| Contract format | Where the rule goes                                                     |
-| --------------- | ----------------------------------------------------------------------- |
-| Markdown        | A row of the `## Business rules` table: BR-ID, Statement and Examples   |
-| YAML or JSON    | An entry `{ id, statement, examples }` of the top-level `x-qfai-rules:` |
-| SQL             | A `-- Rule BR-0006-0001: <statement>` line, then an `-- Examples:` line |
+| Contract format | Where the rule goes                                                        |
+| --------------- | -------------------------------------------------------------------------- |
+| Markdown        | A row of the `## Business rules` table: BR-ID, Statement and Examples      |
+| YAML or JSON    | An entry `{ id, statement, examples }` of the top-level `x-qfai-rules:`    |
+| SQL             | A `-- Rule BR-DB-0006-0001: <statement>` line, then an `-- Examples:` line |
 
 A Markdown contract without a `## Business rules` section gets one as its last
 section. A rule's examples are the new IDs of the examples that cited it. A

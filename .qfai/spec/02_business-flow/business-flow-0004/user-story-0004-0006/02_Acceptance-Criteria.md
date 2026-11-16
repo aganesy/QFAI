@@ -27,7 +27,7 @@ Feature: Move policy and catalog content into the merged files once
   Scenario: Every 1.x contract takes a contract ID, a name to match and a row in the contract index
     Given contract files under the contract kind directories that declare old `CON-*` IDs or none, and the old contract index
     When step 3 runs
-    Then each contract has a new contract ID, unique across kinds, a file name that carries it and a declaration of it
+    Then each contract has a new contract ID, unique within its kind, a file name that carries it and a declaration of it
     And the contract map records each old path and old ID against the new ones
     And `contracts.md` lists every contract in the index table, and what it cannot hold is listed under For a person
     And every old `CON-*` ID the contract map translates, in a contract file step 3 wrote, is its new ID there

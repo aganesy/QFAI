@@ -31,7 +31,7 @@
  *   node scripts/story-ids.mjs check
  *
  * Scopes: `BF`, `US-<flow>`, `AC-<flow>-<story>`,
- * `EX-<flow>-<story>`, `BR-<contract>`.
+ * `EX-<flow>-<story>`, `BR-<KIND>-<contract>`, such as `BR-CLI-0016`.
  *
  * Requires Node.js 22.18 or later, which runs the package's TypeScript
  * story-tree parser directly. On an older runtime it exits 2 before any call.
@@ -73,9 +73,9 @@ export function parseScope(scope) {
   if (flow !== null) return { kind: "US", parentId: `BF-${flow[1]}` };
   const story = /^(AC|EX)-(\d{4}-\d{4})$/.exec(scope);
   if (story !== null) return { kind: story[1], parentId: `US-${story[2]}` };
-  // A rule's parent is its contract; the allocator reads only the number.
-  const contract = /^BR-(\d{4})$/.exec(scope);
-  if (contract !== null) return { kind: "BR", parentId: `CLI-${contract[1]}` };
+  // A rule's parent is its contract, named by its kind and its number.
+  const contract = /^BR-((?:CLI|API|DB|UI)-\d{4})$/.exec(scope);
+  if (contract !== null) return { kind: "BR", parentId: contract[1] };
   return undefined;
 }
 
@@ -532,7 +532,7 @@ const USAGE = [
   "  node scripts/story-ids.mjs next <scope>...",
   "  node scripts/story-ids.mjs check",
   "check: finish any pending merge first; an unfinished merge exits 2.",
-  "Scopes: BF, US-<flow>, AC-<flow>-<story>, EX-<flow>-<story>, BR-<contract>",
+  "Scopes: BF, US-<flow>, AC-<flow>-<story>, EX-<flow>-<story>, BR-<KIND>-<contract>",
 ].join("\n");
 
 /** The package's story-tree parser, which is TypeScript. */

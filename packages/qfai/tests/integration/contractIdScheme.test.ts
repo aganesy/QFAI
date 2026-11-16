@@ -145,49 +145,55 @@ const DB_CONTRACT =
 describe("contract IDs and contract-scoped business rules", () => {
   // QFAI:AC-0001-0008-04
   // QFAI:EX-0001-0008-07
-  it("allocates the next BR of a contract under that contract's number", () => {
+  it("allocates the next BR of a contract under that contract's kind and number", () => {
     const files = tree(
       contract("CLI-0003: Check", [
-        "| BR-0003-0001 | First | EX-0001-0001-01 |",
-        "| BR-0003-0002 | Second | EX-0001-0001-01 |",
+        "| BR-CLI-0003-0001 | First | EX-0001-0001-01 |",
+        "| BR-CLI-0003-0002 | Second | EX-0001-0001-01 |",
       ]),
-      "| DEC-0001 | Retired BR-0003-0004 | Keep its ID reserved |",
+      "| DEC-0001 | Retired BR-CLI-0003-0004 | Keep its ID reserved |",
     );
     const model = buildStoryTreeModel(files);
     expect(model.contracts).toEqual([{ id: "CLI-0003", file: check }]);
-    expect(nextStoryTreeId(model, "BR", "CLI-0003")).toBe("BR-0003-0005");
-    expect(nextStoryTreeId(model, "BR", "API-0007")).toBe("BR-0007-0001");
+    expect(nextStoryTreeId(model, "BR", "CLI-0003")).toBe("BR-CLI-0003-0005");
+    expect(nextStoryTreeId(model, "BR", "API-0003")).toBe("BR-API-0003-0001");
     expect(() => nextId("BR", [], "CON-UI-0001")).toThrow(TypeError);
     const suffixed = buildStoryTreeModel(
       tree(
-        contract("CLI-0003: Check", ["| BR-0003-0001 | First | EX-0001-0001-01 |"]),
-        "| DEC-0001 | Notes on BR-0003-0009copy | None |",
+        contract("CLI-0003: Check", ["| BR-CLI-0003-0001 | First | EX-0001-0001-01 |"]),
+        "| DEC-0001 | Notes on BR-CLI-0003-0009copy | None |",
       ),
     );
-    expect(nextStoryTreeId(suffixed, "BR", "CLI-0003")).toBe("BR-0003-0002");
+    expect(nextStoryTreeId(suffixed, "BR", "CLI-0003")).toBe("BR-CLI-0003-0002");
   });
 
   // QFAI:AC-0001-0008-04
   // QFAI:EX-0001-0008-08
-  it("reports a contract-scoped BR that carries another contract's number", () => {
+  it("reports a contract-scoped BR that names another contract's kind or number", () => {
     expect(
-      ruleFindings(tree(contract("CLI-0003: Check", ["| BR-0003-0001 | Own | EX-0001-0001-01 |"]))),
+      ruleFindings(
+        tree(contract("CLI-0003: Check", ["| BR-CLI-0003-0001 | Own | EX-0001-0001-01 |"])),
+      ),
     ).toEqual([]);
     expect(
       ruleFindings(
-        tree(contract("CLI-0003: Check", ["| BR-0002-0001 | Other | EX-0001-0001-01 |"])),
+        tree(
+          contract("CLI-0003: Check", [
+            "| BR-CLI-0002-0001 | Other number | EX-0001-0001-01 |",
+            "| BR-API-0003-0001 | Other kind | EX-0001-0001-01 |",
+          ]),
+        ),
       ),
     ).toEqual([
-      expect.stringContaining(
-        `BR-0002-0001 does not carry the number of its contract CLI-0003 in ${check}`,
-      ),
+      expect.stringContaining(`BR-API-0003-0001 does not name its contract CLI-0003 in ${check}`),
+      expect.stringContaining(`BR-CLI-0002-0001 does not name its contract CLI-0003 in ${check}`),
     ]);
     expect(
-      ruleFindings(tree(contract("Check", ["| BR-0003-0001 | Undeclared | EX-0001-0001-01 |"]))),
-    ).toEqual([
-      expect.stringContaining(
-        "BR-0003-0001 does not carry the number of its contract (no contract ID)",
+      ruleFindings(
+        tree(contract("Check", ["| BR-CLI-0003-0001 | Undeclared | EX-0001-0001-01 |"])),
       ),
+    ).toEqual([
+      expect.stringContaining("BR-CLI-0003-0001 does not name its contract (no contract ID)"),
     ]);
   });
 
@@ -195,12 +201,12 @@ describe("contract IDs and contract-scoped business rules", () => {
   // QFAI:EX-0001-0055-09
   it("reads a Business rules table with its statement and examples", () => {
     const text = contract("CLI-0003: Check", [
-      "| BR-0003-0001 | Check the project | EX-0001-0001-01 |",
+      "| BR-CLI-0003-0001 | Check the project | EX-0001-0001-01 |",
     ]);
     expect(parseContractRules(check, text)).toEqual({
       rules: [
         {
-          id: "BR-0003-0001",
+          id: "BR-CLI-0003-0001",
           statement: "Check the project",
           examples: ["EX-0001-0001-01"],
           file: check,
@@ -215,7 +221,7 @@ describe("contract IDs and contract-scoped business rules", () => {
   // QFAI:EX-0001-0055-10
   it("rejects a Business rules table without the Examples column", () => {
     const columns =
-      "# CLI-0003: Check\n\n## Business rules\n\n| BR-ID | Statement |\n| --- | --- |\n| BR-0003-0001 | Two columns |\n";
+      "# CLI-0003: Check\n\n## Business rules\n\n| BR-ID | Statement |\n| --- | --- |\n| BR-CLI-0003-0001 | Two columns |\n";
     expect(ruleFindings(tree(columns))).toContain(`Invalid Business rules columns in ${check}`);
   });
 
@@ -223,9 +229,9 @@ describe("contract IDs and contract-scoped business rules", () => {
   // QFAI:EX-0001-0055-11
   it("reads a Business rules heading that closes with a run of hashes", () => {
     const text =
-      "# CLI-0003: Check\n\n## Business rules ##\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003-0001 | Check the project | EX-0001-0001-01 |\n";
+      "# CLI-0003: Check\n\n## Business rules ##\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-CLI-0003-0001 | Check the project | EX-0001-0001-01 |\n";
     expect(parseContractRules(check, text)).toMatchObject({
-      rules: [{ id: "BR-0003-0001", examples: ["EX-0001-0001-01"] }],
+      rules: [{ id: "BR-CLI-0003-0001", examples: ["EX-0001-0001-01"] }],
       errors: [],
     });
     expect(ruleFindings(tree(text))).toEqual([]);
@@ -261,7 +267,7 @@ describe("contract IDs and contract-scoped business rules", () => {
   it("reports a Markdown file under api/ once and counts it as no contract", async () => {
     const refunds = "api/api-0003-refunds.md";
     const root = await contractTree([indexRow("API-0003", refunds)], {
-      [refunds]: contract("API-0003: Refunds", ["| BR-0003-0001 | Refund | EX-0001-0001-01 |"]),
+      [refunds]: contract("API-0003: Refunds", ["| BR-API-0003-0001 | Refund | EX-0001-0001-01 |"]),
     });
     const empty = (await validateContracts(root, defaultConfig))
       .filter((entry) => entry.code === "QFAI-CONTRACT-000")
@@ -286,10 +292,10 @@ describe("contract IDs and contract-scoped business rules", () => {
   it("names each contract node of a flow graph by the contract ID its file declares", async () => {
     const root = await contractTree([], {
       "cli/cli-0003-check.md": contract("CLI-0003: Check", [
-        "| BR-0003-0001 | Check the project | EX-0001-0001-01 |",
+        "| BR-CLI-0003-0001 | Check the project | EX-0001-0001-01 |",
       ]),
-      "api/api-0002-orders.yaml": `${API_CONTRACT}x-qfai-rules:\n  - id: BR-0002-0001\n    statement: Accept an order\n    examples: [EX-0001-0001-01]\n`,
-      "tech.md": `# Tech\n\n${rulesTable("Business rules", ["| BR-0009-0001 | Stack | EX-0001-0001-01 |"])}`,
+      "api/api-0002-orders.yaml": `${API_CONTRACT}x-qfai-rules:\n  - id: BR-API-0002-0001\n    statement: Accept an order\n    examples: [EX-0001-0001-01]\n`,
+      "tech.md": `# Tech\n\n${rulesTable("Business rules", ["| BR-CLI-0009-0001 | Stack | EX-0001-0001-01 |"])}`,
     });
     for (const [relative, body] of tree("")) {
       if (relative !== check) await put(root, relative, body);
@@ -311,9 +317,9 @@ describe("contract IDs and contract-scoped business rules", () => {
       new Set(graph.nodes.filter((node) => node.type === "CON").map((node) => node.id)),
     ).toEqual(new Set(["API-0002", "CLI-0003", `${contracts}/tech.md`]));
     expect(graph.edges.filter((edge) => edge.relation === "BR_TO_CON")).toEqual([
-      { from: "BR-0002-0001", to: "API-0002", relation: "BR_TO_CON" },
-      { from: "BR-0003-0001", to: "CLI-0003", relation: "BR_TO_CON" },
-      { from: "BR-0009-0001", to: `${contracts}/tech.md`, relation: "BR_TO_CON" },
+      { from: "BR-API-0002-0001", to: "API-0002", relation: "BR_TO_CON" },
+      { from: "BR-CLI-0003-0001", to: "CLI-0003", relation: "BR_TO_CON" },
+      { from: "BR-CLI-0009-0001", to: `${contracts}/tech.md`, relation: "BR_TO_CON" },
     ]);
   });
 
@@ -352,7 +358,7 @@ describe("contract IDs and contract-scoped business rules", () => {
 
   // QFAI:AC-0001-0052-03
   // QFAI:EX-0001-0052-04
-  it("reports a misnamed or undeclared contract, a wrong kind and a shared number", async () => {
+  it("reports a misnamed or undeclared contract, a wrong kind and a number its kind repeats", async () => {
     const root = await contractTree(
       [
         indexRow("CLI-0001", "cli/check.md"),
@@ -360,12 +366,16 @@ describe("contract IDs and contract-scoped business rules", () => {
         indexRow("-", "ui/ui-0005-home.yaml"),
         indexRow("CLI-0002", "cli/cli-0002-moved.md"),
         indexRow("DB-0001", "db/db-0001-orders.sql"),
+        indexRow("DB-0001", "db/db-0001-items.sql"),
+        indexRow("UI-0001", "ui/ui-0001-home.yaml"),
       ],
       {
         "cli/check.md": CLI_CONTRACT,
         "api/api-0002-orders.yaml": "# QFAI-CONTRACT-ID: DB-0002\nopenapi: 3.1.0\n",
         "ui/ui-0005-home.yaml": "screens: []\n",
         "db/db-0001-orders.sql": "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE orders (id int);\n",
+        "db/db-0001-items.sql": "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE items (id int);\n",
+        "ui/ui-0001-home.yaml": "# QFAI-CONTRACT-ID: UI-0001\nscreens: []\n",
       },
     );
     const findings = await indexFindings(root);
@@ -380,7 +390,7 @@ describe("contract IDs and contract-scoped business rules", () => {
           /lists CLI-0002 with cli\/cli-0002-moved\.md, which is not a contract file$/,
         ),
         expect.stringMatching(
-          /^QFAI-CONTRACT-034 Contract number 0001 is declared by more than one contract: /,
+          /^QFAI-CONTRACT-034 Contract ID DB-0001 is declared by more than one contract: .*db-0001-items\.sql, .*db-0001-orders\.sql$/,
         ),
       ]),
     );
@@ -423,23 +433,23 @@ describe("the new contract IDs in the checks that read the old ones", () => {
   it("reads the one rendered Business rules table", () => {
     const fenced = contract(
       "CLI-0003: Check",
-      ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
-      "```md\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003-0009 | Example | EX-0001-0001-01 |\n```\n",
+      ["| BR-CLI-0003-0001 | Check the project | EX-0001-0001-01 |"],
+      "```md\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-CLI-0003-0009 | Example | EX-0001-0001-01 |\n```\n",
     );
     expect(parseContractRules(check, fenced)).toMatchObject({
-      rules: [{ id: "BR-0003-0001" }],
+      rules: [{ id: "BR-CLI-0003-0001" }],
       errors: [],
     });
-    const twoTables = `${contract("CLI-0003: Check", ["| BR-0003-0001 | First | EX-0001-0001-01 |"])}\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003-0002 | Second | EX-0001-0001-01 |\n`;
+    const twoTables = `${contract("CLI-0003: Check", ["| BR-CLI-0003-0001 | First | EX-0001-0001-01 |"])}\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-CLI-0003-0002 | Second | EX-0001-0001-01 |\n`;
     expect(parseContractRules(check, twoTables).errors).toEqual([
       `More than one Business rules table in ${check}`,
     ]);
-    const commentedSection = `${contract("CLI-0003: Check", ["| BR-0003-0001 | Real | EX-0001-0001-01 |"])}\n<!--\n${rulesTable("Business rules", ["| BR-0003-0009 | Hidden | EX-0001-0001-01 |"])}-->\n`;
+    const commentedSection = `${contract("CLI-0003: Check", ["| BR-CLI-0003-0001 | Real | EX-0001-0001-01 |"])}\n<!--\n${rulesTable("Business rules", ["| BR-CLI-0003-0009 | Hidden | EX-0001-0001-01 |"])}-->\n`;
     expect(parseContractRules(check, commentedSection)).toMatchObject({
-      rules: [{ id: "BR-0003-0001" }],
+      rules: [{ id: "BR-CLI-0003-0001" }],
       errors: [],
     });
-    const twoSections = `${contract("CLI-0003: Check", ["| BR-0003-0001 | First | EX-0001-0001-01 |"])}\n${rulesTable("Business rules", ["| BR-0003-0002 | Second | EX-0001-0001-01 |"])}`;
+    const twoSections = `${contract("CLI-0003: Check", ["| BR-CLI-0003-0001 | First | EX-0001-0001-01 |"])}\n${rulesTable("Business rules", ["| BR-CLI-0003-0002 | Second | EX-0001-0001-01 |"])}`;
     expect(parseContractRules(check, twoSections).errors).toContain(
       `More than one ## Business rules section in ${check}`,
     );

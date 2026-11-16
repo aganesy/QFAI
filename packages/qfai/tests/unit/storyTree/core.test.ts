@@ -61,7 +61,7 @@ const storyFiles = new Map([
   ],
   [
     ".qfai/spec/03_contract/api/pay.yaml",
-    "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: Payment succeeds\n    examples: [EX-0001-0001-01]\n",
+    "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-API-0001-0001\n    statement: Payment succeeds\n    examples: [EX-0001-0001-01]\n",
   ],
 ]);
 
@@ -117,6 +117,19 @@ describe("story-tree core", () => {
     expect(
       nextId("US", ["US-0001-0001", "US-0001-0002", "US-0001-0003", "US-0002-0007"], "BF-0001"),
     ).toBe("US-0001-0004");
+  });
+
+  it("names the contract's kind in a BR ID and counts each kind's rules apart", () => {
+    const named = ["BR-CLI-0003-0002", "BR-API-0003-0007", "BR-UI-0001-0001"];
+    expect(nextId("BR", named, "CLI-0003")).toBe("BR-CLI-0003-0003");
+    expect(nextId("BR", named, "API-0003")).toBe("BR-API-0003-0008");
+    expect(nextId("BR", named, "DB-0003")).toBe("BR-DB-0003-0001");
+    expect(nextId("BR", named, "UI-0001")).toBe("BR-UI-0001-0002");
+    expect(() => nextId("BR", named, "DESIGN-0003")).toThrow(TypeError);
+    for (const id of ["BR-CLI-0014-0281", "BR-API-0001-0001", "BR-DB-0001-0001", "BR-UI-0001-0001"])
+      expect(isStoryTreeId(id, "BR")).toBe(true);
+    for (const id of ["BR-0003-0001", "BR-DESIGN-0001-0001", "BR-cli-0001-0001", "BR-CLI-0001-001"])
+      expect(isStoryTreeId(id, "BR")).toBe(false);
   });
 
   it("checks exact shapes, parent prefixes, and never fills an ID gap", () => {
@@ -228,7 +241,7 @@ describe("story-tree core", () => {
       ["EX-0001-0001-01", "AC-0001-0001-01"],
     ]);
     expect(model.rules.map((rule) => [rule.id, rule.examples])).toEqual([
-      ["BR-0001-0001", ["EX-0001-0001-01"]],
+      ["BR-API-0001-0001", ["EX-0001-0001-01"]],
     ]);
   });
 
@@ -237,11 +250,11 @@ describe("story-tree core", () => {
     files.delete(".qfai/spec/03_contract/api/pay.yaml");
     files.set(
       ".qfai/spec/03_contract/tech.md",
-      "# Tech\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0002 | The CLI runs | EX-0001-0001-01 |\n",
+      "# Tech\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-API-0001-0002 | The CLI runs | EX-0001-0001-01 |\n",
     );
 
     const model = buildStoryTreeModel(files);
-    expect(model.rules.map((rule) => rule.id)).toEqual(["BR-0001-0002"]);
+    expect(model.rules.map((rule) => rule.id)).toEqual(["BR-API-0001-0002"]);
   });
 
   it("retains malformed declarations so the validator can report their source", () => {
@@ -260,35 +273,35 @@ describe("story-tree core", () => {
     expect(
       parseContractRules(
         "a.yaml",
-        "x-qfai-rules:\n  - id: BR-0001-0001\n    statement: Pay\n    examples: [EX-0001-0001-01]\n",
+        "x-qfai-rules:\n  - id: BR-API-0001-0001\n    statement: Pay\n    examples: [EX-0001-0001-01]\n",
       ).rules.map((rule) => rule.id),
-    ).toEqual(["BR-0001-0001"]);
+    ).toEqual(["BR-API-0001-0001"]);
     expect(
-      parseContractRules("a.sql", "-- Rule BR-0001-0002: Save\n-- Examples: EX-0001-0001-01\n")
+      parseContractRules("a.sql", "-- Rule BR-DB-0001-0002: Save\n-- Examples: EX-0001-0001-01\n")
         .rules,
     ).toEqual([
-      { id: "BR-0001-0002", statement: "Save", examples: ["EX-0001-0001-01"], file: "a.sql" },
+      { id: "BR-DB-0001-0002", statement: "Save", examples: ["EX-0001-0001-01"], file: "a.sql" },
     ]);
     expect(
       parseContractRules(
         "a.md",
-        "## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0003 | Show | EX-0001-0001-01 |\n",
+        "## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-CLI-0001-0003 | Show | EX-0001-0001-01 |\n",
       ),
     ).toMatchObject({
-      rules: [{ id: "BR-0001-0003", statement: "Show", examples: ["EX-0001-0001-01"] }],
+      rules: [{ id: "BR-CLI-0001-0003", statement: "Show", examples: ["EX-0001-0001-01"] }],
     });
     expect(
       parseContractRules(
         "a.json",
         JSON.stringify({
           "x-qfai-rules": [
-            { id: "BR-0001-0004", statement: "Keep", examples: ["EX-0001-0001-01"] },
+            { id: "BR-API-0001-0004", statement: "Keep", examples: ["EX-0001-0001-01"] },
           ],
         }),
       ).rules.map((rule) => rule.id),
-    ).toEqual(["BR-0001-0004"]);
+    ).toEqual(["BR-API-0001-0004"]);
     expect(
-      parseContractRules("a.sql", "-- Rule BR-0001-0005: Missing examples\nSELECT 1;\n").rules[0]
+      parseContractRules("a.sql", "-- Rule BR-DB-0001-0005: Missing examples\nSELECT 1;\n").rules[0]
         ?.examples,
     ).toEqual([]);
     expect(parseContractRules("a.md", "## Business rules\n\nNo table.\n").errors).not.toEqual([]);
@@ -445,7 +458,7 @@ describe("story-tree core", () => {
     );
     files.set(
       ".qfai/spec/03_contract/api/returns.yaml",
-      "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-0002-0001\n    statement: Return succeeds\n    examples: [EX-0002-0001-01]\n",
+      "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-API-0002-0001\n    statement: Return succeeds\n    examples: [EX-0002-0001-01]\n",
     );
     const model = buildStoryTreeModel(files, { contractsDir: ".qfai/spec/03_contract" });
     expect(resolveFlowScope(["BF-0001", "BF-0002", "../bad"], model)).toMatchObject({
@@ -457,7 +470,7 @@ describe("story-tree core", () => {
       flowIds: ["BF-0001"],
       invalidValues: [],
       storyIds: ["US-0001-0001"],
-      ruleIds: ["BR-0001-0001"],
+      ruleIds: ["BR-API-0001-0001"],
     });
   });
 });

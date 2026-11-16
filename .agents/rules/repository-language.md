@@ -83,5 +83,5 @@ built: the validators, `config.ts`, `waivers.ts` and `report.ts` alike.
 
 - Writing standard, once the language is settled: `documentation-clarity.md`
 - The `--format text` grammar those messages are printed in:
-  BR-0014-0092 to BR-0014-0095 in
+  BR-CLI-0014-0092 to BR-CLI-0014-0095 in
   `.qfai/spec/03_contract/cli/cli-0014-qfai-validate.md`

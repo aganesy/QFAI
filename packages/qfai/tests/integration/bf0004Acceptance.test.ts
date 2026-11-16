@@ -981,7 +981,7 @@ describe("BF-0004 acceptance criteria", () => {
     ).toContain("BF-0001");
     expect(await readFile(path.join(contracts, "tech.md"), "utf8")).toContain("JSON requests");
     expect(await readFile(path.join(contracts, "api/api-0001-order.yaml"), "utf8")).toContain(
-      "BR-0001-0001",
+      "BR-API-0001-0001",
     );
     await expect(lstat(path.join(root, ".qfai/spec"))).rejects.toMatchObject({ code: "ENOENT" });
   });
@@ -1663,7 +1663,7 @@ describe("BF-0004 acceptance criteria", () => {
       "US-0001-0002": "US-0002-0001",
       "AC-0001-0001": "AC-0001-0001-01",
       "AC-0001-0002": "AC-0002-0001-01",
-      "BR-0001-0001": "BR-0001-0001",
+      "BR-0001-0001": "BR-API-0001-0001",
     });
     expect(map.placements["spec-0001"]).toMatchObject({
       "US-0001-0001": "Place an order",
@@ -1796,8 +1796,8 @@ describe("BF-0004 acceptance criteria", () => {
       "AC-0001-0002": "AC-0001-0001-02",
       "EX-0001-0001": "EX-0001-0001-01",
       "EX-0001-0002": "EX-0001-0001-02",
-      "BR-0001-0001": "BR-0001-0001",
-      "BR-0001-0002": "BR-0002-0001",
+      "BR-0001-0001": "BR-API-0001-0001",
+      "BR-0001-0002": "BR-DB-0001-0001",
     });
   });
 
@@ -2023,7 +2023,7 @@ describe("BF-0004 acceptance criteria", () => {
       "US-0001-0001": "US-0001-0001",
       "AC-0001-0001": "AC-0001-0001-01",
       "EX-0001-0001": "EX-0001-0001-01",
-      "BR-0001-0001": "BR-0001-0001",
+      "BR-0001-0001": "BR-API-0001-0001",
       "TC-0001-0001": "EX-0001-0001-01",
       "TC-0001-0003": "EX-0001-0001-02",
     });
@@ -2237,7 +2237,7 @@ describe("BF-0004 acceptance criteria", () => {
     // Runs of blanks inside the statement are not pinned.
     expect(sql).toMatch(
       new RegExp(
-        `^-- Rule BR-0002-0001: ${words.join("[ \\t]+")}\\n-- Examples: EX-\\d{4}-\\d{4}-\\d{2}`,
+        `^-- Rule BR-DB-0001-0001: ${words.join("[ \\t]+")}\\n-- Examples: EX-\\d{4}-\\d{4}-\\d{2}`,
         "m",
       ),
     );
@@ -2296,13 +2296,13 @@ describe("BF-0004 acceptance criteria", () => {
       "utf8",
     );
     const db = await readFile(
-      path.join(journey.root, ".qfai/spec/03_contract/db/db-0002-orders.sql"),
+      path.join(journey.root, ".qfai/spec/03_contract/db/db-0001-orders.sql"),
       "utf8",
     );
-    expect(api).toContain("BR-0001-0001");
-    expect(api).toContain("BR-0001-0002");
+    expect(api).toContain("BR-API-0001-0001");
+    expect(api).toContain("BR-API-0001-0002");
     expect(api).toContain("EX-0001-0001-01");
-    expect(db).toContain("BR-0002-0001");
+    expect(db).toContain("BR-DB-0001-0001");
   });
 
   // QFAI:AC-0004-0009-02

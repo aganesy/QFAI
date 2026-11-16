@@ -22,8 +22,8 @@
 | CLI-0018 | Shipped GitHub Actions workflow set | `.qfai/spec/03_contract/cli/cli-0018-shipped-workflows.md` | - | - | Distributed CI workflow ownership and shape. |
 | CLI-0019 | Story-Tree Authoring | `.qfai/spec/03_contract/cli/cli-0019-story-tree-authoring.md` | - | - | SDD and migration authoring boundaries. |
 | CLI-0020 | Workflow Files | `.qfai/spec/03_contract/cli/cli-0020-workflow-files.md` | - | - | Plan files and schemas. |
-| CLI-0021 | Graph exploration | `.qfai/spec/03_contract/cli/cli-0021-graph-exploration.md` | - | UI-0022 | CLI-only graph routing, graph-first guidance, native freshness and independent completed reuse. |
-| UI-0022 | Graph exploration terminal surfaces | `.qfai/spec/03_contract/ui/ui-0022-graph-exploration.yaml` | - | CLI-0009, CLI-0021 | CLI preparation, preview and query-result presentation. |
+| CLI-0021 | Graph exploration | `.qfai/spec/03_contract/cli/cli-0021-graph-exploration.md` | - | UI-0001 | CLI-only graph routing, graph-first guidance, native freshness and independent completed reuse. |
+| UI-0001 | Graph exploration terminal surfaces | `.qfai/spec/03_contract/ui/ui-0001-graph-exploration.yaml` | - | CLI-0009, CLI-0021 | CLI preparation, preview and query-result presentation. |
 | CLI-0023 | `qfai sdd merge-docs` | `.qfai/spec/03_contract/cli/cli-0023-qfai-sdd-merge-docs.md` | - | - | Sentence-level merge of conflicted story-tree documents. |
 | CLI-0024 | `qfai session-review` | `.qfai/spec/03_contract/cli/cli-0024-qfai-session-review.md` | - | - | Local transcript counts for the session review. |
 | CLI-0025 | `qfai catalog components` | `.qfai/spec/03_contract/cli/cli-0025-qfai-catalog-components.md` | - | - | The component catalogue written from the UI source, and how the implementer keeps it. |
