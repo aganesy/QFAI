@@ -396,7 +396,7 @@ describe("hex literals in source", () => {
         "foo(// colour: #abcdef",
         "x=// colour: #abcdef",
         '<a href="https://example.com/issues">',
-        "  #123",
+        "  #1a2",
         "</a>",
         "<p>Note:",
         "#abc is the issue number</p>",
