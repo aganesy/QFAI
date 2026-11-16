@@ -6,7 +6,10 @@
  * with `why` (why the text must exist) and `without` (what goes wrong when it
  * is gone), or the text fails the run. Text that names, labels or reports —
  * headings, labels, buttons, links, alerts — is exempt, and expressions are
- * data, not copy.
+ * data, not copy. So is a data value: a short text that is not a sentence, in a
+ * table cell or a description value, or as a JSX string literal. One reason
+ * before an element, or as its first child, covers every text inside it, so a
+ * sentence a link splits needs one reason.
  *
  * It reads the current prototype pages and the files `uiux.surfacePaths`
  * selects. HTML, Vue and Svelte go through jsdom; JSX goes through the
@@ -33,6 +36,21 @@ const LINK_ALIASES = new Set(["routerlink", "nuxtlink"]);
 /** The last word of a component name that marks it as a link or a button, whatever words precede it. */
 const EXEMPT_LAST_WORDS = new Set(["link", "button"]);
 const EXEMPT_ROLES: ReadonlySet<string> = new Set(UI_TEXT_EXEMPT_ROLES);
+/** Elements whose content is a data value: a table cell and a description list's value. */
+const DATA_CELL_ELEMENTS = new Set(["td", "dd"]);
+/** The last word of a component name that marks it as a data cell, as in `TableCell`. */
+const DATA_CELL_LAST_WORD = "cell";
+/** The most code points a data value holds, inner whitespace collapsed. */
+const DATA_VALUE_LENGTH = 20;
+/**
+ * A mark that ends a sentence: `.`, `!` or `?` at the end of the text or before whitespace, so
+ * `1.5` and `ORD.42` are not sentences, or anywhere a CJK full stop (U+3002), a full-width
+ * exclamation mark (U+FF01), question mark (U+FF1F) or full stop (U+FF0E), or a half-width
+ * ideographic full stop (U+FF61).
+ */
+const SENTENCE_END = /[.!?](?:\s|$)|[\u3002\uFF01\uFF1F\uFF61\uFF0E]/u;
+/** Elements a comment before or inside stands for the whole file; `qfai-text-file` does that. */
+const FILE_LEVEL_ELEMENTS = new Set(["html", "body"]);
 const REASON_MARK = "qfai-text:";
 const EXCERPT_LENGTH = 40;
 const VOID_ELEMENTS = new Set([
@@ -51,7 +69,7 @@ const VOID_ELEMENTS = new Set([
   "wbr",
 ]);
 const REMEDIES =
-  "If the user needs this text here (a result, a cost, a condition, a consequence, a destination, a recovery step, or an empty state's next step), keep it and write the reason before it: `<!-- qfai-text: why=<why it must exist>; without=<what goes wrong without it> -->`, or `{/* qfai-text: ... */}` in JSX. Otherwise delete it, replace it with another component (an icon with an accessible name, a state, a badge), or move its job to an existing element (a label, a heading, the button wording). If none of these works without losing what the user needs, keep it and write its reason. Moving the text into a constant, a prop or an attribute value is not a fix: this check reads only literal text, and the product-surface review still judges that copy.";
+  "If the user needs this text here (a result, a cost, a condition, a consequence, a destination, a recovery step, or an empty state's next step), keep it and write the reason before it: `<!-- qfai-text: why=<why it must exist>; without=<what goes wrong without it> -->`, or `{/* qfai-text: ... */}` in JSX. One reason before an element, or as its first child, covers every text inside it, such as a paragraph a link splits, a list or a table. Otherwise delete it, replace it with another component (an icon with an accessible name, a state, a badge), or move its job to an existing element (a label, a heading, the button wording). If none of these works without losing what the user needs, keep it and write its reason. Moving the text into a constant, a prop or an attribute value is not a fix: this check reads only literal text, and the product-surface review still judges that copy.";
 
 export type UiPlainTextOptions = {
   /** Loads the project's `typescript`; the default resolves it from the project root. */
@@ -65,8 +83,15 @@ export type UiPlainTextOptions = {
  */
 type MappedNames = ReadonlySet<string>;
 
-/** One literal text and the comment that stands before it, if any. */
-type Candidate = { line: number; text: string; reason: string | null };
+/**
+ * A `qfai-text` body and where it came from: the comment node (a DOM or a TypeScript node), or the
+ * file reason's record. `source` is the identity one finding names however many texts the reason
+ * covers, and the markup reader walks on from it to the element the comment stands before.
+ */
+type Reason = { body: string; source: object };
+
+/** One literal text and the comment that gives it its reason, if any. */
+type Candidate = { line: number; text: string; reason: Reason | null };
 
 /**
  * The subset of the TypeScript compiler API this check and the component catalogue call. The
@@ -104,6 +129,8 @@ export type TsNode = {
   heritageClauses?: readonly TsNode[];
   attributes?: TsNode;
   properties?: readonly TsNode[];
+  /** A string or template literal's value, its escapes decoded. */
+  text?: string;
 };
 export type TsApi = {
   createSourceFile(
@@ -128,13 +155,14 @@ export async function validateUiPlainText(
   const jsxFiles = files.filter((file) => [".tsx", ".jsx"].includes(path.extname(file)));
   const ts = jsxFiles.length > 0 ? loadTs(root, options.loadTypescript) : null;
   const mapped: MappedNames = new Set(Object.keys(config.uiText?.elements ?? {}).map(wordsOf));
+  const decoder = ts ? await entityDecoder() : null;
   for (const file of files) {
     const extension = path.extname(file);
     const source = await readSafe(path.join(root, file));
     let candidates: Candidate[];
     if (extension === ".tsx" || extension === ".jsx") {
-      if (!ts) continue;
-      candidates = jsxCandidates(ts, source, file, mapped);
+      if (!ts || !decoder) continue;
+      candidates = jsxCandidates(ts, source, file, mapped, decoder.decode);
     } else {
       candidates = await markupCandidates(markupOf(source, extension), mapped);
     }
@@ -157,7 +185,10 @@ export async function validateUiPlainText(
         ),
       );
     }
-    const shared = recorded && defect === null ? recorded.body : null;
+    const shared: Reason | null =
+      recorded && defect === null ? { body: recorded.body, source: recorded } : null;
+    // A malformed reason is reported once, at the first text it covers.
+    const judged = new Set<object>();
     issues.push(
       ...candidates.flatMap((candidate) =>
         findingsFor(
@@ -165,6 +196,7 @@ export async function validateUiPlainText(
             ? { ...candidate, reason: shared }
             : candidate,
           file,
+          judged,
         ),
       ),
     );
@@ -183,7 +215,29 @@ export async function validateUiPlainText(
       ),
     );
   }
+  decoder?.close();
   return issues;
+}
+
+/**
+ * Decodes the character references in a JSX text, such as `&amp;`, `&#46;` or `&nbsp;`, to the
+ * string the page shows. A `textarea` reads its content as text with references, so no markup in
+ * the text is parsed.
+ */
+async function entityDecoder(): Promise<{ decode: (text: string) => string; close: () => void }> {
+  const { loadJsdom } = await import("../uiux/htmlMockDom.js");
+  const { JSDOM } = await loadJsdom();
+  const dom = new JSDOM("<textarea></textarea>");
+  const area = dom.window.document.querySelector("textarea");
+  if (!area) throw new Error("jsdom did not parse a textarea");
+  return {
+    decode: (text) => {
+      if (!text.includes("&")) return text;
+      area.innerHTML = text;
+      return area.value;
+    },
+    close: () => dom.window.close(),
+  };
 }
 
 /** The current prototype pages and the declared surface files, repository-relative and posix. */
@@ -373,20 +427,97 @@ async function markupCandidates(markup: string, mapped: MappedNames): Promise<Ca
   const { document, Node } = dom.window;
   const candidates: Candidate[] = [];
   const walker = document.createTreeWalker(document, dom.window.NodeFilter.SHOW_TEXT);
+  // The `qfai-text` comment found from `start` on, stepping past whitespace text only.
+  const reasonFrom = (start: Node | null, step: (node: Node) => Node | null): Reason | null => {
+    let current = start;
+    while (
+      current &&
+      current.nodeType === Node.TEXT_NODE &&
+      (current.textContent ?? "").trim() === ""
+    ) {
+      current = step(current);
+    }
+    if (!current || current.nodeType !== Node.COMMENT_NODE) return null;
+    const body = reasonBody(current.textContent ?? "");
+    return body === null ? null : { body, source: current };
+  };
+  const commentBefore = (node: Node): Reason | null =>
+    reasonFrom(node.previousSibling, (current) => current.previousSibling);
+  // A first-child comment that stands directly before an element is that element's reason, not
+  // the container's; it covers the container only when text follows it.
+  const firstChildReason = (element: Element): Reason | null => {
+    const found = reasonFrom(element.firstChild, (child) => child.nextSibling);
+    if (!found || !(found.source instanceof dom.window.Node)) return null;
+    let next = found.source.nextSibling;
+    while (next && next.nodeType === Node.TEXT_NODE && (next.textContent ?? "").trim() === "") {
+      next = next.nextSibling;
+    }
+    return next?.nodeType === Node.ELEMENT_NODE ? null : found;
+  };
+  // The nearest enclosing element with a reason directly before it or as its first child, up to
+  // `body`, whose first comment would stand for the whole file.
+  const elementReason = (element: Element | null): Reason | null => {
+    for (let current = element; current; current = current.parentElement) {
+      if (FILE_LEVEL_ELEMENTS.has(current.localName)) return null;
+      const found = commentBefore(current) ?? firstChildReason(current);
+      if (found) return found;
+    }
+    return null;
+  };
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const raw = node.textContent ?? "";
     if (raw.trim() === "") continue;
     if (insideExempt(node.parentElement, mapped)) continue;
+    // A cell is judged by its whole text, so a sentence a nested element splits is still read.
+    const cell = dataCellOf(node.parentElement);
+    if (cell && isDataValue(markupCellText(cell, mapped))) continue;
     const location = dom.nodeLocation(node);
     const leading = raw.slice(0, raw.length - raw.trimStart().length);
     const line = (location?.startLine ?? 1) + (leading.match(/\n/g)?.length ?? 0);
-    const reason =
-      commentBefore(node, Node.COMMENT_NODE, Node.TEXT_NODE) ??
-      (node.parentNode ? commentBefore(node.parentNode, Node.COMMENT_NODE, Node.TEXT_NODE) : null);
+    const reason = commentBefore(node) ?? elementReason(node.parentElement);
     candidates.push({ line, text: raw, reason });
   }
   dom.window.close();
   return candidates;
+}
+
+/**
+ * A cell's whole text: every text node inside it in order, except one an exempt element such as a
+ * button, a link or a `role="status"` holds, since that text is never plain.
+ */
+function markupCellText(node: Node, mapped: MappedNames): string {
+  if (node.nodeType === node.TEXT_NODE) {
+    return insideExempt(node.parentElement, mapped) ? "" : (node.textContent ?? "");
+  }
+  return Array.from(node.childNodes, (child) => markupCellText(child, mapped)).join("");
+}
+
+/** The nearest enclosing data cell, or `null` when no data cell encloses the element. */
+function dataCellOf(element: Element | null): Element | null {
+  for (let current = element; current; current = current.parentElement) {
+    if (isDataCellName(current.localName)) return current;
+  }
+  return null;
+}
+
+/**
+ * Whether an element or component name is a data cell: its last `.`-separated segment is `td`
+ * or `dd`, or that segment's last word, split as `isExemptName` splits it, is `cell`, as in
+ * `TableCell`, `Table.Cell` or `data-cell`.
+ */
+function isDataCellName(name: string): boolean {
+  const segment = name.split(".").pop() ?? "";
+  if (DATA_CELL_ELEMENTS.has(segment.toLowerCase())) return true;
+  return hyphenateWords(segment).split("-").pop()?.toLowerCase() === DATA_CELL_LAST_WORD;
+}
+
+/**
+ * Whether a text is a data value rather than a sentence: at most `DATA_VALUE_LENGTH` code points
+ * with inner whitespace collapsed, and no mark that ends a sentence.
+ */
+function isDataValue(text: string): boolean {
+  const value = text.replace(/\s+/g, " ").trim();
+  return Array.from(value).length <= DATA_VALUE_LENGTH && !SENTENCE_END.test(value);
 }
 
 function insideExempt(element: Element | null, mapped: MappedNames): boolean {
@@ -453,22 +584,18 @@ function isExemptByName(segment: string): boolean {
   return EXEMPT_ELEMENTS.has(lower) || LINK_ALIASES.has(lower);
 }
 
-/** The `qfai-text` body of the comment directly before `node`, whitespace aside. */
-function commentBefore(node: Node, commentType: number, textType: number): string | null {
-  let previous = node.previousSibling;
-  while (previous && previous.nodeType === textType && (previous.textContent ?? "").trim() === "") {
-    previous = previous.previousSibling;
-  }
-  if (!previous || previous.nodeType !== commentType) return null;
-  return reasonBody(previous.textContent ?? "");
-}
-
 function reasonBody(comment: string): string | null {
   const trimmed = comment.trim();
   return trimmed.startsWith(REASON_MARK) ? trimmed.slice(REASON_MARK.length) : null;
 }
 
-function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNames): Candidate[] {
+function jsxCandidates(
+  ts: TsApi,
+  source: string,
+  file: string,
+  mapped: MappedNames,
+  decode: (text: string) => string,
+): Candidate[] {
   const kind = path.extname(file) === ".jsx" ? ts.ScriptKind.JSX : ts.ScriptKind.TSX;
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, kind);
   const k = ts.SyntaxKind;
@@ -516,7 +643,53 @@ function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNa
     }
     return false;
   };
-  const siblingReason = (node: TsNode): string | null => {
+  const dataCellOf = (node: TsNode): TsNode | null => {
+    for (let current = node.parent; current; current = current.parent) {
+      if (current.kind === k.JsxElement && isDataCellName(tagName(current))) return current;
+    }
+    return null;
+  };
+  // A JSX text as the page shows it, its character references decoded.
+  const jsxText = (node: TsNode): string => decode(node.getText());
+  // The value of a string or template literal that is the whole content of a JSX `{}` child, its
+  // escapes decoded.
+  const literalChild = (node: TsNode): string | null => {
+    if (node.kind !== k.JsxExpression || !isJsxElement(node.parent)) return null;
+    const meaningful = childrenOf(node).filter(
+      (child) => child.kind !== k.OpenBraceToken && child.kind !== k.CloseBraceToken,
+    );
+    const inner = meaningful.length === 1 ? meaningful[0] : undefined;
+    if (inner === undefined) return null;
+    const literal =
+      inner.kind === k.StringLiteral || inner.kind === k.NoSubstitutionTemplateLiteral;
+    return literal ? (inner.text ?? null) : null;
+  };
+  // A cell's whole text: every JSX text and literal child inside it, in order, except one an exempt
+  // element such as a button, a link or a `role="status"` holds; another expression adds nothing.
+  const cellText = (node: TsNode): string => {
+    if (node.kind === k.JsxText) return exempt(node) ? "" : jsxText(node);
+    const literal = literalChild(node);
+    if (literal !== null) return exempt(node) ? "" : literal;
+    return childrenOf(node)
+      .filter((child) => child.kind !== k.JsxOpeningElement && child.kind !== k.JsxClosingElement)
+      .map(cellText)
+      .join("");
+  };
+  // A text is a data value when the nearest data cell's whole text is one, so a sentence a nested
+  // element splits is still read.
+  const inDataValueCell = (node: TsNode): boolean => {
+    const cell = dataCellOf(node);
+    return cell !== null && isDataValue(cellText(cell));
+  };
+  // The reason a `{/* qfai-text: ... */}` child holds.
+  const commentChildReason = (node: TsNode | undefined): Reason | null => {
+    if (!node || node.kind !== k.JsxExpression) return null;
+    const body = node.getText().slice(1, -1).trim();
+    if (!/^\/\*[\s\S]*\*\/$/.test(body)) return null;
+    const reason = reasonBody(body.slice(2, -2));
+    return reason === null ? null : { body: reason, source: node };
+  };
+  const siblingReason = (node: TsNode): Reason | null => {
     const parent = node.parent;
     if (!isJsxElement(parent)) return null;
     const siblings = childrenOf(parent);
@@ -526,45 +699,64 @@ function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNa
       index -= 1;
       previous = siblings[index];
     }
-    if (!previous || previous.kind !== k.JsxExpression) return null;
-    const body = previous.getText().slice(1, -1).trim();
-    if (!/^\/\*[\s\S]*\*\/$/.test(body)) return null;
-    return reasonBody(body.slice(2, -2));
+    return commentChildReason(previous);
+  };
+  // The first child of an element or fragment, between its opening and closing tags. As in
+  // markup, a comment that stands directly before an element is that element's reason only, so
+  // it covers the container only when text follows it.
+  const firstChildReason = (element: TsNode): Reason | null => {
+    const children = childrenOf(element)
+      .slice(1, -1)
+      .filter((child) => !isBlankText(child));
+    const nextKind = children[1]?.kind;
+    const elementKinds = [k.JsxElement, k.JsxFragment, k.JsxSelfClosingElement];
+    const isElement = nextKind !== undefined && elementKinds.includes(nextKind);
+    return isElement ? null : commentChildReason(children[0]);
+  };
+  // A fragment no JSX encloses is a component's top level, as `body` is a page's: a comment before
+  // it or first inside it would stand for the whole component.
+  const isTopFragment = (node: TsNode): boolean => {
+    if (node.kind !== k.JsxFragment) return false;
+    for (let current = node.parent; current !== undefined; current = current.parent) {
+      if (current.kind === k.JsxElement || current.kind === k.JsxFragment) return false;
+    }
+    return true;
   };
   // The trivia between the node's full start and its first token. The compiler's
   // comment-range helpers leave out a comment on the same line as the token
   // before it, as in `return (/* qfai-text: ... */ <p>`, so the trivia is read directly.
-  const leadingReason = (node: TsNode): string | null => {
+  const leadingReason = (node: TsNode): Reason | null => {
     const comment = /\/\*((?:(?!\*\/)[\s\S])*)\*\/\s*$/.exec(
       source.slice(node.pos, node.getStart()),
     );
-    return comment ? reasonBody(comment[1] ?? "") : null;
+    const reason = comment ? reasonBody(comment[1] ?? "") : null;
+    return reason === null ? null : { body: reason, source: node };
   };
-  const reasonFor = (node: TsNode): string | null => {
+  // The text's own comment, else the nearest enclosing element or fragment with a reason before
+  // it or as its first child.
+  const reasonFor = (node: TsNode): Reason | null => {
     const own = siblingReason(node);
     if (own !== null) return own;
-    const parent = node.parent;
-    if (!parent || parent.kind !== k.JsxElement) return null;
-    return siblingReason(parent) ?? leadingReason(parent);
+    for (let current = node.parent; current; current = current.parent) {
+      if (!isJsxElement(current)) continue;
+      if (isTopFragment(current)) return null;
+      const found = siblingReason(current) ?? leadingReason(current) ?? firstChildReason(current);
+      if (found) return found;
+    }
+    return null;
   };
 
   const visit = (node: TsNode): void => {
-    let text: string | null = null;
     // For a JSX text the compiler's start already skips leading whitespace.
     const start = node.getStart();
-    if (node.kind === k.JsxText) {
-      // An entity that only spaces, as `&nbsp;`, is whitespace, as an HTML parser reads it.
-      text = node.getText().replace(/&(nbsp|#160|#xa0);/gi, " ");
-    } else if (node.kind === k.JsxExpression && isJsxElement(node.parent)) {
-      const inner = childrenOf(node).find(
-        (child) => child.kind === k.StringLiteral || child.kind === k.NoSubstitutionTemplateLiteral,
-      );
-      const meaningful = childrenOf(node).filter(
-        (child) => child.kind !== k.OpenBraceToken && child.kind !== k.CloseBraceToken,
-      );
-      if (inner && meaningful.length === 1) text = inner.getText().slice(1, -1);
-    }
-    if (text !== null && text.trim() !== "" && !exempt(node)) {
+    const isText = node.kind === k.JsxText;
+    const text = isText ? jsxText(node) : literalChild(node);
+    // A JSX text is a data value when its cell's whole text is one. A literal child is one on its
+    // own, and inside a cell only when the whole cell is one too.
+    const dataValue = isText
+      ? inDataValueCell(node)
+      : text !== null && isDataValue(text) && (dataCellOf(node) === null || inDataValueCell(node));
+    if (text !== null && text.trim() !== "" && !dataValue && !exempt(node)) {
       const line = sourceFile.getLineAndCharacterOfPosition(start).line + 1;
       candidates.push({ line, text, reason: reasonFor(node) });
     }
@@ -574,7 +766,7 @@ function jsxCandidates(ts: TsApi, source: string, file: string, mapped: MappedNa
   return candidates;
 }
 
-function findingsFor(candidate: Candidate, file: string): Issue[] {
+function findingsFor(candidate: Candidate, file: string, judged: Set<object>): Issue[] {
   // Code points, as the contract counts them.
   const excerpt = Array.from(candidate.text.replace(/\s+/g, " ").trim())
     .slice(0, EXCERPT_LENGTH)
@@ -595,8 +787,9 @@ function findingsFor(candidate: Candidate, file: string): Issue[] {
       ),
     ];
   }
-  const defect = reasonDefect(candidate.reason);
-  if (defect === null) return [];
+  const defect = reasonDefect(candidate.reason.body);
+  if (defect === null || judged.has(candidate.reason.source)) return [];
+  judged.add(candidate.reason.source);
   return [
     issue(
       "QFAI-UITEXT-002",

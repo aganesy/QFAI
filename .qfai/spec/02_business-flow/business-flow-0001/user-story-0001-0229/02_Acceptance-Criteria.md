@@ -41,6 +41,7 @@ Feature: Choose how far the work on a request goes before it starts
     When the answer names stages of the plan
     Then the session runs the stages up to the last one it names, in plan order
     And when it asks for work no stage of the plan does, the session stops and names that work
+    And a run that writes the specification and stops before the implementation stage of a route that has one gets no verify stage, and its final report says its tests come with the implementation stage it left out
 
   # AC-0001-0229-06
   Scenario: A request that ends before implementation lists no tests
@@ -63,4 +64,5 @@ Feature: Choose how far the work on a request goes before it starts
     Then that scope says its tests are pending, and the scope question's option for it says the implement stage writes them later
     And the QFAI gate still runs the full scan, fails, and lists as pending the missing tests of the IDs the run wrote
     And when those are its only errors the commit is made, and the final report lists each pending obligation
+    And a scope whose route has no implement stage, even one that leaves out a test-repair stage, holds no pending tests, and a missing test for an ID it wrote is an ordinary failure
 ```

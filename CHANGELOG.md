@@ -198,6 +198,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     renumbering a kind to start from `0001` is optional, and if you do it,
     rename the contract file, its `contracts.md` row and the rule IDs together.
 
+- **Data values need no `qfai-text` reason, and one reason covers a whole
+  element.** `QFAI-UITEXT-001` stays an error but no longer reports a short
+  value that is not a sentence (at most 20 characters, with no sentence-ending
+  `.`, `!` or `?`, and none of the CJK marks U+3002, U+FF01, U+FF1F, U+FF61 and
+  U+FF0E) in a `td`, a `dd` or a `*Cell` component, or
+  as a whole JSX string literal child, such as `<td>ORD-1042</td>` or
+  `<td>{'-'}</td>`. A cell is judged by its whole text, so a sentence in a cell
+  still needs its reason even when a nested element splits it. A `qfai-text`
+  comment directly before an element, or as its first child with text after
+  it, now gives its reason to every plain text inside it, so a paragraph that
+  a link splits, a list or a table needs one comment instead of one per
+  fragment; a malformed one raises one `QFAI-UITEXT-002`. A first-child
+  comment before an element covers that element only, and a comment at the
+  top of `body` or of a component's top-level JSX fragment covers only what
+  it stands before.
+
 - **`QFAI-DB-001` says why the SQL is flagged and how to resolve it.** The
   warning now says that applying the statement destroys data or structure, and
   its suggested action moves a data reset to test setup or fixtures and a destructive
@@ -217,6 +233,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   When those are its only errors, the local commit is made and its report lists the
   pending tests for the implement stage. The
   scope question says so for that option. Other scopes are printed as before.
+
+- **Pending tests are promised only where a later stage writes them.** A
+  scope that leaves out a stage which only repairs existing tests is not
+  marked `testsPending`, so a missing test for an ID a record restatement
+  wrote fails the QFAI gate as an ordinary error, which the repository gate's
+  fix loop handles like any other. A free-text scope answer that stops before
+  implementation runs no gate, like `narrow`, and its final report says the
+  tests come with the implementation it left out.
 
 - **A merge waits for every check of its head commit.** Step 3 of the shipped
   `triage-operate` step now says that the checks still running before a merge

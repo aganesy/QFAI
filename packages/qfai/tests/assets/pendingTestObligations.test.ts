@@ -76,5 +76,35 @@ describe("a scope that leaves out the implement stage leaves its test obligation
         /holds `testsPending: true` when one of its stages writes `spec` and it leaves out a stage of kind `implement` the route has; no other scope holds the key/,
       );
     });
+
+    // BR-CLI-0015-0336
+    // QFAI:EX-0001-0229-38
+    it(`${tree}: a left-out test-repairing stage leaves nothing pending`, async () => {
+      const [gate, repo, plan] = await Promise.all([
+        read(tree, "assistant/step/verify-qfai-gate/STEP.md"),
+        read(tree, "assistant/step/verify-repo-gate/STEP.md"),
+        read(tree, "assistant/skill/qfai-run/references/plan.md"),
+      ]);
+
+      expect(flat(sectionOf(gate, "### Test obligations a scope leaves pending"))).toContain(
+        "A left-out stage of kind `test_fix` sets no `testsPending`: it repairs tests and writes none for a new ID, so in a scope without `testsPending` a `QFAI-STORY-006` error for an ID the run wrote is an ordinary failure, which `verify-repo-gate`'s fix loop handles like any other.",
+      );
+      expect(flat(repo)).toContain(
+        "Every other failure, of the QFAI gate included, keeps the loop.",
+      );
+      expect(flat(sectionOf(plan, "## Scopes"))).toContain(
+        "A left-out stage of kind `test_fix` does not set the key: it repairs a test under the IDs it already annotates and writes no test for a new ID.",
+      );
+    });
+
+    // BR-CLI-0015-0304
+    // QFAI:EX-0001-0229-07
+    it(`${tree}: a free-text run that stops before implementation runs no gate`, async () => {
+      const screens = await read(tree, "assistant/skill/qfai-run/references/operator-screens.md");
+
+      expect(flat(sectionOf(screens, "## The scope question"))).toContain(
+        "A run that writes the specification and stops before the first implementation stage of a route that has one gets no verify stage, as `narrow` gets none, so no gate runs and nothing is listed as `PENDING`; the final report says its tests come with the implementation stage it left out.",
+      );
+    });
   }
 });
