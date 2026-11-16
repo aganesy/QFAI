@@ -76,5 +76,31 @@ describe("a scope that leaves out the implement stage leaves its test obligation
         /holds `testsPending: true` when one of its stages writes `spec` and it leaves out a stage of kind `implement` the route has; no other scope holds the key/,
       );
     });
+
+    // BR-0015-0336
+    // QFAI:EX-0001-0229-38
+    it(`${tree}: a left-out test-repairing stage leaves nothing pending`, async () => {
+      const [gate, plan] = await Promise.all([
+        read(tree, "assistant/step/verify-qfai-gate/STEP.md"),
+        read(tree, "assistant/skill/qfai-run/references/plan.md"),
+      ]);
+
+      expect(flat(sectionOf(gate, "### Test obligations a scope leaves pending"))).toMatch(
+        /A route with no implement stage gives no scope `testsPending`, even one that leaves out its stage of kind `test_fix`, which repairs tests and writes none for a new ID: a `QFAI-STORY-006` error for an ID such a run wrote is an ordinary failure, and the result says that no stage of the route writes that test./,
+      );
+      expect(flat(sectionOf(plan, "## Scopes"))).toMatch(
+        /A left-out stage of kind `test_fix` does not set the key: it repairs a test under the IDs it already annotates and writes no test for a new ID/,
+      );
+    });
+
+    // BR-0015-0304
+    // QFAI:EX-0001-0229-39
+    it(`${tree}: a free-text run that stops before implementation leaves nothing pending`, async () => {
+      const screens = await read(tree, "assistant/skill/qfai-run/references/operator-screens.md");
+
+      expect(flat(sectionOf(screens, "## The scope question"))).toMatch(
+        /A run that stops before the route's implement stage gets no verify stage, as `narrow` gets none, so no test obligation is pending in it; the final report says its tests come with the implementation stage it left out./,
+      );
+    });
   }
 });

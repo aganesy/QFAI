@@ -172,6 +172,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Pending tests are promised only where a later stage writes them.** A
+  scope that leaves out a stage which only repairs existing tests is not
+  marked `testsPending`, so a missing test for an ID a record restatement
+  wrote fails the QFAI gate as an ordinary error, and the gate says that no
+  stage of the route writes it. A free-text scope answer that stops before
+  implementation runs no gate, like `narrow`, and its final report says the
+  tests come with the implementation it left out.
+
 - **`QFAI-DB-001` says why the SQL is flagged and how to resolve it.** The
   warning now says that applying the statement destroys data or structure, and
   its suggested action moves a data reset to test setup or fixtures and a destructive
