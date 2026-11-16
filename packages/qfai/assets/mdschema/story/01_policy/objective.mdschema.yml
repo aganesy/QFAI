@@ -22,8 +22,10 @@ structure:
         required_text:
           - pattern: "(?m)^- Outcome: "
             regex: true
+            example: "- Outcome: Release notes reach users on the day of the release"
           - pattern: "(?m)^- Evidence: "
             regex: true
+            example: "- Evidence: Support tickets show release notes arrive a week late"
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
