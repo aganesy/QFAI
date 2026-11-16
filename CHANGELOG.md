@@ -197,6 +197,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `BR-API-0003-0001`. Contract IDs and file names stay valid as they are;
     renumbering a kind to start from `0001` is optional, and if you do it,
     rename the contract file, its `contracts.md` row and the rule IDs together.
+  - A v1-to-v2 migration that has already passed step 3 must be run again
+    from step 3, so that its contracts take per-kind numbers and its rules
+    the new IDs.
 
 - **Data values need no `qfai-text` reason, and one reason covers a whole
   element.** `QFAI-UITEXT-001` stays an error but no longer reports a short

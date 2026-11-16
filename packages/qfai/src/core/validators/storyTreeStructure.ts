@@ -282,7 +282,7 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   for (const error of model.errors) {
     issues.push(finding("QFAI-STORY-005", error, ""));
   }
-  issues.push(...validateRuleContractNumbers(model));
+  issues.push(...validateRuleContractIds(model));
   issues.push(...validateRecordCitations(model));
   issues.push(...validateDecisionLengths(model));
   return issues;
@@ -315,7 +315,7 @@ function citationHint(
 }
 
 /** A `BR-<KIND>-NNNN-NNNN` names the kind and number of the contract that declares it. */
-function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
+function validateRuleContractIds(model: StoryTreeModel): Issue[] {
   const contractByFile = new Map(model.contracts.map(({ id, file }) => [file, id]));
   const issues: Issue[] = [];
   for (const rule of model.rules) {

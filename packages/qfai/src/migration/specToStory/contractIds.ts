@@ -179,6 +179,8 @@ async function assignContractIds(
   }
   const oldNumber = (candidate: Candidate) =>
     Number(OLD_CONTRACT_ID.exec(candidate.old ?? "")?.[1] ?? Number.POSITIVE_INFINITY);
+  // The kind order no longer decides a number, but it still orders the map, and the
+  // index sort keeps that order among contracts of different kinds sharing a number.
   const kindOrder: string[] = Object.values(CONTRACT_KIND_BY_DIR);
   candidates.sort(
     (left, right) =>

@@ -130,7 +130,7 @@ function validateContractIndex(
       ),
     );
   }
-  issues.push(...duplicateContractNumbers(model));
+  issues.push(...duplicateContractIds(model));
   return issues;
 }
 
@@ -158,7 +158,7 @@ function contractFileProblems(
 }
 
 /** Contract numbers are unique within a kind: `CLI-0001` and `DB-0001` are two contracts. */
-function duplicateContractNumbers(model: StoryTreeModel): Issue[] {
+function duplicateContractIds(model: StoryTreeModel): Issue[] {
   const byId = new Map<string, string[]>();
   for (const { id, file } of model.contracts) {
     byId.set(id, [...(byId.get(id) ?? []), file]);

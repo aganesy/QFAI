@@ -16,6 +16,8 @@ const RULES_HEADING = /^(?:business )?rules$/i;
 const ANY_RULE_ID = String.raw`BR-(?:(?:CLI|API|DB|UI)-)?\d{4}-\d{4}`;
 /** A rule ID anywhere in a table row after its first cell, which the CLI schema refuses. */
 const RULE_ID_AFTER_FIRST_CELL = new RegExp(String.raw`^\|[^|\n]*\|[^\n]*${ANY_RULE_ID}`, "m");
+/** A rule ID of either form anywhere in a text. */
+const ANY_RULE_ID_IN_TEXT = new RegExp(ANY_RULE_ID);
 /** A row whose first cell is a rule ID in the old form, which names no kind. */
 const OLD_RULE_ID_ROW = /^\|\s*BR-\d{4}-\d{4}\s*\|/m;
 
@@ -61,7 +63,7 @@ function splitContract(text: string): {
 /** One to three paragraphs of prose naming no rule, as the schema's Ownership boundary takes. */
 function ownershipBody(body: string): string | null {
   const paragraphs = paragraphsOf(body);
-  if (!paragraphs || paragraphs.length > 3 || new RegExp(ANY_RULE_ID).test(body)) return null;
+  if (!paragraphs || paragraphs.length > 3 || ANY_RULE_ID_IN_TEXT.test(body)) return null;
   return paragraphs.join("\n\n");
 }
 

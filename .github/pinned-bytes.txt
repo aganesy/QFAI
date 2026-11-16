@@ -14,7 +14,7 @@
 #
 # `sha256sum -c` format, so the pre-flight needs no parser: two spaces between the digest and
 # the path, paths relative to the repository root.
-083e761b2ca50e39924f6dfa31994f9f5ba13a48bcf1ec3c7da97fce85307096  .github/actions/setup/action.yml
+24bd93b4fd4745a81343d704a4479feedf4646d283816ce83fab2582d2d4f9b0  .github/actions/setup/action.yml
 3230335c2f0bc71bfcec72150d56fd51dc30524ca0fb35405197054709bd13b5  .github/actions/setup/dependency-builds.txt
 81c83080bfbae274d46c90cdae9f9ae3dd3af6240fe56fc88aec461799802ae3  .github/actions/setup/verify-rebuild-sources.mjs
 83775e91b9bd6002bb8918b37c714f8a50196b95a6203acb686d65a6d7075164  scripts/bootstrap.mjs

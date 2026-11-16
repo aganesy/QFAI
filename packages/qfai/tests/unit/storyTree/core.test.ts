@@ -119,7 +119,6 @@ describe("story-tree core", () => {
     ).toBe("US-0001-0004");
   });
 
-  // QFAI:EX-0001-0008-07
   it("names the contract's kind in a BR ID and counts each kind's rules apart", () => {
     const named = ["BR-CLI-0003-0002", "BR-API-0003-0007", "BR-UI-0001-0001"];
     expect(nextId("BR", named, "CLI-0003")).toBe("BR-CLI-0003-0003");
@@ -278,18 +277,18 @@ describe("story-tree core", () => {
       ).rules.map((rule) => rule.id),
     ).toEqual(["BR-API-0001-0001"]);
     expect(
-      parseContractRules("a.sql", "-- Rule BR-API-0001-0002: Save\n-- Examples: EX-0001-0001-01\n")
+      parseContractRules("a.sql", "-- Rule BR-DB-0001-0002: Save\n-- Examples: EX-0001-0001-01\n")
         .rules,
     ).toEqual([
-      { id: "BR-API-0001-0002", statement: "Save", examples: ["EX-0001-0001-01"], file: "a.sql" },
+      { id: "BR-DB-0001-0002", statement: "Save", examples: ["EX-0001-0001-01"], file: "a.sql" },
     ]);
     expect(
       parseContractRules(
         "a.md",
-        "## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-API-0001-0003 | Show | EX-0001-0001-01 |\n",
+        "## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-CLI-0001-0003 | Show | EX-0001-0001-01 |\n",
       ),
     ).toMatchObject({
-      rules: [{ id: "BR-API-0001-0003", statement: "Show", examples: ["EX-0001-0001-01"] }],
+      rules: [{ id: "BR-CLI-0001-0003", statement: "Show", examples: ["EX-0001-0001-01"] }],
     });
     expect(
       parseContractRules(
@@ -302,8 +301,8 @@ describe("story-tree core", () => {
       ).rules.map((rule) => rule.id),
     ).toEqual(["BR-API-0001-0004"]);
     expect(
-      parseContractRules("a.sql", "-- Rule BR-API-0001-0005: Missing examples\nSELECT 1;\n")
-        .rules[0]?.examples,
+      parseContractRules("a.sql", "-- Rule BR-DB-0001-0005: Missing examples\nSELECT 1;\n").rules[0]
+        ?.examples,
     ).toEqual([]);
     expect(parseContractRules("a.md", "## Business rules\n\nNo table.\n").errors).not.toEqual([]);
   });
