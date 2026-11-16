@@ -77,7 +77,7 @@ files. A plain text there is a literal text node, non-empty after trimming and s
 `h1`-`h6`, `label`, `button`, `a`, a component whose name ends in the word `Link` or `Button` (such as `Link`,
 `ButtonLink`, `router-link` or `SubmitButton`), `legend`, `th`, `caption`, `option`,
 `summary`, `title`, `script`, `style` and an element with `role="alert"` or `role="status"`. Attribute values
-and expressions are never plain text; a string literal that is a whole JSX child is.
+and expressions are never plain text; a string literal that is a whole JSX child is, unless it is a data value.
 The check reads only that literal text, so it does not see copy held in a constant, a prop, a template
 literal with substitutions or an attribute value. Moving a sentence there is not compliance: the text is
 still copy the user reads, the product-surface reviewer judges it as such, and the procedure below applies to
@@ -89,8 +89,26 @@ value is one of the elements above, or `status` or `alert` for the role. A key m
 name or the last `.`-separated part of it, word by word, so `TableHead` also matches `UI.TableHead` and
 `table-head`. Only component tags are mapped: a native `<header>` stays plain even with a `Header` key. Map the component once instead of writing a reason that only says what the component renders.
 
-Each plain text needs a reason comment directly before it, or before its parent element, with only whitespace
-between. A missing reason is `QFAI-UITEXT-001` and a malformed one `QFAI-UITEXT-002`; `QFAI-UITEXT-003` means a `.tsx` or `.jsx` file is selected but `typescript` cannot be resolved from the project root. All three are errors and cannot be waived.
+A data value is not plain text: at most 20 characters, with no `.`, `!` or `?` that ends the text or comes
+before a space, and none of the full stops, exclamation and question marks of CJK text: U+3002, U+FF01,
+U+FF1F, U+FF61 and U+FF0E. It is exempt in a data cell (`td`, `dd`, or a component whose name ends in the word
+`Cell`, such as `TableCell`) and as a whole JSX string literal child anywhere, as in `<td>ORD-1042</td>`,
+`<td>{'-'}</td>` or `<td>{paid ? 'Yes' : 'No'}</td>`. A sentence or a longer text in a
+cell, such as `<td>Ships once the payment clears.</td>`, is plain text and needs its reason. A cell is judged
+by its whole text, so `<td>Ships in <b>3</b> days once paid</td>` is one sentence that needs a reason, not three short values. The text of a button, a link or another
+element above that a cell holds is left out, so `<td><span>Pending</span> <button>Approve</button></td>` is the
+value `Pending`. An ellipsis or an
+abbreviation counts as that mark where its last `.` ends the text or comes before a space, so a short text
+such as `Loading...` or `Inc.` still needs its reason.
+
+Each plain text needs a reason comment with only whitespace between: directly before the text, or directly
+before an element that holds it. One reason before an element covers every plain text inside it, so a
+paragraph that a link splits, a list or a table needs one reason, not one per fragment. A comment that is an
+element's first child covers that whole element only when text follows it, as in
+`<p><!-- qfai-text: ... --> Check the <a>order page</a> for each line.</p>`; followed by an element, it covers
+that element alone, so to cover a container, write the comment directly before the container. A comment
+before or first inside `body`, a fragment file's top level or a component's top-level JSX fragment covers
+only the text or element it stands before; a `qfai-text-file` comment is the reason for a whole file. A missing reason is `QFAI-UITEXT-001` and a malformed one `QFAI-UITEXT-002`; `QFAI-UITEXT-003` means a `.tsx` or `.jsx` file is selected but `typescript` cannot be resolved from the project root. All three are errors and cannot be waived.
 
 Where one reason holds for every text in a file, such as a help page or release notes, write it once as
 `<!-- qfai-text-file: why=...; without=... -->` or `/* qfai-text-file: why=...; without=... */` anywhere in the
@@ -121,6 +139,11 @@ text, ask first whether the user needs it at that point:
   {/* qfai-text: why=the fee is charged only on this step; without=users pay a fee they never saw */}
   <p>A 2% fee applies to card payments.</p>
 </section>
+```
+
+```html
+<!-- qfai-text: why=the status of each line is only on the order page; without=users think the order is stuck -->
+<p>Check the <a href="/orders">order page</a> for the status of each line.</p>
 ```
 
 Vue and Svelte use the HTML form. Both keys are required and non-empty, no other key is allowed, and `why` and `without` must say different things. The reason names the specific failure the text prevents; "helps the user" is not a reason.
