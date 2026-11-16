@@ -97,16 +97,40 @@ describe("text that names, labels or reports is not checked", () => {
     });
     expect(await uitext(root)).toEqual([]);
   });
+
+  it("raises nothing for a data value in a cell, and still checks a sentence there", async () => {
+    const root = await projectWith({
+      "src/a.html":
+        "<table><tr><td>-</td><td>\u3042\u308a</td></tr></table>\n<table><tr><td>Ships once the payment clears.</td></tr></table>\n",
+    });
+    expect((await uitext(root)).map((item) => [item.code, item.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", 2],
+    ]);
+  });
+});
+
+// QFAI:AC-0001-0297-08
+describe("one reason covers every plain text inside an element", () => {
+  it("clears a sentence a link splits, and leaves the next element unreasoned", async () => {
+    const root = await projectWith({
+      "src/a.html": `<div>\n<h2>Orders</h2>\n${REASON}\n<p>Check the <a href="/orders">order page</a> for the status of each line.</p>\n<p>Refunds take a week.</p>\n</div>\n`,
+    });
+    expect((await uitext(root)).map((item) => [item.code, item.loc?.line])).toEqual([
+      ["QFAI-UITEXT-001", 5],
+    ]);
+  });
 });
 
 // QFAI:AC-0001-0297-09
 describe("a project maps its components to the elements they render", () => {
   it("reads a mapped component as its element, the rest as before, and reports a bad entry", async () => {
+    // The unmapped component is a `Card`, not a data cell: a short value in a `TableCell` is a data
+    // value and exempt on its own, so it would not show that an unmapped component is still checked.
     const root = await projectWith({
       "qfai.config.yaml":
         'uiux:\n  surfacePaths: ["src/**"]\nuiText:\n  elements:\n    TableHead: th\n    StatusRegion: status\n    Panel: div\n',
       "src/a.vue":
-        "<template>\n  <TableHead>Order</TableHead>\n  <StatusRegion>Saved</StatusRegion>\n  <TableCell>ORD-1042</TableCell>\n</template>\n",
+        "<template>\n  <TableHead>Order</TableHead>\n  <StatusRegion>Saved</StatusRegion>\n  <Card>Ships once paid.</Card>\n</template>\n",
       "src/b.svelte": "<TableHead>Total</TableHead>\n",
     });
     const result = await validateProject(root, undefined, { profile: "prototyping" });
