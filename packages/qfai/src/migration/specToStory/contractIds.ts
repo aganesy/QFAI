@@ -145,21 +145,22 @@ export function renamedContractPath(relative: string, id: string): string {
 type Candidate = { relative: string; kind: string; old: string | null };
 
 /**
- * Numbers every contract that declares no `<KIND>-NNNN` ID: in the kind order
- * cli, api, db, ui, then by the number of its old `CON-*` ID, then by
- * path. Numbers run on from the highest a contract already declares.
+ * Numbers every contract that declares no `<KIND>-NNNN` ID, each kind in its
+ * own sequence: by the number of its old `CON-*` ID, then by path. A kind's
+ * numbers run on from the highest a contract of that kind already declares.
  */
 async function assignContractIds(
   context: MigrationContext,
 ): Promise<{ map: ContractMap; forAPerson: string[] }> {
   const candidates: Candidate[] = [];
   const forAPerson: string[] = [];
-  let highest = 0;
+  const highest = new Map<string, number>();
   for (const relative of await contractFiles(context)) {
     const text = (await readMigrationInput(path.join(context.contractsDir, relative))) ?? "";
     const current = declaredContractId(relative, text);
     if (current !== null) {
-      highest = Math.max(highest, Number(contractNumber(current)));
+      const kind = current.slice(0, current.indexOf("-"));
+      highest.set(kind, Math.max(highest.get(kind) ?? 0, Number(contractNumber(current))));
       continue;
     }
     const declared = declaredOldOrCurrentIds(text);
@@ -186,8 +187,10 @@ async function assignContractIds(
       left.relative.localeCompare(right.relative),
   );
   const map: ContractMap = {};
-  for (const [index, candidate] of candidates.entries()) {
-    const id = `${candidate.kind}-${String(highest + index + 1).padStart(4, "0")}`;
+  for (const candidate of candidates) {
+    const number = (highest.get(candidate.kind) ?? 0) + 1;
+    highest.set(candidate.kind, number);
+    const id = `${candidate.kind}-${String(number).padStart(4, "0")}`;
     const entry: ContractEntry = { id, path: renamedContractPath(candidate.relative, id) };
     if (candidate.old) entry.old = candidate.old;
     map[candidate.relative] = entry;

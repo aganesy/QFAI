@@ -218,41 +218,49 @@ const PRIMARY_SPEC = "prototyping:\n  primarySpecId: spec-0001\n";
 describe("migration contract IDs", () => {
   // QFAI:AC-0004-0006-04
   // QFAI:EX-0004-0006-12
-  it("numbers every old contract across kinds, so a colliding old number takes a new one", async () => {
+  it("numbers the old contracts of each kind in that kind's own sequence", async () => {
     const root = await project();
     expect((await run(step03, root)).code).toBe(3);
     expect(await files(path.join(root, CONTRACTS))).toEqual([
-      "api/api-0002-orders.yaml",
+      "api/api-0001-orders.yaml",
       "cli/cli-0001-orders.md",
       "contracts.md",
-      "db/db-0003-orders.sql",
-      "ui/ui-0004-receipt.yaml",
+      "db/db-0001-orders.sql",
+      "ui/ui-0001-receipt.yaml",
     ]);
     expect(JSON.parse(await text(root, `${STATE}/contract-map.json`))).toEqual({
       contracts: {
         "cli/orders.md": { id: "CLI-0001", path: "cli/cli-0001-orders.md" },
         "api/api-0001-orders.yaml": {
-          id: "API-0002",
-          path: "api/api-0002-orders.yaml",
+          id: "API-0001",
+          path: "api/api-0001-orders.yaml",
           old: "CON-API-0001",
         },
         "db/db-0001-orders.sql": {
-          id: "DB-0003",
-          path: "db/db-0003-orders.sql",
+          id: "DB-0001",
+          path: "db/db-0001-orders.sql",
           old: "CON-DB-0001",
         },
-        "ui/receipt.yaml": { id: "UI-0004", path: "ui/ui-0004-receipt.yaml" },
+        "ui/receipt.yaml": { id: "UI-0001", path: "ui/ui-0001-receipt.yaml" },
       },
     });
 
+    // A kind runs on from the highest number a contract of that kind already
+    // declares; another kind's numbers do not move it.
     const keeper = await project();
     await rm(path.join(keeper, CONTRACTS, "cli"), { recursive: true });
+    await put(
+      keeper,
+      `${CONTRACTS}/db/db-0004-items.sql`,
+      "-- QFAI-CONTRACT-ID: DB-0004\n-- Depends on: -\nCREATE TABLE items (id TEXT PRIMARY KEY);\n",
+    );
     await run(step03, keeper);
     expect(await files(path.join(keeper, CONTRACTS))).toEqual([
       "api/api-0001-orders.yaml",
       "contracts.md",
-      "db/db-0002-orders.sql",
-      "ui/ui-0003-receipt.yaml",
+      "db/db-0004-items.sql",
+      "db/db-0005-orders.sql",
+      "ui/ui-0001-receipt.yaml",
     ]);
   });
 
@@ -260,20 +268,20 @@ describe("migration contract IDs", () => {
   it("declares each new ID and rewrites the old IDs a dependency names", async () => {
     const root = await project();
     await run(step03, root);
-    const api = await text(root, `${CONTRACTS}/api/api-0002-orders.yaml`);
+    const api = await text(root, `${CONTRACTS}/api/api-0001-orders.yaml`);
     expect(api.split("\n").slice(0, 3)).toEqual([
-      "# QFAI-CONTRACT-ID: API-0002",
+      "# QFAI-CONTRACT-ID: API-0001",
       "openapi: 3.1.0",
-      "x-qfai-depends-on: [DB-0003]",
+      "x-qfai-depends-on: [DB-0001]",
     ]);
-    expect(await text(root, `${CONTRACTS}/db/db-0003-orders.sql`)).toBe(
-      "-- QFAI-CONTRACT-ID: DB-0003\n-- Depends on: -\nCREATE TABLE orders (id TEXT PRIMARY KEY);\n",
+    expect(await text(root, `${CONTRACTS}/db/db-0001-orders.sql`)).toBe(
+      "-- QFAI-CONTRACT-ID: DB-0001\n-- Depends on: -\nCREATE TABLE orders (id TEXT PRIMARY KEY);\n",
     );
     expect((await text(root, `${CONTRACTS}/cli/cli-0001-orders.md`)).split("\n")[0]).toBe(
       "# CLI-0001: Orders command",
     );
-    expect(await text(root, `${CONTRACTS}/ui/ui-0004-receipt.yaml`)).toMatch(
-      /^# QFAI-CONTRACT-ID: UI-0004\nscreens:\n/,
+    expect(await text(root, `${CONTRACTS}/ui/ui-0001-receipt.yaml`)).toMatch(
+      /^# QFAI-CONTRACT-ID: UI-0001\nscreens:\n/,
     );
   });
 
@@ -291,9 +299,9 @@ describe("migration contract IDs", () => {
         "| ID | Title | File | Depends On | Reconciled With | Purpose |",
         "| --- | --- | --- | --- | --- | --- |",
         "| CLI-0001 | Orders command | `.qfai/spec/03_contract/cli/cli-0001-orders.md` | - | - | - |",
-        "| API-0002 | /orders | `.qfai/spec/03_contract/api/api-0002-orders.yaml` | DB-0003 | DB-0003 | Accept orders |",
-        "| DB-0003 | Order storage | `.qfai/spec/03_contract/db/db-0003-orders.sql` | - | API-0002 | Store orders |",
-        "| UI-0004 | receipt | `.qfai/spec/03_contract/ui/ui-0004-receipt.yaml` | - | - | - |",
+        "| API-0001 | /orders | `.qfai/spec/03_contract/api/api-0001-orders.yaml` | DB-0001 | DB-0001 | Accept orders |",
+        "| DB-0001 | Order storage | `.qfai/spec/03_contract/db/db-0001-orders.sql` | - | API-0001 | Store orders |",
+        "| UI-0001 | receipt | `.qfai/spec/03_contract/ui/ui-0001-receipt.yaml` | - | - | - |",
         "",
       ].join("\n"),
     );
@@ -311,7 +319,7 @@ describe("migration contract IDs", () => {
     const dry = await run(step03, root, true);
     expect(await files(root)).toEqual(before);
     expect(dry.output).toContain(
-      `- ${CONTRACTS}/api/api-0001-orders.yaml: renamed to ${CONTRACTS}/api/api-0002-orders.yaml as API-0002`,
+      `- ${CONTRACTS}/ui/receipt.yaml: renamed to ${CONTRACTS}/ui/ui-0001-receipt.yaml as UI-0001`,
     );
     expect(dry.output).toContain(`- ${STATE}/contract-map.json: write`);
     const real = await run(step03, root);
@@ -326,10 +334,10 @@ describe("migration contract IDs", () => {
   it("rewrites a translated old ID in a contract body and lists one no contract declares", async () => {
     const root = await project();
     const result = await run(step03, root);
-    const receipt = `${CONTRACTS}/ui/ui-0004-receipt.yaml`;
+    const receipt = `${CONTRACTS}/ui/ui-0001-receipt.yaml`;
     const written = await text(root, receipt);
     expect(written).toContain("CON-UI-0009:total");
-    expect(written).toContain("[data-qfai='API-0002:submit']");
+    expect(written).toContain("[data-qfai='API-0001:submit']");
     expect(written).not.toContain("CON-API-0001");
     const listed = `${receipt}:6: CON-UI-0009 is declared by no contract, so it has no new ID`;
     expect(forAPerson(result.output).filter((item) => item.startsWith(receipt))).toEqual([listed]);
@@ -352,11 +360,11 @@ describe("migration contract IDs", () => {
     const notes = "See CON-API-0001 for the orders API.\n";
     await put(root, "docs/notes.md", notes);
     const result = await run(step03, root);
-    const written = await text(root, `${CONTRACTS}/api/api-0002-orders.yaml`);
-    expect(written).toContain("x-qfai-depends-on: [DB-0003]");
+    const written = await text(root, `${CONTRACTS}/api/api-0001-orders.yaml`);
+    expect(written).toContain("x-qfai-depends-on: [DB-0001]");
     expect(await text(root, "docs/notes.md")).toBe(notes);
-    expect(written).toContain("description: Kept by DB-0003");
-    expect(await text(root, `${CONTRACTS}/db/db-0003-orders.sql`)).toContain("-- see API-0002\n");
+    expect(written).toContain("description: Kept by DB-0001");
+    expect(await text(root, `${CONTRACTS}/db/db-0001-orders.sql`)).toContain("-- see API-0001\n");
     expect(written).not.toContain("CON-");
     const inContracts = (item: string) => /^\.qfai\/spec\/03_contract\/(?:api|db)\//.test(item);
     expect(forAPerson(result.output).filter(inContracts)).toEqual([]);
@@ -420,14 +428,14 @@ describe("migration contract IDs", () => {
       ids: Record<string, Record<string, string>>;
       contracts: unknown;
     };
-    expect(map.ids["spec-0001"]?.["BR-0001-0001"]).toBe("BR-0002-0001");
+    expect(map.ids["spec-0001"]?.["BR-0001-0001"]).toBe("BR-API-0001-0001");
     expect(map.contracts).toEqual(
       (JSON.parse(await text(root, `${STATE}/contract-map.json`)) as { contracts: unknown })
         .contracts,
     );
     const story =
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md";
-    expect(await text(root, story)).toContain("through API-0002 and CON-UI-0009.");
+    expect(await text(root, story)).toContain("through API-0001 and CON-UI-0009.");
     expect(forAPerson(result.output)).toContain(
       `${story}: CON-UI-0009 is declared by no contract, so it has no new ID`,
     );
@@ -447,12 +455,12 @@ describe("migration contract IDs", () => {
     await run(step04, root);
     const result = await run(step07, root);
     expect(result.code).toBe(3);
-    expect(parseYaml(await text(root, `${CONTRACTS}/api/api-0002-orders.yaml`))).toMatchObject({
+    expect(parseYaml(await text(root, `${CONTRACTS}/api/api-0001-orders.yaml`))).toMatchObject({
       "x-qfai-rules": [
         {
-          id: "BR-0002-0001",
+          id: "BR-API-0001-0001",
           statement:
-            "An order stored by DB-0003 is proven by EX-0001-0001-01, as BR-0001-0009 says.",
+            "An order stored by DB-0001 is proven by EX-0001-0001-01, as BR-0001-0009 says.",
           examples: ["EX-0001-0001-01"],
         },
       ],
@@ -484,7 +492,7 @@ describe("migration contract IDs", () => {
     const result = await run(step08, root);
     expect(result.code).toBe(3);
     expect(await text(root, "tests/integration/orders.test.ts")).toBe(
-      `// ${annotation("API-0002")}\n// ${annotation("CON-DB-0009")}\n`,
+      `// ${annotation("API-0001")}\n// ${annotation("CON-DB-0009")}\n`,
     );
     expect(forAPerson(result.output)).toContain(
       `tests/integration/orders.test.ts:2: ${annotation("CON-DB-0009")}: no contract declares CON-DB-0009`,
@@ -581,7 +589,7 @@ describe("migration CLI contract shape", () => {
     await run(step04, root);
     expect((await run(step07, root)).code).toBe(0);
     expect(await text(root, NEW)).toContain(
-      "| BR-0001-0001 | Orders are listed newest first. | EX-0001-0001-01 |",
+      "| BR-CLI-0001-0001 | Orders are listed newest first. | EX-0001-0001-01 |",
     );
     const { config } = await loadConfig(root);
     const findings = await validateDocumentSchema(root, config);
@@ -609,21 +617,21 @@ describe("migration CLI contract shape", () => {
     const result = await run(step07, root);
     expect(result.code).toBe(3);
     expect(await text(root, NEW)).toContain(
-      "| BR-0001-0001 | Orders are listed as BR-0001-0009 orders them. | EX-0001-0001-01 |",
+      "| BR-CLI-0001-0001 | Orders are listed as BR-0001-0009 orders them. | EX-0001-0001-01 |",
     );
     expect(forAPerson(result.output)).toContain(
-      `${NEW}: BR-0001-0001: its statement names BR-0001-0009; a statement in a CLI contract names no rule, so rewrite it by hand`,
+      `${NEW}: BR-CLI-0001-0001: its statement names BR-0001-0009; a statement in a CLI contract names no rule, so rewrite it by hand`,
     );
   });
 });
 
 describe("migration files that are no contract", () => {
   const NUMBERED = [
-    "api/api-0002-orders.yaml",
+    "api/api-0001-orders.yaml",
     "cli/cli-0001-orders.md",
     "contracts.md",
-    "db/db-0003-orders.sql",
-    "ui/ui-0004-receipt.yaml",
+    "db/db-0001-orders.sql",
+    "ui/ui-0001-receipt.yaml",
   ];
 
   // QFAI:AC-0004-0006-06
@@ -714,9 +722,9 @@ describe("migration primary spec becomes the primary UI contract", () => {
     const tied = await primaryProject("CON-UI-0008", PRIMARY_SPEC);
     const control = await primaryProject("CON-UI-0008", "");
     expect((await runCli(3, control)).code).toBe(3);
-    expect(await files(path.join(control, CONTRACTS))).toContain("ui/ui-0004-receipt.yaml");
+    expect(await files(path.join(control, CONTRACTS))).toContain("ui/ui-0001-receipt.yaml");
     expect((await runCli(3, tied)).code).toBe(3);
-    expect(await prototypingOf(tied)).toEqual({ primaryUiContract: "UI-0004" });
+    expect(await prototypingOf(tied)).toEqual({ primaryUiContract: "UI-0001" });
 
     const untied = await primaryProject("-", PRIMARY_SPEC);
     const result = await runCli(3, untied);
@@ -736,18 +744,18 @@ describe("migration primary spec becomes the primary UI contract", () => {
   it("replaces the primary spec ID by the new ID of the UI contract its rules cite", async () => {
     const control = await primaryProject("CON-UI-0008", "");
     expect((await runCli(3, control)).code).toBe(3);
-    expect(await files(path.join(control, CONTRACTS))).toContain("ui/ui-0004-receipt.yaml");
+    expect(await files(path.join(control, CONTRACTS))).toContain("ui/ui-0001-receipt.yaml");
 
     const root = await primaryProject("CON-UI-0008", PRIMARY_SPEC);
     const first = await runCli(3, root);
     expect(first.code).toBe(3);
-    expect(await prototypingOf(root)).toEqual({ primaryUiContract: "UI-0004" });
+    expect(await prototypingOf(root)).toEqual({ primaryUiContract: "UI-0001" });
     const operations = section(first.output, "Operations");
     expect(operations).toContain(OLD_NAME);
     expect(operations).toContain(NEW_NAME);
     const second = await runCli(3, root);
     expect(second.output).toMatch(/## Operations\r?\nnone/);
-    expect(await prototypingOf(root)).toEqual({ primaryUiContract: "UI-0004" });
+    expect(await prototypingOf(root)).toEqual({ primaryUiContract: "UI-0001" });
 
     const already = await primaryProject(
       "CON-UI-0008",
@@ -768,7 +776,7 @@ describe("migration primary spec becomes the primary UI contract", () => {
       `${STATE}/id-map.json`,
       `${JSON.stringify({
         version: 1,
-        ids: { "spec-0001": { "BR-0001-0001": "BR-0003-0001" } },
+        ids: { "spec-0001": { "BR-0001-0001": "BR-UI-0001-0001" } },
         placements: { "spec-0001": { "BR-0001-0001": "ui/receipt.yaml" } },
         retiredPacks: {},
       })}\n`,
@@ -776,7 +784,7 @@ describe("migration primary spec becomes the primary UI contract", () => {
     await put(root, "qfai.config.yaml", `${await text(root, "qfai.config.yaml")}${PRIMARY_SPEC}`);
     const result = await runCli(3, root);
     expect(result.errors).toBe("");
-    expect(await prototypingOf(root)).toEqual({ primaryUiContract: "UI-0004" });
+    expect(await prototypingOf(root)).toEqual({ primaryUiContract: "UI-0001" });
     expect(section(result.output, "Operations")).toContain(NEW_NAME);
   });
 
@@ -789,7 +797,7 @@ describe("migration primary spec becomes the primary UI contract", () => {
       `${STATE}/id-map.json`,
       `${JSON.stringify({
         version: 1,
-        ids: { "spec-0001": { "BR-0001-0002": "BR-0003-0002" } },
+        ids: { "spec-0001": { "BR-0001-0002": "BR-UI-0001-0002" } },
         placements: { "spec-0001": { "BR-0001-0002": "ui/receipt.yaml" } },
         retiredPacks: {},
       })}\n`,
@@ -797,7 +805,7 @@ describe("migration primary spec becomes the primary UI contract", () => {
     await put(root, "qfai.config.yaml", `${await text(root, "qfai.config.yaml")}${PRIMARY_SPEC}`);
     const result = await runCli(3, root);
     expect(result.errors).toBe("");
-    expect(await prototypingOf(root)).toEqual({ primaryUiContract: "UI-0004" });
+    expect(await prototypingOf(root)).toEqual({ primaryUiContract: "UI-0001" });
   });
 
   // QFAI:AC-0004-0006-07
@@ -809,7 +817,7 @@ describe("migration primary spec becomes the primary UI contract", () => {
       `${STATE}/id-map.json`,
       `${JSON.stringify({
         version: 1,
-        ids: { "spec-0001": { "BR-0001-0001": "BR-0003-0001" } },
+        ids: { "spec-0001": { "BR-0001-0001": "BR-UI-0001-0001" } },
         placements: { "spec-0001": { "BR-0001-0001": "ui/receipt.yaml" } },
         retiredPacks: {},
       })}\n`,
@@ -876,7 +884,7 @@ describe("migration primary spec becomes the primary UI contract", () => {
     await put(
       root,
       "qfai.config.yaml",
-      config.replace("primarySpecId: spec-0001", "primaryUiContract: UI-0004"),
+      config.replace("primarySpecId: spec-0001", "primaryUiContract: UI-0001"),
     );
     const allowed = await runCli(4, root);
     expect(allowed.errors).not.toContain(OLD_KEY);
@@ -974,12 +982,12 @@ describe("migration step 7 writes contracts that validate", () => {
    */
   function ruleComment(sql: string): string[] {
     const lines = sql.split("\n");
-    const start = lines.findIndex((line) => /^-- Rule BR-\d{4}-\d{4}:/.test(line));
+    const start = lines.findIndex((line) => /^-- Rule BR-DB-\d{4}-\d{4}:/.test(line));
     return start < 0
       ? []
       : lines.slice(start, start + 2).map((line) =>
           line
-            .replace(/BR-\d{4}-\d{4}/, "BR-N")
+            .replace(/BR-DB-\d{4}-\d{4}/, "BR-N")
             .replace(/\s+/g, " ")
             .trim(),
         );
@@ -1009,8 +1017,8 @@ describe("migration step 7 writes contracts that validate", () => {
 
   it("reads the examples of a SQL rule written from a section and keeps its statement to the Rule value", async () => {
     // QFAI:EX-0004-0009-18
-    const sqlContract = `${CONTRACTS}/db/db-0003-orders.sql`;
-    const apiContract = `${CONTRACTS}/api/api-0002-orders.yaml`;
+    const sqlContract = `${CONTRACTS}/db/db-0001-orders.sql`;
+    const apiContract = `${CONTRACTS}/api/api-0001-orders.yaml`;
     const table = await ruleProject(tableRules);
     await migrate(table);
     expect(ruleComment(await text(table, sqlContract))).toEqual([
@@ -1063,7 +1071,7 @@ describe("migration step 7 writes contracts that validate", () => {
         `-- QFAI-CONTRACT-ID: ${id}\n-- Depends on: -\nCREATE TABLE table${index} (id INT);\n`,
       );
     }
-    const contract = `${CONTRACTS}/api/api-0002-orders.yaml`;
+    const contract = `${CONTRACTS}/api/api-0001-orders.yaml`;
     await run(step03, root);
     // Control: step 3 writes the renumbered list on one line.
     const renumbered = dependsOnList(await text(root, contract));
@@ -1072,7 +1080,7 @@ describe("migration step 7 writes contracts that validate", () => {
     for (const step of [step04, step05, step06, step07]) await run(step, root);
     expect(await text(root, contract)).toContain("x-qfai-rules:");
     await expectTreeRead(root);
-    expect(await findings(root, "QFAI-CONTRACT-015", "api/api-0002-orders.yaml")).toEqual([]);
+    expect(await findings(root, "QFAI-CONTRACT-015", "api/api-0001-orders.yaml")).toEqual([]);
     expect(dependsOnList(await text(root, contract))).toEqual(renumbered);
   });
 });

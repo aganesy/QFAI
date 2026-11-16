@@ -9,7 +9,7 @@ const RULE_COLUMNS = ["BR-ID", "Statement", "Examples"] as const;
 /** An old section whose content belongs under `## Business rules` once a person rewrites it. */
 const RULES_HEADING = /^(?:business )?rules$/i;
 /** A rule ID anywhere in a table row after its first cell, which the CLI schema refuses. */
-const RULE_ID_AFTER_FIRST_CELL = /^\|[^|\n]*\|[^\n]*BR-\d{4}-\d{4}/m;
+const RULE_ID_AFTER_FIRST_CELL = /^\|[^|\n]*\|[^\n]*BR-(?:CLI|API|DB|UI)-\d{4}-\d{4}/m;
 
 /** Where a contract is written, and where it was read from. */
 export type CliContractPaths = { target: string; source: string };
@@ -53,7 +53,8 @@ function splitContract(text: string): {
 /** One to three paragraphs of prose naming no rule, as the schema's Ownership boundary takes. */
 function ownershipBody(body: string): string | null {
   const paragraphs = paragraphsOf(body);
-  if (!paragraphs || paragraphs.length > 3 || /BR-\d{4}-\d{4}/.test(body)) return null;
+  if (!paragraphs || paragraphs.length > 3 || /BR-(?:CLI|API|DB|UI)-\d{4}-\d{4}/.test(body))
+    return null;
   return paragraphs.join("\n\n");
 }
 
