@@ -179,14 +179,9 @@ async function assignContractIds(
   }
   const oldNumber = (candidate: Candidate) =>
     Number(OLD_CONTRACT_ID.exec(candidate.old ?? "")?.[1] ?? Number.POSITIVE_INFINITY);
-  // The kind order no longer decides a number, but it still orders the map, and the
-  // index sort keeps that order among contracts of different kinds sharing a number.
-  const kindOrder: string[] = Object.values(CONTRACT_KIND_BY_DIR);
   candidates.sort(
     (left, right) =>
-      kindOrder.indexOf(left.kind) - kindOrder.indexOf(right.kind) ||
-      oldNumber(left) - oldNumber(right) ||
-      left.relative.localeCompare(right.relative),
+      oldNumber(left) - oldNumber(right) || left.relative.localeCompare(right.relative),
   );
   const map: ContractMap = {};
   for (const candidate of candidates) {
@@ -334,8 +329,14 @@ export async function planContracts(context: MigrationContext): Promise<Contract
     const id = declaredContractId(relative, text);
     if (id !== null) contracts.push(indexed(relative, id, text));
   }
+  // Each kind numbers from 0001, so contracts of different kinds share numbers: the index lists
+  // them by number, and a shared number in the kind order cli, api, db, ui.
+  const kindOrder: string[] = Object.values(CONTRACT_KIND_BY_DIR);
+  const kindRank = (id: string): number => kindOrder.indexOf(id.slice(0, id.indexOf("-")));
   contracts.sort(
-    (left, right) => Number(contractNumber(left.id)) - Number(contractNumber(right.id)),
+    (left, right) =>
+      Number(contractNumber(left.id)) - Number(contractNumber(right.id)) ||
+      kindRank(left.id) - kindRank(right.id),
   );
   return { map, contracts, operations, forAPerson };
 }

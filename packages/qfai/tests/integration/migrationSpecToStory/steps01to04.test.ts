@@ -1152,6 +1152,22 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  it("rewrites the kindless rule IDs an earlier version left in the ID map", async () => {
+    await withProject(async (root) => {
+      await putPlanPack(root);
+      expect((await run(step04, await context(root))).code).not.toBe(2);
+      const mapPath = path.join(root, "tmp/qfai-migration/id-map.json");
+      const firstMap = await readFile(mapPath, "utf8");
+      const kindNamed = /"BR-(?:CLI|API|DB|UI)-(\d{4}-\d{4})"/g;
+      expect(firstMap).toMatch(kindNamed);
+      await writeFile(mapPath, firstMap.replace(kindNamed, '"BR-$1"'), "utf8");
+      const rerun = await run(step04, await context(root));
+      expect(rerun.errors).toBe("");
+      expect(rerun.code).not.toBe(2);
+      expect(await readFile(mapPath, "utf8")).toBe(firstMap);
+    });
+  });
+
   it("rejects a criterion added after the first ID map was written", async () => {
     await withProject(async (root) => {
       await putMinimalPack(root);

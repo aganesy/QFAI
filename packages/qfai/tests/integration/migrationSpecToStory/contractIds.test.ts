@@ -312,6 +312,21 @@ describe("migration contract IDs", () => {
     }
   });
 
+  // QFAI:EX-0004-0006-14
+  it("lists a contract that already declares its ID before newly numbered ones of the same number", async () => {
+    const root = await project();
+    await rm(path.join(root, CONTRACTS, "cli", "orders.md"));
+    await put(
+      root,
+      `${CONTRACTS}/cli/cli-0001-orders.md`,
+      "# CLI-0001: Orders command\n\n## Ownership boundary\n\nLists orders.\n",
+    );
+    await run(step03, root);
+    const index = await text(root, `${CONTRACTS}/contracts.md`);
+    const ids = [...index.matchAll(/^\| ((?:CLI|API|DB|UI)-\d{4}) \|/gm)].map((match) => match[1]);
+    expect(ids).toEqual(["CLI-0001", "API-0001", "DB-0001", "UI-0001"]);
+  });
+
   // QFAI:EX-0004-0006-15
   it("shows every rename in a dry run and changes nothing on a second run", async () => {
     const root = await project();

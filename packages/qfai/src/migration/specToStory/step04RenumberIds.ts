@@ -746,6 +746,15 @@ function plannedPlacements(plan: MigrationPlan): MigrationIdMap["placements"] {
   return result;
 }
 
+/**
+ * Whether `prior` is `ruleId` without its kind: `BR-0002-0001` for `BR-API-0002-0001`, as an
+ * earlier version wrote a rule's new ID into the map.
+ */
+export function isKindlessFormOf(prior: string, ruleId: string): boolean {
+  const kindNamed = /^BR-(?:CLI|API|DB|UI)-(\d{4}-\d{4})$/.exec(ruleId);
+  return kindNamed !== null && prior === `BR-${kindNamed[1]}`;
+}
+
 export function assertUnchangedPlacements(plan: MigrationPlan, map: MigrationIdMap): void {
   for (const mark of plan.marks) {
     if (map.ids[packOf(mark.id)]?.[mark.id] !== undefined) {
@@ -1524,11 +1533,18 @@ export const step04: MigrationStep = {
       }
     }
     const computedMap: MigrationIdMap = { version: 1, ids, placements, retiredPacks, contracts };
+    // A map an earlier version wrote names each rule without its contract's kind; the rule keeps
+    // its numbers, and the map is written again in the kind-named form.
+    let ruleIdsUpgraded = false;
     if (existingMap !== null) {
       assertUnchangedPlacements(plan, existingMap);
       for (const [pack, entries] of Object.entries(ids)) {
         for (const [oldId, newId] of Object.entries(entries)) {
           const prior = existingMap.ids[pack]?.[oldId];
+          if (prior !== undefined && prior !== newId && isKindlessFormOf(prior, newId)) {
+            ruleIdsUpgraded = true;
+            continue;
+          }
           if (prior !== newId) {
             throw new MigrationInputError(`${PLAN_PATH}: numbering changed for ${oldId}`);
           }
@@ -1544,10 +1560,10 @@ export const step04: MigrationStep = {
           }
         }
       }
-    } else {
-      operations.push({ kind: "write", target: ID_MAP_PATH, content: serializeIdMap(computedMap) });
     }
-    const map = existingMap ?? computedMap;
+    if (existingMap === null || ruleIdsUpgraded)
+      operations.push({ kind: "write", target: ID_MAP_PATH, content: serializeIdMap(computedMap) });
+    const map = existingMap === null || ruleIdsUpgraded ? computedMap : existingMap;
     forAPerson.push(
       ...reportUnplaced(context.root, packs, plan, ownerByCriterion, exampleCriterion),
     );
