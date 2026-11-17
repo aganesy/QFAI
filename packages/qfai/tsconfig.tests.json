@@ -208,6 +208,7 @@
     "tests/cli/doctorContractSurface.test.ts",
     "tests/cli/githubAnnotationCap.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
+    "tests/cli/githubSummaryEscaping.test.ts",
     "tests/cli/initAgentEntryPointRules.test.ts",
     "tests/cli/initRepointHolds.test.ts",
     "tests/cli/initConfigRefinementWrite.test.ts",

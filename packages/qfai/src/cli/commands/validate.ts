@@ -877,7 +877,7 @@ async function emitProvenance(toolVersion: string): Promise<void> {
   process.stdout.write(`qfai: ${toolVersion} (${where})\n`);
 }
 
-function emitGitHubOutput(
+export function emitGitHubOutput(
   result: ValidationResult,
   root: string,
   jsonPath: string,
@@ -1055,9 +1055,14 @@ function emitGitHubSummary(
     );
   }
 
-  const relative = toRelativePath(options.root, options.jsonPath);
+  // The paths are escaped for DISPLAY only, through the same boundary as the notice above: the
+  // runner reads every stdout line as a possible workflow command, so a path carrying a newline
+  // would start a line of its own and could open one. The report and run-log are still written
+  // to, and recorded at, the original paths.
+  const relative = escapeGitHubCommandValue(toRelativePath(options.root, options.jsonPath));
+  const runLog = escapeGitHubCommandValue(options.runLogPath);
   process.stdout.write(`qfai validate note: see ${relative} or --format text for the details.\n`);
-  process.stdout.write(`qfai validate note: see ${options.runLogPath} for the run-log.\n`);
+  process.stdout.write(`qfai validate note: see ${runLog} for the run-log.\n`);
 
   process.stdout.write(
     "qfai validate note: next, qfai report generates report.md (e.g. qfai report).\n",
@@ -1523,6 +1528,10 @@ function emitTextField(label: string, value: string): void {
   }
 }
 
+/**
+ * One value printed under `--format github`, kept on a single log line: a workflow command's
+ * message, and a path or other metadata in the plain summary lines beside the commands.
+ */
 function escapeGitHubCommandValue(value: string): string {
   return value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
 }
