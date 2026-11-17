@@ -501,6 +501,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rules, so the shipped prompt stays within the size an agent reads in one
   pass.
 
+- **HTML mock and screen checks honour an absolute specs or contracts
+  directory.** They appended `paths.specsDir` and `paths.contractsDir` to the
+  project root even when the configured directory was absolute, so they found
+  no mock or UI contract there. They now resolve each directory as the other
+  checks do, and a relative and an absolute spelling of the same directory
+  select the same files.
+
 - **The `tech.md` template shows each item in the shape validation accepts.**
   The template held placeholders such as `<package>`, so a project filling it
   in guessed the shapes and needed several validate rounds. Every value is now
