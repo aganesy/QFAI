@@ -55,6 +55,27 @@ describe("a refused argument prints the command's usage, not the whole help", ()
     expect(sdd.stdout).not.toContain("Options:");
   });
 
+  // QFAI:AC-0001-0315-01 QFAI:EX-0001-0315-02
+  it("gives every command but workflow its own usage lines on an unknown option", async () => {
+    const commands = [
+      "init",
+      "validate",
+      "report",
+      "doctor",
+      "db-drift",
+      "session-review",
+      "sdd",
+      "atdd",
+      "catalog",
+    ];
+    for (const command of commands) {
+      const { stdout, exitCode } = await captureRun([command, "--bogus"]);
+      expect(exitCode, command).toBe(2);
+      expect(stdout, command).toContain(`qfai ${command}`);
+      expect(stdout, command).not.toContain("Options:");
+    }
+  });
+
   // QFAI:AC-0001-0315-01 QFAI:EX-0001-0315-03
   it("keeps the whole help for --help, no command and an unknown command", async () => {
     for (const argv of [["--help"], ["sdd", "--help"], [], ["bogus"]]) {
