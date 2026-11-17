@@ -484,10 +484,8 @@ function main() {
   process.stdout.write(result.stdout ?? "");
   process.stderr.write(result.stderr ?? "");
 
-  // Only when the dry-run failed: a green dry-run already packed, and packing a second time on
-  // every run would double the slowest step of the required context for no added claim.
-  // Both only when the dry-run FAILED: a green dry-run already packed and needs no tolerance, and
-  // asking twice would double the slowest step of the required context for no added claim.
+  // The pack and publication checks run only when the dry-run failed: a green dry-run already
+  // packed, and repeating them would double the slowest step of the required context.
   const tarballProof = result.status === 0 ? undefined : verifyTarballIndependently(pkgDir);
   const publishedProof = result.status === 0 ? undefined : verifyAlreadyPublished(pkgDir);
   if (tarballProof !== undefined) {
