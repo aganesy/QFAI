@@ -49,15 +49,15 @@ async function projectWithMockAndFlow(): Promise<string> {
 describe("Markdown under the specs directory in the UI/UX group", () => {
   it("is walked and read once for the HTML mock, UI definition and screen flow checks", async () => {
     const root = await projectWithMockAndFlow();
-    const asked: string[][] = [];
+    const asked: string[] = [];
     let walks = 0;
-    const shared = sharedMarkdownFileReader(async (globs) => {
+    const shared = sharedMarkdownFileReader(async (dir) => {
       walks += 1;
-      return readMarkdownFiles(globs);
+      return readMarkdownFiles(dir);
     });
-    const reader: MarkdownFileReader = async (globs) => {
-      asked.push(globs);
-      return shared(globs);
+    const reader: MarkdownFileReader = async (dir) => {
+      asked.push(dir);
+      return shared(dir);
     };
 
     const sharedIssues = await Promise.all([
@@ -80,8 +80,8 @@ describe("Markdown under the specs directory in the UI/UX group", () => {
   it("skips a file the reader could not read, as the default reader does", async () => {
     const root = await projectWithMockAndFlow();
     const unreadable = path.join(root, ".qfai", "specs", "unreadable.md");
-    const reader: MarkdownFileReader = async (globs) => [
-      ...(await readMarkdownFiles(globs)),
+    const reader: MarkdownFileReader = async (dir) => [
+      ...(await readMarkdownFiles(dir)),
       { filePath: unreadable, content: null },
     ];
 

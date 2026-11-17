@@ -442,6 +442,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Directories named with glob syntax are read as the paths they are.** The
+  design token, HTML mock, Mermaid screen flow and UI definition checks built
+  a glob from the project, `paths.specsDir`, `paths.contractsDir` and
+  `uiux.designTokensDir`, so a path such as `build[1]` or `tokens (v2)` was
+  read as a pattern: the check found nothing, or read `build1` instead. Each
+  directory is now the walk's working directory and only the file name is a
+  pattern. Closes #4488.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
