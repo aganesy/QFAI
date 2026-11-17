@@ -42,15 +42,13 @@ const BASELINE_REL = path.join("rule", "shared-skill-operating-baseline.md");
 const BASELINE_HEADING_RE = /^##\s+Default Autopilot Policy \(Shared\)\s*$/m;
 
 /**
- * Canonical token set for the auto-decide bucket. A SKILL.md whose
- * auto-decide bullets contain ONLY entries that match any of these
- * stable substrings is compliant (narrowing is allowed). Adding
- * bullets that don't match any allowed token = widening, which is
- * flagged.
+ * Canonical category set for the auto-decide bucket. A SKILL.md whose
+ * auto-decide entries are each one of these categories, or an instantiation
+ * of one, is compliant (narrowing is allowed). An entry naming anything else
+ * is widening, which is flagged.
  *
- * The matching is case-insensitive on a stable substring; intentional
- * for resilience against minor wording variations (e.g. "ID/sequence
- * numbering" vs "ID / sequence numbering").
+ * The matching ignores case, decoration and the spacing around a slash, so
+ * "ID/sequence numbering" and "ID / sequence numbering" are one category.
  */
 export const AUTO_DECIDE_ALLOWED_TOKENS: readonly string[] = [
   "output formatting",
@@ -114,14 +112,15 @@ const BUCKET_HEADERS = {
 } as const;
 
 /**
- * The same line `BUCKET_HEADERS.hardRequired` finds, with whatever follows the
- * colon captured.
+ * The same lines `BUCKET_HEADERS.autoDecide` and `BUCKET_HEADERS.hardRequired`
+ * find, with whatever follows the colon captured.
  *
- * Two patterns for one line, kept in step by a case that asks both about the
+ * Two patterns per line, kept in step by a case that asks both about the
  * same header spellings. A single pattern would be better, but the bucket set
- * is iterated whole to close one bucket at the next, and only this one has a
- * tail to read.
+ * is iterated whole to close one bucket at the next, and only these two have
+ * entries to read.
  */
+const AUTO_DECIDE_HEADER_WITH_TAIL = /^\s*[-*]\s*auto-decide\s*:(.*)$/i;
 const HARD_REQUIRED_HEADER_WITH_TAIL = /^\s*[-*]\s*hard-required\s*:(.*)$/i;
 
 /**
@@ -183,7 +182,22 @@ export function normalizeHardRequiredEntry(bullet: string): string {
  * Collect the entries nested under the `- hard-required:` line, one string per
  * entry with a wrapped bullet joined back into it. Reads a whole SKILL.md as
  * readily as an already-extracted policy block, because the bucket header is
- * what anchors it.
+ * what anchors it. {@link collectBucketEntries} states how the bucket is read.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
+export function collectHardRequiredEntries(content: string): string[] {
+  return collectBucketEntries(content, HARD_REQUIRED_HEADER_WITH_TAIL);
+}
+
+/**
+ * Collect the entries of the bucket whose header `headerWithTail` matches.
+ *
+ * The auto-decide and hard-required buckets are both read here, so an entry
+ * that one bucket sees the other sees too. Reading auto-decide with a looser
+ * walk of its own left a value written on its header line, and every entry of
+ * a skill that wrote its bucket that way, unchecked.
  *
  * The bucket runs to the next sibling bullet or the next heading, and past
  * everything else: a blank line, a comment and a line of prose all stay inside
@@ -201,17 +215,14 @@ export function normalizeHardRequiredEntry(bullet: string): string {
  * is an entry. Read as a header and nothing else, that file collected an empty
  * bucket, and an empty bucket is a narrowing this check permits: the one
  * spelling that hides an entry was the one spelling that reported nothing.
- *
- * @internal Exported for direct unit-testing — not part of the package's
- * public surface.
  */
-export function collectHardRequiredEntries(content: string): string[] {
+function collectBucketEntries(content: string, headerWithTail: RegExp): string[] {
   const entries: string[] = [];
   let inBucket = false;
   let bucketIndent = 0;
   for (const line of content.split(/\r?\n/)) {
     if (!inBucket) {
-      const header = HARD_REQUIRED_HEADER_WITH_TAIL.exec(line);
+      const header = headerWithTail.exec(line);
       if (header !== null) {
         inBucket = true;
         bucketIndent = line.length - line.trimStart().length;
@@ -429,9 +440,10 @@ export type AutopilotPolicyParseResult = {
 /**
  * Pure-function parser. Extracts a skill's own `## Default Autopilot Policy`
  * block (until the next `## ` heading or EOF), then scans the block for
- * the three bucket headers. The auto-decide widening check enumerates
- * the bullets nested under the `auto-decide:` line and flags any
- * bullet whose text does not contain any of `AUTO_DECIDE_ALLOWED_TOKENS`.
+ * the three bucket headers. The auto-decide widening check reads that
+ * bucket's entries the way the hard-required ones are read, and flags any
+ * entry that is not one of `AUTO_DECIDE_ALLOWED_TOKENS` or an instantiation
+ * of one (see {@link isAllowedAutoDecideEntry}).
  *
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
@@ -477,38 +489,58 @@ export function parseAutopilotPolicy(
 }
 
 /**
- * Walk the block from the `auto-decide:` line until the next
- * top-level (`-` / `*` at column 0..2) bucket header or EOF. For each
- * nested bullet, return the bullet text if it does not match any
- * allowed token. Narrowing (fewer bullets than the canonical set) is
- * permitted; widening (a bullet outside the allowed set) is flagged.
+ * An auto-decide category or entry reduced to what is compared: decoration
+ * gone, a slash written without the spaces around it, and a closing full stop
+ * dropped, so `ID/sequence numbering.` and `` `ID / sequence numbering` `` are
+ * the same category.
+ */
+function autoDecideForm(text: string): string {
+  return decorationOnly(text)
+    .replace(/\s*\/\s*/g, "/")
+    .replace(/[.;]$/, "");
+}
+
+/**
+ * What may follow a category in an entry that instantiates it: a colon, a
+ * parenthetical, or a spaced dash, each opening the operations the skill names
+ * for that category.
+ */
+const AUTO_DECIDE_INSTANTIATION_RE = /^(?::|\s*\(|\s+[—–-]\s)/;
+
+/**
+ * Whether one auto-decide entry stays inside the prototype's categories.
+ *
+ * The entry must BE a category, or open with one and then instantiate it. A
+ * category anywhere inside the entry is not enough: `destructive operations
+ * alongside output formatting` mentions a category and declares an operation
+ * the prototype asks about, and a substring match read that as a narrowing.
+ *
+ * Ceiling: what follows the colon, parenthesis or dash of an instantiation is
+ * not judged, because a category's operations are the skill's own words. A
+ * reviewer reads them; this check sees only the category they claim. Lifting
+ * that needs each category to carry the operations it admits.
+ *
+ * @internal Exported for direct unit-testing — not part of the package's
+ * public surface.
+ */
+export function isAllowedAutoDecideEntry(entry: string): boolean {
+  const form = autoDecideForm(entry);
+  return AUTO_DECIDE_ALLOWED_TOKENS.map(autoDecideForm).some(
+    (category) =>
+      form === category ||
+      (form.startsWith(category) && AUTO_DECIDE_INSTANTIATION_RE.test(form.slice(category.length))),
+  );
+}
+
+/**
+ * The auto-decide entries outside the prototype's categories, as written.
+ * Narrowing (fewer entries than the canonical set) is permitted; widening (an
+ * entry outside the allowed set) is flagged.
  */
 function findWidenedAutoDecideTokens(block: string): string[] {
-  const lines = block.split(/\r?\n/);
-  let inAutoDecide = false;
-  const widened: string[] = [];
-  for (const line of lines) {
-    if (BUCKET_HEADERS.autoDecide.test(line)) {
-      inAutoDecide = true;
-      continue;
-    }
-    if (!inAutoDecide) continue;
-    // Stop when we hit another top-level bucket header.
-    if (BUCKET_HEADERS.askUser.test(line) || BUCKET_HEADERS.hardRequired.test(line)) {
-      break;
-    }
-    // Indented nested bullet under auto-decide.
-    const nested = /^\s+[-*]\s+(.+)$/.exec(line);
-    if (!nested?.[1]) continue;
-    const bulletText = nested[1].trim();
-    if (!bulletText) continue;
-    const lowered = bulletText.toLowerCase();
-    const matched = AUTO_DECIDE_ALLOWED_TOKENS.some((token) =>
-      lowered.includes(token.toLowerCase()),
-    );
-    if (!matched) widened.push(bulletText);
-  }
-  return widened;
+  return collectBucketEntries(block, AUTO_DECIDE_HEADER_WITH_TAIL).filter(
+    (entry) => !isAllowedAutoDecideEntry(entry),
+  );
 }
 
 /**

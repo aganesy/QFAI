@@ -158,3 +158,59 @@ describe("hard-required names with hyphens", () => {
     ).toEqual(["brand intent - unreviewedSecret"]);
   });
 });
+
+/** A policy section whose auto-decide bucket is `bucket`, with the other two buckets after it. */
+function withAutoDecide(bucket: string): string {
+  return `# Skill\n\n## Default Autopilot Policy\n\n${bucket}\n- ask-user:\n  - destructive operations\n- hard-required:\n  - brand intent\n`;
+}
+
+// QFAI:EX-0001-0169-04
+describe("auto-decide entries are read and judged like hard-required entries", () => {
+  it("reads a value written on the auto-decide header line as an entry", () => {
+    expect(
+      parseAutopilotPolicy(withAutoDecide("- auto-decide: destructive operations")).widenedTokens,
+    ).toEqual(["destructive operations"]);
+  });
+
+  it("joins a wrapped entry and keeps reading the entries after it", () => {
+    const result = parseAutopilotPolicy(
+      withAutoDecide(
+        "- auto-decide:\n  - output formatting (of the report and\n    every rename)\n  - force-push",
+      ),
+    );
+    expect(result.widenedTokens).toEqual(["force-push"]);
+  });
+
+  it("stops at a sibling bullet instead of reading its children as auto-decide entries", () => {
+    const result = parseAutopilotPolicy(
+      withAutoDecide("- auto-decide:\n  - output formatting\n- note:\n  - anything at all"),
+    );
+    expect(result.widenedTokens).toEqual([]);
+  });
+
+  it("flags an entry that only mentions an allowed category instead of naming it", () => {
+    for (const entry of [
+      "destructive operations alongside output formatting",
+      "force-push after an equivalent-option pick",
+      "output formatting / destructive operations",
+    ]) {
+      expect(
+        parseAutopilotPolicy(withAutoDecide(`- auto-decide:\n  - ${entry}`)).widenedTokens,
+      ).toEqual([entry]);
+    }
+  });
+
+  it("accepts an allowed category, however it is spaced, and one a skill instantiates", () => {
+    for (const entry of [
+      "`ID/sequence numbering`",
+      "**Output formatting**",
+      "equivalent-option pick: implementation seam, test selector, and local refactor",
+      "append-vs-create on subject overlap (when the subject already has a discussion)",
+      "output formatting — headings and tables",
+    ]) {
+      expect(
+        parseAutopilotPolicy(withAutoDecide(`- auto-decide:\n  - ${entry}`)).widenedTokens,
+      ).toEqual([]);
+    }
+  });
+});
