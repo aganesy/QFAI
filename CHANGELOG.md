@@ -442,6 +442,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A refused argument prints the command's usage, not the whole help.**
+  `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
+  argument of a known command, printed the help of every command after the
+  reason, about 20,000 characters per call. It now prints the reason, that
+  command's usage lines (only the subcommand's when one was given) and a
+  pointer to `qfai --help`. `--help`, no command and an unknown command name
+  still print the whole help. Closes #4448.
+
 - **Every document-schema finding names the line or heading to write.** A
   missing required line in a policy file, a story, its acceptance criteria or
   the decision page list was reported as a regular expression; every such rule
