@@ -424,6 +424,35 @@ describe("BF-0004 migration examples", () => {
     expect(await readFile(target)).toEqual(original);
   });
 
+  // QFAI:EX-0004-0004-07
+  it.each([
+    ["./.qfai/specs", "./.qfai/contracts/"],
+    [".qfai\\specs\\", ".qfai\\contracts"],
+  ])("moves and rewrites the old defaults spelled %s and %s", async (specsDir, contractsDir) => {
+    const context = await fixture(
+      `paths:\n  specsDir: ${JSON.stringify(specsDir)}\n  contractsDir: ${JSON.stringify(contractsDir)}\n`,
+    );
+    await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "legacy spec");
+    await put(context.root, ".qfai/contracts/api/order.yaml", "legacy contract");
+    const result = await run(step01, context);
+    expect(result.code).toBe(0);
+    expect(result.output).toContain(".qfai/specs/spec-0001");
+    expect(await read(context.root, ".qfai/spec/spec-0001/01_Spec.md")).toBe("legacy spec");
+    expect(await read(context.root, ".qfai/spec/03_contract/api/order.yaml")).toBe(
+      "legacy contract",
+    );
+    for (const source of [".qfai/specs", ".qfai/contracts"]) {
+      await expect(readdir(path.join(context.root, source))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    }
+    const paths = (
+      parseYaml(await read(context.root, "qfai.config.yaml")) as { paths: Record<string, string> }
+    ).paths;
+    expect(paths.specsDir).toBe(".qfai/spec");
+    expect(paths.contractsDir).toBe(".qfai/spec/03_contract");
+  });
+
   // QFAI:EX-0004-0004-04
   it("preserves a current skill while deleting its colliding plural predecessor", async () => {
     const context = await fixture();
