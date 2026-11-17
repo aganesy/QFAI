@@ -489,6 +489,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the API does not require, the two remedy sentences ran together with no
   space. They are now separated by one.
 
+- **`qfai report --run-validate` stops on a stale install, as `qfai validate`
+  does.** When the installed qfai was not the version the lockfile pins,
+  `report --run-validate` only warned and then ran a fresh validation with the
+  outdated copy, so a single-step CI gate could pass on the old validator. It
+  now stops before it runs and exits 1, writing nothing. `qfai report` without
+  `--run-validate` reads a result already written, so it still only warns.
+
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
   info.** On a Windows `git worktree`, git can store a directory wrapper as a
   file symlink the OS will not follow. The canonical documents behind it read

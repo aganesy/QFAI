@@ -177,11 +177,17 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   }
 }
 
-/** The commands a stale install stops: `workflow plan` and the gates `validate` and `sdd preflight`. */
+/**
+ * The commands a stale install stops: `workflow plan` and every command that
+ * runs a fresh validation, `validate`, `report --run-validate` and
+ * `sdd preflight`. `report` without `--run-validate` only reads a result
+ * already written, so it warns and goes on.
+ */
 function isGate(command: string, options: ParsedArgs["options"]): boolean {
   return (
     command === "workflow" ||
     command === "validate" ||
+    (command === "report" && options.reportRunValidate) ||
     (command === "sdd" && options.sddAction === "preflight")
   );
 }
