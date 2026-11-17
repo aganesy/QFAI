@@ -442,6 +442,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Migration step 1 moves the old default paths in any spelling.** With
+  `paths.specsDir: ./.qfai/specs` (or a trailing `/`, or backslashes) and a
+  legacy spec pack present, step 1 saw the old layout yet planned no
+  operation and exited 0. It now reads each configured path as the
+  configuration loader does before comparing it with the old default, so it
+  moves the directory and rewrites the key. Closes #4478.
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the

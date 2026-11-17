@@ -848,9 +848,18 @@ function readDirString(
   configPath: string,
   issues: Issue[],
 ): string {
-  const raw = readString(value, fallback, label, configPath, issues);
+  return trimDirSeparators(readString(value, fallback, label, configPath, issues));
+}
+
+/** A directory value with its trailing separators removed, as the loader reads every `paths` key. */
+export function trimDirSeparators(raw: string): string {
   const trimmed = raw.replace(/[\\/]+$/, "");
   return trimmed.length > 0 ? trimmed : raw;
+}
+
+/** A story-tree root value as the loader reads `paths.specsDir` and `paths.contractsDir`. */
+export function foldTreeDir(raw: string): string {
+  return trimDirSeparators(raw).replace(/\\/g, "/");
 }
 
 /**
@@ -869,7 +878,7 @@ function readTreeDirString(
   configPath: string,
   issues: Issue[],
 ): string {
-  return readDirString(value, fallback, label, configPath, issues).replace(/\\/g, "/");
+  return foldTreeDir(readString(value, fallback, label, configPath, issues));
 }
 
 /**
