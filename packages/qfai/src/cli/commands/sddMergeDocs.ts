@@ -1,9 +1,16 @@
 import { execFile } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { lstat, open, rename, rm } from "node:fs/promises";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 
 import { loadConfig, resolvePath } from "../../core/config.js";
+import {
+  findUnsafeHostFileComponent,
+  type PinnedFileRead,
+  readPinnedRegularFileBytes,
+} from "../../core/init/fsGuards.js";
 import { error, info } from "../../core/logger.js";
 import { isGitConflictOutput, mergeDocument } from "../../core/storyTree/sentenceMerge.js";
 import { validateDocumentSchema } from "../../core/validators/documentSchema.js";
@@ -17,6 +24,12 @@ const CONFLICT_MARKER = /^(?:<{7,}|>{7,})(?: |\r?$)/mu;
 const OWN_MARKER = /^(?:<<<<<<< ours|>>>>>>> theirs)\r?$/mu;
 const REGULAR_FILE = new Set(["100644", "100755"]);
 const SCHEMA_VIOLATION = "QFAI-DOCSCHEMA-001";
+const UNSAFE_PATH =
+  "its working file or a directory above it is a symbolic link, or a directory above it is not a directory";
+/** The largest working file read; a story-tree document is far smaller. */
+const MAX_DOCUMENT_BYTES = 16 * 1024 * 1024;
+/** Tries of a rename Windows refuses while another process briefly holds the file open. */
+const RENAME_TRIES = 5;
 
 type Stage = { mode: string; sha: string };
 type Stages = { base?: Stage; ours?: Stage; theirs?: Stage };
@@ -74,15 +87,20 @@ async function mergeOne(root: string, file: string, stages: Stages): Promise<Out
   const present = [stages.base, stages.ours, stages.theirs].filter((stage) => stage !== undefined);
   if (present.some((stage) => !REGULAR_FILE.has(stage.mode)))
     return left("it is not a regular file");
-  const target = path.join(root, ...file.split("/"));
-  let working: string;
+  const segments = file.split("/");
+  const target = path.join(root, ...segments);
+  if ((await findUnsafeHostFileComponent(root, segments)) !== undefined) return left(UNSAFE_PATH);
+  let pinned: PinnedFileRead | null;
   try {
-    working = await readFile(target, "utf8");
+    pinned = await readPinnedRegularFileBytes(target, MAX_DOCUMENT_BYTES);
   } catch (failure) {
     return left(
       `the working file could not be read: ${failure instanceof Error ? failure.message : String(failure)}`,
     );
   }
+  if (pinned === null) return left("the working file is not a regular file of at most 16 MiB");
+  const working = utf8Text(pinned.content);
+  if (working === null) return left("the working file is not UTF-8 text");
   if (!CONFLICT_MARKER.test(working))
     return { kind: "unchanged", message: "left as is; the working file holds no conflict markers" };
   if (OWN_MARKER.test(working))
@@ -100,10 +118,81 @@ async function mergeOne(root: string, file: string, stages: Stages): Promise<Out
     );
   const merged = await mergeDocument(base ?? "", ours ?? "", theirs ?? "");
   if (merged === null) return left("a line in it reads as a merge marker");
-  await writeFile(target, merged.text, "utf8");
+  const replaced = await replacePinned(root, segments, pinned, merged.text);
+  if (replaced !== null) return left(replaced);
   return merged.conflicts === 0
     ? { kind: "merged", message: "merged" }
     : left(`merged around ${merged.conflicts} conflict(s), left between markers`);
+}
+
+/** The text of UTF-8 bytes, with any byte order mark kept, or `null` when they are not UTF-8. */
+function utf8Text(bytes: Buffer): string | null {
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Replaces the working file with `text` through a temporary file beside it, renamed into place
+ * only while its directories still hold no symbolic link and its name still holds the file that
+ * was read. A rename keeps the check and the replacement on one directory entry, where writing
+ * through the name would follow whatever had been put there since.
+ *
+ * Ceiling: the replacement is a new file with the old file's mode, so its owner is whoever runs
+ * the command and a hard link to the old file keeps the old text. A story-tree document is owned
+ * by the person merging and has no other link, so neither is carried over.
+ *
+ * @returns `null` once the file is replaced, or why it was left as is
+ */
+async function replacePinned(
+  root: string,
+  segments: string[],
+  pinned: PinnedFileRead,
+  text: string,
+): Promise<string | null> {
+  const target = path.join(root, ...segments);
+  const temporary = path.join(
+    path.dirname(target),
+    `.${path.basename(target)}.merge-docs-${randomBytes(6).toString("hex")}`,
+  );
+  const handle = await open(temporary, "wx", pinned.mode);
+  try {
+    try {
+      await handle.writeFile(text, "utf8");
+      await handle.chmod(pinned.mode);
+    } finally {
+      await handle.close();
+    }
+    if ((await findUnsafeHostFileComponent(root, segments)) !== undefined) return UNSAFE_PATH;
+    const current = await lstat(target).catch(() => undefined);
+    if (current?.isFile() !== true || current.dev !== pinned.dev || current.ino !== pinned.ino)
+      return "the working file changed while it was merged";
+    await renameOver(temporary, target);
+    return null;
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+
+/**
+ * `rename` over an existing file. Windows refuses it with `EPERM` or `EACCES` while an editor,
+ * an indexer or a virus scanner briefly holds the file open, where writing through the name
+ * succeeded, so those two are retried a few times on Windows before the failure is reported.
+ */
+async function renameOver(from: string, to: string): Promise<void> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await rename(from, to);
+      return;
+    } catch (failure) {
+      const code = failure instanceof Error && "code" in failure ? failure.code : undefined;
+      const transient = process.platform === "win32" && (code === "EPERM" || code === "EACCES");
+      if (!transient || attempt >= RENAME_TRIES) throw failure;
+      await delay(50 * attempt);
+    }
+  }
 }
 
 /** The index stages of each unmerged path, from `git ls-files -u -z`. */

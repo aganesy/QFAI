@@ -4,7 +4,7 @@
 // QFAI:AC-0001-0238-04
 
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { run } from "../../src/cli/main.js";
 import type * as DocumentSchema from "../../src/core/validators/documentSchema.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
+import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const schema = vi.hoisted(() => ({ unavailable: false }));
@@ -337,6 +338,62 @@ describe("qfai sdd merge-docs", () => {
     expect(result.stdout).not.toContain("holds no conflict markers");
     expect(await read(EXAMPLES)).toBe(halfResolved);
     expect(result.code).toBe(1);
+  });
+
+  describe("a working file the command may not replace", () => {
+    let outside: string;
+
+    beforeEach(async () => {
+      outside = await mkdtemp(path.join(os.tmpdir(), "qfai-merge-docs-outside-"));
+    });
+
+    afterEach(async () => {
+      await removeTempTree(outside);
+    });
+
+    // QFAI:EX-0001-0238-17
+    it("leaves a working file that is a symbolic link to a file outside the project", async (ctx) => {
+      await sameSentence();
+      const conflicted = await read(EXAMPLES);
+      const escapee = path.join(outside, "escapee.md");
+      await writeFile(escapee, conflicted, "utf8");
+      await rm(path.join(root, EXAMPLES));
+      if (!(await createSymlinkFixture(escapee, path.join(root, EXAMPLES), "file"))) ctx.skip();
+      const result = await mergeDocs();
+      expect(result.stdout).toContain(`${EXAMPLES}: left as is; its working file or a directory`);
+      expect(await readFile(escapee, "utf8")).toBe(conflicted);
+      expect(result.code).toBe(1);
+    });
+
+    // QFAI:EX-0001-0238-17
+    it("leaves a working file under a directory that links outside the project", async (ctx) => {
+      await sameSentence();
+      const conflicted = await read(EXAMPLES);
+      const story = path.dirname(path.join(root, EXAMPLES));
+      const moved = path.join(outside, "story");
+      await rename(story, moved);
+      if (!(await createSymlinkFixture(moved, story, "junction"))) ctx.skip();
+      const result = await mergeDocs();
+      expect(result.stdout).toContain(`${EXAMPLES}: left as is; its working file or a directory`);
+      expect(await readFile(path.join(moved, path.basename(EXAMPLES)), "utf8")).toBe(conflicted);
+      expect(result.code).toBe(1);
+    });
+
+    // QFAI:EX-0001-0238-17
+    it("leaves a working file that is not UTF-8 text", async () => {
+      await sameSentence();
+      const bytes = Buffer.concat([
+        await readFile(path.join(root, EXAMPLES)),
+        Buffer.from([0xff, 0x0a]),
+      ]);
+      await writeFile(path.join(root, EXAMPLES), bytes);
+      const result = await mergeDocs();
+      expect(result.stdout).toContain(
+        `${EXAMPLES}: left as is; the working file is not UTF-8 text`,
+      );
+      expect(await readFile(path.join(root, EXAMPLES))).toEqual(bytes);
+      expect(result.code).toBe(1);
+    });
   });
 
   // QFAI:EX-0001-0238-12

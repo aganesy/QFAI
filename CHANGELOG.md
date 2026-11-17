@@ -547,6 +547,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   side by side, and the findings and counts are the same either way.
   Fixes #4279.
 
+- **`qfai sdd merge-docs` replaces only the document it read.** It wrote the
+  merged text through the working file's name, so a working file or story
+  directory that was a symbolic link had the text written wherever the link
+  pointed, outside the project included. It now leaves such a document, and
+  one whose working file is not UTF-8 text, as it is and names it, and
+  replaces the file by renaming a temporary file beside it only while the
+  name still holds the file it read. Fixes #4461.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
