@@ -25,4 +25,11 @@ Feature: doctor --autoremediate mode
     When `qfai doctor --autoremediate --yes` runs
     Then no `npm install` runs
     And the output says the install phase is skipped
+
+  # AC-0003-0009-04
+  Scenario: --autoremediate without --yes installs only after the operator confirms
+    Given `--profile <skill>` names a manifest that declares uninstalled runtimeDependencies, outside CI
+    When `qfai doctor --autoremediate` runs without `--yes`
+    Then an operator at a terminal is shown the packages and `npm install` runs only after an affirmative answer
+    And a session with no terminal on stdin installs nothing and says to rerun with `--yes`
 ```

@@ -442,6 +442,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai doctor --autoremediate` asks before it installs packages.**
+  Without `--yes` the install phase ran `npm install` for a skill's missing
+  runtime dependencies unattended, although those packages' install scripts
+  run with your privileges. It now names the packages and installs them only
+  after you answer `y`. A session whose stdin is not a terminal installs
+  nothing without `--yes` and says to rerun with it; the rest of the pass still
+  runs. Closes #4464.
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
