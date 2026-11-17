@@ -357,7 +357,7 @@ describe("cli usage errors", () => {
     const { stdout, stderr } = await captureRun(["validate", "--profile", "bogus"]);
     expect(stderr).toContain("--profile");
     expect(stderr).toContain('"bogus"');
-    expect(stdout).toContain("qfai <command> [options]");
+    expect(stdout).toContain("qfai validate");
   });
 
   it("surfaces the per-family subcommand diagnostics on stderr", async () => {

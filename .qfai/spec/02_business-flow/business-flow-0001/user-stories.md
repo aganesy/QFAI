@@ -189,3 +189,4 @@
 | US-0001-0312 | Derive the design tokens and the theme from DESIGN.md                                  | `user-story-0001-0312/` |
 | US-0001-0313 | A checkout that did not reinstall after a qfai upgrade is caught                       | `user-story-0001-0313/` |
 | US-0001-0314 | Settle what a Japanese product needs from one locale reference                         | `user-story-0001-0314/` |
+| US-0001-0315 | A refused argument shows the command's own usage, not the whole help                   | `user-story-0001-0315/` |

@@ -114,7 +114,10 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         error(await unavailableCommandDiagnosis(options.root));
       }
     }
-    info(usage());
+    // A refused argument of a known command gets that command's usage lines,
+    // not the help of every command: one missing flag must not cost the
+    // caller the whole help text on every call.
+    info(invalid && command ? refusedUsage(command, subcommandOf(options)) : usage());
     if (invalid) {
       process.exitCode = options.invalidExitCode;
     }
@@ -251,7 +254,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           error(
             "qfai doctor: --profile accepts 'prototyping' or a skill name (e.g. 'qfai-prototyping').",
           );
-          info(usage());
+          info(refusedUsage("doctor"));
           process.exitCode = options.invalidExitCode;
           return;
         }
@@ -315,7 +318,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       {
         if (!options.sddAction) {
           error("qfai sdd: unknown or missing subcommand. Expected: preflight|next-id|merge-docs");
-          info(usage());
+          info(refusedUsage("sdd"));
           process.exitCode = options.invalidExitCode;
           return;
         }
@@ -461,6 +464,42 @@ function workflowRefusalSubjects(invalid: boolean, options: ParsedArgs["options"
   ];
   if (given.length === 1 || given.join(" ") === "--in --route") return [];
   return given.length === 0 ? ["--in"] : given;
+}
+
+/** The subcommand the parser accepted, where the command takes one. */
+function subcommandOf(options: ParsedArgs["options"]): string | undefined {
+  return options.sddAction ?? options.atddAction ?? options.catalogAction;
+}
+
+/**
+ * The usage lines of one command, from the command list `usage()` prints,
+ * narrowed to `subcommand` when it names one of them, and a pointer to the
+ * whole help. A command the list does not name falls back to the whole help.
+ */
+function refusedUsage(command: string, subcommand?: string): string {
+  const help = usage();
+  const start = help.indexOf("Commands:\n");
+  const end = help.indexOf("\n\nOptions:");
+  const commandLines = help
+    .slice(start + "Commands:\n".length, end)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line === command || line.startsWith(`${command} `));
+  const narrowed =
+    subcommand === undefined
+      ? []
+      : commandLines.filter(
+          (line) =>
+            line === `${command} ${subcommand}` || line.startsWith(`${command} ${subcommand} `),
+        );
+  const lines = narrowed.length > 0 ? narrowed : commandLines;
+  if (start < 0 || end < 0 || lines.length === 0) return help;
+  return [
+    "Usage:",
+    ...lines.map((line) => `  qfai ${line}`),
+    "Run `qfai --help` for every option.",
+    "",
+  ].join("\n");
 }
 
 function usage(): string {
