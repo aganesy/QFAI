@@ -2331,6 +2331,119 @@ describe("the release tag is exactly vX.Y.Z, and the check is run rather than re
   });
 });
 
+describe("the GitHub Release is created only for the tag commit the workflow verified", () => {
+  // `verify` resolves the tag, and the gates run on that commit for minutes afterwards. A tag
+  // moved or deleted in that window used to reach `gh release create` unchecked: it names a tag,
+  // not a commit, so the Release described a commit no gate ran on — and for a deleted tag it
+  // created a new one at the default branch head.
+  //
+  // EXECUTED, not grepped: the step body runs under bash with `gh` replaced by a shell function
+  // that answers from the table each row supplies. A function takes precedence over any `gh` on
+  // PATH, so no real API is reached.
+
+  const BIND_STEP = "Confirm the tag still points at the verified commit";
+  const VERIFIED = "a".repeat(40);
+  const OTHER = "b".repeat(40);
+  const TAG_OBJECT = "c".repeat(40);
+
+  const releaseSteps = (): Array<Record<string, unknown>> => {
+    const doc = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "release.yml"), "utf-8"),
+    ) as { jobs?: Record<string, { steps?: Array<Record<string, unknown>> }> };
+    const found = doc.jobs?.["github-release"]?.steps ?? [];
+    expect(found.length, "release.yml has no github-release job with steps").toBeGreaterThan(0);
+    return found;
+  };
+
+  /** Runs the binding step against a faked API; `answers` maps an API path to its reply. */
+  const bind = (
+    answers: Record<string, string>,
+    eventSha: string,
+  ): { status: number | null; output: string } => {
+    const step = releaseSteps().find((candidate) => candidate["name"] === BIND_STEP);
+    const body = step?.["run"];
+    expect(body, `the github-release job has no "${BIND_STEP}" step with a body`).toBeTypeOf(
+      "string",
+    );
+    const fake = [
+      "gh() {",
+      '  case "$2" in',
+      ...Object.entries(answers).map(([route, reply]) => `    ${route}) echo '${reply}' ;;`),
+      '    *) echo "gh: Not Found (HTTP 404)" >&2; return 1 ;;',
+      "  esac",
+      "}",
+    ].join("\n");
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-release-bind-"));
+    try {
+      const script = path.join(dir, "bind.sh");
+      writeFileSync(script, `${fake}\n${typeof body === "string" ? body : ""}`, "utf-8");
+      const run = spawnSync("bash", [script], {
+        env: {
+          ...process.env,
+          GITHUB_REPOSITORY: "owner/repo",
+          RELEASE_TAG: "v1.2.3",
+          VERIFIED_SHA: VERIFIED,
+          EVENT_SHA: eventSha,
+        },
+        encoding: "utf-8",
+      });
+      if (run.error !== undefined) throw run.error;
+      return { status: run.status, output: `${run.stdout}${run.stderr}` };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  const REF = "repos/owner/repo/git/ref/tags/v1.2.3";
+  const OBJECT = `repos/owner/repo/git/tags/${TAG_OBJECT}`;
+
+  it("accepts an annotated or a lightweight tag that still names the verified commit", () => {
+    const annotated = bind(
+      { [REF]: `tag ${TAG_OBJECT}`, [OBJECT]: `commit ${VERIFIED}` },
+      VERIFIED,
+    );
+    expect(annotated.status, annotated.output).toBe(0);
+    const lightweight = bind({ [REF]: `commit ${VERIFIED}` }, VERIFIED);
+    expect(lightweight.status, lightweight.output).toBe(0);
+  });
+
+  it("refuses a tag that moved after verify, naming both commits", () => {
+    const moved = bind({ [REF]: `tag ${TAG_OBJECT}`, [OBJECT]: `commit ${OTHER}` }, VERIFIED);
+    expect(moved.status, "a moved tag must stop the Release").not.toBe(0);
+    expect(moved.output).toContain(OTHER);
+    expect(moved.output).toContain(VERIFIED);
+  });
+
+  it("refuses an event whose commit is not the verified one", () => {
+    const drifted = bind({ [REF]: `commit ${VERIFIED}` }, OTHER);
+    expect(drifted.status, "the event's commit must be the verified commit").not.toBe(0);
+    expect(drifted.output).toContain(OTHER);
+  });
+
+  it("refuses a tag that no longer exists", () => {
+    const missing = bind({}, VERIFIED);
+    expect(missing.status, "an unreadable tag must stop the Release").not.toBe(0);
+    expect(missing.output).toContain("could not be read");
+  });
+
+  it("checks the tag before creating the Release, which refuses to create a missing tag", () => {
+    const steps = releaseSteps();
+    const bindAt = steps.findIndex((step) => step["name"] === BIND_STEP);
+    // The invocation, not the text: the notes step's comments name the command too.
+    const creates = steps.flatMap((step, index) =>
+      /^\s*gh release create\b/m.test(String(step["run"] ?? "")) ? [index] : [],
+    );
+    expect(creates, "the github-release job must create the Release exactly once").toHaveLength(1);
+    const [createAt = -1] = creates;
+    expect(bindAt, "the binding check must run before the Release is created").toBeGreaterThan(-1);
+    expect(bindAt).toBeLessThan(createAt);
+    expect(
+      String(steps[createAt]?.["run"] ?? ""),
+      "without --verify-tag, gh creates a missing tag at the default branch head",
+    ).toMatch(/--verify-tag\b/);
+  });
+});
+
 describe("the publish job confirms its environment before it runs anything the tag controls", () => {
   // `environment: release` makes a tag push PROPOSE a publish rather than perform one — but only
   // when the environment carries required reviewers. Without them GitHub starts the job at once,
