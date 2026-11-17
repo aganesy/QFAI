@@ -165,27 +165,38 @@ async function replacePinned(
     } finally {
       await handle.close();
     }
-    if ((await findUnsafeHostFileComponent(root, segments)) !== undefined) return UNSAFE_PATH;
-    const current = await lstat(target).catch(() => undefined);
-    if (current?.isFile() !== true || current.dev !== pinned.dev || current.ino !== pinned.ino)
-      return "the working file changed while it was merged";
-    await renameOver(temporary, target);
-    return null;
+    return await renameOver(temporary, target, async () => {
+      if ((await findUnsafeHostFileComponent(root, segments)) !== undefined) return UNSAFE_PATH;
+      const current = await lstat(target).catch(() => undefined);
+      return current?.isFile() === true && current.dev === pinned.dev && current.ino === pinned.ino
+        ? null
+        : "the working file changed while it was merged";
+    });
   } finally {
     await rm(temporary, { force: true });
   }
 }
 
 /**
- * `rename` over an existing file. Windows refuses it with `EPERM` or `EACCES` while an editor,
- * an indexer or a virus scanner briefly holds the file open, where writing through the name
- * succeeded, so those two are retried a few times on Windows before the failure is reported.
+ * `rename` over an existing file, each try only while `unsafe` finds nothing. Windows refuses a
+ * rename with `EPERM` or `EACCES` while an editor, an indexer or a virus scanner briefly holds the
+ * file open, where writing through the name succeeded, so those two are retried a few times on
+ * Windows before the failure is reported; the check runs again first, since the file may have
+ * been saved meanwhile.
+ *
+ * @returns `null` once renamed, or what `unsafe` found
  */
-async function renameOver(from: string, to: string): Promise<void> {
+async function renameOver(
+  from: string,
+  to: string,
+  unsafe: () => Promise<string | null>,
+): Promise<string | null> {
   for (let attempt = 1; ; attempt += 1) {
+    const reason = await unsafe();
+    if (reason !== null) return reason;
     try {
       await rename(from, to);
-      return;
+      return null;
     } catch (failure) {
       const code = failure instanceof Error && "code" in failure ? failure.code : undefined;
       const transient = process.platform === "win32" && (code === "EPERM" || code === "EACCES");
