@@ -328,7 +328,7 @@ flowchart LR
     `npx qfai doctor --format json`.
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` and installs the assistant tree
-    (`assistant/rule/`, `skill/`, `agent/` and `prompt/`), plus `qfai.config.yaml`.
+    (`assistant/rule/`, `skill/`, `step/`, `agent/` and `prompt/`), plus `qfai.config.yaml`.
   - Options:
 
     | Flag              | Effect                                                                                                                                                                                                                                                                                                                                                              |
@@ -1024,10 +1024,13 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   │   ├── rule
 │   │   │   ├── constitution.md
 │   │   │   └── test-layers.md
-│   │   └── skill
-│   │       ├── qfai-migration-v1-to-v2
-│   │       │   └── SKILL.md
-│   │       └── <other QFAI skills>
+│   │   ├── skill
+│   │   │   ├── qfai-migration-v1-to-v2
+│   │   │   │   └── SKILL.md
+│   │   │   └── <other QFAI skills>
+│   │   └── step
+│   │       └── <step>
+│   │           └── STEP.md
 │   ├── spec
 │   │   ├── 01_policy
 │   │   │   ├── objective.md
