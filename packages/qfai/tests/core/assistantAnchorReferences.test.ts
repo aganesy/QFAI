@@ -11,7 +11,8 @@
  * section and proceeds on whatever the agent inferred.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { lstat, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -523,6 +524,118 @@ describe("validateAssistantAnchorReferences", () => {
       async (root) => {
         const issues = await run(root);
         expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
+      },
+    );
+  });
+});
+
+describe("the read boundary", () => {
+  // The walk followed every link it met and read whatever the link named: a
+  // linked directory or document reaching out of the assistant tree had its
+  // contents indexed and its citations held to this rule, and a link to a FIFO
+  // stopped the run in `readFile` with no finding and no exit. Only what
+  // resolves inside the tree is read, and only as a bounded regular file.
+
+  /** A document outside the tree whose citation would be reported if it were read. */
+  const OUTSIDE_DOCUMENT = [
+    "# Outside notes",
+    "",
+    "See `.qfai/assistant/rule/workflow.md#no-such-section`.",
+    "",
+  ].join("\n");
+
+  const TREE = {
+    ".qfai/assistant/rule/workflow.md": ["# Workflow", "", "## Stages", ""].join("\n"),
+    "vendor/outside/notes.md": OUTSIDE_DOCUMENT,
+  };
+
+  const DIRECTORY_LINK = process.platform === "win32" ? "junction" : "dir";
+
+  it("does not descend a linked directory that resolves outside the tree", async () => {
+    await withAssistantTree(TREE, async (root) => {
+      await symlink(
+        path.join(root, "vendor", "outside"),
+        path.join(root, ".qfai", "assistant", "rule", "linked"),
+        DIRECTORY_LINK,
+      );
+      expect(await run(root)).toEqual([]);
+    });
+  });
+
+  it("does not read a linked document that resolves outside the tree", async () => {
+    await withAssistantTree(TREE, async (root) => {
+      await symlink(
+        path.join(root, "vendor", "outside", "notes.md"),
+        path.join(root, ".qfai", "assistant", "rule", "notes.md"),
+        "file",
+      );
+      expect(await run(root)).toEqual([]);
+    });
+  });
+
+  it("still reads a tree that is itself linked in from elsewhere", async () => {
+    // Vendoring the whole tree by link is a layout a project may choose: the
+    // boundary is where the tree resolves to, not the path that names it.
+    await withAssistantTree(
+      {
+        "vendor/assistant/rule/workflow.md": ["# Workflow", ""].join("\n"),
+        "vendor/assistant/rule/test-layers.md": [
+          "# Test layers",
+          "",
+          "See `rule/workflow.md#no-such-section`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        await rm(path.join(root, ".qfai", "assistant"), { recursive: true, force: true });
+        await symlink(
+          path.join(root, "vendor", "assistant"),
+          path.join(root, ".qfai", "assistant"),
+          DIRECTORY_LINK,
+        );
+        const issues = await run(root);
+        expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
+      },
+    );
+  });
+
+  it("skips a linked document that is not a regular file and keeps walking", async (ctx) => {
+    await withAssistantTree(
+      {
+        ".qfai/assistant/rule/workflow.md": ["# Workflow", ""].join("\n"),
+        ".qfai/assistant/rule/test-layers.md": [
+          "# Test layers",
+          "",
+          "See `rule/workflow.md#no-such-section`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const fifo = path.join(root, ".qfai", "assistant", "rule", "pipe");
+        // On Windows `mkfifo` may exist yet make a FIFO this process cannot
+        // see, so the fixture is verified rather than the exit status.
+        spawnSync("mkfifo", [fifo]);
+        const planted = await lstat(fifo).then(
+          (stats) => stats.isFIFO(),
+          () => false,
+        );
+        if (!planted) ctx.skip(); // no FIFO this process can see — nothing to assert
+        await symlink(fifo, path.join(root, ".qfai", "assistant", "rule", "pipe.md"), "file");
+        const issues = await run(root);
+        expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
+      },
+    );
+  });
+
+  it("refuses a document in the tree too large to read within the ceiling", async () => {
+    // Skipping it would drop every heading it holds, and each citation into it
+    // would then pass or fail against a document nobody read.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/rule/workflow.md": `# Workflow\n\n${"x".repeat(8 * 1024 * 1024)}\n`,
+      },
+      async (root) => {
+        await expect(run(root)).rejects.toThrow(/workflow\.md/);
       },
     );
   });

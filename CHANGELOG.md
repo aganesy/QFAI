@@ -460,6 +460,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
 
+- **The assistant anchor check reads only the assistant tree.** The
+  `QFAI-LINK-002` check followed every link under `.qfai/assistant/`: a link to
+  a directory or document outside the tree had its citations checked as if
+  they were QFAI's own, and a link to a named pipe stopped `qfai validate`
+  with no output. It now follows a link only when it resolves inside the tree,
+  which may itself be linked in whole, and skips an entry that is not a
+  regular file. A document in the tree that cannot be read, or is larger than
+  8 MiB, stops the run with a message naming it. Closes #4484.
+
 - **The `DESIGN.md` step says where a flow's surfaces come from.** It
   decided whether to run from `primary_surface` and `secondary_surfaces`, fields
   nothing has defined since 2.5.0. It now reads the surfaces the deliberation record
