@@ -823,11 +823,23 @@ function runMdschemaAsync(mdschema, schemaPath, files, root, limits) {
     // A failed start emits `error`, and Node does not promise a `close` after it.
     const settle = (/** @type {{ error?: Error, status: number | null }} */ end) =>
       finish(mdschemaResult({ ...end, stdout, stderr }, schemaPath));
-    // A killed process may still not close, so the run ends here, not on `close`.
+    let exited = false;
+    // A process can catch SIGTERM and keep its pipes open, which would hold the
+    // event loop and the caller. So the run ends here, not on `close`: the pipes
+    // are destroyed, the process no longer holds the loop, and one that outlives
+    // SIGTERM gets SIGKILL after a short grace.
     const stop = (why) => {
       if (settled) return;
-      child.kill();
       finish({ ok: false, spawnFailed: false, stopped: true, output: `${why} and was stopped` });
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      child.unref();
+      child.kill("SIGTERM");
+      // Not unref'd: the SIGKILL must go out before this process may exit.
+      const escalate = setTimeout(() => {
+        if (!exited) child.kill("SIGKILL");
+      }, KILL_GRACE_MS);
+      child.once("exit", () => clearTimeout(escalate));
     };
     const read = (append) => (chunk) => {
       if (settled) return;
@@ -857,6 +869,7 @@ function runMdschemaAsync(mdschema, schemaPath, files, root, limits) {
       "data",
       read((chunk) => (stderr += chunk)),
     );
+    child.on("exit", () => (exited = true));
     child.on("close", (status) => settle({ status }));
     timer = setTimeout(() => stop(`it ran longer than ${limits.timeoutMs} ms`), limits.timeoutMs);
   });
@@ -871,6 +884,9 @@ const MDSCHEMA_MAX_OUTPUT = 256 * 1024 * 1024;
  * gives its tools, far above what a whole story tree takes.
  */
 const MDSCHEMA_LIMITS = { timeoutMs: 120_000, maxOutputBytes: MDSCHEMA_MAX_OUTPUT };
+
+/** How long a stopped mdschema run has after SIGTERM before it gets SIGKILL. */
+const KILL_GRACE_MS = 250;
 
 /** How many manifest entries `checkDocuments` runs at the same time. */
 const CONCURRENT_ENTRIES = 8;
