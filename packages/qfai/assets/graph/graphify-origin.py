@@ -11,7 +11,9 @@ reverse lookups are refused outright, since a lookup can carry data itself.
 No redirect is followed, since one could switch the scheme on the approved host
 and port, which the socket checks cannot see. No child process starts, since an
 audit hook does not reach into one; extraction with a selected backend needs
-none, and Graphify's optional Git ignore probe falls back without it.
+none, and Graphify's optional Git ignore probe falls back without it. No socket
+binds or listens, since extraction only sends requests and an accepted
+connection would raise no connect event.
 """
 
 import ipaddress
@@ -25,8 +27,11 @@ REFUSAL = "Graphify network access outside the approved processing origin was re
 FORWARD_LOOKUPS = ("socket.gethostbyname", "socket.gethostbyname_ex")
 REVERSE_LOOKUPS = ("socket.gethostbyaddr", "socket.getnameinfo")
 TRAFFIC = ("socket.connect", "socket.sendto", "socket.sendmsg")
+# A POSIX os.spawn* is os.fork followed by os.exec in the child, so forking is refused too.
 PROCESSES = (
     "subprocess.Popen",
+    "os.fork",
+    "os.forkpty",
     "os.system",
     "os.exec",
     "os.posix_spawn",
@@ -84,7 +89,7 @@ def origin_hook(host, port):
             return False
 
     def allowed(event, args):
-        if event in PROCESSES or event in REVERSE_LOOKUPS:
+        if event in PROCESSES or event in REVERSE_LOOKUPS or event == "socket.bind":
             return False
         if event == "socket.getaddrinfo":
             return host_text(args[0]) == host and port_allowed(args[1])
@@ -109,8 +114,16 @@ def origin_hook(host, port):
 
 
 CHECKED = frozenset(
-    ("socket.getaddrinfo", *FORWARD_LOOKUPS, *REVERSE_LOOKUPS, *TRAFFIC, *PROCESSES)
+    ("socket.getaddrinfo", "socket.bind", *FORWARD_LOOKUPS, *REVERSE_LOOKUPS, *TRAFFIC, *PROCESSES)
 )
+
+
+def refuse_listening():
+    # Listening raises no audit event, and an unbound socket that listens is bound by the system.
+    def listen(self, *args):
+        raise PermissionError(REFUSAL)
+
+    socket.socket.listen = listen
 
 
 def without_redirects(send):
@@ -139,8 +152,10 @@ def main():
         sys.stderr.write("Usage: graphify-origin.py <origin URL> <Graphify arguments...>\n")
         sys.exit(2)
     host, port = approved_origin(sys.argv[1])
-    refuse_redirects()
+    # The hook comes first, so whatever importing an HTTP client does at import time is held too.
     sys.addaudithook(origin_hook(host, port))
+    refuse_listening()
+    refuse_redirects()
     sys.argv = ["graphify", *sys.argv[2:]]
     runpy.run_module("graphify", run_name="__main__", alter_sys=True)
 

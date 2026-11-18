@@ -53,6 +53,13 @@ processes = {
     "os.spawn": lookup(lambda: os.spawnv(os.P_WAIT, sys.executable, child)),
     "os.exec": lookup(lambda: os.execv(sys.executable, child)),
 }
+def fork():
+    child = os.fork()
+    if child == 0:
+        os._exit(0)
+    os.waitpid(child, 0)
+if hasattr(os, "fork"):
+    processes["os.fork"] = lookup(fork)
 if hasattr(os, "posix_spawn"):
     processes["os.posix_spawn"] = lookup(lambda: os.posix_spawn(sys.executable, child, os.environ))
 if hasattr(os, "startfile"):
@@ -76,11 +83,25 @@ print(json.dumps({
         "getnameinfo": lookup(lambda: socket.getnameinfo(("127.0.0.1", 80), 0)),
     },
     "processes": processes,
+    "listeners": {
+        "bind": lookup(lambda: socket.socket().bind(("127.0.0.1", 0))),
+        "listen": lookup(lambda: socket.socket().listen()),
+    },
+    "httpx import": httpx.IMPORT_REACH,
 }))
 `;
 
-// A stand-in for the httpx client the OpenAI SDK uses: send reports whether it would follow.
-const STUB_HTTPX = `class Client:
+// A stand-in for the httpx client the OpenAI SDK uses: send reports whether it would follow, and
+// importing it tries to reach another host, which must already be refused.
+const STUB_HTTPX = `import socket
+try:
+    socket.create_connection(("rationale-data.example.invalid", 80), timeout=5)
+    IMPORT_REACH = "connected"
+except PermissionError:
+    IMPORT_REACH = "refused"
+except OSError as error:
+    IMPORT_REACH = type(error).__name__
+class Client:
     def send(self, request, *, stream=False, follow_redirects=True):
         return follow_redirects
 class AsyncClient:
@@ -95,7 +116,7 @@ const PROCESSES = {
   "os.exec": "refused",
   ...(process.platform === "win32"
     ? { "os.startfile": "refused" }
-    : { "os.posix_spawn": "refused" }),
+    : { "os.fork": "refused", "os.posix_spawn": "refused" }),
 };
 
 const GUARDED = {
@@ -114,6 +135,8 @@ const GUARDED = {
     getnameinfo: "refused",
   },
   processes: PROCESSES,
+  listeners: { bind: "refused", listen: "refused" },
+  "httpx import": "refused",
 };
 
 interface Endpoint {
@@ -209,6 +232,8 @@ async function close(...endpoints: Endpoint[]): Promise<void> {
 // Mutation: packages/qfai/assets/graph/graphify-origin.py `raise PermissionError(REFUSAL)` -> `pass` fails "delivers the synthetic document only to the selected local origin"
 // Mutation: packages/qfai/assets/graph/graphify-origin.py `    refuse_redirects()` -> `    pass` fails "delivers the synthetic document only to the selected local origin"
 // Mutation: packages/qfai/assets/graph/graphify-origin.py `if event in PROCESSES or event in REVERSE_LOOKUPS:` -> `if event in REVERSE_LOOKUPS:` fails "delivers the synthetic document only to the selected local origin"
+// Mutation: packages/qfai/assets/graph/graphify-origin.py ` or event == "socket.bind":` -> `:` fails "delivers the synthetic document only to the selected local origin"
+// Mutation: packages/qfai/assets/graph/graphify-origin.py `    refuse_listening()` -> `    pass` fails "delivers the synthetic document only to the selected local origin"
 it("delivers the synthetic document only to the selected local origin", async () => {
   const other = await endpoint();
   const approved = await endpoint(() => other.origin);
