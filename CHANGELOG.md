@@ -467,6 +467,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   staging file is now removed only when it was written on the same machine by
   a process that is no longer running, or when it is more than an hour old,
   and each run writes its staging file under a name no other run can take.
+  Only that exact name is removed, so a leftover from an earlier version,
+  named `<file>.qfai-init-<pid>-<timestamp>`, stays: delete it by hand.
   Closes #4526.
 
 - **The `DESIGN.md` step says where a flow's surfaces come from.** It

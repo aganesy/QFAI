@@ -35,7 +35,7 @@ vi.mock("node:fs/promises", async () => {
 const { runInit } = await import("../helpers/legacyInit.js");
 const { captureStdout } = await import("../helpers/stdout.js");
 
-/** A staging path, by the only marker that is stable across pid and clock. */
+/** A staging path, by the only marker that is stable across host, pid and token. */
 const isStagingPath = (target: unknown): target is string =>
   typeof target === "string" && target.includes(".qfai-init-");
 

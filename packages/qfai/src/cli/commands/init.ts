@@ -1876,7 +1876,7 @@ async function syncIntegrationWrappers(
   if (instructionsBlocked !== undefined) {
     info(describeSkippedPath(INSTRUCTIONS_DIR_ENTRY, instructionsBlocked));
   } else if (!options.dryRun) {
-    await sweepStagedFiles(destRoot, instructionsDir);
+    await sweepStagedFiles(destRoot, instructionsDir, instructionsFiles);
   }
 
   for (const fileName of instructionsFiles) {
@@ -2518,18 +2518,23 @@ interface StagingOwner {
 }
 
 /**
- * The writer in a basename {@link stagingPathFor} could have produced, or
- * `undefined` for any other name: a destination name, the infix, then the host
- * tag, the base-36 pid and the token.
+ * The writer in a basename {@link stagingPathFor} could have produced for one
+ * of `destNames`, or `undefined` for any other name: that destination name,
+ * the infix, then the eight-hex-digit host tag, the base-36 pid and the
+ * 32-hex-digit token.
  *
- * Read back through the same constant the writer uses, so the sweep cannot end
- * up looking for a shape nothing writes — which would leave it passing while
- * reclaiming nothing.
+ * Exactly that shape and no looser: a file the project named to look like ours,
+ * with another prefix or another token, is not ours to delete. Read back
+ * through the same constant the writer uses, so the sweep cannot end up looking
+ * for a shape nothing writes — which would leave it passing while reclaiming
+ * nothing.
  */
-function stagingOwner(name: string): StagingOwner | undefined {
-  const at = name.lastIndexOf(STAGING_INFIX);
-  if (at <= 0) return undefined;
-  const match = /^([0-9a-f]{8})-([0-9a-z]+)-[0-9a-z]+$/.exec(name.slice(at + STAGING_INFIX.length));
+function stagingOwner(name: string, destNames: readonly string[]): StagingOwner | undefined {
+  const dest = destNames.find((candidate) => name.startsWith(`${candidate}${STAGING_INFIX}`));
+  if (dest === undefined) return undefined;
+  const match = /^([0-9a-f]{8})-([0-9a-z]+)-[0-9a-f]{32}$/.exec(
+    name.slice(dest.length + STAGING_INFIX.length),
+  );
   const [, host, pid] = match ?? [];
   if (host === undefined || pid === undefined) return undefined;
   return { host, pid: Number.parseInt(pid, 36) };
@@ -2586,7 +2591,8 @@ function isEndedProcess(pid: number): boolean {
  * exists to protect. A same-directory stage plus a sweep keeps the atomic
  * replace and still leaves nothing behind.
  *
- * Only regular files whose name has the staging shape are removed, and only
+ * Only regular files whose name is the staging name of one of `destNames` are
+ * removed, and only
  * where the entry resolves inside the project: an orphan of ours is ours to
  * reclaim, anything else in that directory is not.
  *
@@ -2597,7 +2603,11 @@ function isEndedProcess(pid: number): boolean {
  * process, or when it is older than {@link STAGING_ABANDONED_AFTER_MS}. A file
  * another host wrote waits for the age: its pid says nothing about this host.
  */
-async function sweepStagedFiles(destRoot: string, dir: string): Promise<void> {
+async function sweepStagedFiles(
+  destRoot: string,
+  dir: string,
+  destNames: readonly string[],
+): Promise<void> {
   let entries: Dirent[];
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -2606,7 +2616,7 @@ async function sweepStagedFiles(destRoot: string, dir: string): Promise<void> {
   }
   const thisHost = stagingHostTag();
   for (const entry of entries) {
-    const owner = stagingOwner(entry.name);
+    const owner = stagingOwner(entry.name, destNames);
     if (owner === undefined) continue;
     const full = path.join(dir, entry.name);
     const stats = await safeLstat(full);

@@ -1695,7 +1695,7 @@ describe("qfai init", () => {
       // host tag, the base-36 pid and the token.
       const orphan = path.join(
         instrDir,
-        "code-review.instructions.md.qfai-init-0a1b2c3d-1a2b-3c4d",
+        "code-review.instructions.md.qfai-init-0a1b2c3d-1a2b-3c4d0000000000000000000000000000",
       );
       await writeFile(orphan, "half-written\n", "utf-8");
       // Old enough to be abandoned whether or not some process now holds that pid.
@@ -1704,14 +1704,26 @@ describe("qfai init", () => {
       // An unrelated dotfile in the same directory must survive: the sweep is
       // scoped to names this command could have written.
       const bystander = path.join(instrDir, "notes.qfai-init-notes.md");
-      await writeFile(bystander, "keep\n", "utf-8");
+      // Look-alikes the project wrote: the staging suffix after a name init
+      // never writes, and a destination name with a token init never writes.
+      // Both are old, so only the name keeps them.
+      const lookAlikes = [
+        "notes.md.qfai-init-0a1b2c3d-1a2b-3c4d0000000000000000000000000000",
+        "code-review.instructions.md.qfai-init-0a1b2c3d-1a2b-3c4d",
+      ];
+      for (const name of [path.basename(bystander), ...lookAlikes]) {
+        await writeFile(path.join(instrDir, name), "keep\n", "utf-8");
+        await utimes(path.join(instrDir, name), longAgo, longAgo);
+      }
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual([
-        "notes.qfai-init-notes.md",
-      ]);
-      expect(await readFile(bystander, "utf-8")).toBe("keep\n");
+      expect(
+        (await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-")).sort(),
+      ).toEqual(["notes.qfai-init-notes.md", ...lookAlikes].sort());
+      for (const name of [path.basename(bystander), ...lookAlikes]) {
+        expect(await readFile(path.join(instrDir, name), "utf-8")).toBe("keep\n");
+      }
     } finally {
       await removeTempTree(root);
     }
@@ -1743,12 +1755,17 @@ describe("qfai init", () => {
       const staged = (dest: string, host: string, pid: string, token: string) =>
         path.join(instrDir, `${dest}.qfai-init-${host}-${pid}-${token}`);
 
-      const active = staged("code-review.instructions.md", thisHost, livePid, "a1");
-      const killed = staged("code-review.instructions.md", thisHost, deadPid, "b2");
-      const stale = staged("principles.instructions.md", thisHost, livePid, "c3");
+      const active = staged("code-review.instructions.md", thisHost, livePid, "a1".repeat(16));
+      const killed = staged("code-review.instructions.md", thisHost, deadPid, "b2".repeat(16));
+      const stale = staged("principles.instructions.md", thisHost, livePid, "c3".repeat(16));
       // On another host, the dead pid here may be a run still writing there.
-      const remoteActive = staged("principles.instructions.md", otherHost, deadPid, "d4");
-      const remoteStale = staged("principles.instructions.md", otherHost, deadPid, "e5");
+      const remoteActive = staged(
+        "principles.instructions.md",
+        otherHost,
+        deadPid,
+        "d4".repeat(16),
+      );
+      const remoteStale = staged("principles.instructions.md", otherHost, deadPid, "e5".repeat(16));
       await writeFile(active, "in-flight\n", "utf-8");
       await writeFile(remoteActive, "in-flight\n", "utf-8");
       for (const leftover of [killed, stale, remoteStale]) {
@@ -1779,7 +1796,7 @@ describe("qfai init", () => {
       await mkdir(instrDir, { recursive: true });
       const orphan = path.join(
         instrDir,
-        "code-review.instructions.md.qfai-init-0a1b2c3d-1a2b-3c4d",
+        "code-review.instructions.md.qfai-init-0a1b2c3d-1a2b-3c4d0000000000000000000000000000",
       );
       await writeFile(orphan, "half-written\n", "utf-8");
 
