@@ -191,12 +191,14 @@ export async function prepareDocumentAnalysisLocked(
   await mkdir(staged, { recursive: true });
   try {
     await mirrorGraphCorpus(root, staged, scope);
+    // The guard refuses every connection outside the endpoint's origin, so a redirect or a
+    // fallback provider cannot carry documents past the selected or authorized destination.
     const result = await run(
       graphRuntimePaths(root).python,
       [
         ...GRAPH_PYTHON_FLAGS,
-        "-m",
-        "graphify",
+        path.resolve(getInitAssetsDir(), "..", "graph", "graphify-origin.py"),
+        endpoint,
         "extract",
         path.toNamespacedPath(staged),
         "--backend",

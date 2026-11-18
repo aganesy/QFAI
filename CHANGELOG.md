@@ -608,6 +608,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   side by side, and the findings and counts are the same either way.
   Fixes #4279.
 
+- **Document analysis reaches only the approved processing origin.**
+  Graphify document extraction was given the selected or authorized endpoint,
+  but nothing stopped the process from following a redirect or sending to
+  another host. Extraction now runs under a guard that refuses every name
+  lookup and connection outside that endpoint's host name and port, including
+  another name for the same address, and refuses reverse lookups. It follows
+  no redirect, which could otherwise switch an `https` endpoint to `http`,
+  starts no child process, which the guard could not reach, and opens no
+  listening socket. A local backend
+  stays local and a different origin needs its own authorization.
+  Closes #4496.
+
 ## [2.5.0] - 2026-11-15
 
 ### Added
