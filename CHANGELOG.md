@@ -453,6 +453,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
+- **`qfai init` no longer activates graph runtimes beside a graph query.** Graph
+  queries and document preparation held a worktree lock, but `qfai init`
+  replaced the runtimes under `.qfai/tools/` without it, so a query or a second
+  `qfai init` in the same worktree could run against a half-replaced runtime.
+  `qfai init` now holds the same lock while it prepares the graph tools. A
+  query that meets it fails with the contention and a retry line, and an init
+  that meets it stops with the same retry line and asks to run `qfai init`
+  again. Closes #4586.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the

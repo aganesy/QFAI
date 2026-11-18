@@ -7,6 +7,9 @@ import { graphEnvironmentKey } from "../../../src/core/graph/layout.js";
 import { codeAnalysisFixture } from "../../helpers/graphAnalysis.js";
 import { graphCliResult } from "../../helpers/graphCli.js";
 import type { GraphProcess } from "../../../src/core/graph/process.js";
+import { runInit } from "../../../src/cli/commands/init.js";
+import { graphProject } from "../../helpers/graphProject.js";
+import { captureStdout } from "../../helpers/stdout.js";
 
 // QFAI:EX-0001-0236-20
 it("retains contended and abandoned analysis locks with retry or exact manual recovery", async () => {
@@ -96,5 +99,50 @@ it("serializes same-worktree queries while another worktree proceeds independent
     await pending;
     await first.dispose();
     await other.dispose();
+  }
+});
+
+// QFAI:EX-0001-0236-24
+it("serializes init runtime activation with graph queries and another init", async () => {
+  const project = await graphProject();
+  let release: () => void = () => undefined;
+  let began: () => void = () => undefined;
+  const barrier = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const started = new Promise<void>((resolve) => {
+    began = resolve;
+  });
+  const run: GraphProcess = async (command, args, options) => {
+    if (args.includes("--prefix")) {
+      began();
+      await barrier;
+    }
+    return project.fixture.run(command, args, options);
+  };
+  const activating = captureStdout(() =>
+    runInit({ dir: project.root, force: false, dryRun: false, yes: true }, {}, run),
+  );
+  try {
+    await started;
+    const busy = await graphCliResult(project.root, ["code", "checkout callers"], run);
+    expect(busy.value).toMatchObject({
+      status: "failed",
+      failure: expect.stringContaining("contended"),
+      recovery: expect.stringContaining("Retry"),
+    });
+    expect(busy.failures).toBe(1);
+    const calls = project.fixture.calls.length;
+    await expect(project.initialize()).rejects.toThrow(/contended.*Retry.*qfai init again/s);
+    expect(project.fixture.calls).toHaveLength(calls);
+    release();
+    await activating;
+    const state = path.join(project.root, ".qfai", "tools", "state", graphEnvironmentKey());
+    expect(await readdir(state)).toEqual([]);
+    expect(await project.initialize()).toContain("qfai init: done");
+  } finally {
+    release();
+    await activating.catch(() => undefined);
+    await project.dispose();
   }
 });
