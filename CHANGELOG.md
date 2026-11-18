@@ -440,6 +440,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/tools/graph-enforcement.json` and the `*.pending.json`, `*.draft.json`
   and `*.grant.json` files under `.qfai/tools/state/`.
 
+- **The run log's `traceability.json` no longer carries `stats`.** Its
+  `downstream_violations` and `shared_scope_violations` counted finding codes
+  no check reports any more, so both were always 0. The file now holds
+  `schema_version` and `nodes` only.
+
 ### Fixed
 
 - **A refused argument prints the command's usage, not the whole help.**
