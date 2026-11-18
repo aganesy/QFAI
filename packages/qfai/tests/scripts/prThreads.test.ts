@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   codexFindings,
   deferredEntry,
+  foreignThread,
   formatThread,
   run,
   unresolvedThreads,
@@ -153,6 +154,41 @@ describe("the entry a deferred finding leaves in the follow-up issue", () => {
 
   it("is undefined for an id that names no thread", () => {
     expect(deferredEntry("12", { data: { node: null } })).toBeUndefined();
+  });
+});
+
+describe("whether a deferred thread belongs to the pull request it was given", () => {
+  const owned = (pullRequest: unknown): unknown => ({ data: { node: { path: "a", pullRequest } } });
+  const of = (number: unknown, nameWithOwner: unknown): unknown =>
+    owned({ number, repository: { nameWithOwner } });
+
+  it("accepts a thread of that pull request in that repository", () => {
+    expect(foreignThread("aganesy/QFAI", "12", of(12, "aganesy/QFAI"))).toBeUndefined();
+  });
+
+  it("reads the repository name without regard to case, as GitHub does", () => {
+    expect(foreignThread("Aganesy/qfai", "12", of(12, "aganesy/QFAI"))).toBeUndefined();
+  });
+
+  it("names the pull request a thread of another pull request belongs to", () => {
+    expect(foreignThread("aganesy/QFAI", "12", of(13, "aganesy/QFAI"))).toBe(
+      "The thread belongs to aganesy/QFAI#13, not aganesy/QFAI#12.",
+    );
+  });
+
+  it("names the repository a thread of another repository belongs to", () => {
+    expect(foreignThread("aganesy/QFAI", "12", of(12, "someone/fork"))).toBe(
+      "The thread belongs to someone/fork#12, not aganesy/QFAI#12.",
+    );
+  });
+
+  it("refuses a thread whose pull request the answer does not name", () => {
+    expect(foreignThread("aganesy/QFAI", "12", owned(null))).toBe(
+      "GitHub's answer does not name the pull request that thread belongs to.",
+    );
+    expect(foreignThread("aganesy/QFAI", "12", of("12", "aganesy/QFAI"))).toBe(
+      "GitHub's answer does not name the pull request that thread belongs to.",
+    );
   });
 });
 

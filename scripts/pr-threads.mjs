@@ -13,7 +13,9 @@
  * - `resolve` resolves the threads it is given.
  * - `defer` records one thread's finding in a follow-up issue, replies to the
  *   thread with that issue's number and resolves it, in that order, so a
- *   resolved thread always has its finding in the issue.
+ *   resolved thread always has its finding in the issue. It first checks that
+ *   the thread belongs to the pull request it was given, in the repository of
+ *   `origin`, and writes nothing when it does not.
  *
  * A reply takes its body from a file because a body typed into a shell argument
  * has its backticks and `$(...)` run by the shell before this sees it.
@@ -69,6 +71,7 @@ const THREAD_QUERY = `query($id:ID!){
   node(id:$id){
     ... on PullRequestReviewThread {
       path line
+      pullRequest{ number repository{ nameWithOwner } }
       comments(first:1){ nodes{ url author{login} body } }
     }
   }
@@ -143,6 +146,24 @@ export function deferredEntry(pr, response) {
     "",
     first.body.trim(),
   ].join("\n");
+}
+
+/**
+ * Why a thread is not one of pull request `pr` in repository `slug`, or
+ * `undefined` when it is.
+ *
+ * An answer that does not name the thread's pull request is refused too, so a
+ * changed response shape never reads as a match.
+ */
+export function foreignThread(slug, pr, response) {
+  const pullRequest = response?.data?.node?.pullRequest;
+  const owner = pullRequest?.repository?.nameWithOwner;
+  if (!Number.isInteger(pullRequest?.number) || typeof owner !== "string") {
+    return "GitHub's answer does not name the pull request that thread belongs to.";
+  }
+  const sameRepository = owner.toLowerCase() === slug.toLowerCase();
+  if (sameRepository && String(pullRequest.number) === pr) return undefined;
+  return `The thread belongs to ${owner}#${String(pullRequest.number)}, not ${slug}#${pr}.`;
 }
 
 function gh(args) {
@@ -220,12 +241,17 @@ function resolveCommand(threadIds) {
 }
 
 function deferCommand(slug, pr, threadId, issue) {
-  const entry = deferredEntry(
-    pr,
-    JSON.parse(gh(["api", "graphql", "-f", `query=${THREAD_QUERY}`, "-F", `id=${threadId}`])),
+  const response = JSON.parse(
+    gh(["api", "graphql", "-f", `query=${THREAD_QUERY}`, "-F", `id=${threadId}`]),
   );
+  const entry = deferredEntry(pr, response);
   if (entry === undefined) {
     console.error("GitHub's answer holds no review thread with that id.");
+    return 2;
+  }
+  const mismatch = foreignThread(slug, pr, response);
+  if (mismatch !== undefined) {
+    console.error(`${mismatch} Nothing was recorded, replied to or resolved.`);
     return 2;
   }
   gh(["api", `repos/${slug}/issues/${issue}/comments`, "-f", `body=${entry}`]);
