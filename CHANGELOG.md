@@ -442,6 +442,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
+  difference exits 0 under `--fail-on never`, but the parser refused the flag
+  on `db-drift` and the command exited 2. `db-drift` now takes
+  `--fail-on never` and `--fail-on error`, the default; `warning` is refused,
+  since the command has no warning tier. Closes #4516.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
