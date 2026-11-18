@@ -119,6 +119,89 @@ describe("reading two schemas and comparing them", () => {
     expect(result.differences[0]).toMatchObject({ kind: "differs", fields: ["type"] });
   });
 
+  // `information_schema.columns.data_type` gives each pair below the same value
+  // (`character varying`, `numeric`, `ARRAY`, `USER-DEFINED`), so a comparison
+  // of that column alone saw no drift in any of them.
+  it.each([
+    {
+      what: "a varchar length",
+      contracts: "code VARCHAR(20)",
+      migrations: "code VARCHAR(40)",
+      types: ["character varying(20)", "character varying(40)"],
+    },
+    {
+      what: "a numeric precision and scale",
+      contracts: "total NUMERIC(10,2)",
+      migrations: "total NUMERIC(12,4)",
+      types: ["numeric(10,2)", "numeric(12,4)"],
+    },
+    {
+      what: "an array element type",
+      contracts: "tags TEXT[]",
+      migrations: "tags INTEGER[]",
+      types: ["text[]", "integer[]"],
+    },
+  ])("reports $what that differs", async ({ contracts: column, migrations: other, types }) => {
+    const root = await newRoot();
+    const contract = await write(
+      root,
+      ".qfai/contracts/db/DB-0001.sql",
+      `-- QFAI-CONTRACT-ID: DB-0001\nCREATE TABLE orders (id TEXT PRIMARY KEY, ${column});\n`,
+    );
+    const migration = await write(
+      root,
+      "migrations/0001_orders.sql",
+      `CREATE TABLE orders (id TEXT PRIMARY KEY, ${other});\n`,
+    );
+
+    const result = await compareSchemas({
+      root,
+      contractFiles: [contract],
+      migrationFiles: [migration],
+      createDatabase: defaultDatabaseFactory,
+    });
+
+    expect(result.failures).toEqual([]);
+    expect(result.differences).toHaveLength(1);
+    expect(result.differences[0]).toMatchObject({
+      kind: "differs",
+      fields: ["type"],
+      contracts: { type: types[0] },
+      migrations: { type: types[1] },
+    });
+  });
+
+  it("reports a column whose user-defined type is a different one", async () => {
+    const root = await newRoot();
+    const contract = await write(
+      root,
+      ".qfai/contracts/db/DB-0001.sql",
+      "-- QFAI-CONTRACT-ID: DB-0001\nCREATE TYPE order_state AS ENUM ('open', 'closed');\nCREATE TABLE orders (id TEXT PRIMARY KEY, state order_state);\n",
+    );
+    const migration = await write(
+      root,
+      "migrations/0001_orders.sql",
+      "CREATE TYPE order_status AS ENUM ('open', 'closed');\nCREATE TABLE orders (id TEXT PRIMARY KEY, state order_status);\n",
+    );
+
+    const result = await compareSchemas({
+      root,
+      contractFiles: [contract],
+      migrationFiles: [migration],
+      createDatabase: defaultDatabaseFactory,
+    });
+
+    expect(result.failures).toEqual([]);
+    expect(result.differences).toMatchObject([
+      {
+        kind: "differs",
+        fields: ["type"],
+        contracts: { type: "order_state" },
+        migrations: { type: "order_status" },
+      },
+    ]);
+  });
+
   it("says nothing when the two build the same schema", async () => {
     const root = await newRoot();
     const ddl = "CREATE TABLE orders (id TEXT PRIMARY KEY, total NUMERIC NOT NULL DEFAULT 0);\n";

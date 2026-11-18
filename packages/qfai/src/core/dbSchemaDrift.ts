@@ -85,12 +85,25 @@ export type SchemaDatabase = {
 /** Makes one empty database. Injected so the engine is the caller's choice. */
 export type DatabaseFactory = () => Promise<SchemaDatabase>;
 
-/** The columns of every table in the public schema, in a stable order. */
+/**
+ * The columns of every table in the public schema, in a stable order.
+ *
+ * The type is the one `format_type` resolves from the column's type and its
+ * modifier, not `information_schema.columns.data_type`: that column drops the
+ * varchar length, the numeric precision and scale and the array element type,
+ * and reads `USER-DEFINED` for every user-defined type, so two different
+ * declarations read the same and their drift went unreported.
+ */
 const COLUMN_QUERY = `
-  SELECT table_name, column_name, data_type, is_nullable, column_default
-  FROM information_schema.columns
-  WHERE table_schema = 'public'
-  ORDER BY table_name, column_name
+  SELECT c.table_name, c.column_name,
+    pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
+    c.is_nullable, c.column_default
+  FROM information_schema.columns c
+  JOIN pg_catalog.pg_namespace n ON n.nspname = c.table_schema
+  JOIN pg_catalog.pg_class r ON r.relnamespace = n.oid AND r.relname = c.table_name
+  JOIN pg_catalog.pg_attribute a ON a.attrelid = r.oid AND a.attname = c.column_name
+  WHERE c.table_schema = 'public'
+  ORDER BY c.table_name, c.column_name
 `;
 
 /**
