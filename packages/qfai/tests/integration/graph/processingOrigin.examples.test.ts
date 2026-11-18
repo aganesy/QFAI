@@ -191,13 +191,18 @@ async function python(): Promise<string> {
 const CONTENT = "# Rationale\nSynthetic document for the origin guard.\n";
 
 /** Runs the guard over the stand-in Graphify and returns what the stand-in reports. */
-async function guardedRun(origin: string, approved: string, other: string): Promise<unknown> {
+async function guardedRun(
+  origin: string,
+  approved: string,
+  other: string,
+  graphify = STUB_GRAPHIFY,
+): Promise<unknown> {
   const directory = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-origin-"));
   try {
     const stub = path.join(directory, "stub");
     await mkdir(path.join(stub, "graphify"), { recursive: true });
     await writeFile(path.join(stub, "graphify", "__init__.py"), "");
-    await writeFile(path.join(stub, "graphify", "__main__.py"), STUB_GRAPHIFY);
+    await writeFile(path.join(stub, "graphify", "__main__.py"), graphify);
     await writeFile(path.join(stub, "httpx.py"), STUB_HTTPX);
     const document = path.join(directory, "rationale.md");
     await writeFile(document, CONTENT);
@@ -274,6 +279,36 @@ it("refuses another host name for the approved address", async () => {
   } finally {
     await close(approved);
   }
+});
+
+// A stand-in for Graphify that only looks up names: an internationalized name in its Unicode and
+// IDNA ASCII forms, and another name. A lookup that passes the guard fails in DNS on .invalid.
+const STUB_IDNA_LOOKUPS = `import json, socket
+def lookup(host):
+    try:
+        socket.getaddrinfo(host, 443)
+    except PermissionError:
+        return "refused"
+    except OSError:
+        pass
+    return "passed"
+print(json.dumps({
+    "ascii": lookup("xn--xample-9ua.invalid"),
+    "upper ascii": lookup("XN--XAMPLE-9UA.INVALID"),
+    "unicode": lookup("\\u00e9xample.invalid"),
+    "other": lookup("other-example.invalid"),
+}))
+`;
+
+// QFAI:EX-0001-0234-21
+// Mutation: packages/qfai/assets/graph/graphify-origin.py `        bare = bare.encode("idna").decode("ascii")` -> `        pass` fails "matches an internationalized approved host in its IDNA form"
+it("matches an internationalized approved host in its IDNA form", async () => {
+  expect(await guardedRun("https://\u00e9xample.invalid/v1", "", "", STUB_IDNA_LOOKUPS)).toEqual({
+    ascii: "passed",
+    "upper ascii": "passed",
+    unicode: "passed",
+    other: "refused",
+  });
 });
 
 // QFAI:EX-0001-0234-22

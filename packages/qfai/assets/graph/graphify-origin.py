@@ -56,7 +56,15 @@ def host_text(value):
     if not isinstance(value, str):
         return None
     bare = value.strip("[]")
-    return address_text(bare) or bare.lower().rstrip(".")
+    address = address_text(bare)
+    if address:
+        return address
+    # Clients resolve an internationalized name in its IDNA ASCII form, so both sides compare in it.
+    try:
+        bare = bare.encode("idna").decode("ascii")
+    except UnicodeError:
+        pass
+    return bare.lower().rstrip(".")
 
 
 def approved_origin(url):
