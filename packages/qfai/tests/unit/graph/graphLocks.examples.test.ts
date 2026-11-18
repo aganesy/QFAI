@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { prepareDocumentAnalysis } from "../../../src/core/graph/documents.js";
@@ -10,6 +10,7 @@ import type { GraphProcess } from "../../../src/core/graph/process.js";
 import { runInit } from "../../../src/cli/commands/init.js";
 import { graphProject } from "../../helpers/graphProject.js";
 import { captureStdout } from "../../helpers/stdout.js";
+import { prepareGraphIntegration } from "../../../src/core/graph/integration.js";
 
 // QFAI:EX-0001-0236-20
 it("retains contended and abandoned analysis locks with retry or exact manual recovery", async () => {
@@ -124,7 +125,8 @@ it("serializes init runtime activation with graph queries and another init", asy
     runInit({ dir: project.root, force: false, dryRun: false, yes: true }, {}, run),
   );
   try {
-    await started;
+    // An init that fails before its download surfaces here instead of timing out.
+    await Promise.race([started, activating]);
     const busy = await graphCliResult(project.root, ["code", "checkout callers"], run);
     expect(busy.value).toMatchObject({
       status: "failed",
@@ -143,6 +145,34 @@ it("serializes init runtime activation with graph queries and another init", asy
   } finally {
     release();
     await activating.catch(() => undefined);
+    await project.dispose();
+  }
+});
+
+// QFAI:EX-0001-0236-24
+it("replaces an older graph CLI entrypoint whole, so a starting query never reads it part-written", async () => {
+  const project = await graphProject();
+  try {
+    await project.initialize();
+    const tools = path.join(project.root, ".qfai", "tools");
+    const entrypoint = path.join(tools, "graph-cli.mjs");
+    const current = await readFile(entrypoint, "utf8");
+    const older = "// An entrypoint an earlier release wrote\n";
+    await writeFile(entrypoint, older);
+    await writeFile(
+      path.join(tools, "graph-entrypoints.json"),
+      JSON.stringify({ kind: "graph-entrypoints", sources: { "graph-cli.mjs": older } }) + "\n",
+    );
+    const before = await lstat(entrypoint);
+    expect((await prepareGraphIntegration(project.root, project.fixture.run)).files).toEqual([
+      ".qfai/tools/graph-cli.mjs",
+    ]);
+    // A truncate-and-write keeps the inode a starting query is reading; a rename into place
+    // swaps in a different, already complete file.
+    expect((await lstat(entrypoint)).ino).not.toBe(before.ino);
+    expect(await readFile(entrypoint, "utf8")).toBe(current);
+    expect((await readdir(tools)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  } finally {
     await project.dispose();
   }
 });

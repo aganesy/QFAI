@@ -1,4 +1,5 @@
-import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { getInitAssetsDir } from "../../shared/assets.js";
@@ -58,11 +59,26 @@ export async function installGraphEntrypoints(root: string): Promise<GraphSettin
   }
   await mkdir(directory, { recursive: true });
   for (const [name, source] of Object.entries(sources))
-    if (missing.includes(name)) await writeFile(path.join(directory, name), source);
+    if (missing.includes(name)) await replaceWhole(path.join(directory, name), source);
   const ownership = JSON.stringify({ kind: "graph-entrypoints", sources }) + "\n";
   if (missing.length > 0 || Object.keys(previous).length === 0)
-    await writeFile(path.join(directory, record), ownership);
+    await replaceWhole(path.join(directory, record), ownership);
   return { files: missing.map((name) => `.qfai/tools/${name}`), conflicts: [] };
+}
+
+/**
+ * Writes a file beside the target and renames it into place, so a graph query that starts while
+ * init runs (it loads the entrypoint before it can take the graph lock) reads the old file or the
+ * new one, never a truncated one.
+ */
+async function replaceWhole(target: string, text: string): Promise<void> {
+  const temporary = `${target}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, text, { flag: "wx" });
+    await rename(temporary, target);
+  } finally {
+    await rm(temporary, { force: true });
+  }
 }
 
 function wrapper(bundle: string, entry: string): string {

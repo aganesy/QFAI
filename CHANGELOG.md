@@ -460,7 +460,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai init` now holds the same lock while it prepares the graph tools. A
   query that meets it fails with the contention and a retry line, and an init
   that meets it stops with the same retry line and asks to run `qfai init`
-  again. Closes #4586.
+  again. The graph CLI entrypoint, which a query loads before it can take the
+  lock, is now written beside its target and renamed into place, so a query
+  never loads it part-written. Closes #4586.
 
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
