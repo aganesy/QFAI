@@ -145,3 +145,60 @@ describe("checking the manifest's entries at the same time", () => {
     });
   });
 });
+
+describe("bounding each mdschema run", () => {
+  /** A started mdschema process that never closes; `kills` counts each kill. */
+  function hangingChild(kills: { count: number }) {
+    return Object.assign(new EventEmitter(), {
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+      kill: () => {
+        kills.count += 1;
+        return true;
+      },
+    });
+  }
+
+  // QFAI:EX-0001-0011-26
+  it("stops a run past its time limit and reports the check as unfinished", async () => {
+    const root = await twoEntryTree();
+    const kills = { count: 0 };
+    control.spawn = () => hangingChild(kills);
+
+    const result = await checkDocuments(root, undefined, {
+      timeoutMs: 20,
+      maxOutputBytes: 1024,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "mdschema did not finish: it ran longer than 20 ms and was stopped",
+    });
+    expect(kills.count).toBe(2);
+  });
+
+  // QFAI:EX-0001-0011-26
+  it("stops a run past its output limit and reports the check as unfinished", async () => {
+    const root = await twoEntryTree();
+    const kills = { count: 0 };
+    control.spawn = () => {
+      const child = hangingChild(kills);
+      setTimeout(() => {
+        child.stdout.write("x".repeat(10));
+        child.stderr.write("y".repeat(10));
+      }, 0);
+      return child;
+    };
+
+    const result = await checkDocuments(root, undefined, {
+      timeoutMs: 60_000,
+      maxOutputBytes: 16,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "mdschema did not finish: it printed more than 16 bytes and was stopped",
+    });
+    expect(kills.count).toBe(2);
+  });
+});
