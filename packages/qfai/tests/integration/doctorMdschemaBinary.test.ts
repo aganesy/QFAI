@@ -186,7 +186,22 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     // QFAI:AC-0003-0011-10
     await packagedMdschema({ platform: "absent", platformFile: "for (;;) {}\n" });
 
-    const check = await checkMdschemaBinary(500);
+    // The deadline also bounds the `--help` run, so it leaves that run room to
+    // start Node on a loaded machine; only the looping platform file reaches it.
+    const check = await checkMdschemaBinary(5_000);
+
+    expect(check.severity).toBe("ok");
+  });
+
+  // QFAI:EX-0003-0011-37
+  it("stays ok and does not crash when the platform file throws once loaded", async () => {
+    // QFAI:AC-0003-0011-10
+    await packagedMdschema({
+      platform: "absent",
+      platformFile: 'throw new Error("test fixture: the platform file fails");\n',
+    });
+
+    const check = await checkMdschemaBinary();
 
     expect(check.severity).toBe("ok");
   });
