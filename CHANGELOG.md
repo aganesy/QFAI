@@ -466,6 +466,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
+- **The README names npm's own error for a Git install of QFAI.** It said
+  npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
+  through a `preinstall` guard. npm never reaches that guard: it stops with
+  `EUNSUPPORTEDPROTOCOL` at the repository root's `workspace:` dependency, an
+  error that does not mention QFAI. The README now describes npm's error and
+  gives the guard's message to yarn alone. Closes #4626.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
