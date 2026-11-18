@@ -224,8 +224,20 @@ async function applyAll(
   return applied;
 }
 
+/**
+ * The search path both databases are read under.
+ *
+ * `format_type` drops the schema of a type the session's search path can see,
+ * and the applied SQL may leave any search path behind — a dump ends with
+ * `SET search_path = pg_catalog`. Fixing it before the read makes the type text
+ * a function of the schema alone: every type outside `pg_catalog` reads
+ * schema-qualified on both sides, `public.order_state` included.
+ */
+const READ_SEARCH_PATH = "SET search_path TO pg_catalog";
+
 /** The columns one database holds, keyed `table.column`. */
 async function readColumns(db: SchemaDatabase): Promise<Map<string, ColumnFacts>> {
+  await db.exec(READ_SEARCH_PATH);
   const result = await db.query(COLUMN_QUERY);
   const columns = new Map<string, ColumnFacts>();
   for (const row of result.rows) {

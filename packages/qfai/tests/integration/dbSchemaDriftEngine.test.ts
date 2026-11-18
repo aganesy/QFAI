@@ -196,10 +196,37 @@ describe("reading two schemas and comparing them", () => {
       {
         kind: "differs",
         fields: ["type"],
-        contracts: { type: "order_state" },
-        migrations: { type: "order_status" },
+        contracts: { type: "public.order_state" },
+        migrations: { type: "public.order_status" },
       },
     ]);
+  });
+
+  it("reads a type the same way whatever search path the applied SQL left behind", async () => {
+    const root = await newRoot();
+    const ddl =
+      "CREATE TYPE order_state AS ENUM ('open', 'closed');\nCREATE TABLE orders (id TEXT PRIMARY KEY, state order_state);\n";
+    const contract = await write(
+      root,
+      ".qfai/contracts/db/DB-0001.sql",
+      `-- QFAI-CONTRACT-ID: DB-0001\n${ddl}`,
+    );
+    // A dump-style migration that ends by narrowing the search path, so a type
+    // rendered against the session would gain a schema qualifier on this side only.
+    const migration = await write(
+      root,
+      "migrations/0001_orders.sql",
+      `${ddl}SET search_path = pg_catalog;\n`,
+    );
+
+    const result = await compareSchemas({
+      root,
+      contractFiles: [contract],
+      migrationFiles: [migration],
+      createDatabase: defaultDatabaseFactory,
+    });
+
+    expect(result).toMatchObject({ differences: [], failures: [] });
   });
 
   it("says nothing when the two build the same schema", async () => {
