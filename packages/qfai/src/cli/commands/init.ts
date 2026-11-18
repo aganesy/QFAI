@@ -2506,8 +2506,12 @@ function stagingPathFor(dest: string): string {
  * `destNames`: that destination name, the infix, the base-36 pid as
  * `toString(36)` writes it (no leading zero), then the 32-hex-digit token.
  *
+ * The pid takes one to seven characters: every platform Node.js runs on keeps
+ * a pid within 32 unsigned bits, and the largest, 2^32 - 1, is `1z141z3` in
+ * base 36.
+ *
  * Exactly that shape and no looser: a file the project named to look like ours,
- * with another prefix or another token, is not ours to delete. Read back
+ * with another prefix, another pid or another token, is not ours to delete. Read back
  * through the same constant the writer uses, so the sweep cannot end up looking
  * for a shape nothing writes — which would leave it passing while reclaiming
  * nothing.
@@ -2516,7 +2520,7 @@ function isStagingName(name: string, destNames: readonly string[]): boolean {
   return destNames.some(
     (dest) =>
       name.startsWith(`${dest}${STAGING_INFIX}`) &&
-      /^[1-9a-z][0-9a-z]*-[0-9a-f]{32}$/.test(name.slice(dest.length + STAGING_INFIX.length)),
+      /^[1-9a-z][0-9a-z]{0,6}-[0-9a-f]{32}$/.test(name.slice(dest.length + STAGING_INFIX.length)),
   );
 }
 
@@ -2525,9 +2529,10 @@ function isStagingName(name: string, destNames: readonly string[]): boolean {
  *
  * A writer holds its staging file only between one small `writeFile` and its
  * `rename`, milliseconds on any disk, so a file this old belongs to no run
- * still writing. Ceiling: a writer stalled longer than this, or a clock set
- * back by more, loses its staging file and its rename fails; raise the value
- * if that is ever observed. A run that dies leaves its file for up to this
+ * still writing. Ceiling: a writer stalled longer than this loses its staging
+ * file and its rename fails, and so does one whose file a sweeping clock runs
+ * more than this ahead of (the clock set forward, or another host's clock
+ * ahead of the writer's); raise the value if that is ever observed. A run that dies leaves its file for up to this
  * long, until a later run sweeps it.
  */
 const STAGING_ABANDONED_AFTER_MS = 60 * 60 * 1000;

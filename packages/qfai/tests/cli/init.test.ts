@@ -1744,11 +1744,14 @@ describe("qfai init", () => {
         staged("principles.instructions.md", process.pid.toString(36), "d4".repeat(16)),
       ];
       // Old files the project named, close to but not what init writes: another
-      // destination name, a short token, and a pid with a leading zero.
+      // destination name, a short token, a pid with a leading zero and a pid
+      // too long to be one.
       const lookAlikes = [
         staged("notes.md", deadPid, "e5".repeat(16)),
         staged("code-review.instructions.md", deadPid, "e5"),
         staged("principles.instructions.md", `0${deadPid}`, "e5".repeat(16)),
+        // A pid longer than any 32-bit pid in base 36 (seven characters).
+        staged("principles.instructions.md", "z".repeat(100), "e5".repeat(16)),
       ];
       const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
       for (const name of [...recent, ...old, ...lookAlikes]) {
