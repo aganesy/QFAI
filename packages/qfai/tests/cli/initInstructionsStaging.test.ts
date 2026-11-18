@@ -2,7 +2,7 @@
  * The staging file a `--force` instructions refresh goes through is removed on
  * every path that does not consume it.
  *
- * `replaceWithRegularFile` writes `<dest>.qfai-init-<host>-<pid>-<token>` and renames it
+ * `replaceWithRegularFile` writes `<dest>.qfai-init-<pid>-<token>` and renames it
  * into place. The rename failures were already cleaned up, but the staging
  * write itself sat outside the guard: an `ENOSPC` or a mid-transfer I/O fault
  * that had already committed bytes left a partial `.qfai-init-*` inside
@@ -35,7 +35,7 @@ vi.mock("node:fs/promises", async () => {
 const { runInit } = await import("../helpers/legacyInit.js");
 const { captureStdout } = await import("../helpers/stdout.js");
 
-/** A staging path, by the only marker that is stable across host, pid and token. */
+/** A staging path, by the only marker that is stable across pid and token. */
 const isStagingPath = (target: unknown): target is string =>
   typeof target === "string" && target.includes(".qfai-init-");
 

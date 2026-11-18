@@ -1,6 +1,5 @@
 import path from "node:path";
-import { createHash, randomUUID } from "node:crypto";
-import os from "node:os";
+import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
@@ -2489,39 +2488,23 @@ async function resolvesOutsideProject(destRoot: string, target: string): Promise
 const STAGING_INFIX = ".qfai-init-";
 
 /**
- * This machine in a staging name: the first eight hex digits of the SHA-256 of
- * its host name. A pid identifies a process only on the machine that issued
- * it, so the sweep judges a pid only in a name that carries this tag.
- */
-function stagingHostTag(): string {
-  return createHash("sha256").update(os.hostname()).digest("hex").slice(0, 8);
-}
-
-/**
- * The sibling path {@link replaceWithRegularFile} stages `dest` at: the
- * {@link stagingHostTag}, the base-36 pid of the writing process, then a random
- * token.
+ * The sibling path {@link replaceWithRegularFile} stages `dest` at: the base-36
+ * pid of the writing process, then a random 32-hex-digit token.
  *
- * The host and pid are what let {@link sweepStagedFiles} tell a run that ended
- * from one still writing; the token keeps two writers apart where a host and a
- * pid would not, such as one process staging the same file twice.
+ * Both are there only to keep the name unique; nothing reads them back. The
+ * sweep decides by age alone, because neither a pid nor a host name identifies
+ * a writer once the directory is shared: two hosts, or two cloned machines with
+ * one host name, can hold the same pid at once.
  */
 function stagingPathFor(dest: string): string {
   const token = randomUUID().replaceAll("-", "");
-  return `${dest}${STAGING_INFIX}${stagingHostTag()}-${process.pid.toString(36)}-${token}`;
-}
-
-/** The writer a staging name records: the host tag and the pid. */
-interface StagingOwner {
-  readonly host: string;
-  readonly pid: number;
+  return `${dest}${STAGING_INFIX}${process.pid.toString(36)}-${token}`;
 }
 
 /**
- * The writer in a basename {@link stagingPathFor} could have produced for one
- * of `destNames`, or `undefined` for any other name: that destination name,
- * the infix, then the eight-hex-digit host tag, the base-36 pid and the
- * 32-hex-digit token.
+ * True for a basename {@link stagingPathFor} could have produced for one of
+ * `destNames`: that destination name, the infix, the base-36 pid as
+ * `toString(36)` writes it (no leading zero), then the 32-hex-digit token.
  *
  * Exactly that shape and no looser: a file the project named to look like ours,
  * with another prefix or another token, is not ours to delete. Read back
@@ -2529,47 +2512,25 @@ interface StagingOwner {
  * for a shape nothing writes — which would leave it passing while reclaiming
  * nothing.
  */
-function stagingOwner(name: string, destNames: readonly string[]): StagingOwner | undefined {
-  const dest = destNames.find((candidate) => name.startsWith(`${candidate}${STAGING_INFIX}`));
-  if (dest === undefined) return undefined;
-  const match = /^([0-9a-f]{8})-([0-9a-z]+)-[0-9a-f]{32}$/.exec(
-    name.slice(dest.length + STAGING_INFIX.length),
+function isStagingName(name: string, destNames: readonly string[]): boolean {
+  return destNames.some(
+    (dest) =>
+      name.startsWith(`${dest}${STAGING_INFIX}`) &&
+      /^[1-9a-z][0-9a-z]*-[0-9a-f]{32}$/.test(name.slice(dest.length + STAGING_INFIX.length)),
   );
-  const [, host, pid] = match ?? [];
-  if (host === undefined || pid === undefined) return undefined;
-  return { host, pid: Number.parseInt(pid, 36) };
 }
 
 /**
- * How old a staging file must be before it is reclaimed whatever its pid says.
+ * How old a staging file must be before the sweep removes it.
  *
  * A writer holds its staging file only between one small `writeFile` and its
  * `rename`, milliseconds on any disk, so a file this old belongs to no run
- * still writing. The age covers what the pid cannot: a pid the system has since
- * given to an unrelated process, and a writer on another host sharing the
- * directory, whose pid is never judged here. Ceiling: a writer stalled longer
- * than this, or a clock set back by more, loses its staging file and its
- * rename fails; raise the value if that is ever observed.
+ * still writing. Ceiling: a writer stalled longer than this, or a clock set
+ * back by more, loses its staging file and its rename fails; raise the value
+ * if that is ever observed. A run that dies leaves its file for up to this
+ * long, until a later run sweeps it.
  */
 const STAGING_ABANDONED_AFTER_MS = 60 * 60 * 1000;
-
-/**
- * True when no process with `pid` runs on this machine.
- *
- * Signal 0 checks for the process without signalling it. Only `ESRCH` proves it
- * is gone: `EPERM` means it exists under another user, and any other failure
- * proves nothing, so the file waits for {@link STAGING_ABANDONED_AFTER_MS}.
- * A pid no process can hold names no writer at all.
- */
-function isEndedProcess(pid: number): boolean {
-  if (!Number.isSafeInteger(pid) || pid <= 0) return true;
-  try {
-    process.kill(pid, 0);
-    return false;
-  } catch (liveness: unknown) {
-    return hasErrnoCode(liveness) && liveness.code === "ESRCH";
-  }
-}
 
 /**
  * Remove staging files an earlier run left behind in `dir`.
@@ -2578,7 +2539,7 @@ function isEndedProcess(pid: number): boolean {
  * that does not consume it — but `finally` is a JavaScript construct, and
  * SIGINT, SIGKILL, a crashed process or a power loss ends the run without
  * running one. The partial `.qfai-init-*` then stays in `.github/instructions/`,
- * which is tracked, and because each run stages under a fresh host-pid-token
+ * which is tracked, and because each run stages under a fresh pid-token
  * name nothing would ever reclaim it: repeated failures accumulate orphans
  * until one is committed by accident.
  *
@@ -2592,16 +2553,14 @@ function isEndedProcess(pid: number): boolean {
  * replace and still leaves nothing behind.
  *
  * Only regular files whose name is the staging name of one of `destNames` are
- * removed, and only
- * where the entry resolves inside the project: an orphan of ours is ours to
- * reclaim, anything else in that directory is not.
+ * removed, and only where the entry resolves inside the project: an orphan of
+ * ours is ours to reclaim, anything else in that directory is not.
  *
- * And only once its writer is known to have ended. Two inits can run in one
- * project at once, and the other run may be between its write and its rename:
- * removing its file then fails that rename and loses its refresh. A file is
- * reclaimed when its name carries this host's tag and its pid is no running
- * process, or when it is older than {@link STAGING_ABANDONED_AFTER_MS}. A file
- * another host wrote waits for the age: its pid says nothing about this host.
+ * And only once it is older than {@link STAGING_ABANDONED_AFTER_MS}. Two inits
+ * can run in one project at once, and the other run may be between its write
+ * and its rename: removing its file then fails that rename and loses its
+ * refresh. Age is the one signal that holds wherever that other run is; a pid
+ * or a host name does not identify it on a shared or cloned machine.
  */
 async function sweepStagedFiles(
   destRoot: string,
@@ -2614,16 +2573,12 @@ async function sweepStagedFiles(
   } catch {
     return; // absent or unreadable — no orphan of ours is reachable there
   }
-  const thisHost = stagingHostTag();
   for (const entry of entries) {
-    const owner = stagingOwner(entry.name, destNames);
-    if (owner === undefined) continue;
+    if (!isStagingName(entry.name, destNames)) continue;
     const full = path.join(dir, entry.name);
     const stats = await safeLstat(full);
     if (stats?.isFile() !== true) continue;
-    const abandoned = Date.now() - stats.mtimeMs > STAGING_ABANDONED_AFTER_MS;
-    const ended = owner.host === thisHost && isEndedProcess(owner.pid);
-    if (!abandoned && !ended) continue;
+    if (Date.now() - stats.mtimeMs <= STAGING_ABANDONED_AFTER_MS) continue;
     if (await resolvesOutsideProject(destRoot, full)) continue;
     // A leftover we cannot delete is not a reason to fail the whole init; the
     // next run tries again, and nothing downstream depends on it being gone.

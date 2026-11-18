@@ -490,10 +490,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   run first removed every leftover `.qfai-init-*` staging file in
   `.github/instructions/`, including the one a second init in the same
   project was about to rename into place, so that run's refresh failed. A
-  staging file is now removed only when it was written on the same machine by
-  a process that is no longer running, or when it is more than an hour old,
-  and each run writes its staging file under a name no other run can take.
-  Only that exact name is removed, so a leftover from an earlier version,
+  staging file is now removed only when it is more than an hour old, and each
+  run writes its staging file under a name no other run can take. Only that
+  exact name is removed, so a leftover from an earlier version,
   named `<file>.qfai-init-<pid>-<timestamp>`, stays: delete it by hand.
   Closes #4526.
 
