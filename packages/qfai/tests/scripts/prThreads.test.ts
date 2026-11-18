@@ -1,12 +1,23 @@
 /**
  * The command that reads a pull request's review state.
  *
- * Nothing here makes a call. What the cases hold is the reading of a response,
- * because a mistake there reads as a pull request with nothing open: a resolved
- * thread counted, a changed response shape taken for an empty list, or a Codex
- * comment from another author reported as a review.
+ * Nothing here makes a call: `git` and `gh` are stubbed. Most cases hold the
+ * reading of a response, because a mistake there reads as a pull request with
+ * nothing open: a resolved thread counted, a changed response shape taken for an
+ * empty list, or a Codex comment from another author reported as a review.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const calls = vi.hoisted(() => ({ list: [] as string[][], threadAnswer: "" }));
+
+vi.mock("node:child_process", () => ({
+  execFileSync: (command: string, args: string[]): string => {
+    calls.list.push([command, ...args]);
+    if (command === "git") return "https://github.com/aganesy/QFAI.git\n";
+    if (args.some((arg) => arg.includes("PullRequestReviewThread"))) return calls.threadAnswer;
+    return "{}";
+  },
+}));
 
 import {
   codexFindings,
@@ -182,6 +193,10 @@ describe("whether a deferred thread belongs to the pull request it was given", (
     );
   });
 
+  it("reads a pull request number written with leading zeros as that number", () => {
+    expect(foreignThread("aganesy/QFAI", "012", of(12, "aganesy/QFAI"))).toBeUndefined();
+  });
+
   it("refuses a thread whose pull request the answer does not name", () => {
     expect(foreignThread("aganesy/QFAI", "12", owned(null))).toBe(
       "GitHub's answer does not name the pull request that thread belongs to.",
@@ -189,6 +204,51 @@ describe("whether a deferred thread belongs to the pull request it was given", (
     expect(foreignThread("aganesy/QFAI", "12", of("12", "aganesy/QFAI"))).toBe(
       "GitHub's answer does not name the pull request that thread belongs to.",
     );
+  });
+});
+
+describe("deferring a thread of another pull request", () => {
+  afterEach(() => {
+    calls.list.length = 0;
+    vi.restoreAllMocks();
+  });
+
+  const answer = (number: number, nameWithOwner: string): string =>
+    JSON.stringify({
+      data: {
+        node: {
+          path: "src/a.ts",
+          line: 7,
+          pullRequest: { number, repository: { nameWithOwner } },
+          comments: {
+            nodes: [{ url: "https://x/c/1", author: { login: "reviewer" }, body: "Cover it." }],
+          },
+        },
+      },
+    });
+
+  it.each([
+    ["another pull request", answer(13, "aganesy/QFAI")],
+    ["another repository", answer(12, "someone/fork")],
+  ])("of %s stops with 2 and makes no write", (_label, threadAnswer) => {
+    calls.threadAnswer = threadAnswer;
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(run(["defer", "12", "T1", "40"])).toBe(2);
+    const ghCalls = calls.list.filter(([command]) => command === "gh");
+    expect(ghCalls).toHaveLength(1);
+    expect(ghCalls[0]?.join(" ")).toContain("PullRequestReviewThread");
+    expect(error.mock.calls.join(" ")).toContain("Nothing was recorded, replied to or resolved.");
+  });
+
+  it("of the requested pull request records, replies and resolves", () => {
+    calls.threadAnswer = answer(12, "aganesy/QFAI");
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    expect(run(["defer", "12", "T1", "40"])).toBe(0);
+    const ghCalls = calls.list.filter(([command]) => command === "gh").map((c) => c.join(" "));
+    expect(ghCalls).toHaveLength(4);
+    expect(ghCalls[1]).toContain("repos/aganesy/QFAI/issues/40/comments");
+    expect(ghCalls[2]).toContain("addPullRequestReviewThreadReply");
+    expect(ghCalls[3]).toContain("resolveReviewThread");
   });
 });
 

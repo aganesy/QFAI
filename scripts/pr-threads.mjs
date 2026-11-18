@@ -27,7 +27,8 @@
  *   node scripts/pr-threads.mjs defer <pr> <thread-id> <follow-up-issue>
  *
  * Exit codes: 0 answered, 1 the remaining budget is below the reserve, 2 the
- * arguments, `git` or `gh` could not be read.
+ * arguments, `git` or `gh` could not be read, or `defer` was given a thread of
+ * another pull request or repository.
  */
 /* global console, process */
 import { execFileSync } from "node:child_process";
@@ -157,13 +158,14 @@ export function deferredEntry(pr, response) {
  */
 export function foreignThread(slug, pr, response) {
   const pullRequest = response?.data?.node?.pullRequest;
-  const owner = pullRequest?.repository?.nameWithOwner;
-  if (!Number.isInteger(pullRequest?.number) || typeof owner !== "string") {
+  const nameWithOwner = pullRequest?.repository?.nameWithOwner;
+  if (!Number.isInteger(pullRequest?.number) || typeof nameWithOwner !== "string") {
     return "GitHub's answer does not name the pull request that thread belongs to.";
   }
-  const sameRepository = owner.toLowerCase() === slug.toLowerCase();
-  if (sameRepository && String(pullRequest.number) === pr) return undefined;
-  return `The thread belongs to ${owner}#${String(pullRequest.number)}, not ${slug}#${pr}.`;
+  const requested = Number(pr);
+  const sameRepository = nameWithOwner.toLowerCase() === slug.toLowerCase();
+  if (sameRepository && pullRequest.number === requested) return undefined;
+  return `The thread belongs to ${nameWithOwner}#${String(pullRequest.number)}, not ${slug}#${String(requested)}.`;
 }
 
 function gh(args) {
