@@ -32,6 +32,7 @@
     "tests/assets/surfaceReviewChecklist.test.ts",
     "tests/integration/surfaceReviewChecklist.test.ts",
     "tests/integration/refusedArgumentUsage.test.ts",
+    "tests/integration/initStagingCleanup.test.ts",
     "tests/core/sqlContractStructure.test.ts",
     "tests/assets/uiProcurementCompatibility.test.ts",
     "tests/assets/implementAntiPatternSections.test.ts",
