@@ -551,7 +551,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Graphify document extraction was given the selected or authorized endpoint,
   but nothing stopped the process from following a redirect or sending to
   another host. Extraction now runs under a guard that refuses every name
-  lookup and connection outside that endpoint's host and port, so a local
+  lookup and connection outside that endpoint's host name and port, including
+  another name for the same address, and refuses reverse lookups, so a local
   backend stays local and a different origin needs its own authorization.
   Closes #4496.
 

