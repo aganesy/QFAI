@@ -447,6 +447,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
+  difference exits 0 under `--fail-on never`, but the parser refused the flag
+  on `db-drift` and the command exited 2. `db-drift` now takes
+  `--fail-on never` and `--fail-on error`, the default; `warning` is refused,
+  since the command has no warning tier. A contract or migration that would
+  not apply still exits 2 under `--fail-on never`, since no comparison was
+  made. Closes #4516.
+
 - **`qfai db-drift` compares the full PostgreSQL column type.** It read
   `information_schema.columns.data_type`, which drops the varchar length, the
   numeric precision and scale and the array element type, and reads
