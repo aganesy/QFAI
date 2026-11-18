@@ -89,7 +89,7 @@ describe("qfai db-drift --fail-on, from the command line", () => {
     expect(stderr).not.toContain("--fail-on");
     expect(stdout).toContain("cancelled_at");
     expect(exitCode).toBe(0);
-  }, 60_000);
+  });
 
   it("exits 1 on the same difference under --fail-on error, the default", async () => {
     const root = await driftingProject();
@@ -102,7 +102,23 @@ describe("qfai db-drift --fail-on, from the command line", () => {
     ]);
     expect(stdout).toContain("cancelled_at");
     expect(exitCode).toBe(1);
-  }, 60_000);
+  });
+
+  it("still exits 2 under --fail-on never when a file would not apply", async () => {
+    // `never` waives a difference, not a comparison that never happened: a
+    // migration that does not apply leaves its columns out of one side.
+    const root = await driftingProject();
+    await write(root, "migrations/0002_broken.sql", "CREATE TABLE refunds (id TEXT PRIMARY KEY\n");
+    const { stdout, exitCode } = await captureRun([
+      "db-drift",
+      "--root",
+      root,
+      "--fail-on",
+      "never",
+    ]);
+    expect(stdout).toContain("0002_broken.sql");
+    expect(exitCode).toBe(2);
+  });
 
   it("refuses --fail-on warning, since the command has no warning tier", async () => {
     const root = await driftingProject();

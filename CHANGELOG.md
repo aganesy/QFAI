@@ -446,7 +446,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   difference exits 0 under `--fail-on never`, but the parser refused the flag
   on `db-drift` and the command exited 2. `db-drift` now takes
   `--fail-on never` and `--fail-on error`, the default; `warning` is refused,
-  since the command has no warning tier. Closes #4516.
+  since the command has no warning tier. A contract or migration that would
+  not apply still exits 2 under `--fail-on never`, since no comparison was
+  made. Closes #4516.
 
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused

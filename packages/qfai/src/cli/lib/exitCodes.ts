@@ -64,10 +64,10 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "db-drift",
     lines: [
-      `${EXIT_CODES.ok} = no difference, nothing configured to compare, or --fail-on never,`,
+      `${EXIT_CODES.ok} = no difference, nothing configured to compare, or a difference under --fail-on never,`,
       `${EXIT_CODES.findings} = the contracts and the migrations differ,`,
       `${EXIT_CODES.inputError} = the comparison could not be made (a file on either side`,
-      "      would not apply, or the schemas could not be read)",
+      "      would not apply, or the schemas could not be read), even under --fail-on never",
     ],
   },
   {
