@@ -552,8 +552,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   but nothing stopped the process from following a redirect or sending to
   another host. Extraction now runs under a guard that refuses every name
   lookup and connection outside that endpoint's host name and port, including
-  another name for the same address, and refuses reverse lookups, so a local
-  backend stays local and a different origin needs its own authorization.
+  another name for the same address, and refuses reverse lookups. It follows
+  no redirect, which could otherwise switch an `https` endpoint to `http`, and
+  starts no child process, which the guard could not reach. A local backend
+  stays local and a different origin needs its own authorization.
   Closes #4496.
 
 ## [2.5.0] - 2026-11-15

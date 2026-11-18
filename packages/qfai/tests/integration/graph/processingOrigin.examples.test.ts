@@ -12,10 +12,13 @@ import { documentAnalysisFixture, graphifyExtractionFixture } from "../../helper
 const execute = promisify(execFile);
 const ORIGIN_GUARD = path.resolve(getInitAssetsDir(), "..", "graph", "graphify-origin.py");
 
-// A stand-in for Graphify: it sends the synthetic document to the approved endpoint, follows a
-// redirect the endpoint answers with, sends it straight to another origin, and tries every kind of
-// name lookup, since a lookup of a chosen name can carry data out by itself.
-const STUB_GRAPHIFY = `import json, socket, sys, urllib.parse, urllib.request
+// A stand-in for Graphify: it sends the synthetic document to the approved endpoint, meets a
+// redirect to another origin and one back to the approved origin, sends it straight to another
+// origin, asks httpx to follow redirects, tries every kind of name lookup, since a lookup of a
+// chosen name can carry data out by itself, and tries to start child processes, which the audit
+// hook would not reach.
+const STUB_GRAPHIFY = `import json, os, socket, sys, urllib.error, urllib.parse, urllib.request
+import httpx
 document = open(sys.argv[2], encoding="utf-8").read().encode("utf-8")
 approved, other = sys.argv[3], sys.argv[4]
 host = urllib.parse.urlsplit(approved).hostname
@@ -25,6 +28,8 @@ def attempt(url):
     try:
         opener.open(urllib.request.Request(url, data=document), timeout=10).read()
         return "sent"
+    except urllib.error.HTTPError as error:
+        return "not followed" if 300 <= error.code < 400 else str(error.code)
     except Exception as error:
         reason = getattr(error, "reason", error)
         return "refused" if isinstance(reason, PermissionError) else type(reason).__name__
@@ -36,10 +41,31 @@ def lookup(call):
         return "refused"
     except OSError as error:
         return type(error).__name__
+def awaited(coroutine):
+    try:
+        coroutine.send(None)
+    except StopIteration as done:
+        return done.value
+child = [sys.executable, "-c", "pass"]
+processes = {
+    "subprocess": lookup(lambda: __import__("subprocess").run(child)),
+    "os.system": lookup(lambda: os.system("exit 0")),
+    "os.spawn": lookup(lambda: os.spawnv(os.P_WAIT, sys.executable, child)),
+    "os.exec": lookup(lambda: os.execv(sys.executable, child)),
+}
+if hasattr(os, "posix_spawn"):
+    processes["os.posix_spawn"] = lookup(lambda: os.posix_spawn(sys.executable, child, os.environ))
+if hasattr(os, "startfile"):
+    processes["os.startfile"] = lookup(lambda: os.startfile(os.path.join(os.getcwd(), "missing.txt")))
 print(json.dumps({
     "approved": attempt(approved + "/v1/chat/completions"),
     "redirect": attempt(approved + "/redirect"),
+    "same origin redirect": attempt(approved + "/same"),
     "other": attempt(other + "/v1/chat/completions"),
+    "httpx follows": [
+        httpx.Client().send("request", follow_redirects=True),
+        awaited(httpx.AsyncClient().send("request", follow_redirects=True)),
+    ],
     "lookups": {
         "gethostbyname": lookup(lambda: socket.gethostbyname(host)),
         "gethostbyname_ex": lookup(lambda: socket.gethostbyname_ex(host)),
@@ -49,17 +75,45 @@ print(json.dumps({
         "gethostbyaddr": lookup(lambda: socket.gethostbyaddr("127.0.0.1")),
         "getnameinfo": lookup(lambda: socket.getnameinfo(("127.0.0.1", 80), 0)),
     },
+    "processes": processes,
 }))
 `;
 
-const LOOKUPS = {
-  gethostbyname: "allowed",
-  gethostbyname_ex: "allowed",
-  "gethostbyname outside": "refused",
-  "gethostbyname_ex outside": "refused",
-  "getaddrinfo outside": "refused",
-  gethostbyaddr: "refused",
-  getnameinfo: "refused",
+// A stand-in for the httpx client the OpenAI SDK uses: send reports whether it would follow.
+const STUB_HTTPX = `class Client:
+    def send(self, request, *, stream=False, follow_redirects=True):
+        return follow_redirects
+class AsyncClient:
+    async def send(self, request, *, stream=False, follow_redirects=True):
+        return follow_redirects
+`;
+
+const PROCESSES = {
+  subprocess: "refused",
+  "os.system": "refused",
+  "os.spawn": "refused",
+  "os.exec": "refused",
+  ...(process.platform === "win32"
+    ? { "os.startfile": "refused" }
+    : { "os.posix_spawn": "refused" }),
+};
+
+const GUARDED = {
+  approved: "sent",
+  redirect: "not followed",
+  "same origin redirect": "not followed",
+  other: "refused",
+  "httpx follows": [false, false],
+  lookups: {
+    gethostbyname: "allowed",
+    gethostbyname_ex: "allowed",
+    "gethostbyname outside": "refused",
+    "gethostbyname_ex outside": "refused",
+    "getaddrinfo outside": "refused",
+    gethostbyaddr: "refused",
+    getnameinfo: "refused",
+  },
+  processes: PROCESSES,
 };
 
 interface Endpoint {
@@ -75,9 +129,13 @@ async function endpoint(redirectTo?: (port: number) => string): Promise<Endpoint
     request.on("data", (chunk: Buffer) => chunks.push(chunk));
     request.on("end", () => {
       received.push({ url: request.url ?? "", body: Buffer.concat(chunks).toString("utf8") });
+      const port = request.socket.localPort ?? 0;
       if (redirectTo && request.url === "/redirect") {
-        const port = request.socket.localPort ?? 0;
-        response.writeHead(302, { location: `${redirectTo(port)}/v1/chat/completions` }).end();
+        response.writeHead(307, { location: `${redirectTo(port)}/v1/chat/completions` }).end();
+        return;
+      }
+      if (request.url === "/same") {
+        response.writeHead(307, { location: `http://127.0.0.1:${port}/followed` }).end();
         return;
       }
       response.writeHead(200, { "content-type": "application/json" }).end("{}");
@@ -117,6 +175,7 @@ async function guardedRun(origin: string, approved: string, other: string): Prom
     await mkdir(path.join(stub, "graphify"), { recursive: true });
     await writeFile(path.join(stub, "graphify", "__init__.py"), "");
     await writeFile(path.join(stub, "graphify", "__main__.py"), STUB_GRAPHIFY);
+    await writeFile(path.join(stub, "httpx.py"), STUB_HTTPX);
     const document = path.join(directory, "rationale.md");
     await writeFile(document, CONTENT);
     const { stdout } = await execute(
@@ -148,17 +207,21 @@ async function close(...endpoints: Endpoint[]): Promise<void> {
 
 // QFAI:EX-0001-0234-21
 // Mutation: packages/qfai/assets/graph/graphify-origin.py `raise PermissionError(REFUSAL)` -> `pass` fails "delivers the synthetic document only to the selected local origin"
+// Mutation: packages/qfai/assets/graph/graphify-origin.py `    refuse_redirects()` -> `    pass` fails "delivers the synthetic document only to the selected local origin"
+// Mutation: packages/qfai/assets/graph/graphify-origin.py `if event in PROCESSES or event in REVERSE_LOOKUPS:` -> `if event in REVERSE_LOOKUPS:` fails "delivers the synthetic document only to the selected local origin"
 it("delivers the synthetic document only to the selected local origin", async () => {
   const other = await endpoint();
   const approved = await endpoint(() => other.origin);
   try {
-    expect(await guardedRun(`${approved.origin}/v1`, approved.origin, other.origin)).toEqual({
-      approved: "sent",
-      redirect: "refused",
-      other: "refused",
-      lookups: LOOKUPS,
-    });
+    expect(await guardedRun(`${approved.origin}/v1`, approved.origin, other.origin)).toEqual(
+      GUARDED,
+    );
     expect(approved.received).toContainEqual({ url: "/v1/chat/completions", body: CONTENT });
+    expect(approved.received.map(({ url }) => url)).toEqual([
+      "/v1/chat/completions",
+      "/redirect",
+      "/same",
+    ]);
     expect(other.received).toEqual([]);
   } finally {
     await close(approved, other);
@@ -177,8 +240,12 @@ it("refuses another host name for the approved address", async () => {
         `http://localhost:${port}`,
         `http://127.0.0.1:${port}`,
       ),
-    ).toEqual({ approved: "sent", redirect: "refused", other: "refused", lookups: LOOKUPS });
-    expect(approved.received.map(({ url }) => url)).toEqual(["/v1/chat/completions", "/redirect"]);
+    ).toEqual(GUARDED);
+    expect(approved.received.map(({ url }) => url)).toEqual([
+      "/v1/chat/completions",
+      "/redirect",
+      "/same",
+    ]);
   } finally {
     await close(approved);
   }
