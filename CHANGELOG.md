@@ -450,6 +450,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
 
+- **`qfai validate` no longer writes its run log through a link.** When
+  `paths.outDir`, a directory between the project root and it, or
+  `validate.log` in it is a symbolic link or junction, the run writes no run
+  log, names that path on stderr and exits 1, where it used to create the run
+  directory and overwrite `validate.log` wherever the link pointed. The run's
+  files are now created as new files, and `validate.log` is replaced by
+  renaming a new file over it rather than written in place. Closes #4486.
+
 - **Every document-schema finding names the line or heading to write.** A
   missing required line in a policy file, a story, its acceptance criteria or
   the decision page list was reported as a regular expression; every such rule
