@@ -1240,7 +1240,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "1023df3dbcb38f34223a1ff46c21a5e98482a8ee4e2cfcd0009e6116a3ac1f9c"],
+  ["qfai-docs.yml", "70a8543ed24443b5b28bbfdb94c046ad5944312da41d46b78894094105659078"],
   ["qfai-tests.yml", "23936510c76f82647e4d48cce2a116bf44185f5ba90fac3ca9b91a560a969572"],
   ["qfai-validate.yml", "a1407c67a98f053fd544b5a78b17b4c63c64be349c4483b55d647ef03c22145c"],
 ]);
@@ -2105,11 +2105,11 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body d939db1104343423ba54f051f0cb566a5bb8f5be6e37dcbbbb9915a8055093cb>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 6abdc9bfc53af09623e865337d8e7f77ff2d00c84fc22e895874712e2eb9372f>"}',
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body 51b5b26d3613f7250e7e16d2a696da10dab52e0df5f5901c423d292c0ccc9ff0>"}',
+    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body f5ac749ee5f57414d6beb2892f358ec3f604899404a89713a7330f50ba8415ca>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2368,28 +2368,30 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * The exact package sets a shipped lane may install as TOOLS OF ITS OWN.
  *
  * `TAKES_NO_PACKAGE` refuses `npm install <package>` because that is how an
- * arbitrary program reaches an adopter's runner. The document lane needs three
- * named ones, so they are written down here rather than the refusal being
- * relaxed: `npm install left-pad` still fails, and so does the same lane
- * fetching a fourth package or a different version of one of these three.
+ * arbitrary program reaches an adopter's runner. The document lane needs Mermaid,
+ * jsdom and, without a QFAI of the project's own, QFAI itself, so they are
+ * written down here rather than the refusal being relaxed: `npm install
+ * left-pad` still fails, and so does the same lane fetching another package or
+ * a different version of Mermaid or jsdom.
  *
  * Keyed by the whole package list, in the order the command writes it, so a
  * reordering is a change a reviewer reads too — the string is the thing being
  * approved. Versions are exact for the same reason the file digests are: an
  * unpinned install fetches whatever the registry calls latest at the moment the
- * job runs, and these three programs produce the lane's verdict.
+ * job runs, and these programs produce the lane's verdict. The schema checker
+ * is not listed: it comes with QFAI, at the version that release depends on.
  *
  * `qfai` is the one entry without a version, and the exception is narrow enough
  * to state: it is THIS package, fetched only when the adopter's own install did
  * not already provide it, so that the lane can run files out of it the way
  * `qfai-validate.yml` runs `npx qfai`. A pin here would be this file's own
  * release number frozen into every adopter's workflow at generation time, which
- * is the opposite of what pinning the other three buys. It stays enumerated
+ * is the opposite of what pinning the other two buys. It stays enumerated
  * because the refusal it passes through is about WHICH package reaches a
  * runner, and that answer is still exactly one.
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
-  "@jackchuka/mdschema@0.15.7 mermaid@11.17.2 jsdom@29.1.1",
+  "mermaid@11.17.2 jsdom@29.1.1",
   "mermaid@11.17.2 jsdom@29.1.1 qfai",
 ]);
 

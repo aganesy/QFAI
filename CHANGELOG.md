@@ -461,6 +461,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
 
+- **The docs lane checks with the schema checker your QFAI version depends
+  on.** In a project with its own `node_modules/qfai`, the shipped
+  `qfai-docs.yml` installed `@jackchuka/mdschema` at the version current when
+  `qfai init` generated the file, and ran it in place of the one the project's
+  QFAI depends on, so after a QFAI upgrade the lane and `qfai validate` could
+  disagree about one document. The lane now installs only Mermaid and jsdom
+  there and runs the checker the project's install put beside QFAI, the one
+  `qfai validate` runs. Closes #4596.
+
 - **`qfai validate` no longer writes its run log through a link.** When
   `paths.outDir`, a directory between the project root and it, or
   `validate.log` in it is a symbolic link or junction, the run writes no run

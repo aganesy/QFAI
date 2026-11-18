@@ -123,12 +123,11 @@ describe("the delivered document lane installs its checkers outside the project'
     expect(call).toContain("--ignore-scripts");
     expect(call).toContain("--include=optional");
     const packages = call.filter((argument) => !argument.startsWith("-") && argument !== "install");
-    // With no QFAI of its own the project gets the newest one, and the schema checker comes with
-    // it at the version that release depends on, so its schemas and their checker stay one release.
+    // The schema checker always comes with QFAI, at the version that release depends on, so the
+    // schemas and their checker stay one release and the lane runs the checker `qfai validate`
+    // runs. A project with its own QFAI already installed it; one without gets the newest QFAI here.
     expect(packages).toEqual(
-      withQfai
-        ? [`@jackchuka/mdschema@${MDSCHEMA_VERSION}`, "mermaid@11.17.2", "jsdom@29.1.1"]
-        : ["mermaid@11.17.2", "jsdom@29.1.1", "qfai"],
+      withQfai ? ["mermaid@11.17.2", "jsdom@29.1.1"] : ["mermaid@11.17.2", "jsdom@29.1.1", "qfai"],
     );
   });
 

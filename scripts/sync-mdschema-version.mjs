@@ -1,7 +1,10 @@
 #!/usr/bin/env node
-/** Synchronize the schema checker copies after a manifest and frozen-lockfile update. */
+/**
+ * Synchronize the schema-writing heading after a manifest and frozen-lockfile update.
+ *
+ * The shipped docs lane names no checker version: it runs the checker that comes with QFAI.
+ */
 import { Buffer } from "node:buffer";
-import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -10,22 +13,7 @@ import { fileURLToPath, URL } from "node:url";
 
 const PACKAGE = "@jackchuka/mdschema";
 const EXACT_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const WORKFLOW = "packages/qfai/assets/init/root/.github/workflows/qfai-docs.yml";
-const HELPER = "packages/qfai/tests/helpers/shippedLaneCommands.ts";
 const RULE = ".agents/rules/document-schema.local.md";
-const INSTALL_NAME = "Install the document-shape and diagram checkers";
-const TOKEN =
-  /@jackchuka\/mdschema@((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)) mermaid@11\.17\.2 jsdom@29\.1\.1/g;
-
-/** The helper uses the same raw-byte hash, without text decoding or normalization. */
-export function fileDigest(raw) {
-  return createHash("sha256").update(raw).digest("hex");
-}
-
-/** YAML parses the body; the helper hashes that exact string without normalization. */
-export function bodyDigest(body) {
-  return createHash("sha256").update(body).digest("hex");
-}
 
 function requireCondition(condition, message) {
   if (!condition) throw new Error(message);
@@ -149,73 +137,14 @@ export function syncMdschemaVersion(root) {
       "pnpm-workspace.yaml and .github/actions/setup/dependency-builds.txt must keep the esbuild-only permission",
     );
 
-    const workflow = read(WORKFLOW);
-    const helper = read(HELPER);
     const rule = read(RULE);
-    const workflowToken = unique(workflow, TOKEN, `${WORKFLOW}: the checker install`);
-    const helperToken = unique(
-      helper,
-      new RegExp(`"${TOKEN.source}"`, "g"),
-      `${HELPER}: the explicit tool-install allowlist`,
-    );
     const heading = unique(
       rule,
       /^## Writing a schema for mdschema ((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/gm,
       `${RULE}: the checker heading`,
     );
-    requireCondition(
-      workflowToken[1] === helperToken[1] && workflowToken[1] === heading[1],
-      `${WORKFLOW}, ${HELPER} and ${RULE}: derived checker versions disagree`,
-    );
-    const filePin = unique(
-      helper,
-      /\["qfai-docs\.yml", "([a-f0-9]{64})"\]/g,
-      `${HELPER}: the workflow file pin`,
-    );
-    const bodyPin = unique(
-      helper,
-      /\{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body ([a-f0-9]{64})>"\}/g,
-      `${HELPER}: the install-step body pin`,
-    );
-    function installBody(text) {
-      let document;
-      try {
-        document = parseYaml(text);
-      } catch {
-        throw new Error(`${WORKFLOW} is not valid YAML`);
-      }
-      const steps = document?.jobs?.checks?.steps;
-      requireCondition(Array.isArray(steps), `${WORKFLOW}: the check steps are missing`);
-      const installs = steps.filter((step) => step?.name === INSTALL_NAME);
-      requireCondition(
-        installs.length === 1 && typeof installs[0]?.run === "string",
-        `${WORKFLOW}: the install step must occur exactly once`,
-      );
-      return installs[0].run;
-    }
-    requireCondition(
-      filePin[1] === fileDigest(originals.get(WORKFLOW)) &&
-        bodyPin[1] === bodyDigest(installBody(workflow)),
-      `${HELPER}: pins do not match ${WORKFLOW}; unrelated edits cannot be resealed here`,
-    );
-
-    const packageList = `${PACKAGE}@${canonical} mermaid@11.17.2 jsdom@29.1.1`;
-    const nextWorkflow = workflow.replace(TOKEN, packageList);
-    let nextHelper = helper.replace(new RegExp(`"${TOKEN.source}"`, "g"), `"${packageList}"`);
-    nextHelper = nextHelper.replace(
-      filePin[0],
-      `["qfai-docs.yml", "${fileDigest(Buffer.from(nextWorkflow, "utf8"))}"]`,
-    );
-    nextHelper = nextHelper.replace(
-      bodyPin[0],
-      bodyPin[0].replace(bodyPin[1], bodyDigest(installBody(nextWorkflow))),
-    );
     const nextRule = rule.replace(heading[0], `## Writing a schema for mdschema ${canonical}`);
-    const updates = new Map([
-      [WORKFLOW, nextWorkflow],
-      [HELPER, nextHelper],
-      [RULE, nextRule],
-    ]);
+    const updates = new Map([[RULE, nextRule]]);
     for (const relative of updates.keys()) {
       const stat = lstatSync(path.join(root, relative));
       requireCondition(

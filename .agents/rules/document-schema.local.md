@@ -62,9 +62,9 @@ gets a verdict this repository would not have given.
 
 `packages/qfai/package.json` declares the checker version. Update the root
 manifest and lockfile with it, then install the dependencies in this checkout.
-`pnpm sync:mdschema` checks those versions and updates the shipped docs install,
-its explicit tool allowlist, the two shipped workflow pins and the heading below.
-It stops before writing if an expected anchor or existing pin does not match.
+`pnpm sync:mdschema` checks those versions and updates the heading below. The
+shipped docs lane names no checker version: it runs the checker that comes with
+QFAI. The command stops before writing if the heading is missing or repeated.
 Renovate groups both manifests and runs the same command in its repin job before
 the guard-byte and verification-body resealers. Install-script permissions stay
 unchanged; synchronization runs no install, build or test.
