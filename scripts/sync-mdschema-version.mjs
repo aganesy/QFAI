@@ -2,7 +2,7 @@
 /**
  * Synchronize the schema-writing heading after a manifest and frozen-lockfile update.
  *
- * The shipped docs lane names no checker version: it runs the checker that comes with QFAI.
+ * The shipped docs lane names no checker version: it reads the one the selected QFAI declares.
  */
 import { Buffer } from "node:buffer";
 import { lstatSync, readFileSync, writeFileSync } from "node:fs";

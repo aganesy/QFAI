@@ -563,13 +563,17 @@ jobs:
           # runs, so the same commit could be checked by a different rule set
           # from one day to the next.
           #
-          # The schema checker, `@jackchuka/mdschema`, is not named here. It
-          # always comes with QFAI, at the version that QFAI release depends on:
-          # its schemas are written for that version, and `qfai validate` runs
-          # that same installation. A version written into this file would be
-          # the one current when `qfai init` generated it, and once your project
-          # moves to another QFAI the lane and `qfai validate` could give two
-          # verdicts about one document.
+          # The schema checker, `@jackchuka/mdschema`, is the version the QFAI
+          # this lane runs depends on, because its schemas are written for that
+          # version and `qfai validate` checks with it. A version written into
+          # this file would be the one current when `qfai init` generated it,
+          # and once your project moved to another QFAI the lane and `qfai
+          # validate` could give two verdicts about one document. So with a
+          # QFAI of your own the version is read from its `package.json`, and
+          # the step stops when that is not one exact version. The checker is
+          # installed here even though your install has it too: your install
+          # may have omitted the optional dependency that carries its platform
+          # binary, and this install keeps it (see `--include=optional` below).
           #
           # `--prefix` puts the tools in a directory of their own, and that is
           # what keeps this step independent of the package manager above. npm
@@ -607,17 +611,35 @@ jobs:
           # steps would fail on a missing module rather than on your documents.
           #
           # Guarded rather than unconditional, because a repository that DOES
-          # depend on QFAI has already installed the version it chose, with the
-          # schema checker that version depends on, and this lane must report
-          # that version's rules rather than quietly replace them with the
-          # newest ones. Unpinned in the bootstrap case for the same reason a
+          # depend on QFAI has already installed the version it chose, and this
+          # lane must report that version's rules, with that version's checker,
+          # rather than quietly replace them with the newest ones. Unpinned in the bootstrap case for the same reason a
           # bare `npx qfai` is: with nothing in the manifest there is no version
           # to honour, and pinning one here would freeze every adopter's docs
           # lane at whatever release generated this file. One install for both
           # cases, because a second `--no-save` install into the same prefix
           # removes what the first one added.
           if [ -d node_modules/qfai ]; then
-            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools mermaid@11.17.2 jsdom@29.1.1
+            checker="$(node -e '
+              const { readFileSync } = require("node:fs");
+              const manifest = "node_modules/qfai/package.json";
+              let declared;
+              try {
+                declared = JSON.parse(readFileSync(manifest, "utf8")).dependencies[
+                  "@jackchuka/mdschema"
+                ];
+              } catch {
+                declared = undefined;
+              }
+              if (typeof declared !== "string" || !/^\d+\.\d+\.\d+$/.test(declared)) {
+                console.error(
+                  `::error::qfai docs: ${manifest} declares no exact @jackchuka/mdschema version`,
+                );
+                process.exit(1);
+              }
+              process.stdout.write(declared);
+            ')"
+            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools "@jackchuka/mdschema@${checker}" mermaid@11.17.2 jsdom@29.1.1
           else
             npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools mermaid@11.17.2 jsdom@29.1.1 qfai
           fi
@@ -631,11 +653,9 @@ jobs:
           # `paths.contractsDir` from your `qfai.config.yaml`, so a relocated
           # tree is covered. A document carrying the opt-out marker fails.
           #
-          # `--tools` names the directory the step above installed into. It holds
-          # no schema checker of its own when your project has QFAI, so the
-          # driver finds the one your install put beside QFAI, as `qfai validate`
-          # does. With no QFAI of your own, the driver and its checker run out of
-          # that directory.
+          # `--tools` names the directory the step above installed the checker
+          # into. With no QFAI of your own, the driver runs out of that same
+          # directory.
           if [ -d node_modules/qfai ]; then
             node node_modules/qfai/assets/scripts/check-mdschema.mjs --tools tmp/qfai-docs-tools --scope all --summary
           else

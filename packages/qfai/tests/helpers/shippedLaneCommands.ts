@@ -1240,7 +1240,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "70a8543ed24443b5b28bbfdb94c046ad5944312da41d46b78894094105659078"],
+  ["qfai-docs.yml", "529feeb217698828f103a7b2b90e75a7ca76aa0c68b41066860d9db3bc7d1105"],
   ["qfai-tests.yml", "23936510c76f82647e4d48cce2a116bf44185f5ba90fac3ca9b91a560a969572"],
   ["qfai-validate.yml", "a1407c67a98f053fd544b5a78b17b4c63c64be349c4483b55d647ef03c22145c"],
 ]);
@@ -2105,11 +2105,11 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 6abdc9bfc53af09623e865337d8e7f77ff2d00c84fc22e895874712e2eb9372f>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body ecd353b90d1dcfb238e4f1be8d65c7acb1edbe2c1b999c81adb4940a0b853274>"}',
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body f5ac749ee5f57414d6beb2892f358ec3f604899404a89713a7330f50ba8415ca>"}',
+    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body 51b5b26d3613f7250e7e16d2a696da10dab52e0df5f5901c423d292c0ccc9ff0>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2299,6 +2299,10 @@ export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
   // adopter declared is one this runner can hash with. Reads no file, writes nothing, and its whole
   // output is an exit code.
   "91abbc929ce0cf578b47794d59ca072e1841a848d9480d904d68ebf30dc5a384",
+  // `qfai-docs.yml#checks` — reads the `@jackchuka/mdschema` version out of the project's
+  // `node_modules/qfai/package.json`, prints it, and stops with a non-zero exit when it is not one
+  // exact version. Reads one file, writes one line. 557 characters.
+  "6a6632d06e0694fbd58649fc7f091ae941e24ae5fcbae51fc8c8c681f08e6c7c",
 ]);
 
 /**
@@ -2368,18 +2372,22 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * The exact package sets a shipped lane may install as TOOLS OF ITS OWN.
  *
  * `TAKES_NO_PACKAGE` refuses `npm install <package>` because that is how an
- * arbitrary program reaches an adopter's runner. The document lane needs Mermaid,
- * jsdom and, without a QFAI of the project's own, QFAI itself, so they are
- * written down here rather than the refusal being relaxed: `npm install
- * left-pad` still fails, and so does the same lane fetching another package or
- * a different version of Mermaid or jsdom.
+ * arbitrary program reaches an adopter's runner. The document lane needs the
+ * schema checker, Mermaid, jsdom and, without a QFAI of the project's own, QFAI
+ * itself, so they are written down here rather than the refusal being relaxed:
+ * `npm install left-pad` still fails, and so does the same lane fetching another
+ * package or a different version of Mermaid or jsdom.
  *
  * Keyed by the whole package list, in the order the command writes it, so a
  * reordering is a change a reviewer reads too — the string is the thing being
  * approved. Versions are exact for the same reason the file digests are: an
  * unpinned install fetches whatever the registry calls latest at the moment the
- * job runs, and these programs produce the lane's verdict. The schema checker
- * is not listed: it comes with QFAI, at the version that release depends on.
+ * job runs, and these programs produce the lane's verdict.
+ *
+ * The schema checker's version is `${checker}`, read from the project's own
+ * `node_modules/qfai/package.json` by an enumerated `node -e` payload that
+ * stops the step unless it is one exact version. A version written here would
+ * be the release that generated the workflow, not the QFAI the project selected.
  *
  * `qfai` is the one entry without a version, and the exception is narrow enough
  * to state: it is THIS package, fetched only when the adopter's own install did
@@ -2391,7 +2399,7 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * runner, and that answer is still exactly one.
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
-  "mermaid@11.17.2 jsdom@29.1.1",
+  "@jackchuka/mdschema@${checker} mermaid@11.17.2 jsdom@29.1.1",
   "mermaid@11.17.2 jsdom@29.1.1 qfai",
 ]);
 

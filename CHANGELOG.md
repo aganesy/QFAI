@@ -466,9 +466,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai-docs.yml` installed `@jackchuka/mdschema` at the version current when
   `qfai init` generated the file, and ran it in place of the one the project's
   QFAI depends on, so after a QFAI upgrade the lane and `qfai validate` could
-  disagree about one document. The lane now installs only Mermaid and jsdom
-  there and runs the checker the project's install put beside QFAI, the one
-  `qfai validate` runs. Closes #4596.
+  disagree about one document. The lane now installs the exact version that
+  `node_modules/qfai/package.json` declares, with its platform binary, and
+  stops before installing when that file declares no exact version.
+  Closes #4596.
 
 - **`qfai validate` no longer writes its run log through a link.** When
   `paths.outDir`, a directory between the project root and it, or

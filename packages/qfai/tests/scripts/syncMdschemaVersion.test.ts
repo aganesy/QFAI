@@ -294,7 +294,7 @@ describe("syncing the schema checker's declared version", () => {
   });
 
   it("updates only the schema heading, and names no shipped workflow", async () => {
-    // The shipped docs lane names no checker version: it runs the checker that comes with QFAI.
+    // The shipped docs lane names no checker version: it reads the one the selected QFAI declares.
     const root = await fixture();
     const before = await snapshot(root);
     const originalRule = await text(root, RULE);
