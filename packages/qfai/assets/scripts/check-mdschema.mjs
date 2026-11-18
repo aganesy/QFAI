@@ -28,12 +28,14 @@
  *                    against their own state at the merge base. A document-level
  *                    ratchet: a new document must conform, an edited document
  *                    that conformed at the merge base must still conform, and an
- *                    edited document that already failed there is reported, not
- *                    failed, however many schema violations it gains, unless it
- *                    carries the opt-out marker, which always fails (see "No
- *                    opt-out" below). Untouched legacy documents are left for
- *                    their own change. A rewrite that moves bytes without moving
- *                    text — re-normalised line endings — is not a change here.
+ *                    edited document that already failed there and still fails
+ *                    at the head is reported, not failed, however many schema
+ *                    violations it gains, unless it carries the opt-out marker,
+ *                    which always fails (see "No opt-out" below). One fixed to
+ *                    conform at the head simply passes. Untouched legacy
+ *                    documents are left for their own change. A rewrite that
+ *                    moves bytes without moving text — re-normalised line
+ *                    endings — is not a change here.
  *   --scope all      every document the manifest matches. The migration view.
  *   --scope files    only the paths named on the command line.
  *
