@@ -2487,23 +2487,64 @@ async function resolvesOutsideProject(destRoot: string, target: string): Promise
 /** Marks a {@link replaceWithRegularFile} staging file. */
 const STAGING_INFIX = ".qfai-init-";
 
-/** The sibling path {@link replaceWithRegularFile} stages `dest` at. */
+/**
+ * The sibling path {@link replaceWithRegularFile} stages `dest` at: the
+ * base-36 pid of the writing process, then a random token.
+ *
+ * The pid is what lets {@link sweepStagedFiles} tell a run that ended from one
+ * still writing; the token keeps two writers apart where a pid and a clock
+ * would not, such as two hosts sharing the directory.
+ */
 function stagingPathFor(dest: string): string {
-  return `${dest}${STAGING_INFIX}${process.pid.toString(36)}-${Date.now().toString(36)}`;
+  const token = randomUUID().replaceAll("-", "");
+  return `${dest}${STAGING_INFIX}${process.pid.toString(36)}-${token}`;
 }
 
 /**
- * True for a basename {@link stagingPathFor} could have produced: a destination
- * name, the infix, then the base-36 pid and timestamp.
+ * The pid in a basename {@link stagingPathFor} could have produced, or
+ * `undefined` for any other name: a destination name, the infix, then the
+ * base-36 pid and the token.
  *
  * Read back through the same constant the writer uses, so the sweep cannot end
  * up looking for a shape nothing writes — which would leave it passing while
  * reclaiming nothing.
  */
-function isStagingName(name: string): boolean {
+function stagingOwnerPid(name: string): number | undefined {
   const at = name.lastIndexOf(STAGING_INFIX);
-  if (at <= 0) return false;
-  return /^[0-9a-z]+-[0-9a-z]+$/.test(name.slice(at + STAGING_INFIX.length));
+  if (at <= 0) return undefined;
+  const match = /^([0-9a-z]+)-[0-9a-z]+$/.exec(name.slice(at + STAGING_INFIX.length));
+  return match?.[1] === undefined ? undefined : Number.parseInt(match[1], 36);
+}
+
+/**
+ * How old a staging file must be before it is reclaimed whatever its pid says.
+ *
+ * A writer holds its staging file only between one small `writeFile` and its
+ * `rename`, milliseconds on any disk, so a file this old belongs to no run
+ * still writing. The age covers what the pid cannot: a pid the system has since
+ * given to an unrelated process, and a writer on another host sharing the
+ * directory, whose pid means nothing here. Ceiling: a writer stalled longer
+ * than this, or a clock set back by more, loses its staging file and its
+ * rename fails; raise the value if that is ever observed.
+ */
+const STAGING_ABANDONED_AFTER_MS = 60 * 60 * 1000;
+
+/**
+ * True when no process with `pid` runs on this machine.
+ *
+ * Signal 0 checks for the process without signalling it. Only `ESRCH` proves it
+ * is gone: `EPERM` means it exists under another user, and any other failure
+ * proves nothing, so the file waits for {@link STAGING_ABANDONED_AFTER_MS}.
+ * A pid no process can hold names no writer at all.
+ */
+function isEndedProcess(pid: number): boolean {
+  if (!Number.isSafeInteger(pid) || pid <= 0) return true;
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (liveness: unknown) {
+    return hasErrnoCode(liveness) && liveness.code === "ESRCH";
+  }
 }
 
 /**
@@ -2529,6 +2570,12 @@ function isStagingName(name: string): boolean {
  * Only regular files whose name has the staging shape are removed, and only
  * where the entry resolves inside the project: an orphan of ours is ours to
  * reclaim, anything else in that directory is not.
+ *
+ * And only once its writer is known to have ended. Two inits can run in one
+ * project at once, and the other run may be between its write and its rename:
+ * removing its file then fails that rename and loses its refresh. A file is
+ * reclaimed when the pid in its name is no running process, or when it is older
+ * than {@link STAGING_ABANDONED_AFTER_MS}.
  */
 async function sweepStagedFiles(destRoot: string, dir: string): Promise<void> {
   let entries: Dirent[];
@@ -2538,9 +2585,13 @@ async function sweepStagedFiles(destRoot: string, dir: string): Promise<void> {
     return; // absent or unreadable — no orphan of ours is reachable there
   }
   for (const entry of entries) {
-    if (!isStagingName(entry.name)) continue;
+    const ownerPid = stagingOwnerPid(entry.name);
+    if (ownerPid === undefined) continue;
     const full = path.join(dir, entry.name);
-    if ((await safeLstat(full))?.isFile() !== true) continue;
+    const stats = await safeLstat(full);
+    if (stats?.isFile() !== true) continue;
+    const abandoned = Date.now() - stats.mtimeMs > STAGING_ABANDONED_AFTER_MS;
+    if (!abandoned && !isEndedProcess(ownerPid)) continue;
     if (await resolvesOutsideProject(destRoot, full)) continue;
     // A leftover we cannot delete is not a reason to fail the whole init; the
     // next run tries again, and nothing downstream depends on it being gone.
@@ -2577,7 +2628,9 @@ async function replaceWithRegularFile(dest: string, content: string): Promise<vo
   const tempPath = stagingPathFor(dest);
   let consumed = false;
   try {
-    await writeFile(tempPath, content, "utf-8");
+    // `wx` refuses a path that already exists, so this run never writes into a
+    // staging file another writer holds.
+    await writeFile(tempPath, content, { encoding: "utf-8", flag: "wx" });
     try {
       await rename(tempPath, dest);
       consumed = true;

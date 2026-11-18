@@ -9,6 +9,7 @@ import {
   rm,
   writeFile,
   symlink,
+  utimes,
 } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFile as execFileCb, spawnSync } from "node:child_process";
@@ -1693,6 +1694,9 @@ describe("qfai init", () => {
       // base-36 pid and timestamp.
       const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
       await writeFile(orphan, "half-written\n", "utf-8");
+      // Old enough to be abandoned whether or not some process now holds that pid.
+      const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      await utimes(orphan, longAgo, longAgo);
       // An unrelated dotfile in the same directory must survive: the sweep is
       // scoped to names this command could have written.
       const bystander = path.join(instrDir, "notes.qfai-init-notes.md");
@@ -1704,6 +1708,46 @@ describe("qfai init", () => {
         "notes.qfai-init-notes.md",
       ]);
       expect(await readFile(bystander, "utf-8")).toBe("keep\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:EX-0001-0031-04
+  it("--force keeps a staging file another run is still writing and reclaims ended runs' ones", async () => {
+    // Two inits in one project can run at once, so a staging file in the
+    // directory is no proof of an ended run: the other run may be between its
+    // write and its rename. Removing the file then fails that run's rename and
+    // loses its refresh. A file is reclaimed only once its owner is known to be
+    // gone: the pid in its name is no running process, or the file is older
+    // than any write and rename take.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      // This test's own process stands in for the other run still writing.
+      const livePid = process.pid.toString(36);
+      // A process that has already exited stands in for a killed run.
+      const exited = spawnSync(process.execPath, ["-e", ""]);
+      expect(exited.pid).toBeGreaterThan(0);
+      const deadPid = exited.pid.toString(36);
+
+      const active = path.join(instrDir, `code-review.instructions.md.qfai-init-${livePid}-a1`);
+      const killed = path.join(instrDir, `code-review.instructions.md.qfai-init-${deadPid}-b2`);
+      const stale = path.join(instrDir, `principles.instructions.md.qfai-init-${livePid}-c3`);
+      await writeFile(active, "in-flight\n", "utf-8");
+      await writeFile(killed, "half-written\n", "utf-8");
+      await writeFile(stale, "half-written\n", "utf-8");
+      // Older than any write and rename take, whoever holds its pid now.
+      const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      await utimes(stale, longAgo, longAgo);
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual([
+        path.basename(active),
+      ]);
+      expect(await readFile(active, "utf-8")).toBe("in-flight\n");
     } finally {
       await removeTempTree(root);
     }

@@ -460,6 +460,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
 
+- **`qfai init --force` no longer removes another run's staging file.** Each
+  run first removed every leftover `.qfai-init-*` staging file in
+  `.github/instructions/`, including the one a second init in the same
+  project was about to rename into place, so that run's refresh failed. A
+  staging file is now removed only when the process that wrote it is no
+  longer running or the file is more than an hour old, and each run writes
+  its staging file under a name no other run can take. Closes #4526.
+
 - **The `DESIGN.md` step says where a flow's surfaces come from.** It
   decided whether to run from `primary_surface` and `secondary_surfaces`, fields
   nothing has defined since 2.5.0. It now reads the surfaces the deliberation record
