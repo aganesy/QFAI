@@ -34,7 +34,8 @@ export const EXIT_CODES = {
    * the value `invalidExitCode` in `parseArgs` returns for every command,
    * and the row the init CLI contract's exit-code table reserves. A value
    * flag whose value the parser rejects (--fail-on with anything but never /
-   * warning / error) also stops here, before any main processing.
+   * warning / error, or on db-drift, which has no warning tier, anything but
+   * never / error) also stops here, before any main processing.
    *
    * Input and lock-drift errors use the same value. In report, a missing
    * input file does too.
