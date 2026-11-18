@@ -533,6 +533,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rules, so the shipped prompt stays within the size an agent reads in one
   pass.
 
+- **Acceptance tests are found when `paths.testsDir` is the repository root.**
+  With `testsDir: "."`, the patterns for `e2e/`, `integration/` and `api/`
+  started with `/`, so they pointed at the filesystem root and the story-tree
+  test check found no acceptance test there. The patterns are now joined from
+  their path segments and read those directories at the top of the repository.
+
 - **The `tech.md` template shows each item in the shape validation accepts.**
   The template held placeholders such as `<package>`, so a project filling it
   in guessed the shapes and needed several validate rounds. Every value is now
