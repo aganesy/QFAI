@@ -442,6 +442,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai db-drift` compares the full PostgreSQL column type.** It read
+  `information_schema.columns.data_type`, which drops the varchar length, the
+  numeric precision and scale and the array element type, and reads
+  `USER-DEFINED` for every user-defined type, so `VARCHAR(20)` against
+  `VARCHAR(40)`, `NUMERIC(10,2)` against `NUMERIC(12,4)`, `TEXT[]` against
+  `INTEGER[]` or two different enum types were reported as agreeing. It now
+  compares the type PostgreSQL resolves with its modifiers, and reports it as
+  that, for example `character varying(20)`. A type outside `pg_catalog` reads
+  with its schema, such as `public.order_state`, whatever search path the
+  applied SQL left behind. Closes #4476.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
