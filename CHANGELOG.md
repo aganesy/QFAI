@@ -450,6 +450,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **`qfai db-drift` compares the full PostgreSQL column type.** It read
+  `information_schema.columns.data_type`, which drops the varchar length, the
+  numeric precision and scale and the array element type, and reads
+  `USER-DEFINED` for every user-defined type, so `VARCHAR(20)` against
+  `VARCHAR(40)`, `NUMERIC(10,2)` against `NUMERIC(12,4)`, `TEXT[]` against
+  `INTEGER[]` or two different enum types were reported as agreeing. It now
+  compares the type PostgreSQL resolves with its modifiers, and reports it as
+  that, for example `character varying(20)`. A type outside `pg_catalog` reads
+  with its schema, such as `public.order_state`, whatever search path the
+  applied SQL left behind. Closes #4476.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
@@ -457,6 +468,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   command's usage lines (only the subcommand's when one was given) and a
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
+
+- **`qfai validate` no longer writes its run log through a link.** When
+  `paths.outDir`, a directory between the project root and it, or
+  `validate.log` in it is a symbolic link or junction, the run writes no run
+  log, names that path on stderr and exits 1, where it used to create the run
+  directory and overwrite `validate.log` wherever the link pointed. The run's
+  files are now created as new files, and `validate.log` is replaced by
+  renaming a new file over it rather than written in place. A directory
+  swapped for a link while the run writes is still not detected.
+  Closes #4486.
 
 - **Every document-schema finding names the line or heading to write.** A
   missing required line in a policy file, a story, its acceptance criteria or
