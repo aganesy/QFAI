@@ -96,6 +96,19 @@ describe("reading a contract's own DDL", () => {
     expect(references.size).toBe(0);
   });
 
+  it("does not read a REFERENCES inside a tagged dollar-quoted literal", () => {
+    // `$note$ … $note$` is as much a PostgreSQL literal as `$$ … $$`. Counted,
+    // it makes the file depend on the contract that creates `orders`.
+    const sql = [
+      "CREATE TABLE t (note TEXT DEFAULT $note$ REFERENCES orders $note$);",
+      "COMMENT ON TABLE t IS $a$ $b$ REFERENCES sessions $b$ $a$;",
+    ].join("\n");
+    const { references } = readTableEdges(sql);
+
+    expect(references.size).toBe(0);
+    expect(blankSqlNoise(sql)).toHaveLength(sql.length);
+  });
+
   it("keeps every offset when it blanks a comment", () => {
     // The blanking is a mask, not a delete: a later match has to land where the
     // reader sees it.

@@ -466,6 +466,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
+- **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
+  literal.** The check that compares a `db/` contract's foreign keys with its
+  `-- Depends on:` line skipped `$$ … $$` literals but not `$tag$ … $tag$`
+  ones, so text such as `$note$ REFERENCES orders $note$` was read as a
+  foreign key to `orders` and the contract was reported for not depending on
+  the contract that creates it. Both forms are now skipped, the same way the
+  SQL statement splitter already reads them. Closes #4656.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the

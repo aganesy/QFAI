@@ -38,6 +38,16 @@ export type SqlParseResult = {
 };
 
 /**
+ * The opening marker of a PostgreSQL dollar-quoted literal: `$$` or `$tag$`.
+ *
+ * The literal ends at the next occurrence of the same marker. Shared with the
+ * apply-order check, which has to skip the same literals this splitter does.
+ */
+export const DOLLAR_QUOTE_MARKER = /\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/;
+
+const DOLLAR_QUOTE_AT_START = new RegExp(`^${DOLLAR_QUOTE_MARKER.source}`);
+
+/**
  * Splits SQL into statements on top-level `;`.
  *
  * "Top-level" is the whole point: a `;` inside a string literal, a comment, a
@@ -131,7 +141,7 @@ export function parseSqlContract(text: string): SqlParseResult {
 
     // `$tag$ … $tag$` dollar quoting (PostgreSQL function bodies)
     if (ch === "$") {
-      const tag = /^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$/.exec(text.slice(index));
+      const tag = DOLLAR_QUOTE_AT_START.exec(text.slice(index));
       if (tag) {
         const marker = tag[0];
         const openedAt = line;
