@@ -47,8 +47,8 @@ export async function writeValidateRunLog(input: {
   const outDir = resolvePath(root, input.config, "outDir");
   await refuseLinkedDestination(root, outDir);
   await mkdir(outDir, { recursive: true });
-  // Again after `mkdir`: a link put in place while it ran would otherwise hold
-  // the run directory created next.
+  // Again after `mkdir`, which narrows the window a link swapped in can use
+  // but does not close it (see `refuseLinkedDestination`).
   await refuseLinkedDestination(root, outDir);
   const { runId, reportDir } = await allocateRunReportDir(outDir, input.startedAt);
 
@@ -191,9 +191,13 @@ async function writeLatestValidateLog(
  * sees. An `outDir` outside the root is checked from its own name down, since
  * the directories above it are not the project's.
  *
- * Ceiling: this is a check, then a write. A link put in place between the two
- * is not caught here; the writes below create new files and rename over
- * `validate.log`, so they do not write through one either way.
+ * Ceiling: this is a check, then writes. Another process that swaps `outDir`,
+ * a directory above it or the new run directory for a link after the check
+ * is not caught: `mkdir`, the exclusive creates and the rename all follow a
+ * linked parent directory. The exclusive creates and the rename only keep a
+ * link at the file name itself from being written through. Closing the window
+ * needs directory handles opened without following links, which Node does not
+ * offer portably; lift this if it does.
  */
 async function refuseLinkedDestination(root: string, outDir: string): Promise<void> {
   const insideRoot = isInside(root, outDir);

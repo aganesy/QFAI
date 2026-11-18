@@ -456,7 +456,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   log, names that path on stderr and exits 1, where it used to create the run
   directory and overwrite `validate.log` wherever the link pointed. The run's
   files are now created as new files, and `validate.log` is replaced by
-  renaming a new file over it rather than written in place. Closes #4486.
+  renaming a new file over it rather than written in place. A directory
+  swapped for a link while the run writes is still not detected.
+  Closes #4486.
 
 - **Every document-schema finding names the line or heading to write.** A
   missing required line in a policy file, a story, its acceptance criteria or
