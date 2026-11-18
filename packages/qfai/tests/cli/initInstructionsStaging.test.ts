@@ -2,7 +2,7 @@
  * The staging file a `--force` instructions refresh goes through is removed on
  * every path that does not consume it.
  *
- * `replaceWithRegularFile` writes `<dest>.qfai-init-<pid>-<ts>` and renames it
+ * `replaceWithRegularFile` writes `<dest>.qfai-init-<host>-<pid>-<token>` and renames it
  * into place. The rename failures were already cleaned up, but the staging
  * write itself sat outside the guard: an `ENOSPC` or a mid-transfer I/O fault
  * that had already committed bytes left a partial `.qfai-init-*` inside

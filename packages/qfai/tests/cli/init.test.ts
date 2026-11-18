@@ -13,6 +13,7 @@ import {
 } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFile as execFileCb, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -1683,7 +1684,7 @@ describe("qfai init", () => {
   it("--force sweeps a staging file a killed run left in the tracked directory", async () => {
     // `replaceWithRegularFile` cleans up its own staging file, but `finally` is
     // a JavaScript construct: SIGKILL, a crash or a power loss ends the run
-    // without one. Every run stages under a fresh pid-timestamp name, so
+    // without one. Every run stages under a fresh host-pid-token name, so
     // without a sweep the orphans only accumulate in a tracked directory until
     // one is committed by accident.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
@@ -1691,8 +1692,11 @@ describe("qfai init", () => {
       const instrDir = path.join(root, ".github", "instructions");
       await mkdir(instrDir, { recursive: true });
       // The shape a killed run leaves: a destination name, the infix, then the
-      // base-36 pid and timestamp.
-      const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
+      // host tag, the base-36 pid and the token.
+      const orphan = path.join(
+        instrDir,
+        "code-review.instructions.md.qfai-init-0a1b2c3d-1a2b-3c4d",
+      );
       await writeFile(orphan, "half-written\n", "utf-8");
       // Old enough to be abandoned whether or not some process now holds that pid.
       const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
@@ -1719,35 +1723,49 @@ describe("qfai init", () => {
     // directory is no proof of an ended run: the other run may be between its
     // write and its rename. Removing the file then fails that run's rename and
     // loses its refresh. A file is reclaimed only once its owner is known to be
-    // gone: the pid in its name is no running process, or the file is older
-    // than any write and rename take.
+    // gone: it was written on this host and the pid in its name is no running
+    // process, or the file is older than any write and rename take. A pid from
+    // another host sharing the directory says nothing here, so such a file
+    // waits for the age.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       const instrDir = path.join(root, ".github", "instructions");
       await mkdir(instrDir, { recursive: true });
+      // The writer's host tag: the first eight hex digits of SHA-256 of the host name.
+      const thisHost = createHash("sha256").update(os.hostname()).digest("hex").slice(0, 8);
+      const otherHost = thisHost === "00000000" ? "ffffffff" : "00000000";
       // This test's own process stands in for the other run still writing.
       const livePid = process.pid.toString(36);
       // A process that has already exited stands in for a killed run.
       const exited = spawnSync(process.execPath, ["-e", ""]);
       expect(exited.pid).toBeGreaterThan(0);
       const deadPid = exited.pid.toString(36);
+      const staged = (dest: string, host: string, pid: string, token: string) =>
+        path.join(instrDir, `${dest}.qfai-init-${host}-${pid}-${token}`);
 
-      const active = path.join(instrDir, `code-review.instructions.md.qfai-init-${livePid}-a1`);
-      const killed = path.join(instrDir, `code-review.instructions.md.qfai-init-${deadPid}-b2`);
-      const stale = path.join(instrDir, `principles.instructions.md.qfai-init-${livePid}-c3`);
+      const active = staged("code-review.instructions.md", thisHost, livePid, "a1");
+      const killed = staged("code-review.instructions.md", thisHost, deadPid, "b2");
+      const stale = staged("principles.instructions.md", thisHost, livePid, "c3");
+      // On another host, the dead pid here may be a run still writing there.
+      const remoteActive = staged("principles.instructions.md", otherHost, deadPid, "d4");
+      const remoteStale = staged("principles.instructions.md", otherHost, deadPid, "e5");
       await writeFile(active, "in-flight\n", "utf-8");
-      await writeFile(killed, "half-written\n", "utf-8");
-      await writeFile(stale, "half-written\n", "utf-8");
+      await writeFile(remoteActive, "in-flight\n", "utf-8");
+      for (const leftover of [killed, stale, remoteStale]) {
+        await writeFile(leftover, "half-written\n", "utf-8");
+      }
       // Older than any write and rename take, whoever holds its pid now.
       const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
       await utimes(stale, longAgo, longAgo);
+      await utimes(remoteStale, longAgo, longAgo);
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual([
-        path.basename(active),
-      ]);
+      expect(
+        (await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-")).sort(),
+      ).toEqual([path.basename(active), path.basename(remoteActive)].sort());
       expect(await readFile(active, "utf-8")).toBe("in-flight\n");
+      expect(await readFile(remoteActive, "utf-8")).toBe("in-flight\n");
     } finally {
       await removeTempTree(root);
     }
@@ -1759,7 +1777,10 @@ describe("qfai init", () => {
     try {
       const instrDir = path.join(root, ".github", "instructions");
       await mkdir(instrDir, { recursive: true });
-      const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
+      const orphan = path.join(
+        instrDir,
+        "code-review.instructions.md.qfai-init-0a1b2c3d-1a2b-3c4d",
+      );
       await writeFile(orphan, "half-written\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: true, yes: true });

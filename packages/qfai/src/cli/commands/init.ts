@@ -1,5 +1,6 @@
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import os from "node:os";
 import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
@@ -2488,32 +2489,50 @@ async function resolvesOutsideProject(destRoot: string, target: string): Promise
 const STAGING_INFIX = ".qfai-init-";
 
 /**
- * The sibling path {@link replaceWithRegularFile} stages `dest` at: the
- * base-36 pid of the writing process, then a random token.
- *
- * The pid is what lets {@link sweepStagedFiles} tell a run that ended from one
- * still writing; the token keeps two writers apart where a pid and a clock
- * would not, such as two hosts sharing the directory.
+ * This machine in a staging name: the first eight hex digits of the SHA-256 of
+ * its host name. A pid identifies a process only on the machine that issued
+ * it, so the sweep judges a pid only in a name that carries this tag.
  */
-function stagingPathFor(dest: string): string {
-  const token = randomUUID().replaceAll("-", "");
-  return `${dest}${STAGING_INFIX}${process.pid.toString(36)}-${token}`;
+function stagingHostTag(): string {
+  return createHash("sha256").update(os.hostname()).digest("hex").slice(0, 8);
 }
 
 /**
- * The pid in a basename {@link stagingPathFor} could have produced, or
- * `undefined` for any other name: a destination name, the infix, then the
- * base-36 pid and the token.
+ * The sibling path {@link replaceWithRegularFile} stages `dest` at: the
+ * {@link stagingHostTag}, the base-36 pid of the writing process, then a random
+ * token.
+ *
+ * The host and pid are what let {@link sweepStagedFiles} tell a run that ended
+ * from one still writing; the token keeps two writers apart where a host and a
+ * pid would not, such as one process staging the same file twice.
+ */
+function stagingPathFor(dest: string): string {
+  const token = randomUUID().replaceAll("-", "");
+  return `${dest}${STAGING_INFIX}${stagingHostTag()}-${process.pid.toString(36)}-${token}`;
+}
+
+/** The writer a staging name records: the host tag and the pid. */
+interface StagingOwner {
+  readonly host: string;
+  readonly pid: number;
+}
+
+/**
+ * The writer in a basename {@link stagingPathFor} could have produced, or
+ * `undefined` for any other name: a destination name, the infix, then the host
+ * tag, the base-36 pid and the token.
  *
  * Read back through the same constant the writer uses, so the sweep cannot end
  * up looking for a shape nothing writes — which would leave it passing while
  * reclaiming nothing.
  */
-function stagingOwnerPid(name: string): number | undefined {
+function stagingOwner(name: string): StagingOwner | undefined {
   const at = name.lastIndexOf(STAGING_INFIX);
   if (at <= 0) return undefined;
-  const match = /^([0-9a-z]+)-[0-9a-z]+$/.exec(name.slice(at + STAGING_INFIX.length));
-  return match?.[1] === undefined ? undefined : Number.parseInt(match[1], 36);
+  const match = /^([0-9a-f]{8})-([0-9a-z]+)-[0-9a-z]+$/.exec(name.slice(at + STAGING_INFIX.length));
+  const [, host, pid] = match ?? [];
+  if (host === undefined || pid === undefined) return undefined;
+  return { host, pid: Number.parseInt(pid, 36) };
 }
 
 /**
@@ -2523,7 +2542,7 @@ function stagingOwnerPid(name: string): number | undefined {
  * `rename`, milliseconds on any disk, so a file this old belongs to no run
  * still writing. The age covers what the pid cannot: a pid the system has since
  * given to an unrelated process, and a writer on another host sharing the
- * directory, whose pid means nothing here. Ceiling: a writer stalled longer
+ * directory, whose pid is never judged here. Ceiling: a writer stalled longer
  * than this, or a clock set back by more, loses its staging file and its
  * rename fails; raise the value if that is ever observed.
  */
@@ -2554,7 +2573,7 @@ function isEndedProcess(pid: number): boolean {
  * that does not consume it — but `finally` is a JavaScript construct, and
  * SIGINT, SIGKILL, a crashed process or a power loss ends the run without
  * running one. The partial `.qfai-init-*` then stays in `.github/instructions/`,
- * which is tracked, and because each run stages under a fresh `pid`-timestamp
+ * which is tracked, and because each run stages under a fresh host-pid-token
  * name nothing would ever reclaim it: repeated failures accumulate orphans
  * until one is committed by accident.
  *
@@ -2574,8 +2593,9 @@ function isEndedProcess(pid: number): boolean {
  * And only once its writer is known to have ended. Two inits can run in one
  * project at once, and the other run may be between its write and its rename:
  * removing its file then fails that rename and loses its refresh. A file is
- * reclaimed when the pid in its name is no running process, or when it is older
- * than {@link STAGING_ABANDONED_AFTER_MS}.
+ * reclaimed when its name carries this host's tag and its pid is no running
+ * process, or when it is older than {@link STAGING_ABANDONED_AFTER_MS}. A file
+ * another host wrote waits for the age: its pid says nothing about this host.
  */
 async function sweepStagedFiles(destRoot: string, dir: string): Promise<void> {
   let entries: Dirent[];
@@ -2584,14 +2604,16 @@ async function sweepStagedFiles(destRoot: string, dir: string): Promise<void> {
   } catch {
     return; // absent or unreadable — no orphan of ours is reachable there
   }
+  const thisHost = stagingHostTag();
   for (const entry of entries) {
-    const ownerPid = stagingOwnerPid(entry.name);
-    if (ownerPid === undefined) continue;
+    const owner = stagingOwner(entry.name);
+    if (owner === undefined) continue;
     const full = path.join(dir, entry.name);
     const stats = await safeLstat(full);
     if (stats?.isFile() !== true) continue;
     const abandoned = Date.now() - stats.mtimeMs > STAGING_ABANDONED_AFTER_MS;
-    if (!abandoned && !isEndedProcess(ownerPid)) continue;
+    const ended = owner.host === thisHost && isEndedProcess(owner.pid);
+    if (!abandoned && !ended) continue;
     if (await resolvesOutsideProject(destRoot, full)) continue;
     // A leftover we cannot delete is not a reason to fail the whole init; the
     // next run tries again, and nothing downstream depends on it being gone.
