@@ -474,6 +474,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
 
+- **`qfai doctor` can no longer hang on the mdschema package's platform
+  file.** After `mdschema --help` ran under its 15-second limit, the
+  `workflows.mdschemaBinary` check loaded `@jackchuka/mdschema`'s
+  `lib/platform.js` in doctor's own process, with no limit, to learn whether the
+  binary is the downloaded copy. That file now runs in a separate Node process
+  stopped at the same limit; one that does not answer by then gives no finding,
+  as a missing file already did. Closes #4616.
+
 - **`qfai validate` no longer writes its run log through a link.** When
   `paths.outDir`, a directory between the project root and it, or
   `validate.log` in it is a symbolic link or junction, the run writes no run
