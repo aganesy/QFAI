@@ -29,10 +29,11 @@
  *                    ratchet: a new document must conform, an edited document
  *                    that conformed at the merge base must still conform, and an
  *                    edited document that already failed there is reported, not
- *                    failed, however many violations it gains. Untouched legacy
- *                    documents are left for their own change. A rewrite that
- *                    moves bytes without moving text
- *                    — re-normalised line endings — is not a change here.
+ *                    failed, however many schema violations it gains, unless it
+ *                    carries the opt-out marker, which always fails (see "No
+ *                    opt-out" below). Untouched legacy documents are left for
+ *                    their own change. A rewrite that moves bytes without moving
+ *                    text — re-normalised line endings — is not a change here.
  *   --scope all      every document the manifest matches. The migration view.
  *   --scope files    only the paths named on the command line.
  *
