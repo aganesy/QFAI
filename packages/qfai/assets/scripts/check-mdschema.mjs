@@ -25,10 +25,13 @@
  * rather than by weakening the schemas until the current tree happens to pass:
  *
  *   --scope changed  (default) documents whose text this branch changed, judged
- *                    against their own state at the merge base. A ratchet: a new
- *                    document must conform and an edited one must not get
- *                    worse, while untouched legacy documents are left for their
- *                    own change. A rewrite that moves bytes without moving text
+ *                    against their own state at the merge base. A document-level
+ *                    ratchet: a new document must conform, an edited document
+ *                    that conformed at the merge base must still conform, and an
+ *                    edited document that already failed there is reported, not
+ *                    failed, however many violations it gains. Untouched legacy
+ *                    documents are left for their own change. A rewrite that
+ *                    moves bytes without moving text
  *                    — re-normalised line endings — is not a change here.
  *   --scope all      every document the manifest matches. The migration view.
  *   --scope files    only the paths named on the command line.
@@ -59,8 +62,9 @@
  * violations `mdschema` printed, and `mdschema` has no machine-readable output
  * — `--format json` and `--format sarif` both render the same text — so a
  * violation-level ratchet would couple this file to one release's wording, and
- * a reflowed message would silently report every violation as new. The file
- * ratchet uses only the exit status, which the tool does promise.
+ * a reflowed message would silently report every violation as new. The
+ * document-level ratchet uses only the exit status, which the tool does
+ * promise.
  *
  * ── Coverage ──────────────────────────────────────────────────────────────
  *
