@@ -486,6 +486,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
 
+- **`qfai validate` no longer waits forever on the document-schema check.**
+  An mdschema run that never exited held `validate` open, and one that printed
+  without end was read into memory whole. Each run now stops after 120 seconds
+  or 256 MiB of output, and `validate` reports a `QFAI-DOCSCHEMA-002` error
+  naming the limit the check passed instead of a result. Closes #4556.
+
 - **The `DESIGN.md` step says where a flow's surfaces come from.** It
   decided whether to run from `primary_surface` and `secondary_surfaces`, fields
   nothing has defined since 2.5.0. It now reads the surfaces the deliberation record
