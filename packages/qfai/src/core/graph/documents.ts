@@ -140,8 +140,10 @@ export async function prepareDocumentAnalysisLocked(
     (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none")).current;
   if ((await restoreCompletedDocumentAnalysis(root, run, inspect, environment)) === "restored")
     return { status: "prepared", source: "restored" };
-  const endpoint = processing.endpoint ?? "http://127.0.0.1:11434/v1";
-  const selected = new URL(endpoint);
+  const selected = new URL(processing.endpoint ?? "http://127.0.0.1:11434/v1");
+  // The approval, the origin guard and the Python client all receive the URL this check parsed,
+  // so no parser can read another host out of the configured text.
+  const endpoint = selected.href;
   const backend = processing.backend;
   const credential =
     typeof processing.credentialEnv === "string"
@@ -163,6 +165,16 @@ export async function prepareDocumentAnalysisLocked(
     };
   }
   const local = ["127.0.0.1", "localhost", "[::1]"].includes(selected.hostname);
+  // Plain http would carry documents and credentials readable in transit. The Python client
+  // verifies the certificate by default, and the sanitized environment and isolated
+  // interpreter pass no setting that turns that off.
+  if (!local && selected.protocol !== "https:") {
+    return {
+      status: "not-ready",
+      recovery:
+        "Use an https endpoint for external document processing; plain http is accepted only for a loopback endpoint.",
+    };
+  }
   let scope: readonly string[] | undefined;
   if (processing.scope !== undefined) {
     if (!validDocumentScope(processing.scope))
@@ -284,7 +296,10 @@ function validGraphProcessing(processing: unknown): processing is GraphProcessin
         endpoint.username ||
         endpoint.password ||
         endpoint.search ||
-        endpoint.hash
+        endpoint.hash ||
+        // Text another parser reads differently, such as a backslash before an `@`, is refused:
+        // only the canonical form, with or without the root path's slash, is accepted.
+        (endpoint.href !== processing.endpoint && endpoint.href !== `${processing.endpoint}/`)
       )
         return false;
     } catch {

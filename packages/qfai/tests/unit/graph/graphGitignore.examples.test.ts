@@ -94,6 +94,30 @@ it("preserves removed managed ignores and tracked output with concrete conflict 
   }
 });
 
+// QFAI:EX-0001-0236-17
+// Mutation: packages/qfai/src/core/graph/ignore.ts `const samples = graphOutputSamples();` -> `const samples = [".qfai/tools/analysis/current/graph.json"];` fails "names each graph output path a narrower managed rule leaves visible to Git"
+it("names each graph output path a narrower managed rule leaves visible to Git", async () => {
+  const key = graphEnvironmentKey();
+  for (const [rules, visible] of [
+    ["/.qfai/tools/analysis/\n", `.qfai/tools/runtimes/${key}/graphify/pyvenv.cfg`],
+    ["/.qfai/tools/*\n!/.qfai/tools/state/\n", `.qfai/tools/state/${key}/analysis.lock`],
+    ["/.qfai/tools/*/\n", ".qfai/tools/graph-cli.mjs"],
+  ] as const) {
+    const root = await repository();
+    try {
+      const content = `${GRAPH_IGNORE_MARKER}\n${rules}`;
+      await writeFile(path.join(root, ".gitignore"), content);
+      const result = await ensureGraphGitignore(root, runGraphProcess);
+      expect(result.conflicts, rules).toHaveLength(1);
+      expect(result.conflicts[0], rules).toContain(visible);
+      expect(result.files).toEqual([]);
+      expect(await readFile(path.join(root, ".gitignore"), "utf8")).toBe(content);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+});
+
 // QFAI:EX-0001-0236-16
 // Mutation: packages/qfai/src/core/graph/integration.ts moving `const ignore = await ensureGraphGitignore(root, run);` back below `prepareGraphRuntimes` fails "ignores the tools directory even when a runtime download fails"
 it("ignores the tools directory even when a runtime download fails", async () => {

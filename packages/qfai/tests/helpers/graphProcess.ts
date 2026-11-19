@@ -10,6 +10,9 @@ export function graphProcessFixture(): {
   const calls: { command: string; args: readonly string[]; env?: NodeJS.ProcessEnv }[] = [];
   const run: GraphProcess = async (command, args, options) => {
     calls.push({ command, args, ...(options.env ? { env: options.env } : {}) });
+    // Git lists each ignored path it was asked about; the fixture reports every one as ignored.
+    if (command === "git" && args[0] === "check-ignore")
+      return { exitCode: 0, stdout: args.slice(args.indexOf("--") + 1).join("\n") + "\n" };
     if (args.includes("--prefix")) {
       const prefix = args[args.indexOf("--prefix") + 1];
       if (!prefix || !args.includes(`@colbymchenry/codegraph@${GRAPH_VERSIONS.codegraph}`)) {

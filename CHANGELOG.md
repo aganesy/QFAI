@@ -540,6 +540,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `##[<command>]` form, which the runner finds anywhere in a line, prints as
   `##\[`. The JSON report keeps the exact values.
 
+- **External document analysis now requires `https`.** An external Graphify
+  processing endpoint could be configured with plain `http`, so documents and
+  the selected credential crossed the network unencrypted once a human
+  authorized the destination. Such an endpoint is now not ready, with a
+  recovery that names `https`, and no authorization is asked for it. The
+  extraction keeps the client's default certificate verification, and no
+  ambient certificate setting reaches it. Plain `http` still works for an
+  endpoint on `127.0.0.1`, `localhost` or `[::1]`. An endpoint written so that
+  Python reads a different host than the loopback check did, such as
+  `http://127.0.0.1\@evil.example/v1`, is now an invalid processing
+  definition, and every step receives the one parsed URL.
+  Closes #4585.
+
 - **`qfai validate` reports the actual line of a Mermaid screen-flow
   finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction
   warnings named the line before the one they flagged. They now name the
@@ -584,6 +597,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.agents/rules/graph-exploration.md` shows a local setup that names a
   variable holding a placeholder value instead of a real key.
 
+- **A failed document graph refresh keeps the previous graph with the files it
+  was built from.** Checking whether the document graph was current copied the
+  changed project files into the active analysis first, so when the
+  replacement graph then failed, the previous graph sat beside inputs it was
+  never built from. When project files changed, the check now refreshes and
+  verifies a separate copy and makes it active, graph and inputs together,
+  only when the graph is current for them. Unchanged files are checked where
+  they are, with no copy. Closes #4588.
+
 - **`qfai validate` compares the index's Depends On with each contract.** The
   `contracts.md` index check compared each row's ID and File with the contract
   but never read its Depends On cell, so the index could state an apply order
@@ -593,14 +615,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   has no such declaration, is not compared. The `QFAI-CONTRACT-015`
   message no longer names a rule `qfai validate` no longer has.
 
-- **A failed document graph refresh keeps the previous graph with the files it
-  was built from.** Checking whether the document graph was current copied the
-  changed project files into the active analysis first, so when the
-  replacement graph then failed, the previous graph sat beside inputs it was
-  never built from. When project files changed, the check now refreshes and
-  verifies a separate copy and makes it active, graph and inputs together,
-  only when the graph is current for them. Unchanged files are checked where
-  they are, with no copy. Closes #4588.
+- **The turn-end hook no longer runs checks when `qfai.config.yaml` cannot be
+  read.** A file that could not be read or parsed, or whose top level was not
+  a set of keys, such as an empty file, was treated as omitting
+  `workflow.stopGate` and so ran the project's turn-end checks. The hook now
+  runs none and says which file it could not read and that no turn-end check
+  ran.
 
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the
@@ -627,6 +647,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   multi-line comment ends on: before, a
   `<!-- note --> ## Risks` line was read as a heading, and a code fence after
   a closing `-->` hid the rest of the document. Closes #4568.
+
+- **A CommonJS consumer now gets the CommonJS declaration file.** The
+  package's exports map sent `import` and `require` to the same
+  `index.d.ts`, which TypeScript reads as an ES module in this package, so a
+  `.cts` file compiled in `node16` mode got TS1471 for a `require("qfai")`
+  that worked at runtime. `require` now resolves its types to `index.d.cts`,
+  and `import` keeps `index.d.ts`. Closes #4598.
 
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
@@ -709,6 +736,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reading `qfai.config.yaml`, such as an unknown `workflow.mode` value, was
   dropped and appeared only after the migration. The run now reports those
   findings before `QFAI-LAYOUT-001`, so both can be fixed in one pass.
+
+- **Graph setup checks every graph output path against `.gitignore`.** When
+  the managed graph block was already present, `qfai init` checked one path
+  under `.qfai/tools/analysis/` that the current layout no longer writes, so a
+  narrower rule could leave runtimes, local state, engine caches or the graph
+  entrypoints visible to Git while the check passed. It now checks a path in
+  each place graph preparation and queries write, and the conflict it reports
+  names each path Git would still see.
 
 - **`qfai validate` no longer passes over a story-tree Markdown file it
   cannot read.** The HTML mock, Mermaid screen flow and UI definition checks
