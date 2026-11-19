@@ -13,7 +13,7 @@ Feature: A migrated project is told which of its own files still name a 1.x path
 
   # AC-0004-0042-02
   Scenario: Step 12 leaves out what it does not scan
-    Given a file under `.qfai/` or under the configured spec or contract directory, the file `qfai init` writes about the retired layout, a symbolic link, a binary file, a path that is no regular file in the working tree, and a file git does not track, each carrying or leading to a 1.x path
+    Given a file under `.qfai/` or under the configured spec or contract directory, the file `qfai init` writes about the retired layout, a symbolic link, a binary file, a path that is no regular file in the working tree, a file whose directory leads outside the project, and a file git does not track, each carrying or leading to a 1.x path
     When step 12 runs
     Then none of them is listed, and a file a link leads to is listed once, under its own path
 

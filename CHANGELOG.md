@@ -617,6 +617,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   another profile than `--profile` exits 2 and names the validate run to
   repeat. Closes #4468.
 
+- **The migration's step 12 scan no longer reads files outside the project.**
+  A tracked file whose directory in the working tree was a link to elsewhere
+  was read through that link, so the scan could report lines from a file the
+  project does not hold. The scan now resolves each file's directory against
+  the project root, with every link followed, and leaves out a file whose
+  directory lands outside it. A project reached through a linked root is still
+  scanned in full. Closes #4458.
+
 - **`qfai validate` no longer waits forever on the document-schema check.**
   An mdschema run that never exited held `validate` open, and one that printed
   without end was read into memory whole. Each run now stops after 120 seconds

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -47,6 +47,23 @@ describe("step 12 project-file scan", () => {
     const scan = await scanOldPaths(context);
     expect(scan.items).toHaveLength(1);
     expect(scan.items[0]).toContain("old-path: docs/notes.md:1:");
+  });
+
+  it("reads a project's own files when its root is reached through a link", async () => {
+    const context = await trackedProject(".qfai/spec", ".qfai/spec/03_contract");
+    const holder = await mkdtemp(path.join(os.tmpdir(), "qfai-step12-link-"));
+    roots.push(holder);
+    const linked = path.join(holder, "project");
+    await symlink(context.root, linked, "junction");
+    const scan = await scanOldPaths({
+      ...context,
+      root: linked,
+      specsDir: path.join(linked, ".qfai/spec"),
+      contractsDir: path.join(linked, ".qfai/spec/03_contract"),
+    });
+    expect(scan.items).toHaveLength(1);
+    expect(scan.items[0]).toContain("old-path: docs/notes.md:1:");
+    expect(scan.scanned).toEqual(["files checked for 1.x paths: 1"]);
   });
 
   it("leaves every tracked file out when a configured directory is the project root", async () => {
