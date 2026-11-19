@@ -477,6 +477,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
 
+- **The README states what the Claude Code launcher permission allows.** It
+  said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
+  entries `qfai init` writes trust the launcher the project installs. Claude
+  Code matches only the command text and never checks which package runs, so
+  `npx qfai` in a checkout without its own install runs a copy outside the
+  checkout or one downloaded from the npm registry without asking. The README
+  now says so. Closes #4622.
+
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
   `requires: null`, or a `requires:` with no value, as `requires: []`. It now
