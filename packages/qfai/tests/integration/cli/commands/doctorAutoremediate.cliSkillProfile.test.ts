@@ -135,6 +135,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
   // severity, so `--fail-on never` must not turn it into exit 0.
   // QFAI:EX-0003-0009-13
   it("exits 1 when an install fails, even under --fail-on never", async () => {
+    // QFAI:AC-0003-0009-05
     const root = await newTempDir("install-failed");
     const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
@@ -157,17 +158,34 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
       return summary;
     });
 
-    const exit = await runDoctor({
-      root,
-      rootExplicit: true,
-      format: "json",
-      outPath: path.join(root, ".qfai", "report", "doctor.json"),
-      skillProfile: "qfai-prototyping",
-      autoremediate: true,
-      yes: true,
-      failOn: "never",
+    // In JSON mode doctor writes the remediation lines to stderr, so the
+    // operator sees the failure there; the chunk alone is observed.
+    const stderrChunks: string[] = [];
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      if (typeof chunk === "string") {
+        stderrChunks.push(chunk);
+      } else if (chunk instanceof Uint8Array) {
+        stderrChunks.push(Buffer.from(chunk).toString("utf-8"));
+      }
+      return true;
     });
+    let exit: number;
+    try {
+      exit = await runDoctor({
+        root,
+        rootExplicit: true,
+        format: "json",
+        outPath: path.join(root, ".qfai", "report", "doctor.json"),
+        skillProfile: "qfai-prototyping",
+        autoremediate: true,
+        yes: true,
+        failOn: "never",
+      });
+    } finally {
+      stderrSpy.mockRestore();
+    }
 
+    expect(stderrChunks.join("")).toContain("install failed for playwright");
     expect(summary?.lines).toContain(
       "autoremediate: install failed for playwright: npm install playwright exited with code 1",
     );
