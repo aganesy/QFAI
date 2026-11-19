@@ -1,5 +1,16 @@
 import { randomBytes } from "node:crypto";
-import { chmod, lstat, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  lstat,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -117,9 +128,11 @@ export async function writeValidateRunLog(input: {
   // PowerShell.
   await publishLatestRunPointer({
     runRoot: outDir,
-    runId,
+    run: { runId, startedAtMs: input.startedAt.getTime() },
     pointerPath: logPath,
     runIdLine: VALIDATE_RUN_ID_LINE,
+    startedAtLine: VALIDATE_STARTED_AT_LINE,
+    readStartedAtMs: readRunStartedAtMs,
     buildContents: () =>
       `${buildValidateLog({
         runId,
@@ -141,13 +154,14 @@ export async function writeValidateRunLog(input: {
 
 const VALIDATE_LOG_NAME = "validate.log";
 const RUN_LOG_LABEL = "qfai validate: the run log";
-/** The `- run_id:` line `buildValidateLog` writes. */
+/** The `- run_id:` and `- started_at:` lines `buildValidateLog` writes. */
 export const VALIDATE_RUN_ID_LINE = /^-\s*run_id:\s*(run-\d{17})\s*$/m;
+export const VALIDATE_STARTED_AT_LINE = /^-\s*started_at:\s*(\S+)\s*$/m;
 const RUN_DIR_RE = /^run-\d{17}$/;
 
 /**
  * Point `pointerPath`, a "latest run" file such as `validate.log` or
- * `preflight_summary.md`, at the run `runId` unless a newer run already
+ * `preflight_summary.md`, at `run` unless a run that started after it already
  * exists. Every writer of such a pointer goes through here.
  *
  * Two runs on the same root race here. Run directories are named from the
@@ -155,13 +169,15 @@ const RUN_DIR_RE = /^run-\d{17}$/;
  * after it, and an unconditional write would leave the pointer on A's older
  * `run-*` directory while B's newer one sits beside it.
  *
- * Two freshness checks decide, both on run ids, whose lexical order is
- * chronological order: a `run-*` directory under `runRoot` newer than `runId`
- * (a run's directory exists from the moment it is allocated, so a newer run
- * still in flight is seen), and the `runIdLine` of the existing pointer (a
- * newer run whose directory was pruned after it wrote). An unreadable or
- * unparseable pointer counts as "no newer run", so a truncated or hand-edited
- * file self-heals on the next run.
+ * Two freshness checks decide: a `run-*` directory under `runRoot` for a
+ * newer run (a run's directory exists from the moment it is allocated, so a
+ * newer run still in flight is seen), and the run the existing pointer names
+ * by `runIdLine` and `startedAtLine` (a newer run whose directory was pruned
+ * after it wrote). "Newer" is decided by absolute start time, as
+ * `startedAfter` says, not by run id: the id is a local timestamp, which a
+ * daylight-saving fall-back repeats. An unreadable or unparseable pointer
+ * counts as "no newer run", so a truncated or hand-edited file self-heals on
+ * the next run.
  *
  * The checks and the write happen under one exclusive guard, so an older run
  * that passed the checks cannot write after a newer run that started checking
@@ -169,9 +185,11 @@ const RUN_DIR_RE = /^run-\d{17}$/;
  */
 export async function publishLatestRunPointer(input: {
   runRoot: string;
-  runId: string;
+  run: RunStart;
   pointerPath: string;
   runIdLine: RegExp;
+  startedAtLine: RegExp;
+  readStartedAtMs: RunStartReader;
   buildContents: () => string | Promise<string>;
   /** Overrides for tests; every caller in the package leaves this out. */
   guard?: PointerGuardOptions;
@@ -179,18 +197,26 @@ export async function publishLatestRunPointer(input: {
   await withPointerGuard(
     input.pointerPath,
     async () => {
-      if (await hasNewerRunDir(input.runRoot, input.runId)) return;
-      const existingRunId = await readPointerRunId(input.pointerPath, input.runIdLine);
-      if (existingRunId !== null && existingRunId > input.runId) return;
+      if (await hasNewerRunDir(input.runRoot, input.run, input.readStartedAtMs)) return;
+      const existing = await readPointerRunStart(input);
+      if (existing !== null && startedAfter(existing, input.run)) return;
       await replaceFile(input.pointerPath, await input.buildContents());
     },
     input.guard,
   );
 }
 
-async function readPointerRunId(pointerPath: string, runIdLine: RegExp): Promise<string | null> {
+async function readPointerRunStart(input: {
+  pointerPath: string;
+  runIdLine: RegExp;
+  startedAtLine: RegExp;
+}): Promise<RunStart | null> {
   try {
-    return runIdLine.exec(await readFile(pointerPath, "utf-8"))?.[1] ?? null;
+    return recordedRunStart(
+      await readFile(input.pointerPath, "utf-8"),
+      input.runIdLine,
+      input.startedAtLine,
+    );
   } catch {
     return null;
   }
@@ -449,25 +475,129 @@ async function writeNewFile(filePath: string, contents: string, mode?: number): 
   });
 }
 
+/** A run, by its id and its absolute start time in epoch milliseconds. */
+export type RunStart = { runId: string; startedAtMs: number };
+
+/** The start time a run directory records, in epoch milliseconds, or `null` when it records none. */
+export type RunStartReader = (runDir: string) => Promise<number | null>;
+
 /**
- * True when `runRoot` already holds a `run-*` directory strictly newer than
- * `runId`.
+ * Whether `candidate` started after `run`.
+ *
+ * Decided by absolute start time, with the run id breaking a tie. The run id
+ * alone does not do: it is `run-<17-digit LOCAL timestamp>`, and a
+ * daylight-saving fall-back, or a clock set back, gives a run that starts later
+ * a smaller id. The run-log retention check in `qfai doctor --clean` orders runs
+ * by the same instant.
+ */
+export function startedAfter(candidate: RunStart, run: RunStart): boolean {
+  if (candidate.startedAtMs !== run.startedAtMs) {
+    return candidate.startedAtMs > run.startedAtMs;
+  }
+  return candidate.runId > run.runId;
+}
+
+/**
+ * The run a "latest run" pointer's text names: its run id and its start
+ * instant, read with the two line patterns the pointer is written with. `null`
+ * when either is missing or the instant does not parse, so a truncated or
+ * hand-edited pointer counts as naming no run.
+ */
+export function recordedRunStart(
+  text: string,
+  runIdLine: RegExp,
+  startedAtLine: RegExp,
+): RunStart | null {
+  const runId = runIdLine.exec(text)?.[1];
+  const startedAt = startedAtLine.exec(text)?.[1];
+  if (runId === undefined || startedAt === undefined) {
+    return null;
+  }
+  const startedAtMs = Date.parse(startedAt);
+  return Number.isFinite(startedAtMs) ? { runId, startedAtMs } : null;
+}
+
+/**
+ * True when `runRoot` already holds a `run-*` directory for a run that started
+ * after `run`, as `startedAfter` decides.
  *
  * `allocateRunDir` creates the directory at the START of a run, so a newer
- * concurrent run is visible here before it finishes. Run ids are
- * `run-<17-digit local timestamp>`, so lexical order is chronological order.
+ * concurrent run is visible here before it finishes. `readStartedAtMs` reads the start time a directory's
+ * files record. A directory that records none yet, as one still in flight,
+ * counts from its modification time, which `allocateRunDir` sets to the run's
+ * start, so an in-flight run and a finished one are compared by the same
+ * instant. Directories are read in descending id order and the first newer one
+ * ends the scan, which in the usual case reads one directory.
+ *
+ * Ceiling: between `mkdir` and that `utimes`, and between the moment a run
+ * creates its first file and the moment the file is complete, a reader sees
+ * the time of that write rather than the run's start, so it may take that run
+ * as newer. `publishLatestRunPointer` calls this under its guard once its own
+ * run's files are complete, so two runs can no longer each be inside that
+ * window while the other checks. What is left needs a run that started
+ * earlier to still be allocating its directory while a later run publishes;
+ * both then leave the pointer as it was. Recording the start time in the
+ * directory atomically with its creation would lift it.
  */
-async function hasNewerRunDir(runRoot: string, runId: string): Promise<boolean> {
+async function hasNewerRunDir(
+  runRoot: string,
+  run: RunStart,
+  readStartedAtMs: RunStartReader,
+): Promise<boolean> {
+  let entries;
   try {
-    const entries = await readdir(runRoot, { withFileTypes: true });
-    return entries.some(
-      (entry) => entry.isDirectory() && RUN_DIR_RE.test(entry.name) && entry.name > runId,
-    );
+    entries = await readdir(runRoot, { withFileTypes: true });
   } catch {
     // An unreadable run root cannot prove a newer run exists; fall through to
     // the caller's own pointer guard rather than skipping the write and losing
     // evidence.
     return false;
+  }
+  const names = entries
+    .filter(
+      (entry) => entry.isDirectory() && RUN_DIR_RE.test(entry.name) && entry.name !== run.runId,
+    )
+    .map((entry) => entry.name)
+    .sort((a, b) => b.localeCompare(a));
+  for (const name of names) {
+    const runDir = path.join(runRoot, name);
+    const startedAtMs = (await readStartedAtMs(runDir)) ?? (await modifiedAtMs(runDir));
+    if (startedAtMs !== null && startedAfter({ runId: name, startedAtMs }, run)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** The modification time of `entryPath`, or `null` when it is gone. */
+async function modifiedAtMs(entryPath: string): Promise<number | null> {
+  try {
+    return (await stat(entryPath)).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+function hasStartedAt(value: unknown): value is { started_at: unknown } {
+  return typeof value === "object" && value !== null && "started_at" in value;
+}
+
+/**
+ * `run.json#started_at` of the validate run directory `runDir`, in epoch
+ * milliseconds. `null` for every failure mode (absent file, unreadable file,
+ * invalid JSON, missing or unparseable field), so a caller falls back to an
+ * ordering key that is always available rather than drop the run.
+ */
+export async function readRunStartedAtMs(runDir: string): Promise<number | null> {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(path.join(runDir, "run.json"), "utf-8"));
+    if (!hasStartedAt(parsed) || typeof parsed.started_at !== "string") {
+      return null;
+    }
+    const startedAtMs = Date.parse(parsed.started_at);
+    return Number.isFinite(startedAtMs) ? startedAtMs : null;
+  } catch {
+    return null;
   }
 }
 
@@ -640,8 +770,9 @@ function formatTimestamp17(date: Date): string {
  * The name is derived from the run's start time and the directory is created
  * exclusively, so two runs that start in the same millisecond get distinct ids
  * instead of writing over each other. Shared with the preflight writer, which
- * needs the same "one directory per run, lexically ordered" addressing under a
- * parent of its own.
+ * needs the same "one directory per run" addressing under a parent of its own.
+ * The id is a local timestamp, so its order is not the runs' order across a
+ * daylight-saving fall-back: order runs with `startedAfter`.
  */
 export async function allocateRunDir(
   parentDir: string,
@@ -654,6 +785,13 @@ export async function allocateRunDir(
     const runDir = path.join(parentDir, runId);
     try {
       await mkdir(runDir);
+      // Until the run records its start in a file, `hasNewerRunDir` reads the
+      // directory's modification time, so make that the start, not `mkdir`'s.
+      await utimes(runDir, startedAt, startedAt).catch(() => {
+        // A file system that refuses it leaves the `mkdir` time, so the order
+        // can be off until the run records its start. The run itself must not
+        // fail over that.
+      });
       return { runId, runDir };
     } catch (error) {
       if (isAlreadyExistsError(error)) {

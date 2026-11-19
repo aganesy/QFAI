@@ -1,10 +1,15 @@
-import { lstat, mkdir, open, readdir, realpath, stat } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { blockedAncestor } from "../fs/templateCopy.js";
-import { allocateRunDir, publishLatestRunPointer, replaceFile } from "../runLog.js";
+import {
+  allocateRunDir,
+  publishLatestRunPointer,
+  recordedRunStart,
+  replaceFile,
+} from "../runLog.js";
 
 const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
 /**
@@ -60,6 +65,7 @@ export type SddPreflightResult = {
 
 type PreflightRun = {
   runId: string;
+  startedAt: Date;
   summaryPath: string;
   latestSummaryPath: string;
   /** `<outDir>/preflight/` — where the `run-*` freshness check looks. */
@@ -209,6 +215,7 @@ async function completeReadyPreflight(input: {
     input.run,
     buildReadyPreflightSummary({
       runId: input.run.runId,
+      startedAt: input.run.startedAt,
       source: input.source,
       selectedInputPath: input.selectedInputPath,
       openQuestions: input.openQuestions,
@@ -237,6 +244,7 @@ async function completeBlockedPreflight(input: {
     input.run,
     buildBlockedPreflightSummary({
       runId: input.run.runId,
+      startedAt: input.run.startedAt,
       blockers: input.blockers,
       openQuestions: input.openQuestions,
       nextCommands,
@@ -276,6 +284,7 @@ async function allocatePreflightRun(
   const { runId, runDir } = await allocateRunDir(runRoot, startedAt);
   return {
     runId,
+    startedAt,
     summaryPath: path.join(runDir, PREFLIGHT_SUMMARY_FILE),
     latestSummaryPath: path.join(reportRoot, PREFLIGHT_SUMMARY_FILE),
     runRoot,
@@ -284,22 +293,42 @@ async function allocatePreflightRun(
 
 /** The `- run id:` line `buildReadyPreflightSummary` / `buildBlocked…` write. */
 const PREFLIGHT_RUN_ID_LINE_RE = /^-\s*run id:\s*(run-\d{17})\s*$/m;
+/** The `- started at:` line they write beside it, a UTC ISO 8601 instant. */
+const PREFLIGHT_STARTED_AT_LINE_RE = /^-\s*started at:\s*(\S+)\s*$/m;
+
+/** The start time the summary in the preflight run directory `runDir` records. */
+async function readPreflightStartedAtMs(runDir: string): Promise<number | null> {
+  let text: string;
+  try {
+    text = await readFile(path.join(runDir, PREFLIGHT_SUMMARY_FILE), "utf-8");
+  } catch {
+    // Not written yet, as for a run still in flight: the caller falls back
+    // to the directory's modification time.
+    return null;
+  }
+  return (
+    recordedRunStart(text, PREFLIGHT_RUN_ID_LINE_RE, PREFLIGHT_STARTED_AT_LINE_RE)?.startedAtMs ??
+    null
+  );
+}
 
 /**
  * Write the run-scoped summary first, then refresh the latest pointer with the
  * same body. The run-scoped copy is never rewritten, so a report that
  * cites it keeps resolving to the state that justified its decisions. The
- * pointer is refreshed only when no newer preflight exists, under the guard
- * `publishLatestRunPointer` holds for every "latest run" pointer.
+ * pointer is refreshed only when no preflight that started later exists, under
+ * the guard `publishLatestRunPointer` holds for every "latest run" pointer.
  */
 async function publishPreflightSummary(run: PreflightRun, body: string): Promise<void> {
   const contents = `${body}\n`;
   await replaceFile(run.summaryPath, contents);
   await publishLatestRunPointer({
     runRoot: run.runRoot,
-    runId: run.runId,
+    run: { runId: run.runId, startedAtMs: run.startedAt.getTime() },
     pointerPath: run.latestSummaryPath,
     runIdLine: PREFLIGHT_RUN_ID_LINE_RE,
+    startedAtLine: PREFLIGHT_STARTED_AT_LINE_RE,
+    readStartedAtMs: readPreflightStartedAtMs,
     buildContents: () => contents,
   });
 }
@@ -383,6 +412,7 @@ function toDisplayPath(root: string, target: string): string {
  */
 function buildBlockedPreflightSummary(input: {
   runId: string;
+  startedAt: Date;
   blockers: string[];
   openQuestions: string[];
   nextCommands: string[];
@@ -394,6 +424,7 @@ function buildBlockedPreflightSummary(input: {
     "",
     "- status: blocked",
     `- run id: ${input.runId}`,
+    `- started at: ${input.startedAt.toISOString()}`,
     "- selected input: (none)",
     "",
     "## Blockers",
@@ -416,6 +447,7 @@ function renderCarryOver(openQuestions: string[]): string[] {
 
 function buildReadyPreflightSummary(input: {
   runId: string;
+  startedAt: Date;
   source: SddPreflightSource;
   selectedInputPath: string;
   openQuestions: string[];
@@ -427,6 +459,7 @@ function buildReadyPreflightSummary(input: {
     "",
     "- status: ready",
     `- run id: ${input.runId}`,
+    `- started at: ${input.startedAt.toISOString()}`,
     `- source: ${input.source}`,
     `- selected ${input.source}: ${input.selectedInputPath}`,
     "",
