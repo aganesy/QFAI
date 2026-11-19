@@ -301,6 +301,7 @@ export async function validateProject(
     // only those findings, and their absence is indistinguishable from a clean
     // surface to a reader looking at the issue list alone.
     profileValidatorsRan: profileRun.ranProfileValidators,
+    ...(flowScope ? { flowIds: flowScope.flowIds } : {}),
     issues,
     counts: countIssues(issues),
     waivers,

@@ -521,6 +521,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The configured specs directory is also read as a literal path, so a name
   holding `*` no longer selects conflicted documents outside it. Closes #4523.
 
+- **`qfai report` checks the flows a validation result records.** A flow
+  report trusted a result named `validate.flow-<ids>.json`, so a result of
+  another scope copied or renamed to that name was rendered as the requested
+  flows'. `qfai validate --flow` now records the flows it checked in the
+  result's `flowIds` field, and `qfai report` exits 2, names the validate run
+  to repeat and writes no report when the recorded flows are not the requested
+  ones, including a result with no recorded flows under `--flow` and a result
+  with recorded flows read without `--flow`. Closes #4547.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts

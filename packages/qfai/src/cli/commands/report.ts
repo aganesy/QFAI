@@ -74,14 +74,41 @@ function resolveReportPaths(
 }
 
 /**
- * True when an explicit `--in` file carries the scope the run was asked for.
+ * True when the validation result records the flows the run was asked for.
  *
- * The stored validation result carries findings and waiver totals that cannot
- * be reconstructed by filtering a repository-wide result. The scoped file
- * name is the available provenance; the profile is not part of it.
+ * The stored result carries findings and waiver totals that cannot be
+ * reconstructed by filtering a result of another scope, and a file name can be
+ * copied or renamed, so the scope the result records is the provenance. No
+ * recorded flows means a repository-wide run.
  */
-function inputCarriesRequestedScope(inputPath: string, scopedValidateJsonPath: string): boolean {
-  return path.basename(inputPath) === path.basename(scopedValidateJsonPath);
+function recordsRequestedScope(validation: ValidationResult, flowIds: readonly string[]): boolean {
+  const requested = [...new Set(flowIds)].sort();
+  const recorded = validation.flowIds ?? [];
+  return (
+    recorded.length === requested.length && recorded.every((id, index) => id === requested[index])
+  );
+}
+
+/**
+ * The refusal for a result whose recorded flows are not the requested ones.
+ * The suggested commands write and read a result of the requested scope.
+ */
+function buildScopeMismatchGuidance(
+  inputPath: string,
+  recorded: readonly string[] | undefined,
+  flowIds: readonly string[],
+): string {
+  const describe = (ids: readonly string[] | undefined): string =>
+    ids && ids.length > 0 ? `flows ${ids.join(", ")}` : "the whole repository";
+  const scopeArgs = flowIds.map((id) => ` --flow ${id}`).join("");
+  return [
+    `qfai report: ${inputPath} records a validation of ${describe(recorded)}, not of ${describe(flowIds)}.`,
+    "A report takes counts, issues and waiver totals from the result as they are. Run validate with the same scope first. For example:",
+    `  qfai validate${scopeArgs}`,
+    `  qfai report${scopeArgs}`,
+    "",
+    "Alternatively, pass --run-validate to report.",
+  ].join("\n");
 }
 
 /**
@@ -174,24 +201,6 @@ export async function runReport(options: ReportOptions): Promise<number> {
     validation = ran.validation;
   } else {
     const inputPath = resolveInputPath(root, paths.validateJsonPath, options.inputPath);
-    if (
-      options.inputPath !== undefined &&
-      flowIds.length > 0 &&
-      !inputCarriesRequestedScope(inputPath, paths.validateJsonPath)
-    ) {
-      const unit = "flow";
-      const scopeArgs = flowIds.map((id) => `--flow ${id}`).join(" ");
-      error(
-        [
-          `qfai report: the --in validate result does not match the --${unit} scope: ${inputPath}`,
-          `report with --${unit} takes counts, issues, and waiver totals from the input file as they are.`,
-          `Pass the scoped validate result named ${path.basename(paths.validateJsonPath)}. For example:`,
-          `  qfai validate ${scopeArgs}`,
-          `  qfai report ${scopeArgs}`,
-        ].join("\n"),
-      );
-      return 2;
-    }
     const loaded = await loadValidationResult(
       inputPath,
       flowIds,
@@ -199,6 +208,10 @@ export async function runReport(options: ReportOptions): Promise<number> {
       resolveInputPath(root, paths.validateJsonPath, undefined),
     );
     if (loaded === null) {
+      return 2;
+    }
+    if (!recordsRequestedScope(loaded, flowIds)) {
+      error(buildScopeMismatchGuidance(inputPath, loaded.flowIds, flowIds));
       return 2;
     }
     if (options.inputPath === undefined && options.profile !== undefined && flowIds.length > 0) {
@@ -483,6 +496,13 @@ function validationResultShapeProblem(value: unknown): string | null {
   const profile: unknown = Reflect.get(value, "profile");
   if (profile !== undefined && !VALIDATION_PROFILES.includes(profile)) {
     return "profile must name a validation profile";
+  }
+  const recordedFlows: unknown = Reflect.get(value, "flowIds");
+  if (
+    recordedFlows !== undefined &&
+    (!Array.isArray(recordedFlows) || !recordedFlows.every((id) => typeof id === "string"))
+  ) {
+    return "flowIds must be an array of strings";
   }
   // `severity` and `suppressed` are load-bearing: the gate counts by the first
   // and skips on the second, so a value of the wrong type would silently drop
