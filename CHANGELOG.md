@@ -668,6 +668,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   side by side, and the findings and counts are the same either way.
   Fixes #4279.
 
+- **`qfai sdd merge-docs` replaces only the document it read.** It wrote the
+  merged text through the working file's name, so a working file or story
+  directory that was a symbolic link had the text written wherever the link
+  pointed, outside the project included. It now leaves such a document, and
+  one whose working file is not UTF-8 text or is larger than 16 MiB, as it
+  is and names it. It sets the working file aside, checks it is still the
+  file it read, and gives the merged text the name only while nothing else
+  holds it, so a file an editor saves meanwhile is kept, not overwritten.
+  Fixes #4461.
+
 - **Document analysis reaches only the approved processing origin.**
   Graphify document extraction was given the selected or authorized endpoint,
   but nothing stopped the process from following a redirect or sending to
