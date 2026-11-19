@@ -348,8 +348,9 @@ describe("the optional named diagnostic acceptance", () => {
     for (const step of steps) expect(step["continue-on-error"]).toBeUndefined();
     expect(runText(steps[run] ?? {})).toContain('node "${RUNNER_TEMP}/named-preflight.mjs"');
     const program = namedDiagnosticProgram("PREFLIGHT");
-    expect(program).toContain('readFileSync("packages/qfai/vitest.workspace.ts"');
-    expect(program).toContain('git("ls-tree", "HEAD", "--", file)');
+    expect(program).toContain('committedFile("packages/qfai/vitest.workspace.ts", 64 * 1024,');
+    expect(program).toContain('committedFile(file, 16 * 1024 * 1024, "the test file")');
+    expect(program).toContain('git("ls-tree", "HEAD", "--", relative)');
     expect(program).toContain("committed.equals(readFileSync(target))");
     expect(sorted(runnerProjects())).toHaveLength(7);
     for (const entry of declaredIncludeGlobs()) {
