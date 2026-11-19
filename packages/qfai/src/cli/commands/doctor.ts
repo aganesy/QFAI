@@ -215,8 +215,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       ...(options.skillProfile ? { skill: options.skillProfile } : {}),
     });
     sideEffectLines.push(...summary.lines);
-    remediationFailed =
-      summary.failedRunLogPrunes.length > 0 || summary.failedInstalls.length > 0;
+    remediationFailed = summary.failedRunLogPrunes.length > 0 || summary.failedInstalls.length > 0;
     // When the operator did not pass `--profile <skill>`, the install
     // phase of runAutoremediate is structurally skipped (there is no
     // manifest to probe). Surface that explicitly so operators do not
