@@ -155,6 +155,16 @@ export async function prepareDocumentAnalysisLocked(
     };
   }
   const local = ["127.0.0.1", "localhost", "[::1]"].includes(selected.hostname);
+  // Plain http would carry documents and credentials readable in transit. The Python client
+  // verifies the certificate by default, and the sanitized environment and isolated
+  // interpreter pass no setting that turns that off.
+  if (!local && selected.protocol !== "https:") {
+    return {
+      status: "not-ready",
+      recovery:
+        "Use an https endpoint for external document processing; plain http is accepted only for a loopback endpoint.",
+    };
+  }
   let scope: readonly string[] | undefined;
   if (processing.scope !== undefined) {
     if (!validDocumentScope(processing.scope))
