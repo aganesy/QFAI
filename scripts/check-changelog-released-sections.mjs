@@ -69,6 +69,7 @@ import { lstatSync, readFileSync, writeFileSync } from "node:fs";
 import { argv, exit, stderr, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 
+import { parseReleasedHeading } from "./changelog-heading.mjs";
 import { entryTitles, releasedSections } from "./check-release-notes.mjs";
 import { blobAt, resolveRange } from "./check-shipped-ci-parity.mjs";
 
@@ -229,11 +230,9 @@ function spans(text) {
     if (/^## /u.test(line.text)) {
       finish(line.start);
       if (section !== null) section.end = line.start;
-      const released = /^## \[(\d+\.\d+\.\d+)\][ \t]+-[ \t]+\d{4}-\d{2}-\d{2}[ \t]*$/u.exec(
-        line.text,
-      );
+      const released = parseReleasedHeading(line.text);
       section = {
-        version: released?.[1] ?? null,
+        version: released?.version ?? null,
         unreleased: /^## \[Unreleased\][ \t]*$/u.test(line.text),
         start: line.start,
         end: text.length,
