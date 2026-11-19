@@ -625,6 +625,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   then switches the two; if the switch fails, the project's copy is put back,
   and when even that fails the error names the hidden directory that holds it.
 
+- **The run log's `traceability.json` lists every story-tree ID a finding
+  cites.** It kept only the first ID in each reference a finding gave, missed
+  business flow IDs, contract-scoped business rule IDs such as
+  `BR-CLI-0014-0092`, and decision and open-question IDs, and still read the
+  ID forms of QFAI 1.x. It now lists every BF, US, AC, EX, BR, DEC and OQ ID in
+  each reference, read with the same ID rules `qfai validate` applies to the
+  story tree. Closes #4537.
+
 - **The document-schema check sees changes under a non-ASCII directory.**
   `check-mdschema.mjs --scope changed` read Git's changed paths line by line,
   where Git quotes a path with a non-ASCII character and escapes its bytes. The
