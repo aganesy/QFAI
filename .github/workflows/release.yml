@@ -168,8 +168,10 @@ jobs:
           # pushes the tag, so a heading refused here was already refused there. It matches the
           # version literally: under a regex the dots in `1.10.0` match any character, so a
           # `## [1x10x0]` heading would pass here and break the extraction that builds the
-          # release notes. A released heading always starts `## [X.Y.Z] - `, which is the
-          # prefix the notes step cuts at, so the two cannot disagree.
+          # release notes. A released heading is `## [X.Y.Z] - ` with exactly one space each
+          # side of the dash, the literal prefix the notes step cuts at, so the two cannot
+          # disagree: a wider or tab separator is refused here instead of publishing to npm
+          # and leaving the GitHub Release with no body.
           if ! heading="$(git show "${sha}:CHANGELOG.md" | node ./scripts/changelog-heading.mjs "${version}" -)"; then
             echo "::error::${heading}"
             exit 1

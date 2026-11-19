@@ -13,8 +13,11 @@
  * ## What a released heading is
  *
  * `## [X.Y.Z] - YYYY-MM-DD`, with nothing after the date but whitespace. The
- * date is checked for shape only: it is the day the release was prepared, and
- * nothing downstream reads it as a calendar date.
+ * dash has exactly one space on each side, because `release.yml` cuts the
+ * release notes at the literal prefix `## [X.Y.Z] - `: a wider or tab
+ * separator would pass here, publish to npm, and then leave the GitHub Release
+ * with no body. The date is checked for shape only: it is the day the release
+ * was prepared, and nothing downstream reads it as a calendar date.
  *
  * ## Which line names a version
  *
@@ -38,8 +41,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 /** `## [1.11.0] - 2026-09-07`: a released section, as opposed to `[Unreleased]`. */
-export const RELEASED_HEADING_RE =
-  /^## \[(\d+\.\d+\.\d+)\][ \t]+-[ \t]+(\d{4}-\d{2}-\d{2})[ \t]*$/u;
+export const RELEASED_HEADING_RE = /^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})[ \t]*$/u;
 
 /** `X.Y.Z`, the only shape a version takes in a release heading. */
 const VERSION_RE = /^\d+\.\d+\.\d+$/u;
@@ -76,9 +78,17 @@ export function describeHeading(changelog, version, label) {
   const heading = versionHeading(changelog, version);
   if (heading.state === "released") return { code: 0, message: heading.date };
   if (heading.state === "malformed") {
+    // Control characters dropped: the line goes into a `::error::` annotation, and a
+    // lone `\r` survives the line split.
+    const shown = Array.from(heading.line)
+      .filter((char) => {
+        const code = char.codePointAt(0) ?? 0;
+        return code >= 0x20 && code !== 0x7f;
+      })
+      .join("");
     return {
       code: 1,
-      message: `${label} names ${version} as '${heading.line}', which is not a released heading; expected ${expected}`,
+      message: `${label} names ${version} as '${shown}', which is not a released heading; expected ${expected}`,
     };
   }
   return { code: 3, message: `${label} has no heading for ${version}; expected ${expected}` };

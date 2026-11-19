@@ -37,6 +37,10 @@ describe("a released heading", () => {
   it.each([
     ["no date", "## [1.11.0]"],
     ["no separator", "## [1.11.0] 2026-09-07"],
+    // The notes step cuts at the literal `## [X.Y.Z] - `, so a wider separator would
+    // publish to npm and leave the GitHub Release with no body.
+    ["two spaces around the dash", "## [1.11.0]  -  2026-09-07"],
+    ["a tab around the dash", "## [1.11.0]\t-\t2026-09-07"],
     ["a separator and no date", "## [1.11.0] - "],
     ["a date that is not date-shaped", "## [1.11.0] - 7 September 2026"],
     ["text after the date", "## [1.11.0] - 2026-09-07 (yanked)"],
@@ -103,6 +107,20 @@ describe("the command the release workflows run", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("names 1.2.3 as '## [1.2.3]'");
     expect(result.stdout).toContain("'## [1.2.3] - YYYY-MM-DD'");
+  });
+
+  it("exits 1 for a double-space or tab separator, which the notes step cannot cut at", () => {
+    for (const heading of ["## [1.2.3]  -  2026-11-20", "## [1.2.3]\t-\t2026-11-20"]) {
+      const result = run(["1.2.3", "-"], changelog(heading));
+      expect(result.status, heading).toBe(1);
+    }
+  });
+
+  it("drops control characters from the line it names, so the annotation stays one line", () => {
+    const { code, message } = main(["1.2.3", "-"], () => changelog("## [1.2.3]\r - x"));
+    expect(code).toBe(1);
+    expect(message).toContain("as '## [1.2.3] - x'");
+    expect(message).not.toMatch(/\r/);
   });
 
   it("exits 3 when no heading names the version, which tagging reads as nothing to tag", () => {
