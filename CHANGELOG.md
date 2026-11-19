@@ -490,12 +490,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
 
+- **A file at an assistant layer path no longer counts as an installed
+  layer.** `qfai validate` accepted a regular file named, for example,
+  `.qfai/assistant/prompt` as the `prompt/` layer and reported nothing. It
+  now reports `QFAI-ASSISTANT-002` at info saying the path is not a
+  directory, as it already does for a layer that is missing.
+
 - **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
   `E'…'` a backslash escapes the next character, but the statement splitter
   ended the literal at a backslash-escaped quote, so `SELECT E'it\'s';`
   reported an unterminated string or split a statement at a `;` inside the
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
+
+- **The package self-governance checks report an input they cannot read.**
+  `QFAI-MANIFEST-001` and `QFAI-HANDOFF-001` skipped a source file that was
+  present but could not be read, such as one behind a permission error or a
+  directory in its place, and the run passed as if that pair were in sync.
+  Each now reports such a file at severity error, naming it and saying the
+  check is incomplete. A file that is absent is still skipped, so a project
+  without the qfai package source is unaffected.
 
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
@@ -545,9 +559,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   limit was reported as a missing Python or uv, an incompatible version or a
   broken analysis to repair. A download now has 15 minutes, code analysis 30
   minutes and document analysis two hours, each with 16 MiB of output. A step
-  stopped at its limit is reported as that, for example `Cause: the CodeGraph
-download did not finish within 15 minutes and was stopped.`, and a stopped
-  document analysis says to narrow the document scope.
+  stopped at its limit is reported as that, naming the step, the limit and its
+  value, and a stopped document analysis says to narrow the document scope.
+
+- **An unreadable completed graph analysis no longer stops reuse.** When one
+  saved CodeGraph or Graphify analysis in the repository's graph cache could
+  not be inspected or its metadata could not be read, CodeGraph preparation
+  failed instead of generating the analysis locally, and Graphify passed over
+  every later saved analysis and rebuilt. That entry is now skipped on its own:
+  a later valid analysis is restored, and with none left the analysis is
+  generated locally.
 
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
@@ -631,6 +652,13 @@ download did not finish within 15 minutes and was stopped.`, and a stopped
   quoting rules: a bare part folds to lower case, a quoted part keeps its
   case and its doubled `""`, and a dot inside quotes does not split the name.
 
+- **An agent card's required sections must be real headings.** The
+  `QFAI-AGENT-005` check accepted any occurrence of a required heading's text,
+  so a card missing `## Stop conditions` passed when the frontmatter, a
+  sentence, a code sample, an HTML comment or a `### Stop conditions` heading
+  carried the same words. Only a level-2 heading of the card body now counts.
+  Closes #4573.
+
 - **`qfai validate` checks every resource reference in an HTML mock.** The
   external URL, local file and unsafe scheme checks read only `href`, `src`
   and `action`, so a mock could load a CDN asset through CSS `url()`,
@@ -664,6 +692,13 @@ download did not finish within 15 minutes and was stopped.`, and a stopped
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
+- **`qfai validate` reads every skill document within the same size limit.**
+  A document the skill-tree crawl found was read whole into memory, while the
+  same document named from a directory the crawl skips was read only up to
+  64 MiB. Every skill document now goes through one bounded reader: past the
+  limit its encoding is still checked and what it cites is left undecided,
+  wherever it sits. Closes #4577.
 
 - **A DB contract that gives a regular and a unique index one name is
   reported.** PostgreSQL keeps both kinds of index in one namespace, so the
