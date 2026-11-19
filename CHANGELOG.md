@@ -440,7 +440,38 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/tools/graph-enforcement.json` and the `*.pending.json`, `*.draft.json`
   and `*.grant.json` files under `.qfai/tools/state/`.
 
+- **The run log's `traceability.json` no longer carries `stats`.** Its
+  `downstream_violations` and `shared_scope_violations` counted finding codes
+  no check reports any more, so both were always 0. The file now holds
+  `schema_version` and `nodes` only.
+
 ### Fixed
+
+- **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
+  difference exits 0 under `--fail-on never`, but the parser refused the flag
+  on `db-drift` and the command exited 2. `db-drift` now takes
+  `--fail-on never` and `--fail-on error`, the default; `warning` is refused,
+  since the command has no warning tier. A contract or migration that would
+  not apply still exits 2 under `--fail-on never`, since no comparison was
+  made. Closes #4516.
+
+- **`qfai db-drift` compares the full PostgreSQL column type.** It read
+  `information_schema.columns.data_type`, which drops the varchar length, the
+  numeric precision and scale and the array element type, and reads
+  `USER-DEFINED` for every user-defined type, so `VARCHAR(20)` against
+  `VARCHAR(40)`, `NUMERIC(10,2)` against `NUMERIC(12,4)`, `TEXT[]` against
+  `INTEGER[]` or two different enum types were reported as agreeing. It now
+  compares the type PostgreSQL resolves with its modifiers, and reports it as
+  that, for example `character varying(20)`. A type outside `pg_catalog` reads
+  with its schema, such as `public.order_state`, whatever search path the
+  applied SQL left behind. Closes #4476.
+
+- **The README names npm's own error for a Git install of QFAI.** It said
+  npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
+  through a `preinstall` guard. npm never reaches that guard: it stops with
+  `EUNSUPPORTEDPROTOCOL` at the repository root's `workspace:` dependency, an
+  error that does not mention QFAI. The README now describes npm's error and
+  gives the guard's message to yarn alone. Closes #4626.
 
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
@@ -449,6 +480,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   command's usage lines (only the subcommand's when one was given) and a
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
+
+- **`qfai doctor` can no longer hang on the mdschema package's platform
+  file.** After `mdschema --help` ran under its 15-second limit, the
+  `workflows.mdschemaBinary` check loaded `@jackchuka/mdschema`'s
+  `lib/platform.js` in doctor's own process, with no limit, to learn whether the
+  binary is the downloaded copy. That file now runs in a separate Node process
+  stopped at the same limit; one that does not answer by then gives no finding,
+  as a missing file already did. Closes #4616.
+
+- **`qfai validate` no longer writes its run log through a link.** When
+  `paths.outDir`, a directory between the project root and it, or
+  `validate.log` in it is a symbolic link or junction, the run writes no run
+  log, names that path on stderr and exits 1, where it used to create the run
+  directory and overwrite `validate.log` wherever the link pointed. The run's
+  files are now created as new files, and `validate.log` is replaced by
+  renaming a new file over it rather than written in place. A directory
+  swapped for a link while the run writes is still not detected.
+  Closes #4486.
 
 - **Every document-schema finding names the line or heading to write.** A
   missing required line in a policy file, a story, its acceptance criteria or
@@ -459,6 +508,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   title, keeps its pattern. The `tech.md` Surface example is now the bare row,
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
+
+- **`qfai validate` no longer waits forever on the document-schema check.**
+  An mdschema run that never exited held `validate` open, and one that printed
+  without end was read into memory whole. Each run now stops after 120 seconds
+  or 256 MiB of output, and `validate` reports a `QFAI-DOCSCHEMA-002` error
+  naming the limit the check passed instead of a result. Closes #4556.
 
 - **The `DESIGN.md` step says where a flow's surfaces come from.** It
   decided whether to run from `primary_surface` and `secondary_surfaces`, fields
@@ -508,6 +563,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   rules, so the shipped prompt stays within the size an agent reads in one
   pass.
 
+- **Acceptance tests are found when `paths.testsDir` is the repository root.**
+  With `testsDir: "."`, the patterns for `e2e/`, `integration/` and `api/`
+  started with `/`, so they pointed at the filesystem root and the story-tree
+  test check found no acceptance test there. The patterns are now joined from
+  their path segments and read those directories at the top of the repository.
+
 - **The `tech.md` template shows each item in the shape validation accepts.**
   The template held placeholders such as `<package>`, so a project filling it
   in guessed the shapes and needed several validate rounds. Every value is now
@@ -553,6 +614,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   own, as part of the group's time. A run without `--timings` still runs them
   side by side, and the findings and counts are the same either way.
   Fixes #4279.
+
+- **Document analysis reaches only the approved processing origin.**
+  Graphify document extraction was given the selected or authorized endpoint,
+  but nothing stopped the process from following a redirect or sending to
+  another host. Extraction now runs under a guard that refuses every name
+  lookup and connection outside that endpoint's host name and port, including
+  another name for the same address, and refuses reverse lookups. It follows
+  no redirect, which could otherwise switch an `https` endpoint to `http`,
+  starts no child process, which the guard could not reach, and opens no
+  listening socket. A local backend
+  stays local and a different origin needs its own authorization.
+  Closes #4496.
 
 ## [2.5.0] - 2026-11-15
 

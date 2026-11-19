@@ -1,6 +1,5 @@
 import { spawnSync } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -11,8 +10,9 @@ const TITLE = "Document-schema checker (@jackchuka/mdschema)";
 
 /**
  * How long the probe waits for `mdschema --help` before it stops the binary and
- * calls it unusable. The stop is `SIGKILL`: a binary that ignores `SIGTERM`
- * would otherwise keep the probe waiting for ever.
+ * calls it unusable, and, separately, for the package's platform file to name
+ * the binary it resolves. The stop is `SIGKILL`: a process that ignores
+ * `SIGTERM` would otherwise keep the probe waiting for ever.
  */
 const PROBE_TIMEOUT_MS = 15_000;
 
@@ -107,36 +107,62 @@ const DOWNLOAD_ONLY_MESSAGE =
   "Install without omitting optional dependencies, so the platform package supplies the binary and the download is not needed.";
 
 /**
+ * The program a child Node process runs to ask the package's platform file
+ * which binary it resolves. The file to load is its one argument; it prints the
+ * path as JSON, or `null` when the file names none.
+ */
+const PROVENANCE_PROGRAM = [
+  "const platform = require(process.argv[1]);",
+  'const answer = platform !== null && typeof platform === "object" && typeof platform.getBinaryPath === "function" ? platform.getBinaryPath() : null;',
+  'process.stdout.write(JSON.stringify(typeof answer === "string" ? answer : null));',
+].join("\n");
+
+/** The path the provenance program printed, or `null` when it printed none. */
+function printedPath(stdout: string): string | null {
+  try {
+    const printed: unknown = JSON.parse(stdout);
+    return typeof printed === "string" ? printed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Whether @jackchuka/mdschema resolves its binary to the copy under its own
  * `bin/` directory, which is where its install script downloads one, rather
  * than to the platform package. `entry` is the package's command file.
  *
  * The package's own `lib/platform.js` answers, so the result is the binary its
- * command file starts. A package without that file, or one whose file does not
- * answer, gives no finding: the binary has already run.
+ * command file starts. That file is the package's code, so it runs in a child
+ * Node process stopped at the same deadline as `mdschema --help`, never in
+ * doctor's own process. A package without that file, or one whose file does
+ * not answer before the deadline, gives no finding: the binary has already run.
  */
-function runsFromDownload(entry: string): boolean {
+function runsFromDownload(entry: string, timeoutMs: number): boolean {
+  let platformFile: string;
   try {
-    const platformFile = realpathSync(
-      path.join(path.dirname(path.dirname(entry)), "lib", "platform.js"),
-    );
-    const platform: unknown = createRequire(platformFile)(platformFile);
-    if (
-      typeof platform !== "object" ||
-      platform === null ||
-      !("getBinaryPath" in platform) ||
-      typeof platform.getBinaryPath !== "function"
-    ) {
-      return false;
-    }
-    const binary: unknown = Reflect.apply(platform.getBinaryPath, undefined, []);
-    return (
-      typeof binary === "string" &&
-      path.dirname(path.resolve(binary)) === path.resolve(path.dirname(platformFile), "..", "bin")
-    );
+    platformFile = realpathSync(path.join(path.dirname(path.dirname(entry)), "lib", "platform.js"));
   } catch {
     return false;
   }
+  const result = spawnSync(
+    process.execPath,
+    ["--input-type=commonjs", "--eval", PROVENANCE_PROGRAM, platformFile],
+    {
+      encoding: "utf-8",
+      timeout: timeoutMs,
+      killSignal: "SIGKILL",
+      stdio: ["ignore", "pipe", "ignore"],
+    },
+  );
+  if (result.error !== undefined || result.status !== 0) {
+    return false;
+  }
+  const binary = printedPath(result.stdout);
+  return (
+    binary !== null &&
+    path.dirname(path.resolve(binary)) === path.resolve(path.dirname(platformFile), "..", "bin")
+  );
 }
 
 /**
@@ -170,7 +196,7 @@ export async function checkMdschemaBinary(
     return failure(failureReason(result), INSTALL_FIX);
   }
   const entry = command.args[0];
-  if (entry !== undefined && runsFromDownload(entry)) {
+  if (entry !== undefined && runsFromDownload(entry, timeoutMs)) {
     return {
       id: CHECK_ID,
       severity: "warning",

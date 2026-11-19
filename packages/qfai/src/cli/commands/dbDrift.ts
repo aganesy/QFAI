@@ -29,7 +29,7 @@ export type DbDriftOptions = {
   root: string;
   format?: "text" | "json";
   outPath?: string;
-  /** `never` reports the differences and still exits 0. */
+  /** `never` reports the differences and still exits 0; a file that would not apply still exits 2. */
   failOn?: "error" | "never";
   /** Injected by tests so the comparison can run without a WASM build. */
   createDatabase?: DatabaseFactory;
@@ -98,14 +98,15 @@ export async function runDbDrift(options: DbDriftOptions): Promise<number> {
     info(rendered.trimEnd());
   }
 
-  if (options.failOn === "never") {
-    return EXIT_OK;
-  }
   // A file that would not apply is not a clean run either: the schema it was
   // meant to contribute is missing from one side, so every column it declares
-  // reads as a difference against a comparison that never had it.
+  // reads as a difference against a comparison that never had it. `never`
+  // waives a difference, not a comparison that could not be made.
   if (result.failures.length > 0) {
     return EXIT_CANNOT_RUN;
+  }
+  if (options.failOn === "never") {
+    return EXIT_OK;
   }
   return result.differences.length > 0 ? EXIT_DRIFT : EXIT_OK;
 }
