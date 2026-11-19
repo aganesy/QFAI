@@ -317,11 +317,13 @@ describe("validate.log freshness under out-of-order completion", () => {
     const { runRoot, pointerPath, run } = await guardFixture();
     const refusals = ["EPERM", "EACCES"];
     await publishPointer(runRoot, pointerPath, run, {
-      platform: "win32",
-      createGuard: async (guardPath, contents) => {
-        const code = refusals.shift();
-        if (code !== undefined) throw Object.assign(new Error(code), { code });
-        await writeFile(guardPath, contents, { encoding: "utf-8", flag: "wx" });
+      guard: {
+        platform: "win32",
+        createGuard: async (guardPath, contents) => {
+          const code = refusals.shift();
+          if (code !== undefined) throw Object.assign(new Error(code), { code });
+          await writeFile(guardPath, contents, { encoding: "utf-8", flag: "wx" });
+        },
       },
     });
 
@@ -333,9 +335,11 @@ describe("validate.log freshness under out-of-order completion", () => {
     const { runRoot, pointerPath, run } = await guardFixture();
     await expect(
       publishPointer(runRoot, pointerPath, run, {
-        platform: "linux",
-        createGuard: async () => {
-          throw Object.assign(new Error("EACCES"), { code: "EACCES" });
+        guard: {
+          platform: "linux",
+          createGuard: async () => {
+            throw Object.assign(new Error("EACCES"), { code: "EACCES" });
+          },
         },
       }),
     ).rejects.toThrow("EACCES");
