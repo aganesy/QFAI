@@ -41,11 +41,13 @@ describe("readers of a validation result read the one the current command wrote"
     expect(intro).toContain("-<profile>");
     expect(intro).toContain(".flow-");
     expect(intro).toContain("`generatedAt`");
+    expect(intro).toContain("`run-log:`");
   });
 
   it("configure inspects the result of the validate run it just made", async () => {
     const configure = await read("skill/qfai-configure/SKILL.md");
     expect(configure).not.toContain("inspect `.qfai/report/validate.json#issues`");
     expect(configure).toContain("output.validateJsonPath");
+    expect(configure).toContain("`run-log:`");
   });
 });

@@ -11,8 +11,8 @@ the file the invocation wrote, not a fixed path:
 
 `output.validateJsonPath` defaults to `.qfai/report/validate.json`, which every
 repository-wide run also rewrites, so it can hold another profile's or worker's
-result. Use a result only when its `profile` is the one the command ran and its
-`generatedAt` is no earlier than the command's start.
+result. Use a result only when its `profile` is the one the command ran and its `generatedAt` is no earlier than the command's start.
+Two runs of one profile write one file, so where they can overlap on one tree, read the run's own `run-*/` directory instead, named by the `run-log:` line: `run.json` holds the counts and `validator.json` the unsuppressed errors and warnings by `code`.
 `npx qfai report --profile <profile>` reads the suffixed file but only warns on another profile.
 
 It is a **public surface** (`@api` under
