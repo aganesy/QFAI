@@ -85,7 +85,7 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
   const { JSDOM } = await loadJsdom();
   let dom: JsdomInstance;
   try {
-    dom = new JSDOM(html, { runScripts: "outside-only" });
+    dom = new JSDOM(html);
   } catch (error) {
     result.parseErrors.push(
       `HTML parse error: ${error instanceof Error ? error.message : String(error)}`,
