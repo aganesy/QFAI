@@ -12,6 +12,8 @@ export type FlowScope = {
   ruleIds: string[];
   flowDirectories: string[];
   ruleFiles: string[];
+  /** Every flow, story, criterion, example and rule ID above, built once for lookups. */
+  ids: ReadonlySet<string>;
 };
 
 function sorted(values: Iterable<string>): string[] {
@@ -39,28 +41,24 @@ export function resolveFlowScope(values: readonly string[], model: StoryTreeMode
   const exampleIds = sorted(examples.map((example) => example.id));
   const exampleSet = new Set(exampleIds);
   const rules = model.rules.filter((rule) => rule.examples.some((id) => exampleSet.has(id)));
+  const ruleIds = sorted(rules.map((rule) => rule.id));
   return {
     flowIds,
     invalidValues: [...new Set(invalidValues)],
     storyIds,
     acceptanceCriteriaIds,
     exampleIds,
-    ruleIds: sorted(rules.map((rule) => rule.id)),
+    ruleIds,
     flowDirectories: sorted(
       model.flows.filter((flow) => flowSet.has(flow.id)).map((flow) => flow.directory),
     ),
     ruleFiles: sorted(rules.map((rule) => rule.file)),
+    ids: new Set([...flowIds, ...storyIds, ...acceptanceCriteriaIds, ...exampleIds, ...ruleIds]),
   };
 }
 
 export function flowScopeContainsId(scope: FlowScope, id: string): boolean {
-  return [
-    ...scope.flowIds,
-    ...scope.storyIds,
-    ...scope.acceptanceCriteriaIds,
-    ...scope.exampleIds,
-    ...scope.ruleIds,
-  ].includes(id);
+  return scope.ids.has(id);
 }
 
 /**
