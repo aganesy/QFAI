@@ -38,6 +38,26 @@ export type SqlParseResult = {
 };
 
 /**
+ * The opening marker of a PostgreSQL dollar-quoted literal: `$$` or `$tag$`.
+ *
+ * The literal ends at the next occurrence of the same marker. Shared with the
+ * apply-order check, which has to skip the same literals this splitter does.
+ *
+ * A tag follows PostgreSQL's identifier rules without the `$`: a letter, `_` or
+ * any non-ASCII character first, then digits as well. PostgreSQL counts every
+ * byte above 0x7F as a letter here, so `\u0080-\uFFFF` stands for all of them,
+ * each half of a surrogate pair included.
+ *
+ * A marker directly after a letter, digit, `_`, non-ASCII character or `$`
+ * opens nothing: `$` continues an identifier, so `foo$tag$` is one name.
+ */
+export const DOLLAR_QUOTE_MARKER =
+  /(?<![A-Za-z0-9_$\u0080-\uFFFF])\$(?:[A-Za-z_\u0080-\uFFFF][A-Za-z0-9_\u0080-\uFFFF]*)?\$/;
+
+/** {@link DOLLAR_QUOTE_MARKER} at one offset of the whole text, so the lookbehind sees what precedes it. */
+const DOLLAR_QUOTE_AT = new RegExp(DOLLAR_QUOTE_MARKER.source, "y");
+
+/**
  * Splits SQL into statements on top-level `;`.
  *
  * "Top-level" is the whole point: a `;` inside a string literal, a comment, a
@@ -131,7 +151,8 @@ export function parseSqlContract(text: string): SqlParseResult {
 
     // `$tag$ … $tag$` dollar quoting (PostgreSQL function bodies)
     if (ch === "$") {
-      const tag = /^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$/.exec(text.slice(index));
+      DOLLAR_QUOTE_AT.lastIndex = index;
+      const tag = DOLLAR_QUOTE_AT.exec(text);
       if (tag) {
         const marker = tag[0];
         const openedAt = line;
