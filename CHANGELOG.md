@@ -613,6 +613,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dropped and appeared only after the migration. The run now reports those
   findings before `QFAI-LAYOUT-001`, so both can be fixed in one pass.
 
+- **`qfai validate` no longer passes over a story-tree Markdown file it
+  cannot read.** The HTML mock, Mermaid screen flow and UI definition checks
+  skipped any file whose read failed, so a file the run had no permission to
+  read, or one lost to an I/O error, went unchecked with no message. Only a
+  file removed between the directory walk and the read is still left out. Any
+  other read failure now stops the run, which is recorded as incomplete with
+  `QFAI-SCAN-002` naming the file and the error.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
