@@ -219,7 +219,10 @@ describe("uiux validators", () => {
 
     const issues = await validateMermaidScreenFlow(root, defaultConfig);
     const lines = Object.fromEntries(
-      issues.map((finding) => [finding.code, { line: finding.loc?.line, message: finding.message }]),
+      issues.map((finding) => [
+        finding.code,
+        { line: finding.loc?.line, message: finding.message },
+      ]),
     );
 
     expect(lines["QFAI-FLOW-001"]).toEqual({

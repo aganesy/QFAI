@@ -452,6 +452,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai validate` reports the actual line of a Mermaid screen-flow
+  finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction
+  warnings named the line before the one they flagged. They now name the
+  flagged line, and each finding carries that line in its location so an
+  editor or report can jump to it. Closes #4562.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from
