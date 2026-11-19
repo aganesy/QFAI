@@ -13,9 +13,11 @@ import { isEnoent } from "../fs/errno.js";
 import { mirrorGraphCorpus } from "./analysis.js";
 import { graphAnalysisRoot, graphRuntimePaths, GRAPH_VERSIONS } from "./layout.js";
 import {
+  GRAPH_PROCESS_LIMITS,
   GRAPH_PYTHON_FLAGS,
   graphifyConfigurationSafe,
   graphifyCorpusEnvironment,
+  graphLimitCause,
   runGraphProcess,
   type GraphProcess,
 } from "./process.js";
@@ -90,13 +92,23 @@ export async function prepareGraphifyCodeAnalysis(
         "--max-concurrency",
         "1",
       ],
-      { cwd: staged, env: graphifyCorpusEnvironment(root, staged) },
+      {
+        cwd: staged,
+        env: graphifyCorpusEnvironment(root, staged),
+        ...GRAPH_PROCESS_LIMITS.codeAnalysis,
+      },
     );
     if (
       result.exitCode !== 0 ||
       !(await currentGraphifyCorpus(root, staged, graphRuntimePaths(root).python, run, "ast"))
     ) {
-      return { status: "failed", recovery: "Repair local Graphify code analysis." };
+      const cause = graphLimitCause("Graphify code analysis", result);
+      return {
+        status: "failed",
+        recovery: cause
+          ? `${cause} Retry the graph query.`
+          : "Repair local Graphify code analysis.",
+      };
     }
     await writeFile(
       path.join(staged, "graphify-out", "managed.json"),
@@ -221,15 +233,19 @@ export async function prepareDocumentAnalysisLocked(
             ? { [backend === "ollama" ? "OLLAMA_API_KEY" : "OPENAI_API_KEY"]: credential }
             : {}),
         },
+        ...GRAPH_PROCESS_LIMITS.documentAnalysis,
       },
     );
     if (
       result.exitCode !== 0 ||
       !(await currentGraphifyCorpus(root, staged, graphRuntimePaths(root).python, run))
     ) {
+      const cause = graphLimitCause("Graphify document analysis", result);
       return {
         status: "failed",
-        recovery: "Check the selected local model and repair Graphify document analysis.",
+        recovery: cause
+          ? `${cause} Narrow the document scope in .qfai/graph-processing.json, then retry the graph query.`
+          : "Check the selected local model and repair Graphify document analysis.",
       };
     }
     await writeFile(

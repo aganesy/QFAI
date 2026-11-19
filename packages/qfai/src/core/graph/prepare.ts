@@ -5,7 +5,9 @@ import path from "node:path";
 import {
   codegraphEnvironment,
   graphifyEnvironment,
+  GRAPH_PROCESS_LIMITS,
   GRAPH_PYTHON_FLAGS,
+  graphLimitCause,
   npmCommand,
   runGraphProcess,
   type GraphProcess,
@@ -113,12 +115,13 @@ export async function prepareGraphRuntimes(
           "--ignore-scripts",
           `@colbymchenry/codegraph@${GRAPH_VERSIONS.codegraph}`,
         ],
-        { cwd: root, env },
+        { cwd: root, env, ...GRAPH_PROCESS_LIMITS.download },
       );
       if (install.exitCode !== 0)
         return {
           ...notReady,
           failedStep: "CodeGraph download",
+          ...limitRecovery("CodeGraph download", install),
           rerun: rerunByHand("codegraph", (directory) => [
             "npm",
             "install",
@@ -165,7 +168,9 @@ export async function prepareGraphRuntimes(
         return {
           ...notReady,
           failedStep: "Python 3.10+ and uv prerequisite",
-          recovery: "Install Python 3.10 or later and uv, then run qfai init again.",
+          recovery:
+            graphLimitCause("Python environment setup", venv) ??
+            "Install Python 3.10 or later and uv, then run qfai init again.",
         };
       const pythonInstall = await run(
         "uv",
@@ -176,12 +181,13 @@ export async function prepareGraphRuntimes(
           staged.python,
           `graphifyy[ollama]==${GRAPH_VERSIONS.graphify}`,
         ],
-        { cwd: root, env: pythonEnvironment },
+        { cwd: root, env: pythonEnvironment, ...GRAPH_PROCESS_LIMITS.download },
       );
       if (pythonInstall.exitCode !== 0)
         return {
           ...notReady,
           failedStep: "Graphify download",
+          ...limitRecovery("Graphify download", pythonInstall),
           rerun: rerunByHand("graphify", (directory) => [
             "uv",
             "pip",
@@ -290,6 +296,12 @@ export function windowsPathLimitRecovery(
   const longest = root.length + STAGED_TOOL_DEPTH;
   if (longest < WINDOWS_PATH_LIMIT - WINDOWS_PATH_MARGIN) return undefined;
   return `The graph tool files reach about ${longest} characters, near or past the Windows limit of ${WINDOWS_PATH_LIMIT}. Move the project to a shorter path, or enable Windows long paths (LongPathsEnabled), then run qfai init again.`;
+}
+
+/** A download QFAI stopped at its limit names that limit; the rerun line still follows. */
+function limitRecovery(step: string, result: GraphProcessResult): { recovery?: string } {
+  const cause = graphLimitCause(step, result);
+  return cause ? { recovery: cause } : {};
 }
 
 // The installer's own output is not shown, since it can carry credentials. The same download,

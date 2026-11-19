@@ -539,6 +539,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
+- **Graph preparation says when a step ran out of time or printed too much.**
+  Runtime downloads and full code and document analysis ran under the same
+  two-minute and 4 MiB limits as a version check, and a step stopped at either
+  limit was reported as a missing Python or uv, an incompatible version or a
+  broken analysis to repair. A download now has 15 minutes, code analysis 30
+  minutes and document analysis two hours, each with 16 MiB of output. A step
+  stopped at its limit is reported as that, for example `Cause: the CodeGraph
+download did not finish within 15 minutes and was stopped.`, and a stopped
+  document analysis says to narrow the document scope.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from

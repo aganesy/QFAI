@@ -3,7 +3,7 @@ import { exploreGraph } from "../../../src/core/graph/query.js";
 import { documentAnalysisFixture } from "../../helpers/graphAnalysis.js";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { GraphProcess } from "../../../src/core/graph/process.js";
+import { GRAPH_PROCESS_LIMITS, type GraphProcess } from "../../../src/core/graph/process.js";
 import { graphCliResult } from "../../helpers/graphCli.js";
 
 // QFAI:EX-0001-0234-13
@@ -292,6 +292,69 @@ it("labels inferred relationships and retains the native source locations", asyn
     expect(result.inferenceNotice ?? "").toContain("Inferred");
     expect(result.inferenceNotice ?? "").toContain("semantic correctness");
     expect(result.inferenceNotice ?? "").toContain("coverage");
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+// QFAI:EX-0001-0234-25
+// Mutation: packages/qfai/src/core/graph/codePreparation.ts `const cause = result && graphLimitCause("CodeGraph analysis", result);` -> `const cause = undefined;` fails "names the limit a managed query's analysis passed instead of a repair"
+it("names the limit a managed query's analysis passed instead of a repair", async () => {
+  const fixture = await documentAnalysisFixture();
+  try {
+    await rm(path.join(fixture.analysis, ".codegraph", "codegraph.db"));
+    await writeFile(path.join(fixture.root, "rationale.md"), "# Changed rationale\n");
+    const limits: { timeoutMs: number | undefined; maxBufferBytes: number | undefined }[] = [];
+    const run: GraphProcess = async (command, args, options) => {
+      const codeAnalysis =
+        args[0] === "--liftoff-only" &&
+        path.basename(args.at(-1) ?? "").startsWith(".preparing-codegraph-");
+      const documentAnalysis = args.includes("extract") && args.includes("--backend");
+      if (codeAnalysis || documentAnalysis) {
+        limits.push({ timeoutMs: options.timeoutMs, maxBufferBytes: options.maxBufferBytes });
+        return documentAnalysis
+          ? {
+              exitCode: 1,
+              stdout: "",
+              failure: "printed more than 16 MiB of output and was stopped",
+              limit: "output",
+            }
+          : {
+              exitCode: 1,
+              stdout: "",
+              failure: "did not finish within 30 minutes and was stopped",
+              limit: "time",
+            };
+      }
+      if (
+        args.includes(fixture.documentAnalysis) &&
+        args.some((arg) => arg.endsWith("graphify-native.py"))
+      )
+        return { exitCode: 0, stdout: '{"current":false,"unsupported":[],"unreadable":[]}' };
+      return fixture.run(command, args, options);
+    };
+    const code = await graphCliResult(fixture.root, ["code", "checkout callers"], run);
+    expect(code.value).toMatchObject({
+      status: "failed",
+      failure: "CodeGraph analysis preparation failed.",
+    });
+    expect(code.output).toContain(
+      "Cause: the CodeGraph analysis did not finish within 30 minutes and was stopped. Retry the graph query.",
+    );
+    expect(code.output).not.toContain("Repair the local CodeGraph runtime");
+    const documents = await graphCliResult(fixture.root, ["documents", "Changed rationale"], run);
+    expect(documents.value).toMatchObject({
+      status: "failed",
+      failure: "Graphify analysis preparation failed.",
+    });
+    expect(documents.output).toContain(
+      "Cause: the Graphify document analysis printed more than 16 MiB of output and was stopped. Narrow the document scope in .qfai/graph-processing.json, then retry the graph query.",
+    );
+    expect(documents.output).not.toContain("repair Graphify document analysis");
+    expect(limits).toEqual([
+      GRAPH_PROCESS_LIMITS.codeAnalysis,
+      GRAPH_PROCESS_LIMITS.documentAnalysis,
+    ]);
   } finally {
     await fixture.dispose();
   }
