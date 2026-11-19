@@ -46,6 +46,20 @@ export async function loadJsdom(): Promise<JsdomModule> {
 
 const EVENT_HANDLER_RE = /\s(on[a-z]+)\s*=/gi;
 
+/** Anchored, with no nested quantifier, so it runs in time linear in the value it reads. */
+const PIXEL_LENGTH_RE = /^(\d+(?:\.\d+)?)px$/;
+
+/**
+ * The pixel length a parsed declaration value states, or `null` for anything else.
+ *
+ * jsdom lower-cases the unit and keeps `!important` apart from the value, so only a plain
+ * `<number>px` is left to match; a percentage, a `calc()` or a keyword has no fixed size.
+ */
+function readPixelLength(value: string | undefined): number | null {
+  const match = value === undefined ? null : PIXEL_LENGTH_RE.exec(value);
+  return match?.[1] === undefined ? null : Number.parseFloat(match[1]);
+}
+
 export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> {
   const result: HtmlMockParseResult = {
     externalUrls: [],
@@ -135,14 +149,17 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
       });
     }
 
-    // Inline dimensions
-    const widthMatch = /width\s*:\s*(\d+(?:\.\d+)?)\s*px/i.exec(style);
-    const heightMatch = /height\s*:\s*(\d+(?:\.\d+)?)\s*px/i.exec(style);
-    if (widthMatch || heightMatch) {
+    // Inline dimensions, read from jsdom's parsed declarations so that `min-width` or
+    // `border-width` is never taken for `width`.
+    const declarations =
+      el instanceof dom.window.HTMLElement || el instanceof dom.window.SVGElement ? el.style : null;
+    const width = readPixelLength(declarations?.getPropertyValue("width"));
+    const height = readPixelLength(declarations?.getPropertyValue("height"));
+    if (width !== null || height !== null) {
       result.inlineDimensions.push({
         element: el.tagName.toLowerCase(),
-        width: widthMatch && widthMatch[1] ? parseFloat(widthMatch[1]) : null,
-        height: heightMatch && heightMatch[1] ? parseFloat(heightMatch[1]) : null,
+        width,
+        height,
         interactive: isInteractiveElement(el),
       });
     }
