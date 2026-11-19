@@ -19,14 +19,20 @@ import type * as templateCopyModule from "../../../../src/core/fs/templateCopy.j
 type FsPromises = typeof fsPromises;
 type TemplateCopy = typeof templateCopyModule;
 type CopyArgs = Parameters<TemplateCopy["copyTemplatePaths"]>;
+type RmArgs = Parameters<FsPromises["rm"]>;
 
-const { renameSpy, copySpy } = vi.hoisted(() => ({ renameSpy: vi.fn(), copySpy: vi.fn() }));
+const { renameSpy, copySpy, rmSpy } = vi.hoisted(() => ({
+  renameSpy: vi.fn(),
+  copySpy: vi.fn(),
+  rmSpy: vi.fn(),
+}));
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
   return {
     ...actual,
     rename: (from: string, to: string): unknown => renameSpy(actual, from, to),
+    rm: (...args: RmArgs): unknown => rmSpy(actual, ...args),
   };
 });
 
@@ -54,6 +60,7 @@ beforeEach(() => {
   copySpy.mockImplementation((actual: TemplateCopy, ...args: CopyArgs) =>
     actual.copyTemplatePaths(...args),
   );
+  rmSpy.mockImplementation((actual: FsPromises, ...args: RmArgs) => actual.rm(...args));
 });
 
 afterEach(async () => {
@@ -104,6 +111,20 @@ function simulatedFault(code: string): NodeJS.ErrnoException {
   return Object.assign(new Error(`simulated ${code}`), { code });
 }
 
+/** The error the replacement rejected with; fails the test when it resolved. */
+async function replaceError(root: string): Promise<Error> {
+  const outcome: unknown = await replaceSkill(root).then(
+    () => null,
+    (error: unknown) => error,
+  );
+  if (!(outcome instanceof Error)) throw new Error("The replacement did not reject");
+  return outcome;
+}
+
+function isStagingPath(target: string): boolean {
+  return path.basename(target).startsWith(`.${SKILL}-replace-`);
+}
+
 describe("step 11 stages a replacement before it moves the project's copy", () => {
   it("keeps the project's copy when the package's copy fails partway", async () => {
     const root = await customisedProject();
@@ -130,6 +151,70 @@ describe("step 11 stages a replacement before it moves the project's copy", () =
     await expect(replaceSkill(root)).rejects.toThrow("EBUSY");
     expect(await skillText(root)).toContain(ADDED.trim());
     expect(await skillParent(root)).toEqual([SKILL]);
+  });
+
+  it("keeps the project's copy when the staged copy differs from the package's", async () => {
+    const root = await customisedProject();
+    copySpy.mockImplementation(async (actual: TemplateCopy, ...args: CopyArgs) => {
+      const result = await actual.copyTemplatePaths(...args);
+      const [, destRoot] = args;
+      await appendFile(path.join(destRoot, SKILL, "SKILL.md"), "\nA corrupted line.\n");
+      return result;
+    });
+    await expect(replaceSkill(root)).rejects.toThrow("did not match the package's copy");
+    expect(await skillText(root)).toContain(ADDED.trim());
+    expect(await skillParent(root)).toEqual([SKILL]);
+  });
+
+  it("keeps the project's copy when it cannot be moved aside", async () => {
+    const root = await customisedProject();
+    const target = path.join(root, SKILL_DIR);
+    renameSpy.mockImplementation(async (actual: FsPromises, from: string, to: string) => {
+      if (from === target) throw simulatedFault("EACCES");
+      return actual.rename(from, to);
+    });
+    await expect(replaceSkill(root)).rejects.toThrow("EACCES");
+    expect(await skillText(root)).toContain(ADDED.trim());
+    expect(await skillParent(root)).toEqual([SKILL]);
+  });
+
+  it("keeps the project's copy and names it when neither the switch nor the undo works", async () => {
+    const root = await customisedProject();
+    const target = path.join(root, SKILL_DIR);
+    const switchFault = simulatedFault("EBUSY");
+    renameSpy.mockImplementation(async (actual: FsPromises, from: string, to: string) => {
+      if (to === target && from !== target) {
+        throw from.endsWith(`${path.sep}previous`) ? simulatedFault("EPERM") : switchFault;
+      }
+      return actual.rename(from, to);
+    });
+    const error = await replaceError(root);
+    expect(error.cause).toBe(switchFault);
+    expect(error.message).toContain("EPERM");
+    const left = /the project's copy is at (.+)$/.exec(error.message)?.[1];
+    expect(left).toBeDefined();
+    const aside = left ?? "";
+    expect(path.dirname(path.dirname(aside))).toBe(path.dirname(target));
+    expect(await readFile(path.join(aside, "SKILL.md"), "utf8")).toContain(ADDED.trim());
+    // Only the staged package copy is removed beside it.
+    expect((await readdir(path.dirname(aside))).sort()).toEqual(["previous"]);
+  });
+
+  it("completes the replacement when the staging directory cannot be removed", async () => {
+    const root = await customisedProject();
+    rmSpy.mockImplementation((actual: FsPromises, ...args: RmArgs) => {
+      const [target] = args;
+      if (typeof target === "string" && isStagingPath(target)) {
+        return Promise.reject(simulatedFault("EBUSY"));
+      }
+      return actual.rm(...args);
+    });
+    await replaceSkill(root);
+    const shipped = await readFile(
+      path.join(getInitAssetsDir(), ".qfai", "assistant", "skill", SKILL, "SKILL.md"),
+      "utf8",
+    );
+    expect(await skillText(root)).toBe(shipped);
   });
 
   it("puts the package's copy in place and leaves nothing beside it", async () => {

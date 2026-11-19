@@ -222,8 +222,10 @@ function installOperation(
  * Puts the package's copy at `dir` in place of the one there. The copy is
  * written and checked in a directory beside `dir`, on the same filesystem, and
  * only then switched in by two renames; when the second fails, the first is
- * undone. A failure at any point leaves the project's copy where it was, and
- * the staging directory is removed whatever happens.
+ * undone. A failure at any point leaves the project's copy where it was. When
+ * the undo fails too, the project's copy stays where the first rename put it
+ * and the error names that path. The staging directory is removed otherwise;
+ * a failure to remove it does not fail the operation.
  */
 async function replaceFromPackage(
   layer: Layer,
@@ -234,6 +236,8 @@ async function replaceFromPackage(
   const holder = await mkdtemp(path.join(path.dirname(dir), `.${id}-replace-`));
   const staged = path.join(holder, "new");
   const previous = path.join(holder, "previous");
+  // True while `previous` holds the project's only copy, which cleanup must keep.
+  let projectCopyAside = false;
   try {
     await copyTemplatePaths(path.join(packageQfaiAssets(), "assistant", layer), holder, [id], {
       force: false,
@@ -248,14 +252,52 @@ async function replaceFromPackage(
       );
     }
     await rename(dir, previous);
+    projectCopyAside = true;
     try {
       await rename(staged, dir);
     } catch (error) {
-      await rename(previous, dir);
+      await restoreProjectCopy(layer, id, previous, dir, error);
+      projectCopyAside = false;
       throw error;
     }
+    projectCopyAside = false;
   } finally {
-    await rm(holder, { recursive: true, force: true });
+    await removeQuietly(projectCopyAside ? staged : holder);
+  }
+}
+
+/** Moves the project's copy back to `dir`, or names where it was left. */
+async function restoreProjectCopy(
+  layer: Layer,
+  id: string,
+  previous: string,
+  dir: string,
+  switchError: unknown,
+): Promise<void> {
+  // The switch's error is the cause; the undo's error is only named, so the
+  // reason the replacement failed is the one a caller reads first.
+  const failure = await rename(previous, dir).then(
+    () => null,
+    (restoreError: unknown) => ({ restoreError }),
+  );
+  if (failure === null) return;
+  const { restoreError } = failure;
+  const reason = restoreError instanceof Error ? restoreError.message : String(restoreError);
+  throw new Error(
+    `The ${layer} replacement of ${id} could not be switched in, and the project's copy could not be put back (${reason}); the project's copy is at ${previous}`,
+    { cause: switchError },
+  );
+}
+
+/**
+ * Removes a staging path. A failure here comes after the outcome is settled, so
+ * it neither fails a finished replacement nor hides the error of a failed one.
+ */
+async function removeQuietly(target: string): Promise<void> {
+  try {
+    await rm(target, { recursive: true, force: true, maxRetries: 3 });
+  } catch {
+    // Left under a hidden `.<id>-replace-*` directory beside the layer; nothing reads it.
   }
 }
 

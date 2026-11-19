@@ -642,7 +642,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   11 deleted a skill or step directory that differed from the package's copy
   before writing the new one, so a failed copy left the project with neither.
   It now writes the package's copy beside the directory, checks it, and only
-  then switches the two; if the switch fails, the project's copy is put back.
+  then switches the two; if the switch fails, the project's copy is put back,
+  and when even that fails the error names the hidden directory that holds it.
 
 - **`qfai sdd preflight` writes only inside its output directory.** A report
   directory, or a directory under it, that was a link to somewhere else carried
