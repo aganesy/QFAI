@@ -783,6 +783,8 @@ jobs:
           // (`scripts/check-release-notes.mjs`) can hold the body to exactly that many
           // of the section's first entries, in order. Read from the body instead, a body
           // cut down to its footer alone would cover nothing and so be missing nothing.
+          // SHIPPED-CI: not-applicable
+          // Because: the shipped templates carry no release workflow and no release-notes drift check.
           const footerFor = (kept) =>
             "\n\n---\n\n**These notes are not the whole section.**\n\n" +
             `The \`[${version}]\` section of \`CHANGELOG.md\` runs to ${body.length} characters, ` +
