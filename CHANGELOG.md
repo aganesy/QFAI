@@ -621,6 +621,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   files, so a marker kept only in such a module was reported as missing and
   blocked validation. Those four extensions are now read as well.
 
+- **A dependency lockfile no longer blocks graph reuse or a document query.**
+  The completed-analysis check treated every `.lock` or `.pid` file at any
+  depth as a run still in progress, so a project with a `Cargo.lock`,
+  `yarn.lock` or `poetry.lock` in scope could neither publish its graph to the
+  shared cache nor answer a local Graphify document query. Only such a file
+  inside the engine's own storage directory now counts as a live run.
+
 - **The verify gate reads the result its own validate run wrote.** The
   `verify-qfai-gate` step told agents to read `.qfai/report/validate.json` and
   then ran `qfai report` with no profile. That file is only the default path,
@@ -631,6 +638,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai report --profile <profile>`. The `validate.json` schema reference now
   lists the file each kind of run writes, and `qfai-configure` inspects the
   result its own validate run wrote.
+
+- **A documents graph query with no match keeps Graphify's message.**
+  Graphify's `query` exits with code 4 when the graph holds no matching nodes,
+  and the documents query reads that code as a no-match answer. The process
+  runner discarded the output of every non-zero exit, so the answer arrived
+  empty. The runner now keeps the output of an exit code its caller names as an
+  answer, and the documents query names only Graphify's no-match code.
 
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
@@ -654,6 +668,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   of the one focused re-review. They now name the behaviour fixes made for
   findings of the first review, and the gate points to the review convergence
   rule: a fix made for a finding of the re-review gets no further re-review.
+
+- **`QFAI-CONTRACT-037` names a required element however its keys are
+  written.** The unrendered-marker finding said `required: true` only when a
+  UI contract element wrote `required` on a line after its `id`. An element
+  that put `required` first, or was written as a flow mapping such as
+  `{ required: true, id: submit }`, lost the mention. The flag is now read
+  from each parsed element.
 
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text

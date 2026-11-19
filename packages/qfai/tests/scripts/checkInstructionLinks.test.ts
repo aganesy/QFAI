@@ -143,7 +143,10 @@ describe("check-instruction-links", () => {
     const run = check(root);
 
     expect(run.status, run.output).toBe(0);
-    expect(run.output).toContain("Every relative link under .instruction/ resolves (6 links).");
+    expect(run.output).toContain(
+      "Every relative link under .instruction/ points at a path that exists " +
+        "(6 links; headings are not checked).",
+    );
   });
 
   // QFAI:EX-0002-0028-02

@@ -2380,7 +2380,7 @@ describe("instruction-tree link acceptance", () => {
     const pass = runLinkCheck(REPO_ROOT);
     expect(pass.status, pass.output).toBe(0);
     expect(pass.output).toMatch(
-      /Every relative link under \.instruction\/ resolves \(\d+ links\)\./,
+      /Every relative link under \.instruction\/ points at a path that exists \(\d+ links; headings are not checked\)\./,
     );
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf0002-links-"));
