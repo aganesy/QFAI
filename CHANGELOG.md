@@ -521,6 +521,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now reports `QFAI-ASSISTANT-002` at info saying the path is not a
   directory, as it already does for a layer that is missing.
 
+- **The validate JSON guide now counts errors under `--fail-on warning`.**
+  It told a consumer to read `counts.warning` alone, so an error-only result
+  looked like a pass although the run fails it. The guide now states the
+  check the run makes: `counts.error + counts.warning > 0`.
+
 - **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
   `E'…'` a backslash escapes the next character, but the statement splitter
   ended the literal at a backslash-escaped quote, so `SELECT E'it\'s';`
