@@ -659,10 +659,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **A document query restores a shared completed analysis without a
   processing configuration.** A worktree with no document analysis and no
   `.qfai/graph-processing.json` answered "not ready" before it looked in the
-  shared completed-analysis cache. It now restores a compatible snapshot made
-  with the same document scope, which calls no backend, and asks for a
-  configuration only when new analysis has to be generated. A malformed
-  configuration or a changed scope still blocks restoration.
+  shared completed-analysis cache. It now first restores a compatible
+  snapshot made with the default processing: the local Ollama backend at its
+  default endpoint, over the whole document corpus, with no credential.
+  Restoring calls no backend. A snapshot made with a document scope, another
+  endpoint or a credential is not restored in such a worktree, and a malformed
+  configuration blocks restoration. When nothing is restored, the query asks
+  for a configuration as before.
 
 - **Graph queries reject a `qfai.config.yaml` or `paths` set to null.** A
   config file holding only `~` or `null`, or a `paths:` key with no value or

@@ -144,12 +144,18 @@ export async function prepareDocumentAnalysisLocked(
   const inspect = async (analysis: string, refresh: boolean) =>
     (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none")).current;
   const processing = await readGraphProcessing(root);
-  // Restoration calls no backend, so only new generation needs one configured. Without a
-  // configuration the snapshot's recorded definition decides; a malformed one is refused, and
-  // the inspection refuses a snapshot whose scope or definition differs.
+  // Restoration calls no backend, so only new generation needs one configured. A malformed
+  // configuration is refused, and the inspection refuses a snapshot whose definition differs from
+  // the configured one. Without a configuration only a snapshot made with the defaults (the
+  // local Ollama endpoint over the whole corpus, no credential) is accepted, so a narrower or
+  // remote snapshot from another worktree is never restored as this one's analysis.
+  const restoreInspect = processing
+    ? inspect
+    : async (analysis: string, refresh: boolean) =>
+        (await recordsDefaultProcessing(analysis)) && inspect(analysis, refresh);
   if (
     (processing || (await processingConfigurationAbsent(root))) &&
-    (await restoreCompletedDocumentAnalysis(root, run, inspect, environment)) === "restored"
+    (await restoreCompletedDocumentAnalysis(root, run, restoreInspect, environment)) === "restored"
   )
     return { status: "prepared", source: "restored" };
   if (!processing) {
@@ -158,7 +164,7 @@ export async function prepareDocumentAnalysisLocked(
       recovery: DOCUMENT_PROCESSING_SETUP,
     };
   }
-  const selected = new URL(processing.endpoint ?? "http://127.0.0.1:11434/v1");
+  const selected = new URL(processing.endpoint ?? DEFAULT_PROCESSING_ENDPOINT);
   // The approval, the origin guard and the Python client all receive the URL this check parsed,
   // so no parser can read another host out of the configured text.
   const endpoint = selected.href;
@@ -288,6 +294,22 @@ export async function prepareDocumentAnalysisLocked(
   } finally {
     await rm(staged, { recursive: true, force: true });
   }
+}
+
+const DEFAULT_PROCESSING_ENDPOINT = "http://127.0.0.1:11434/v1";
+
+async function recordsDefaultProcessing(analysis: string): Promise<boolean> {
+  const managed = await readOptionalJson(path.join(analysis, "graphify-out", "managed.json"));
+  if (!object(managed)) return false;
+  const recorded = managed.processing;
+  return (
+    validGraphProcessing(recorded) &&
+    recorded.backend === "ollama" &&
+    (recorded.endpoint === undefined ||
+      new URL(recorded.endpoint).href === DEFAULT_PROCESSING_ENDPOINT) &&
+    recorded.scope === undefined &&
+    recorded.credentialEnv === undefined
+  );
 }
 
 export async function readGraphProcessing(root: string): Promise<GraphProcessing | undefined> {

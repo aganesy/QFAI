@@ -1,4 +1,14 @@
-import { cp, lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import {
+  cp,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
@@ -97,14 +107,41 @@ it("restores a compatible document snapshot when no processing configuration is 
   };
   const configuration = path.join(fixture.root, ".qfai", "graph-processing.json");
   const prepare = () => prepareDocumentAnalysis(fixture.root, run, undefined, environment);
+  const recordedProcessing = async () =>
+    JSON.parse(
+      await readFile(path.join(fixture.documentAnalysis, "graphify-out", "managed.json"), "utf8"),
+    ).processing;
   try {
     await rm(fixture.documentAnalysis, { recursive: true });
     expect(await prepare()).toMatchObject({ source: "generated", reuse: "published" });
+    const cache = path.join(common, "qfai-graph-cache", "win32-x64", "graphify");
+    const [published] = await readdir(cache);
+    const wholeCorpus = path.join(cache, published ?? "");
+    // Another worktree's snapshot over a narrower scope, otherwise identical.
+    const narrow = path.join(cache, "narrow-scope-snapshot");
+    await cp(wholeCorpus, narrow, { recursive: true });
+    const narrowManaged = path.join(narrow, "analysis", "graphify-out", "managed.json");
+    const managed = JSON.parse(await readFile(narrowManaged, "utf8"));
+    await writeFile(
+      narrowManaged,
+      JSON.stringify({
+        ...managed,
+        processing: { ...managed.processing, scope: ["rationale.md"] },
+      }),
+    );
     await rm(fixture.documentAnalysis, { recursive: true });
     await rm(configuration);
+
+    const held = path.join(cache, ".held-whole-corpus");
+    await rename(wholeCorpus, held);
+    expect(await prepare()).toMatchObject({ status: "not-ready" });
+    await expect(lstat(fixture.documentAnalysis)).rejects.toMatchObject({ code: "ENOENT" });
+
+    await rename(held, wholeCorpus);
     fixture.calls.length = 0;
     expect(await prepare()).toMatchObject({ status: "prepared", source: "restored" });
     expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+    expect(await recordedProcessing()).toEqual(fixture.processing);
 
     await rm(fixture.documentAnalysis, { recursive: true });
     await writeFile(configuration, "{");
@@ -113,7 +150,7 @@ it("restores a compatible document snapshot when no processing configuration is 
 
     await writeFile(
       configuration,
-      JSON.stringify({ ...fixture.processing, scope: ["rationale.md"] }),
+      JSON.stringify({ ...fixture.processing, scope: ["checkout.ts"] }),
     );
     fixture.calls.length = 0;
     expect(await prepare()).toMatchObject({ status: "prepared", source: "generated" });
