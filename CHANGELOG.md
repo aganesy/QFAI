@@ -514,6 +514,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
 
+- **`qfai init --force` no longer removes another run's staging file.** Each
+  run first removed every leftover `.qfai-init-*` staging file in
+  `.github/instructions/`, including the one a second init in the same
+  project was about to rename into place, so that run's refresh failed. A
+  staging file is now removed only when it is more than an hour old, and each
+  run writes its staging file under a name no other run can take. Only that
+  exact name is removed, so a leftover from an earlier version,
+  named `<file>.qfai-init-<pid>-<timestamp>`, stays: delete it by hand.
+  Closes #4526.
+
 - **`qfai validate` no longer waits forever on the document-schema check.**
   An mdschema run that never exited held `validate` open, and one that printed
   without end was read into memory whole. Each run now stops after 120 seconds
