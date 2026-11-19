@@ -540,6 +540,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `##[<command>]` form, which the runner finds anywhere in a line, prints as
   `##\[`. The JSON report keeps the exact values.
 
+- **External document analysis now requires `https`.** An external Graphify
+  processing endpoint could be configured with plain `http`, so documents and
+  the selected credential crossed the network unencrypted once a human
+  authorized the destination. Such an endpoint is now not ready, with a
+  recovery that names `https`, and no authorization is asked for it. The
+  extraction keeps the client's default certificate verification, and no
+  ambient certificate setting reaches it. Plain `http` still works for an
+  endpoint on `127.0.0.1`, `localhost` or `[::1]`. An endpoint written so that
+  Python reads a different host than the loopback check did, such as
+  `http://127.0.0.1\@evil.example/v1`, is now an invalid processing
+  definition, and every step receives the one parsed URL.
+  Closes #4585.
+
 - **`qfai validate` reports the actual line of a Mermaid screen-flow
   finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction
   warnings named the line before the one they flagged. They now name the
