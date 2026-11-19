@@ -81,8 +81,8 @@ import {
   type ReleaseNeeds,
 } from "../helpers/spec0017Release.js";
 import {
+  entryDrift,
   entryTitles,
-  missingEntries,
   recordedCutoff,
 } from "../../../../scripts/check-release-notes.mjs";
 import {
@@ -3605,7 +3605,10 @@ describe("release automation performs decisions rather than making them", () => 
     expect(recordedCutoff(notes), "the footer must record how many entries it kept").toBe(
       entryTitles(kept).length,
     );
-    expect(missingEntries(section, notes), "the drift check must accept the cap").toEqual([]);
+    expect(entryDrift(section, notes), "the drift check must accept the cap").toMatchObject({
+      missing: [],
+      outOfOrder: [],
+    });
 
     expect(notes, "and must say where the rest is").toContain(
       "https://github.com/aganesy/QFAI/blob/v9.9.9/CHANGELOG.md",

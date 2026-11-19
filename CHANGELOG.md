@@ -476,8 +476,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   body as a set and took its cut from the entries it still carried, so it
   accepted reordered entries and a body emptied down to the note. The note now
   records how many entries the cut kept, and the check requires that many of
-  the section's first entries in the section's order. A cut body whose note
-  records no count is held to the whole section.
+  the section's first entries in the section's order. It reports a kept
+  entry the body lacks as missing and one it carries elsewhere as out of
+  order, and passes over a line added by hand. A cut body whose note records
+  no count is held to the whole section.
 
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the

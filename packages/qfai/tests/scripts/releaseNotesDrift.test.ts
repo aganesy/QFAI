@@ -22,9 +22,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { maskFencedCodeBlocks } from "../../src/core/ids.js";
 import {
   TRUNCATION_MARKER,
+  entryDrift,
   entryTitles,
   fetchReleasePage,
-  missingEntries,
   nextPageLink,
   nextPageUrl,
   recordedCutoff,
@@ -259,10 +259,16 @@ describe("what counts as an entry", () => {
 });
 
 describe("what the published body is allowed to be missing", () => {
+  /** What the comparison reports, without the cut facts the cases do not vary. */
+  const drift = (section: string, body: string): { missing: string[]; outOfOrder: string[] } => {
+    const { missing, outOfOrder } = entryDrift(section, body);
+    return { missing, outOfOrder };
+  };
+
   it("nothing, when it was not cut", () => {
     const section = ["- **First**", "- **Second**"].join("\n");
 
-    expect(missingEntries(section, "- **First**")).toEqual(["- **Second**"]);
+    expect(drift(section, "- **First**")).toEqual({ missing: ["- **Second**"], outOfOrder: [] });
   });
 
   /** A cut body as the release workflow writes it: the kept entries, then its note. */
@@ -279,58 +285,91 @@ describe("what the published body is allowed to be missing", () => {
         `an entry boundary after its first ${String(kept)} ${kept === 1 ? "entry" : "entries"}.`,
     ].join("\n");
 
-  it("the tail, when the workflow had to cut it", () => {
-    const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
+  const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
 
+  it("the tail, when the workflow had to cut it", () => {
     expect(recordedCutoff(cutBody(["- **First**"], 1))).toBe(1);
-    expect(missingEntries(section, cutBody(["- **First**"], 1))).toEqual([]);
+    expect(drift(section, cutBody(["- **First**"], 1))).toEqual({ missing: [], outOfOrder: [] });
   });
 
   it("but not a hole inside the part a cut body does cover", () => {
     // A cut body ends at an entry boundary, so it holds a PREFIX. An entry
     // missing from the middle of that prefix is drift, cut or not.
-    const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
-
-    expect(missingEntries(section, cutBody(["- **First**", "- **Third**"], 3))).toEqual([
-      "- **Second**",
-    ]);
+    expect(drift(section, cutBody(["- **First**", "- **Third**"], 3))).toEqual({
+      missing: ["- **Second**"],
+      outOfOrder: [],
+    });
   });
 
   it("nor the entries its note says it kept, when the body has lost them", () => {
     // The cutoff comes from the note, not from what the body still carries. Read
     // from the body, a cut body emptied down to its note would cover nothing and
     // so be missing nothing.
-    const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
-
-    expect(missingEntries(section, cutBody([], 2))).toEqual(["- **First**", "- **Second**"]);
+    expect(drift(section, cutBody([], 2))).toEqual({
+      missing: ["- **First**", "- **Second**"],
+      outOfOrder: [],
+    });
   });
 
   it("nor its kept entries in another order", () => {
     // A set would accept this: every kept entry is present. A cut keeps the
-    // section's order, so an entry out of place is reported where the section
-    // puts it.
-    const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
+    // section's order, so the entry out of place is reported as out of order,
+    // not as missing.
+    expect(drift(section, cutBody(["- **Second**", "- **First**"], 2))).toEqual({
+      missing: [],
+      outOfOrder: ["- **Second**"],
+    });
+  });
 
-    expect(missingEntries(section, cutBody(["- **Second**", "- **First**"], 2))).toEqual([
-      "- **First**",
-    ]);
+  it("and names the one entry moved, not every entry behind it", () => {
+    // A walk that matched the first title it could would read the moved entry
+    // as the end of the order and report the two it passed as out of place.
+    expect(drift(section, cutBody(["- **Third**", "- **First**", "- **Second**"], 3))).toEqual({
+      missing: [],
+      outOfOrder: ["- **Third**"],
+    });
+  });
+
+  it("and passes over a hand-added line that repeats a later title", () => {
+    // An added line is allowed in a cut body too, even one that reads like a
+    // later entry; matched as that entry, it would put the real ones out of order.
+    expect(
+      drift(section, cutBody(["- **First**", "- **Third**", "- **Second**", "- **Third**"], 3)),
+    ).toEqual({ missing: [], outOfOrder: [] });
+  });
+
+  it("and reads the count from the note, not from an entry quoting its sentence", () => {
+    // An entry above the note that quotes the sentence would otherwise set the
+    // cutoff, and the report and the comparison would disagree about it.
+    const quoting = "- **Quote:** stopped at an entry boundary after its first 1 entry.";
+    const cutSection = [quoting, "- **Second**"].join("\n");
+    const body = [quoting, "", TRUNCATION_MARKER].join("\n");
+
+    expect(entryDrift(cutSection, body)).toEqual({
+      missing: ["- **Second**"],
+      outOfOrder: [],
+      cut: true,
+      cutoff: null,
+    });
   });
 
   it("and a cut body that records no count is held to the whole section", () => {
     // Nothing says where its cut was, so no tail is excused.
-    const section = ["- **First**", "- **Second**"].join("\n");
     const body = ["- **First**", "", TRUNCATION_MARKER].join("\n");
 
     expect(recordedCutoff(body)).toBeNull();
-    expect(missingEntries(section, body)).toEqual(["- **Second**"]);
+    expect(drift(section, body)).toEqual({
+      missing: ["- **Second**", "- **Third**"],
+      outOfOrder: [],
+    });
   });
 
   it("and an entry the body adds is not reported", () => {
     // A release body can be edited on purpose. The section is the authority
     // for what must be there, not for what may not.
-    expect(
-      missingEntries("- **First**", ["- **First**", "- **A note somebody added**"].join("\n")),
-    ).toEqual([]);
+    expect(drift("- **First**", ["- **First**", "- **A note somebody added**"].join("\n"))).toEqual(
+      { missing: [], outOfOrder: [] },
+    );
   });
 });
 

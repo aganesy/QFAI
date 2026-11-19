@@ -163,40 +163,86 @@ export function recordedCutoff(releaseBody) {
 }
 
 /**
- * What a section carries and its published body does not.
+ * The entries of `required` that do not sit in a longest run of them `published`
+ * carries in the same order.
+ *
+ * Longest, not first-come: a walk that matches the first title it can would
+ * read a hand-added line repeating a later title as that entry, or one entry
+ * moved to the front as every entry behind it being out of place. On a tie the
+ * published line is the one passed over, since a published line may be an
+ * addition and a required one may not.
+ */
+function unmatchedInOrder(required, published) {
+  const rows = required.length;
+  const cols = published.length;
+  // `longest[i][j]`: the longest common run of `required[i..]` and `published[j..]`.
+  const longest = Array.from({ length: rows + 1 }, () => new Array(cols + 1).fill(0));
+  for (let i = rows - 1; i >= 0; i--) {
+    for (let j = cols - 1; j >= 0; j--) {
+      longest[i][j] =
+        required[i] === published[j]
+          ? longest[i + 1][j + 1] + 1
+          : Math.max(longest[i + 1][j], longest[i][j + 1]);
+    }
+  }
+  const unmatched = [];
+  let i = 0;
+  let j = 0;
+  while (i < rows) {
+    if (j < cols && required[i] === published[j]) {
+      i += 1;
+      j += 1;
+    } else if (j < cols && longest[i][j + 1] >= longest[i + 1][j]) {
+      j += 1;
+    } else {
+      unmatched.push(required[i]);
+      i += 1;
+    }
+  }
+  return unmatched;
+}
+
+/**
+ * What a section carries and its published body does not, as
+ * `{ missing, outOfOrder, cut, cutoff }`.
  *
  * A body that was not cut is compared as a set: it can be edited by hand, and
  * only an entry it lacks is drift.
  *
  * A truncated body is the first entries of its section, in the section's order,
  * as many as its note says it kept. It is missing the tail by construction, so
- * only that prefix is required. The body is read up to its note and only for
- * the entries its section names, since an entry somebody added is not the
- * section's to require, and walked against the prefix in order: an entry it
- * carries out of place is reported as missing from where the section puts it,
- * so a reordered cut is drift rather than agreement.
+ * only that prefix is required. The body is read up to its note, and the prefix
+ * is matched against it in order with any other line passed over, so an entry
+ * somebody added is not drift. A required entry the body does not carry at all
+ * is `missing`; one it carries outside the matched order is `outOfOrder`, so a
+ * reordered cut is drift rather than agreement.
+ *
+ * `cutoff` is read from the note onward, never from the entries above it: an
+ * entry quoting the note's sentence would otherwise set the count.
  */
-export function missingEntries(sectionBody, releaseBody) {
+export function entryDrift(sectionBody, releaseBody) {
   const wanted = entryTitles(sectionBody);
   const markerAt = releaseBody.indexOf(TRUNCATION_MARKER);
   if (markerAt < 0) {
     const published = new Set(entryTitles(releaseBody));
-    return wanted.filter((title) => !published.has(title));
+    return {
+      missing: wanted.filter((title) => !published.has(title)),
+      outOfOrder: [],
+      cut: false,
+      cutoff: null,
+    };
   }
-  const known = new Set(wanted);
-  const published = entryTitles(releaseBody.slice(0, markerAt)).filter((title) => known.has(title));
+  const published = entryTitles(releaseBody.slice(0, markerAt));
   const cutoff = recordedCutoff(releaseBody.slice(markerAt));
   const required = cutoff === null ? wanted : wanted.slice(0, cutoff);
-  const missing = [];
-  let next = 0;
-  for (const title of required) {
-    if (published[next] === title) {
-      next += 1;
-    } else {
-      missing.push(title);
-    }
-  }
-  return missing;
+  const carried = new Set(published);
+  const unmatched = unmatchedInOrder(required, published);
+  return {
+    missing: unmatched.filter((title) => !carried.has(title)),
+    outOfOrder: unmatched.filter((title) => carried.has(title)),
+    cut: true,
+    cutoff,
+  };
 }
 
 /**
@@ -369,22 +415,34 @@ async function releaseBodies(repository, token, readPage) {
 }
 
 /**
- * Reports what a section's published body does not carry, and says whether it
- * was missing anything.
+ * Reports what a section's published body does not carry, or carries out of
+ * the section's order, and says whether there was anything to report.
  */
 function reportSection(tag, section, body) {
-  const missing = missingEntries(section.body, body);
-  if (missing.length === 0) {
+  const { missing, outOfOrder, cut, cutoff } = entryDrift(section.body, body);
+  if (missing.length === 0 && outOfOrder.length === 0) {
     return false;
   }
-  console.error(`${tag}: ${String(missing.length)} entr(y|ies) the published body does not carry:`);
-  if (saysItWasCut(body) && recordedCutoff(body) === null) {
+  if (cut && cutoff === null) {
     console.error(
-      "  (the body says it was cut and does not record how many entries it kept, so it is held to the whole section)",
+      `${tag}: the body says it was cut and does not record how many entries it kept, so it is held to the whole section.`,
     );
   }
-  for (const title of missing) {
-    console.error(`  ${title}`);
+  if (missing.length > 0) {
+    console.error(
+      `${tag}: ${String(missing.length)} entr(y|ies) the published body does not carry:`,
+    );
+    for (const title of missing) {
+      console.error(`  ${title}`);
+    }
+  }
+  if (outOfOrder.length > 0) {
+    console.error(
+      `${tag}: ${String(outOfOrder.length)} entr(y|ies) the published body carries out of the section's order:`,
+    );
+    for (const title of outOfOrder) {
+      console.error(`  ${title}`);
+    }
   }
   return true;
 }
