@@ -48,15 +48,22 @@ describe("init project boundary", () => {
 
   // QFAI:AC-0001-0021-03
   // QFAI:EX-0001-0021-14
-  it("refuses a .qfai that is not a directory before writing any asset", async () => {
+  it.each([
+    [".qfai", /refused to write \.qfai: it is not a directory/u],
+    [
+      path.join(".qfai", "spec", "03_contract", "api"),
+      /refused to seed the story tree: \.qfai\/spec\/03_contract\/api is not a directory/u,
+    ],
+  ])("refuses a %s that is not a directory before writing any asset", async (relative, message) => {
     const sandbox = await mkdtemp(path.join(os.tmpdir(), "qfai-init-boundary-"));
     const root = path.join(sandbox, "project");
     try {
-      await mkdir(root);
-      await writeFile(path.join(root, ".qfai"), "not a directory\n");
+      const file = path.join(root, relative);
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, "not a directory\n");
 
       await expect(runInit({ dir: root, force: true, dryRun: false, yes: true })).rejects.toThrow(
-        /refused to write \.qfai: it is not a directory/u,
+        message,
       );
 
       expect(await readdir(root)).toEqual([".qfai"]);
