@@ -53,7 +53,7 @@ describe("the GitHub summary keeps each path on one log line", () => {
     const lines = emittedLines(root, jsonPath, ".qfai/report/run-1");
     expect(lines.filter((line) => line.startsWith("::"))).toEqual([]);
     const reportLine = lines.find((line) => line.includes("--format text for the details"));
-    expect(reportLine).toContain(`report%0A${INJECTED_COMMAND}`);
+    expect(reportLine).toContain(`report\\n${INJECTED_COMMAND}`);
   });
 
   it("does not let the run-log path open a command of its own", () => {
@@ -64,12 +64,12 @@ describe("the GitHub summary keeps each path on one log line", () => {
     );
     expect(lines.filter((line) => line.startsWith("::"))).toEqual([]);
     expect(lines).toContain(
-      `qfai validate note: see .qfai/report/run%0D%0A${INJECTED_COMMAND} for the run-log.`,
+      `qfai validate note: see .qfai/report/run\\r\\n${INJECTED_COMMAND} for the run-log.`,
     );
   });
 
-  it("escapes `%` the way a notice does, so the line decodes to the original path", () => {
+  it("keeps `%` as written, since the runner decodes escapes only inside a command", () => {
     const lines = emittedLines(root, path.join(root, "validate.json"), ".qfai/report/100%");
-    expect(lines).toContain("qfai validate note: see .qfai/report/100%25 for the run-log.");
+    expect(lines).toContain("qfai validate note: see .qfai/report/100% for the run-log.");
   });
 });

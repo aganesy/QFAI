@@ -552,8 +552,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **`qfai validate --format github` keeps each path in its summary on one log
   line.** The report and run-log paths in the closing notes were printed raw, so
   a path holding a line break started a line of its own, which the runner reads
-  as a possible workflow command. They are now escaped the way a notice's text
-  is. The report and run-log are still written at their original paths.
+  as a possible workflow command. A line break in them now shows as a visible
+  `\r` or `\n`, and `%` stays as written. The report and run-log are still
+  written at their original paths.
 
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
   info.** On a Windows `git worktree`, git can store a directory wrapper as a
