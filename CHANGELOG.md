@@ -655,6 +655,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the scan still stops at the nearest `.git` entry, so the run-log cleanup
   still finds every project that shares its output directory. Closes #4510.
 
+- **`validate.log` and `preflight_summary.md` name the run that started last,
+  across a daylight-saving change.** A run's id is its local start time, and
+  both pointers took the run with the largest id as the newest. After clocks go
+  back an hour, a later run gets a smaller id, so the pointer kept naming the
+  earlier run. Both now compare the runs' recorded UTC start times, as
+  `qfai doctor --clean` already did. The preflight summary gains a
+  `- started at:` line for that time. Closes #4534.
+
 - **`qfai db-drift` keeps apart columns whose names join to the same text.**
   The comparison keyed each column by its table and column names joined with a
   period. A quoted Postgres name may hold a period itself, so `"a.b".c` and

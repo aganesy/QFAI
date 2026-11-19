@@ -14,6 +14,7 @@ command does not compute can still live here.
 
 - status: <ready | blocked>
 - run id: run-<timestamp>
+- started at: <UTC ISO 8601 instant>
 - source: <ready only: deliberation-record | import-lite>
 - selected <deliberation-record | import-lite>: <ready only: path>
 - selected input: <blocked only: (none)>
