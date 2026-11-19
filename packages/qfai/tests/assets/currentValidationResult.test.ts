@@ -26,6 +26,10 @@ describe("readers of a validation result read the one the current command wrote"
     expect(reads).toContain("output.validateJsonPath");
     expect(reads).toContain("-<profile>");
     expect(reads).toContain("`generatedAt`");
+    // Two runs of one profile write one file, so a concurrent run is told
+    // apart by the run log only that run wrote.
+    expect(reads).toContain("`run-log:`");
+    expect(reads).toContain("`validator.json`");
     expect(gate).toContain("npx qfai report --profile <profile>");
     expect(gate).not.toContain("Run `npx qfai report` when");
   });

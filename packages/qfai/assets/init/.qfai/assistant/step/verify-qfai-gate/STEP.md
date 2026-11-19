@@ -24,6 +24,12 @@ obligations this gate lists as pending.
   not this run's result. Use it only when its `profile` is the profile run and
   its `generatedAt` is no earlier than the command's start. Its keys are in
   `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`.
+  That check cannot tell this run from another run of the same profile that
+  finished after it started, because both write the same file. Where another
+  validate run of that profile can run on the same tree at the same time, read
+  this run's own run log instead: the `run-log:` line it prints names its
+  `run-*/` directory, whose `run.json` holds the counts and whose
+  `validator.json` lists its unsuppressed errors and warnings by `code`.
 - `.qfai/waivers.yml`, where the project has one.
 - In a route, whether the plan scope the session chose at the scope question
   carries `testsPending`, as `qfai-run`'s `references/plan.md` `## Scopes` says.
