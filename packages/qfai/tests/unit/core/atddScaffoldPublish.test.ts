@@ -71,7 +71,7 @@ afterEach(async () => {
 
 describe("emitSkeleton when the write fails", () => {
   const target: ScaffoldTarget = { id: "BF-0008", kind: "BF" };
-  const body = "// QFAI:BF-0008\n\nit('BF-0008', () => {});\n";
+  const body = "// a skeleton\n\nit('runs', () => {});\n";
 
   it("leaves nothing at the destination and a retry writes the full skeleton", async () => {
     const dir = path.join(root, "tests", "e2e");
