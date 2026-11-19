@@ -452,6 +452,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai doctor --autoremediate` asks before it installs packages.**
+  Without `--yes` the install phase ran `npm install` for a skill's missing
+  runtime dependencies unattended, although those packages' install scripts
+  run with your privileges. It now names the packages and installs them only
+  after you answer `y`. A session whose stdin is not a terminal installs
+  nothing without `--yes` and says to rerun with it; the rest of the pass still
+  runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
 - **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
   difference exits 0 under `--fail-on never`, but the parser refused the flag
   on `db-drift` and the command exited 2. `db-drift` now takes
