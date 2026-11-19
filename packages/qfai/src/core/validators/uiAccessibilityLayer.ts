@@ -4,16 +4,20 @@
  * The accessibility layer of `test-layers.md` runs axe through Playwright on
  * every route the UI contracts declare. This rule asks only whether that layer
  * exists: a project whose UI contracts declare a screen with a web route, and
- * whose selected test files call axe nowhere, ships its screens unchecked.
+ * whose selected test files name axe nowhere, ships its screens unchecked.
  *
  * ## What counts
  *
  * - A web route starts with `/`. A UI contract screen can also describe a
  *   terminal surface, whose route is a command line; axe has nothing to load
  *   there, so such a screen does not make a project a UI project.
- * - An axe call is `AxeBuilder` or an `@axe-core/` import in any test file the
- *   story-tree scan selects: the acceptance-layer directories and
- *   `validation.traceability.testFileGlobs`.
+ * - A test file names axe when its text contains `AxeBuilder` or an
+ *   `@axe-core/` package name, in any test file the story-tree scan selects:
+ *   the acceptance-layer directories and `validation.traceability.testFileGlobs`.
+ * - The signal is static. The rule neither parses nor runs a test, so a
+ *   comment or an unused import satisfies it as well as a spec that runs axe.
+ *   Whether the routes pass is shown by the accessibility gate of the
+ *   repository's `Test` command, not here.
  *
  * ## Severity
  *
@@ -31,16 +35,19 @@ import { issue } from "./utils.js";
 
 export const UI_ACCESSIBILITY_LAYER_RULE_ID = "QFAI-AXE-001";
 
-const AXE_CALL = /\bAxeBuilder\b|@axe-core\//;
+const AXE_NAME = /\bAxeBuilder\b|@axe-core\//;
 
 /** True for a route axe can load in a browser: a path that starts with `/`. */
 export function isWebRoute(route: string): boolean {
   return route.trim().startsWith("/");
 }
 
-/** True when the test source calls axe through `AxeBuilder` or an `@axe-core/` package. */
-export function callsAxe(source: string): boolean {
-  return AXE_CALL.test(source);
+/**
+ * True when the test source's text contains `AxeBuilder` or an `@axe-core/`
+ * package name. A text search: a comment or an unused import also matches.
+ */
+export function namesAxe(source: string): boolean {
+  return AXE_NAME.test(source);
 }
 
 export async function validateUiAccessibilityLayer(
@@ -63,13 +70,13 @@ export async function validateUiAccessibilityLayer(
     return [];
   }
   if (scan.truncated) return [];
-  if (scan.files.some((file) => callsAxe(file.content))) return [];
+  if (scan.files.some((file) => namesAxe(file.content))) return [];
 
   const file = first.sourceRef.split("#")[0];
   return [
     issue(
       UI_ACCESSIBILITY_LAYER_RULE_ID,
-      `The UI contracts declare ${String(screens.length)} screen(s) with a web route, such as '${first.route}', and no selected test file calls axe (\`AxeBuilder\` or an \`@axe-core/\` package), so no route is checked for accessibility.`,
+      `The UI contracts declare ${String(screens.length)} screen(s) with a web route, such as '${first.route}', and no selected test file contains \`AxeBuilder\` or an \`@axe-core/\` package name, so no test checks a route for accessibility.`,
       "warning",
       file,
       "uiux.accessibilityLayer",

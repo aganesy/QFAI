@@ -8,6 +8,10 @@
  * `vi.mock` is hoisted to module scope, so these cases live in their own file.
  * The failure travels through the real traversal; only the operating system's
  * refusal is replaced.
+ *
+ * A symbolic link beneath a document root is a finding for the same reason:
+ * the lane checks regular files and directories only, so what a link names
+ * would otherwise drop out of the inventory unseen.
  */
 import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -18,6 +22,8 @@ import { fileURLToPath } from "node:url";
 
 import type * as fs from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 
 type Fs = typeof fs;
 
@@ -161,6 +167,95 @@ describe("a document directory the lane cannot list", () => {
 
     expect(await checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
   });
+});
+
+describe("a linked entry beneath a document root", () => {
+  /** A directory outside the tree holding one conforming flow, which the lane must not grade. */
+  async function outsideFlow(): Promise<string> {
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-mdschema-outside-"));
+    tempDirs.push(outside);
+    await writeFile(path.join(outside, "business-flow.md"), CONFORMING_FLOW, "utf-8");
+    return outside;
+  }
+
+  /**
+   * Links `linked` to a conforming flow outside the tree, or returns `false`
+   * where the host may not create the link.
+   */
+  async function linkOutside(root: string, linked: string, type: "file" | "dir"): Promise<boolean> {
+    const outside = await outsideFlow();
+    if (type === "file") {
+      return createSymlinkFixture(
+        path.join(outside, "business-flow.md"),
+        path.join(root, linked),
+        type,
+      );
+    }
+    // A junction on Windows, which needs no privilege, so the case runs there.
+    const dirType = process.platform === "win32" ? "junction" : "dir";
+    return createSymlinkFixture(outside, path.join(root, linked), dirType);
+  }
+
+  it("reports a configured root that is itself a link, without walking it", async (context) => {
+    const root = await newTree();
+    refusal.dir = "";
+    const contracts = ".qfai/contracts";
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      `paths:\n  specsDir: .qfai/spec\n  contractsDir: ${contracts}\n`,
+      "utf-8",
+    );
+    if (!(await linkOutside(root, contracts, "dir"))) {
+      context.skip();
+      return;
+    }
+
+    await expectReported(root, contracts);
+  });
+
+  it("reports a linked document by its path and fails the command", async (context) => {
+    const root = await newTree();
+    refusal.dir = "";
+    const linked = `${HIDDEN}/business-flow.md`;
+    if (!(await linkOutside(root, linked, "file"))) {
+      context.skip();
+      return;
+    }
+
+    await expectReported(root, linked);
+  });
+
+  it("reports a linked directory by its path and fails the command", async (context) => {
+    const root = await newTree();
+    refusal.dir = "";
+    const linked = `${FLOWS}/business-flow-0003`;
+    if (!(await linkOutside(root, linked, "dir"))) {
+      context.skip();
+      return;
+    }
+
+    await expectReported(root, linked);
+  });
+
+  /** The link is one inventory finding by its path, and the command fails naming it. */
+  async function expectReported(root: string, linked: string): Promise<void> {
+    expect(await checkDocuments(root)).toEqual({
+      ok: true,
+      checked: 1,
+      violations: [
+        expect.objectContaining({
+          file: linked,
+          rule: "inventory",
+          line: 1,
+          message: expect.stringContaining("symbolic link") as unknown,
+        }),
+      ],
+    });
+    const result = runMain(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(linked);
+    expect(result.stderr).toContain("[inventory]");
+  }
 });
 
 describe("a configured document root the lane cannot walk", () => {

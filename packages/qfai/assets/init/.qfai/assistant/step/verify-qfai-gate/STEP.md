@@ -96,9 +96,14 @@ obligations stops the commit is decided by `verify-commit`.
 In a project whose UI contracts declare a screen with a route that starts with
 `/`, record whether the accessibility layer
 `.qfai/assistant/rule/test-layers.md#l6-accessibility` defines exists: a
-selected test file that calls axe. `QFAI-AXE-001` (`warning`) reports that no
-selected test file does. Record the layer as present or missing in the stage
-report, so the missing accessibility gate in `verify-repo-gate` has its reason.
+selected test file that runs axe. `QFAI-AXE-001` (`warning`) reports that no
+selected test file contains `AxeBuilder` or an `@axe-core/` package name; it
+reads text only, so a file that names axe in a comment or an unused import
+silences it without running a check. Record the layer as present only when a
+selected test file you read runs `AxeBuilder` over the routes; a missing
+warning alone does not make it present. Record the layer as present or missing
+in the stage report, so the missing accessibility gate in `verify-repo-gate`
+has its reason.
 
 ## Waivers
 

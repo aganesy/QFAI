@@ -81,8 +81,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runs it through the `Test` command, and `verify-qfai-gate` records whether it
   exists. `qfai validate`
   warns with `QFAI-AXE-001` in the verify and full profiles when a project with
-  web screens has no test that calls axe. QFAI itself takes no axe dependency.
-  Closes #4309.
+  web screens has no selected test file whose text names `AxeBuilder` or an
+  `@axe-core/` package. That warning is a text search: a comment or an unused
+  import silences it too, and the accessibility gate is what shows the routes
+  pass. QFAI itself takes no axe dependency. Closes #4309 and #4565.
 
 - **Browser tests survive a rebuild that keeps the behaviour.** QFAI said
   nothing about how a browser test finds an element or injects a failure, so
@@ -530,6 +532,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reported as resolved from outside the project. Only a `..` path segment now
   leaves the project. Closes #4544.
 
+- **The deliberation record check ignores headings and tables inside HTML
+  comments.** `QFAI-DELIB-001` skipped fenced samples only, so a commented
+  `## Agent decisions` heading counted as the section and a commented table
+  under `Interview` was checked as one. The check now also skips HTML comments,
+  and still reports each row at its line in the file.
+  Every check that skips comments in story-tree and contract documents now
+  also skips the rest of a line that starts with a comment or that a
+  multi-line comment ends on: before, a
+  `<!-- note --> ## Risks` line was read as a heading, and a code fence after
+  a closing `-->` hid the rest of the document. Closes #4568.
+
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
   `npx qfai` and the document lane's check for `node_modules/qfai` found
@@ -548,6 +561,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `$&`, `$$` and the other replacement patterns in the CSS as instructions, so
   a rule such as `content: "$&"` was checked with `</head>` in its place. The
   CSS is now inserted as written.
+
+- **The Markdown-schema check no longer passes over a linked document.** A
+  symbolic link beneath `paths.specsDir` or `paths.contractsDir`, to a file or
+  to a directory, was skipped without a word, so the documents behind it were
+  never checked and the run still passed. Each link, and a configured root that
+  is itself a link, is now reported with its path as an `inventory` finding and
+  is not followed, and the run fails, both in the document lane
+  and as `QFAI-DOCSCHEMA-001` in `qfai validate`. Closes #4569.
 
 - **The contract rules no longer claim `qfai validate` starts no processes.**
   Validation runs short-lived checkers, such as the document schema checker,
