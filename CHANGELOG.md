@@ -591,6 +591,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped at its limit is reported as that, naming the step, the limit and its
   value, and a stopped document analysis says to narrow the document scope.
 
+- **The shipped test workflow stops on a blank layer test script.** A
+  `test:unit`, `test:component`, `test:integration`, `test:api` or `test:e2e`
+  script that was empty or only whitespace counted as a declared layer, and a
+  blank script exits successfully without running anything, so its lane went
+  green over no tests. The change detection job now stops, names the blank
+  script and turns the check red. A layer with no script stays optional.
+
 - **A failed graph tool download names a directory of its own to retry in.**
   The recovery line of `qfai init` told you to rerun the download into a fixed
   `qfai-graph-check` directory under the system temporary directory and then

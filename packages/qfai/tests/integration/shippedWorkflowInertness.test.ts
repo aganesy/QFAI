@@ -633,6 +633,13 @@ describe("a manifest or an input the detection job cannot read stops it instead 
     { label: "a scripts field that is a string", manifest: '{"scripts": "vitest"}' },
     { label: "a layer script that is a number", manifest: '{"scripts": {"test:unit": 1}}' },
     { label: "a layer script that is null", manifest: '{"scripts": {"test:e2e": null}}' },
+    // A blank npm script exits 0 without running anything, so declaring one would turn its lane
+    // green over no tests at all.
+    { label: "a layer script that is empty", manifest: '{"scripts": {"test:unit": ""}}' },
+    {
+      label: "a layer script that is only whitespace",
+      manifest: JSON.stringify({ scripts: { "test:unit": "vitest run", "test:api": " \t\n " } }),
+    },
   ])(
     "the probe stops, publishes no script list and names the error for $label",
     async ({ manifest }) => {
@@ -649,7 +656,7 @@ describe("a manifest or an input the detection job cannot read stops it instead 
     { label: "an empty scripts object", manifest: '{"scripts": {}}', expected: [] },
     {
       label: "a script that is not named for a layer, whatever its value",
-      manifest: '{"scripts": {"test:other": 1, "test:unit": "echo unit"}}',
+      manifest: '{"scripts": {"test:other": 1, "test:blank": "", "test:unit": "echo unit"}}',
       expected: ["unit"],
     },
   ])("the probe still publishes a valid answer for $label", async ({ manifest, expected }) => {
