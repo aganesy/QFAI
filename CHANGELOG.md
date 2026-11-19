@@ -522,6 +522,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
   omitted `requires:` still counts as empty.
 
+- **The README's skipped-test check now names each allowed skip.** The
+  example script allowed a number of skipped tests per file, so one test's
+  skip could stand in for another's, and it read whatever report was on disk,
+  including one left by an earlier run. It now runs the test command itself,
+  removes any old report first, fails when the run writes none, and fails each
+  test that did not run unless `allowed-skips.json` lists its file and full
+  name. An allowlist written for the old script, with a count per file, makes
+  the new script stop with an error at the first skip in that file, so rewrite
+  each count as the names of the tests it covered.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so
