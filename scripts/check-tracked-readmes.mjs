@@ -30,6 +30,8 @@
 /* global console, process */
 import { execFileSync } from "node:child_process";
 
+import { escapeCommandMessage, escapeCommandProperty } from "./lib/workflow-command.mjs";
+
 /**
  * The two paths a README may be tracked at, each with the reason it is there.
  *
@@ -54,6 +56,14 @@ function trackedReadmes() {
     .filter((line) => /(^|\/)readme\.md$/i.test(line));
 }
 
+/**
+ * One error annotation on `file`. The path comes from the index, so a pull request chooses it,
+ * and it is escaped as the field it lands in rather than interpolated as command syntax.
+ */
+function annotate(file, message) {
+  console.error(`::error file=${escapeCommandProperty(file)}::${escapeCommandMessage(message)}`);
+}
+
 function main() {
   let readmes;
   try {
@@ -69,16 +79,18 @@ function main() {
   const missing = [...PUBLISHED.keys()].filter((file) => !readmes.includes(file)).sort();
 
   for (const file of unlisted) {
-    console.error(
-      `::error file=${file}::${file} is a README outside the two this repository publishes. ` +
+    annotate(
+      file,
+      `${file} is a README outside the two this repository publishes. ` +
         `A rule belongs in .agents/rules/, how to do a thing correctly belongs in the guard that ` +
         `fails when it is done wrong, and where to look next belongs in the entry point that sent ` +
         `the reader. See .agents/rules/root-additions-policy.local.md.`,
     );
   }
   for (const file of missing) {
-    console.error(
-      `::error file=${file}::${file} is listed as a published page and is not tracked. ` +
+    annotate(
+      file,
+      `${file} is listed as a published page and is not tracked. ` +
         `Restore it, or strike the entry from check-tracked-readmes.mjs in the change that ` +
         `stopped publishing it.`,
     );

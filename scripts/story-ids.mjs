@@ -1,8 +1,8 @@
 /**
  * Story-tree ID candidates and collision checks against published heads.
  *
- * - `next <scope>...` prints one candidate per scope from main, the latest 100
- *   updated open pull requests and the working tree. It reserves nothing.
+ * - `next <scope>...` prints one candidate per scope from main, every open
+ *   pull request and the working tree. It reserves nothing.
  *   A scope named twice gets two consecutive candidates.
  * - `check` names each ID this branch adds that main or a fetched open pull
  *   request also adds. Other branches' unpublished changes are outside this
@@ -21,10 +21,16 @@
  * read from the first cell of each table row.
  *
  * Reading the listed pull-request heads and requested scopes costs one REST
- * listing and one `git fetch`. The listing goes
+ * call per page of open pull requests and one `git fetch`. A page that cannot
+ * be read stops the command before it answers: an ID an unread pull request
+ * holds would be handed out again. A pull request closed while the pages are
+ * read can move another across a page boundary unread, as a simultaneous
+ * publisher can still collide. The listing goes
  * through `gh-budget.mjs`, which keeps its reserve and reports the remaining
  * allowance on stderr, so stdout holds only the answer. A check during an unfinished
- * merge stops before fetching or comparing branch-owned identifiers.
+ * merge stops before fetching or comparing branch-owned identifiers. The fetch
+ * writes only refs this run owns, never the shared `FETCH_HEAD`, and a listed
+ * head it does not return stops the command before any answer.
  *
  * Usage:
  *   node scripts/story-ids.mjs next <scope>...
@@ -37,12 +43,15 @@
  * story-tree parser directly. On an older runtime it exits 2 before any call.
  *
  * Exit codes: 0 answered; 1 a collision was found, or the listing left the
- * budget below the reserve (the answer is still printed); 2 the arguments,
- * the runtime, `git` or `gh` could not be used, or `check` found an unfinished
- * merge; 3 a scope has no number left.
+ * budget below the reserve (the answer is still printed once every page was
+ * read, and nothing is when the reserve stopped a page); 2 the arguments,
+ * the runtime, `git` or `gh` could not be used, the fetch did not return main
+ * and every listed head, or `check` found an unfinished merge; 3 a scope has
+ * no number left.
  */
 /* global console, process */
 import { execFileSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { register } from "node:module";
 import path from "node:path";
@@ -59,8 +68,7 @@ const SPEC_DIR = ".qfai/spec";
 /** The branch pull requests merge into. */
 const MAIN = "main";
 
-// SIMPLIFIED: reads the 100 most recently updated open pull requests, one page.
-// Lift when: a collision comes from an open pull request outside that page.
+/** The most pull requests one listing page holds. */
 const PULLS_PER_PAGE = 100;
 
 /** Blob contents across every open head can outgrow the default buffer. */
@@ -168,18 +176,71 @@ export function pullsFrom(body) {
 }
 
 /**
- * The commit `git fetch` wrote for each pull request's head, from `FETCH_HEAD`.
+ * Every open pull request, page by page, until a page comes back short.
+ *
+ * `callPage(page, handleBody)` makes one call and returns its exit code, as
+ * `callAndReport` does. A page is full by its raw length, so an entry
+ * `pullsFrom` drops does not end the listing early. Pull requests are kept by
+ * number, so one that moves across a page boundary is counted once. The
+ * listing is `undefined` unless every page was read.
+ */
+export function listAllPulls(callPage, perPage = PULLS_PER_PAGE) {
+  const byNumber = new Map();
+  let code = 0;
+  for (let page = 1; ; page += 1) {
+    let pagePulls;
+    let size = 0;
+    const pageCode = callPage(page, (body) => {
+      pagePulls = pullsFrom(body);
+      if (pagePulls === undefined) {
+        console.error("The response body is not a pull request listing.");
+        return 2;
+      }
+      size = JSON.parse(body).length;
+      return 0;
+    });
+    if (pagePulls === undefined || (pageCode !== 0 && pageCode !== 1)) {
+      if (page > 1) {
+        console.error(
+          `Open pull requests past page ${String(page - 1)} were not read, so no ID is answered.`,
+        );
+      }
+      return { code: pageCode === 0 ? 2 : pageCode, pulls: undefined };
+    }
+    for (const pull of pagePulls) byNumber.set(pull.number, pull);
+    if (pageCode === 1) code = 1;
+    if (size < perPage) return { code, pulls: [...byNumber.values()] };
+  }
+}
+
+/**
+ * The commit this run's fetch wrote for main and for each listed pull request,
+ * from `git for-each-ref --format='%(objectname) %(refname)' <namespace>/`.
  *
  * Read from the fetch rather than from the listing: a head pushed between the
- * two is the one that holds the IDs now.
+ * two is the one that holds the IDs now. Throws when main or any listed pull
+ * request has no commit, so no check runs on a partial set of heads.
  */
-export function fetchedHeads(fetchHead) {
-  const heads = new Map();
-  for (const line of fetchHead.split(/\r?\n/)) {
-    const match = /^([0-9a-f]{40,64})\t[^\t]*\t'refs\/pull\/(\d+)\/head'/.exec(line);
-    if (match !== null) heads.set(Number(match[2]), match[1]);
+export function fetchedHeads(refs, namespace, pulls) {
+  const commits = new Map();
+  for (const line of refs.split(/\r?\n/)) {
+    const match = /^([0-9a-f]{40,64}) (\S+)$/.exec(line);
+    if (match !== null) commits.set(match[2], match[1]);
   }
-  return heads;
+  const main = commits.get(`${namespace}/${MAIN}`);
+  const heads = new Map();
+  const missing = [];
+  for (const { number } of pulls) {
+    const commit = commits.get(`${namespace}/pull/${String(number)}`);
+    if (commit === undefined) missing.push(`#${String(number)}`);
+    else heads.set(number, commit);
+  }
+  if (main === undefined) missing.unshift(MAIN);
+  if (missing.length > 0)
+    throw new Error(
+      `The fetch did not return ${missing.join(", ")}; allocation and collision checks need every listed head.`,
+    );
+  return { main, pulls: heads };
 }
 
 /** A table row of a register, with the DEC or OQ ID in its first cell. */
@@ -424,26 +485,39 @@ function declared(files) {
   return new Set(files.flatMap((file) => file.ids));
 }
 
-/** Fetches main and every listed head; returns main's ref and each head's commit. */
-function fetchHeads(reader, pulls) {
-  reader.git([
-    "fetch",
-    "--quiet",
-    "--no-tags",
-    "--write-fetch-head",
-    "origin",
-    `+refs/heads/${MAIN}:refs/remotes/origin/${MAIN}`,
-    ...pulls.map((pull) => `refs/pull/${String(pull.number)}/head`),
-  ]);
-  const fetchHead = readFileSync(
-    path.resolve(reader.cwd, reader.text(["rev-parse", "--git-path", "FETCH_HEAD"]).trim()),
-    "utf-8",
-  );
-  return { main: `refs/remotes/origin/${MAIN}`, pulls: fetchedHeads(fetchHead) };
+/**
+ * Fetches main and every listed head into refs only this run writes, and
+ * returns main's commit and each head's commit.
+ *
+ * Neither the shared `FETCH_HEAD` nor `refs/remotes/origin/main` is read or
+ * written, so a fetch another process runs at the same time cannot change
+ * which commits are compared. The run's refs keep the fetched commits
+ * reachable while `use` reads them, and are deleted when it returns. The
+ * refspecs go on stdin: every open pull request's refspec can outgrow a
+ * Windows command line.
+ */
+function withFetchedHeads(reader, pulls, use) {
+  const namespace = `refs/story-ids/${String(process.pid)}-${randomBytes(6).toString("hex")}`;
+  const refspecs = [
+    `+refs/heads/${MAIN}:${namespace}/${MAIN}`,
+    ...pulls.map(
+      (pull) => `+refs/pull/${String(pull.number)}/head:${namespace}/pull/${String(pull.number)}`,
+    ),
+  ];
+  try {
+    reader.git(
+      ["fetch", "--quiet", "--no-tags", "--no-write-fetch-head", "--stdin", "origin"],
+      `${refspecs.join("\n")}\n`,
+    );
+    const refs = reader.text(["for-each-ref", "--format=%(objectname) %(refname)", namespace]);
+    return use(fetchedHeads(refs, namespace, pulls));
+  } finally {
+    const written = reader.text(["for-each-ref", "--format=delete %(refname)", namespace]);
+    if (written !== "") reader.git(["update-ref", "--stdin"], written);
+  }
 }
 
-function nextCommand(reader, scopes, pulls, allocate) {
-  const heads = fetchHeads(reader, pulls);
+function nextCommand(reader, scopes, heads, allocate) {
   const trees = [reader.atCommit(heads.main), reader.inWorkingTree()];
   for (const commit of heads.pulls.values()) trees.push(reader.atCommit(commit));
   const ids = allocateAll(scopes, combine(trees), allocate);
@@ -455,15 +529,18 @@ function nextCommand(reader, scopes, pulls, allocate) {
   return 0;
 }
 
-function checkCommand(reader, pulls) {
+/** Whether a merge is unfinished, so branch-owned identifiers cannot be told apart yet. */
+function mergeInProgress(reader) {
   try {
     reader.git(["rev-parse", "--verify", "--quiet", "MERGE_HEAD"]);
-    console.error("Finish the merge before checking branch-owned identifiers.");
-    return 2;
+    return true;
   } catch (cause) {
     if (cause?.status !== 1) throw cause;
+    return false;
   }
-  const heads = fetchHeads(reader, pulls);
+}
+
+function checkCommand(reader, pulls, heads) {
   const base = declared(reader.atCommit(reader.text(["merge-base", "HEAD", heads.main]).trim()));
   const mine = added(declared(reader.inWorkingTree()), base);
   const isAncestorOfHead = (commit) => {
@@ -495,10 +572,11 @@ function checkCommand(reader, pulls) {
 }
 
 /**
- * The open pull requests, from one REST call through `gh-budget.mjs`.
+ * Every open pull request, one REST call per page through `gh-budget.mjs`.
  *
- * Returns the exit code the call left and the listing, which is present even
- * when the call left the budget below the reserve.
+ * Oldest first, so a pull request opened while the pages are read lands on a
+ * later page. Returns the exit code the calls left and the listing, which is
+ * present even when the last call left the budget below the reserve.
  */
 function listOpenPulls(cwd) {
   let slug;
@@ -513,18 +591,13 @@ function listOpenPulls(cwd) {
     console.error("The `origin` remote does not name a GitHub repository.");
     return { code: 2, pulls: undefined };
   }
-  let pulls;
-  const code = callAndReport(
-    `repos/${slug}/pulls?state=open&sort=updated&direction=desc&per_page=${String(PULLS_PER_PAGE)}`,
-    (body) => {
-      pulls = pullsFrom(body);
-      if (pulls !== undefined) return 0;
-      console.error("The response body is not a pull request listing.");
-      return 2;
-    },
-    console.error,
+  return listAllPulls((page, handleBody) =>
+    callAndReport(
+      `repos/${slug}/pulls?state=open&sort=created&direction=asc&per_page=${String(PULLS_PER_PAGE)}&page=${String(page)}`,
+      handleBody,
+      console.error,
+    ),
   );
-  return { code, pulls };
 }
 
 const USAGE = [
@@ -574,10 +647,15 @@ export async function run(argv, options = {}) {
   const reader = new TreeReader(cwd, buildStoryTreeModel);
   let code;
   try {
-    code =
+    if (command === "check" && mergeInProgress(reader)) {
+      console.error("Finish the merge before checking branch-owned identifiers.");
+      return 2;
+    }
+    code = withFetchedHeads(reader, pulls, (heads) =>
       command === "next"
-        ? nextCommand(reader, scopes, pulls, nextStoryTreeId)
-        : checkCommand(reader, pulls);
+        ? nextCommand(reader, scopes, heads, nextStoryTreeId)
+        : checkCommand(reader, pulls, heads),
+    );
   } catch (cause) {
     const stderr = cause?.stderr === undefined ? "" : String(cause.stderr).trim();
     console.error(stderr === "" ? String(cause?.message ?? cause) : stderr);

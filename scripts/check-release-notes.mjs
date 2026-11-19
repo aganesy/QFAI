@@ -26,9 +26,15 @@
  * ## A body the workflow had to cut
  *
  * A release body is capped at 125,000 characters. Past that the workflow stops
- * the section at an entry boundary and appends a note saying so. Such a body
- * legitimately lacks the tail of its section, so the comparison asks only that
- * what it carries is a prefix of what the section carries.
+ * the section at an entry boundary and appends a note saying so, and the note
+ * records how many entries it kept. Such a body legitimately lacks the tail of
+ * its section, so the comparison asks that it carries the first that many
+ * entries of the section, in the section's order.
+ *
+ * The count is read from the note rather than from the body. Taken from the
+ * entries the body still carries, a body cut down to the note alone would cover
+ * nothing and so be missing nothing. A cut body whose note records no count is
+ * held to the whole section, because nothing says where its cut was.
  *
  * ## What it does about a difference
  *
@@ -67,11 +73,13 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-/** `## [1.11.0] - 2026-09-07` — a released section, as opposed to `[Unreleased]`. */
-const RELEASED_HEADING_RE = /^## \[(\d+\.\d+\.\d+)\][ \t]+-[ \t]+\d{4}-\d{2}-\d{2}[ \t]*$/;
+import { parseReleasedHeading } from "./changelog-heading.mjs";
 
 /** The sentence `release.yml` appends when it had to cut the section. */
 export const TRUNCATION_MARKER = "**These notes are not the whole section.**";
+
+/** The sentence in that note, written by the same step, that records how many entries the cut kept. */
+const CUTOFF_RE = /stopped at an entry boundary after its first (\d+) entr(?:y|ies)\./u;
 
 /** Whether a published body says it is a cut of its section. */
 export function saysItWasCut(releaseBody) {
@@ -89,9 +97,9 @@ export function releasedSections(changelog) {
   const sections = [];
   let current = null;
   for (const line of lines) {
-    const released = RELEASED_HEADING_RE.exec(line);
+    const released = parseReleasedHeading(line);
     if (released !== null) {
-      current = { version: released[1] ?? "", lines: [] };
+      current = { version: released.version, lines: [] };
       sections.push(current);
       continue;
     }
@@ -144,25 +152,96 @@ export function entryTitles(markdown) {
 }
 
 /**
- * What a section carries and its published body does not.
- *
- * A truncated body is compared as a prefix: it is missing the tail of its
- * section by construction, and only an entry missing from the part it does
- * cover is drift.
+ * How many entries the workflow kept when it cut a body, as its note records,
+ * or `null` when the body records no count.
  */
-export function missingEntries(sectionBody, releaseBody) {
+export function recordedCutoff(releaseBody) {
+  const recorded = CUTOFF_RE.exec(releaseBody);
+  if (recorded === null) return null;
+  return Number(recorded[1]);
+}
+
+/**
+ * The entries of `required` that do not sit in a longest run of them `published`
+ * carries in the same order.
+ *
+ * Longest, not first-come: a walk that matches the first title it can would
+ * read a hand-added line repeating a later title as that entry, or one entry
+ * moved to the front as every entry behind it being out of place. On a tie the
+ * published line is the one passed over, since a published line may be an
+ * addition and a required one may not.
+ */
+function unmatchedInOrder(required, published) {
+  const rows = required.length;
+  const cols = published.length;
+  // `longest[i][j]`: the longest common run of `required[i..]` and `published[j..]`.
+  const longest = Array.from({ length: rows + 1 }, () => new Array(cols + 1).fill(0));
+  for (let i = rows - 1; i >= 0; i--) {
+    for (let j = cols - 1; j >= 0; j--) {
+      longest[i][j] =
+        required[i] === published[j]
+          ? longest[i + 1][j + 1] + 1
+          : Math.max(longest[i + 1][j], longest[i][j + 1]);
+    }
+  }
+  const unmatched = [];
+  let i = 0;
+  let j = 0;
+  while (i < rows) {
+    if (j < cols && required[i] === published[j]) {
+      i += 1;
+      j += 1;
+    } else if (j < cols && longest[i][j + 1] >= longest[i + 1][j]) {
+      j += 1;
+    } else {
+      unmatched.push(required[i]);
+      i += 1;
+    }
+  }
+  return unmatched;
+}
+
+/**
+ * What a section carries and its published body does not, as
+ * `{ missing, outOfOrder, cut, cutoff }`.
+ *
+ * A body that was not cut is compared as a set: it can be edited by hand, and
+ * only an entry it lacks is drift.
+ *
+ * A truncated body is the first entries of its section, in the section's order,
+ * as many as its note says it kept. It is missing the tail by construction, so
+ * only that prefix is required. The body is read up to its note, and the prefix
+ * is matched against it in order with any other line passed over, so an entry
+ * somebody added is not drift. A required entry the body does not carry at all
+ * is `missing`; one it carries outside the matched order is `outOfOrder`, so a
+ * reordered cut is drift rather than agreement.
+ *
+ * `cutoff` is read from the note onward, never from the entries above it: an
+ * entry quoting the note's sentence would otherwise set the count.
+ */
+export function entryDrift(sectionBody, releaseBody) {
   const wanted = entryTitles(sectionBody);
-  const published = new Set(entryTitles(releaseBody));
-  const truncated = saysItWasCut(releaseBody);
-  if (!truncated) {
-    return wanted.filter((title) => !published.has(title));
+  const markerAt = releaseBody.indexOf(TRUNCATION_MARKER);
+  if (markerAt < 0) {
+    const published = new Set(entryTitles(releaseBody));
+    return {
+      missing: wanted.filter((title) => !published.has(title)),
+      outOfOrder: [],
+      cut: false,
+      cutoff: null,
+    };
   }
-  // The covered part ends at the last section entry the body still carries.
-  let covered = -1;
-  for (let i = 0; i < wanted.length; i++) {
-    if (published.has(wanted[i] ?? "")) covered = i;
-  }
-  return wanted.slice(0, covered + 1).filter((title) => !published.has(title));
+  const published = entryTitles(releaseBody.slice(0, markerAt));
+  const cutoff = recordedCutoff(releaseBody.slice(markerAt));
+  const required = cutoff === null ? wanted : wanted.slice(0, cutoff);
+  const carried = new Set(published);
+  const unmatched = unmatchedInOrder(required, published);
+  return {
+    missing: unmatched.filter((title) => !carried.has(title)),
+    outOfOrder: unmatched.filter((title) => carried.has(title)),
+    cut: true,
+    cutoff,
+  };
 }
 
 /**
@@ -335,17 +414,34 @@ async function releaseBodies(repository, token, readPage) {
 }
 
 /**
- * Reports what a section's published body does not carry, and says whether it
- * was missing anything.
+ * Reports what a section's published body does not carry, or carries out of
+ * the section's order, and says whether there was anything to report.
  */
 function reportSection(tag, section, body) {
-  const missing = missingEntries(section.body, body);
-  if (missing.length === 0) {
+  const { missing, outOfOrder, cut, cutoff } = entryDrift(section.body, body);
+  if (missing.length === 0 && outOfOrder.length === 0) {
     return false;
   }
-  console.error(`${tag}: ${String(missing.length)} entr(y|ies) the published body does not carry:`);
-  for (const title of missing) {
-    console.error(`  ${title}`);
+  if (cut && cutoff === null) {
+    console.error(
+      `${tag}: the body says it was cut and does not record how many entries it kept, so it is held to the whole section.`,
+    );
+  }
+  if (missing.length > 0) {
+    console.error(
+      `${tag}: ${String(missing.length)} entr(y|ies) the published body does not carry:`,
+    );
+    for (const title of missing) {
+      console.error(`  ${title}`);
+    }
+  }
+  if (outOfOrder.length > 0) {
+    console.error(
+      `${tag}: ${String(outOfOrder.length)} entr(y|ies) the published body carries out of the section's order:`,
+    );
+    for (const title of outOfOrder) {
+      console.error(`  ${title}`);
+    }
   }
   return true;
 }

@@ -20,6 +20,7 @@ Feature: Run one pull request test file in manual CI
     Given the project is core, unit, validators, integration, e2e, cli or scripts
     When the diagnostic checks the exact file before installation and before execution
     Then the file must be tracked at the selected head and included by the selected project's current include patterns
+    And those include patterns are read from the workspace configuration's tracked blob at the requested SHA within a byte limit, and its unlinked checkout bytes must equal that blob
     And it must be a normal file inside the package with no linked parent or leaf
     And at both checks its current bytes must equal its tracked blob at the requested SHA
     And a byte mismatch stops the diagnostic even if HEAD is unchanged

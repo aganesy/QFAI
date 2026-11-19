@@ -463,6 +463,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The Firecrawl integration now says where it processes data.** The
+  `web-research` skill and the Codex Firecrawl template recommended a local
+  `npx` launch for sensitive environments, while every template sends pages
+  to Firecrawl's cloud API. They now treat where the MCP server runs and the
+  API at `FIRECRAWL_API_URL` as separate settings. They say that URLs and page
+  content pass through Firecrawl's service when the remote MCP server is used,
+  or when `FIRECRAWL_API_URL` is unset or points at the cloud API. They also
+  show how to point it at a self-hosted Firecrawl instance and add that host to
+  `webResearch.allowlist`. The templates still
+  default to the cloud API.
+
 - **An unknown `prototype.mode` written as an inline mapping is now
   reported.** `QFAI-CONTRACT-038` scanned a UI contract line by line, so
   `prototype: { mode: static }` passed unchecked. It now reads the mode from
@@ -476,6 +487,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   could be applied. It now reports `QFAI-CONTRACT-021` at the line of each
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
+
+- **The release-notes drift check holds a cut body to its kept entries, in
+  order.** When a changelog section is too long for a GitHub Release body,
+  the release workflow cuts it and appends a note. The check compared such a
+  body as a set and took its cut from the entries it still carried, so it
+  accepted reordered entries and a body emptied down to the note. The note now
+  records how many entries the cut kept, and the check requires that many of
+  the section's first entries in the section's order. It reports a kept
+  entry the body lacks as missing and one it carries elsewhere as out of
+  order, and passes over a line added by hand. A cut body whose note records
+  no count is held to the whole section.
+
+- **The README states what the Claude Code launcher permission allows.** It
+  said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
+  entries `qfai init` writes trust the launcher the project installs. Claude
+  Code matches only the command text and never checks which package runs, so
+  `npx qfai` in a checkout without its own install runs a copy outside the
+  checkout or one downloaded from the npm registry without asking. The README
+  now says so. Closes #4622.
 
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
@@ -501,6 +531,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/assistant/prompt` as the `prompt/` layer and reported nothing. It
   now reports `QFAI-ASSISTANT-002` at info saying the path is not a
   directory, as it already does for a layer that is missing.
+
+- **The validate JSON guide now counts errors under `--fail-on warning`.**
+  It told a consumer to read `counts.warning` alone, so an error-only result
+  looked like a pass although the run fails it. The guide now states the
+  check the run makes: `counts.error + counts.warning > 0`.
 
 - **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
   `E'…'` a backslash escapes the next character, but the statement splitter
@@ -533,13 +568,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it already did for any other value that is not a mapping. Defaults still
   apply when the file or the `paths` key is absent.
 
-- **`scripts/pr-threads.mjs list` counts every review thread and comment.** It
-  read only the newest 100 threads and the first 100 comments of a pull
-  request, so a longer one could show fewer unresolved threads or Codex review
-  comments than it had. It now reads every page of both. When a call fails or
-  the budget reserve stops it before the last page of comments, it says the
-  Codex comment count is incomplete (#4609).
-
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its
@@ -566,6 +594,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   definition, and every step receives the one parsed URL.
   Closes #4585.
 
+- **Story ID commands no longer answer from a partial or shared set of pull
+  request heads.** `scripts/story-ids.mjs` read each head's commit from the
+  shared `FETCH_HEAD`, so a fetch another process ran at the same time could
+  change or drop heads, and a listed pull request missing from the fetch was
+  skipped without notice. The command now fetches main and every listed head
+  into refs only that run writes, removes them when it finishes, and stops
+  with exit 2 when main or any listed head is missing. It no longer writes
+  `FETCH_HEAD` or moves `origin/main`. This is a repository tool; the package
+  does not ship it. Closes #4611.
+
 - **`qfai validate` reports the actual line of a Mermaid screen-flow
   finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction
   warnings named the line before the one they flagged. They now name the
@@ -579,6 +617,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
+- **`scripts/pr-threads.mjs list` counts every review thread and comment.** It
+  read only the newest 100 threads and the first 100 comments of a pull
+  request, so a longer one could show fewer unresolved threads or Codex review
+  comments than it had. It now reads every page of both. When a call fails or
+  the budget reserve stops it before the last page of comments, it says the
+  Codex comment count is incomplete (#4609).
+
 - **Graph preparation says when a step ran out of time or printed too much.**
   Runtime downloads and full code and document analysis ran under the same
   two-minute and 4 MiB limits as a version check, and a step stopped at either
@@ -587,6 +632,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   minutes and document analysis two hours, each with 16 MiB of output. A step
   stopped at its limit is reported as that, naming the step, the limit and its
   value, and a stopped document analysis says to narrow the document scope.
+
+- **The shipped test workflow stops on a blank layer test script.** A
+  `test:unit`, `test:component`, `test:integration`, `test:api` or `test:e2e`
+  script that was empty or only whitespace counted as a declared layer, and a
+  blank script exits successfully without running anything, so its lane went
+  green over no tests. The change detection job now stops, names the blank
+  script and turns the check red. A layer with no script stays optional.
 
 - **A failed graph tool download names a directory of its own to retry in.**
   The recovery line of `qfai init` told you to rerun the download into a fixed
@@ -610,6 +662,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   or later with `uv`, and network access to the npm registry and PyPI, from
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
+
+- **The mdschema approval advice names the key current pnpm writes.** The
+  README and the `qfai doctor` fix for a checker that does not run said pnpm
+  records the approval under `onlyBuiltDependencies`, a setting pnpm 11
+  removed. Both now recommend `pnpm approve-builds` and say it records the
+  approval under `allowBuilds` for pnpm 10.31 or later and
+  `onlyBuiltDependencies` for earlier pnpm 10.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
@@ -676,6 +735,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.cts` file compiled in `node16` mode got TS1471 for a `require("qfai")`
   that worked at runtime. `require` now resolves its types to `index.d.cts`,
   and `import` keeps `index.d.ts`. Closes #4598.
+
+- **`pnpm branch:catchup --push` pushes the commit it checked.** The helper
+  checked the current commit and then pushed `HEAD`, so other Git activity in
+  the checkout between the two could send a commit it never checked. It now
+  pushes the checked commit by its SHA to the same branch, as the manual push
+  steps in the development guide already do. Closes #4613.
 
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
@@ -782,6 +847,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
+- **A release heading the publish would refuse now stops the tag.** Tagging
+  accepted any `CHANGELOG.md` line starting `## [X.Y.Z]`, while publishing
+  also required ` - YYYY-MM-DD` after it, so a heading without a date was
+  tagged and then refused by the publish. Tagging, publishing and the
+  release-notes comparison now read the heading through one parser, and a
+  heading that names the version in another shape fails the tag run with the
+  line it found. Closes #4599.
 
 - **`qfai validate` reads every skill document within the same size limit.**
   A document the skill-tree crawl found was read whole into memory, while the

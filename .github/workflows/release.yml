@@ -180,14 +180,18 @@ jobs:
             exit 1
           fi
 
-          # Literal prefix match, not a regex: as a basic regular expression the
-          # dots in `1.10.0` match any character, so a `## [1x10x0]` heading
-          # would satisfy the check here and then break the awk extraction that
-          # builds the release notes — publishing while the GitHub Release
-          # silently fails. `index($0, h) == 1` is the comparison the notes step
-          # makes, so the two cannot disagree.
-          if ! git show "${sha}:CHANGELOG.md" | awk -v h="## [${version}] - " 'index($0, h) == 1 { found = 1 } END { exit !found }'; then
-            echo "::error::CHANGELOG.md has no released heading for ${version} (expected '## [${version}] - YYYY-MM-DD')"
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped workflow set has no release workflow to read a CHANGELOG heading.
+          # Read by `scripts/changelog-heading.mjs`, the parser tag-release.yml runs before it
+          # pushes the tag, so a heading refused here was already refused there. It matches the
+          # version literally: under a regex the dots in `1.10.0` match any character, so a
+          # `## [1x10x0]` heading would pass here and break the extraction that builds the
+          # release notes. A released heading is `## [X.Y.Z] - ` with exactly one space each
+          # side of the dash, the literal prefix the notes step cuts at, so the two cannot
+          # disagree: a wider or tab separator is refused here instead of publishing to npm
+          # and leaving the GitHub Release with no body.
+          if ! heading="$(git show "${sha}:CHANGELOG.md" | node ./scripts/changelog-heading.mjs "${version}" -)"; then
+            echo "::error::${heading}"
             exit 1
           fi
 
@@ -797,13 +801,21 @@ jobs:
             console.log(`release notes: ${body.length} characters, within the limit`);
             process.exit(0);
           }
-          const footer =
+          // The footer records how many entries the cut kept, so the drift check
+          // (`scripts/check-release-notes.mjs`) can hold the body to exactly that many
+          // of the section's first entries, in order. Read from the body instead, a body
+          // cut down to its footer alone would cover nothing and so be missing nothing.
+          // SHIPPED-CI: not-applicable
+          // Because: the shipped templates carry no release workflow and no release-notes drift check.
+          const footerFor = (kept) =>
             "\n\n---\n\n**These notes are not the whole section.**\n\n" +
             `The \`[${version}]\` section of \`CHANGELOG.md\` runs to ${body.length} characters, ` +
             `past the ${LIMIT}-character limit on a release body. What is above is that same ` +
-            "section in document order, stopped at an entry boundary.\n\n" +
+            "section in document order, stopped at an entry boundary after its first " +
+            `${kept} ${kept === 1 ? "entry" : "entries"}.\n\n` +
             `Full section: https://github.com/${process.env.GITHUB_REPOSITORY}/blob/v${version}/CHANGELOG.md\n`;
-          const budget = LIMIT - footer.length - 200;
+          // Sized for the widest count the body could need: it has no more entries than lines.
+          const budget = LIMIT - footerFor(body.split("\n").length).length - 200;
           // An entry boundary, so the notes never end mid-sentence. A heading boundary was tried
           // first and kept a quarter of the section: the headings are few and the bodies between
           // them are enormous.
@@ -811,7 +823,22 @@ jobs:
           if (cut < 0) cut = body.lastIndexOf("\n- ", budget);
           if (cut < 0) cut = body.lastIndexOf("\n### ", budget);
           if (cut < 0) cut = budget;
-          writeFileSync(path, body.slice(0, cut).replace(/\n+$/, "") + footer, "utf8");
+          const notes = body.slice(0, cut).replace(/\n+$/, "");
+          // Counted the way the drift check reads entries: a top-level `- ` bullet's own
+          // line, outside a fenced block, which closes on its own character and at least
+          // its own length.
+          let kept = 0;
+          let fence = null;
+          for (const line of notes.split(/\r?\n/)) {
+            const run = /^\s{0,3}(`{3,}|~{3,})/.exec(line);
+            if (run !== null) {
+              if (fence === null) fence = run[1];
+              else if (run[1][0] === fence[0] && run[1].length >= fence.length) fence = null;
+              continue;
+            }
+            if (fence === null && /^-[ \t]+\S/.test(line)) kept += 1;
+          }
+          writeFileSync(path, notes + footerFor(kept), "utf8");
           console.log(
             `release notes: capped at ${cut} of ${body.length} characters ` +
               `(${Math.round((100 * cut) / body.length)}% of the section), with a link to the rest`,

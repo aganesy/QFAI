@@ -69,9 +69,11 @@ npx qfai validate --profile full --fail-on error
 jq -r '.issues[] | select(.severity == "error") | .code' .qfai/report/validate.json
 ```
 
-For a pass/fail decision, read `counts.error` (or `counts.warning` under
-`--fail-on warning`) rather than filtering the array — the counts already
-account for suppressed findings.
+For a pass/fail decision, read the counts rather than filtering the array — the
+counts already account for suppressed findings. The run fails on
+`counts.error > 0` under `--fail-on error`, and on
+`counts.error + counts.warning > 0` under `--fail-on warning`, so an error-only
+result fails both.
 
 ## Related
 

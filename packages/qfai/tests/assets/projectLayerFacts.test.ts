@@ -148,4 +148,21 @@ describe("the project layer describes the repository it is in", () => {
       `the declared Node range is ${String(engines)}`,
     ).toEqual([]);
   });
+
+  // `git tag vX.Y.Z` tags whatever the local checkout has as HEAD, and
+  // `release.yml` only checks that the tag is somewhere on main, so a stale or
+  // wrong checkout would publish a commit nobody approved.
+  it("tags a release by the commit it names, never the local HEAD", async () => {
+    const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
+    const creates = guide
+      .split(/\r?\n/)
+      .map((line) => line.trim().replace(/^`|`$/g, ""))
+      .filter((line) => /^git tag\s/.test(line) && !/^git tag\s+-/.test(line));
+
+    expect(creates.length, "the release guide shows no tag command to check").toBeGreaterThan(0);
+    expect(
+      creates.filter((line) => line.split(/\s+/).length < 4),
+      "each tag command names the commit after the tag",
+    ).toEqual([]);
+  });
 });

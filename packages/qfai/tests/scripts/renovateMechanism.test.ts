@@ -43,7 +43,9 @@
  * reference, so a rename or a move breaks every adopter's Renovate run and reports nothing here.
  */
 
-import { readFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -322,6 +324,146 @@ describe("the re-pin runs the two scripts in the order the first one's output re
       body,
       "the re-pin must verify its own output against the lane the update would have failed",
     ).toContain("scripts/check-workflow-hygiene.mjs");
+  });
+});
+
+describe("the re-pin commits only the files its programs write", () => {
+  // The re-pin step runs after the shared setup action, so the work tree can carry changes no
+  // re-pin program made. Staging everything would push those onto the update branch under
+  // Renovate's identity. The step therefore names the files it may commit and fails, listing the
+  // rest, when anything else changed.
+  //
+  // EXECUTED, not grepped: the step body runs under bash in a scratch repository whose
+  // `scripts/*.mjs` are stubs, and one stub writes the paths a row asks for.
+
+  const REPIN_STEP = "Re-pin the digests the update invalidated";
+  const PUSH_STEP = "Push the re-pin";
+
+  function repinFiles(): string[] {
+    const env = jobs()["repin"]?.["env"];
+    const value = isRecord(env) ? env["REPIN_FILES"] : undefined;
+    expect(
+      value,
+      "the repin job must declare REPIN_FILES, the files its commit may carry",
+    ).toBeTypeOf("string");
+    return typeof value === "string" ? value.split(/\s+/u).filter((rel) => rel !== "") : [];
+  }
+
+  function stepBody(name: string): string {
+    const body = stepsOf("repin").find((step) => step["name"] === name)?.["run"];
+    expect(body, `the repin job has no "${name}" step with a body`).toBeTypeOf("string");
+    return typeof body === "string" ? body : "";
+  }
+
+  /** The string a script assigns to one top-level constant, read from its source. */
+  function scriptConstant(rel: string, name: string): string {
+    const source = readFileSync(path.join(REPO_ROOT, rel), "utf-8");
+    const found = new RegExp(`^(?:export )?const ${name} = "([^"]+)";$`, "mu").exec(source);
+    expect(found, `${rel} no longer declares ${name} as a string literal`).not.toBeNull();
+    return found?.[1] ?? "";
+  }
+
+  const STUB_WRITER = [
+    'import { mkdirSync, writeFileSync } from "node:fs";',
+    'import path from "node:path";',
+    'for (const rel of (process.env.STUB_WRITES ?? "").split("\\n").filter(Boolean)) {',
+    "  mkdirSync(path.dirname(rel), { recursive: true });",
+    '  writeFileSync(rel, "after\\n");',
+    "}",
+  ].join("\n");
+
+  function runRepin(writes: string[]): { status: number | null; output: string; changed: string } {
+    const files = repinFiles();
+    const body = stepBody(REPIN_STEP);
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-renovate-repin-"));
+    try {
+      const repo = path.join(dir, "repo");
+      const git = (...args: string[]): void => {
+        execFileSync("git", args, { cwd: repo, stdio: "pipe" });
+      };
+      mkdirSync(path.join(repo, "scripts"), { recursive: true });
+      git("init", "-q");
+      git("config", "core.autocrlf", "false");
+      for (const rel of [...files, "README.md"]) {
+        mkdirSync(path.join(repo, path.dirname(rel)), { recursive: true });
+        writeFileSync(path.join(repo, rel), "before\n", "utf-8");
+      }
+      for (const stub of [
+        "sync-mdschema-version.mjs",
+        "pin-verification-bodies.mjs",
+        "check-workflow-hygiene.mjs",
+      ]) {
+        writeFileSync(path.join(repo, "scripts", stub), "", "utf-8");
+      }
+      writeFileSync(path.join(repo, "scripts", "pin-guard-bytes.mjs"), STUB_WRITER, "utf-8");
+      git("add", "-A");
+      git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "-m", "base");
+
+      const script = path.join(dir, "repin.sh");
+      const outputFile = path.join(dir, "github-output");
+      writeFileSync(script, body, "utf-8");
+      writeFileSync(outputFile, "", "utf-8");
+      const result = spawnSync("bash", [script], {
+        cwd: repo,
+        env: {
+          ...process.env,
+          REPIN_FILES: files.join(" "),
+          GITHUB_OUTPUT: outputFile,
+          STUB_WRITES: writes.join("\n"),
+        },
+        encoding: "utf-8",
+      });
+      if (result.error !== undefined) throw result.error;
+      return {
+        status: result.status,
+        output: `${result.stdout}${result.stderr}`,
+        changed: readFileSync(outputFile, "utf-8"),
+      };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("names every file the re-pin programs write as one its commit may carry", () => {
+    const expected = [
+      scriptConstant("scripts/sync-mdschema-version.mjs", "RULE"),
+      scriptConstant("scripts/pin-guard-bytes.mjs", "LIST_REL"),
+      scriptConstant("scripts/pin-guard-bytes.mjs", "DECLARATION_REL"),
+      scriptConstant("scripts/pin-guard-bytes.mjs", "WORKFLOW_REL"),
+      scriptConstant("scripts/check-lifecycle-manifests.mjs", "LIFECYCLE_MANIFESTS_REL"),
+      scriptConstant("scripts/pin-verification-bodies.mjs", "DECLARATION_REL"),
+    ];
+    expect(new Set(repinFiles())).toEqual(new Set(expected));
+  });
+
+  it("reports a change when only the expected files changed", () => {
+    const run = runRepin([".github/pinned-bytes.txt", ".github/workflows/ci.yml"]);
+    expect(run.status, run.output).toBe(0);
+    expect(run.changed).toContain("changed=true");
+  });
+
+  it("reports nothing to push when no file changed", () => {
+    const run = runRepin([]);
+    expect(run.status, run.output).toBe(0);
+    expect(run.changed).toContain("changed=false");
+  });
+
+  it("fails and lists every change outside the expected files", () => {
+    const run = runRepin([".github/pinned-bytes.txt", "README.md", "stray/new.txt"]);
+    expect(run.status, run.output).not.toBe(0);
+    expect(run.output).toContain("README.md");
+    expect(run.output).toContain("stray/new.txt");
+    expect(run.output, "an expected file is not reported as unexpected").not.toContain(
+      "pinned-bytes.txt",
+    );
+    expect(run.changed).not.toContain("changed=true");
+  });
+
+  it("stages the expected files by name rather than the whole work tree", () => {
+    const body = stepBody(PUSH_STEP);
+    expect(body).not.toMatch(/git add\s+(?:-A|--all|-u|--update|\.(?:\s|$))/u);
+    expect(body).toMatch(/git add -- "\$\{expected\[@\]\}"/u);
+    expect(body).toContain("REPIN_FILES");
   });
 });
 
