@@ -52,6 +52,20 @@ export async function loadJsdom(): Promise<JsdomModule> {
 
 const EVENT_HANDLER_RE = /\s(on[a-z]+)\s*=/gi;
 
+/** Anchored, with no nested quantifier, so it runs in time linear in the value it reads. */
+const PIXEL_LENGTH_RE = /^(\d+(?:\.\d+)?)px$/;
+
+/**
+ * The pixel length a parsed declaration value states, or `null` for anything else.
+ *
+ * The value arrives lower-cased with `!important` kept apart from it, so only a plain
+ * `<number>px` is left to match; a percentage, a `calc()` or a keyword has no fixed size.
+ */
+function readPixelLength(value: string | undefined): number | null {
+  const match = value === undefined ? null : PIXEL_LENGTH_RE.exec(value);
+  return match?.[1] === undefined ? null : Number.parseFloat(match[1]);
+}
+
 export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> {
   const result: HtmlMockParseResult = {
     externalUrls: [],
@@ -97,6 +111,8 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
   // Script tags
   result.scriptTags = doc.querySelectorAll("script").length;
 
+  const dimensionProbe = doc.createElement("div");
+
   // Var usages from inline styles
   for (const el of allElements) {
     const style = el.getAttribute("style") ?? "";
@@ -110,14 +126,20 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
       });
     }
 
-    // Inline dimensions
-    const widthMatch = /width\s*:\s*(\d+(?:\.\d+)?)\s*px/i.exec(style);
-    const heightMatch = /height\s*:\s*(\d+(?:\.\d+)?)\s*px/i.exec(style);
-    if (widthMatch || heightMatch) {
+    // Inline dimensions, read from parsed declarations so that `min-width` or `border-width` is
+    // never taken for `width`. jsdom drops a declaration whose property name is not lower-case,
+    // while CSS property names are case-insensitive, so the attribute is lower-cased and parsed
+    // on one detached element. Only the pixel values of `width` and `height` are read from it,
+    // and lower-casing cannot change those. The detached element also gives every element,
+    // MathML included, the same reading.
+    dimensionProbe.style.cssText = style.toLowerCase();
+    const width = readPixelLength(dimensionProbe.style.getPropertyValue("width"));
+    const height = readPixelLength(dimensionProbe.style.getPropertyValue("height"));
+    if (width !== null || height !== null) {
       result.inlineDimensions.push({
         element: el.tagName.toLowerCase(),
-        width: widthMatch && widthMatch[1] ? parseFloat(widthMatch[1]) : null,
-        height: heightMatch && heightMatch[1] ? parseFloat(heightMatch[1]) : null,
+        width,
+        height,
         interactive: isInteractiveElement(el),
       });
     }
