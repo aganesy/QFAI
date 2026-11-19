@@ -461,6 +461,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An extra positional argument is now an argument error.** Only
+  `qfai sdd next-id` takes positional arguments, but every other command
+  dropped one and ran as if it had not been given, so
+  `qfai db-drift --format json unused-positional` completed normally. Such a
+  token now stops the command with `unexpected argument: <token>`, the
+  command's usage lines and exit code 2.
+
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its

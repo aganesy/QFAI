@@ -860,6 +860,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           // These subcommands take no positional arguments.
           options.unknownFlags.push(arg);
           markInvalid(`${scope()}: unexpected argument: ${arg}`);
+        } else if (command !== null && arg !== undefined) {
+          // No other command declares a positional, so an extra token is an
+          // argument error rather than something to drop silently.
+          markInvalid(`${scope()}: unexpected argument: ${arg}`);
         }
         break;
     }
