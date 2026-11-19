@@ -676,6 +676,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
 
+- **`qfai validate` reads every skill document within the same size limit.**
+  A document the skill-tree crawl found was read whole into memory, while the
+  same document named from a directory the crawl skips was read only up to
+  64 MiB. Every skill document now goes through one bounded reader: past the
+  limit its encoding is still checked and what it cites is left undecided,
+  wherever it sits. Closes #4577.
+
 - **A DB contract that gives a regular and a unique index one name is
   reported.** PostgreSQL keeps both kinds of index in one namespace, so the
   second `CREATE` fails when the contract is applied, but `QFAI-DB-002`
