@@ -12,7 +12,11 @@ import {
 import { renderGraphPreparation } from "../../../src/core/graph/presentation.js";
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
 import { graphAnalysisRoot } from "../../../src/core/graph/analysis.js";
-import { runGraphProcess } from "../../../src/core/graph/process.js";
+import {
+  GRAPH_PROCESS_LIMITS,
+  runGraphProcess,
+  type GraphProcessResult,
+} from "../../../src/core/graph/process.js";
 
 // QFAI:EX-0001-0237-05
 // Mutation: packages/qfai/src/core/graph/prepare.ts `recovery: "Install Python 3.10 or later and uv, then run qfai init again."` -> `recovery: "Install Python 3.9 and uv, then run qfai init again."` fails "reports an unmet interpreter prerequisite with a recovery action"
@@ -376,7 +380,7 @@ it("stages a runtime beside the installed one", async () => {
 });
 
 // QFAI:EX-0001-0237-27
-// Mutation: packages/qfai/src/core/graph/process.ts `? \`was stopped (${signal})\`` -> `? undefined` fails "says a version check could not start or was stopped instead of giving an exit code"
+// Mutation: packages/qfai/src/core/graph/process.ts `if (typeof cause.code === "string") return { failure: \`could not start (${cause.code})\` };` -> `` fails "says a version check could not start or was stopped instead of giving an exit code"
 it("says a version check could not start or was stopped instead of giving an exit code", async () => {
   const exited = await runGraphProcess(
     process.execPath,
@@ -402,7 +406,10 @@ it("says a version check could not start or was stopped instead of giving an exi
     cwd: os.tmpdir(),
     timeoutMs: 200,
   });
-  expect(stopped.failure).toBe("was stopped (SIGTERM)");
+  expect(stopped).toMatchObject({
+    failure: "did not finish within 0.2 seconds and was stopped",
+    limit: "time",
+  });
 
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-version-start-"));
   const fixture = graphProcessFixture();
@@ -418,6 +425,102 @@ it("says a version check could not start or was stopped instead of giving an exi
       expect(output).not.toContain("exited with code");
     }
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0237-29
+// Mutation: packages/qfai/src/core/graph/process.ts `return result.limit && result.failure ? \`Cause: the ${step} ${result.failure}.\` : undefined;` -> `return undefined;` fails "names the limit a download, setup or version check passed"
+it("names the limit a download, setup or version check passed", async () => {
+  const output = await runGraphProcess(
+    process.execPath,
+    ["-e", "process.stdout.write('x'.repeat(4096))"],
+    { cwd: os.tmpdir(), maxBufferBytes: 1024 },
+  );
+  expect(output).toMatchObject({
+    exitCode: 1,
+    failure: "printed more than 1024 bytes of output and was stopped",
+    limit: "output",
+  });
+
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-limit-"));
+  const fixture = graphProcessFixture();
+  const stopped = (failure: string, limit: "time" | "output"): GraphProcessResult => ({
+    exitCode: 1,
+    stdout: "",
+    failure,
+    limit,
+  });
+  const allocated: string[] = [];
+  try {
+    const limits: { timeoutMs: number | undefined; maxBufferBytes: number | undefined }[] = [];
+    const download = await prepareGraphRuntimes(root, (command, args, options) => {
+      if (args.includes("install")) {
+        limits.push({ timeoutMs: options.timeoutMs, maxBufferBytes: options.maxBufferBytes });
+        if (args.includes("--prefix"))
+          return Promise.resolve(
+            stopped("did not finish within 15 minutes and was stopped", "time"),
+          );
+      }
+      return fixture.run(command, args, options);
+    });
+    expect(limits).toEqual([GRAPH_PROCESS_LIMITS.download]);
+    const downloadShown = renderGraphPreparation(download);
+    expect(downloadShown).toContain("Failed step: CodeGraph download");
+    expect(downloadShown).toContain("Recovery: Run npm install");
+    expect(downloadShown).toContain(
+      "Cause: the CodeGraph download did not finish within 15 minutes and was stopped.",
+    );
+
+    const graphifyLimits: { timeoutMs: number | undefined; maxBufferBytes: number | undefined }[] =
+      [];
+    const graphify = await prepareGraphRuntimes(root, (command, args, options) => {
+      if (args[0] === "pip") {
+        graphifyLimits.push({
+          timeoutMs: options.timeoutMs,
+          maxBufferBytes: options.maxBufferBytes,
+        });
+        return Promise.resolve(
+          stopped("printed more than 16 MiB of output and was stopped", "output"),
+        );
+      }
+      return fixture.run(command, args, options);
+    });
+    expect(graphifyLimits).toEqual([GRAPH_PROCESS_LIMITS.download]);
+    expect(renderGraphPreparation(graphify)).toContain(
+      "Cause: the Graphify download printed more than 16 MiB of output and was stopped.",
+    );
+
+    const setup = await prepareGraphRuntimes(root, (command, args, options) =>
+      command === "uv" && args[0] === "venv"
+        ? Promise.resolve(stopped("did not finish within 2 minutes and was stopped", "time"))
+        : fixture.run(command, args, options),
+    );
+    const setupShown = renderGraphPreparation(setup);
+    expect(setup.failedStep).toBe("Python environment setup");
+    expect(setupShown).toContain(
+      "Cause: the Python environment setup did not finish within 2 minutes and was stopped. Run qfai init again.",
+    );
+    expect(setupShown).not.toContain("Install Python 3.10 or later");
+    expect(setupShown).not.toContain("prerequisite");
+
+    const check = await prepareGraphRuntimes(root, (command, args, options) =>
+      args.includes("--version")
+        ? Promise.resolve(stopped("did not finish within 2 minutes and was stopped", "time"))
+        : fixture.run(command, args, options),
+    );
+    const checkShown = renderGraphPreparation(check);
+    expect(check.failedStep).toBe("CodeGraph compatibility");
+    expect(checkShown).toContain(
+      "Cause: the CodeGraph version check did not finish within 2 minutes and was stopped.",
+    );
+    expect(checkShown).not.toContain("printed");
+    allocated.push(
+      await freshRerunDirectory(download.rerun?.directory, "codegraph"),
+      await freshRerunDirectory(graphify.rerun?.directory, "graphify"),
+    );
+  } finally {
+    for (const directory of allocated) await rm(directory, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });
   }
 });

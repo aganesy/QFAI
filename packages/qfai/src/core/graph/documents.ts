@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import {
   publishCompletedDocumentAnalysis,
@@ -10,12 +10,14 @@ import { withGraphLock } from "./locks.js";
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { isEnoent } from "../fs/errno.js";
-import { mirrorGraphCorpus } from "./analysis.js";
+import { graphCorpusChanged, mirrorGraphCorpus } from "./analysis.js";
 import { graphAnalysisRoot, graphRuntimePaths, GRAPH_VERSIONS } from "./layout.js";
 import {
+  GRAPH_PROCESS_LIMITS,
   GRAPH_PYTHON_FLAGS,
   graphifyConfigurationSafe,
   graphifyCorpusEnvironment,
+  graphLimitCause,
   runGraphProcess,
   type GraphProcess,
 } from "./process.js";
@@ -90,13 +92,23 @@ export async function prepareGraphifyCodeAnalysis(
         "--max-concurrency",
         "1",
       ],
-      { cwd: staged, env: graphifyCorpusEnvironment(root, staged) },
+      {
+        cwd: staged,
+        env: graphifyCorpusEnvironment(root, staged),
+        ...GRAPH_PROCESS_LIMITS.codeAnalysis,
+      },
     );
     if (
       result.exitCode !== 0 ||
       !(await currentGraphifyCorpus(root, staged, graphRuntimePaths(root).python, run, "ast"))
     ) {
-      return { status: "failed", recovery: "Repair local Graphify code analysis." };
+      const cause = graphLimitCause("Graphify code analysis", result);
+      return {
+        status: "failed",
+        recovery: cause
+          ? `${cause} Retry the graph query.`
+          : "Repair local Graphify code analysis.",
+      };
     }
     await writeFile(
       path.join(staged, "graphify-out", "managed.json"),
@@ -137,7 +149,7 @@ export async function prepareDocumentAnalysisLocked(
     };
   }
   const inspect = async (analysis: string, refresh: boolean) =>
-    (await inspectDocumentScopeAt(root, analysis, run, refresh)).current;
+    (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none")).current;
   if ((await restoreCompletedDocumentAnalysis(root, run, inspect, environment)) === "restored")
     return { status: "prepared", source: "restored" };
   const selected = new URL(processing.endpoint ?? "http://127.0.0.1:11434/v1");
@@ -241,15 +253,19 @@ export async function prepareDocumentAnalysisLocked(
             ? { [backend === "ollama" ? "OLLAMA_API_KEY" : "OPENAI_API_KEY"]: credential }
             : {}),
         },
+        ...GRAPH_PROCESS_LIMITS.documentAnalysis,
       },
     );
     if (
       result.exitCode !== 0 ||
       !(await currentGraphifyCorpus(root, staged, graphRuntimePaths(root).python, run))
     ) {
+      const cause = graphLimitCause("Graphify document analysis", result);
       return {
         status: "failed",
-        recovery: "Check the selected local model and repair Graphify document analysis.",
+        recovery: cause
+          ? `${cause} Narrow the document scope in .qfai/graph-processing.json, then retry the graph query.`
+          : "Check the selected local model and repair Graphify document analysis.",
       };
     }
     await writeFile(
@@ -319,14 +335,22 @@ export async function inspectDocumentScope(
 ): Promise<DocumentScopeStatus> {
   const analysis = graphAnalysisRoot(root, "graphify");
   await assertGraphStoragePath(root, analysis);
-  return inspectDocumentScopeAt(root, analysis, run);
+  return inspectDocumentScopeAt(root, analysis, run, "staged");
 }
+
+/**
+ * `in-place` refreshes the inputs of a copy nothing else reads yet. `staged` checks the active
+ * analysis where it stands when its inputs already match the project; otherwise it refreshes and
+ * checks an independent copy and activates it only when it is current, so a failed refresh
+ * leaves the previous graph paired with the inputs it was built from.
+ */
+type InputRefresh = "none" | "in-place" | "staged";
 
 async function inspectDocumentScopeAt(
   root: string,
   analysis: string,
   run: GraphProcess,
-  refresh = true,
+  refresh: InputRefresh,
 ): Promise<DocumentScopeStatus> {
   const managed = await readOptionalJson(path.join(analysis, "graphify-out", "managed.json"));
   const selected = await readGraphProcessing(root);
@@ -346,8 +370,38 @@ async function inspectDocumentScopeAt(
   if (!(await safeDocumentCopy(root, analysis, run))) return notCurrent();
   const scope =
     object(processing) && validDocumentScope(processing.scope) ? processing.scope : undefined;
-  if (refresh) await mirrorGraphCorpus(root, analysis, scope);
+  if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope)))
+    return refreshStagedDocumentScope(root, analysis, run, scope);
+  if (refresh === "in-place") await mirrorGraphCorpus(root, analysis, scope);
   return nativeGraphifyScope(root, analysis, graphRuntimePaths(root).python, run);
+}
+
+async function refreshStagedDocumentScope(
+  root: string,
+  analysis: string,
+  run: GraphProcess,
+  scope: readonly string[] | undefined,
+): Promise<DocumentScopeStatus> {
+  const staged = path.join(path.dirname(analysis), `.refreshing-graphify-${randomUUID()}`);
+  await assertGraphStoragePath(root, staged);
+  try {
+    await cp(analysis, staged, { recursive: true, dereference: false });
+    await assertIndependentAnalysis(staged);
+    await mirrorGraphCorpus(root, staged, scope);
+    const status = await nativeGraphifyScope(root, staged, graphRuntimePaths(root).python, run);
+    if (status.current) await replaceGraphDirectory(staged, analysis, root);
+    return status;
+  } finally {
+    await discardRefreshCopy(staged);
+  }
+}
+
+async function discardRefreshCopy(staged: string): Promise<void> {
+  try {
+    await rm(staged, { recursive: true, force: true, maxRetries: 3 });
+  } catch {
+    // The status already decided stands: a left-over hidden copy is never read as analysis.
+  }
 }
 
 async function processingForCompletedQuery(

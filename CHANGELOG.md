@@ -490,6 +490,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
 
+- **A rejected release version or tag no longer reaches the Actions log as a
+  workflow command.** The manual prepare-release and release workflows put
+  the value they refused inside their error annotation, so a value carrying a
+  newline started a line of its own, which the runner reads as a command. The
+  refusal now states its reason without the value. Closes #4605.
+
 - **A file at an assistant layer path no longer counts as an installed
   layer.** `qfai validate` accepted a regular file named, for example,
   `.qfai/assistant/prompt` as the `prompt/` layer and reported nothing. It
@@ -566,6 +572,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
+- **Graph preparation says when a step ran out of time or printed too much.**
+  Runtime downloads and full code and document analysis ran under the same
+  two-minute and 4 MiB limits as a version check, and a step stopped at either
+  limit was reported as a missing Python or uv, an incompatible version or a
+  broken analysis to repair. A download now has 15 minutes, code analysis 30
+  minutes and document analysis two hours, each with 16 MiB of output. A step
+  stopped at its limit is reported as that, naming the step, the limit and its
+  value, and a stopped document analysis says to narrow the document scope.
+
 - **A failed graph tool download names a directory of its own to retry in.**
   The recovery line of `qfai init` told you to rerun the download into a fixed
   `qfai-graph-check` directory under the system temporary directory and then
@@ -596,6 +611,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports document analysis not ready and says to set `credentialEnv`, and
   `.agents/rules/graph-exploration.md` shows a local setup that names a
   variable holding a placeholder value instead of a real key.
+
+- **A failed document graph refresh keeps the previous graph with the files it
+  was built from.** Checking whether the document graph was current copied the
+  changed project files into the active analysis first, so when the
+  replacement graph then failed, the previous graph sat beside inputs it was
+  never built from. When project files changed, the check now refreshes and
+  verifies a separate copy and makes it active, graph and inputs together,
+  only when the graph is current for them. Unchanged files are checked where
+  they are, with no copy. Closes #4588.
 
 - **`qfai validate` compares the index's Depends On with each contract.** The
   `contracts.md` index check compared each row's ID and File with the contract
@@ -752,6 +776,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
 
+- **A release heading the publish would refuse now stops the tag.** Tagging
+  accepted any `CHANGELOG.md` line starting `## [X.Y.Z]`, while publishing
+  also required ` - YYYY-MM-DD` after it, so a heading without a date was
+  tagged and then refused by the publish. Tagging, publishing and the
+  release-notes comparison now read the heading through one parser, and a
+  heading that names the version in another shape fails the tag run with the
+  line it found. Closes #4599.
+
 - **`qfai validate` reads every skill document within the same size limit.**
   A document the skill-tree crawl found was read whole into memory, while the
   same document named from a directory the crawl skips was read only up to
@@ -772,14 +804,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it was kept, its counts included flows that were not named. The documents
   are now selected before they are counted, so the finding and its counts
   cover the named flows only. Closes #4579.
-
-- **A release heading the publish would refuse now stops the tag.** Tagging
-  accepted any `CHANGELOG.md` line starting `## [X.Y.Z]`, while publishing
-  also required ` - YYYY-MM-DD` after it, so a heading without a date was
-  tagged and then refused by the publish. Tagging, publishing and the
-  release-notes comparison now read the heading through one parser, and a
-  heading that names the version in another shape fails the tag run with the
-  line it found. Closes #4599.
 
 - **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
   with no `--assume` copies the carry-over list from the previous
