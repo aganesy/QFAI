@@ -4902,3 +4902,69 @@ describe("the Windows diagnostic's actual Node programs", () => {
     expect(result.status, result.stdout + result.stderr).not.toBe(0);
   });
 });
+
+describe("a rejected release input never reaches the log as a workflow command", () => {
+  // Both workflows validate a value whoever dispatches them types in. The refusal used to echo
+  // that value inside its `::error::` line, so a value carrying a newline put a line of its own
+  // choosing into the log, and the runner reads a line that starts with `::` as a command. The
+  // refusal now states its reason alone. Executed over the step's own body, because a row that
+  // read the `echo` would agree with whatever quoting is written there.
+
+  /** The step's body up to `until`: the part that only checks the dispatched value. */
+  const checkPrefix = (file: string, job: string, id: string, until: string): string => {
+    const doc = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", file), "utf-8"),
+    ) as { jobs?: Record<string, { steps?: Array<Record<string, unknown>> }> };
+    const step = (doc.jobs?.[job]?.steps ?? []).find((entry) => entry["id"] === id);
+    const body = step?.["run"];
+    expect(body, `${file} has no \`${id}\` step with a body`).toBeTypeOf("string");
+    const text = typeof body === "string" ? body : "";
+    const cut = text.indexOf(until);
+    expect(cut, `${file}'s \`${id}\` step never reaches ${until}`).toBeGreaterThan(0);
+    return text.slice(0, cut);
+  };
+
+  const INJECTED = "::warning::injected-by-the-dispatcher";
+  const TAG = {
+    file: "release.yml",
+    job: "verify",
+    id: "pin",
+    until: "git fetch",
+    name: "RELEASE_TAG",
+  };
+  const VERSION = {
+    file: "prepare-release.yml",
+    job: "prepare",
+    id: "check",
+    until: 'current="$(node',
+    name: "RELEASE_VERSION",
+  };
+
+  it.each([
+    { ...TAG, value: `v1.2.3\n${INJECTED}` },
+    { ...TAG, value: `1.2.3\r\n${INJECTED}` },
+    { ...TAG, value: `v1.2.3%0A${INJECTED}` },
+    { ...VERSION, value: `1.2.3\n${INJECTED}` },
+    { ...VERSION, value: `v1.2.3\n${INJECTED}` },
+    { ...VERSION, value: `1.2.3%0A${INJECTED}` },
+  ])("$file refuses $value without echoing it", ({ file, job, id, until, name, value }) => {
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-reject-"));
+    try {
+      const script = path.join(dir, "check.sh");
+      writeFileSync(script, checkPrefix(file, job, id, until), "utf-8");
+      const run = spawnSync("bash", [script], {
+        env: { ...process.env, [name]: value },
+        encoding: "utf-8",
+      });
+      if (run.error !== undefined) throw run.error;
+      const output = `${run.stdout}${run.stderr}`;
+      expect(run.status, `the value must be refused: ${output}`).not.toBe(0);
+      const lines = run.stdout.split(/\r?\n/).filter((line) => line !== "");
+      expect(lines, "one refusal line, and nothing the value put after it").toHaveLength(1);
+      expect(lines[0], "the refusal is an error annotation").toMatch(/^::error::/);
+      expect(output, "no part of the rejected value reaches the log").not.toContain("injected");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

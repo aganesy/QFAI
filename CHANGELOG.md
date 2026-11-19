@@ -470,17 +470,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
 
-- **The release-notes drift check holds a cut body to its kept entries, in
-  order.** When a changelog section is too long for a GitHub Release body,
-  the release workflow cuts it and appends a note. The check compared such a
-  body as a set and took its cut from the entries it still carried, so it
-  accepted reordered entries and a body emptied down to the note. The note now
-  records how many entries the cut kept, and the check requires that many of
-  the section's first entries in the section's order. It reports a kept
-  entry the body lacks as missing and one it carries elsewhere as out of
-  order, and passes over a line added by hand. A cut body whose note records
-  no count is held to the whole section.
-
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
@@ -494,12 +483,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
   omitted `requires:` still counts as empty.
 
+- **The release-notes drift check holds a cut body to its kept entries, in
+  order.** When a changelog section is too long for a GitHub Release body,
+  the release workflow cuts it and appends a note. The check compared such a
+  body as a set and took its cut from the entries it still carried, so it
+  accepted reordered entries and a body emptied down to the note. The note now
+  records how many entries the cut kept, and the check requires that many of
+  the section's first entries in the section's order. It reports a kept
+  entry the body lacks as missing and one it carries elsewhere as out of
+  order, and passes over a line added by hand. A cut body whose note records
+  no count is held to the whole section.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so
   `qfai db-drift --format json unused-positional` completed normally. Such a
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
+
+- **A rejected release version or tag no longer reaches the Actions log as a
+  workflow command.** The manual prepare-release and release workflows put
+  the value they refused inside their error annotation, so a value carrying a
+  newline started a line of its own, which the runner reads as a command. The
+  refusal now states its reason without the value. Closes #4605.
 
 - **A file at an assistant layer path no longer counts as an installed
   layer.** `qfai validate` accepted a regular file named, for example,
@@ -616,6 +622,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports document analysis not ready and says to set `credentialEnv`, and
   `.agents/rules/graph-exploration.md` shows a local setup that names a
   variable holding a placeholder value instead of a real key.
+
+- **A failed document graph refresh keeps the previous graph with the files it
+  was built from.** Checking whether the document graph was current copied the
+  changed project files into the active analysis first, so when the
+  replacement graph then failed, the previous graph sat beside inputs it was
+  never built from. When project files changed, the check now refreshes and
+  verifies a separate copy and makes it active, graph and inputs together,
+  only when the graph is current for them. Unchanged files are checked where
+  they are, with no copy. Closes #4588.
 
 - **`qfai validate` compares the index's Depends On with each contract.** The
   `contracts.md` index check compared each row's ID and File with the contract
