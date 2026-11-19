@@ -463,6 +463,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An unknown `prototype.mode` written as an inline mapping is now
+  reported.** `QFAI-CONTRACT-038` scanned a UI contract line by line, so
+  `prototype: { mode: static }` passed unchecked. It now reads the mode from
+  the parsed contract, so the block and inline forms are treated alike. A
+  contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
+  references now say the finding is an error, which it already was.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
