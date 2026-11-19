@@ -627,6 +627,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   quoting rules: a bare part folds to lower case, a quoted part keeps its
   case and its doubled `""`, and a dot inside quotes does not split the name.
 
+- **An agent card's required sections must be real headings.** The
+  `QFAI-AGENT-005` check accepted any occurrence of a required heading's text,
+  so a card missing `## Stop conditions` passed when the frontmatter, a
+  sentence, a code sample, an HTML comment or a `### Stop conditions` heading
+  carried the same words. Only a level-2 heading of the card body now counts.
+  Closes #4573.
+
 - **`qfai validate` checks every resource reference in an HTML mock.** The
   external URL, local file and unsafe scheme checks read only `href`, `src`
   and `action`, so a mock could load a CDN asset through CSS `url()`,
