@@ -5,7 +5,7 @@ import { readPinnedRegularFileBytes } from "../init/fsGuards.js";
 import { graphEnvironmentKey } from "./layout.js";
 import { assertGraphStoragePath } from "./storage.js";
 
-export const GRAPH_STATE_BYTES = 32768;
+const GRAPH_STATE_BYTES = 32768;
 export const GRAPH_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 export class GraphLocalStateError extends Error {
@@ -26,7 +26,7 @@ export async function graphStateDirectory(root: string): Promise<string> {
   return directory;
 }
 
-export function invalidGraphState(): GraphLocalStateError {
+function invalidGraphState(): GraphLocalStateError {
   return new GraphLocalStateError(
     "Project graph state is invalid.",
     "Retain the local state and repair .qfai/tools/state before retrying the graph CLI.",

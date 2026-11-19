@@ -43,7 +43,9 @@ export async function validateMermaidScreenFlow(
 
       const declaration = findDiagramDeclaration(block.content);
       const firstLine = declaration?.line ?? "";
-      const declarationLine = block.startLine + (declaration?.lineOffset ?? 0);
+      // `startLine` is the opening fence; content offset 0 is the line after it.
+      const firstContentLine = block.startLine + 1;
+      const declarationLine = firstContentLine + (declaration?.lineOffset ?? 0);
 
       // Check for v1 stateDiagram (migration warning)
       if (STATE_DIAGRAM_V1_RE.test(firstLine) && !STATE_DIAGRAM_V2_RE.test(firstLine)) {
@@ -57,6 +59,7 @@ export async function validateMermaidScreenFlow(
             undefined,
             "canonical",
             "Replace 'stateDiagram' with 'stateDiagram-v2' at the first line of the diagram.",
+            { loc: { line: declarationLine } },
           ),
         );
       }
@@ -67,13 +70,18 @@ export async function validateMermaidScreenFlow(
           if (transition.label) {
             continue;
           }
+          const transitionLine = firstContentLine + transition.lineOffset;
           issues.push(
             issue(
               "QFAI-FLOW-002",
-              `Unlabeled transition: ${transition.from} --> ${transition.to} at line ${block.startLine + transition.lineOffset}`,
+              `Unlabeled transition: ${transition.from} --> ${transition.to} at line ${transitionLine}`,
               "warning",
               rel,
               "mermaidScreenFlow.unlabeledTransition",
+              undefined,
+              "canonical",
+              undefined,
+              { loc: { line: transitionLine } },
             ),
           );
         }
@@ -87,6 +95,10 @@ export async function validateMermaidScreenFlow(
             "warning",
             rel,
             "mermaidScreenFlow.flowchartDeclaration",
+            undefined,
+            "canonical",
+            undefined,
+            { loc: { line: declarationLine } },
           ),
         );
       }

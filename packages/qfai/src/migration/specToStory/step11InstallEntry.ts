@@ -2,11 +2,13 @@ import { constants } from "node:fs";
 import {
   lstat,
   mkdir,
+  mkdtemp,
   open,
   readFile,
   readdir,
   readlink,
   realpath,
+  rename,
   rm,
   stat,
 } from "node:fs/promises";
@@ -216,19 +218,117 @@ function installOperation(
   };
 }
 
-function removeOperation(context: MigrationContext, layer: Layer, id: string): MigrationOperation {
+/**
+ * Puts the package's copy at `dir` in place of the one there. The copy is
+ * written and checked in a directory beside `dir`, on the same filesystem, and
+ * only then switched in by two renames; when the second fails, the first is
+ * undone. A failure at any point leaves the project's copy where it was. When
+ * the undo fails too, the project's copy stays where the first rename put it
+ * and the error names that path. The staging directory is removed otherwise;
+ * a failure to remove it does not fail the operation.
+ */
+async function replaceFromPackage(
+  layer: Layer,
+  id: string,
+  dir: string,
+  shipped: ReadonlyMap<string, ComparedFile>,
+): Promise<void> {
+  const holder = await mkdtemp(path.join(path.dirname(dir), `.${id}-replace-`));
+  const staged = path.join(holder, "new");
+  const previous = path.join(holder, "previous");
+  // True while `previous` holds the project's only copy, which cleanup must keep.
+  let projectCopyAside = false;
+  try {
+    await copyTemplatePaths(path.join(packageQfaiAssets(), "assistant", layer), holder, [id], {
+      force: false,
+      dryRun: false,
+      conflictPolicy: "skip",
+    });
+    await rename(path.join(holder, id), staged);
+    const copied = await treeFiles(staged);
+    if (copied === null || !(await sameTree(copied, shipped))) {
+      throw new Error(
+        `The ${layer} replacement did not match the package's copy, so ${id} was left unchanged`,
+      );
+    }
+    await rename(dir, previous);
+    projectCopyAside = true;
+    try {
+      await rename(staged, dir);
+    } catch (error) {
+      await restoreProjectCopy(layer, id, previous, dir, error);
+      projectCopyAside = false;
+      throw error;
+    }
+    projectCopyAside = false;
+  } finally {
+    await removeQuietly(projectCopyAside ? staged : holder);
+  }
+}
+
+/** Moves the project's copy back to `dir`, or names where it was left. */
+async function restoreProjectCopy(
+  layer: Layer,
+  id: string,
+  previous: string,
+  dir: string,
+  switchError: unknown,
+): Promise<void> {
+  // The switch's error is the cause; the undo's error is only named, so the
+  // reason the replacement failed is the one a caller reads first.
+  const failure = await rename(previous, dir).then(
+    () => null,
+    (restoreError: unknown) => ({ restoreError }),
+  );
+  if (failure === null) return;
+  const { restoreError } = failure;
+  const reason = restoreError instanceof Error ? restoreError.message : String(restoreError);
+  throw new Error(
+    `The ${layer} replacement of ${id} could not be switched in, and the project's copy could not be put back (${reason}); the project's copy is at ${previous}`,
+    { cause: switchError },
+  );
+}
+
+/**
+ * Removes a staging path. A failure here comes after the outcome is settled, so
+ * it neither fails a finished replacement nor hides the error of a failed one.
+ */
+async function removeQuietly(target: string): Promise<void> {
+  try {
+    await rm(target, { recursive: true, force: true, maxRetries: 3 });
+  } catch {
+    // Left under a hidden `.<id>-replace-*` directory beside the layer; nothing reads it.
+  }
+}
+
+function replaceOperation(
+  context: MigrationContext,
+  layer: Layer,
+  id: string,
+  shipped: ReadonlyMap<string, ComparedFile>,
+): MigrationOperation {
   const dir = layerDir(context, layer, id);
+  const shown = projectPath(context, dir);
+  const installed = [...shipped.keys()]
+    .sort()
+    .map((file) => projectPath(context, path.join(dir, file)));
   return {
     kind: "delegate",
-    target: projectPath(context, dir),
-    description: "delete the project's copy",
-    apply: () => rm(dir, { recursive: true }),
+    target: shown,
+    targets: [shown, ...installed],
+    description: "replace with the package's copy",
+    report: [
+      `${shown}: delete the project's copy`,
+      ...installed.map((target) => `${target}: install from the package`),
+    ],
+    apply: () => replaceFromPackage(layer, id, dir, shipped),
   };
 }
 
 /**
- * What bringing one shipped skill or step up to the package's copy takes. A
- * copy that differs is deleted whole, then installed from the package.
+ * What bringing one shipped skill or step up to the package's copy takes. An
+ * absent copy is installed from the package; one that differs is replaced
+ * whole, the package's copy staged before the project's is moved aside.
  */
 async function planLayerEntry(
   context: MigrationContext,
@@ -239,7 +339,10 @@ async function planLayerEntry(
   const shipped = await packageFiles(layer, id);
   const current = await treeFiles(layerDir(context, layer, id));
   if (current !== null && (await sameTree(current, shipped))) return;
-  if (current !== null) plan.operations.push(removeOperation(context, layer, id));
+  if (current !== null) {
+    plan.operations.push(replaceOperation(context, layer, id, shipped));
+    return;
+  }
   const install = installOperation(context, layer, id, [...shipped.keys()].sort());
   if (install !== null) plan.operations.push(install);
 }
