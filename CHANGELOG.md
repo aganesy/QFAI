@@ -567,13 +567,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
-- **Graph setup checks every graph output path against `.gitignore`.** When
-  the managed graph block was already present, `qfai init` checked one path
-  under `.qfai/tools/analysis/` that the current layout no longer writes, so a
-  narrower rule could leave runtimes, local state, engine caches or the graph
-  entrypoints visible to Git while the check passed. It now checks a path in
-  each place graph preparation and queries write, and the conflict it reports
-  names each path Git would still see.
+- **An `openai` document backend with no credential now stops before
+  extraction.** Graphify's `openai` client refuses to start without a non-empty
+  key, even for a local server that needs no authentication, so document
+  analysis used to fail only after extraction began. The documents CLI now
+  reports document analysis not ready and says to set `credentialEnv`, and
+  `.agents/rules/graph-exploration.md` shows a local setup that names a
+  variable holding a placeholder value instead of a real key.
 
 - **`qfai validate` compares the index's Depends On with each contract.** The
   `contracts.md` index check compared each row's ID and File with the contract
@@ -675,6 +675,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reading `qfai.config.yaml`, such as an unknown `workflow.mode` value, was
   dropped and appeared only after the migration. The run now reports those
   findings before `QFAI-LAYOUT-001`, so both can be fixed in one pass.
+
+- **Graph setup checks every graph output path against `.gitignore`.** When
+  the managed graph block was already present, `qfai init` checked one path
+  under `.qfai/tools/analysis/` that the current layout no longer writes, so a
+  narrower rule could leave runtimes, local state, engine caches or the graph
+  entrypoints visible to Git while the check passed. It now checks a path in
+  each place graph preparation and queries write, and the conflict it reports
+  names each path Git would still see.
 
 - **`qfai validate` no longer passes over a story-tree Markdown file it
   cannot read.** The HTML mock, Mermaid screen flow and UI definition checks
