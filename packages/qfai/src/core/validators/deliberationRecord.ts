@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import { maskNonSpecRegions } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -19,7 +20,6 @@ const DELIBERATION_COLUMNS = [
 ] as const;
 
 const HEADING_RE = /^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/;
-const FENCE_RE = /^ {0,3}(`{3,}|~{3,})/;
 const DELIMITER_CELL_RE = /^:?-+:?$/;
 
 type Line = { text: string; number: number };
@@ -73,36 +73,34 @@ function checkRecord(file: string, text: string): Issue[] {
   return issues;
 }
 
-/** The lines under each Interview or Agent decisions heading, up to the next heading of its level or above. */
+/**
+ * The lines under each Interview or Agent decisions heading, up to the next heading of its level or above.
+ *
+ * It reads the text {@link maskNonSpecRegions} leaves, so a heading or table inside a fenced
+ * sample, an HTML comment or another region it blanks is not a section or a table, and every line keeps
+ * its number.
+ */
 function collectSections(text: string): Section[] {
   const sections: Section[] = [];
   let open: { section: Section; level: number } | null = null;
-  let fence: string | null = null;
-  text.split(/\r?\n/).forEach((raw, index) => {
-    const line = { text: raw, number: index + 1 };
-    const fenceMatch = FENCE_RE.exec(raw);
-    if (fence !== null) {
-      if (fenceMatch?.[1]?.startsWith(fence)) fence = null;
-      return;
-    }
-    if (fenceMatch?.[1]) {
-      fence = fenceMatch[1];
-      return;
-    }
-    const heading = HEADING_RE.exec(raw);
-    if (heading?.[1] && heading[2] !== undefined) {
-      const level = heading[1].length;
-      if (open !== null && level <= open.level) open = null;
-      const name = SECTIONS.find((candidate) => candidate === heading[2]?.trim());
-      if (name !== undefined) {
-        const section: Section = { name, lines: [] };
-        sections.push(section);
-        open = { section, level };
+  maskNonSpecRegions(text)
+    .split("\n")
+    .forEach((raw, index) => {
+      const line = { text: raw, number: index + 1 };
+      const heading = HEADING_RE.exec(raw);
+      if (heading?.[1] && heading[2] !== undefined) {
+        const level = heading[1].length;
+        if (open !== null && level <= open.level) open = null;
+        const name = SECTIONS.find((candidate) => candidate === heading[2]?.trim());
+        if (name !== undefined) {
+          const section: Section = { name, lines: [] };
+          sections.push(section);
+          open = { section, level };
+        }
+        return;
       }
-      return;
-    }
-    open?.section.lines.push(line);
-  });
+      open?.section.lines.push(line);
+    });
   return sections;
 }
 
