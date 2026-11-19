@@ -41,9 +41,9 @@
  *   --scope all      every document the manifest matches. The migration view.
  *   --scope files    only the paths named on the command line.
  *
- * A degraded base (no merge base, a shallow clone, a failed diff) FAILS OPEN to
- * `all`, because the alternative — silently checking nothing and reporting
- * green — claims a result the run never established.
+ * A degraded base (no merge base, a shallow clone, a failed branch or worktree
+ * diff) FAILS OPEN to `all`, because the alternative — silently checking
+ * nothing and reporting green — claims a result the run never established.
  *
  * ── What `--scope changed` holds a branch to ──────────────────────────────
  *
@@ -803,7 +803,13 @@ function changedFiles(base, root) {
     ["diff", "--numstat", "-z", "--no-renames", "--ignore-cr-at-eol", "HEAD"],
     { cwd: root, encoding: "utf-8" },
   );
-  const files = `${diff.stdout}\0${staged.status === 0 ? staged.stdout : ""}`
+  // The worktree diff is half the answer, so its failure degrades the whole
+  // answer: reading it as "nothing uncommitted" would drop every staged and
+  // unstaged edit from the scope and report them clean.
+  if (staged.status !== 0) {
+    return null;
+  }
+  const files = `${diff.stdout}\0${staged.stdout}`
     .split("\0")
     .map((record) => numstatPath(record))
     .filter((file) => file !== null);
