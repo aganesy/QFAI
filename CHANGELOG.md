@@ -728,6 +728,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   was. The same holds for the reminder text step 11 refreshes and for the hook
   settings it and `qfai init` update. Closes #4457.
 
+- **`qfai init` no longer writes through a linked `.qfai`.** The asset copies
+  checked the directories below `.qfai` but not `.qfai` itself, so a `.qfai`
+  that was a symbolic link had every assistant file written wherever it
+  pointed. A story-tree seed path under a link was refused only after the root
+  assets and `AGENTS.md` had already been written. Init now checks `.qfai` and
+  the seed paths before it writes anything, and stops with the path named when
+  `.qfai` is a link or not a directory, leaving every project file as it was.
+  Closes #4471.
+
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in
   `.github/instructions/`, including the one a second init in the same
