@@ -635,6 +635,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped at the same limit; one that does not answer by then gives no finding,
   as a missing file already did. Closes #4616.
 
+- **A graph query still works after a source directory becomes a file, or a
+  file becomes a directory.** The code graph copies the project into its own
+  corpus before each query. A path that changed type since the last copy made
+  that copy fail, so the next query stopped with exit code 2. The stale entry
+  is now removed before the new one is copied in. Closes #4498.
+
 - **A DB contract that defines one SQL function twice is reported even when the
   two definitions differ only in defaults or argument names.** `QFAI-DB-002`
   compared the whole argument text, so two `CREATE OR REPLACE FUNCTION`
