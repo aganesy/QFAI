@@ -443,7 +443,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   from `.claude/settings.json` and `.codex/hooks.json`, and delete
   `.github/hooks/qfai-graph.json`, `.qfai/tools/graph-hook.mjs`,
   `.qfai/tools/graph-enforcement.json` and the `*.pending.json`, `*.draft.json`
-  and `*.grant.json` files under `.qfai/tools/state/`.
+  and `*.grant.json` files under `.qfai/tools/state/`. Closes #4056.
 
 - **The run log's `traceability.json` no longer carries `stats`.** Its
   `downstream_violations` and `shared_scope_violations` counted finding codes
