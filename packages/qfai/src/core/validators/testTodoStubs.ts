@@ -1526,6 +1526,24 @@ function reportRefusedScan(error: unknown, callerGlobs: boolean, scannedRest: bo
   );
 }
 
+/**
+ * The unreadable-file form of `QFAI-TEST-002`: the selection reached these
+ * files, but opening them failed, so the files that were read are reported and
+ * these are named as not checked.
+ */
+function reportUnreadableFiles(root: string, files: string[]): Issue {
+  return issue(
+    "QFAI-TEST-002",
+    `The stub scan could not read ${files.length} selected test file(s): ${files.join(", ")}. The other files were scanned, and a clean result is not evidence that these hold no stub.`,
+    "info",
+    root,
+    "validation.testStrategy.stubScanUnreadable",
+    files,
+    "canonical",
+    "Make these files readable to the account running `qfai validate`, or exclude them with `validation.traceability.testFileExcludeGlobs` where they hold no test.",
+  );
+}
+
 export async function validateTestTodoStubs(
   root: string,
   config: QfaiConfig,
@@ -1663,6 +1681,9 @@ export async function validateTestTodoStubs(
   const skippedTestSeverity = "error";
 
   const unscannedExtensions = new Set<string>();
+  // A selected file that could not be opened was never checked; dropping it
+  // silently made "no stubs" mean "not read" as well.
+  const unreadableFiles: string[] = [];
   for (const absFile of files) {
     const relFile = path.relative(root, absFile).replace(/\\/g, "/");
     // No dialect means qfai knows no stub construct for this extension. Reading
@@ -1677,6 +1698,7 @@ export async function validateTestTodoStubs(
     try {
       content = await readFile(absFile, "utf-8");
     } catch {
+      unreadableFiles.push(relFile);
       continue;
     }
 
@@ -1691,6 +1713,10 @@ export async function validateTestTodoStubs(
         projectGlobs: !callerGlobs || projectGlobs.size > 0,
       }),
     );
+  }
+
+  if (unreadableFiles.length > 0) {
+    issues.push(reportUnreadableFiles(root, unreadableFiles.sort()));
   }
 
   if (unscannedExtensions.size > 0) {

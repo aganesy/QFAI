@@ -610,6 +610,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   replace each result file with a new one, so a second name for the file is
   left unchanged. Closes #4485.
 
+- **The stub scan names the test files it could not read.** A selected test
+  file that failed to open was skipped without a word, so a clean
+  `QFAI-TEST-001` / `QFAI-TEST-003` result could mean the file was never
+  checked. The scan now reports those files in one `QFAI-TEST-002` finding and
+  still checks every file it could read. Closes #4558.
+
 - **`qfai catalog components` writes only inside the project.** A
   `.qfai/catalog` directory, or a directory above it, that was a symbolic link
   or junction led the write to wherever the link pointed, overwriting a file
