@@ -24,7 +24,9 @@
  * listing and one `git fetch`. The listing goes
  * through `gh-budget.mjs`, which keeps its reserve and reports the remaining
  * allowance on stderr, so stdout holds only the answer. A check during an unfinished
- * merge stops before fetching or comparing branch-owned identifiers.
+ * merge stops before fetching or comparing branch-owned identifiers. The fetch
+ * writes only refs this run owns, never the shared `FETCH_HEAD`, and a listed
+ * head it does not return stops the command before any answer.
  *
  * Usage:
  *   node scripts/story-ids.mjs next <scope>...
@@ -38,11 +40,12 @@
  *
  * Exit codes: 0 answered; 1 a collision was found, or the listing left the
  * budget below the reserve (the answer is still printed); 2 the arguments,
- * the runtime, `git` or `gh` could not be used, or `check` found an unfinished
- * merge; 3 a scope has no number left.
+ * the runtime, `git` or `gh` could not be used, the fetch did not return main
+ * and every listed head, or `check` found an unfinished merge; 3 a scope has no number left.
  */
 /* global console, process */
 import { execFileSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import { register } from "node:module";
 import path from "node:path";
@@ -168,18 +171,33 @@ export function pullsFrom(body) {
 }
 
 /**
- * The commit `git fetch` wrote for each pull request's head, from `FETCH_HEAD`.
+ * The commit this run's fetch wrote for main and for each listed pull request,
+ * from `git for-each-ref --format='%(objectname) %(refname)' <namespace>/`.
  *
  * Read from the fetch rather than from the listing: a head pushed between the
- * two is the one that holds the IDs now.
+ * two is the one that holds the IDs now. Throws when main or any listed pull
+ * request has no commit, so no check runs on a partial set of heads.
  */
-export function fetchedHeads(fetchHead) {
-  const heads = new Map();
-  for (const line of fetchHead.split(/\r?\n/)) {
-    const match = /^([0-9a-f]{40,64})\t[^\t]*\t'refs\/pull\/(\d+)\/head'/.exec(line);
-    if (match !== null) heads.set(Number(match[2]), match[1]);
+export function fetchedHeads(refs, namespace, pulls) {
+  const commits = new Map();
+  for (const line of refs.split(/\r?\n/)) {
+    const match = /^([0-9a-f]{40,64}) (\S+)$/.exec(line);
+    if (match !== null) commits.set(match[2], match[1]);
   }
-  return heads;
+  const main = commits.get(`${namespace}/${MAIN}`);
+  const heads = new Map();
+  const missing = [];
+  for (const { number } of pulls) {
+    const commit = commits.get(`${namespace}/pull/${String(number)}`);
+    if (commit === undefined) missing.push(`#${String(number)}`);
+    else heads.set(number, commit);
+  }
+  if (main === undefined) missing.unshift(MAIN);
+  if (missing.length > 0)
+    throw new Error(
+      `The fetch did not return ${missing.join(", ")}; allocation and collision checks need every listed head.`,
+    );
+  return { main, pulls: heads };
 }
 
 /** A table row of a register, with the DEC or OQ ID in its first cell. */
@@ -424,26 +442,38 @@ function declared(files) {
   return new Set(files.flatMap((file) => file.ids));
 }
 
-/** Fetches main and every listed head; returns main's ref and each head's commit. */
-function fetchHeads(reader, pulls) {
-  reader.git([
-    "fetch",
-    "--quiet",
-    "--no-tags",
-    "--write-fetch-head",
-    "origin",
-    `+refs/heads/${MAIN}:refs/remotes/origin/${MAIN}`,
-    ...pulls.map((pull) => `refs/pull/${String(pull.number)}/head`),
-  ]);
-  const fetchHead = readFileSync(
-    path.resolve(reader.cwd, reader.text(["rev-parse", "--git-path", "FETCH_HEAD"]).trim()),
-    "utf-8",
-  );
-  return { main: `refs/remotes/origin/${MAIN}`, pulls: fetchedHeads(fetchHead) };
+/**
+ * Fetches main and every listed head into refs only this run writes, and
+ * returns main's commit and each head's commit.
+ *
+ * Neither the shared `FETCH_HEAD` nor `refs/remotes/origin/main` is read or
+ * written, so a fetch another process runs at the same time cannot change
+ * which commits are compared. The run's refs keep the fetched commits
+ * reachable while `use` reads them, and are deleted when it returns.
+ */
+function withFetchedHeads(reader, pulls, use) {
+  const namespace = `refs/story-ids/${String(process.pid)}-${randomBytes(6).toString("hex")}`;
+  try {
+    reader.git([
+      "fetch",
+      "--quiet",
+      "--no-tags",
+      "--no-write-fetch-head",
+      "origin",
+      `+refs/heads/${MAIN}:${namespace}/${MAIN}`,
+      ...pulls.map(
+        (pull) => `+refs/pull/${String(pull.number)}/head:${namespace}/pull/${String(pull.number)}`,
+      ),
+    ]);
+    const refs = reader.text(["for-each-ref", "--format=%(objectname) %(refname)", namespace]);
+    return use(fetchedHeads(refs, namespace, pulls));
+  } finally {
+    const written = reader.text(["for-each-ref", "--format=delete %(refname)", namespace]);
+    if (written !== "") reader.git(["update-ref", "--stdin"], written);
+  }
 }
 
-function nextCommand(reader, scopes, pulls, allocate) {
-  const heads = fetchHeads(reader, pulls);
+function nextCommand(reader, scopes, heads, allocate) {
   const trees = [reader.atCommit(heads.main), reader.inWorkingTree()];
   for (const commit of heads.pulls.values()) trees.push(reader.atCommit(commit));
   const ids = allocateAll(scopes, combine(trees), allocate);
@@ -455,15 +485,18 @@ function nextCommand(reader, scopes, pulls, allocate) {
   return 0;
 }
 
-function checkCommand(reader, pulls) {
+/** Whether a merge is unfinished, so branch-owned identifiers cannot be told apart yet. */
+function mergeInProgress(reader) {
   try {
     reader.git(["rev-parse", "--verify", "--quiet", "MERGE_HEAD"]);
-    console.error("Finish the merge before checking branch-owned identifiers.");
-    return 2;
+    return true;
   } catch (cause) {
     if (cause?.status !== 1) throw cause;
+    return false;
   }
-  const heads = fetchHeads(reader, pulls);
+}
+
+function checkCommand(reader, pulls, heads) {
   const base = declared(reader.atCommit(reader.text(["merge-base", "HEAD", heads.main]).trim()));
   const mine = added(declared(reader.inWorkingTree()), base);
   const isAncestorOfHead = (commit) => {
@@ -574,10 +607,15 @@ export async function run(argv, options = {}) {
   const reader = new TreeReader(cwd, buildStoryTreeModel);
   let code;
   try {
-    code =
+    if (command === "check" && mergeInProgress(reader)) {
+      console.error("Finish the merge before checking branch-owned identifiers.");
+      return 2;
+    }
+    code = withFetchedHeads(reader, pulls, (heads) =>
       command === "next"
-        ? nextCommand(reader, scopes, pulls, nextStoryTreeId)
-        : checkCommand(reader, pulls);
+        ? nextCommand(reader, scopes, heads, nextStoryTreeId)
+        : checkCommand(reader, pulls, heads),
+    );
   } catch (cause) {
     const stderr = cause?.stderr === undefined ? "" : String(cause.stderr).trim();
     console.error(stderr === "" ? String(cause?.message ?? cause) : stderr);

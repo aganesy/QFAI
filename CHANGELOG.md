@@ -553,6 +553,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   definition, and every step receives the one parsed URL.
   Closes #4585.
 
+- **Story ID commands no longer answer from a partial or shared set of pull
+  request heads.** `scripts/story-ids.mjs` read each head's commit from the
+  shared `FETCH_HEAD`, so a fetch another process ran at the same time could
+  change or drop heads, and a listed pull request missing from the fetch was
+  skipped without notice. The command now fetches main and every listed head
+  into refs only that run writes, removes them when it finishes, and stops
+  with exit 2 when main or any listed head is missing. It no longer writes
+  `FETCH_HEAD` or moves `origin/main`. This is a repository tool; the package
+  does not ship it. Closes #4611.
+
 - **`qfai validate` reports the actual line of a Mermaid screen-flow
   finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction
   warnings named the line before the one they flagged. They now name the

@@ -143,14 +143,29 @@ describe("reading git and the hosted side", () => {
     expect(pullsFrom("not json")).toBeUndefined();
   });
 
-  it("takes each head's commit from FETCH_HEAD", () => {
-    const fetchHead = [
-      "0fbae1fb0d3485fc2ec18598948a60327ecb80c4\t\tbranch 'main' of https://github.com/owner/repo",
-      "085cccdac1948e8c66568c4c8cabeb8bc3c8a23a\tnot-for-merge\t'refs/pull/2515/head' of https://github.com/owner/repo",
-    ].join("\n");
-    expect([...fetchedHeads(fetchHead)]).toEqual([
-      [2515, "085cccdac1948e8c66568c4c8cabeb8bc3c8a23a"],
-    ]);
+  const namespace = "refs/story-ids/1-abc";
+  const refs = [
+    `0fbae1fb0d3485fc2ec18598948a60327ecb80c4 ${namespace}/main`,
+    `085cccdac1948e8c66568c4c8cabeb8bc3c8a23a ${namespace}/pull/2515`,
+    "",
+  ].join("\n");
+
+  it("takes main's and each head's commit from the refs this run fetched", () => {
+    const heads = fetchedHeads(refs, namespace, [{ number: 2515, branch: "feature" }]);
+    expect(heads.main).toBe("0fbae1fb0d3485fc2ec18598948a60327ecb80c4");
+    expect([...heads.pulls]).toEqual([[2515, "085cccdac1948e8c66568c4c8cabeb8bc3c8a23a"]]);
+  });
+
+  it("refuses a fetched set that lacks a listed pull request or main", () => {
+    const pulls = [
+      { number: 2515, branch: "feature" },
+      { number: 2516, branch: "absent" },
+    ];
+    expect(() => fetchedHeads(refs, namespace, pulls)).toThrow(/did not return #2516\b/);
+    const withoutMain = refs.replace(/^.*\/main\n/, "");
+    expect(() => fetchedHeads(withoutMain, namespace, pulls.slice(0, 1))).toThrow(
+      /did not return main\b/,
+    );
   });
 
   it("reads cat-file --batch output byte by byte", () => {
@@ -376,6 +391,36 @@ describe("against a repository", () => {
       expect(log.mock.calls).toEqual([["BF-0002"]]);
     } finally {
       log.mockRestore();
+    }
+  });
+
+  it("leaves another process's FETCH_HEAD alone and keeps none of its own refs", async () => {
+    const fetchHead = path.join(work, ".git", "FETCH_HEAD");
+    const theirs = `${"c".repeat(40)}\t\tbranch 'elsewhere' of ${root}\n`;
+    writeFileSync(fetchHead, theirs);
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      expect(await run(["next", "BF"], { cwd: work, list })).toBe(0);
+      expect(log.mock.calls).toEqual([["BF-0002"]]);
+      expect(readFileSync(fetchHead, "utf-8")).toBe(theirs);
+      expect(git(work, "for-each-ref", "refs/story-ids")).toBe("");
+    } finally {
+      rmSync(fetchHead, { force: true });
+      log.mockRestore();
+    }
+  });
+
+  it("stops with exit 2 when a listed pull request has no head to fetch", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const absent = () => ({ code: 0, pulls: [...pulls, { number: 9, branch: "closed" }] });
+      expect(await run(["check"], { cwd: work, list: absent })).toBe(2);
+      expect(log.mock.calls).toEqual([]);
+      expect(git(work, "for-each-ref", "refs/story-ids")).toBe("");
+    } finally {
+      log.mockRestore();
+      error.mockRestore();
     }
   });
 
