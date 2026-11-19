@@ -2,9 +2,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import fg from "fast-glob";
-import { parse as parseYaml } from "yaml";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
+import { readUiContractScreenIds } from "../contracts/screenContracts.js";
 import { parseDesignToken } from "../parse/designToken.js";
 import type { Issue } from "../types.js";
 import { collectVarUsages } from "../uiux/htmlMockParser.js";
@@ -46,33 +46,11 @@ export async function validateUiDefinitionConsistency(
     }
   }
 
-  // Load UI Contract screen IDs
-  const uiContractDir = path.join(resolvePath(root, config, "contractsDir"), "ui");
-  const uiFiles = await fg("**/*.yaml", { cwd: uiContractDir, absolute: true });
-  const contractScreenIds = new Set<string>();
-
-  for (const uiFile of uiFiles) {
-    try {
-      const content = await readFile(uiFile, "utf-8");
-      const parsed: unknown = parseYaml(content);
-      if (parsed && typeof parsed === "object") {
-        const screens = (parsed as Record<string, unknown>).screens;
-        if (Array.isArray(screens)) {
-          for (const screen of screens) {
-            if (
-              screen &&
-              typeof screen === "object" &&
-              "id" in (screen as Record<string, unknown>)
-            ) {
-              contractScreenIds.add(String((screen as Record<string, unknown>).id));
-            }
-          }
-        }
-      }
-    } catch {
-      // skip
-    }
-  }
+  // Load UI Contract screen IDs from the same file set the other screen checks read
+  const contractScreenIds = await readUiContractScreenIds(
+    root,
+    resolvePath(root, config, "contractsDir"),
+  );
 
   // Load HTML Mock blocks
   const mdFiles = await readMarkdown(mockMarkdownDir(root, config));
