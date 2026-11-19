@@ -728,6 +728,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   was. The same holds for the reminder text step 11 refreshes and for the hook
   settings it and `qfai init` update. Closes #4457.
 
+- **The migration warns that it replaces customised step directories.** The
+  backup warning in the migration skill, its guide and `MIGRATION-2.0.0.md`
+  named only the shipped skills that step 11 replaces. They now also name the
+  shipped step directories under `.qfai/assistant/step/`, whose untracked files
+  and uncommitted edits step 11 replaces too, so a person copies their local
+  changes before the first run. Closes #4509.
+
 - **`qfai init` no longer writes through a linked `.qfai`.** The asset copies
   checked the directories below `.qfai` but not `.qfai` itself, so a `.qfai`
   that was a symbolic link had every assistant file written wherever it
