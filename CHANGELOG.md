@@ -610,6 +610,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   error that does not mention QFAI. The README now describes npm's error and
   gives the guard's message to yarn alone. Closes #4626.
 
+- **`qfai db-drift` reports a configuration error instead of passing.** A
+  `qfai.config.yaml` that did not parse, or held an invalid setting, made the
+  command fall back to the defaults. The defaults name no migrations
+  directory, so the command said there was nothing to compare and exited 0.
+  It now lists the configuration errors on stderr and exits 2 before
+  comparing anything. "Nothing to compare" is reported only for a
+  configuration that loaded. Closes #4517.
+
 - **The turn-end check runs only commands the Standard commands list itself
   holds.** It read every `- Label:` line under the heading, so a fenced or
   indented example, an item nested under another, and a heading inside a

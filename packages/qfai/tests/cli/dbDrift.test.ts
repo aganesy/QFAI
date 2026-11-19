@@ -147,6 +147,67 @@ describe("a project the command is not for", () => {
   });
 });
 
+describe("a configuration that did not load", () => {
+  /** What the command wrote to stderr while `run` was awaited. */
+  async function capturedErr(
+    run: () => Promise<number>,
+  ): Promise<{ exitCode: number; said: string }> {
+    const chunks: string[] = [];
+    const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      chunks.push(String(chunk));
+      return true;
+    });
+    try {
+      return { exitCode: await run(), said: chunks.join("") };
+    } finally {
+      spy.mockRestore();
+    }
+  }
+
+  it("is reported with exit 2, not declined as out of scope, when the file does not parse", async () => {
+    const root = await project({ migrationsDir: "migrations" });
+    await write(root, "qfai.config.yaml", "paths: [unclosed\n");
+
+    const { exitCode, said } = await capturedErr(() =>
+      runDbDrift({ root, createDatabase: () => Promise.resolve(databaseOf([])) }),
+    );
+
+    expect(exitCode).toBe(2);
+    expect(said).toContain("qfai.config.yaml");
+    expect(said).toContain("could not be read or parsed");
+  });
+
+  it("stops before any comparison when a setting is invalid", async () => {
+    const root = await project({ migrationsDir: "migrations" });
+    await write(
+      root,
+      "qfai.config.yaml",
+      [
+        "paths:",
+        "  contractsDir: .qfai/contracts",
+        "  migrationsDir: migrations",
+        "validation: 3",
+        "",
+      ].join("\n"),
+    );
+    let opened = 0;
+
+    const { exitCode, said } = await capturedErr(() =>
+      runDbDrift({
+        root,
+        createDatabase: () => {
+          opened += 1;
+          return Promise.resolve(databaseOf([]));
+        },
+      }),
+    );
+
+    expect(exitCode).toBe(2);
+    expect(opened).toBe(0);
+    expect(said).toContain("validation must be an object.");
+  });
+});
+
 describe("what the exit code says", () => {
   it("is 0 when the two schemas agree", async () => {
     const root = await project({ migrationsDir: "migrations" });
