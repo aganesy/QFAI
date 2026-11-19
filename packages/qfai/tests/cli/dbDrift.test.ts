@@ -225,6 +225,40 @@ describe("the report", () => {
     expect(written).toContain("note");
   });
 
+  it("goes to the file --out names when there is nothing to compare", async () => {
+    const root = await project();
+
+    const { exitCode } = await captured(() =>
+      runDbDrift({
+        root,
+        outPath: ".qfai/report/db-drift.txt",
+        createDatabase: () => Promise.resolve(databaseOf([])),
+      }),
+    );
+
+    expect(exitCode).toBe(0);
+    const written = await readFile(path.join(root, ".qfai/report/db-drift.txt"), "utf-8");
+    expect(written).toContain("paths.migrationsDir");
+  });
+
+  it("goes to the file --out names as JSON when one side has nothing to apply", async () => {
+    const root = await project({ migrationsDir: "db/changes" });
+
+    const { said } = await captured(() =>
+      runDbDrift({
+        root,
+        format: "json",
+        outPath: ".qfai/report/db-drift.json",
+        createDatabase: () => Promise.resolve(databaseOf([])),
+      }),
+    );
+
+    const written = await readFile(path.join(root, ".qfai/report/db-drift.json"), "utf-8");
+    const parsed: unknown = JSON.parse(written);
+    expect(parsed).toMatchObject({ status: "out-of-scope" });
+    expect(said).not.toContain("out-of-scope");
+  });
+
   it("is parseable JSON under --format json", async () => {
     const root = await project({ migrationsDir: "migrations" });
 

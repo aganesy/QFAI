@@ -49,11 +49,7 @@ export async function runDbDrift(options: DbDriftOptions): Promise<number> {
   if (migrationsDir === undefined || migrationsDir.trim() === "") {
     const message =
       "No migrations directory is configured, so there is nothing to compare the contracts against. Set `paths.migrationsDir` in qfai.config.yaml to the directory holding the project's migrations.";
-    if (asJson) {
-      info(JSON.stringify({ status: "out-of-scope", reason: message }, null, 2));
-    } else {
-      info(`qfai db-drift: ${message}`);
-    }
+    await emit(root, options.outPath, renderOutOfScope(message, asJson));
     return EXIT_OK;
   }
 
@@ -65,11 +61,7 @@ export async function runDbDrift(options: DbDriftOptions): Promise<number> {
   if (contractFiles.length === 0 || migrationFiles.length === 0) {
     const missing = contractFiles.length === 0 ? "DB contracts" : "migrations";
     const message = `Found no ${missing} to apply, so a comparison would report every column of the other side as a difference.`;
-    if (asJson) {
-      info(JSON.stringify({ status: "out-of-scope", reason: message }, null, 2));
-    } else {
-      info(`qfai db-drift: ${message}`);
-    }
+    await emit(root, options.outPath, renderOutOfScope(message, asJson));
     return EXIT_OK;
   }
 
@@ -89,14 +81,7 @@ export async function runDbDrift(options: DbDriftOptions): Promise<number> {
   const rendered = asJson
     ? `${JSON.stringify(result, null, 2)}\n`
     : `${renderText(result.differences, result.failures)}\n`;
-  if (options.outPath !== undefined) {
-    const out = path.resolve(root, options.outPath);
-    await mkdir(path.dirname(out), { recursive: true });
-    await writeFile(out, rendered, "utf-8");
-    info(`qfai db-drift: wrote ${path.relative(root, out).split(path.sep).join("/")}`);
-  } else {
-    info(rendered.trimEnd());
-  }
+  await emit(root, options.outPath, rendered);
 
   // A file that would not apply is not a clean run either: the schema it was
   // meant to contribute is missing from one side, so every column it declares
@@ -109,6 +94,27 @@ export async function runDbDrift(options: DbDriftOptions): Promise<number> {
     return EXIT_OK;
   }
   return result.differences.length > 0 ? EXIT_DRIFT : EXIT_OK;
+}
+
+/** Why there was nothing to compare, in the format the run asked for. */
+function renderOutOfScope(reason: string, asJson: boolean): string {
+  return asJson
+    ? `${JSON.stringify({ status: "out-of-scope", reason }, null, 2)}
+`
+    : `qfai db-drift: ${reason}
+`;
+}
+
+/** Sends a rendered result to the file `--out` names, or to stdout without one. */
+async function emit(root: string, outPath: string | undefined, rendered: string): Promise<void> {
+  if (outPath === undefined) {
+    info(rendered.trimEnd());
+    return;
+  }
+  const out = path.resolve(root, outPath);
+  await mkdir(path.dirname(out), { recursive: true });
+  await writeFile(out, rendered, "utf-8");
+  info(`qfai db-drift: wrote ${path.relative(root, out).split(path.sep).join("/")}`);
 }
 
 /** One line per difference, grouped by table, with a count at the top. */

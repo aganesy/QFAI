@@ -618,6 +618,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it marks is listed twice, the hook runs nothing and tells the user which
   label is listed more than once in tech.md. Closes #4470.
 
+- **`qfai db-drift --out` receives the result when there is nothing to
+  compare.** With no migrations directory configured, or no DB contracts or
+  migrations to apply, the command printed its out-of-scope result to stdout
+  and left the file `--out` named unwritten. That result, as text or as JSON,
+  now goes to the file the same way a finished comparison does.
+  Closes #4518.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
