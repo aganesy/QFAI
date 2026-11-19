@@ -81,10 +81,11 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
   const doc = dom.window.document;
   const allElements = doc.querySelectorAll("*");
 
-  const srcdocBudget = { remaining: MAX_SRCDOC_DOCUMENTS };
+  const srcdocBudget: SrcdocBudget = { remaining: MAX_SRCDOC_DOCUMENTS, unread: new Set() };
   for (const rawUrl of collectResourceReferences(dom, JSDOM, 0, srcdocBudget)) {
     classifyReference(rawUrl, result);
   }
+  result.parseErrors.push(...srcdocBudget.unread);
 
   // Inline event handlers
   for (const match of html.matchAll(EVENT_HANDLER_RE)) {
@@ -212,12 +213,35 @@ const MAX_SRCDOC_DEPTH = 8;
  */
 const MAX_SRCDOC_DOCUMENTS = 50;
 
-/** Every element of a tree, including the content of each `template`, in document order. */
+/**
+ * What is left of the `srcdoc` documents one mock may read, and why any went unread.
+ *
+ * A frame past either ceiling is reported rather than passed over, so a mock
+ * cannot hide a reference behind the limits.
+ */
+type SrcdocBudget = { remaining: number; unread: Set<string> };
+
+const SRCDOC_TOO_DEEP = `iframe srcdoc nested deeper than ${MAX_SRCDOC_DEPTH} levels was not read`;
+const SRCDOC_TOO_MANY = `iframe srcdoc documents past the first ${MAX_SRCDOC_DOCUMENTS} were not read`;
+
+/**
+ * Every element of a tree, including the content of each `template`, in document order.
+ *
+ * An explicit stack of iterators, not recursion: templates nest without limit,
+ * and one generator frame per level overflows the call stack.
+ */
 function* elementsOf(root: ParentNode, window: JsdomInstance["window"]): Generator<Element> {
-  for (const el of root.querySelectorAll("*")) {
+  const pending: Iterator<Element>[] = [root.querySelectorAll("*")[Symbol.iterator]()];
+  while (pending.length > 0) {
+    const step = pending[pending.length - 1]?.next();
+    if (!step || step.done === true) {
+      pending.pop();
+      continue;
+    }
+    const el = step.value;
     yield el;
     if (el instanceof window.HTMLTemplateElement) {
-      yield* elementsOf(el.content, window);
+      pending.push(el.content.querySelectorAll("*")[Symbol.iterator]());
     }
   }
 }
@@ -235,7 +259,7 @@ function collectResourceReferences(
   dom: JsdomInstance,
   JSDOM: JsdomModule["JSDOM"],
   depth: number,
-  srcdocBudget: { remaining: number },
+  srcdocBudget: SrcdocBudget,
 ): string[] {
   const refs: string[] = [];
   // One push per value: spreading a list of unbounded length into `push` can exceed the stack.
@@ -275,10 +299,20 @@ function collectResourceReferences(
     }
 
     const srcdoc = tag === "iframe" ? el.getAttribute("srcdoc") : null;
-    if (srcdoc?.trim() && depth < MAX_SRCDOC_DEPTH && srcdocBudget.remaining > 0) {
-      srcdocBudget.remaining -= 1;
-      const inner = new JSDOM(srcdoc);
+    if (!srcdoc?.trim()) continue;
+    if (depth >= MAX_SRCDOC_DEPTH) {
+      srcdocBudget.unread.add(SRCDOC_TOO_DEEP);
+      continue;
+    }
+    if (srcdocBudget.remaining <= 0) {
+      srcdocBudget.unread.add(SRCDOC_TOO_MANY);
+      continue;
+    }
+    srcdocBudget.remaining -= 1;
+    const inner = new JSDOM(srcdoc);
+    try {
       add(collectResourceReferences(inner, JSDOM, depth + 1, srcdocBudget));
+    } finally {
       inner.window.close();
     }
   }

@@ -138,15 +138,53 @@ describe("HTML mock resource references", () => {
     const result = await parseHtmlMock(blank + frames);
     expect(result.externalUrls).toHaveLength(50);
     expect(result.externalUrls.at(-1)).toBe(`${EXTERNAL}/49`);
+    expect(result.parseErrors).toEqual(["iframe srcdoc documents past the first 50 were not read"]);
   });
 
   // QFAI:EX-0001-0039-58
-  it("reads hostile CSS in linear time", async () => {
+  it("reports a srcdoc nested deeper than 8 levels instead of passing it", async () => {
+    let html = `<img src='${EXTERNAL}/deep'>`;
+    for (let level = 0; level < 10; level++) {
+      const attribute = html.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+      html = `<iframe srcdoc="${attribute}"></iframe>`;
+    }
+    const result = await parseHtmlMock(html);
+    expect(result.externalUrls).toEqual([]);
+    expect(result.parseErrors).toEqual(["iframe srcdoc nested deeper than 8 levels was not read"]);
+  });
+
+  // QFAI:EX-0001-0039-58
+  it("reads a reference under 5,000 nested templates", async () => {
+    const html = `${"<template>".repeat(5_000)}<img src="${EXTERNAL}" alt="">`;
+    const result = await parseHtmlMock(html);
+    expect(result.externalUrls).toEqual([EXTERNAL]);
+  });
+
+  // QFAI:EX-0001-0039-58
+  it("opens no function after a hash or a number, and honours escapes in a bad url()", async () => {
+    const result = await parseHtmlMock(
+      [
+        `<div style="background: #url(${EXTERNAL}/hash)"></div>`,
+        `<div style="margin: 1url(${EXTERNAL}/number)"></div>`,
+        `<div style="background: url(a b\\) url(${EXTERNAL}/bad)"></div>`,
+        `<div style="background: url(${EXTERNAL}/after-bad)"></div>`,
+        '<div style="background: url(x.png\\"></div>',
+      ].join("\n"),
+    );
+    expect(result.externalUrls).toEqual([`${EXTERNAL}/after-bad`]);
+    // The trailing backslash is an escape standing for U+FFFD, so the URL ends in it.
+    expect(result.localRefs).toEqual([`x.png${String.fromCodePoint(0xfffd)}`]);
+  });
+
+  // QFAI:EX-0001-0039-58
+  it("reads hostile CSS and srcset in linear time", async () => {
     const escapes = `<div style="background:url(${"\\a".repeat(200)}"></div>`;
     const imageSets = `<style>${".x{background:image-set(".repeat(20_000)}</style>`;
+    const commas = `<img alt="" srcset="a${",".repeat(200_000)}b,">`;
     const started = performance.now();
     await parseHtmlMock(escapes);
     await parseHtmlMock(imageSets);
+    await parseHtmlMock(commas);
     expect(performance.now() - started).toBeLessThan(2_000);
   });
 });

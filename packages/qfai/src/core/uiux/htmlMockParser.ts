@@ -100,10 +100,14 @@ export function parseSrcsetUrls(value: string): string[] {
     while (i < value.length && !HTML_WHITESPACE_RE.test(value[i] ?? "")) {
       i += 1;
     }
-    let url = value.slice(start, i);
-    if (url.endsWith(",")) {
-      url = url.replace(/,+$/, "");
-    } else {
+    // Trailing commas end the URL. An index walk, because a regular expression
+    // anchored at the end retries from every comma and turns quadratic.
+    let end = i;
+    while (end > start && value[end - 1] === ",") {
+      end -= 1;
+    }
+    const url = value.slice(start, end);
+    if (end === i) {
       let depth = 0;
       while (i < value.length) {
         const ch = value[i];

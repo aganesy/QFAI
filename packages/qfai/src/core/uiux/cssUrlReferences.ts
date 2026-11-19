@@ -11,6 +11,7 @@ const CSS_WHITESPACE = new Set([" ", "\t", "\n", "\r", "\f"]);
 const LINE_BREAKS = new Set(["\n", "\r", "\f"]);
 const HEX_DIGIT_RE = /^[0-9a-f]$/i;
 const IDENT_CHAR_RE = /^[a-z0-9_\u0080-￿-]$/i;
+const DIGIT_RE = /^[0-9]$/;
 const IDENT_START_RE = /^[a-z_\u0080-￿-]$/i;
 
 /** Functions whose own string arguments are resource URLs. */
@@ -18,10 +19,15 @@ const STRING_URL_FUNCTIONS = new Set(["src", "image-set", "-webkit-image-set"]);
 
 type Scanned = { value: string; next: number };
 
-/** Whether `css[i]` starts an escape: a backslash not followed by a line break or the end. */
+/** U+FFFD, which an escape stands for when it names no character or ends the text. */
+const REPLACEMENT_CHARACTER = String.fromCodePoint(0xfffd);
+
+/**
+ * Whether `css[i]` starts an escape: a backslash not followed by a line break. A
+ * backslash that ends the text is one too, standing for U+FFFD.
+ */
 function startsEscape(css: string, i: number): boolean {
-  const following = css[i + 1];
-  return css[i] === "\\" && following !== undefined && !LINE_BREAKS.has(following);
+  return css[i] === "\\" && !LINE_BREAKS.has(css[i + 1] ?? "");
 }
 
 /** Reads the escape at `css[i]`: up to six hex digits and one whitespace, or one character. */
@@ -33,7 +39,7 @@ function readEscape(css: string, i: number): Scanned {
     j += 1;
   }
   if (hex === "") {
-    return { value: css[j] ?? "", next: j + 1 };
+    return { value: css[j] ?? REPLACEMENT_CHARACTER, next: Math.min(j + 1, css.length) };
   }
   if (CSS_WHITESPACE.has(css[j] ?? "")) {
     j += 1;
@@ -41,7 +47,7 @@ function readEscape(css: string, i: number): Scanned {
   const codePoint = Number.parseInt(hex, 16);
   const valid =
     codePoint > 0 && codePoint <= 0x10ffff && (codePoint < 0xd800 || codePoint > 0xdfff);
-  return { value: valid ? String.fromCodePoint(codePoint) : "�", next: j };
+  return { value: valid ? String.fromCodePoint(codePoint) : REPLACEMENT_CHARACTER, next: j };
 }
 
 /** Reads an identifier from `css[i]`, its escapes resolved. */
@@ -80,6 +86,11 @@ function readString(css: string, i: number): Scanned {
       if (LINE_BREAKS.has(css[j + 1] ?? "")) {
         // An escaped line break continues the string and stands for nothing.
         j += 2;
+        continue;
+      }
+      if (j + 1 >= css.length) {
+        // A backslash that ends the text inside a string stands for nothing.
+        j += 1;
         continue;
       }
       const escape = readEscape(css, j);
@@ -123,9 +134,11 @@ function readUrlBody(css: string, i: number): { value: string | null; next: numb
   }
   while (CSS_WHITESPACE.has(css[j] ?? "")) j += 1;
   if (j < css.length && css[j] !== ")") {
+    // A bad URL: skip its remnants to the closing parenthesis, which an escape does not close.
     valid = false;
-    const close = css.indexOf(")", j);
-    j = close < 0 ? css.length : close;
+    while (j < css.length && css[j] !== ")") {
+      j = startsEscape(css, j) ? readEscape(css, j).next : j + 1;
+    }
   }
   return { value: valid ? value : null, next: j + 1 };
 }
@@ -180,6 +193,12 @@ export function collectCssUrlReferences(css: string | null): string[] {
         afterImport = keyword === "import";
         i = name.next;
       }
+    } else if (ch === "#" || DIGIT_RE.test(ch)) {
+      // A hash such as `#url(` or a dimension such as `1url(` holds a name but
+      // opens no function: read past the name with its prefix.
+      let j = i + 1;
+      while (j < css.length && (DIGIT_RE.test(css[j] ?? "") || css[j] === ".")) j += 1;
+      i = readIdent(css, j).next;
     } else if (IDENT_START_RE.test(ch) || startsEscape(css, i)) {
       const name = readIdent(css, i);
       i = name.next;
