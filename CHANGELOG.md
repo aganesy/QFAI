@@ -559,6 +559,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **Graph setup checks every graph output path against `.gitignore`.** When
+  the managed graph block was already present, `qfai init` checked one path
+  under `.qfai/tools/analysis/` that the current layout no longer writes, so a
+  narrower rule could leave runtimes, local state, engine caches or the graph
+  entrypoints visible to Git while the check passed. It now checks a path in
+  each place graph preparation and queries write, and the conflict it reports
+  names each path Git would still see.
+
 - **`qfai validate` compares the index's Depends On with each contract.** The
   `contracts.md` index check compared each row's ID and File with the contract
   but never read its Depends On cell, so the index could state an apply order
