@@ -269,6 +269,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    * - `yes` — `init`, `doctor`
    * - `force` — `init`
    * - `dryRun` — `init`, `doctor`
+   * - `profile`, `doctorSkillProfile` — `validate`, `report`, `doctor`
    *
    * One predicate rather than one per flag: two that mean almost the same
    * thing are two contracts to keep in step.
@@ -484,7 +485,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       case "--profile": {
         const next = consumeOptionValue();
-        if (command === "sdd" && !sddPreflight()) {
+        // Read by validate and report (a validation profile) and by doctor
+        // (`prototyping` or a skill name). Every other command dropped it.
+        if (!ownedBy("validate", "report", "doctor")) {
           markInvalid(notValidHere("--profile"));
           break;
         }
@@ -492,13 +495,20 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid(missingValue("--profile"));
           break;
         }
+        if (command === "doctor") {
+          // doctor runs no validation profile: only the prototyping
+          // preflight, or a skill manifest probe under any other name.
+          if (next === "prototyping") {
+            options.profile = next;
+          } else if (!isValidationProfile(next) && isSkillProfileName(next)) {
+            options.doctorSkillProfile = next;
+          } else {
+            markInvalid(badValue("--profile", next, "prototyping|<skill>"));
+          }
+          break;
+        }
         if (isValidationProfile(next)) {
           options.profile = next;
-        } else if (command === "doctor" && isSkillProfileName(next)) {
-          // `qfai doctor --profile <skill>` accepts arbitrary skill
-          // names that fall outside the validate-side enum. The
-          // doctor command threads the value into the manifest probe.
-          options.doctorSkillProfile = next;
         } else {
           markInvalid(
             badValue(
@@ -849,6 +859,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         ) {
           // These subcommands take no positional arguments.
           options.unknownFlags.push(arg);
+          markInvalid(`${scope()}: unexpected argument: ${arg}`);
+        } else if (command !== null && arg !== undefined) {
+          // No other command declares a positional, so an extra token is an
+          // argument error rather than something to drop silently.
           markInvalid(`${scope()}: unexpected argument: ${arg}`);
         }
         break;
