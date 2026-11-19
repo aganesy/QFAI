@@ -132,20 +132,33 @@ describe("web-research pipeline", () => {
   });
 
   // QFAI:EX-0001-0177-06
-  it("Firecrawl template documents both hosted and local npx modes", async () => {
-    const firecrawlDir = path.join(mcpTemplateDir, "firecrawl");
-    const files = await fg(["**/*"], { cwd: firecrawlDir, absolute: false }).catch(() => []);
-    expect(files.length).toBeGreaterThan(0);
+  it("Firecrawl docs separate where the server runs from where pages are scraped", async () => {
+    // A local npx launch still sends every URL to the API at FIRECRAWL_API_URL,
+    // so the docs must not let "local" read as "the data stays here".
+    const content = await readSkill();
+    const start = content.indexOf("### 2.2 Firecrawl MCP");
+    expect(start, "section 2.2 Firecrawl MCP").toBeGreaterThanOrEqual(0);
+    const end = content.indexOf("\n### ", start + 1);
+    const section = content.slice(start, end === -1 ? undefined : end).replace(/\s+/g, " ");
 
-    // Read all available configs and require explicit mode markers to avoid false positives.
-    let hasHosted = false;
-    let hasLocal = false;
-    for (const file of files) {
-      const content = await readFile(path.join(firecrawlDir, file), "utf-8");
-      if (/hosted\s+mode|hosted\s+url/i.test(content)) hasHosted = true;
-      if (/local\s+npx\s+mode/i.test(content)) hasLocal = true;
-    }
-    expect(hasHosted).toBe(true);
-    expect(hasLocal).toBe(true);
+    expect(section).toContain("**Where the MCP server runs.**");
+    expect(section).toContain("**Where the pages are scraped.**");
+    expect(section).toContain("Launching the server locally does not keep the data local.");
+    expect(section).toContain("the agent uses Firecrawl's remote MCP server;");
+    expect(section).toContain("`FIRECRAWL_API_URL` is unset or points at Firecrawl's cloud API.");
+    expect(section).toContain(
+      "For a sensitive environment, keep the local launch and point `FIRECRAWL_API_URL` at a Firecrawl instance you run yourself",
+    );
+    expect(section).toContain("`http://localhost:3002`");
+    expect(section).toContain("`FIRECRAWL_API_KEY` is optional against a self-hosted instance.");
+
+    // The Codex template carries comments; the JSON formats cannot.
+    const toml = await readFile(path.join(mcpTemplateDir, "firecrawl", "config.toml"), "utf-8");
+    expect(toml).toContain("# Process location: npx launches the MCP server on this machine");
+    expect(toml).toContain(
+      "# Data destination: FIRECRAWL_API_URL is the API that fetches every page.",
+    );
+    expect(toml).toContain("# For sensitive environments, set FIRECRAWL_API_URL to a self-hosted");
+    expect(toml).not.toMatch(/local\s+npx\s+mode:\s+recommended/i);
   });
 });

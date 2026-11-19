@@ -102,10 +102,36 @@ Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/brave
 
 ### 2.2 Firecrawl MCP
 
-Content fetching and extraction. Supports two modes:
+Content fetching and extraction. Two separate settings decide where the work
+happens:
 
-- **Local**: `npx` execution via stdio transport.
-- **Hosted**: Remote Firecrawl service via HTTP transport.
+- **Where the MCP server runs.** Local: `npx` launches `firecrawl-mcp` on this
+  machine over stdio transport; every template does this. Hosted: the agent
+  connects over HTTP transport to Firecrawl's remote MCP server; no template
+  configures this.
+- **Where the pages are scraped.** The MCP server sends each URL to the
+  Firecrawl API at `FIRECRAWL_API_URL`, and that API fetches the page and
+  returns its content. The templates set `https://api.firecrawl.dev`,
+  Firecrawl's cloud API, which `firecrawl-mcp` also uses when the variable is
+  unset.
+
+Launching the server locally does not keep the data local. Every URL the fetch
+stage requests, and the page content returned for it, passes through
+Firecrawl's service when either of these holds:
+
+- the agent uses Firecrawl's remote MCP server;
+- `FIRECRAWL_API_URL` is unset or points at Firecrawl's cloud API.
+
+For a sensitive environment, keep the local launch and point
+`FIRECRAWL_API_URL` at a Firecrawl instance you run yourself:
+
+1. Run Firecrawl by its self-hosting guide; its API listens on port `3002` by
+   default.
+2. Set `FIRECRAWL_API_URL` in the template to that instance, for example
+   `http://localhost:3002`.
+3. `FIRECRAWL_API_KEY` is optional against a self-hosted instance. Keep it when
+   the instance requires authentication; otherwise remove its entry from the
+   template.
 
 Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/firecrawl/`
 

@@ -1,6 +1,10 @@
-# Firecrawl MCP - supports both hosted URL and local npx modes
-# Local npx mode: recommended for sensitive environments
-# Hosted mode: set FIRECRAWL_API_URL to https://api.firecrawl.dev
+# Firecrawl MCP - two separate settings decide where the work happens.
+# Process location: npx launches the MCP server on this machine (stdio).
+# Data destination: FIRECRAWL_API_URL is the API that fetches every page.
+# https://api.firecrawl.dev is Firecrawl's cloud API, so URLs and page
+# content pass through Firecrawl's service even though the server runs here.
+# For sensitive environments, set FIRECRAWL_API_URL to a self-hosted
+# Firecrawl instance (for example http://localhost:3002).
 [mcp_servers.firecrawl]
 command = "npx"
 args = ["-y", "firecrawl-mcp@3.11.0"]
