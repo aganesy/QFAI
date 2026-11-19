@@ -41,9 +41,9 @@
  *   --scope all      every document the manifest matches. The migration view.
  *   --scope files    only the paths named on the command line.
  *
- * A degraded base (no merge base, a shallow clone, a failed diff) FAILS OPEN to
- * `all`, because the alternative — silently checking nothing and reporting
- * green — claims a result the run never established.
+ * A degraded base (no merge base, a shallow clone, a failed branch or worktree
+ * diff) FAILS OPEN to `all`, because the alternative — silently checking
+ * nothing and reporting green — claims a result the run never established.
  *
  * ── What `--scope changed` holds a branch to ──────────────────────────────
  *
@@ -749,10 +749,13 @@ function numstatPath(record) {
 }
 
 /**
- * The files this branch changed, or `null` when the answer is degraded.
+ * The files this branch changed, or why the answer is degraded.
  *
- * `null` and "no files changed" are different answers and are kept different:
- * the first must widen the scope, the second must narrow it to nothing.
+ * A degraded answer and "no files changed" are different answers and are kept
+ * different: the first must widen the scope, the second must narrow it to
+ * nothing. The degraded answer names the diff that failed: the branch diff and
+ * the worktree diff fail for different reasons and are mended in different
+ * places.
  *
  * A document whose bytes moved but whose text did not is not a document this
  * branch changed. Re-normalising line endings across the tree rewrites every
@@ -778,15 +781,18 @@ function numstatPath(record) {
  * to a single path.
  *
  * @param {string} base
- * @returns {string[] | null}
+ * @returns {{ files: string[] } | { degraded: string }}
  */
 function changedFiles(base, root) {
+  const branchFailure = {
+    degraded: `cannot diff against ${base} (unreachable ref, shallow clone or failed diff)`,
+  };
   const rev = spawnSync("git", ["rev-parse", "--verify", "--quiet", `${base}^{commit}`], {
     cwd: root,
     encoding: "utf-8",
   });
   if (rev.status !== 0) {
-    return null;
+    return branchFailure;
   }
   // `A...HEAD` is the merge base, which is what "what this branch changed"
   // means; a plain two-dot diff also reports everything the base gained.
@@ -796,18 +802,25 @@ function changedFiles(base, root) {
     { cwd: root, encoding: "utf-8" },
   );
   if (diff.status !== 0) {
-    return null;
+    return branchFailure;
   }
   const staged = spawnSync(
     "git",
     ["diff", "--numstat", "-z", "--no-renames", "--ignore-cr-at-eol", "HEAD"],
     { cwd: root, encoding: "utf-8" },
   );
-  const files = `${diff.stdout}\0${staged.status === 0 ? staged.stdout : ""}`
+  // The worktree diff is half the answer, so its failure degrades the whole
+  // answer: reading it as "nothing uncommitted" would drop every staged and
+  // unstaged edit from the scope and report them clean.
+  if (staged.status !== 0) {
+    const reason = (staged.stderr ?? "").trim().split("\n")[0] || `git exited ${staged.status}`;
+    return { degraded: `cannot diff the worktree against HEAD (${reason})` };
+  }
+  const files = `${diff.stdout}\0${staged.stdout}`
     .split("\0")
     .map((record) => numstatPath(record))
     .filter((file) => file !== null);
-  return [...new Set(files)];
+  return { files: [...new Set(files)] };
 }
 
 /**
@@ -2003,12 +2016,12 @@ export function main() {
     );
   } else if (scope === "changed") {
     const changed = changedFiles(base, root);
-    if (changed === null) {
+    if ("degraded" in changed) {
       console.warn(
-        `check-mdschema: cannot diff against ${base} (unreachable ref, shallow clone or failed diff) - checking every document instead (fail open)`,
+        `check-mdschema: ${changed.degraded} - checking every document instead (fail open)`,
       );
     } else {
-      restrictTo = changed;
+      restrictTo = changed.files;
     }
   }
 
