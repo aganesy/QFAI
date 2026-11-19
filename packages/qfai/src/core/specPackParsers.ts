@@ -81,6 +81,9 @@ export function maskLineComments(
   return { text: visible, open };
 }
 
+/** Start of a CommonMark type-2 HTML block: a comment opening the line. */
+const COMMENT_BLOCK_START = /^ {0,3}<!--/;
+
 /** A top-level indented code block: four spaces or a tab, per CommonMark. */
 const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
 
@@ -278,8 +281,7 @@ export function maskNonSpecRegions(text: string): string {
       // The fence opener is read before the comment scan, because a `<!--` in
       // an info string labels the sample rather than opening a comment. Only
       // when a comment is already open does the scan come first: a fence marker
-      // inside one is comment text, and the line may close the comment and open
-      // a fence after it, which the check below still catches.
+      // inside one is comment text.
       if (!inComment) {
         const opener = FENCE_LINE.exec(line)?.[1];
         if (opener) {
@@ -289,7 +291,17 @@ export function maskNonSpecRegions(text: string): string {
       }
 
       const masked = maskLineComments(line, inComment);
+      // A line that opens with a comment, or that an open comment runs into,
+      // is comment through its end: CommonMark makes it an HTML block up to
+      // the line holding `-->`. Stripping the comment alone would hand back
+      // what follows it at the start of a line, so `<!-- note --> ## Risks`
+      // would read as a heading and a ```` ``` ```` after a closing `-->` as a
+      // fence that hides the rest of the document.
+      const commentLine = inComment || COMMENT_BLOCK_START.test(line);
       inComment = masked.open;
+      if (commentLine) {
+        return "";
+      }
 
       const fence = FENCE_LINE.exec(masked.text)?.[1];
       if (fence) {

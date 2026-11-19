@@ -81,8 +81,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runs it through the `Test` command, and `verify-qfai-gate` records whether it
   exists. `qfai validate`
   warns with `QFAI-AXE-001` in the verify and full profiles when a project with
-  web screens has no test that calls axe. QFAI itself takes no axe dependency.
-  Closes #4309.
+  web screens has no selected test file whose text names `AxeBuilder` or an
+  `@axe-core/` package. That warning is a text search: a comment or an unused
+  import silences it too, and the accessibility gate is what shows the routes
+  pass. QFAI itself takes no axe dependency. Closes #4309 and #4565.
 
 - **Browser tests survive a rebuild that keeps the behaviour.** QFAI said
   nothing about how a browser test finds an element or injects a failure, so
@@ -529,6 +531,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   project began with `..`, so a copy under a directory such as `..vendor` was
   reported as resolved from outside the project. Only a `..` path segment now
   leaves the project. Closes #4544.
+
+- **The deliberation record check ignores headings and tables inside HTML
+  comments.** `QFAI-DELIB-001` skipped fenced samples only, so a commented
+  `## Agent decisions` heading counted as the section and a commented table
+  under `Interview` was checked as one. The check now also skips HTML comments,
+  and still reports each row at its line in the file.
+  Every check that skips comments in story-tree and contract documents now
+  also skips the rest of a line that starts with a comment or that a
+  multi-line comment ends on: before, a
+  `<!-- note --> ## Risks` line was read as a heading, and a code fence after
+  a closing `-->` hid the rest of the document. Closes #4568.
 
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
