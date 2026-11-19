@@ -309,6 +309,33 @@ describe("turn-end hook", () => {
       "workflow.stopGate must be true or false; an absent key means true.",
     ]);
   });
+
+  // QFAI:EX-0001-0244-20
+  it.each([
+    ["cannot be parsed", "workflow: [\n"],
+    ["holds a list instead of keys", "- workflow\n"],
+  ])("runs no command and names the config file when it %s", async (_case, config) => {
+    const marker = path.join(root, "ran.txt");
+    await writeFile(
+      path.join(root, "mark.js"),
+      `require("fs").writeFileSync(${JSON.stringify(marker)}, "ran");process.exit(1);\n`,
+      "utf-8",
+    );
+    await project(["- Lint: `node mark.js`", "- Turn-end check: Lint"], config);
+    const output = parsed(await hook({ hook_event_name: "Stop", session_id: "s1" }));
+    expect(output.decision).toBeUndefined();
+    expect(output.systemMessage).toContain(path.join(root, "qfai.config.yaml"));
+    expect(output.systemMessage).toContain("could not be read as configuration");
+    expect(output.systemMessage).toContain("no turn-end check ran");
+    await expect(readFile(marker, "utf-8")).rejects.toThrow();
+  });
+
+  // QFAI:EX-0001-0244-20
+  it("reads an empty config file as one that omits workflow.stopGate", async () => {
+    const fail = await script("fail.js", "type error\n", 1);
+    await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"], "");
+    expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
+  });
 });
 
 const assetsInit = path.resolve(
