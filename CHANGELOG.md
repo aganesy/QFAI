@@ -513,6 +513,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **The validation result is written only inside its directory.** A
+  `validate.json` that was a symbolic link, or a directory on the
+  `output.validateJsonPath` path that was a link or junction, carried
+  `qfai validate`'s result wherever it pointed. `qfai report --run-validate`,
+  which writes no run log, also wrote through a linked `.qfai/report`. Both
+  commands now check the result file and its directories as `qfai validate`
+  checks the run log, stop without writing and name the linked path, and
+  replace each result file with a new one, so a second name for the file is
+  left unchanged. Closes #4485.
+
 - **`qfai catalog components` writes only inside the project.** A
   `.qfai/catalog` directory, or a directory above it, that was a symbolic link
   or junction led the write to wherever the link pointed, overwriting a file
@@ -734,6 +744,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeping the document's permissions, so a failure leaves the original as it
   was. The same holds for the reminder text step 11 refreshes and for the hook
   settings it and `qfai init` update. Closes #4457.
+
+- **The migration warns that it replaces customised step directories.** The
+  backup warning in the migration skill, its guide and `MIGRATION-2.0.0.md`
+  named only the shipped skills that step 11 replaces. They now also name the
+  shipped step directories under `.qfai/assistant/step/`, whose untracked files
+  and uncommitted edits step 11 replaces too, so a person copies their local
+  changes before the first run. Closes #4509.
 
 - **`qfai init` no longer writes through a linked `.qfai`.** The asset copies
   checked the directories below `.qfai` but not `.qfai` itself, so a `.qfai`

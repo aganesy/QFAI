@@ -80,7 +80,8 @@ keep authors separate from reviewers.
    may be written before step 1, from the old contract paths.
 2. Before the first real run, tell the person that the migration deletes
    every 1.x file that has no destination and replaces every customised
-   shipped skill, untracked files and uncommitted edits included, so that they
+   shipped skill and step directory, untracked files and uncommitted edits
+   included, so that they
    commit or copy anything they need first: only what git history holds can be
    recovered. Run steps 1 to 3 in order. A dry run of a step refuses until the
    earlier steps ran, so each step's dry run follows the real run of the step
