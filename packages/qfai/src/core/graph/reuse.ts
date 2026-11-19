@@ -306,13 +306,25 @@ async function safeCodegraphInputs(
   try {
     const inventory: unknown = JSON.parse(result.stdout);
     if (!object(inventory) || !Array.isArray(inventory.files)) return false;
-    for (const file of inventory.files) {
-      if (
-        typeof file !== "string" ||
-        !file ||
-        path.posix.isAbsolute(file) ||
-        path.win32.isAbsolute(file)
-      )
+    return await safeInventoryFiles(analysis, inventory.files, deliberationDir);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Checks the files a native engine reports as its inventory: each must be a
+ * relative path with no empty, "." or ".." segment, outside the excluded graph
+ * inputs, and a regular file with one link inside the analysis copy.
+ */
+export async function safeInventoryFiles(
+  analysis: string,
+  files: readonly unknown[],
+  deliberationDir: string,
+): Promise<boolean> {
+  try {
+    for (const file of files) {
+      if (typeof file !== "string" || path.posix.isAbsolute(file) || path.win32.isAbsolute(file))
         return false;
       const normalized = file.replaceAll("\\", "/");
       const parts = normalized.split("/");
