@@ -9,7 +9,7 @@
  *     same root finish out of order.
  */
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -186,5 +186,111 @@ describe("validate.log freshness under out-of-order completion", () => {
     });
     expect(runId).toBe(expectedRunId(startedAt));
     expect(await readValidateLog(root, defaultConfig.paths.outDir)).toContain(`- run_id: ${runId}`);
+  });
+});
+
+/** Link `linkPath` to the directory `target`: a junction on Windows, which needs no privilege. */
+async function linkDirectory(target: string, linkPath: string): Promise<void> {
+  await symlink(target, linkPath, process.platform === "win32" ? "junction" : "dir");
+}
+
+/** Link `linkPath` to the file `target`, or `false` where the platform refuses a file link. */
+async function tryLinkFile(target: string, linkPath: string): Promise<boolean> {
+  try {
+    await symlink(target, linkPath, "file");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function runDirsIn(entries: string[]): string[] {
+  return entries.filter((name) => name.startsWith("run-"));
+}
+
+// BR-CLI-0014-0297
+describe("run-log destinations reached through a link", () => {
+  // QFAI:EX-0001-0039-53
+  it("refuses an outDir that is a link and writes nothing through it", async () => {
+    const root = await newTempDir();
+    const outside = await newTempDir();
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await linkDirectory(outside, path.join(root, ".qfai", "report"));
+
+    await expect(
+      writeValidateRunLog({
+        root,
+        config: defaultConfig,
+        result: cleanResult(),
+        startedAt: new Date("2026-05-05T10:00:00.000Z"),
+      }),
+    ).rejects.toThrow(".qfai/report is a symbolic link or junction");
+    expect(await readdir(outside)).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0039-53
+  it("refuses a directory between the root and outDir that is a link", async () => {
+    const root = await newTempDir();
+    const outside = await newTempDir();
+    await linkDirectory(outside, path.join(root, ".qfai"));
+
+    await expect(
+      writeValidateRunLog({
+        root,
+        config: defaultConfig,
+        result: cleanResult(),
+        startedAt: new Date("2026-05-05T10:00:00.000Z"),
+      }),
+    ).rejects.toThrow(".qfai is a symbolic link or junction");
+    expect(await readdir(outside)).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0039-53
+  it("refuses a validate.log that is a link and leaves its target as it was", async (ctx) => {
+    const root = await newTempDir();
+    const outside = await newTempDir();
+    const target = path.join(outside, "victim.txt");
+    await writeFile(target, "keep\n", "utf-8");
+    const outDir = path.join(root, defaultConfig.paths.outDir);
+    await mkdir(outDir, { recursive: true });
+    if (!(await tryLinkFile(target, path.join(outDir, "validate.log")))) ctx.skip();
+
+    await expect(
+      writeValidateRunLog({
+        root,
+        config: defaultConfig,
+        result: cleanResult(),
+        startedAt: new Date("2026-05-05T10:00:00.000Z"),
+      }),
+    ).rejects.toThrow(".qfai/report/validate.log is a symbolic link or junction");
+    expect(await readFile(target, "utf-8")).toBe("keep\n");
+    expect(runDirsIn(await readdir(outDir))).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0039-53
+  it("replaces validate.log with a new file rather than writing through the old one", async () => {
+    // A hard link shares the old file's inode: a write in place would change
+    // the other name as well, so an unchanged twin shows the log was replaced.
+    const root = await newTempDir();
+    const outDir = path.join(root, defaultConfig.paths.outDir);
+    await mkdir(outDir, { recursive: true });
+    const logPath = path.join(outDir, "validate.log");
+    await writeFile(logPath, "old\n", "utf-8");
+    const twin = path.join(root, "twin.log");
+    await link(logPath, twin);
+
+    const { runId } = await writeValidateRunLog({
+      root,
+      config: defaultConfig,
+      result: cleanResult(),
+      startedAt: new Date("2026-05-05T10:00:00.000Z"),
+    });
+
+    expect(await readValidateLog(root, defaultConfig.paths.outDir)).toContain(`- run_id: ${runId}`);
+    expect(await readFile(twin, "utf-8")).toBe("old\n");
+    const leftovers = (await readdir(outDir)).filter(
+      (name) => name !== "validate.log" && !name.startsWith("run-"),
+    );
+    expect(leftovers).toEqual([]);
   });
 });
