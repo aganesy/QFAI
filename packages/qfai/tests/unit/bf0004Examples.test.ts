@@ -426,11 +426,24 @@ describe("BF-0004 migration examples", () => {
 
   // QFAI:EX-0004-0004-07
   it.each([
-    ["./.qfai/specs", "./.qfai/contracts/"],
-    [".qfai\\specs\\", ".qfai\\contracts"],
-  ])("moves and rewrites the old defaults spelled %s and %s", async (specsDir, contractsDir) => {
+    [
+      "./.qfai/specs",
+      "./.qfai/contracts/",
+      "./.qfai/assistant/skills/",
+      "./.qfai/assistant/prompts",
+    ],
+    [
+      ".qfai\\specs\\",
+      ".qfai\\contracts",
+      ".qfai/assistant/skills//",
+      "./.qfai/assistant/prompts/",
+    ],
+  ])("moves and rewrites the old defaults spelled %s and %s", async (...spellings) => {
+    const [specsDir, contractsDir, skillsDir, promptsDir] = spellings.map((value) =>
+      JSON.stringify(value),
+    );
     const context = await fixture(
-      `paths:\n  specsDir: ${JSON.stringify(specsDir)}\n  contractsDir: ${JSON.stringify(contractsDir)}\n`,
+      `paths:\n  specsDir: ${specsDir}\n  contractsDir: ${contractsDir}\n  skillsDir: ${skillsDir}\n  promptsDir: ${promptsDir}\n`,
     );
     await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "legacy spec");
     await put(context.root, ".qfai/contracts/api/order.yaml", "legacy contract");
@@ -451,6 +464,8 @@ describe("BF-0004 migration examples", () => {
     ).paths;
     expect(paths.specsDir).toBe(".qfai/spec");
     expect(paths.contractsDir).toBe(".qfai/spec/03_contract");
+    expect(paths.skillsDir).toBe(".qfai/assistant/skill");
+    expect(paths.promptsDir).toBe(".qfai/assistant/prompt");
   });
 
   // QFAI:EX-0004-0004-04

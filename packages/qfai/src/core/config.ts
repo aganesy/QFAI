@@ -851,7 +851,10 @@ function readDirString(
   return trimDirSeparators(readString(value, fallback, label, configPath, issues));
 }
 
-/** A directory value with its trailing separators removed, as the loader reads every `paths` key. */
+/**
+ * A directory value with its trailing separators removed, as the loader reads each required
+ * directory key of `paths`. The optional `paths.migrationsDir` is read as written.
+ */
 export function trimDirSeparators(raw: string): string {
   const trimmed = raw.replace(/[\\/]+$/, "");
   return trimmed.length > 0 ? trimmed : raw;
