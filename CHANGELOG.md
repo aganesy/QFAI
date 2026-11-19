@@ -522,6 +522,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
+- **`QFAI-CONTRACT-036` keeps a table's schema and the case of a quoted
+  name.** The foreign-key check dropped the schema and lowercased every name,
+  so `audit.events` and `sales.events`, or `"Orders"` and `orders`, read as
+  one table that two contracts create, and a missing `-- Depends on:` entry
+  went unreported. Names now compare as PostgreSQL resolves them: the schema
+  counts and only unquoted names fold. A name with no schema matches a table
+  of that name in any schema, and is attributed to no contract when those
+  tables belong to more than one. A `$tag$`, `'` or `REFERENCES` inside a
+  double-quoted identifier no longer opens a literal or reads as a foreign
+  key, and a quoted name holding spaces, dots or `$` is read whole.
+  Closes #4487.
+
 - **`qfai sdd next-id` reads the ID kind without regard to case.**
   `qfai sdd next-id ac US-0001-0001 --base main` was refused as an unknown
   kind, though `AC` worked. The kind is now read in any case, so `ac` counts
