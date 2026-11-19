@@ -659,6 +659,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   quoting rules: a bare part folds to lower case, a quoted part keeps its
   case and its doubled `""`, and a dot inside quotes does not split the name.
 
+- **A graph lock still being taken reads as busy, not abandoned.** A graph
+  query, analysis preparation or `qfai init` that found the worktree's
+  analysis lock in the moment between its creation and its owner record being
+  written, or just after its release, was told to inspect and remove the lock
+  by hand. It is now told to retry. A lock whose owner record is still missing
+  after ten seconds, or whose owner process has exited, is still kept and
+  reported for manual recovery. Closes #4591.
+
 - **An agent card's required sections must be real headings.** The
   `QFAI-AGENT-005` check accepted any occurrence of a required heading's text,
   so a card missing `## Stop conditions` passed when the frontmatter, a
