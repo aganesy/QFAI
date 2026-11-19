@@ -100,6 +100,7 @@
     "tests/assets/askUserQuestionAutoMode.test.ts",
     "tests/assets/architecturalUsageHome.test.ts",
     "tests/assets/assets.test.ts",
+    "tests/assets/currentValidationResult.test.ts",
     "tests/assets/businessUiPatterns.test.ts",
     "tests/assets/marketingUiPatterns.test.ts",
     "tests/assets/screenOmittedList.test.ts",
