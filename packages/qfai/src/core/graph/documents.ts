@@ -1,17 +1,16 @@
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { getInitAssetsDir } from "../../shared/assets.js";
+import { isEnoent } from "../fs/errno.js";
+import { graphCorpusChanged, mirrorGraphCorpus } from "./analysis.js";
 import {
   publishCompletedDocumentAnalysis,
   restoreCompletedDocumentAnalysis,
   safeDocumentCopy,
 } from "./documentReuse.js";
-import type { GraphReuseEnvironment } from "./reuse.js";
-import { withGraphLock } from "./locks.js";
-import path from "node:path";
-import { getInitAssetsDir } from "../../shared/assets.js";
-import { isEnoent } from "../fs/errno.js";
-import { graphCorpusChanged, mirrorGraphCorpus } from "./analysis.js";
 import { graphAnalysisRoot, graphRuntimePaths, GRAPH_VERSIONS } from "./layout.js";
+import { withGraphLock } from "./locks.js";
 import {
   GRAPH_PROCESS_LIMITS,
   GRAPH_PYTHON_FLAGS,
@@ -21,6 +20,7 @@ import {
   runGraphProcess,
   type GraphProcess,
 } from "./process.js";
+import type { GraphReuseEnvironment } from "./reuse.js";
 import {
   assertGraphStoragePath,
   assertIndependentAnalysis,
