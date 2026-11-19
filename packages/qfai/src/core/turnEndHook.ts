@@ -59,22 +59,28 @@ export function readTurnEndChecks(techText: string): TurnEndSelection {
   const seen = new Map<string, { label: string; count: number }>();
   let marked: string[] = [];
   let inSection = false;
-  /** The indent of the section's first item; an item indented further is nested under another. */
-  let topIndent: number | null = null;
+  /**
+   * The content column of the last top-level item. An item indented to it or further is nested
+   * under that item, as Markdown reads it; a shallower one starts a new top-level item.
+   */
+  let contentColumn: number | null = null;
   for (const line of maskNonSpecRegions(techText).split("\n")) {
     if (/^#{1,2}\s/.test(line)) {
       inSection = COMMANDS_HEADING.test(line);
-      topIndent = null;
+      contentColumn = null;
       continue;
     }
     if (!inSection) continue;
-    // Every list marker counts toward the top indent, so an item nested under a `*`, `+` or
-    // numbered parent stays nested; only `- Label:` items are read as commands.
-    const bullet = /^( *)(?:[-*+]|\d{1,9}[.)])(?:\s|$)/.exec(line);
+    // Every list marker takes part in nesting, so an item under a `*`, `+` or numbered parent
+    // stays nested; only `- Label:` items are read as commands.
+    const bullet = /^( *)([-*+]|\d{1,9}[.)])( *)/.exec(line);
     if (bullet === null) continue;
     const indent = (bullet[1] ?? "").length;
-    topIndent ??= indent;
-    if (indent > topIndent) continue;
+    const spaces = (bullet[3] ?? "").length;
+    if (spaces === 0 && line.length > bullet[0].length) continue;
+    if (contentColumn !== null && indent >= contentColumn) continue;
+    // A marker followed by more than four spaces, or by nothing, has its content one column on.
+    contentColumn = indent + (bullet[2] ?? "").length + (spaces >= 1 && spaces <= 4 ? spaces : 1);
     const item = /^ *-\s+([^:`]+):\s*(.*)$/.exec(line);
     if (item === null) continue;
     const label = (item[1] ?? "").trim();
@@ -291,14 +297,16 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
     throw error;
   }
   const { checks, ambiguous } = readTurnEndChecks(techText);
+  const session = stringField(event, "session_id");
+  const file = session === undefined ? null : stateFile(options.stateDir, session, agentKey(event));
   if (ambiguous.length > 0) {
-    // Which command a repeated label means cannot be told, so none runs and the turn ends.
+    // Which command a repeated label means cannot be told, so none runs and the turn ends; a
+    // failure blocked on earlier no longer stands.
+    if (file !== null) await rm(file, { force: true });
     return `${JSON.stringify({
       systemMessage: `QFAI turn-end check: ${ambiguous.join(", ")} ${ambiguous.length === 1 ? "is" : "are"} listed more than once under Standard commands in ${techPath}, so no turn-end check ran. Keep one item for each label.`,
     })}\n`;
   }
-  const session = stringField(event, "session_id");
-  const file = session === undefined ? null : stateFile(options.stateDir, session, agentKey(event));
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   for (const check of checks) {

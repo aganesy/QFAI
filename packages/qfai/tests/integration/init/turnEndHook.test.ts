@@ -5,7 +5,7 @@
 // QFAI:AC-0001-0244-05
 // QFAI:AC-0001-0244-06
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -494,6 +494,15 @@ describe("readTurnEndChecks", () => {
       checks: [{ label: "Lint", command: "pnpm lint" }],
       ambiguous: [],
     });
+    const indentedFirst = [
+      "## Standard commands",
+      "",
+      "  * aside",
+      "- Lint: `pnpm lint`",
+      "  - Build: `rm -rf dist`",
+      "- Turn-end check: Build",
+    ].join("\n");
+    expect(readTurnEndChecks(indentedFirst)).toEqual({ checks: [], ambiguous: [] });
   });
 
   // QFAI:EX-0001-0244-19
@@ -538,5 +547,18 @@ describe("turn-end hook with an ambiguous label", () => {
     expect(output.systemMessage).toContain("Lint is listed more than once under Standard commands");
     expect(output.systemMessage).toContain("no turn-end check ran");
     await expect(readFile(marker, "utf-8")).rejects.toThrow();
+  });
+
+  // QFAI:EX-0001-0244-19
+  it("drops the failure the session last blocked on", async () => {
+    const fail = await script("fail.js", "type error\n", 1);
+    await project([`- Lint: \`${fail}\``, "- Turn-end check: Lint"]);
+    expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
+    expect(await readdir(stateDir)).toHaveLength(1);
+    await project([`- Lint: \`${fail}\``, `- Lint: \`${fail}\``, "- Turn-end check: Lint"]);
+    expect(parsed(await hook({ session_id: "s1" })).systemMessage).toContain(
+      "no turn-end check ran",
+    );
+    expect(await readdir(stateDir)).toEqual([]);
   });
 });
