@@ -527,6 +527,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it already did for any other value that is not a mapping. Defaults still
   apply when the file or the `paths` key is absent.
 
+- **`scripts/pr-threads.mjs list` counts every review thread and comment.** It
+  read only the newest 100 threads and the first 100 comments of a pull
+  request, so a longer one could show fewer unresolved threads or Codex review
+  comments than it had. It now reads every page of both. When a call fails or
+  the budget reserve stops it before the last page of comments, it says the
+  Codex comment count is incomplete (#4609).
+
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its

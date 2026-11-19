@@ -8,15 +8,28 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const calls = vi.hoisted(() => ({ list: [] as string[][], threadAnswer: "" }));
+const calls = vi.hoisted(() => ({
+  list: [] as string[][],
+  threadAnswer: "",
+  threadPages: [] as string[],
+  commentPages: [] as string[],
+}));
 
 vi.mock("node:child_process", () => ({
   execFileSync: (command: string, args: string[]): string => {
     calls.list.push([command, ...args]);
     if (command === "git") return "https://github.com/aganesy/QFAI.git\n";
+    if (args.some((arg) => arg.includes("reviewThreads(")))
+      return calls.threadPages.shift() ?? "{}";
+    if (args[1] === "-i") return calls.commentPages.shift() ?? "HTTP/2.0 404 Not Found\n\n{}";
     if (args.some((arg) => arg.includes("PullRequestReviewThread"))) return calls.threadAnswer;
     return "{}";
   },
+}));
+
+// No saved budget reading: one left on this machine must not stop a listing.
+vi.mock("../../../../scripts/lib/bounded-read.mjs", () => ({
+  readBoundedText: (): undefined => undefined,
 }));
 
 import {
@@ -24,6 +37,7 @@ import {
   deferredEntry,
   foreignThread,
   formatThread,
+  previousCursor,
   run,
   unresolvedThreads,
 } from "../../../../scripts/pr-threads.mjs";
@@ -249,6 +263,86 @@ describe("deferring a thread of another pull request", () => {
     expect(ghCalls[1]).toContain("repos/aganesy/QFAI/issues/40/comments");
     expect(ghCalls[2]).toContain("addPullRequestReviewThreadReply");
     expect(ghCalls[3]).toContain("resolveReviewThread");
+  });
+});
+
+describe("the cursor of the page of threads before this one", () => {
+  const paged = (pageInfo: unknown): unknown => ({
+    data: { repository: { pullRequest: { reviewThreads: { pageInfo, nodes: [] } } } },
+  });
+
+  it("is the start cursor while an earlier page exists", () => {
+    expect(previousCursor(paged({ hasPreviousPage: true, startCursor: "c1" }))).toBe("c1");
+  });
+
+  it("is undefined on the first page or without page information", () => {
+    expect(previousCursor(paged({ hasPreviousPage: false, startCursor: "c1" }))).toBeUndefined();
+    expect(previousCursor(paged({ hasPreviousPage: true, startCursor: null }))).toBeUndefined();
+    expect(previousCursor(response([]))).toBeUndefined();
+  });
+});
+
+describe("listing a pull request that holds more than one page", () => {
+  afterEach(() => {
+    calls.list.length = 0;
+    calls.threadPages.length = 0;
+    calls.commentPages.length = 0;
+    vi.restoreAllMocks();
+  });
+
+  const threadPage = (ids: string[], startCursor: string | null): string =>
+    JSON.stringify({
+      data: {
+        repository: {
+          pullRequest: {
+            reviewThreads: {
+              pageInfo: { hasPreviousPage: startCursor !== null, startCursor },
+              nodes: ids.map((id) => thread({ id })),
+            },
+          },
+        },
+      },
+    });
+
+  const codexComment = { user: { login: "chatgpt-codex-connector[bot]" }, body: "Codex Review" };
+  const commentPage = (count: number): string =>
+    `HTTP/2.0 200 OK\n\n${JSON.stringify(Array.from({ length: count }, () => codexComment))}`;
+
+  function listOutput(): { code: number; out: string } {
+    const lines: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((line: unknown) => {
+      lines.push(String(line));
+    });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const code = run(["list", "12"]);
+    return { code, out: lines.join("\n") };
+  }
+
+  it("reads every page of threads and of comments and counts them all", () => {
+    calls.threadPages.push(threadPage(["new"], "c1"), threadPage(["old"], null));
+    calls.commentPages.push(commentPage(100), commentPage(1));
+    const { code, out } = listOutput();
+    expect(code).toBe(0);
+    expect(out).toContain("Unresolved threads: 2");
+    expect(out.indexOf("- old")).toBeLessThan(out.indexOf("- new"));
+    expect(out).toContain("Codex review comments: 101");
+    expect(out).not.toContain("Incomplete");
+    const threadCalls = calls.list.filter((call) => call.some((a) => a.includes("reviewThreads(")));
+    expect(threadCalls[1]).toContain("before=c1");
+    const commentCalls = calls.list.filter((call) => call[2] === "-i").map((call) => call[3]);
+    expect(commentCalls).toEqual([
+      "repos/aganesy/QFAI/issues/12/comments?per_page=100&page=1",
+      "repos/aganesy/QFAI/issues/12/comments?per_page=100&page=2",
+    ]);
+  });
+
+  it("says the count is incomplete when a later page of comments cannot be read", () => {
+    calls.threadPages.push(threadPage([], null));
+    calls.commentPages.push(commentPage(100));
+    const { code, out } = listOutput();
+    expect(code).toBe(2);
+    expect(out).toContain("Codex review comments: 100");
+    expect(out).toContain("Incomplete: not every page of comments was read");
   });
 });
 
