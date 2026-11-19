@@ -399,6 +399,71 @@ describe("the existing DB checks are unchanged", () => {
     expect(finding?.category).toBe("canonical");
   });
 
+  // The check read the raw file, so a keyword in a comment or a string, or an
+  // `ALTER TABLE` in one statement and a `DROP` in a later one, warned on a
+  // contract that destroys nothing.
+  it.each([
+    [
+      "a line comment",
+      "-- DROP TABLE orders is how we reset locally\nCREATE TABLE orders (id int);\n",
+    ],
+    ["a block comment", "/* TRUNCATE orders */ CREATE TABLE orders (id int);\n"],
+    ["a string literal", "COMMENT ON TABLE orders IS 'never DROP TABLE orders';\n"],
+    ["an escape string", "COMMENT ON TABLE orders IS E'it\\'s TRUNCATE-safe';\n"],
+    ["a quoted name", 'CREATE TABLE "truncate" (id int);\n'],
+    [
+      "a function body",
+      "CREATE FUNCTION reset() RETURNS void AS $$ TRUNCATE orders; $$ LANGUAGE sql;\n",
+    ],
+    [
+      "two separate statements",
+      "ALTER TABLE orders ADD COLUMN note text;\nDROP INDEX orders_note_idx;\n",
+    ],
+  ])("does not warn on a keyword in %s", async (_where, sql) => {
+    const issues = await runOn(`${HEADER}${sql}`);
+    expect(issues.filter((i) => i.code === "QFAI-DB-001")).toEqual([]);
+  });
+
+  it("warns on a destructive statement that follows a comment or string holding a keyword", async () => {
+    const issues = await runOn(
+      `${HEADER}COMMENT ON TABLE orders IS 'DROP TABLE';\nALTER TABLE orders DROP COLUMN note;\n`,
+    );
+    expect(issues.filter((i) => i.code === "QFAI-DB-001").map((i) => i.message)).toEqual([
+      expect.stringContaining("ALTER TABLE ... DROP"),
+    ]);
+  });
+
+  // A DO block runs its body when the contract is applied.
+  it("warns on a destructive statement inside a DO block", async () => {
+    const issues = await runOn(`${HEADER}DO $$ BEGIN TRUNCATE orders; END $$;\n`);
+    expect(issues.filter((i) => i.code === "QFAI-DB-001").map((i) => i.message)).toEqual([
+      expect.stringContaining("TRUNCATE"),
+    ]);
+  });
+
+  // EXECUTE in a DO block runs its string as SQL when the file is applied.
+  it("warns on a destructive statement a DO block runs through EXECUTE", async () => {
+    const issues = await runOn(`${HEADER}DO $$ BEGIN EXECUTE 'TRUNCATE orders'; END $$;\n`);
+    expect(issues.filter((i) => i.code === "QFAI-DB-001").map((i) => i.message)).toEqual([
+      expect.stringContaining("TRUNCATE"),
+    ]);
+  });
+
+  // Only a quoted body is a literal; a SQL-standard body is statements.
+  it("warns on a destructive statement in a BEGIN ATOMIC function body", async () => {
+    const issues = await runOn(
+      `${HEADER}CREATE FUNCTION reset() RETURNS void LANGUAGE sql BEGIN ATOMIC TRUNCATE orders; END;\n`,
+    );
+    expect(issues.filter((i) => i.code === "QFAI-DB-001").map((i) => i.message)).toEqual([
+      expect.stringContaining("TRUNCATE"),
+    ]);
+  });
+
+  it("reports each dangerous operation once per file", async () => {
+    const issues = await runOn(`${HEADER}DROP TABLE a;\nDROP TABLE b;\n`);
+    expect(issues.filter((i) => i.code === "QFAI-DB-001")).toHaveLength(1);
+  });
+
   it("still requires the contract id declaration", async () => {
     const issues = await runOn("CREATE TABLE t (a int);\n");
     expect(issues.map((i) => i.code)).toContain("QFAI-CONTRACT-010");
