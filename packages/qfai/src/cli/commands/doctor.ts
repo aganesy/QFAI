@@ -173,10 +173,10 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // Side-effecting pre-steps run before the diagnostic build so the
   // post-cleanup tree is what `createDoctorData` reports on.
   const sideEffectLines: string[] = [];
-  // A partial run-log prune must not report success: some directories
-  // are irreversibly gone while others the operator asked to remove are
-  // still there. Independent of `--fail-on`, which grades diagnostics.
-  let cleanFailed = false;
+  // A partial run-log prune or a failed install must not report success:
+  // the remediation the operator asked for is incomplete. Independent of
+  // `--fail-on`, which grades diagnostics.
+  let remediationFailed = false;
   if (options.autoremediate) {
     // The owning business rule suppresses autoremediation on "standard CI
     // env vars", not on the single `CI` variable. An inline
@@ -215,7 +215,8 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       ...(options.skillProfile ? { skill: options.skillProfile } : {}),
     });
     sideEffectLines.push(...summary.lines);
-    cleanFailed = summary.failedRunLogPrunes.length > 0;
+    remediationFailed =
+      summary.failedRunLogPrunes.length > 0 || summary.failedInstalls.length > 0;
     // When the operator did not pass `--profile <skill>`, the install
     // phase of runAutoremediate is structurally skipped (there is no
     // manifest to probe). Surface that explicitly so operators do not
@@ -252,7 +253,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       Boolean(options.dryRun),
     );
     sideEffectLines.push(...cleanPhase.lines);
-    cleanFailed = cleanPhase.failed;
+    remediationFailed = cleanPhase.failed;
   }
 
   const data = await createDoctorData({
@@ -277,10 +278,11 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     options.failOn ? { failOn: options.failOn } : {},
     config.validation.failOn,
   );
-  // `cleanFailed` overrides `failOn` on purpose: it reports an
-  // irreversible, partially-applied deletion, which is not a diagnostic
-  // severity for `--fail-on` (or `validation.failOn`) to grade away.
-  const exitCode = cleanFailed || shouldFailDoctor(data.summary, failOn) ? 1 : 0;
+  // `remediationFailed` overrides `failOn` on purpose: it reports an
+  // incomplete remediation (a partially-applied deletion or a failed
+  // install), which is not a diagnostic severity for `--fail-on` (or
+  // `validation.failOn`) to grade away.
+  const exitCode = remediationFailed || shouldFailDoctor(data.summary, failOn) ? 1 : 0;
 
   if (isJson && sideEffectLines.length > 0) {
     process.stderr.write(`${sideEffectLines.join("\n")}\n`);

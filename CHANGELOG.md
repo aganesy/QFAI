@@ -496,6 +496,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **`qfai doctor --autoremediate` exits 1 when an install fails.** A failed
+  `npm install` for a skill's runtime dependency was printed, but doctor still
+  exited 0 when the diagnosis passed, so a script read an incomplete
+  remediation as a success. Like a failed run-log removal, a failed install
+  now makes doctor exit 1 whatever `--fail-on` says.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one

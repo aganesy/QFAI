@@ -130,6 +130,52 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     expect(installCalls).toEqual(["playwright"]);
   });
 
+  // A failed `npm install` leaves the remediation the operator asked for
+  // incomplete. Like a failed run-log removal it is not a diagnostic
+  // severity, so `--fail-on never` must not turn it into exit 0.
+  // QFAI:EX-0003-0009-13
+  it("exits 1 when an install fails, even under --fail-on never", async () => {
+    const root = await newTempDir("install-failed");
+    const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
+    await mkdir(manifestDir, { recursive: true });
+    await recordAssistantVersion(root);
+    await writeFile(
+      path.join(manifestDir, "manifest.json"),
+      JSON.stringify({ runtimeDependencies: ["playwright"] }, null, 2),
+      "utf-8",
+    );
+
+    let summary: autoremediateModule.AutoremediateSummary | undefined;
+    const realRunAutoremediate = autoremediateModule.runAutoremediate;
+    vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation(async (opts) => {
+      summary = await realRunAutoremediate({
+        ...opts,
+        installRunner: async (name) => {
+          throw new Error(`npm install ${name} exited with code 1`);
+        },
+      });
+      return summary;
+    });
+
+    const exit = await runDoctor({
+      root,
+      rootExplicit: true,
+      format: "json",
+      outPath: path.join(root, ".qfai", "report", "doctor.json"),
+      skillProfile: "qfai-prototyping",
+      autoremediate: true,
+      yes: true,
+      failOn: "never",
+    });
+
+    expect(summary?.lines).toContain(
+      "autoremediate: install failed for playwright: npm install playwright exited with code 1",
+    );
+    expect(summary?.failedInstalls).toEqual(["playwright"]);
+    expect(summary?.installed).toEqual([]);
+    expect(exit).toBe(1);
+  });
+
   // Pin the subdirectory-launch root resolution. When `doctor
   // --autoremediate` is invoked without `--root` (rootExplicit=false),
   // `runDoctor` must walk up via `findConfigRoot` to find the project
@@ -155,7 +201,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     const seenOptions: autoremediateModule.AutoremediateOptions[] = [];
     vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation(async (opts) => {
       seenOptions.push(opts);
-      return { lines: [], disabledInCi: false, failedRunLogPrunes: [] };
+      return { lines: [], disabledInCi: false, failedRunLogPrunes: [], failedInstalls: [] };
     });
 
     const exit = await runDoctor({
@@ -220,6 +266,7 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
       lines: [],
       disabledInCi: false,
       failedRunLogPrunes: [],
+      failedInstalls: [],
     }));
 
     function captureStdout(): { restore: () => void; read: () => string } {
