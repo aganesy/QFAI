@@ -534,6 +534,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   already wrote keeps its old steps; delete it and run `qfai init` again to
   get these.
 
+- **The contract rules no longer claim `qfai validate` starts no processes.**
+  Validation runs short-lived checkers, such as the document schema checker,
+  as child processes. The `qfai-sdd` contract rules now state the narrower
+  guarantee that `qfai validate` never starts a database engine, which is why
+  `qfai db-drift` is a separate command.
+
 - **`qfai sdd merge-docs` no longer fails on a conflicted file it does not
   merge.** A conflicted file under the specs directory that is not Markdown or
   YAML, such as an image, made the command exit 1 even when no document was
@@ -541,6 +547,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   conflicted document the command says there is nothing to merge and exits 0.
   The configured specs directory is also read as a literal path, so a name
   holding `*` no longer selects conflicted documents outside it. Closes #4523.
+
+- **Two tables in one quoted schema are no longer reported as one.** The
+  same-file redefinition check (`QFAI-DB-002`) read a created object's name
+  only up to a quoted part, so `CREATE TABLE "app".users` and
+  `CREATE TABLE "app".orders` were both keyed as `app` and reported as a
+  redefinition. Each part of a qualified name is now read under PostgreSQL's
+  quoting rules: a bare part folds to lower case, a quoted part keeps its
+  case and its doubled `""`, and a dot inside quotes does not split the name.
 
 - **`qfai validate` checks every resource reference in an HTML mock.** The
   external URL, local file and unsafe scheme checks read only `href`, `src`
@@ -554,6 +568,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that relied on one of these forms now reports `QFAI-MOCK-002`,
   `QFAI-MOCK-010` or `QFAI-MOCK-011` at error.
 
+- **`qfai validate` keeps configuration findings on an old spec-pack
+  layout.** When `QFAI-LAYOUT-001` stopped the run, an error found while
+  reading `qfai.config.yaml`, such as an unknown `workflow.mode` value, was
+  dropped and appeared only after the migration. The run now reports those
+  findings before `QFAI-LAYOUT-001`, so both can be fixed in one pass.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
@@ -561,6 +581,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
+- **A DB contract that gives a regular and a unique index one name is
+  reported.** PostgreSQL keeps both kinds of index in one namespace, so the
+  second `CREATE` fails when the contract is applied, but `QFAI-DB-002`
+  compared `INDEX` and `UNIQUE INDEX` names separately and passed the file. It
+  now reports the pair as one index defined twice. Closes #4549.
 
 - **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
   with no `--assume` copies the carry-over list from the previous
@@ -579,6 +605,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exclusively under a name of its own, and on failure undoes only what it did.
   When it cannot put both files back, its message says so and names the file it
   kept. Closes #4463.
+
+- **QFAI reads its templates only from its own installed package.** When the
+  installed package was missing its templates, the search went on to
+  directories above it, so `qfai init` and the checks that read the templates
+  could use an `assets/init` directory in the project or in another
+  dependency. QFAI now looks only in the package it was installed as, and an
+  installation without its templates stops with a message that names the
+  missing files and says to reinstall QFAI. Closes #4554.
 
 - **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
   difference exits 0 under `--fail-on never`, but the parser refused the flag
@@ -717,6 +751,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   quoted path matched no document, so an edit under such a directory was left
   out of the check and a broken document passed. The check now reads the paths
   NUL-delimited, as Git stores them. Closes #4491.
+
+- **`qfai atdd scaffold` leaves no partial test behind when a write fails.**
+  The command created the test file and then wrote its body, so a write that
+  failed left an incomplete file, and the next run kept it as an existing test.
+  The skeleton is now written in full to a hidden file beside the destination
+  and then published without replacing anything already there. On a
+  filesystem without hard links it is written directly, as before. A hidden
+  file the command cannot remove is named in its output. Closes #4538.
 
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
