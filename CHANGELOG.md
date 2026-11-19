@@ -269,6 +269,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pending tests for the implement stage. The
   scope question says so for that option. Other scopes are printed as before.
 
+- **The `web-research` skill ends with one completion checklist.** Its
+  completion contract and its two end checklists are now a single
+  `Completion Checklist` that keeps every distinct requirement: hard
+  constraints and security controls, the session log and evidence, cited
+  sources, open questions and risks, the smoke check, reviewer findings and the
+  completion message.
+
 - **Pending tests are promised only where a later stage writes them.** A
   scope that leaves out a stage which only repairs existing tests is not
   marked `testsPending`, so a missing test for an ID a record restatement
