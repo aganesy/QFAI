@@ -257,9 +257,9 @@ convention declared here and rendered nowhere is reported.
 
 `mode` names the kind of prototype the review walks. Nothing branches on it, so
 a value outside the vocabulary breaks no run — it tells a reader the prototype
-is something it is not, which is what `QFAI-CONTRACT-038` reports. The finding
-names the release at which it stops being a warning. A contract that writes no
-`mode` is asked nothing.
+is something it is not, which is what `QFAI-CONTRACT-038` reports as an error.
+The rule reads the parsed contract, so `prototype: { mode: … }` is read the same
+as the block form. A contract that writes no `mode` is asked nothing.
 
 `mockPaths` names the flows a prototype has to be able to walk, each with an id
 stable enough to be cited from a review. No lane reads it, and the prototyping

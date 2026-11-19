@@ -35,6 +35,8 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { parseStructuredContract } from "../contracts.js";
+import { stripContractDeclarationLines } from "../contractsDecl.js";
 import { collectUiContractFiles } from "../discovery.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -46,56 +48,38 @@ export const UI_PROTOTYPE_MODE_RULE_ID = "QFAI-CONTRACT-038";
 export const PROTOTYPE_MODES = ["interactive"] as const;
 
 /**
- * The `mode` value a text declares under its top-level `prototype`, if any.
+ * The `mode` value a contract declares under its top-level `prototype`, if any.
  *
- * Read line by line rather than by parsing the document. `prototype` sits at
- * the top level by definition, so its block is the run of indented lines after
- * it, and a parse would fail the whole file on a contract another rule already
- * reports as unparseable.
+ * Read from the parsed document, so every form YAML allows — a block mapping,
+ * an inline `{ mode: … }` mapping, quoted or commented values — means the same
+ * thing here as it does to any other reader. A `mode` nested inside a
+ * `mockPaths` or `markers` entry is a different key and is not this one.
  *
- * `mode` is taken only at the block's own child indent, so a `mode` nested
- * deeper — inside a `mockPaths` or `markers` entry — is a different key and is
- * not read as this one.
+ * A contract that does not parse yields nothing: `QFAI-CONTRACT-021` already
+ * reports it, and a second finding about a value nobody can read would repeat
+ * that one.
  */
-function prototypeModeIn(text: string): string | null {
-  const lines = text.split(/\r?\n/);
-  const start = lines.findIndex((line) => /^prototype:\s*(#.*)?$/.test(line));
-  if (start === -1) {
+function prototypeModeIn(file: string, text: string): string | null {
+  let doc: unknown;
+  try {
+    doc = parseStructuredContract(file, stripContractDeclarationLines(text));
+  } catch {
     return null;
   }
-
-  let childIndent: number | null = null;
-  for (const line of lines.slice(start + 1)) {
-    if (line.trim() === "") {
-      continue;
-    }
-    const indent = line.length - line.trimStart().length;
-    if (indent === 0) {
-      break;
-    }
-    if (childIndent === null) {
-      childIndent = indent;
-    }
-    if (indent !== childIndent) {
-      continue;
-    }
-    const mode = /^\s*mode:\s*(.*)$/.exec(line);
-    if (mode) {
-      return unquote(stripComment(mode[1] ?? ""));
-    }
+  const prototype = fieldOf(doc, "prototype");
+  const mode = fieldOf(prototype, "mode");
+  if (mode === undefined || mode === null) {
+    return null;
   }
-  return null;
+  return typeof mode === "string" ? mode : JSON.stringify(mode);
 }
 
-/** A trailing YAML comment, which needs whitespace before its `#`. */
-function stripComment(value: string): string {
-  return value.replace(/\s+#.*$/, "").trim();
-}
-
-/** The value inside matching quotes, or the value as written. */
-function unquote(value: string): string {
-  const quoted = /^(['"])(.*)\1$/.exec(value);
-  return quoted?.[2] ?? value;
+/** The value a mapping holds under `key`, or `undefined` when it is no mapping. */
+function fieldOf(value: unknown, key: string): unknown {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  return Object.entries(value).find(([name]) => name === key)?.[1];
 }
 
 export async function validateUiPrototypeMode(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -108,7 +92,7 @@ export async function validateUiPrototypeMode(root: string, config: QfaiConfig):
   const known: ReadonlySet<string> = new Set(PROTOTYPE_MODES);
   const unknown: Array<{ file: string; mode: string }> = [];
   for (const file of contractFiles.slice().sort()) {
-    const mode = prototypeModeIn(await readSafe(file));
+    const mode = prototypeModeIn(file, await readSafe(file));
     if (mode === null || mode === "" || known.has(mode)) {
       continue;
     }
