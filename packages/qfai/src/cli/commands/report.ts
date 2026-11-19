@@ -97,10 +97,12 @@ function buildScopeMismatchGuidance(
   inputPath: string,
   recorded: readonly string[] | undefined,
   flowIds: readonly string[],
+  profile: ValidationProfile | undefined,
 ): string {
   const describe = (ids: readonly string[] | undefined): string =>
     ids && ids.length > 0 ? `flows ${ids.join(", ")}` : "the whole repository";
-  const scopeArgs = flowIds.map((id) => ` --flow ${id}`).join("");
+  const scopeArgs =
+    flowIds.map((id) => ` --flow ${id}`).join("") + (profile ? ` --profile ${profile}` : "");
   return [
     `qfai report: ${inputPath} records a validation of ${describe(recorded)}, not of ${describe(flowIds)}.`,
     "A report takes counts, issues and waiver totals from the result as they are. Run validate with the same scope first. For example:",
@@ -211,7 +213,7 @@ export async function runReport(options: ReportOptions): Promise<number> {
       return 2;
     }
     if (!recordsRequestedScope(loaded, flowIds)) {
-      error(buildScopeMismatchGuidance(inputPath, loaded.flowIds, flowIds));
+      error(buildScopeMismatchGuidance(inputPath, loaded.flowIds, flowIds, options.profile));
       return 2;
     }
     if (options.inputPath === undefined && options.profile !== undefined && flowIds.length > 0) {

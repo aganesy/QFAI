@@ -266,6 +266,19 @@ describe("qfai report on a story tree", () => {
     expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
       "qfai validate --flow BF-0001",
     );
+    stderr.mockClear();
+    expect(
+      await runReport({
+        root,
+        format: "md",
+        flowIds: ["BF-0001"],
+        inputPath: elsewhere,
+        profile: "full",
+      }),
+    ).toBe(2);
+    const withProfile = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
+    expect(withProfile).toContain("qfai validate --flow BF-0001 --profile full");
+    expect(withProfile).toContain("qfai report --flow BF-0001 --profile full");
 
     await writeValidation(root, [], "validate.json", ["BF-0001"]);
     expect(await runReport({ root, format: "md" })).toBe(2);
