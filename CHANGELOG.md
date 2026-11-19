@@ -514,6 +514,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
 
+- **`qfai init --force` no longer removes another run's staging file.** Each
+  run first removed every leftover `.qfai-init-*` staging file in
+  `.github/instructions/`, including the one a second init in the same
+  project was about to rename into place, so that run's refresh failed. A
+  staging file is now removed only when it is more than an hour old, and each
+  run writes its staging file under a name no other run can take. Only that
+  exact name is removed, so a leftover from an earlier version,
+  named `<file>.qfai-init-<pid>-<timestamp>`, stays: delete it by hand.
+  Closes #4526.
+
 - **`qfai validate` no longer waits forever on the document-schema check.**
   An mdschema run that never exited held `validate` open, and one that printed
   without end was read into memory whole. Each run now stops after 120 seconds
@@ -525,6 +535,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing has defined since 2.5.0. It now reads the surfaces the deliberation record
   settles, the `tech.md` `Surface` row and the UI contracts linked to the
   flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
+
+- **A skill's auto-decide entries are checked the way its hard-required
+  entries are.** `QFAI-POLICY-002` skipped a value written on the
+  `- auto-decide:` line itself, read the children of a later bullet as
+  auto-decide entries, and passed any entry that merely mentioned an allowed
+  category, such as `destructive operations alongside output formatting`. The
+  bucket is now read like hard-required, and each entry must be one of the four
+  categories or open with one and name its operations after a colon,
+  parenthesis or dash. `/qfai-implement` now lists its implementation choices
+  as an equivalent-option pick. Closes #4494.
 
 - **The colour warning reads more of the places a colour is written.**
   `QFAI-DCAT-003` now reads a hex that is a whole Tailwind arbitrary value,
@@ -563,10 +583,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
+  that made a token group or a `$value` its own descendant overflowed the stack,
+  and the run reported no result at all. Such a file, or one nesting deeper than
+  64 levels, now raises `QFAI-DT-002` at error naming the path where reading
+  stopped, and every other check completes.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one
   pass.
+
+- **HTML mock and screen checks honour an absolute specs or contracts
+  directory.** They appended `paths.specsDir` and `paths.contractsDir` to the
+  project root even when the configured directory was absolute, so they found
+  no mock or UI contract there. They now resolve each directory as the other
+  checks do, and a relative and an absolute spelling of the same directory
+  select the same files.
 
 - **Acceptance tests are found when `paths.testsDir` is the repository root.**
   With `testsDir: "."`, the patterns for `e2e/`, `integration/` and `api/`
