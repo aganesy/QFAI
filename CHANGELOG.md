@@ -452,6 +452,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Repository text in `qfai validate` text output can no longer open a CI
+  command.** The shipped CI workflow runs `qfai validate` in the default text
+  format, and the GitHub runner reads a log line starting with `::`, after its
+  leading spaces, as a workflow command. A finding's message, path, refs or
+  suggested action comes from the repository, so a pull request could print
+  `::stop-commands::<token>` on a line of its own and hide every later
+  annotation. Each further line of a message or a `fix:` value now starts
+  with a vertical bar after its indent, and control characters in these
+  fields, in the `run-log:` path and in the `--format github` summary paths
+  print as visible escapes such as `\n`, `\t` and `\u001B`. The JSON report
+  keeps the exact values.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from
