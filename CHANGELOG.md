@@ -797,6 +797,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   is written now refuses a rewrite that changes a token in a literal. Closes
   #4513.
 
+- **`qfai validate` no longer reports an inline event handler that a mock
+  only mentions.** `QFAI-MOCK-012` searched the raw HTML for text such as
+  ` onclick=`, so a sentence, a comment or an escaped code sample that spelled
+  out a handler failed the mock. It now reads the attributes of the parsed
+  elements, including those inside a `<template>` and an `<iframe srcdoc>`,
+  so only a handler a browser would attach is reported. Closes #4550.
+
 - **`qfai catalog design` no longer replaces a file it cannot inspect.** The
   command treated any failure to read a destination's metadata as a missing
   file, so a token file or theme it could not inspect, for example because
