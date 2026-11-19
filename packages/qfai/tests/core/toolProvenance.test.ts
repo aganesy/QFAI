@@ -154,6 +154,11 @@ describe("classifyToolLocation", () => {
     expect(classifyToolLocation(at("proj"), at("usr", "lib", "node_modules", "qfai"))).toBe(true);
   });
 
+  it("stays quiet for a copy under a project directory whose name begins with two dots", () => {
+    // `..tools` is an ordinary name inside the project, not a parent traversal.
+    expect(classifyToolLocation(at("proj"), at("proj", "..tools", "qfai"))).toBe(false);
+  });
+
   it("reports a dependency hoisted above the project", () => {
     // Also benign, also reported, and the reason the rule ships at `info`
     // rather than as an error.
@@ -259,6 +264,17 @@ describe("classifyAgainstDeclaration", () => {
     // root that declares, and the hoisted copy is under it — so the declaration
     // is being honoured, not bypassed.
     expect(classifyAgainstDeclaration(at("repo"), at("repo", "node_modules", "qfai"))).toBe(false);
+  });
+
+  it("stays quiet for a copy under a directory whose name begins with two dots", () => {
+    // Only a `..` segment leaves the declaring directory; `..vendor` is an
+    // ordinary name inside it.
+    const vendored = at("proj", "..vendor", "node_modules", "qfai");
+    expect(classifyAgainstDeclaration(at("proj"), vendored)).toBe(false);
+  });
+
+  it("still reports a copy reached through a parent traversal", () => {
+    expect(classifyAgainstDeclaration(at("proj"), at("proj", "..", "other", "qfai"))).toBe(true);
   });
 });
 
