@@ -544,6 +544,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   platform; on Windows doctor runs npm's JavaScript entry with Node. Closes
   #4465.
 
+- **`qfai validate` announces a pass only after its result is saved.** The
+  text pass summary and the `--format github` summary, with its `result=PASS`
+  and the path of `validate.json`, were printed before the result files were
+  written, so a run whose write then failed showed a pass and a file it never
+  wrote, and exited 1. The result files are now written first: a run that
+  cannot write them prints no pass summary and no `--format github` output,
+  still ends its text output with `run-log:`, and exits 1 with the write
+  failure on stderr. Closes #4529.
+
 - **`qfai db-drift` compares the full PostgreSQL column type.** It read
   `information_schema.columns.data_type`, which drops the varchar length, the
   numeric precision and scale and the array element type, and reads

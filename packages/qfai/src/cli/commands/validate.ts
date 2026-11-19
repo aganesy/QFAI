@@ -158,14 +158,36 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     normalized.profile ?? options.profile,
   );
 
+  // A scope that failed with `QFAI-FLOW-005` writes nothing, so it never
+  // replaces the file a healthy run of a similar scope would write.
+  const writeResult = async (): Promise<void> => {
+    if (resultPaths !== null && !normalized.issues.some((item) => item.code === "QFAI-FLOW-005")) {
+      await emitJson(normalized, root, resultPaths.write);
+    }
+  };
+
+  // The result files are written before any verdict is printed, so a run that
+  // could not save them never announces a pass or points at a file it did not
+  // write; the write failure then stops the command and exits 1.
   if (format === "text") {
     emitText(normalized, failOn, designAuditFindingsShownPerCode(configResult.config));
+    // Kept, not thrown here: the run log was written, so `run-log:` still ends
+    // the output before the failure reaches stderr.
+    const writeFailure = await writeResult().then(
+      () => null,
+      (error: unknown) => ({ error }),
+    );
     // A run that did not finish has no pass to report, even under `--fail-on never`.
-    if (!willFail && !isIncompleteRunResult(normalized)) {
+    if (writeFailure === null && !willFail && !isIncompleteRunResult(normalized)) {
       const elapsedMs = Date.now() - startedAt.getTime();
       process.stdout.write(`${formatPassSummary(normalized, failOn, elapsedMs)}\n`);
     }
     process.stdout.write(`${formatRunLogLine(runLogPath)}\n`);
+    if (writeFailure !== null) {
+      throw writeFailure.error;
+    }
+  } else {
+    await writeResult();
   }
   if (format === "github") {
     const jsonPath = resolveJsonPath(root, resultPaths?.write[0] ?? configuredValidateJsonPath);
@@ -174,11 +196,6 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       willFail,
       runLogPath,
     });
-  }
-  // A scope that failed with `QFAI-FLOW-005` writes nothing, so it never
-  // replaces the file a healthy run of a similar scope would write.
-  if (resultPaths !== null && !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-005")) {
-    await emitJson(normalized, root, resultPaths.write);
   }
 
   return willFail ? 1 : 0;
