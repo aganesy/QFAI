@@ -2,13 +2,15 @@
  * The review state of one pull request, read and answered through one call each.
  *
  * Review threads exist only in GraphQL, so this is where that surface is spent,
- * and it is spent once per command: `list` is one GraphQL query for the threads
- * and one REST call for the pull request's comments, never a query per thread.
- * The REST call goes through `gh-budget.mjs`, so it keeps that command's reserve
- * and reports the remaining budget.
+ * and it is spent once per page: `list` is one GraphQL query per 100 threads
+ * and one REST call per 100 of the pull request's comments, never a query per
+ * thread. The REST calls go through `gh-budget.mjs`, so they keep that
+ * command's reserve and report the remaining budget.
  *
  * - `list` prints each unresolved thread and each comment that carries a Codex
- *   review, which arrives as a comment with no thread.
+ *   review, which arrives as a comment with no thread. It reads every page, so
+ *   its counts cover the whole pull request; when a call fails or the reserve
+ *   stops it before the last page of comments, it says the count is incomplete.
  * - `reply` answers one thread with the text of a file.
  * - `resolve` resolves the threads it is given.
  * - `defer` records one thread's finding in a follow-up issue, replies to the
@@ -44,15 +46,14 @@ const EXCERPT_LENGTH = 600;
 /** The login the Codex review bot comments under. */
 const CODEX_LOGIN = "chatgpt-codex-connector[bot]";
 
-// SIMPLIFIED: reads the newest 100 threads of a pull request and the first 100
-// of its comments.
-// Lift when: a pull request carries more than that and the missing ones matter.
+/** How many threads or comments one call asks for: the most GitHub returns. */
 const PAGE_SIZE = 100;
 
-const THREADS_QUERY = `query($owner:String!,$repo:String!,$number:Int!,$size:Int!){
+const THREADS_QUERY = `query($owner:String!,$repo:String!,$number:Int!,$size:Int!,$before:String){
   repository(owner:$owner,name:$repo){
     pullRequest(number:$number){
-      reviewThreads(last:$size){
+      reviewThreads(last:$size,before:$before){
+        pageInfo{ hasPreviousPage startCursor }
         nodes{ id isResolved isOutdated path line
           comments(first:1){ nodes{ author{login} body } } }
       }
@@ -122,6 +123,16 @@ export function unresolvedThreads(response) {
         body: typeof first?.body === "string" ? first.body : "",
       };
     });
+}
+
+/**
+ * The cursor that reads the page of threads before this one, or `undefined`
+ * when this page is the first.
+ */
+export function previousCursor(response) {
+  const info = response?.data?.repository?.pullRequest?.reviewThreads?.pageInfo;
+  if (info?.hasPreviousPage !== true || typeof info.startCursor !== "string") return undefined;
+  return info.startCursor;
 }
 
 /** The comments of a pull request that carry a Codex review. */
@@ -219,10 +230,15 @@ function origin() {
   }
 }
 
-function listCommand(slug, number) {
-  const [owner, repo] = slug.split("/");
-  const response = JSON.parse(
-    gh([
+/**
+ * The unresolved threads of every page, oldest first, or `undefined` when an
+ * answer holds no threads list.
+ */
+function readThreads(owner, repo, number) {
+  const threads = [];
+  let before;
+  do {
+    const args = [
       "api",
       "graphql",
       "-f",
@@ -235,9 +251,52 @@ function listCommand(slug, number) {
       `number=${number}`,
       "-F",
       `size=${String(PAGE_SIZE)}`,
-    ]),
-  );
-  const threads = unresolvedThreads(response);
+    ];
+    if (before !== undefined) args.push("-f", `before=${before}`);
+    const response = JSON.parse(gh(args));
+    const page = unresolvedThreads(response);
+    if (page === undefined) return undefined;
+    threads.unshift(...page);
+    before = previousCursor(response);
+  } while (before !== undefined);
+  return threads;
+}
+
+/**
+ * The comments of a pull request, page by page until a page is not full.
+ *
+ * `complete` is false when a call failed, or the reserve stopped the reading
+ * after a full page, so the comments read may be short. `budget` is the last
+ * remaining-budget line, printed once after the answer.
+ */
+function readComments(slug, number) {
+  const comments = [];
+  let budget;
+  for (let page = 1; ; page += 1) {
+    let read = false;
+    let full = false;
+    const code = callAndReport(
+      `repos/${slug}/issues/${number}/comments?per_page=${String(PAGE_SIZE)}&page=${String(page)}`,
+      (body) => {
+        const items = JSON.parse(body);
+        read = true;
+        if (Array.isArray(items)) {
+          comments.push(...items);
+          full = items.length === PAGE_SIZE;
+        }
+        return 0;
+      },
+      (line) => {
+        budget = line;
+      },
+    );
+    if (code !== 0 || !full) return { comments, code, complete: read && !full, budget };
+  }
+}
+
+function listCommand(slug, number) {
+  const [owner, repo] = slug.split("/");
+  const threads = readThreads(owner, repo, number);
   if (threads === undefined) {
     console.error("GitHub's answer holds no review threads for that pull request.");
     return 2;
@@ -245,15 +304,17 @@ function listCommand(slug, number) {
   console.log(`Unresolved threads: ${String(threads.length)}`);
   for (const thread of threads) console.log(`\n${formatThread(thread)}`);
 
-  return callAndReport(
-    `repos/${slug}/issues/${number}/comments?per_page=${String(PAGE_SIZE)}`,
-    (body) => {
-      const findings = codexFindings(JSON.parse(body));
-      console.log(`\nCodex review comments: ${String(findings.length)}`);
-      for (const finding of findings) console.log(`\n- ${finding.url}\n${excerpt(finding.body)}`);
-      return 0;
-    },
-  );
+  const { comments, code, complete, budget } = readComments(slug, number);
+  const findings = codexFindings(comments);
+  console.log(`\nCodex review comments: ${String(findings.length)}`);
+  for (const finding of findings) console.log(`\n- ${finding.url}\n${excerpt(finding.body)}`);
+  if (!complete) {
+    console.log(
+      "\nIncomplete: not every page of comments was read, so there may be more Codex review comments than this count.",
+    );
+  }
+  if (budget !== undefined) console.log(budget);
+  return code;
 }
 
 function replyCommand(threadId, bodyFile) {
