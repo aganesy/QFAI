@@ -110,6 +110,7 @@ async function readRecordedCarryOver(root: string, summaryPath: string): Promise
       `cannot read the previous summary ${toRelative(root, summaryPath)} (${reason}), ` +
         "so its carry-over cannot be kept. It was left unchanged and no summary was written. " +
         "Make it a readable file, or move it aside, then run again.",
+      { cause: err },
     );
   }
 
