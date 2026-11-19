@@ -283,7 +283,7 @@ describe("README facts", () => {
       staleReport: unknown,
     ): Promise<{ status: number | null; stderr: string }> {
       const readme = await readFile(readmePath, "utf-8");
-      const anchor = readme.indexOf("save this script as `scripts/check-skipped-tests.mjs`");
+      const anchor = readme.search(/save this script as `scripts\/check-skipped-tests\.mjs`/i);
       expect(anchor, readmePath).toBeGreaterThanOrEqual(0);
       const program = /```js\r?\n([\s\S]*?)```/.exec(readme.slice(anchor))?.[1];
       expect(program, readmePath).toBeDefined();

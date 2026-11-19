@@ -886,7 +886,7 @@ process.exit(failed ? 1 : 0);
 
 `allowed-skips.json` maps a test file to the full names of the tests it may skip,
 as the report's `fullName` spells them, such as
-`{ "tests/orders.test.ts": ["orders refunds a cancelled order"] }`. A count per
+`{ "orders.test.ts": ["orders refunds a cancelled order"] }`. A count per
 file would let one test's skip stand in for another's, so each skip is named.
 Start from the skips you see today. The list should only ever shrink: a pull
 request may remove a name, and adding one is a decision a reviewer makes on
