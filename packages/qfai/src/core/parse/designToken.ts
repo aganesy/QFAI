@@ -24,6 +24,8 @@ export type DesignTokenParseError = {
 
 const REF_PATTERN = /\{([^}]+)\}/g;
 const MAX_RESOLVE_DEPTH = 10;
+/** Deeper nesting than this is no real token tree, and walking it could exhaust the stack. */
+const MAX_NESTING_DEPTH = 64;
 
 export function parseDesignToken(yamlContent: string): DesignTokenParseResult {
   const result: DesignTokenParseResult = {
@@ -72,7 +74,7 @@ function collectLayer(
     errors.push({ message: `${layerName} layer must be an object.`, path: layerName });
     return;
   }
-  flattenTokens(layer as Record<string, unknown>, layerName, target, errors);
+  flattenTokens(layer as Record<string, unknown>, layerName, target, errors, [layer]);
 }
 
 function flattenTokens(
@@ -80,11 +82,19 @@ function flattenTokens(
   prefix: string,
   target: Map<string, DesignTokenValue>,
   errors: DesignTokenParseError[],
+  ancestors: readonly object[],
 ): void {
   for (const [key, value] of Object.entries(obj)) {
     const path = `${prefix}.${key}`;
     if (value && typeof value === "object" && !Array.isArray(value)) {
       const record = value as Record<string, unknown>;
+      const problem =
+        findShapeProblem(record, ancestors) ??
+        ("$value" in record ? findValueProblem(record.$value, [...ancestors, record]) : undefined);
+      if (problem) {
+        errors.push({ message: `${problem} at: ${path}; nothing under it is read.`, path });
+        continue;
+      }
       if ("$value" in record) {
         const token: DesignTokenValue = {
           $value: record.$value,
@@ -100,10 +110,40 @@ function flattenTokens(
         }
         target.set(path, token);
       } else {
-        flattenTokens(record, path, target, errors);
+        flattenTokens(record, path, target, errors, [...ancestors, record]);
       }
     }
   }
+}
+
+/** A YAML alias can make a node its own ancestor; such a graph has no end to walk. */
+function findShapeProblem(value: object, ancestors: readonly object[]): string | undefined {
+  if (ancestors.includes(value)) {
+    return "YAML alias cycle";
+  }
+  if (ancestors.length >= MAX_NESTING_DEPTH) {
+    return `Nesting deeper than ${MAX_NESTING_DEPTH} levels`;
+  }
+  return undefined;
+}
+
+function findValueProblem(value: unknown, ancestors: readonly object[]): string | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  const own = findShapeProblem(value, ancestors);
+  if (own) {
+    return own;
+  }
+  const inner = [...ancestors, value];
+  const children: unknown[] = Array.isArray(value) ? value : Object.values(value);
+  for (const child of children) {
+    const problem = findValueProblem(child, inner);
+    if (problem) {
+      return problem;
+    }
+  }
+  return undefined;
 }
 
 function resolveAllReferences(result: DesignTokenParseResult): void {
