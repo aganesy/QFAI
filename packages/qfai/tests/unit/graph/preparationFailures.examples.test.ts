@@ -436,11 +436,12 @@ it("names the limit a download, setup or version check passed", async () => {
         : fixture.run(command, args, options),
     );
     const setupShown = renderGraphPreparation(setup);
-    expect(setup.failedStep).toBe("Python 3.10+ and uv prerequisite");
+    expect(setup.failedStep).toBe("Python environment setup");
     expect(setupShown).toContain(
-      "Cause: the Python environment setup did not finish within 2 minutes and was stopped.",
+      "Cause: the Python environment setup did not finish within 2 minutes and was stopped. Run qfai init again.",
     );
     expect(setupShown).not.toContain("Install Python 3.10 or later");
+    expect(setupShown).not.toContain("prerequisite");
 
     const check = await prepareGraphRuntimes(root, (command, args, options) =>
       args.includes("--version")

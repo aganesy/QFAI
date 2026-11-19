@@ -164,14 +164,22 @@ export async function prepareGraphRuntimes(
         ],
         { cwd: root, env: pythonEnvironment },
       );
-      if (venv.exitCode !== 0)
+      if (venv.exitCode !== 0) {
+        // A setup stopped at its limit found Python and uv, so it is not named a missing prerequisite.
+        const stopped = graphLimitCause("Python environment setup", venv);
         return {
           ...notReady,
-          failedStep: "Python 3.10+ and uv prerequisite",
-          recovery:
-            graphLimitCause("Python environment setup", venv) ??
-            "Install Python 3.10 or later and uv, then run qfai init again.",
+          ...(stopped
+            ? {
+                failedStep: "Python environment setup",
+                recovery: `${stopped} Run qfai init again.`,
+              }
+            : {
+                failedStep: "Python 3.10+ and uv prerequisite",
+                recovery: "Install Python 3.10 or later and uv, then run qfai init again.",
+              }),
         };
+      }
       const pythonInstall = await run(
         "uv",
         [
