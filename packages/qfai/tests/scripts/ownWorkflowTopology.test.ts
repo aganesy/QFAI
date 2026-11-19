@@ -3282,17 +3282,18 @@ describe("release automation performs decisions rather than making them", () => 
     }
   });
 
-  it("refuses a version component with a leading zero, at both ends", () => {
+  it("refuses a version component with a leading zero, in every release workflow", () => {
     // `01.11.0`, `1.011.0` and `1.11.00` satisfy every structural check these workflows made
     // — digits and dots, three non-empty components — and `sort -V` orders them happily. They
     // are not SemVer: `node-semver` rejects them, so npm refuses the publish. Without this the
     // refusal arrived last, after the release pull request had merged and the tag was pushed,
     // leaving an invalid version in `main` and a tag naming it.
     //
-    // Both ends, because they read different things: prepare-release reads what a human typed
-    // into the dispatch form, tag-release reads what the tree declares — and a manifest can be
-    // edited by hand without either workflow being involved.
-    for (const name of ["prepare-release.yml", "tag-release.yml"]) {
+    // Every release workflow, because they read different things: prepare-release reads what a
+    // human typed into the dispatch form, tag-release reads what the tree declares, and the
+    // publish workflow reads a tag a dispatcher can name by hand — and a manifest can be edited
+    // by hand without any of them being involved.
+    for (const name of ["prepare-release.yml", "tag-release.yml", "release.yml"]) {
       const document = workflow(name);
       const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
       const commands = Object.values(jobs)
