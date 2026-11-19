@@ -493,6 +493,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   budget check counts from, and report its file line; a `-->` in the front
   matter is not read as a transition.
 
+- **Graph queries reject a `qfai.config.yaml` or `paths` set to null.** A
+  config file holding only `~` or `null`, or a `paths:` key with no value or
+  `null`, was read as if it were left out, so the graph used the default
+  deliberation directory. The query now fails with the configuration error, as
+  it already did for any other value that is not a mapping. Defaults still
+  apply when the file or the `paths` key is absent.
+
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its

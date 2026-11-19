@@ -171,8 +171,8 @@ export async function graphDeliberationDir(root: string): Promise<string> {
   const paths = object(document) ? document.paths : undefined;
   const value = object(paths) ? paths.deliberationDir : undefined;
   if (
-    (document !== undefined && document !== null && !object(document)) ||
-    (paths !== undefined && paths !== null && !object(paths)) ||
+    (document !== undefined && !object(document)) ||
+    (paths !== undefined && !object(paths)) ||
     (value !== undefined &&
       (typeof value !== "string" ||
         value.trim() === "" ||
