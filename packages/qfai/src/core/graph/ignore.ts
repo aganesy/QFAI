@@ -6,7 +6,7 @@ import { isPathIgnored } from "../gitignore.js";
 import type { GraphProcess } from "./process.js";
 
 /** The files a graph preparation step wrote, and the conflicts it left for the adopter. */
-export interface GraphSettingsComposition {
+export interface GraphPreparedFiles {
   files: string[];
   conflicts: string[];
 }
@@ -16,7 +16,7 @@ export const GRAPH_IGNORE_MARKER = "# QFAI graph analysis (local)";
 export async function ensureGraphGitignore(
   root: string,
   run: GraphProcess,
-): Promise<GraphSettingsComposition> {
+): Promise<GraphPreparedFiles> {
   if (await findUnsafeHostFileComponent(root, [".gitignore"])) return conflict();
   const file = path.join(root, ".gitignore");
   let content = "";
@@ -46,7 +46,7 @@ export async function ensureGraphGitignore(
   return { files: [".gitignore"], conflicts: [] };
 }
 
-function conflict(): GraphSettingsComposition {
+function conflict(): GraphPreparedFiles {
   return {
     files: [],
     conflicts: [

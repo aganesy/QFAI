@@ -443,7 +443,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   from `.claude/settings.json` and `.codex/hooks.json`, and delete
   `.github/hooks/qfai-graph.json`, `.qfai/tools/graph-hook.mjs`,
   `.qfai/tools/graph-enforcement.json` and the `*.pending.json`, `*.draft.json`
-  and `*.grant.json` files under `.qfai/tools/state/`.
+  and `*.grant.json` files under `.qfai/tools/state/`. Closes #4056.
 
 - **The run log's `traceability.json` no longer carries `stats`.** Its
   `downstream_violations` and `shared_scope_violations` counted finding codes
@@ -463,6 +463,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fields, in the `run-log:` path and in the `--format github` summary paths
   print as visible escapes such as `\n`, `\t` and `\u001B`. The JSON report
   keeps the exact values.
+
+- **`qfai validate` reports the actual line of a Mermaid screen-flow
+  finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction
+  warnings named the line before the one they flagged. They now name the
+  flagged line, and each finding carries that line in its location so an
+  editor or report can jump to it. Closes #4562.
 
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
@@ -779,6 +785,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   started with `/`, so they pointed at the filesystem root and the story-tree
   test check found no acceptance test there. The patterns are now joined from
   their path segments and read those directories at the top of the repository.
+
+- **The reviewer gate check reads only the active text of the delegation
+  baseline.** `QFAI-SKILLS-011` and `QFAI-SKILLS-012` searched the raw
+  Markdown, so a `## Reviewer Gate Baseline` heading or an obligation shown in a
+  fenced example, an HTML comment or a raw HTML block counted as the policy.
+  An example placed before the real section was checked in its place. Those
+  regions are now skipped, and only the section that applies is checked.
 
 - **The `tech.md` template shows each item in the shape validation accepts.**
   The template held placeholders such as `<package>`, so a project filling it
