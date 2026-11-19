@@ -13,14 +13,14 @@
  * it asserts stable substring presence so the pair stays deterministic
  * and cheap (mirrors `mockHrefPairs` / `evidenceMutationUnlogged`).
  */
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { Issue } from "../types.js";
-import { exists, issue } from "./utils.js";
+import { issue, readPresentFile } from "./utils.js";
 import { HANDOFF_SCHEMA_REL, HANDOFF_WRITER_PAIRS } from "./handoffSchemaPairs.js";
 
 const FINDING_CODE = "QFAI-HANDOFF-001";
+const RULE = "reviewerGate.handoffSchemaDrift";
 /** Stable token whose presence in the schema source proves the canonical field set is exported. */
 const SCHEMA_TOKEN = "HANDOFF_MINIMUM_FIELDS";
 
@@ -48,30 +48,29 @@ function schemaFields(schemaText: string): string[] {
  *     that the writer does not name.
  *   - When neither source file exists in the repo (consumer install
  *     without source), no finding is emitted.
+ *   - When a source file exists but cannot be read, the same finding
+ *     fires naming it: the check for it is incomplete.
  */
 export async function detectHandoffSchemaDrift(root: string): Promise<Issue[]> {
-  const schemaAbs = path.join(root, HANDOFF_SCHEMA_REL);
-  if (!(await exists(schemaAbs))) return [];
-  let schemaText: string;
-  try {
-    schemaText = await readFile(schemaAbs, "utf-8");
-  } catch {
-    return [];
+  const schema = await readPresentFile(path.join(root, HANDOFF_SCHEMA_REL));
+  if (schema.kind === "absent") return [];
+  if (schema.kind === "unreadable") {
+    return [unreadableInput(HANDOFF_SCHEMA_REL, schema.reason, "every registered writer")];
   }
+  const schemaText = schema.text;
   const schemaHasField = schemaText.includes(SCHEMA_TOKEN);
   if (!schemaHasField) return [];
 
   const fields = schemaFields(schemaText);
   const issues: Issue[] = [];
   for (const pair of HANDOFF_WRITER_PAIRS) {
-    const writerAbs = path.join(root, pair.writerRel);
-    if (!(await exists(writerAbs))) continue;
-    let writerText: string;
-    try {
-      writerText = await readFile(writerAbs, "utf-8");
-    } catch {
+    const writer = await readPresentFile(path.join(root, pair.writerRel));
+    if (writer.kind === "absent") continue;
+    if (writer.kind === "unreadable") {
+      issues.push(unreadableInput(pair.writerRel, writer.reason, `clause=${pair.clause}`));
       continue;
     }
+    const writerText = writer.text;
     const missing = writerText.includes(pair.writerToken) ? [] : [pair.writerToken];
     if (pair.namesSchemaFields) {
       missing.push(...fields.filter((field) => !writerText.includes(`\`${field}\``)));
@@ -82,9 +81,18 @@ export async function detectHandoffSchemaDrift(root: string): Promise<Issue[]> {
       `(justification: schema=${HANDOFF_SCHEMA_REL} exports ${SCHEMA_TOKEN}, ` +
       `writer=${pair.writerRel} does NOT reference ${missing.map((m) => `"${m}"`).join(", ")}. ` +
       `clause=${pair.clause} — un-paired counterpart=${pair.writerRel}).`;
-    issues.push(
-      issue(FINDING_CODE, message, "error", pair.writerRel, "reviewerGate.handoffSchemaDrift"),
-    );
+    issues.push(issue(FINDING_CODE, message, "error", pair.writerRel, RULE));
   }
   return issues;
+}
+
+/**
+ * A present input that cannot be read leaves the pair check undone, which
+ * is not the same as in sync, so it is reported rather than skipped.
+ */
+function unreadableInput(rel: string, reason: string, scope: string): Issue {
+  const message =
+    `${FINDING_CODE}: ${rel} could not be read (${reason}), so the handoff schema ` +
+    `SSOT-sync check for ${scope} is incomplete. Make it a readable file.`;
+  return issue(FINDING_CODE, message, "error", rel, RULE);
 }

@@ -105,4 +105,28 @@ describe("detectSkillManifestDrift — SSOT-sync Pair III", () => {
     const issues = await detectSkillManifestDrift(root);
     expect(issues).toEqual([]);
   });
+
+  // A directory where the file belongs is present but cannot be read as text,
+  // on every platform CI runs.
+  it("a side that is present but cannot be read → QFAI-MANIFEST-001 naming it", async () => {
+    const root = await newTempDir("unreadable");
+    const pair = SKILL_MANIFEST_PAIRS[0];
+    if (!pair) throw new Error("expected at least one pair");
+    await mkdir(path.join(root, pair.probeImplRel), { recursive: true });
+    await writePackageFile(root, pair.schemaRel, `// declares ${pair.schemaToken}\n`);
+    const issues = await detectSkillManifestDrift(root);
+    expect(issues.map((iss) => [iss.code, iss.severity, iss.file])).toEqual([
+      ["QFAI-MANIFEST-001", "error", pair.probeImplRel],
+    ]);
+    expect(issues[0]?.message).toContain("could not be read");
+  });
+
+  it("one side absent and the other unreadable → no findings (the pair is not in this tree)", async () => {
+    const root = await newTempDir("absent-and-unreadable");
+    const pair = SKILL_MANIFEST_PAIRS[0];
+    if (!pair) throw new Error("expected at least one pair");
+    await mkdir(path.join(root, pair.schemaRel), { recursive: true });
+    const issues = await detectSkillManifestDrift(root);
+    expect(issues).toEqual([]);
+  });
 });
