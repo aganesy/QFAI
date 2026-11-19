@@ -552,6 +552,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped at the same limit; one that does not answer by then gives no finding,
   as a missing file already did. Closes #4616.
 
+- **A DB contract that defines one SQL function twice is reported even when the
+  two definitions differ only in defaults or argument names.** `QFAI-DB-002`
+  compared the whole argument text, so two `CREATE OR REPLACE FUNCTION`
+  statements that differed only in a default value, an argument name, an OUT
+  argument or spacing passed. It now compares the input argument types, which
+  is how PostgreSQL tells two routines apart.
+
 - **`qfai validate` no longer writes its run log through a link.** When
   `paths.outDir`, a directory between the project root and it, or
   `validate.log` in it is a symbolic link or junction, the run writes no run
