@@ -323,7 +323,7 @@ satisfied by a file that cannot run.
   early and implementation moves, so the two schemas drift by default, and a
   suite that passes against the migration schema proves nothing about the
   contracts. It is a separate command because it needs a database, and
-  `npx qfai validate` starts no processes.
+  `npx qfai validate` never starts a database engine.
 
 ## Obligation realizability
 

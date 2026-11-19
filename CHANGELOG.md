@@ -506,6 +506,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   already wrote keeps its old steps; delete it and run `qfai init` again to
   get these.
 
+- **The contract rules no longer claim `qfai validate` starts no processes.**
+  Validation runs short-lived checkers, such as the document schema checker,
+  as child processes. The `qfai-sdd` contract rules now state the narrower
+  guarantee that `qfai validate` never starts a database engine, which is why
+  `qfai db-drift` is a separate command.
+
 - **`qfai sdd merge-docs` no longer fails on a conflicted file it does not
   merge.** A conflicted file under the specs directory that is not Markdown or
   YAML, such as an image, made the command exit 1 even when no document was

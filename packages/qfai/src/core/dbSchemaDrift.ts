@@ -12,9 +12,11 @@
  *
  * ## Why this is not part of `validate`
  *
- * Answering the question needs a database. `validate` is static and starts no
- * processes, and that guarantee is worth more than folding one more rule into
- * it, so this is a command a project runs on its own.
+ * Answering the question needs a database. `validate` never starts a database
+ * engine: it reads files, and the only processes it runs are short-lived
+ * checkers such as the document schema checker. That guarantee is worth more
+ * than folding one more rule into it, so this is a command a project runs on
+ * its own.
  *
  * The engine is an in-process Postgres build, loaded only when the command
  * runs. Nothing is installed, no service is started, and a project that never
