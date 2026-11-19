@@ -545,6 +545,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
+- **The migration warns that it replaces customised step directories.** The
+  backup warning in the migration skill, its guide and `MIGRATION-2.0.0.md`
+  named only the shipped skills that step 11 replaces. They now also name the
+  shipped step directories under `.qfai/assistant/step/`, whose untracked files
+  and uncommitted edits step 11 replaces too, so a person copies their local
+  changes before the first run. Closes #4509.
+
 - **`qfai sdd next-id` reads the ID kind without regard to case.**
   `qfai sdd next-id ac US-0001-0001 --base main` was refused as an unknown
   kind, though `AC` worked. The kind is now read in any case, so `ac` counts
