@@ -24,7 +24,7 @@ import { validateStoryPolicyPlaceholders } from "./validators/assistantAssets.js
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { issue } from "./validators/utils.js";
-import { mockMarkdownGlobs } from "./validators/htmlMockBlocks.js";
+import { mockMarkdownDir } from "./validators/htmlMockBlocks.js";
 import { sharedMarkdownFileReader } from "./validators/markdownFiles.js";
 import type {
   Issue,
@@ -1031,7 +1031,7 @@ async function runUiuxValidators(
     // Run one after another, the first check to ask for the shared Markdown would be charged for
     // the read the others reuse, so the read is done first and reported on its own.
     const readStart = performance.now();
-    await readMarkdown(mockMarkdownGlobs(root, config));
+    await readMarkdown(mockMarkdownDir(root, config));
     timings.sharedMarkdownReadMs += performance.now() - readStart;
     for (const part of uiuxValidators) uiuxIssueGroups.push(await runPart(part));
   } else {

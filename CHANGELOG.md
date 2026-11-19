@@ -689,6 +689,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `\r` or `\n`, and `%` stays as written. The report and run-log are still
   written at their original paths.
 
+- **Directories named with glob syntax are read as the paths they are.** The
+  design token, HTML mock, Mermaid screen flow and UI definition checks built
+  a glob from the project, `paths.specsDir`, `paths.contractsDir` and
+  `uiux.designTokensDir`, so a path such as `build[1]` or `tokens (v2)` was
+  read as a pattern: the check found nothing, or read `build1` instead. Each
+  directory is now the walk's working directory and only the file name is a
+  pattern. Closes #4488.
+
 - **The migration's step 12 scan no longer runs out of memory on large
   tracked files.** It held git's whole file listing and read each tracked file
   whole before checking it for 1.x paths, so a repository with large tracked

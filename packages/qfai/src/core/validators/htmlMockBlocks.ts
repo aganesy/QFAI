@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { resolvePath, type QfaiConfig } from "../config.js";
 
 const HTML_FENCE_RE = /```html\s*\r?\n([\s\S]*?)```/g;
@@ -14,15 +12,9 @@ export type HtmlMockBlock = {
   rawBlock: string;
 };
 
-/**
- * The globs that find every Markdown file an HTML mock can sit in: those under `paths.specsDir`.
- *
- * The directory is resolved against the root, so an absolute one is kept as it is. A backslash in
- * a glob escapes the next character, so the resolved directory is written with `/` before it joins
- * the pattern.
- */
-export function mockMarkdownGlobs(root: string, config: QfaiConfig): string[] {
-  return [path.posix.join(resolvePath(root, config, "specsDir").replace(/\\/g, "/"), "**/*.md")];
+/** The directory whose Markdown files an HTML mock can sit in: `paths.specsDir`, resolved. */
+export function mockMarkdownDir(root: string, config: QfaiConfig): string {
+  return resolvePath(root, config, "specsDir");
 }
 
 export function collectHtmlMockBlocks(content: string): HtmlMockBlock[] {
