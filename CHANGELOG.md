@@ -455,8 +455,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from
-  which init downloads CodeGraph and Graphify. A fresh install no longer meets
-  these only when init stops. Closes #4508.
+  which init downloads CodeGraph and Graphify. A new user now sees these
+  requirements before init runs rather than only after it fails.
 
 - **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
   difference exits 0 under `--fail-on never`, but the parser refused the flag

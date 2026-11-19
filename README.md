@@ -70,13 +70,12 @@ upgrades.
 
 A fresh `qfai init` needs these on the machine before the first run:
 
-- Node.js 20.19.0 or later.
-- Python 3.10 or later, and [`uv`](https://docs.astral.sh/uv/). Init builds the
-  code and document graphs with them.
+- Node.js 20.19.0 or later, to run `qfai` at all.
+- Python 3.10 or later, and [`uv`](https://docs.astral.sh/uv/). Init installs
+  the code and document graph runtimes with them; the graphs themselves are
+  built later, when the graph commands first run.
 - Network access to the npm registry, which serves CodeGraph, and to PyPI,
   which serves Graphify. Init downloads both on its first run.
-
-Init stops and names the missing piece when one of them is absent.
 
 > **Windows users:** `qfai init` creates symlinks internally.
 > You must enable **Developer Mode** (Settings → System → For developers → Developer Mode: ON)
