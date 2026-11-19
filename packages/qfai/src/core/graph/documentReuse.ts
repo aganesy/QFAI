@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { cp, lstat, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { excludedGraphInput, graphDeliberationDir } from "./analysis.js";
+import { graphDeliberationDir } from "./analysis.js";
 import { GRAPH_VERSIONS, graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
 import {
   GRAPH_PYTHON_FLAGS,
@@ -17,6 +17,7 @@ import {
   graphReuseEnvironment,
   readSnapshotMetadata,
   safeCompletedCorpus,
+  safeInventoryFiles,
   sameEnvironment,
   type GraphReuseEnvironment,
 } from "./reuse.js";
@@ -160,19 +161,7 @@ export async function safeDocumentCopy(
       !Array.isArray(inventory.files)
     )
       return false;
-    for (const file of inventory.files) {
-      if (typeof file !== "string" || path.posix.isAbsolute(file) || path.win32.isAbsolute(file))
-        return false;
-      const parts = file.replaceAll("\\", "/").split("/");
-      if (
-        parts.some((part) => !part || part === "." || part === "..") ||
-        excludedGraphInput(parts.join("/"), deliberationDir)
-      )
-        return false;
-      const stats = await lstat(path.join(analysis, ...parts));
-      if (!stats.isFile() || stats.isSymbolicLink() || stats.nlink !== 1) return false;
-    }
-    return true;
+    return await safeInventoryFiles(analysis, inventory.files, deliberationDir);
   } catch {
     return false;
   }
