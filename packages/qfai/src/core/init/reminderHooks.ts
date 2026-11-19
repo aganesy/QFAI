@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -7,6 +7,7 @@ import {
   serializeClaudeSettings,
 } from "../claudeCodeHooks.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
+import { replaceFile } from "../runLog.js";
 import { findUnsafeHostFileComponent } from "./fsGuards.js";
 
 /**
@@ -163,5 +164,6 @@ export async function planReminderHooks(
 /** Writes what `planReminderHooks` planned, creating the host directory when it is absent. */
 export async function writeReminderHooks(plan: ReminderHooksWrite): Promise<void> {
   await mkdir(path.dirname(plan.target), { recursive: true });
-  await writeFile(plan.target, plan.text, "utf-8");
+  // Renamed into place, so a failed write leaves the settings it replaces whole.
+  await replaceFile(plan.target, plan.text);
 }
