@@ -1,8 +1,10 @@
+import { randomBytes } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat, mkdir, open } from "node:fs/promises";
+import { link, lstat, mkdir, open, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { atddTestKindDirs } from "../atddTraceability.js";
+import { hasErrnoCode } from "../fs/errno.js";
 import { isStoryTreeId } from "../storyTree/ids.js";
 import { DEFAULT_SCAFFOLD_DIALECT, type ScaffoldDialect } from "./scaffoldDialect.js";
 
@@ -33,8 +35,23 @@ export function buildSkeleton(
 export type EmitSkeletonResult = {
   destPath: string;
   wrote: boolean;
+  /** The hidden staging file this run wrote and could not remove, if any. */
+  leftBehind?: string;
 };
 
+/**
+ * Write `body` at `destPath` unless a test is already there. The full body is
+ * written to a hidden file beside `destPath` first and published by `link`,
+ * which refuses a taken path, so a failed write leaves nothing at `destPath`
+ * that a retry would keep as an existing test, and an existing test is never
+ * replaced.
+ *
+ * Ceiling: where `link` fails for any other reason, such as a filesystem
+ * without hard links (FAT32 and exFAT among them, whose error code varies by
+ * platform), the body is written straight to `destPath` through an exclusive
+ * create, so a write that fails there can still leave a partial file. A
+ * no-replace rename exposed to Node lifts it.
+ */
 export async function emitSkeleton(
   target: ScaffoldTarget,
   destPath: string,
@@ -42,18 +59,70 @@ export async function emitSkeleton(
 ): Promise<EmitSkeletonResult> {
   if (!isScaffoldTarget(target)) throw new TypeError(`Invalid scaffold target: ${target.id}`);
   await mkdir(path.dirname(destPath), { recursive: true });
+  // The name leaves out the destination's, so a name near the length limit still stages.
+  const staged = path.join(
+    path.dirname(destPath),
+    `.qfai-scaffold-${randomBytes(6).toString("hex")}.tmp`,
+  );
+  let outcome: { wrote: boolean } | { error: unknown };
   try {
-    const handle = await open(destPath, "wx");
-    try {
-      await handle.writeFile(body, "utf8");
-    } finally {
-      await handle.close();
-    }
-    return { destPath, wrote: true };
+    outcome = { wrote: await publishStaged(staged, destPath, body) };
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-    await assertReadableTestFile(destPath);
-    return { destPath, wrote: false };
+    outcome = { error };
+  }
+  // Removal is best-effort, so it never replaces the publish result or its error.
+  const leftBehind = await removeStaged(staged);
+  if ("error" in outcome) throw outcome.error;
+  const { wrote } = outcome;
+  if (!wrote) await assertReadableTestFile(destPath);
+  return leftBehind === undefined ? { destPath, wrote } : { destPath, wrote, leftBehind };
+}
+
+/**
+ * Write the complete `body` to `staged` and publish it at `destPath`. Resolves
+ * `false`, writing nothing at `destPath`, when an entry is already there. A
+ * `link` that fails for any other reason falls back to an exclusive create
+ * once `lstat` finds nothing at `destPath`.
+ */
+async function publishStaged(staged: string, destPath: string, body: string): Promise<boolean> {
+  await writeFile(staged, body, { encoding: "utf8", flag: "wx" });
+  try {
+    await link(staged, destPath);
+    return true;
+  } catch (error) {
+    if (isTaken(error) || (await entryExists(destPath))) return false;
+  }
+  try {
+    await writeFile(destPath, body, { encoding: "utf8", flag: "wx" });
+    return true;
+  } catch (error) {
+    if (isTaken(error)) return false;
+    throw error;
+  }
+}
+
+/** The error a create raises when its path is already taken. */
+function isTaken(error: unknown): boolean {
+  return hasErrnoCode(error) && error.code === "EEXIST";
+}
+
+async function entryExists(filePath: string): Promise<boolean> {
+  try {
+    await lstat(filePath);
+    return true;
+  } catch (error) {
+    if (hasErrnoCode(error) && error.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+/** Remove the staging file; return its path when it could not be removed. */
+async function removeStaged(staged: string): Promise<string | undefined> {
+  try {
+    await rm(staged, { force: true });
+    return undefined;
+  } catch {
+    return staged;
   }
 }
 

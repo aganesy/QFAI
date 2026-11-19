@@ -240,6 +240,18 @@ describe("story-tree layout dispatch", () => {
     expect(result.issues.map((item) => item.code)).toEqual(["QFAI-LAYOUT-001"]);
   });
 
+  // QFAI:EX-0001-0051-18
+  it("keeps the configuration findings beside the migration finding", async () => {
+    await put("qfai.config.yaml", "workflow:\n  mode: sometimes\n");
+    await mkdir(path.join(root, specs, "spec-0001"), { recursive: true });
+
+    const result = await validateProject(root, undefined, { profile: "full" });
+
+    expect(result.issues.map((item) => item.code)).toEqual(["QFAI-CFG-002", "QFAI-LAYOUT-001"]);
+    expect(result.issues[0]?.message).toContain("workflow.mode");
+    expect(result.profileValidatorsRan).toBe(false);
+  });
+
   // QFAI:EX-0001-0150-02
   it("keeps only the named flow's finding under --flow", async () => {
     for (const number of ["0001", "0002"]) {
