@@ -118,6 +118,38 @@ it("queries a current completed document graph without a model or backend call",
   }
 });
 
+// QFAI:EX-0001-0234-11
+// Mutation: packages/qfai/src/core/graph/documents.ts `? slashScope(processing.scope)` -> `? processing.scope` fails "queries a document graph prepared for a backslash-separated nested scope without dropping its documents"
+it("queries a document graph prepared for a backslash-separated nested scope without dropping its documents", async () => {
+  const fixture = await documentAnalysisFixture();
+  try {
+    await mkdir(path.join(fixture.root, "docs", "nested"), { recursive: true });
+    await writeFile(
+      path.join(fixture.root, "docs", "nested", "rationale.md"),
+      "# Nested requirement rationale\n",
+    );
+    await writeFile(
+      path.join(fixture.root, ".qfai", "graph-processing.json"),
+      JSON.stringify({ ...fixture.processing, scope: ["docs\\nested\\rationale.md"] }),
+    );
+    const run = graphifyExtractionFixture(fixture);
+    expect((await prepareDocumentAnalysis(fixture.root, run)).status).toBe("prepared");
+    const mirrored = path.join(fixture.documentAnalysis, "docs", "nested", "rationale.md");
+    expect(await readFile(mirrored, "utf8")).toBe("# Nested requirement rationale\n");
+    fixture.calls.length = 0;
+    const result = await exploreGraph(
+      fixture.root,
+      { domain: "documents", question: "Nested requirement rationale" },
+      run,
+    );
+    expect(result.status).toBe("answered");
+    expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+    expect(await readFile(mirrored, "utf8")).toBe("# Nested requirement rationale\n");
+  } finally {
+    await fixture.dispose();
+  }
+});
+
 // QFAI:EX-0001-0234-10
 // Mutation: packages/qfai/src/core/graph/documents.ts `"--code-only",` -> `"--no-cluster",` fails "allows local Graphify code analysis without claiming document readiness"
 it("allows local Graphify code analysis without claiming document readiness", async () => {
