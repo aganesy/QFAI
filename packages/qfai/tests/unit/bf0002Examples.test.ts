@@ -279,7 +279,7 @@ describe("BF-0002 CI verdict examples", () => {
   // The self-validate step runs three profiles and fails at the end if any failed. Its
   // name and its command lines are pinned above; this runs the body itself, so a body
   // whose closing check is deleted can no longer pass.
-  // QFAI:EX-0002-0016-05
+  // QFAI:EX-0002-0020-05
   it.skipIf(process.platform === "win32")(
     "runs every self-validate profile and fails the step when one fails",
     () => {
