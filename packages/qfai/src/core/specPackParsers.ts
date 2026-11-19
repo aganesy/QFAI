@@ -99,6 +99,18 @@ const RAW_HTML_BLOCK_START = /^ {0,3}<(?:pre|script|style|textarea)(?=[\s/>]|$)/
 const RAW_HTML_BLOCK_END = /<\/(?:pre|script|style|textarea)>/i;
 
 /**
+ * Start of a CommonMark type-2 HTML block: a line opening with `<!--`. The block
+ * runs to the line holding `-->`, and that whole line belongs to it, so text
+ * after the closer, such as `--> ## Risks`, is block content and not a heading.
+ */
+const COMMENT_BLOCK_START = /^ {0,3}<!--/;
+
+/** Whether a line opening a comment block also closes it, from just past `<!--`. */
+function closesCommentBlockOnOpener(line: string): boolean {
+  return line.indexOf("-->", line.indexOf("<!--") + 2) !== -1;
+}
+
+/**
  * CommonMark's type-6 block-level tag names. A line opening or closing one of
  * these starts a raw HTML block that runs to the next **blank line**, and
  * Markdown does not resume inside it.
@@ -217,6 +229,7 @@ export function maskNonSpecRegions(text: string): string {
   let inComment = false;
   let inIndentedCode = false;
   let inRawHtml = false;
+  let inCommentBlock = false;
   let inBlankTerminatedHtml = false;
   let listOpen = false;
   let prevBlank = true;
@@ -235,6 +248,14 @@ export function maskNonSpecRegions(text: string): string {
         // The closing-tag line belongs to the block, so it is blanked as well.
         if (RAW_HTML_BLOCK_END.test(line)) {
           inRawHtml = false;
+        }
+        return "";
+      }
+
+      if (inCommentBlock) {
+        // As with type 1, the line holding the closer is part of the block.
+        if (line.includes("-->")) {
+          inCommentBlock = false;
         }
         return "";
       }
@@ -284,6 +305,10 @@ export function maskNonSpecRegions(text: string): string {
         const opener = FENCE_LINE.exec(line)?.[1];
         if (opener) {
           open = { marker: opener.charAt(0), length: opener.length };
+          return "";
+        }
+        if (COMMENT_BLOCK_START.test(line)) {
+          inCommentBlock = !closesCommentBlockOnOpener(line);
           return "";
         }
       }

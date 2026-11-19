@@ -570,6 +570,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so a card missing `## Stop conditions` passed when the frontmatter, a
   sentence, a code sample, an HTML comment or a `### Stop conditions` heading
   carried the same words. Only a level-2 heading of the card body now counts.
+  Every check that skips code and comments in a spec document now also skips
+  text after `-->` on a line that is part of a comment block, such as
+  `<!-- note --> ## Risks`, which Markdown does not read as a heading.
   Closes #4573.
 
 - **`qfai validate` checks every resource reference in an HTML mock.** The

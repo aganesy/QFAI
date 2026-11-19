@@ -302,6 +302,8 @@ describe("every agent card follows the standard contract", () => {
       prose: `${withoutHeading}\nSee the ## Stop conditions section.\n`,
       fence: `${withoutHeading}\n\`\`\`md\n## Stop conditions\n\`\`\`\n`,
       comment: `${withoutHeading}\n<!--\n## Stop conditions\n-->\n`,
+      "comment closing line": `${withoutHeading}\n<!--\na note\n--> ## Stop conditions\n`,
+      "one-line comment": `${withoutHeading}\n<!-- a note --> ## Stop conditions\n`,
       subsection: `${withoutHeading}\n### Stop conditions\n`,
     };
     const root = await initProject();

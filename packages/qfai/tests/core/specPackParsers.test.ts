@@ -116,6 +116,23 @@ describe("maskNonSpecRegions", () => {
     expect(visible(text)).toEqual(["# doc", "## Scope"]);
   });
 
+  it("blanks the whole closing line of a comment block, text after the closer included", () => {
+    const text = [
+      "# doc",
+      "",
+      "<!-- a note --> ## Risks",
+      "",
+      "<!--",
+      "a longer note",
+      "--> ## Risks",
+      "",
+      "## Scope",
+    ].join("\n");
+
+    expect(visible(text)).toEqual(["# doc", "## Scope"]);
+    expect(maskNonSpecRegions(text).split("\n")).toHaveLength(9);
+  });
+
   it("blanks a raw HTML block and everything it holds", () => {
     const text = [
       "# doc",
