@@ -612,9 +612,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   merged text through the working file's name, so a working file or story
   directory that was a symbolic link had the text written wherever the link
   pointed, outside the project included. It now leaves such a document, and
-  one whose working file is not UTF-8 text, as it is and names it, and
-  replaces the file by renaming a temporary file beside it only while the
-  name still holds the file it read. Fixes #4461.
+  one whose working file is not UTF-8 text or is larger than 16 MiB, as it
+  is and names it. It sets the working file aside, checks it is still the
+  file it read, and gives the merged text the name only while nothing else
+  holds it, so a file an editor saves meanwhile is kept, not overwritten.
+  Fixes #4461.
 
 - **Document analysis reaches only the approved processing origin.**
   Graphify document extraction was given the selected or authorized endpoint,

@@ -4,7 +4,8 @@
 // QFAI:AC-0001-0238-04
 
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import type * as FsPromises from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -17,6 +18,28 @@ import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const schema = vi.hoisted(() => ({ unavailable: false }));
+/** Runs once, just before the next rename or hard link the command makes, as another program would. */
+const between = vi.hoisted(() => ({
+  next: undefined as (() => Promise<void>) | undefined,
+}));
+
+// A save by another program can only be timed between two system calls from inside them.
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const original = await importOriginal<typeof FsPromises>();
+  const interrupted =
+    <A extends unknown[], R>(call: (...args: A) => Promise<R>) =>
+    async (...args: A): Promise<R> => {
+      const save = between.next;
+      if (save !== undefined) await save();
+      return call(...args);
+    };
+  return {
+    ...original,
+    default: original,
+    rename: interrupted(original.rename),
+    link: interrupted(original.link),
+  };
+});
 
 // The shipped checker cannot be made to fail from a fixture, so one test withholds it.
 vi.mock("../../src/core/validators/documentSchema.js", async (importOriginal) => {
@@ -152,6 +175,7 @@ function read(file: string): Promise<string> {
 
 beforeEach(async () => {
   schema.unavailable = false;
+  between.next = undefined;
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-merge-docs-"));
   git("init", "-q", "-b", "main");
   git("config", "user.email", "test@example.test");
@@ -392,6 +416,68 @@ describe("qfai sdd merge-docs", () => {
         `${EXAMPLES}: left as is; the working file is not UTF-8 text`,
       );
       expect(await readFile(path.join(root, EXAMPLES))).toEqual(bytes);
+      expect(result.code).toBe(1);
+    });
+  });
+
+  // QFAI:EX-0001-0238-18
+  it("leaves a working file larger than 16 MiB as it is", async () => {
+    await sameSentence();
+    const bytes = Buffer.concat([
+      await readFile(path.join(root, EXAMPLES)),
+      Buffer.alloc(16 * 1024 * 1024, 0x0a),
+    ]);
+    await writeFile(path.join(root, EXAMPLES), bytes);
+    const result = await mergeDocs();
+    expect(result.stdout).toContain(
+      `${EXAMPLES}: left as is; the working file is not a regular file of at most 16 MiB`,
+    );
+    expect((await readFile(path.join(root, EXAMPLES))).equals(bytes)).toBe(true);
+    expect(result.code).toBe(1);
+  });
+
+  describe("an editor saving the working file while it is merged", () => {
+    const saved = examples.replace("Another row.", "Saved by hand.");
+
+    /** An editor's save: the text is written to a file of its own, then renamed over the name. */
+    async function atomicSave(): Promise<void> {
+      const draft = path.join(root, "editor-draft.md");
+      await writeFile(draft, saved, "utf8");
+      await rename(draft, path.join(root, EXAMPLES));
+    }
+
+    async function leftover(): Promise<string[]> {
+      const names = await readdir(path.dirname(path.join(root, EXAMPLES)));
+      return names.filter((name) => name.includes("merge-docs"));
+    }
+
+    // QFAI:EX-0001-0238-19
+    it("keeps a save that replaces the working file just before it is replaced", async () => {
+      await sameSentence();
+      between.next = atomicSave;
+      const result = await mergeDocs();
+      expect(result.stdout).toContain(
+        `${EXAMPLES}: left as is; the working file changed while it was merged`,
+      );
+      expect(await read(EXAMPLES)).toBe(saved);
+      expect(await leftover()).toEqual([]);
+      expect(result.code).toBe(1);
+    });
+
+    // QFAI:EX-0001-0238-19
+    it("keeps a save made after the working file is set aside", async () => {
+      await sameSentence();
+      // The first call sets the working file aside; the save lands before the second one.
+      between.next = () => {
+        between.next = () => writeFile(path.join(root, EXAMPLES), saved, "utf8");
+        return Promise.resolve();
+      };
+      const result = await mergeDocs();
+      expect(result.stdout).toContain(
+        `${EXAMPLES}: left as is; the working file changed while it was merged`,
+      );
+      expect(await read(EXAMPLES)).toBe(saved);
+      expect(await leftover()).toEqual([]);
       expect(result.code).toBe(1);
     });
   });

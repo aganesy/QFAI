@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { lstat, open, rename, rm } from "node:fs/promises";
+import { link, lstat, open, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
@@ -26,8 +26,10 @@ const REGULAR_FILE = new Set(["100644", "100755"]);
 const SCHEMA_VIOLATION = "QFAI-DOCSCHEMA-001";
 const UNSAFE_PATH =
   "its working file or a directory above it is a symbolic link, or a directory above it is not a directory";
-/** The largest working file read; a story-tree document is far smaller. */
+/** The largest working file read, held whole in memory; a story-tree document is far smaller. */
 const MAX_DOCUMENT_BYTES = 16 * 1024 * 1024;
+/** Why a document is left when its working file is saved or replaced while it is merged. */
+const CHANGED = "the working file changed while it was merged";
 /** Tries of a rename Windows refuses while another process briefly holds the file open. */
 const RENAME_TRIES = 5;
 
@@ -135,14 +137,21 @@ function utf8Text(bytes: Buffer): string | null {
 }
 
 /**
- * Replaces the working file with `text` through a temporary file beside it, renamed into place
- * only while its directories still hold no symbolic link and its name still holds the file that
- * was read. A rename keeps the check and the replacement on one directory entry, where writing
- * through the name would follow whatever had been put there since.
+ * Replaces the working file with `text` without overwriting anything but the file that was read.
+ * The working file is first renamed aside, so no later save through its name can reach it, and
+ * checked there to be the same file holding the same bytes; the merged text, written to a
+ * temporary file beside it, is then hard-linked into the name, which fails rather than overwrite
+ * a file an editor saved there meanwhile. A file that is not the one read is put back. Node has
+ * no compare-and-swap rename; these two steps stand in for one, and leave no moment at which a
+ * save through the name is overwritten.
  *
- * Ceiling: the replacement is a new file with the old file's mode, so its owner is whoever runs
- * the command and a hard link to the old file keeps the old text. A story-tree document is owned
- * by the person merging and has no other link, so neither is carried over.
+ * Ceiling: a program that already holds the working file open and writes into it after it is set
+ * aside writes into the copy that is then removed, and on a file system without hard links the
+ * temporary file is renamed into the name only after the name is found empty, so a file created
+ * there in that instant is overwritten. A story-tree document is edited by the person running the
+ * merge, so neither is expected; a file system that supports `renameat2` exchange would lift both.
+ * The replacement is a new file with the old file's mode, so its owner is whoever runs the command
+ * and a hard link to the old file keeps the old text.
  *
  * @returns `null` once the file is replaced, or why it was left as is
  */
@@ -153,10 +162,12 @@ async function replacePinned(
   text: string,
 ): Promise<string | null> {
   const target = path.join(root, ...segments);
-  const temporary = path.join(
+  const stem = path.join(
     path.dirname(target),
     `.${path.basename(target)}.merge-docs-${randomBytes(6).toString("hex")}`,
   );
+  const temporary = `${stem}.new`;
+  const aside = `${stem}.old`;
   const handle = await open(temporary, "wx", pinned.mode);
   try {
     try {
@@ -165,45 +176,91 @@ async function replacePinned(
     } finally {
       await handle.close();
     }
-    return await renameOver(temporary, target, async () => {
+    const moved = await retried(async () => {
       if ((await findUnsafeHostFileComponent(root, segments)) !== undefined) return UNSAFE_PATH;
-      const current = await lstat(target).catch(() => undefined);
-      return current?.isFile() === true && current.dev === pinned.dev && current.ino === pinned.ino
-        ? null
-        : "the working file changed while it was merged";
+      await rename(target, aside);
+      return null;
+    }).catch((failure: unknown) => {
+      if (errorCode(failure) === "ENOENT") return CHANGED;
+      throw failure;
     });
+    if (moved !== null) return moved;
+    if (!(await holdsRead(aside, pinned))) return await putBack(aside, target);
+    let placed: boolean;
+    try {
+      placed = await placeWithoutOverwrite(temporary, target);
+    } catch (failure) {
+      await putBack(aside, target);
+      throw failure;
+    }
+    await rm(aside, { force: true, maxRetries: RENAME_TRIES });
+    return placed ? null : CHANGED;
   } finally {
-    await rm(temporary, { force: true });
+    await rm(temporary, { force: true, maxRetries: RENAME_TRIES });
+  }
+}
+
+/** Whether `file` is still the file that was read, holding the bytes that were read. */
+async function holdsRead(file: string, pinned: PinnedFileRead): Promise<boolean> {
+  const now = await readPinnedRegularFileBytes(file, MAX_DOCUMENT_BYTES).catch(() => null);
+  return (
+    now !== null &&
+    now.dev === pinned.dev &&
+    now.ino === pinned.ino &&
+    now.content.equals(pinned.content)
+  );
+}
+
+/**
+ * Returns a file set aside to its name, unless a file was saved there meanwhile; then the set-aside
+ * file is kept and named.
+ *
+ * @returns why the document is left as is
+ */
+async function putBack(aside: string, target: string): Promise<string> {
+  if (!(await placeWithoutOverwrite(aside, target)))
+    return `${CHANGED}; the file its name held before is kept as ${path.basename(aside)}`;
+  await rm(aside, { force: true, maxRetries: RENAME_TRIES });
+  return CHANGED;
+}
+
+/**
+ * Gives `from` the name `to` only while nothing holds that name: a hard link, which fails when the
+ * name exists, or, where the file system has no hard links, a rename once the name is found empty.
+ *
+ * @returns `true` once `to` names the file, `false` when another file holds the name
+ */
+async function placeWithoutOverwrite(from: string, to: string): Promise<boolean> {
+  try {
+    await link(from, to);
+    return true;
+  } catch (failure) {
+    if (errorCode(failure) === "EEXIST") return false;
+    if ((await lstat(to).catch(() => undefined)) !== undefined) return false;
+    await retried(() => rename(from, to));
+    return true;
   }
 }
 
 /**
- * `rename` over an existing file, each try only while `unsafe` finds nothing. Windows refuses a
- * rename with `EPERM` or `EACCES` while an editor, an indexer or a virus scanner briefly holds the
- * file open, where writing through the name succeeded, so those two are retried a few times on
- * Windows before the failure is reported; the check runs again first, since the file may have
- * been saved meanwhile.
- *
- * @returns `null` once renamed, or what `unsafe` found
+ * Runs a rename, retrying the `EPERM` or `EACCES` Windows reports while an editor, an indexer or a
+ * virus scanner briefly holds the file open, where writing through the name succeeded.
  */
-async function renameOver(
-  from: string,
-  to: string,
-  unsafe: () => Promise<string | null>,
-): Promise<string | null> {
+async function retried<T>(step: () => Promise<T>): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
-    const reason = await unsafe();
-    if (reason !== null) return reason;
     try {
-      await rename(from, to);
-      return null;
+      return await step();
     } catch (failure) {
-      const code = failure instanceof Error && "code" in failure ? failure.code : undefined;
+      const code = errorCode(failure);
       const transient = process.platform === "win32" && (code === "EPERM" || code === "EACCES");
       if (!transient || attempt >= RENAME_TRIES) throw failure;
       await delay(50 * attempt);
     }
   }
+}
+
+function errorCode(failure: unknown): unknown {
+  return failure instanceof Error && "code" in failure ? failure.code : undefined;
 }
 
 /** The index stages of each unmerged path, from `git ls-files -u -z`. */
