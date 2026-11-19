@@ -149,8 +149,11 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // pointed at the shared `validate.json`, that summary would name a file this
   // run never wrote — either missing, or a stale repo-wide report from another
   // run — and the findings dropped by the annotation cap would be unreachable.
-  const scopedReportRel =
-    scopedFlowIds.length > 0 ? scopedReportPath(configuredValidateJsonPath, scopedFlowIds) : null;
+  const resultPaths = validationResultPaths(
+    configuredValidateJsonPath,
+    scopedFlowIds,
+    normalized.profile ?? options.profile,
+  );
 
   if (format === "text") {
     emitText(normalized, failOn);
@@ -162,36 +165,51 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     emitTextRunLog(runLogPath);
   }
   if (format === "github") {
-    const jsonPath = resolveJsonPath(
-      root,
-      scopedReportRel ?? configResult.config.output.validateJsonPath,
-    );
+    const jsonPath = resolveJsonPath(root, resultPaths?.write[0] ?? configuredValidateJsonPath);
     emitGitHubOutput(normalized, root, jsonPath, {
       failOn,
       willFail,
       runLogPath,
     });
   }
-  if (scopedFlowIds.length > 0) {
-    // Writing a scoped result to the shared `validate.json` /
-    // `validate-<profile>.json` would let parallel Slice workers
-    // race on the same files, leaving the last finisher's single flow looking
-    // like a repo-wide PASS to every downstream reader.
-    if (
-      scopedReportRel !== null &&
-      !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-005")
-    ) {
-      await emitJson(normalized, root, scopedReportRel);
+  // A scope that failed with `QFAI-FLOW-005` writes nothing, so it never
+  // replaces the file a healthy run of a similar scope would write.
+  if (resultPaths !== null && !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-005")) {
+    for (const target of resultPaths.write) {
+      await emitJson(normalized, root, target);
     }
-  } else {
-    // Always-latest report + profile-suffixed report.
-    await emitJson(normalized, root, configuredValidateJsonPath);
-    const profileLabel = normalized.profile ?? options.profile ?? "full";
-    const profileSuffixedRel = profileSuffixedReportPath(configuredValidateJsonPath, profileLabel);
-    await emitJson(normalized, root, profileSuffixedRel);
   }
 
   return willFail ? 1 : 0;
+}
+
+/**
+ * Where a validation result of one scope and profile is written, and where a
+ * reader asking for that scope and profile finds it. `validate` and `report`
+ * both resolve through here, so the two never disagree on a file name.
+ *
+ * - Repository-wide: written to the always-latest path and to its
+ *   profile-suffixed sibling; a reader that names a profile reads the
+ *   suffixed file, any other reader the always-latest one.
+ * - `--flow`: one file per flow set, whatever the profile. A scoped result
+ *   in the shared files would let parallel Slice workers race on them,
+ *   leaving the last finisher's single flow looking like a repo-wide PASS.
+ *   The profile is not in the name, so a reader checks the profile the
+ *   result records.
+ *
+ * `null` when the flow scope is not writable (see `scopedReportPath`).
+ */
+export function validationResultPaths(
+  configured: string,
+  flowIds: readonly string[],
+  profile: ValidationProfile | undefined,
+): { read: string; write: string[] } | null {
+  if (flowIds.length > 0) {
+    const scoped = scopedReportPath(configured, flowIds);
+    return scoped === null ? null : { read: scoped, write: [scoped] };
+  }
+  const suffixed = profileSuffixedReportPath(configured, profile ?? "full");
+  return { read: profile ? suffixed : configured, write: [configured, suffixed] };
 }
 
 /**

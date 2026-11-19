@@ -442,6 +442,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai report --flow --profile` reads the result `qfai validate` wrote.**
+  `qfai validate --flow` writes one `validate.flow-<ids>.json` whatever the
+  profile, while `qfai report` with both `--flow` and `--profile` read a
+  profile-suffixed file that only an earlier `report --run-validate` wrote,
+  so a report either missed a fresh result or rendered a stale one. Both
+  commands now resolve the file name through one function, `--run-validate`
+  writes only the scoped file, and a report read without `--in` that records
+  another profile than `--profile` exits 2 and names the validate run to
+  repeat. Closes #4468.
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
