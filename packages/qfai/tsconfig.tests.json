@@ -482,6 +482,7 @@
     "tests/integration/windowsParity/suitesLandFirst.test.ts",
     "tests/cli/dbDrift.test.ts",
     "tests/core/dbSchemaDrift.test.ts",
+    "tests/core/validateStartsNoDatabase.test.ts",
     "tests/integration/dbSchemaDriftEngine.test.ts",
     "tests/integration/dbDriftFailOn.test.ts",
     "tests/validators/inertGateFirstContact.test.ts",
