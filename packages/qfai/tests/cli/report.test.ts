@@ -36,14 +36,16 @@ async function writeValidation(
   root: string,
   issues: Issue[],
   file = "validate.json",
+  flowIds?: string[],
 ): Promise<void> {
   const result: ValidationResult = {
     toolVersion: "2.0.0-test",
     profile: "full",
+    ...(flowIds ? { flowIds } : {}),
     issues,
     counts: { info: 0, warning: 0, error: 0 },
   };
-  const output = path.join(root, ".qfai/report", file);
+  const output = path.isAbsolute(file) ? file : path.join(root, ".qfai/report", file);
   await mkdir(path.dirname(output), { recursive: true });
   await writeFile(output, `${JSON.stringify(result)}\n`, "utf8");
 }
@@ -85,7 +87,7 @@ describe("qfai report on a story tree", () => {
     await writeValidation(root, []);
     expect(await runReport({ root, format: "json", failOn: "never" })).toBe(0);
     expect(await contractCount("report.json")).toBe(1);
-    await writeValidation(root, [], "validate.flow-0001.json");
+    await writeValidation(root, [], "validate.flow-0001.json", ["BF-0001"]);
     expect(await runReport({ root, format: "json", failOn: "never", flowIds: ["BF-0001"] })).toBe(
       0,
     );
@@ -240,9 +242,53 @@ describe("qfai report on a story tree", () => {
     expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
       "qfai validate --flow BF-0001",
     );
-    await writeValidation(root, [], "validate.flow-0001.json");
+    await writeValidation(root, [], "validate.flow-0001.json", ["BF-0001"]);
     expect(await runReport({ root, format: "md", flowIds: ["BF-0001"] })).toBe(0);
     expect(await exists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(true);
+  });
+
+  // QFAI:EX-0001-0066-06
+  it("refuses a validation result whose recorded flow scope is not the requested one", async () => {
+    const root = await storyRoot();
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const scopedReport = path.join(root, ".qfai/report/report.flow-0001.md");
+    const elsewhere = path.join(root, "copied/validate.flow-0001.json");
+
+    for (const recorded of [["BF-0002"], undefined]) {
+      await writeValidation(root, [], "validate.flow-0001.json", recorded);
+      expect(await runReport({ root, format: "md", flowIds: ["BF-0001"] })).toBe(2);
+      await writeValidation(root, [], elsewhere, recorded);
+      expect(
+        await runReport({ root, format: "md", flowIds: ["BF-0001"], inputPath: elsewhere }),
+      ).toBe(2);
+    }
+    expect(await exists(scopedReport)).toBe(false);
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
+      "qfai validate --flow BF-0001",
+    );
+    stderr.mockClear();
+    expect(
+      await runReport({
+        root,
+        format: "md",
+        flowIds: ["BF-0001"],
+        inputPath: elsewhere,
+        profile: "full",
+      }),
+    ).toBe(2);
+    const withProfile = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
+    expect(withProfile).toContain("qfai validate --flow BF-0001 --profile full");
+    expect(withProfile).toContain("qfai report --flow BF-0001 --profile full");
+
+    await writeValidation(root, [], "validate.json", ["BF-0001"]);
+    expect(await runReport({ root, format: "md" })).toBe(2);
+    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+
+    await writeValidation(root, [], elsewhere, ["BF-0001"]);
+    expect(
+      await runReport({ root, format: "md", flowIds: ["BF-0001"], inputPath: elsewhere }),
+    ).toBe(0);
+    expect(await exists(scopedReport)).toBe(true);
   });
 
   // QFAI:EX-0001-0062-02
