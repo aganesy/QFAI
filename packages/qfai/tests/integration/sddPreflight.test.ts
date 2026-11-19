@@ -438,7 +438,7 @@ describe("runSddPreflight", () => {
         );
 
         await expect(runSddPreflight(root, defaultConfig)).rejects.toThrow(
-          /\.qfai\/report is a symbolic link or not a directory/,
+          /\.qfai\/report is a symbolic link or junction/,
         );
         expect(await readdir(outside)).toEqual([]);
       });
@@ -457,10 +457,41 @@ describe("runSddPreflight", () => {
         );
 
         await expect(runSddPreflight(root, defaultConfig)).rejects.toThrow(
-          /\.qfai\/report\/preflight is a symbolic link or not a directory/,
+          /\.qfai\/report\/preflight is a symbolic link or junction/,
         );
         expect(await readdir(outside)).toEqual([]);
       });
+    });
+  });
+
+  // QFAI:EX-0001-0151-04
+  it("writes nothing when an output directory outside the project is itself a link", async () => {
+    await withRoot(async (root) => {
+      await withRoot(async (elsewhere) => {
+        await withRoot(async (target) => {
+          const outDir = path.join(elsewhere, "report");
+          await symlink(target, outDir, process.platform === "win32" ? "junction" : "dir");
+          const config = { ...defaultConfig, paths: { ...defaultConfig.paths, outDir } };
+
+          await expect(runSddPreflight(root, config)).rejects.toThrow(
+            /report is a symbolic link or junction/,
+          );
+          expect(await readdir(target)).toEqual([]);
+        });
+      });
+    });
+  });
+
+  // QFAI:EX-0001-0151-04
+  it("says the directory cannot be created when the run directory is a file", async () => {
+    await withRoot(async (root) => {
+      const reportRoot = path.join(root, ".qfai", "report");
+      await mkdir(reportRoot, { recursive: true });
+      await writeFile(path.join(reportRoot, "preflight"), "not a directory\n", "utf-8");
+
+      await expect(runSddPreflight(root, defaultConfig)).rejects.toThrow(
+        /\.qfai\/report\/preflight is not a directory, so the preflight output directory cannot be created/,
+      );
     });
   });
 

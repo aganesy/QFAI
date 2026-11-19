@@ -570,7 +570,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   directory, or a directory under it, that was a link to somewhere else carried
   the preflight summary there, and a `preflight_summary.md` that was a link was
   written through. Preflight now stops and names the linked directory without
-  writing, and it writes each summary to a new file that replaces the old one,
+  writing, also when `paths.outDir` lies outside the project and is itself a
+  link, and says so separately when a path it needs is a file. It writes each summary to a new file that replaces the old one,
   so a linked summary file is replaced instead of followed.
 
 - **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
