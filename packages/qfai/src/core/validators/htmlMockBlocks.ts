@@ -135,12 +135,7 @@ function extractInlineHtml(section: string): string {
     if (!trimmed) {
       return false;
     }
-    return (
-      trimmed.startsWith("<") ||
-      trimmed.startsWith("</") ||
-      trimmed.startsWith("<!--") ||
-      trimmed.startsWith("/*")
-    );
+    return trimmed.startsWith("<") || trimmed.startsWith("/*");
   });
   return htmlLines.join("\n");
 }
