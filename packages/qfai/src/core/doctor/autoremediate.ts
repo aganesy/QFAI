@@ -21,15 +21,22 @@
  *
  * The `npm install` call is routed through a pluggable runner so tests
  * can substitute a no-op stub. The default runner is loaded lazily and
- * skipped entirely under `dryRun`.
+ * skipped entirely under `dryRun`. It starts npm without a shell on every
+ * platform, so a manifest entry is one argument and never shell text; the
+ * probe has already refused any entry that is not a registry package name.
  */
 
 import path from "node:path";
 import type { ReadLineOptions } from "node:readline";
 
 import { loadConfig } from "../config.js";
+import { npmCommand } from "../graph/process.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "./cleanRunLogs.js";
-import { probeSkillManifest, type SkillManifestProbeResult } from "./skillManifestProbe.js";
+import {
+  probeSkillManifest,
+  quoteManifestNames,
+  type SkillManifestProbeResult,
+} from "./skillManifestProbe.js";
 
 export type InstallRunner = (name: string, cwd: string) => Promise<void>;
 
@@ -72,13 +79,30 @@ export type AutoremediateSummary = {
   readonly failedRunLogPrunes: readonly string[];
 };
 
+export type NpmInstallInvocation = {
+  readonly command: string;
+  readonly args: readonly string[];
+};
+
+/**
+ * The program and arguments the default runner starts for `npm install <name>`.
+ * On Windows npm is a `.cmd` launcher that only a shell can start, so the
+ * runner starts npm's JavaScript entry with Node instead.
+ */
+export async function npmInstallInvocation(name: string): Promise<NpmInstallInvocation> {
+  const npm = await npmCommand();
+  return { command: npm.command, args: [...npm.prefix, "install", name] };
+}
+
 async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
   const { spawn } = await import("node:child_process");
+  const invocation = await npmInstallInvocation(name);
   await new Promise<void>((resolve, reject) => {
-    const child = spawn("npm", ["install", name], {
+    const child = spawn(invocation.command, [...invocation.args], {
       cwd,
       stdio: "ignore",
-      shell: process.platform === "win32",
+      shell: false,
+      windowsHide: true,
     });
     child.once("error", reject);
     child.once("close", (code) => {
@@ -180,6 +204,9 @@ function describeUnprobedManifest(probe: SkillManifestProbeResult): string {
   }
   if (probe.manifest === "unreadable") {
     return "present but unreadable";
+  }
+  if (probe.manifest === "invalid") {
+    return `lists entries that are not registry package names (${quoteManifestNames(probe.invalidNames)})`;
   }
   return probe.skillsRootExists ? "not found" : "not found (skills root missing; run qfai init)";
 }

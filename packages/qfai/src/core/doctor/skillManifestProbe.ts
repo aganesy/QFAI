@@ -54,8 +54,12 @@ export type SkillManifestProbeFinding = {
  *   config gap.
  * - `unparseable` — manifest exists but is not JSON, is not an object,
  *   or declares a non-array `runtimeDependencies`.
+ * - `invalid` — `runtimeDependencies` lists an entry that is not a
+ *   registry package name ({@link isRegistryPackageName}). None of the
+ *   entries is probed or installed, since the name would reach a
+ *   filesystem path and the `npm install` argument list.
  */
-export type SkillManifestState = "found" | "absent" | "unreadable" | "unparseable";
+export type SkillManifestState = "found" | "absent" | "unreadable" | "unparseable" | "invalid";
 
 export type SkillManifestProbeResult = {
   readonly manifest: SkillManifestState;
@@ -80,8 +84,29 @@ export type SkillManifestProbeResult = {
    * whether the requested `--profile` value is correct.
    */
   readonly skillsRootExists: boolean;
+  /** The `runtimeDependencies` entries that are not registry package names; empty unless `invalid`. */
+  readonly invalidNames: readonly string[];
   readonly findings: readonly SkillManifestProbeFinding[];
 };
+
+/**
+ * A registry package name, optionally scoped: lowercase letters, digits
+ * and `-._~`, starting with a letter or digit, at most 214 characters.
+ * The npm rule also lets a name start with `-` or `~`; refusing that
+ * keeps every accepted name from reading as an npm option, and the first
+ * character also keeps `.` and `..` out of the `node_modules` path.
+ */
+const REGISTRY_PACKAGE_NAME = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/u;
+const REGISTRY_PACKAGE_NAME_MAX_LENGTH = 214;
+
+export function isRegistryPackageName(name: string): boolean {
+  return name.length <= REGISTRY_PACKAGE_NAME_MAX_LENGTH && REGISTRY_PACKAGE_NAME.test(name);
+}
+
+/** JSON quoting keeps a control character in a rejected manifest entry from reaching the terminal raw. */
+export function quoteManifestNames(names: readonly string[]): string {
+  return names.map((name) => JSON.stringify(name)).join(", ");
+}
 
 export type SkillManifestProbeOptions = {
   /**
@@ -193,6 +218,7 @@ type ManifestRead =
   | { readonly state: "absent" }
   | { readonly state: "unreadable" }
   | { readonly state: "unparseable" }
+  | { readonly state: "invalid"; readonly invalidNames: readonly string[] }
   | { readonly state: "found"; readonly deps: readonly string[] };
 
 function extractRuntimeDeps(parsed: unknown): ManifestRead {
@@ -215,7 +241,8 @@ function extractRuntimeDeps(parsed: unknown): ManifestRead {
       deps.push(item.trim());
     }
   }
-  return { state: "found", deps };
+  const invalidNames = deps.filter((name) => !isRegistryPackageName(name));
+  return invalidNames.length > 0 ? { state: "invalid", invalidNames } : { state: "found", deps };
 }
 
 /**
@@ -281,7 +308,13 @@ export async function probeSkillManifest(
     ? "directory"
     : await probeDirectory(skillsRootPath);
   const skillsRootExists = skillsRoot === "directory";
-  const location = { manifestPath, skillDirExists, skillsRootPath, skillsRootExists };
+  const location = {
+    manifestPath,
+    skillDirExists,
+    skillsRootPath,
+    skillsRootExists,
+    invalidNames: [],
+  };
   if (skillDir === "unusable" || skillsRoot === "unusable") {
     // One of the two directories is occupied by something that is not
     // a directory (a stray regular file named after the skill, a
@@ -294,6 +327,9 @@ export async function probeSkillManifest(
     return { manifest: "unreadable", ...location, findings: [] };
   }
   const read = await readManifest(manifestPath);
+  if (read.state === "invalid") {
+    return { manifest: "invalid", ...location, invalidNames: read.invalidNames, findings: [] };
+  }
   if (read.state !== "found") {
     return { manifest: read.state, ...location, findings: [] };
   }
