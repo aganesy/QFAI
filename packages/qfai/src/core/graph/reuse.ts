@@ -257,12 +257,13 @@ export async function safeCompletedCorpus(
       withFileTypes: true,
     })) {
       const next = relative ? `${relative}/${entry.name}` : entry.name;
-      const input = next.startsWith(`${engineDirectory}/`)
-        ? next.slice(engineDirectory.length + 1)
-        : next;
+      const engineOwned = next.startsWith(`${engineDirectory}/`);
+      const input = engineOwned ? next.slice(engineDirectory.length + 1) : next;
+      // Only the engine's own storage can hold a live run marker; a project's
+      // Cargo.lock or yarn.lock is an ordinary input.
       if (
         (next !== engineDirectory && excludedGraphInput(input, deliberationDir)) ||
-        /\.(?:pid|lock)$/i.test(entry.name)
+        (engineOwned && /\.(?:pid|lock)$/i.test(entry.name))
       )
         return false;
       const stats = await lstat(path.join(directory, ...next.split("/")));
