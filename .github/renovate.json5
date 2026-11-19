@@ -62,9 +62,6 @@
   // STATED rather than left to its default, because it is the one knob that would quietly undo
   // the whole block: `true` merges a branch whose checks failed.
   ignoreTests: false,
-  // Deliberately unconstrained, and NOT copied from `schedule` above. That one holds branch
-  // creation to Monday morning; a merge happens when CI goes green, which is a different moment,
-  // and pinning the two together would hold a finished pull request until the next window.
   automergeSchedule: ["at any time"],
   //
   // ⚠ Load-bearing repository SETTING, which no file here can assert: branch protection on the
