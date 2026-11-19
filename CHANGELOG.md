@@ -484,6 +484,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
 
+- **The package self-governance checks report an input they cannot read.**
+  `QFAI-MANIFEST-001` and `QFAI-HANDOFF-001` skipped a source file that was
+  present but could not be read, such as one behind a permission error or a
+  directory in its place, and the run passed as if that pair were in sync.
+  Each now reports such a file at severity error, naming it and saying the
+  check is incomplete. A file that is absent is still skipped, so a project
+  without the qfai package source is unaffected.
+
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
   took the opening `---` as the diagram's declaration and skipped the
