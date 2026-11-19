@@ -1,5 +1,10 @@
 import { sinceInstant } from "../../core/sessionReview/locate.js";
 import { STORY_TREE_ID_KINDS, type StoryTreeIdKind } from "../../core/storyTree/ids.js";
+import {
+  isValidationProfile,
+  VALIDATION_PROFILE_CHOICES,
+  type ValidationProfile,
+} from "../../core/validationProfiles.js";
 
 const NEXT_ID_USAGE = "qfai sdd next-id <kind> [<parent-ID>] --base <local-ref>";
 /** Decision and question rows take the UTC time they are written as their ID, never a counted number. */
@@ -61,16 +66,7 @@ export type ParsedArgs = {
     doctorFormat: "text" | "json";
     doctorOut?: string;
     validateFormat: "text" | "github";
-    profile?:
-      | "discussion"
-      | "sdd"
-      | "prototyping"
-      | "atdd"
-      | "tdd"
-      | "verify"
-      | "full"
-      | "saas-package"
-      | "drift";
+    profile?: ValidationProfile;
     /**
      * `qfai doctor --profile <skill>` per-skill profile. Distinct from
      * the validate-side `profile` enum above: when `doctor --profile`
@@ -510,13 +506,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (isValidationProfile(next)) {
           options.profile = next;
         } else {
-          markInvalid(
-            badValue(
-              "--profile",
-              next,
-              "discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift",
-            ),
-          );
+          markInvalid(badValue("--profile", next, VALIDATION_PROFILE_CHOICES));
         }
         break;
       }
@@ -1032,29 +1022,4 @@ function isSkillProfileName(value: string): boolean {
   // Skill names are non-empty, lower-kebab-case-ish identifiers. Keep
   // the gate permissive so future skills don't need a parser update.
   return /^[a-z][a-z0-9-]*$/u.test(value);
-}
-
-function isValidationProfile(
-  value: string,
-): value is
-  | "discussion"
-  | "sdd"
-  | "prototyping"
-  | "atdd"
-  | "tdd"
-  | "verify"
-  | "full"
-  | "saas-package"
-  | "drift" {
-  return (
-    value === "discussion" ||
-    value === "sdd" ||
-    value === "prototyping" ||
-    value === "atdd" ||
-    value === "tdd" ||
-    value === "verify" ||
-    value === "full" ||
-    value === "saas-package" ||
-    value === "drift"
-  );
 }

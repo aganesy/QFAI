@@ -18,6 +18,7 @@ import { resolveFlowScope } from "../../core/flowScope.js";
 import { readStoryTreeModel } from "../../core/storyTree/tree.js";
 import { isStoryTreeProject } from "../../core/storyTree/layout.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
+import { isValidationProfile } from "../../core/validationProfiles.js";
 import { countIssues, validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { error, info, warn } from "../../core/logger.js";
@@ -474,18 +475,6 @@ function issueShapeProblem(issue: unknown): string | null {
   return null;
 }
 
-const VALIDATION_PROFILES: readonly unknown[] = [
-  "discussion",
-  "sdd",
-  "prototyping",
-  "atdd",
-  "tdd",
-  "verify",
-  "full",
-  "saas-package",
-  "drift",
-];
-
 /**
  * The first field of an `--in` validate result the report cannot read, as a
  * path and the type it must have, or `null` when the whole result is readable.
@@ -496,7 +485,7 @@ function validationResultShapeProblem(value: unknown): string | null {
   }
   if (typeof Reflect.get(value, "toolVersion") !== "string") return "toolVersion must be a string";
   const profile: unknown = Reflect.get(value, "profile");
-  if (profile !== undefined && !VALIDATION_PROFILES.includes(profile)) {
+  if (profile !== undefined && !isValidationProfile(profile)) {
     return "profile must name a validation profile";
   }
   const recordedFlows: unknown = Reflect.get(value, "flowIds");
