@@ -80,7 +80,7 @@ export const step12: MigrationStep = {
     const refusals = await allPlanRefusals(context.root);
     return {
       operations: [],
-      filesScanned: [scan.scanned],
+      filesScanned: scan.scanned,
       forAPerson: [
         ...refusals.map(refusalItem),
         ...(await modeItems(context)),
