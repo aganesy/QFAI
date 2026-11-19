@@ -59,10 +59,15 @@ export function collectHtmlMockBlocks(content: string): HtmlMockBlock[] {
 
   const pushSection = (opener: string, bodyStart: number): void => {
     const remainder = content.slice(bodyStart);
-    const nextHeadingOffset = remainder.search(NEXT_HEADING_RE);
+    // A section ends at the next heading or the next mock comment, so each comment-led mock stays
+    // its own block rather than being taken by the section that opened before it.
+    const boundaries = [
+      remainder.search(NEXT_HEADING_RE),
+      remainder.search(SCREEN_MOCK_COMMENT_RE),
+    ].filter((offset) => offset !== -1);
     const range = {
       start: bodyStart,
-      end: nextHeadingOffset === -1 ? content.length : bodyStart + nextHeadingOffset,
+      end: boundaries.length === 0 ? content.length : bodyStart + Math.min(...boundaries),
     };
     const section = unclaimedText(content, range, claimed);
     pushBlock(extractInlineHtml(section), `${opener}\n${section}`, range);

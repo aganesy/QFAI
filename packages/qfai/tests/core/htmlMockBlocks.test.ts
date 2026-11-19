@@ -68,6 +68,24 @@ describe("each HTML mock block is collected once", () => {
     expect(blocks).toHaveLength(1);
   });
 
+  it("keeps each mock comment under one heading as its own block", () => {
+    const content = [
+      "## Screens",
+      "<!-- Screen Mock: A -->",
+      '<div data-state="default"></div>',
+      "<!-- Screen Mock: B -->",
+      '<div data-state="error"></div>',
+      "",
+    ].join("\n");
+
+    const blocks = collectHtmlMockBlocks(content);
+
+    expect(blocks.map((block) => block.html)).toEqual([
+      '<div data-state="default"></div>',
+      '<div data-state="error"></div>',
+    ]);
+  });
+
   it("keeps two separate fences with identical HTML as two blocks", () => {
     const fence = ["```html", "<p>Same</p>", "```", ""];
     const content = ["## First", "", ...fence, "## Second", "", ...fence].join("\n");
