@@ -404,6 +404,7 @@
     "tests/scripts/checkTrackedReadmes.test.ts",
     "tests/scripts/assistantTreeLinks.test.ts",
     "tests/scripts/checkTrackedSymlinks.test.ts",
+    "tests/scripts/scanPathAnnotations.test.ts",
     "tests/scripts/checkShippedCiParity.test.ts",
     "tests/scripts/changelogReleasedSections.test.ts",
     "tests/scripts/changelogEntries.test.ts",

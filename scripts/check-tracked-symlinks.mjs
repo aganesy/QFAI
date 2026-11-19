@@ -45,6 +45,8 @@
 /* global console, process */
 import { execFileSync } from "node:child_process";
 
+import { escapeCommandMessage, escapeCommandProperty } from "./lib/workflow-command.mjs";
+
 const SYMLINK_MODE = "120000";
 
 const SHIPPED_RULES = "packages/qfai/assets/init/root/.agents/rules";
@@ -131,10 +133,13 @@ function main() {
   }
 
   for (const copy of copies) {
+    // The path comes from the index, so it is escaped as the field it lands in.
+    const message =
+      `${copy.path} is staged with mode ${String(copy.mode)}, not ${SYMLINK_MODE}, ` +
+      `and it must be a link because ${copy.why}. A copy is byte-identical to its target, so it ` +
+      `passes every check that reads content and stops matching the moment the target changes.`;
     console.error(
-      `::error file=${copy.path}::${copy.path} is staged with mode ${String(copy.mode)}, not ${SYMLINK_MODE}, ` +
-        `and it must be a link because ${copy.why}. A copy is byte-identical to its target, so it ` +
-        `passes every check that reads content and stops matching the moment the target changes.`,
+      `::error file=${escapeCommandProperty(copy.path)}::${escapeCommandMessage(message)}`,
     );
   }
   console.error(
