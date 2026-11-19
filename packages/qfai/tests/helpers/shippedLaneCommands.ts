@@ -1250,7 +1250,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-docs.yml", "bf3fe4f9816f8b3d4b5fe5173afd0decf0dd2ce4cf9fe6d0e30026dc0b7ed021"],
-  ["qfai-tests.yml", "23936510c76f82647e4d48cce2a116bf44185f5ba90fac3ca9b91a560a969572"],
+  ["qfai-tests.yml", "d1d5ed3e34853884d6df58220b7cbde658e0fe74ae0cebdf6ce94c52b9389fb8"],
   ["qfai-validate.yml", "d6a3d5d691f777509066a9be2c844f51dff4b242d2ae40cbb29f5fb1739ecb3b"],
 ]);
 
@@ -2138,7 +2138,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Probe layer-named test scripts","id":"scripts","shell":"bash","run":"<body 40969a6773f60778f7f7afd9fe900c45d937866e252f9805123a750f8e77e4d6>"}',
+    '{"name":"Probe layer-named test scripts","id":"scripts","shell":"bash","run":"<body bbbde165253f76a6c6f8de4c1d2f132de8a8c3661ad90f60220655efdebaa36d>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -2300,8 +2300,8 @@ export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = n
  */
 export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
   // `qfai-tests.yml#detection` — reads `scripts` out of `package.json`, and stops with a non-zero
-  // exit on a manifest it cannot read. 1195 characters.
-  "4dae4c428c97a11a595323becce1dbb63bbb8c06b3a96e253837cf9873dc00af",
+  // exit on a manifest it cannot read or a layer script that is blank. 1293 characters.
+  "ae31b06c7a29ea80485e9c40d2d056824c8051a7ada523b7eb07506d1c79cea7",
   // `qfai-tests.yml#detection` — intersects the selected lanes with the declared scripts, which is
   // the matrix axis the lane runs on, and stops with a non-zero exit on an input that is not a list
   // of layers. Reads two environment variables, writes one line. 897 characters.
