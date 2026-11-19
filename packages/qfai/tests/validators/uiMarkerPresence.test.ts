@@ -151,6 +151,74 @@ describe("a marker the contract declares and no source carries", () => {
     expect(byMarker("SCR-ORDER:submit")).toContain("required: true");
   });
 
+  it("reads required from an element that refers to itself through an anchor", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "loop: &loop [ *loop ]",
+        "elements:",
+        "  - &submit",
+        "    id: submit",
+        "    required: true",
+        "    selector: \"[data-qfai='SCR-ORDER:submit']\"",
+        "    self: *submit",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const issues = await validateUiMarkerPresence(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("required: true");
+  });
+
+  it("reads required from an element whose id is a number", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "elements:",
+        "  - id: 123",
+        "    required: true",
+        "    selector: \"[data-qfai='SCR-ORDER:123']\"",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const [finding] = await validateUiMarkerPresence(root, defaultConfig);
+
+    expect(finding?.message).toContain("required: true");
+  });
+
+  it("reads required from every document of a multi-document contract", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "---",
+        "elements:",
+        "  - id: submit",
+        "    required: true",
+        "    selector: \"[data-qfai='SCR-ORDER:submit']\"",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const [finding] = await validateUiMarkerPresence(root, defaultConfig);
+
+    expect(finding?.message).toContain("required: true");
+  });
+
   it("still reports the marker of a contract that does not parse", async () => {
     const root = await newRoot();
     await write(
