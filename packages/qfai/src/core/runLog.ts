@@ -8,6 +8,7 @@ import {
   rename,
   rm,
   stat,
+  utimes,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
@@ -370,10 +371,18 @@ export function recordedRunStart(
  * Exported because every writer of a "latest run" pointer needs the same rule
  * and the same reasoning about the race — `allocateRunDir` creates the
  * directory at the START of a run, so a newer concurrent run is visible here
- * before it finishes. `readStartedAtMs` reads the start time a directory
- * records; a directory that records none yet, as one still in flight, counts
- * from its modification time, which for a directory nothing was written into is
- * the time it was created.
+ * before it finishes. `readStartedAtMs` reads the start time a directory's
+ * files record. A directory that records none yet, as one still in flight,
+ * counts from its modification time, which `allocateRunDir` sets to the run's
+ * start, so an in-flight run and a finished one are compared by the same
+ * instant. Directories are read in descending id order and the first newer one
+ * ends the scan, which in the usual case reads one directory.
+ *
+ * Ceiling: between `mkdir` and that `utimes`, and between the moment a run
+ * creates its first file and the moment the file is complete, a reader sees
+ * the time of that write rather than the run's start. Two runs inside those
+ * windows at once can each take the other as newer and both leave the pointer
+ * as it was. Serialising pointer updates closes the window.
  */
 export async function hasNewerRunDir(
   runRoot: string,
@@ -389,13 +398,16 @@ export async function hasNewerRunDir(
     // evidence.
     return false;
   }
-  for (const entry of entries) {
-    if (!entry.isDirectory() || !RUN_DIR_RE.test(entry.name) || entry.name === run.runId) {
-      continue;
-    }
-    const runDir = path.join(runRoot, entry.name);
+  const names = entries
+    .filter(
+      (entry) => entry.isDirectory() && RUN_DIR_RE.test(entry.name) && entry.name !== run.runId,
+    )
+    .map((entry) => entry.name)
+    .sort((a, b) => b.localeCompare(a));
+  for (const name of names) {
+    const runDir = path.join(runRoot, name);
     const startedAtMs = (await readStartedAtMs(runDir)) ?? (await modifiedAtMs(runDir));
-    if (startedAtMs !== null && startedAfter({ runId: entry.name, startedAtMs }, run)) {
+    if (startedAtMs !== null && startedAfter({ runId: name, startedAtMs }, run)) {
       return true;
     }
   }
@@ -623,6 +635,13 @@ export async function allocateRunDir(
     const runDir = path.join(parentDir, runId);
     try {
       await mkdir(runDir);
+      // Until the run records its start in a file, `hasNewerRunDir` reads the
+      // directory's modification time, so make that the start, not `mkdir`'s.
+      await utimes(runDir, startedAt, startedAt).catch(() => {
+        // A file system that refuses it leaves the `mkdir` time, so the order
+        // can be off until the run records its start. The run itself must not
+        // fail over that.
+      });
       return { runId, runDir };
     } catch (error) {
       if (isAlreadyExistsError(error)) {

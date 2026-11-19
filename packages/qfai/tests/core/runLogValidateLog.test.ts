@@ -9,14 +9,24 @@
  *     same root finish out of order.
  */
 
-import { link, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  link,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  symlink,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
-import { writeValidateRunLog } from "../../src/core/runLog.js";
+import { allocateRunDir, writeValidateRunLog } from "../../src/core/runLog.js";
 import type { ValidationResult } from "../../src/core/types.js";
 
 const tempDirs: string[] = [];
@@ -158,8 +168,10 @@ describe("validate.log freshness under out-of-order completion", () => {
     // An older run finishing inside that window must not claim the pointer.
     const root = await newTempDir();
     const outDir = path.join(root, defaultConfig.paths.outDir);
-    const newerRunId = expectedRunId(new Date("2026-05-05T10:00:05.000Z"));
+    const newerStart = new Date("2026-05-05T10:00:05.000Z");
+    const newerRunId = expectedRunId(newerStart);
     await mkdir(path.join(outDir, newerRunId), { recursive: true });
+    await utimes(path.join(outDir, newerRunId), newerStart, newerStart);
 
     const olderRun = await writeValidateRunLog({
       root,
@@ -170,6 +182,58 @@ describe("validate.log freshness under out-of-order completion", () => {
 
     expect(olderRun.runId < newerRunId).toBe(true);
     await expect(readValidateLog(root, defaultConfig.paths.outDir)).rejects.toThrow();
+  });
+
+  it("takes the pointer from an in-flight run that started earlier", async () => {
+    const root = await newTempDir();
+    const outDir = path.join(root, defaultConfig.paths.outDir);
+    const earlierStart = new Date("2026-05-05T10:00:00.000Z");
+    const earlierRunId = expectedRunId(earlierStart);
+    await mkdir(path.join(outDir, earlierRunId), { recursive: true });
+    await utimes(path.join(outDir, earlierRunId), earlierStart, earlierStart);
+
+    const laterRun = await writeValidateRunLog({
+      root,
+      config: defaultConfig,
+      result: cleanResult(),
+      startedAt: new Date("2026-05-05T10:00:05.000Z"),
+    });
+
+    expect(await readValidateLog(root, defaultConfig.paths.outDir)).toContain(
+      `- run_id: ${laterRun.runId}`,
+    );
+  });
+
+  it("lets the later of two overlapping runs take the pointer whichever finishes first", async () => {
+    // Each run's directory exists before its start is recorded in it. Judged by
+    // the time the directory was made, each run could take the other as newer
+    // and neither would write the pointer.
+    for (const laterFinishesFirst of [true, false]) {
+      const root = await newTempDir();
+      const outDir = path.join(root, defaultConfig.paths.outDir);
+      await mkdir(outDir, { recursive: true });
+      const earlierStart = new Date("2026-05-05T10:00:00.000Z");
+      const laterStart = new Date("2026-05-05T10:00:10.000Z");
+      const inFlightStart = laterFinishesFirst ? earlierStart : laterStart;
+      const finishingStart = laterFinishesFirst ? laterStart : earlierStart;
+      const inFlight = await allocateRunDir(outDir, inFlightStart);
+
+      const finishing = await writeValidateRunLog({
+        root,
+        config: defaultConfig,
+        result: cleanResult(),
+        startedAt: finishingStart,
+      });
+
+      if (laterFinishesFirst) {
+        expect(await readValidateLog(root, defaultConfig.paths.outDir)).toContain(
+          `- run_id: ${finishing.runId}`,
+        );
+      } else {
+        await expect(readValidateLog(root, defaultConfig.paths.outDir)).rejects.toThrow();
+        expect(inFlight.runId > finishing.runId).toBe(true);
+      }
+    }
   });
 
   // A daylight-saving fall-back repeats an hour of local time, so a run that

@@ -16,6 +16,7 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
+import { allocateRunDir } from "../../src/core/runLog.js";
 import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 
 const RECORD_NAME = "20261112093000-task-dashboard.md";
@@ -469,6 +470,32 @@ describe("runSddPreflight", () => {
       expect(earlier.runId > laterRunId).toBe(true);
       expect(await readFile(earlier.latestPreflightSummaryPath, "utf-8")).toBe(laterSummary);
     });
+  });
+
+  it("lets the later of two overlapping runs take the pointer whichever finishes first", async () => {
+    // Each run's directory exists from its start, and its summary only from
+    // its end. Judged by the time the directory was made, each run could take
+    // the other as newer and neither would write the pointer.
+    for (const laterFinishesFirst of [true, false]) {
+      await withRoot(async (root) => {
+        const runRoot = path.join(root, ".qfai", "report", "preflight");
+        await mkdir(runRoot, { recursive: true });
+        const earlierStart = new Date("2026-02-16T01:00:00.000Z");
+        const laterStart = new Date("2026-02-16T02:00:00.000Z");
+        await allocateRunDir(runRoot, laterFinishesFirst ? earlierStart : laterStart);
+
+        const finishing = await runSddPreflight(root, defaultConfig, {
+          startedAt: laterFinishesFirst ? laterStart : earlierStart,
+        });
+
+        if (laterFinishesFirst) {
+          const latest = await readFile(finishing.latestPreflightSummaryPath, "utf-8");
+          expect(latest).toContain(`- run id: ${finishing.runId}`);
+        } else {
+          await expect(readFile(finishing.latestPreflightSummaryPath, "utf-8")).rejects.toThrow();
+        }
+      });
+    }
   });
 
   it("keeps preflight runs out of the validate run-log namespace", async () => {
