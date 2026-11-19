@@ -18,4 +18,11 @@ Feature: Idempotent initialization
     Then the run writes the new file and keeps the differing one, as before
     And one line gives the number of new files written under `.qfai/assistant/` and the number of kept files that differ, names the kept `SKILL.md` and `STEP.md` files as the owners that may not list or cite the new file, and says `qfai init --force` rewrites all the kept files
     And a run with `--force`, a run that writes no new assistant file and a run that keeps no differing file print no such line
+
+  # AC-0001-0021-03
+  Scenario: A `.qfai` that is a link or not a directory stops init before it writes anything
+    Given a project whose `.qfai`, or a directory on the way to a story-tree seed, is a symbolic link or not a directory
+    When `qfai init` runs, with or without `--force`
+    Then the run stops with a message naming that path
+    And no project file and no file the link points to is written or changed
 ```

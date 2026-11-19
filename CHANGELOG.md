@@ -540,6 +540,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
 
+- **`qfai init` no longer writes through a linked `.qfai`.** The asset copies
+  checked the directories below `.qfai` but not `.qfai` itself, so a `.qfai`
+  that was a symbolic link had every assistant file written wherever it
+  pointed. A story-tree seed path under a link was refused only after the root
+  assets and `AGENTS.md` had already been written. Init now checks `.qfai` and
+  the seed paths before it writes anything, and stops with the path named when
+  `.qfai` is a link or not a directory, leaving every project file as it was.
+  Closes #4471.
+
 - **`qfai doctor --autoremediate` exits 1 when an install fails.** A failed
   `npm install` for a skill's runtime dependency was printed, but doctor still
   exited 0 when the diagnosis passed, so a script read an incomplete

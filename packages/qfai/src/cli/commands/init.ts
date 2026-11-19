@@ -85,7 +85,6 @@ import {
   findUnsafeHostFileComponent,
   findUnreachableHostDirComponent,
   findUnsafeWrapperComponent,
-  firstLinkedComponent,
   readTextFileIfPresent,
   safeLstat,
 } from "../../core/init/fsGuards.js";
@@ -175,6 +174,44 @@ async function legacySpecLayoutPath(root: string): Promise<string | undefined> {
   return (await exists(legacyContracts)) ? legacyContracts : undefined;
 }
 
+/**
+ * Refuses, before anything is written or read through it, a `.qfai` that is a symbolic link or
+ * not a directory.
+ *
+ * The asset copies guard the entries below the directory they copy into, not that directory
+ * itself, so a linked `.qfai` had every assistant file written wherever it points.
+ */
+async function refuseUnsafeQfaiDirectory(root: string): Promise<void> {
+  const qfaiDir = await findUnsafeWrapperComponent(root, ".qfai");
+  if (qfaiDir !== undefined) {
+    throw new Error(
+      `qfai init refused to write .qfai: it is ${qfaiDir.symlink ? "a symbolic link" : "not a directory"}. Nothing was written. Replace it with a directory inside the project and re-run.`,
+    );
+  }
+}
+
+/**
+ * Refuses, before anything is written, a story-tree seed destination below a symbolic link or
+ * an entry that is not a directory. Found only when the seeds were reached, the refusal came
+ * after the root assets and the entry points had been written.
+ */
+async function refuseUnsafeStorySeedDestination(root: string): Promise<void> {
+  const seedTargets = [
+    ...STORY_SEED_PATHS.map((relative) => relative.split("/")),
+    ...CONTRACT_KIND_DIRS.map((kind) => ["03_contract", kind]),
+  ];
+  for (const target of seedTargets) {
+    const unsafe = await findUnsafeHostFileComponent(root, [".qfai", "spec", ...target]);
+    if (unsafe !== undefined) {
+      throw new Error(
+        unsafe.symlink
+          ? `qfai init refused to seed the story tree through a symlink: ${formatReportPath(unsafe.relativePath)}. Nothing was written.`
+          : `qfai init refused to seed the story tree: ${formatReportPath(unsafe.relativePath)} is not a directory. Nothing was written.`,
+      );
+    }
+  }
+}
+
 async function seedStoryTree(root: string, assetsRoot: string, dryRun: boolean) {
   const source = path.join(assetsRoot, "assistant", "skill", "qfai-sdd", "templates", "spec");
   const destination = path.join(root, ".qfai", "spec");
@@ -182,18 +219,6 @@ async function seedStoryTree(root: string, assetsRoot: string, dryRun: boolean) 
     const sourceFile = path.join(source, relative);
     if (!(await stat(sourceFile)).isFile()) {
       throw new Error(`Story-tree seed is not a file: ${sourceFile}`);
-    }
-  }
-  const seedTargets = [
-    ...STORY_SEED_PATHS.map((relative) => path.join(destination, relative)),
-    ...CONTRACT_KIND_DIRS.map((kind) => path.join(destination, "03_contract", kind)),
-  ];
-  for (const target of seedTargets) {
-    const linked = await firstLinkedComponent(target, root);
-    if (linked !== null) {
-      throw new Error(
-        `qfai init refused to seed the story tree through a symlink: ${formatReportPath(linked)}`,
-      );
     }
   }
   const copied = await copyTemplatePaths(source, destination, [...STORY_SEED_PATHS], {
@@ -298,7 +323,10 @@ export async function runInit(
   info(`qfai init: dest=${formatReportPath(destRoot)}`);
 
   await refuseWritingThroughToOwnAssets(destRoot, assistantAssets);
+  // Every destination check comes before the first write, so a refused run changes no file.
+  await refuseUnsafeQfaiDirectory(destRoot);
   const oldSpecLayout = await legacySpecLayoutPath(destRoot);
+  if (oldSpecLayout === undefined) await refuseUnsafeStorySeedDestination(destRoot);
 
   if (options.force) {
     info(
