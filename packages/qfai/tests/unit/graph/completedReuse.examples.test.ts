@@ -111,7 +111,10 @@ it("restores a compatible document snapshot when no processing configuration is 
     expect(await prepare()).toMatchObject({ status: "not-ready" });
     await expect(lstat(fixture.documentAnalysis)).rejects.toMatchObject({ code: "ENOENT" });
 
-    await writeFile(configuration, JSON.stringify({ ...fixture.processing, scope: ["rationale.md"] }));
+    await writeFile(
+      configuration,
+      JSON.stringify({ ...fixture.processing, scope: ["rationale.md"] }),
+    );
     fixture.calls.length = 0;
     expect(await prepare()).toMatchObject({ status: "prepared", source: "generated" });
     expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(true);
