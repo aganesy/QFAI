@@ -1261,7 +1261,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-055":
     "Every `type: list` or `type: table` element of an application screen in a UI contract carries `list`: its columns, search, filters, sort and pagination, or `none` with the reason it has no list behaviour, so the list is built searchable, sortable and paged where it needs to be. A `surface: marketing` screen is asked nothing.",
   "QFAI-CONTRACT-056":
-    "Every `pattern` a UI contract screen declares is the ID of a screen type in the shipped business UI pattern reference (`list`, `detail`, `form`, `settings`, `members` or `dashboard`), so the screen is built and reviewed against a type that exists. A screen that declares no pattern is asked nothing.",
+    "Every `pattern` a UI contract screen declares is the ID of a screen type in the shipped business UI pattern reference (`list`, `detail`, `form`, `settings`, `members` or `dashboard`), so the screen is built and reviewed against a type that exists, and a `surface: marketing` screen declares none. A screen that declares no pattern is asked nothing.",
   "QFAI-UITEXT-001":
     "Every plain text in the current prototype pages and the `uiux.surfacePaths` source is exempt (a heading, label, button, link, alert, a short data value that is not a sentence, or the like) or has a `qfai-text` comment with `why` and `without` directly before it, or directly before or first inside an element that holds it, or a `qfai-text-file` comment in its file gives it one.",
   "QFAI-UITEXT-002":

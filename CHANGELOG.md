@@ -245,6 +245,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   for its file in `.qfai/waivers.yml`, with its reason, evidence and expiry
   date.
 
+- **The implementer and the screen reviewer take a screen's type from its
+  `pattern`.** `implement-tdd` and the `product-surface-reviewer` card read an
+  application screen's business type from the `pattern` its UI contract
+  declares, and choose the type from the screen only when the contract writes
+  none, so both read the same entry of `business-ui-patterns.md`. A `pattern`
+  on a `surface: marketing` screen is now reported as `QFAI-CONTRACT-056` at
+  error: a marketing screen takes none, and its sections are read against the
+  marketing patterns.
+
 - The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
 
 - **A scope that stops before implementation can reach its own commit.** In
@@ -443,7 +452,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   from `.claude/settings.json` and `.codex/hooks.json`, and delete
   `.github/hooks/qfai-graph.json`, `.qfai/tools/graph-hook.mjs`,
   `.qfai/tools/graph-enforcement.json` and the `*.pending.json`, `*.draft.json`
-  and `*.grant.json` files under `.qfai/tools/state/`.
+  and `*.grant.json` files under `.qfai/tools/state/`. Closes #4056.
 
 - **The run log's `traceability.json` no longer carries `stats`.** Its
   `downstream_violations` and `shared_scope_violations` counted finding codes
@@ -641,6 +650,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   writes only the scoped file, and a report read without `--in` that records
   another profile than `--profile` exits 2 and names the validate run to
   repeat. Closes #4468.
+
+- **The migration's step 12 scan no longer reads files outside the project.**
+  A tracked file whose directory in the working tree was a link to elsewhere
+  was read through that link, so the scan could report lines from a file the
+  project does not hold. The scan now resolves each file's directory against
+  the project root, with every link followed, and leaves out a file whose
+  directory lands outside it. A project reached through a linked root is still
+  scanned in full. Closes #4458.
 
 - **`qfai validate` no longer waits forever on the document-schema check.**
   An mdschema run that never exited held `validate` open, and one that printed

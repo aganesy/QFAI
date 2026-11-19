@@ -33,4 +33,11 @@ Feature: Write the standard parts of a business screen into its UI contract
     When the step names the type of an application screen in its UI contract
     Then it writes `pattern: <id>` with the ID the reference gives that type
     And a screen that fits no type, and a marketing screen, leave `pattern` out
+
+  # AC-0001-0305-06
+  Scenario: The implementation and the screen review read a screen's type from its pattern
+    Given the shipped `implement-tdd` step and `product-surface-reviewer` card
+    When either reads an application screen against its business type
+    Then it takes the type from the `pattern` the screen's UI contract declares
+    And it chooses the type from the screen only when the contract writes no `pattern`
 ```

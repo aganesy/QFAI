@@ -1,8 +1,9 @@
 import { execFileSync, spawn } from "node:child_process";
-import { lstat } from "node:fs/promises";
+import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
+import { isInside } from "../../core/validators/utils.js";
 import { isRecord } from "../../core/workflow/parse.js";
 import { scanBoundedRegularFile } from "../../shared/boundedRead.js";
 import { MigrationInputError, type MigrationContext } from "./harness.js";
@@ -169,15 +170,46 @@ function isExcluded(entry: TrackedEntry, prefixes: readonly string[]): boolean {
 type FileRead =
   { kind: "text"; text: string } | { kind: "skip" } | { kind: "unchecked"; why: string };
 
-/** Reads a regular file of the working tree a block at a time, and stops at its first NUL byte. */
-async function readableText(root: string, file: string): Promise<FileRead> {
-  const target = path.join(root, file);
+function isAbsentPath(error: unknown): boolean {
+  return isEnoent(error) || (hasErrnoCode(error) && error.code === "ENOTDIR");
+}
+
+/**
+ * Where `file` is in the working tree once its directory is resolved, or
+ * `null` when that directory is absent or resolves outside `boundary`, the
+ * canonical project root: a directory link to elsewhere does not carry the
+ * scan out of the project.
+ */
+async function insidePath(boundary: string, file: string): Promise<string | null> {
+  const target = path.join(boundary, file);
+  let parent: string;
+  try {
+    parent = await realpath(path.dirname(target));
+  } catch (error) {
+    if (isAbsentPath(error)) return null;
+    throw error;
+  }
+  return isInside(boundary, parent) ? path.join(parent, path.basename(target)) : null;
+}
+
+/**
+ * Reads a regular file of the working tree inside `boundary` a block at a
+ * time, and stops at its first NUL byte. The read checks the file it opened,
+ * so what was inspected is what is read.
+ *
+ * Shortcut: the directory is resolved by name before the open and once more
+ * after the read, not pinned to a descriptor. A directory swapped for a link
+ * outside the project for exactly the length of the read, and swapped back
+ * before the second check, is not noticed: Node.js has no descriptor-relative
+ * open (`openat` with `RESOLVE_BENEATH`). The window lifts when Node.js offers one.
+ */
+async function readableText(boundary: string, file: string): Promise<FileRead> {
+  const target = await insidePath(boundary, file);
+  if (target === null) return { kind: "skip" };
   try {
     if (!(await lstat(target)).isFile()) return { kind: "skip" };
   } catch (error) {
-    if (isEnoent(error) || (hasErrnoCode(error) && error.code === "ENOTDIR")) {
-      return { kind: "skip" };
-    }
+    if (isAbsentPath(error)) return { kind: "skip" };
     throw error;
   }
   const blocks: Buffer[] = [];
@@ -186,6 +218,8 @@ async function readableText(root: string, file: string): Promise<FileRead> {
     blocks.push(Buffer.from(block));
     return "continue";
   });
+  // A directory that now resolves elsewhere may have led the read out of the project.
+  if ((await insidePath(boundary, file)) !== target) return { kind: "skip" };
   switch (outcome) {
     case "stopped":
       return { kind: "skip" };
@@ -236,12 +270,14 @@ export async function scanOldPaths(context: MigrationContext): Promise<OldPathSc
     ...directoryPrefix(context.root, context.specsDir),
     ...directoryPrefix(context.root, context.contractsDir),
   ];
+  // Every read stays under the canonical root, so a project reached through a link still holds its own files.
+  const boundary = await realpath(context.root);
   const items: string[] = [];
   const unchecked: string[] = [];
   let checked = 0;
   for await (const entry of trackedEntries(context.root)) {
     if (isExcluded(entry, prefixes)) continue;
-    const read = await readableText(context.root, entry.file);
+    const read = await readableText(boundary, entry.file);
     if (read.kind === "skip") continue;
     if (read.kind === "unchecked") {
       unchecked.push(`not checked for 1.x paths, ${read.why}: ${reportableName(entry.file)}`);

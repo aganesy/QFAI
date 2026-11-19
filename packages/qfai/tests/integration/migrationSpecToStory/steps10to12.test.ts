@@ -1416,6 +1416,23 @@ describe("migration step 12: project files that still name a 1.x path", () => {
   });
 
   // QFAI:AC-0004-0042-02
+  // QFAI:EX-0004-0042-16
+  it("leaves out a tracked file whose directory resolves outside the project", async () => {
+    const root = await indexedProject(migrated11, {
+      "docs/outside/notes.md": "placeholder\n",
+      "README.md": "# Project\n",
+    });
+    const outside = await scratch("qfai-step12-outside-");
+    await writeFile(path.join(outside, "notes.md"), "Read .qfai/specs\n");
+    await rm(path.join(root, "docs/outside"), { recursive: true });
+    await symlink(outside, path.join(root, "docs/outside"), "junction");
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(0);
+    expect(section(result.output, "For a person")).toEqual([]);
+    expect(section(result.output, "Files scanned")).toEqual(scanned(1));
+  });
+
+  // QFAI:AC-0004-0042-02
   // QFAI:EX-0004-0042-14
   it("leaves out the configured spec and contract directories", async () => {
     const configured = await clone(migrated11);
