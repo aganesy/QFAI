@@ -488,7 +488,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   default branch head. The job now reads the tag from the API just before it
   creates the Release and stops unless the tag's commit, the verified commit
   and the push event's commit are the same, and `gh release create` runs with
-  `--verify-tag`, so it never creates a tag. Closes #4504.
+  `--verify-tag`, so it never creates a tag. It reads the tag once more after
+  the create, and deletes the Release again and fails when the tag moved or
+  was deleted in between. Closes #4504.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the

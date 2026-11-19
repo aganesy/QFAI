@@ -809,49 +809,74 @@ jobs:
       # three commits must be one: the commit the tag points at now, the commit `verify` checked
       # and every gate ran on, and the commit this push event carried. `github.sha` on a tag push
       # is the tag's commit, not the tag object: the v2.5.0 run's head sha is the commit its annotated
-      # tag dereferences to. The create step below then refuses to create a tag at all.
+      # tag dereferences to. `--verify-tag` makes a missing tag an error, so `gh release create`
+      # never creates a tag itself.
+      #
+      # GitHub offers no call that creates a Release only if a tag still names a given commit, so
+      # the tag can still move between the check and the create. The tag is therefore read once
+      # more after the create, and a Release whose tag no longer names the verified commit is
+      # deleted again (the tag itself is left alone) and the job fails. Check, create and re-check
+      # are one step so that no other step can run between them.
       #
       # SHIPPED-CI: not-applicable
       # Because: the shipped templates have no release or registry publication jobs.
-      - name: Confirm the tag still points at the verified commit
+      - name: Create the release for the verified tag commit
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.verify.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
           VERIFIED_SHA: ${{ needs.verify.outputs.sha }}
           EVENT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           refuse() { echo "::error::$1"; exit 1; }
-          [ -n "$VERIFIED_SHA" ] || refuse "verify produced no commit for ${RELEASE_TAG}, so there is nothing to bind the Release to"
-          # One call per hop, type and sha read from the same answer, so the two cannot come
-          # from different states of the tag.
-          if ! answer="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq '.object.type + " " + .object.sha')"; then
-            refuse "refs/tags/${RELEASE_TAG} could not be read, so whether it still names the verified commit ${VERIFIED_SHA} is unknown; no Release was created"
-          fi
-          read -r object_type object_sha <<< "$answer"
-          # An annotated tag's ref names the tag OBJECT; its commit is one hop further. A tag of
-          # a tag adds hops, so a few are followed and anything deeper is refused, not guessed at.
-          hops=0
-          while [ "$object_type" = "tag" ] && [ "$hops" -lt 4 ]; do
-            if ! answer="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${object_sha}" --jq '.object.type + " " + .object.sha')"; then
-              refuse "tag object ${object_sha} of ${RELEASE_TAG} could not be read; no Release was created"
+          # Sets TAG_COMMIT to the commit refs/tags/$RELEASE_TAG names now. On failure it sets
+          # REASON and returns 1, so the caller decides whether a Release has to be rolled back.
+          read_tag_commit() {
+            local answer object_type object_sha hops=0
+            TAG_COMMIT=""
+            # One call per hop, type and sha read from the same answer, so the two cannot come
+            # from different states of the tag.
+            if ! answer="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq '.object.type + " " + .object.sha')"; then
+              REASON="refs/tags/${RELEASE_TAG} could not be read"
+              return 1
             fi
             read -r object_type object_sha <<< "$answer"
-            hops=$((hops + 1))
-          done
-          [ "$object_type" = "commit" ] || refuse "${RELEASE_TAG} does not resolve to a commit (last object: ${object_type} ${object_sha}); no Release was created"
-          [ "$object_sha" = "$VERIFIED_SHA" ] || refuse "${RELEASE_TAG} now points at ${object_sha}, not at ${VERIFIED_SHA}, the commit verify checked and the gates ran on; no Release was created"
+            # An annotated tag's ref names the tag OBJECT; its commit is one hop further. A tag of
+            # a tag adds hops, so a few are followed and anything deeper is refused, not guessed at.
+            while [ "$object_type" = "tag" ] && [ "$hops" -lt 4 ]; do
+              if ! answer="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${object_sha}" --jq '.object.type + " " + .object.sha')"; then
+                REASON="tag object ${object_sha} of ${RELEASE_TAG} could not be read"
+                return 1
+              fi
+              read -r object_type object_sha <<< "$answer"
+              hops=$((hops + 1))
+            done
+            if [ "$object_type" != "commit" ]; then
+              REASON="${RELEASE_TAG} does not resolve to a commit (last object: ${object_type} ${object_sha})"
+              return 1
+            fi
+            TAG_COMMIT="$object_sha"
+          }
+
+          [ -n "$VERIFIED_SHA" ] || refuse "verify produced no commit for ${RELEASE_TAG}, so there is nothing to bind the Release to"
           [ "$EVENT_SHA" = "$VERIFIED_SHA" ] || refuse "this run was started for ${EVENT_SHA}, but ${RELEASE_TAG} was verified at ${VERIFIED_SHA}; no Release was created"
-          echo "release: ${RELEASE_TAG} points at the verified commit ${VERIFIED_SHA}"
-        shell: bash
-      # `--verify-tag` makes a missing tag an error. Without it `gh release create` creates the
-      # tag itself, at the default branch head, and the Release would name a commit no gate ran on.
-      - name: Create the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.verify.outputs.tag }}
-          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
-        run: gh release create "$RELEASE_TAG" --verify-tag --title "qfai $RELEASE_VERSION" --notes-file tmp/release-notes.md
+          read_tag_commit || refuse "${REASON}, so whether it still names the verified commit ${VERIFIED_SHA} is unknown; no Release was created"
+          [ "$TAG_COMMIT" = "$VERIFIED_SHA" ] || refuse "${RELEASE_TAG} now points at ${TAG_COMMIT}, not at ${VERIFIED_SHA}, the commit verify checked and the gates ran on; no Release was created"
+
+          gh release create "$RELEASE_TAG" --verify-tag --title "qfai $RELEASE_VERSION" --notes-file tmp/release-notes.md
+
+          if read_tag_commit; then
+            if [ "$TAG_COMMIT" = "$VERIFIED_SHA" ]; then
+              echo "release: ${RELEASE_TAG} points at the verified commit ${VERIFIED_SHA}"
+              exit 0
+            fi
+            REASON="${RELEASE_TAG} moved to ${TAG_COMMIT}"
+          fi
+          if gh release delete "$RELEASE_TAG" --yes; then
+            refuse "${REASON} while its Release was being created, so the Release no longer names the verified commit ${VERIFIED_SHA}; the Release was deleted again and the tag left as it is"
+          fi
+          refuse "${REASON} while its Release was being created, and deleting that Release failed: delete the ${RELEASE_TAG} Release by hand, because it does not name the verified commit ${VERIFIED_SHA}"
         shell: bash
 
   # ── 4. npm publish, on either trigger, behind an approval ────────

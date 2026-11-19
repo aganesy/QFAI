@@ -2335,16 +2335,20 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
   // `verify` resolves the tag, and the gates run on that commit for minutes afterwards. A tag
   // moved or deleted in that window used to reach `gh release create` unchecked: it names a tag,
   // not a commit, so the Release described a commit no gate ran on — and for a deleted tag it
-  // created a new one at the default branch head.
+  // created a new one at the default branch head. The tag can still move between the check and
+  // the create, so the step reads it again afterwards and deletes a Release it no longer matches.
   //
-  // EXECUTED, not grepped: the step body runs under bash with `gh` replaced by a shell function
-  // that answers from the table each row supplies. A function takes precedence over any `gh` on
-  // PATH, so no real API is reached.
+  // EXECUTED, not grepped: the step body runs under bash with `gh` replaced by a shell function.
+  // `gh api` answers from the table a row supplies, one table before `gh release create` and one
+  // after it; `gh release` subcommands only print what they were asked. A function takes
+  // precedence over any `gh` on PATH, so no real API is reached.
 
-  const BIND_STEP = "Confirm the tag still points at the verified commit";
+  const CREATE_STEP = "Create the release for the verified tag commit";
   const VERIFIED = "a".repeat(40);
   const OTHER = "b".repeat(40);
   const TAG_OBJECT = "c".repeat(40);
+  const CREATED = "fake-gh: release create";
+  const DELETED = "fake-gh: release delete";
 
   const releaseSteps = (): Array<Record<string, unknown>> => {
     const doc = parseYaml(
@@ -2355,40 +2359,57 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
     return found;
   };
 
-  /** Runs the binding step against a faked API; `answers` maps an API path to its reply. */
-  const bind = (
-    answers: Record<string, string>,
-    eventSha: string,
-  ): { status: number | null; output: string } => {
-    const step = releaseSteps().find((candidate) => candidate["name"] === BIND_STEP);
+  const apiCases = (answers: Record<string, string>): string[] => [
+    '    case "$2" in',
+    ...Object.entries(answers).map(([route, reply]) => `      ${route}) echo '${reply}' ;;`),
+    '      *) echo "gh: Not Found (HTTP 404)" >&2; return 1 ;;',
+    "    esac",
+  ];
+
+  /** Runs the create step against a faked API; each table maps an API path to its reply. */
+  const create = (run: {
+    before: Record<string, string>;
+    after?: Record<string, string>;
+    eventSha?: string;
+    deleteFails?: boolean;
+  }): { status: number | null; output: string } => {
+    const step = releaseSteps().find((candidate) => candidate["name"] === CREATE_STEP);
     const body = step?.["run"];
-    expect(body, `the github-release job has no "${BIND_STEP}" step with a body`).toBeTypeOf(
+    expect(body, `the github-release job has no "${CREATE_STEP}" step with a body`).toBeTypeOf(
       "string",
     );
     const fake = [
       "gh() {",
-      '  case "$2" in',
-      ...Object.entries(answers).map(([route, reply]) => `    ${route}) echo '${reply}' ;;`),
-      '    *) echo "gh: Not Found (HTTP 404)" >&2; return 1 ;;',
-      "  esac",
+      '  if [ "$1" = "release" ]; then',
+      '    echo "fake-gh: release $2"',
+      '    if [ "$2" = "create" ]; then FAKE_CREATED=1; fi',
+      `    if [ "$2" = "delete" ]; then return ${run.deleteFails === true ? 1 : 0}; fi`,
+      "    return 0",
+      "  fi",
+      '  if [ -n "${FAKE_CREATED:-}" ]; then',
+      ...apiCases(run.after ?? run.before),
+      "  else",
+      ...apiCases(run.before),
+      "  fi",
       "}",
     ].join("\n");
     const dir = mkdtempSync(path.join(tmpdir(), "qfai-release-bind-"));
     try {
-      const script = path.join(dir, "bind.sh");
+      const script = path.join(dir, "create.sh");
       writeFileSync(script, `${fake}\n${typeof body === "string" ? body : ""}`, "utf-8");
-      const run = spawnSync("bash", [script], {
+      const result = spawnSync("bash", [script], {
         env: {
           ...process.env,
           GITHUB_REPOSITORY: "owner/repo",
           RELEASE_TAG: "v1.2.3",
+          RELEASE_VERSION: "1.2.3",
           VERIFIED_SHA: VERIFIED,
-          EVENT_SHA: eventSha,
+          EVENT_SHA: run.eventSha ?? VERIFIED,
         },
         encoding: "utf-8",
       });
-      if (run.error !== undefined) throw run.error;
-      return { status: run.status, output: `${run.stdout}${run.stderr}` };
+      if (result.error !== undefined) throw result.error;
+      return { status: result.status, output: `${result.stdout}${result.stderr}` };
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -2396,51 +2417,81 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
 
   const REF = "repos/owner/repo/git/ref/tags/v1.2.3";
   const OBJECT = `repos/owner/repo/git/tags/${TAG_OBJECT}`;
+  const ANNOTATED = { [REF]: `tag ${TAG_OBJECT}`, [OBJECT]: `commit ${VERIFIED}` };
 
-  it("accepts an annotated or a lightweight tag that still names the verified commit", () => {
-    const annotated = bind(
-      { [REF]: `tag ${TAG_OBJECT}`, [OBJECT]: `commit ${VERIFIED}` },
-      VERIFIED,
-    );
-    expect(annotated.status, annotated.output).toBe(0);
-    const lightweight = bind({ [REF]: `commit ${VERIFIED}` }, VERIFIED);
-    expect(lightweight.status, lightweight.output).toBe(0);
+  it("creates the Release for an annotated or a lightweight tag that still names the verified commit", () => {
+    for (const before of [ANNOTATED, { [REF]: `commit ${VERIFIED}` }]) {
+      const created = create({ before });
+      expect(created.status, created.output).toBe(0);
+      expect(created.output).toContain(CREATED);
+      expect(created.output).not.toContain(DELETED);
+    }
   });
 
-  it("refuses a tag that moved after verify, naming both commits", () => {
-    const moved = bind({ [REF]: `tag ${TAG_OBJECT}`, [OBJECT]: `commit ${OTHER}` }, VERIFIED);
+  it("refuses a tag that moved after verify, naming both commits, and creates nothing", () => {
+    const moved = create({ before: { [REF]: `tag ${TAG_OBJECT}`, [OBJECT]: `commit ${OTHER}` } });
     expect(moved.status, "a moved tag must stop the Release").not.toBe(0);
     expect(moved.output).toContain(OTHER);
     expect(moved.output).toContain(VERIFIED);
+    expect(moved.output).not.toContain(CREATED);
   });
 
-  it("refuses an event whose commit is not the verified one", () => {
-    const drifted = bind({ [REF]: `commit ${VERIFIED}` }, OTHER);
+  it("refuses an event whose commit is not the verified one, and creates nothing", () => {
+    const drifted = create({ before: { [REF]: `commit ${VERIFIED}` }, eventSha: OTHER });
     expect(drifted.status, "the event's commit must be the verified commit").not.toBe(0);
     expect(drifted.output).toContain(OTHER);
+    expect(drifted.output).not.toContain(CREATED);
   });
 
-  it("refuses a tag that no longer exists", () => {
-    const missing = bind({}, VERIFIED);
+  it("refuses a tag that no longer exists, and creates nothing", () => {
+    const missing = create({ before: {} });
     expect(missing.status, "an unreadable tag must stop the Release").not.toBe(0);
     expect(missing.output).toContain("could not be read");
+    expect(missing.output).not.toContain(CREATED);
   });
 
-  it("checks the tag before creating the Release, which refuses to create a missing tag", () => {
+  it("deletes the Release again when the tag moved while it was being created", () => {
+    const raced = create({ before: ANNOTATED, after: { [REF]: `commit ${OTHER}` } });
+    expect(raced.status, "a tag moved during the create must fail the job").not.toBe(0);
+    expect(raced.output).toContain(CREATED);
+    expect(raced.output).toContain(DELETED);
+    expect(raced.output).toContain(OTHER);
+    expect(raced.output).toContain("deleted again");
+  });
+
+  it("deletes the Release again when the tag was deleted while it was being created", () => {
+    const raced = create({ before: ANNOTATED, after: {} });
+    expect(raced.status, "a tag deleted during the create must fail the job").not.toBe(0);
+    expect(raced.output).toContain(DELETED);
+    expect(raced.output).toContain("could not be read");
+  });
+
+  it("asks for the Release to be deleted by hand when deleting it fails", () => {
+    const stuck = create({
+      before: ANNOTATED,
+      after: { [REF]: `commit ${OTHER}` },
+      deleteFails: true,
+    });
+    expect(stuck.status, "a Release that could not be deleted must fail the job").not.toBe(0);
+    expect(stuck.output).toContain("by hand");
+  });
+
+  it("creates the Release once, in that step, refusing to create a missing tag", () => {
     const steps = releaseSteps();
-    const bindAt = steps.findIndex((step) => step["name"] === BIND_STEP);
     // The invocation, not the text: the notes step's comments name the command too.
-    const creates = steps.flatMap((step, index) =>
-      /^\s*gh release create\b/m.test(String(step["run"] ?? "")) ? [index] : [],
+    const creates = steps.filter((step) =>
+      /^\s*gh release create\b/m.test(String(step["run"] ?? "")),
     );
     expect(creates, "the github-release job must create the Release exactly once").toHaveLength(1);
-    const [createAt = -1] = creates;
-    expect(bindAt, "the binding check must run before the Release is created").toBeGreaterThan(-1);
-    expect(bindAt).toBeLessThan(createAt);
+    expect(creates[0]?.["name"], "the Release must be created by the checking step").toBe(
+      CREATE_STEP,
+    );
+    const body = String(creates[0]?.["run"] ?? "");
     expect(
-      String(steps[createAt]?.["run"] ?? ""),
+      body,
       "without --verify-tag, gh creates a missing tag at the default branch head",
-    ).toMatch(/--verify-tag\b/);
+    ).toMatch(/gh release create\b[^\n]*--verify-tag\b/);
+    expect(body, "a rollback deletes the Release, never the tag").not.toMatch(/--cleanup-tag\b/);
   });
 });
 
