@@ -22,7 +22,13 @@
 import type * as Jsdom from "jsdom";
 import type { JSDOM as JsdomInstance } from "jsdom";
 
-import { collectVarUsages, type HtmlMockParseResult } from "./htmlMockParser.js";
+import { collectCssUrlReferences } from "./cssUrlReferences.js";
+import {
+  collectVarUsages,
+  parseRefreshUrl,
+  parseSrcsetUrls,
+  type HtmlMockParseResult,
+} from "./htmlMockParser.js";
 
 type JsdomModule = typeof Jsdom;
 
@@ -45,6 +51,20 @@ export async function loadJsdom(): Promise<JsdomModule> {
 }
 
 const EVENT_HANDLER_RE = /\s(on[a-z]+)\s*=/gi;
+
+/** Anchored, with no nested quantifier, so it runs in time linear in the value it reads. */
+const PIXEL_LENGTH_RE = /^(\d+(?:\.\d+)?)px$/;
+
+/**
+ * The pixel length a parsed declaration value states, or `null` for anything else.
+ *
+ * The value arrives lower-cased with `!important` kept apart from it, so only a plain
+ * `<number>px` is left to match; a percentage, a `calc()` or a keyword has no fixed size.
+ */
+function readPixelLength(value: string | undefined): number | null {
+  const match = value === undefined ? null : PIXEL_LENGTH_RE.exec(value);
+  return match?.[1] === undefined ? null : Number.parseFloat(match[1]);
+}
 
 export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> {
   const result: HtmlMockParseResult = {
@@ -75,42 +95,11 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
   const doc = dom.window.document;
   const allElements = doc.querySelectorAll("*");
 
-  // URL references (strictly from href/src/action attributes)
-  for (const el of allElements) {
-    for (const attr of ["href", "src", "action"] as const) {
-      const rawUrl = el.getAttribute(attr)?.trim();
-      if (!rawUrl) continue;
-
-      if (/^(https?:)?\/\//i.test(rawUrl)) {
-        result.externalUrls.push(rawUrl);
-        continue;
-      }
-
-      if (
-        /^javascript:/i.test(rawUrl) ||
-        (/^data:/i.test(rawUrl) &&
-          !/^data:image\/(png|jpe?g|gif|webp|avif|bmp|ico|tiff?)[;,]/i.test(rawUrl))
-      ) {
-        result.unsafeUrls.push(rawUrl);
-        continue;
-      }
-
-      if (/^data:image\/(png|jpe?g|gif|webp|avif|bmp|ico|tiff?)[;,]/i.test(rawUrl)) {
-        continue;
-      }
-
-      if (/^(#|mailto:|tel:)/i.test(rawUrl)) {
-        continue;
-      }
-
-      if (/^[a-z][a-z0-9+.-]*:/i.test(rawUrl)) {
-        result.externalUrls.push(rawUrl);
-        continue;
-      }
-
-      result.localRefs.push(rawUrl);
-    }
+  const srcdocBudget: SrcdocBudget = { remaining: MAX_SRCDOC_DOCUMENTS, unread: new Set() };
+  for (const rawUrl of collectResourceReferences(dom, JSDOM, 0, srcdocBudget)) {
+    classifyReference(rawUrl, result);
   }
+  result.parseErrors.push(...srcdocBudget.unread);
 
   // Inline event handlers
   for (const match of html.matchAll(EVENT_HANDLER_RE)) {
@@ -121,6 +110,8 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
 
   // Script tags
   result.scriptTags = doc.querySelectorAll("script").length;
+
+  const dimensionProbe = doc.createElement("div");
 
   // Var usages from inline styles
   for (const el of allElements) {
@@ -135,14 +126,20 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
       });
     }
 
-    // Inline dimensions
-    const widthMatch = /width\s*:\s*(\d+(?:\.\d+)?)\s*px/i.exec(style);
-    const heightMatch = /height\s*:\s*(\d+(?:\.\d+)?)\s*px/i.exec(style);
-    if (widthMatch || heightMatch) {
+    // Inline dimensions, read from parsed declarations so that `min-width` or `border-width` is
+    // never taken for `width`. jsdom drops a declaration whose property name is not lower-case,
+    // while CSS property names are case-insensitive, so the attribute is lower-cased and parsed
+    // on one detached element. Only the pixel values of `width` and `height` are read from it,
+    // and lower-casing cannot change those. The detached element also gives every element,
+    // MathML included, the same reading.
+    dimensionProbe.style.cssText = style.toLowerCase();
+    const width = readPixelLength(dimensionProbe.style.getPropertyValue("width"));
+    const height = readPixelLength(dimensionProbe.style.getPropertyValue("height"));
+    if (width !== null || height !== null) {
       result.inlineDimensions.push({
         element: el.tagName.toLowerCase(),
-        width: widthMatch && widthMatch[1] ? parseFloat(widthMatch[1]) : null,
-        height: heightMatch && heightMatch[1] ? parseFloat(heightMatch[1]) : null,
+        width,
+        height,
         interactive: isInteractiveElement(el),
       });
     }
@@ -187,6 +184,193 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
 
   dom.window.close();
   return result;
+}
+
+/** Attributes whose whole value is one URL a browser loads or navigates to. */
+const URL_ATTRIBUTES = [
+  "href",
+  "xlink:href",
+  "src",
+  "action",
+  "formaction",
+  "poster",
+  "background",
+  "manifest",
+] as const;
+
+/** Attributes holding a list of image candidates. */
+const SRCSET_ATTRIBUTES = ["srcset", "imagesrcset"] as const;
+
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+/** SVG presentation attributes that take a CSS `url()`. */
+const CSS_URL_ATTRIBUTES = [
+  "fill",
+  "stroke",
+  "filter",
+  "mask",
+  "clip-path",
+  "marker-start",
+  "marker-mid",
+  "marker-end",
+  "cursor",
+] as const;
+
+/**
+ * How many `srcdoc` documents deep the reference walk follows.
+ *
+ * Shortcut: a mock nesting frames deeper than this has its deepest `srcdoc`
+ * left unread. Each level escapes the one inside it again, so a real mock stops
+ * at one or two; raise the ceiling if a mock is ever found going further.
+ */
+const MAX_SRCDOC_DEPTH = 8;
+
+/**
+ * How many non-empty `srcdoc` documents one mock has read.
+ *
+ * Shortcut: each one costs a DOM of its own, a few milliseconds, so a mock with
+ * thousands of frames would hold the run for minutes. The frames past this count
+ * are left unread. A screen mock holds a handful at most; raise the ceiling if a
+ * real one is found holding more.
+ */
+const MAX_SRCDOC_DOCUMENTS = 50;
+
+/**
+ * What is left of the `srcdoc` documents one mock may read, and why any went unread.
+ *
+ * A frame past either ceiling is reported rather than passed over, so a mock
+ * cannot hide a reference behind the limits.
+ */
+type SrcdocBudget = { remaining: number; unread: Set<string> };
+
+const SRCDOC_TOO_DEEP = `iframe srcdoc nested deeper than ${MAX_SRCDOC_DEPTH} levels was not read`;
+const SRCDOC_TOO_MANY = `iframe srcdoc documents past the first ${MAX_SRCDOC_DOCUMENTS} were not read`;
+
+/**
+ * Every element of a tree, including the content of each `template`, in document order.
+ *
+ * An explicit stack of iterators, not recursion: templates nest without limit,
+ * and one generator frame per level overflows the call stack.
+ */
+function* elementsOf(root: ParentNode, window: JsdomInstance["window"]): Generator<Element> {
+  const pending: Iterator<Element>[] = [root.querySelectorAll("*")[Symbol.iterator]()];
+  while (pending.length > 0) {
+    const step = pending[pending.length - 1]?.next();
+    if (!step || step.done === true) {
+      pending.pop();
+      continue;
+    }
+    const el = step.value;
+    yield el;
+    if (el instanceof window.HTMLTemplateElement) {
+      pending.push(el.content.querySelectorAll("*")[Symbol.iterator]());
+    }
+  }
+}
+
+/**
+ * Every resource reference a parsed mock holds, raw and in document order.
+ *
+ * Read from each URL attribute, `ping`, `srcset` and `imagesrcset`, the `data` of
+ * an `<object>`, the target of a `<meta http-equiv="refresh">`, the CSS of each
+ * `style` attribute, `<style>` element and SVG presentation attribute, and the
+ * document each `<iframe srcdoc>` holds. `data-*` and other attributes that name
+ * no resource are not read.
+ */
+function collectResourceReferences(
+  dom: JsdomInstance,
+  JSDOM: JsdomModule["JSDOM"],
+  depth: number,
+  srcdocBudget: SrcdocBudget,
+): string[] {
+  const refs: string[] = [];
+  // One push per value: spreading a list of unbounded length into `push` can exceed the stack.
+  const add = (values: readonly string[]): void => {
+    for (const value of values) refs.push(value);
+  };
+  for (const el of elementsOf(dom.window.document, dom.window)) {
+    const tag = el.tagName.toLowerCase();
+
+    for (const attr of URL_ATTRIBUTES) {
+      const value = el.getAttribute(attr);
+      if (value !== null) refs.push(value);
+    }
+    if (tag === "object") {
+      const data = el.getAttribute("data");
+      if (data !== null) refs.push(data);
+    }
+    const ping = el.getAttribute("ping");
+    if (ping !== null) add(ping.split(/[\t\n\f\r ]+/));
+    for (const attr of SRCSET_ATTRIBUTES) {
+      const value = el.getAttribute(attr);
+      if (value !== null) add(parseSrcsetUrls(value));
+    }
+    if (tag === "meta" && el.getAttribute("http-equiv")?.trim().toLowerCase() === "refresh") {
+      const target = parseRefreshUrl(el.getAttribute("content") ?? "");
+      if (target !== null) refs.push(target);
+    }
+
+    add(collectCssUrlReferences(el.getAttribute("style")));
+    if (el.namespaceURI === SVG_NAMESPACE) {
+      for (const attr of CSS_URL_ATTRIBUTES) {
+        add(collectCssUrlReferences(el.getAttribute(attr)));
+      }
+    }
+    if (tag === "style") {
+      add(collectCssUrlReferences(el.textContent));
+    }
+
+    const srcdoc = tag === "iframe" ? el.getAttribute("srcdoc") : null;
+    if (!srcdoc?.trim()) continue;
+    if (depth >= MAX_SRCDOC_DEPTH) {
+      srcdocBudget.unread.add(SRCDOC_TOO_DEEP);
+      continue;
+    }
+    if (srcdocBudget.remaining <= 0) {
+      srcdocBudget.unread.add(SRCDOC_TOO_MANY);
+      continue;
+    }
+    srcdocBudget.remaining -= 1;
+    const inner = new JSDOM(srcdoc);
+    try {
+      add(collectResourceReferences(inner, JSDOM, depth + 1, srcdocBudget));
+    } finally {
+      inner.window.close();
+    }
+  }
+  return refs;
+}
+
+const ALLOWED_DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|avif|bmp|ico|tiff?)[;,]/i;
+
+/** Files one raw reference as external, unsafe or local, or lets it pass. */
+function classifyReference(raw: string, result: HtmlMockParseResult): void {
+  const rawUrl = raw.trim();
+  if (!rawUrl) return;
+
+  if (/^(https?:)?\/\//i.test(rawUrl)) {
+    result.externalUrls.push(rawUrl);
+    return;
+  }
+
+  if (
+    /^javascript:/i.test(rawUrl) ||
+    (/^data:/i.test(rawUrl) && !ALLOWED_DATA_IMAGE_RE.test(rawUrl))
+  ) {
+    result.unsafeUrls.push(rawUrl);
+    return;
+  }
+
+  if (ALLOWED_DATA_IMAGE_RE.test(rawUrl) || /^(#|mailto:|tel:)/i.test(rawUrl)) {
+    return;
+  }
+
+  if (/^[a-z][a-z0-9+.-]*:/i.test(rawUrl)) {
+    result.externalUrls.push(rawUrl);
+    return;
+  }
+
+  result.localRefs.push(rawUrl);
 }
 
 /**

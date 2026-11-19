@@ -6,7 +6,8 @@
  * check, so the two can disagree about 58 columns and report nothing.
  *
  * The comparison needs a database, which is why it is a command rather than a
- * `validate` rule: `validate` starts no processes, and that is worth keeping.
+ * `validate` rule: `validate` never starts a database engine, and that is worth
+ * keeping.
  *
  * A project that has not said where its migrations are is out of scope, not in
  * violation — the command says so and exits 0. A configuration that did not

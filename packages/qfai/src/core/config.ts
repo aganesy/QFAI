@@ -38,7 +38,7 @@ export type QfaiForbiddenIdentifier = {
 
 export type DiagramBudget = { nodes: number; edges: number };
 
-export const DEFAULT_DIAGRAM_BUDGET: DiagramBudget = { nodes: 12, edges: 16 };
+export const DEFAULT_DIAGRAM_BUDGET: DiagramBudget = Object.freeze({ nodes: 12, edges: 16 });
 
 export type QfaiValidationConfig = {
   failOn: FailOn;
@@ -242,7 +242,12 @@ export type ConfigSearchResult = {
   found: boolean;
 };
 
-export const defaultConfig: QfaiConfig = {
+/**
+ * The canonical defaults, frozen at every depth. `loadConfig` hands each
+ * caller its own copy, so a change one caller makes never reaches the
+ * defaults a later load starts from.
+ */
+export const defaultConfig: QfaiConfig = deepFreeze({
   paths: {
     contractsDir: ".qfai/spec/03_contract",
     specsDir: ".qfai/spec",
@@ -271,7 +276,17 @@ export const defaultConfig: QfaiConfig = {
       browserTool: "playwright",
     },
   },
-};
+});
+
+function deepFreeze<T>(value: T): T {
+  if (typeof value === "object" && value !== null) {
+    for (const child of Object.values(value)) {
+      deepFreeze(child);
+    }
+    Object.freeze(value);
+  }
+  return value;
+}
 
 export function getConfigPath(root: string): string {
   return path.join(root, "qfai.config.yaml");
@@ -310,13 +325,15 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
     parsed = parseYaml(raw);
   } catch (error) {
     if (isEnoent(error)) {
-      return { config: defaultConfig, issues, configPath };
+      return { config: structuredClone(defaultConfig), issues, configPath };
     }
     issues.push(configIssue(configPath, "The configuration file could not be read or parsed."));
-    return { config: defaultConfig, issues, configPath };
+    return { config: structuredClone(defaultConfig), issues, configPath };
   }
 
-  const normalized = normalizeConfig(parsed, configPath, issues);
+  // Normalization reuses default objects and arrays for keys the file omits;
+  // the copy keeps them out of the caller's reach.
+  const normalized = structuredClone(normalizeConfig(parsed, configPath, issues));
   if (readWorkflowMode(parsed) === null) {
     issues.push(configIssue(configPath, WORKFLOW_MODE_MESSAGE));
   }

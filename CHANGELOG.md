@@ -501,11 +501,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   flagged line, and each finding carries that line in its location so an
   editor or report can jump to it. Closes #4562.
 
+- **Each configuration load returns its own copy.** A project with no
+  `qfai.config.yaml`, or one that left out a key such as `paths` or
+  `validation`, received the shared default objects and lists themselves, so
+  a program that loaded a configuration and changed it changed the defaults
+  every later load in the same process started from. Each load now returns a
+  copy, and the defaults themselves can no longer be changed.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
+
+- **A qfai copy under a directory whose name begins with two dots counts as
+  inside the project.** `qfai validate` and `qfai sdd preflight` judged
+  where the running qfai came from by whether its path relative to the
+  project began with `..`, so a copy under a directory such as `..vendor` was
+  reported as resolved from outside the project. Only a `..` path segment now
+  leaves the project. Closes #4544.
 
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
@@ -520,6 +534,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   already wrote keeps its old steps; delete it and run `qfai init` again to
   get these.
 
+- **The contract rules no longer claim `qfai validate` starts no processes.**
+  Validation runs short-lived checkers, such as the document schema checker,
+  as child processes. The `qfai-sdd` contract rules now state the narrower
+  guarantee that `qfai validate` never starts a database engine, which is why
+  `qfai db-drift` is a separate command.
+
 - **`qfai sdd merge-docs` no longer fails on a conflicted file it does not
   merge.** A conflicted file under the specs directory that is not Markdown or
   YAML, such as an image, made the command exit 1 even when no document was
@@ -527,6 +547,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   conflicted document the command says there is nothing to merge and exits 0.
   The configured specs directory is also read as a literal path, so a name
   holding `*` no longer selects conflicted documents outside it. Closes #4523.
+
+- **`qfai validate` checks every resource reference in an HTML mock.** The
+  external URL, local file and unsafe scheme checks read only `href`, `src`
+  and `action`, so a mock could load a CDN asset through CSS `url()`,
+  `@import`, `srcset`, `poster` or a `<meta>` refresh without a finding. They
+  now also read `xlink:href`, `formaction`, `poster`, `background`,
+  `manifest`, `<object data>`, `ping`, `srcset`, `imagesrcset`, a refresh
+  target, every CSS `url()`, `src()`, `@import` string and `image-set()`
+  string in `style` attributes, `<style>` elements and SVG presentation
+  attributes, `<iframe srcdoc>` documents and `<template>` content. A mock
+  that relied on one of these forms now reports `QFAI-MOCK-002`,
+  `QFAI-MOCK-010` or `QFAI-MOCK-011` at error.
 
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
@@ -740,6 +772,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reads `result=INCOMPLETE`, whatever `--fail-on` says. A reader of `run.json`,
   `validator.json`, `summary.md` or `validate.log` that expects only `pass` or
   `fail` now meets a third status.
+
+- **The touch-target check reads the exact `width` and `height` of an inline
+  style.** It took the first `width:` or `height:` it found, so `min-width`,
+  `border-width`, `max-height` or `line-height` could stand in for the real
+  size: a 48px button with `min-width: 10px` drew `QFAI-MOCK-009`, and a
+  later declaration of the same property was ignored. It now reads the parsed
+  declarations, so the declaration CSS applies is the one measured, whatever
+  the case of its property name.
 
 - **The design audit no longer drops findings past its display limit.** It
   kept only the first `uiux.audit.maxDuplicateFindingsPerRule` findings of a
