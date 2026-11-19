@@ -189,6 +189,53 @@ describe("uiux validators", () => {
     expect(issues).toHaveLength(0);
   });
 
+  it("reports the file line of the Mermaid declaration and transition it flags", async () => {
+    const root = await newTempDir();
+    const specsDir = path.join(root, ".qfai", "specs");
+    await mkdir(specsDir, { recursive: true });
+    await writeFile(
+      path.join(specsDir, "flow.md"),
+      [
+        "# Flow", // line 1
+        "", // line 2
+        "```mermaid", // line 3
+        "stateDiagram", // line 4
+        "```", // line 5
+        "", // line 6
+        "```mermaid", // line 7
+        "%% screens", // line 8
+        "stateDiagram-v2", // line 9
+        "  Home --> Detail", // line 10
+        "```", // line 11
+        "", // line 12
+        "```mermaid", // line 13
+        "flowchart", // line 14
+        "  A --> B", // line 15
+        "```", // line 16
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateMermaidScreenFlow(root, defaultConfig);
+    const lines = Object.fromEntries(
+      issues.map((finding) => [finding.code, { line: finding.loc?.line, message: finding.message }]),
+    );
+
+    expect(lines["QFAI-FLOW-001"]).toEqual({
+      line: 4,
+      message: expect.stringContaining("at line 4."),
+    });
+    expect(lines["QFAI-FLOW-002"]).toEqual({
+      line: 10,
+      message: expect.stringContaining("at line 10"),
+    });
+    expect(lines["QFAI-FLOW-004"]).toEqual({
+      line: 14,
+      message: expect.stringContaining("at line 14"),
+    });
+  });
+
   it("returns empty issues for ui definition consistency validator when inputs are absent", async () => {
     const root = await newTempDir();
     const issues = await validateUiDefinitionConsistency(root, defaultConfig);
