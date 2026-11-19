@@ -219,7 +219,9 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(check.message).toContain("mdschema binary not found at /nowhere");
     expect(check.message).toContain("optional dependenc");
     expect(check.message).toContain("npm approve-scripts");
-    expect(check.message).toContain("onlyBuiltDependencies");
+    expect(check.message).toContain("pnpm approve-builds");
+    expect(check.message).toContain("`allowBuilds` for pnpm 11 or later");
+    expect(check.message).toContain("`onlyBuiltDependencies` for pnpm 10");
     expect(check.details["reason"]).toBe("mdschema binary not found at /nowhere");
   });
 
@@ -258,7 +260,9 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     expect(check.severity).toBe("error");
     expect(check.message).toContain("no @jackchuka/mdschema installation was found");
     expect(check.message).toContain("npm approve-scripts");
-    expect(check.message).toContain("onlyBuiltDependencies");
+    expect(check.message).toContain("pnpm approve-builds");
+    expect(check.message).toContain("`allowBuilds` for pnpm 11 or later");
+    expect(check.message).toContain("`onlyBuiltDependencies` for pnpm 10");
   });
 
   // QFAI:EX-0003-0011-23

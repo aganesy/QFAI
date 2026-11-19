@@ -611,6 +611,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **The mdschema approval advice names the key current pnpm writes.** The
+  README and the `qfai doctor` fix for a checker that does not run said pnpm
+  records the approval under `onlyBuiltDependencies`, a setting pnpm 11
+  removed. Both now recommend `pnpm approve-builds` and say it records the
+  approval under `allowBuilds` for pnpm 11 or later and
+  `onlyBuiltDependencies` for pnpm 10.
+
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
   key, even for a local server that needs no authentication, so document

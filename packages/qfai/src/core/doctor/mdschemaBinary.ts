@@ -98,7 +98,8 @@ function failure(reason: string, fix: string): MdschemaBinaryCheck {
 const INSTALL_FIX =
   "It arrives as an optional dependency of @jackchuka/mdschema, so install without omitting optional dependencies. " +
   "Where the platform package is missing, the package's install script downloads the binary instead: " +
-  "approve it with `npm approve-scripts` for npm 11.16 or later, or list @jackchuka/mdschema under `onlyBuiltDependencies` for pnpm.";
+  "approve it with `npm approve-scripts` for npm 11.16 or later, or `pnpm approve-builds` for pnpm, " +
+  "which records @jackchuka/mdschema under `allowBuilds` for pnpm 11 or later and `onlyBuiltDependencies` for pnpm 10.";
 
 const DOWNLOAD_REASON = "the platform package is absent and the binary is the downloaded copy";
 

@@ -44,7 +44,7 @@ here: `package.json#version` in the published package is the only version source
 ### The install script of `@jackchuka/mdschema`
 
 `qfai` depends on `@jackchuka/mdschema`, the document-schema checker, which
-declares a `postinstall` script. Recent npm and pnpm 10 report it as unapproved
+declares a `postinstall` script. Recent npm and pnpm 10 or later report it as unapproved
 on every install. QFAI does not need it to run where the checker's platform package installs: the
 platform binary arrives as an optional dependency, which installs without any
 script. The script only downloads a binary when that platform package is missing,
@@ -55,7 +55,8 @@ To let the script run anyway, approve it:
 
 ```bash
 npm approve-scripts          # npm 11.16 or later: adds it to `allowScripts`
-pnpm approve-builds          # pnpm: adds it to `onlyBuiltDependencies`
+pnpm approve-builds          # pnpm: adds it to `allowBuilds` (pnpm 11 or later)
+                             # or `onlyBuiltDependencies` (pnpm 10)
 ```
 
 `npx qfai doctor` runs `mdschema --help` and reports an error, naming these
