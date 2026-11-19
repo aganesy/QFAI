@@ -606,6 +606,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   has no such declaration, is not compared. The `QFAI-CONTRACT-015`
   message no longer names a rule `qfai validate` no longer has.
 
+- **The turn-end hook no longer runs checks when `qfai.config.yaml` cannot be
+  read.** A file that could not be read or parsed, or whose top level was not
+  a set of keys, such as an empty file, was treated as omitting
+  `workflow.stopGate` and so ran the project's turn-end checks. The hook now
+  runs none and says which file it could not read and that no turn-end check
+  ran.
+
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the
   hook let the turn end, even when the agent had moved to another worktree
@@ -631,14 +638,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   multi-line comment ends on: before, a
   `<!-- note --> ## Risks` line was read as a heading, and a code fence after
   a closing `-->` hid the rest of the document. Closes #4568.
-
-- **A release heading the publish would refuse now stops the tag.** Tagging
-  accepted any `CHANGELOG.md` line starting `## [X.Y.Z]`, while publishing
-  also required ` - YYYY-MM-DD` after it, so a heading without a date was
-  tagged and then refused by the publish. Tagging, publishing and the
-  release-notes comparison now read the heading through one parser, and a
-  heading that names the version in another shape fails the tag run with the
-  line it found. Closes #4599.
 
 - **A CommonJS consumer now gets the CommonJS declaration file.** The
   package's exports map sent `import` and `require` to the same
@@ -773,6 +772,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   it was kept, its counts included flows that were not named. The documents
   are now selected before they are counted, so the finding and its counts
   cover the named flows only. Closes #4579.
+
+- **A release heading the publish would refuse now stops the tag.** Tagging
+  accepted any `CHANGELOG.md` line starting `## [X.Y.Z]`, while publishing
+  also required ` - YYYY-MM-DD` after it, so a heading without a date was
+  tagged and then refused by the publish. Tagging, publishing and the
+  release-notes comparison now read the heading through one parser, and a
+  heading that names the version in another shape fails the tag run with the
+  line it found. Closes #4599.
 
 - **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
   with no `--assume` copies the carry-over list from the previous

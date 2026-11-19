@@ -40,4 +40,10 @@ Feature: Keep an agent's turn going while a turn-end check fails
     Given a tech.md whose Standard commands section shows an example, a block quote or a nested item, or lists a marked label twice
     When the agent ends a turn
     Then the hook reads only the section's top-level items, and where a marked label selects more than one item it runs no command and names that label
+
+  # AC-0001-0244-07
+  Scenario: An unreadable configuration is not read as an omitted stopGate
+    Given a qfai.config.yaml that cannot be read or parsed, or whose top level is not a set of keys, such as an empty file
+    When the agent ends a turn
+    Then the hook runs no command and tells the user which file it could not read
 ```
