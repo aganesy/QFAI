@@ -47,19 +47,10 @@ export async function readUiContractScreenContracts(
   root: string,
   contractsDirRelative = ".qfai/contracts",
 ): Promise<CanonicalScreenContract[]> {
-  // `path.resolve`, not `path.join`, for consistency with `specDirExists`
-  // (specsDir) and `readPerSpecScreens` (per-spec contractsDir). This
-  // project-wide screen reader runs in parallel with the per-spec reader;
-  // `path.join` here would have the two paths produce different discovery
-  // results when `qfai.config.yaml` carries an absolute `paths.contractsDir`
-  // override — a least-astonishment violation that would silently
-  // break certify's per-(spec × screen) gate.
-  // Other call sites (lockAbs, designContractReadiness, designToken,
-  // doctor) still use
-  // `path.join` and remain a deferred follow-up. This site is fixed here
-  // because it directly partners with `readPerSpecScreens` and would
-  // otherwise produce divergent contract-discovery behaviour between CLI
-  // paths.
+  // `path.resolve`, as `resolvePath` in `config.ts` does: an absolute
+  // `paths.contractsDir` replaces `root`, and a relative one is read from
+  // `root`. `path.join` would append an absolute override to `root` and
+  // name a folder that does not exist, so no screen would be found.
   const uiDir = path.resolve(root, contractsDirRelative, "ui");
   // Accept both `.yaml` and `.yml` extensions. Pre-fix the glob only matched `.yaml`, so repositories
   // that author UI contracts with the `.yml` extension auto-derived
