@@ -496,6 +496,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **`qfai catalog components` writes only inside the project.** A
+  `.qfai/catalog` directory, or a directory above it, that was a symbolic link
+  or junction led the write to wherever the link pointed, overwriting a file
+  outside the project. The command now checks each directory on the path before
+  and after creating it, stops with exit 1 naming the link, and leaves any
+  existing file as it was. It writes to a new temporary file beside the
+  catalogue and renames it into place, so a failed write leaves the old
+  catalogue whole.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one

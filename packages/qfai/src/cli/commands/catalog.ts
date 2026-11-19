@@ -2,10 +2,12 @@
  * `qfai catalog components` and `qfai catalog design`: write the project's component catalogue
  * or its design catalogue, or with `--check` say whether the committed files are current.
  */
-import { lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { lstat, mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import { findUnsafeHostFileComponent } from "../../core/init/fsGuards.js";
 import { error, info } from "../../core/logger.js";
 import {
   COMPONENT_CATALOG_PATH,
@@ -63,9 +65,13 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
     );
     return EXIT_CODES.findings;
   }
-  const file = path.join(root, COMPONENT_CATALOG_PATH);
-  await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(file, text, "utf-8");
+  const failure = await writeCatalog(root, text);
+  if (failure !== null) {
+    error(
+      `qfai catalog components: could not write ${target}, so any existing catalogue is as it was: ${failure}`,
+    );
+    return EXIT_CODES.findings;
+  }
   if (scan.files === 0) {
     info(`Wrote ${target}: 0 component(s); uiux.surfacePaths selects no .tsx or .jsx file.`);
     return EXIT_CODES.ok;
@@ -76,6 +82,51 @@ export async function runCatalogComponents(options: CatalogComponentsOptions): P
     `Wrote ${target}: ${scan.components.length} component(s) in ${files} file(s), ${unsourced} with no @source.`,
   );
   return EXIT_CODES.ok;
+}
+
+/**
+ * Writes the component catalogue inside the project. Every directory on its path is checked
+ * before and after it is created: a symbolic link (a junction included) or an entry that is not
+ * a directory stops the write, as does a catalogue path that is a link or not a file, so nothing
+ * is written outside the project and an existing catalogue is left as it was. The text goes to an
+ * exclusively created temporary file in the checked directory, which is then renamed onto the
+ * catalogue. Returns the failure's message, or null.
+ */
+async function writeCatalog(root: string, text: string): Promise<string | null> {
+  const segments = COMPONENT_CATALOG_PATH.split(path.sep);
+  const file = path.join(root, ...segments);
+  let temporary: string | null = null;
+  try {
+    await assertInsideProject(root, segments);
+    await mkdir(path.dirname(file), { recursive: true });
+    await assertInsideProject(root, segments);
+    const existing = await lstat(file).catch(() => null);
+    if (existing !== null && !existing.isFile()) {
+      throw new Error(`${segments.join("/")} is not a file.`);
+    }
+    temporary = path.join(path.dirname(file), `.${path.basename(file)}.${randomUUID()}.tmp`);
+    const handle = await open(temporary, "wx");
+    try {
+      await handle.writeFile(text, "utf-8");
+    } finally {
+      await handle.close();
+    }
+    await rename(temporary, file);
+    temporary = null;
+    return null;
+  } catch (caught) {
+    if (temporary !== null) await rm(temporary, { force: true });
+    return caught instanceof Error ? caught.message : String(caught);
+  }
+}
+
+/** Throws when a component of the catalogue path would lead a write outside the project. */
+async function assertInsideProject(root: string, segments: readonly string[]): Promise<void> {
+  const unsafe = await findUnsafeHostFileComponent(root, segments);
+  if (unsafe === undefined) return;
+  throw new Error(
+    `${unsafe.relativePath} is ${unsafe.symlink ? "a symbolic link" : "not a directory"}.`,
+  );
 }
 
 export type CatalogDesignOptions = {
