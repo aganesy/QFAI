@@ -1875,7 +1875,7 @@ async function syncIntegrationWrappers(
   if (instructionsBlocked !== undefined) {
     info(describeSkippedPath(INSTRUCTIONS_DIR_ENTRY, instructionsBlocked));
   } else if (!options.dryRun) {
-    await sweepStagedFiles(destRoot, instructionsDir);
+    await sweepStagedFiles(destRoot, instructionsDir, instructionsFiles);
   }
 
   for (const fileName of instructionsFiles) {
@@ -2487,24 +2487,61 @@ async function resolvesOutsideProject(destRoot: string, target: string): Promise
 /** Marks a {@link replaceWithRegularFile} staging file. */
 const STAGING_INFIX = ".qfai-init-";
 
-/** The sibling path {@link replaceWithRegularFile} stages `dest` at. */
+/**
+ * The sibling path {@link replaceWithRegularFile} stages `dest` at: the base-36
+ * pid of the writing process, then a random 32-hex-digit token.
+ *
+ * Both are there only to keep the name unique; nothing reads them back. The
+ * sweep decides by age alone, because neither a pid nor a host name identifies
+ * a writer once the directory is shared: two hosts, or two cloned machines with
+ * one host name, can hold the same pid at once.
+ */
 function stagingPathFor(dest: string): string {
-  return `${dest}${STAGING_INFIX}${process.pid.toString(36)}-${Date.now().toString(36)}`;
+  const token = randomUUID().replaceAll("-", "");
+  return `${dest}${STAGING_INFIX}${process.pid.toString(36)}-${token}`;
 }
 
 /**
- * True for a basename {@link stagingPathFor} could have produced: a destination
- * name, the infix, then the base-36 pid and timestamp.
+ * True for a basename {@link stagingPathFor} could have produced for one of
+ * `destNames`: that destination name, the infix, the base-36 pid as
+ * `toString(36)` writes it (no leading zero), then the 32-hex-digit token.
  *
- * Read back through the same constant the writer uses, so the sweep cannot end
- * up looking for a shape nothing writes — which would leave it passing while
- * reclaiming nothing.
+ * The pid takes one to seven characters and is at most {@link MAX_PID}: every
+ * platform Node.js runs on keeps a pid within 32 unsigned bits, and the
+ * largest, 2^32 - 1, is `1z141z3` in base 36. Seven characters reach past it
+ * (`zzzzzzz`), so the value is checked as well as the length.
+ *
+ * Exactly that shape and no looser: a file the project named to look like ours,
+ * with another prefix, another pid or another token, is not ours to delete. Read back
+ * through the same constant the writer uses, so the sweep cannot end up looking
+ * for a shape nothing writes — which would leave it passing while reclaiming
+ * nothing.
  */
-function isStagingName(name: string): boolean {
-  const at = name.lastIndexOf(STAGING_INFIX);
-  if (at <= 0) return false;
-  return /^[0-9a-z]+-[0-9a-z]+$/.test(name.slice(at + STAGING_INFIX.length));
+function isStagingName(name: string, destNames: readonly string[]): boolean {
+  return destNames.some((dest) => {
+    if (!name.startsWith(`${dest}${STAGING_INFIX}`)) return false;
+    const match = /^([1-9a-z][0-9a-z]{0,6})-[0-9a-f]{32}$/.exec(
+      name.slice(dest.length + STAGING_INFIX.length),
+    );
+    return match !== null && Number.parseInt(match[1] ?? "", 36) <= MAX_PID;
+  });
 }
+
+/** The largest pid any platform Node.js runs on can hand out: 2^32 - 1. */
+const MAX_PID = 0xffffffff;
+
+/**
+ * How old a staging file must be before the sweep removes it.
+ *
+ * A writer holds its staging file only between one small `writeFile` and its
+ * `rename`, milliseconds on any disk, so a file this old belongs to no run
+ * still writing. Ceiling: a writer stalled longer than this loses its staging
+ * file and its rename fails, and so does one whose file a sweeping clock runs
+ * more than this ahead of (the clock set forward, or another host's clock
+ * ahead of the writer's); raise the value if that is ever observed. A run that dies leaves its file for up to this
+ * long, until a later run sweeps it.
+ */
+const STAGING_ABANDONED_AFTER_MS = 60 * 60 * 1000;
 
 /**
  * Remove staging files an earlier run left behind in `dir`.
@@ -2513,7 +2550,7 @@ function isStagingName(name: string): boolean {
  * that does not consume it — but `finally` is a JavaScript construct, and
  * SIGINT, SIGKILL, a crashed process or a power loss ends the run without
  * running one. The partial `.qfai-init-*` then stays in `.github/instructions/`,
- * which is tracked, and because each run stages under a fresh `pid`-timestamp
+ * which is tracked, and because each run stages under a fresh pid-token
  * name nothing would ever reclaim it: repeated failures accumulate orphans
  * until one is committed by accident.
  *
@@ -2526,11 +2563,21 @@ function isStagingName(name: string): boolean {
  * exists to protect. A same-directory stage plus a sweep keeps the atomic
  * replace and still leaves nothing behind.
  *
- * Only regular files whose name has the staging shape are removed, and only
- * where the entry resolves inside the project: an orphan of ours is ours to
- * reclaim, anything else in that directory is not.
+ * Only regular files whose name is the staging name of one of `destNames` are
+ * removed, and only where the entry resolves inside the project: an orphan of
+ * ours is ours to reclaim, anything else in that directory is not.
+ *
+ * And only once it is older than {@link STAGING_ABANDONED_AFTER_MS}. Two inits
+ * can run in one project at once, and the other run may be between its write
+ * and its rename: removing its file then fails that rename and loses its
+ * refresh. Age is the one signal that holds wherever that other run is; a pid
+ * or a host name does not identify it on a shared or cloned machine.
  */
-async function sweepStagedFiles(destRoot: string, dir: string): Promise<void> {
+async function sweepStagedFiles(
+  destRoot: string,
+  dir: string,
+  destNames: readonly string[],
+): Promise<void> {
   let entries: Dirent[];
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -2538,9 +2585,11 @@ async function sweepStagedFiles(destRoot: string, dir: string): Promise<void> {
     return; // absent or unreadable — no orphan of ours is reachable there
   }
   for (const entry of entries) {
-    if (!isStagingName(entry.name)) continue;
+    if (!isStagingName(entry.name, destNames)) continue;
     const full = path.join(dir, entry.name);
-    if ((await safeLstat(full))?.isFile() !== true) continue;
+    const stats = await safeLstat(full);
+    if (stats?.isFile() !== true) continue;
+    if (Date.now() - stats.mtimeMs <= STAGING_ABANDONED_AFTER_MS) continue;
     if (await resolvesOutsideProject(destRoot, full)) continue;
     // A leftover we cannot delete is not a reason to fail the whole init; the
     // next run tries again, and nothing downstream depends on it being gone.
@@ -2577,7 +2626,9 @@ async function replaceWithRegularFile(dest: string, content: string): Promise<vo
   const tempPath = stagingPathFor(dest);
   let consumed = false;
   try {
-    await writeFile(tempPath, content, "utf-8");
+    // `wx` refuses a path that already exists, so this run never writes into a
+    // staging file another writer holds.
+    await writeFile(tempPath, content, { encoding: "utf-8", flag: "wx" });
     try {
       await rename(tempPath, dest);
       consumed = true;

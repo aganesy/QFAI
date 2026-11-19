@@ -4,7 +4,7 @@ import path from "node:path";
 import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
-import type { QfaiConfig } from "../config.js";
+import { resolvePath, type QfaiConfig } from "../config.js";
 import { parseDesignToken } from "../parse/designToken.js";
 import type { Issue } from "../types.js";
 import { collectVarUsages } from "../uiux/htmlMockParser.js";
@@ -49,7 +49,7 @@ export async function validateUiDefinitionConsistency(
   }
 
   // Load UI Contract screen IDs
-  const uiContractDir = path.join(root, config.paths.contractsDir, "ui");
+  const uiContractDir = path.join(resolvePath(root, config, "contractsDir"), "ui");
   const uiPattern = path.posix.join(uiContractDir.replace(/\\/g, "/"), "**/*.yaml");
   const uiFiles = await fg(uiPattern, { absolute: true });
   const contractScreenIds = new Set<string>();

@@ -192,6 +192,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.16.0.** The
+  document-schema checker the docs lane runs moves from 0.15.7 to 0.16.0, the
+  version the package now depends on. Both versions declare the same
+  `postinstall` script, which downloads the checker's platform binary.
+
 - **Breaking: each contract kind has its own number sequence, and a business
   rule ID names its contract's kind.** A project with five DB contracts and
   two API contracts can number them `DB-0001` to `DB-0005` and `API-0001` to
@@ -521,6 +526,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and in every other check that asks whether a link stays inside one.
   Closes #4484.
 
+- **`qfai init --force` no longer removes another run's staging file.** Each
+  run first removed every leftover `.qfai-init-*` staging file in
+  `.github/instructions/`, including the one a second init in the same
+  project was about to rename into place, so that run's refresh failed. A
+  staging file is now removed only when it is more than an hour old, and each
+  run writes its staging file under a name no other run can take. Only that
+  exact name is removed, so a leftover from an earlier version,
+  named `<file>.qfai-init-<pid>-<timestamp>`, stays: delete it by hand.
+  Closes #4526.
+
 - **`qfai validate` no longer waits forever on the document-schema check.**
   An mdschema run that never exited held `validate` open, and one that printed
   without end was read into memory whole. Each run now stops after 120 seconds
@@ -563,10 +578,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
+  that made a token group or a `$value` its own descendant overflowed the stack,
+  and the run reported no result at all. Such a file, or one nesting deeper than
+  64 levels, now raises `QFAI-DT-002` at error naming the path where reading
+  stopped, and every other check completes.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one
   pass.
+
+- **HTML mock and screen checks honour an absolute specs or contracts
+  directory.** They appended `paths.specsDir` and `paths.contractsDir` to the
+  project root even when the configured directory was absolute, so they found
+  no mock or UI contract there. They now resolve each directory as the other
+  checks do, and a relative and an absolute spelling of the same directory
+  select the same files.
 
 - **Acceptance tests are found when `paths.testsDir` is the repository root.**
   With `testsDir: "."`, the patterns for `e2e/`, `integration/` and `api/`
