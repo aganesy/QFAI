@@ -841,37 +841,56 @@ It cannot see a skip that is not a text pattern, and none of these is reported:
 
 A suite skipped for a missing database therefore passes CI, and so does a suite
 whose database failed to start. Only the test runner knows what was skipped in a
-given run. Have it write a JSON report, and fail the job when a file skips more
-tests than a list of named, allowed skips permits. Jest and Vitest write the same
+given run. Have it write a JSON report, and fail the job when a test that did not
+run is missing from a list of named, allowed skips. Jest and Vitest write the same
 shape: `jest --json --outputFile=test-report.json`, or
-`vitest run --reporter=json --outputFile=test-report.json`. Add the flags to
-your `test:<layer>` script, save this script as `scripts/check-skipped-tests.mjs`,
-and run it in a step of `qfai-tests.yml` after the step that runs the tests:
+`vitest run --reporter=default --reporter=json --outputFile=test-report.json`.
+Save this script as `scripts/check-skipped-tests.mjs`, and run the tests through
+it in your `test:<layer>` script, such as
+`"test:unit": "node scripts/check-skipped-tests.mjs vitest run --reporter=default --reporter=json --outputFile=test-report.json"`.
+The shipped `qfai-tests.yml` then runs it unchanged:
 
 ```js
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
+const reportPath = "test-report.json";
+const command = process.argv.slice(2).join(" ");
+if (command === "") {
+  console.error("usage: node scripts/check-skipped-tests.mjs <test command>");
+  process.exit(2);
+}
 const allowed = JSON.parse(readFileSync("allowed-skips.json", "utf8"));
-const report = JSON.parse(readFileSync("test-report.json", "utf8"));
-let failed = false;
+// A report left by an earlier run would hide this run's skips.
+rmSync(reportPath, { force: true });
+const run = spawnSync(command, { shell: true, stdio: "inherit" });
+if (!existsSync(reportPath)) {
+  console.error(`${reportPath}: not written by this run of ${command}`);
+  process.exit(1);
+}
+const report = JSON.parse(readFileSync(reportPath, "utf8"));
+let failed = run.status !== 0;
 for (const file of report.testResults) {
   const name = path.relative(process.cwd(), file.name).split(path.sep).join("/");
-  const skipped = file.assertionResults.filter(
-    (test) => test.status !== "passed" && test.status !== "failed",
-  ).length;
-  if (skipped > (allowed[name] ?? 0)) {
-    console.error(`${name}: ${skipped} tests did not run, ${allowed[name] ?? 0} allowed`);
-    failed = true;
+  for (const test of file.assertionResults) {
+    if (test.status === "passed" || test.status === "failed") continue;
+    if (!(allowed[name] ?? []).includes(test.fullName)) {
+      console.error(`${name}: "${test.fullName}" did not run and is not an allowed skip`);
+      failed = true;
+    }
   }
 }
 process.exit(failed ? 1 : 0);
 ```
 
-`allowed-skips.json` maps a test file to the number of tests it may skip, such as
-`{ "orders.test.ts": 2 }`. Start from the count you measure today. The
-list should only ever shrink: a pull request may remove an entry or lower a count,
-and raising one is a decision a reviewer makes on purpose.
+`allowed-skips.json` maps a test file to the full names of the tests it may skip,
+as the report's `fullName` spells them, such as
+`{ "tests/orders.test.ts": ["orders refunds a cancelled order"] }`. A count per
+file would let one test's skip stand in for another's, so each skip is named.
+Start from the skips you see today. The list should only ever shrink: a pull
+request may remove a name, and adding one is a decision a reviewer makes on
+purpose.
 
 ### Writing a change-scope gate for your own workflows
 
