@@ -2,8 +2,8 @@
  * A plain copy that finds a destination already there compares it with the template once: each
  * file is read a single time, and the destination, which the adopter owns, only within a bound.
  *
- * `readFile` is wrapped to count the calls per path, because the number of reads leaves no other
- * trace. `vi.mock` is hoisted to module scope, so these cases live in their own file.
+ * `readFile` and the bounded reader are wrapped to record their calls, because the number of reads
+ * and their bound leave no other trace. `vi.mock` is hoisted to module scope, so these cases live in their own file.
  */
 
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
@@ -11,13 +11,30 @@ import os from "node:os";
 import path from "node:path";
 
 import type * as fsPromises from "node:fs/promises";
+import type * as boundedRead from "../../../src/shared/boundedRead.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { removeTempTree } from "../../helpers/tempTree.js";
 
 type FsPromises = typeof fsPromises;
 
-const { reads } = vi.hoisted(() => ({ reads: new Map<string, number>() }));
+type BoundedRead = typeof boundedRead;
+
+const { reads, boundedReads } = vi.hoisted(() => ({
+  reads: new Map<string, number>(),
+  boundedReads: new Array<{ path: string; maxBytes: number }>(),
+}));
+
+vi.mock("../../../src/shared/boundedRead.js", async (importOriginal) => {
+  const actual = await importOriginal<BoundedRead>();
+  return {
+    ...actual,
+    readBoundedRegularFile: (filePath: string, maxBytes: number) => {
+      boundedReads.push({ path: path.resolve(filePath), maxBytes });
+      return actual.readBoundedRegularFile(filePath, maxBytes);
+    },
+  };
+});
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
@@ -39,6 +56,7 @@ let root: string | undefined;
 
 beforeEach(() => {
   reads.clear();
+  boundedReads.length = 0;
 });
 
 afterEach(async () => {
@@ -74,9 +92,9 @@ describe("comparing an installed template", () => {
     expect(result.skipped).toEqual([path.join(dest, "doc.md")]);
     expect(result.kept).toEqual([]);
     expect(reads.get(sourceFile) ?? 0).toBe(1);
-    // The destination is read through the bounded reader, which opens it rather than calling
-    // `readFile` on a path the adopter controls.
+    // The destination is read once, through the bounded reader, capped at twice the template.
     expect(reads.get(destFile) ?? 0).toBe(0);
+    expect(boundedReads).toEqual([{ path: destFile, maxBytes: 8 }]);
   });
 
   it("reports a destination larger than twice the template as kept", async () => {
@@ -86,5 +104,6 @@ describe("comparing an installed template", () => {
 
     expect(result.kept).toEqual([path.join(dest, "doc.md")]);
     expect(reads.get(destFile) ?? 0).toBe(0);
+    expect(boundedReads).toEqual([{ path: destFile, maxBytes: 4 }]);
   });
 });
