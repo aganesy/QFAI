@@ -463,6 +463,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The Firecrawl integration now says where it processes data.** The
+  `web-research` skill and the Codex Firecrawl template recommended a local
+  `npx` launch for sensitive environments, while every template sends pages
+  to Firecrawl's cloud API. They now treat where the MCP server runs and the
+  API at `FIRECRAWL_API_URL` as separate settings. They say that URLs and page
+  content pass through Firecrawl's service when the remote MCP server is used,
+  or when `FIRECRAWL_API_URL` is unset or points at the cloud API. They also
+  show how to point it at a self-hosted Firecrawl instance and add that host to
+  `webResearch.allowlist`. The templates still
+  default to the cloud API.
+
 - **An unknown `prototype.mode` written as an inline mapping is now
   reported.** `QFAI-CONTRACT-038` scanned a UI contract line by line, so
   `prototype: { mode: static }` passed unchecked. It now reads the mode from
