@@ -36,7 +36,7 @@ function emittedLines(root: string, jsonPath: string, runLogPath: string): strin
   try {
     emitGitHubOutput(result, root, jsonPath, {
       failOn: "error",
-      willFail: false,
+      status: "pass",
       runLogPath,
     });
   } finally {

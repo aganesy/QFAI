@@ -50,11 +50,14 @@ export async function runSddMergeDocsCommand(options: { root: string }): Promise
   try {
     const loaded = await loadConfig(root);
     if (loaded.issues.length) throw new Error("Correct qfai.config.yaml before merging documents.");
-    const scope = path.relative(root, resolvePath(root, loaded.config, "specsDir")) || ".";
-    const unmerged = readUnmerged(await gitText(root, ["ls-files", "-u", "-z", "--", scope]));
-    const label = scope.split(path.sep).join("/");
+    const scope = (path.relative(root, resolvePath(root, loaded.config, "specsDir")) || ".")
+      .split(path.sep)
+      .join("/");
+    const unmerged = readUnmerged(
+      await gitText(root, ["--literal-pathspecs", "ls-files", "-u", "-z", "--", scope]),
+    );
     if (unmerged.size === 0) {
-      info(`qfai sdd merge-docs: no conflicted document under ${label}; nothing to merge.`);
+      info(`qfai sdd merge-docs: no conflicted document under ${scope}; nothing to merge.`);
       return EXIT_CODES.ok;
     }
     const checked: string[] = [];
@@ -84,7 +87,6 @@ export async function runSddMergeDocsCommand(options: { root: string }): Promise
 
 async function mergeOne(root: string, file: string, stages: Stages): Promise<Outcome> {
   const left = (reason: string): Outcome => ({ kind: "left", message: `left as is; ${reason}` });
-  if (!DOCUMENT.test(file)) return left("it is not a Markdown or YAML document");
   if (stages.ours === undefined || stages.theirs === undefined) return left("one side deleted it");
   const present = [stages.base, stages.ours, stages.theirs].filter((stage) => stage !== undefined);
   if (present.some((stage) => !REGULAR_FILE.has(stage.mode)))
@@ -263,12 +265,15 @@ function errorCode(failure: unknown): unknown {
   return failure instanceof Error && "code" in failure ? failure.code : undefined;
 }
 
-/** The index stages of each unmerged path, from `git ls-files -u -z`. */
+/**
+ * The index stages of each unmerged Markdown or YAML document, from `git ls-files -u -z`. Any other
+ * unmerged file is not a document this command merges, so it is left to Git and not counted.
+ */
 function readUnmerged(output: string): Map<string, Stages> {
   const unmerged = new Map<string, Stages>();
   for (const entry of output.split("\0")) {
     const match = /^(\d+) ([0-9a-f]+) ([123])\t(.+)$/su.exec(entry);
-    if (!match?.[1] || !match[2] || !match[4]) continue;
+    if (!match?.[1] || !match[2] || !match[4] || !DOCUMENT.test(match[4])) continue;
     const stage = { mode: match[1], sha: match[2] };
     const stages = unmerged.get(match[4]) ?? {};
     if (match[3] === "1") stages.base = stage;

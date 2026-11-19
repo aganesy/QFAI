@@ -235,16 +235,28 @@ async function applyAll(
  */
 const READ_SEARCH_PATH = "SET search_path TO pg_catalog";
 
-/** The columns one database holds, keyed `table.column`. */
-async function readColumns(db: SchemaDatabase): Promise<Map<string, ColumnFacts>> {
+/**
+ * The columns of a schema, keyed by table and then by column.
+ *
+ * Two levels rather than one joined key: a quoted Postgres identifier may hold
+ * a period, so `"a.b".c` and `a."b.c"` would join to the same text and one
+ * column would drop out of the comparison.
+ */
+export type ColumnsByTable = ReadonlyMap<string, ReadonlyMap<string, ColumnFacts>>;
+
+/** The columns one database holds. */
+async function readColumns(db: SchemaDatabase): Promise<ColumnsByTable> {
   await db.exec(READ_SEARCH_PATH);
   const result = await db.query(COLUMN_QUERY);
-  const columns = new Map<string, ColumnFacts>();
+  const tables = new Map<string, Map<string, ColumnFacts>>();
   for (const row of result.rows) {
     const facts = toColumnFacts(row);
-    if (facts) columns.set(`${facts.table}.${facts.column}`, facts);
+    if (!facts) continue;
+    const columns = tables.get(facts.table) ?? new Map<string, ColumnFacts>();
+    columns.set(facts.column, facts);
+    tables.set(facts.table, columns);
   }
-  return columns;
+  return tables;
 }
 
 /** One `information_schema.columns` row, or `null` when it is not one. */
@@ -279,45 +291,58 @@ export function differingFields(contracts: ColumnFacts, migrations: ColumnFacts)
 
 /** Compares two readings of the same schema, in a stable order. */
 export function compareColumns(
-  contracts: ReadonlyMap<string, ColumnFacts>,
-  migrations: ReadonlyMap<string, ColumnFacts>,
+  contracts: ColumnsByTable,
+  migrations: ColumnsByTable,
 ): ColumnDifference[] {
   const differences: ColumnDifference[] = [];
-  for (const key of [...new Set([...contracts.keys(), ...migrations.keys()])].sort()) {
-    const inContracts = contracts.get(key);
-    const inMigrations = migrations.get(key);
-    if (inContracts && !inMigrations) {
-      differences.push({
-        kind: "only-in-contracts",
-        table: inContracts.table,
-        column: inContracts.column,
-        contracts: inContracts,
-      });
-      continue;
-    }
-    if (inMigrations && !inContracts) {
-      differences.push({
-        kind: "only-in-migrations",
-        table: inMigrations.table,
-        column: inMigrations.column,
-        migrations: inMigrations,
-      });
-      continue;
-    }
-    if (!inContracts || !inMigrations) continue;
-    const fields = differingFields(inContracts, inMigrations);
-    if (fields.length > 0) {
-      differences.push({
-        kind: "differs",
-        table: inContracts.table,
-        column: inContracts.column,
-        contracts: inContracts,
-        migrations: inMigrations,
-        fields,
-      });
+  for (const table of sortedUnion(contracts, migrations)) {
+    const contractColumns = contracts.get(table) ?? new Map<string, ColumnFacts>();
+    const migrationColumns = migrations.get(table) ?? new Map<string, ColumnFacts>();
+    for (const name of sortedUnion(contractColumns, migrationColumns)) {
+      const difference = compareColumn(contractColumns.get(name), migrationColumns.get(name));
+      if (difference) differences.push(difference);
     }
   }
   return differences;
+}
+
+/** The keys of two maps, once each, in a stable order. */
+function sortedUnion(a: ReadonlyMap<string, unknown>, b: ReadonlyMap<string, unknown>): string[] {
+  return [...new Set([...a.keys(), ...b.keys()])].sort();
+}
+
+/** What two readings of one column disagree about, or `null` when nothing. */
+function compareColumn(
+  inContracts: ColumnFacts | undefined,
+  inMigrations: ColumnFacts | undefined,
+): ColumnDifference | null {
+  if (inContracts && !inMigrations) {
+    return {
+      kind: "only-in-contracts",
+      table: inContracts.table,
+      column: inContracts.column,
+      contracts: inContracts,
+    };
+  }
+  if (inMigrations && !inContracts) {
+    return {
+      kind: "only-in-migrations",
+      table: inMigrations.table,
+      column: inMigrations.column,
+      migrations: inMigrations,
+    };
+  }
+  if (!inContracts || !inMigrations) return null;
+  const fields = differingFields(inContracts, inMigrations);
+  if (fields.length === 0) return null;
+  return {
+    kind: "differs",
+    table: inContracts.table,
+    column: inContracts.column,
+    contracts: inContracts,
+    migrations: inMigrations,
+    fields,
+  };
 }
 
 /**

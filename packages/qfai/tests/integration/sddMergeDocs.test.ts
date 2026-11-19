@@ -241,6 +241,37 @@ describe("qfai sdd merge-docs", () => {
     expect(result.code).toBe(0);
   });
 
+  // QFAI:EX-0001-0238-04
+  it("says there is nothing to merge when only a file that is not a document is unmerged", async () => {
+    const notes = ".qfai/spec/notes.txt";
+    await conflict({ [notes]: ["base\n", "ours\n", "theirs\n"] });
+    const before = await read(notes);
+    const result = await mergeDocs();
+    expect(result.stdout).toContain("nothing to merge");
+    expect(result.stdout).not.toContain(notes);
+    expect(await read(notes)).toBe(before);
+    expect(result.code).toBe(0);
+  });
+
+  // QFAI:EX-0001-0238-04
+  it("reads the specs directory as a literal path, not as a pathspec pattern", async () => {
+    await put("qfai.config.yaml", 'paths:\n  specsDir: "spec*"\n');
+    // Read as a pattern, `spec*` would also select this document outside the specs directory.
+    const outside = "specs-other/03_Example.md";
+    await conflict({
+      [outside]: [
+        examples,
+        examples.replace("Another row.", "Ours row."),
+        examples.replace("Another row.", "Theirs row."),
+      ],
+    });
+    const before = await read(outside);
+    const result = await mergeDocs();
+    expect(result.stdout).toContain("nothing to merge");
+    expect(await read(outside)).toBe(before);
+    expect(result.code).toBe(0);
+  });
+
   // QFAI:EX-0001-0238-05
   it("leaves a working file that no longer holds conflict markers unchanged", async () => {
     await sameSentence();

@@ -174,7 +174,26 @@ describe("qfai report on a story tree", () => {
   it("rejects an invalid issue severity rather than dropping the gate", async () => {
     const root = await storyRoot();
     await writeValidation(root, [{ ...issue("error"), severity: "invalid" } as unknown as Issue]);
-    await expect(runReport({ root, format: "json" })).rejects.toThrow("invalid shape");
+    await expect(runReport({ root, format: "json" })).rejects.toThrow("issues[0].severity");
+  });
+
+  it("refuses a non-string issue file and names it before rendering a link", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [
+      issue("warning"),
+      { ...issue("warning"), file: 42 } as unknown as Issue,
+    ]);
+    await expect(
+      runReport({ root, format: "md", failOn: "never", baseUrl: "https://example.test/repo" }),
+    ).rejects.toThrow(/invalid shape: .*validate\.json \(issues\[1\]\.file must be a string\)/);
+    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+  });
+
+  it("names the top-level field that makes a validate result malformed", async () => {
+    const root = await storyRoot();
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(path.join(root, ".qfai/report/validate.json"), '{"issues":[]}', "utf8");
+    await expect(runReport({ root, format: "md" })).rejects.toThrow("toolVersion");
   });
 
   // QFAI:EX-0001-0062-01
