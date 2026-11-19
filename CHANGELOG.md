@@ -488,6 +488,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
 
+- **The release-notes drift check holds a cut body to its kept entries, in
+  order.** When a changelog section is too long for a GitHub Release body,
+  the release workflow cuts it and appends a note. The check compared such a
+  body as a set and took its cut from the entries it still carried, so it
+  accepted reordered entries and a body emptied down to the note. The note now
+  records how many entries the cut kept, and the check requires that many of
+  the section's first entries in the section's order. It reports a kept
+  entry the body lacks as missing and one it carries elsewhere as out of
+  order, and passes over a line added by hand. A cut body whose note records
+  no count is held to the whole section.
+
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
   entries `qfai init` writes trust the launcher the project installs. Claude
