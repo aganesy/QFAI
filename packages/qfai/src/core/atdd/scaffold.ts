@@ -64,44 +64,46 @@ export async function emitSkeleton(
     path.dirname(destPath),
     `.qfai-scaffold-${randomBytes(6).toString("hex")}.tmp`,
   );
-  let failure: { error: unknown } | undefined;
+  let outcome: { wrote: boolean } | { error: unknown };
   try {
-    await publishStaged(staged, destPath, body);
+    outcome = { wrote: await publishStaged(staged, destPath, body) };
   } catch (error) {
-    failure = { error };
+    outcome = { error };
   }
   // Removal is best-effort, so it never replaces the publish result or its error.
   const leftBehind = await removeStaged(staged);
-  if (failure !== undefined) {
-    const { error } = failure;
-    if (!(hasErrnoCode(error) && error.code === "EEXIST")) throw error;
-    await assertReadableTestFile(destPath);
-  }
-  const wrote = failure === undefined;
+  if ("error" in outcome) throw outcome.error;
+  const { wrote } = outcome;
+  if (!wrote) await assertReadableTestFile(destPath);
   return leftBehind === undefined ? { destPath, wrote } : { destPath, wrote, leftBehind };
 }
 
 /**
- * Write the complete `body` to `staged` and publish it at `destPath`, failing
- * with `EEXIST` when an entry is already there. A `link` that fails for any
- * other reason falls back to an exclusive create once `lstat` finds nothing at
- * `destPath`.
+ * Write the complete `body` to `staged` and publish it at `destPath`. Resolves
+ * `false`, writing nothing at `destPath`, when an entry is already there. A
+ * `link` that fails for any other reason falls back to an exclusive create
+ * once `lstat` finds nothing at `destPath`.
  */
-async function publishStaged(staged: string, destPath: string, body: string): Promise<void> {
+async function publishStaged(staged: string, destPath: string, body: string): Promise<boolean> {
   await writeFile(staged, body, { encoding: "utf8", flag: "wx" });
   try {
     await link(staged, destPath);
-    return;
+    return true;
   } catch (error) {
-    if (hasErrnoCode(error) && error.code === "EEXIST") throw error;
-    if (await entryExists(destPath)) {
-      throw Object.assign(new Error(`EEXIST: ${destPath} already exists`), {
-        code: "EEXIST",
-        cause: error,
-      });
-    }
+    if (isTaken(error) || (await entryExists(destPath))) return false;
   }
-  await writeFile(destPath, body, { encoding: "utf8", flag: "wx" });
+  try {
+    await writeFile(destPath, body, { encoding: "utf8", flag: "wx" });
+    return true;
+  } catch (error) {
+    if (isTaken(error)) return false;
+    throw error;
+  }
+}
+
+/** The error a create raises when its path is already taken. */
+function isTaken(error: unknown): boolean {
+  return hasErrnoCode(error) && error.code === "EEXIST";
 }
 
 async function entryExists(filePath: string): Promise<boolean> {
