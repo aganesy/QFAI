@@ -318,6 +318,23 @@ describe("check-bidi: the bidi and BOM scan covers the tracked tree", () => {
     expect(result.stderr).toContain("control character 0x00");
   });
 
+  it("reports both findings from one read of a file, the bidi one first", async () => {
+    // Both passes look at one read of the file: the rendering finding and the
+    // byte finding in it both arrive, in the order the passes run.
+    const dir = await newRepo({
+      "src/both.ts": `const a = "${RIGHT_TO_LEFT_OVERRIDE}";\nconst b = "${NUL}";\n`,
+    });
+
+    const result = runGuard(dir);
+
+    expect(result.status).toBe(1);
+    const lines = result.stderr.split("\n").filter((line) => line.startsWith("src/both.ts:"));
+    expect(lines).toEqual([
+      "src/both.ts: bidi/control character U+202E at index 11",
+      "src/both.ts: control character 0x00 at line 2, byte 12",
+    ]);
+  });
+
   it("does not exempt a path that merely starts like one", async () => {
     // Prefix matching on a directory boundary: `.qfai/reviewer-notes/` is not
     // `.qfai/review/`, and a guard that cannot tell them apart is one rename
