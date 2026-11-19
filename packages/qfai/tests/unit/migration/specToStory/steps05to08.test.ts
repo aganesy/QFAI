@@ -1049,6 +1049,36 @@ describe("migration steps 5 to 8", () => {
     expect(c.output.join("")).toContain("QFAI:SPEC-0001:TC-0001-9999");
   });
 
+  it("rewrites an annotation in a comment and leaves the same token in a string literal", async () => {
+    const context = await fixture();
+    const legacy = ["QFAI", "SPEC-0001", "TC-0001-0001"].join(":");
+    const example = ["QFAI", "EX-0001-0001-02"].join(":");
+    const literals = [
+      `expect(parse('${legacy}')).toBe("${legacy}");`,
+      `const template = \`${legacy}\`;`,
+    ];
+    const file = "tests/integration/parser.test.ts";
+    await put(
+      context.root,
+      file,
+      [`// ${legacy}`, `/* ${legacy} */`, ...literals, `run("${legacy}"); // ${legacy}`, ""].join(
+        "\n",
+      ),
+    );
+    const report = capture();
+    expect(await executePlannedStep(step08, context, false, report.io)).toBe(0);
+    expect(await readFile(path.join(context.root, file), "utf8")).toBe(
+      [
+        `// ${example}`,
+        `/* ${example} */`,
+        ...literals,
+        `run("${legacy}"); // ${example}`,
+        "",
+      ].join("\n"),
+    );
+    expect(reportSection(report.output.join(""), "For a person")).toBe("none");
+  });
+
   it("selects test files with padded globs and exclusions like the unpadded ones", async () => {
     const context = await fixture();
     context.config.validation.traceability.testFileGlobs = [
