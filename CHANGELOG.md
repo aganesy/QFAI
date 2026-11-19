@@ -661,6 +661,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **`qfai validate` no longer hides a file or a broken link at the default
+  spec and contract paths.** `QFAI-CFG-LINK-002` stayed silent for the shipped
+  default `paths.specsDir` and `paths.contractsDir` whatever stood there, so a
+  file, a broken link or a path that could not be read went unreported. It now
+  stays silent only when nothing is at the path, and otherwise warns that what
+  is there is not a directory or could not be read. Closes #4559.
+
 - **The changed-documents check widens to every document when the worktree
   diff fails.** `check-mdschema --scope changed` already checked every
   document when the branch diff failed, but read a failed diff of uncommitted

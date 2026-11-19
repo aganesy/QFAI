@@ -25,5 +25,6 @@ Feature: Path resolution diagnosis
     When `qfai validate` runs
     Then `QFAI-CFG-LINK-002` is raised at info for each, with one line saying why and no repair to make
     And it is raised at warning for a `srcDir` or `testsDir` that is not the shipped default and does not exist, or whose default name is taken by a file or a broken link
+    And it is not raised for a shipped-default `specsDir` or `contractsDir` with nothing at the path, and is raised at warning where a file or a broken link stands there
     And `paths.outDir` is not checked
 ```
