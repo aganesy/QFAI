@@ -351,6 +351,20 @@ describe("README facts", () => {
     );
   });
 
+  // The allow entries match the command a session types, never the package it resolves to.
+  it("scopes the launcher permission to the command, not to a verified package", async () => {
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("It also adds `permissions.allow` entries");
+      expect(start, readmePath).toBeGreaterThanOrEqual(0);
+      const paragraph = readme.slice(start, readme.indexOf("\n\n", start)).replace(/\s+/g, " ");
+      expect(paragraph, readmePath).toContain("match the command text");
+      expect(paragraph, readmePath).toContain("`node_modules/.bin/qfai`");
+      expect(paragraph, readmePath).toContain("npm registry");
+      expect(paragraph, readmePath).not.toContain("trust the launcher the project installs");
+    }
+  });
+
   it("names the prototype directory", async () => {
     for (const readmePath of READMES) {
       const readme = await readFile(readmePath, "utf-8");

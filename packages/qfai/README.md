@@ -44,7 +44,7 @@ here: `package.json#version` in the published package is the only version source
 ### The install script of `@jackchuka/mdschema`
 
 `qfai` depends on `@jackchuka/mdschema`, the document-schema checker, which
-declares a `postinstall` script. Recent npm and pnpm 10 report it as unapproved
+declares a `postinstall` script. Recent npm and pnpm 10 or later report it as unapproved
 on every install. QFAI does not need it to run where the checker's platform package installs: the
 platform binary arrives as an optional dependency, which installs without any
 script. The script only downloads a binary when that platform package is missing,
@@ -55,7 +55,8 @@ To let the script run anyway, approve it:
 
 ```bash
 npm approve-scripts          # npm 11.16 or later: adds it to `allowScripts`
-pnpm approve-builds          # pnpm: adds it to `onlyBuiltDependencies`
+pnpm approve-builds          # pnpm: adds it to `allowBuilds` (pnpm 10.31 or later)
+                             # or `onlyBuiltDependencies` (earlier pnpm 10)
 ```
 
 `npx qfai doctor` runs `mdschema --help` and reports an error, naming these
@@ -133,9 +134,14 @@ Codex runs a project's hooks only after you review and trust them with `/hooks`.
 
 It also adds `permissions.allow` entries to `.claude/settings.json`: one `Skill(<name>)` for each
 shipped skill, and the launcher as `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and
-`Bash(yarn qfai:*)`. They trust the launcher the project installs. Without them a non-interactive Claude Code run refuses the
-skills. Claude Code accepts no wildcard for a skill name, so `Skill(qfai-*)` never matches and each
-name is listed. Remove an entry you do not want; the next `npx qfai init` adds it again.
+`Bash(yarn qfai:*)`. Without them a non-interactive Claude Code run refuses the skills. Claude Code
+accepts no wildcard for a skill name, so `Skill(qfai-*)` never matches and each name is listed.
+Remove an entry you do not want; the next `npx qfai init` adds it again. The launcher entries match
+the command text, not the package the command runs: Claude Code does not check which `qfai` it
+resolves to. `npx qfai` runs the checkout's `node_modules/.bin/qfai` when there is one; without
+it, npx runs a copy outside the checkout or downloads one from the npm registry, and the entry
+allows that run without asking. `yarn qfai` runs a `qfai` script of `package.json` before a binary
+of that name. The hook below warns when the checkout has no install of its own.
 
 A third hook checks that this checkout has its own `node_modules/.bin/qfai`, or `.pnp.cjs` beside a
 `package.json` that lists `qfai`, looking up to the git root only. A fresh clone or a new worktree has no install, and `npx qfai` would then run the copy of a
