@@ -14,8 +14,10 @@ repository-wide run also rewrites that unsuffixed file, so it holds whichever
 such run finished last and can belong to another profile or another worker.
 Before using a result, confirm its `profile` is the one the command ran and its
 `generatedAt` is no earlier than the command's start.
-`npx qfai report --profile <profile>` reads the suffixed file and refuses one
-that records another profile.
+`npx qfai report --profile <profile>` reads the suffixed file. For a
+repository-wide run it only warns when that file records another profile and
+still renders it, so the `profile` check above stays the reader's to make; for
+a `--flow` run it refuses such a file.
 
 It is a **public surface** (`@api` under
 `.qfai/assistant/rule/change-classification.md`): the skills instruct agents to read it,
@@ -78,7 +80,9 @@ given rule populates. A consumer that matches on `message` will break; match on
 
 ## Reading it
 
-A waiver's `rule:` is `issues[].code`, copied verbatim:
+A waiver's `rule:` is `issues[].code`, copied verbatim. The example assumes
+the default `output.validateJsonPath`; with another one, read its `-full`
+sibling instead:
 
 ```bash
 npx qfai validate --profile full --fail-on error

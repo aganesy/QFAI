@@ -20,7 +20,9 @@ describe("readers of a validation result read the one the current command wrote"
   it("the verify gate reads its own profile's result and reports that profile", async () => {
     const gate = await read("step/verify-qfai-gate/STEP.md");
     const reads = gate.slice(gate.indexOf("## Reads"), gate.indexOf("## Writes"));
-    expect(reads).not.toContain("`.qfai/report/validate.json`");
+    // The default path may still be named as the default; it must not be the
+    // bullet that says what to read.
+    expect(reads).not.toMatch(/^- `\.qfai\/report\/validate\.json`/m);
     expect(reads).toContain("output.validateJsonPath");
     expect(reads).toContain("-<profile>");
     expect(reads).toContain("`generatedAt`");
