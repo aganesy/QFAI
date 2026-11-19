@@ -53,6 +53,9 @@ describe("test-layers.md defines the accessibility layer", () => {
     expect(layer).toMatch(
       /The\s+warning reads text only: a comment or an unused import silences it/,
     );
+    expect(layer).toMatch(
+      /The warning reports a missing spec only\s+when no selected file names axe at all/,
+    );
   });
 });
 
