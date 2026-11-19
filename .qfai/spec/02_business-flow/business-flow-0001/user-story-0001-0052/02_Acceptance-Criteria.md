@@ -22,7 +22,7 @@ Feature: Contract index and contract-layer validation
   Scenario: A contract file declares its ID, is named after it and has a matching index row
     Given the story tree, and a `contracts.md` whose index has the columns ID, Title, File, Depends On, Reconciled With and Purpose
     When `qfai validate --profile sdd` runs
-    Then `QFAI-CONTRACT-034` is raised at error for each contract file under a kind directory that declares no contract ID of its directory's kind, is not named `<kind>-NNNN-<slug>.<ext>` after that ID, or has no row whose ID and File agree with it
+    Then `QFAI-CONTRACT-034` is raised at error for each contract file under a kind directory that declares no contract ID of its directory's kind, is not named `<kind>-NNNN-<slug>.<ext>` after that ID, or has no row whose ID and File agree with it and, for a contract that is not Markdown, whose Depends On agrees with its dependency declaration
     And it is also raised for a row that names no contract file, and for a contract ID that more than one contract declares, while contracts of different kinds may share a number
 
   # AC-0001-0052-04

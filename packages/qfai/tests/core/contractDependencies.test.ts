@@ -71,7 +71,7 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     // `# …` is a comment, not part of the value, and explaining *why* the order
     // holds is the natural thing to write there. An end-of-line anchor made the
     // declaration invisible, so a conforming file earned `QFAI-CONTRACT-015`
-    // and its correct index row `QFAI-CONTRACT-033`.
+    // and its correct index row `QFAI-CONTRACT-034`.
     expect(
       extractDeclaredDependencies("x-qfai-depends-on: [DB-0001] # apply DB first\n", "a.yaml"),
     ).toEqual(["DB-0001"]);
@@ -110,7 +110,7 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     // Same comment, block spelling. The item pattern allowed only whitespace
     // after the value, so the sequence ended at the first commented item and
     // `API-0002` was dropped — leaving a truncated apply order that
-    // disagrees with the correct index row (`QFAI-CONTRACT-033`).
+    // disagrees with the correct index row (`QFAI-CONTRACT-034`).
     expect(
       extractDeclaredDependencies(
         "x-qfai-depends-on:\n  - DB-0001 # schema first\n  - API-0002\n",
@@ -135,7 +135,7 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     // the only one CRLF broke: the key's `\n` did not match `\r\n`, and past it
     // each item ended at its own `\r`, stopping the repetition after the first.
     // A contract saved on Windows declared its apply order to no effect —
-    // `QFAI-CONTRACT-015` on a file that had declared, and `-033` against its
+    // `QFAI-CONTRACT-015` on a file that had declared, and `-034` against its
     // correct index row.
     const crlf = "openapi: 3.0.0\r\nx-qfai-depends-on:\r\n  - DB-0001\r\n  - API-0002\r\n";
     expect(extractDeclaredDependencies(crlf, "a.yaml")).toEqual(["API-0002", "DB-0001"]);
@@ -296,7 +296,7 @@ describe("the declaration itself is distinguishable from its absence", () => {
   it("does not accept a JSON value that is not an array", () => {
     // Reading ids out of a stringification of the whole value accepted anything
     // that merely *contained* one, so an object or a bare string suppressed
-    // `QFAI-CONTRACT-015` and fed the id to the `-014` / `-033` checks as
+    // `QFAI-CONTRACT-015` and fed the id to the `-014` / `-034` checks as
     // though an apply order had been stated.
     const json = (value: string): string =>
       `// QFAI-CONTRACT-ID: API-0001\n{\n  "x-qfai-depends-on": ${value}\n}\n`;
@@ -320,7 +320,7 @@ describe("the declaration itself is distinguishable from its absence", () => {
   it("does not accept a SQL or YAML list holding an element that is not an id", () => {
     // Harvesting the recognisable ids and discarding the rest let a half-written
     // declaration read as a finished one: the resolvable half satisfied
-    // `QFAI-CONTRACT-014`, suppressed `-015`, and agreed under `-033` with an
+    // `QFAI-CONTRACT-014`, suppressed `-015`, and agreed under `-034` with an
     // index cell mirroring the same half — so the undetermined element left no
     // trace anywhere. `["TBD"]` was already rejected in the JSON lane; the other
     // three lanes now make the same judgement.
