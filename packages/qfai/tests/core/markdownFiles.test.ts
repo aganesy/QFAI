@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { legacyLayoutConfig as config } from "./legacyLayoutConfig.js";
 import { validateHtmlMock } from "../../src/core/validators/htmlMock.js";
 import {
+  markdownFileReader,
   readMarkdownFiles,
   sharedMarkdownFileReader,
   type MarkdownFileReader,
@@ -21,6 +22,11 @@ afterEach(async () => {
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+/** An error shaped as a failed `fs` call reports it, with its errno code and the path. */
+function errnoError(code: string, filePath: string): NodeJS.ErrnoException {
+  return Object.assign(new Error(`${code}: open '${filePath}'`), { code, path: filePath });
+}
 
 async function projectWithMockAndFlow(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-markdown-files-"));
@@ -77,29 +83,33 @@ describe("Markdown under the specs directory in the UI/UX group", () => {
     expect(sharedIssues[2]?.some((entry) => entry.code === "QFAI-FLOW-002")).toBe(true);
   });
 
-  it("skips a file the reader could not read, as the default reader does", async () => {
+  it("leaves out a file that is gone by the time it is read", async () => {
     const root = await projectWithMockAndFlow();
-    const unreadable = path.join(root, ".qfai", "specs", "unreadable.md");
-    const reader: MarkdownFileReader = async (dir) => [
-      ...(await readMarkdownFiles(dir)),
-      { filePath: unreadable, content: null },
-    ];
+    const specsDir = path.join(root, ".qfai", "specs");
+    await writeFile(path.join(specsDir, "vanished.md"), "# Gone\n", "utf-8");
+    const reader = markdownFileReader(async (filePath) => {
+      if (filePath.endsWith("vanished.md")) throw errnoError("ENOENT", filePath);
+      return readFile(filePath, "utf-8");
+    });
 
-    const withUnreadable = await Promise.all([
-      validateHtmlMock(root, "web", config, undefined, reader),
-      validateUiDefinitionConsistency(root, config, reader),
-      validateMermaidScreenFlow(root, config, reader),
-    ]);
+    const files = await reader(specsDir);
 
-    expect(withUnreadable).toEqual(
-      await Promise.all([
-        validateHtmlMock(root, "web", config),
-        validateUiDefinitionConsistency(root, config),
-        validateMermaidScreenFlow(root, config),
-      ]),
-    );
-    expect(withUnreadable.flat().some((entry) => entry.file?.endsWith("unreadable.md"))).toBe(
-      false,
+    expect(files.map((file) => path.basename(file.filePath))).toEqual(["screens.md"]);
+  });
+
+  it("fails the read when a file is there but cannot be read, naming the file", async () => {
+    const root = await projectWithMockAndFlow();
+    const specsDir = path.join(root, ".qfai", "specs");
+    const denied = path.join(specsDir, "denied.md");
+    await writeFile(denied, "# Denied\n", "utf-8");
+    const reader = markdownFileReader(async (filePath) => {
+      if (filePath.endsWith("denied.md")) throw errnoError("EACCES", filePath);
+      return readFile(filePath, "utf-8");
+    });
+
+    await expect(reader(specsDir)).rejects.toThrow(/denied\.md/);
+    await expect(validateHtmlMock(root, "web", config, undefined, reader)).rejects.toThrow(
+      /EACCES/,
     );
   });
 });

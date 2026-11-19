@@ -31,8 +31,6 @@ export async function validateMermaidScreenFlow(
   const files = await readMarkdown(resolvePath(root, config, "specsDir"));
 
   for (const { filePath, content } of files) {
-    if (content === null) continue;
-
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
     const blocks = extractFencedCodeBlocks(content);
 
