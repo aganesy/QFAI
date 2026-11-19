@@ -29,10 +29,7 @@ export async function validateMermaidScreenFlow(
   readMarkdown: MarkdownFileReader = readMarkdownFiles,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const specsRoot = resolvePath(root, config, "specsDir");
-  const pattern = path.posix.join(specsRoot.replace(/\\/g, "/"), "**/*.md");
-
-  const files = await readMarkdown([pattern]);
+  const files = await readMarkdown(resolvePath(root, config, "specsDir"));
 
   for (const { filePath, content } of files) {
     if (content === null) continue;

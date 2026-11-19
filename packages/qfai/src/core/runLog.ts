@@ -1,10 +1,12 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { FailOn, QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
+import { findUnsafeHostFileComponent } from "./init/fsGuards.js";
 import { toRelativePath } from "./paths.js";
 import type { Issue, ValidationResult } from "./types.js";
+import { isInside } from "./validators/utils.js";
 
 type RunLogResultStatus = "pass" | "fail";
 
@@ -43,7 +45,11 @@ export async function writeValidateRunLog(input: {
 }): Promise<ValidateRunLog> {
   const root = path.resolve(input.root);
   const outDir = resolvePath(root, input.config, "outDir");
+  await refuseLinkedDestination(root, outDir);
   await mkdir(outDir, { recursive: true });
+  // Again after `mkdir`, which narrows the window a link swapped in can use
+  // but does not close it (see `refuseLinkedDestination`).
+  await refuseLinkedDestination(root, outDir);
   const { runId, reportDir } = await allocateRunReportDir(outDir, input.startedAt);
 
   const relativeSpecsRoot = toRelativePath(root, resolvePath(root, input.config, "specsDir"));
@@ -93,7 +99,7 @@ export async function writeValidateRunLog(input: {
   await writeJson(path.join(reportDir, "run.json"), runJson);
   await writeJson(path.join(reportDir, "validator.json"), validatorJson);
   await writeJson(path.join(reportDir, "traceability.json"), traceabilityJson);
-  await writeFile(path.join(reportDir, "summary.md"), `${summaryMd}\n`, "utf-8");
+  await writeNewFile(path.join(reportDir, "summary.md"), `${summaryMd}\n`);
 
   // Validate Hard Gate evidence. Written on every run so it can never go stale:
   // it always points at the newest run-log directory. Relying on `| tee` for it
@@ -118,6 +124,7 @@ export async function writeValidateRunLog(input: {
   };
 }
 
+const VALIDATE_LOG_NAME = "validate.log";
 const RUN_ID_LINE_RE = /^-\s*run_id:\s*(run-\d{17})\s*$/m;
 const RUN_DIR_RE = /^run-\d{17}$/;
 
@@ -161,7 +168,7 @@ async function writeLatestValidateLog(
   if (await hasNewerRunDir(outDir, runId)) {
     return;
   }
-  const filePath = path.join(outDir, "validate.log");
+  const filePath = path.join(outDir, VALIDATE_LOG_NAME);
   let existingRunId: string | null;
   try {
     existingRunId = RUN_ID_LINE_RE.exec(await readFile(filePath, "utf-8"))?.[1] ?? null;
@@ -171,7 +178,63 @@ async function writeLatestValidateLog(
   if (existingRunId !== null && existingRunId > runId) {
     return;
   }
-  await writeFile(filePath, `${buildContents()}\n`, "utf-8");
+  await replaceFile(filePath, `${buildContents()}\n`);
+}
+
+/**
+ * Stop before anything is written when `outDir`, a directory between the
+ * project root and it, or `validate.log` in it is a symbolic link or junction.
+ *
+ * `mkdir` and `writeFile` follow a link, so a linked component would put the
+ * run log, or overwrite a file, wherever the link points. Thrown with the
+ * component's path relative to the root, which is the message the operator
+ * sees. An `outDir` outside the root is checked from its own name down, since
+ * the directories above it are not the project's.
+ *
+ * Ceiling: this is a check, then writes. Another process that swaps `outDir`,
+ * a directory above it or the new run directory for a link after the check
+ * is not caught: `mkdir`, the exclusive creates and the rename all follow a
+ * linked parent directory. The exclusive creates and the rename only keep a
+ * link at the file name itself from being written through. Closing the window
+ * needs directory handles opened without following links, which Node does not
+ * offer portably; lift this if it does.
+ */
+async function refuseLinkedDestination(root: string, outDir: string): Promise<void> {
+  const insideRoot = isInside(root, outDir);
+  const base = insideRoot ? root : path.dirname(outDir);
+  const relative = path.relative(base, outDir);
+  const segments = [...(relative === "" ? [] : relative.split(path.sep)), VALIDATE_LOG_NAME];
+  const unsafe = await findUnsafeHostFileComponent(base, segments);
+  if (unsafe === undefined) {
+    return;
+  }
+  const shown = insideRoot ? unsafe.relativePath : path.join(base, unsafe.relativePath);
+  const what = unsafe.symlink ? "is a symbolic link or junction" : "is not a directory";
+  throw new Error(
+    `qfai validate: the run log was not written: ${shown} ${what}. Remove it, create a real directory where one belongs, and run again.`,
+  );
+}
+
+/**
+ * Put `contents` at `filePath` by writing a new file beside it and renaming it
+ * into place. A rename replaces the name, so a link or a hard link at
+ * `filePath` is replaced rather than written through, and a reader never sees a
+ * half-written file. Exported for every writer of a report file that a link
+ * could have replaced, such as the SDD preflight summaries.
+ */
+export async function replaceFile(filePath: string, contents: string): Promise<void> {
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    await writeNewFile(tempPath, contents);
+    await rename(tempPath, filePath);
+  } finally {
+    await rm(tempPath, { force: true });
+  }
+}
+
+/** Create `filePath`; fail rather than open whatever, a link included, is already there. */
+async function writeNewFile(filePath: string, contents: string): Promise<void> {
+  await writeFile(filePath, contents, { encoding: "utf-8", flag: "wx" });
 }
 
 /**
@@ -227,7 +290,7 @@ function buildValidateLog(input: {
 }
 
 async function writeJson(filePath: string, value: unknown): Promise<void> {
-  await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf-8");
+  await writeNewFile(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 function resolveStatus(
@@ -276,7 +339,6 @@ function buildTraceabilityJson(
 ): {
   schema_version: number;
   nodes: TraceabilityNode[];
-  stats: Record<string, number>;
 } {
   const idRegex = new RegExp(TRACEABILITY_ID_REGEX.source, TRACEABILITY_ID_REGEX.flags);
   const nodes = new Map<string, TraceabilityNode>();
@@ -311,12 +373,6 @@ function buildTraceabilityJson(
   return {
     schema_version: 1,
     nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
-    stats: {
-      downstream_violations: issues.filter((issue) => issue.code === "TRACE_DOWNSTREAM_REF").length,
-      shared_scope_violations: issues.filter(
-        (issue) => issue.code === "TRACE_SHARED_SCOPE_VIOLATION",
-      ).length,
-    },
   };
 }
 

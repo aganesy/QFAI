@@ -166,6 +166,46 @@ describe("qfai doctor reports whether the mdschema binary runs", () => {
     );
   });
 
+  // QFAI:EX-0003-0011-37
+  it("loads the package's platform file in a process of its own, not in doctor's", async () => {
+    // QFAI:AC-0003-0011-10
+    const log = path.join(await tempDir(), "platform-pid.txt");
+    await packagedMdschema({
+      platform: "absent",
+      platformFile: `require("node:fs").writeFileSync(${JSON.stringify(log)}, String(process.pid));\nmodule.exports = {};\n`,
+    });
+
+    const check = await checkMdschemaBinary();
+
+    expect(check.severity).toBe("ok");
+    expect(await readFile(log, "utf-8")).not.toBe(String(process.pid));
+  });
+
+  // QFAI:EX-0003-0011-37
+  it("stops a platform file that never returns at the deadline and stays ok", async () => {
+    // QFAI:AC-0003-0011-10
+    await packagedMdschema({ platform: "absent", platformFile: "for (;;) {}\n" });
+
+    // The deadline also bounds the `--help` run, so it leaves that run room to
+    // start Node on a loaded machine; only the looping platform file reaches it.
+    const check = await checkMdschemaBinary(5_000);
+
+    expect(check.severity).toBe("ok");
+  });
+
+  // QFAI:EX-0003-0011-37
+  it("stays ok and does not crash when the platform file throws once loaded", async () => {
+    // QFAI:AC-0003-0011-10
+    await packagedMdschema({
+      platform: "absent",
+      platformFile: 'throw new Error("test fixture: the platform file fails");\n',
+    });
+
+    const check = await checkMdschemaBinary();
+
+    expect(check.severity).toBe("ok");
+  });
+
   // QFAI:EX-0003-0011-23
   it("is an error naming the reason and the fix when the binary cannot run", async () => {
     // QFAI:AC-0003-0011-10

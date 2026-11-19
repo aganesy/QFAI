@@ -7,6 +7,11 @@
  * an install into that tree stops with an internal error and neither document check ever runs. The
  * checkers therefore go into a directory of their own, and the checker scripts are told where it is.
  *
+ * The schema checker is the version the selected QFAI depends on: the one the project's own
+ * `node_modules/qfai/package.json` declares, or, without one, the one the QFAI installed beside the
+ * tools brings. The lane installs it into the tools directory either way, so its platform binary
+ * arrives under the lane's own `--include=optional` whatever the project's install omitted.
+ *
  * Every assertion reads the tree `runInit` writes into a temporary directory, never `assets/init/**`.
  * The install step is executed under bash with `npm` replaced by a function that records its arguments,
  * so what is asserted is what the delivered step asks npm to do, in a project laid out the way pnpm
@@ -33,6 +38,11 @@ const MDSCHEMA_VERSION: string = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
 ).dependencies["@jackchuka/mdschema"];
 const TOOLS_DIR = "tmp/qfai-docs-tools";
+/**
+ * The checker version the staged project's QFAI declares. Not this package's own, so a lane that
+ * installed a version written into the workflow could not pass by coincidence.
+ */
+const DECLARED = "9.8.7";
 const INSTALL_STEP = "Install the document-shape and diagram checkers";
 
 let initPromise: Promise<string> | undefined;
@@ -73,13 +83,20 @@ type Recorded = { status: number | null; stderr: string; calls: string[][] };
  * Runs the install step in a project laid out as pnpm lays one out, with `npm` recording its arguments.
  * Each call is one line of the log: its arguments, joined by a tab.
  */
-async function runInstall(withQfai: boolean): Promise<Recorded> {
+async function runInstall(withQfai: boolean, declared: unknown = DECLARED): Promise<Recorded> {
   const body = await runBody(INSTALL_STEP);
   const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-int-docs-install-run-"));
   try {
     await mkdir(path.join(stage, "node_modules", ".pnpm"), { recursive: true });
     await writeFile(path.join(stage, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n", "utf-8");
-    if (withQfai) await mkdir(path.join(stage, "node_modules", "qfai"), { recursive: true });
+    if (withQfai) {
+      const qfai = path.join(stage, "node_modules", "qfai");
+      await mkdir(qfai, { recursive: true });
+      // `null` stands for a QFAI that declares no checker at all.
+      const dependencies = declared === null ? {} : { "@jackchuka/mdschema": declared };
+      const manifest = { name: "qfai", dependencies };
+      await writeFile(path.join(qfai, "package.json"), JSON.stringify(manifest), "utf-8");
+    }
     const log = path.join(stage, "npm-calls.log");
     const script = path.join(stage, "step.sh");
     const prelude = `npm() { local IFS=$'\\t'; printf '%s\\n' "$*" >> "$NPM_LOG"; }\n`;
@@ -123,13 +140,28 @@ describe("the delivered document lane installs its checkers outside the project'
     expect(call).toContain("--ignore-scripts");
     expect(call).toContain("--include=optional");
     const packages = call.filter((argument) => !argument.startsWith("-") && argument !== "install");
-    // With no QFAI of its own the project gets the newest one, and the schema checker comes with
-    // it at the version that release depends on, so its schemas and their checker stay one release.
+    // The schema checker is the version the selected QFAI depends on, so its schemas and their
+    // checker stay one release. With a QFAI of its own the project's copy declares it; without one
+    // the project gets the newest QFAI, and the checker comes with it.
     expect(packages).toEqual(
       withQfai
-        ? [`@jackchuka/mdschema@${MDSCHEMA_VERSION}`, "mermaid@11.17.2", "jsdom@29.1.1"]
+        ? [`@jackchuka/mdschema@${DECLARED}`, "mermaid@11.17.2", "jsdom@29.1.1"]
         : ["mermaid@11.17.2", "jsdom@29.1.1", "qfai"],
     );
+  });
+
+  // QFAI:EX-0002-0003-07
+  it.skipIf(!HAS_BASH).each([
+    ["declares no checker", null],
+    ["declares a range", "^0.15.7"],
+    ["declares a version followed by an argument", "0.15.7 left-pad"],
+    ["declares a version with a leading zero", "00.15.7"],
+  ])("stops before installing when the project's QFAI %s", async (_name, declared) => {
+    const run = await runInstall(true, declared);
+
+    expect(run.status).not.toBe(0);
+    expect(run.calls).toEqual([]);
+    expect(run.stderr).toContain("node_modules/qfai/package.json");
   });
 
   // QFAI:EX-0002-0003-07

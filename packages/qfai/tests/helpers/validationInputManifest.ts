@@ -13,7 +13,7 @@ import { collectFilesByGlobs } from "../../src/core/fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../../src/core/traceability.js";
 import {
   collectHtmlMockBlocks,
-  mockMarkdownGlobs,
+  mockMarkdownDir,
 } from "../../src/core/validators/htmlMockBlocks.js";
 
 const execFile = promisify(execFileCallback);
@@ -56,9 +56,9 @@ export async function validationInputManifest(root: string) {
       dot: true,
     })
   ).map((file) => path.resolve(file));
-  const htmlMarkdown = (await fg(mockMarkdownGlobs(root, config), { absolute: true })).map((file) =>
-    path.resolve(file),
-  );
+  const htmlMarkdown = (
+    await fg("**/*.md", { cwd: mockMarkdownDir(root, config), absolute: true })
+  ).map((file) => path.resolve(file));
   const surfaces = (
     await fg(
       (["specsDir", "contractsDir", "skillsDir", "srcDir", "testsDir"] as const).map((key) =>

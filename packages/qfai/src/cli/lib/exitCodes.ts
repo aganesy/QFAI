@@ -34,7 +34,8 @@ export const EXIT_CODES = {
    * the value `invalidExitCode` in `parseArgs` returns for every command,
    * and the row the init CLI contract's exit-code table reserves. A value
    * flag whose value the parser rejects (--fail-on with anything but never /
-   * warning / error) also stops here, before any main processing.
+   * warning / error, or on db-drift, which has no warning tier, anything but
+   * never / error) also stops here, before any main processing.
    *
    * Input and lock-drift errors use the same value. In report, a missing
    * input file does too.
@@ -64,10 +65,10 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "db-drift",
     lines: [
-      `${EXIT_CODES.ok} = no difference, nothing configured to compare, or --fail-on never,`,
+      `${EXIT_CODES.ok} = no difference, nothing configured to compare, or a difference under --fail-on never,`,
       `${EXIT_CODES.findings} = the contracts and the migrations differ,`,
       `${EXIT_CODES.inputError} = the comparison could not be made (a file on either side`,
-      "      would not apply, or the schemas could not be read)",
+      "      would not apply, or the schemas could not be read), even under --fail-on never",
     ],
   },
   {

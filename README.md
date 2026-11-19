@@ -33,7 +33,9 @@ here: `package.json#version` in the published package is the only version source
 > **Do not install from the GitHub repository.** A git specifier such as
 > `"qfai": "github:aganesy/QFAI"` installs the private monorepo root as `node_modules/qfai`.
 > That root ships no `bin` and no built `dist`, so nothing is runnable or importable.
-> npm and yarn refuse it with an explanatory error through a `preinstall` guard.
+> npm stops with `EUNSUPPORTEDPROTOCOL` before any install script runs, because the
+> repository root declares a `workspace:` dependency npm does not support; the error does not
+> mention QFAI. yarn refuses it with an explanatory error through a `preinstall` guard.
 > pnpm, and any package manager that reports no user agent, do not, so avoid it yourself.
 > Use the npm package.
 > Standalone CLI inspection can use `npx qfai@latest <command>`;
@@ -65,6 +67,15 @@ that approves the script for each version can approve the new one before it
 upgrades.
 
 ## Quick start
+
+A fresh `qfai init` needs these on the machine before the first run:
+
+- Node.js 20.19.0 or later, to run `qfai` at all.
+- Python 3.10 or later, and [`uv`](https://docs.astral.sh/uv/). Init installs
+  the code and document graph runtimes with them; the graphs themselves are
+  built later, when the graph commands first run.
+- Network access to the npm registry, which serves CodeGraph, and to PyPI,
+  which serves Graphify. Init downloads both on its first run.
 
 > **Windows users:** `qfai init` creates symlinks internally.
 > You must enable **Developer Mode** (Settings → System → For developers → Developer Mode: ON)
@@ -328,7 +339,7 @@ flowchart LR
     `npx qfai doctor --format json`.
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` and installs the assistant tree
-    (`assistant/rule/`, `skill/`, `agent/` and `prompt/`), plus `qfai.config.yaml`.
+    (`assistant/rule/`, `skill/`, `step/`, `agent/` and `prompt/`), plus `qfai.config.yaml`.
   - Options:
 
     | Flag              | Effect                                                                                                                                                                                                                                                                                                                                                              |
@@ -958,8 +969,8 @@ To upgrade by hand:
 8. After the change is merged, every other checkout and worktree of the
    project runs its install once it pulls the change, for example `npm ci`.
    Until it does, its `node_modules` keeps the old qfai: every command warns
-   with both versions, and `npx qfai validate`, `npx qfai sdd preflight` and
-   `npx qfai workflow plan` stop.
+   with both versions, and `npx qfai validate`, `npx qfai sdd preflight`,
+   `npx qfai report --run-validate` and `npx qfai workflow plan` stop.
 
 An agent asked to upgrade `qfai` follows these steps as a dependency update.
 
@@ -1024,10 +1035,13 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   │   ├── rule
 │   │   │   ├── constitution.md
 │   │   │   └── test-layers.md
-│   │   └── skill
-│   │       ├── qfai-migration-v1-to-v2
-│   │       │   └── SKILL.md
-│   │       └── <other QFAI skills>
+│   │   ├── skill
+│   │   │   ├── qfai-migration-v1-to-v2
+│   │   │   │   └── SKILL.md
+│   │   │   └── <other QFAI skills>
+│   │   └── step
+│   │       └── <step>
+│   │           └── STEP.md
 │   ├── spec
 │   │   ├── 01_policy
 │   │   │   ├── objective.md

@@ -58,6 +58,24 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     expect(statements).toHaveLength(1);
   });
 
+  it("splits after an identifier that holds a tag-like run", () => {
+    // `foo$tag$` is one identifier, since `$` continues a name. Read as an
+    // opener, it would swallow every statement up to the next `foo$tag$`.
+    const { statements, errors } = parseSqlContract(
+      "CREATE TABLE foo$tag$ (id int); SELECT 1; COMMENT ON TABLE foo$tag$ IS 'x';",
+    );
+    expect(errors).toEqual([]);
+    expect(statements).toHaveLength(3);
+  });
+
+  it("does not split on a `;` inside a body tagged with non-ASCII letters", () => {
+    const { statements, errors } = parseSqlContract(
+      "CREATE FUNCTION f() RETURNS int AS $é$ BEGIN RETURN 1; END $é$ LANGUAGE plpgsql;",
+    );
+    expect(errors).toEqual([]);
+    expect(statements).toHaveLength(1);
+  });
+
   it("does not split on a `;` inside a string literal", () => {
     const { statements } = parseSqlContract(`INSERT INTO t VALUES ('a;b'); SELECT 1;`);
     expect(statements).toHaveLength(2);
@@ -136,6 +154,84 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     const { statements } = parseSqlContract(
       `CREATE FUNCTION f(a int) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
         `CREATE FUNCTION f(a text) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  // PostgreSQL identifies a routine by its name and input argument types.
+  // Argument names, DEFAULT expressions, OUT arguments of a function and
+  // spacing are not part of that identity, so a difference in them alone
+  // still declares the same routine twice.
+  it.each([
+    ["a default value", "f(a int DEFAULT 1)", "f(a int DEFAULT 2)"],
+    ["a default written with =", "f(a int = 1, b text)", "f(a int, b text)"],
+    ["argument names", "f(a int, b text)", "f(x int, y text)"],
+    ["a named versus an unnamed argument", "f(a int)", "f(int)"],
+    ["spacing and case", "f(a INT,b  numeric(10, 2))", "f( a int , b numeric(10,2) )"],
+    ["an OUT argument of a function", "f(a int, OUT b int)", "f(IN a int)"],
+    ["a multi-word type", "f(double precision)", "f(x double precision DEFAULT 0)"],
+    ["a mode written after the name", "f(a IN int)", "f(INOUT b int)"],
+    ["a default holding a comma", "f(a text DEFAULT 'x,y', b int)", "f(a text, b int)"],
+    ["a spaced type modifier on an unnamed argument", "f(numeric(10, 2))", "f(x numeric(10,2))"],
+    [
+      "the name of a precision-qualified zoned type",
+      "f(ts timestamp(3) with time zone)",
+      "f(timestamp(3) with time zone)",
+    ],
+    ["the name of an SQL-standard array type", "f(a int ARRAY)", "f(int ARRAY)"],
+  ])("reports two functions that differ only by %s", (_label, left, right) => {
+    const { statements } = parseSqlContract(
+      `CREATE OR REPLACE FUNCTION ${left} RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE OR REPLACE FUNCTION ${right} RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    const redefined = findRedefinitions(collectCreatedObjects(statements));
+    expect(redefined).toHaveLength(1);
+    expect(redefined[0]?.lines).toEqual([1, 2]);
+  });
+
+  it("does not report two functions whose input types differ in order", () => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION f(a int, b text) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION f(a text, b int) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  it.each([
+    [
+      "a precision-qualified time zone qualifier",
+      "f(timestamp(3) with time zone)",
+      "f(timestamp(3) without time zone)",
+    ],
+    [
+      "a precision-qualified time type",
+      "f(time(3) with time zone)",
+      "f(timestamp(3) with time zone)",
+    ],
+    ["the element type of an SQL-standard array", "f(int ARRAY)", "f(text ARRAY)"],
+    ["the element type of a sized SQL-standard array", "f(int ARRAY[3])", "f(text ARRAY[3])"],
+  ])("does not report two functions whose input types differ by %s", (_label, left, right) => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION ${left} RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION ${right} RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  it("does not report two functions where one has a VARIADIC input", () => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION f(a int) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION f(a int, VARIADIC b int[]) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  // A procedure's OUT arguments are part of its identity in PostgreSQL, unlike
+  // a function's.
+  it("does not report two procedures that differ by an OUT argument", () => {
+    const { statements } = parseSqlContract(
+      `CREATE PROCEDURE p(a int, OUT b int) LANGUAGE sql AS $$ SELECT 1 $$;\n` +
+        `CREATE PROCEDURE p(a int) LANGUAGE sql AS $$ SELECT 1 $$;\n`,
     );
     expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
   });

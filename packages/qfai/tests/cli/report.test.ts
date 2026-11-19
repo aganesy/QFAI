@@ -70,6 +70,28 @@ describe("qfai report on a story tree", () => {
     expect(await exists(path.join(root, ".qfai/report/business-flow-0001/coverage.md"))).toBe(true);
   });
 
+  // QFAI:EX-0001-0058-01
+  it("counts a declared contract no rule links to a flow, unless --flow scopes the report", async () => {
+    const root = await storyRoot();
+    const contractDir = path.join(root, ".qfai/spec/03_contract/cli");
+    await mkdir(contractDir, { recursive: true });
+    await writeFile(path.join(contractDir, "cli-0001-sample.md"), "# CLI-0001: Sample\n", "utf8");
+    const contractCount = async (file: string): Promise<number> => {
+      const output = JSON.parse(await readFile(path.join(root, ".qfai/report", file), "utf8")) as {
+        summary: { contracts: number };
+      };
+      return output.summary.contracts;
+    };
+    await writeValidation(root, []);
+    expect(await runReport({ root, format: "json", failOn: "never" })).toBe(0);
+    expect(await contractCount("report.json")).toBe(1);
+    await writeValidation(root, [], "validate.flow-0001.json");
+    expect(await runReport({ root, format: "json", failOn: "never", flowIds: ["BF-0001"] })).toBe(
+      0,
+    );
+    expect(await contractCount("report.flow-0001.json")).toBe(0);
+  });
+
   it("links finding paths when --base-url is set", async () => {
     const root = await storyRoot();
     await writeValidation(root, [{ ...issue("warning"), file: ".qfai/spec/decisions.md" }]);
@@ -78,6 +100,55 @@ describe("qfai report on a story tree", () => {
     expect(output).toContain(
       "[.qfai/spec/decisions.md](https://example.test/repo/.qfai/spec/decisions.md)",
     );
+  });
+
+  // QFAI:EX-0001-0060-02
+  it("renders diagnostic text as Markdown text and encodes each linked path segment", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [
+      {
+        ...issue("warning"),
+        code: "QFAI-[X]",
+        message: "see [here](https://evil.test) <b>*now*</b>\n# Heading",
+        file: "docs/a b/(x)](https:/evil.test)#.md",
+      },
+    ]);
+    await runReport({ root, format: "md", failOn: "never", baseUrl: "https://example.test/repo/" });
+    const output = await readFile(path.join(root, ".qfai/report/report.md"), "utf8");
+    expect(output).toContain(
+      "- WARNING QFAI-\\[X\\]: see \\[here\\](https://evil.test) \\<b\\>\\*now\\*\\</b\\> # Heading" +
+        " ([docs/a b/(x)\\](https:/evil.test)#.md]" +
+        "(https://example.test/repo/docs/a%20b/%28x%29%5D%28https%3A/evil.test%29%23.md))",
+    );
+    expect(output.split("\n").filter((line) => line.startsWith("# "))).toEqual(["# QFAI Report"]);
+  });
+
+  // QFAI:EX-0001-0060-02
+  it("leaves a path that climbs out of the base URL unlinked", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [{ ...issue("warning"), file: "../../other/secret.md" }]);
+    await runReport({ root, format: "md", failOn: "never", baseUrl: "https://example.test/repo" });
+    const output = await readFile(path.join(root, ".qfai/report/report.md"), "utf8");
+    expect(output).toContain("(../../other/secret.md)");
+    expect(output).not.toContain("](https://");
+  });
+
+  // QFAI:EX-0001-0060-03
+  it.each([
+    "javascript:alert(1)",
+    "not a url",
+    "https://example.test/repo?x=1",
+    "https://example.test/#a",
+    "https://example.test/repo?",
+    "https://example.test/repo#",
+    "https://user:secret@example.test/repo",
+  ])("exits 2 before writing a report when --base-url is %s", async (baseUrl) => {
+    const root = await storyRoot();
+    await writeValidation(root, [issue("warning")]);
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    expect(await runReport({ root, format: "md", failOn: "never", baseUrl })).toBe(2);
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain("--base-url");
+    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 
   it("uses loaded findings for the exit gate even when stored counts are stale", async () => {

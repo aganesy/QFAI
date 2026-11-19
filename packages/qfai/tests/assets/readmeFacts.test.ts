@@ -54,6 +54,40 @@ describe("README facts", () => {
     }
   });
 
+  it("states what a fresh qfai init needs before the first command", async () => {
+    const manifest: unknown = JSON.parse(
+      await readFile(path.join(repoRoot, "packages", "qfai", "package.json"), "utf-8"),
+    );
+    const engines =
+      typeof manifest === "object" && manifest !== null && "engines" in manifest
+        ? manifest.engines
+        : undefined;
+    const node =
+      typeof engines === "object" && engines !== null && "node" in engines
+        ? String(engines.node)
+        : "";
+    const minimum = /^>=(\d+\.\d+\.\d+)$/.exec(node)?.[1];
+    expect(minimum, "packages/qfai/package.json#engines.node").toBeDefined();
+
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("## Quick start");
+      expect(start, readmePath).toBeGreaterThanOrEqual(0);
+      const quickStart = readme.slice(start, readme.indexOf("npx qfai init", start));
+      for (const fact of [
+        `Node.js ${minimum} or later`,
+        "Python 3.10 or later",
+        "`uv`",
+        "npm registry",
+        "PyPI",
+      ]) {
+        expect(quickStart, `${readmePath} must state ${fact} before the first init`).toContain(
+          fact,
+        );
+      }
+    }
+  });
+
   it("states the upgrade procedure in both READMEs", async () => {
     for (const readmePath of READMES) {
       const readme = await readFile(readmePath, "utf-8");
@@ -134,11 +168,19 @@ describe("README facts", () => {
     //     common help flags in the guard above the dispatch, so scanning only
     //     `case "init":` would let both READMEs drop `--help` / `-h` while the
     //     test name still promises "every qfai init flag". Derive that guard's
-    //     options too — they apply to every command, `init` included.
-    const preDispatch = mainSource.slice(0, mainSource.indexOf("switch (command) {"));
-    expect(preDispatch.length, "main.ts must keep a `switch (command) {` dispatch").toBeGreaterThan(
-      0,
-    );
+    //     options too — they apply to every command, `init` included. Only
+    //     `run()` up to its `dispatch(` call is the guard: a helper declared
+    //     between `run()` and the switch, such as the stale-install gate that
+    //     reads `options.reportRunValidate` for `report`, does not apply to
+    //     `init` and must not pull its flags into this set.
+    const runStart = mainSource.indexOf("export async function run(");
+    const dispatchCall = mainSource.indexOf("await dispatch(command, options)", runStart);
+    expect(runStart, "main.ts must keep an exported `run()`").toBeGreaterThanOrEqual(0);
+    expect(
+      dispatchCall,
+      "`run()` must keep its `await dispatch(command, options)` call",
+    ).toBeGreaterThan(runStart);
+    const preDispatch = mainSource.slice(runStart, dispatchCall);
     const commonOptionKeys = collectOptionKeys(preDispatch);
 
     // 1c. Options the PARSER folds into an init option after the switch.
@@ -192,6 +234,24 @@ describe("README facts", () => {
     ).toBeGreaterThan(0);
     for (const flag of commonFlags) {
       expectDocumented(flag, "handled before the init dispatch");
+    }
+  });
+
+  // npm stops at the root's `workspace:` dependency before the `preinstall`
+  // guard runs, so the guard's message is yarn's refusal, not npm's.
+  it("names npm's own error for a Git install and gives the preinstall guard to yarn", async () => {
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("> **Do not install from the GitHub repository.**");
+      expect(start, readmePath).toBeGreaterThanOrEqual(0);
+      const note = readme
+        .slice(start, readme.indexOf("\n\n", start))
+        .replace(/^> ?/gm, "")
+        .replace(/\s+/g, " ");
+      expect(note, readmePath).toContain("`EUNSUPPORTEDPROTOCOL`");
+      expect(note, readmePath).toContain("`workspace:`");
+      expect(note, readmePath).toMatch(/yarn refuses it [^.]*`preinstall` guard/);
+      expect(note, readmePath).not.toMatch(/npm and yarn refuse/i);
     }
   });
 

@@ -1,5 +1,4 @@
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { cp, link, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -22,29 +21,14 @@ const PACKAGE_MANIFEST = "packages/qfai/package.json";
 const LOCK = "pnpm-lock.yaml";
 const WORKSPACE = "pnpm-workspace.yaml";
 const BUILDS = ".github/actions/setup/dependency-builds.txt";
-const WORKFLOW = "packages/qfai/assets/init/root/.github/workflows/qfai-docs.yml";
-const HELPER = "packages/qfai/tests/helpers/shippedLaneCommands.ts";
 const RULE = ".agents/rules/document-schema.local.md";
 const INSTALLED = [
   "node_modules/@jackchuka/mdschema/package.json",
   "packages/qfai/node_modules/@jackchuka/mdschema/package.json",
 ];
-const INPUTS = [ROOT_MANIFEST, PACKAGE_MANIFEST, LOCK, WORKSPACE, BUILDS, WORKFLOW, HELPER, RULE];
-const TARGETS = [WORKFLOW, HELPER, RULE];
+const INPUTS = [ROOT_MANIFEST, PACKAGE_MANIFEST, LOCK, WORKSPACE, BUILDS, RULE];
 const NEXT_VERSION = "0.16.123";
-const INSTALL_NAME = "Install the document-shape and diagram checkers";
-const TOOL_SUFFIX = " mermaid@11.17.2 jsdom@29.1.1";
-const FILE_PIN = /\["qfai-docs\.yml", "([a-f0-9]{64})"\]/;
-const BODY_PIN =
-  /"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body ([a-f0-9]{64})>"/;
 const HEADING = /^## Writing a schema for mdschema \d+\.\d+\.\d+$/m;
-const ANCHORS: Array<[string, RegExp]> = [
-  [WORKFLOW, /@jackchuka\/mdschema@\d+\.\d+\.\d+/],
-  [HELPER, /@jackchuka\/mdschema@\d+\.\d+\.\d+/],
-  [RULE, HEADING],
-  [HELPER, FILE_PIN],
-  [HELPER, BODY_PIN],
-];
 const tempDir = useTempDirPool("qfai-sync-mdschema-");
 
 async function text(root: string, file: string): Promise<string> {
@@ -118,64 +102,16 @@ async function fixture(version = NEXT_VERSION): Promise<string> {
   return root;
 }
 
-function run(root: string, preload?: string) {
+function run(root: string) {
   const source =
     `import { syncMdschemaVersion } from ${JSON.stringify(pathToFileURL(SCRIPT).href)};` +
     "process.exit(syncMdschemaVersion(process.argv[1]));";
-  const args = [
-    ...(preload === undefined ? [] : ["--import", pathToFileURL(preload).href]),
-    "--input-type=module",
-    "--eval",
-    source,
-    root,
-  ];
+  const args = ["--input-type=module", "--eval", source, root];
   return spawnSync(process.execPath, args, {
     cwd: root,
     encoding: "utf-8",
     timeout: 10_000,
   });
-}
-
-async function failurePreload(root: string, fault: "concurrent-change" | "write-failure") {
-  const preload = path.join(root, "write-fault.mjs");
-  const traceFile = path.join(root, "write-trace.json");
-  const parallel = `${await text(root, HELPER)}\n// concurrent fixture edit\n`;
-  await writeFile(
-    preload,
-    `
-import fs from "node:fs";
-import path from "node:path";
-import { syncBuiltinESMExports } from "node:module";
-const root = ${JSON.stringify(root)};
-const workflow = ${JSON.stringify(WORKFLOW)};
-const helper = ${JSON.stringify(HELPER)};
-const traceFile = ${JSON.stringify(traceFile)};
-const parallel = ${JSON.stringify(parallel)};
-const fault = ${JSON.stringify(fault)};
-const write = fs.writeFileSync;
-const trace = [];
-const save = () => write(traceFile, JSON.stringify(trace));
-save();
-fs.writeFileSync = (file, ...args) => {
-  const relative = path.relative(root, String(file)).split(path.sep).join("/");
-  trace.push(relative);
-  save();
-  if (relative === helper && fault === "write-failure") {
-    throw Object.assign(new Error("fixture refuses writing " + helper), { code: "EPERM" });
-  }
-  const result = write(file, ...args);
-  if (relative === workflow && fault === "concurrent-change") {
-    write(path.join(root, helper), parallel);
-    trace.push("concurrent helper change");
-    save();
-  }
-  return result;
-};
-syncBuiltinESMExports();
-`,
-    "utf-8",
-  );
-  return { preload, traceFile, parallel };
 }
 
 async function snapshot(root: string): Promise<Array<[string, string | null]>> {
@@ -200,21 +136,6 @@ async function refusesWithoutWrites(root: string, diagnostic: string): Promise<v
   expect(result.stderr).toContain(diagnostic);
   expect(await snapshot(root)).toEqual(before);
   expect(git(root, ["status", "--porcelain"])).toBe(status);
-}
-
-function digest(value: Buffer | string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-function installBody(workflow: string): string {
-  const parsed: unknown = parseYaml(workflow);
-  const job = findWorkflowJob(parsed, "checks");
-  if (job === undefined) throw new Error("Fixture has no checks job");
-  const matches = collectJobSteps(job).filter((step) => step["name"] === INSTALL_NAME);
-  expect(matches).toHaveLength(1);
-  const body = matches[0]?.["run"];
-  if (typeof body !== "string") throw new Error("Fixture has no install body");
-  return body;
 }
 
 describe("syncing the schema checker's declared version", () => {
@@ -283,7 +204,7 @@ describe("syncing the schema checker's declared version", () => {
       const result = run(root);
       expect(result.error).toBeUndefined();
       expect(result.status, result.stderr).toBe(0);
-      expect(result.stdout).toContain(`updated ${WORKFLOW}`);
+      expect(result.stdout).toContain(`updated ${RULE}`);
     });
 
     it("still checks the project document's importer entries", async () => {
@@ -328,21 +249,21 @@ describe("syncing the schema checker's declared version", () => {
     },
   );
 
-  it.each(ANCHORS)("refuses a duplicate anchor in %s (%s)", async (file, pattern) => {
+  it("refuses a duplicate schema heading", async () => {
     const root = await fixture();
-    const original = await text(root, file);
-    const lines = original.split("\n").filter((line) => pattern.test(line));
+    const original = await text(root, RULE);
+    const lines = original.split("\n").filter((line) => HEADING.test(line));
     expect(lines).toHaveLength(1);
-    await put(root, file, `${original}\n${lines[0]}\n`);
-    await refusesWithoutWrites(root, file);
+    await put(root, RULE, `${original}\n${lines[0]}\n`);
+    await refusesWithoutWrites(root, RULE);
   });
 
-  it.each(ANCHORS)("refuses a missing anchor in %s (%s)", async (file, pattern) => {
+  it("refuses a missing schema heading", async () => {
     const root = await fixture();
-    const original = await text(root, file);
-    expect(original).toMatch(pattern);
-    await put(root, file, original.replace(pattern, ""));
-    await refusesWithoutWrites(root, file);
+    const original = await text(root, RULE);
+    expect(original).toMatch(HEADING);
+    await put(root, RULE, original.replace(HEADING, ""));
+    await refusesWithoutWrites(root, RULE);
   });
 
   it("refuses a checker permission that would enable install scripts", async () => {
@@ -363,16 +284,6 @@ describe("syncing the schema checker's declared version", () => {
     await refusesWithoutWrites(root, BUILDS);
   });
 
-  it("refuses disagreement between existing derived versions", async () => {
-    const root = await fixture();
-    await put(
-      root,
-      RULE,
-      (await text(root, RULE)).replace(HEADING, "## Writing a schema for mdschema 0.16.124"),
-    );
-    await refusesWithoutWrites(root, RULE);
-  });
-
   it("refuses a hard-linked target before changing either link", async () => {
     const root = await fixture();
     const alias = path.join(root, "linked-rule.md");
@@ -382,60 +293,23 @@ describe("syncing the schema checker's declared version", () => {
     expect(await readFile(alias)).toEqual(before);
   });
 
-  it.each([FILE_PIN, BODY_PIN])("refuses a stale reviewed pin %s", async (pattern) => {
-    const root = await fixture();
-    const original = await text(root, HELPER);
-    const pin = pattern.exec(original)?.[1];
-    if (pin === undefined) throw new Error("Missing fixture pin");
-    await put(root, HELPER, original.replace(pin, "0".repeat(64)));
-    await refusesWithoutWrites(root, HELPER);
-  });
-
-  it("refuses an unrelated workflow edit even when the version anchor still exists", async () => {
-    const root = await fixture();
-    await put(root, WORKFLOW, `${await text(root, WORKFLOW)}\n# unrelated edit\n`);
-    await refusesWithoutWrites(root, HELPER);
-  });
-
-  // QFAI:EX-0002-0003-07 QFAI:EX-0002-0003-09
-  it("updates only the checker version, its two reviewed pins and the schema heading", async () => {
+  it("updates only the schema heading, and names no shipped workflow", async () => {
+    // The shipped docs lane names no checker version: it reads the one the selected QFAI declares.
     const root = await fixture();
     const before = await snapshot(root);
-    const originalWorkflow = await text(root, WORKFLOW);
-    const originalHelper = await text(root, HELPER);
     const originalRule = await text(root, RULE);
-    const oldToken = /@jackchuka\/mdschema@\d+\.\d+\.\d+/.exec(originalWorkflow)?.[0];
-    const oldFilePin = FILE_PIN.exec(originalHelper)?.[1];
-    const oldBodyPin = BODY_PIN.exec(originalHelper)?.[1];
-    if (oldToken === undefined || oldFilePin === undefined || oldBodyPin === undefined) {
-      throw new Error("Missing fixture version or pin");
-    }
-    const expectedWorkflow = originalWorkflow.replace(oldToken, `${PACKAGE}@${NEXT_VERSION}`);
-    const expectedHelper = originalHelper
-      .replace(oldToken, `${PACKAGE}@${NEXT_VERSION}`)
-      .replace(oldFilePin, digest(Buffer.from(expectedWorkflow)))
-      .replace(oldBodyPin, digest(installBody(expectedWorkflow)));
 
     const result = run(root);
     expect(result.error).toBeUndefined();
     expect(result.status, result.stderr).toBe(0);
-    expect(await text(root, WORKFLOW)).toBe(expectedWorkflow);
-    expect(await text(root, HELPER)).toBe(expectedHelper);
+    expect(result.stdout).toBe(`sync-mdschema-version: updated ${RULE}\n`);
     expect(await text(root, RULE)).toBe(
       originalRule.replace(HEADING, `## Writing a schema for mdschema ${NEXT_VERSION}`),
     );
-    const body = installBody(await text(root, WORKFLOW));
-    expect(body).toContain(`${PACKAGE}@${NEXT_VERSION}${TOOL_SUFFIX}`);
-    expect(body).toContain("--ignore-scripts --include=optional");
-    expect(body).toContain("--prefix=tmp/qfai-docs-tools");
-    expect(body).toContain("--no-save");
-    expect(body).toContain("mermaid@11.17.2 jsdom@29.1.1 qfai");
-    expect((await snapshot(root)).filter(([file]) => !TARGETS.includes(file))).toEqual(
-      before.filter(([file]) => !TARGETS.includes(file)),
+    expect((await snapshot(root)).filter(([file]) => file !== RULE)).toEqual(
+      before.filter(([file]) => file !== RULE),
     );
-    expect(git(root, ["diff", "--name-only"]).trim().split("\n").sort()).toEqual(
-      [...TARGETS].sort(),
-    );
+    expect(git(root, ["diff", "--name-only"]).trim()).toBe(RULE);
 
     git(root, ["add", "--all"]);
     git(root, [
@@ -451,57 +325,9 @@ describe("syncing the schema checker's declared version", () => {
     const once = await snapshot(root);
     const again = run(root);
     expect(again.status, again.stderr).toBe(0);
+    expect(again.stdout).toBe("sync-mdschema-version: already synchronized\n");
     expect(await snapshot(root)).toEqual(once);
     expect(git(root, ["status", "--porcelain"])).toBe("");
-  });
-
-  // QFAI:EX-0002-0003-07 QFAI:EX-0002-0003-09
-  it("retains a concurrent target change and stops before the next write", async () => {
-    const root = await fixture();
-    const before = await snapshot(root);
-    const original = await text(root, WORKFLOW);
-    const expected = original.replace(
-      /@jackchuka\/mdschema@\d+\.\d+\.\d+/,
-      `${PACKAGE}@${NEXT_VERSION}`,
-    );
-    const { preload, traceFile, parallel } = await failurePreload(root, "concurrent-change");
-    const result = run(root, preload);
-    expect(result.error).toBeUndefined();
-    expect(result.status, result.stderr).toBe(1);
-    expect(result.stderr).toContain(`the observed input changed: ${HELPER}`);
-    expect(result.stderr).toContain(`Partial changes retained: ${WORKFLOW}`);
-    expect(await text(root, WORKFLOW)).toBe(expected);
-    expect(await text(root, HELPER)).toBe(parallel);
-    expect((await snapshot(root)).filter(([file]) => file !== WORKFLOW && file !== HELPER)).toEqual(
-      before.filter(([file]) => file !== WORKFLOW && file !== HELPER),
-    );
-    const trace: unknown = JSON.parse(await readFile(traceFile, "utf-8"));
-    expect(trace).toEqual([WORKFLOW, "concurrent helper change"]);
-    expect(result.stdout).toBe("");
-  });
-
-  // QFAI:EX-0002-0003-07 QFAI:EX-0002-0003-09
-  it("reports a later write failure and retains only the completed write", async () => {
-    const root = await fixture();
-    const before = await snapshot(root);
-    const original = await text(root, WORKFLOW);
-    const expected = original.replace(
-      /@jackchuka\/mdschema@\d+\.\d+\.\d+/,
-      `${PACKAGE}@${NEXT_VERSION}`,
-    );
-    const { preload, traceFile } = await failurePreload(root, "write-failure");
-    const result = run(root, preload);
-    expect(result.error).toBeUndefined();
-    expect(result.status, result.stderr).toBe(1);
-    expect(result.stderr).toContain(`fixture refuses writing ${HELPER}`);
-    expect(result.stderr).toContain(`Partial changes retained: ${WORKFLOW}`);
-    expect(await text(root, WORKFLOW)).toBe(expected);
-    expect((await snapshot(root)).filter(([file]) => file !== WORKFLOW)).toEqual(
-      before.filter(([file]) => file !== WORKFLOW),
-    );
-    const trace: unknown = JSON.parse(await readFile(traceFile, "utf-8"));
-    expect(trace).toEqual([WORKFLOW, HELPER]);
-    expect(result.stdout).toBe("");
   });
 
   it("runs the sync before both resealers in Renovate's push step", async () => {
