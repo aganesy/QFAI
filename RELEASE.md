@@ -70,13 +70,7 @@ it is the release notes adopters read before they upgrade.
 - Branch naming: on the automated path Prepare release creates `release/vX.Y.Z`.
   On the manual path, use `feature/vX.Y.Z`
 - Run CI locally before creating the PR (the commands are in the next section)
-- Review completion criteria: the DoD is met and every additional finding is resolved
-- Before merging, follow [REVIEW.md](REVIEW.md#merging-a-pull-request):
-  - Every CI check on the PR's current head succeeded or was skipped.
-  - No review thread is unresolved.
-  - The Codex review of that head is complete and holds no P0 or P1 finding.
-    If Codex has posted no review of that head, an independent read-only reviewer
-    reviews it instead and reports no P0 or P1 findings.
+- The PR merges when it meets [REVIEW.md](REVIEW.md#merging-a-pull-request)
 - A permission holder merges the PR by hand with a merge commit, or an agent
   the user delegated the release to does, as
   `.agents/rules/version-discipline.local.md` says. In Claude Code, `gh pr merge`
