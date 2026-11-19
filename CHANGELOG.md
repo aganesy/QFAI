@@ -632,6 +632,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   replace each result file with a new one, so a second name for the file is
   left unchanged. Closes #4485.
 
+- **Screen alignment reads `.yml` UI contracts.** The check that names a
+  contract screen with no HTML mock (`QFAI-CONSISTENCY-002`) read only `.yaml`
+  files under the UI contract directory, so a screen declared in a `.yml`
+  contract was never compared with the mocks. It now reads the same contract
+  files as the other screen checks. Closes #4557.
+
 - **`qfai catalog components` writes only inside the project.** A
   `.qfai/catalog` directory, or a directory above it, that was a symbolic link
   or junction led the write to wherever the link pointed, overwriting a file
