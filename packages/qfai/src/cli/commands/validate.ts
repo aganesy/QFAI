@@ -162,7 +162,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       const elapsedMs = Date.now() - startedAt.getTime();
       process.stdout.write(`${formatPassSummary(normalized, failOn, elapsedMs)}\n`);
     }
-    emitTextRunLog(runLogPath);
+    process.stdout.write(`${formatRunLogLine(runLogPath)}\n`);
   }
   if (format === "github") {
     const jsonPath = resolveJsonPath(root, resultPaths?.write[0] ?? configuredValidateJsonPath);
@@ -666,11 +666,19 @@ function groupIssues(issues: readonly Issue[]): TextIssueGroup[] {
   );
 }
 
+/**
+ * One issue as its text lines. The message, the path and the refs come from the repository, so
+ * they are printed as log data: the path and refs stay on the issue's line, and every further
+ * line of the message starts with `MESSAGE_CONTINUATION`.
+ */
 function formatTextIssueLine(item: Issue): string {
-  const location = item.file ? ` (${item.file})` : "";
-  const refs = item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
+  const location = item.file ? ` (${escapePlainLine(item.file)})` : "";
+  const refs =
+    item.refs && item.refs.length > 0 ? ` refs=${item.refs.map(escapePlainLine).join(",")}` : "";
   const suppressed = item.suppressed ? " suppressed=true" : "";
-  return `[${item.severity}] ${item.code} ${item.message}${location}${refs}${suppressed}`;
+  const [first = "", ...rest] = plainLines(item.message);
+  const message = [first, ...rest.map((line) => `${MESSAGE_CONTINUATION}${line}`)].join("\n");
+  return `[${item.severity}] ${item.code} ${message}${location}${refs}${suppressed}`;
 }
 
 /**
@@ -867,8 +875,9 @@ export function formatPassSummary(
   );
 }
 
-function emitTextRunLog(runLogPath: string): void {
-  process.stdout.write(`run-log: ${runLogPath}\n`);
+/** The text output's last line; the path comes from the configuration, so it is log data. */
+export function formatRunLogLine(runLogPath: string): string {
+  return `run-log: ${escapePlainLine(runLogPath)}`;
 }
 
 /**
@@ -1076,8 +1085,8 @@ function emitGitHubSummary(
   // The paths are escaped for DISPLAY only: the runner reads every stdout line as a possible
   // workflow command, so a path carrying a newline would start a line of its own and could open
   // one. The report and run-log are still written to, and recorded at, the original paths.
-  const relative = escapeGitHubPlainLine(toRelativePath(options.root, options.jsonPath));
-  const runLog = escapeGitHubPlainLine(options.runLogPath);
+  const relative = escapePlainLine(toRelativePath(options.root, options.jsonPath));
+  const runLog = escapePlainLine(options.runLogPath);
   process.stdout.write(`qfai validate note: see ${relative} or --format text for the details.\n`);
   process.stdout.write(`qfai validate note: see ${runLog} for the run-log.\n`);
 
@@ -1532,17 +1541,31 @@ export function resolveIssueFix(issue: Issue): string {
   return issue.suggested_action ?? ISSUE_FIX_BY_CODE[issue.code] ?? UNCATALOGUED_FIX;
 }
 
+/**
+ * One labelled field under an issue. A value can carry repository text, so it is printed as log
+ * data, and each further line continues under the value's first character behind a `| `.
+ */
 function emitTextField(label: string, value: string): void {
-  const lines = value.replace(/\r\n/g, "\n").split("\n");
-  if (lines.length === 0) {
-    process.stdout.write(`  ${label}: \n`);
-    return;
-  }
-  const [first, ...rest] = lines;
-  process.stdout.write(`  ${label}: ${first ?? ""}\n`);
+  const [first = "", ...rest] = plainLines(value);
+  process.stdout.write(`  ${label}: ${first}\n`);
   for (const line of rest) {
-    process.stdout.write(`  ${" ".repeat(label.length)}  ${line}\n`);
+    process.stdout.write(`  ${" ".repeat(label.length)}| ${line}\n`);
   }
+}
+
+/**
+ * What starts every further line of an issue's message in the text output.
+ *
+ * Not spaces alone: the GitHub runner strips the leading whitespace of a log line before it
+ * looks for `::`, so a message line `  ::stop-commands::<token>` indented with spaces would
+ * still silence every annotation after it. The bar makes the line's first visible character
+ * QFAI's own.
+ */
+const MESSAGE_CONTINUATION = "  | ";
+
+/** A multi-line value as its lines, each printed as log data (`escapePlainLine`). */
+function plainLines(value: string): string[] {
+  return value.split(/\r\n|\n/).map(escapePlainLine);
 }
 
 /** A workflow command's message under `--format github`, which the runner decodes back. */
@@ -1551,12 +1574,33 @@ function escapeGitHubCommandValue(value: string): string {
 }
 
 /**
- * A path or other value inside a plain summary line under `--format github`, kept on one log
- * line. The runner decodes `%XX` only inside a workflow command, so a plain line keeps `%` as
- * written and shows a line break as a visible `\r` or `\n` instead.
+ * Repository-derived text inside one plain output line, in the text output and in the plain
+ * summary lines of `--format github`, printed as log data. Every control character shows as a
+ * visible escape: a line break as `\r` or `\n`, so the value cannot start a log line of its own,
+ * a tab as `\t`, and any other as `\u` and four hexadecimal digits, so a terminal or a CI log
+ * viewer does not act on it. The runner decodes `%XX` only inside a workflow command, so a plain
+ * line keeps `%` as written.
+ *
+ * `##[` prints as `##\[`: the runner also reads the older `##[<command>]` form, and it looks for
+ * that one anywhere in a line, so neither the issue's own prefix nor a continuation bar would
+ * stop `##[stop-commands]<token>`.
  */
-function escapeGitHubPlainLine(value: string): string {
-  return value.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+function escapePlainLine(value: string): string {
+  let escaped = "";
+  for (const char of value) {
+    escaped += escapeControlCharacter(char);
+  }
+  return escaped.replace(/##\[/g, "##\\[");
+}
+
+/** One character as `escapePlainLine` prints it. */
+function escapeControlCharacter(char: string): string {
+  const code = char.codePointAt(0) ?? 0;
+  if (code === 0x0a) return "\\n";
+  if (code === 0x0d) return "\\r";
+  if (code === 0x09) return "\\t";
+  const control = code < 0x20 || (code >= 0x7f && code <= 0x9f);
+  return control ? `\\u${code.toString(16).toUpperCase().padStart(4, "0")}` : char;
 }
 
 /**
