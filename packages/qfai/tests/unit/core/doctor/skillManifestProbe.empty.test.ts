@@ -9,10 +9,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  probeSkillManifest,
-  probeSkillManifestRuntimeDeps,
-} from "../../../../src/core/doctor/skillManifestProbe.js";
+import { probeSkillManifest } from "../../../../src/core/doctor/skillManifestProbe.js";
 
 const tempDirs: string[] = [];
 
@@ -42,24 +39,24 @@ async function seedManifest(root: string, skill: string, deps: string[]): Promis
 }
 
 // QFAI:EX-0003-0010-02
-describe("probeSkillManifestRuntimeDeps — empty runtimeDependencies", () => {
+describe("probeSkillManifest findings — empty runtimeDependencies", () => {
   it("emits zero probe findings when runtimeDependencies is []", async () => {
     const root = await newTempDir("empty");
     await seedManifest(root, "qfai-atdd", []);
-    const findings = await probeSkillManifestRuntimeDeps(root, "qfai-atdd");
+    const { findings } = await probeSkillManifest(root, "qfai-atdd");
     expect(findings).toEqual([]);
   });
 
   it("returns empty array when manifest itself is absent", async () => {
     const root = await newTempDir("absent");
-    const findings = await probeSkillManifestRuntimeDeps(root, "qfai-atdd");
+    const { findings } = await probeSkillManifest(root, "qfai-atdd");
     expect(findings).toEqual([]);
   });
 
   it("reports missing dep with install command when declared but not installed", async () => {
     const root = await newTempDir("missing");
     await seedManifest(root, "qfai-prototyping", ["playwright"]);
-    const findings = await probeSkillManifestRuntimeDeps(root, "qfai-prototyping");
+    const { findings } = await probeSkillManifest(root, "qfai-prototyping");
     expect(findings).toHaveLength(1);
     const finding = findings[0];
     if (!finding) throw new Error("expected one finding");
@@ -73,7 +70,7 @@ describe("probeSkillManifestRuntimeDeps — empty runtimeDependencies", () => {
     const root = await newTempDir("found");
     await seedManifest(root, "qfai-prototyping", ["playwright"]);
     await mkdir(path.join(root, "node_modules", "playwright"), { recursive: true });
-    const findings = await probeSkillManifestRuntimeDeps(root, "qfai-prototyping");
+    const { findings } = await probeSkillManifest(root, "qfai-prototyping");
     expect(findings).toHaveLength(1);
     expect(findings[0]?.status).toBe("found");
   });
