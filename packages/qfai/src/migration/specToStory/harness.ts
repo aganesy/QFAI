@@ -1,14 +1,4 @@
-import {
-  cp,
-  lstat,
-  mkdir,
-  readFile,
-  readdir,
-  rename,
-  rm,
-  rmdir,
-  writeFile,
-} from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, readdir, rename, rm, rmdir } from "node:fs/promises";
 import path from "node:path";
 
 import { SKILL_INTEGRATION_DIRS } from "../../core/init/integrationDirs.js";
@@ -23,6 +13,7 @@ import {
   type QfaiConfig,
 } from "../../core/config.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
+import { replaceFile } from "../../core/runLog.js";
 import { ID_MAP_PATH, IdMapInputError, MIGRATION_STATE_DIR, readIdMap } from "./idMap.js";
 import { shouldRenameSource, STEP01_RENAMES } from "./step01RenameDirectories.js";
 
@@ -376,7 +367,8 @@ async function applyOperation(
   switch (operation.kind) {
     case "write":
       await mkdir(path.dirname(target), { recursive: true });
-      await writeFile(target, operation.content, "utf8");
+      // Renamed into place, so a failed write leaves the document it replaces whole.
+      await replaceFile(target, operation.content);
       return;
     case "move":
       {
