@@ -256,14 +256,6 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       return;
     case "doctor":
       {
-        if (options.profile && options.profile !== "prototyping") {
-          error(
-            "qfai doctor: --profile accepts 'prototyping' or a skill name (e.g. 'qfai-prototyping').",
-          );
-          info(refusedUsage("doctor"));
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
         const exitCode = await runDoctor({
           root: options.root,
           rootExplicit: options.rootExplicit,
