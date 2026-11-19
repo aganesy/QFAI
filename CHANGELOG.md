@@ -677,6 +677,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that worked at runtime. `require` now resolves its types to `index.d.cts`,
   and `import` keeps `index.d.ts`. Closes #4598.
 
+- **`pnpm branch:catchup --push` pushes the commit it checked.** The helper
+  checked the current commit and then pushed `HEAD`, so other Git activity in
+  the checkout between the two could send a commit it never checked. It now
+  pushes the checked commit by its SHA to the same branch, as the manual push
+  steps in the development guide already do. Closes #4613.
+
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
   `npx qfai` and the document lane's check for `node_modules/qfai` found
