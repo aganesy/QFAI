@@ -186,7 +186,7 @@ export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map();
  * a backlog nobody can add to is a backlog that goes away.
  */
 export const WIDTH_BUDGET_BACKLOG: ReadonlyMap<string, number> = new Map([
-  ["assistant/skill/qfai-configure/SKILL.md", 671],
+  ["assistant/skill/qfai-configure/SKILL.md", 427],
   ["assistant/skill/qfai-sdd/references/design-md-brand-catalog.md", 529],
 ]);
 
