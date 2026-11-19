@@ -504,6 +504,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
 
+- **The GitHub Release is created only for the tag commit the release
+  workflow verified.** The release job named a tag, not a commit, minutes
+  after the tag was checked, so a tag moved in the meantime got a Release
+  describing a commit no gate ran on, and a deleted tag was recreated at the
+  default branch head. The job now reads the tag from the API just before it
+  creates the Release and stops unless the tag's commit, the verified commit
+  and the push event's commit are the same, and `gh release create` runs with
+  `--verify-tag`, so it never creates a tag. It reads the tag once more after
+  the create, and deletes the Release again and fails when the tag moved or
+  was deleted in between. Closes #4504.
+
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the
   `workflows.mdschemaBinary` check loaded `@jackchuka/mdschema`'s
