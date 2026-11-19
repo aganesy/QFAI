@@ -254,6 +254,43 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
     expect(await findings()).toEqual([]);
   });
 
+  it("skips a table inside an HTML comment", async () => {
+    const commented = ["<!--", "| Background | Chosen |", "| --- | --- |", "| x | 1 |", "-->"];
+    await put(
+      RECORD,
+      record([...commented, "", table(HEADER, INTERVIEW_ROW)].join("\n"), table(HEADER)),
+    );
+    expect(await findings()).toEqual([]);
+  });
+
+  it("does not take a heading inside an HTML comment as a section", async () => {
+    const text = [
+      "## Subject",
+      "Login.",
+      "## Interview",
+      table(HEADER, INTERVIEW_ROW),
+      ["<!--", "## Agent decisions", "-->"].join("\n"),
+    ].join("\n\n");
+    await put(RECORD, text);
+    const found = await findings();
+    expect(found).toHaveLength(1);
+    expect(found[0]?.message).toContain("has no `Agent decisions` section");
+  });
+
+  it("keeps each row's line number after an HTML comment", async () => {
+    const text = [
+      "## Interview",
+      ["<!--", "a note", "over three lines", "-->"].join("\n"),
+      table(HEADER, INTERVIEW_ROW),
+      "## Agent decisions",
+      table(HEADER, "| Name | A | B | C | 1 |"),
+    ].join("\n\n");
+    await put(RECORD, text);
+    const found = await findings();
+    expect(found).toHaveLength(1);
+    expect(found[0]?.message).toContain("row at line 16 has 5 cells");
+  });
+
   // QFAI:AC-0001-0302-03
   // QFAI:EX-0001-0302-10
   it("raises nothing with no directory and with a directory of no Markdown file", async () => {

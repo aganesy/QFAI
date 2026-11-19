@@ -521,6 +521,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reported as resolved from outside the project. Only a `..` path segment now
   leaves the project. Closes #4544.
 
+- **The deliberation record check ignores headings and tables inside HTML
+  comments.** `QFAI-DELIB-001` skipped fenced samples only, so a commented
+  `## Agent decisions` heading counted as the section and a commented table
+  under `Interview` was checked as one. The check now also skips HTML comments
+  and raw HTML blocks, and still reports each row at its line in the file.
+  Closes #4568.
+
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
   `npx qfai` and the document lane's check for `node_modules/qfai` found
