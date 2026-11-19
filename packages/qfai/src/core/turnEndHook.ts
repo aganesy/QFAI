@@ -68,7 +68,7 @@ export function readTurnEndChecks(techText: string): TurnEndSelection {
       continue;
     }
     if (!inSection) continue;
-    const bullet = /^( *)[-*+]\s/.exec(line);
+    const bullet = /^( *)-\s/.exec(line);
     if (bullet === null) continue;
     const indent = (bullet[1] ?? "").length;
     topIndent ??= indent;
