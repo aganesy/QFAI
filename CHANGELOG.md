@@ -566,6 +566,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
+- **Graph preparation says when a step ran out of time or printed too much.**
+  Runtime downloads and full code and document analysis ran under the same
+  two-minute and 4 MiB limits as a version check, and a step stopped at either
+  limit was reported as a missing Python or uv, an incompatible version or a
+  broken analysis to repair. A download now has 15 minutes, code analysis 30
+  minutes and document analysis two hours, each with 16 MiB of output. A step
+  stopped at its limit is reported as that, naming the step, the limit and its
+  value, and a stopped document analysis says to narrow the document scope.
+
 - **A failed graph tool download names a directory of its own to retry in.**
   The recovery line of `qfai init` told you to rerun the download into a fixed
   `qfai-graph-check` directory under the system temporary directory and then
@@ -605,6 +614,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `x-qfai-depends-on` declaration, or is empty; a Markdown contract, which
   has no such declaration, is not compared. The `QFAI-CONTRACT-015`
   message no longer names a rule `qfai validate` no longer has.
+
+- **The turn-end hook no longer runs checks when `qfai.config.yaml` cannot be
+  read.** A file that could not be read or parsed, or whose top level was not
+  a set of keys, such as an empty file, was treated as omitting
+  `workflow.stopGate` and so ran the project's turn-end checks. The hook now
+  runs none and says which file it could not read and that no turn-end check
+  ran.
 
 - **The turn-end check tells a failure in another worktree from a repeat.**
   When a continued turn failed with the same output it had blocked on, the

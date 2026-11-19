@@ -329,6 +329,7 @@
     "tests/integration/initDistributionAcceptance.test.ts",
     "tests/integration/initSeedGitignoreSymlink.test.ts",
     "tests/integration/scripts/checkPublishDryRun.test.ts",
+    "tests/integration/scripts/regenShippedEntryRealCli.test.ts",
     "tests/integration/scripts/storyCoverageCiWiring.test.ts",
     "tests/integration/sddConcreteAbstractCycle.test.ts",
     "tests/integration/sddPreDraftGrilling.test.ts",

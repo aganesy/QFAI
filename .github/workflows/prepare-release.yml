@@ -241,7 +241,22 @@ jobs:
           #
           # Adopted only when it really is this release's branch. A branch of the same name
           # declaring some other version is a collision, not a resume, and is refused by name.
-          if git ls-remote --exit-code --heads "$remote" "refs/heads/${RELEASE_BRANCH}" > /dev/null 2>&1; then
+          #
+          # The exit status is READ rather than tested for truth: `--exit-code` answers 2 for "no
+          # such ref" and 128 for "the question could not be asked" (a DNS blip, a rate limit).
+          # Only 2 means the branch is absent; anything else stops with git's own diagnostic.
+          # Asked through the credential-free `origin`, as in `renovate.yml`, so that diagnostic
+          # can stay visible without carrying the token. The repository is public.
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped templates prepare no release branch, so they have no lookup to fix.
+          lookup=0
+          git ls-remote --exit-code --heads origin "refs/heads/${RELEASE_BRANCH}" > /dev/null || lookup=$?
+          if [ "$lookup" -eq 2 ]; then
+            git push "$remote" "HEAD:refs/heads/${RELEASE_BRANCH}"
+          elif [ "$lookup" -ne 0 ]; then
+            echo "::error::prepare-release: could not determine whether ${RELEASE_BRANCH} already exists on the remote (git ls-remote exited ${lookup}; its message is above). The lookup is unauthenticated because this repository is public, so a repository turned private fails here too. Re-run once the remote answers; nothing was pushed."
+            exit 1
+          else
             git fetch --depth=1 "$remote" "refs/heads/${RELEASE_BRANCH}"
             existing_version="$(git show FETCH_HEAD:packages/qfai/package.json | node -pe "JSON.parse(require('node:fs').readFileSync(0, 'utf8')).version")"
             if [ "$existing_version" != "${RELEASE_VERSION}" ]; then
@@ -249,8 +264,6 @@ jobs:
               exit 1
             fi
             echo "prepare-release: ${RELEASE_BRANCH} is already pushed and declares ${RELEASE_VERSION}; reusing it rather than pushing a sibling commit. Its CHANGELOG is whatever that earlier run captured — delete the branch and re-run if the Unreleased section has grown since."
-          else
-            git push "$remote" "HEAD:refs/heads/${RELEASE_BRANCH}"
           fi
 
           # The body is written to a file rather than passed inline: its lines begin at column

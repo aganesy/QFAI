@@ -9,9 +9,10 @@
  *
  * Each guard is run over a throwaway repository. The index cases stage their paths with
  * `git update-index` rather than on disk, so a name no Windows filesystem accepts is still
- * exercised on every runner.
+ * exercised on every runner. The `find`-based case needs the name on disk and skips on Windows.
  */
 import { execFileSync, spawnSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -20,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { lifecycleProjection } from "../../../../scripts/check-lifecycle-manifests.mjs";
+import { plantedTree } from "./helpers/hygieneTree.js";
 
 const SCRIPTS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../scripts");
 
@@ -170,4 +172,33 @@ describe("check-lifecycle-manifests escapes the paths its walk found", () => {
       /^::error::check-lifecycle-manifests: odd%250Aname\/package\.json declares/,
     );
   });
+});
+
+describe("check-toolchain-action escapes the paths its find listed", () => {
+  // The guard compares what `find` lists under `scripts/` with what the pin list names, so the
+  // stray file has to exist on disk, and no Windows filesystem holds a line break in a name.
+  it.skipIf(process.platform === "win32")(
+    "keeps an unpinned file with a line break in its name inside one annotation",
+    () => {
+      const tree = plantedTree((dir) => {
+        writeFileSync(path.join(dir, "scripts", `x%\n${INJECTED_COMMAND}`), "exit 0\n", "utf-8");
+      });
+      roots.push(tree);
+
+      const child = spawnSync("bash", [path.join(SCRIPTS, "check-toolchain-action.sh"), tree], {
+        cwd: tree,
+        encoding: "utf-8",
+      });
+      const lines = `${child.stdout ?? ""}${child.stderr ?? ""}`.split(/\r?\n/).filter(Boolean);
+
+      expect(child.status).toBe(1);
+      expect(lines.filter((line) => line.startsWith(INJECTED_COMMAND))).toEqual([]);
+      const annotations = commands(lines);
+      expect(annotations).toHaveLength(1);
+      // `find` lists the name as two lines, which the locale may sort apart; both stay in the
+      // message, each as one entry of the joined list.
+      expect(annotations[0]?.line).toContain("scripts/x%25");
+      expect(annotations[0]?.line).toMatch(/(?:, |Present: )::stop-commands::7f3a9c(?:, |\. )/);
+    },
+  );
 });
