@@ -70,6 +70,28 @@ describe("qfai report on a story tree", () => {
     expect(await exists(path.join(root, ".qfai/report/business-flow-0001/coverage.md"))).toBe(true);
   });
 
+  // QFAI:EX-0001-0058-01
+  it("counts a declared contract no rule links to a flow, unless --flow scopes the report", async () => {
+    const root = await storyRoot();
+    const contractDir = path.join(root, ".qfai/spec/03_contract/cli");
+    await mkdir(contractDir, { recursive: true });
+    await writeFile(path.join(contractDir, "cli-0001-sample.md"), "# CLI-0001: Sample\n", "utf8");
+    const contractCount = async (file: string): Promise<number> => {
+      const output = JSON.parse(await readFile(path.join(root, ".qfai/report", file), "utf8")) as {
+        summary: { contracts: number };
+      };
+      return output.summary.contracts;
+    };
+    await writeValidation(root, []);
+    expect(await runReport({ root, format: "json", failOn: "never" })).toBe(0);
+    expect(await contractCount("report.json")).toBe(1);
+    await writeValidation(root, [], "validate.flow-0001.json");
+    expect(await runReport({ root, format: "json", failOn: "never", flowIds: ["BF-0001"] })).toBe(
+      0,
+    );
+    expect(await contractCount("report.flow-0001.json")).toBe(0);
+  });
+
   it("links finding paths when --base-url is set", async () => {
     const root = await storyRoot();
     await writeValidation(root, [{ ...issue("warning"), file: ".qfai/spec/decisions.md" }]);

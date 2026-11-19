@@ -579,6 +579,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
 
+- **A report without `--flow` counts every declared contract.** The summary
+  counted only contracts holding a business rule linked to a flow, so a project
+  with one declared contract and no linked rule reported zero contracts. Only a
+  report scoped by `--flow` now limits the count to the contracts its flows
+  link.
+
 - **The assistant anchor check reads only the assistant tree.** The
   `QFAI-LINK-002` check followed every link under `.qfai/assistant/`: a link to
   a directory or document outside the tree had its citations checked as if
