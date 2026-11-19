@@ -103,9 +103,13 @@ in with no session.
 `implement-scaffold` writes the spec from
 `.qfai/assistant/skill/qfai-implement/references/accessibility-check.md`.
 `npx qfai validate` warns with `QFAI-AXE-001` when the layer applies and no
-selected test file calls axe. A missing spec is reported by that warning, not
-as an UNRUN lane: the accessibility gate runs only in a project that has the
-spec.
+selected test file contains `AxeBuilder` or an `@axe-core/` package name. The
+warning reads text only: a comment or an unused import silences it as well as
+a spec that runs, so the accessibility gate, not the warning, shows that the
+routes pass. A missing spec is not an UNRUN lane: the accessibility gate runs
+only in a project that has the spec. The warning reports a missing spec only
+when no selected file names axe at all; `verify-qfai-gate` records the layer
+as missing whenever no selected test file runs `AxeBuilder` over the routes.
 
 ## Annotation routing
 

@@ -41,8 +41,6 @@ export async function validateHtmlMock(
   const mockBlocks: { file: string; html: string; rawBlock: string }[] = [];
 
   for (const { filePath, content } of files) {
-    if (content === null) continue;
-
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
 
     for (const block of collectHtmlMockBlocks(content)) {

@@ -116,21 +116,26 @@ describe("maskNonSpecRegions", () => {
     expect(visible(text)).toEqual(["# doc", "## Scope"]);
   });
 
-  it("blanks the whole closing line of a comment block, text after the closer included", () => {
+  it("blanks the rest of a line a comment opens or an open comment runs into", () => {
+    // Stripping only the comment handed what followed it back at the start of
+    // the line, so `<!-- note --> ## Risks` read as a heading and a fence after
+    // a closing `-->` hid the rest of the document.
     const text = [
       "# doc",
       "",
-      "<!-- a note --> ## Risks",
+      "<!-- note --> ## Risks",
       "",
       "<!--",
-      "a longer note",
-      "--> ## Risks",
+      "a note",
+      "--> ```",
       "",
       "## Scope",
+      "",
+      "Text <!-- aside --> ends here.",
     ].join("\n");
 
-    expect(visible(text)).toEqual(["# doc", "## Scope"]);
-    expect(maskNonSpecRegions(text).split("\n")).toHaveLength(9);
+    expect(visible(text)).toEqual(["# doc", "## Scope", "Text  ends here."]);
+    expect(maskNonSpecRegions(text).split("\n")).toHaveLength(11);
   });
 
   it("blanks a raw HTML block and everything it holds", () => {

@@ -1,7 +1,8 @@
 /**
  * Whether a project with web screens has an accessibility check: a selected
- * test file that calls axe. The rule warns only; it reads the UI contracts and
- * the story-tree test selection and nothing else.
+ * test file whose text names axe. The rule warns only; it reads the UI
+ * contracts and the story-tree test selection and nothing else, and it does
+ * not run or parse a test.
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -12,7 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
 import {
   UI_ACCESSIBILITY_LAYER_RULE_ID,
-  callsAxe,
+  namesAxe,
   isWebRoute,
   validateUiAccessibilityLayer,
 } from "../../src/core/validators/uiAccessibilityLayer.js";
@@ -57,7 +58,7 @@ afterEach(async () => {
 });
 
 // QFAI:EX-0001-0311-01
-describe("what makes a project a UI project and what counts as an axe call", () => {
+describe("what makes a project a UI project and what counts as naming axe", () => {
   it("reads a route that starts with / as a web route, and a command line as none", () => {
     expect(isWebRoute("/orders")).toBe(true);
     expect(isWebRoute(" /")).toBe(true);
@@ -65,18 +66,23 @@ describe("what makes a project a UI project and what counts as an axe call", () 
     expect(isWebRoute("orders")).toBe(false);
   });
 
-  it("counts AxeBuilder and an @axe-core/ import, and nothing else", () => {
-    expect(callsAxe(AXE_SPEC)).toBe(true);
-    expect(callsAxe('const { AxeBuilder } = require("x");')).toBe(true);
-    expect(callsAxe('import { checkA11y } from "@axe-core/react";')).toBe(true);
-    expect(callsAxe('test("orders", () => { expect(1).toBe(1); });')).toBe(false);
-    expect(callsAxe("// accessibility is checked by hand")).toBe(false);
+  it("counts AxeBuilder and an @axe-core/ package name, and nothing else", () => {
+    expect(namesAxe(AXE_SPEC)).toBe(true);
+    expect(namesAxe('const { AxeBuilder } = require("x");')).toBe(true);
+    expect(namesAxe('import { checkA11y } from "@axe-core/react";')).toBe(true);
+    expect(namesAxe('test("orders", () => { expect(1).toBe(1); });')).toBe(false);
+    expect(namesAxe("// accessibility is checked by hand")).toBe(false);
+  });
+
+  it("reads text only, so a comment or an unused import counts as well", () => {
+    expect(namesAxe("// TODO: run AxeBuilder here")).toBe(true);
+    expect(namesAxe('import AxeBuilder from "@axe-core/playwright";')).toBe(true);
   });
 });
 
 // QFAI:EX-0001-0311-01
 describe("validate and the accessibility layer", () => {
-  it("warns once, naming the web screens, when no selected test file calls axe", async () => {
+  it("warns once, naming the web screens, when no selected test file names axe", async () => {
     const root = await project({
       [CONTRACT]: contract("/orders", "/orders/new"),
       "tests/e2e/BF-0001.test.ts": 'test("journey", () => {});\n',
@@ -93,9 +99,13 @@ describe("validate and the accessibility layer", () => {
     expect(finding?.refs).toEqual(["screen_0", "screen_1"]);
     expect(finding?.message).toContain("2 screen(s) with a web route");
     expect(finding?.message).toContain("'/orders'");
+    expect(finding?.message).toContain(
+      "no selected test file contains `AxeBuilder` or an `@axe-core/` package name",
+    );
+    expect(finding?.message).not.toContain("calls axe");
   });
 
-  it("raises nothing when a spec under the E2E layer calls axe", async () => {
+  it("raises nothing when a spec under the E2E layer names axe", async () => {
     const root = await project({
       [CONTRACT]: contract("/orders"),
       "tests/e2e/accessibility.spec.ts": AXE_SPEC,
@@ -104,7 +114,7 @@ describe("validate and the accessibility layer", () => {
     expect(await validateUiAccessibilityLayer(root, defaultConfig)).toEqual([]);
   });
 
-  it("raises nothing when a file the configured globs select calls axe", async () => {
+  it("raises nothing when a file the configured globs select names axe", async () => {
     const root = await project({
       [CONTRACT]: contract("/orders"),
       "web/a11y/routes.check.ts": AXE_SPEC,
@@ -123,7 +133,7 @@ describe("validate and the accessibility layer", () => {
     expect(await validateUiAccessibilityLayer(root, config)).toEqual([]);
   });
 
-  it("does not count an axe call in a file the selection leaves out", async () => {
+  it("does not count axe named in a file the selection leaves out", async () => {
     const root = await project({
       [CONTRACT]: contract("/orders"),
       "scripts/a11y.ts": AXE_SPEC,

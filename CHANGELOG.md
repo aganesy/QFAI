@@ -81,8 +81,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runs it through the `Test` command, and `verify-qfai-gate` records whether it
   exists. `qfai validate`
   warns with `QFAI-AXE-001` in the verify and full profiles when a project with
-  web screens has no test that calls axe. QFAI itself takes no axe dependency.
-  Closes #4309.
+  web screens has no selected test file whose text names `AxeBuilder` or an
+  `@axe-core/` package. That warning is a text search: a comment or an unused
+  import silences it too, and the accessibility gate is what shows the routes
+  pass. QFAI itself takes no axe dependency. Closes #4309 and #4565.
 
 - **Browser tests survive a rebuild that keeps the behaviour.** QFAI said
   nothing about how a browser test finds an element or injects a failure, so
@@ -523,12 +525,32 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **`qfai validate` compares the index's Depends On with each contract.** The
+  `contracts.md` index check compared each row's ID and File with the contract
+  but never read its Depends On cell, so the index could state an apply order
+  the contracts did not. `QFAI-CONTRACT-034` now also reports a row whose
+  Depends On names other contracts than the file's `-- Depends on:` or
+  `x-qfai-depends-on` declaration, or is empty; a Markdown contract, which
+  has no such declaration, is not compared. The `QFAI-CONTRACT-015`
+  message no longer names a rule `qfai validate` no longer has.
+
 - **A qfai copy under a directory whose name begins with two dots counts as
   inside the project.** `qfai validate` and `qfai sdd preflight` judged
   where the running qfai came from by whether its path relative to the
   project began with `..`, so a copy under a directory such as `..vendor` was
   reported as resolved from outside the project. Only a `..` path segment now
   leaves the project. Closes #4544.
+
+- **The deliberation record check ignores headings and tables inside HTML
+  comments.** `QFAI-DELIB-001` skipped fenced samples only, so a commented
+  `## Agent decisions` heading counted as the section and a commented table
+  under `Interview` was checked as one. The check now also skips HTML comments,
+  and still reports each row at its line in the file.
+  Every check that skips comments in story-tree and contract documents now
+  also skips the rest of a line that starts with a comment or that a
+  multi-line comment ends on: before, a
+  `<!-- note --> ## Risks` line was read as a heading, and a code fence after
+  a closing `-->` hid the rest of the document. Closes #4568.
 
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
@@ -542,6 +564,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version stops before installing anything. A workflow file `qfai init`
   already wrote keeps its old steps; delete it and run `qfai init` again to
   get these.
+
+- **The Markdown-schema check no longer passes over a linked document.** A
+  symbolic link beneath `paths.specsDir` or `paths.contractsDir`, to a file or
+  to a directory, was skipped without a word, so the documents behind it were
+  never checked and the run still passed. Each link, and a configured root that
+  is itself a link, is now reported with its path as an `inventory` finding and
+  is not followed, and the run fails, both in the document lane
+  and as `QFAI-DOCSCHEMA-001` in `qfai validate`. Closes #4569.
 
 - **The contract rules no longer claim `qfai validate` starts no processes.**
   Validation runs short-lived checkers, such as the document schema checker,
@@ -570,9 +600,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   so a card missing `## Stop conditions` passed when the frontmatter, a
   sentence, a code sample, an HTML comment or a `### Stop conditions` heading
   carried the same words. Only a level-2 heading of the card body now counts.
-  Every check that skips code and comments in a spec document now also skips
-  text after `-->` on a line that is part of a comment block, such as
-  `<!-- note --> ## Risks`, which Markdown does not read as a heading.
   Closes #4573.
 
 - **`qfai validate` checks every resource reference in an HTML mock.** The
@@ -592,6 +619,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reading `qfai.config.yaml`, such as an unknown `workflow.mode` value, was
   dropped and appeared only after the migration. The run now reports those
   findings before `QFAI-LAYOUT-001`, so both can be fixed in one pass.
+
+- **`qfai validate` no longer passes over a story-tree Markdown file it
+  cannot read.** The HTML mock, Mermaid screen flow and UI definition checks
+  skipped any file whose read failed, so a file the run had no permission to
+  read, or one lost to an I/O error, went unchecked with no message. Only a
+  file removed between the directory walk and the read is still left out. Any
+  other read failure now stops the run, which is recorded as incomplete with
+  `QFAI-SCAN-002` naming the file and the error.
 
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
@@ -641,6 +676,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **`qfai validate` no longer hides a file or a broken link at the default
+  spec and contract paths.** `QFAI-CFG-LINK-002` stayed silent for the shipped
+  default `paths.specsDir` and `paths.contractsDir` whatever stood there, so a
+  file, a broken link or a path that could not be read went unreported. It now
+  stays silent only when nothing is at the path, and otherwise warns that what
+  is there is not a directory or could not be read. Closes #4559.
+
 - **The changed-documents check widens to every document when the worktree
   diff fails.** `check-mdschema --scope changed` already checked every
   document when the branch diff failed, but read a failed diff of uncommitted
@@ -659,6 +701,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checks the run log, stop without writing and name the linked path, and
   replace each result file with a new one, so a second name for the file is
   left unchanged. Closes #4485.
+
+- **The stub scan names the test files it could not read.** A selected test
+  file that failed to open was skipped without a word, so a clean
+  `QFAI-TEST-001` / `QFAI-TEST-003` result could mean the file was never
+  checked. The scan now reports each such file, with its error code, in a
+  `QFAI-TEST-002` finding of its own, and still checks every file it could
+  read. The
+  suggested fix depends on the error: run `qfai validate` again for a file that
+  was moved or replaced, or when the system ran out of file handles; for any
+  other error, make the file readable or exclude it. Closes #4558.
 
 - **Screen alignment reads `.yml` UI contracts.** The check that names a
   contract screen with no HTML mock (`QFAI-CONSISTENCY-002`) read only `.yaml`

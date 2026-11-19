@@ -81,6 +81,9 @@ export function maskLineComments(
   return { text: visible, open };
 }
 
+/** Start of a CommonMark type-2 HTML block: a comment opening the line. */
+const COMMENT_BLOCK_START = /^ {0,3}<!--/;
+
 /** A top-level indented code block: four spaces or a tab, per CommonMark. */
 const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
 
@@ -97,18 +100,6 @@ const RAW_HTML_BLOCK_START = /^ {0,3}<(?:pre|script|style|textarea)(?=[\s/>]|$)/
 
 /** End of a type-1 raw HTML block: any of the four closing tags, per CommonMark. */
 const RAW_HTML_BLOCK_END = /<\/(?:pre|script|style|textarea)>/i;
-
-/**
- * Start of a CommonMark type-2 HTML block: a line opening with `<!--`. The block
- * runs to the line holding `-->`, and that whole line belongs to it, so text
- * after the closer, such as `--> ## Risks`, is block content and not a heading.
- */
-const COMMENT_BLOCK_START = /^ {0,3}<!--/;
-
-/** Whether a line opening a comment block also closes it, from just past `<!--`. */
-function closesCommentBlockOnOpener(line: string): boolean {
-  return line.indexOf("-->", line.indexOf("<!--") + 2) !== -1;
-}
 
 /**
  * CommonMark's type-6 block-level tag names. A line opening or closing one of
@@ -229,7 +220,6 @@ export function maskNonSpecRegions(text: string): string {
   let inComment = false;
   let inIndentedCode = false;
   let inRawHtml = false;
-  let inCommentBlock = false;
   let inBlankTerminatedHtml = false;
   let listOpen = false;
   let prevBlank = true;
@@ -248,14 +238,6 @@ export function maskNonSpecRegions(text: string): string {
         // The closing-tag line belongs to the block, so it is blanked as well.
         if (RAW_HTML_BLOCK_END.test(line)) {
           inRawHtml = false;
-        }
-        return "";
-      }
-
-      if (inCommentBlock) {
-        // As with type 1, the line holding the closer is part of the block.
-        if (line.includes("-->")) {
-          inCommentBlock = false;
         }
         return "";
       }
@@ -299,22 +281,27 @@ export function maskNonSpecRegions(text: string): string {
       // The fence opener is read before the comment scan, because a `<!--` in
       // an info string labels the sample rather than opening a comment. Only
       // when a comment is already open does the scan come first: a fence marker
-      // inside one is comment text, and the line may close the comment and open
-      // a fence after it, which the check below still catches.
+      // inside one is comment text.
       if (!inComment) {
         const opener = FENCE_LINE.exec(line)?.[1];
         if (opener) {
           open = { marker: opener.charAt(0), length: opener.length };
           return "";
         }
-        if (COMMENT_BLOCK_START.test(line)) {
-          inCommentBlock = !closesCommentBlockOnOpener(line);
-          return "";
-        }
       }
 
       const masked = maskLineComments(line, inComment);
+      // A line that opens with a comment, or that an open comment runs into,
+      // is comment through its end: CommonMark makes it an HTML block up to
+      // the line holding `-->`. Stripping the comment alone would hand back
+      // what follows it at the start of a line, so `<!-- note --> ## Risks`
+      // would read as a heading and a ```` ``` ```` after a closing `-->` as a
+      // fence that hides the rest of the document.
+      const commentLine = inComment || COMMENT_BLOCK_START.test(line);
       inComment = masked.open;
+      if (commentLine) {
+        return "";
+      }
 
       const fence = FENCE_LINE.exec(masked.text)?.[1];
       if (fence) {
