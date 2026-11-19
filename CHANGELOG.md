@@ -522,6 +522,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
+- **`qfai sdd next-id` reads the ID kind without regard to case.**
+  `qfai sdd next-id ac US-0001-0001 --base main` was refused as an unknown
+  kind, though `AC` worked. The kind is now read in any case, so `ac` counts
+  as `AC`, and a lower-case `dec` or `oq` gets the same reason as `DEC` or
+  `OQ`. Closes #4445.
+
 - **Migration step 11 keeps a skill or step when its replacement fails.** Step
   11 deleted a skill or step directory that differed from the package's copy
   before writing the new one, so a failed copy left the project with neither.
