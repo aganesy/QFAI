@@ -9,14 +9,28 @@
  *     same root finish out of order.
  */
 
-import { link, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  link,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  symlink,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
-import { writeValidateRunLog } from "../../src/core/runLog.js";
+import {
+  publishLatestRunPointer,
+  VALIDATE_RUN_ID_LINE,
+  writeValidateRunLog,
+} from "../../src/core/runLog.js";
 import type { ValidationResult } from "../../src/core/types.js";
 
 const tempDirs: string[] = [];
@@ -170,6 +184,66 @@ describe("validate.log freshness under out-of-order completion", () => {
 
     expect(olderRun.runId < newerRunId).toBe(true);
     await expect(readValidateLog(root, defaultConfig.paths.outDir)).rejects.toThrow();
+  });
+
+  it("holds the guard from the freshness check to the write", async () => {
+    // A delayed older run passes the freshness check, a newer run is then
+    // allocated and publishes, and only after that does the older run write.
+    // Checked and written separately, the older run's write lands last and the
+    // pointer names the older run.
+    const runRoot = await newTempDir();
+    const pointerPath = path.join(runRoot, "validate.log");
+    const olderRunId = expectedRunId(new Date("2026-05-05T10:00:00.000Z"));
+    const newerRunId = expectedRunId(new Date("2026-05-05T10:00:05.000Z"));
+    await mkdir(path.join(runRoot, olderRunId));
+    let newerPublish: Promise<void> | undefined;
+    const pointer = (runId: string): string => `- run_id: ${runId}\n`;
+
+    await publishLatestRunPointer({
+      runRoot,
+      runId: olderRunId,
+      pointerPath,
+      runIdLine: VALIDATE_RUN_ID_LINE,
+      buildContents: async () => {
+        await mkdir(path.join(runRoot, newerRunId));
+        newerPublish = publishLatestRunPointer({
+          runRoot,
+          runId: newerRunId,
+          pointerPath,
+          runIdLine: VALIDATE_RUN_ID_LINE,
+          buildContents: () => pointer(newerRunId),
+        });
+        // Long enough for an unguarded newer run to finish its own write.
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        return pointer(olderRunId);
+      },
+    });
+    await newerPublish;
+
+    expect(await readFile(pointerPath, "utf-8")).toBe(pointer(newerRunId));
+    expect(await readdir(runRoot)).not.toContain("validate.log.lock");
+  });
+
+  it("takes over a guard a crashed run left behind", async () => {
+    const runRoot = await newTempDir();
+    const pointerPath = path.join(runRoot, "validate.log");
+    const lockPath = `${pointerPath}.lock`;
+    const runId = expectedRunId(new Date("2026-05-05T10:00:00.000Z"));
+    await mkdir(path.join(runRoot, runId));
+    await writeFile(lockPath, JSON.stringify({ pid: process.pid, token: "left-behind" }), "utf-8");
+    const longAgo = new Date(Date.now() - 60 * 60 * 1000);
+    await utimes(lockPath, longAgo, longAgo);
+
+    await publishLatestRunPointer({
+      runRoot,
+      runId,
+      pointerPath,
+      runIdLine: VALIDATE_RUN_ID_LINE,
+      buildContents: () => `- run_id: ${runId}\n`,
+    });
+
+    expect(await readFile(pointerPath, "utf-8")).toBe(`- run_id: ${runId}\n`);
+    expect(await readdir(runRoot)).not.toContain("validate.log.lock");
   });
 
   it("self-heals from an unparseable existing log", async () => {

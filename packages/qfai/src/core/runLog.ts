@@ -1,10 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { chmod, lstat, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 import type { FailOn, QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
-import { isEnoent } from "./fs/errno.js";
+import { hasErrnoCode, isEnoent } from "./fs/errno.js";
 import { findUnsafeHostFileComponent } from "./init/fsGuards.js";
 import { toRelativePath } from "./paths.js";
 import type { Issue, ValidationResult } from "./types.js";
@@ -108,18 +109,23 @@ export async function writeValidateRunLog(input: {
   // it always points at the newest run-log directory. Relying on `| tee` for it
   // would not do: the Hard Gate command line omits it, and it is not portable to
   // PowerShell.
-  await writeLatestValidateLog(outDir, runId, () =>
-    buildValidateLog({
-      runId,
-      startedAt: input.startedAt.toISOString(),
-      status,
-      relativeReportDir,
-      command: runJson.command,
-      errorCount: input.result.counts.error,
-      warningCount: input.result.counts.warning,
-      summaryMd,
-    }),
-  );
+  await publishLatestRunPointer({
+    runRoot: outDir,
+    runId,
+    pointerPath: logPath,
+    runIdLine: VALIDATE_RUN_ID_LINE,
+    buildContents: () =>
+      `${buildValidateLog({
+        runId,
+        startedAt: input.startedAt.toISOString(),
+        status,
+        relativeReportDir,
+        command: runJson.command,
+        errorCount: input.result.counts.error,
+        warningCount: input.result.counts.warning,
+        summaryMd,
+      })}\n`,
+  });
 
   return {
     runId,
@@ -129,60 +135,121 @@ export async function writeValidateRunLog(input: {
 
 const VALIDATE_LOG_NAME = "validate.log";
 const RUN_LOG_LABEL = "qfai validate: the run log";
-const RUN_ID_LINE_RE = /^-\s*run_id:\s*(run-\d{17})\s*$/m;
+/** The `- run_id:` line `buildValidateLog` writes. */
+export const VALIDATE_RUN_ID_LINE = /^-\s*run_id:\s*(run-\d{17})\s*$/m;
 const RUN_DIR_RE = /^run-\d{17}$/;
 
 /**
- * Write the shared `validate.log` only when this run is the newest one on disk.
+ * Point `pointerPath`, a "latest run" file such as `validate.log` or
+ * `preflight_summary.md`, at the run `runId` unless a newer run already
+ * exists. Every writer of such a pointer goes through here.
  *
- * Two validates on the same root race here. Run-log directory names come from
- * the run's START time, so a long run A started before a short run B finishes
- * after it — and an unconditional write would leave `validate.log` pointing at
- * A's older `run-*` directory while B's newer one sits beside it. The freshness
- * rule the shipped Hard Gate documents ("`run_log:` names the newest `run-*`")
- * would then fail on a repository where nothing is actually wrong.
+ * Two runs on the same root race here. Run directories are named from the
+ * run's START time, so a long run A started before a short run B finishes
+ * after it, and an unconditional write would leave the pointer on A's older
+ * `run-*` directory while B's newer one sits beside it.
  *
- * Run ids are `run-<17-digit local timestamp>`, so lexical order is
- * chronological order and both comparisons need no parsing.
+ * Two freshness checks decide, both on run ids, whose lexical order is
+ * chronological order: a `run-*` directory under `runRoot` newer than `runId`
+ * (a run's directory exists from the moment it is allocated, so a newer run
+ * still in flight is seen), and the `runIdLine` of the existing pointer (a
+ * newer run whose directory was pruned after it wrote). An unreadable or
+ * unparseable pointer counts as "no newer run", so a truncated or hand-edited
+ * file self-heals on the next run.
  *
- * The decision is keyed on the `run-*` DIRECTORY listing rather than on
- * `validate.log` alone. A run's directory is created by `allocateRunReportDir`
- * at the START of the run, whereas the log is written at the END, so the
- * directory of a newer concurrent run is already visible during the window in
- * which an older run would otherwise clobber the pointer. Reading `validate.log`
- * remains as a second guard for the case where the newer run's directory was
- * pruned after it wrote.
- *
- * This is still not mutual exclusion: an older run that lists the directory
- * before a newer run has been allocated, and writes after that newer run has
- * finished, can leave a stale pointer. That window is now bounded by the gap
- * between this listing and the write below rather than by the whole duration of
- * the older run, which is what made the original ordering easy to lose. Closing
- * it entirely needs a lock file, whose stale-entry recovery after a crashed run
- * costs more than the residual risk.
- *
- * An unreadable or unparseable existing file is treated as "no newer run", so a
- * truncated or hand-edited log self-heals on the next validate.
+ * The checks and the write happen under one exclusive guard, so an older run
+ * that passed the checks cannot write after a newer run that started checking
+ * later. `buildContents` runs inside it, after the checks.
  */
-async function writeLatestValidateLog(
-  outDir: string,
-  runId: string,
-  buildContents: () => string,
-): Promise<void> {
-  if (await hasNewerRunDir(outDir, runId)) {
-    return;
-  }
-  const filePath = path.join(outDir, VALIDATE_LOG_NAME);
-  let existingRunId: string | null;
+export async function publishLatestRunPointer(input: {
+  runRoot: string;
+  runId: string;
+  pointerPath: string;
+  runIdLine: RegExp;
+  buildContents: () => string | Promise<string>;
+}): Promise<void> {
+  await withPointerGuard(input.pointerPath, async () => {
+    if (await hasNewerRunDir(input.runRoot, input.runId)) return;
+    const existingRunId = await readPointerRunId(input.pointerPath, input.runIdLine);
+    if (existingRunId !== null && existingRunId > input.runId) return;
+    await replaceFile(input.pointerPath, await input.buildContents());
+  });
+}
+
+async function readPointerRunId(pointerPath: string, runIdLine: RegExp): Promise<string | null> {
   try {
-    existingRunId = RUN_ID_LINE_RE.exec(await readFile(filePath, "utf-8"))?.[1] ?? null;
+    return runIdLine.exec(await readFile(pointerPath, "utf-8"))?.[1] ?? null;
   } catch {
-    existingRunId = null;
+    return null;
   }
-  if (existingRunId !== null && existingRunId > runId) {
-    return;
+}
+
+/** How old a guard file must be before a waiting run treats it as abandoned. */
+const POINTER_GUARD_STALE_MS = 10_000;
+/** How long a run waits for the guard before it stops with an error. */
+const POINTER_GUARD_WAIT_MS = 30_000;
+const POINTER_GUARD_RETRY_MS = 20;
+
+/**
+ * Run `action` while holding `<pointerPath>.lock`, a file created exclusively
+ * that names this process and a token of this call. A run that finds it held
+ * retries until it is released. The guarded work is a directory listing, one
+ * read and one rename, so a guard older than `POINTER_GUARD_STALE_MS`, or one
+ * whose process no longer exists, was left by a crashed run and is removed.
+ * The guard is removed afterwards only while it still holds this call's token.
+ *
+ * Ceiling: removing an abandoned guard is itself not exclusive. Two runs that
+ * both find the same abandoned guard can both remove it, and the second
+ * removal can take away the guard the first has just created. That needs a
+ * crashed run and two runs arriving within the same retry interval after it;
+ * an atomic compare-and-delete in the file system would lift it.
+ */
+async function withPointerGuard<T>(pointerPath: string, action: () => Promise<T>): Promise<T> {
+  const guardPath = `${pointerPath}.lock`;
+  const owner = JSON.stringify({ pid: process.pid, token: randomBytes(8).toString("hex") });
+  const deadline = Date.now() + POINTER_GUARD_WAIT_MS;
+  for (;;) {
+    try {
+      await writeNewFile(guardPath, owner);
+      break;
+    } catch (error) {
+      if (!isAlreadyExistsError(error)) throw error;
+    }
+    if (await isAbandonedGuard(guardPath)) {
+      await rm(guardPath, { force: true });
+      continue;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `${guardPath} is held by another run. Remove it if no qfai run is in progress, and run again.`,
+      );
+    }
+    await delay(POINTER_GUARD_RETRY_MS);
   }
-  await replaceFile(filePath, `${buildContents()}\n`);
+  try {
+    return await action();
+  } finally {
+    if ((await readFile(guardPath, "utf-8").catch(() => undefined)) === owner) {
+      await rm(guardPath, { force: true });
+    }
+  }
+}
+
+async function isAbandonedGuard(guardPath: string): Promise<boolean> {
+  try {
+    const stats = await lstat(guardPath);
+    if (Date.now() - stats.mtimeMs > POINTER_GUARD_STALE_MS) return true;
+    const owner: unknown = JSON.parse(await readFile(guardPath, "utf-8"));
+    if (typeof owner !== "object" || owner === null || !("pid" in owner)) return false;
+    const { pid } = owner;
+    if (typeof pid !== "number" || !Number.isSafeInteger(pid) || pid <= 0) return false;
+    process.kill(pid, 0);
+    return false;
+  } catch (error) {
+    // A guard released meanwhile, or one still being written and so not yet
+    // valid JSON, is waited on like a held one.
+    return hasErrnoCode(error) && error.code === "ESRCH";
+  }
 }
 
 /**
@@ -309,13 +376,11 @@ async function writeNewFile(filePath: string, contents: string, mode?: number): 
  * True when `runRoot` already holds a `run-*` directory strictly newer than
  * `runId`.
  *
- * Exported because every writer of a "latest run" pointer needs the same rule
- * and the same reasoning about the race — `allocateRunDir` creates the
- * directory at the START of a run, so a newer concurrent run is visible here
- * before it finishes. Run ids are `run-<17-digit local timestamp>`, so lexical
- * order is chronological order.
+ * `allocateRunDir` creates the directory at the START of a run, so a newer
+ * concurrent run is visible here before it finishes. Run ids are
+ * `run-<17-digit local timestamp>`, so lexical order is chronological order.
  */
-export async function hasNewerRunDir(runRoot: string, runId: string): Promise<boolean> {
+async function hasNewerRunDir(runRoot: string, runId: string): Promise<boolean> {
   try {
     const entries = await readdir(runRoot, { withFileTypes: true });
     return entries.some(

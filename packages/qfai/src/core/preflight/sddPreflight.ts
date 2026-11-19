@@ -1,10 +1,10 @@
-import { lstat, mkdir, open, readdir, readFile, realpath, stat } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { blockedAncestor } from "../fs/templateCopy.js";
-import { allocateRunDir, hasNewerRunDir, replaceFile } from "../runLog.js";
+import { allocateRunDir, publishLatestRunPointer, replaceFile } from "../runLog.js";
 
 const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
 /**
@@ -288,41 +288,20 @@ const PREFLIGHT_RUN_ID_LINE_RE = /^-\s*run id:\s*(run-\d{17})\s*$/m;
 /**
  * Write the run-scoped summary first, then refresh the latest pointer with the
  * same body. The run-scoped copy is never rewritten, so a report that
- * cites it keeps resolving to the state that justified its decisions.
- *
- * The pointer refresh is conditional, for the same reason
- * `writeLatestValidateLog` makes it conditional: run directories are named from
- * the run's START time, so a slow preflight started first can finish last, and
- * an unconditional write would leave `preflight_summary.md` describing the
- * older run while a newer `preflight/run-*` sits beside it — exactly what the
- * "latest run" pointer promises not to do.
- *
- * Two guards, as there: the `run-*` listing catches a newer run that is still
- * in flight (its directory exists from the moment it was allocated), and the
- * existing file's own `run id:` catches a newer run whose directory was pruned
- * after it wrote. Neither is mutual exclusion — the residual window is the gap
- * between this check and the write — but it is bounded by that gap rather than
- * by the whole duration of the slower run. An unreadable or unparseable
- * existing pointer counts as "no newer run", so a truncated file self-heals.
+ * cites it keeps resolving to the state that justified its decisions. The
+ * pointer is refreshed only when no newer preflight exists, under the guard
+ * `publishLatestRunPointer` holds for every "latest run" pointer.
  */
 async function publishPreflightSummary(run: PreflightRun, body: string): Promise<void> {
   const contents = `${body}\n`;
   await replaceFile(run.summaryPath, contents);
-
-  if (await hasNewerRunDir(run.runRoot, run.runId)) {
-    return;
-  }
-  let existingRunId: string | null;
-  try {
-    existingRunId =
-      PREFLIGHT_RUN_ID_LINE_RE.exec(await readFile(run.latestSummaryPath, "utf-8"))?.[1] ?? null;
-  } catch {
-    existingRunId = null;
-  }
-  if (existingRunId !== null && existingRunId > run.runId) {
-    return;
-  }
-  await replaceFile(run.latestSummaryPath, contents);
+  await publishLatestRunPointer({
+    runRoot: run.runRoot,
+    runId: run.runId,
+    pointerPath: run.latestSummaryPath,
+    runIdLine: PREFLIGHT_RUN_ID_LINE_RE,
+    buildContents: () => contents,
+  });
 }
 
 /** Whether `target` is `base` or lies under it, compared as paths. */
