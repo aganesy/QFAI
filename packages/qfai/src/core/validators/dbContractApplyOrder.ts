@@ -74,18 +74,17 @@ export type TableName = { schema: string | undefined; name: string; key: string 
 /**
  * One identifier part as PostgreSQL stores it.
  *
- * A quoted part is kept exactly, so `"Orders"` and `orders` stay two tables. An
- * unquoted part is folded to lower case in ASCII only, as PostgreSQL does under
- * UTF-8.
+ * A double-quoted part is kept exactly, so `"Orders"` and `orders` stay two
+ * tables. An unquoted part is folded to lower case in ASCII only, as PostgreSQL
+ * does under UTF-8. A backtick-quoted or bracketed part is not PostgreSQL
+ * quoting; it folds like an unquoted one, so `[Orders]` is still `orders`.
  */
 function identifierPart(raw: string): string {
   if (raw.startsWith('"')) {
     return raw.slice(1, -1).replace(/""/g, '"');
   }
-  if (raw.startsWith("`") || raw.startsWith("[")) {
-    return raw.slice(1, -1);
-  }
-  return raw.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+  const bare = raw.startsWith("`") || raw.startsWith("[") ? raw.slice(1, -1) : raw;
+  return bare.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
 }
 
 /** A part spelled so that reading it back gives the same part. */
@@ -216,11 +215,12 @@ function claimTables(files: readonly ContractFile[]): TableClaims {
 /**
  * The one contract that creates the table `reference` names, or undefined.
  *
- * A name spelled the same way as a created one, qualifier included, is that
- * table. Otherwise the candidates are the created tables of the same name
- * where one side has no qualifier, because an unqualified name resolves
- * through a search path this check cannot see: `orders` may be `public.orders`
- * or `sales.orders`. A qualified name never matches a different qualifier.
+ * The candidates are the created tables of the same name that are spelled
+ * the same way, qualifier included, or where one side has no qualifier. An
+ * unqualified name resolves through a search path this check cannot see:
+ * `orders` may be `public.orders` or `sales.orders`, and a contract creating
+ * `public.orders` may be creating the `orders` another one references. A
+ * qualified name never matches a different qualifier.
  *
  * When the candidates belong to more than one contract the reference is
  * ambiguous and is attributed to none of them, as is a table two contracts
@@ -228,13 +228,16 @@ function claimTables(files: readonly ContractFile[]): TableClaims {
  * the wrong one sends the author to edit a line that is already right.
  */
 function ownerOf(reference: TableName, claims: TableClaims): string | undefined {
-  const candidates =
-    claims.byKey.get(reference.key) ??
-    new Set(
-      (claims.byName.get(reference.name) ?? [])
-        .filter((table) => reference.schema === undefined || table.schema === undefined)
-        .flatMap((table) => [...(claims.byKey.get(table.key) ?? [])]),
-    );
+  const candidates = new Set(
+    (claims.byName.get(reference.name) ?? [])
+      .filter(
+        (table) =>
+          table.key === reference.key ||
+          reference.schema === undefined ||
+          table.schema === undefined,
+      )
+      .flatMap((table) => [...(claims.byKey.get(table.key) ?? [])]),
+  );
   return candidates.size === 1 ? [...candidates][0] : undefined;
 }
 

@@ -330,6 +330,33 @@ describe("validateDbContractApplyOrder", () => {
     expect(await validateDbContractApplyOrder(root, [parent, child])).toEqual([]);
   });
 
+  it("names no contract when the referencing file may create the table itself", async () => {
+    // `public.orders` and `orders` may be one table. The referencing file
+    // creates one spelling and another contract the other, so the parent is
+    // either itself or that contract, and naming that contract may be wrong.
+    for (const [own, reference, other] of [
+      ["public.orders", "orders", "orders"],
+      ["orders", "public.orders", "public.orders"],
+    ]) {
+      const root = await newRoot();
+      const parent = await contract(root, "DB-0097", `CREATE TABLE ${other} (id TEXT);\n`);
+      const child = await contract(
+        root,
+        "DB-0098",
+        `-- Depends on: -\nCREATE TABLE ${own} (id TEXT);\n` +
+          `CREATE TABLE t (o TEXT REFERENCES ${reference} (id));\n`,
+      );
+
+      expect(await validateDbContractApplyOrder(root, [parent, child])).toEqual([]);
+    }
+  });
+
+  it("folds a backtick-quoted or bracketed name like an unquoted one", () => {
+    // Neither is PostgreSQL quoting, so neither keeps case.
+    expect(tableName("[Orders]").key).toBe("orders");
+    expect(tableName("`Sales`.`Orders`").key).toBe("sales.orders");
+  });
+
   it("names every undeclared parent in one finding, with the tables behind it", async () => {
     // One finding per file, because the remedy is one edit to one line.
     const root = await newRoot();
