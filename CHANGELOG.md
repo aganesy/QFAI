@@ -581,6 +581,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as `AC`, and a lower-case `dec` or `oq` gets the same reason as `DEC` or
   `OQ`. Closes #4445.
 
+- **`qfai doctor` starts its output collision scan at the real Git root.** An
+  empty `.git` directory in a parent directory counted as a repository, so a
+  standalone project's scan reached unrelated directories beside it and could
+  stop on a permission error there. Git now names the working-tree root. When
+  Git fails for any reason other than "not a git repository" (Git missing,
+  dubious ownership, a broken config), or names a root the scan cannot reach,
+  the scan still stops at the nearest `.git` entry, so the run-log cleanup
+  still finds every project that shares its output directory. Closes #4510.
+
 - **Migration step 11 keeps a skill or step when its replacement fails.** Step
   11 deleted a skill or step directory that differed from the package's copy
   before writing the new one, so a failed copy left the project with neither.
@@ -637,6 +646,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `EUNSUPPORTEDPROTOCOL` at the repository root's `workspace:` dependency, an
   error that does not mention QFAI. The README now describes npm's error and
   gives the guard's message to yarn alone. Closes #4626.
+
+- **`qfai db-drift` reports a configuration error instead of passing.** A
+  `qfai.config.yaml` that did not parse, or held an invalid setting, made the
+  command fall back to the defaults. The defaults name no migrations
+  directory, so the command said there was nothing to compare and exited 0.
+  It now lists the configuration errors on stderr and exits 2 before
+  comparing anything. "Nothing to compare" is reported only for a
+  configuration that loaded. Closes #4517.
 
 - **The turn-end check runs only commands the Standard commands list itself
   holds.** It read every `- Label:` line under the heading, so a fenced or
