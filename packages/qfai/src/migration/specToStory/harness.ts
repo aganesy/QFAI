@@ -848,16 +848,9 @@ async function runConfiguredStep(
     }
     selected = await loadStep(step);
   } catch (error) {
-    if (
-      error instanceof MigrationRefusal ||
-      error instanceof MigrationInputError ||
-      error instanceof IdMapInputError ||
-      hasErrnoCode(error)
-    ) {
-      io.stderr.write(`${errorMessage(error)}\n`);
-      return 2;
-    }
-    throw error;
+    if (!isInputFailure(error)) throw error;
+    io.stderr.write(`${errorMessage(error)}\n`);
+    return 2;
   }
   return await executePlannedStep(selected, context, dryRun, io, layoutTrace);
 }
