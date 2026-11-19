@@ -208,11 +208,16 @@ export async function cacheDirectorySafe(repository: string, candidate: string):
   const parts = relative.split(path.sep);
   if (path.isAbsolute(relative) || parts.includes("..") || parts[0] !== "qfai-graph-cache")
     return false;
-  for (let depth = 1; depth <= parts.length; depth += 1) {
-    const stats = await lstat(path.join(repository, ...parts.slice(0, depth)));
-    if (stats.isSymbolicLink() || !stats.isDirectory()) return false;
+  try {
+    for (let depth = 1; depth <= parts.length; depth += 1) {
+      const stats = await lstat(path.join(repository, ...parts.slice(0, depth)));
+      if (stats.isSymbolicLink() || !stats.isDirectory()) return false;
+    }
+    return true;
+  } catch {
+    // A candidate that cannot be inspected is skipped; later candidates stay eligible.
+    return false;
   }
-  return true;
 }
 
 export async function readSnapshotMetadata(
@@ -225,9 +230,9 @@ export async function readSnapshotMetadata(
       await readFile(path.join(candidate, "completed.json"), "utf8"),
     );
     return object(metadata) ? metadata : undefined;
-  } catch (cause: unknown) {
-    if (isEnoent(cause) || cause instanceof SyntaxError) return undefined;
-    throw cause;
+  } catch {
+    // Missing, unreadable or malformed metadata makes only this candidate ineligible.
+    return undefined;
   }
 }
 
