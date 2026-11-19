@@ -75,8 +75,7 @@ describe("qfai report on a story tree", () => {
     const root = await storyRoot();
     const contractDir = path.join(root, ".qfai/spec/03_contract/cli");
     await mkdir(contractDir, { recursive: true });
-    await writeFile(path.join(contractDir, "cli-0001-sample.md"), "# CLI-0001: Sample
-", "utf8");
+    await writeFile(path.join(contractDir, "cli-0001-sample.md"), "# CLI-0001: Sample\n", "utf8");
     const contractCount = async (file: string): Promise<number> => {
       const output = JSON.parse(await readFile(path.join(root, ".qfai/report", file), "utf8")) as {
         summary: { contracts: number };
@@ -87,7 +86,9 @@ describe("qfai report on a story tree", () => {
     expect(await runReport({ root, format: "json", failOn: "never" })).toBe(0);
     expect(await contractCount("report.json")).toBe(1);
     await writeValidation(root, [], "validate.flow-0001.json");
-    expect(await runReport({ root, format: "json", failOn: "never", flowIds: ["BF-0001"] })).toBe(0);
+    expect(await runReport({ root, format: "json", failOn: "never", flowIds: ["BF-0001"] })).toBe(
+      0,
+    );
     expect(await contractCount("report.flow-0001.json")).toBe(0);
   });
 
