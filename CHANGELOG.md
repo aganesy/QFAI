@@ -686,6 +686,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   named `<file>.qfai-init-<pid>-<timestamp>`, stays: delete it by hand.
   Closes #4526.
 
+- **A migration move between two filesystems no longer leaves a partial
+  copy.** When a spec-to-story migration step moved a file or directory onto
+  another filesystem, it copied straight to the destination, so a full disk or
+  a stopped run left an incomplete copy there, and the retry refused it as
+  existing data. The copy is now written beside the destination and appears
+  there only once complete, without replacing anything that appeared there
+  meanwhile, and the source is removed only after that. Closes #4480.
+
 - **`qfai report --flow --profile` reads the result `qfai validate` wrote.**
   `qfai validate --flow` writes one `validate.flow-<ids>.json` whatever the
   profile, while `qfai report` with both `--flow` and `--profile` read a

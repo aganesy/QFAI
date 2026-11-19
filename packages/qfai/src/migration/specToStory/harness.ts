@@ -1,4 +1,4 @@
-import { cp, lstat, mkdir, readFile, readdir, rename, rm, rmdir } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, rename, rm, rmdir } from "node:fs/promises";
 import path from "node:path";
 
 import { SKILL_INTEGRATION_DIRS } from "../../core/init/integrationDirs.js";
@@ -15,6 +15,7 @@ import {
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { replaceFile } from "../../core/runLog.js";
 import { ID_MAP_PATH, IdMapInputError, MIGRATION_STATE_DIR, readIdMap } from "./idMap.js";
+import { publishStagedCopy } from "./stagedCopy.js";
 import { shouldRenameSource, STEP01_RENAMES } from "./step01RenameDirectories.js";
 
 export type MigrationStepNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
@@ -382,13 +383,16 @@ async function applyOperation(
           await rename(source, target);
         } catch (error) {
           if (!(hasErrnoCode(error) && error.code === "EXDEV")) throw error;
-          await cp(source, target, {
-            recursive: true,
-            preserveTimestamps: true,
-            verbatimSymlinks: true,
-            force: false,
-            errorOnExist: true,
-          });
+          // Published only once complete, and the source kept until it is, so a
+          // failed copy leaves nothing at the destination for a retry to refuse.
+          try {
+            await publishStagedCopy(source, target);
+          } catch (failure) {
+            if (!(await pathExists(target))) throw failure;
+            throw new MigrationRefusal(`Migration destination exists: ${operation.target}`, {
+              cause: failure,
+            });
+          }
           await rm(source, { recursive: true });
         }
       }
