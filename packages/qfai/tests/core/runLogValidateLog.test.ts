@@ -294,3 +294,48 @@ describe("run-log destinations reached through a link", () => {
     expect(leftovers).toEqual([]);
   });
 });
+
+describe("run-log traceability nodes", () => {
+  it("records every story-tree ID a reference names, business flows included", async () => {
+    const root = await newTempDir();
+    const result = cleanResult();
+    result.issues = [
+      {
+        code: "QFAI-TEST-001",
+        severity: "error",
+        category: "canonical",
+        message: "cites several IDs",
+        file: path.join(root, ".qfai", "spec", "story.md"),
+        refs: [
+          "BF-0001 owns US-0001-0002, which AC-0001-0002-01 and EX-0001-0002-03 refine",
+          "BR-CLI-0014-0092",
+          "DEC-0007; OQ-0002",
+          // A malformed ID names no node, not the shorter ID it starts with.
+          "US-0001-0003- and AC-0001-0002-1",
+        ],
+      },
+    ];
+    const { reportDir } = await writeValidateRunLog({
+      root,
+      config: defaultConfig,
+      result,
+      startedAt: new Date("2026-05-05T10:00:00.000Z"),
+    });
+    const traceability: unknown = JSON.parse(
+      await readFile(path.join(reportDir, "traceability.json"), "utf-8"),
+    );
+    const nodePath = ".qfai/spec/story.md";
+    expect(traceability).toEqual({
+      schema_version: 1,
+      nodes: [
+        { id: "AC-0001-0002-01", layer: "AC", path: nodePath },
+        { id: "BF-0001", layer: "BF", path: nodePath },
+        { id: "BR-CLI-0014-0092", layer: "BR", path: nodePath },
+        { id: "DEC-0007", layer: "DEC", path: nodePath },
+        { id: "EX-0001-0002-03", layer: "EX", path: nodePath },
+        { id: "OQ-0002", layer: "OQ", path: nodePath },
+        { id: "US-0001-0002", layer: "US", path: nodePath },
+      ],
+    });
+  });
+});

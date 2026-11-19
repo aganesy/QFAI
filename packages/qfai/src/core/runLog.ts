@@ -7,6 +7,7 @@ import { resolvePath } from "./config.js";
 import { isEnoent } from "./fs/errno.js";
 import { findUnsafeHostFileComponent } from "./init/fsGuards.js";
 import { toRelativePath } from "./paths.js";
+import { isStoryTreeId, STORY_TREE_ID_KINDS, type StoryTreeIdKind } from "./storyTree/ids.js";
 import type { Issue, ValidationResult } from "./types.js";
 import { isInside } from "./validators/utils.js";
 
@@ -399,12 +400,21 @@ function toRunLogIssues(
 }
 
 /**
- * `\b` after `\d{4}` matched happily before the `-` of a composite spec-local ID, so
- * `US-0006-0001` was silently rewritten to `US-0006` and the node dedup then collapsed every
- * requirement in a spec onto one node named after the spec. `{1,2}` accepts both the short and
- * composite forms; `SC` and `CASE` were missing from the prefix list entirely.
+ * A dashed token standing on its own: no letter, digit, `_` or `-` touches either end, so a
+ * longer ID is never read as the shorter ID it starts with. Each token is kept only when
+ * `isStoryTreeId` accepts it for one of the story-tree kinds.
  */
-const TRACEABILITY_ID_REGEX = /\b(OBJ|INIT|CAP|FLOW|US|AC|BR|EX|TC|SC|CASE)(?:-\d{4}){1,2}\b/g;
+const ID_CANDIDATE_REGEX = /(?<![A-Za-z0-9_-])[A-Z]+(?:-[A-Z0-9]+)+(?![A-Za-z0-9_-])/g;
+
+/** Every story-tree ID `ref` names, each with its kind, in the order the text names them. */
+function storyTreeIdsIn(ref: string): Array<{ id: string; kind: StoryTreeIdKind }> {
+  const ids: Array<{ id: string; kind: StoryTreeIdKind }> = [];
+  for (const [id] of ref.matchAll(ID_CANDIDATE_REGEX)) {
+    const kind = STORY_TREE_ID_KINDS.find((candidate) => isStoryTreeId(id, candidate));
+    if (kind) ids.push({ id, kind });
+  }
+  return ids;
+}
 
 function buildTraceabilityJson(
   root: string,
@@ -413,33 +423,19 @@ function buildTraceabilityJson(
   schema_version: number;
   nodes: TraceabilityNode[];
 } {
-  const idRegex = new RegExp(TRACEABILITY_ID_REGEX.source, TRACEABILITY_ID_REGEX.flags);
   const nodes = new Map<string, TraceabilityNode>();
 
   // The IDs findings cite, each with the file of the first finding that cites it.
   for (const issue of issues) {
-    if (!issue.refs || issue.refs.length === 0) {
-      continue;
-    }
-    for (const ref of issue.refs) {
-      idRegex.lastIndex = 0;
-      const match = idRegex.exec(ref);
-      const rawId = match?.[0];
-      const layer = match?.[1];
-      if (!rawId || !layer) {
-        continue;
+    for (const ref of issue.refs ?? []) {
+      for (const { id, kind } of storyTreeIdsIn(ref)) {
+        if (nodes.has(id)) continue;
+        const node: TraceabilityNode = { id, layer: kind };
+        if (issue.file) {
+          node.path = toRelativePath(root, issue.file);
+        }
+        nodes.set(id, node);
       }
-      if (nodes.has(rawId)) {
-        continue;
-      }
-      const node: TraceabilityNode = {
-        id: rawId,
-        layer,
-      };
-      if (issue.file) {
-        node.path = toRelativePath(root, issue.file);
-      }
-      nodes.set(rawId, node);
     }
   }
 

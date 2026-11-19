@@ -461,12 +461,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A SQL contract with an unmatched closing parenthesis now fails to
+  parse.** `qfai validate` accepted a `)` that closed nothing, such as the
+  second one in `CREATE TABLE t (a int));`, and treated the file as one that
+  could be applied. It now reports `QFAI-CONTRACT-021` at the line of each
+  such `)`. A `)` inside a string, quoted identifier, comment or
+  dollar-quoted body is still not counted.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so
   `qfai db-drift --format json unused-positional` completed normally. Such a
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
+
+- **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
+  `E'…'` a backslash escapes the next character, but the statement splitter
+  ended the literal at a backslash-escaped quote, so `SELECT E'it\'s';`
+  reported an unterminated string or split a statement at a `;` inside the
+  literal. The splitter now follows PostgreSQL's escape-string rules; a
+  backslash in a standard `'…'` string stays literal.
 
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
@@ -493,6 +507,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **The shipped validation and document workflows run the QFAI a Yarn
+  Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
+  `npx qfai` and the document lane's check for `node_modules/qfai` found
+  nothing and fell back to the newest QFAI from the registry. When the project
+  has a `.pnp.cjs` and a `yarn.lock` and its `package.json` declares QFAI,
+  both lanes now ask Yarn which version it resolves and install that exact
+  version under `tmp/`: the validation lane runs both profiles with it, and
+  the document lane runs its checkers out of it. A project that declares no QFAI still gets the
+  newest release, and one whose declared QFAI Yarn cannot resolve to one
+  version stops before installing anything. A workflow file `qfai init`
+  already wrote keeps its old steps; delete it and run `qfai init` again to
+  get these.
+
 - **`qfai sdd merge-docs` no longer fails on a conflicted file it does not
   merge.** A conflicted file under the specs directory that is not Markdown or
   YAML, such as an image, made the command exit 1 even when no document was
@@ -508,6 +535,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
+- **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
+  with no `--assume` copies the carry-over list from the previous
+  `preflight_summary.md`. When that file existed but could not be read, the
+  rerun treated it as having no carry-over and replaced it with `- none`. Only
+  a missing file now counts as empty. Any other read failure stops the run
+  with exit code 1, names the file, and leaves it unchanged. Closes #4524.
 
 - **`qfai catalog design` writes only its own files, and only inside the
   project.** It staged both files under names built from its process ID, so a
@@ -566,6 +600,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   platform; on Windows doctor runs npm's JavaScript entry with Node. Closes
   #4465.
 
+- **`qfai validate` announces a pass only after its result is saved.** The
+  text pass summary and the `--format github` summary, with its `result=PASS`
+  and the path of `validate.json`, were printed before the result files were
+  written, so a run whose write then failed showed a pass and a file it never
+  wrote, and exited 1. The result files are now written first: a run that
+  cannot write them prints no pass summary and no `--format github` output,
+  still ends its text output with `run-log:`, and exits 1 with the write
+  failure on stderr. Closes #4529.
+
 - **`qfai db-drift` compares the full PostgreSQL column type.** It read
   `information_schema.columns.data_type`, which drops the varchar length, the
   numeric precision and scale and the array element type, and reads
@@ -617,6 +660,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   It now writes the package's copy beside the directory, checks it, and only
   then switches the two; if the switch fails, the project's copy is put back,
   and when even that fails the error names the hidden directory that holds it.
+
+- **The run log's `traceability.json` lists every story-tree ID a finding
+  cites.** It kept only the first ID in each reference a finding gave, missed
+  business flow IDs, contract-scoped business rule IDs such as
+  `BR-CLI-0014-0092`, and decision and open-question IDs, and still read the
+  ID forms of QFAI 1.x. It now lists every BF, US, AC, EX, BR, DEC and OQ ID in
+  each reference, read with the same ID rules `qfai validate` applies to the
+  story tree. Closes #4537.
 
 - **The document-schema check sees changes under a non-ASCII directory.**
   `check-mdschema.mjs --scope changed` read Git's changed paths line by line,
