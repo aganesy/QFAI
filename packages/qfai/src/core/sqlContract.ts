@@ -66,9 +66,10 @@ const DOLLAR_QUOTE_AT = new RegExp(DOLLAR_QUOTE_MARKER.source, "y");
  * statement. A naive `text.split(";")` would report a valid PL/pgSQL function
  * as a dozen malformed fragments, which is worse than not checking at all.
  *
- * Recognised: single-quoted strings with `''` escaping, double-quoted
- * identifiers, `--` line comments, C-style block comments (nested, as
- * PostgreSQL allows), and `$tag$ … $tag$` dollar quoting.
+ * Recognised: single-quoted strings with `''` escaping, `E'…'` escape strings
+ * whose backslash escapes the next character, double-quoted identifiers, `--`
+ * line comments, C-style block comments (nested, as PostgreSQL allows), and
+ * `$tag$ … $tag$` dollar quoting.
  */
 export function parseSqlContract(text: string): SqlParseResult {
   const statements: SqlStatement[] = [];
@@ -181,10 +182,18 @@ export function parseSqlContract(text: string): SqlParseResult {
     if (ch === "'" || ch === '"') {
       const openedAt = line;
       const quote = ch;
+      const escapes = quote === "'" && opensEscapeString(text, index);
       let cursor = index + 1;
       let closed = false;
       while (cursor < text.length) {
         if (text[cursor] === "\n") line += 1;
+        // In an `E'…'` string a backslash escapes the next character, a quote
+        // included, so `E'it\'s'` is one literal and not `E'it\'` then `s'`.
+        if (escapes && text[cursor] === "\\") {
+          if (text[cursor + 1] === "\n") line += 1;
+          cursor += 2;
+          continue;
+        }
         if (text[cursor] === quote) {
           // Doubled quote is an escaped quote, not a terminator.
           if (text[cursor + 1] === quote) {
@@ -251,6 +260,21 @@ export function parseSqlContract(text: string): SqlParseResult {
   push();
 
   return { statements, errors };
+}
+
+/** One character that may continue an identifier, under the rules {@link DOLLAR_QUOTE_MARKER} follows. */
+const IDENTIFIER_CHAR = /[A-Za-z0-9_$\u0080-￿]/;
+
+/**
+ * Whether the `'` at `quoteAt` opens a PostgreSQL escape string, `E'…'`.
+ *
+ * The prefix is a lone `E` or `e`. One that ends a longer identifier, as in
+ * `name'x'`, belongs to that name, and the quote opens a standard string.
+ */
+function opensEscapeString(text: string, quoteAt: number): boolean {
+  const prefix = text[quoteAt - 1];
+  if (prefix !== "E" && prefix !== "e") return false;
+  return !IDENTIFIER_CHAR.test(text[quoteAt - 2] ?? "");
 }
 
 function countNewlines(value: string): number {
