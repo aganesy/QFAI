@@ -496,6 +496,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **Migration step 11 keeps a skill or step when its replacement fails.** Step
+  11 deleted a skill or step directory that differed from the package's copy
+  before writing the new one, so a failed copy left the project with neither.
+  It now writes the package's copy beside the directory, checks it, and only
+  then switches the two; if the switch fails, the project's copy is put back.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one
