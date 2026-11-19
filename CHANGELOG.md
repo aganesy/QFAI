@@ -610,6 +610,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the API does not require, the two remedy sentences ran together with no
   space. They are now separated by one.
 
+- **`qfai validate --format github` keeps each path in its summary on one log
+  line.** The report and run-log paths in the closing notes were printed raw, so
+  a path holding a line break started a line of its own, which the runner reads
+  as a possible workflow command. A line break in them now shows as a visible
+  `\r` or `\n`, and `%` stays as written. The report and run-log are still
+  written at their original paths.
+
 - **The migration's step 12 scan no longer runs out of memory on large
   tracked files.** It held git's whole file listing and read each tracked file
   whole before checking it for 1.x paths, so a repository with large tracked
