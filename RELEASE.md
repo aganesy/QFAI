@@ -205,12 +205,25 @@ Note: run the commands below from the repository root unless stated otherwise.
    `release/vX.Y.Z` PR merges. A hand tag there races it, so skip this step.
    On the manual path, push it only on the user's explicit instruction.
 
+   Tag the commit the user approved, not your local `HEAD`. A checkout can be
+   behind `main` or on another branch, and `release.yml` checks only that the
+   tag is somewhere on `main`, so a tag on the wrong commit still publishes.
+   Take the merge commit of the approved pull request, check it, tag it by its
+   full SHA and confirm the tag before you push it:
+
    ```sh
-   git tag vX.Y.Z
-   git push origin vX.Y.Z
+   gh pr view <PR> --json mergeCommit --jq .mergeCommit.oid
+   git fetch origin main
+   git merge-base --is-ancestor <SHA> origin/main
+   git show <SHA>:packages/qfai/package.json
+   git tag vX.Y.Z <SHA>
+   git rev-parse "vX.Y.Z^{commit}"
+   git push origin refs/tags/vX.Y.Z
    ```
 
-   Example: `git tag vX.Y.Z`
+   `<SHA>` is what the first command prints. Push only when the ancestry check
+   exits 0, the manifest shows `"version": "X.Y.Z"` and `git rev-parse` prints
+   `<SHA>` again. Otherwise delete the local tag with `git tag -d vX.Y.Z`.
 
 5. Approve the publish
 
