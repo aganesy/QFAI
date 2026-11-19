@@ -22,6 +22,7 @@ import {
   collisionGuidance,
   collisions,
   fetchedHeads,
+  listAllPulls,
   otherHeads,
   parseScope,
   pullsFrom,
@@ -141,6 +142,57 @@ describe("reading git and the hosted side", () => {
     expect(pullsFrom(body)).toEqual([{ number: 12, branch: "feature" }]);
     expect(pullsFrom("{}")).toBeUndefined();
     expect(pullsFrom("not json")).toBeUndefined();
+  });
+
+  /** A page caller that answers each page from `pages` and the code beside it. */
+  function pager(pages: { pulls: unknown[]; code?: number }[]) {
+    const calls: number[] = [];
+    const callPage = (page: number, handleBody: (body: string) => number) => {
+      calls.push(page);
+      const answer = pages[page - 1];
+      if (answer === undefined) throw new Error(`page ${String(page)} was not expected`);
+      const handled = handleBody(JSON.stringify(answer.pulls));
+      return handled === 0 ? (answer.code ?? 0) : handled;
+    };
+    return { calls, callPage };
+  }
+  const pull = (number: number) => ({ number, head: { ref: `b${String(number)}` } });
+
+  it("reads every page of open pull requests, not only the first", () => {
+    const { calls, callPage } = pager([
+      { pulls: [pull(1), pull(2)] },
+      { pulls: [pull(2), pull(3)] },
+      { pulls: [pull(4)] },
+    ]);
+    const listed = listAllPulls(callPage, 2);
+    expect(calls).toEqual([1, 2, 3]);
+    expect(listed.code).toBe(0);
+    expect(listed.pulls?.map(({ number }) => number)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("counts a page full even when an entry in it is unreadable", () => {
+    const { calls, callPage } = pager([{ pulls: [pull(1), { head: {} }] }, { pulls: [] }]);
+    expect(listAllPulls(callPage, 2).pulls?.map(({ number }) => number)).toEqual([1]);
+    expect(calls).toEqual([1, 2]);
+  });
+
+  it("answers no listing when a later page could not be read", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const callPage = (page: number, handleBody: (body: string) => number) =>
+        page === 1 ? handleBody(JSON.stringify([pull(1), pull(2)])) : 1;
+      expect(listAllPulls(callPage, 2)).toEqual({ code: 1, pulls: undefined });
+      expect(error.mock.calls.flat().join("\n")).toContain("past page 1");
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("keeps a complete listing whose last page crossed the reserve, as exit 1", () => {
+    const { callPage } = pager([{ pulls: [pull(1), pull(2)] }, { pulls: [pull(3)], code: 1 }]);
+    const listed = listAllPulls(callPage, 2);
+    expect(listed.code).toBe(1);
+    expect(listed.pulls?.map(({ number }) => number)).toEqual([1, 2, 3]);
   });
 
   it("takes each head's commit from FETCH_HEAD", () => {
