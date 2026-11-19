@@ -482,6 +482,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
 
+- **The Mermaid screen-flow checks now read a diagram behind front matter.**
+  When a Mermaid block opened with a `---` front-matter block, `qfai validate`
+  took the opening `---` as the diagram's declaration and skipped the
+  `stateDiagram`, `stateDiagram-v2` and `flowchart` checks
+  (`QFAI-FLOW-001`, `QFAI-FLOW-002`, `QFAI-FLOW-004`) for that block. They now
+  find the declaration after the front matter, the same line the diagram
+  budget check counts from, and report its file line; a `-->` in the front
+  matter is not read as a transition.
+
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its

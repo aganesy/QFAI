@@ -187,6 +187,11 @@ describe("the diagram budget", () => {
       nodes: 2,
       edges: 1,
     });
+    expect(diagramSize("%% note\n---\ntitle: A --> B\n---\r\nflowchart LR\r\n  A --> B")).toEqual({
+      nodes: 2,
+      edges: 1,
+    });
+    expect(diagramSize("---\ntitle: Unclosed\nflowchart LR\n  A --> B")).toBeNull();
   });
 
   // QFAI:EX-0001-0240-10

@@ -55,3 +55,34 @@ export function extractFencedCodeBlocks(text: string): FencedCodeBlock[] {
 export function containsMermaidSyntax(content: string): boolean {
   return MERMAID_LINE_RE.test(content);
 }
+
+/** The line that declares a Mermaid diagram, trimmed, and its line offset in the block. */
+export type DiagramDeclaration = {
+  line: string;
+  lineOffset: number;
+};
+
+/**
+ * The diagram's declaration: the first line that is neither blank, nor a `%%`
+ * comment, nor inside a leading `---` front-matter block. A front-matter block
+ * that never closes leaves no declaration. Line offsets count `\n` breaks after
+ * `\r\n` is folded, as `extractFencedCodeBlocks` counts them.
+ */
+export function findDiagramDeclaration(content: string): DiagramDeclaration | null {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  let frontMatter: "possible" | "open" | "done" = "possible";
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    if (frontMatter === "open") {
+      if (line === "---") frontMatter = "done";
+      continue;
+    }
+    if (line === "" || line.startsWith("%%")) continue;
+    if (line === "---" && frontMatter === "possible") {
+      frontMatter = "open";
+      continue;
+    }
+    return { line, lineOffset: index };
+  }
+  return null;
+}

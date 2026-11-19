@@ -303,6 +303,52 @@ describe("uiux validators", () => {
     });
   });
 
+  it("reads the Mermaid declaration behind a front-matter block", async () => {
+    const root = await newTempDir();
+    const specsDir = path.join(root, ".qfai", "specs");
+    await mkdir(specsDir, { recursive: true });
+    await writeFile(
+      path.join(specsDir, "flow.md"),
+      [
+        "# Flow", // line 1
+        "", // line 2
+        "```mermaid", // line 3
+        "---", // line 4
+        "title: Legacy", // line 5
+        "---", // line 6
+        "stateDiagram", // line 7
+        "```", // line 8
+        "", // line 9
+        "```mermaid", // line 10
+        "---", // line 11
+        "title: Sign in --> Home", // line 12
+        "---", // line 13
+        "stateDiagram-v2", // line 14
+        "  Home --> Detail", // line 15
+        "```", // line 16
+        "", // line 17
+        "```mermaid", // line 18
+        "---", // line 19
+        "config:", // line 20
+        "  theme: neutral", // line 21
+        "---", // line 22
+        "flowchart", // line 23
+        "  A --> B", // line 24
+        "```", // line 25
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateMermaidScreenFlow(root, defaultConfig);
+
+    expect(issues.map((finding) => [finding.code, finding.loc?.line])).toEqual([
+      ["QFAI-FLOW-001", 7],
+      ["QFAI-FLOW-002", 15],
+      ["QFAI-FLOW-004", 23],
+    ]);
+  });
+
   it("returns empty issues for ui definition consistency validator when inputs are absent", async () => {
     const root = await newTempDir();
     const issues = await validateUiDefinitionConsistency(root, defaultConfig);

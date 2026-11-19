@@ -9,6 +9,8 @@
  * budget.
  */
 
+import { findDiagramDeclaration } from "./mermaidUtils.js";
+
 export type DiagramSize = { nodes: number; edges: number };
 
 /** Statements that draw neither a node nor an edge. */
@@ -50,18 +52,17 @@ function splitStatements(line: string): string[] {
  * `graph TD; A-->B` writes after its declaration on lines of their own.
  */
 function statements(source: string): string[] {
-  const lines = source
-    .replace(/\r\n?/g, "\n")
+  const text = source.replace(/\r\n?/g, "\n");
+  const found = findDiagramDeclaration(text);
+  if (found === null) return [""];
+  const lines = text
     .split("\n")
+    .slice(found.lineOffset + 1)
     .map((line) => line.trim())
     .filter((line) => line !== "" && !line.startsWith("%%"));
-  if (lines[0] === "---") {
-    const close = lines.indexOf("---", 1);
-    lines.splice(0, close < 0 ? lines.length : close + 1);
-  }
-  const [declaration = "", ...rest] = splitStatements(lines[0] ?? "");
+  const [declaration = "", ...rest] = splitStatements(found.line);
   const after = rest.map((part) => part.trim()).filter((part) => part !== "");
-  return [declaration.trim(), ...after, ...lines.slice(1)];
+  return [declaration.trim(), ...after, ...lines];
 }
 
 /** Removes quoted text and every bracketed shape, innermost first. */
