@@ -37,6 +37,11 @@ document often exists in two trees. **Edit the one the package carries.**
   needs its own build runs the three steps with its own `node_modules`, never through a junction
   shared with another checkout. A new worktree has no `node_modules`: run
   `pnpm install --frozen-lockfile` first, and merge `origin/main` into it before relying on its skills.
+- A Claude Code desktop session in a worktree under `.claude/worktrees/` runs the hooks of the main
+  checkout's `.claude/settings.json`, not the worktree's. When the main checkout is behind
+  `origin/main`, the session gets that older checkout's reminders, such as an install check that
+  warns on every prompt after the worktree's own install. Keep the main checkout fast-forwarded to
+  `origin/main` and built with the three steps above.
 - Where `pnpm` is not on `PATH`, run `corepack pnpm <script>`; `scripts/run-lint-checks.sh` falls back to it itself. npm stops at the `workspace:` protocol,
   and `scripts/check-not-a-dependency.mjs` refuses a yarn install. On Windows a linked file reads as a
   one-line path unless `core.symlinks` is enabled: open its target under
