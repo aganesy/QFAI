@@ -30,6 +30,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
     <A extends unknown[], R>(call: (...args: A) => Promise<R>) =>
     async (...args: A): Promise<R> => {
       const save = between.next;
+      between.next = undefined;
       if (save !== undefined) await save();
       return call(...args);
     };
