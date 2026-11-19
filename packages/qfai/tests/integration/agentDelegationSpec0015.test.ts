@@ -288,6 +288,44 @@ describe("every agent card follows the standard contract", () => {
       await removeTempTree(root);
     }
   });
+
+  // QFAI:AC-0001-0162-01
+  // QFAI:EX-0001-0162-02
+  it("counts a required section only as a level-2 heading of the card body", async () => {
+    const worker = (await readCards()).get("fullstack-engineer") ?? "";
+    const withoutHeading = worker.replace("## Stop conditions", "## Stop");
+    const closingDelimiter = withoutHeading.indexOf("\n---", 3);
+    const frontmatter = withoutHeading.slice(0, closingDelimiter);
+    const body = withoutHeading.slice(closingDelimiter);
+    const mentions: Record<string, string> = {
+      frontmatter: `${frontmatter}\n# ## Stop conditions${body}`,
+      prose: `${withoutHeading}\nSee the ## Stop conditions section.\n`,
+      fence: `${withoutHeading}\n\`\`\`md\n## Stop conditions\n\`\`\`\n`,
+      comment: `${withoutHeading}\n<!--\n## Stop conditions\n-->\n`,
+      "comment closing line": `${withoutHeading}\n<!--\na note\n--> ## Stop conditions\n`,
+      "one-line comment": `${withoutHeading}\n<!-- a note --> ## Stop conditions\n`,
+      subsection: `${withoutHeading}\n### Stop conditions\n`,
+    };
+    const root = await initProject();
+    try {
+      const file = path.join(root, ".qfai", "assistant", "agent", "fullstack-engineer.md");
+      for (const [where, card] of Object.entries(mentions)) {
+        await writeFile(file, card, "utf-8");
+        const missing = (await validateAgentDefinition(root))
+          .filter((finding) => finding.code === "QFAI-AGENT-005")
+          .map((finding) => finding.message);
+        expect(missing, where).toEqual([
+          'Missing required section "## Stop conditions" in .qfai/assistant/agent/fullstack-engineer.md',
+        ]);
+      }
+
+      await writeFile(file, worker.replace("## Stop conditions", "## Stop conditions ##"), "utf-8");
+      const findings = await validateAgentDefinition(root);
+      expect(findings.filter((finding) => finding.code === "QFAI-AGENT-005")).toEqual([]);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
 });
 
 /** The same section of the shipped baseline and of the repository's synced copy. */

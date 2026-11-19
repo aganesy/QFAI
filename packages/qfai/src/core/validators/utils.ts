@@ -108,6 +108,31 @@ export async function readSafe(filePath: string): Promise<string> {
   }
 }
 
+/**
+ * A file read that keeps "nothing is there" apart from "it is there and could
+ * not be read": a check may skip the first, but must report the second as
+ * incomplete rather than pass on it.
+ */
+export type PresentFileRead =
+  | { readonly kind: "absent" }
+  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "unreadable"; readonly reason: string };
+
+/** Read a file as UTF-8, telling an absent path from one that cannot be read. */
+export async function readPresentFile(filePath: string): Promise<PresentFileRead> {
+  try {
+    return { kind: "text", text: await readFile(filePath, "utf-8") };
+  } catch (error: unknown) {
+    if (isAbsent(error)) {
+      return { kind: "absent" };
+    }
+    return {
+      kind: "unreadable",
+      reason: hasErrnoCode(error) ? error.code : error instanceof Error ? error.message : "error",
+    };
+  }
+}
+
 export function to4(value: number): string {
   return `${value}`.padStart(4, "0");
 }

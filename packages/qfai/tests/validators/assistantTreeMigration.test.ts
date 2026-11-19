@@ -83,6 +83,24 @@ describe("assistantTreeMigration validator", () => {
     }
   });
 
+  it("reports a regular file at a layer path as a layer that is not a directory", async () => {
+    const root = await newRoot("treemig-file-layer");
+    try {
+      await seed4LayerTree(root);
+      const promptPath = path.join(root, ".qfai", "assistant", "prompt");
+      await rm(promptPath, { recursive: true, force: true });
+      await writeFile(promptPath, "not a directory\n", "utf-8");
+      const issues = await validateAssistantTreeMigration(root, await getConfig(root));
+      const layerIssues = issues.filter((i) => i.code === "QFAI-ASSISTANT-002");
+      expect(layerIssues.map((i) => i.file)).toEqual([".qfai/assistant/prompt/"]);
+      expect(layerIssues[0]?.severity).toBe("info");
+      expect(layerIssues[0]?.message).toContain("is not a directory");
+      expect(layerIssues[0]?.message).not.toContain("not seeded");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:EX-0001-0043-01
   it("allows step and skill.local and reports a directory outside the layers", async () => {
     const root = await newRoot("treemig-catalog");

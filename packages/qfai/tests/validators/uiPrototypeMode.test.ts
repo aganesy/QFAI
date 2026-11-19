@@ -223,6 +223,42 @@ describe("which mode the rule reads", () => {
 
     expect(await validateUiPrototypeMode(root, defaultConfig)).toEqual([]);
   });
+
+  it("reads a mode written as an inline mapping, which YAML allows", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      ["prototype: { mode: static }", "screens:", "  - id: order_create", ""].join("\n"),
+    );
+
+    const [finding] = await validateUiPrototypeMode(root, defaultConfig);
+
+    expect(finding?.code).toBe(UI_PROTOTYPE_MODE_RULE_ID);
+    expect(finding?.message).toContain("`prototype.mode: static`");
+  });
+
+  it("says nothing about the template's mode written as an inline mapping", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      ['prototype: { mode: "interactive", mockPaths: [] }', "screens: []", ""].join("\n"),
+    );
+
+    expect(await validateUiPrototypeMode(root, defaultConfig)).toEqual([]);
+  });
+
+  it("asks nothing of a contract that does not parse, which another rule reports", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      ["prototype:", "  mode: static", "screens: [", ""].join("\n"),
+    );
+
+    expect(await validateUiPrototypeMode(root, defaultConfig)).toEqual([]);
+  });
 });
 
 describe("the paths the project configured", () => {

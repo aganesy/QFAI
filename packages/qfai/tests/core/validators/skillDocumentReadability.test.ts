@@ -27,7 +27,8 @@ vi.mock("node:fs/promises", async () => {
   return {
     ...actual,
     default: actual,
-    readFile: (...args: Parameters<typeof actual.readFile>) => {
+    // The open every skill document read goes through, crawled or cited.
+    open: (...args: Parameters<typeof actual.open>) => {
       // Literals, not the consts below: `vi.mock` is hoisted above them.
       const target = typeof args[0] === "string" ? args[0] : "";
       const denied =
@@ -35,7 +36,7 @@ vi.mock("node:fs/promises", async () => {
         target.split(path.sep).includes("unreadable-skill");
       return denied
         ? Promise.reject(new Error(`EACCES: permission denied, open '${path.basename(target)}'`))
-        : actual.readFile(...args);
+        : actual.open(...args);
     },
   };
 });
