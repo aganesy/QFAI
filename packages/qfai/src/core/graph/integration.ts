@@ -14,10 +14,10 @@ export async function prepareGraphIntegration(
   root: string,
   run: GraphProcess = runGraphProcess,
 ): Promise<GraphIntegrationPreparation> {
+  // Before the lock and before preparation: the lock file and a failed download's cache both live
+  // under .qfai/tools/, and an unignored file there is what `git add -A` stages.
+  const ignore = await ensureGraphGitignore(root, run);
   return withGraphLock(root, "analysis", async () => {
-    // Before preparation: a failed download still leaves its cache under .qfai/tools/, and an
-    // unignored cache is what `git add -A` stages.
-    const ignore = await ensureGraphGitignore(root, run);
     const preparation = await prepareGraphRuntimes(root, run);
     if (preparation.failedStep)
       return { ...preparation, files: ignore.files, conflicts: ignore.conflicts };

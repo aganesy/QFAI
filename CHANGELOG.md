@@ -475,7 +475,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that meets it stops with the same retry line and asks to run `qfai init`
   again. The graph CLI entrypoint, which a query loads before it can take the
   lock, is now written beside its target and renamed into place, so a query
-  never loads it part-written. Closes #4586.
+  never loads it part-written. The `.gitignore` entry for `.qfai/tools/` is
+  still written before the lock is taken, so a `git add -A` never stages the
+  lock file. Closes #4586.
 
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
