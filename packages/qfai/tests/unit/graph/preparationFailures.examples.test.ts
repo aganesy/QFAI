@@ -6,6 +6,7 @@ import {
   GRAPH_VERSIONS,
   graphRuntimePaths,
   prepareGraphRuntimes,
+  shellArgument,
   windowsPathLimitRecovery,
 } from "../../../src/core/graph/prepare.js";
 import { renderGraphPreparation } from "../../../src/core/graph/presentation.js";
@@ -174,25 +175,34 @@ it("retains the prior installation after an interrupted replacement download", a
   }
 });
 
+/** The argument as the shell of this platform reads it literally. */
+function quoted(value: string): string {
+  return shellArgument(value) ?? "unquotable";
+}
+
 // QFAI:EX-0001-0237-22
-// Mutation: packages/qfai/src/core/graph/prepare.ts `command(directory).join(" ")` -> `command(directory).slice(0, 1).join(" ")` fails "names a command to rerun a failed download by hand"
+// Mutation: packages/qfai/src/core/graph/prepare.ts `const directory = shellArgument(created);` -> `const directory = shellArgument(path.join(os.tmpdir(), "qfai-graph-check", engine));` fails "names a command to rerun a failed download by hand"
 it("names a command to rerun a failed download by hand", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-rerun-"));
   const fixture = graphProcessFixture();
   const installerOutput = "INSTALLER-OUTPUT-SENTINEL token=secret";
+  const allocated: string[] = [];
   try {
     const graphifyResult = await prepareGraphRuntimes(root, (command, args, options) =>
       args[0] === "pip"
         ? Promise.resolve({ exitCode: 1, stdout: installerOutput })
         : fixture.run(command, args, options),
     );
-    const graphifyDirectory = path.join(os.tmpdir(), "qfai-graph-check", "graphify");
-    expect(graphifyResult.rerun?.directory).toBe(`"${graphifyDirectory}"`);
-    expect(graphifyResult.rerun?.directory).not.toContain(root);
+    const graphifyDirectory = await freshRerunDirectory(
+      graphifyResult.rerun?.directory,
+      "graphify",
+    );
+    allocated.push(graphifyDirectory);
+    expect(graphifyDirectory).not.toContain(root);
     const graphify = renderGraphPreparation(graphifyResult);
     expect(graphify).toContain("Failed step: Graphify download");
     expect(graphify).toContain(
-      `Recovery: Run uv pip install --python ">=3.10" --target "${graphifyDirectory}" "graphifyy[ollama]==${GRAPH_VERSIONS.graphify}" to see the cause, fix it, then run qfai init again. Then delete "${graphifyDirectory}".`,
+      `Recovery: Run uv pip install --python ${quoted(">=3.10")} --target ${quoted(graphifyDirectory)} ${quoted(`graphifyy[ollama]==${GRAPH_VERSIONS.graphify}`)} to see the cause, fix it, then run qfai init again. Then delete ${quoted(graphifyDirectory)}.`,
     );
     expect(graphify).not.toContain("Preparation failed.");
     expect(graphify).not.toContain("reported cause");
@@ -202,22 +212,68 @@ it("names a command to rerun a failed download by hand", async () => {
         ? Promise.resolve({ exitCode: 1, stdout: installerOutput })
         : fixture.run(command, args, options),
     );
-    const codegraphDirectory = path.join(os.tmpdir(), "qfai-graph-check", "codegraph");
-    expect(codegraphResult.rerun?.directory).toBe(`"${codegraphDirectory}"`);
-    expect(codegraphResult.rerun?.directory).not.toContain(root);
+    const codegraphDirectory = await freshRerunDirectory(
+      codegraphResult.rerun?.directory,
+      "codegraph",
+    );
+    allocated.push(codegraphDirectory);
+    expect(codegraphDirectory).not.toContain(root);
     const codegraph = renderGraphPreparation(codegraphResult);
     expect(codegraph).toContain("Failed step: CodeGraph download");
     expect(codegraph).toContain(
-      `Recovery: Run npm install --prefix "${codegraphDirectory}" --no-audit --no-fund --save-exact --ignore-scripts @colbymchenry/codegraph@${GRAPH_VERSIONS.codegraph} to see the cause, fix it, then run qfai init again. Then delete "${codegraphDirectory}".`,
+      `Recovery: Run npm install --prefix ${quoted(codegraphDirectory)} --no-audit --no-fund --save-exact --ignore-scripts @colbymchenry/codegraph@${GRAPH_VERSIONS.codegraph} to see the cause, fix it, then run qfai init again. Then delete ${quoted(codegraphDirectory)}.`,
     );
     expect(codegraph).not.toContain(installerOutput);
+    // A second failure gets a directory of its own, never the one a first failure named.
+    const again = await prepareGraphRuntimes(root, (command, args, options) =>
+      args[0] === "pip"
+        ? Promise.resolve({ exitCode: 1, stdout: "" })
+        : fixture.run(command, args, options),
+    );
+    const againDirectory = await freshRerunDirectory(again.rerun?.directory, "graphify");
+    allocated.push(againDirectory);
+    expect(againDirectory).not.toBe(graphifyDirectory);
   } finally {
+    for (const directory of allocated) await rm(directory, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });
   }
 });
 
-// A temporary directory carrying a control character is escaped, not printed raw.
-it("escapes a control character in the rerun directory", async () => {
+/** Unquotes a shown rerun directory and checks it was allocated empty under the temporary directory. */
+async function freshRerunDirectory(shown: string | undefined, engine: string): Promise<string> {
+  expect(shown).toBeDefined();
+  const text = shown ?? "";
+  const directory = /^["']/.test(text) ? text.slice(1, -1) : text;
+  expect(shown).toBe(quoted(directory));
+  expect(path.dirname(directory)).toBe(os.tmpdir());
+  expect(path.basename(directory)).toMatch(new RegExp(`^qfai-graph-check-${engine}-`));
+  expect(await readdir(directory)).toEqual([]);
+  return directory;
+}
+
+// QFAI:EX-0001-0237-22
+// Mutation: packages/qfai/src/core/graph/prepare.ts `if (platform === "win32")` -> `if (false)` fails "quotes a rerun argument for the shell of the platform"
+it("quotes a rerun argument for the shell of the platform", () => {
+  expect(shellArgument("--no-audit", "linux")).toBe("--no-audit");
+  expect(shellArgument("/tmp/qfai-graph-check-graphify-Ab12Cd", "linux")).toBe(
+    "/tmp/qfai-graph-check-graphify-Ab12Cd",
+  );
+  expect(shellArgument("@colbymchenry/codegraph@1.6.2", "win32")).toBe(
+    "@colbymchenry/codegraph@1.6.2",
+  );
+  expect(shellArgument(">=3.10", "linux")).toBe("'>=3.10'");
+  expect(shellArgument(">=3.10", "win32")).toBe('">=3.10"');
+  expect(shellArgument("/tmp/it's $HOME `x`", "darwin")).toBe("'/tmp/it'\\''s $HOME `x`'");
+  expect(shellArgument("C:\\Users\\a b\\Temp", "win32")).toBe('"C:\\Users\\a b\\Temp"');
+  for (const unsafe of ["C:\\Users\\$a", "C:\\Users\\`a", "C:\\Users\\%a%", 'C:\\"a'])
+    expect(shellArgument(unsafe, "win32")).toBeUndefined();
+  expect(shellArgument("/tmp/forged\nline", "linux")).toBeUndefined();
+  expect(shellArgument("C:\\forged\u001b[2J", "win32")).toBeUndefined();
+});
+
+// A temporary directory that cannot be allocated, or carries a control character, leaves the
+// generic recovery line rather than a forged one.
+it("keeps the generic recovery line when no rerun directory can be allocated", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-graph-rerun-escape-"));
   const fixture = graphProcessFixture();
   const tmpdir = vi.spyOn(os, "tmpdir").mockReturnValue(path.join(root, "forged\nline"));
@@ -227,8 +283,12 @@ it("escapes a control character in the rerun directory", async () => {
         ? Promise.resolve({ exitCode: 1, stdout: "" })
         : fixture.run(command, args, options),
     );
+    expect(result.failedStep).toBe("Graphify download");
+    expect(result.rerun).toBeUndefined();
     const output = renderGraphPreparation(result);
-    expect(output).toContain("forged\\x0aline");
+    expect(output).toContain(
+      "Recovery: Preparation failed. Fix the cause, then run qfai init again.",
+    );
     expect(output.split("\n").some((line) => line.startsWith("line"))).toBe(false);
   } finally {
     tmpdir.mockRestore();

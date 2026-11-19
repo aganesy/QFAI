@@ -532,6 +532,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
+- **A failed graph tool download names a directory of its own to retry in.**
+  The recovery line of `qfai init` told you to rerun the download into a fixed
+  `qfai-graph-check` directory under the system temporary directory and then
+  delete it, even if that directory already held something else. Init now
+  creates a new empty directory for each failure, names only that one in the
+  command and in the deletion, and quotes the command for the shell of your
+  platform. Where no such directory can be created or shown safely, the
+  recovery line says to fix the cause and run `qfai init` again. Closes #4589.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from
