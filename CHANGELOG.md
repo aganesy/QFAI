@@ -545,12 +545,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
-- **The migration warns that it replaces customised step directories.** The
-  backup warning in the migration skill, its guide and `MIGRATION-2.0.0.md`
-  named only the shipped skills that step 11 replaces. They now also name the
-  shipped step directories under `.qfai/assistant/step/`, whose untracked files
-  and uncommitted edits step 11 replaces too, so a person copies their local
-  changes before the first run. Closes #4509.
+- **`QFAI-CONTRACT-036` keeps a table's schema and the case of a quoted
+  name.** The foreign-key check dropped the schema and lowercased every name,
+  so `audit.events` and `sales.events`, or `"Orders"` and `orders`, read as
+  one table that two contracts create, and a missing `-- Depends on:` entry
+  went unreported. Names now compare as PostgreSQL resolves them: the schema
+  counts and only unquoted names fold. A name with no schema matches a table
+  of that name in any schema, and is attributed to no contract when those
+  tables belong to more than one. A `$tag$`, `'` or `REFERENCES` inside a
+  double-quoted identifier no longer opens a literal or reads as a foreign
+  key, and a quoted name holding spaces, dots or `$` is read whole.
+  Closes #4487.
 
 - **`qfai sdd next-id` reads the ID kind without regard to case.**
   `qfai sdd next-id ac US-0001-0001 --base main` was refused as an unknown
@@ -564,6 +569,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   It now writes the package's copy beside the directory, checks it, and only
   then switches the two; if the switch fails, the project's copy is put back,
   and when even that fails the error names the hidden directory that holds it.
+
+- **The document-schema check sees changes under a non-ASCII directory.**
+  `check-mdschema.mjs --scope changed` read Git's changed paths line by line,
+  where Git quotes a path with a non-ASCII character and escapes its bytes. The
+  quoted path matched no document, so an edit under such a directory was left
+  out of the check and a broken document passed. The check now reads the paths
+  NUL-delimited, as Git stores them. Closes #4491.
 
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
@@ -583,12 +595,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   outside the base URL stays unlinked, and a `--base-url` that is not an
   absolute http or https URL without a query, fragment or credentials exits 2.
 
+- **The design audit no longer drops findings past its display limit.** It
+  kept only the first `uiux.audit.maxDuplicateFindingsPerRule` findings of a
+  code and replaced the rest with one info finding, before flow scope and
+  waivers ran, so a waiver or the exit code could act on the wrong set and
+  `validate.json` lacked findings. The audit now returns every finding, and
+  the key only sets how many of a `QFAI-AUD-` code `--format text` prints
+  before `and <n> more`. Closes #4493.
+
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
   through a `preinstall` guard. npm never reaches that guard: it stops with
   `EUNSUPPORTEDPROTOCOL` at the repository root's `workspace:` dependency, an
   error that does not mention QFAI. The README now describes npm's error and
   gives the guard's message to yarn alone. Closes #4626.
+
+- **The turn-end check runs only commands the Standard commands list itself
+  holds.** It read every `- Label:` line under the heading, so a fenced or
+  indented example, an item nested under another, and a heading inside a
+  sample could replace a real command or mark one. Only the section's
+  top-level items are read now. Where the `Turn-end check:` item or a label
+  it marks is listed twice, the hook runs nothing and tells the user which
+  label is listed more than once in tech.md. Closes #4470.
 
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
@@ -633,6 +661,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   binary is the downloaded copy. That file now runs in a separate Node process
   stopped at the same limit; one that does not answer by then gives no finding,
   as a missing file already did. Closes #4616.
+
+- **A graph query still works after a source directory becomes a file, or a
+  file becomes a directory.** The code graph copies the project into its own
+  corpus before each query. A path that changed type since the last copy made
+  that copy fail, so the next query stopped with exit code 2. The stale entry
+  is now removed before the new one is copied in. Closes #4498.
 
 - **A DB contract that defines one SQL function twice is reported even when the
   two definitions differ only in defaults or argument names.** `QFAI-DB-002`
@@ -693,6 +727,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeping the document's permissions, so a failure leaves the original as it
   was. The same holds for the reminder text step 11 refreshes and for the hook
   settings it and `qfai init` update. Closes #4457.
+
+- **The migration warns that it replaces customised step directories.** The
+  backup warning in the migration skill, its guide and `MIGRATION-2.0.0.md`
+  named only the shipped skills that step 11 replaces. They now also name the
+  shipped step directories under `.qfai/assistant/step/`, whose untracked files
+  and uncommitted edits step 11 replaces too, so a person copies their local
+  changes before the first run. Closes #4509.
+
+- **`qfai init` no longer writes through a linked `.qfai`.** The asset copies
+  checked the directories below `.qfai` but not `.qfai` itself, so a `.qfai`
+  that was a symbolic link had every assistant file written wherever it
+  pointed. A story-tree seed path under a link was refused only after the root
+  assets and `AGENTS.md` had already been written. Init now checks `.qfai` and
+  the seed paths before it writes anything, and stops with the path named when
+  `.qfai` is a link or not a directory, leaving every project file as it was.
+  Closes #4471.
 
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in
