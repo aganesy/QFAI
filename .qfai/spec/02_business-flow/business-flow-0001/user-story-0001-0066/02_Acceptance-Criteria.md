@@ -19,4 +19,12 @@ Feature: Flow-scoped report
     When `qfai report --flow <value>` runs with a value that is not a `BF-NNNN` ID
     Then it exits 2
     And no report file is written
+
+  # AC-0001-0066-04
+  Scenario: --flow with --profile reads the result validate wrote for that scope
+    Given the story tree
+    And `validate.flow-<ids>.json` written by `qfai validate --flow BF-NNNN --profile <profile>`
+    When `qfai report --flow BF-NNNN --profile <profile>` runs for the same flows
+    Then the report is rendered from `validate.flow-<ids>.json`
+    And when that file records another profile, it exits 2 and writes no report
 ```

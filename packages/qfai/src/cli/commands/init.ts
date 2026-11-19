@@ -109,6 +109,7 @@ import type { WrapperSyncOptions } from "../../core/init/managedLink.js";
 import { formatReportPath } from "../../core/init/reportPath.js";
 import { ensureRootGitignoreEntries } from "../../core/init/rootGitignore.js";
 import { prepareGraphIntegration } from "../../core/graph/integration.js";
+import { GraphLocalStateError } from "../../core/graph/localFiles.js";
 import { renderGraphPreparation, renderGraphPreview } from "../../core/graph/presentation.js";
 import { runGraphProcess, type GraphProcess } from "../../core/graph/process.js";
 
@@ -599,7 +600,16 @@ export async function runInit(
     info(AGENT_RESTART_NOTE);
   }
   if (!options.dryRun) {
-    const preparation = await prepareGraphIntegration(destRoot, graphProcess);
+    const preparation = await prepareGraphIntegration(destRoot, graphProcess).catch(
+      (cause: unknown) => {
+        // The lock's cause is the EEXIST of its open, which would be reported as an unreadable
+        // required file; the refusal is rethrown alone so its retry line reaches the user.
+        if (!(cause instanceof GraphLocalStateError)) throw cause;
+        throw new Error(
+          `Graph preparation stopped: ${cause.message} ${cause.recovery} Then run qfai init again.`,
+        );
+      },
+    );
     if (preparation.files.includes(".gitignore")) await ensureRootGitignoreEntries(destRoot, false);
     info(renderGraphPreparation(preparation));
     for (const conflict of preparation.conflicts) warn(conflict);

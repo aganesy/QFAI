@@ -557,23 +557,35 @@ jobs:
       - name: Install the document-shape and diagram checkers
         shell: bash
         run: |
-          # Both are pinned to an exact version rather than a range: this step
-          # bootstraps the two programs whose verdict the lane reports, and an
-          # unpinned install fetches whatever the registry calls latest at the
-          # moment the job runs, so the same commit could be checked by a
-          # different rule set from one day to the next.
+          # Mermaid and jsdom are pinned to an exact version rather than a range:
+          # they produce the diagram check's verdict, and an unpinned install
+          # fetches whatever the registry calls latest at the moment the job
+          # runs, so the same commit could be checked by a different rule set
+          # from one day to the next.
           #
-          # `--prefix` puts them in a directory of their own, and that is what
-          # keeps this step independent of the package manager above. npm cannot
-          # read a `node_modules` that pnpm laid out - it stops with an internal
-          # error - so an install into your tree fails for every project that
-          # uses pnpm, and neither check ever runs. A prefix of its own has no
-          # tree to read, and `--no-save` keeps it from writing a manifest there.
-          # The two checker scripts below are given the directory with `--tools`.
-          # They are installed rather than run through `npx` for the same reason
-          # the version is pinned - `npx` resolves and caches on its own terms,
-          # and a lane that reports a verdict should be able to say which program
-          # produced it.
+          # The schema checker, `@jackchuka/mdschema`, is the version the QFAI
+          # this lane runs depends on, because its schemas are written for that
+          # version and `qfai validate` checks with it. A version written into
+          # this file would be the one current when `qfai init` generated it,
+          # and once your project moved to another QFAI the lane and `qfai
+          # validate` could give two verdicts about one document. So with a
+          # QFAI of your own the version is read from its `package.json`, and
+          # the step stops when that is not one exact version. The checker is
+          # installed here even though your install has it too: your install
+          # may have omitted the optional dependency that carries its platform
+          # binary, and this install keeps it (see `--include=optional` below).
+          #
+          # `--prefix` puts the tools in a directory of their own, and that is
+          # what keeps this step independent of the package manager above. npm
+          # cannot read a `node_modules` that pnpm laid out - it stops with an
+          # internal error - so an install into your tree fails for every project
+          # that uses pnpm, and neither check ever runs. A prefix of its own has
+          # no tree to read, and `--no-save` keeps it from writing a manifest
+          # there. The two checker scripts below are given the directory with
+          # `--tools`. The tools are installed rather than run through `npx` for
+          # the same reason the versions are pinned - `npx` resolves and caches
+          # on its own terms, and a lane that reports a verdict should be able to
+          # say which program produced it.
           #
           # `--registry` on the command line outranks both `NPM_CONFIG_REGISTRY`
           # and a project `.npmrc`, so the version says WHAT and this says WHERE
@@ -600,18 +612,36 @@ jobs:
           #
           # Guarded rather than unconditional, because a repository that DOES
           # depend on QFAI has already installed the version it chose, and this
-          # lane must report that version's rules rather than quietly replace it
-          # with the newest one. Unpinned in the bootstrap case for the same
-          # reason a bare `npx qfai` is: with nothing in the manifest there is no
-          # version to honour, and pinning one here would freeze every adopter's
-          # docs lane at whatever release generated this file. For the same
-          # reason the bootstrap install leaves the schema checker to QFAI: the
-          # release it fetches depends on one version of that checker, and its
-          # schemas are written for that version. One install for both cases,
-          # because a second `--no-save` install into the same prefix removes
-          # what the first one added.
+          # lane must report that version's rules, with that version's checker,
+          # rather than quietly replace them with the newest ones. Unpinned in
+          # the bootstrap case for the same reason a bare `npx qfai` is: with
+          # nothing in the manifest there is no version to honour, and pinning
+          # one here would freeze every adopter's docs lane at whatever release
+          # generated this file. One install for both cases, because a second
+          # `--no-save` install into the same prefix removes what the first one
+          # added.
           if [ -d node_modules/qfai ]; then
-            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools @jackchuka/mdschema@0.16.0 mermaid@11.17.2 jsdom@29.1.1
+            checker="$(node -e '
+              const { readFileSync } = require("node:fs");
+              const manifest = "node_modules/qfai/package.json";
+              let declared;
+              try {
+                declared = JSON.parse(readFileSync(manifest, "utf8")).dependencies[
+                  "@jackchuka/mdschema"
+                ];
+              } catch {
+                declared = undefined;
+              }
+              const exact = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+              if (typeof declared !== "string" || !exact.test(declared)) {
+                console.error(
+                  `::error::qfai docs: ${manifest} declares no exact @jackchuka/mdschema version`,
+                );
+                process.exit(1);
+              }
+              process.stdout.write(declared);
+            ')"
+            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools "@jackchuka/mdschema@${checker}" mermaid@11.17.2 jsdom@29.1.1
           else
             npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools mermaid@11.17.2 jsdom@29.1.1 qfai
           fi

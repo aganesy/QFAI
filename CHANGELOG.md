@@ -192,11 +192,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.16.0.** The
-  document-schema checker the docs lane runs moves from 0.15.7 to 0.16.0, the
-  version the package now depends on. Both versions declare the same
-  `postinstall` script, which downloads the checker's platform binary.
-
 - **Breaking: each contract kind has its own number sequence, and a business
   rule ID names its contract's kind.** A project with five DB contracts and
   two API contracts can number them `DB-0001` to `DB-0005` and `API-0001` to
@@ -392,6 +387,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   findings reached the prototype only through what the grill session settled.
   Closes #4387.
 
+- **QFAI depends on `@jackchuka/mdschema` 0.16.0.** The document-schema
+  checker that `qfai validate` and the shipped `qfai-docs.yml` run moves from
+  0.15.7 to 0.16.0. Both versions declare the same `postinstall` script, which
+  downloads the checker's platform binary.
+
 - **UI research and design close gaps a redesign exposed.**
   - The product-surface reviewer also checks built screens against the
     _Components_, _Layout and composition_ and _Displacement_ anti-patterns,
@@ -474,6 +474,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **`qfai catalog components` writes only inside the project.** A
+  `.qfai/catalog` directory, or a directory above it, that was a symbolic link
+  or junction led the write to wherever the link pointed, overwriting a file
+  outside the project. The command now checks each directory on the path before
+  and after creating it, stops with exit 1 naming the link, and leaves any
+  existing file as it was. It writes to a new temporary file beside the
+  catalogue and renames it into place, so a failed write leaves the old
+  catalogue whole.
+
 - **`qfai db-drift` compares the full PostgreSQL column type.** It read
   `information_schema.columns.data_type`, which drops the varchar length, the
   numeric precision and scale and the array element type, and reads
@@ -485,6 +494,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
+- **Migration step 11 keeps a skill or step when its replacement fails.** Step
+  11 deleted a skill or step directory that differed from the package's copy
+  before writing the new one, so a failed copy left the project with neither.
+  It now writes the package's copy beside the directory, checks it, and only
+  then switches the two; if the switch fails, the project's copy is put back,
+  and when even that fails the error names the hidden directory that holds it.
+
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
   `-- Depends on:` line skipped `$$ … $$` literals but not `$tag$ … $tag$`
@@ -494,6 +510,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   SQL statement splitter already reads them. Both readers also accept a tag
   with non-ASCII letters, such as `$é$`, and no longer open a literal at a
   `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
+
+- **Diagnostic text can no longer reshape a Markdown report.** The Markdown
+  report of `qfai report` wrote each finding's code, message and file as raw
+  Markdown, so brackets, HTML or a line break in them could add links, headings
+  or markup, and a file path could move a `--base-url` link elsewhere. They now
+  render as escaped text, each linked path segment is percent-encoded, a path
+  outside the base URL stays unlinked, and a `--base-url` that is not an
+  absolute http or https URL without a query, fragment or credentials exits 2.
 
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
@@ -509,6 +533,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   command's usage lines (only the subcommand's when one was given) and a
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
+
+- **`qfai doctor --autoremediate` exits 1 when an install fails.** A failed
+  `npm install` for a skill's runtime dependency was printed, but doctor still
+  exited 0 when the diagnosis passed, so a script read an incomplete
+  remediation as a success. Like a failed run-log removal, a failed install
+  now makes doctor exit 1 whatever `--fail-on` says.
 
 - **The GitHub Release is created only for the tag commit the release
   workflow verified.** The release job named a tag, not a commit, minutes
@@ -529,6 +559,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped at the same limit; one that does not answer by then gives no finding,
   as a missing file already did. Closes #4616.
 
+- **A DB contract that defines one SQL function twice is reported even when the
+  two definitions differ only in defaults or argument names.** `QFAI-DB-002`
+  compared the whole argument text, so two `CREATE OR REPLACE FUNCTION`
+  statements that differed only in a default value, an argument name, an OUT
+  argument or spacing passed. It now compares the input argument types, which
+  is how PostgreSQL tells two routines apart.
+
 - **`qfai validate` no longer writes its run log through a link.** When
   `paths.outDir`, a directory between the project root and it, or
   `validate.log` in it is a symbolic link or junction, the run writes no run
@@ -548,6 +585,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   title, keeps its pattern. The `tech.md` Surface example is now the bare row,
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
+
+- **A report without `--flow` counts every declared contract.** The summary
+  counted only contracts holding a business rule linked to a flow, so a project
+  with one declared contract and no linked rule reported zero contracts. Only a
+  report scoped by `--flow` now limits the count to the contracts its flows
+  link.
 
 - **The assistant anchor check reads only the assistant tree.** The
   `QFAI-LINK-002` check followed every link under `.qfai/assistant/`: a link to
@@ -571,6 +614,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   named `<file>.qfai-init-<pid>-<timestamp>`, stays: delete it by hand.
   Closes #4526.
 
+- **`qfai report --flow --profile` reads the result `qfai validate` wrote.**
+  `qfai validate --flow` writes one `validate.flow-<ids>.json` whatever the
+  profile, while `qfai report` with both `--flow` and `--profile` read a
+  profile-suffixed file that only an earlier `report --run-validate` wrote,
+  so a report either missed a fresh result or rendered a stale one. Both
+  commands now resolve the file name through one function, `--run-validate`
+  writes only the scoped file, and a report read without `--in` that records
+  another profile than `--profile` exits 2 and names the validate run to
+  repeat. Closes #4468.
+
 - **`qfai validate` no longer waits forever on the document-schema check.**
   An mdschema run that never exited held `validate` open, and one that printed
   without end was read into memory whole. Each run now stops after 120 seconds
@@ -582,6 +635,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing has defined since 2.5.0. It now reads the surfaces the deliberation record
   settles, the `tech.md` `Surface` row and the UI contracts linked to the
   flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
+
+- **Migration step 1 moves the old default paths in any spelling.** With
+  `paths.specsDir: ./.qfai/specs` (or a trailing `/`, or backslashes) and a
+  legacy spec pack present, step 1 saw the old layout yet planned no
+  operation and exited 0. It now reads each configured path as the
+  configuration loader does before comparing it with the old default, so it
+  moves the directory and rewrites the key. Closes #4478.
 
 - **A skill's auto-decide entries are checked the way its hard-required
   entries are.** `QFAI-POLICY-002` skipped a value written on the
@@ -611,6 +671,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   line; and the theme writer refuses a value that would break its
   declaration even when the design did not come through the parser.
 
+- **`qfai init` no longer activates graph runtimes beside a graph query.** Graph
+  queries and document preparation held a worktree lock, but `qfai init`
+  replaced the runtimes under `.qfai/tools/` without it, so a query or a second
+  `qfai init` in the same worktree could run against a half-replaced runtime.
+  `qfai init` now holds the same lock while it prepares the graph tools. A
+  query that meets it fails with the contention and a retry line, and an init
+  that meets it stops with the same retry line and asks to run `qfai init`
+  again. The graph CLI entrypoint, which a query loads before it can take the
+  lock, is now written beside its target and renamed into place, so a query
+  never loads it part-written. The `.gitignore` entry for `.qfai/tools/` is
+  still written before the lock is taken, so a `git add -A` never stages the
+  lock file. Closes #4586.
+
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
   derived-value declaration covered both a value the DB stores and a value
   the API does not require, the two remedy sentences ran together with no
@@ -622,6 +695,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as a possible workflow command. A line break in them now shows as a visible
   `\r` or `\n`, and `%` stays as written. The report and run-log are still
   written at their original paths.
+
+- **Directories named with glob syntax are read as the paths they are.** The
+  design token, HTML mock, Mermaid screen flow and UI definition checks built
+  a glob from the project, `paths.specsDir`, `paths.contractsDir` and
+  `uiux.designTokensDir`, so a path such as `build[1]` or `tokens (v2)` was
+  read as a pattern: the check found nothing, or read `build1` instead. Each
+  directory is now the walk's working directory and only the file name is a
+  pattern. Closes #4488.
 
 - **The migration's step 12 scan no longer runs out of memory on large
   tracked files.** It held git's whole file listing and read each tracked file
@@ -638,12 +719,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
-- **Migration step 11 keeps a skill or step when its replacement fails.** Step
-  11 deleted a skill or step directory that differed from the package's copy
-  before writing the new one, so a failed copy left the project with neither.
-  It now writes the package's copy beside the directory, checks it, and only
-  then switches the two; if the switch fails, the project's copy is put back,
-  and when even that fails the error names the hidden directory that holds it.
+- **The docs lane checks with the schema checker your QFAI version depends
+  on.** In a project with its own `node_modules/qfai`, the shipped
+  `qfai-docs.yml` installed `@jackchuka/mdschema` at the version current when
+  `qfai init` generated the file, and ran it in place of the one the project's
+  QFAI depends on, so after a QFAI upgrade the lane and `qfai validate` could
+  disagree about one document. The lane now installs the exact version that
+  `node_modules/qfai/package.json` declares, with its platform binary, and
+  stops before installing when that file declares no exact version.
+  Closes #4596.
 
 - **`qfai sdd preflight` writes only inside its output directory.** A report
   directory, or a directory under it, that was a link to somewhere else carried
@@ -658,6 +742,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the run reported no result at all. Such a file, or one nesting deeper than
   64 levels, now raises `QFAI-DT-002` at error naming the path where reading
   stopped, and every other check completes.
+
+- **`qfai report --run-validate` stops on a stale install, as `qfai validate`
+  does.** When the installed qfai was not the version the lockfile pins,
+  `report --run-validate` only warned and then ran a fresh validation with the
+  outdated copy, so a single-step CI gate could pass on the old validator. It
+  now stops before it runs and exits 1, writing nothing. `qfai report` without
+  `--run-validate` reads a result already written, so it still only warns.
 
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
