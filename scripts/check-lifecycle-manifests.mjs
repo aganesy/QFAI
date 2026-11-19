@@ -33,6 +33,8 @@ import path from "node:path";
 import { argv, cwd, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { escapeCommandMessage } from "./lib/workflow-command.mjs";
+
 /** Where the manifests allowed to run code at install time are pinned. */
 export const LIFECYCLE_MANIFESTS_REL = ".github/lifecycle-manifests.txt";
 
@@ -303,7 +305,8 @@ function pnpmfilesUnder(root) {
 function main(root) {
   const findings = lifecycleFindings(root);
   for (const finding of findings) {
-    stdout.write(`::error::check-lifecycle-manifests: ${finding}\n`);
+    // A finding names paths the walk found, and a pull request chooses those.
+    stdout.write(`::error::${escapeCommandMessage(`check-lifecycle-manifests: ${finding}`)}\n`);
   }
   if (findings.length > 0) return 1;
   stdout.write(

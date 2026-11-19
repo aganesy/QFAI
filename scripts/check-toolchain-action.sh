@@ -139,16 +139,24 @@ fi
 # Duplicates are refused on their own too, ahead of the comparison: a list that names a path
 # twice is a list somebody is doing arithmetic with, and the message should say that rather than
 # leaving a set difference to be puzzled over.
+# A path list as one workflow-command message field: entries joined with ", ", then `%` and CR
+# escaped as `qfai validate --format github` escapes a message (`scripts/lib/workflow-command.mjs`).
+# A pull request names the files `find` lists, and a name holding a line break would otherwise
+# end this command and open its own, such as `::stop-commands::<token>`.
+annotation_list() {
+  printf "%s\n" "$1" | sed 's/%/%25/g; s/\r/%0D/g' | awk 'NR > 1 { printf ", " } { printf "%s", $0 }'
+}
+
 for pinned_root in ".github/actions" "scripts"; do
   listed="$(grep -E "^[0-9a-f]{64}  ${pinned_root}/" "${digests_file}" | sed "s/^[0-9a-f]\{64\}  //" | sort)"
   duplicated="$(printf "%s\n" "${listed}" | uniq -d)"
   if [ -n "${duplicated}" ]; then
-    echo "::error::check-toolchain-action: .github/pinned-bytes.txt names these paths more than once under ${pinned_root}: ${duplicated}. A path pinned twice is a line count being made to balance, not a file being verified."
+    echo "::error::check-toolchain-action: .github/pinned-bytes.txt names these paths more than once under ${pinned_root}: $(annotation_list "${duplicated}"). A path pinned twice is a line count being made to balance, not a file being verified."
     exit 1
   fi
   present="$(cd "${root}" && find "${pinned_root}" -type f | sed "s|^\./||" | sort)"
   if [ "${listed}" != "${present}" ]; then
-    echo "::error::check-toolchain-action: the files under ${pinned_root} are not the files .github/pinned-bytes.txt pins. Pinned: ${listed}. Present: ${present}. A file the list does not name is code nobody reviewed the bytes of; a name the tree does not hold is a pin protecting nothing."
+    echo "::error::check-toolchain-action: the files under ${pinned_root} are not the files .github/pinned-bytes.txt pins. Pinned: $(annotation_list "${listed}"). Present: $(annotation_list "${present}"). A file the list does not name is code nobody reviewed the bytes of; a name the tree does not hold is a pin protecting nothing."
     exit 1
   fi
 done

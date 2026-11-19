@@ -73,8 +73,7 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-/** `## [1.11.0] - 2026-09-07` — a released section, as opposed to `[Unreleased]`. */
-const RELEASED_HEADING_RE = /^## \[(\d+\.\d+\.\d+)\][ \t]+-[ \t]+\d{4}-\d{2}-\d{2}[ \t]*$/;
+import { parseReleasedHeading } from "./changelog-heading.mjs";
 
 /** The sentence `release.yml` appends when it had to cut the section. */
 export const TRUNCATION_MARKER = "**These notes are not the whole section.**";
@@ -98,9 +97,9 @@ export function releasedSections(changelog) {
   const sections = [];
   let current = null;
   for (const line of lines) {
-    const released = RELEASED_HEADING_RE.exec(line);
+    const released = parseReleasedHeading(line);
     if (released !== null) {
-      current = { version: released[1] ?? "", lines: [] };
+      current = { version: released.version, lines: [] };
       sections.push(current);
       continue;
     }

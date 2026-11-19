@@ -225,6 +225,7 @@ async function repairFixture(
   repairTrees.push(root);
   await mkdir(path.join(root, "scripts"));
   for (const name of [
+    "changelog-heading.mjs",
     "check-changelog-released-sections.mjs",
     "check-release-notes.mjs",
     "check-shipped-ci-parity.mjs",

@@ -141,7 +141,7 @@ jobs:
           fi
         shell: bash
 
-      - uses: renovatebot/github-action@266fef21329c44765ad42f9dea1f01f5d2d91084 # v46.3.13
+      - uses: renovatebot/github-action@acdd6bda8b035c99ce59d5675816af2aa65a1774 # v46.3.14
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
           # Pinned, like every other version in this tree. The action's own default is the
@@ -167,6 +167,18 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # The files the re-pin programs write, and the only paths the re-pin commit may carry.
+      # Anything else that changed came from setup or a side effect, and the re-pin step fails
+      # listing it rather than pushing it onto the update branch under Renovate's identity.
+      # SHIPPED-CI: not-applicable
+      # Because: the shipped templates carry no Renovate workflow and no re-pin commit to narrow.
+      REPIN_FILES: >-
+        .agents/rules/document-schema.local.md
+        .github/lifecycle-manifests.txt
+        .github/pinned-bytes.txt
+        .github/required-status-contexts.json
+        .github/workflows/ci.yml
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -219,12 +231,22 @@ jobs:
           # produced an inconsistent tree fails the job instead of being pushed.
           node scripts/check-workflow-hygiene.mjs --root .
 
-          if [ -z "$(git status --porcelain)" ]; then
+          read -ra expected <<< "${REPIN_FILES}"
+          outside=()
+          for file in "${expected[@]}"; do outside+=(":(exclude)${file}"); done
+          unexpected="$(git status --porcelain --untracked-files=all -- . "${outside[@]}")"
+          if [ -n "${unexpected}" ]; then
+            echo "::error::renovate repin: files outside REPIN_FILES changed. The re-pin commits only the files its programs write, so it refuses rather than pushing these:"
+            printf '%s\n' "${unexpected}"
+            exit 1
+          fi
+
+          if [ -z "$(git status --porcelain -- "${expected[@]}")" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "renovate repin: the digests already match this branch; nothing to push"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            git --no-pager diff --stat
+            git --no-pager diff --stat -- "${expected[@]}"
           fi
         shell: bash
 
@@ -246,7 +268,9 @@ jobs:
           # committed under any other name would freeze the very branches it just fixed.
           git config user.name "renovate[bot]"
           git config user.email "29139614+renovate[bot]@users.noreply.github.com"
-          git add -A
+          # By name. The re-pin step has already refused any change outside this list.
+          read -ra expected <<< "${REPIN_FILES}"
+          git add -- "${expected[@]}"
           git commit -m "chore(deps): re-pin the digests this update invalidated"
 
           # The branch still has to EXIST. `.github/renovate.json5` automerges every update, so
