@@ -528,26 +528,20 @@ describe("TC-0003-0032 (TDD-0032): the shipped third-party allow-list rejects an
 });
 
 /**
- * The docs lane installs the checker's engine itself, and the package depends
- * on the same engine. Two versions would let the lane and `qfai validate` give
- * two verdicts about one document, so all three pins are one.
+ * The package and this repository depend on one engine version, so this
+ * repository's own document lane checks with the engine an adopter's lane gets
+ * from the package.
  */
-describe("the docs lane installs the mdschema version the package depends on", () => {
+describe("this repository and the package depend on one mdschema version", () => {
   const PACKAGE = /"@jackchuka\/mdschema":\s*"([^"]+)"/;
 
-  it("pins @jackchuka/mdschema to the version both package manifests name", async () => {
-    const lane = await readFile(
-      path.join(shippedGithubDir(), "workflows", "qfai-docs.yml"),
-      "utf-8",
-    );
-    const shipped = /@jackchuka\/mdschema@(\d+\.\d+\.\d+)/.exec(lane)?.[1];
+  it("names the same @jackchuka/mdschema version in both manifests", async () => {
     const own = PACKAGE.exec(await readFile(path.join(packageRoot, "package.json"), "utf-8"))?.[1];
     const repository = PACKAGE.exec(
       await readFile(path.join(packageRoot, "..", "..", "package.json"), "utf-8"),
     )?.[1];
 
-    expect(shipped).toBeDefined();
-    expect(own).toBe(shipped);
-    expect(repository).toBe(shipped);
+    expect(own).toBeDefined();
+    expect(repository).toBe(own);
   });
 });

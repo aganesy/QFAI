@@ -192,11 +192,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.16.0.** The
-  document-schema checker the docs lane runs moves from 0.15.7 to 0.16.0, the
-  version the package now depends on. Both versions declare the same
-  `postinstall` script, which downloads the checker's platform binary.
-
 - **Breaking: each contract kind has its own number sequence, and a business
   rule ID names its contract's kind.** A project with five DB contracts and
   two API contracts can number them `DB-0001` to `DB-0005` and `API-0001` to
@@ -391,6 +386,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   beside the grill session's rows. A finding the grill rejected or deferred reaches neither. Before, the
   findings reached the prototype only through what the grill session settled.
   Closes #4387.
+
+- **QFAI depends on `@jackchuka/mdschema` 0.16.0.** The document-schema
+  checker that `qfai validate` and the shipped `qfai-docs.yml` run moves from
+  0.15.7 to 0.16.0. Both versions declare the same `postinstall` script, which
+  downloads the checker's platform binary.
 
 - **UI research and design close gaps a redesign exposed.**
   - The product-surface reviewer also checks built screens against the
@@ -711,6 +711,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fine, yet `qfai validate` raised a `QFAI-LINK-001` warning on every run, which
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
+
+- **The docs lane checks with the schema checker your QFAI version depends
+  on.** In a project with its own `node_modules/qfai`, the shipped
+  `qfai-docs.yml` installed `@jackchuka/mdschema` at the version current when
+  `qfai init` generated the file, and ran it in place of the one the project's
+  QFAI depends on, so after a QFAI upgrade the lane and `qfai validate` could
+  disagree about one document. The lane now installs the exact version that
+  `node_modules/qfai/package.json` declares, with its platform binary, and
+  stops before installing when that file declares no exact version.
+  Closes #4596.
 
 - **`qfai sdd preflight` writes only inside its output directory.** A report
   directory, or a directory under it, that was a link to somewhere else carried
