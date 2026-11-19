@@ -82,6 +82,25 @@ plain `http` works only on `127.0.0.1`, `localhost` or `[::1]`. An external
 endpoint still requires human authorization of the exact destination and scope
 before processing.
 
+An `openai` backend always needs `credentialEnv`, even for a local server
+that requires no authentication: Graphify's client refuses to start without a
+non-empty key, so the documents CLI reports document analysis not ready before
+extraction. For such a local server, set a variable to any placeholder value,
+for example `QFAI_LOCAL_LLM_KEY=local`, and name it:
+
+```json
+{
+  "backend": "openai",
+  "model": "your-installed-model",
+  "endpoint": "http://127.0.0.1:8080/v1",
+  "credentialEnv": "QFAI_LOCAL_LLM_KEY",
+  "scope": ["docs"]
+}
+```
+
+The documents CLI passes the placeholder only to the managed process that
+reaches the selected endpoint.
+
 ### Authorize external document analysis
 
 Set the selected `backend`, `model`, `endpoint` and exact `scope` in the same

@@ -580,6 +580,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **An `openai` document backend with no credential now stops before
+  extraction.** Graphify's `openai` client refuses to start without a non-empty
+  key, even for a local server that needs no authentication, so document
+  analysis used to fail only after extraction began. The documents CLI now
+  reports document analysis not ready and says to set `credentialEnv`, and
+  `.agents/rules/graph-exploration.md` shows a local setup that names a
+  variable holding a placeholder value instead of a real key.
+
 - **`qfai validate` compares the index's Depends On with each contract.** The
   `contracts.md` index check compared each row's ID and File with the contract
   but never read its Depends On cell, so the index could state an apply order

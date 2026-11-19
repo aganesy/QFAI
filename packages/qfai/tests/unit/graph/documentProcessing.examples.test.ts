@@ -151,12 +151,15 @@ it("allows local Graphify code analysis without claiming document readiness", as
 // Mutation: packages/qfai/src/core/graph/documents.ts `if (!local) {` -> `if (false) {` fails "requires human approval of the exact external destination and document scope"
 it("requires human approval of the exact external destination and document scope", async () => {
   const fixture = await documentAnalysisFixture();
+  const previousKey = process.env.QFAI_TEST_SELECTED_KEY;
   try {
+    process.env.QFAI_TEST_SELECTED_KEY = "fixture-selected-key";
     const selected = {
       backend: "openai",
       model: "selected-model",
       endpoint: "https://selected.example.invalid/v1",
       scope: ["rationale.md"],
+      credentialEnv: "QFAI_TEST_SELECTED_KEY",
     };
     await writeFile(
       path.join(fixture.root, ".qfai", "graph-processing.json"),
@@ -202,6 +205,52 @@ it("requires human approval of the exact external destination and document scope
       "Unapproved document.\n",
     );
   } finally {
+    if (previousKey === undefined) delete process.env.QFAI_TEST_SELECTED_KEY;
+    else process.env.QFAI_TEST_SELECTED_KEY = previousKey;
+    await fixture.dispose();
+  }
+});
+
+// QFAI:EX-0001-0234-25
+// Mutation: packages/qfai/src/core/graph/documents.ts `if (backend === "openai" && !credential) {` -> `if (false) {` fails "requires a named credential for an openai backend before extraction"
+it("requires a named credential for an openai backend before extraction", async () => {
+  const fixture = await documentAnalysisFixture();
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousPlaceholder = process.env.QFAI_TEST_LOCAL_PLACEHOLDER;
+  try {
+    process.env.OPENAI_API_KEY = "fixture-ambient-key-must-not-fill-the-credential";
+    delete process.env.QFAI_TEST_LOCAL_PLACEHOLDER;
+    const definition = path.join(fixture.root, ".qfai", "graph-processing.json");
+    const local = {
+      backend: "openai",
+      model: "selected-local-model",
+      endpoint: "http://127.0.0.1:8080/v1",
+      scope: ["rationale.md"],
+    };
+    await writeFile(definition, JSON.stringify(local));
+    const run = graphifyExtractionFixture(fixture);
+    const missing = await prepareDocumentAnalysis(fixture.root, run);
+    expect(missing.status).toBe("not-ready");
+    expect(missing.recovery).toContain("credentialEnv");
+    expect(missing.recovery).toContain("placeholder");
+    expect(JSON.stringify(missing)).not.toContain(process.env.OPENAI_API_KEY);
+    expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+    process.env.QFAI_TEST_LOCAL_PLACEHOLDER = "local";
+    await writeFile(
+      definition,
+      JSON.stringify({ ...local, credentialEnv: "QFAI_TEST_LOCAL_PLACEHOLDER" }),
+    );
+    fixture.calls.length = 0;
+    expect((await prepareDocumentAnalysis(fixture.root, run)).status).toBe("prepared");
+    const extracts = fixture.calls.filter((call) => call.args.includes("extract"));
+    expect(extracts).toHaveLength(1);
+    expect(extracts[0]?.env?.OPENAI_BASE_URL).toBe(local.endpoint);
+    expect(extracts[0]?.env?.OPENAI_API_KEY).toBe("local");
+  } finally {
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousKey;
+    if (previousPlaceholder === undefined) delete process.env.QFAI_TEST_LOCAL_PLACEHOLDER;
+    else process.env.QFAI_TEST_LOCAL_PLACEHOLDER = previousPlaceholder;
     await fixture.dispose();
   }
 });
@@ -313,7 +362,10 @@ it("refuses plain http for an external processing destination before asking for 
     "OPENSSL_CONF",
   ] as const;
   const prior = certificateSettings.map((name) => process.env[name]);
+  const priorKey = process.env.QFAI_TEST_EXTERNAL_KEY;
   try {
+    // The openai backend needs a selected credential, so the endpoint is the only thing refused.
+    process.env.QFAI_TEST_EXTERNAL_KEY = "fixture-external-key";
     const definition = path.join(fixture.root, ".qfai", "graph-processing.json");
     const run = graphifyExtractionFixture(fixture);
     const external = (endpoint: string) =>
@@ -322,6 +374,7 @@ it("refuses plain http for an external processing destination before asking for 
         model: "selected-model",
         endpoint,
         scope: ["rationale.md"],
+        credentialEnv: "QFAI_TEST_EXTERNAL_KEY",
       });
     for (const endpoint of [
       "http://selected.example.invalid/v1",
@@ -378,6 +431,8 @@ it("refuses plain http for an external processing destination before asking for 
       if (value === undefined) Reflect.deleteProperty(process.env, name);
       else process.env[name] = value;
     });
+    if (priorKey === undefined) delete process.env.QFAI_TEST_EXTERNAL_KEY;
+    else process.env.QFAI_TEST_EXTERNAL_KEY = priorKey;
     await fixture.dispose();
   }
 });
