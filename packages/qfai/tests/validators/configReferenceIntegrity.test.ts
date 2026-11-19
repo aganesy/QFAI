@@ -184,6 +184,7 @@ describe("validateConfigReferenceIntegrity", () => {
     expect(issues.some((i) => i.rule === "config.paths.contractsDir.reality")).toBe(true);
   });
 
+  // QFAI:EX-0003-0003-07
   it("stays silent when the shipped-default spec and contract directories are absent", async () => {
     const root = await newTempDir();
     const issues = await validateConfigReferenceIntegrity(root, makeConfig());
@@ -193,6 +194,7 @@ describe("validateConfigReferenceIntegrity", () => {
     expect(rules).not.toContain("config.paths.contractsDir.reality");
   });
 
+  // QFAI:EX-0003-0003-07
   it("warns when a file stands at the shipped-default spec and contract paths", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
@@ -214,6 +216,7 @@ describe("validateConfigReferenceIntegrity", () => {
     expect(specIssue?.message).toContain("is not a directory");
   });
 
+  // QFAI:EX-0003-0003-07
   it("warns when a broken link stands at the shipped-default spec path", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, ".qfai"), { recursive: true });
