@@ -21,7 +21,7 @@ Feature: Idempotent initialization
 
   # AC-0001-0021-03
   Scenario: A `.qfai` that is a link or not a directory stops init before it writes anything
-    Given a project whose `.qfai`, or a directory on the way to a story-tree seed, is a symbolic link or not a directory
+    Given a project whose `.qfai` is a symbolic link or not a directory, or whose story-tree seed path runs through a symbolic link
     When `qfai init` runs, with or without `--force`
     Then the run stops with a message naming that path
     And no project file and no file the link points to is written or changed

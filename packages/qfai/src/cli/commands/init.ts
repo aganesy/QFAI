@@ -191,18 +191,24 @@ async function refuseUnsafeQfaiDirectory(root: string): Promise<void> {
 }
 
 /**
- * Refuses, before anything is written, a story-tree seed destination below a symbolic link or
- * an entry that is not a directory, and a contract kind directory that is either itself. Found
- * only when the seeds were reached, the refusal came after the root assets and the entry points
- * had been written.
+ * Refuses, before anything is written, a story-tree seed destination that is or sits under a
+ * symbolic link, and a contract kind directory that is either one or sits under one, or is or
+ * sits under an entry that is not a directory. Found only when the seeds were reached, the
+ * refusal came after the root assets and the entry points had been written.
+ *
+ * A seed file under an entry that is not a directory is left to the copy, which skips it and
+ * names it, and the run carries on. A kind directory has no such path: `mkdir` throws on it.
  */
 async function refuseUnsafeStorySeedDestination(root: string): Promise<void> {
   const checks = [
-    ...STORY_SEED_PATHS.map(
-      (relative) => () =>
-        findUnsafeHostFileComponent(root, [".qfai", "spec", ...relative.split("/")]),
-    ),
-    // A kind directory is created with `mkdir`, which fails on a file as much as on a link.
+    ...STORY_SEED_PATHS.map((relative) => async () => {
+      const unsafe = await findUnsafeHostFileComponent(root, [
+        ".qfai",
+        "spec",
+        ...relative.split("/"),
+      ]);
+      return unsafe?.symlink === true ? unsafe : undefined;
+    }),
     ...CONTRACT_KIND_DIRS.map(
       (kind) => () => findUnsafeWrapperComponent(root, `.qfai/spec/03_contract/${kind}`),
     ),

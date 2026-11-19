@@ -9,7 +9,6 @@ import { runInit } from "../../helpers/legacyInit.js";
 const OWN_AGENTS = "# Our agents\n\nProject text.\n";
 
 describe("init project boundary", () => {
-  // QFAI:AC-0001-0021-03
   // QFAI:EX-0001-0021-14
   it.each([
     [".qfai", /refused to write \.qfai: it is a symbolic link/u],
@@ -46,7 +45,6 @@ describe("init project boundary", () => {
     },
   );
 
-  // QFAI:AC-0001-0021-03
   // QFAI:EX-0001-0021-14
   it.each([
     [".qfai", /refused to write \.qfai: it is not a directory/u],
