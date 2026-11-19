@@ -12,7 +12,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { ColumnFacts, SchemaDatabase } from "../../src/core/dbSchemaDrift.js";
+import type { ColumnFacts, ColumnsByTable, SchemaDatabase } from "../../src/core/dbSchemaDrift.js";
 import {
   compareColumns,
   compareSchemas,
@@ -51,9 +51,16 @@ function column(facts: Partial<ColumnFacts> & { table: string; column: string })
 function sides(
   contracts: readonly ColumnFacts[],
   migrations: readonly ColumnFacts[],
-): [Map<string, ColumnFacts>, Map<string, ColumnFacts>] {
-  const index = (facts: readonly ColumnFacts[]): Map<string, ColumnFacts> =>
-    new Map(facts.map((f) => [`${f.table}.${f.column}`, f]));
+): [ColumnsByTable, ColumnsByTable] {
+  const index = (facts: readonly ColumnFacts[]): ColumnsByTable => {
+    const tables = new Map<string, Map<string, ColumnFacts>>();
+    for (const f of facts) {
+      const columns = tables.get(f.table) ?? new Map<string, ColumnFacts>();
+      columns.set(f.column, f);
+      tables.set(f.table, columns);
+    }
+    return tables;
+  };
   return [index(contracts), index(migrations)];
 }
 
@@ -192,6 +199,50 @@ describe("what counts as a difference", () => {
       "customers.id",
       "orders.cancelled_at",
       "orders.note",
+    ]);
+  });
+});
+
+describe("a table or column name that holds a period", () => {
+  /** A database that reports the given columns and applies anything. */
+  function reporting(columns: readonly ColumnFacts[]): SchemaDatabase {
+    return {
+      exec: () => Promise.resolve(undefined),
+      query: () =>
+        Promise.resolve({
+          rows: columns.map((c) => ({
+            table_name: c.table,
+            column_name: c.column,
+            data_type: c.type,
+            is_nullable: c.nullable ? "YES" : "NO",
+            column_default: c.columnDefault,
+          })),
+        }),
+      close: () => Promise.resolve(),
+    };
+  }
+
+  it("keeps two columns apart when their table and column names join to the same text", async () => {
+    const root = await newRoot();
+    const file = await write(root, "migrations/0001.sql", "SELECT 1;\n");
+    const shared = column({ table: "a", column: "b.c" });
+    const databases = [
+      reporting([column({ table: "a.b", column: "c" }), shared]),
+      reporting([shared]),
+    ];
+
+    const result = await compareSchemas({
+      root,
+      contractFiles: [file],
+      migrationFiles: [file],
+      createDatabase: () => {
+        const next = databases.shift();
+        return next ? Promise.resolve(next) : Promise.reject(new Error("no database left"));
+      },
+    });
+
+    expect(result.differences).toMatchObject([
+      { kind: "only-in-contracts", table: "a.b", column: "c" },
     ]);
   });
 });
