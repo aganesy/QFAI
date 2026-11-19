@@ -452,6 +452,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The README says what a fresh `qfai init` needs.** The Quick start now
+  lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
+  or later with `uv`, and network access to the npm registry and PyPI, from
+  which init downloads CodeGraph and Graphify. A new user now sees these
+  requirements before init runs rather than only after it fails.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
