@@ -486,6 +486,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **The shipped validation and document workflows run the QFAI a Yarn
+  Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
+  `npx qfai` and the document lane's check for `node_modules/qfai` found
+  nothing and fell back to the newest QFAI from the registry. When the project
+  has a `.pnp.cjs` and its `package.json` declares QFAI, both lanes now ask
+  Yarn which version it resolves and install that exact version under `tmp/`:
+  the validation lane runs both profiles with it, and the document lane runs
+  its checkers out of it. A project that declares no QFAI still gets the
+  newest release, and one whose declared QFAI Yarn cannot resolve to one
+  version stops before installing anything. A workflow file `qfai init`
+  already wrote keeps its old steps; delete it and run `qfai init` again to
+  get these.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts

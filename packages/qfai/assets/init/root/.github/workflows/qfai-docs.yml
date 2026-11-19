@@ -620,6 +620,50 @@ jobs:
           # generated this file. One install for both cases, because a second
           # `--no-save` install into the same prefix removes what the first one
           # added.
+          #
+          # Yarn Plug'n'Play writes no `node_modules`: its packages stay in zip
+          # archives that only Yarn's own resolver reads, so a PnP project that
+          # depends on QFAI has no `node_modules/qfai` either, and the guard below
+          # alone read it as the bootstrap case and fetched the newest QFAI. The
+          # `.pnp.cjs` Yarn writes is the sign of that layout, and Yarn resolves
+          # the version the project depends on; that exact version joins the
+          # install, and its checker comes with it. A project that does not
+          # declare QFAI prints nothing here and keeps the unpinned bootstrap
+          # install. One that declares it and whose install cannot resolve it
+          # stops, rather than report what another version would say.
+          version=""
+          if [ -f .pnp.cjs ]; then
+            version="$(yarn node -e '
+              const { readFileSync } = require("node:fs");
+              const path = require("node:path");
+              const own = JSON.parse(readFileSync("package.json", "utf8"));
+              const declared = ["dependencies", "devDependencies", "optionalDependencies"].some(
+                (field) => own[field] !== null && typeof own[field] === "object" && Object.hasOwn(own[field], "qfai"),
+              );
+              if (!declared) process.exit(0);
+              const exact = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;
+              for (let dir = path.dirname(require.resolve("qfai")); ; dir = path.dirname(dir)) {
+                let manifest;
+                try {
+                  manifest = JSON.parse(readFileSync(path.join(dir, "package.json"), "utf8"));
+                } catch {
+                  manifest = undefined;
+                }
+                if (manifest !== undefined && manifest.name === "qfai") {
+                  if (typeof manifest.version !== "string" || !exact.test(manifest.version)) {
+                    console.error("::error::Yarn resolves a QFAI whose package.json names no exact version");
+                    process.exit(1);
+                  }
+                  process.stdout.write(manifest.version);
+                  process.exit(0);
+                }
+                if (path.dirname(dir) === dir) {
+                  console.error("::error::Yarn resolves QFAI to a file outside any QFAI package.json");
+                  process.exit(1);
+                }
+              }
+            ')"
+          fi
           if [ -d node_modules/qfai ]; then
             checker="$(node -e '
               const { readFileSync } = require("node:fs");
@@ -642,6 +686,8 @@ jobs:
               process.stdout.write(declared);
             ')"
             npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools "@jackchuka/mdschema@${checker}" mermaid@11.17.2 jsdom@29.1.1
+          elif [ -n "$version" ]; then
+            npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools mermaid@11.17.2 jsdom@29.1.1 "qfai@${version}"
           else
             npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-docs-tools mermaid@11.17.2 jsdom@29.1.1 qfai
           fi

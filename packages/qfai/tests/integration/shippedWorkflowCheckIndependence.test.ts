@@ -277,26 +277,44 @@ describe("delivered validation profiles run as two steps of one job that carries
     expect(validate?.["continue-on-error"]).toBeUndefined();
     const steps = collectJobSteps(validate ?? {});
     const profiles = steps.filter((step) =>
-      String(step["run"] ?? "").startsWith("npx qfai validate "),
+      /^\s*npx\s+qfai\s+validate\b/m.test(String(step["run"] ?? "")),
     );
+    // Each step runs one profile: with the copy of the version Yarn resolves in a Plug'n'Play
+    // project, or through `npx` otherwise, so it carries the invocation once per branch.
+    const pinned = "node tmp/qfai-validate/node_modules/qfai/dist/cli/index.mjs";
     expect(
       profiles.map((step) => ({
-        tokens: String(step["run"]).split(" "),
+        invocations: String(step["run"])
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.startsWith("npx ") || line.startsWith("node ")),
         if: step["if"],
       })),
     ).toEqual([
       {
-        tokens: ["npx", "qfai", "validate", "--profile", "full", "--fail-on", "error"],
+        invocations: [
+          `${pinned} validate --profile full --fail-on error`,
+          "npx qfai validate --profile full --fail-on error",
+        ],
         if: undefined,
       },
       {
-        tokens: ["npx", "qfai", "validate", "--profile", "drift", "--fail-on", "error"],
+        invocations: [
+          `${pinned} validate --profile drift --fail-on error`,
+          "npx qfai validate --profile drift --fail-on error",
+        ],
         if: DRIFT_STEP_CONDITION,
       },
     ]);
     for (const step of profiles) expect(step["continue-on-error"]).toBeUndefined();
+    // The project's own install, not the copy of QFAI a Plug'n'Play project gets under `tmp/`.
     const installs = steps.filter((step) =>
-      /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/.test(String(step["run"] ?? "")),
+      String(step["run"] ?? "")
+        .split(/\r?\n/)
+        .some(
+          (line) =>
+            /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/.test(line) && !line.includes("--prefix="),
+        ),
     );
     expect(installs, "both profiles share one dependency install").toHaveLength(1);
   });
