@@ -127,9 +127,9 @@ describe("qfai validate on a mock naming a resource from CSS", () => {
     root = await mkdtemp(path.join(os.tmpdir(), "qfai-mock-refs-"));
     const specsDir = path.join(root, ".qfai", "specs");
     await mkdir(specsDir, { recursive: true });
+    // A bare fence, so the block is collected once: under a screen-mock heading the
+    // fence and the heading's section would each be read as a block.
     const md = [
-      "## Screen Mock (HTML+CSS)",
-      "",
       "```html",
       `<style>.hero { background: url("${EXTERNAL}/hero.png"); }</style>`,
       '<img alt="" srcset="./hero@2x.png 2x">',
