@@ -590,7 +590,7 @@ describe(
       expect(missing.outputs["lanes"]).not.toBe("[]");
     });
 
-    it("returns a green verdict for an all-skipped matrix and a red one for a failure, executed", async () => {
+    it("returns a green verdict for a passed lane and a red one for any other result, executed", async () => {
       const job = (await jobsOf(ORCHESTRATOR))[`${ORCHESTRATOR}#verdict`];
       expect(job, "no verdict job was delivered").toBeDefined();
       expect(String(job?.["if"] ?? ""), "the verdict does not always run").toContain("always()");
@@ -601,44 +601,22 @@ describe(
 
       const cwd = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-0003-verdict-"));
       try {
-        // The empty-axis case: the lane never ran because the adopter declared no
-        // layer-named script, and the verdict exits 0 without claiming a result it
-        // does not have.
-        const skipped = await runStep(body, cwd, {
-          QFAI_TESTS_RESULT: "skipped",
-          QFAI_SELECTED: "[]",
-        });
-        if (skipped.skipped) return;
-        expect(skipped.status).toBe(0);
+        const passed = await runStep(body, cwd, { QFAI_TESTS_RESULT: "success" });
+        if (passed.skipped) return;
+        expect(passed.status).toBe(0);
 
-        // The same skip with work on the axis. Without this row the green-on-skip
-        // rule would swallow a lane that was asked to run and did not.
-        const skippedWithWork = await runStep(body, cwd, {
-          QFAI_TESTS_RESULT: "skipped",
-          QFAI_SELECTED: '["unit"]',
-        });
-        expect(skippedWithWork.status).toBe(1);
+        // A skipped lane under a verdict that started was asked to run and did not: the job
+        // condition already keeps the verdict out of an explicitly empty selection.
+        const skipped = await runStep(body, cwd, { QFAI_TESTS_RESULT: "skipped" });
+        expect(skipped.status).toBe(1);
 
-        const failed = await runStep(body, cwd, {
-          QFAI_TESTS_RESULT: "failure",
-          QFAI_SELECTED: '["unit"]',
-        });
+        const failed = await runStep(body, cwd, { QFAI_TESTS_RESULT: "failure" });
         expect(failed.status).toBe(1);
         expect(failed.stdout).toContain("::error::");
 
-        // A cancelled lane is not a skipped lane. Without this the green-on-skip rule would swallow
-        // a run someone stopped mid-flight.
-        const cancelled = await runStep(body, cwd, {
-          QFAI_TESTS_RESULT: "cancelled",
-          QFAI_SELECTED: '["unit"]',
-        });
+        // A cancelled lane is red too: a run someone stopped mid-flight passed nothing.
+        const cancelled = await runStep(body, cwd, { QFAI_TESTS_RESULT: "cancelled" });
         expect(cancelled.status).toBe(1);
-
-        // An absent selection says nothing about why the lane did not run, so it
-        // cannot make a skip green. This is the row that keeps the green path from
-        // being reachable by an unset variable.
-        const unknownSelection = await runStep(body, cwd, { QFAI_TESTS_RESULT: "skipped" });
-        expect(unknownSelection.status).toBe(1);
       } finally {
         await removeTempTree(cwd);
       }
