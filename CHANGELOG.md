@@ -514,6 +514,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **A qfai copy under a directory whose name begins with two dots counts as
+  inside the project.** `qfai validate` and `qfai sdd preflight` judged
+  where the running qfai came from by whether its path relative to the
+  project began with `..`, so a copy under a directory such as `..vendor` was
+  reported as resolved from outside the project. Only a `..` path segment now
+  leaves the project. Closes #4544.
+
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
   `npx qfai` and the document lane's check for `node_modules/qfai` found
