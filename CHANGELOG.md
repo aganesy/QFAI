@@ -597,6 +597,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with non-ASCII letters, such as `$é$`, and no longer open a literal at a
   `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
 
+- **`qfai catalog design` no longer replaces a file it cannot inspect.** The
+  command treated any failure to read a destination's metadata as a missing
+  file, so a token file or theme it could not inspect, for example because
+  access was denied, was overwritten without being moved aside first. Now
+  only a file that is not there counts as absent. Any other inspection failure
+  stops the write and leaves both files as they were. When the undo after a
+  failed write cannot put everything back, the message now also names each
+  file that is as it was, beside each moved-aside file that still holds an
+  earlier one. Closes #4514.
+
 - **Diagnostic text can no longer reshape a Markdown report.** The Markdown
   report of `qfai report` wrote each finding's code, message and file as raw
   Markdown, so brackets, HTML or a line break in them could add links, headings
