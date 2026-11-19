@@ -502,18 +502,29 @@ export async function countScreenElements(html: string): Promise<ScreenElementCo
   };
 }
 
+/** Elements a user can operate without any role or `tabindex`. */
+const INTERACTIVE_TAGS: ReadonlySet<string> = new Set([
+  "a",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "summary",
+]);
+
+/** Roles that make any element one a user can operate. */
+const INTERACTIVE_ROLES: ReadonlySet<string> = new Set([
+  "button",
+  "link",
+  "checkbox",
+  "radio",
+  "switch",
+  "tab",
+  "menuitem",
+]);
+
 function isInteractiveElement(el: Element): boolean {
   const tag = el.tagName.toLowerCase();
-  const interactiveTags = new Set(["a", "button", "input", "select", "textarea", "summary"]);
-  const interactiveRoles = new Set([
-    "button",
-    "link",
-    "checkbox",
-    "radio",
-    "switch",
-    "tab",
-    "menuitem",
-  ]);
 
   const ariaDisabledAttr = el.getAttribute("aria-disabled");
   const isAriaDisabled =
@@ -523,13 +534,13 @@ function isInteractiveElement(el: Element): boolean {
     return false;
   }
 
-  if (interactiveTags.has(tag)) {
+  if (INTERACTIVE_TAGS.has(tag)) {
     return true;
   }
 
   const roleAttr = el.getAttribute("role");
   const role = typeof roleAttr === "string" ? roleAttr.toLowerCase() : "";
-  if (interactiveRoles.has(role)) {
+  if (INTERACTIVE_ROLES.has(role)) {
     return true;
   }
 

@@ -241,6 +241,7 @@
     "tests/core/htmlMockBlocks.test.ts",
     "tests/core/htmlMockLiteralCss.test.ts",
     "tests/unit/core/uiux/htmlMockEventHandlers.test.ts",
+    "tests/unit/core/uiux/htmlMockInteractiveElements.test.ts",
     "tests/unit/core/uiux/htmlMockResourceReferences.test.ts",
     "tests/core/markdownFiles.test.ts",
     "tests/core/literalGlobDirectories.test.ts",
