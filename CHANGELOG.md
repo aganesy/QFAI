@@ -554,6 +554,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that relied on one of these forms now reports `QFAI-MOCK-002`,
   `QFAI-MOCK-010` or `QFAI-MOCK-011` at error.
 
+- **`qfai validate` keeps configuration findings on an old spec-pack
+  layout.** When `QFAI-LAYOUT-001` stopped the run, an error found while
+  reading `qfai.config.yaml`, such as an unknown `workflow.mode` value, was
+  dropped and appeared only after the migration. The run now reports those
+  findings before `QFAI-LAYOUT-001`, so both can be fixed in one pass.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
