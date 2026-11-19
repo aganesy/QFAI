@@ -178,19 +178,42 @@ describe("a linked entry beneath a document root", () => {
     return outside;
   }
 
-  it.each<[string, string, "file" | "dir"]>([
-    ["document", `${HIDDEN}/business-flow.md`, "file"],
-    ["directory", `${FLOWS}/business-flow-0003`, "dir"],
-  ])("reports a linked %s by its path and fails the command", async (_, linked, type, context) => {
-    const root = await newTree();
-    refusal.dir = "";
+  /**
+   * Links `linked` to a conforming flow outside the tree, or returns `false`
+   * where the host may not create the link.
+   */
+  async function linkOutside(root: string, linked: string, type: "file" | "dir"): Promise<boolean> {
     const outside = await outsideFlow();
     const target = type === "file" ? path.join(outside, "business-flow.md") : outside;
-    if (!(await createSymlinkFixture(target, path.join(root, linked), type))) {
+    return createSymlinkFixture(target, path.join(root, linked), type);
+  }
+
+  it("reports a linked document by its path and fails the command", async (context) => {
+    const root = await newTree();
+    refusal.dir = "";
+    const linked = `${HIDDEN}/business-flow.md`;
+    if (!(await linkOutside(root, linked, "file"))) {
       context.skip();
       return;
     }
 
+    await expectReported(root, linked);
+  });
+
+  it("reports a linked directory by its path and fails the command", async (context) => {
+    const root = await newTree();
+    refusal.dir = "";
+    const linked = `${FLOWS}/business-flow-0003`;
+    if (!(await linkOutside(root, linked, "dir"))) {
+      context.skip();
+      return;
+    }
+
+    await expectReported(root, linked);
+  });
+
+  /** The link is one inventory finding by its path, and the command fails naming it. */
+  async function expectReported(root: string, linked: string): Promise<void> {
     expect(await checkDocuments(root)).toEqual({
       ok: true,
       checked: 1,
@@ -207,7 +230,7 @@ describe("a linked entry beneath a document root", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(linked);
     expect(result.stderr).toContain("[inventory]");
-  });
+  }
 });
 
 describe("a configured document root the lane cannot walk", () => {
