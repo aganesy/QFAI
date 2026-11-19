@@ -2,7 +2,13 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { codegraphEnvironment, type GraphProcess } from "./process.js";
+import {
+  codegraphEnvironment,
+  GRAPH_PROCESS_LIMITS,
+  graphLimitCause,
+  type GraphProcess,
+  type GraphProcessResult,
+} from "./process.js";
 import {
   publishCompletedCodeAnalysis,
   restoreCompletedCodeAnalysis,
@@ -54,9 +60,10 @@ export async function prepareCodeAnalysis(
         runtime.codegraphSdk,
         staged,
       ],
-      { cwd: staged, env: codegraphEnvironment(root) },
+      { cwd: staged, env: codegraphEnvironment(root), ...GRAPH_PROCESS_LIMITS.codeAnalysis },
     );
-    if (result.exitCode !== 0 || !(await inspectCodeAnalysisAt(root, staged, run))) return failed();
+    if (result.exitCode !== 0 || !(await inspectCodeAnalysisAt(root, staged, run)))
+      return failed(result);
     await assertIndependentAnalysis(staged);
     await replaceGraphDirectory(staged, current, root);
     return {
@@ -72,9 +79,12 @@ export async function prepareCodeAnalysis(
   }
 }
 
-function failed(): CodePreparation {
+function failed(result?: GraphProcessResult): CodePreparation {
+  const cause = result && graphLimitCause("CodeGraph analysis", result);
   return {
     status: "failed",
-    recovery: "Repair the local CodeGraph runtime and prepare independent analysis.",
+    recovery: cause
+      ? `${cause} Retry the graph query.`
+      : "Repair the local CodeGraph runtime and prepare independent analysis.",
   };
 }
