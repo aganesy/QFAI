@@ -577,6 +577,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check is incomplete. A file that is absent is still skipped, so a project
   without the qfai package source is unaffected.
 
+- **The verify gate reads the result its own validate run wrote.** The
+  `verify-qfai-gate` step told agents to read `.qfai/report/validate.json` and
+  then ran `qfai report` with no profile. That file is only the default path,
+  the project can configure it, and it holds whichever repository-wide run
+  finished last. The step now reads the configured `output.validateJsonPath`
+  with the run's `-<profile>` suffix, uses it only when its `profile` and
+  `generatedAt` show the current command wrote it, and runs
+  `qfai report --profile <profile>`. The `validate.json` schema reference now
+  lists the file each kind of run writes, and `qfai-configure` inspects the
+  result its own validate run wrote.
+
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
   took the opening `---` as the diagram's declaration and skipped the
@@ -631,6 +642,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `api/`, `db/` and `ui/`, although step 4 refuses a rule placed there and
   step 3 removes that directory. They now name only the four contract kind
   directories, as the placement guide does. Closes #4627.
+
+- **`qfai init` reads an installed file once, and only within a bound, when it
+  compares it with the template.** A plain run read a kept file in full twice,
+  as bytes and then as text, however large it was. It now reads each file once
+  and stops at twice the template's size, since a file larger than that cannot
+  hold the template with converted line endings. Closes #4638.
 
 - **Story ID commands no longer answer from a partial or shared set of pull
   request heads.** `scripts/story-ids.mjs` read each head's commit from the
