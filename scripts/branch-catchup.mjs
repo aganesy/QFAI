@@ -745,7 +745,8 @@ export function main(args = process.argv.slice(2)) {
       unchanged(accepted);
       let pushed;
       try {
-        pushed = command("git", ["push", "origin", `HEAD:refs/heads/${branch}`], true);
+        // Push the verified commit, not HEAD: other Git activity can move HEAD after the check.
+        pushed = command("git", ["push", "origin", `${accepted.head}:refs/heads/${branch}`], true);
       } catch (cause) {
         refuse(
           `Push failed; HEAD is retained. Retry: pnpm branch:catchup --push (${cause instanceof Error ? cause.message : String(cause)})`,
