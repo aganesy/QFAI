@@ -148,4 +148,19 @@ describe("the project layer describes the repository it is in", () => {
       `the declared Node range is ${String(engines)}`,
     ).toEqual([]);
   });
+
+  // The publish job authenticates through OIDC, and the guide forbids a hand
+  // publish. It still asked a manual releaser for an npm login, which sent
+  // someone who can push the tag looking for a credential nothing uses.
+  it("asks a release operator for no npm credentials the publish job does not use", async () => {
+    const workflow = await readFile(
+      path.join(repoRoot, ".github", "workflows", "release.yml"),
+      "utf-8",
+    );
+    expect(workflow, "release.yml no longer holds `id-token: write`").toMatch(/id-token:\s*write/);
+
+    const guide = withoutFencedBlocks(await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8"));
+    const askedFor = [...guide.matchAll(/npm whoami|npm login|NPM_TOKEN/g)].map(([match]) => match);
+    expect(askedFor).toEqual([]);
+  });
 });
