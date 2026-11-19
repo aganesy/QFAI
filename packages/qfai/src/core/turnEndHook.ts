@@ -78,7 +78,8 @@ export function readTurnEndChecks(techText: string): TurnEndSelection {
     const label = (item[1] ?? "").trim();
     const rest = item[2] ?? "";
     const key = label.toLowerCase();
-    seen.set(key, { label, count: (seen.get(key)?.count ?? 0) + 1 });
+    const earlier = seen.get(key);
+    seen.set(key, { label: earlier?.label ?? label, count: (earlier?.count ?? 0) + 1 });
     if (key === TURN_END_LABEL) {
       // A value still holding a template slot, such as the shipped `<optional example: ...>`,
       // marks nothing: a project opts into the hook only by writing its own labels.
