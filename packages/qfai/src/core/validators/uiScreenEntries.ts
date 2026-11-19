@@ -10,12 +10,21 @@
  */
 
 import type { QfaiConfig } from "../config.js";
-import { findUnreadUiScreenEntries, type UnreadScreenEntry } from "../contracts/screenContracts.js";
+import {
+  findUnreadUiScreenEntries,
+  type UiContractDocument,
+  type UnreadScreenEntry,
+} from "../contracts/screenContracts.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-export async function validateUiScreenEntries(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const unread = await findUnreadUiScreenEntries(root, config.paths.contractsDir);
+/** `uiDocuments` is the walk of the UI contract folder a caller has already read. */
+export async function validateUiScreenEntries(
+  root: string,
+  config: QfaiConfig,
+  uiDocuments?: readonly UiContractDocument[],
+): Promise<Issue[]> {
+  const unread = await findUnreadUiScreenEntries(root, config.paths.contractsDir, uiDocuments);
   return unread.map((entry) =>
     issue(
       "QFAI-CONTRACT-042",
