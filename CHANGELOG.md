@@ -553,6 +553,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
+- **An unreadable completed graph analysis no longer stops reuse.** When one
+  saved CodeGraph or Graphify analysis in the repository's graph cache could
+  not be inspected or its metadata could not be read, CodeGraph preparation
+  failed instead of generating the analysis locally, and Graphify passed over
+  every later saved analysis and rebuilt. That entry is now skipped on its own:
+  a later valid analysis is restored, and with none left the analysis is
+  generated locally.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from
