@@ -1934,7 +1934,7 @@ describe("branch catch-up acceptance", () => {
         commandRecords(fixture.root)
           .filter(({ args }) => args[0] === "push")
           .map(({ args }) => args),
-      ).toEqual([["push", "origin", "HEAD:refs/heads/topic"]]);
+      ).toEqual([["push", "origin", `${head}:refs/heads/topic`]]);
     });
   });
 
