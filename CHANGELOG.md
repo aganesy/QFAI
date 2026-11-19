@@ -580,6 +580,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with non-ASCII letters, such as `$é$`, and no longer open a literal at a
   `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
 
+- **Migration step 8 rewrites legacy annotations only in comments.** Step 8
+  also rewrote a `QFAI:SPEC-…` or `QFAI:CON-…` token written in a string
+  literal, so a test's input or expected value changed during migration. It
+  now rewrites a token only where it stands in a comment, read the same way
+  `qfai validate` reads test annotations, and leaves the same token in a
+  string or template literal as it was. The check that runs before a test file
+  is written now refuses a rewrite that changes a token in a literal. Closes
+  #4513.
+
 - **Diagnostic text can no longer reshape a Markdown report.** The Markdown
   report of `qfai report` wrote each finding's code, message and file as raw
   Markdown, so brackets, HTML or a line break in them could add links, headings

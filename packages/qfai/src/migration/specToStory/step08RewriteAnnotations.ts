@@ -1,12 +1,14 @@
 import { createTestLayerRoots, resolveTestKind } from "../../core/atddTraceability.js";
 import { collectFilesByGlobs } from "../../core/fs.js";
 import { normalizeGlobs } from "../../core/traceability.js";
+import { commentSpanTest } from "./annotationComments.js";
 import { oldContractIds, readIdMap } from "./idMap.js";
 import { MigrationInputError, type MigrationOperation, type MigrationStep } from "./harness.js";
 import { readMigrationInput, repositoryRelative } from "./step05CasesToExamples.js";
 
-const LEGACY_ANNOTATION = /\bQFAI:SPEC-(\d{4}):([A-Z]+-\d{4}(?:-\d{4})?)(?![\d-])/g;
-const CONTRACT_ANNOTATION = /\bQFAI:(CON-(?:API|DB|UI)-\d+)(?![\w-])/g;
+/** A legacy case or story annotation (groups 1 and 2), or a legacy contract annotation (group 3). */
+const ANNOTATION =
+  /\bQFAI:(?:SPEC-(\d{4}):([A-Z]+-\d{4}(?:-\d{4})?)(?![\d-])|(CON-(?:API|DB|UI)-\d+)(?![\w-]))/g;
 const DEFERRAL = /\bx-qfai-status:\s*(?:planned|external)\b/g;
 const FILE_LIMIT = 200_000;
 
@@ -55,17 +57,21 @@ export const step08: MigrationStep = {
       if (original === null)
         throw new MigrationInputError(`Cannot read selected test file ${file}`);
       const isE2e = resolveTestKind(file, roots) === "e2e";
+      const inComment = commentSpanTest(original);
+      let lineStart = 0;
       const changedLines = original.split("\n").map((line, index) => {
         const location = `${repositoryRelative(context.root, file)}:${index + 1}`;
+        const offset = lineStart;
+        lineStart += line.length + 1;
         for (const match of line.matchAll(DEFERRAL))
           annotationsKept.push(`${location}: ${match[0]}`);
-        const contracts = line.replace(CONTRACT_ANNOTATION, (whole, oldId: string) => {
+        const contract = (whole: string, oldId: string): string => {
           const mapped = contractIds[oldId];
           if (mapped) return `QFAI:${mapped}`;
           forAPerson.push(`${location}: ${whole}: no contract declares ${oldId}`);
           return whole;
-        });
-        return contracts.replace(LEGACY_ANNOTATION, (whole, packNumber: string, oldId: string) => {
+        };
+        const legacy = (whole: string, packNumber: string, oldId: string): string => {
           if (oldId.startsWith("US-") && !isE2e) {
             annotationsKept.push(`${location}: ${whole}`);
             return whole;
@@ -80,7 +86,20 @@ export const step08: MigrationStep = {
             return `QFAI:BF-${mapped.slice(3, 7)}`;
           forAPerson.push(`${location}: ${whole}: no usable ID mapping`);
           return whole;
-        });
+        };
+        let rewritten = "";
+        let copied = 0;
+        for (const match of line.matchAll(ANNOTATION)) {
+          const [whole, packNumber, oldId, contractId] = match;
+          // The same token in a string literal is test data: rewriting it changes what the test checks.
+          if (!inComment(offset + match.index, whole.length)) continue;
+          const replacement = contractId
+            ? contract(whole, contractId)
+            : legacy(whole, packNumber ?? "", oldId ?? "");
+          rewritten += line.slice(copied, match.index) + replacement;
+          copied = match.index + whole.length;
+        }
+        return rewritten + line.slice(copied);
       });
       const updated = changedLines.join("\n");
       if (updated !== original)

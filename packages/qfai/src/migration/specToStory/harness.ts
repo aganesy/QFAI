@@ -14,6 +14,7 @@ import {
 } from "../../core/config.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { replaceFile } from "../../core/runLog.js";
+import { commentSpanTest } from "./annotationComments.js";
 import { ID_MAP_PATH, IdMapInputError, MIGRATION_STATE_DIR, readIdMap } from "./idMap.js";
 import { publishStagedCopy } from "./stagedCopy.js";
 import { shouldRenameSource, STEP01_RENAMES } from "./step01RenameDirectories.js";
@@ -249,13 +250,26 @@ async function assertAnnotationOnly(target: string, content: string): Promise<vo
   if (oldLines.length !== newLines.length) {
     throw new MigrationRefusal(`Annotation rewrite changes line count: ${target}`);
   }
+  const withoutCommentAnnotations = (text: string): string[] => {
+    const inComment = commentSpanTest(text);
+    let lineStart = 0;
+    return text.split("\n").map((line) => {
+      const offset = lineStart;
+      lineStart += line.length + 1;
+      // Only an annotation in a comment may change; the same token in a literal is test data.
+      return line.replace(/\bQFAI:[A-Za-z0-9:-]+/g, (token, column: number) =>
+        inComment(offset + column, token.length) ? "" : token,
+      );
+    });
+  };
+  const oldKept = withoutCommentAnnotations(original);
+  const newKept = withoutCommentAnnotations(content);
   for (let index = 0; index < oldLines.length; index += 1) {
     if (oldLines[index] === newLines[index]) continue;
-    const annotation = /\bQFAI:[A-Za-z0-9:-]+/g;
     if (
       !oldLines[index]?.includes("QFAI:") ||
       !newLines[index]?.includes("QFAI:") ||
-      oldLines[index]?.replace(annotation, "") !== newLines[index]?.replace(annotation, "")
+      oldKept[index] !== newKept[index]
     ) {
       throw new MigrationRefusal(
         `Annotation rewrite changes a non-annotation line: ${target}:${index + 1}`,
