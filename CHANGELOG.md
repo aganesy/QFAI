@@ -486,6 +486,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **`qfai sdd merge-docs` no longer fails on a conflicted file it does not
+  merge.** A conflicted file under the specs directory that is not Markdown or
+  YAML, such as an image, made the command exit 1 even when no document was
+  conflicted. Such a file is now left to Git and not counted, so with no
+  conflicted document the command says there is nothing to merge and exits 0.
+  The configured specs directory is also read as a literal path, so a name
+  holding `*` no longer selects conflicted documents outside it. Closes #4523.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
