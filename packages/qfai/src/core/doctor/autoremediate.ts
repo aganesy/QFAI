@@ -90,7 +90,9 @@ async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
 export type InstallPromptStreams = Pick<ReadLineOptions, "input" | "output" | "terminal">;
 
 /**
- * The `[y/N]` prompt. Ctrl+D is a decline, since no answer is not a yes.
+ * The `[y/N]` prompt. Ctrl+D is a decline, since no answer is not a yes:
+ * the close it causes settles the prompt, because Node 20 leaves a pending
+ * question unsettled when the interface closes.
  * Ctrl+C rejects, so the command stops instead of carrying on with the rest
  * of the pass. Readline rejects both keys with the same `AbortError`, so
  * Ctrl+C aborts the question through its own signal to stay distinguishable.
@@ -104,12 +106,15 @@ export async function askBeforeInstall(
   const prompt = createInterface(streams);
   const interrupted = new AbortController();
   prompt.once("SIGINT", () => interrupted.abort());
+  const closed = new Promise<false>((resolve) => {
+    prompt.once("close", () => resolve(false));
+  });
   try {
-    const answer = await prompt.question(
+    const answered = prompt.question(
       `doctor --autoremediate: run npm install for ${packages.join(", ")}? Install scripts run with your privileges. [y/N] `,
       { signal: interrupted.signal },
     );
-    return isAffirmative(answer);
+    return await Promise.race([answered.then(isAffirmative), closed]);
   } catch (error: unknown) {
     if (interrupted.signal.aborted) {
       throw error;
