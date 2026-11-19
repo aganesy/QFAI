@@ -90,8 +90,8 @@ async function project(): Promise<string> {
 async function readRunLog(root: string): Promise<{
   validateLog: string;
   summary: string;
-  runJson: { result: { status: string; fail_on: string | null } };
-  validatorJson: { status: string };
+  runJson: unknown;
+  validatorJson: unknown;
 }> {
   const outDir = path.join(root, ".qfai", "report");
   const validateLog = await readFile(path.join(outDir, "validate.log"), "utf-8");
@@ -101,12 +101,8 @@ async function readRunLog(root: string): Promise<{
   return {
     validateLog,
     summary: await readFile(path.join(dir, "summary.md"), "utf-8"),
-    runJson: JSON.parse(await readFile(path.join(dir, "run.json"), "utf-8")) as {
-      result: { status: string; fail_on: string | null };
-    },
-    validatorJson: JSON.parse(await readFile(path.join(dir, "validator.json"), "utf-8")) as {
-      status: string;
-    },
+    runJson: JSON.parse(await readFile(path.join(dir, "run.json"), "utf-8")),
+    validatorJson: JSON.parse(await readFile(path.join(dir, "validator.json"), "utf-8")),
   };
 }
 
@@ -347,9 +343,8 @@ describe("validate reports a run it could not finish", () => {
       const run = await readRunLog(root);
       expect(run.validateLog).toMatch(/^- status: incomplete$/m);
       expect(run.summary).toMatch(/^- status: incomplete$/m);
-      expect(run.runJson.result.status).toBe("incomplete");
-      expect(run.runJson.result.fail_on).toBe(failOn);
-      expect(run.validatorJson.status).toBe("incomplete");
+      expect(run.runJson).toMatchObject({ result: { status: "incomplete", fail_on: failOn } });
+      expect(run.validatorJson).toMatchObject({ status: "incomplete" });
     }
   });
 
@@ -369,8 +364,10 @@ describe("validate reports a run it could not finish", () => {
 
     expect(lines.join("")).toMatch(/^qfai validate summary: .* result=PASS$/m);
     const run = await readRunLog(root);
-    expect(run.runJson.result.status).toBe("pass");
-    expect(run.validatorJson.status).toBe("pass");
+    expect(run.validateLog).toMatch(/^- status: pass$/m);
+    expect(run.summary).toMatch(/^- status: pass$/m);
+    expect(run.runJson).toMatchObject({ result: { status: "pass", fail_on: "never" } });
+    expect(run.validatorJson).toMatchObject({ status: "pass" });
   });
 
   it("does not report an incomplete run when validation completes", async () => {

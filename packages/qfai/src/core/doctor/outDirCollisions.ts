@@ -15,14 +15,18 @@
  * implementation instead of restating the scan.
  */
 
+import { execFile } from "node:child_process";
 import { realpath } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { loadConfig, resolvePath } from "../config.js";
 import { collectFilesByGlobs } from "../fs.js";
 import { isEnoent } from "../fs/errno.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
 import { exists } from "../validators/utils.js";
+
+const execute = promisify(execFile);
 
 export const DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS = [
   ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
@@ -220,19 +224,114 @@ export async function findOutDirCoOwners(
     .sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * The directory the config scan starts from: the nearest ancestor of
+ * `startDir` holding `pnpm-workspace.yaml`, else the Git working-tree
+ * root, else `startDir` itself.
+ *
+ * The Git root comes from Git, not from a `.git` entry on disk. An empty
+ * `.git` directory left in a shared parent (a temporary directory, say)
+ * is not a repository, and treating it as one widened a standalone
+ * project's scan to unrelated directories.
+ *
+ * Whenever Git gives no usable answer, the on-disk marker walk decides
+ * instead. That walk can only widen the scan, so the pre-prune guard
+ * still sees every co-owner it would have seen before; a narrower scan
+ * there could authorise deleting a sibling project's run logs.
+ */
 async function findMonorepoRoot(startDir: string): Promise<string> {
-  let current = path.resolve(startDir);
+  const start = path.resolve(startDir);
+  const gitRoot = await resolveGitRoot(start);
+  if (gitRoot.kind === "unknown") {
+    return findMarkerRoot(start, [".git", "pnpm-workspace.yaml"]);
+  }
+  let current = start;
   for (;;) {
-    const gitPath = path.join(current, ".git");
-    const workspacePath = path.join(current, "pnpm-workspace.yaml");
-    if ((await exists(gitPath)) || (await exists(workspacePath))) {
+    if (await exists(path.join(current, "pnpm-workspace.yaml"))) {
+      return current;
+    }
+    if (gitRoot.kind === "root" && (await isSameDirectory(current, gitRoot.dir))) {
       return current;
     }
     const parent = path.dirname(current);
     if (parent === current) {
-      break;
+      // Git named a root that is no ancestor under any spelling this walk
+      // sees (a work tree set elsewhere, a mapped-drive alias).
+      return gitRoot.kind === "root"
+        ? findMarkerRoot(start, [".git", "pnpm-workspace.yaml"])
+        : start;
     }
     current = parent;
   }
-  return path.resolve(startDir);
+}
+
+/** Variables that point Git at another repository or stop its discovery early. */
+const GIT_LOCATION_VARIABLES = ["GIT_DIR", "GIT_WORK_TREE", "GIT_CEILING_DIRECTORIES"];
+
+/**
+ * The working-tree root Git reports for `dir`. `none` only when Git says
+ * `dir` is not in a repository; any other failure (Git missing, dubious
+ * ownership, a broken config) is `unknown`, since it proves nothing about
+ * where the repository ends.
+ *
+ * The child runs without the variables that redirect discovery, as a Git
+ * hook exports them, and in the C locale so the refusal text can be read.
+ */
+async function resolveGitRoot(dir: string): Promise<GitRoot> {
+  // Compared case-blind: Windows environment names are.
+  const env: NodeJS.ProcessEnv = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([name]) => !GIT_LOCATION_VARIABLES.includes(name.toUpperCase()),
+      ),
+    ),
+    LC_ALL: "C",
+    LANGUAGE: "C",
+  };
+  try {
+    const { stdout } = await execute("git", ["rev-parse", "--show-toplevel"], {
+      cwd: dir,
+      encoding: "utf8",
+      env,
+    });
+    const top = stdout.trim();
+    return top === "" ? { kind: "unknown" } : { kind: "root", dir: path.resolve(top) };
+  } catch (error) {
+    return isNotARepository(error) ? { kind: "none" } : { kind: "unknown" };
+  }
+}
+
+function isNotARepository(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("stderr" in error)) {
+    return false;
+  }
+  const { stderr } = error;
+  return typeof stderr === "string" && stderr.includes("not a git repository");
+}
+
+type GitRoot = { kind: "root"; dir: string } | { kind: "none" } | { kind: "unknown" };
+
+/** True when both paths name one directory once symlinks are resolved. */
+async function isSameDirectory(candidate: string, realDir: string): Promise<boolean> {
+  try {
+    return path.relative(await realpath(candidate), realDir) === "";
+  } catch {
+    return false;
+  }
+}
+
+async function findMarkerRoot(start: string, markers: readonly string[]): Promise<string> {
+  let current = start;
+  for (;;) {
+    for (const marker of markers) {
+      if (await exists(path.join(current, marker))) {
+        return current;
+      }
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return start;
+    }
+    current = parent;
+  }
 }
