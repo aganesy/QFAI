@@ -16,7 +16,7 @@ const SUBMODULE = "160000";
 const COPILOT_FILE = ".github/copilot-instructions.md";
 
 /**
- * The most bytes of one file the scan holds at once. A text file past it is
+ * The most bytes of one file the scan reads. A text file past it is
  * named as not checked rather than read whole. Lifting it means matching lines
  * across blocks, which no project has needed yet.
  */
