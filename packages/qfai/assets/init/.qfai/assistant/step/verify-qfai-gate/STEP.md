@@ -51,7 +51,12 @@ obligations this gate lists as pending.
 2. Where the repository uses the report, run
    `npx qfai report --profile <profile>` with the profile step 1 ran, `full`
    for the default command. Without `--profile` the report reads the
-   unsuffixed file, which another run may have replaced.
+   unsuffixed file, which another run may have replaced. Where another
+   validate run of that profile can overlap on the same tree, the suffixed
+   file can be replaced between steps 1 and 2 too: run
+   `npx qfai report --run-validate --profile <profile>` instead, which
+   validates again and renders the result of that run alone. The gate's
+   verdict still comes from step 1.
 3. Report each result in the stage report.
 
 ## What this gate is

@@ -31,6 +31,9 @@ describe("readers of a validation result read the one the current command wrote"
     expect(reads).toContain("`run-log:`");
     expect(reads).toContain("`validator.json`");
     expect(gate).toContain("npx qfai report --profile <profile>");
+    // The report re-reads the shared suffixed file, so beside an overlapping
+    // run it renders the result of its own validation instead.
+    expect(gate).toContain("npx qfai report --run-validate --profile <profile>");
     expect(gate).not.toContain("Run `npx qfai report` when");
   });
 
