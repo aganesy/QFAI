@@ -474,6 +474,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the contract that creates it. Both forms are now skipped, the same way the
   SQL statement splitter already reads them. Closes #4656.
 
+- **The README names npm's own error for a Git install of QFAI.** It said
+  npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
+  through a `preinstall` guard. npm never reaches that guard: it stops with
+  `EUNSUPPORTEDPROTOCOL` at the repository root's `workspace:` dependency, an
+  error that does not mention QFAI. The README now describes npm's error and
+  gives the guard's message to yarn alone. Closes #4626.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
@@ -481,6 +488,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   command's usage lines (only the subcommand's when one was given) and a
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
+
+- **`qfai doctor` can no longer hang on the mdschema package's platform
+  file.** After `mdschema --help` ran under its 15-second limit, the
+  `workflows.mdschemaBinary` check loaded `@jackchuka/mdschema`'s
+  `lib/platform.js` in doctor's own process, with no limit, to learn whether the
+  binary is the downloaded copy. That file now runs in a separate Node process
+  stopped at the same limit; one that does not answer by then gives no finding,
+  as a missing file already did. Closes #4616.
 
 - **`qfai validate` no longer writes its run log through a link.** When
   `paths.outDir`, a directory between the project root and it, or
@@ -600,6 +615,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   own, as part of the group's time. A run without `--timings` still runs them
   side by side, and the findings and counts are the same either way.
   Fixes #4279.
+
+- **Document analysis reaches only the approved processing origin.**
+  Graphify document extraction was given the selected or authorized endpoint,
+  but nothing stopped the process from following a redirect or sending to
+  another host. Extraction now runs under a guard that refuses every name
+  lookup and connection outside that endpoint's host name and port, including
+  another name for the same address, and refuses reverse lookups. It follows
+  no redirect, which could otherwise switch an `https` endpoint to `http`,
+  starts no child process, which the guard could not reach, and opens no
+  listening socket. A local backend
+  stays local and a different origin needs its own authorization.
+  Closes #4496.
 
 ## [2.5.0] - 2026-11-15
 
