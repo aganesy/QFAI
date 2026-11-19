@@ -381,18 +381,29 @@ function classifyReference(raw: string, result: HtmlMockParseResult): void {
   result.localRefs.push(rawUrl);
 }
 
+/** Tags this checker classifies as an interactive control unless disabled. */
+const INTERACTIVE_TAGS: ReadonlySet<string> = new Set([
+  "a",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "summary",
+]);
+
+/** Roles that make this checker classify any element as an interactive control unless disabled. */
+const INTERACTIVE_ROLES: ReadonlySet<string> = new Set([
+  "button",
+  "link",
+  "checkbox",
+  "radio",
+  "switch",
+  "tab",
+  "menuitem",
+]);
+
 function isInteractiveElement(el: Element): boolean {
   const tag = el.tagName.toLowerCase();
-  const interactiveTags = new Set(["a", "button", "input", "select", "textarea", "summary"]);
-  const interactiveRoles = new Set([
-    "button",
-    "link",
-    "checkbox",
-    "radio",
-    "switch",
-    "tab",
-    "menuitem",
-  ]);
 
   const ariaDisabledAttr = el.getAttribute("aria-disabled");
   const isAriaDisabled =
@@ -402,13 +413,13 @@ function isInteractiveElement(el: Element): boolean {
     return false;
   }
 
-  if (interactiveTags.has(tag)) {
+  if (INTERACTIVE_TAGS.has(tag)) {
     return true;
   }
 
   const roleAttr = el.getAttribute("role");
   const role = typeof roleAttr === "string" ? roleAttr.toLowerCase() : "";
-  if (interactiveRoles.has(role)) {
+  if (INTERACTIVE_ROLES.has(role)) {
     return true;
   }
 
