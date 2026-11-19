@@ -494,6 +494,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
 
+- **`qfai catalog design` writes only its own files, and only inside the
+  project.** It staged both files under names built from its process ID, so a
+  second run could overwrite the first run's staging file, and a failed run
+  removed any file under that name, even one it had not written. A
+  `.qfai/catalog` directory that was a symbolic link or junction also led the
+  write outside the project. The command now checks each directory on the path
+  before and after creating it, stages each file in a new file it creates
+  exclusively under a name of its own, and on failure undoes only what it did.
+  When it cannot put both files back, its message says so and names the file it
+  kept. Closes #4463.
+
 - **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
   difference exits 0 under `--fail-on never`, but the parser refused the flag
   on `db-drift` and the command exited 2. `db-drift` now takes

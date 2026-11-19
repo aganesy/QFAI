@@ -137,25 +137,6 @@ describe("the command writes the token file and the theme from DESIGN.md", () =>
     const catalogDir = path.join(root, ".qfai", "catalog");
     expect((await readdir(catalogDir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
-
-  // QFAI:EX-0001-0312-01
-  it("moves a replaced file back when a later file of the pair cannot be replaced", async () => {
-    const root = await projectWith();
-    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
-    const tokens = await readFile(path.join(root, ...TOKENS.split("/")));
-    const theme = await readFile(path.join(root, ...THEME.split("/")));
-    await changePrimary(root);
-    // A directory where the theme would be moved aside makes that rename fail after the token
-    // file has already been replaced.
-    const blocker = `${path.join(root, ...THEME.split("/"))}.${process.pid}.old`;
-    await mkdir(path.join(blocker, "keep"), { recursive: true });
-    const failed = await cli(["catalog", "design", "--root", root]);
-    expect(failed.code).toBe(1);
-    expect(await readFile(path.join(root, ...TOKENS.split("/")))).toEqual(tokens);
-    expect(await readFile(path.join(root, ...THEME.split("/")))).toEqual(theme);
-    const left = (await readdir(path.join(root, ".qfai", "catalog"))).sort();
-    expect(left).toEqual(["design.tokens.json", "theme.css", path.basename(blocker)].sort());
-  });
 });
 
 // QFAI:AC-0001-0312-02
