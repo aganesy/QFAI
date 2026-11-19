@@ -616,6 +616,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check is incomplete. A file that is absent is still skipped, so a project
   without the qfai package source is unaffected.
 
+- **A document graph keeps a nested scope written with backslashes.** A
+  `scope` entry in `.qfai/graph-processing.json` such as
+  `docs\nested\rationale.md` was read as `docs/nested/rationale.md` when the
+  document graph was built, but as written when the next query checked it, so
+  that check matched no document and dropped the scope's documents from the
+  graph. Both now read the scope with forward slashes.
+
 - **A UI marker written in a JavaScript module file counts as rendered.**
   `QFAI-CONTRACT-037` looked for a contract's `data-qfai` marker in `.js` and
   `.ts` files under `paths.srcDir` but not in `.mjs`, `.cjs`, `.mts` or `.cts`
@@ -639,6 +646,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai report --profile <profile>`. The `validate.json` schema reference now
   lists the file each kind of run writes, and `qfai-configure` inspects the
   result its own validate run wrote.
+
+- **A documents graph query with no match keeps Graphify's message.**
+  Graphify's `query` exits with code 4 when the graph holds no matching nodes,
+  and the documents query reads that code as a no-match answer. The process
+  runner discarded the output of every non-zero exit, so the answer arrived
+  empty. The runner now keeps the output of an exit code its caller names as an
+  answer, and the documents query names only Graphify's no-match code.
 
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`

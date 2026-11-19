@@ -191,7 +191,7 @@ export async function prepareDocumentAnalysisLocked(
   if (processing.scope !== undefined) {
     if (!validDocumentScope(processing.scope))
       return { status: "not-ready", recovery: "Select the exact document scope for processing." };
-    scope = Object.freeze(processing.scope.map((item) => item.replaceAll("\\", "/")));
+    scope = slashScope(processing.scope);
   }
   if (!local) {
     if (!scope) {
@@ -370,7 +370,9 @@ async function inspectDocumentScopeAt(
   // This walk refuses every shared file and link the corpus walks below would, so they skip theirs.
   if (!(await safeDocumentCopy(root, analysis, run))) return notCurrent();
   const scope =
-    object(processing) && validDocumentScope(processing.scope) ? processing.scope : undefined;
+    object(processing) && validDocumentScope(processing.scope)
+      ? slashScope(processing.scope)
+      : undefined;
   if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope, "checked")))
     return refreshStagedDocumentScope(root, analysis, run, scope);
   if (refresh === "in-place") await mirrorGraphCorpus(root, analysis, scope, "checked");
@@ -517,6 +519,14 @@ function validDocumentScope(value: unknown): value is string[] {
         !item.split(/[\\/]/).some((part) => part === ".." || part === "." || part === ""),
     )
   );
+}
+
+/**
+ * The corpus walk matches slash-separated paths, so generation and every later refresh read a
+ * scope written with backslashes the same way.
+ */
+function slashScope(scope: readonly string[]): readonly string[] {
+  return Object.freeze(scope.map((item) => item.replaceAll("\\", "/")));
 }
 
 function providerConflict(): DocumentPreparation {

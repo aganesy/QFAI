@@ -14,6 +14,9 @@ import {
   type GraphProcess,
 } from "./process.js";
 
+/** Graphify's `query` exits with this code when the graph holds no matching nodes. */
+const GRAPHIFY_NO_MATCH_EXIT = 4;
+
 export interface GraphQuestion {
   domain: "code" | "documents";
   question: string;
@@ -81,9 +84,10 @@ async function exploreGraphScope(
       {
         cwd: graphAnalysisRoot(root, "graphify"),
         env: graphifyCorpusEnvironment(root, graphAnalysisRoot(root, "graphify")),
+        answerExitCodes: [GRAPHIFY_NO_MATCH_EXIT],
       },
     );
-    if (result.exitCode !== 0 && result.exitCode !== 4) {
+    if (result.exitCode !== 0 && result.exitCode !== GRAPHIFY_NO_MATCH_EXIT) {
       return {
         engine: "graphify",
         status: "failed",
@@ -114,7 +118,7 @@ async function exploreGraphScope(
     }
     return {
       engine: "graphify",
-      status: result.exitCode === 4 ? "no-match" : "answered",
+      status: result.exitCode === GRAPHIFY_NO_MATCH_EXIT ? "no-match" : "answered",
       answer: result.stdout,
       coverage,
       ...inference,
