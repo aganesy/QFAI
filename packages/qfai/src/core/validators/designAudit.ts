@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
+import { resolvePath, type QfaiConfig } from "../config.js";
 import {
   readUiContractScreenContracts,
   type CanonicalScreenContract,
@@ -291,7 +291,8 @@ async function checkTokenDrift(
   }
   if (!hasTokenFiles) return findings;
 
-  const contractsUiDir = path.join(root, cfg.paths.contractsDir, "ui");
+  // Resolved as `readUiContractScreenContracts` resolves it, so an absolute override reads the same directory
+  const contractsUiDir = path.join(resolvePath(root, cfg, "contractsDir"), "ui");
   let htmlFiles: string[];
   try {
     const entries = await readdir(contractsUiDir);
