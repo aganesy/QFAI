@@ -25,7 +25,7 @@ import {
   copyTemplateTree,
 } from "../../core/fs/templateCopy.js";
 import type { CopyResult } from "../../core/fs/templateCopy.js";
-import { getInitAssetsDir } from "../lib/assets.js";
+import { getInitAssetsDir } from "../../shared/assets.js";
 import { error, info, warn } from "../../core/logger.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
