@@ -10,13 +10,16 @@
  * ## What is asked, and of whom
  *
  * The key is optional, so a contract that never writes it is asked nothing. An
- * empty `pattern:`, or an empty string, is a slot nobody has filled yet. Only a
- * value outside the vocabulary is reported, because it names an entry the
- * reference does not have. The vocabulary is the business types: a marketing
- * screen's sections are named against the marketing pattern reference, so a
- * marketing screen leaves the key out. A filled `pattern` on a screen that
- * declares `surface: marketing` is reported too, because the implementer and
- * the reviewer would otherwise have two references to read the screen against.
+ * empty `pattern:`, or an empty string, is a slot nobody has filled yet. Two
+ * filled values are reported:
+ *
+ * - a value outside the vocabulary, because it names an entry the reference
+ *   does not have;
+ * - any value on a screen that declares `surface: marketing`. The vocabulary
+ *   is the business types, and a marketing screen's sections are named against
+ *   the marketing pattern reference, so a marketing screen leaves the key out.
+ *   A filled one would give the implementer and the reviewer two references to
+ *   read the screen against.
  *
  * A `screens` that is not a list, and an entry that is not a mapping, are left
  * to `QFAI-CONTRACT-042`, which reports them.

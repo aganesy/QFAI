@@ -75,7 +75,7 @@ describe("validate reads the surface kind of each UI contract screen", () => {
 
 // QFAI:AC-0001-0039-06
 describe("validate reads the business screen type of each UI contract screen", () => {
-  it("raises nothing for a type ID or an absent pattern, and one error for another value or a marketing screen's", async () => {
+  it("raises nothing for a type ID or an absent pattern, and one error for another value or a pattern on a marketing screen", async () => {
     await contract(
       "  - id: orders",
       "    route: /orders",
