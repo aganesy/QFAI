@@ -123,6 +123,17 @@ describe("a marker the source mentions", () => {
     expect(await validateUiMarkerPresence(root, defaultConfig)).toEqual([]);
   });
 
+  it.each([".mjs", ".cjs", ".mts", ".cts"])(
+    "is found in a module written only as %s",
+    async (extension) => {
+      const root = await newRoot();
+      await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
+      await write(root, `src/markers${extension}`, 'export const SUBMIT = "SCR-ORDER:submit";\n');
+
+      expect(await validateUiMarkerPresence(root, defaultConfig)).toEqual([]);
+    },
+  );
+
   it("is found below the top level of the source tree", async () => {
     const root = await newRoot();
     await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));

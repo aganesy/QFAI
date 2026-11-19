@@ -71,8 +71,26 @@ export const UI_MARKER_NOT_RENDERED_RULE_ID = "QFAI-CONTRACT-037";
  */
 const MARKER_RE = /data-qfai\s*=\s*(?:(['"])([^'"]+)\1|([^\s'"\]>,}]+))/g;
 
-/** The extensions a marker can be written in on the implementation side. */
-const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".vue", ".svelte", ".html"];
+/**
+ * The extensions a marker can be written in on the implementation side.
+ *
+ * The module variants are listed beside `.js` and `.ts`: a marker kept in an
+ * `.mjs` or `.cts` file is as rendered as one kept in a `.js` file, and leaving
+ * them out reported it as missing.
+ */
+const SOURCE_EXTENSIONS = [
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".vue",
+  ".svelte",
+  ".html",
+];
 
 /** Every `data-qfai` value a text carries, in the order it writes them. */
 function markersIn(text: string): string[] {

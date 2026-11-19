@@ -595,6 +595,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check is incomplete. A file that is absent is still skipped, so a project
   without the qfai package source is unaffected.
 
+- **A UI marker written in a JavaScript module file counts as rendered.**
+  `QFAI-CONTRACT-037` looked for a contract's `data-qfai` marker in `.js` and
+  `.ts` files under `paths.srcDir` but not in `.mjs`, `.cjs`, `.mts` or `.cts`
+  files, so a marker kept only in such a module was reported as missing and
+  blocked validation. Those four extensions are now read as well.
+
 - **The verify gate reads the result its own validate run wrote.** The
   `verify-qfai-gate` step told agents to read `.qfai/report/validate.json` and
   then ran `qfai report` with no profile. That file is only the default path,
