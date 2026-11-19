@@ -171,10 +171,7 @@ function bandFindingFor(
   };
 }
 
-function checkContractHierarchyFromScreens(
-  screens: CanonicalScreenContract[],
-  _auditConfig: DesignAuditConfig,
-): DesignFinding[] {
+function checkContractHierarchyFromScreens(screens: CanonicalScreenContract[]): DesignFinding[] {
   const findings: DesignFinding[] = [];
   for (const screen of screens) {
     if (screen.primaryTasks.length === 0) {
@@ -344,9 +341,7 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   const uiContractScreens = await readUiContractScreenContracts(root, config.paths.contractsDir);
   if (uiContractScreens.length === 0) return [];
 
-  const findings: DesignFinding[] = [
-    ...checkContractHierarchyFromScreens(uiContractScreens, auditConfig),
-  ];
+  const findings: DesignFinding[] = [...checkContractHierarchyFromScreens(uiContractScreens)];
 
   // Token drift check
   findings.push(...(await checkTokenDrift(root, auditConfig, config)));
