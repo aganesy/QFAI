@@ -805,6 +805,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ones, including a result with no recorded flows under `--flow` and a result
   with recorded flows read without `--flow`. Closes #4547.
 
+- **An HTML mock fenced under a mock heading is now checked once.** A
+  ` ```html ` fence under `## Screen Mock (HTML+CSS)` was read once as a
+  fence and again as part of the heading's section, so `qfai validate`
+  parsed it twice and could report the same finding twice. Each block is now
+  taken once by where it sits in the file, and two separate fences holding
+  the same HTML are both checked rather than merged into one.
+
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
   `-- Depends on:` line skipped `$$ … $$` literals but not `$tag$ … $tag$`
