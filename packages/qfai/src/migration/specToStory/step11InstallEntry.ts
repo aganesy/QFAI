@@ -1,6 +1,5 @@
 import { constants } from "node:fs";
 import {
-  copyFile,
   lstat,
   mkdir,
   mkdtemp,
@@ -34,6 +33,7 @@ import {
   CODEX_HOOKS_RELATIVE_PATH,
 } from "../../core/claudeCodeHooks.js";
 import { findUnsafeHostFileComponent } from "../../core/init/fsGuards.js";
+import { replaceFile } from "../../core/runLog.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { normalizeNewlines } from "../../shared/text.js";
 import type { MigrationContext, MigrationOperation, MigrationStep, StepPlan } from "./harness.js";
@@ -489,9 +489,9 @@ async function planReminderText(context: MigrationContext, plan: StepPlan): Prom
     description,
     apply: async () => {
       await mkdir(path.dirname(target), { recursive: true });
-      // Replaced as an entry, so a hard link's other names keep their content.
-      await rm(target, { force: true });
-      await copyFile(shipped, target);
+      // Renamed into place as a new entry, so a failed write leaves the text it
+      // replaces whole and a hard link's other names keep their content.
+      await replaceFile(target, await readFile(shipped, "utf8"));
     },
   });
 }

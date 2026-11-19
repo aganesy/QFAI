@@ -210,6 +210,11 @@ describe("BF-0002 pull request workflow acceptance", () => {
     expect(ci).toMatch(
       /\n {2}build:\n[\s\S]*?node packages\/qfai\/dist\/cli\/index\.mjs validate --profile full --fail-on error --format github --root \./u,
     );
+    // A profile that fails before the full profile records its failure instead of
+    // ending the step, and the step fails once every profile has run.
+    expect(ci).toMatch(
+      /\n {2}build:\n[\s\S]*?validate --profile tdd [^\n]*\|\| failed=[\s\S]*?validate --profile sdd [^\n]*\|\| failed=[\s\S]*?validate --profile full [^\n]*\n\s*if \[ -n "\$failed" \]; then\n[^\n]*\n\s*exit 1/u,
+    );
     expect(ci).toMatch(/\n {2}build:\n[\s\S]*?Run qfai validate gate \(fail on error\)/u);
   });
 });

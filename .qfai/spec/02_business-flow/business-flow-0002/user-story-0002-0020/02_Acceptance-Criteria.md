@@ -12,6 +12,7 @@ Feature: Retire the duplicate validate workflow without weakening the required c
     Then the duplicate workflow file is absent
     And exactly one workflow is triggered by a pull request
     And the full profile runs from the build job against the repository root, using the locally built binary rather than the published package
+    And a profile that fails before the full profile in that job never skips it, and the job fails after the last profile when any of them failed
     And the folded run becomes part of that job's enumerated verification set, so removing it later is a release blocker
 
   # AC-0002-0020-02
