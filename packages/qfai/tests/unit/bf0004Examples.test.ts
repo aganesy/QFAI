@@ -827,16 +827,17 @@ describe("BF-0004 migration examples", () => {
     );
   });
 
-  // QFAI:EX-0004-0012-01
   it("names only the four contract kind directories as a destination for an old business rule", async () => {
     const skill = await readFile(
       path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md"),
       "utf8",
     );
     const prose = skill.replace(/\s+/g, " ");
-    expect(prose).toContain(
-      "Name that contract by its current path under `cli/`, `api/`, `db/` or `ui/` of the contracts directory",
-    );
+    const sentence =
+      /Name that contract by its current path under (.+?) of the contracts directory/.exec(prose);
+    expect(sentence, "SKILL.md names the destination directories").not.toBeNull();
+    const directories = [...(sentence?.[1] ?? "").matchAll(/`([^`]+)`/g)].map((match) => match[1]);
+    expect(directories).toEqual(["cli/", "api/", "db/", "ui/"]);
   });
 
   // QFAI:EX-0004-0012-06
