@@ -90,7 +90,8 @@ specialization_tags:
   under the excess route above.
 
 - Check each application screen against its type in `.qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md`.
-  A part of that type the UI contract names and the screen lacks is a blocking finding. A part the contract
+  Take the type from the `pattern` its UI contract declares; choose the type the screen matches, or none,
+  only when the contract writes no `pattern`. A part of that type the UI contract names and the screen lacks is a blocking finding. A part the contract
   neither names nor leaves out with a reason is an `advisory` finding for the contract stage, naming the
   part and the type.
 - Check a screen whose UI contract declares `surface: marketing` against its section entries in

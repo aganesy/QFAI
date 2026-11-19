@@ -16,4 +16,11 @@ Feature: per-skill manifest runtimeDependencies probe
     Given a manifest whose `runtimeDependencies` is an empty array
     When `qfai doctor --profile <skill>` runs
     Then no probe finding is emitted (no false positive)
+
+  # AC-0003-0010-03
+  Scenario: An entry that is not a registry package name is neither probed nor installed
+    Given a manifest whose `runtimeDependencies` lists an entry that is not a registry package name, such as shell text or an npm option
+    When `qfai doctor --profile <skill>` runs, with or without `--autoremediate --yes`
+    Then doctor reports the manifest as an error naming the entry, probes no entry and installs nothing
+    And npm is started without a shell for every install doctor runs
 ```

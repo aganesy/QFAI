@@ -75,7 +75,7 @@ describe("validate reads the surface kind of each UI contract screen", () => {
 
 // QFAI:AC-0001-0039-06
 describe("validate reads the business screen type of each UI contract screen", () => {
-  it("raises nothing for a type ID or an absent pattern, and one error for another value", async () => {
+  it("raises nothing for a type ID or an absent pattern, and one error for another value or a pattern on a marketing screen", async () => {
     await contract(
       "  - id: orders",
       "    route: /orders",
@@ -85,13 +85,19 @@ describe("validate reads the business screen type of each UI contract screen", (
       "  - id: report",
       "    route: /report",
       "    pattern: table",
+      "  - id: pricing",
+      "    route: /pricing",
+      "    surface: marketing",
+      "    pattern: list",
     );
     const { issues } = await validateProject(root, undefined, { profile: "sdd" });
     const reported = issues.filter((item) => item.code === "QFAI-CONTRACT-056");
-    expect(reported).toHaveLength(1);
-    expect(reported[0]?.severity).toBe("error");
-    expect(reported[0]?.message).toContain("screen 'report'");
-    expect(reported[0]?.message).toContain("`pattern: table`");
+    expect(reported).toHaveLength(2);
+    expect(reported.every((item) => item.severity === "error")).toBe(true);
+    const report = reported.find((item) => item.message.includes("screen 'report'"));
+    const pricing = reported.find((item) => item.message.includes("screen 'pricing'"));
+    expect(report?.message).toContain("`pattern: table`");
+    expect(pricing?.message).toContain("A marketing screen takes no `pattern`");
   });
 });
 
