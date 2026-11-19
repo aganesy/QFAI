@@ -55,8 +55,8 @@ To let the script run anyway, approve it:
 
 ```bash
 npm approve-scripts          # npm 11.16 or later: adds it to `allowScripts`
-pnpm approve-builds          # pnpm: adds it to `allowBuilds` (pnpm 11 or later)
-                             # or `onlyBuiltDependencies` (pnpm 10)
+pnpm approve-builds          # pnpm: adds it to `allowBuilds` (pnpm 10.31 or later)
+                             # or `onlyBuiltDependencies` (earlier pnpm 10)
 ```
 
 `npx qfai doctor` runs `mdschema --help` and reports an error, naming these

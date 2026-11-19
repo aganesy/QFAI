@@ -615,8 +615,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   README and the `qfai doctor` fix for a checker that does not run said pnpm
   records the approval under `onlyBuiltDependencies`, a setting pnpm 11
   removed. Both now recommend `pnpm approve-builds` and say it records the
-  approval under `allowBuilds` for pnpm 11 or later and
-  `onlyBuiltDependencies` for pnpm 10.
+  approval under `allowBuilds` for pnpm 10.31 or later and
+  `onlyBuiltDependencies` for earlier pnpm 10.
 
 - **An `openai` document backend with no credential now stops before
   extraction.** Graphify's `openai` client refuses to start without a non-empty
