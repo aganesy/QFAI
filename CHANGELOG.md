@@ -604,6 +604,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the scan still stops at the nearest `.git` entry, so the run-log cleanup
   still finds every project that shares its output directory. Closes #4510.
 
+- **`qfai db-drift` keeps apart columns whose names join to the same text.**
+  The comparison keyed each column by its table and column names joined with a
+  period. A quoted Postgres name may hold a period itself, so `"a.b".c` and
+  `a."b.c"` shared one key and one of them dropped out of the comparison
+  unreported. Each column is now looked up by its table and then by its own
+  name. Closes #4533.
+
 - **Migration step 11 keeps a skill or step when its replacement fails.** Step
   11 deleted a skill or step directory that differed from the package's copy
   before writing the new one, so a failed copy left the project with neither.
