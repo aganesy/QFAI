@@ -4,6 +4,7 @@ import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { findConfigRoot, loadConfig, readStopGate, resolvePath } from "./config.js";
+import { maskNonSpecRegions } from "./specPackParsers.js";
 
 /** One Standard command the project marks for turn end. */
 export interface TurnEndCheck {
@@ -34,25 +35,51 @@ const TURN_END_LABEL = "turn-end check";
 /** An unreplaced template slot, such as `<optional example: Format, Lint>`. */
 const TEMPLATE_SLOT = /<[^<>\n]+>/;
 
+/** What the Standard commands section of a tech.md selects for turn end. */
+export interface TurnEndSelection {
+  /** The marked commands, in the order the `Turn-end check:` item lists their labels. */
+  readonly checks: TurnEndCheck[];
+  /**
+   * Labels that select more than one item: a marked label the section lists twice, or the
+   * `Turn-end check` label itself. Any entry means no check may run.
+   */
+  readonly ambiguous: string[];
+}
+
 /**
  * The commands the Standard commands section of a tech.md marks for turn end, in the order its
  * `Turn-end check:` item lists their labels. A label the section does not list is skipped.
+ *
+ * Only the section's own top-level list items count. Fenced and indented code, HTML comments and
+ * raw HTML are blanked first, a block quote's lines never match an item, and an item nested
+ * under another is part of that item: each is an example, not a command.
  */
-export function readTurnEndChecks(techText: string): TurnEndCheck[] {
+export function readTurnEndChecks(techText: string): TurnEndSelection {
   const commands = new Map<string, string>();
+  const seen = new Map<string, { label: string; count: number }>();
   let marked: string[] = [];
   let inSection = false;
-  for (const line of techText.split(/\r?\n/)) {
+  /** The indent of the section's first item; an item indented further is nested under another. */
+  let topIndent: number | null = null;
+  for (const line of maskNonSpecRegions(techText).split("\n")) {
     if (/^#{1,2}\s/.test(line)) {
       inSection = COMMANDS_HEADING.test(line);
+      topIndent = null;
       continue;
     }
     if (!inSection) continue;
-    const item = /^\s*-\s+([^:`]+):\s*(.*)$/.exec(line);
+    const bullet = /^( *)[-*+]\s/.exec(line);
+    if (bullet === null) continue;
+    const indent = (bullet[1] ?? "").length;
+    topIndent ??= indent;
+    if (indent > topIndent) continue;
+    const item = /^ *-\s+([^:`]+):\s*(.*)$/.exec(line);
     if (item === null) continue;
     const label = (item[1] ?? "").trim();
     const rest = item[2] ?? "";
-    if (label.toLowerCase() === TURN_END_LABEL) {
+    const key = label.toLowerCase();
+    seen.set(key, { label, count: (seen.get(key)?.count ?? 0) + 1 });
+    if (key === TURN_END_LABEL) {
       // A value still holding a template slot, such as the shipped `<optional example: ...>`,
       // marks nothing: a project opts into the hook only by writing its own labels.
       marked = TEMPLATE_SLOT.test(rest)
@@ -64,14 +91,19 @@ export function readTurnEndChecks(techText: string): TurnEndCheck[] {
       continue;
     }
     const command = /`([^`]+)`/.exec(rest)?.[1];
-    if (command !== undefined) commands.set(label.toLowerCase(), command);
+    if (command !== undefined) commands.set(key, command);
   }
+  const ambiguous = new Set<string>();
+  const markedItem = seen.get(TURN_END_LABEL);
+  if (markedItem !== undefined && markedItem.count > 1) ambiguous.add(markedItem.label);
   const checks: TurnEndCheck[] = [];
   for (const label of marked) {
+    const listed = seen.get(label.toLowerCase());
+    if (listed !== undefined && listed.count > 1) ambiguous.add(listed.label);
     const command = commands.get(label.toLowerCase());
     if (command !== undefined) checks.push({ label, command });
   }
-  return checks;
+  return { checks, ambiguous: [...ambiguous] };
 }
 
 interface CommandResult {
@@ -246,18 +278,22 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
   if (!found.found) return "";
   const loaded = await loadConfig(found.root);
   if (readStopGate(loaded.document) !== true) return "";
+  const techPath = path.join(resolvePath(found.root, loaded.config, "contractsDir"), "tech.md");
   let techText: string;
   try {
-    techText = await readFile(
-      path.join(resolvePath(found.root, loaded.config, "contractsDir"), "tech.md"),
-      "utf8",
-    );
+    techText = await readFile(techPath, "utf8");
   } catch (error) {
     // A project without tech.md lists no check; any other read error is reported by the caller.
     if (isRecord(error) && error.code === "ENOENT") return "";
     throw error;
   }
-  const checks = readTurnEndChecks(techText);
+  const { checks, ambiguous } = readTurnEndChecks(techText);
+  if (ambiguous.length > 0) {
+    // Which command a repeated label means cannot be told, so none runs and the turn ends.
+    return `${JSON.stringify({
+      systemMessage: `QFAI turn-end check: ${ambiguous.join(", ")} ${ambiguous.length === 1 ? "is" : "are"} listed more than once under Standard commands in ${techPath}, so no turn-end check ran. Keep one item for each label.`,
+    })}\n`;
+  }
   const session = stringField(event, "session_id");
   const file = session === undefined ? null : stateFile(options.stateDir, session, agentKey(event));
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
