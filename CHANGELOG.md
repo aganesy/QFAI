@@ -473,6 +473,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   no check reports any more, so both were always 0. The file now holds
   `schema_version` and `nodes` only.
 
+- **The shipped test verdict no longer has a green branch for an empty
+  selection.** The verdict job of `qfai-tests.yml` never starts when detection
+  selects no lane, so its step no longer reads `QFAI_SELECTED`: a verdict that
+  starts is green only over a passed lane. Closes #4669.
+
 ### Fixed
 
 - **The Firecrawl integration now says where it processes data.** The
@@ -589,6 +594,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Each now reports such a file at severity error, naming it and saying the
   check is incomplete. A file that is absent is still skipped, so a project
   without the qfai package source is unaffected.
+
+- **A UI marker written in a JavaScript module file counts as rendered.**
+  `QFAI-CONTRACT-037` looked for a contract's `data-qfai` marker in `.js` and
+  `.ts` files under `paths.srcDir` but not in `.mjs`, `.cjs`, `.mts` or `.cts`
+  files, so a marker kept only in such a module was reported as missing and
+  blocked validation. Those four extensions are now read as well.
 
 - **The verify gate reads the result its own validate run wrote.** The
   `verify-qfai-gate` step told agents to read `.qfai/report/validate.json` and

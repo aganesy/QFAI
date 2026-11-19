@@ -7,7 +7,7 @@
  * + JSON filtering, no third-party action), selects the minimal lane set
  * for docs-only diffs and the full one for source diffs, fails OPEN to the
  * full superset with a warning on degraded inputs, and the co-located
- * verdict stays green over an empty matrix. The detection shell and the
+ * verdict is green only over a passed lane. The detection shell and the
  * verdict body are extracted from the REAL shipped orchestrator and
  * executed with bash against git fixture repositories built in temp dirs —
  * env stubs (GITHUB_OUTPUT, QFAI_BASE_REF, QFAI_TESTS_RESULT) stand in for
@@ -399,7 +399,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
   // decision for bullet 3, disclosed: "verdict is green" is realized here
   // as the DETECTION shell exiting 0 in all three cases (fail open is the
   // green path — the superset selection is what keeps the claim honest);
-  // the verdict job's own green behaviour (always-run, empty matrix,
+  // the verdict job's own green behaviour (always-run, a passed lane,
   // aggregation) is TC-0003-0040's dedicated surface, landing next in this
   // same group.
 
@@ -507,7 +507,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
 
 // QFAI:AC-0002-0004-01
 // QFAI:EX-0002-0004-03
-describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carries an empty permission map", () => {
+describe("TC-0003-0040 (TDD-0040): verdict exits 0 only over a passed lane and carries an empty permission map", () => {
   // One it() per TC-0003-0040 verify bullet. The verdict body is the REAL
   // shipped run: block, executed via bash with env stubs. This
   // row also discharges the GB3 conditional oracles: once the verdict job
@@ -531,36 +531,22 @@ describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carrie
     return { verdict, body };
   }
 
-  it("the verdict runs under an always-run condition and exits 0 on an empty matrix", async () => {
+  it("the verdict runs under an always-run condition and exits 0 only over a passed lane", async () => {
     const { verdict, body } = await verdictJobAndBody();
     expect(String(verdict["if"])).toContain("always()");
     const stage = await newTempDir();
 
-    // Empty axis: detection selected nothing, so the lane never ran and there is
-    // nothing for the verdict to report on.
-    const emptyMatrix = await runShell(body, stage, {
-      QFAI_TESTS_RESULT: "skipped",
-      QFAI_SELECTED: "[]",
-    });
-    expect(emptyMatrix.status).toBe(0);
+    const passedLane = await runShell(body, stage, { QFAI_TESTS_RESULT: "success" });
+    expect(passedLane.status).toBe(0);
 
-    // Discriminating control of the same predicate: green-on-skip is not
-    // green-on-anything — a failed lane must turn the verdict red.
-    const failedLane = await runShell(body, stage, {
-      QFAI_TESTS_RESULT: "failure",
-      QFAI_SELECTED: '["unit"]',
-    });
+    // Discriminating control of the same predicate: a failed lane must turn the verdict red.
+    const failedLane = await runShell(body, stage, { QFAI_TESTS_RESULT: "failure" });
     expect(failedLane.status).toBe(1);
 
-    // And the second control the axis makes possible: the same skip with work on
-    // the axis is a lane that was asked to run and did not. Without this row the
-    // green-on-skip rule would swallow a failed install, which skips nothing but
-    // can leave the lane with no result at all.
-    const skippedWithWork = await runShell(body, stage, {
-      QFAI_TESTS_RESULT: "skipped",
-      QFAI_SELECTED: '["unit"]',
-    });
-    expect(skippedWithWork.status).toBe(1);
+    // A lane skipped under a verdict that started was asked to run and did not: the job
+    // condition already keeps the verdict out of an explicitly empty selection.
+    const skippedLane = await runShell(body, stage, { QFAI_TESTS_RESULT: "skipped" });
+    expect(skippedLane.status).toBe(1);
   });
 
   it("the verdict permissions block is an empty map", async () => {
@@ -704,7 +690,7 @@ describe("an event with nothing for the test lanes to run starts one job", () =>
       throw new Error("unreachable: asserted above");
     }
     const stage = await newTempDir();
-    const run = await runShell(body, stage, { QFAI_TESTS_RESULT: "skipped", QFAI_SELECTED: "" });
+    const run = await runShell(body, stage, { QFAI_TESTS_RESULT: "skipped" });
     expect(run.status).toBe(1);
   });
 
