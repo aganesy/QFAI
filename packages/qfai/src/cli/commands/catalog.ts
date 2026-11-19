@@ -3,10 +3,12 @@
  * or its design catalogue, or with `--check` say whether the committed files are current.
  */
 import { randomUUID } from "node:crypto";
+import type { BigIntStats, Stats } from "node:fs";
 import { lstat, mkdir, open, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import { isEnoent } from "../../core/fs/errno.js";
 import {
   findUnsafeHostFileComponent,
   findUnsafeWrapperComponent,
@@ -212,13 +214,16 @@ type PairEntry = {
  * Writes the token file and the theme as a pair, only inside the project. Both destinations are
  * checked before anything is written: each directory on their path, before and after it is
  * created, must not be a symbolic link (a junction included) or an entry that is not a directory,
- * and a target that exists must be a file or a link. Each text goes to a staging file this run
+ * and a target that exists must be a file or a link. Only a target that is not there counts as
+ * absent: one whose metadata cannot be read stops the write, before or after anything is written,
+ * so it is never overwritten unseen. Each text goes to a staging file this run
  * creates exclusively under a name of its own beside its target; then each existing target is
  * moved aside under a name of its own and the staging file renamed into place. When a step fails,
  * the run undoes only what it did: it removes a file it placed while that file is still the one it
  * placed, renames what it moved aside back, and removes its own staging files, so a file of
  * another run is never removed or overwritten. On success the moved-aside files are removed.
- * Returns null, or the failure's message and whether both files were put back as they were.
+ * Returns null, or the failure's message and whether both files were put back as they were; when
+ * they were not, the message names each file left behind and each target that is as it was.
  */
 async function writePair(
   root: string,
@@ -236,7 +241,7 @@ async function writePair(
   try {
     await assertDirectoriesInsideProject(root, directories);
     for (const entry of entries) {
-      const found = await lstat(entry.file).catch(() => null);
+      const found = await inspect(entry.file);
       if (found !== null && !found.isFile() && !found.isSymbolicLink()) {
         throw new Error(`${relativeTo(root, entry.file)} is not a file.`);
       }
@@ -248,8 +253,15 @@ async function writePair(
     for (const entry of entries) await stage(entry);
     for (const entry of entries) await place(entry);
   } catch (caught) {
-    const left = await undoPair(root, entries);
-    return { message: [messageOf(caught), ...left].join(" "), restored: left.length === 0 };
+    const undo = await undoPair(root, entries);
+    if (undo.left.length === 0) return { message: messageOf(caught), restored: true };
+    const kept =
+      undo.restored.length === 0
+        ? []
+        : [
+            `${undo.restored.join(" and ")} ${undo.restored.length === 1 ? "is as it was" : "are as they were"}.`,
+          ];
+    return { message: [messageOf(caught), ...undo.left, ...kept].join(" "), restored: false };
   }
   const asides = entries.flatMap((entry) => (entry.aside === null ? [] : [entry.aside]));
   await Promise.all(asides.map((aside) => rm(aside, { force: true })));
@@ -291,7 +303,7 @@ async function stage(entry: PairEntry): Promise<void> {
 
 /** Moves an existing target aside, then renames the staging file onto the target. */
 async function place(entry: PairEntry): Promise<void> {
-  if ((await lstat(entry.file).catch(() => null)) !== null) {
+  if ((await inspect(entry.file)) !== null) {
     const aside = ownSibling(entry.file, "old");
     await rename(entry.file, aside);
     entry.aside = aside;
@@ -303,20 +315,35 @@ async function place(entry: PairEntry): Promise<void> {
 }
 
 /**
- * Undoes what this run did to the pair after a failed write and returns a sentence for each step
- * that could not be undone. A placed file that another run has since replaced is left in place,
- * as is one whose file system gives no inode number to tell the two apart, and the moved-aside
- * file is then kept under its own name rather than renamed over it.
+ * Undoes what this run did to the pair after a failed write. Returns a sentence for each step
+ * that could not be undone, and each target that is as it was. A placed file that another run has
+ * since replaced is left in place, as is one whose file system gives no inode number to tell the
+ * two apart or that cannot be inspected, and the moved-aside file is then kept under its own name
+ * rather than renamed over it.
  */
-async function undoPair(root: string, entries: readonly PairEntry[]): Promise<string[]> {
+async function undoPair(
+  root: string,
+  entries: readonly PairEntry[],
+): Promise<{ left: string[]; restored: string[] }> {
   const left: string[] = [];
-  const attempt = (what: string, step: () => Promise<void>): Promise<void> =>
-    step().catch((caught: unknown) => {
-      left.push(`${what}: ${messageOf(caught)}`);
-    });
+  const restored: string[] = [];
   for (const entry of entries) {
     const target = relativeTo(root, entry.file);
-    const owner = entry.placed ? await ownerOf(entry) : "other";
+    let intact = true;
+    const attempt = (what: string, step: () => Promise<void>): Promise<void> =>
+      step().catch((caught: unknown) => {
+        intact = false;
+        left.push(`${what}: ${messageOf(caught)}`);
+      });
+    let owner: "this run" | "other" | "unknown" | "uninspected" = "other";
+    if (entry.placed) {
+      owner = await ownerOf(entry).catch((caught: unknown): "uninspected" => {
+        left.push(
+          `${target} was left in place, as it could not be inspected: ${messageOf(caught)}`,
+        );
+        return "uninspected";
+      });
+    }
     if (owner === "this run") {
       await attempt(`${target} could not be removed`, () => rm(entry.file, { force: true }));
     } else if (owner === "unknown") {
@@ -324,32 +351,51 @@ async function undoPair(root: string, entries: readonly PairEntry[]): Promise<st
         `${target} was left in place: the file system gives no inode number, so it cannot be told apart from another run's file.`,
       );
     }
+    if (owner === "unknown" || owner === "uninspected") intact = false;
     const aside = entry.aside;
     if (aside !== null) {
       await attempt(`${relativeTo(root, aside)} still holds the earlier ${target}`, async () => {
-        if ((await lstat(entry.file).catch(() => null)) !== null) {
+        if ((await inspect(entry.file)) !== null) {
           throw new Error(`another file is at ${target}.`);
         }
         await rename(aside, entry.file);
       });
     }
+    // A staging file left behind is reported, but the target is as it was all the same.
     const staging = entry.staging;
     if (staging !== null) {
-      await attempt(`${relativeTo(root, staging)} could not be removed`, () =>
-        rm(staging, { force: true }),
-      );
+      await rm(staging, { force: true }).catch((caught: unknown) => {
+        left.push(`${relativeTo(root, staging)} could not be removed: ${messageOf(caught)}`);
+      });
     }
+    if (intact) restored.push(target);
   }
-  return left;
+  return { left, restored };
+}
+
+/** The entry's metadata, or null when nothing is there; any other failure to read it throws. */
+async function inspect(file: string): Promise<Stats | null> {
+  try {
+    return await lstat(file);
+  } catch (caught) {
+    if (isEnoent(caught)) return null;
+    throw caught;
+  }
 }
 
 /**
  * Whether the entry's target is still the file this run placed there, another file or none, or
- * cannot be told: a volume that gives no inode number reports 0 for every file.
+ * cannot be told: a volume that gives no inode number reports 0 for every file. Throws when the
+ * target cannot be inspected.
  */
 async function ownerOf(entry: PairEntry): Promise<"this run" | "other" | "unknown"> {
-  const found = await lstat(entry.file, { bigint: true }).catch(() => null);
-  if (found === null) return "other";
+  let found: BigIntStats;
+  try {
+    found = await lstat(entry.file, { bigint: true });
+  } catch (caught) {
+    if (isEnoent(caught)) return "other";
+    throw caught;
+  }
   if (entry.identity === null || entry.identity.ino === 0n || found.ino === 0n) return "unknown";
   return found.dev === entry.identity.dev && found.ino === entry.identity.ino
     ? "this run"
