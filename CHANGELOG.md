@@ -595,6 +595,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   outside the base URL stays unlinked, and a `--base-url` that is not an
   absolute http or https URL without a query, fragment or credentials exits 2.
 
+- **A `qfai validate` run that did not finish is no longer recorded as a
+  pass.** Under `--fail-on never` such a run exits 0, and its run log and the
+  `--format github` summary line took their verdict from that exit code, so
+  they said `pass` and `result=PASS` while the text output printed no pass
+  line. The run log now records the status `incomplete` and the summary line
+  reads `result=INCOMPLETE`, whatever `--fail-on` says. A reader of `run.json`,
+  `validator.json`, `summary.md` or `validate.log` that expects only `pass` or
+  `fail` now meets a third status.
+
 - **The design audit no longer drops findings past its display limit.** It
   kept only the first `uiux.audit.maxDuplicateFindingsPerRule` findings of a
   code and replaced the rest with one info finding, before flow scope and

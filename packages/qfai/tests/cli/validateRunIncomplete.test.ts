@@ -86,6 +86,30 @@ async function project(): Promise<string> {
   return dir;
 }
 
+/** The newest run log `validate` wrote under the default `paths.outDir`. */
+async function readRunLog(root: string): Promise<{
+  validateLog: string;
+  summary: string;
+  runJson: { result: { status: string; fail_on: string | null } };
+  validatorJson: { status: string };
+}> {
+  const outDir = path.join(root, ".qfai", "report");
+  const validateLog = await readFile(path.join(outDir, "validate.log"), "utf-8");
+  const reportDir = /^- run_log: (.+)$/m.exec(validateLog)?.[1];
+  if (reportDir === undefined) throw new Error("validate.log names no run_log");
+  const dir = path.join(root, reportDir);
+  return {
+    validateLog,
+    summary: await readFile(path.join(dir, "summary.md"), "utf-8"),
+    runJson: JSON.parse(await readFile(path.join(dir, "run.json"), "utf-8")) as {
+      result: { status: string; fail_on: string | null };
+    },
+    validatorJson: JSON.parse(await readFile(path.join(dir, "validator.json"), "utf-8")) as {
+      status: string;
+    },
+  };
+}
+
 /** A libuv error as Node raises one: `code`, `syscall`, `errno` and `path`. */
 const libuvError = (code: string, syscall: string, at: string): Error => {
   const err: NodeJS.ErrnoException = new Error(`${code}: operation failed, ${syscall} '${at}'`);
@@ -298,6 +322,55 @@ describe("validate reports a run it could not finish", () => {
     expect(out).toContain("QFAI-SCAN-002");
     expect(out).not.toMatch(/^qfai validate: passed /m);
     expect(out.trimEnd().split("\n").at(-2)).toBe("fail-on: never");
+  });
+
+  // QFAI:EX-0001-0039-60
+  it("records a run that did not finish as incomplete in every output, whatever --fail-on says", async () => {
+    // `--fail-on never` decides the exit code only. Before this, the run log
+    // and the GitHub summary derived their verdict from the exit threshold, so
+    // the run the text output refused to call a pass was recorded as one.
+    for (const failOn of ["never", "error"] as const) {
+      const root = await project();
+      validateProjectSpy.mockImplementation(() => Promise.reject(errno("EPERM", root)));
+      const lines: string[] = [];
+      const write = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+        lines.push(String(chunk));
+        return true;
+      });
+      try {
+        await runValidate({ root, strict: false, format: "github", failOn });
+      } finally {
+        write.mockRestore();
+      }
+
+      expect(lines.join("")).toMatch(/^qfai validate summary: .* result=INCOMPLETE$/m);
+      const run = await readRunLog(root);
+      expect(run.validateLog).toMatch(/^- status: incomplete$/m);
+      expect(run.summary).toMatch(/^- status: incomplete$/m);
+      expect(run.runJson.result.status).toBe("incomplete");
+      expect(run.runJson.result.fail_on).toBe(failOn);
+      expect(run.validatorJson.status).toBe("incomplete");
+    }
+  });
+
+  it("records a run that finished as a pass under --fail-on never", async () => {
+    // The negative control for the row above: a completed run keeps its pass.
+    const root = await project();
+    const lines: string[] = [];
+    const write = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    try {
+      await runValidate({ root, strict: false, format: "github", failOn: "never" });
+    } finally {
+      write.mockRestore();
+    }
+
+    expect(lines.join("")).toMatch(/^qfai validate summary: .* result=PASS$/m);
+    const run = await readRunLog(root);
+    expect(run.runJson.result.status).toBe("pass");
+    expect(run.validatorJson.status).toBe("pass");
   });
 
   it("does not report an incomplete run when validation completes", async () => {
