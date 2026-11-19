@@ -461,6 +461,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An HTML mock fenced under a mock heading is now checked once.** A
+  ` ```html ` fence under `## Screen Mock (HTML+CSS)` was read once as a
+  fence and again as part of the heading's section, so `qfai validate`
+  parsed it twice and could report the same finding twice. Each block is now
+  taken once by where it sits in the file, and two separate fences holding
+  the same HTML are both checked rather than merged into one.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that

@@ -17,11 +17,20 @@ export function mockMarkdownDir(root: string, config: QfaiConfig): string {
   return resolvePath(root, config, "specsDir");
 }
 
+/** A half-open span `[start, end)` of the Markdown source. */
+type SourceRange = { start: number; end: number };
+
+/**
+ * Each block is keyed by the source it came from, not by its text. A fence under a mock heading is
+ * reached by the fence pass and again by the heading's section, with different raw text each time,
+ * so a text key let it through twice; and two separate fences holding the same HTML are two
+ * blocks, which a text key merged into one.
+ */
 export function collectHtmlMockBlocks(content: string): HtmlMockBlock[] {
   const blocks: HtmlMockBlock[] = [];
-  const seen = new Set<string>();
+  const claimed: SourceRange[] = [];
 
-  const pushBlock = (html: string, rawBlock: string): void => {
+  const pushBlock = (html: string, rawBlock: string, range: SourceRange): void => {
     const trimmedHtml = html.trim();
     if (!trimmedHtml) {
       return;
@@ -29,11 +38,7 @@ export function collectHtmlMockBlocks(content: string): HtmlMockBlock[] {
     if (!/[<>]/.test(trimmedHtml)) {
       return;
     }
-    const key = `${trimmedHtml}\n---\n${rawBlock.trim()}`;
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
+    claimed.push(range);
     blocks.push({ html: trimmedHtml, rawBlock: rawBlock.trim() });
   };
 
@@ -41,39 +46,60 @@ export function collectHtmlMockBlocks(content: string): HtmlMockBlock[] {
     if (match[1] && match[0]) {
       let html = match[1];
       let rawBlock = match[0];
-      const sectionAfterHtml = content.slice(match.index + match[0].length);
-      const cssMatch = ADJACENT_CSS_FENCE_RE.exec(sectionAfterHtml);
+      let end = match.index + match[0].length;
+      const cssMatch = ADJACENT_CSS_FENCE_RE.exec(content.slice(end));
       if (cssMatch?.[1]) {
         html = mergeHtmlWithCss(html, cssMatch[1]);
         rawBlock = `${match[0]}\n${cssMatch[0]}`;
+        end += cssMatch[0].length;
       }
-      pushBlock(html, rawBlock);
+      pushBlock(html, rawBlock, { start: match.index, end });
     }
   }
 
-  for (const headingMatch of content.matchAll(SCREEN_MOCK_HEADING_RE)) {
-    const start = headingMatch.index;
-    const headingLine = headingMatch[0];
-    const bodyStart = start + headingLine.length;
+  const pushSection = (opener: string, bodyStart: number): void => {
     const remainder = content.slice(bodyStart);
     const nextHeadingOffset = remainder.search(NEXT_HEADING_RE);
-    const section = nextHeadingOffset === -1 ? remainder : remainder.slice(0, nextHeadingOffset);
-    const inlineHtml = extractInlineHtml(section);
-    pushBlock(inlineHtml, `${headingLine}\n${section}`);
+    const range = {
+      start: bodyStart,
+      end: nextHeadingOffset === -1 ? content.length : bodyStart + nextHeadingOffset,
+    };
+    const section = unclaimedText(content, range, claimed);
+    pushBlock(extractInlineHtml(section), `${opener}\n${section}`, range);
+  };
+
+  for (const headingMatch of content.matchAll(SCREEN_MOCK_HEADING_RE)) {
+    pushSection(headingMatch[0], headingMatch.index + headingMatch[0].length);
   }
 
   for (const commentMatch of content.matchAll(SCREEN_MOCK_COMMENT_RE)) {
-    const start = commentMatch.index;
-    const marker = commentMatch[0];
-    const bodyStart = start + marker.length;
-    const remainder = content.slice(bodyStart);
-    const nextHeadingOffset = remainder.search(NEXT_HEADING_RE);
-    const section = nextHeadingOffset === -1 ? remainder : remainder.slice(0, nextHeadingOffset);
-    const inlineHtml = extractInlineHtml(section);
-    pushBlock(inlineHtml, `${marker}\n${section}`);
+    pushSection(commentMatch[0], commentMatch.index + commentMatch[0].length);
   }
 
   return blocks;
+}
+
+/** The text of `range` with every span an earlier block already took cut out. */
+function unclaimedText(
+  content: string,
+  range: SourceRange,
+  claimed: readonly SourceRange[],
+): string {
+  const overlapping = claimed
+    .filter((taken) => taken.end > range.start && taken.start < range.end)
+    .sort((a, b) => a.start - b.start);
+  const pieces: string[] = [];
+  let cursor = range.start;
+  for (const taken of overlapping) {
+    if (taken.start > cursor) {
+      pieces.push(content.slice(cursor, taken.start));
+    }
+    cursor = Math.max(cursor, taken.end);
+  }
+  if (cursor < range.end) {
+    pieces.push(content.slice(cursor, range.end));
+  }
+  return pieces.join("\n");
 }
 
 export function collectScreenMockLabels(content: string): string[] {
