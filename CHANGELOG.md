@@ -572,12 +572,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
-- **`pnpm branch:catchup --push` pushes the commit it checked.** The helper
-  checked the current commit and then pushed `HEAD`, so other Git activity in
-  the checkout between the two could send a commit it never checked. It now
-  pushes the checked commit by its SHA to the same branch, as the manual push
-  steps in the development guide already do. Closes #4613.
-
 - **Graph preparation says when a step ran out of time or printed too much.**
   Runtime downloads and full code and document analysis ran under the same
   two-minute and 4 MiB limits as a version check, and a step stopped at either
@@ -688,6 +682,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version stops before installing anything. A workflow file `qfai init`
   already wrote keeps its old steps; delete it and run `qfai init` again to
   get these.
+
+- **`pnpm branch:catchup --push` pushes the commit it checked.** The helper
+  checked the current commit and then pushed `HEAD`, so other Git activity in
+  the checkout between the two could send a commit it never checked. It now
+  pushes the checked commit by its SHA to the same branch, as the manual push
+  steps in the development guide already do. Closes #4613.
 
 - **CSS beside an HTML mock now reaches the mock unchanged.** When
   `qfai validate` put a `css` block into the HTML mock before it, it read
