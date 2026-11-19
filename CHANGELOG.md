@@ -481,6 +481,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
 
+- **The `web-research` skill now ships the HTTP transport templates it
+  describes.** Every Brave Search and Firecrawl template started a stdio
+  server, though the skill and its contract call for HTTP transport too.
+  `firecrawl-hosted/` connects Claude Code, Codex and Copilot CLI to
+  Firecrawl's hosted MCP server and sends the API key as a bearer token from
+  `FIRECRAWL_API_KEY`; the skill says to export it before the agent starts.
+  `brave-search-http/` connects them to a Brave Search server you start in
+  HTTP mode on loopback; the skill gives the command.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
@@ -512,6 +521,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `requires: null`, or a `requires:` with no value, as `requires: []`. It now
   reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
   omitted `requires:` still counts as empty.
+
+- **The README's skipped-test check now names each allowed skip.** The
+  example script allowed a number of skipped tests per file, so one test's
+  skip could stand in for another's, and it read whatever report was on disk,
+  including one left by an earlier run. It now runs the test command itself,
+  removes any old report first, fails when the run writes none, and fails each
+  test that did not run unless `allowed-skips.json` lists its file and full
+  name. An allowlist written for the old script, with a count per file, makes
+  the new script stop with an error at the first skip in that file, so rewrite
+  each count as the names of the tests it covered.
 
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
@@ -640,6 +659,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a program that loaded a configuration and changed it changed the defaults
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
+
+- **`scripts/pr-threads.mjs list` counts every review thread and comment.** It
+  read only the newest 100 threads and the first 100 comments of a pull
+  request, so a longer one could show fewer unresolved threads or Codex review
+  comments than it had. It now reads every page of both. When a call fails or
+  the budget reserve stops it before the last page of comments, it says the
+  Codex comment count is incomplete (#4609).
 
 - **Graph preparation says when a step ran out of time or printed too much.**
   Runtime downloads and full code and document analysis ran under the same

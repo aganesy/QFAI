@@ -46,7 +46,9 @@ it is the release notes adopters read before they upgrade.
 ### Using the manual path
 
 - The version in `packages/qfai/package.json` and `CHANGELOG.md` are already updated
-- You have npm publish permission, and `npm whoami` succeeds
+- You can push tags to this repository (write access). No npm publish permission
+  is needed: the tag push starts `release.yml`, which publishes through trusted
+  publishing (OIDC) once a required reviewer of the `release` environment approves
 - If an earlier pull request already bumped the manifest version, Prepare release
   refuses that version, and Tag release does not run for a pull request that
   changes only `CHANGELOG.md`. Write the release pull request by hand (rename
@@ -192,6 +194,9 @@ Note: run the commands below from the repository root unless stated otherwise.
    - `pnpm verify:pack` succeeds
    - `npm publish --dry-run` succeeds
 
+   The dry-run needs no npm login. Without credentials npm warns that the
+   command requires you to be logged in, then still packs the package.
+
    After the dry-run, return to the repository root (Unix/Linux: `cd ../../`, PowerShell: `Set-Location ..\\..`). Run the remaining steps from the repository root.
 
 4. Create the tag (manual path only)
@@ -289,9 +294,8 @@ Inspect and recover those contents before retrying.
 
 ## Notes
 
-- Check that you are logged in with `npm whoami`.
-- With 2FA enabled, use an automation token (`NPM_TOKEN`).
-- Running npm publish needs authentication such as `NPM_TOKEN`.
+- No step needs npm credentials: `release.yml` publishes through trusted
+  publishing (OIDC), and the dry-run in step 3 runs without a login.
 - `--access public` is not needed for unscoped packages (only for scoped ones).
 - Always run publish under `packages/qfai`.
 - `report.json` and `doctor.json` are internal representations with no compatibility guarantee. For external integration, use Markdown output such as `report.md`.
