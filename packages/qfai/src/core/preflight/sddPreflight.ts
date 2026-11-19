@@ -1,9 +1,10 @@
-import { mkdir, open, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { allocateRunDir, hasNewerRunDir } from "../runLog.js";
+import { blockedAncestor } from "../fs/templateCopy.js";
+import { allocateRunDir, hasNewerRunDir, replaceFile } from "../runLog.js";
 
 const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
 /**
@@ -80,7 +81,7 @@ export async function runSddPreflight(
 ): Promise<SddPreflightResult> {
   const deliberationRoot = resolvePath(root, config, "deliberationDir");
   const reportRoot = resolvePath(root, config, "outDir");
-  const run = await allocatePreflightRun(reportRoot, options.startedAt ?? new Date());
+  const run = await allocatePreflightRun(root, reportRoot, options.startedAt ?? new Date());
   const openQuestions = normalizeTextList(options.assumptions);
 
   if (options.recordPath !== undefined) {
@@ -264,9 +265,13 @@ function toSummaryPaths(
 }
 
 /** Reserve `<outDir>/preflight/run-<timestamp>/` for this preflight. */
-async function allocatePreflightRun(reportRoot: string, startedAt: Date): Promise<PreflightRun> {
+async function allocatePreflightRun(
+  root: string,
+  reportRoot: string,
+  startedAt: Date,
+): Promise<PreflightRun> {
   const runRoot = path.join(reportRoot, PREFLIGHT_RUN_ROOT);
-  await mkdir(runRoot, { recursive: true });
+  await ensureDirectoryWithin(root, reportRoot, runRoot);
 
   const { runId, runDir } = await allocateRunDir(runRoot, startedAt);
   return {
@@ -302,7 +307,7 @@ const PREFLIGHT_RUN_ID_LINE_RE = /^-\s*run id:\s*(run-\d{17})\s*$/m;
  */
 async function publishPreflightSummary(run: PreflightRun, body: string): Promise<void> {
   const contents = `${body}\n`;
-  await writeFile(run.summaryPath, contents, "utf-8");
+  await replaceFile(run.summaryPath, contents);
 
   if (await hasNewerRunDir(run.runRoot, run.runId)) {
     return;
@@ -317,7 +322,78 @@ async function publishPreflightSummary(run: PreflightRun, body: string): Promise
   if (existingRunId !== null && existingRunId > run.runId) {
     return;
   }
-  await writeFile(run.latestSummaryPath, contents, "utf-8");
+  await replaceFile(run.latestSummaryPath, contents);
+}
+
+/** Whether `target` is `base` or lies under it, compared as paths. */
+function isWithin(base: string, target: string): boolean {
+  const relative = path.relative(base, target);
+  return relative === "" || (!path.isAbsolute(relative) && relative.split(path.sep)[0] !== "..");
+}
+
+/**
+ * Create `directory` under `reportRoot` and prove it physically lies there.
+ *
+ * When `paths.outDir` lies in the project, which the default `.qfai/report`
+ * does, every component from the project root down is checked and the
+ * directory must resolve under the root. When the project points
+ * `paths.outDir` elsewhere, the check starts at `paths.outDir` itself and the
+ * directory must resolve under it. A checked component that is a symbolic link
+ * or a junction would carry every write to wherever it points: `mkdir` and
+ * `writeFile` both follow it. So each component is `lstat`-ed before and after
+ * creating the directory, and the directory's real path is checked against the
+ * start's. Nothing is written when any check fails.
+ */
+async function ensureDirectoryWithin(
+  root: string,
+  reportRoot: string,
+  directory: string,
+): Promise<void> {
+  const insideRoot = isWithin(root, reportRoot);
+  const containment = insideRoot ? root : reportRoot;
+  // `blockedAncestor` checks the components below the path it starts from, so
+  // an outside `paths.outDir` is walked from its parent to check it too, and a
+  // file name under `directory` makes it check `directory` itself.
+  const walkFrom = insideRoot ? root : path.dirname(reportRoot);
+  const probe = path.join(directory, PREFLIGHT_SUMMARY_FILE);
+
+  await refuseBlockedComponent(root, walkFrom, probe);
+  await mkdir(directory, { recursive: true });
+  await refuseBlockedComponent(root, walkFrom, probe);
+
+  if (!isWithin(await realpath(containment), await realpath(directory))) {
+    throw new Error(
+      `${toDisplayPath(root, directory)} resolves outside ${toDisplayPath(root, containment)}, ` +
+        "so the preflight summary would be written outside the output directory. " +
+        "Nothing was written. Replace the linked directory with a real one, or set paths.outDir to one.",
+    );
+  }
+}
+
+/** Stop, naming the component and why, when a component on `probe`'s path is unsafe. */
+async function refuseBlockedComponent(
+  root: string,
+  walkFrom: string,
+  probe: string,
+): Promise<void> {
+  const entry = await blockedAncestor(walkFrom, probe);
+  if (entry === undefined) return;
+  const shown = toDisplayPath(root, entry);
+  if ((await lstat(entry)).isSymbolicLink()) {
+    throw new Error(
+      `${shown} is a symbolic link or junction, so the preflight summary would be written ` +
+        "outside the output directory. Nothing was written. " +
+        "Replace it with a real directory, or set paths.outDir to one.",
+    );
+  }
+  throw new Error(
+    `${shown} is not a directory, so the preflight output directory cannot be created. ` +
+      "Nothing was written. Move it aside, or set paths.outDir to a directory.",
+  );
+}
+
+function toDisplayPath(root: string, target: string): string {
+  return (path.relative(root, target) || ".").replace(/\\/g, "/");
 }
 
 /**
