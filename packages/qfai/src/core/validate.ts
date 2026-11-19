@@ -285,7 +285,9 @@ export async function validateProject(
     ...scopeIssues,
     ...profileRun.issues,
   ];
-  const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));
+  const scopedFindings = findings.filter((finding) =>
+    isFindingInFlowScope(finding, flowScope, root),
+  );
   const { issues, waivers } = await applyWaivers(root, scopedFindings);
 
   const toolVersion = await resolveToolVersion();
@@ -316,7 +318,7 @@ export async function validateProject(
   };
 }
 
-function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boolean {
+function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined, root: string): boolean {
   if (!scope || finding.code === "QFAI-FLOW-005") return true;
   if (
     !finding.code.startsWith("QFAI-STORY-") &&
@@ -326,7 +328,7 @@ function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boo
     return true;
   }
   if (finding.refs?.some((ref) => flowScopeContainsId(scope, ref))) return true;
-  return finding.file ? flowScopeContainsFile(scope, finding.file) : false;
+  return finding.file ? flowScopeContainsFile(scope, finding.file, root) : false;
 }
 
 /**

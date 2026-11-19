@@ -1,7 +1,9 @@
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
-import { resolveFlowScope } from "../../../src/core/flowScope.js";
+import { flowScopeContainsFile, resolveFlowScope } from "../../../src/core/flowScope.js";
 import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
 import {
   isStoryTreeId,
@@ -472,6 +474,27 @@ describe("story-tree core", () => {
       storyIds: ["US-0001-0001"],
       ruleIds: ["BR-API-0001-0001"],
     });
+  });
+
+  it("matches a root-relative finding path against an absolute story model", () => {
+    const root = path.resolve("project");
+    const absolute = new Map(
+      [...storyFiles].map(([file, text]) => [path.join(root, file), text] as const),
+    );
+    const model = buildStoryTreeModel(absolute, {
+      contractsDir: path.join(root, ".qfai/spec/03_contract"),
+    });
+    const scope = resolveFlowScope(["BF-0001"], model);
+    const story =
+      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md";
+    expect(flowScopeContainsFile(scope, story, root)).toBe(true);
+    expect(flowScopeContainsFile(scope, path.join(root, story), root)).toBe(true);
+    expect(
+      flowScopeContainsFile(scope, ".qfai/spec/02_business-flow/business-flow-0002/x.md", root),
+    ).toBe(false);
+    expect(
+      flowScopeContainsFile(scope, ".qfai/spec/02_business-flow/business-flow-00010/x.md", root),
+    ).toBe(false);
   });
 });
 

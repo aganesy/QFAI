@@ -193,7 +193,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     await put(
       root,
       `${flow}/business-flow.md`,
-      `# ${flowId}: Complete checkout\n\n## Purpose\n\nA buyer completes checkout.\n\n## Flow\n\n\`\`\`mermaid\nflowchart TD\n  Need[Buyer needs a total] --> Story[Define checkout and its contract]\n  Story --> Verify[Verify acceptance and implementation]\n\`\`\`\n`,
+      `# ${flowId}: Complete checkout\n\n## Purpose\n\nA buyer completes checkout.\n\n## Flow\n\n\`\`\`mermaid\nflowchart TD\n  Need[Buyer needs a total] --> Story[Define checkout and its contract]\n  Story --> Verify[Verify acceptance and implementation]\n\`\`\`\n\n## Alternate and exception paths\n\n- An empty cart ends checkout before payment.\n`,
     );
     await put(
       root,

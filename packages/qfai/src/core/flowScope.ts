@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { isStoryTreeId } from "./storyTree/ids.js";
 import type { StoryTreeModel } from "./storyTree/tree.js";
 
@@ -61,12 +63,22 @@ export function flowScopeContainsId(scope: FlowScope, id: string): boolean {
   ].includes(id);
 }
 
-export function flowScopeContainsFile(scope: FlowScope, file: string): boolean {
-  const normalized = file.replace(/\\/g, "/");
+/**
+ * A path resolved against the project root, with POSIX separators. The story model names its
+ * files absolutely while some validators name them relative to the root, so both sides of a
+ * comparison pass through here.
+ */
+function fromRoot(root: string, file: string): string {
+  return path.resolve(root, file.replace(/\\/g, "/")).split(path.sep).join("/");
+}
+
+export function flowScopeContainsFile(scope: FlowScope, file: string, root: string): boolean {
+  const target = fromRoot(root, file);
   return (
-    scope.ruleFiles.includes(normalized) ||
-    scope.flowDirectories.some(
-      (directory) => normalized === directory || normalized.startsWith(`${directory}/`),
-    )
+    scope.ruleFiles.some((ruleFile) => fromRoot(root, ruleFile) === target) ||
+    scope.flowDirectories.some((directory) => {
+      const resolved = fromRoot(root, directory);
+      return target === resolved || target.startsWith(`${resolved}/`);
+    })
   );
 }
