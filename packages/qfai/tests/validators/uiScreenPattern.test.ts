@@ -3,8 +3,9 @@
  *
  * A screen names its type in the shipped business UI pattern reference by the
  * type's ID, so the author, the implementer and the reviewer read the same
- * entry. The key is optional; only a value outside the vocabulary is reported,
- * because it names an entry the reference does not have.
+ * entry. The key is optional. A value outside the vocabulary is reported,
+ * because it names an entry the reference does not have, and so is any value on
+ * a marketing screen, which is read against the marketing reference instead.
  */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -144,6 +145,46 @@ describe("validate and the pattern key", () => {
     const [finding] = await validateUiScreenPattern(root, defaultConfig);
 
     expect(finding?.message).toContain('`pattern: ["list"]`');
+  });
+
+  // QFAI:EX-0001-0039-55
+  it("reports a filled pattern on a marketing screen once, and passes one without", async () => {
+    const root = await rootWithContract(
+      "  - id: pricing",
+      "    route: /pricing",
+      "    surface: marketing",
+      "    pattern: list",
+      "  - id: features",
+      "    route: /features",
+      "    surface: marketing",
+      "    pattern: table",
+      "  - id: home",
+      "    route: /",
+      "    surface: marketing",
+      "  - id: about",
+      "    route: /about",
+      "    surface: marketing",
+      "    pattern:",
+      "  - id: orders",
+      "    route: /orders",
+      "    surface: application",
+      "    pattern: list",
+    );
+
+    const issues = await validateUiScreenPattern(root, defaultConfig);
+
+    expect(issues.map((finding) => finding.refs)).toEqual([["pricing"], ["features"]]);
+    for (const finding of issues) {
+      expect(finding.code).toBe("QFAI-CONTRACT-056");
+      expect(finding.severity).toBe("error");
+      expect(finding.file).toBe(CONTRACT);
+      expect(finding.message).toContain("`surface: marketing`");
+      expect(finding.message).toContain("A marketing screen takes no `pattern`");
+      expect(finding.suggested_action).toContain("Drop `pattern` from the marketing screen");
+    }
+    expect(issues[0]?.message).toContain("`pattern: list`");
+    expect(issues[1]?.message).toContain("`pattern: table`");
+    expect(issues[1]?.message).not.toContain("The vocabulary is");
   });
 
   it("runs with the contract checks", async () => {

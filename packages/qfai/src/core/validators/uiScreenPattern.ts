@@ -10,12 +10,16 @@
  * ## What is asked, and of whom
  *
  * The key is optional, so a contract that never writes it is asked nothing. An
- * empty `pattern:`, or an empty string, is a slot nobody has filled yet. Only a
- * value outside the vocabulary is reported, because it names an entry the
- * reference does not have. The vocabulary is the business types: a marketing
- * screen's sections are named against the marketing pattern reference, so a
- * marketing screen leaves the key out, and a value it writes is read the same
- * way as on any other screen.
+ * empty `pattern:`, or an empty string, is a slot nobody has filled yet. Two
+ * filled values are reported:
+ *
+ * - a value outside the vocabulary, because it names an entry the reference
+ *   does not have;
+ * - any value on a screen that declares `surface: marketing`. The vocabulary
+ *   is the business types, and a marketing screen's sections are named against
+ *   the marketing pattern reference, so a marketing screen leaves the key out.
+ *   A filled one would give the implementer and the reviewer two references to
+ *   read the screen against.
  *
  * A `screens` that is not a list, and an entry that is not a mapping, are left
  * to `QFAI-CONTRACT-042`, which reports them.
@@ -30,6 +34,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { readUiContractDocuments } from "../contracts/screenContracts.js";
 import type { Issue } from "../types.js";
+import { screenSurfaceOf } from "./uiScreenSurface.js";
 import { issue } from "./utils.js";
 
 export const UI_SCREEN_PATTERN_RULE_ID = "QFAI-CONTRACT-056";
@@ -78,16 +83,41 @@ function screensOf(parsed: unknown): unknown[] {
   return Array.isArray(screens) ? screens : [];
 }
 
-type UnknownPattern = { file: string; index: number; screenId: string; value: string };
+/**
+ * Why a screen's `pattern` is reported: a value outside the vocabulary, or any
+ * filled value on a marketing screen, which takes none. A marketing screen is
+ * reported once, as dropping the key settles both.
+ */
+type PatternFault = "unknown" | "marketing";
 
-function unknownPatternsIn(parsed: unknown, file: string): UnknownPattern[] {
+type ReportedPattern = {
+  file: string;
+  index: number;
+  screenId: string;
+  value: string;
+  fault: PatternFault;
+};
+
+function faultOf(entry: Readonly<Record<string, unknown>>): PatternFault | null {
+  const pattern = screenPatternOf(entry);
+  if (pattern !== null && screenSurfaceOf(entry) === "marketing") {
+    return "marketing";
+  }
+  return pattern === undefined ? "unknown" : null;
+}
+
+function reportedPatternsIn(parsed: unknown, file: string): ReportedPattern[] {
   return screensOf(parsed).flatMap((entry, index) => {
-    if (!isMapping(entry) || screenPatternOf(entry) !== undefined) {
+    if (!isMapping(entry)) {
+      return [];
+    }
+    const fault = faultOf(entry);
+    if (fault === null) {
       return [];
     }
     const screenId = typeof entry.id === "string" ? entry.id.trim() : "";
     const value = typeof entry.pattern === "string" ? entry.pattern : JSON.stringify(entry.pattern);
-    return [{ file, index, screenId, value }];
+    return [{ file, index, screenId, value, fault }];
   });
 }
 
@@ -97,24 +127,31 @@ export async function validateUiScreenPattern(root: string, config: QfaiConfig):
   const documents = (await readUiContractDocuments(uiDir, root))
     .slice()
     .sort((a, b) => a.relativePath.localeCompare(b.relativePath));
-  const unknown = documents.flatMap(({ relativePath, parsed }) =>
-    unknownPatternsIn(parsed, relativePath),
+  const reported = documents.flatMap(({ relativePath, parsed }) =>
+    reportedPatternsIn(parsed, relativePath),
   );
 
   const vocabulary = SCREEN_PATTERNS.map((pattern) => `\`${pattern}\``).join(", ");
-  return unknown.map(({ file, index, screenId, value }) => {
+  return reported.map(({ file, index, screenId, value, fault }) => {
     const where = screenId
       ? `screen '${screenId}' (\`screens[${String(index)}]\`)`
       : `\`screens[${String(index)}]\``;
+    const marketing = fault === "marketing";
+    const message = marketing
+      ? `UI contract ${where} declares \`surface: marketing\` and \`pattern: ${value}\`. A marketing screen takes no \`pattern\`: its sections are named against the marketing UI pattern reference, not a business screen type.`
+      : `UI contract ${where} declares \`pattern: ${value}\`, which is not a screen type of the business UI pattern reference. The vocabulary is ${vocabulary}.`;
+    const remedy = marketing
+      ? "Drop `pattern` from the marketing screen, or drop `surface: marketing` when it is an application screen of that type."
+      : `Set \`pattern\` to one of ${vocabulary}, or drop the key for a screen that fits no type, such as a marketing screen.`;
     return issue(
       UI_SCREEN_PATTERN_RULE_ID,
-      `UI contract ${where} declares \`pattern: ${value}\`, which is not a screen type of the business UI pattern reference. The vocabulary is ${vocabulary}.`,
+      message,
       "error",
       file,
       "contracts.ui.pattern",
       screenId ? [screenId] : undefined,
       "canonical",
-      `Set \`pattern\` to one of ${vocabulary}, or drop the key for a screen that fits no type, such as a marketing screen.`,
+      remedy,
     );
   });
 }

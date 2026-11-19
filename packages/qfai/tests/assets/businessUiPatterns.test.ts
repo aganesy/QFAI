@@ -100,6 +100,31 @@ describe("business UI pattern reference", () => {
       expect(step).toContain("as `pattern: <id>` with the type's ID");
       expect(step).toContain("takes no `pattern`");
     });
+
+    // QFAI:EX-0001-0305-08
+    it(`${tree}: the implementation and the screen review take a screen's type from its pattern`, async () => {
+      const read = async (file: string) =>
+        (await readFile(path.join(root, file), "utf-8")).replace(/\s+/g, " ");
+      const step = await read("step/implement-tdd/STEP.md");
+      const reviewer = await read("agent/product-surface-reviewer.md");
+      const reference = await read(REFERENCE);
+      const fallback =
+        "choose the type the screen matches, or none, only when the contract writes no `pattern`";
+
+      expect(step).toContain("taking the type from the `pattern` its UI contract declares");
+      expect(step).toContain(
+        "choosing the type the screen matches, or none, only when the contract writes no `pattern`",
+      );
+      expect(step).toContain("for a screen whose contract declares `surface: marketing`");
+      expect(reviewer).toContain("Take the type from the `pattern` its UI contract declares");
+      expect(reviewer).toContain(fallback);
+      expect(reviewer).toContain("Check a screen whose UI contract declares `surface: marketing`");
+      expect(reference).toContain(
+        "Take the screen's type from the `pattern` its contract declares",
+      );
+      expect(reference).toContain(fallback);
+      expect(reference).toContain("Its type is read the same way: from its `pattern`");
+    });
   }
 
   // QFAI:EX-0001-0305-05

@@ -245,6 +245,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   for its file in `.qfai/waivers.yml`, with its reason, evidence and expiry
   date.
 
+- **The implementer and the screen reviewer take a screen's type from its
+  `pattern`.** `implement-tdd` and the `product-surface-reviewer` card read an
+  application screen's business type from the `pattern` its UI contract
+  declares, and choose the type from the screen only when the contract writes
+  none, so both read the same entry of `business-ui-patterns.md`. A `pattern`
+  on a `surface: marketing` screen is now reported as `QFAI-CONTRACT-056` at
+  error: a marketing screen takes none, and its sections are read against the
+  marketing patterns.
+
 - The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
 
 - **A scope that stops before implementation can reach its own commit.** In
@@ -452,6 +461,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Repository text in `qfai validate` text output can no longer open a CI
+  command.** The shipped CI workflow runs `qfai validate` in the default text
+  format, and the GitHub runner reads a log line starting with `::`, after its
+  leading spaces, as a workflow command. A finding's message, path, refs or
+  suggested action comes from the repository, so a pull request could print
+  `::stop-commands::<token>` on a line of its own and hide every later
+  annotation. Each further line of a message or a `fix:` value now starts
+  with a vertical bar after its indent, and control characters in these
+  fields, in the `run-log:` path and in the `--format github` summary paths
+  print as visible escapes such as `\n`, `\t` and `\u001B`. The older
+  `##[<command>]` form, which the runner finds anywhere in a line, prints as
+  `##\[`. The JSON report keeps the exact values.
+
 - **`qfai validate` reports the actual line of a Mermaid screen-flow
   finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction
   warnings named the line before the one they flagged. They now name the
@@ -499,6 +521,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that, for example `character varying(20)`. A type outside `pg_catalog` reads
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
+
+- **`qfai sdd next-id` reads the ID kind without regard to case.**
+  `qfai sdd next-id ac US-0001-0001 --base main` was refused as an unknown
+  kind, though `AC` worked. The kind is now read in any case, so `ac` counts
+  as `AC`, and a lower-case `dec` or `oq` gets the same reason as `DEC` or
+  `OQ`. Closes #4445.
 
 - **Migration step 11 keeps a skill or step when its replacement fails.** Step
   11 deleted a skill or step directory that differed from the package's copy
@@ -638,6 +666,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   writes only the scoped file, and a report read without `--in` that records
   another profile than `--profile` exits 2 and names the validate run to
   repeat. Closes #4468.
+
+- **The migration's step 12 scan no longer reads files outside the project.**
+  A tracked file whose directory in the working tree was a link to elsewhere
+  was read through that link, so the scan could report lines from a file the
+  project does not hold. The scan now resolves each file's directory against
+  the project root, with every link followed, and leaves out a file whose
+  directory lands outside it. A project reached through a linked root is still
+  scanned in full. Closes #4458.
 
 - **`qfai validate` no longer waits forever on the document-schema check.**
   An mdschema run that never exited held `validate` open, and one that printed
