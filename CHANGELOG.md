@@ -536,6 +536,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   settles, the `tech.md` `Surface` row and the UI contracts linked to the
   flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
 
+- **A skill's auto-decide entries are checked the way its hard-required
+  entries are.** `QFAI-POLICY-002` skipped a value written on the
+  `- auto-decide:` line itself, read the children of a later bullet as
+  auto-decide entries, and passed any entry that merely mentioned an allowed
+  category, such as `destructive operations alongside output formatting`. The
+  bucket is now read like hard-required, and each entry must be one of the four
+  categories or open with one and name its operations after a colon,
+  parenthesis or dash. `/qfai-implement` now lists its implementation choices
+  as an equivalent-option pick. Closes #4494.
+
 - **The colour warning reads more of the places a colour is written.**
   `QFAI-DCAT-003` now reads a hex that is a whole Tailwind arbitrary value,
   such as `bg-[#123456]`, a hex inside a CSS function such as
