@@ -135,7 +135,7 @@ describe("reviewer depth and completion", () => {
   it("holds the stage until every finding of its one review is fixed or answered", async () => {
     const cycle = await readFlat(assistant, "step", "common-review-cycle", "STEP.md");
     expect(cycle).toContain(
-      "5. **Complete** once every reviewer has responded, each behaviour fix has had its one re-review, and every finding is fixed or answered.",
+      "5. **Complete** once every reviewer has responded, each behaviour fix made for a finding of the first review has had its one re-review, and every finding is fixed or answered.",
     );
     const baseline = await readFlat(assistant, "rule", "shared-skill-delegation-baseline.md");
     expect(baseline).toContain(
@@ -157,7 +157,10 @@ describe("reviewer depth and completion", () => {
     );
     expect(cycle).toContain("No other reviewer is rerun.");
     expect(cycle).toContain(
-      "Every required reviewer responded once, each behaviour fix had its one focused re-review,",
+      "Every required reviewer responded once, each behaviour fix made for a finding of the first review had its one focused re-review,",
+    );
+    expect(cycle).toContain(
+      "A fix made for a finding of that re-review gets none (`.qfai/assistant/rule/review-convergence.md#one-review`).",
     );
     const convergence = await readFlat(assistant, "rule", "review-convergence.md");
     expect(convergence).toContain(
