@@ -496,6 +496,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **A report without `--flow` counts every declared contract.** The summary
+  counted only contracts holding a business rule linked to a flow, so a project
+  with one declared contract and no linked rule reported zero contracts. Only a
+  report scoped by `--flow` now limits the count to the contracts its flows
+  link.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one

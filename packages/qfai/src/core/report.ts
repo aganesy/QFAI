@@ -58,7 +58,12 @@ export async function createReportData(
   const examples = new Set(flows.flatMap((flow) => flow.examples));
   const rules = new Set(flows.flatMap((flow) => flow.rules));
   const contracts = new Set(
-    model.rules.filter((rule) => rules.has(rule.id)).map((rule) => rule.file),
+    selected
+      ? model.rules.filter((rule) => rules.has(rule.id)).map((rule) => rule.file)
+      : [
+          ...model.contracts.map((contract) => contract.file),
+          ...model.rules.map((rule) => rule.file),
+        ],
   );
   return {
     tool: "qfai",
