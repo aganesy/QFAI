@@ -862,17 +862,22 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
 const reportPath = "test-report.json";
-const command = process.argv.slice(2).join(" ");
-if (command === "") {
-  console.error("usage: node scripts/check-skipped-tests.mjs <test command>");
+const [command, ...args] = process.argv.slice(2);
+if (command === undefined) {
+  console.error("usage: node scripts/check-skipped-tests.mjs <test command> [args...]");
   process.exit(2);
 }
 const allowed = JSON.parse(readFileSync("allowed-skips.json", "utf8"));
 // A report left by an earlier run would hide this run's skips.
 rmSync(reportPath, { force: true });
-const run = spawnSync(command, { shell: true, stdio: "inherit" });
+// Each argument reaches the runner as given. Windows needs a shell to find a
+// runner's .cmd shim, and cmd.exe splits an argument that holds a space.
+const run = spawnSync(command, args, {
+  shell: process.platform === "win32",
+  stdio: "inherit",
+});
 if (!existsSync(reportPath)) {
-  console.error(`${reportPath}: not written by this run of ${command}`);
+  console.error(`${reportPath}: not written by this run of ${[command, ...args].join(" ")}`);
   process.exit(1);
 }
 const report = JSON.parse(readFileSync(reportPath, "utf8"));

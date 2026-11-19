@@ -272,6 +272,7 @@ describe("README facts", () => {
       "  }));",
       '  writeFileSync("test-report.json", JSON.stringify({ testResults }));',
       "}",
+      "process.exit(Number(process.argv[2] ?? 0));",
     ].join("\n");
     const ORDERS = "tests/orders.test.ts";
     const allowedSkip = { fullName: "orders refunds a cancelled order", status: "skipped" };
@@ -281,6 +282,7 @@ describe("README facts", () => {
       readmePath: string,
       fixture: unknown,
       staleReport: unknown,
+      runnerExitCode = 0,
     ): Promise<{ status: number | null; stderr: string }> {
       const readme = await readFile(readmePath, "utf-8");
       const anchor = readme.search(/save this script as `scripts\/check-skipped-tests\.mjs`/i);
@@ -305,7 +307,12 @@ describe("README facts", () => {
         }
         const run = spawnSync(
           process.execPath,
-          [path.join("scripts", "check-skipped-tests.mjs"), "node", "fake-runner.mjs"],
+          [
+            path.join("scripts", "check-skipped-tests.mjs"),
+            "node",
+            "fake-runner.mjs",
+            String(runnerExitCode),
+          ],
           { cwd: dir, encoding: "utf-8" },
         );
         return { status: run.status, stderr: run.stderr };
@@ -320,9 +327,23 @@ describe("README facts", () => {
         [{ name: ORDERS, tests: [passing, allowedSkip] }],
         undefined,
       );
-      expect(result.stderr).toBe("");
+      expect(result.stderr).not.toContain("did not run");
       expect(result.status).toBe(0);
     });
+
+    it.each(READMES)(
+      "fails when the test command fails, though its report has no unlisted skip (%s)",
+      async (readmePath) => {
+        const result = await runCheck(
+          readmePath,
+          [{ name: ORDERS, tests: [passing, allowedSkip] }],
+          undefined,
+          3,
+        );
+        expect(result.stderr).not.toContain("did not run");
+        expect(result.status).toBe(1);
+      },
+    );
 
     it.each(READMES)(
       "fails a skip the allowlist does not name, in a file that has an allowed one (%s)",
