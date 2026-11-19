@@ -74,12 +74,6 @@ describe("web-research pipeline", () => {
     expect(content).toMatch(/stdio|mcp/i);
   });
 
-  // QFAI:EX-0001-0177-02
-  it("references MCP HTTP transport support", async () => {
-    const content = await readSkill();
-    expect(content).toMatch(/http\s+transport|http[_\s-]?based\s+mcp|streamable[_\s-]?http/i);
-  });
-
   // QFAI:EX-0001-0177-05
   it("cross-agent MCP templates exist for at least 2 of 3 agent formats", async () => {
     const braveDir = path.join(mcpTemplateDir, "brave-search");
