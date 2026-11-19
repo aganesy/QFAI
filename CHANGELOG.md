@@ -581,6 +581,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   stopped at its limit is reported as that, naming the step, the limit and its
   value, and a stopped document analysis says to narrow the document scope.
 
+- **The shipped test workflow stops on a blank layer test script.** A
+  `test:unit`, `test:component`, `test:integration`, `test:api` or `test:e2e`
+  script that was empty or only whitespace counted as a declared layer, and a
+  blank script exits successfully without running anything, so its lane went
+  green over no tests. The change detection job now stops, names the blank
+  script and turns the check red. A layer with no script stays optional.
+
 - **A failed graph tool download names a directory of its own to retry in.**
   The recovery line of `qfai init` told you to rerun the download into a fixed
   `qfai-graph-check` directory under the system temporary directory and then
@@ -669,6 +676,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.cts` file compiled in `node16` mode got TS1471 for a `require("qfai")`
   that worked at runtime. `require` now resolves its types to `index.d.cts`,
   and `import` keeps `index.d.ts`. Closes #4598.
+
+- **`pnpm branch:catchup --push` pushes the commit it checked.** The helper
+  checked the current commit and then pushed `HEAD`, so other Git activity in
+  the checkout between the two could send a commit it never checked. It now
+  pushes the checked commit by its SHA to the same branch, as the manual push
+  steps in the development guide already do. Closes #4613.
 
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
@@ -775,6 +788,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
+- **A release heading the publish would refuse now stops the tag.** Tagging
+  accepted any `CHANGELOG.md` line starting `## [X.Y.Z]`, while publishing
+  also required ` - YYYY-MM-DD` after it, so a heading without a date was
+  tagged and then refused by the publish. Tagging, publishing and the
+  release-notes comparison now read the heading through one parser, and a
+  heading that names the version in another shape fails the tag run with the
+  line it found. Closes #4599.
 
 - **`qfai validate` reads every skill document within the same size limit.**
   A document the skill-tree crawl found was read whole into memory, while the

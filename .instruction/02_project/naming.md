@@ -64,8 +64,8 @@ one kind of content each section holds. `qfai validate` reports a violation as
 A decision or question ID takes no candidate. Every other new ID comes from
 `node scripts/story-ids.mjs next <scope>...`, for example
 `next EX-0001-0054`. It is a candidate, not a reservation. The command
-counts a snapshot of main, the latest 100 updated open pull requests and the
-working tree. It does not guarantee unique allocation for unpublished branches
+counts a snapshot of main, every open pull request and the working tree, and
+answers nothing when a page of the listing could not be read. It does not guarantee unique allocation for unpublished branches
 or simultaneous checks followed by pushes.
 
 Commit the ID and reference changes before running check, and use a clean index

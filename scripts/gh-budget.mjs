@@ -46,9 +46,22 @@
  * Exit codes: 0 answered, 1 the remaining budget is below the reserve, 2 the
  * arguments, `git` or `gh` could not be read.
  */
-/* global console, process */
+/* global Buffer, console, process */
 import { execFileSync } from "node:child_process";
-import { mkdirSync, statSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import {
+  closeSync,
+  constants as fsConstants,
+  fstatSync,
+  fsyncSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeSync,
+} from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -69,10 +82,14 @@ const ROOT = path.resolve(fileURLToPath(import.meta.url), "..", "..");
  * `tmp/` at the repository root, which `.agents/rules/temporary-files.md`
  * reserves for exactly this and `.gitignore` already excludes.
  */
-export const CACHE_DIR = path.join(ROOT, "tmp", "gh-budget");
+const CACHE_PARTS = ["tmp", "gh-budget"];
+export const CACHE_DIR = path.join(ROOT, ...CACHE_PARTS);
 
-/** The saved reading. Small by construction, so a bounded read is enough. */
-const READING_PATH = path.join(CACHE_DIR, "last-reading.json");
+/** The saved reading's file name. */
+const READING_NAME = "last-reading.json";
+
+/** The saved reading is small by construction, so this bounds its read and its write. */
+const READING_MAX_BYTES = 4096;
 
 /** A job log can run to megabytes, so the child's buffer has to hold one. */
 const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
@@ -147,7 +164,9 @@ export function describeReading(reading) {
  * one, where the allowance is whole again.
  */
 export function lastReading(now = Date.now()) {
-  const text = readBoundedText(READING_PATH, 4096);
+  const directory = cacheDirectory(ROOT, CACHE_PARTS, { create: false });
+  if (directory.error !== undefined) return undefined;
+  const text = readBoundedText(path.join(directory.path, READING_NAME), READING_MAX_BYTES);
   if (text === undefined) return undefined;
   let parsed;
   try {
@@ -173,9 +192,162 @@ function readingOf(value) {
   };
 }
 
+/**
+ * Saves the reading. A refusal is reported and the answer goes on: the reading
+ * only spares the next invocation a guess.
+ */
 function saveReading(reading) {
-  mkdirSync(CACHE_DIR, { recursive: true });
-  writeFileSync(READING_PATH, `${JSON.stringify(reading)}\n`, "utf-8");
+  const saved = writeCacheEntry(
+    ROOT,
+    CACHE_PARTS,
+    READING_NAME,
+    `${JSON.stringify(reading)}\n`,
+    READING_MAX_BYTES,
+  );
+  if (saved.error !== undefined) console.error(`The reading was not saved: ${saved.error}`);
+}
+
+/** A cache entry name: one plain path segment, never `.`, `..` or a separator. */
+const ENTRY_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+/**
+ * The cache directory `parts` names under `base`, verified, or the reason it is refused.
+ *
+ * The cache sits in `tmp/`, which anything running in the checkout can write to,
+ * so a component replaced by a link or a junction would send every later write
+ * somewhere else. Each component is checked by name with `lstat`, created one at
+ * a time when `create` is set rather than recursively, and the resolved whole is
+ * compared with the path the components spell, which catches a redirection
+ * `lstat` does not report as a link. `base` itself is trusted: it is the checkout.
+ *
+ * The identity returned is what `writeCacheEntry` compares again just before it
+ * renames, so a directory swapped after this check is refused rather than
+ * written into.
+ */
+export function cacheDirectory(base, parts, { create }) {
+  let current = base;
+  let stats;
+  for (const part of parts) {
+    current = path.join(current, part);
+    if (create) {
+      try {
+        mkdirSync(current);
+      } catch (cause) {
+        if (cause?.code !== "EEXIST") return { error: `${current} could not be created.` };
+      }
+    }
+    try {
+      stats = lstatSync(current);
+    } catch {
+      return { error: `${current} does not exist.` };
+    }
+    if (stats.isSymbolicLink() || !stats.isDirectory()) {
+      return { error: `${current} is not a plain directory.` };
+    }
+  }
+  try {
+    const resolved = path.relative(realpathSync(base), realpathSync(current));
+    if (resolved !== path.join(...parts)) {
+      return { error: `${current} resolves outside the cache.` };
+    }
+  } catch {
+    return { error: `${current} could not be resolved.` };
+  }
+  return { path: current, dev: stats.dev, ino: stats.ino, error: undefined };
+}
+
+/**
+ * Writes `text` as the cache entry `name` under `base`/`parts`, or says why not.
+ *
+ * The text is bounded by `maxBytes`. It goes to a fresh file created exclusively
+ * in the verified directory, so no existing name, a link included, is ever
+ * opened for writing; that file is synced and then renamed over the entry, so a
+ * reader sees the old entry or the new one and never part of either. An entry
+ * already there that is not a regular file with one link is left alone and
+ * refused, and so is a directory whose identity changed after it was verified.
+ *
+ * Returns the entry's `path` on success, and an `error` otherwise.
+ */
+export function writeCacheEntry(base, parts, name, text, maxBytes) {
+  if (!ENTRY_NAME.test(name) || name.includes("..")) {
+    return { error: `${name} is not a plain file name.` };
+  }
+  const bytes = Buffer.from(text, "utf-8");
+  if (bytes.length > maxBytes) {
+    return { error: `${name} would be ${String(bytes.length)} bytes, over ${String(maxBytes)}.` };
+  }
+  const directory = cacheDirectory(base, parts, { create: true });
+  if (directory.error !== undefined) return { error: directory.error };
+
+  const target = path.join(directory.path, name);
+  const temporary = path.join(
+    directory.path,
+    `.${name}.${String(process.pid)}.${randomBytes(6).toString("hex")}.tmp`,
+  );
+  let flags = fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL;
+  if (typeof fsConstants.O_NOFOLLOW === "number") flags |= fsConstants.O_NOFOLLOW;
+
+  let fd;
+  try {
+    fd = openSync(temporary, flags, 0o600);
+  } catch {
+    return { error: `${temporary} could not be created.` };
+  }
+  let written = false;
+  try {
+    let offset = 0;
+    while (offset < bytes.length) offset += writeSync(fd, bytes, offset, bytes.length - offset);
+    fsyncSync(fd);
+    const stats = fstatSync(fd);
+    written = stats.isFile() && stats.nlink === 1 && stats.size === bytes.length;
+  } catch {
+    // `written` stays false, and the temporary file is removed below
+  } finally {
+    closeSync(fd);
+  }
+
+  const refusal = written
+    ? notReplaceable(directory, target)
+    : `${temporary} could not be written.`;
+  if (refusal === undefined) {
+    try {
+      renameSync(temporary, target);
+      return { path: target, error: undefined };
+    } catch {
+      rmSync(temporary, { force: true });
+      return { error: `${target} could not be replaced.` };
+    }
+  }
+  rmSync(temporary, { force: true });
+  return { error: refusal };
+}
+
+/**
+ * Why `target` may not be replaced, or `undefined` when it may.
+ *
+ * The directory must still be the one `cacheDirectory` verified, and an entry
+ * already at `target` must be a regular file with one link.
+ */
+function notReplaceable(directory, target) {
+  let now;
+  try {
+    now = lstatSync(directory.path);
+  } catch {
+    return `${directory.path} changed while the entry was written.`;
+  }
+  if (now.isSymbolicLink() || now.dev !== directory.dev || now.ino !== directory.ino) {
+    return `${directory.path} changed while the entry was written.`;
+  }
+  let existing;
+  try {
+    existing = lstatSync(target);
+  } catch {
+    return undefined;
+  }
+  if (existing.isSymbolicLink() || !existing.isFile() || existing.nlink !== 1) {
+    return `${target} is not a regular file with one link.`;
+  }
+  return undefined;
 }
 
 /**
@@ -347,8 +519,9 @@ function runsCommand(slug, branch) {
 
 /** `log <job-id>`: the saved log's path, downloading it only the first time. */
 function logCommand(slug, jobId) {
-  const target = path.join(CACHE_DIR, `job-${jobId}.log`);
-  if (saved(target)) {
+  const name = `job-${jobId}.log`;
+  const target = path.join(CACHE_DIR, name);
+  if (saved(name)) {
     console.log(target);
     console.log("Already saved, so no call was made.");
     return 0;
@@ -358,17 +531,28 @@ function logCommand(slug, jobId) {
       console.error("GitHub returned an empty log body; nothing was saved.");
       return 2;
     }
-    mkdirSync(CACHE_DIR, { recursive: true });
-    writeFileSync(target, body, "utf-8");
-    console.log(target);
+    const written = writeCacheEntry(ROOT, CACHE_PARTS, name, body, MAX_RESPONSE_BYTES);
+    if (written.error !== undefined) {
+      console.error(`The log was not saved: ${written.error}`);
+      return 2;
+    }
+    console.log(written.path);
     return 0;
   });
 }
 
-/** Whether a log is already on disk with content in it. */
-function saved(target) {
+/**
+ * Whether a log is already on disk with content in it.
+ *
+ * Only a regular file with one link in the verified directory counts, judged by
+ * name; anything else is not a saved log, and the write that follows refuses it.
+ */
+function saved(name) {
+  const directory = cacheDirectory(ROOT, CACHE_PARTS, { create: false });
+  if (directory.error !== undefined) return false;
   try {
-    return statSync(target).size > 0;
+    const stats = lstatSync(path.join(directory.path, name));
+    return stats.isFile() && !stats.isSymbolicLink() && stats.nlink === 1 && stats.size > 0;
   } catch {
     return false;
   }

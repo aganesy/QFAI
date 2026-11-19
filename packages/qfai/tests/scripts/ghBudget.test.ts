@@ -11,15 +11,26 @@
  * justification has drifted away from it cannot be reviewed, and the next reader
  * has no way to tell a considered floor from one somebody typed.
  */
-import { readFile } from "node:fs/promises";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   RESERVE,
   branchRows,
+  cacheDirectory,
+  writeCacheEntry,
   describeReading,
   formatRows,
   readingFrom,
@@ -255,5 +266,78 @@ describe("branch overview conclusions are separate from gate receipts", () => {
     );
     expect(comment).toMatch(/individual runs and logs.*required verification/is);
     expect(comment).toMatch(/check name or workflow event cannot establish cleanup purpose/i);
+  });
+});
+
+// The cache lives in `tmp/`, which anything running in the checkout can write
+// to. A component or an entry replaced by a link would otherwise carry a saved
+// job log, megabytes of it, to wherever the link points.
+describe("the cache writes only inside its own directory", () => {
+  const PARTS = ["tmp", "gh-budget"];
+  let base = "";
+  let outside = "";
+
+  beforeEach(async () => {
+    base = await mkdtemp(path.join(os.tmpdir(), "gh-budget-cache-"));
+    outside = await mkdtemp(path.join(os.tmpdir(), "gh-budget-outside-"));
+  });
+
+  afterEach(async () => {
+    await rm(base, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  });
+
+  it("creates the directory, writes the entry and replaces it, leaving no temporary file", () => {
+    const first = writeCacheEntry(base, PARTS, "job-1.log", "first", 64);
+    expect(first.error).toBeUndefined();
+    const second = writeCacheEntry(base, PARTS, "job-1.log", "second", 64);
+    expect(second.path).toBe(path.join(base, ...PARTS, "job-1.log"));
+    expect(readFileSync(path.join(base, ...PARTS, "job-1.log"), "utf-8")).toBe("second");
+    expect(readdirSync(path.join(base, ...PARTS))).toEqual(["job-1.log"]);
+  });
+
+  // A junction needs no privilege on Windows and is a directory link elsewhere.
+  it("refuses a cache directory that is a link, and writes nothing where it points", () => {
+    mkdirSync(path.join(base, "tmp"));
+    symlinkSync(outside, path.join(base, ...PARTS), "junction");
+    const written = writeCacheEntry(base, PARTS, "job-1.log", "log", 64);
+    expect(written.error).toMatch(/not a plain directory/);
+    expect(readdirSync(outside)).toEqual([]);
+  });
+
+  it("refuses a parent of the cache directory that is a link", () => {
+    symlinkSync(outside, path.join(base, "tmp"), "junction");
+    const written = writeCacheEntry(base, PARTS, "job-1.log", "log", 64);
+    expect(written.error).toMatch(/not a plain directory/);
+    expect(readdirSync(outside)).toEqual([]);
+  });
+
+  it("refuses to replace an entry that is a link, and leaves both sides alone", () => {
+    const directory = path.join(base, ...PARTS);
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(path.join(outside, "kept.txt"), "kept");
+    symlinkSync(outside, path.join(directory, "job-1.log"), "junction");
+    const written = writeCacheEntry(base, PARTS, "job-1.log", "log", 64);
+    expect(written.error).toMatch(/not a regular file with one link/);
+    expect(readdirSync(outside)).toEqual(["kept.txt"]);
+    expect(readdirSync(directory)).toEqual(["job-1.log"]);
+  });
+
+  it.each(["../job-1.log", "a/b.log", "..", ".hidden", ""])("refuses the entry name %j", (name) => {
+    expect(writeCacheEntry(base, PARTS, name, "log", 64).error).toMatch(/not a plain file name/);
+    expect(existsSync(path.join(base, "tmp"))).toBe(false);
+  });
+
+  it("refuses text over the bound before creating anything", () => {
+    const written = writeCacheEntry(base, PARTS, "job-1.log", "x".repeat(65), 64);
+    expect(written.error).toMatch(/over 64/);
+    expect(existsSync(path.join(base, "tmp"))).toBe(false);
+  });
+
+  it("verifies an existing directory without creating a missing one", () => {
+    expect(cacheDirectory(base, PARTS, { create: false }).error).toMatch(/does not exist/);
+    expect(existsSync(path.join(base, "tmp"))).toBe(false);
+    mkdirSync(path.join(base, ...PARTS), { recursive: true });
+    expect(cacheDirectory(base, PARTS, { create: false }).path).toBe(path.join(base, ...PARTS));
   });
 });

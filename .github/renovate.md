@@ -207,6 +207,10 @@ Renovate inside its own container against its own clone, and `pin-verification-b
 the `yaml` parser out of `packages/qfai/node_modules`, which no install in that container created.
 The job here uses the same shared setup action every other toolchain job in the tree consumes.
 
+The re-pin commit carries only the files those programs write, listed in `REPIN_FILES` in the
+workflow. If anything else in the work tree changed, the job fails and lists it, so a setup or
+generation side effect never lands on the update branch.
+
 The re-pin commits under `renovate[bot]`, matching `gitAuthor` in the config. That is load-bearing:
 Renovate stops updating a branch whose commits it does not recognise as its own, so a re-pin under
 any other name would freeze the branches it had just fixed.

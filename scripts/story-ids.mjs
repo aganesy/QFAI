@@ -1,8 +1,8 @@
 /**
  * Story-tree ID candidates and collision checks against published heads.
  *
- * - `next <scope>...` prints one candidate per scope from main, the latest 100
- *   updated open pull requests and the working tree. It reserves nothing.
+ * - `next <scope>...` prints one candidate per scope from main, every open
+ *   pull request and the working tree. It reserves nothing.
  *   A scope named twice gets two consecutive candidates.
  * - `check` names each ID this branch adds that main or a fetched open pull
  *   request also adds. Other branches' unpublished changes are outside this
@@ -21,7 +21,11 @@
  * read from the first cell of each table row.
  *
  * Reading the listed pull-request heads and requested scopes costs one REST
- * listing and one `git fetch`. The listing goes
+ * call per page of open pull requests and one `git fetch`. A page that cannot
+ * be read stops the command before it answers: an ID an unread pull request
+ * holds would be handed out again. A pull request closed while the pages are
+ * read can move another across a page boundary unread, as a simultaneous
+ * publisher can still collide. The listing goes
  * through `gh-budget.mjs`, which keeps its reserve and reports the remaining
  * allowance on stderr, so stdout holds only the answer. A check during an unfinished
  * merge stops before fetching or comparing branch-owned identifiers.
@@ -37,7 +41,8 @@
  * story-tree parser directly. On an older runtime it exits 2 before any call.
  *
  * Exit codes: 0 answered; 1 a collision was found, or the listing left the
- * budget below the reserve (the answer is still printed); 2 the arguments,
+ * budget below the reserve (the answer is still printed once every page was
+ * read, and nothing is when the reserve stopped a page); 2 the arguments,
  * the runtime, `git` or `gh` could not be used, or `check` found an unfinished
  * merge; 3 a scope has no number left.
  */
@@ -59,8 +64,7 @@ const SPEC_DIR = ".qfai/spec";
 /** The branch pull requests merge into. */
 const MAIN = "main";
 
-// SIMPLIFIED: reads the 100 most recently updated open pull requests, one page.
-// Lift when: a collision comes from an open pull request outside that page.
+/** The most pull requests one listing page holds. */
 const PULLS_PER_PAGE = 100;
 
 /** Blob contents across every open head can outgrow the default buffer. */
@@ -165,6 +169,44 @@ export function pullsFrom(body) {
       ? [{ number: pull.number, branch: pull.head.ref }]
       : [],
   );
+}
+
+/**
+ * Every open pull request, page by page, until a page comes back short.
+ *
+ * `callPage(page, handleBody)` makes one call and returns its exit code, as
+ * `callAndReport` does. A page is full by its raw length, so an entry
+ * `pullsFrom` drops does not end the listing early. Pull requests are kept by
+ * number, so one that moves across a page boundary is counted once. The
+ * listing is `undefined` unless every page was read.
+ */
+export function listAllPulls(callPage, perPage = PULLS_PER_PAGE) {
+  const byNumber = new Map();
+  let code = 0;
+  for (let page = 1; ; page += 1) {
+    let pagePulls;
+    let size = 0;
+    const pageCode = callPage(page, (body) => {
+      pagePulls = pullsFrom(body);
+      if (pagePulls === undefined) {
+        console.error("The response body is not a pull request listing.");
+        return 2;
+      }
+      size = JSON.parse(body).length;
+      return 0;
+    });
+    if (pagePulls === undefined || (pageCode !== 0 && pageCode !== 1)) {
+      if (page > 1) {
+        console.error(
+          `Open pull requests past page ${String(page - 1)} were not read, so no ID is answered.`,
+        );
+      }
+      return { code: pageCode === 0 ? 2 : pageCode, pulls: undefined };
+    }
+    for (const pull of pagePulls) byNumber.set(pull.number, pull);
+    if (pageCode === 1) code = 1;
+    if (size < perPage) return { code, pulls: [...byNumber.values()] };
+  }
 }
 
 /**
@@ -495,10 +537,11 @@ function checkCommand(reader, pulls) {
 }
 
 /**
- * The open pull requests, from one REST call through `gh-budget.mjs`.
+ * Every open pull request, one REST call per page through `gh-budget.mjs`.
  *
- * Returns the exit code the call left and the listing, which is present even
- * when the call left the budget below the reserve.
+ * Oldest first, so a pull request opened while the pages are read lands on a
+ * later page. Returns the exit code the calls left and the listing, which is
+ * present even when the last call left the budget below the reserve.
  */
 function listOpenPulls(cwd) {
   let slug;
@@ -513,18 +556,13 @@ function listOpenPulls(cwd) {
     console.error("The `origin` remote does not name a GitHub repository.");
     return { code: 2, pulls: undefined };
   }
-  let pulls;
-  const code = callAndReport(
-    `repos/${slug}/pulls?state=open&sort=updated&direction=desc&per_page=${String(PULLS_PER_PAGE)}`,
-    (body) => {
-      pulls = pullsFrom(body);
-      if (pulls !== undefined) return 0;
-      console.error("The response body is not a pull request listing.");
-      return 2;
-    },
-    console.error,
+  return listAllPulls((page, handleBody) =>
+    callAndReport(
+      `repos/${slug}/pulls?state=open&sort=created&direction=asc&per_page=${String(PULLS_PER_PAGE)}&page=${String(page)}`,
+      handleBody,
+      console.error,
+    ),
   );
-  return { code, pulls };
 }
 
 const USAGE = [
