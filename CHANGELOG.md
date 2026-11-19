@@ -655,6 +655,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   findings of the first review, and the gate points to the review convergence
   rule: a fix made for a finding of the re-review gets no further re-review.
 
+- **`QFAI-CONTRACT-037` names a required element however its keys are
+  written.** The unrendered-marker finding said `required: true` only when a
+  UI contract element wrote `required` on a line after its `id`. An element
+  that put `required` first, or was written as a flow mapping such as
+  `{ required: true, id: submit }`, lost the mention. The flag is now read
+  from each parsed element.
+
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its
