@@ -111,7 +111,12 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#rejected-option-
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`. The smallest applicable smoke check is one terminating command from the documented runnable path plus `npx qfai doctor --fail-on error`. Require `traceability.testGlobs` to report `[ok]`; exit 0 with a warning or truncated scan does not prove test discovery. Also run `npx qfai validate --fail-on error` and inspect `issues` by code in the result it wrote: the configured `output.validateJsonPath` with `-full` before the extension (default `.qfai/report/validate-full.json`), once its `generatedAt` is no earlier than the run's start. Resolve config and test-glob errors this skill owns, including `QFAI-SCAN-002`; report `QFAI-STORY-006` through `QFAI-STORY-009` uncovered obligations to the testing stage. A path recorded but never executed is UNRUN.
+Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`.
+The smallest applicable smoke check is one terminating command from the documented runnable path plus `npx qfai doctor --fail-on error`.
+Require `traceability.testGlobs` to report `[ok]`; exit 0 with a warning or truncated scan does not prove test discovery.
+Also run `npx qfai validate --fail-on error` and inspect `issues` by code in the result it wrote: the configured `output.validateJsonPath` with `-full` before the extension (default `.qfai/report/validate-full.json`), once its `generatedAt` is no earlier than the run's start.
+Resolve config and test-glob errors this skill owns, including `QFAI-SCAN-002`; report `QFAI-STORY-006` through `QFAI-STORY-009` uncovered obligations to the testing stage.
+A path recorded but never executed is UNRUN.
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Goal

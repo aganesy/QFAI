@@ -9,15 +9,11 @@ the file the invocation wrote, not a fixed path:
 | repository-wide, no `--profile`        | the same, with `-full`                                                          |
 | `--flow BF-0003` (any `--profile`)     | `<stem>.flow-0003<ext>` beside the configured path, and nothing else            |
 
-`output.validateJsonPath` defaults to `.qfai/report/validate.json`. A
-repository-wide run also rewrites that unsuffixed file, so it holds whichever
-such run finished last and can belong to another profile or another worker.
-Before using a result, confirm its `profile` is the one the command ran and its
-`generatedAt` is no earlier than the command's start.
-`npx qfai report --profile <profile>` reads the suffixed file. For a
-repository-wide run it only warns when that file records another profile and
-still renders it, so the `profile` check above stays the reader's to make; for
-a `--flow` run it refuses such a file.
+`output.validateJsonPath` defaults to `.qfai/report/validate.json`, which every
+repository-wide run also rewrites, so it can hold another profile's or worker's
+result. Use a result only when its `profile` is the one the command ran and its
+`generatedAt` is no earlier than the command's start. `qfai report --profile`
+reads the suffixed file but, repository-wide, only warns on another profile.
 
 It is a **public surface** (`@api` under
 `.qfai/assistant/rule/change-classification.md`): the skills instruct agents to read it,
