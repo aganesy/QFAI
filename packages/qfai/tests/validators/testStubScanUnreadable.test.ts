@@ -85,7 +85,7 @@ function unreadableFindings(issues: Awaited<ReturnType<typeof validateTestTodoSt
 }
 
 describe("QFAI-TEST-002 — selected files the scan could not read", () => {
-  it("names every one in a single finding, in path order, while the readable files are still scanned", async () => {
+  it("names each one in its own finding while the readable files are still scanned", async () => {
     const root = await projectWith(["locked.test.ts", "gone.test.ts"]);
 
     const issues = await validateTestTodoStubs(root, CONFIG);
@@ -93,28 +93,32 @@ describe("QFAI-TEST-002 — selected files the scan could not read", () => {
     expect(issues.some((i) => i.code === "QFAI-TEST-001" && i.file?.endsWith("open.test.ts"))).toBe(
       true,
     );
-    const findings = unreadableFindings(issues);
-    expect(findings).toHaveLength(1);
-    expect(findings[0]?.refs).toEqual(["tests/gone.test.ts", "tests/locked.test.ts"]);
-    // Placed on a failed file, so an annotation and a path-scoped waiver reach it.
-    expect(findings[0]?.file).toBe("tests/gone.test.ts");
-    expect(findings[0]?.relatedFiles).toEqual(["tests/locked.test.ts"]);
-    expect(findings[0]?.message).toContain("tests/gone.test.ts (ENOENT)");
-    expect(findings[0]?.message).toContain("tests/locked.test.ts (EACCES)");
-    // Each cause brings its own repair: running again, and access or exclusion.
-    expect(findings[0]?.suggested_action).toContain("running `qfai validate` once more");
-    expect(findings[0]?.suggested_action).toContain("testFileExcludeGlobs");
+    // One finding per file, placed on it, so a path-scoped waiver covers only
+    // the file it names.
+    const byFile = new Map(unreadableFindings(issues).map((i) => [i.file, i]));
+    expect([...byFile.keys()].sort()).toEqual(["tests/gone.test.ts", "tests/locked.test.ts"]);
+    const gone = byFile.get("tests/gone.test.ts");
+    const locked = byFile.get("tests/locked.test.ts");
+    expect(gone?.refs).toEqual(["tests/gone.test.ts"]);
+    expect(gone?.message).toContain("tests/gone.test.ts (ENOENT)");
+    expect(locked?.message).toContain("tests/locked.test.ts (EACCES)");
+    // Each cause brings its own repair: running again, or access or exclusion.
+    expect(gone?.suggested_action).toContain("Run `qfai validate` once more");
+    expect(gone?.suggested_action).not.toContain("testFileExcludeGlobs");
+    expect(locked?.suggested_action).toContain("testFileExcludeGlobs");
+    expect(locked?.suggested_action).not.toContain("once more");
   });
 
-  it("offers only a re-run for a file that vanished after it was selected", async () => {
-    const root = await projectWith(["gone.test.ts"]);
+  it("does not claim other files were scanned when the only selected file failed", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-unreadable-"));
+    tempDirs.push(root);
+    await mkdir(path.join(root, "tests"), { recursive: true });
+    await writeFile(path.join(root, "tests", "gone.test.ts"), "export {};\n", "utf-8");
 
     const [finding] = unreadableFindings(await validateTestTodoStubs(root, CONFIG));
 
-    expect(finding?.refs).toEqual(["tests/gone.test.ts"]);
     expect(finding?.file).toBe("tests/gone.test.ts");
-    expect(finding?.relatedFiles).toBeUndefined();
-    expect(finding?.suggested_action).toContain("running `qfai validate` once more");
-    expect(finding?.suggested_action).not.toContain("testFileExcludeGlobs");
+    expect(finding?.message).toContain("Any other selected files were scanned");
+    expect(finding?.message).not.toContain("The other files were scanned");
   });
 });

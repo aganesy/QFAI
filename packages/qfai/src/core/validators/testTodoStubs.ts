@@ -1527,13 +1527,6 @@ function reportRefusedScan(error: unknown, callerGlobs: boolean, scannedRest: bo
   );
 }
 
-/**
- * The unreadable-file form of `QFAI-TEST-002`: the selection reached these
- * files, but opening them failed, so the files that were read are reported and
- * these are named as not checked.
- */
-type UnreadableFile = { file: string; error: unknown };
-
 /** The errno code of a file-system failure, else the error's message. */
 function readFailureReason(error: unknown): string {
   if (isFileSystemError(error) && error instanceof Error && "code" in error) {
@@ -1542,47 +1535,35 @@ function readFailureReason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/**
- * The repair for each kind of read failure. A file that vanished, turned into a
- * directory, or met a busy or exhausted system after it was selected reads on
- * the next run; a denied read needs its permissions or an exclusion.
- */
-function unreadableRemedy(reasons: ReadonlySet<string>): string {
-  const transient = ["ENOENT", "EISDIR", "EMFILE", "ENFILE", "EBUSY", "EAGAIN"];
-  const remedies: string[] = [];
-  if (transient.some((code) => reasons.has(code))) {
-    remedies.push(
-      "A file that was moved, replaced or opened while the system was short of file handles (ENOENT, EISDIR, EMFILE, ENFILE, EBUSY, EAGAIN) is read again by running `qfai validate` once more.",
-    );
-  }
-  if ([...reasons].some((reason) => !transient.includes(reason))) {
-    remedies.push(
-      "Make any other file readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no test.",
-    );
-  }
-  return remedies.join(" ");
-}
+// A file that vanished, turned into a directory, or met a busy or exhausted
+// system after it was selected reads on the next run.
+const TRANSIENT_READ_FAILURES = new Set([
+  "ENOENT",
+  "EISDIR",
+  "EMFILE",
+  "ENFILE",
+  "EBUSY",
+  "EAGAIN",
+]);
 
 /**
- * The finding sits on the first failed file and names the rest as related, so
- * an annotation and a path-scoped waiver reach a file that needs the repair.
+ * The unreadable-file form of `QFAI-TEST-002`: the selection reached this file,
+ * but opening it failed, so it was never checked. One finding per file, so a
+ * path-scoped waiver covers exactly the file it names.
  */
-function reportUnreadableFiles(failures: UnreadableFile[]): Issue {
-  const sorted = [...failures]
-    .map(({ file, error }) => ({ file, reason: readFailureReason(error) }))
-    .sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
-  const files = sorted.map(({ file }) => file);
-  const related = files.slice(1);
+function reportUnreadableFile(file: string, error: unknown): Issue {
+  const reason = readFailureReason(error);
   return issue(
     "QFAI-TEST-002",
-    `The stub scan could not read ${sorted.length} selected test file(s): ${sorted.map(({ file, reason }) => `${file} (${reason})`).join(", ")}. The other files were scanned, and a clean result is not evidence that these hold no stub.`,
+    `The stub scan could not read the selected test file ${file} (${reason}). Any other selected files were scanned, and a clean result is not evidence that this one holds no stub.`,
     "info",
-    files[0],
+    file,
     "validation.testStrategy.stubScanUnreadable",
-    files,
+    [file],
     "canonical",
-    unreadableRemedy(new Set(sorted.map(({ reason }) => reason))),
-    related.length > 0 ? { relatedFiles: related } : undefined,
+    TRANSIENT_READ_FAILURES.has(reason)
+      ? "The file was moved or replaced, or the system was short of file handles, after it was selected. Run `qfai validate` once more to read it."
+      : "Make the file readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no test.",
   );
 }
 
@@ -1723,9 +1704,6 @@ export async function validateTestTodoStubs(
   const skippedTestSeverity = "error";
 
   const unscannedExtensions = new Set<string>();
-  // A selected file that could not be opened was never checked; dropping it
-  // silently made "no stubs" mean "not read" as well.
-  const unreadableFiles: UnreadableFile[] = [];
   for (const absFile of files) {
     const relFile = path.relative(root, absFile).replace(/\\/g, "/");
     // No dialect means qfai knows no stub construct for this extension. Reading
@@ -1740,7 +1718,8 @@ export async function validateTestTodoStubs(
     try {
       content = await readFile(absFile, "utf-8");
     } catch (error) {
-      unreadableFiles.push({ file: relFile, error });
+      // Dropped silently, a file never opened read as one with no stubs.
+      issues.push(reportUnreadableFile(relFile, error));
       continue;
     }
 
@@ -1755,10 +1734,6 @@ export async function validateTestTodoStubs(
         projectGlobs: !callerGlobs || projectGlobs.size > 0,
       }),
     );
-  }
-
-  if (unreadableFiles.length > 0) {
-    issues.push(reportUnreadableFiles(unreadableFiles));
   }
 
   if (unscannedExtensions.size > 0) {
