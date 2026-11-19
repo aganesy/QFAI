@@ -77,8 +77,10 @@ does not evaluate it. Check important answers against their cited sources.
 The supported backend names are `ollama` and `openai`. An `openai` backend can
 also use a compatible local endpoint. Keep credentials out of this file. When
 the selected server requires a key, set `credentialEnv` to the name of an
-environment variable containing it. An external endpoint still requires human
-authorization of the exact destination and scope before processing.
+environment variable containing it. An external endpoint must use `https`;
+plain `http` works only on `127.0.0.1`, `localhost` or `[::1]`. An external
+endpoint still requires human authorization of the exact destination and scope
+before processing.
 
 An `openai` backend always needs `credentialEnv`, even for a local server
 that requires no authentication: Graphify's client refuses to start without a
