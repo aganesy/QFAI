@@ -746,6 +746,28 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
     expect(parsed.options.sddIdParent).toBe(parent);
   });
 
+  // QFAI:EX-0001-0008-35
+  it.each([
+    [["sdd", "next-id", "ac", "US-0001-0008", "--base", "origin/main"], "AC", "US-0001-0008"],
+    [["sdd", "next-id", "Ex", "US-0001-0008", "--base", "main"], "EX", "US-0001-0008"],
+    [["sdd", "next-id", "--base", "main", "bf"], "BF", undefined],
+  ])("reads the next-id kind without regard to case %j", (argv, kind, parent) => {
+    const parsed = parseArgs(argv, process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.sddIdKind).toBe(kind);
+    expect(parsed.options.sddIdParent).toBe(parent);
+  });
+
+  // QFAI:EX-0001-0008-35
+  it("names the timestamped kind in upper case when it arrives in lower case", () => {
+    const parsed = parseArgs(["sdd", "next-id", "dec", "--base", "main"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.sddIdKind).toBeUndefined();
+    expect(parsed.invalidReason).toBe(
+      "qfai sdd next-id: DEC takes no number; a decision row takes the UTC time it is written, as DEC-yyyymmddhhMMss. Expected one of BF|US|AC|EX|BR.",
+    );
+  });
+
   // QFAI:EX-0001-0008-30
   it.each([
     [["sdd", "next-id", "BF"], "--base"],

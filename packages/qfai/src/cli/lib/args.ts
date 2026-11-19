@@ -9,14 +9,15 @@ const TIMESTAMPED_ROWS: ReadonlyMap<string, string> = new Map([
 ]);
 const NEXT_ID_KINDS = STORY_TREE_ID_KINDS.filter((kind) => !TIMESTAMPED_ROWS.has(kind));
 
-/** The kind `qfai sdd next-id` counts, or why the token is refused. */
+/** The kind `qfai sdd next-id` counts, read without regard to case, or why the token is refused. */
 function readNextIdKind(token: string): { kind: StoryTreeIdKind } | { reason: string } {
-  const row = TIMESTAMPED_ROWS.get(token);
+  const upper = token.toUpperCase();
+  const row = TIMESTAMPED_ROWS.get(upper);
   if (row !== undefined)
     return {
-      reason: `qfai sdd next-id: ${token} takes no number; a ${row} row takes the UTC time it is written, as ${token}-yyyymmddhhMMss. Expected one of ${NEXT_ID_KINDS.join("|")}.`,
+      reason: `qfai sdd next-id: ${upper} takes no number; a ${row} row takes the UTC time it is written, as ${upper}-yyyymmddhhMMss. Expected one of ${NEXT_ID_KINDS.join("|")}.`,
     };
-  const kind = NEXT_ID_KINDS.find((value) => value === token);
+  const kind = NEXT_ID_KINDS.find((value) => value === upper);
   return kind
     ? { kind }
     : {

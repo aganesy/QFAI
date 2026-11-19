@@ -494,6 +494,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
+- **`qfai sdd next-id` reads the ID kind without regard to case.**
+  `qfai sdd next-id ac US-0001-0001 --base main` was refused as an unknown
+  kind, though `AC` worked. The kind is now read in any case, so `ac` counts
+  as `AC`, and a lower-case `dec` or `oq` gets the same reason as `DEC` or
+  `OQ`. Closes #4445.
+
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
   `-- Depends on:` line skipped `$$ … $$` literals but not `$tag$ … $tag$`
