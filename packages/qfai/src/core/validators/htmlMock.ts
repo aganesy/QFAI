@@ -4,7 +4,7 @@ import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { computeContrastRatio } from "../uiux/contrastRatio.js";
 import { extractTokenComments } from "../uiux/htmlMockParser.js";
-import { collectHtmlMockBlocks, mockMarkdownGlobs } from "./htmlMockBlocks.js";
+import { collectHtmlMockBlocks, mockMarkdownDir } from "./htmlMockBlocks.js";
 import { readMarkdownFiles, type MarkdownFileReader } from "./markdownFiles.js";
 import { issue } from "./utils.js";
 
@@ -37,7 +37,7 @@ export async function validateHtmlMock(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
 
-  const files = await readMarkdown(mockMarkdownGlobs(root, config));
+  const files = await readMarkdown(mockMarkdownDir(root, config));
   const mockBlocks: { file: string; html: string; rawBlock: string }[] = [];
 
   for (const { filePath, content } of files) {

@@ -182,6 +182,41 @@ describe("qfai report", () => {
     );
   });
 
+  // QFAI:AC-0001-0060-02
+  it("renders hostile diagnostic text as text and keeps its link under --base-url", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [
+      {
+        ...warning,
+        code: "QFAI-[X]",
+        message: "see [here](https://evil.test)\n# Injected",
+        file: "docs/(x)](https:/evil.test).md",
+      },
+      { ...note, file: "../../other/secret.md" },
+    ]);
+
+    const result = await cli(root, [
+      "report",
+      "--format",
+      "md",
+      "--base-url",
+      "https://github.com/org/repo",
+    ]);
+
+    expect(result.exit).toBe(0);
+    const lines = await markdownLines(root);
+    expect(lines).toContain(
+      "- WARNING QFAI-\\[X\\]: see \\[here\\](https://evil.test) # Injected" +
+        " ([docs/(x)\\](https:/evil.test).md](https://github.com/org/repo/docs/%28x%29%5D%28https%3A/evil.test%29.md))",
+    );
+    expect(lines).toContain("- INFO QFAI-TEST-002: fixture note (../../other/secret.md)");
+    expect(lines.filter((line) => line.startsWith("# "))).toEqual(["# QFAI Report"]);
+
+    const refused = await cli(root, ["report", "--format", "md", "--base-url", "javascript:x"]);
+    expect(refused.exit).toBe(2);
+    expect(refused.stderr).toContain("--base-url");
+  });
+
   // QFAI:AC-0001-0061-01
   // QFAI:EX-0001-0061-01
   it("builds the report from a validation it runs itself and ignores --in", async () => {

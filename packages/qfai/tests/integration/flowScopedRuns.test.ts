@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -164,6 +164,56 @@ describe("flow-scoped report", () => {
 
     expect(await readFile(target, "utf8")).toContain("QFAI-TEST-001");
     expect(await exists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(false);
+  });
+
+  // QFAI:AC-0001-0066-04
+  // QFAI:EX-0001-0066-05
+  it("reads the result validate wrote for the same flows and profile", async () => {
+    const root = await twoFlowRoot();
+    const report = path.join(root, ".qfai/report");
+
+    const run = await cli(root, [
+      "report",
+      "--flow",
+      "BF-0001",
+      "--profile",
+      "sdd",
+      "--run-validate",
+      "--fail-on",
+      "never",
+    ]);
+    expect(run.exit).toBe(0);
+    expect((await readdir(report)).filter((name) => name.startsWith("validate"))).toEqual([
+      "validate.flow-0001.json",
+    ]);
+
+    await cli(root, ["validate", "--flow", "BF-0001", "--profile", "sdd", "--fail-on", "never"]);
+    const fresh = await cli(root, [
+      "report",
+      "--flow",
+      "BF-0001",
+      "--profile",
+      "sdd",
+      "--fail-on",
+      "never",
+    ]);
+    expect(fresh.exit).toBe(0);
+    expect(await exists(path.join(report, "report.flow-0001.md"))).toBe(true);
+
+    await cli(root, ["validate", "--flow", "BF-0001", "--profile", "atdd", "--fail-on", "never"]);
+    await rm(path.join(report, "report.flow-0001.md"));
+    const mismatched = await cli(root, [
+      "report",
+      "--flow",
+      "BF-0001",
+      "--profile",
+      "sdd",
+      "--fail-on",
+      "never",
+    ]);
+    expect(mismatched.exit).toBe(2);
+    expect(mismatched.stderr).toContain("qfai validate --flow BF-0001 --profile sdd");
+    expect(await exists(path.join(report, "report.flow-0001.md"))).toBe(false);
   });
 
   // QFAI:AC-0001-0066-03

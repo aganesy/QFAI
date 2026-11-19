@@ -4,14 +4,14 @@ import path from "node:path";
 import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
-import type { QfaiConfig } from "../config.js";
+import { resolvePath, type QfaiConfig } from "../config.js";
 import { parseDesignToken } from "../parse/designToken.js";
 import type { Issue } from "../types.js";
 import { collectVarUsages } from "../uiux/htmlMockParser.js";
 import {
   collectHtmlMockBlocks,
   collectScreenMockLabels,
-  mockMarkdownGlobs,
+  mockMarkdownDir,
 } from "./htmlMockBlocks.js";
 import { readMarkdownFiles, type MarkdownFileReader } from "./markdownFiles.js";
 import { issue } from "./utils.js";
@@ -26,13 +26,11 @@ export async function validateUiDefinitionConsistency(
   // Load Design Tokens, which live only where `uiux.designTokensDir` names
   const configuredDir = config.uiux?.designTokensDir;
   const tokenFiles = configuredDir
-    ? await fg(
-        path.posix.join(
-          path.resolve(root, configuredDir).replace(/\\/g, "/"),
-          "design-tokens*.yaml",
-        ),
-        { absolute: true, ignore: ["**/*.schema.yaml", "**/*.schema.yml"] },
-      )
+    ? await fg("design-tokens*.yaml", {
+        cwd: path.resolve(root, configuredDir),
+        absolute: true,
+        ignore: ["**/*.schema.yaml", "**/*.schema.yml"],
+      })
     : [];
 
   const resolvedTokens = new Map<string, string>();
@@ -49,9 +47,8 @@ export async function validateUiDefinitionConsistency(
   }
 
   // Load UI Contract screen IDs
-  const uiContractDir = path.join(root, config.paths.contractsDir, "ui");
-  const uiPattern = path.posix.join(uiContractDir.replace(/\\/g, "/"), "**/*.yaml");
-  const uiFiles = await fg(uiPattern, { absolute: true });
+  const uiContractDir = path.join(resolvePath(root, config, "contractsDir"), "ui");
+  const uiFiles = await fg("**/*.yaml", { cwd: uiContractDir, absolute: true });
   const contractScreenIds = new Set<string>();
 
   for (const uiFile of uiFiles) {
@@ -78,7 +75,7 @@ export async function validateUiDefinitionConsistency(
   }
 
   // Load HTML Mock blocks
-  const mdFiles = await readMarkdown(mockMarkdownGlobs(root, config));
+  const mdFiles = await readMarkdown(mockMarkdownDir(root, config));
   const mockScreenIds = new Set<string>();
 
   for (const { filePath: mdFile, content } of mdFiles) {

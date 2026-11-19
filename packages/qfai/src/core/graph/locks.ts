@@ -60,7 +60,7 @@ export async function withGraphLock<T>(
     throw new GraphLocalStateError(
       `Project graph ${kind} lock ${active ? "is contended" : "requires manual recovery"}.`,
       active
-        ? `Retry after the active worktree ${kind} operation finishes; retain its lock.`
+        ? "Retry after the active worktree graph operation (a graph query, analysis preparation or qfai init) finishes; retain its lock."
         : `Retain and inspect .qfai/tools/state/${graphEnvironmentKey()}/${kind}.lock; remove only a confirmed abandoned worktree lock before retrying.`,
       { cause },
     );

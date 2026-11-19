@@ -53,4 +53,11 @@ Feature: Catalogue the components a project already has
     When an agent reads the shipped implementation UI guidance, the procurement ladder and the test-first implementation step
     Then the UI guidance says to read `.qfai/catalog/components.yaml` before writing a region, to reuse a listed component, and, on authoring a component, to write its doc comment with the tags and run `qfai catalog components`
     And the procurement ladder's first rung and the implementation step point to that guidance
+
+  # AC-0001-0307-08
+  Scenario: The catalogue is written only inside the project
+    Given a project whose `.qfai/catalog` is a symbolic link to a directory outside it that holds a `components.yaml`
+    When `qfai catalog components` runs
+    Then it exits 1 with one line naming `.qfai/catalog/components.yaml` and the link, and the file outside the project is as it was with nothing written beside it
+    And in a project with no such link it replaces the catalogue and leaves no temporary file in `.qfai/catalog`
 ```

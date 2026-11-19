@@ -4,7 +4,7 @@
  * `typescript` package the way an adopter's does.
  */
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -202,6 +202,43 @@ describe("JSX needs the TypeScript compiler the project installs", () => {
     expect(code).toBe(1);
     expect(err.join("")).toMatch(/2 \.tsx\/\.jsx file\(s\)[^\n]*`typescript`/);
     await expect(readCatalogText(root)).rejects.toThrow();
+  });
+});
+
+// QFAI:AC-0001-0307-08
+describe("the catalogue is written only inside the project", () => {
+  // QFAI:EX-0001-0307-18
+  it("refuses a catalogue directory that links outside and leaves the file there as it was", async () => {
+    const root = await projectWith({ "src/a.tsx": component("Alpha", []) });
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-component-catalog-outside-"));
+    roots.push(outside);
+    await writeFile(path.join(outside, "components.yaml"), "keep\n", "utf-8");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await symlink(
+      outside,
+      path.join(root, ".qfai", "catalog"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const result = await cli(["catalog", "components", "--root", root]);
+    expect(result.code).toBe(1);
+    expect(result.err).toBe(
+      `qfai catalog components: could not write ${CATALOG}, so any existing catalogue is as it was: .qfai/catalog is a symbolic link.\n`,
+    );
+    expect(await readFile(path.join(outside, "components.yaml"), "utf-8")).toBe("keep\n");
+    expect(await readdir(outside)).toEqual(["components.yaml"]);
+  });
+
+  // QFAI:EX-0001-0307-19
+  it("replaces the catalogue in place and leaves no temporary file beside it", async () => {
+    const root = await projectWith({
+      "src/a.tsx": component("Alpha", []),
+      [CATALOG]: "stale\n",
+    });
+    const fresh = await projectWith({ "src/a.tsx": component("Alpha", []) });
+    expect((await cli(["catalog", "components", "--root", fresh])).code).toBe(0);
+    expect((await cli(["catalog", "components", "--root", root])).code).toBe(0);
+    expect(await readCatalogText(root)).toBe(await readCatalogText(fresh));
+    expect(await readdir(path.join(root, ".qfai", "catalog"))).toEqual(["components.yaml"]);
   });
 });
 

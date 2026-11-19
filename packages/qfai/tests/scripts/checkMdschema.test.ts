@@ -736,7 +736,9 @@ describe("check-mdschema command resolution", () => {
   // QFAI:EX-0002-0003-08
   it("prefers the installation in the tools directory over the tree's own", async () => {
     // The shipped document lane installs the checker into a directory of its own
-    // and names it with `--tools`; that copy is the one the lane pinned.
+    // and names it with `--tools`. That copy is the version the selected QFAI
+    // declares, installed with its platform binary, so it wins over the tree's
+    // own copy, whose install may have left the binary out.
     const root = await newTempDir();
     const tools = await newTempDir();
     await seedPackage(root, { mdschema: "bin/cli.js" });
