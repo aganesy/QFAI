@@ -35,7 +35,7 @@ afterEach(async () => {
   }
 });
 
-async function seedManifest(root: string, deps: readonly string[]): Promise<void> {
+async function seedManifest(root: string, deps: readonly unknown[]): Promise<void> {
   const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
   await mkdir(dir, { recursive: true });
   await writeFile(
@@ -78,7 +78,18 @@ describe("runtimeDependencies entries must be registry package names", () => {
     await seedManifest(root, ["playwright", "playwright & calc"]);
     const result = await probeSkillManifest(root, "qfai-prototyping");
     expect(result.manifest).toBe("invalid");
-    expect(result.invalidNames).toEqual(["playwright & calc"]);
+    expect(result.invalidEntries).toEqual(["playwright & calc"]);
+    expect(result.findings).toEqual([]);
+  });
+
+  // Dropping or trimming an entry before the check would call this manifest healthy,
+  // or install a name it does not hold.
+  it("refuses a non-string, an empty string and a padded name as written", async () => {
+    const root = await newTempDir("as-written");
+    await seedManifest(root, ["left-pad", 1, null, "", " left-pad "]);
+    const result = await probeSkillManifest(root, "qfai-prototyping");
+    expect(result.manifest).toBe("invalid");
+    expect(result.invalidEntries).toEqual([1, null, "", " left-pad "]);
     expect(result.findings).toEqual([]);
   });
 
@@ -108,7 +119,7 @@ describe("runtimeDependencies entries must be registry package names", () => {
     expect(check["severity"]).toBe("error");
     expect(check["message"]).toContain('"--global"');
     expect(check["message"]).toContain("not registry package names");
-    expect(check["details"]["invalidNames"]).toEqual(["--global"]);
+    expect(check["details"]["invalidEntries"]).toEqual(["--global"]);
   });
 
   it("installs nothing from such a manifest under --autoremediate --yes", async () => {

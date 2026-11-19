@@ -495,9 +495,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   manifest ran a second command, and an entry such as `--global` reached npm
   as an option. Doctor now accepts only registry package names there:
   lowercase letters, digits and `-._~`, starting with a letter or digit,
-  optionally scoped. A manifest listing anything else is an error naming the
-  entry, and none of its entries is probed or installed. npm now starts
-  without a shell on every platform. Closes #4465.
+  optionally scoped. A manifest listing anything else, a non-string or a name
+  with spaces around it included, is an error naming the entry, and none of
+  its entries is probed or installed. npm now starts without a shell on every
+  platform; on Windows doctor runs npm's JavaScript entry with Node. Closes
+  #4465.
 
 - **`qfai db-drift` compares the full PostgreSQL column type.** It read
   `information_schema.columns.data_type`, which drops the varchar length, the

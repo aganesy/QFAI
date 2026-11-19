@@ -26,6 +26,7 @@
  * probe has already refused any entry that is not a registry package name.
  */
 
+import { access } from "node:fs/promises";
 import path from "node:path";
 import type { ReadLineOptions } from "node:readline";
 
@@ -34,7 +35,7 @@ import { npmCommand } from "../graph/process.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "./cleanRunLogs.js";
 import {
   probeSkillManifest,
-  quoteManifestNames,
+  quoteManifestEntries,
   type SkillManifestProbeResult,
 } from "./skillManifestProbe.js";
 
@@ -85,12 +86,40 @@ export type NpmInstallInvocation = {
 };
 
 /**
+ * npm's JavaScript entry beside an `npm.cmd` launcher on `searchPath`, the
+ * layout the Node installer and nvm-windows use. Undefined when no
+ * directory on the path holds one.
+ */
+export async function npmEntryOnPath(searchPath: string): Promise<string | undefined> {
+  for (const dir of searchPath.split(path.delimiter)) {
+    if (dir.length === 0) continue;
+    const entry = path.join(dir, "node_modules", "npm", "bin", "npm-cli.js");
+    try {
+      await access(entry);
+      return entry;
+    } catch {
+      // Not in this directory; the next one may hold it.
+    }
+  }
+  return undefined;
+}
+
+/**
  * The program and arguments the default runner starts for `npm install <name>`.
  * On Windows npm is a `.cmd` launcher that only a shell can start, so the
- * runner starts npm's JavaScript entry with Node instead.
+ * runner starts npm's JavaScript entry with Node instead: the one beside
+ * Node, else the one beside an `npm` on `PATH`. With neither, the install
+ * fails and says so rather than going through a shell.
  */
 export async function npmInstallInvocation(name: string): Promise<NpmInstallInvocation> {
   const npm = await npmCommand();
+  if (npm.prefix.length === 0 && process.platform === "win32") {
+    const entry = await npmEntryOnPath(process.env["PATH"] ?? "");
+    if (entry === undefined) {
+      throw new Error("npm's JavaScript entry (npm-cli.js) was not found beside node or on PATH");
+    }
+    return { command: process.execPath, args: [entry, "install", name] };
+  }
   return { command: npm.command, args: [...npm.prefix, "install", name] };
 }
 
@@ -206,7 +235,7 @@ function describeUnprobedManifest(probe: SkillManifestProbeResult): string {
     return "present but unreadable";
   }
   if (probe.manifest === "invalid") {
-    return `lists entries that are not registry package names (${quoteManifestNames(probe.invalidNames)})`;
+    return `lists entries that are not registry package names (${quoteManifestEntries(probe.invalidEntries)})`;
   }
   return probe.skillsRootExists ? "not found" : "not found (skills root missing; run qfai init)";
 }

@@ -55,9 +55,10 @@ export type SkillManifestProbeFinding = {
  * - `unparseable` — manifest exists but is not JSON, is not an object,
  *   or declares a non-array `runtimeDependencies`.
  * - `invalid` — `runtimeDependencies` lists an entry that is not a
- *   registry package name ({@link isRegistryPackageName}). None of the
- *   entries is probed or installed, since the name would reach a
- *   filesystem path and the `npm install` argument list.
+ *   registry package name ({@link isRegistryPackageName}), as written:
+ *   a non-string, an empty string and a name with surrounding spaces are
+ *   such entries too. None of the entries is probed or installed, since
+ *   a name would reach a filesystem path and the `npm install` argument list.
  */
 export type SkillManifestState = "found" | "absent" | "unreadable" | "unparseable" | "invalid";
 
@@ -84,8 +85,8 @@ export type SkillManifestProbeResult = {
    * whether the requested `--profile` value is correct.
    */
   readonly skillsRootExists: boolean;
-  /** The `runtimeDependencies` entries that are not registry package names; empty unless `invalid`. */
-  readonly invalidNames: readonly string[];
+  /** The `runtimeDependencies` entries, as parsed, that are not registry package names; empty unless `invalid`. */
+  readonly invalidEntries: readonly unknown[];
   readonly findings: readonly SkillManifestProbeFinding[];
 };
 
@@ -103,9 +104,12 @@ export function isRegistryPackageName(name: string): boolean {
   return name.length <= REGISTRY_PACKAGE_NAME_MAX_LENGTH && REGISTRY_PACKAGE_NAME.test(name);
 }
 
-/** JSON quoting keeps a control character in a rejected manifest entry from reaching the terminal raw. */
-export function quoteManifestNames(names: readonly string[]): string {
-  return names.map((name) => JSON.stringify(name)).join(", ");
+/**
+ * Each rejected entry as JSON, so a string reads quoted, a number or `null`
+ * reads as itself, and a control character never reaches the terminal raw.
+ */
+export function quoteManifestEntries(entries: readonly unknown[]): string {
+  return entries.map((entry) => JSON.stringify(entry)).join(", ");
 }
 
 export type SkillManifestProbeOptions = {
@@ -218,7 +222,7 @@ type ManifestRead =
   | { readonly state: "absent" }
   | { readonly state: "unreadable" }
   | { readonly state: "unparseable" }
-  | { readonly state: "invalid"; readonly invalidNames: readonly string[] }
+  | { readonly state: "invalid"; readonly invalidEntries: readonly unknown[] }
   | { readonly state: "found"; readonly deps: readonly string[] };
 
 function extractRuntimeDeps(parsed: unknown): ManifestRead {
@@ -235,14 +239,21 @@ function extractRuntimeDeps(parsed: unknown): ManifestRead {
   if (!Array.isArray(value)) {
     return { state: "unparseable" };
   }
+  // Every entry is checked as written: dropping a non-string or trimming
+  // a padded name first would report a bad manifest as healthy, or install
+  // a name the manifest does not hold.
   const deps: string[] = [];
+  const invalidEntries: unknown[] = [];
   for (const item of value) {
-    if (typeof item === "string" && item.trim().length > 0) {
-      deps.push(item.trim());
+    if (typeof item === "string" && isRegistryPackageName(item)) {
+      deps.push(item);
+    } else {
+      invalidEntries.push(item);
     }
   }
-  const invalidNames = deps.filter((name) => !isRegistryPackageName(name));
-  return invalidNames.length > 0 ? { state: "invalid", invalidNames } : { state: "found", deps };
+  return invalidEntries.length > 0
+    ? { state: "invalid", invalidEntries }
+    : { state: "found", deps };
 }
 
 /**
@@ -313,7 +324,7 @@ export async function probeSkillManifest(
     skillDirExists,
     skillsRootPath,
     skillsRootExists,
-    invalidNames: [],
+    invalidEntries: [],
   };
   if (skillDir === "unusable" || skillsRoot === "unusable") {
     // One of the two directories is occupied by something that is not
@@ -328,7 +339,7 @@ export async function probeSkillManifest(
   }
   const read = await readManifest(manifestPath);
   if (read.state === "invalid") {
-    return { manifest: "invalid", ...location, invalidNames: read.invalidNames, findings: [] };
+    return { manifest: "invalid", ...location, invalidEntries: read.invalidEntries, findings: [] };
   }
   if (read.state !== "found") {
     return { manifest: read.state, ...location, findings: [] };

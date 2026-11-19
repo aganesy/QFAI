@@ -42,7 +42,7 @@ import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
 import {
   probeSkillManifest,
-  quoteManifestNames,
+  quoteManifestEntries,
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
   type SkillManifestProbeResult,
 } from "./doctor/skillManifestProbe.js";
@@ -1025,8 +1025,10 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
 }
 
 /**
- * Report a manifest the probe could not read. An unprobed manifest is
- * NOT a clean bill of health: nothing was probed.
+ * Report a manifest whose dependencies the probe did not probe: one it
+ * could not find, read or parse, or one listing an entry that is not a
+ * registry package name. An unprobed manifest is NOT a clean bill of
+ * health: nothing was probed.
  *
  * The unprobed states are diagnosed apart because they call for
  * different actions:
@@ -1045,7 +1047,7 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
  *   here is the `--profile` value itself wrong (a typo, or a skill
  *   that was renamed), so that case is an error.
  */
-function buildUnreadableManifestCheck(
+function buildUnprobedManifestCheck(
   root: string,
   skill: string,
   result: SkillManifestProbeResult,
@@ -1072,9 +1074,9 @@ function buildUnreadableManifestCheck(
   if (result.manifest === "invalid") {
     return {
       ...base,
-      details: { ...details, invalidNames: result.invalidNames },
+      details: { ...details, invalidEntries: result.invalidEntries },
       severity: "error",
-      message: `manifest for skill '${skill}' at ${manifestRel} lists '${SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD}' entries that are not registry package names: ${quoteManifestNames(result.invalidNames)} — runtimeDependencies were not probed`,
+      message: `manifest for skill '${skill}' at ${manifestRel} lists '${SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD}' entries that are not registry package names: ${quoteManifestEntries(result.invalidEntries)} — runtimeDependencies were not probed`,
     };
   }
   if (result.manifest === "unreadable") {
@@ -1108,7 +1110,7 @@ function buildUnreadableManifestCheck(
 async function buildSkillManifestProbeChecks(root: string, skill: string): Promise<DoctorCheck[]> {
   const result = await probeSkillManifest(root, skill);
   if (result.manifest !== "found") {
-    return [buildUnreadableManifestCheck(root, skill, result)];
+    return [buildUnprobedManifestCheck(root, skill, result)];
   }
   const findings = result.findings;
   const manifestPath = toRelativePath(root, result.manifestPath);

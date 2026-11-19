@@ -32,7 +32,7 @@ vi.mock("node:child_process", async () => {
   };
 });
 
-const { npmInstallInvocation, runAutoremediate } =
+const { npmEntryOnPath, npmInstallInvocation, runAutoremediate } =
   await import("../../../../src/core/doctor/autoremediate.js");
 
 const tempDirs: string[] = [];
@@ -57,6 +57,19 @@ describe("the default install runner starts npm without a shell", () => {
       // npm's `.cmd` launcher needs a shell, so Windows starts npm's JavaScript entry with Node.
       expect(invocation.command).toBe(process.execPath);
     }
+  });
+
+  // Windows falls back to this when npm-cli.js is not beside node.
+  it("finds npm's JavaScript entry beside an npm on the search path", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-autoremediate-npmpath-"));
+    tempDirs.push(root);
+    const withNpm = path.join(root, "with-npm");
+    const entry = path.join(withNpm, "node_modules", "npm", "bin", "npm-cli.js");
+    await mkdir(path.dirname(entry), { recursive: true });
+    await writeFile(entry, "", "utf-8");
+    const searchPath = ["", path.join(root, "without-npm"), withNpm].join(path.delimiter);
+    expect(await npmEntryOnPath(searchPath)).toBe(entry);
+    expect(await npmEntryOnPath(path.join(root, "without-npm"))).toBeUndefined();
   });
 
   it("spawns with shell: false on every platform", async () => {
