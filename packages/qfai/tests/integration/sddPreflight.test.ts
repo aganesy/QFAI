@@ -425,6 +425,7 @@ describe("runSddPreflight", () => {
     });
   });
 
+  // QFAI:AC-0001-0151-03
   // QFAI:EX-0001-0151-04
   it("writes nothing when the output directory is a link out of the project", async () => {
     await withRoot(async (root) => {
