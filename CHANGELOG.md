@@ -474,6 +474,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **`qfai catalog components` writes only inside the project.** A
+  `.qfai/catalog` directory, or a directory above it, that was a symbolic link
+  or junction led the write to wherever the link pointed, overwriting a file
+  outside the project. The command now checks each directory on the path before
+  and after creating it, stops with exit 1 naming the link, and leaves any
+  existing file as it was. It writes to a new temporary file beside the
+  catalogue and renames it into place, so a failed write leaves the old
+  catalogue whole.
+
 - **`qfai db-drift` compares the full PostgreSQL column type.** It read
   `information_schema.columns.data_type`, which drops the varchar length, the
   numeric precision and scale and the array element type, and reads
