@@ -21,9 +21,9 @@ Feature: Shipped Node and package manager portability
 
   # AC-0002-0006-03
   Scenario: A Yarn Plug'n'Play project runs the QFAI it depends on
-    Given an adopter project laid out by Yarn Plug'n'Play, with a `.pnp.cjs` and no `node_modules`
+    Given an adopter project laid out by Yarn Plug'n'Play, with a `.pnp.cjs`, a `yarn.lock` and no `node_modules`
     When the shipped validation and document lanes resolve which QFAI to run
     Then a project that declares QFAI runs the exact version Yarn resolves for it, not the newest release
-    And a project that declares no QFAI runs the newest release, as before
+    And a project that declares no QFAI, or has a `.pnp.cjs` without a `yarn.lock`, runs the newest release, as before
     And a project that declares QFAI that Yarn cannot resolve to one version stops before installing anything
 ```

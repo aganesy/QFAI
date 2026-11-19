@@ -7,10 +7,11 @@
  * ask Yarn which version the project resolves and install that one.
  *
  * Every assertion reads the tree `runInit` writes into a temporary directory. Each step runs under
- * bash in a project laid out the way Yarn Plug'n'Play lays one out: a `package.json` and a
- * `.pnp.cjs`, with no `node_modules`. `yarn node` is replaced by the real `node` with `NODE_PATH`
- * pointing at a staged copy of the package, which stands in for the Plug'n'Play resolver, and
- * `npm`, `npx` and the validator's own entry record their arguments instead of running.
+ * bash in a project laid out the way Yarn Plug'n'Play lays one out: a `package.json`, a `yarn.lock`
+ * and a `.pnp.cjs`, with no `node_modules`. `yarn node` is replaced by the real `node` with
+ * `NODE_PATH` pointing at a staged copy of the package, which stands in for the Plug'n'Play
+ * resolver, and `npm`, `npx` and the validator's own entry record their arguments instead of
+ * running.
  */
 import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
@@ -67,6 +68,11 @@ interface Project {
   readonly declares?: string | undefined;
   /** The version the staged resolver answers with, or `undefined` when it resolves nothing. */
   readonly resolves?: string | undefined;
+  /**
+   * Whether the project has a `yarn.lock`, true unless set. pnpm under `node-linker=pnp` writes a
+   * `.pnp.cjs` with no `yarn.lock`, and the Yarn on the runner has no resolver for it.
+   */
+  readonly yarnLock?: boolean | undefined;
 }
 
 interface Run {
@@ -95,6 +101,9 @@ async function runStep(
         : { name: "adopter", devDependencies: { qfai: project.declares } };
     await writeFile(path.join(work, "package.json"), JSON.stringify(manifest), "utf-8");
     await writeFile(path.join(work, ".pnp.cjs"), "// staged\n", "utf-8");
+    if (project.yarnLock !== false) {
+      await writeFile(path.join(work, "yarn.lock"), "__metadata:\n  version: 8\n", "utf-8");
+    }
     if (project.resolves !== undefined) {
       // The published package exports `.` only, so a payload that asked for
       // `qfai/package.json` would fail here the way it fails on the real one.
@@ -197,7 +206,24 @@ describe("the delivered validation lane runs the QFAI a Yarn Plug'n'Play project
     expect(run.status).not.toBe(0);
     expect(run.calls).toEqual([]);
     expect(run.output).toBe("");
+    if (resolves === undefined) expect(run.stderr).toContain("Yarn resolves none");
   });
+
+  // QFAI:EX-0002-0006-04
+  it.skipIf(!HAS_BASH)(
+    "leaves a `.pnp.cjs` without a `yarn.lock` to the npx fallback",
+    async () => {
+      const run = await runStep(await resolveBody(), {
+        declares: "^4.5.0",
+        resolves: RESOLVED,
+        yarnLock: false,
+      });
+
+      expect(run.status, run.stderr).toBe(0);
+      expect(run.calls).toEqual([]);
+      expect(run.output).toBe("");
+    },
+  );
 
   // QFAI:EX-0002-0006-04
   it.skipIf(!HAS_BASH).each([
@@ -226,6 +252,11 @@ describe("the delivered document lane installs the QFAI a Yarn Plug'n'Play proje
   it.skipIf(!HAS_BASH).each([
     ["declares QFAI", { declares: "^4.5.0", resolves: RESOLVED }, `qfai@${RESOLVED}`],
     ["does not declare QFAI", {}, "qfai"],
+    [
+      "has a `.pnp.cjs` but no `yarn.lock`",
+      { declares: "^4.5.0", resolves: RESOLVED, yarnLock: false },
+      "qfai",
+    ],
   ])(
     "installs the checkers with the right QFAI when the project %s",
     async (_name, project, qfai) => {
@@ -248,6 +279,7 @@ describe("the delivered document lane installs the QFAI a Yarn Plug'n'Play proje
 
       expect(run.status).not.toBe(0);
       expect(run.calls).toEqual([]);
+      expect(run.stderr).toContain("Yarn resolves none");
     },
   );
 });

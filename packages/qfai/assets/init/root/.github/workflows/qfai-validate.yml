@@ -465,7 +465,12 @@ jobs:
           # the newest one, as `npx qfai` does everywhere else. A project that
           # declares it and whose install cannot resolve it stops, rather than
           # report what another version would say.
-          if [ -f .pnp.cjs ]; then
+          # Both files, because a `.pnp.cjs` alone does not mean Yarn: pnpm
+          # writes one too under `node-linker=pnp`, and the Yarn on the runner
+          # then has no Plug'n'Play resolver for the project. Such a project
+          # keeps the unpinned fallback, which is what the install step's own
+          # Yarn branch keys on as well.
+          if [ -f .pnp.cjs ] && [ -f yarn.lock ]; then
             version="$(yarn node -e '
               const { readFileSync } = require("node:fs");
               const path = require("node:path");
@@ -475,7 +480,14 @@ jobs:
               );
               if (!declared) process.exit(0);
               const exact = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;
-              for (let dir = path.dirname(require.resolve("qfai")); ; dir = path.dirname(dir)) {
+              let entry;
+              try {
+                entry = require.resolve("qfai");
+              } catch {
+                console.error("::error::package.json declares qfai but Yarn resolves none; run yarn install and commit the lockfile");
+                process.exit(1);
+              }
+              for (let dir = path.dirname(entry); ; dir = path.dirname(dir)) {
                 let manifest;
                 try {
                   manifest = JSON.parse(readFileSync(path.join(dir, "package.json"), "utf8"));

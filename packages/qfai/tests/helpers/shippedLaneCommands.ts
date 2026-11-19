@@ -1249,9 +1249,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "48176a8ba812f5462bb9846c6d78abdd9d3f841197a034454bdccd229f0bfe57"],
+  ["qfai-docs.yml", "8932531e5ff53e8934d9d8a54629e545fe7aa3add8561a56b9190a36014ecdec"],
   ["qfai-tests.yml", "23936510c76f82647e4d48cce2a116bf44185f5ba90fac3ca9b91a560a969572"],
-  ["qfai-validate.yml", "a3316e876eed13127ced91b39aa76ffa5be073e92a23d16cca1dc28fab236230"],
+  ["qfai-validate.yml", "f0c4a2499d49dac221fcd04a1ea4262e14c0932ec883501ee471a4be41cd6fc7"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -2114,7 +2114,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body f59a37c189700c2c53ae675626547d1c1bdf89874e5a1a96dfd61e625c7574a2>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 57fabe750ca171bf2379a79a571274e55341c1555045a522a29c9a7e523d7bd8>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2210,7 +2210,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Resolve the QFAI a Yarn Plug\'n\'Play project depends on","id":"qfai","shell":"bash","run":"<body 4e801af7331e209e8f6e5b500649db3acf23394169f2f92d3da4e4a8707ce291>"}',
+    '{"name":"Resolve the QFAI a Yarn Plug\'n\'Play project depends on","id":"qfai","shell":"bash","run":"<body 35aa5403cf748a70b07e81c2b76b84e93c91169780d8284ad495e3778e92dba6>"}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -2319,8 +2319,8 @@ export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
   // `qfai-validate.yml#validate` and `qfai-docs.yml#checks`, one payload run by `yarn node` in both —
   // prints the version of the QFAI a Yarn Plug'n'Play project depends on, or nothing when its
   // `package.json` declares none, and stops with a non-zero exit when the version Yarn resolves is
-  // not one SemVer version. Reads files, writes one line. 1294 characters.
-  "ec9ba301f9fac73b66b75daa877c467953ecec5535b8634803707d6d4f287b43",
+  // not one SemVer version or Yarn resolves none. Reads files, writes one line. 1508 characters.
+  "639d575c36f3596d01d47353ae624ec168f9841d426a0bb263bc58c37d50a3e6",
 ]);
 
 /**
