@@ -380,6 +380,42 @@ describe("parseArgs", () => {
     });
   });
 
+  describe("undeclared positional arguments", () => {
+    // Only `sdd next-id` declares positionals. Every other command used to
+    // drop an extra token and run as if it had not been given.
+    it.each([
+      ["init"],
+      ["validate"],
+      ["report"],
+      ["doctor"],
+      ["db-drift", "--format", "json"],
+      ["session-review"],
+      ["sdd", "preflight"],
+      ["atdd", "scaffold"],
+    ])("rejects an extra positional on %s", (...prefix) => {
+      const parsed = parseArgs([...prefix, "unused-positional"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.invalidExitCode).toBe(2);
+      expect(parsed.invalidReason).toBe(
+        `qfai ${prefix[0]}: unexpected argument: unused-positional`,
+      );
+    });
+
+    it("rejects a positional placed before the options too", () => {
+      const parsed = parseArgs(
+        ["db-drift", "unused-positional", "--format", "json"],
+        process.cwd(),
+      );
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toBe("qfai db-drift: unexpected argument: unused-positional");
+    });
+
+    it("still accepts a flag value that looks like a positional", () => {
+      const parsed = parseArgs(["validate", "--root", "some-dir"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+    });
+  });
+
   describe("init destination resolution", () => {
     it("uses --root as the init destination when --dir is omitted", () => {
       const parsed = parseArgs(["init", "--root", "/tmp/target"], "/tmp/cwd");
