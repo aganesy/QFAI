@@ -1249,7 +1249,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "bf3fe4f9816f8b3d4b5fe5173afd0decf0dd2ce4cf9fe6d0e30026dc0b7ed021"],
+  ["qfai-docs.yml", "dd5d7af338e0c31186cae22faac4a90fe56e25237710184ee850794bba5195b7"],
   ["qfai-tests.yml", "7fb9b20b4f472d9ffa19bf254eb53d42032538756a62250abb4d8e8fcaf451f7"],
   ["qfai-validate.yml", "d6a3d5d691f777509066a9be2c844f51dff4b242d2ae40cbb29f5fb1739ecb3b"],
 ]);
@@ -2126,7 +2126,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"Require every document check to succeed","env":{"CHECK_RESULT":"${{ needs.checks.result }}","DOCS_SCOPE":"${{ needs.scope.outputs.run }}"},"shell":"bash","run":"<body f871286b4f3baaadb4d3881e59b5a8ba212a79083202654ae20a054c303b0e86>"}',
+    '{"name":"Require every document check to succeed","env":{"CHECK_RESULT":"${{ needs.checks.result }}"},"shell":"bash","run":"<body 8e8c3a23f87d1f0cbe19cf75d718fee8047e478cd11a4cc88a581a7696666c8a>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -2523,10 +2523,6 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
  */
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   ["CHECK_RESULT", "${{ needs.checks.result }}"],
-  // Whether the document lane's scope job found a change a document check reads. The aggregate
-  // needs it to tell a skip it asked for from a skip it did not, and its value is one of two
-  // literals the scope body writes.
-  ["DOCS_SCOPE", "${{ needs.scope.outputs.run }}"],
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   // The QFAI version Yarn resolves in a Plug'n'Play project. The resolving step writes it only after
   // its payload has checked it is one SemVer version and that version is installed, and the
