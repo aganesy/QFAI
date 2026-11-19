@@ -13,6 +13,7 @@ describe("AC-0001-0234-03", () => {
   it("uses selected local processing and requires separate authorization for external scope", async () => {
     const fixture = await documentAnalysisFixture();
     const prior = process.env.OPENAI_API_KEY;
+    const priorSelected = process.env.QFAI_TEST_SELECTED_KEY;
     const definition = path.join(fixture.root, ".qfai", "graph-processing.json");
     const extract = graphifyExtractionFixture(fixture);
     const run: typeof fixture.run = async (command, args, options) => {
@@ -55,7 +56,9 @@ describe("AC-0001-0234-03", () => {
         ...selected,
         backend: "openai",
         endpoint: "https://selected.example.invalid/v1",
+        credentialEnv: "QFAI_TEST_SELECTED_KEY",
       };
+      process.env.QFAI_TEST_SELECTED_KEY = "fixture-selected-key";
       await writeFile(definition, JSON.stringify(external));
       fixture.calls.length = 0;
       const blocked = await prepareDocumentAnalysis(fixture.root, run);
@@ -98,6 +101,8 @@ describe("AC-0001-0234-03", () => {
     } finally {
       if (prior === undefined) delete process.env.OPENAI_API_KEY;
       else process.env.OPENAI_API_KEY = prior;
+      if (priorSelected === undefined) delete process.env.QFAI_TEST_SELECTED_KEY;
+      else process.env.QFAI_TEST_SELECTED_KEY = priorSelected;
       await fixture.dispose();
     }
   });
