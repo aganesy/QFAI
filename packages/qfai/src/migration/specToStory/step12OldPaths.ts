@@ -196,6 +196,12 @@ async function insidePath(boundary: string, file: string): Promise<string | null
  * Reads a regular file of the working tree inside `boundary` a block at a
  * time, and stops at its first NUL byte. The read checks the file it opened,
  * so what was inspected is what is read.
+ *
+ * Shortcut: the directory is resolved by name before the open and once more
+ * after the read, not pinned to a descriptor. A directory swapped for a link
+ * outside the project for exactly the length of the read, and swapped back
+ * before the second check, is not noticed: Node.js has no descriptor-relative
+ * open (`openat` with `RESOLVE_BENEATH`). The window lifts when Node.js offers one.
  */
 async function readableText(boundary: string, file: string): Promise<FileRead> {
   const target = await insidePath(boundary, file);
@@ -212,6 +218,8 @@ async function readableText(boundary: string, file: string): Promise<FileRead> {
     blocks.push(Buffer.from(block));
     return "continue";
   });
+  // A directory that now resolves elsewhere may have led the read out of the project.
+  if ((await insidePath(boundary, file)) !== target) return { kind: "skip" };
   switch (outcome) {
     case "stopped":
       return { kind: "skip" };
