@@ -525,6 +525,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **The validation result is written only inside its directory.** A
+  `validate.json` that was a symbolic link, or a directory on the
+  `output.validateJsonPath` path that was a link or junction, carried
+  `qfai validate`'s result wherever it pointed. `qfai report --run-validate`,
+  which writes no run log, also wrote through a linked `.qfai/report`. Both
+  commands now check the result file and its directories as `qfai validate`
+  checks the run log, stop without writing and name the linked path, and
+  replace each result file with a new one, so a second name for the file is
+  left unchanged. Closes #4485.
+
 - **`qfai catalog components` writes only inside the project.** A
   `.qfai/catalog` directory, or a directory above it, that was a symbolic link
   or junction led the write to wherever the link pointed, overwriting a file
@@ -575,6 +585,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as `AC`, and a lower-case `dec` or `oq` gets the same reason as `DEC` or
   `OQ`. Closes #4445.
 
+- **`qfai doctor` starts its output collision scan at the real Git root.** An
+  empty `.git` directory in a parent directory counted as a repository, so a
+  standalone project's scan reached unrelated directories beside it and could
+  stop on a permission error there. Git now names the working-tree root. When
+  Git fails for any reason other than "not a git repository" (Git missing,
+  dubious ownership, a broken config), or names a root the scan cannot reach,
+  the scan still stops at the nearest `.git` entry, so the run-log cleanup
+  still finds every project that shares its output directory. Closes #4510.
+
 - **Migration step 11 keeps a skill or step when its replacement fails.** Step
   11 deleted a skill or step directory that differed from the package's copy
   before writing the new one, so a failed copy left the project with neither.
@@ -599,6 +618,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with non-ASCII letters, such as `$é$`, and no longer open a literal at a
   `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
 
+- **`qfai catalog design` no longer replaces a file it cannot inspect.** The
+  command treated any failure to read a destination's metadata as a missing
+  file, so a token file or theme it could not inspect, for example because
+  access was denied, was overwritten without being moved aside first. Now
+  only a file that is not there counts as absent. Any other inspection failure
+  stops the write and leaves both files as they were. When the undo after a
+  failed write cannot put everything back, the message now also names each
+  file that is as it was, beside each moved-aside file that still holds an
+  earlier one. Closes #4514.
+
 - **Diagnostic text can no longer reshape a Markdown report.** The Markdown
   report of `qfai report` wrote each finding's code, message and file as raw
   Markdown, so brackets, HTML or a line break in them could add links, headings
@@ -621,6 +650,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `EUNSUPPORTEDPROTOCOL` at the repository root's `workspace:` dependency, an
   error that does not mention QFAI. The README now describes npm's error and
   gives the guard's message to yarn alone. Closes #4626.
+
+- **`qfai db-drift` reports a configuration error instead of passing.** A
+  `qfai.config.yaml` that did not parse, or held an invalid setting, made the
+  command fall back to the defaults. The defaults name no migrations
+  directory, so the command said there was nothing to compare and exited 0.
+  It now lists the configuration errors on stderr and exits 2 before
+  comparing anything. "Nothing to compare" is reported only for a
+  configuration that loaded. Closes #4517.
+
+- **The turn-end check runs only commands the Standard commands list itself
+  holds.** It read every `- Label:` line under the heading, so a fenced or
+  indented example, an item nested under another, and a heading inside a
+  sample could replace a real command or mark one. Only the section's
+  top-level items are read now. Where the `Turn-end check:` item or a label
+  it marks is listed twice, the hook runs nothing and tells the user which
+  label is listed more than once in tech.md. Closes #4470.
 
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
@@ -731,6 +776,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeping the document's permissions, so a failure leaves the original as it
   was. The same holds for the reminder text step 11 refreshes and for the hook
   settings it and `qfai init` update. Closes #4457.
+
+- **The migration warns that it replaces customised step directories.** The
+  backup warning in the migration skill, its guide and `MIGRATION-2.0.0.md`
+  named only the shipped skills that step 11 replaces. They now also name the
+  shipped step directories under `.qfai/assistant/step/`, whose untracked files
+  and uncommitted edits step 11 replaces too, so a person copies their local
+  changes before the first run. Closes #4509.
+
+- **`qfai init` no longer writes through a linked `.qfai`.** The asset copies
+  checked the directories below `.qfai` but not `.qfai` itself, so a `.qfai`
+  that was a symbolic link had every assistant file written wherever it
+  pointed. A story-tree seed path under a link was refused only after the root
+  assets and `AGENTS.md` had already been written. Init now checks `.qfai` and
+  the seed paths before it writes anything, and stops with the path named when
+  `.qfai` is a link or not a directory, leaving every project file as it was.
+  Closes #4471.
 
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in

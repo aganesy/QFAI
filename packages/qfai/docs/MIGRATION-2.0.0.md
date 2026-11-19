@@ -10,8 +10,11 @@ yet must keep a pinned 1.x dependency.
 1. Commit or otherwise back up the project before any migration step. Include
    untracked files and any configured spec or contract directory outside
    `.qfai/`: the migration deletes every 1.x file that has no destination, an
-   untracked file and an uncommitted edit included, and only what git history
-   holds can be recovered. Inspect `qfai.config.yaml` for custom `paths.specsDir` and
+   untracked file and an uncommitted edit included. Step 11 also replaces each
+   shipped skill and step directory you customised under
+   `.qfai/assistant/skill/` and `.qfai/assistant/step/`, with the untracked
+   files and uncommitted edits in it. Only what git history holds can be
+   recovered. Inspect `qfai.config.yaml` for custom `paths.specsDir` and
    `paths.contractsDir`.
 2. Install `qfai@2.0.0` as a local project dependency. The bundled scripts
    load the installed package; an `npx` download alone is insufficient.
@@ -136,8 +139,9 @@ opens the rest of the report.
 Step 10 resets the managed `.gitignore` block and leaves every other line as it
 is.
 
-Step 11 replaces each shipped skill with the installed package's copy, a copy
-the project changed included. Step 12 lists under `## For a person` each check
+Step 11 replaces each shipped skill and each shipped step directory under
+`.qfai/assistant/step/` with the installed package's copy, a copy the project
+changed included, with any untracked file or uncommitted edit in it. Step 12 lists under `## For a person` each check
 a shipped plan needs that fails, such as a `qfai.config.yaml` routing
 override that drops a reviewer the defaults require. It also lists, as an
 `old-path` item, each line of a tracked project file that still names a 1.x

@@ -2430,7 +2430,7 @@ describe("BF-0004 acceptance criteria", () => {
     expect(report).toContain("what the migration deleted survives only where git history held it");
     const start = prose.slice(0, prose.indexOf("Run steps 1 to 3 in order"));
     expect(start).toContain(
-      "Before the first real run, tell the person that the migration deletes every 1.x file that has no destination and replaces every customised shipped skill, untracked files and uncommitted edits included, so that they commit or copy anything they need first",
+      "Before the first real run, tell the person that the migration deletes every 1.x file that has no destination and replaces every customised shipped skill and step directory, untracked files and uncommitted edits included, so that they commit or copy anything they need first",
     );
   });
 

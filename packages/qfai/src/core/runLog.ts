@@ -47,11 +47,12 @@ export async function writeValidateRunLog(input: {
 }): Promise<ValidateRunLog> {
   const root = path.resolve(input.root);
   const outDir = resolvePath(root, input.config, "outDir");
-  await refuseLinkedDestination(root, outDir);
+  const logPath = path.join(outDir, VALIDATE_LOG_NAME);
+  await refuseLinkedDestination(root, logPath, RUN_LOG_LABEL);
   await mkdir(outDir, { recursive: true });
   // Again after `mkdir`, which narrows the window a link swapped in can use
   // but does not close it (see `refuseLinkedDestination`).
-  await refuseLinkedDestination(root, outDir);
+  await refuseLinkedDestination(root, logPath, RUN_LOG_LABEL);
   const { runId, reportDir } = await allocateRunReportDir(outDir, input.startedAt);
 
   const relativeSpecsRoot = toRelativePath(root, resolvePath(root, input.config, "specsDir"));
@@ -127,6 +128,7 @@ export async function writeValidateRunLog(input: {
 }
 
 const VALIDATE_LOG_NAME = "validate.log";
+const RUN_LOG_LABEL = "qfai validate: the run log";
 const RUN_ID_LINE_RE = /^-\s*run_id:\s*(run-\d{17})\s*$/m;
 const RUN_DIR_RE = /^run-\d{17}$/;
 
@@ -184,28 +186,36 @@ async function writeLatestValidateLog(
 }
 
 /**
- * Stop before anything is written when `outDir`, a directory between the
- * project root and it, or `validate.log` in it is a symbolic link or junction.
+ * Stop before anything is written when the directory `filePath` goes in, a
+ * directory between the project root and it, or `filePath` itself is a
+ * symbolic link or junction, or when one of those directories is not a
+ * directory.
  *
  * `mkdir` and `writeFile` follow a link, so a linked component would put the
- * run log, or overwrite a file, wherever the link points. Thrown with the
+ * file, or overwrite another one, wherever the link points. Thrown with the
  * component's path relative to the root, which is the message the operator
- * sees. An `outDir` outside the root is checked from its own name down, since
- * the directories above it are not the project's.
+ * sees, after `label`, which names what was not written. A directory outside
+ * the root is checked from its own name down, since the directories above it
+ * are not the project's.
  *
- * Ceiling: this is a check, then writes. Another process that swaps `outDir`,
- * a directory above it or the new run directory for a link after the check
- * is not caught: `mkdir`, the exclusive creates and the rename all follow a
- * linked parent directory. The exclusive creates and the rename only keep a
- * link at the file name itself from being written through. Closing the window
- * needs directory handles opened without following links, which Node does not
- * offer portably; lift this if it does.
+ * Ceiling: this is a check, then writes. Another process that swaps the
+ * directory, a directory above it or the new run directory for a link after
+ * the check is not caught: `mkdir`, the exclusive creates and the rename all
+ * follow a linked parent directory. The exclusive creates and the rename only
+ * keep a link at the file name itself from being written through. Closing the
+ * window needs directory handles opened without following links, which Node
+ * does not offer portably; lift this if it does.
  */
-async function refuseLinkedDestination(root: string, outDir: string): Promise<void> {
-  const insideRoot = isInside(root, outDir);
-  const base = insideRoot ? root : path.dirname(outDir);
-  const relative = path.relative(base, outDir);
-  const segments = [...(relative === "" ? [] : relative.split(path.sep)), VALIDATE_LOG_NAME];
+async function refuseLinkedDestination(
+  root: string,
+  filePath: string,
+  label: string,
+): Promise<void> {
+  const directory = path.dirname(filePath);
+  const insideRoot = isInside(root, directory);
+  const base = insideRoot ? root : path.dirname(directory);
+  const relative = path.relative(base, directory);
+  const segments = [...(relative === "" ? [] : relative.split(path.sep)), path.basename(filePath)];
   const unsafe = await findUnsafeHostFileComponent(base, segments);
   if (unsafe === undefined) {
     return;
@@ -213,8 +223,35 @@ async function refuseLinkedDestination(root: string, outDir: string): Promise<vo
   const shown = insideRoot ? unsafe.relativePath : path.join(base, unsafe.relativePath);
   const what = unsafe.symlink ? "is a symbolic link or junction" : "is not a directory";
   throw new Error(
-    `qfai validate: the run log was not written: ${shown} ${what}. Remove it, create a real directory where one belongs, and run again.`,
+    `${label} was not written: ${shown} ${what}. Remove it, create a real directory where one belongs, and run again.`,
   );
+}
+
+/**
+ * Write the same report, such as `validate.json` and its profile-suffixed
+ * sibling, at every path in `filePaths`, refusing a destination reached
+ * through a link the way the run log does. Every path is checked by
+ * `refuseLinkedDestination` before any of them is written, so one linked path
+ * leaves all of them as they were; each is checked again after its directory
+ * is created, and replaced by `replaceFile`, so a second name at the path is
+ * replaced rather than written through. `label` names the files in the error,
+ * as in `qfai validate: the validation result`. The ceiling of
+ * `refuseLinkedDestination` applies.
+ */
+export async function writeReportFiles(
+  root: string,
+  filePaths: readonly string[],
+  contents: string,
+  label: string,
+): Promise<void> {
+  for (const filePath of filePaths) {
+    await refuseLinkedDestination(root, filePath, label);
+  }
+  for (const filePath of filePaths) {
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await refuseLinkedDestination(root, filePath, label);
+    await replaceFile(filePath, contents);
+  }
 }
 
 /**

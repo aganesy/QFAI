@@ -15,11 +15,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 type RenameFault = (from: string, to: string) => boolean;
+type LstatFault = (file: string) => boolean;
 
-const fault = vi.hoisted((): { rename: RenameFault | null; noInodes: boolean } => ({
-  rename: null,
-  noInodes: false,
-}));
+const fault = vi.hoisted(
+  (): { rename: RenameFault | null; lstat: LstatFault | null; noInodes: boolean } => ({
+    rename: null,
+    lstat: null,
+    noInodes: false,
+  }),
+);
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
@@ -41,6 +45,15 @@ vi.mock("node:fs/promises", async () => {
           return typeof value === "function" ? value.bind(target) : value;
         },
       });
+    },
+    // A file whose metadata cannot be read, as when its directory denies the lookup.
+    lstat: (...args: Parameters<FsPromises["lstat"]>): ReturnType<FsPromises["lstat"]> => {
+      if (fault.lstat?.(String(args[0])) === true) {
+        return Promise.reject(
+          Object.assign(new Error("EACCES: permission denied, lstat"), { code: "EACCES" }),
+        );
+      }
+      return actual.lstat(...args);
     },
     rename: async (...args: Parameters<FsPromises["rename"]>): Promise<void> => {
       const [from, to] = args;
@@ -71,6 +84,7 @@ const SAMPLE = path.join(
 
 afterEach(async () => {
   fault.rename = null;
+  fault.lstat = null;
   fault.noInodes = false;
   vi.restoreAllMocks();
   while (roots.length > 0) {
@@ -217,7 +231,7 @@ describe("the design catalogue is written only inside the project, by the run th
     const failed = await cli(["catalog", "design", "--root", root]);
     expect(failed.code).toBe(1);
     expect(failed.err).toMatch(
-      /^qfai catalog design: could not write the design catalogue, and could not put both files back: EBUSY: resource busy or locked, rename \.qfai\/catalog\/\.theme\.css\.[0-9a-f-]+\.old still holds the earlier \.qfai\/catalog\/theme\.css: EBUSY: resource busy or locked, rename\n$/,
+      /^qfai catalog design: could not write the design catalogue, and could not put both files back: EBUSY: resource busy or locked, rename \.qfai\/catalog\/\.theme\.css\.[0-9a-f-]+\.old still holds the earlier \.qfai\/catalog\/theme\.css: EBUSY: resource busy or locked, rename \.qfai\/catalog\/design\.tokens\.json is as it was\.\n$/,
     );
     expect(await readFile(catalogFile(root, "design.tokens.json"))).toEqual(tokens);
     const left = await readdir(path.join(root, ...CATALOG));
@@ -239,7 +253,66 @@ describe("the design catalogue is written only inside the project, by the run th
     const failed = await cli(["catalog", "design", "--root", root]);
     expect(failed.code).toBe(1);
     expect(failed.err).toMatch(
-      /^qfai catalog design: could not write the design catalogue, and could not put both files back: EBUSY: resource busy or locked, rename \.qfai\/catalog\/design\.tokens\.json was left in place: the file system gives no inode number, so it cannot be told apart from another run's file\. \.qfai\/catalog\/\.design\.tokens\.json\.[0-9a-f-]+\.old still holds the earlier \.qfai\/catalog\/design\.tokens\.json: another file is at \.qfai\/catalog\/design\.tokens\.json\.\n$/,
+      /^qfai catalog design: could not write the design catalogue, and could not put both files back: EBUSY: resource busy or locked, rename \.qfai\/catalog\/design\.tokens\.json was left in place: the file system gives no inode number, so it cannot be told apart from another run's file\. \.qfai\/catalog\/\.design\.tokens\.json\.[0-9a-f-]+\.old still holds the earlier \.qfai\/catalog\/design\.tokens\.json: another file is at \.qfai\/catalog\/design\.tokens\.json\. \.qfai\/catalog\/theme\.css is as it was\.\n$/,
+    );
+    expect(await readFile(catalogFile(root, "theme.css"))).toEqual(theme);
+    expect(await readFile(catalogFile(root, "design.tokens.json"))).not.toEqual(tokens);
+    const left = await readdir(path.join(root, ...CATALOG));
+    const aside = left.filter((name) => name.endsWith(".old"));
+    expect(left.sort()).toEqual(["design.tokens.json", "theme.css", ...aside].sort());
+    expect(aside).toHaveLength(1);
+    expect(await readFile(catalogFile(root, aside[0] ?? ""))).toEqual(tokens);
+  });
+
+  // QFAI:EX-0001-0312-20
+  it("stops and leaves both files as they were when a target cannot be inspected", async () => {
+    const root = await project();
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    const tokens = await readFile(catalogFile(root, "design.tokens.json"));
+    const theme = await readFile(catalogFile(root, "theme.css"));
+    await changePrimary(root);
+    // First every look at the theme fails; then every look after the first.
+    let looks = 0;
+    const faults: LstatFault[] = [
+      (file) => path.basename(file) === "theme.css",
+      (file) => path.basename(file) === "theme.css" && (looks += 1) > 1,
+    ];
+    for (const lstatFault of faults) {
+      fault.lstat = lstatFault;
+      const failed = await cli(["catalog", "design", "--root", root]);
+      fault.lstat = null;
+      expect(failed.code).toBe(1);
+      expect(failed.err).toBe(
+        "qfai catalog design: could not write the design catalogue, so both files are as they were: EACCES: permission denied, lstat\n",
+      );
+      expect(await readFile(catalogFile(root, "design.tokens.json"))).toEqual(tokens);
+      expect(await readFile(catalogFile(root, "theme.css"))).toEqual(theme);
+      expect((await readdir(path.join(root, ...CATALOG))).sort()).toEqual([
+        "design.tokens.json",
+        "theme.css",
+      ]);
+    }
+  });
+
+  // QFAI:EX-0001-0312-20
+  it("keeps a file it cannot inspect while undoing, and names the file put back", async () => {
+    const root = await project();
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    const tokens = await readFile(catalogFile(root, "design.tokens.json"));
+    const theme = await readFile(catalogFile(root, "theme.css"));
+    await changePrimary(root);
+    let undoing = false;
+    fault.rename = (from, to) => {
+      if (!placesTheme(from, to)) return false;
+      undoing = true;
+      return true;
+    };
+    fault.lstat = (file) => undoing && path.basename(file) === "design.tokens.json";
+    const failed = await cli(["catalog", "design", "--root", root]);
+    fault.lstat = null;
+    expect(failed.code).toBe(1);
+    expect(failed.err).toMatch(
+      /^qfai catalog design: could not write the design catalogue, and could not put both files back: EBUSY: resource busy or locked, rename \.qfai\/catalog\/design\.tokens\.json was left in place, as it could not be inspected: EACCES: permission denied, lstat \.qfai\/catalog\/\.design\.tokens\.json\.[0-9a-f-]+\.old still holds the earlier \.qfai\/catalog\/design\.tokens\.json: EACCES: permission denied, lstat \.qfai\/catalog\/theme\.css is as it was\.\n$/,
     );
     expect(await readFile(catalogFile(root, "theme.css"))).toEqual(theme);
     expect(await readFile(catalogFile(root, "design.tokens.json"))).not.toEqual(tokens);
