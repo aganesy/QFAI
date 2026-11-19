@@ -521,6 +521,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `brave-search-http/` connects them to a Brave Search server you start in
   HTTP mode on loopback; the skill gives the command.
 
+- **`qfai init` now reports a file another writer creates during the copy
+  as kept when it differs from the template.** A file that appeared between
+  the existence check and the create was counted as skipped without being
+  compared, so an edit saved while `qfai init` ran was left out of the
+  notice naming the files only `--force` brings up to date. It is now
+  compared like a file that was already there. Closes #4703.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
