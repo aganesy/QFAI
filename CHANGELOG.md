@@ -680,7 +680,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The command created the test file and then wrote its body, so a write that
   failed left an incomplete file, and the next run kept it as an existing test.
   The skeleton is now written in full to a hidden file beside the destination
-  and then published without replacing anything already there. Closes #4538.
+  and then published without replacing anything already there. On a
+  filesystem without hard links it is written directly, as before. A hidden
+  file the command cannot remove is named in its output. Closes #4538.
 
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its

@@ -35,6 +35,8 @@ export function buildSkeleton(
 export type EmitSkeletonResult = {
   destPath: string;
   wrote: boolean;
+  /** The hidden staging file this run wrote and could not remove, if any. */
+  leftBehind?: string;
 };
 
 /**
@@ -44,9 +46,11 @@ export type EmitSkeletonResult = {
  * that a retry would keep as an existing test, and an existing test is never
  * replaced.
  *
- * Ceiling: on a filesystem without hard links the body is written straight to
- * `destPath` through an exclusive create, so a write that fails there can
- * still leave a partial file. A no-replace rename exposed to Node lifts it.
+ * Ceiling: where `link` fails for any other reason, such as a filesystem
+ * without hard links (FAT32 and exFAT among them, whose error code varies by
+ * platform), the body is written straight to `destPath` through an exclusive
+ * create, so a write that fails there can still leave a partial file. A
+ * no-replace rename exposed to Node lifts it.
  */
 export async function emitSkeleton(
   target: ScaffoldTarget,
@@ -55,36 +59,68 @@ export async function emitSkeleton(
 ): Promise<EmitSkeletonResult> {
   if (!isScaffoldTarget(target)) throw new TypeError(`Invalid scaffold target: ${target.id}`);
   await mkdir(path.dirname(destPath), { recursive: true });
-  try {
-    await publishNewFile(destPath, body);
-    return { destPath, wrote: true };
-  } catch (error) {
-    if (!(hasErrnoCode(error) && error.code === "EEXIST")) throw error;
-    await assertReadableTestFile(destPath);
-    return { destPath, wrote: false };
-  }
-}
-
-/** The `link` errors that mean the filesystem has no hard links, not that the path is taken. */
-const NO_HARD_LINKS = new Set(["EPERM", "ENOSYS", "ENOTSUP", "EOPNOTSUPP", "EXDEV"]);
-
-/** Put the complete `body` at `destPath`, failing with `EEXIST` when an entry is already there. */
-async function publishNewFile(destPath: string, body: string): Promise<void> {
   // The name leaves out the destination's, so a name near the length limit still stages.
   const staged = path.join(
     path.dirname(destPath),
     `.qfai-scaffold-${randomBytes(6).toString("hex")}.tmp`,
   );
+  let failure: { error: unknown } | undefined;
   try {
-    await writeFile(staged, body, { encoding: "utf8", flag: "wx" });
-    try {
-      await link(staged, destPath);
-    } catch (error) {
-      if (!(hasErrnoCode(error) && NO_HARD_LINKS.has(error.code))) throw error;
-      await writeFile(destPath, body, { encoding: "utf8", flag: "wx" });
+    await publishStaged(staged, destPath, body);
+  } catch (error) {
+    failure = { error };
+  }
+  // Removal is best-effort, so it never replaces the publish result or its error.
+  const leftBehind = await removeStaged(staged);
+  if (failure !== undefined) {
+    const { error } = failure;
+    if (!(hasErrnoCode(error) && error.code === "EEXIST")) throw error;
+    await assertReadableTestFile(destPath);
+  }
+  const wrote = failure === undefined;
+  return leftBehind === undefined ? { destPath, wrote } : { destPath, wrote, leftBehind };
+}
+
+/**
+ * Write the complete `body` to `staged` and publish it at `destPath`, failing
+ * with `EEXIST` when an entry is already there. A `link` that fails for any
+ * other reason falls back to an exclusive create once `lstat` finds nothing at
+ * `destPath`.
+ */
+async function publishStaged(staged: string, destPath: string, body: string): Promise<void> {
+  await writeFile(staged, body, { encoding: "utf8", flag: "wx" });
+  try {
+    await link(staged, destPath);
+    return;
+  } catch (error) {
+    if (hasErrnoCode(error) && error.code === "EEXIST") throw error;
+    if (await entryExists(destPath)) {
+      throw Object.assign(new Error(`EEXIST: ${destPath} already exists`), {
+        code: "EEXIST",
+        cause: error,
+      });
     }
-  } finally {
+  }
+  await writeFile(destPath, body, { encoding: "utf8", flag: "wx" });
+}
+
+async function entryExists(filePath: string): Promise<boolean> {
+  try {
+    await lstat(filePath);
+    return true;
+  } catch (error) {
+    if (hasErrnoCode(error) && error.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+/** Remove the staging file; return its path when it could not be removed. */
+async function removeStaged(staged: string): Promise<string | undefined> {
+  try {
     await rm(staged, { force: true });
+    return undefined;
+  } catch {
+    return staged;
   }
 }
 
