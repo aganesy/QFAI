@@ -503,6 +503,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
 
+- **The package self-governance checks report an input they cannot read.**
+  `QFAI-MANIFEST-001` and `QFAI-HANDOFF-001` skipped a source file that was
+  present but could not be read, such as one behind a permission error or a
+  directory in its place, and the run passed as if that pair were in sync.
+  Each now reports such a file at severity error, naming it and saying the
+  check is incomplete. A file that is absent is still skipped, so a project
+  without the qfai package source is unaffected.
+
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
   took the opening `---` as the diagram's declaration and skipped the
@@ -552,6 +560,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   never built from. The check now refreshes and verifies a separate copy and
   makes it active, graph and inputs together, only when the graph is current
   for them. Closes #4588.
+
+- **An unreadable completed graph analysis no longer stops reuse.** When one
+  saved CodeGraph or Graphify analysis in the repository's graph cache could
+  not be inspected or its metadata could not be read, CodeGraph preparation
+  failed instead of generating the analysis locally, and Graphify passed over
+  every later saved analysis and rebuilt. That entry is now skipped on its own:
+  a later valid analysis is restored, and with none left the analysis is
+  generated locally.
 
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
@@ -675,6 +691,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
+- **`qfai validate` reads every skill document within the same size limit.**
+  A document the skill-tree crawl found was read whole into memory, while the
+  same document named from a directory the crawl skips was read only up to
+  64 MiB. Every skill document now goes through one bounded reader: past the
+  limit its encoding is still checked and what it cites is left undecided,
+  wherever it sits. Closes #4577.
 
 - **A DB contract that gives a regular and a unique index one name is
   reported.** PostgreSQL keeps both kinds of index in one namespace, so the
