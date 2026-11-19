@@ -502,7 +502,7 @@ export async function countScreenElements(html: string): Promise<ScreenElementCo
   };
 }
 
-/** Elements a user can operate without any role or `tabindex`. */
+/** Tags this checker classifies as an interactive control unless disabled. */
 const INTERACTIVE_TAGS: ReadonlySet<string> = new Set([
   "a",
   "button",
@@ -512,7 +512,7 @@ const INTERACTIVE_TAGS: ReadonlySet<string> = new Set([
   "summary",
 ]);
 
-/** Roles that make any element one a user can operate. */
+/** Roles that make this checker classify any element as an interactive control unless disabled. */
 const INTERACTIVE_ROLES: ReadonlySet<string> = new Set([
   "button",
   "link",
