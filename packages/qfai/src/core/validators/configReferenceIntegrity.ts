@@ -57,8 +57,13 @@ const VERIFIED_PATH_KEYS: ReadonlyArray<ConfigPathKey> = [
 
 const DEFAULT_SKILL_CREATED_PATH_KEYS = new Set<ConfigPathKey>(["specsDir", "contractsDir"]);
 
+/** True when `relPath` names the shipped default for `key`, however it is spelled (`./src` is `src`). */
+function isShippedDefault(key: ConfigPathKey, relPath: string): boolean {
+  return path.normalize(relPath) === path.normalize(defaultConfig.paths[key]);
+}
+
 function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean {
-  return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
+  return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && isShippedDefault(key, relPath);
 }
 
 const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
@@ -68,9 +73,7 @@ const DEFAULT_ABSENT_NOTES: Partial<Record<ConfigPathKey, string>> = {
 
 /** What an absent directory at its shipped default means, or undefined where it is a fault. */
 function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefined {
-  return path.normalize(relPath) === path.normalize(defaultConfig.paths[key])
-    ? DEFAULT_ABSENT_NOTES[key]
-    : undefined;
+  return isShippedDefault(key, relPath) ? DEFAULT_ABSENT_NOTES[key] : undefined;
 }
 
 function pathFindingMessage(

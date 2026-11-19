@@ -195,6 +195,20 @@ describe("validateConfigReferenceIntegrity", () => {
   });
 
   // QFAI:EX-0003-0003-07
+  it("reads a default spec and contract path spelled with a leading ./ as the default", async () => {
+    const root = await newTempDir();
+    const base = makeConfig();
+    const issues = await validateConfigReferenceIntegrity(root, {
+      ...base,
+      paths: { ...base.paths, specsDir: "./.qfai/spec", contractsDir: "./.qfai/spec/03_contract" },
+    });
+    const rules = issues.map((i) => i.rule);
+
+    expect(rules).not.toContain("config.paths.specsDir.reality");
+    expect(rules).not.toContain("config.paths.contractsDir.reality");
+  });
+
+  // QFAI:EX-0003-0003-07
   it("warns when a file stands at the shipped-default spec and contract paths", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
