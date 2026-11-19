@@ -54,6 +54,40 @@ describe("README facts", () => {
     }
   });
 
+  it("states what a fresh qfai init needs before the first command", async () => {
+    const manifest: unknown = JSON.parse(
+      await readFile(path.join(repoRoot, "packages", "qfai", "package.json"), "utf-8"),
+    );
+    const engines =
+      typeof manifest === "object" && manifest !== null && "engines" in manifest
+        ? manifest.engines
+        : undefined;
+    const node =
+      typeof engines === "object" && engines !== null && "node" in engines
+        ? String(engines.node)
+        : "";
+    const minimum = /^>=(\d+\.\d+\.\d+)$/.exec(node)?.[1];
+    expect(minimum, "packages/qfai/package.json#engines.node").toBeDefined();
+
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("## Quick start");
+      expect(start, readmePath).toBeGreaterThanOrEqual(0);
+      const quickStart = readme.slice(start, readme.indexOf("npx qfai init", start));
+      for (const fact of [
+        `Node.js ${minimum} or later`,
+        "Python 3.10 or later",
+        "`uv`",
+        "npm registry",
+        "PyPI",
+      ]) {
+        expect(quickStart, `${readmePath} must state ${fact} before the first init`).toContain(
+          fact,
+        );
+      }
+    }
+  });
+
   it("states the upgrade procedure in both READMEs", async () => {
     for (const readmePath of READMES) {
       const readme = await readFile(readmePath, "utf-8");

@@ -442,6 +442,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The README says what a fresh `qfai init` needs.** The Quick start now
+  lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
+  or later with `uv`, and network access to the npm registry and PyPI, from
+  which init downloads CodeGraph and Graphify. A fresh install no longer meets
+  these only when init stops. Closes #4508.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
