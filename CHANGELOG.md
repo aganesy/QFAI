@@ -477,6 +477,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
 
+- **A null `requires:` is no longer read as an empty step list.** In a
+  step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
+  `requires: null`, or a `requires:` with no value, as `requires: []`. It now
+  reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
+  omitted `requires:` still counts as empty.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so
