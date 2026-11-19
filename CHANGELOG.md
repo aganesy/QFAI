@@ -736,6 +736,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   64 levels, now raises `QFAI-DT-002` at error naming the path where reading
   stopped, and every other check completes.
 
+- **`qfai report --run-validate` stops on a stale install, as `qfai validate`
+  does.** When the installed qfai was not the version the lockfile pins,
+  `report --run-validate` only warned and then ran a fresh validation with the
+  outdated copy, so a single-step CI gate could pass on the old validator. It
+  now stops before it runs and exits 1, writing nothing. `qfai report` without
+  `--run-validate` reads a result already written, so it still only warns.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one

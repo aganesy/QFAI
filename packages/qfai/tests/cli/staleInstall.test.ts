@@ -64,6 +64,11 @@ async function project(
   return { root, packageDir };
 }
 
+/** The smallest story tree `report` accepts: a business-flow directory with nothing in it. */
+async function storyTree(root: string): Promise<void> {
+  await mkdir(path.join(root, ".qfai", "spec", "02_business-flow"), { recursive: true });
+}
+
 type Captured = { stdout: string; stderr: string; exitCode: number | undefined };
 
 async function cli(argv: string[], cwd: string): Promise<Captured> {
@@ -141,6 +146,40 @@ describe("a stale install", () => {
       reasons: [{ reason: "stale-install", subject: "package-lock.json" }],
     });
     expect(result.stderr).toContain("This command stops until then.");
+  });
+});
+
+// QFAI:EX-0001-0313-08
+describe("report on a stale install", () => {
+  it("stops report --run-validate with exit 1 before it validates, even under --fail-on never", async () => {
+    const { root, packageDir } = await project("0.0.1");
+    await storyTree(root);
+    stale.value = await findStaleInstall(root, { packageDir, version: "2.5.0" });
+
+    const result = await cli(
+      ["report", "--run-validate", "--root", root, "--fail-on", "never"],
+      root,
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("This command stops until then.");
+    await expect(stat(path.join(root, ".qfai", "report", "validate.json"))).rejects.toThrow();
+    await expect(stat(path.join(root, ".qfai", "report", "report.md"))).rejects.toThrow();
+  });
+
+  it("still reports an existing validate result without --run-validate, warning only", async () => {
+    const { root, packageDir } = await project("0.0.1");
+    await storyTree(root);
+    await cli(["validate", "--root", root, "--fail-on", "never"], root);
+    await stat(path.join(root, ".qfai", "report", "validate.json"));
+    stale.value = await findStaleInstall(root, { packageDir, version: "2.5.0" });
+
+    const result = await cli(["report", "--root", root, "--fail-on", "never"], root);
+
+    expect(result.exitCode ?? 0).toBe(0);
+    await stat(path.join(root, ".qfai", "report", "report.md"));
+    expect(result.stderr).toContain("package-lock.json pins 0.0.1");
+    expect(result.stderr).not.toContain("This command stops");
   });
 });
 

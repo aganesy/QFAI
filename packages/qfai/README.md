@@ -969,8 +969,8 @@ To upgrade by hand:
 8. After the change is merged, every other checkout and worktree of the
    project runs its install once it pulls the change, for example `npm ci`.
    Until it does, its `node_modules` keeps the old qfai: every command warns
-   with both versions, and `npx qfai validate`, `npx qfai sdd preflight` and
-   `npx qfai workflow plan` stop.
+   with both versions, and `npx qfai validate`, `npx qfai sdd preflight`,
+   `npx qfai report --run-validate` and `npx qfai workflow plan` stop.
 
 An agent asked to upgrade `qfai` follows these steps as a dependency update.
 

@@ -168,11 +168,19 @@ describe("README facts", () => {
     //     common help flags in the guard above the dispatch, so scanning only
     //     `case "init":` would let both READMEs drop `--help` / `-h` while the
     //     test name still promises "every qfai init flag". Derive that guard's
-    //     options too — they apply to every command, `init` included.
-    const preDispatch = mainSource.slice(0, mainSource.indexOf("switch (command) {"));
-    expect(preDispatch.length, "main.ts must keep a `switch (command) {` dispatch").toBeGreaterThan(
-      0,
-    );
+    //     options too — they apply to every command, `init` included. Only
+    //     `run()` up to its `dispatch(` call is the guard: a helper declared
+    //     between `run()` and the switch, such as the stale-install gate that
+    //     reads `options.reportRunValidate` for `report`, does not apply to
+    //     `init` and must not pull its flags into this set.
+    const runStart = mainSource.indexOf("export async function run(");
+    const dispatchCall = mainSource.indexOf("await dispatch(command, options)", runStart);
+    expect(runStart, "main.ts must keep an exported `run()`").toBeGreaterThanOrEqual(0);
+    expect(
+      dispatchCall,
+      "`run()` must keep its `await dispatch(command, options)` call",
+    ).toBeGreaterThan(runStart);
+    const preDispatch = mainSource.slice(runStart, dispatchCall);
     const commonOptionKeys = collectOptionKeys(preDispatch);
 
     // 1c. Options the PARSER folds into an init option after the switch.
