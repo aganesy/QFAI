@@ -3,7 +3,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
-import { flowScopeContainsFile, resolveFlowScope } from "../../../src/core/flowScope.js";
+import {
+  flowScopeContainsFile,
+  flowScopeContainsId,
+  resolveFlowScope,
+} from "../../../src/core/flowScope.js";
 import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
 import {
   isStoryTreeId,
@@ -474,6 +478,19 @@ describe("story-tree core", () => {
       storyIds: ["US-0001-0001"],
       ruleIds: ["BR-API-0001-0001"],
     });
+    const scope = resolveFlowScope(["BF-0001"], model);
+    for (const id of [
+      "BF-0001",
+      "US-0001-0001",
+      ...scope.acceptanceCriteriaIds,
+      ...scope.exampleIds,
+      "BR-API-0001-0001",
+    ]) {
+      expect(flowScopeContainsId(scope, id)).toBe(true);
+    }
+    for (const id of ["BF-0002", "US-0002-0001", "EX-0002-0001-01", "BR-API-0002-0001"]) {
+      expect(flowScopeContainsId(scope, id)).toBe(false);
+    }
   });
 
   it("matches a root-relative finding path against an absolute story model", () => {
