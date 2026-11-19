@@ -494,6 +494,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
+- **Migration step 11 keeps a skill or step when its replacement fails.** Step
+  11 deleted a skill or step directory that differed from the package's copy
+  before writing the new one, so a failed copy left the project with neither.
+  It now writes the package's copy beside the directory, checks it, and only
+  then switches the two; if the switch fails, the project's copy is put back,
+  and when even that fails the error names the hidden directory that holds it.
+
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
   `-- Depends on:` line skipped `$$ … $$` literals but not `$tag$ … $tag$`
