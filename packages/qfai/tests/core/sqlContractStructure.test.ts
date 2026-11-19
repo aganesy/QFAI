@@ -310,6 +310,18 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
   });
 
+  // A regular and a unique index share PostgreSQL's relation namespace, so one
+  // name used for both is the same collision as one name used twice. Keying
+  // `INDEX` and `UNIQUE INDEX` as two kinds let the pair through.
+  it("reports a regular and a unique index that share a name", () => {
+    const { statements } = parseSqlContract(
+      `CREATE INDEX orders_idx ON orders (a);\nCREATE UNIQUE INDEX orders_idx ON orders (b);\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([
+      { kind: "INDEX", name: "orders_idx", lines: [1, 2] },
+    ]);
+  });
+
   it("treats a quoted identifier case-sensitively and a bare one not", () => {
     const { statements } = parseSqlContract(
       `CREATE TABLE Orders (a int);\nCREATE TABLE orders (b int);\n`,

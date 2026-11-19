@@ -442,6 +442,15 @@ function stripDefault(argument: string): string {
   return match ? argument.slice(0, match.index) : argument;
 }
 
+/**
+ * The kind an object's name is unique within. `UNIQUE` is a property of an
+ * index, not a namespace of its own: a regular and a unique index share
+ * PostgreSQL's relation namespace, so one name used for both collides.
+ */
+function identityKind(kind: string): string {
+  return kind === "UNIQUE INDEX" ? "INDEX" : kind;
+}
+
 export type Redefinition = {
   kind: string;
   name: string;
@@ -458,7 +467,7 @@ export type Redefinition = {
 export function findRedefinitions(created: CreatedObject[]): Redefinition[] {
   const byKey = new Map<string, CreatedObject[]>();
   for (const object of created) {
-    const key = `${object.kind}|${object.name}|${object.signature}`;
+    const key = `${identityKind(object.kind)}|${object.name}|${object.signature}`;
     const bucket = byKey.get(key);
     if (bucket) {
       bucket.push(object);
@@ -472,7 +481,7 @@ export function findRedefinitions(created: CreatedObject[]): Redefinition[] {
     const first = objects[0];
     if (!first) continue;
     redefined.push({
-      kind: first.kind,
+      kind: identityKind(first.kind),
       name: first.name,
       lines: objects.map((object) => object.line),
     });

@@ -568,6 +568,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
 
+- **A DB contract that gives a regular and a unique index one name is
+  reported.** PostgreSQL keeps both kinds of index in one namespace, so the
+  second `CREATE` fails when the contract is applied, but `QFAI-DB-002`
+  compared `INDEX` and `UNIQUE INDEX` names separately and passed the file. It
+  now reports the pair as one index defined twice. Closes #4549.
+
 - **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
   with no `--assume` copies the carry-over list from the previous
   `preflight_summary.md`. When that file existed but could not be read, the
