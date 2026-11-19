@@ -140,6 +140,57 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
   });
 
+  // PostgreSQL identifies a routine by its name and input argument types.
+  // Argument names, DEFAULT expressions, OUT arguments of a function and
+  // spacing are not part of that identity, so a difference in them alone
+  // still declares the same routine twice.
+  it.each([
+    ["a default value", "f(a int DEFAULT 1)", "f(a int DEFAULT 2)"],
+    ["a default written with =", "f(a int = 1, b text)", "f(a int, b text)"],
+    ["argument names", "f(a int, b text)", "f(x int, y text)"],
+    ["a named versus an unnamed argument", "f(a int)", "f(int)"],
+    ["spacing and case", "f(a INT,b  numeric(10, 2))", "f( a int , b numeric(10,2) )"],
+    ["an OUT argument of a function", "f(a int, OUT b int)", "f(IN a int)"],
+    ["a multi-word type", "f(double precision)", "f(x double precision DEFAULT 0)"],
+    ["a mode written after the name", "f(a IN int)", "f(INOUT b int)"],
+    ["a default holding a comma", "f(a text DEFAULT 'x,y', b int)", "f(a text, b int)"],
+    ["a spaced type modifier on an unnamed argument", "f(numeric(10, 2))", "f(x numeric(10,2))"],
+  ])("reports two functions that differ only by %s", (_label, left, right) => {
+    const { statements } = parseSqlContract(
+      `CREATE OR REPLACE FUNCTION ${left} RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE OR REPLACE FUNCTION ${right} RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    const redefined = findRedefinitions(collectCreatedObjects(statements));
+    expect(redefined).toHaveLength(1);
+    expect(redefined[0]?.lines).toEqual([1, 2]);
+  });
+
+  it("does not report two functions whose input types differ in order", () => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION f(a int, b text) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION f(a text, b int) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  it("does not report two functions where one has a VARIADIC input", () => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION f(a int) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION f(a int, VARIADIC b int[]) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  // A procedure's OUT arguments are part of its identity in PostgreSQL, unlike
+  // a function's.
+  it("does not report two procedures that differ by an OUT argument", () => {
+    const { statements } = parseSqlContract(
+      `CREATE PROCEDURE p(a int, OUT b int) LANGUAGE sql AS $$ SELECT 1 $$;\n` +
+        `CREATE PROCEDURE p(a int) LANGUAGE sql AS $$ SELECT 1 $$;\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
   // A PostgreSQL trigger name is unique per TABLE, not per schema, so two
   // same-named triggers on different tables are correct SQL. Keying on the name
   // alone would report them — a false positive on valid input.

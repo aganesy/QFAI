@@ -496,6 +496,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **A DB contract that defines one SQL function twice is reported even when the
+  two definitions differ only in defaults or argument names.** `QFAI-DB-002`
+  compared the whole argument text, so two `CREATE OR REPLACE FUNCTION`
+  statements that differed only in a default value, an argument name, an OUT
+  argument or spacing passed. It now compares the input argument types, which
+  is how PostgreSQL tells two routines apart.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one

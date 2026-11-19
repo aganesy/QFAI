@@ -258,7 +258,7 @@ export type CreatedObject = {
   kind: string;
   /** Normalised name: unquoted, lower-cased, schema-qualification preserved. */
   name: string;
-  /** For functions and procedures, the normalised argument list. */
+  /** For functions and procedures, the normalised identity argument types. */
   signature: string;
   line: number;
 };
@@ -266,9 +266,9 @@ export type CreatedObject = {
 /**
  * Every object a file creates, with the line it is created on.
  *
- * Functions and procedures carry their argument list, because PostgreSQL
- * overloading makes two same-named functions with different arguments two
- * distinct objects. Everything else is keyed on the name alone.
+ * Functions and procedures carry their identity argument types, because
+ * PostgreSQL overloading makes two same-named functions with different input
+ * types two distinct objects. Everything else is keyed on the name alone.
  */
 export function collectCreatedObjects(statements: SqlStatement[]): CreatedObject[] {
   const created: CreatedObject[] = [];
@@ -281,32 +281,103 @@ export function collectCreatedObjects(statements: SqlStatement[]): CreatedObject
     created.push({
       kind,
       name,
-      signature: kind === "FUNCTION" || kind === "PROCEDURE" ? argumentList(statement.text) : "",
+      signature:
+        kind === "FUNCTION" || kind === "PROCEDURE"
+          ? identityArgumentTypes(argumentList(statement.text), kind)
+          : "",
       line: statement.line,
     });
   }
   return created;
 }
 
-/** The parenthesised argument list of a `CREATE FUNCTION` / `PROCEDURE`. */
+/** The text inside the parentheses of a `CREATE FUNCTION` / `PROCEDURE`. */
 function argumentList(statement: string): string {
   const open = statement.indexOf("(");
   if (open === -1) return "";
   let depth = 0;
   for (let index = open; index < statement.length; index += 1) {
     const ch = statement[index];
+    if (ch === "'") {
+      index = statement.indexOf("'", index + 1);
+      if (index === -1) return "";
+      continue;
+    }
     if (ch === "(") depth += 1;
     if (ch === ")") {
       depth -= 1;
-      if (depth === 0) {
-        return statement
-          .slice(open, index + 1)
-          .replace(/\s+/g, " ")
-          .toLowerCase();
-      }
+      if (depth === 0) return statement.slice(open + 1, index);
     }
   }
   return "";
+}
+
+const ARGUMENT_MODES = new Set(["in", "out", "inout", "variadic"]);
+
+/**
+ * Type phrases whose first word could otherwise be read as an argument name.
+ * A shortcut, not a type parser: a multi-word type missing from this list is
+ * read as `name type`, so its first word is dropped and two definitions that
+ * differ only in that word are taken for one routine. Extend the list when a
+ * contract uses such a type.
+ */
+const MULTI_WORD_TYPE_START =
+  /^(?:double precision|(?:character|char|bit) varying|national (?:character|char)\b|(?:time|timestamp)(?:\s*\(\d+\))? with(?:out)? time zone|interval (?:year|month|day|hour|minute|second)\b)/;
+
+/**
+ * The PostgreSQL identity of a routine's argument list: its input argument
+ * types, in order. Argument names, DEFAULT expressions and spacing are not
+ * part of it; neither are a function's OUT arguments.
+ */
+function identityArgumentTypes(argumentText: string, kind: string): string {
+  const types: string[] = [];
+  for (const argument of splitTopLevel(argumentText)) {
+    const words = stripDefault(argument)
+      .toLowerCase()
+      .replace(/\s*([(),[\]])\s*/g, "$1")
+      .split(/\s+/)
+      .filter(Boolean);
+    let mode = "in";
+    if (words[0] !== undefined && ARGUMENT_MODES.has(words[0])) {
+      mode = words.shift() ?? mode;
+    } else if (words[1] !== undefined && ARGUMENT_MODES.has(words[1]) && words.length > 2) {
+      mode = words[1];
+      words.splice(1, 1);
+    }
+    if (words.length > 1 && !MULTI_WORD_TYPE_START.test(words.join(" "))) words.shift();
+    const type = words.join(" ");
+    if (type.length === 0) continue;
+    if (mode === "out" && kind === "FUNCTION") continue;
+    types.push(type);
+  }
+  return types.join(",");
+}
+
+/** Split on commas outside parentheses and string literals. */
+function splitTopLevel(text: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let inString = false;
+  let current = "";
+  for (const ch of text) {
+    if (ch === "'") inString = !inString;
+    if (!inString && ch === "(") depth += 1;
+    if (!inString && ch === ")") depth -= 1;
+    if (!inString && depth === 0 && ch === ",") {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  parts.push(current);
+  return parts;
+}
+
+/** An argument without its `DEFAULT <expr>` or `= <expr>` tail. */
+function stripDefault(argument: string): string {
+  const match = /\s+default\s|\s+default$|=/i.exec(argument);
+  return match ? argument.slice(0, match.index) : argument;
 }
 
 export type Redefinition = {
