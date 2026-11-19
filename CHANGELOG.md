@@ -629,6 +629,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   settles, the `tech.md` `Surface` row and the UI contracts linked to the
   flow, and the `DESIGN.md` authoring reference says the same. Closes #4414.
 
+- **Migration step 1 moves the old default paths in any spelling.** With
+  `paths.specsDir: ./.qfai/specs` (or a trailing `/`, or backslashes) and a
+  legacy spec pack present, step 1 saw the old layout yet planned no
+  operation and exited 0. It now reads each configured path as the
+  configuration loader does before comparing it with the old default, so it
+  moves the directory and rewrites the key. Closes #4478.
+
 - **A skill's auto-decide entries are checked the way its hard-required
   entries are.** `QFAI-POLICY-002` skipped a value written on the
   `- auto-decide:` line itself, read the children of a later bullet as

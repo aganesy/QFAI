@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { isMap, parseDocument, type Document } from "yaml";
 
+import { foldTreeDir, trimDirSeparators } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import {
   MigrationInputError,
@@ -30,6 +31,27 @@ const CONFIG_PATH_RENAMES = [
   ["promptsDir", ".qfai/assistant/prompts", ".qfai/assistant/prompt"],
 ] as const;
 
+type ConfigPathKey = (typeof CONFIG_PATH_RENAMES)[number][0];
+
+/**
+ * Whether a configured `paths` value names the old default, read as the config loader reads it:
+ * trailing separators dropped, a backslash folded to `/` for the two story-tree roots, and the
+ * result resolved against the project root, so `./.qfai/specs` and `.qfai/specs/` both match.
+ */
+function namesOldDefault(
+  root: string,
+  key: ConfigPathKey,
+  configured: unknown,
+  oldPath: string,
+): boolean {
+  if (typeof configured !== "string" || configured.trim().length === 0) return false;
+  const read =
+    key === "specsDir" || key === "contractsDir"
+      ? foldTreeDir(configured)
+      : trimDirSeparators(configured);
+  return path.resolve(root, read) === path.resolve(root, oldPath);
+}
+
 export async function shouldRenameSource(
   context: MigrationContext,
   sourceDir: string,
@@ -56,7 +78,7 @@ export async function shouldRenameSource(
     );
   }
   const configured = document.getIn(["paths", key]);
-  return configured === undefined || configured === sourceDir;
+  return configured === undefined || namesOldDefault(context.root, key, configured, sourceDir);
 }
 
 async function exists(absolutePath: string): Promise<boolean> {
@@ -105,7 +127,7 @@ async function planConfigRewrite(root: string): Promise<MigrationOperation | nul
   }
   let changed = false;
   for (const [key, oldPath, newPath] of CONFIG_PATH_RENAMES) {
-    if (document.getIn(["paths", key]) !== oldPath) continue;
+    if (!namesOldDefault(root, key, document.getIn(["paths", key]), oldPath)) continue;
     document.setIn(["paths", key], newPath);
     changed = true;
   }
