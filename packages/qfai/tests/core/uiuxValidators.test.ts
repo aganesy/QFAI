@@ -471,6 +471,63 @@ describe("uiux validators", () => {
     expect(await validateDesignToken(root, defaultConfig)).toEqual([]);
   });
 
+  // QFAI:EX-0001-0039-53
+  it("reports a cyclic or too deep design token file and still checks the rest", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "tokens"), { recursive: true });
+    const cyclicYaml = [
+      "primitive:",
+      "  color:",
+      "    base:",
+      "      $value: ''",
+      "  loop: &loop",
+      "    again: *loop",
+      "  shadow:",
+      "    $value: &shadow",
+      "      inner: *shadow",
+      "",
+    ].join("\n");
+    await writeFile(path.join(root, "tokens", "design-tokens.yaml"), cyclicYaml, "utf-8");
+    const deepLines = ["primitive:"];
+    for (let level = 0; level < 80; level += 1) {
+      deepLines.push(`${"  ".repeat(level + 1)}l${level}:`);
+    }
+    deepLines.push(`${"  ".repeat(81)}$value: '#ffffff'`, "");
+    await writeFile(
+      path.join(root, "tokens", "design-tokens-deep.yaml"),
+      deepLines.join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "tokens", "design-tokens-plain.yaml"),
+      ["primitive:", "  size:", "    gap:", "      $value: ''", ""].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignToken(root, tokensConfig);
+
+    const parseFindings = issues.filter((item) => item.code === "QFAI-DT-002");
+    expect(parseFindings.every((item) => item.severity === "error")).toBe(true);
+    const cyclic = parseFindings.filter((item) => item.file === "tokens/design-tokens.yaml");
+    expect(cyclic.map((item) => item.refs)).toEqual([
+      ["primitive.loop.again"],
+      ["primitive.shadow"],
+    ]);
+    expect(cyclic.every((item) => item.message.includes("cycle"))).toBe(true);
+    const deep = parseFindings.filter((item) => item.file === "tokens/design-tokens-deep.yaml");
+    expect(deep).toHaveLength(1);
+    expect(deep[0]?.message).toContain("64");
+    const emptyValues = issues
+      .filter((item) => item.code === "QFAI-DT-004")
+      .map((item) => [item.file, item.refs]);
+    expect(emptyValues).toEqual(
+      expect.arrayContaining([
+        ["tokens/design-tokens.yaml", ["primitive.color.base"]],
+        ["tokens/design-tokens-plain.yaml", ["primitive.size.gap"]],
+      ]),
+    );
+  });
+
   it("normalizes design token platform values before validation", async () => {
     const root = await newTempDir();
     const designDir = path.join(root, "tokens");

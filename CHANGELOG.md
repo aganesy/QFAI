@@ -496,6 +496,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
+  that made a token group or a `$value` its own descendant overflowed the stack,
+  and the run reported no result at all. Such a file, or one nesting deeper than
+  64 levels, now raises `QFAI-DT-002` at error naming the path where reading
+  stopped, and every other check completes.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one
