@@ -162,12 +162,13 @@ describe("the project layer describes the repository it is in", () => {
       jobs: { publish: { permissions: { "id-token": "write" } } },
     });
 
-    const guide = withoutFencedBlocks(await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8"));
-    // The commands and the token name, in code spans: prose that says no npm
-    // login is needed must not count as asking for one.
-    const askedFor = [...guide.matchAll(/`npm (?:whoami|login)`|NPM_TOKEN/g)].map(
-      ([match]) => match,
-    );
+    // The whole guide, fenced blocks included: a shell block is where a command
+    // is most likely to come back. A command counts in a code span or at the
+    // start of a line, so prose saying no npm login is needed does not.
+    const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
+    const askedFor = [
+      ...guide.matchAll(/`npm (?:whoami|login)\b[^`]*`|^\s*npm (?:whoami|login)\b|NPM_TOKEN/gm),
+    ].map(([match]) => match.trim());
     expect(askedFor).toEqual([]);
   });
 
