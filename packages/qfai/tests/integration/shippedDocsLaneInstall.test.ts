@@ -155,6 +155,7 @@ describe("the delivered document lane installs its checkers outside the project'
     ["declares no checker", null],
     ["declares a range", "^0.15.7"],
     ["declares a version followed by an argument", "0.15.7 left-pad"],
+    ["declares a version with a leading zero", "00.15.7"],
   ])("stops before installing when the project's QFAI %s", async (_name, declared) => {
     const run = await runInstall(true, declared);
 

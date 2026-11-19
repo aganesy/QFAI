@@ -1240,7 +1240,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "529feeb217698828f103a7b2b90e75a7ca76aa0c68b41066860d9db3bc7d1105"],
+  ["qfai-docs.yml", "1d11d9a1db06c01ba851ad54991f2f99b19d9739ad11dc5ca07fb808c62d3edf"],
   ["qfai-tests.yml", "23936510c76f82647e4d48cce2a116bf44185f5ba90fac3ca9b91a560a969572"],
   ["qfai-validate.yml", "a1407c67a98f053fd544b5a78b17b4c63c64be349c4483b55d647ef03c22145c"],
 ]);
@@ -2105,7 +2105,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body ecd353b90d1dcfb238e4f1be8d65c7acb1edbe2c1b999c81adb4940a0b853274>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 1b57ec180a18a6aea6e1945bbcccff2792b6659af41c8952c3971c322367bb5c>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2301,8 +2301,8 @@ export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
   "91abbc929ce0cf578b47794d59ca072e1841a848d9480d904d68ebf30dc5a384",
   // `qfai-docs.yml#checks` — reads the `@jackchuka/mdschema` version out of the project's
   // `node_modules/qfai/package.json`, prints it, and stops with a non-zero exit when it is not one
-  // exact version. Reads one file, writes one line. 557 characters.
-  "6a6632d06e0694fbd58649fc7f091ae941e24ae5fcbae51fc8c8c681f08e6c7c",
+  // exact version. Reads one file, writes one line. 609 characters.
+  "eac5aa604c041fccf1f050ea66703ef95b4d1bbc0d0c7ebe81a871eabb5fe67f",
 ]);
 
 /**

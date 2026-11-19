@@ -613,12 +613,13 @@ jobs:
           # Guarded rather than unconditional, because a repository that DOES
           # depend on QFAI has already installed the version it chose, and this
           # lane must report that version's rules, with that version's checker,
-          # rather than quietly replace them with the newest ones. Unpinned in the bootstrap case for the same reason a
-          # bare `npx qfai` is: with nothing in the manifest there is no version
-          # to honour, and pinning one here would freeze every adopter's docs
-          # lane at whatever release generated this file. One install for both
-          # cases, because a second `--no-save` install into the same prefix
-          # removes what the first one added.
+          # rather than quietly replace them with the newest ones. Unpinned in
+          # the bootstrap case for the same reason a bare `npx qfai` is: with
+          # nothing in the manifest there is no version to honour, and pinning
+          # one here would freeze every adopter's docs lane at whatever release
+          # generated this file. One install for both cases, because a second
+          # `--no-save` install into the same prefix removes what the first one
+          # added.
           if [ -d node_modules/qfai ]; then
             checker="$(node -e '
               const { readFileSync } = require("node:fs");
@@ -631,7 +632,8 @@ jobs:
               } catch {
                 declared = undefined;
               }
-              if (typeof declared !== "string" || !/^\d+\.\d+\.\d+$/.test(declared)) {
+              const exact = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+              if (typeof declared !== "string" || !exact.test(declared)) {
                 console.error(
                   `::error::qfai docs: ${manifest} declares no exact @jackchuka/mdschema version`,
                 );
