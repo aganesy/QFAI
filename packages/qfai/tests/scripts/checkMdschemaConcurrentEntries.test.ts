@@ -145,3 +145,115 @@ describe("checking the manifest's entries at the same time", () => {
     });
   });
 });
+
+describe("bounding each mdschema run", () => {
+  /**
+   * A started mdschema process that never exits, whatever it is sent.
+   * `signals` records each signal sent to any such child, and `children` each
+   * child, so a case can see its pipes were destroyed.
+   */
+  function hangingChild(signals: string[], children: { stdout: PassThrough }[] = []) {
+    const child = Object.assign(new EventEmitter(), {
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+      unref: () => undefined,
+      kill: (signal: string) => {
+        signals.push(signal);
+        return true;
+      },
+    });
+    children.push(child);
+    return child;
+  }
+
+  // QFAI:EX-0001-0011-26
+  it("stops a run past its time limit and reports the check as unfinished", async () => {
+    const root = await twoEntryTree();
+    const signals: string[] = [];
+    const children: { stdout: PassThrough }[] = [];
+    control.spawn = () => hangingChild(signals, children);
+
+    const result = await checkDocuments(root, undefined, {
+      timeoutMs: 20,
+      maxOutputBytes: 1024,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "mdschema did not finish: it ran longer than 20 ms and was stopped",
+    });
+    expect(signals).toEqual(["SIGTERM", "SIGTERM"]);
+    expect(children.map((child) => child.stdout.destroyed)).toEqual([true, true]);
+    // Neither child exits, so each gets SIGKILL once the grace has passed.
+    await vi.waitFor(() => expect(signals).toEqual(["SIGTERM", "SIGTERM", "SIGKILL", "SIGKILL"]));
+  });
+
+  // QFAI:EX-0001-0011-26
+  it("stops a run past its output limit and reports the check as unfinished", async () => {
+    const root = await twoEntryTree();
+    const signals: string[] = [];
+    control.spawn = () => {
+      const child = hangingChild(signals);
+      setTimeout(() => {
+        child.stdout.write("x".repeat(10));
+        child.stderr.write("y".repeat(10));
+      }, 0);
+      return child;
+    };
+
+    const result = await checkDocuments(root, undefined, {
+      timeoutMs: 60_000,
+      maxOutputBytes: 16,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "mdschema did not finish: it printed more than 16 bytes and was stopped",
+    });
+    expect(signals).toEqual(["SIGTERM", "SIGTERM"]);
+  });
+
+  // On Windows `kill` ends the process whatever the signal, and a process
+  // cannot catch or ignore SIGTERM there, so no child can outlive it.
+  // QFAI:EX-0001-0011-26
+  it.skipIf(process.platform === "win32")(
+    "kills a run that ignores SIGTERM and still reports the check as unfinished",
+    async () => {
+      const root = await twoEntryTree();
+      const { spawn } = await vi.importActual<typeof ChildProcess>("node:child_process");
+      // The handler is in place before the first byte, so the limit the
+      // output passes is always reached by a child that ignores SIGTERM.
+      const script =
+        'process.on("SIGTERM", () => {}); process.stdout.write("x".repeat(64)); setInterval(() => {}, 1000);';
+      const children: ChildProcess.ChildProcess[] = [];
+      control.spawn = (_command, _args, options) => {
+        const child = spawn(process.execPath, ["-e", script], { cwd: options.cwd });
+        children.push(child);
+        return child;
+      };
+
+      const result = await checkDocuments(root, undefined, {
+        timeoutMs: 60_000,
+        maxOutputBytes: 16,
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        reason: "mdschema did not finish: it printed more than 16 bytes and was stopped",
+      });
+      const ends = await Promise.all(
+        children.map(
+          (child) =>
+            new Promise<string | null>((resolve) => {
+              if (child.exitCode !== null || child.signalCode !== null) {
+                resolve(child.signalCode);
+                return;
+              }
+              child.once("exit", (_code, signal) => resolve(signal));
+            }),
+        ),
+      );
+      expect(ends).toEqual(["SIGKILL", "SIGKILL"]);
+    },
+  );
+});

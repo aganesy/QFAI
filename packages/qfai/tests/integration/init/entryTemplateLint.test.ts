@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { getInitAssetsDir } from "../../../src/cli/lib/assets.js";
+import { getInitAssetsDir } from "../../../src/shared/assets.js";
 
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 const SHIPPED_CONFIG = path.join(PACKAGE_ROOT, "shipped.markdownlint-cli2.jsonc");

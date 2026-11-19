@@ -231,8 +231,12 @@ export async function readStoryTests(
   config: QfaiConfig,
 ): Promise<{ files: StoryTestFile[]; truncated: boolean }> {
   const testsRoot = resolvePath(root, config, "testsDir");
-  const relativeTests = toPosix(path.relative(root, testsRoot)).replace(/\/$/, "");
-  const layerGlobs = ["e2e", "integration", "api"].map((kind) => `${relativeTests}/${kind}/**/*`);
+  // Joined, not concatenated: `paths.testsDir: "."` makes this empty, and a
+  // leading `/` would root every pattern at the filesystem root.
+  const relativeTests = toPosix(path.relative(root, testsRoot));
+  const layerGlobs = ["e2e", "integration", "api"].map((kind) =>
+    path.posix.join(relativeTests, kind, "**/*"),
+  );
   // Normalised like every other reader of these lists, so a padded or blank
   // entry selects here what it selects there.
   const configured = normalizeGlobs(config.validation.traceability.testFileGlobs);
