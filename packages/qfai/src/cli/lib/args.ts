@@ -536,9 +536,21 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           command !== "validate" &&
           command !== "report" &&
           command !== "doctor" &&
+          command !== "db-drift" &&
           !sddPreflight()
         ) {
           markInvalid(notValidHere("--fail-on"));
+          break;
+        }
+        // db-drift has no warning tier: a difference either fails the run or,
+        // under `never`, does not. Accepting `warning` would promise a third
+        // threshold the command cannot grade.
+        if (command === "db-drift") {
+          if (next === "never" || next === "error") {
+            options.failOn = next;
+          } else {
+            markInvalid(badValue("--fail-on", next, "never|error"));
+          }
           break;
         }
         // Silently dropping a bad value would let a typo such as

@@ -72,6 +72,37 @@ describe("story-tree test scan", () => {
     }
   });
 
+  // QFAI:EX-0001-0056-02
+  it("reads the acceptance layers at the top level when testsDir is the repository root", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-story-root-tests-"));
+    try {
+      for (const file of ["e2e/flow.test.ts", "integration/a.test.ts", "api/b.test.ts"]) {
+        await mkdir(path.dirname(path.join(root, file)), { recursive: true });
+        await writeFile(path.join(root, file), "export {};\n", "utf8");
+      }
+      const config = {
+        ...defaultConfig,
+        paths: { ...defaultConfig.paths, testsDir: "." },
+        validation: {
+          ...defaultConfig.validation,
+          traceability: { ...defaultConfig.validation.traceability, testFileGlobs: [] },
+        },
+      };
+      const { files } = await readStoryTests(root, config);
+      const found = files
+        .map((file) => [path.relative(root, file.file).split(path.sep).join("/"), file.kind])
+        .sort(([a], [b]) => String(a).localeCompare(String(b)));
+
+      expect(found).toEqual([
+        ["api/b.test.ts", "api"],
+        ["e2e/flow.test.ts", "e2e"],
+        ["integration/a.test.ts", "integration"],
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   describe("configured test globs with boundary whitespace", () => {
     async function selectedFiles(
       testFileGlobs: string[],
