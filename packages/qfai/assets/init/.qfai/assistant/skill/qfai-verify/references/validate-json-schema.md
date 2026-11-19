@@ -1,7 +1,23 @@
 # `validate.json` schema
 
-`.qfai/report/validate.json` is the machine-readable result of
-`npx qfai validate`. It is a **public surface** (`@api` under
+`validate.json` is the machine-readable result of `npx qfai validate`. Read
+the file the invocation wrote, not a fixed path:
+
+| run                                    | file it writes                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------------- |
+| repository-wide, `--profile <profile>` | the configured `output.validateJsonPath` with `-<profile>` before the extension |
+| repository-wide, no `--profile`        | the same, with `-full`                                                          |
+| `--flow BF-0003` (any `--profile`)     | `<stem>.flow-0003<ext>` beside the configured path, and nothing else            |
+
+`output.validateJsonPath` defaults to `.qfai/report/validate.json`. A
+repository-wide run also rewrites that unsuffixed file, so it holds whichever
+such run finished last and can belong to another profile or another worker.
+Before using a result, confirm its `profile` is the one the command ran and its
+`generatedAt` is no earlier than the command's start.
+`npx qfai report --profile <profile>` reads the suffixed file and refuses one
+that records another profile.
+
+It is a **public surface** (`@api` under
 `.qfai/assistant/rule/change-classification.md`): the skills instruct agents to read it,
 so a key change is a breaking change and takes the `@api` path.
 
@@ -17,7 +33,7 @@ named a single key — so an agent looking for the findings array guessed
 | ------------- | -------------------------- | ------------------------------------------------------------- |
 | `toolVersion` | `string`                   | the qfai that produced the run                                |
 | `generatedAt` | `string?`                  | ISO-8601. Absent from a file written before the field existed |
-| `profile`     | `string?`                  | the `--profile` the run used; absent for the default          |
+| `profile`     | `string?`                  | the `--profile` the run used; `full` for the default          |
 | `issues`      | `Issue[]`                  | **the findings array. It is `issues`, not `findings`**        |
 | `counts`      | `{ info, warning, error }` | all three always present, all numbers                         |
 | `waivers`     | object?                    | present only when `.qfai/waivers.yml` was read                |
@@ -66,7 +82,7 @@ A waiver's `rule:` is `issues[].code`, copied verbatim:
 
 ```bash
 npx qfai validate --profile full --fail-on error
-jq -r '.issues[] | select(.severity == "error") | .code' .qfai/report/validate.json
+jq -r '.issues[] | select(.severity == "error") | .code' .qfai/report/validate-full.json
 ```
 
 For a pass/fail decision, read `counts.error` (or `counts.warning` under

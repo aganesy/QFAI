@@ -536,6 +536,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check is incomplete. A file that is absent is still skipped, so a project
   without the qfai package source is unaffected.
 
+- **The verify gate reads the result its own validate run wrote.** The
+  `verify-qfai-gate` step told agents to read `.qfai/report/validate.json` and
+  then ran `qfai report` with no profile. That file is only the default path,
+  the project can configure it, and it holds whichever repository-wide run
+  finished last. The step now reads the configured `output.validateJsonPath`
+  with the run's `-<profile>` suffix, uses it only when its `profile` and
+  `generatedAt` show the current command wrote it, and runs
+  `qfai report --profile <profile>`. The `validate.json` schema reference now
+  lists the file each kind of run writes, and `qfai-configure` inspects the
+  result its own validate run wrote.
+
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
   took the opening `---` as the diagram's declaration and skipped the
