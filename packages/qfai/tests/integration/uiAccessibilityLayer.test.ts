@@ -1,6 +1,6 @@
 /**
  * A full `qfai validate` warns when a project whose UI contracts declare a web
- * route has no test file that calls axe, and the shipped steps write and run
+ * route has no test file that names axe, and the shipped steps write and run
  * the accessibility spec that silences it.
  */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -51,10 +51,11 @@ describe("validate warns about a UI project with no accessibility check", () => 
     expect(verify[0]?.severity).toBe("warning");
     expect(await axeFindings("full")).toHaveLength(1);
     expect(await axeFindings("tdd")).toEqual([]);
-    expect(ISSUE_EXPECTED_BY_CODE[CODE]).toContain("calls axe");
+    expect(ISSUE_EXPECTED_BY_CODE[CODE]).toContain("reads the text of the test files only");
+    expect(ISSUE_EXPECTED_BY_CODE[CODE]).not.toContain("calls axe");
   });
 
-  it("is quiet once the E2E layer holds a spec that calls axe", async () => {
+  it("is quiet once the E2E layer holds a spec that names axe", async () => {
     const spec = path.join(root, "tests", "e2e", "accessibility.spec.ts");
     await mkdir(path.dirname(spec), { recursive: true });
     await writeFile(
