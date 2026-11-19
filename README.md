@@ -33,7 +33,9 @@ here: `package.json#version` in the published package is the only version source
 > **Do not install from the GitHub repository.** A git specifier such as
 > `"qfai": "github:aganesy/QFAI"` installs the private monorepo root as `node_modules/qfai`.
 > That root ships no `bin` and no built `dist`, so nothing is runnable or importable.
-> npm and yarn refuse it with an explanatory error through a `preinstall` guard.
+> npm stops with `EUNSUPPORTEDPROTOCOL` before any install script runs, because the
+> repository root declares a `workspace:` dependency npm does not support; the error does not
+> mention QFAI. yarn refuses it with an explanatory error through a `preinstall` guard.
 > pnpm, and any package manager that reports no user agent, do not, so avoid it yourself.
 > Use the npm package.
 > Standalone CLI inspection can use `npx qfai@latest <command>`;
