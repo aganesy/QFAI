@@ -464,16 +464,20 @@ describe("contract IDs and contract-scoped business rules", () => {
       ),
     ]);
 
-    // The index writes "none" as `-` only, though a declaration may also write `none`.
-    const spelledNone = await contractTree(
+    // The index writes "none" as `-` only, though a declaration may also write `none`, and a
+    // code span inside an ID leaves it no ID.
+    const misspelled = await contractTree(
       [
         indexRow("CLI-0001", "cli/cli-0001-check.md"),
-        indexRow("API-0002", "api/api-0002-orders.yaml", "DB-0004"),
+        indexRow("API-0002", "api/api-0002-orders.yaml", "D`B`-0004"),
         indexRow("DB-0004", "db/db-0004-orders.sql", "none"),
       ],
       files,
     );
-    expect(await indexFindings(spelledNone)).toEqual([
+    expect(await indexFindings(misspelled)).toEqual([
+      expect.stringMatching(
+        /^QFAI-CONTRACT-034 Contract file .*api-0002-orders\.yaml is listed as depending on D`B`-0004 but declares DB-0004$/,
+      ),
       expect.stringMatching(
         /^QFAI-CONTRACT-034 Contract file .*db-0004-orders\.sql is listed as depending on none but declares -$/,
       ),

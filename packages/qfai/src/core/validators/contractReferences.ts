@@ -74,7 +74,7 @@ async function validateContractIndex(
   const listed: ListedContract[] = rows.map((row) => ({
     id: bareCell(row.cells[0] ?? ""),
     file: toPosixPath(bareCell(row.cells[2] ?? "")).replace(/^\.\//, ""),
-    dependsOn: bareCell(row.cells[3] ?? ""),
+    dependsOn: (row.cells[3] ?? "").trim(),
   }));
   const declared = new Map(model.contracts.map(({ id, file }) => [file, id]));
   const matched = new Set<ListedContract>();
@@ -167,13 +167,16 @@ function contractFileProblems(
   return problems;
 }
 
+/** A code span holding one whole Depends On entry, as `` `DB-0001` ``; one inside an entry stays. */
+const WHOLE_ENTRY_CODE_SPAN_RE = /(^|[,\s])`([^`,\s]+)`(?=$|[,\s])/g;
+
 /**
  * The disagreement between a row's Depends On cell and the dependencies its
  * contract declares, or `null` when both name the same contracts. A cell that is
  * empty or holds anything but contract IDs or `-` names none, and disagrees.
  */
 function dependencyProblem(cell: string, declared: string[]): string | null {
-  const listed = listedDependencyIds(cell.replace(/`/g, ""));
+  const listed = listedDependencyIds(cell.replace(WHOLE_ENTRY_CODE_SPAN_RE, "$1$2"));
   if (listed && listed.join(",") === declared.join(",")) return null;
   const declaration = declared.length > 0 ? declared.join(", ") : "-";
   return `is listed as depending on ${cell || "(empty)"} but declares ${declaration}`;
