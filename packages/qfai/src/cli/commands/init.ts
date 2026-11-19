@@ -161,7 +161,8 @@ async function legacySpecLayoutPath(root: string): Promise<string | undefined> {
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch (cause) {
-      if (isEnoent(cause)) continue;
+      // A spec directory that is a file holds no old layout; the destination check names it.
+      if (isEnoent(cause) || (hasErrnoCode(cause) && cause.code === "ENOTDIR")) continue;
       throw cause;
     }
     const legacyName = entries

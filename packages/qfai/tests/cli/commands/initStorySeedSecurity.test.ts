@@ -49,6 +49,10 @@ describe("init project boundary", () => {
   it.each([
     [".qfai", /refused to write \.qfai: it is not a directory/u],
     [
+      path.join(".qfai", "spec"),
+      /refused to seed the story tree: \.qfai\/spec is not a directory/u,
+    ],
+    [
       path.join(".qfai", "spec", "03_contract", "api"),
       /refused to seed the story tree: \.qfai\/spec\/03_contract\/api is not a directory/u,
     ],
