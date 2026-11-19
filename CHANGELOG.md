@@ -452,6 +452,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The README says what a fresh `qfai init` needs.** The Quick start now
+  lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
+  or later with `uv`, and network access to the npm registry and PyPI, from
+  which init downloads CodeGraph and Graphify. A new user now sees these
+  requirements before init runs rather than only after it fails.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
@@ -543,6 +549,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
 
+- **A report without `--flow` counts every declared contract.** The summary
+  counted only contracts holding a business rule linked to a flow, so a project
+  with one declared contract and no linked rule reported zero contracts. Only a
+  report scoped by `--flow` now limits the count to the contracts its flows
+  link.
+
 - **The assistant anchor check reads only the assistant tree.** The
   `QFAI-LINK-002` check followed every link under `.qfai/assistant/`: a link to
   a directory or document outside the tree had its citations checked as if
@@ -610,6 +622,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the API does not require, the two remedy sentences ran together with no
   space. They are now separated by one.
 
+- **`qfai validate --format github` keeps each path in its summary on one log
+  line.** The report and run-log paths in the closing notes were printed raw, so
+  a path holding a line break started a line of its own, which the runner reads
+  as a possible workflow command. A line break in them now shows as a visible
+  `\r` or `\n`, and `%` stays as written. The report and run-log are still
+  written at their original paths.
+
 - **The migration's step 12 scan no longer runs out of memory on large
   tracked files.** It held git's whole file listing and read each tracked file
   whole before checking it for 1.x paths, so a repository with large tracked
@@ -625,11 +644,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
-- **A report without `--flow` counts every declared contract.** The summary
-  counted only contracts holding a business rule linked to a flow, so a project
-  with one declared contract and no linked rule reported zero contracts. Only a
-  report scoped by `--flow` now limits the count to the contracts its flows
-  link.
+- **`qfai sdd preflight` writes only inside its output directory.** A report
+  directory, or a directory under it, that was a link to somewhere else carried
+  the preflight summary there, and a `preflight_summary.md` that was a link was
+  written through. Preflight now stops and names the linked directory without
+  writing, also when `paths.outDir` lies outside the project and is itself a
+  link, and says so separately when a path it needs is a file. It writes each summary to a new file that replaces the old one,
+  so a linked summary file is replaced instead of followed.
 
 - **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
   that made a token group or a `$value` its own descendant overflowed the stack,

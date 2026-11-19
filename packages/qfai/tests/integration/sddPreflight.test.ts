@@ -1,4 +1,14 @@
-import { chmod, mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  lstat,
+  mkdtemp,
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -6,6 +16,7 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
+import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 
 const RECORD_NAME = "20261112093000-task-dashboard.md";
 
@@ -411,6 +422,100 @@ describe("runSddPreflight", () => {
       // there would become the "newest `run-*`" the Validate Hard Gate reads.
       expect(entries.filter((entry) => entry.name.startsWith("run-"))).toEqual([]);
       expect(result.preflightSummaryPath).toContain(`${path.sep}preflight${path.sep}`);
+    });
+  });
+
+  // QFAI:AC-0001-0151-03
+  // QFAI:EX-0001-0151-04
+  it("writes nothing when the output directory is a link out of the project", async () => {
+    await withRoot(async (root) => {
+      await withRoot(async (outside) => {
+        await mkdir(path.join(root, ".qfai"), { recursive: true });
+        await symlink(
+          outside,
+          path.join(root, ".qfai", "report"),
+          process.platform === "win32" ? "junction" : "dir",
+        );
+
+        await expect(runSddPreflight(root, defaultConfig)).rejects.toThrow(
+          /\.qfai\/report is a symbolic link or junction/,
+        );
+        expect(await readdir(outside)).toEqual([]);
+      });
+    });
+  });
+
+  // QFAI:EX-0001-0151-04
+  it("writes nothing when the preflight run directory is a link out of the project", async () => {
+    await withRoot(async (root) => {
+      await withRoot(async (outside) => {
+        await mkdir(path.join(root, ".qfai", "report"), { recursive: true });
+        await symlink(
+          outside,
+          path.join(root, ".qfai", "report", "preflight"),
+          process.platform === "win32" ? "junction" : "dir",
+        );
+
+        await expect(runSddPreflight(root, defaultConfig)).rejects.toThrow(
+          /\.qfai\/report\/preflight is a symbolic link or junction/,
+        );
+        expect(await readdir(outside)).toEqual([]);
+      });
+    });
+  });
+
+  // QFAI:EX-0001-0151-04
+  it("writes nothing when an output directory outside the project is itself a link", async () => {
+    await withRoot(async (root) => {
+      await withRoot(async (elsewhere) => {
+        await withRoot(async (target) => {
+          const outDir = path.join(elsewhere, "report");
+          await symlink(target, outDir, process.platform === "win32" ? "junction" : "dir");
+          const config = { ...defaultConfig, paths: { ...defaultConfig.paths, outDir } };
+
+          await expect(runSddPreflight(root, config)).rejects.toThrow(
+            /report is a symbolic link or junction/,
+          );
+          expect(await readdir(target)).toEqual([]);
+        });
+      });
+    });
+  });
+
+  // QFAI:EX-0001-0151-04
+  it("says the directory cannot be created when the run directory is a file", async () => {
+    await withRoot(async (root) => {
+      const reportRoot = path.join(root, ".qfai", "report");
+      await mkdir(reportRoot, { recursive: true });
+      await writeFile(path.join(reportRoot, "preflight"), "not a directory\n", "utf-8");
+
+      await expect(runSddPreflight(root, defaultConfig)).rejects.toThrow(
+        /\.qfai\/report\/preflight is not a directory, so the preflight output directory cannot be created/,
+      );
+    });
+  });
+
+  // QFAI:EX-0001-0151-04
+  it("replaces a linked latest pointer instead of writing through it", async (ctx) => {
+    await withRoot(async (root) => {
+      await withRoot(async (outside) => {
+        const escapee = path.join(outside, "someone-elses.md");
+        await writeFile(escapee, "someone else's file\n", "utf-8");
+        const reportRoot = path.join(root, ".qfai", "report");
+        await mkdir(reportRoot, { recursive: true });
+        const pointer = path.join(reportRoot, "preflight_summary.md");
+        if (!(await createSymlinkFixture(escapee, pointer, "file"))) ctx.skip();
+
+        const result = await runSddPreflight(root, defaultConfig);
+
+        expect(await readFile(escapee, "utf-8")).toBe("someone else's file\n");
+        expect((await lstat(pointer)).isSymbolicLink()).toBe(false);
+        expect(await readFile(pointer, "utf-8")).toBe(
+          await readFile(result.preflightSummaryPath, "utf-8"),
+        );
+        // The file each summary is staged in is renamed into place, not left behind.
+        expect((await readdir(reportRoot)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+      });
     });
   });
 });
