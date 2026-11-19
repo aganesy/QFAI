@@ -526,6 +526,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
+- **A failed document graph refresh keeps the previous graph with the files it
+  was built from.** Checking whether the document graph was current copied the
+  changed project files into the active analysis first, so when the
+  replacement graph then failed, the previous graph sat beside inputs it was
+  never built from. The check now refreshes and verifies a separate copy and
+  makes it active, graph and inputs together, only when the graph is current
+  for them. Closes #4588.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from

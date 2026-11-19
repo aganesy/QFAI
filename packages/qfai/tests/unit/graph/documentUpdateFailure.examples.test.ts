@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { documentAnalysisFixture } from "../../helpers/graphAnalysis.js";
@@ -59,6 +59,63 @@ it("retains prior document graph when the selected local backend cannot update c
           call.args.includes("query") ||
           call.args.includes("context") ||
           call.env?.OPENAI_API_KEY !== undefined,
+      ),
+    ).toBe(false);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+// QFAI:EX-0001-0236-15
+// Mutation: packages/qfai/src/core/graph/documents.ts `if (status.current) await replaceGraphDirectory(staged, analysis, root);` -> `await replaceGraphDirectory(staged, analysis, root);` fails "keeps the prior graph paired with its prior inputs when a changed document cannot be refreshed"
+it("keeps the prior graph paired with its prior inputs when a changed document cannot be refreshed", async () => {
+  const fixture = await documentAnalysisFixture();
+  try {
+    await writeFile(path.join(fixture.root, "rationale.md"), "# Changed rationale\n");
+    const run: GraphProcess = async (command, args, options) => {
+      if (args.includes("extract")) return { exitCode: 1, stdout: "" };
+      if (args.some((arg) => arg.endsWith("graphify-native.py")) && args.at(-1) === "semantic")
+        return { exitCode: 0, stdout: '{"current":false,"unsupported":[],"unreadable":[]}' };
+      return fixture.run(command, args, options);
+    };
+    await expect(prepareDocumentAnalysis(fixture.root, run)).resolves.toMatchObject({
+      status: "failed",
+    });
+    expect(await readFile(path.join(fixture.documentAnalysis, "rationale.md"), "utf8")).toBe(
+      "# Requirement rationale\n",
+    );
+    expect(
+      await readFile(path.join(fixture.documentAnalysis, "graphify-out", "graph.json"), "utf8"),
+    ).toBe("Process-port graph marker");
+    expect(
+      (await readdir(path.dirname(fixture.documentAnalysis))).filter((name) =>
+        name.startsWith("."),
+      ),
+    ).toEqual([]);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+// QFAI:EX-0001-0236-15
+// Mutation: packages/qfai/src/core/graph/documents.ts `if (status.current) await replaceGraphDirectory(staged, analysis, root);` -> `` fails "activates refreshed inputs together with the graph they were verified against"
+it("activates refreshed inputs together with the graph they were verified against", async () => {
+  const fixture = await documentAnalysisFixture();
+  try {
+    await writeFile(path.join(fixture.root, "rationale.md"), "# Changed rationale\n");
+    await expect(prepareDocumentAnalysis(fixture.root, fixture.run)).resolves.toMatchObject({
+      status: "prepared",
+      source: "current",
+    });
+    expect(await readFile(path.join(fixture.documentAnalysis, "rationale.md"), "utf8")).toBe(
+      "# Changed rationale\n",
+    );
+    expect(
+      await readFile(path.join(fixture.documentAnalysis, "graphify-out", "graph.json"), "utf8"),
+    ).toBe("Process-port graph marker");
+    expect(
+      fixture.calls.some(
+        (call) => call.args.at(-1) === "semantic" && call.args.includes(fixture.documentAnalysis),
       ),
     ).toBe(false);
   } finally {
