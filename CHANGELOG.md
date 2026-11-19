@@ -613,6 +613,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the scan still stops at the nearest `.git` entry, so the run-log cleanup
   still finds every project that shares its output directory. Closes #4510.
 
+- **`qfai db-drift` keeps apart columns whose names join to the same text.**
+  The comparison keyed each column by its table and column names joined with a
+  period. A quoted Postgres name may hold a period itself, so `"a.b".c` and
+  `a."b.c"` shared one key and one of them dropped out of the comparison
+  unreported. Each column is now looked up by its table and then by its own
+  name. Closes #4533.
+
 - **Migration step 11 keeps a skill or step when its replacement fails.** Step
   11 deleted a skill or step directory that differed from the package's copy
   before writing the new one, so a failed copy left the project with neither.
@@ -637,6 +644,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with non-ASCII letters, such as `$é$`, and no longer open a literal at a
   `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
 
+- **Migration step 8 rewrites legacy annotations only in comments.** Step 8
+  also rewrote a `QFAI:SPEC-…` or `QFAI:CON-…` token written in a string
+  literal, so a test's input or expected value changed during migration. It
+  now rewrites a token only where it stands in a comment, read the same way
+  `qfai validate` reads test annotations, and leaves the same token in a
+  string or template literal as it was. The check that runs before a test file
+  is written now refuses a rewrite that changes a token in a literal. Closes
+  #4513.
+
 - **`qfai catalog design` no longer replaces a file it cannot inspect.** The
   command treated any failure to read a destination's metadata as a missing
   file, so a token file or theme it could not inspect, for example because
@@ -654,6 +670,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   render as escaped text, each linked path segment is percent-encoded, a path
   outside the base URL stays unlinked, and a `--base-url` that is not an
   absolute http or https URL without a query, fragment or credentials exits 2.
+
+- **A `qfai validate` run that did not finish is no longer recorded as a
+  pass.** Under `--fail-on never` such a run exits 0, and its run log and the
+  `--format github` summary line took their verdict from that exit code, so
+  they said `pass` and `result=PASS` while the text output printed no pass
+  line. The run log now records the status `incomplete` and the summary line
+  reads `result=INCOMPLETE`, whatever `--fail-on` says. A reader of `run.json`,
+  `validator.json`, `summary.md` or `validate.log` that expects only `pass` or
+  `fail` now meets a third status.
 
 - **The design audit no longer drops findings past its display limit.** It
   kept only the first `uiux.audit.maxDuplicateFindingsPerRule` findings of a
