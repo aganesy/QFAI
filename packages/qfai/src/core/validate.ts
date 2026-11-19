@@ -279,6 +279,7 @@ export async function validateProject(
     timingsSink,
     options.platform,
     storyModel,
+    flowScope ? (file) => flowScopeContainsFile(flowScope, file, root) : undefined,
   );
   const findings = [
     ...versionIssues,
@@ -613,6 +614,7 @@ async function runProfileValidators(
   timings: TimingsSink,
   platformOption?: string,
   storyModel?: StoryTreeModel,
+  fileInScope?: (file: string) => boolean,
 ): Promise<ProfileValidatorRun> {
   // Runs in every profile, ahead of the profile's own validators. A broken
   // integration link means the assistant loaded no skill and routed no agent,
@@ -686,10 +688,23 @@ async function runProfileValidators(
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     if (!storyModel) return [];
-    return runStoryProfileValidators(root, config, profile, storyModel, timings, platformOption);
+    return runStoryProfileValidators(
+      root,
+      config,
+      profile,
+      storyModel,
+      timings,
+      platformOption,
+      fileInScope,
+    );
   }
 }
 
+/**
+ * `fileInScope` is the `--flow` selection, for a check that sums several documents into one
+ * finding: it must select before it sums, because the scope filter afterwards sees only the
+ * finding's representative file.
+ */
 async function runStoryProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -697,13 +712,14 @@ async function runStoryProfileValidators(
   model: StoryTreeModel,
   timings: TimingsSink,
   platformOption?: string,
+  fileInScope?: (file: string) => boolean,
 ): Promise<Issue[]> {
   // `standalone` is false in `verify` and `full`. They leave out the policy
   // placeholders, and leave the root DESIGN.md readiness gate to the prototyping
   // group, which runs it in the same profile.
   const sdd = async (standalone = true): Promise<Issue[]> => [
     ...(await timed(timings, "story-structure", () =>
-      validateStoryTreeStructure(root, config, model),
+      validateStoryTreeStructure(root, config, model, fileInScope),
     )),
     ...(await timed(timings, "diagram-budget", () => validateDiagramBudget(root, config))),
     ...(await timed(timings, "document-schema", () => validateDocumentSchema(root, config))),

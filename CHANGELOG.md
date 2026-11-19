@@ -618,6 +618,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   compared `INDEX` and `UNIQUE INDEX` names separately and passed the file. It
   now reports the pair as one index defined twice. Closes #4549.
 
+- **`qfai validate --flow` keeps the external-reference warning for every
+  named flow.** `QFAI-STORY-015` sums a tree's documents into one finding
+  named after its first file, and the flow filter looked at that file alone:
+  when the first file sat in another flow, the warning was dropped, and when
+  it was kept, its counts included flows that were not named. The documents
+  are now selected before they are counted, so the finding and its counts
+  cover the named flows only. Closes #4579.
+
 - **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
   with no `--assume` copies the carry-over list from the previous
   `preflight_summary.md`. When that file existed but could not be read, the
