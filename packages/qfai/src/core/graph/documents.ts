@@ -13,9 +13,11 @@ import { isEnoent } from "../fs/errno.js";
 import { mirrorGraphCorpus } from "./analysis.js";
 import { graphAnalysisRoot, graphRuntimePaths, GRAPH_VERSIONS } from "./layout.js";
 import {
+  GRAPH_PROCESS_LIMITS,
   GRAPH_PYTHON_FLAGS,
   graphifyConfigurationSafe,
   graphifyCorpusEnvironment,
+  graphLimitCause,
   runGraphProcess,
   type GraphProcess,
 } from "./process.js";
@@ -90,13 +92,23 @@ export async function prepareGraphifyCodeAnalysis(
         "--max-concurrency",
         "1",
       ],
-      { cwd: staged, env: graphifyCorpusEnvironment(root, staged) },
+      {
+        cwd: staged,
+        env: graphifyCorpusEnvironment(root, staged),
+        ...GRAPH_PROCESS_LIMITS.codeAnalysis,
+      },
     );
     if (
       result.exitCode !== 0 ||
       !(await currentGraphifyCorpus(root, staged, graphRuntimePaths(root).python, run, "ast"))
     ) {
-      return { status: "failed", recovery: "Repair local Graphify code analysis." };
+      const cause = graphLimitCause("Graphify code analysis", result);
+      return {
+        status: "failed",
+        recovery: cause
+          ? `${cause} Retry the graph query.`
+          : "Repair local Graphify code analysis.",
+      };
     }
     await writeFile(
       path.join(staged, "graphify-out", "managed.json"),
@@ -140,8 +152,10 @@ export async function prepareDocumentAnalysisLocked(
     (await inspectDocumentScopeAt(root, analysis, run, refresh)).current;
   if ((await restoreCompletedDocumentAnalysis(root, run, inspect, environment)) === "restored")
     return { status: "prepared", source: "restored" };
-  const endpoint = processing.endpoint ?? "http://127.0.0.1:11434/v1";
-  const selected = new URL(endpoint);
+  const selected = new URL(processing.endpoint ?? "http://127.0.0.1:11434/v1");
+  // The approval, the origin guard and the Python client all receive the URL this check parsed,
+  // so no parser can read another host out of the configured text.
+  const endpoint = selected.href;
   const backend = processing.backend;
   const credential =
     typeof processing.credentialEnv === "string"
@@ -163,6 +177,16 @@ export async function prepareDocumentAnalysisLocked(
     };
   }
   const local = ["127.0.0.1", "localhost", "[::1]"].includes(selected.hostname);
+  // Plain http would carry documents and credentials readable in transit. The Python client
+  // verifies the certificate by default, and the sanitized environment and isolated
+  // interpreter pass no setting that turns that off.
+  if (!local && selected.protocol !== "https:") {
+    return {
+      status: "not-ready",
+      recovery:
+        "Use an https endpoint for external document processing; plain http is accepted only for a loopback endpoint.",
+    };
+  }
   let scope: readonly string[] | undefined;
   if (processing.scope !== undefined) {
     if (!validDocumentScope(processing.scope))
@@ -229,15 +253,19 @@ export async function prepareDocumentAnalysisLocked(
             ? { [backend === "ollama" ? "OLLAMA_API_KEY" : "OPENAI_API_KEY"]: credential }
             : {}),
         },
+        ...GRAPH_PROCESS_LIMITS.documentAnalysis,
       },
     );
     if (
       result.exitCode !== 0 ||
       !(await currentGraphifyCorpus(root, staged, graphRuntimePaths(root).python, run))
     ) {
+      const cause = graphLimitCause("Graphify document analysis", result);
       return {
         status: "failed",
-        recovery: "Check the selected local model and repair Graphify document analysis.",
+        recovery: cause
+          ? `${cause} Narrow the document scope in .qfai/graph-processing.json, then retry the graph query.`
+          : "Check the selected local model and repair Graphify document analysis.",
       };
     }
     await writeFile(
@@ -284,7 +312,10 @@ function validGraphProcessing(processing: unknown): processing is GraphProcessin
         endpoint.username ||
         endpoint.password ||
         endpoint.search ||
-        endpoint.hash
+        endpoint.hash ||
+        // Text another parser reads differently, such as a backslash before an `@`, is refused:
+        // only the canonical form, with or without the root path's slash, is accepted.
+        (endpoint.href !== processing.endpoint && endpoint.href !== `${processing.endpoint}/`)
       )
         return false;
     } catch {

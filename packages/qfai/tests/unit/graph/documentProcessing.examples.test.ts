@@ -303,7 +303,7 @@ it("uses explicitly selected local document processing settings", async () => {
     expect(extracts[0]?.env?.GRAPHIFY_OUT).toBe(
       path.toNamespacedPath(path.join(selectedCorpus, "graphify-out")),
     );
-    expect(extracts[0]?.env?.OLLAMA_BASE_URL).toBe("http://127.0.0.1:11434");
+    expect(extracts[0]?.env?.OLLAMA_BASE_URL).toBe("http://127.0.0.1:11434/");
     expect(extracts[0]?.env?.OPENAI_API_KEY).toBeUndefined();
     expect(await readFile(definition, "utf8")).toBe(selected);
     expect(JSON.stringify(result)).not.toContain(process.env.OPENAI_API_KEY);
@@ -344,6 +344,128 @@ it("uses explicitly selected local document processing settings", async () => {
     else process.env.OPENAI_API_KEY = previousKey;
     if (previousEndpoint === undefined) delete process.env.OLLAMA_BASE_URL;
     else process.env.OLLAMA_BASE_URL = previousEndpoint;
+    await fixture.dispose();
+  }
+});
+
+// QFAI:EX-0001-0234-23
+// Mutation: packages/qfai/src/core/graph/documents.ts `if (!local && selected.protocol !== "https:") {` -> `if (false) {` fails "refuses plain http for an external processing destination before asking for authorization"
+// Mutation: packages/qfai/src/core/graph/documents.ts `(endpoint.href !== processing.endpoint &&` -> `(false &&` fails "refuses plain http for an external processing destination before asking for authorization"
+it("refuses plain http for an external processing destination before asking for authorization", async () => {
+  const fixture = await documentAnalysisFixture();
+  const certificateSettings = [
+    "SSL_CERT_FILE",
+    "SSL_CERT_DIR",
+    "REQUESTS_CA_BUNDLE",
+    "CURL_CA_BUNDLE",
+    "SSLKEYLOGFILE",
+    "OPENSSL_CONF",
+  ] as const;
+  const prior = certificateSettings.map((name) => process.env[name]);
+  const priorKey = process.env.QFAI_TEST_EXTERNAL_KEY;
+  try {
+    // The openai backend needs a selected credential, so the endpoint is the only thing refused.
+    process.env.QFAI_TEST_EXTERNAL_KEY = "fixture-external-key";
+    const definition = path.join(fixture.root, ".qfai", "graph-processing.json");
+    const run = graphifyExtractionFixture(fixture);
+    const external = (endpoint: string) =>
+      JSON.stringify({
+        backend: "openai",
+        model: "selected-model",
+        endpoint,
+        scope: ["rationale.md"],
+        credentialEnv: "QFAI_TEST_EXTERNAL_KEY",
+      });
+    for (const endpoint of [
+      "http://selected.example.invalid/v1",
+      "http://192.168.1.5:11434/v1",
+      "http://127.0.0.2:11434/v1",
+    ]) {
+      await writeFile(definition, external(endpoint));
+      fixture.calls.length = 0;
+      const approvals: ExternalProcessingRequest[] = [];
+      const refused = await prepareDocumentAnalysis(fixture.root, run, (request) => {
+        approvals.push(request);
+        return Promise.resolve(true);
+      });
+      expect(refused.status).toBe("not-ready");
+      expect(refused.recovery).toContain("https");
+      expect(approvals).toEqual([]);
+      expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+    }
+    // Node reads a loopback host out of these, while Python's urlsplit and httpx read
+    // evil.example: the text is refused, so neither reading reaches the managed process.
+    for (const endpoint of [
+      "http://127.0.0.1\\@evil.example/v1",
+      "http://localhost\\@evil.example/v1",
+      "http://127.0.0.1:11434\t/v1",
+      " http://127.0.0.1:11434/v1",
+    ]) {
+      await writeFile(definition, external(endpoint));
+      fixture.calls.length = 0;
+      const approvals: ExternalProcessingRequest[] = [];
+      const refused = await prepareDocumentAnalysis(fixture.root, run, (request) => {
+        approvals.push(request);
+        return Promise.resolve(true);
+      });
+      expect(refused.status).toBe("not-ready");
+      expect(refused.recovery).toContain(".qfai/graph-processing.json");
+      expect(approvals).toEqual([]);
+      expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+    }
+    // An authorized https destination keeps the client's certificate verification: no ambient
+    // setting that replaces the trusted certificates reaches the managed process.
+    for (const name of certificateSettings) process.env[name] = "fixture-untrusted-certificates";
+    const secure = "https://selected.example.invalid/v1";
+    await writeFile(definition, external(secure));
+    fixture.calls.length = 0;
+    const approved = await prepareDocumentAnalysis(fixture.root, run, () => Promise.resolve(true));
+    expect(approved.status).toBe("prepared");
+    const extracts = fixture.calls.filter((call) => call.args.includes("extract"));
+    expect(extracts).toHaveLength(1);
+    expect(extracts[0]?.env?.OPENAI_BASE_URL).toBe(secure);
+    for (const name of certificateSettings) expect(extracts[0]?.env?.[name]).toBeUndefined();
+  } finally {
+    certificateSettings.forEach((name, index) => {
+      const value = prior[index];
+      if (value === undefined) Reflect.deleteProperty(process.env, name);
+      else process.env[name] = value;
+    });
+    if (priorKey === undefined) delete process.env.QFAI_TEST_EXTERNAL_KEY;
+    else process.env.QFAI_TEST_EXTERNAL_KEY = priorKey;
+    await fixture.dispose();
+  }
+});
+
+// QFAI:EX-0001-0234-24
+// Mutation: packages/qfai/src/core/graph/documents.ts `const local = ["127.0.0.1", "localhost", "[::1]"].includes(selected.hostname);` -> `const local = false;` fails "keeps plain http for an explicitly selected loopback endpoint without authorization"
+it("keeps plain http for an explicitly selected loopback endpoint without authorization", async () => {
+  const fixture = await documentAnalysisFixture();
+  try {
+    const definition = path.join(fixture.root, ".qfai", "graph-processing.json");
+    const run = graphifyExtractionFixture(fixture);
+    for (const endpoint of [
+      "http://127.0.0.1:11434/v1",
+      "http://localhost:11434/v1",
+      "http://[::1]:11434/v1",
+    ]) {
+      await writeFile(
+        definition,
+        JSON.stringify({ backend: "ollama", model: "selected-local-model", endpoint }),
+      );
+      fixture.calls.length = 0;
+      const approvals: ExternalProcessingRequest[] = [];
+      const result = await prepareDocumentAnalysis(fixture.root, run, (request) => {
+        approvals.push(request);
+        return Promise.resolve(true);
+      });
+      expect(result.status).toBe("prepared");
+      expect(approvals).toEqual([]);
+      const extracts = fixture.calls.filter((call) => call.args.includes("extract"));
+      expect(extracts).toHaveLength(1);
+      expect(extracts[0]?.env?.OLLAMA_BASE_URL).toBe(endpoint);
+    }
+  } finally {
     await fixture.dispose();
   }
 });

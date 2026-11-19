@@ -3219,6 +3219,42 @@ describe("release automation performs decisions rather than making them", () => 
     ).not.toMatch(/push[^\n]*(--force|-f \b)/);
   });
 
+  it("stops on a failed release branch lookup instead of treating it as an absent branch", () => {
+    // `git ls-remote --exit-code` answers 2 for "no such ref" and 128 for "the question could
+    // not be asked". Tested for truth, a rate limit or a revoked token reads as "not pushed yet",
+    // and the run pushes a sibling commit with the lookup's own diagnostic thrown away.
+    const prepare = workflow("prepare-release.yml");
+    const jobs = isRecord(prepare["jobs"]) ? prepare["jobs"] : {};
+    const commands = Object.values(jobs)
+      .flatMap((job) => (isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : []))
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+    const lookup = commands
+      .split("\n")
+      .filter((line) => /ls-remote[^\n]*RELEASE_BRANCH/.test(line));
+
+    expect(lookup, "the release branch is looked up exactly once").toHaveLength(1);
+    const [line = ""] = lookup;
+    expect(line, "the lookup's exit status must be kept, not tested for truth").toMatch(
+      /\|\| lookup=\$\?$/,
+    );
+    expect(line, "the lookup's diagnostic must stay visible in the log").not.toMatch(/2>/);
+    expect(
+      line,
+      "the lookup must not carry the token, so its visible diagnostic cannot expose it",
+    ).not.toContain("$remote");
+    expect(commands, "only exit status 2 may mean the branch is absent").toContain(
+      'if [ "$lookup" -eq 2 ]; then',
+    );
+    expect(commands, "and any other failure must stop the run").toMatch(
+      /\[ "\$lookup" -ne 0 \][^\n]*\n[^\n]*::error::[^\n]*\nexit 1/,
+    );
+  });
+
   it("keeps scratch inside the one directory this repository sanctions", () => {
     // `.agents/rules/temporary-files.md` makes `tmp/` at the repository root the sole scratch
     // area. Bare `mktemp` implies `--tmpdir` and lands in `/tmp` when `TMPDIR` is unset, which
@@ -3251,17 +3287,18 @@ describe("release automation performs decisions rather than making them", () => 
     }
   });
 
-  it("refuses a version component with a leading zero, at both ends", () => {
+  it("refuses a version component with a leading zero, in every release workflow", () => {
     // `01.11.0`, `1.011.0` and `1.11.00` satisfy every structural check these workflows made
     // — digits and dots, three non-empty components — and `sort -V` orders them happily. They
     // are not SemVer: `node-semver` rejects them, so npm refuses the publish. Without this the
     // refusal arrived last, after the release pull request had merged and the tag was pushed,
     // leaving an invalid version in `main` and a tag naming it.
     //
-    // Both ends, because they read different things: prepare-release reads what a human typed
-    // into the dispatch form, tag-release reads what the tree declares — and a manifest can be
-    // edited by hand without either workflow being involved.
-    for (const name of ["prepare-release.yml", "tag-release.yml"]) {
+    // Every release workflow, because they read different things: prepare-release reads what a
+    // human typed into the dispatch form, tag-release reads what the tree declares, and the
+    // publish workflow reads a tag a dispatcher can name by hand — and a manifest can be edited
+    // by hand without any of them being involved.
+    for (const name of ["prepare-release.yml", "tag-release.yml", "release.yml"]) {
       const document = workflow(name);
       const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
       const commands = Object.values(jobs)

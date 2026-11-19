@@ -148,6 +148,20 @@ jobs:
             *.*) reject "it must carry exactly three numeric components" ;;
           esac
 
+          # No leading zeros, as prepare-release and tag-release refuse them. `v01.11.0` passes
+          # every check above and is not SemVer: `node-semver` rejects it, so npm would refuse
+          # the publish only after the gate had passed and the build had run.
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped templates publish nothing to npm and validate no release tag.
+          major="${version%%.*}"
+          minor="${after_major%%.*}"
+          for part in "$major" "$minor" "$after_minor"; do
+            case "$part" in
+              0) ;;
+              0*) reject "it has a leading zero in '$part', which node-semver rejects, so npm would refuse the publish" ;;
+            esac
+          done
+
           # Fully qualified, so a branch that happens to share the tag's name
           # cannot stand in for it. `^{commit}` dereferences an annotated tag.
           git fetch --no-tags origin "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"

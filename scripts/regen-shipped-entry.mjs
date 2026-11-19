@@ -13,9 +13,12 @@
  *
  * This tool rewrites both from the shipped sources. The copy of `AGENTS.md` is taken from the
  * template, and the Copilot digest is the hash of what the built CLI writes into an empty
- * temporary directory. The result is a diff a reviewer reads; the tool never reads a value out of
- * a failing test. Run `pnpm build` first so the CLI it runs is the one for this checkout, and
- * `pnpm pins:reseal` after it when a file under `scripts/` or a pinned path also changed.
+ * temporary directory. That init runs under the acquisition fixture the package verification
+ * uses (`packages/qfai/tests/helpers/legacyInitProcess.mjs`), so it downloads no graph tool and a
+ * missing network, npm registry or uv cannot fail it. The result is a diff a reviewer reads; the
+ * tool never reads a value out of a failing test. Run `pnpm build` first so the CLI it runs is the
+ * one for this checkout, and `pnpm pins:reseal` after it when a file under `scripts/` or a pinned
+ * path also changed.
  *
  * Usage:
  *
@@ -31,13 +34,27 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const TEMPLATE_REL = "packages/qfai/assets/init/root/AGENTS.md";
 const FIXTURE_REL = "packages/qfai/tests/fixtures/shipped-entry/agents.txt";
 const HELPER_REL = "packages/qfai/tests/helpers/shippedLaneCommands.ts";
 const CLI_REL = "packages/qfai/dist/cli/index.mjs";
 const COPILOT_REL = ".github/copilot-instructions.md";
+
+/**
+ * The preload that stands in for graph acquisition and host probes in an init child. It is
+ * resolved from this script, not from `--root`, because it is part of the tool and not an input.
+ */
+const INIT_PRELOAD = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "packages",
+  "qfai",
+  "tests",
+  "helpers",
+  "legacyInitProcess.mjs",
+);
 
 /** The digest literal that follows the Copilot file's name in `ALLOWED_INIT_CONTENT`. */
 const DIGEST_LINE = /(\n\s*"\.github\/copilot-instructions\.md",\n\s*")([0-9a-f]{64})(")/g;
@@ -61,10 +78,12 @@ function readRequired(file, hint) {
 function generatedCopilotBytes(cli) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-regen-entry-"));
   try {
-    const run = spawnSync(process.execPath, [cli, "init", "--dir", dir, "--yes"], {
-      encoding: "utf-8",
-      maxBuffer: 64 * 1024 * 1024,
-    });
+    if (!existsSync(INIT_PRELOAD)) throw new Error(`${INIT_PRELOAD} does not exist`);
+    const run = spawnSync(
+      process.execPath,
+      ["--import", pathToFileURL(INIT_PRELOAD).href, cli, "init", "--dir", dir, "--yes"],
+      { encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 },
+    );
     if (run.error !== undefined) throw new Error(`qfai init did not run: ${run.error.message}`);
     if (run.status !== 0) {
       throw new Error(`qfai init exited ${run.status}:\n${run.stdout ?? ""}${run.stderr ?? ""}`);
