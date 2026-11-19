@@ -1,3 +1,11 @@
+import path from "node:path";
+import {
+  GraphConfigUnreadableError,
+  inspectCodeCoverage,
+  inspectCurrentCodeAnalysis,
+} from "./analysis.js";
+import { inspectDocumentScope, readGraphProcessing } from "./documents.js";
+import { graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
 import {
   GRAPH_PYTHON_FLAGS,
   codegraphEnvironment,
@@ -5,14 +13,6 @@ import {
   runGraphProcess,
   type GraphProcess,
 } from "./process.js";
-import {
-  GraphConfigUnreadableError,
-  inspectCodeCoverage,
-  inspectCurrentCodeAnalysis,
-} from "./analysis.js";
-import { graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
-import path from "node:path";
-import { inspectDocumentScope, readGraphProcessing } from "./documents.js";
 
 export interface GraphQuestion {
   domain: "code" | "documents";

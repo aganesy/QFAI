@@ -1209,11 +1209,9 @@ jobs:
         # explicitly rather than relying on the documented default, because the
         # attestation is the point of publishing this way and a silent default
         # change would remove it without failing anything.
-        env:
-          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
-        # `./` is load-bearing. Without it npm reads `tmp/qfai-1.10.0.tgz` as the
-        # `owner/repo` GitHub shorthand and fails with EALLOWGIT, refusing to
-        # fetch "github:tmp/qfai-1.10.0.tgz" — a path that looks like a spec.
+        #
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped templates have no release workflow.
         run: npm publish --access public --provenance --ignore-scripts
         working-directory: tmp/packed/package
         shell: bash

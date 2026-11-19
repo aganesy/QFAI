@@ -161,11 +161,12 @@ function isFrozenRecord(relative) {
  *
  * Decoded, unlike the C0 pass beside it, because these are CODE POINTS: a bidi
  * override is three UTF-8 bytes and a byte scan would have to reassemble them.
- * The two passes read the same file two ways on purpose — one asks what the
- * bytes are, the other what they render as.
+ * The two passes look at the same bytes two ways on purpose — one asks what the
+ * bytes are, the other what they render as — and the caller reads the file
+ * once, so both answer about one snapshot.
  */
-function scanBidi(relative, absolute) {
-  const text = readFileSync(absolute, "utf-8");
+function scanBidi(relative, bytes) {
+  const text = bytes.toString("utf-8");
   let reported = 0;
   for (let i = 0; i < text.length && reported < maxHitsPerFile; i++) {
     const code = text.charCodeAt(i);
@@ -253,10 +254,10 @@ for (const relative of tracked ?? []) {
   if (!isScannableEntry(absolute)) {
     continue;
   }
-  if (!isFrozenRecord(relative)) {
-    scanBidi(relative, absolute);
-  }
   const bytes = readFileSync(absolute);
+  if (!isFrozenRecord(relative)) {
+    scanBidi(relative, bytes);
+  }
   // Line and byte are carried along the scan rather than recomputed per hit.
   // Locating each hit by counting newlines from the start of the file is
   // quadratic in the number of hits, which is exactly the file the cap above
