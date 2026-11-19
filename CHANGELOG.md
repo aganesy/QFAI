@@ -609,6 +609,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check is incomplete. A file that is absent is still skipped, so a project
   without the qfai package source is unaffected.
 
+- **A document graph keeps a nested scope written with backslashes.** A
+  `scope` entry in `.qfai/graph-processing.json` such as
+  `docs\nested\rationale.md` was read as `docs/nested/rationale.md` when the
+  document graph was built, but as written when the next query checked it, so
+  that check matched no document and dropped the scope's documents from the
+  graph. Both now read the scope with forward slashes.
+
 - **A UI marker written in a JavaScript module file counts as rendered.**
   `QFAI-CONTRACT-037` looked for a contract's `data-qfai` marker in `.js` and
   `.ts` files under `paths.srcDir` but not in `.mjs`, `.cjs`, `.mts` or `.cts`
