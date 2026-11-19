@@ -18,7 +18,8 @@ the 2.x validation and authoring workflow.
 
 1. Commit the current project state. The migration deletes every 1.x file
    that has no destination, an untracked file and an uncommitted edit included,
-   and replaces every shipped skill the project customised. Only what git
+   and replaces every shipped skill and step directory the project
+   customised, with the untracked files and uncommitted edits in it. Only what git
    history holds can be recovered, so commit or copy anything you need first.
    Copy `.qfai/` with its git-ignored files to a place outside the repository
    before step 1, because version control does not hold them.
