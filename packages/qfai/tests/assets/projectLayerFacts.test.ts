@@ -160,7 +160,11 @@ describe("the project layer describes the repository it is in", () => {
     expect(workflow, "release.yml no longer holds `id-token: write`").toMatch(/id-token:\s*write/);
 
     const guide = withoutFencedBlocks(await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8"));
-    const askedFor = [...guide.matchAll(/npm whoami|npm login|NPM_TOKEN/g)].map(([match]) => match);
+    // The commands and the token name, in code spans: prose that says no npm
+    // login is needed must not count as asking for one.
+    const askedFor = [...guide.matchAll(/`npm (?:whoami|login)`|NPM_TOKEN/g)].map(
+      ([match]) => match,
+    );
     expect(askedFor).toEqual([]);
   });
 });
