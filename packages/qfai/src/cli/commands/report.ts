@@ -189,9 +189,9 @@ export async function runReport(options: ReportOptions): Promise<number> {
     if (loaded === null) {
       return 2;
     }
-    if (options.inputPath === undefined && options.profile !== undefined) {
-      // The resolved file is the requested profile's only by name for a
-      // repository-wide run, and not even by name for a flow-scoped one.
+    if (options.inputPath === undefined && options.profile !== undefined && flowIds.length > 0) {
+      // A flow-scoped file name carries no profile, so the profile the
+      // result records is the only evidence it is the requested one.
       if (loaded.profile !== options.profile) {
         error(buildProfileMismatchGuidance(inputPath, loaded.profile, flowIds, options.profile));
         return 2;
