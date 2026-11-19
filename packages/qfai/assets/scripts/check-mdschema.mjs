@@ -25,11 +25,19 @@
  * rather than by weakening the schemas until the current tree happens to pass:
  *
  *   --scope changed  (default) documents whose text this branch changed, judged
- *                    against their own state at the merge base. A ratchet: a new
- *                    document must conform and an edited one must not get
- *                    worse, while untouched legacy documents are left for their
- *                    own change. A rewrite that moves bytes without moving text
- *                    — re-normalised line endings — is not a change here.
+ *                    against their own state at the merge base. A document-level
+ *                    ratchet: a new document must conform, an edited document
+ *                    that conformed at the merge base must still conform, and an
+ *                    edited document that already failed there and still fails
+ *                    at the head is reported, not failed, however many schema
+ *                    violations it gains. Two exceptions fail the run anyway:
+ *                    the document carries the opt-out marker (see "No opt-out"
+ *                    below), or its first heading matched the root heading the
+ *                    schema names at the merge base and no longer does at the
+ *                    head. One fixed to conform at the head simply passes.
+ *                    Untouched legacy documents are left for their own change.
+ *                    A rewrite that moves bytes without moving text —
+ *                    re-normalised line endings — is not a change here.
  *   --scope all      every document the manifest matches. The migration view.
  *   --scope files    only the paths named on the command line.
  *
@@ -59,8 +67,9 @@
  * violations `mdschema` printed, and `mdschema` has no machine-readable output
  * — `--format json` and `--format sarif` both render the same text — so a
  * violation-level ratchet would couple this file to one release's wording, and
- * a reflowed message would silently report every violation as new. The file
- * ratchet uses only the exit status, which the tool does promise.
+ * a reflowed message would silently report every violation as new. The
+ * document-level ratchet uses only the exit status, which the tool does
+ * promise.
  *
  * ── Coverage ──────────────────────────────────────────────────────────────
  *
@@ -106,6 +115,7 @@
  * on stdout, names them, and counts them in its closing line, which is why the
  * exit code alone is not the whole answer there.
  */
+import { Buffer } from "node:buffer";
 import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -120,6 +130,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { clearTimeout, setTimeout } from "node:timers";
 import { fileURLToPath } from "node:url";
 
 /**
@@ -801,18 +812,52 @@ function runMdschema(mdschema, schemaPath, files, root) {
  * @param {string} schemaPath
  * @param {string[]} files
  * @param {string} root
- * @returns {Promise<{ ok: boolean, output: string, spawnFailed: boolean }>}
+ * @param {{ timeoutMs: number, maxOutputBytes: number }} limits A run past
+ *   either one is killed and reported as `stopped`, never read as a result.
+ * @returns {Promise<{ ok: boolean, output: string, spawnFailed: boolean, stopped?: boolean }>}
  */
-function runMdschemaAsync(mdschema, schemaPath, files, root) {
+function runMdschemaAsync(mdschema, schemaPath, files, root, limits) {
   return new Promise((resolve) => {
     let stdout = "";
     let stderr = "";
+    let printed = 0;
     let settled = false;
-    // A failed start emits `error`, and Node does not promise a `close` after it.
-    const settle = (/** @type {{ error?: Error, status: number | null }} */ end) => {
+    let timer;
+    const finish = (result) => {
       if (settled) return;
       settled = true;
-      resolve(mdschemaResult({ ...end, stdout, stderr }, schemaPath));
+      clearTimeout(timer);
+      resolve(result);
+    };
+    // A failed start emits `error`, and Node does not promise a `close` after it.
+    const settle = (/** @type {{ error?: Error, status: number | null }} */ end) =>
+      finish(mdschemaResult({ ...end, stdout, stderr }, schemaPath));
+    let exited = false;
+    // A process can catch SIGTERM and keep its pipes open, which would hold the
+    // event loop and the caller. So the run ends here, not on `close`: the pipes
+    // are destroyed, the process no longer holds the loop, and one that outlives
+    // SIGTERM gets SIGKILL after a short grace.
+    const stop = (why) => {
+      if (settled) return;
+      finish({ ok: false, spawnFailed: false, stopped: true, output: `${why} and was stopped` });
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      child.unref();
+      child.kill("SIGTERM");
+      // Not unref'd: the SIGKILL must go out before this process may exit.
+      const escalate = setTimeout(() => {
+        if (!exited) child.kill("SIGKILL");
+      }, KILL_GRACE_MS);
+      child.once("exit", () => clearTimeout(escalate));
+    };
+    const read = (append) => (chunk) => {
+      if (settled) return;
+      printed += Buffer.byteLength(chunk);
+      if (printed > limits.maxOutputBytes) {
+        stop(`it printed more than ${limits.maxOutputBytes} bytes`);
+        return;
+      }
+      append(chunk);
     };
     // `spawn` throws for some start failures (an argument list too long), and
     // leaves the output streams null for others (no descriptors left). Both are
@@ -825,14 +870,32 @@ function runMdschemaAsync(mdschema, schemaPath, files, root) {
       return;
     }
     child.on("error", (error) => settle({ error, status: null }));
-    child.stdout?.setEncoding("utf-8").on("data", (chunk) => (stdout += chunk));
-    child.stderr?.setEncoding("utf-8").on("data", (chunk) => (stderr += chunk));
+    child.stdout?.setEncoding("utf-8").on(
+      "data",
+      read((chunk) => (stdout += chunk)),
+    );
+    child.stderr?.setEncoding("utf-8").on(
+      "data",
+      read((chunk) => (stderr += chunk)),
+    );
+    child.on("exit", () => (exited = true));
     child.on("close", (status) => settle({ status }));
+    timer = setTimeout(() => stop(`it ran longer than ${limits.timeoutMs} ms`), limits.timeoutMs);
   });
 }
 
-/** How much output the synchronous runner reads from one mdschema run. */
+/** How much output one mdschema run may print before it is read as a failed run. */
 const MDSCHEMA_MAX_OUTPUT = 256 * 1024 * 1024;
+
+/**
+ * The bounds `checkDocuments` holds each mdschema run to. The output bound is
+ * the synchronous runner's; the time bound is the one the code-graph runner
+ * gives its tools, far above what a whole story tree takes.
+ */
+const MDSCHEMA_LIMITS = { timeoutMs: 120_000, maxOutputBytes: MDSCHEMA_MAX_OUTPUT };
+
+/** How long a stopped mdschema run has after SIGTERM before it gets SIGKILL. */
+const KILL_GRACE_MS = 250;
 
 /** How many manifest entries `checkDocuments` runs at the same time. */
 const CONCURRENT_ENTRIES = 8;
@@ -1525,7 +1588,7 @@ export function parseViolations(output, files, root) {
  * @returns {Promise<string | null>} why the check could not run, or `null`
  */
 async function checkEntryDocuments(context, entry, violations) {
-  const { root, paths, universe, mdschema } = context;
+  const { root, paths, universe, mdschema, limits } = context;
   const schemaPath = path.join(SCHEMA_ROOT, entry.schema);
   if (!existsSync(schemaPath)) {
     return `the schema ${entry.schema} is missing from the package`;
@@ -1549,9 +1612,12 @@ async function checkEntryDocuments(context, entry, violations) {
     gradable.push(file);
   }
   if (gradable.length === 0) return null;
-  const result = await runMdschemaAsync(mdschema, schemaPath, gradable, root);
+  const result = await runMdschemaAsync(mdschema, schemaPath, gradable, root, limits);
   if (result.spawnFailed) {
     return `mdschema did not run: ${result.output}`;
+  }
+  if (result.stopped) {
+    return `mdschema did not finish: ${result.output}`;
   }
   if (result.ok) return null;
   const parsed = parseViolations(result.output, gradable, root);
@@ -1737,9 +1803,16 @@ function decisionRegisterViolations(root, paths) {
  *
  * @param {string} root
  * @param {{ specsDir: string, contractsDir: string }} [paths] tree-relative roots
+ * @param {{ timeoutMs: number, maxOutputBytes: number }} [limits] how long each
+ *   mdschema run may take and how much it may print; a run past either is
+ *   stopped, and the check reports that it did not finish
  * @returns {Promise<{ ok: true, checked: number, violations: {file: string, line: number, column: number, rule: string, message: string}[] } | { ok: false, reason: string }>}
  */
-export async function checkDocuments(root, paths = configuredPaths(root)) {
+export async function checkDocuments(
+  root,
+  paths = configuredPaths(root),
+  limits = MDSCHEMA_LIMITS,
+) {
   const mdschema = findMdschemaCommand(root);
   if (mdschema === null) {
     return { ok: false, reason: `no ${MDSCHEMA_PACKAGE} installation was found` };
@@ -1747,7 +1820,7 @@ export async function checkDocuments(root, paths = configuredPaths(root)) {
   const register = decisionRegisterViolations(root, paths);
   if (register.unsafe) return { ok: true, checked: 0, violations: register.violations };
   const { files, unreadable } = documentUniverse(root, paths);
-  const context = { root, paths, mdschema, universe: files, checked: 0 };
+  const context = { root, paths, mdschema, limits, universe: files, checked: 0 };
   const entries = readManifest();
   const violations = [
     ...unreadable,

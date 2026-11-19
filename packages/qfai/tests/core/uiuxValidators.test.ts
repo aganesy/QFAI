@@ -471,7 +471,7 @@ describe("uiux validators", () => {
     expect(await validateDesignToken(root, defaultConfig)).toEqual([]);
   });
 
-  // QFAI:EX-0001-0039-53
+  // QFAI:EX-0001-0039-54
   it("reports a cyclic or too deep design token file and still checks the rest", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "tokens"), { recursive: true });
