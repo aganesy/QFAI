@@ -141,17 +141,23 @@ export async function prepareDocumentAnalysisLocked(
 ): Promise<DocumentPreparation> {
   if (!(await graphifyConfigurationSafe(root))) return providerConflict();
   if (await inspectDocumentAnalysis(root, run)) return { status: "prepared", source: "current" };
+  const inspect = async (analysis: string, refresh: boolean) =>
+    (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none")).current;
   const processing = await readGraphProcessing(root);
+  // Restoration calls no backend, so only new generation needs one configured. Without a
+  // configuration the snapshot's recorded definition decides; a malformed one is refused, and
+  // the inspection refuses a snapshot whose scope or definition differs.
+  if (
+    (processing || (await processingConfigurationAbsent(root))) &&
+    (await restoreCompletedDocumentAnalysis(root, run, inspect, environment)) === "restored"
+  )
+    return { status: "prepared", source: "restored" };
   if (!processing) {
     return {
       status: "not-ready",
       recovery: DOCUMENT_PROCESSING_SETUP,
     };
   }
-  const inspect = async (analysis: string, refresh: boolean) =>
-    (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none")).current;
-  if ((await restoreCompletedDocumentAnalysis(root, run, inspect, environment)) === "restored")
-    return { status: "prepared", source: "restored" };
   const selected = new URL(processing.endpoint ?? "http://127.0.0.1:11434/v1");
   // The approval, the origin guard and the Python client all receive the URL this check parsed,
   // so no parser can read another host out of the configured text.
@@ -411,14 +417,19 @@ async function processingForCompletedQuery(
   recorded: unknown,
 ): Promise<unknown> {
   if (selected !== undefined) return selected;
-  try {
-    await readFile(path.join(root, ".qfai", "graph-processing.json"));
-    return undefined;
-  } catch (cause: unknown) {
-    if (!isEnoent(cause)) throw cause;
-  }
+  if (!(await processingConfigurationAbsent(root))) return undefined;
   if (!validGraphProcessing(recorded)) return undefined;
   return recorded;
+}
+
+async function processingConfigurationAbsent(root: string): Promise<boolean> {
+  try {
+    await readFile(path.join(root, ".qfai", "graph-processing.json"));
+    return false;
+  } catch (cause: unknown) {
+    if (!isEnoent(cause)) throw cause;
+    return true;
+  }
 }
 
 async function currentGraphifyCorpus(

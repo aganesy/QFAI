@@ -635,6 +635,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   budget check counts from, and report its file line; a `-->` in the front
   matter is not read as a transition.
 
+- **A document query restores a shared completed analysis without a
+  processing configuration.** A worktree with no document analysis and no
+  `.qfai/graph-processing.json` answered "not ready" before it looked in the
+  shared completed-analysis cache. It now restores a compatible snapshot made
+  with the same document scope, which calls no backend, and asks for a
+  configuration only when new analysis has to be generated. A malformed
+  configuration or a changed scope still blocks restoration.
+
 - **Graph queries reject a `qfai.config.yaml` or `paths` set to null.** A
   config file holding only `~` or `null`, or a `paths:` key with no value or
   `null`, was read as if it were left out, so the graph used the default
