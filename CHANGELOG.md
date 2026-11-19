@@ -562,6 +562,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
+- **A failed graph tool download names a directory of its own to retry in.**
+  The recovery line of `qfai init` told you to rerun the download into a fixed
+  `qfai-graph-check` directory under the system temporary directory and then
+  delete it, even if that directory already held something else. Init now
+  creates a new empty directory for each failure, names only that one in the
+  command and in the deletion, and quotes the command for the shell of your
+  platform. Where no such directory can be created or shown safely, the
+  recovery line says to fix the cause and run `qfai init` again. Closes #4589.
+
 - **An unreadable completed graph analysis no longer stops reuse.** When one
   saved CodeGraph or Graphify analysis in the repository's graph cache could
   not be inspected or its metadata could not be read, CodeGraph preparation
