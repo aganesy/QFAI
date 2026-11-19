@@ -472,7 +472,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ones, so text such as `$note$ REFERENCES orders $note$` was read as a
   foreign key to `orders` and the contract was reported for not depending on
   the contract that creates it. Both forms are now skipped, the same way the
-  SQL statement splitter already reads them. Closes #4656.
+  SQL statement splitter already reads them. Both readers also accept a tag
+  with non-ASCII letters, such as `$é$`, and no longer open a literal at a
+  `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
 
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`

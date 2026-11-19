@@ -109,6 +109,29 @@ describe("reading a contract's own DDL", () => {
     expect(blankSqlNoise(sql)).toHaveLength(sql.length);
   });
 
+  it("reads a REFERENCES after an identifier that holds a tag-like run", () => {
+    // `$` continues an identifier in PostgreSQL, so `foo$tag$` is one name and
+    // opens no literal. Read as an opener, the second `foo$tag$` would close it
+    // and blank the real foreign key between them.
+    const sql = [
+      "CREATE TABLE foo$tag$ (parent_id int REFERENCES orders(id));",
+      "COMMENT ON TABLE foo$tag$ IS 'child rows';",
+    ].join("\n");
+    const { references } = readTableEdges(sql);
+
+    expect(references).toEqual(new Set(["orders"]));
+  });
+
+  it("does not read a REFERENCES inside a literal tagged with non-ASCII letters", () => {
+    // A tag follows PostgreSQL's identifier rules, which accept any letter, so
+    // `$é$ … $é$` is a literal just as `$note$ … $note$` is.
+    const sql = "COMMENT ON TABLE t IS $é$ REFERENCES orders $é$;";
+    const { references } = readTableEdges(sql);
+
+    expect(references.size).toBe(0);
+    expect(blankSqlNoise(sql)).toHaveLength(sql.length);
+  });
+
   it("keeps every offset when it blanks a comment", () => {
     // The blanking is a mask, not a delete: a later match has to land where the
     // reader sees it.
