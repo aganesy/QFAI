@@ -9,6 +9,7 @@
  *     same root finish out of order.
  */
 
+import { spawnSync } from "node:child_process";
 import {
   link,
   mkdir,
@@ -27,6 +28,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
 import {
+  type PointerGuardOptions,
   publishLatestRunPointer,
   VALIDATE_RUN_ID_LINE,
   writeValidateRunLog,
@@ -80,6 +82,36 @@ function expectedRunId(date: Date): string {
 
 async function readValidateLog(root: string, outDir: string): Promise<string> {
   return readFile(path.join(root, outDir, "validate.log"), "utf-8");
+}
+
+/** A run root holding one run directory, with the pointer and guard paths beside it. */
+async function guardFixture(): Promise<{
+  runRoot: string;
+  pointerPath: string;
+  lockPath: string;
+  runId: string;
+}> {
+  const runRoot = await newTempDir();
+  const pointerPath = path.join(runRoot, "validate.log");
+  const runId = expectedRunId(new Date("2026-05-05T10:00:00.000Z"));
+  await mkdir(path.join(runRoot, runId));
+  return { runRoot, pointerPath, lockPath: `${pointerPath}.lock`, runId };
+}
+
+async function publishPointer(
+  runRoot: string,
+  pointerPath: string,
+  runId: string,
+  guard?: PointerGuardOptions,
+): Promise<void> {
+  await publishLatestRunPointer({
+    runRoot,
+    runId,
+    pointerPath,
+    runIdLine: VALIDATE_RUN_ID_LINE,
+    buildContents: () => `- run_id: ${runId}\n`,
+    ...(guard === undefined ? {} : { guard }),
+  });
 }
 
 describe("validate.log placement", () => {
@@ -224,26 +256,77 @@ describe("validate.log freshness under out-of-order completion", () => {
     expect(await readdir(runRoot)).not.toContain("validate.log.lock");
   });
 
-  it("takes over a guard a crashed run left behind", async () => {
-    const runRoot = await newTempDir();
-    const pointerPath = path.join(runRoot, "validate.log");
-    const lockPath = `${pointerPath}.lock`;
-    const runId = expectedRunId(new Date("2026-05-05T10:00:00.000Z"));
-    await mkdir(path.join(runRoot, runId));
-    await writeFile(lockPath, JSON.stringify({ pid: process.pid, token: "left-behind" }), "utf-8");
+  it("takes over an old guard that names no process", async () => {
+    const { runRoot, pointerPath, lockPath, runId } = await guardFixture();
+    await writeFile(lockPath, "half-written", "utf-8");
     const longAgo = new Date(Date.now() - 60 * 60 * 1000);
     await utimes(lockPath, longAgo, longAgo);
 
-    await publishLatestRunPointer({
-      runRoot,
-      runId,
-      pointerPath,
-      runIdLine: VALIDATE_RUN_ID_LINE,
-      buildContents: () => `- run_id: ${runId}\n`,
-    });
+    await publishPointer(runRoot, pointerPath, runId);
 
     expect(await readFile(pointerPath, "utf-8")).toBe(`- run_id: ${runId}\n`);
     expect(await readdir(runRoot)).not.toContain("validate.log.lock");
+  });
+
+  it("takes over a fresh guard whose process has ended at once", async () => {
+    const { runRoot, pointerPath, lockPath, runId } = await guardFixture();
+    const endedPid = spawnSync(process.execPath, ["-e", ""]).pid;
+    await writeFile(lockPath, JSON.stringify({ pid: endedPid, token: "ended" }), "utf-8");
+
+    await publishPointer(runRoot, pointerPath, runId, { waitMs: 0 });
+
+    expect(await readFile(pointerPath, "utf-8")).toBe(`- run_id: ${runId}\n`);
+    expect(await readdir(runRoot)).not.toContain("validate.log.lock");
+  });
+
+  it("waits on an old guard whose process still exists, then names the file", async () => {
+    const { runRoot, pointerPath, lockPath, runId } = await guardFixture();
+    await writeFile(lockPath, JSON.stringify({ pid: process.pid, token: "live" }), "utf-8");
+    const longAgo = new Date(Date.now() - 60 * 60 * 1000);
+    await utimes(lockPath, longAgo, longAgo);
+
+    await expect(publishPointer(runRoot, pointerPath, runId, { waitMs: 100 })).rejects.toThrow(
+      `${lockPath} is held by another run. Remove it if no qfai run is in progress, and run again.`,
+    );
+    await expect(readFile(pointerPath, "utf-8")).rejects.toThrow();
+    expect(await readFile(lockPath, "utf-8")).toContain('"live"');
+  });
+
+  it("refuses a directory at the guard's name with the same guidance", async () => {
+    const { runRoot, pointerPath, lockPath, runId } = await guardFixture();
+    await mkdir(lockPath);
+
+    await expect(publishPointer(runRoot, pointerPath, runId)).rejects.toThrow(
+      `${lockPath} is not a file. Remove it if no qfai run is in progress, and run again.`,
+    );
+  });
+
+  it("on Windows, retries a guard create refused while the old guard is deleted", async () => {
+    const { runRoot, pointerPath, runId } = await guardFixture();
+    const refusals = ["EPERM", "EACCES"];
+    await publishPointer(runRoot, pointerPath, runId, {
+      platform: "win32",
+      createGuard: async (guardPath, contents) => {
+        const code = refusals.shift();
+        if (code !== undefined) throw Object.assign(new Error(code), { code });
+        await writeFile(guardPath, contents, { encoding: "utf-8", flag: "wx" });
+      },
+    });
+
+    expect(refusals).toEqual([]);
+    expect(await readFile(pointerPath, "utf-8")).toBe(`- run_id: ${runId}\n`);
+  });
+
+  it("elsewhere, stops on a guard create refused with EACCES", async () => {
+    const { runRoot, pointerPath, runId } = await guardFixture();
+    await expect(
+      publishPointer(runRoot, pointerPath, runId, {
+        platform: "linux",
+        createGuard: async () => {
+          throw Object.assign(new Error("EACCES"), { code: "EACCES" });
+        },
+      }),
+    ).rejects.toThrow("EACCES");
   });
 
   it("self-heals from an unparseable existing log", async () => {

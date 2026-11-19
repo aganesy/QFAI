@@ -621,8 +621,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   steps, so an older run that passed the check could write after a newer run
   had. Both now check and write under one exclusive guard, a
   `<pointer>.lock` file beside the pointer that a run waits on while another
-  run holds it. A guard left by a crashed run is removed after 10 seconds or
-  once its process is gone. Closes #4535.
+  run holds it, for up to 30 seconds. A guard left by a crashed run is
+  removed once its process is gone, or after 10 seconds when it names no
+  process; anything else stops the run with a message naming the file to
+  remove. Closes #4535.
 
 - **`qfai doctor` starts its output collision scan at the real Git root.** An
   empty `.git` directory in a parent directory counted as a repository, so a

@@ -173,13 +173,19 @@ export async function publishLatestRunPointer(input: {
   pointerPath: string;
   runIdLine: RegExp;
   buildContents: () => string | Promise<string>;
+  /** Overrides for tests; every caller in the package leaves this out. */
+  guard?: PointerGuardOptions;
 }): Promise<void> {
-  await withPointerGuard(input.pointerPath, async () => {
-    if (await hasNewerRunDir(input.runRoot, input.runId)) return;
-    const existingRunId = await readPointerRunId(input.pointerPath, input.runIdLine);
-    if (existingRunId !== null && existingRunId > input.runId) return;
-    await replaceFile(input.pointerPath, await input.buildContents());
-  });
+  await withPointerGuard(
+    input.pointerPath,
+    async () => {
+      if (await hasNewerRunDir(input.runRoot, input.runId)) return;
+      const existingRunId = await readPointerRunId(input.pointerPath, input.runIdLine);
+      if (existingRunId !== null && existingRunId > input.runId) return;
+      await replaceFile(input.pointerPath, await input.buildContents());
+    },
+    input.guard,
+  );
 }
 
 async function readPointerRunId(pointerPath: string, runIdLine: RegExp): Promise<string | null> {
@@ -190,72 +196,137 @@ async function readPointerRunId(pointerPath: string, runIdLine: RegExp): Promise
   }
 }
 
-/** How old a guard file must be before a waiting run treats it as abandoned. */
+/**
+ * How old a guard file that names no process must be before a waiting run
+ * treats it as abandoned.
+ */
 const POINTER_GUARD_STALE_MS = 10_000;
 /** How long a run waits for the guard before it stops with an error. */
 const POINTER_GUARD_WAIT_MS = 30_000;
 const POINTER_GUARD_RETRY_MS = 20;
 
+export type PointerGuardOptions = {
+  waitMs?: number;
+  platform?: NodeJS.Platform;
+  /** Creates the guard file exclusively; `writeNewFile` unless a test replaces it. */
+  createGuard?: (guardPath: string, contents: string) => Promise<void>;
+};
+
 /**
  * Run `action` while holding `<pointerPath>.lock`, a file created exclusively
  * that names this process and a token of this call. A run that finds it held
- * retries until it is released. The guarded work is a directory listing, one
- * read and one rename, so a guard older than `POINTER_GUARD_STALE_MS`, or one
- * whose process no longer exists, was left by a crashed run and is removed.
- * The guard is removed afterwards only while it still holds this call's token.
+ * retries until it is released or the wait limit passes. The guarded work is
+ * a directory listing, one read and one rename, so a guard whose process no
+ * longer exists, or one older than `POINTER_GUARD_STALE_MS` that names no
+ * process, was left by a crashed run and is removed. A guard whose process
+ * still exists is waited on however old it is.
+ *
+ * On Windows the exclusive create also fails with `EPERM` or `EACCES` while
+ * the previous guard is being deleted, and on some file systems in place of
+ * `EEXIST`; there those count as held too.
+ *
+ * Removing the guard afterwards is best effort and only while it still holds
+ * this call's token, so a failed removal never replaces the action's own
+ * result or error; the guard it leaves is taken over once its process ends.
  *
  * Ceiling: removing an abandoned guard is itself not exclusive. Two runs that
  * both find the same abandoned guard can both remove it, and the second
  * removal can take away the guard the first has just created. That needs a
  * crashed run and two runs arriving within the same retry interval after it;
- * an atomic compare-and-delete in the file system would lift it.
+ * an atomic compare-and-delete in the file system would lift it. A crashed
+ * run whose process id was reused by a live process holds the guard until the
+ * wait limit, and the error then names the file to remove.
  */
-async function withPointerGuard<T>(pointerPath: string, action: () => Promise<T>): Promise<T> {
+async function withPointerGuard<T>(
+  pointerPath: string,
+  action: () => Promise<T>,
+  options: PointerGuardOptions = {},
+): Promise<T> {
   const guardPath = `${pointerPath}.lock`;
+  const createGuard = options.createGuard ?? writeNewFile;
+  const platform = options.platform ?? process.platform;
   const owner = JSON.stringify({ pid: process.pid, token: randomBytes(8).toString("hex") });
-  const deadline = Date.now() + POINTER_GUARD_WAIT_MS;
+  const deadline = Date.now() + (options.waitMs ?? POINTER_GUARD_WAIT_MS);
   for (;;) {
     try {
-      await writeNewFile(guardPath, owner);
+      await createGuard(guardPath, owner);
       break;
     } catch (error) {
-      if (!isAlreadyExistsError(error)) throw error;
+      if (!isGuardHeldError(error, platform)) throw error;
     }
     if (await isAbandonedGuard(guardPath)) {
       await rm(guardPath, { force: true });
       continue;
     }
-    if (Date.now() >= deadline) {
-      throw new Error(
-        `${guardPath} is held by another run. Remove it if no qfai run is in progress, and run again.`,
-      );
-    }
+    if (Date.now() >= deadline) throw guardRefusal(guardPath, "is held by another run");
     await delay(POINTER_GUARD_RETRY_MS);
   }
   try {
     return await action();
   } finally {
-    if ((await readFile(guardPath, "utf-8").catch(() => undefined)) === owner) {
-      await rm(guardPath, { force: true });
-    }
+    await releasePointerGuard(guardPath, owner);
   }
 }
 
+function isGuardHeldError(error: unknown, platform: NodeJS.Platform): boolean {
+  if (!hasErrnoCode(error)) return false;
+  if (error.code === "EEXIST" || error.code === "EISDIR") return true;
+  return platform === "win32" && (error.code === "EPERM" || error.code === "EACCES");
+}
+
+function guardRefusal(guardPath: string, reason: string): Error {
+  return new Error(
+    `${guardPath} ${reason}. Remove it if no qfai run is in progress, and run again.`,
+  );
+}
+
+async function releasePointerGuard(guardPath: string, owner: string): Promise<void> {
+  try {
+    if ((await readFile(guardPath, "utf-8")) === owner) await rm(guardPath, { force: true });
+  } catch {
+    // Left for the next run, which takes it over once this process has ended.
+  }
+}
+
+/**
+ * Whether the guard at `guardPath` was left by a crashed run. Throws the
+ * guard refusal when something other than a file sits at the guard's name.
+ */
 async function isAbandonedGuard(guardPath: string): Promise<boolean> {
+  let mtimeMs: number;
+  let text: string;
   try {
     const stats = await lstat(guardPath);
-    if (Date.now() - stats.mtimeMs > POINTER_GUARD_STALE_MS) return true;
-    const owner: unknown = JSON.parse(await readFile(guardPath, "utf-8"));
-    if (typeof owner !== "object" || owner === null || !("pid" in owner)) return false;
-    const { pid } = owner;
-    if (typeof pid !== "number" || !Number.isSafeInteger(pid) || pid <= 0) return false;
+    if (!stats.isFile()) throw guardRefusal(guardPath, "is not a file");
+    mtimeMs = stats.mtimeMs;
+    text = await readFile(guardPath, "utf-8");
+  } catch (error) {
+    // A guard released meanwhile, or one Windows is still deleting, is retried.
+    if (hasErrnoCode(error)) return false;
+    throw error;
+  }
+  const pid = guardOwnerPid(text);
+  if (pid === undefined) return Date.now() - mtimeMs > POINTER_GUARD_STALE_MS;
+  try {
     process.kill(pid, 0);
     return false;
   } catch (error) {
-    // A guard released meanwhile, or one still being written and so not yet
-    // valid JSON, is waited on like a held one.
+    // `EPERM` means the process exists under another user.
     return hasErrnoCode(error) && error.code === "ESRCH";
   }
+}
+
+/** The process id a guard file names, or nothing for one still being written or edited. */
+function guardOwnerPid(text: string): number | undefined {
+  let owner: unknown;
+  try {
+    owner = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  if (typeof owner !== "object" || owner === null || !("pid" in owner)) return undefined;
+  const { pid } = owner;
+  return typeof pid === "number" && Number.isSafeInteger(pid) && pid > 0 ? pid : undefined;
 }
 
 /**
