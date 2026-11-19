@@ -192,6 +192,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped `qfai-docs.yml` installs `@jackchuka/mdschema` 0.16.0.** The
+  document-schema checker the docs lane runs moves from 0.15.7 to 0.16.0, the
+  version the package now depends on. Both versions declare the same
+  `postinstall` script, which downloads the checker's platform binary.
+
 - **Breaking: each contract kind has its own number sequence, and a business
   rule ID names its contract's kind.** A project with five DB contracts and
   two API contracts can number them `DB-0001` to `DB-0005` and `API-0001` to
