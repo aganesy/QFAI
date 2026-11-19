@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { chmod, lstat, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -228,10 +229,16 @@ async function refuseLinkedDestination(root: string, outDir: string): Promise<vo
  * created `0600` and widened to them once complete, so its content is never
  * readable under a mode the original did not carry. A link or an absent file
  * gives the new file the default mode.
+ *
+ * The new file's name does not include the target's, so a target whose name is
+ * already near the file system's name length limit can still be replaced.
  */
 export async function replaceFile(filePath: string, contents: string): Promise<void> {
   const mode = await regularFileMode(filePath);
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  const tempPath = path.join(
+    path.dirname(filePath),
+    `.qfai-replace-${randomBytes(6).toString("hex")}.tmp`,
+  );
   try {
     await writeNewFile(tempPath, contents, mode === undefined ? undefined : 0o600);
     if (mode !== undefined) await chmod(tempPath, mode);

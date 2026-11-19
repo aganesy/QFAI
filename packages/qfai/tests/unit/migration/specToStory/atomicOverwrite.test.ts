@@ -108,6 +108,30 @@ describe("migration overwrites", () => {
     expect(await readdir(path.dirname(target))).toEqual(["notes.md"]);
   });
 
+  // Windows runners cap a whole path at 260 characters unless long paths are
+  // enabled, so the fixture path itself would fail there; the name length
+  // limit this checks is the same 255 bytes on Linux and macOS.
+  it.skipIf(process.platform === "win32")(
+    "replaces a document whose name is near the file name length limit",
+    async () => {
+      const ctx = await context();
+      const relative = `.qfai/spec/${"n".repeat(240)}.md`;
+      const target = path.join(ctx.root, ...relative.split("/"));
+      await put(target, "old\n");
+      const step: MigrationStep = {
+        number: 3,
+        writeSet: ["qfai"],
+        plan: () =>
+          Promise.resolve({ operations: [{ kind: "write", target: relative, content: "new\n" }] }),
+      };
+
+      expect(await executePlannedStep(step, ctx, false, silent)).toBe(0);
+
+      expect(await readFile(target, "utf8")).toBe("new\n");
+      expect(await readdir(path.dirname(target))).toEqual([path.basename(target)]);
+    },
+  );
+
   it("leaves the original hook settings when rewriting them fails", async () => {
     const root = (await context()).root;
     const target = path.join(root, ".claude", "settings.json");
