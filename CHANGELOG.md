@@ -607,6 +607,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   step 3 removes that directory. They now name only the four contract kind
   directories, as the placement guide does. Closes #4627.
 
+- **`qfai init` reads an installed file once, and only within a bound, when it
+  compares it with the template.** A plain run read a kept file in full twice,
+  as bytes and then as text, however large it was. It now reads each file once
+  and stops at twice the template's size, since a file larger than that cannot
+  hold the template with converted line endings. Closes #4638.
+
 - **Story ID commands no longer answer from a partial or shared set of pull
   request heads.** `scripts/story-ids.mjs` read each head's commit from the
   shared `FETCH_HEAD`, so a fetch another process ran at the same time could
