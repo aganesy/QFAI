@@ -78,6 +78,62 @@ describe("parseArgs", () => {
     }
   });
 
+  describe("--profile reaches only the commands that read it", () => {
+    // validate and report read the validation profile; doctor reads
+    // `prototyping` or a skill name. Every other command dropped the value and
+    // ran as if no profile had been given.
+    const strangers = [
+      ["catalog", "components", "--check"],
+      ["catalog", "design"],
+      ["init"],
+      ["atdd", "scaffold"],
+      ["sdd", "preflight"],
+      ["sdd", "merge-docs"],
+      ["db-drift"],
+      ["session-review"],
+      ["workflow", "plan", "--order"],
+    ];
+    for (const stranger of strangers) {
+      it(`rejects --profile full on ${stranger.join(" ")}, which never reads it`, () => {
+        const parsed = parseArgs([...stranger, "--profile", "full"], process.cwd());
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.invalidReason).toContain("--profile is not valid for this command.");
+        expect(parsed.options.profile).toBeUndefined();
+      });
+    }
+
+    it("still accepts a validation profile on validate and report", () => {
+      for (const command of ["validate", "report"]) {
+        const parsed = parseArgs([command, "--profile", "full"], process.cwd());
+        expect(parsed.invalid).toBe(false);
+        expect(parsed.options.profile).toBe("full");
+      }
+    });
+
+    it("accepts prototyping and a skill name on doctor, kept apart", () => {
+      const prototyping = parseArgs(["doctor", "--profile", "prototyping"], process.cwd());
+      expect(prototyping.invalid).toBe(false);
+      expect(prototyping.options.profile).toBe("prototyping");
+      expect(prototyping.options.doctorSkillProfile).toBeUndefined();
+
+      const skill = parseArgs(["doctor", "--profile", "qfai-sdd"], process.cwd());
+      expect(skill.invalid).toBe(false);
+      expect(skill.options.doctorSkillProfile).toBe("qfai-sdd");
+      expect(skill.options.profile).toBeUndefined();
+    });
+
+    it("refuses a validation profile other than prototyping on doctor", () => {
+      // doctor runs no validation profile; `full` here is neither the
+      // prototyping preflight nor a skill name.
+      const parsed = parseArgs(["doctor", "--profile", "full"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.invalidReason).toContain('"full"');
+      expect(parsed.invalidReason).toContain("prototyping|<skill>");
+      expect(parsed.options.profile).toBeUndefined();
+      expect(parsed.options.doctorSkillProfile).toBeUndefined();
+    });
+  });
+
   it("still accepts --root on the commands that resolve a target", () => {
     // The flag the operator wanted. A rejection that did not leave this working
     // would have removed the only way to point those commands at a tree.

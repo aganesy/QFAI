@@ -632,6 +632,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the key only sets how many of a `QFAI-AUD-` code `--format text` prints
   before `and <n> more`. Closes #4493.
 
+- **`--profile` is refused on a command that does not read it.** The
+  `catalog`, `init`, `atdd`, `sdd`, `db-drift`, `session-review` and
+  `workflow` commands accepted a validation profile and ran as if none had
+  been given; they now stop with an argument error. `qfai doctor --profile` takes
+  `prototyping` or a skill name, and a validation profile such as `full` is
+  refused there by the argument parser with the accepted values. Closes #4519.
+
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
   through a `preinstall` guard. npm never reaches that guard: it stops with
