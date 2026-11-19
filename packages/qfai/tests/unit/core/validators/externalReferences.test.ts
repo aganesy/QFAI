@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../../src/core/config.js";
+import { validateProject } from "../../../../src/core/validate.js";
 import { validateExternalReferences } from "../../../../src/core/validators/externalReferences.js";
 
 async function inProject(
@@ -107,6 +108,41 @@ describe("validateExternalReferences", () => {
       const findings = await validateExternalReferences(root, defaultConfig);
       expect(findings.map(({ message }) => message)).toEqual([
         "The policy tree has 1 line in 1 file naming a path outside .qfai",
+      ]);
+    });
+  });
+
+  // QFAI:EX-0001-0057-01
+  it("counts only the files of the flows --flow names", async () => {
+    const storyOf = (id: string) =>
+      `.qfai/spec/02_business-flow/business-flow-${id}/user-story-${id}-0001/01_User-story.md`;
+    const files: Record<string, string> = {};
+    for (const id of ["0001", "0002", "0003"]) {
+      files[`.qfai/spec/02_business-flow/business-flow-${id}/business-flow.md`] =
+        `# BF-${id}: Flow ${id}\n`;
+      files[storyOf(id)] = `# US-${id}-0001: Story\n\nRead \`docs/flow-${id}.md\`.\n`;
+    }
+    await inProject(files, async (root) => {
+      const result = await validateProject(
+        root,
+        { config: defaultConfig, issues: [], configPath: path.join(root, "qfai.config.yaml") },
+        { profile: "sdd", flowIds: ["BF-0002", "BF-0003"] },
+      );
+      const relative = (file: string) => path.relative(root, file).split(path.sep).join("/");
+      expect(
+        result.issues
+          .filter((found) => found.code === "QFAI-STORY-015")
+          .map((found) => ({
+            message: found.message,
+            file: relative(found.file ?? ""),
+            relatedFiles: (found.relatedFiles ?? []).map(relative),
+          })),
+      ).toEqual([
+        {
+          message: "The business-flow tree has 2 lines in 2 files naming a path outside .qfai",
+          file: storyOf("0002"),
+          relatedFiles: [storyOf("0003")],
+        },
       ]);
     });
   });

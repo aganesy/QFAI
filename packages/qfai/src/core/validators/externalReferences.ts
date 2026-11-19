@@ -60,16 +60,22 @@ function plural(count: number, noun: string): string {
  * and open-question trees record history and cite files by design, and discussion
  * packs are reference material, so neither is read. One finding per tree carries the
  * counts, so an existing project can bring them down over time.
+ *
+ * `inScope` keeps the documents a `--flow` run selected. They are chosen before the counts
+ * are summed, so the finding, its counts and its files describe the selected flows alone.
  */
 export async function validateExternalReferences(
   root: string,
   config: QfaiConfig,
+  inScope: (file: string) => boolean = () => true,
 ): Promise<Issue[]> {
   const { specsDir, contractsDir } = resolveStoryTreeRoots(root, config);
   const qfaiDir = path.join(root, ".qfai");
   const files = [
     ...new Set([...(await markdownFiles(specsDir)), ...(await markdownFiles(contractsDir))]),
-  ].sort();
+  ]
+    .filter(inScope)
+    .sort();
 
   const insideQfai = async (token: string, documentDir: string): Promise<boolean> => {
     if (token.startsWith(".qfai/")) return true;

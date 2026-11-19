@@ -463,12 +463,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An unknown `prototype.mode` written as an inline mapping is now
+  reported.** `QFAI-CONTRACT-038` scanned a UI contract line by line, so
+  `prototype: { mode: static }` passed unchecked. It now reads the mode from
+  the parsed contract, so the block and inline forms are treated alike. A
+  contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
+  references now say the finding is an error, which it already was.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
   could be applied. It now reports `QFAI-CONTRACT-021` at the line of each
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
+
+- **A null `requires:` is no longer read as an empty step list.** In a
+  step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
+  `requires: null`, or a `requires:` with no value, as `requires: []`. It now
+  reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
+  omitted `requires:` still counts as empty.
 
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
@@ -492,6 +505,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   find the declaration after the front matter, the same line the diagram
   budget check counts from, and report its file line; a `-->` in the front
   matter is not read as a transition.
+
+- **Graph queries reject a `qfai.config.yaml` or `paths` set to null.** A
+  config file holding only `~` or `null`, or a `paths:` key with no value or
+  `null`, was read as if it were left out, so the graph used the default
+  deliberation directory. The query now fails with the configuration error, as
+  it already did for any other value that is not a mapping. Defaults still
+  apply when the file or the `paths` key is absent.
 
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
@@ -564,6 +584,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   version stops before installing anything. A workflow file `qfai init`
   already wrote keeps its old steps; delete it and run `qfai init` again to
   get these.
+
+- **CSS beside an HTML mock now reaches the mock unchanged.** When
+  `qfai validate` put a `css` block into the HTML mock before it, it read
+  `$&`, `$$` and the other replacement patterns in the CSS as instructions, so
+  a rule such as `content: "$&"` was checked with `</head>` in its place. The
+  CSS is now inserted as written.
 
 - **The Markdown-schema check no longer passes over a linked document.** A
   symbolic link beneath `paths.specsDir` or `paths.contractsDir`, to a file or
@@ -642,6 +668,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   second `CREATE` fails when the contract is applied, but `QFAI-DB-002`
   compared `INDEX` and `UNIQUE INDEX` names separately and passed the file. It
   now reports the pair as one index defined twice. Closes #4549.
+
+- **`qfai validate --flow` keeps the external-reference warning for every
+  named flow.** `QFAI-STORY-015` sums a tree's documents into one finding
+  named after its first file, and the flow filter looked at that file alone:
+  when the first file sat in another flow, the warning was dropped, and when
+  it was kept, its counts included flows that were not named. The documents
+  are now selected before they are counted, so the finding and its counts
+  cover the named flows only. Closes #4579.
 
 - **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
   with no `--assume` copies the carry-over list from the previous
