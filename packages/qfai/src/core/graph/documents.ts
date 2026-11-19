@@ -154,6 +154,14 @@ export async function prepareDocumentAnalysisLocked(
         "Set the explicitly selected credential environment variable before document processing.",
     };
   }
+  // The pinned Graphify openai backend stops without a non-empty key, even for a local server.
+  if (backend === "openai" && !credential) {
+    return {
+      status: "not-ready",
+      recovery:
+        "The openai backend needs a credential. Set credentialEnv in .qfai/graph-processing.json to the name of an environment variable holding the key, or any non-empty placeholder value for a local server that needs no key.",
+    };
+  }
   const local = ["127.0.0.1", "localhost", "[::1]"].includes(selected.hostname);
   let scope: readonly string[] | undefined;
   if (processing.scope !== undefined) {
