@@ -359,6 +359,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
 
+- **`qfai --help` lists the validation profiles in the order the parser
+  names them.** The `--profile` line for validate and report now reads
+  `discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift`, the
+  same order as the refusal for an unknown profile; it listed `saas-package`
+  before `full`. The set of profiles is unchanged. Closes #4637.
+
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
   no confirmed prototype covers, even when the request asks no design question.

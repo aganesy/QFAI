@@ -15,6 +15,7 @@ import type {
   ValidationResult,
   ValidationTimings,
 } from "../../core/types.js";
+import { isValidationProfile, VALIDATION_PROFILES } from "../../core/validationProfiles.js";
 import {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,
   unevaluatedPackageSelfGovernanceFamilies,
@@ -448,19 +449,15 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   drift: ["drift", "story-test-scan"],
 };
 
-function isKnownProfile(profile: string): profile is ValidationProfile {
-  return Object.prototype.hasOwnProperty.call(PROFILE_GATE_GROUPS, profile);
-}
-
 /**
  * The profiles that leave no gate a full scan covers unevaluated: the profiles whose
  * `QFAI-PROFILE-001` notice never calls them partial. `FULL_SCAN_PROFILES` in
  * `core/phasePolicy.ts` names them in `QFAI-VALIDATE-017`, and a test keeps the two equal.
  */
 export function fullScanProfiles(): ValidationProfile[] {
-  return Object.keys(PROFILE_GATE_GROUPS)
-    .filter(isKnownProfile)
-    .filter((profile) => unevaluatedGates(profile, []).fullCovered.length === 0);
+  return VALIDATION_PROFILES.filter(
+    (profile) => unevaluatedGates(profile, []).fullCovered.length === 0,
+  );
 }
 
 /** Families a profile does not evaluate, split by where the reader must go. */
@@ -501,7 +498,7 @@ function unevaluatedGates(
   profile: string,
   unevaluatedSelfGovernance: readonly string[],
 ): UnevaluatedGates {
-  if (!isKnownProfile(profile)) {
+  if (!isValidationProfile(profile)) {
     return { fullCovered: [], stageOnly: [], preconditionGated: [] };
   }
   const evaluated = new Set<GateGroup>(PROFILE_GATE_GROUPS[profile]);
