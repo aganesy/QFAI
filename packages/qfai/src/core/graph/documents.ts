@@ -116,7 +116,7 @@ export async function prepareDocumentAnalysis(
   approveExternal: ApproveExternalProcessing = () => Promise.resolve(false),
   environment?: GraphReuseEnvironment,
 ): Promise<DocumentPreparation> {
-  return withGraphLock(root, "analysis", () =>
+  return withGraphLock(root, () =>
     prepareDocumentAnalysisLocked(root, run, approveExternal, environment),
   );
 }

@@ -9,7 +9,7 @@ export async function queryPreparedGraph(
   request: GraphQuestion,
   run: GraphProcess = runGraphProcess,
 ): Promise<GraphAnswer> {
-  return withGraphLock(root, "analysis", async () => {
+  return withGraphLock(root, async () => {
     const initial = await exploreGraph(root, request, run);
     if (initial.status !== "not-ready") return initial;
     const preparation =
