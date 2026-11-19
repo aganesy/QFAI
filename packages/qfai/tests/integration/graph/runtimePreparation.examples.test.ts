@@ -7,7 +7,7 @@ import { runInit } from "../../../src/cli/commands/init.js";
 import { captureStdout } from "../../helpers/stdout.js";
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
 import { prepareGraphIntegration } from "../../../src/index.js";
-import { getInitAssetsDir } from "../../../src/cli/lib/assets.js";
+import { getInitAssetsDir } from "../../../src/shared/assets.js";
 
 // QFAI:EX-0001-0237-01
 // Mutation: packages/qfai/src/core/graph/prepare.ts `return { runtime: "installed", code: "code-not-ready", documents: "documents-not-ready" };` -> `return { runtime: "not-ready", code: "code-not-ready", documents: "documents-not-ready" };` fails "prepares both project-local runtimes"

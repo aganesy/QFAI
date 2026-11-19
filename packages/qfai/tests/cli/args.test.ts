@@ -636,6 +636,18 @@ describe("parseArgs --fail-on", () => {
     expect(parsed.options.failOn).toBeUndefined();
   });
 
+  it.each(["never", "error"] as const)("accepts %s on db-drift", (value) => {
+    const parsed = parseArgs(["db-drift", "--fail-on", value], process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.failOn).toBe(value);
+  });
+
+  it("refuses warning on db-drift, which has no warning tier", () => {
+    const parsed = parseArgs(["db-drift", "--fail-on", "warning"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.failOn).toBeUndefined();
+  });
+
   it("does not consume the next option when --fail-on has no value", () => {
     const parsed = parseArgs(["validate", "--fail-on", "--strict"], process.cwd());
     expect(parsed.invalid).toBe(true);
