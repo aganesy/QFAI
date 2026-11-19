@@ -225,6 +225,7 @@
     "tests/cli/staleInstall.test.ts",
     "tests/cli/validateRunIncomplete.test.ts",
     "tests/cli/validationResultLinks.test.ts",
+    "tests/cli/validateVerdictAfterResultWrite.test.ts",
     "tests/core/assistantAnchorReferences.test.ts",
     "tests/core/sessionReview.test.ts",
     "tests/integration/sessionReviewCli.test.ts",
