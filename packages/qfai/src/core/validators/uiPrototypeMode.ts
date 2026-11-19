@@ -114,8 +114,6 @@ export async function validateUiPrototypeMode(root: string, config: QfaiConfig):
     }
     unknown.push({ file: path.relative(root, file).split(path.sep).join("/"), mode });
   }
-  // Read after the scan rather than before it: a tree whose contracts all
-  // declare a mode this knows asks nothing of the version.
   if (unknown.length === 0) {
     return [];
   }
