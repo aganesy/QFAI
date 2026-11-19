@@ -494,6 +494,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
 
+- **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
+  with no `--assume` copies the carry-over list from the previous
+  `preflight_summary.md`. When that file existed but could not be read, the
+  rerun treated it as having no carry-over and replaced it with `- none`. Only
+  a missing file now counts as empty. Any other read failure stops the run
+  with exit code 1, names the file, and leaves it unchanged. Closes #4524.
+
 - **`qfai catalog design` writes only its own files, and only inside the
   project.** It staged both files under names built from its process ID, so a
   second run could overwrite the first run's staging file, and a failed run

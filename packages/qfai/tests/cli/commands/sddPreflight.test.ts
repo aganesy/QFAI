@@ -347,6 +347,35 @@ describe("qfai sdd preflight", () => {
     expect(summary).not.toContain("- none");
   });
 
+  it("stops and keeps the previous summary when it cannot be read", async () => {
+    // A summary that exists but cannot be read is not one with no carry-over:
+    // treating it as empty would let the re-run replace it without its notes.
+    // A directory at the summary's path fails the read on every platform.
+    const root = await newTempRoot();
+    await seedRecord(root);
+    const summaryPath = path.join(root, ".qfai", "report", "preflight_summary.md");
+    await mkdir(summaryPath, { recursive: true });
+    const kept = path.join(summaryPath, "kept.md");
+    await writeFile(kept, "- OQ-0001 carried over to the next phase\n", "utf-8");
+
+    const sinks = newSinks();
+    const exitCode = await runSddPreflightCommand({
+      root,
+      recordPath: RECORD_NAME,
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(sinks.out).toEqual([]);
+    expect(sinks.err.join("\n")).toContain(".qfai/report/preflight_summary.md");
+    expect((await stat(summaryPath)).isDirectory()).toBe(true);
+    expect(await readFile(kept, { encoding: "utf-8" })).toBe(
+      "- OQ-0001 carried over to the next phase\n",
+    );
+    await expect(stat(path.join(root, ".qfai", "report", "preflight"))).rejects.toThrow();
+  });
+
   it("reports the blockers without failing under --fail-on never", async () => {
     const root = await newTempRoot();
     const sinks = newSinks();

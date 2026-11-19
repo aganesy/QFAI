@@ -26,6 +26,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig, resolvePath, type QfaiConfig } from "../../core/config.js";
+import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { runSddPreflight, type SddPreflightResult } from "../../core/preflight/sddPreflight.js";
 import { locateToolAgainstProject } from "../../core/version.js";
 import { error as logError, info as logInfo } from "../../core/logger.js";
@@ -92,13 +93,24 @@ function renderText(root: string, result: SddPreflightResult): string {
  * Carry-over entries already recorded under `## Open Questions (Carry-over)`.
  * The summary is the Stage 0 SSOT, so a re-run (Required Process step 3) must
  * not silently replace hand-recorded carry-over with `- none`.
+ *
+ * Only a missing summary has no carry-over. Any other read failure throws,
+ * naming the path, so the run stops before the summary is replaced.
  */
-async function readRecordedCarryOver(summaryPath: string): Promise<string[]> {
+async function readRecordedCarryOver(root: string, summaryPath: string): Promise<string[]> {
   let text: string;
   try {
     text = await readFile(summaryPath, "utf-8");
-  } catch {
-    return [];
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return [];
+    }
+    const reason = hasErrnoCode(err) ? err.code : String(err);
+    throw new Error(
+      `cannot read the previous summary ${toRelative(root, summaryPath)} (${reason}), ` +
+        "so its carry-over cannot be kept. It was left unchanged and no summary was written. " +
+        "Make it a readable file, or move it aside, then run again.",
+    );
   }
 
   const lines = text.replace(/\r\n/g, "\n").split("\n");
@@ -134,6 +146,7 @@ async function resolveCarryOver(
     return provided;
   }
   return await readRecordedCarryOver(
+    root,
     path.join(resolvePath(root, config, "outDir"), "preflight_summary.md"),
   );
 }
