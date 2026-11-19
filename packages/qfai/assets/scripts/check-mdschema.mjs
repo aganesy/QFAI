@@ -681,12 +681,18 @@ function describeFailure(error) {
  * rather than dropped: a tree whose subtree cannot be read has not been shown to
  * conform.
  *
+ * Documents are regular files in regular directories, as the decision register
+ * already requires of its own paths. A symbolic link — to a file or to a
+ * directory, a Windows junction included — is neither, so it is not followed;
+ * it is recorded in `linked`, since a document behind it was not checked.
+ *
  * @param {string} dir Absolute directory to walk.
  * @param {string} root The tree the returned paths are relative to.
  * @param {{ dir: string, cause: string }[]} unreadable Receives each directory that could not be listed.
+ * @param {string[]} linked Receives each symbolic link found, tree-relative.
  * @returns {string[]}
  */
-function walk(dir, root, unreadable) {
+function walk(dir, root, unreadable, linked) {
   const out = [];
   const pending = [dir];
   while (pending.length > 0) {
@@ -714,6 +720,12 @@ function walk(dir, root, unreadable) {
     }
     for (const entry of entries) {
       const full = path.join(current, entry.name);
+      if (entry.isSymbolicLink()) {
+        if (entry.name !== "node_modules" && entry.name !== ".git") {
+          linked.push(path.relative(root, full).split(path.sep).join("/"));
+        }
+        continue;
+      }
       if (entry.isDirectory()) {
         if (entry.name !== "node_modules" && entry.name !== ".git") {
           pending.push(full);
@@ -1086,6 +1098,8 @@ function splitByOwnership(context, files) {
  *
  * A directory that could not be listed comes back as a violation of its own, so
  * a subtree that vanished from the universe fails the run instead of passing it.
+ * So does a symbolic link at or beneath either root, whose target the walk does
+ * not follow.
  *
  * @param {string} root
  * @param {{ specsDir: string, contractsDir: string }} paths
@@ -1096,6 +1110,8 @@ function documentUniverse(root, paths) {
   const failed = [];
   /** @type {{ dir: string, problem: string }[]} */
   const roots = [];
+  /** @type {string[]} */
+  const linked = [];
   const files = [
     ...new Set(
       [paths.specsDir, paths.contractsDir].flatMap((dir) => {
@@ -1104,10 +1120,14 @@ function documentUniverse(root, paths) {
         // An absent configured root holds no documents. One that is a file, or
         // that cannot be inspected, is a tree whose documents were not checked.
         // The spec root rarely reaches here: the decision-register check inspects
-        // it first and stops the run on the same two conditions.
+        // it first and stops the run on the same two conditions. A root that is
+        // itself a symbolic link is not walked and is reported as a link, as one
+        // beneath it would be.
         let stats;
+        let link;
         try {
           stats = statSync(absolute);
+          link = lstatSync(absolute).isSymbolicLink();
         } catch (error) {
           if (!isMissing(error)) {
             roots.push({
@@ -1117,11 +1137,15 @@ function documentUniverse(root, paths) {
           }
           return [];
         }
+        if (link) {
+          linked.push(relative);
+          return [];
+        }
         if (!stats.isDirectory()) {
           roots.push({ dir: relative, problem: "is not a directory" });
           return [];
         }
-        return walk(absolute, root, failed);
+        return walk(absolute, root, failed, linked);
       }),
     ),
   ];
@@ -1139,6 +1163,14 @@ function documentUniverse(root, paths) {
       column: 1,
       rule: "inventory",
       message: `this directory could not be listed (${cause}); the documents beneath it were not checked`,
+    })),
+    ...[...new Set(linked)].map((file) => ({
+      file,
+      line: 1,
+      column: 1,
+      rule: "inventory",
+      message:
+        "this entry is a symbolic link, and documents must be regular files in regular directories; what it links to was not checked",
     })),
   ];
   return { files, unreadable };
@@ -2079,7 +2111,8 @@ export function main() {
 
   // A directory that could not be listed hides every document beneath it, and a
   // changed file there is hidden with the rest, so this fails the run whatever
-  // the scope: the documents it holds were not shown to conform.
+  // the scope: the documents it holds were not shown to conform. A symbolic
+  // link beneath a root is reported here too, for the same reason.
   if (unreadable.length > 0) {
     violations++;
     console.error("\n── inventory (document directories) ──");
