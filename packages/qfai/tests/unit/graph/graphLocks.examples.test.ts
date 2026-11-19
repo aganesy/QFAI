@@ -136,7 +136,15 @@ it("serializes init runtime activation with graph queries and another init", asy
     expect(busy.failures).toBe(1);
     const calls = project.fixture.calls.length;
     await expect(project.initialize()).rejects.toThrow(/contended.*Retry.*qfai init again/s);
-    expect(project.fixture.calls).toHaveLength(calls);
+    // Only the .gitignore checks that run before the lock is taken; no installer or probe starts.
+    const refused = project.fixture.calls.slice(calls);
+    expect(refused.length).toBeGreaterThan(0);
+    expect(
+      refused.every(
+        (call) =>
+          call.command === "git" && ["ls-files", "check-ignore"].includes(call.args[0] ?? ""),
+      ),
+    ).toBe(true);
     release();
     await activating;
     const state = path.join(project.root, ".qfai", "tools", "state", graphEnvironmentKey());
