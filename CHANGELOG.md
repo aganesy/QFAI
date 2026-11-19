@@ -545,6 +545,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
+- **A graph lock still being taken reads as busy, not abandoned.** A graph
+  query, analysis preparation or `qfai init` that found the worktree's
+  analysis lock in the moment between its creation and its owner record being
+  written, or just after its release, was told to inspect and remove the lock
+  by hand. It is now told to retry. A lock whose owner record is still missing
+  after ten seconds, or whose owner process has exited, is still kept and
+  reported for manual recovery. Closes #4591.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from
