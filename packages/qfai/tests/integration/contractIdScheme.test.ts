@@ -117,8 +117,8 @@ const INDEX_HEADER = [
   "| --- | --- | --- | --- | --- | --- |",
 ];
 
-function indexRow(id: string, file: string): string {
-  return `| ${id} | Title | \`${file}\` | - | - | Purpose. |`;
+function indexRow(id: string, file: string, dependsOn = "-"): string {
+  return `| ${id} | Title | \`${file}\` | ${dependsOn} | - | Purpose. |`;
 }
 
 async function contractTree(rows: string[], files: Record<string, string>): Promise<string> {
@@ -255,7 +255,7 @@ describe("contract IDs and contract-scoped business rules", () => {
         "## Contract Index ##",
         "",
         ...INDEX_HEADER.slice(4),
-        indexRow("API-0002", "api/api-0002-orders.yaml"),
+        indexRow("API-0002", "api/api-0002-orders.yaml", "DB-0004"),
         "",
       ].join("\n"),
     );
@@ -333,7 +333,7 @@ describe("contract IDs and contract-scoped business rules", () => {
     };
     const agreeing = [
       indexRow("CLI-0001", `${contracts}/cli/cli-0001-check.md`),
-      indexRow("API-0002", "api/api-0002-orders.yaml"),
+      indexRow("API-0002", "api/api-0002-orders.yaml", "DB-0004"),
       indexRow("DB-0004", `${contracts}/db/db-0004-orders.sql`),
     ];
     const root = await contractTree(agreeing, files);
@@ -344,7 +344,7 @@ describe("contract IDs and contract-scoped business rules", () => {
     expect(legacyChecks).toEqual([]);
 
     const disagreeing = await contractTree(
-      [indexRow("API-0003", "api/api-0002-orders.yaml"), agreeing[2] ?? ""],
+      [indexRow("API-0003", "api/api-0002-orders.yaml", "DB-0004"), agreeing[2] ?? ""],
       files,
     );
     const findings = await indexFindings(disagreeing);
@@ -426,6 +426,63 @@ describe("contract IDs and contract-scoped business rules", () => {
     );
     expect(findings).toHaveLength(2);
   });
+
+  // QFAI:AC-0001-0052-03
+  // QFAI:EX-0001-0052-13
+  it("compares each row's Depends On with the dependencies its contract declares", async () => {
+    // A Markdown contract has no declaration form: an example in it declares nothing.
+    const cli = `${CLI_CONTRACT}\n\`\`\`yaml\nx-qfai-depends-on: [DB-0001]\n\`\`\`\n`;
+    const files = {
+      "cli/cli-0001-check.md": cli,
+      "api/api-0002-orders.yaml": API_CONTRACT,
+      "db/db-0004-orders.sql": DB_CONTRACT,
+    };
+    const agreeing = await contractTree(
+      [
+        indexRow("CLI-0001", "cli/cli-0001-check.md"),
+        indexRow("API-0002", "api/api-0002-orders.yaml", "`DB-0004`"),
+        indexRow("DB-0004", "db/db-0004-orders.sql"),
+      ],
+      files,
+    );
+    expect(await indexFindings(agreeing)).toEqual([]);
+
+    const disagreeing = await contractTree(
+      [
+        indexRow("CLI-0001", "cli/cli-0001-check.md"),
+        indexRow("API-0002", "api/api-0002-orders.yaml", ""),
+        indexRow("DB-0004", "db/db-0004-orders.sql", "DB-0001"),
+      ],
+      files,
+    );
+    expect(await indexFindings(disagreeing)).toEqual([
+      expect.stringMatching(
+        /^QFAI-CONTRACT-034 Contract file .*api-0002-orders\.yaml is listed as depending on \(empty\) but declares DB-0004$/,
+      ),
+      expect.stringMatching(
+        /^QFAI-CONTRACT-034 Contract file .*db-0004-orders\.sql is listed as depending on DB-0001 but declares -$/,
+      ),
+    ]);
+
+    // The index writes "none" as `-` only, though a declaration may also write `none`, and a
+    // code span inside an ID leaves it no ID.
+    const misspelled = await contractTree(
+      [
+        indexRow("CLI-0001", "cli/cli-0001-check.md"),
+        indexRow("API-0002", "api/api-0002-orders.yaml", "D`B`-0004"),
+        indexRow("DB-0004", "db/db-0004-orders.sql", "none"),
+      ],
+      files,
+    );
+    expect(await indexFindings(misspelled)).toEqual([
+      expect.stringMatching(
+        /^QFAI-CONTRACT-034 Contract file .*api-0002-orders\.yaml is listed as depending on D`B`-0004 but declares DB-0004$/,
+      ),
+      expect.stringMatching(
+        /^QFAI-CONTRACT-034 Contract file .*db-0004-orders\.sql is listed as depending on none but declares -$/,
+      ),
+    ]);
+  });
 });
 
 describe("the new contract IDs in the checks that read the old ones", () => {
@@ -481,7 +538,7 @@ describe("the new contract IDs in the checks that read the old ones", () => {
         "  ## Contract Index",
         "",
         ...INDEX_HEADER.slice(4),
-        indexRow("API-0002", "api/api-0002-orders.yaml"),
+        indexRow("API-0002", "api/api-0002-orders.yaml", "DB-0004"),
         "",
         "### More",
         "",
@@ -507,7 +564,7 @@ describe("the new contract IDs in the checks that read the old ones", () => {
       [
         ...INDEX_HEADER.slice(0, 5),
         "| -- | :-- | --: | :-: | - | -- |",
-        indexRow("API-0002", "api/api-0002-orders.yaml"),
+        indexRow("API-0002", "api/api-0002-orders.yaml", "DB-0004"),
         "",
       ].join("\n"),
     );

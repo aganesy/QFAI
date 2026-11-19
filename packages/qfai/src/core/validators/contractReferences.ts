@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { extractDeclaredDependencies, listedDependencyIds } from "../contractsDecl.js";
 import { headingText } from "../parse/markdown.js";
 import { looksLikeTableRow, maskNonSpecRegions, splitMarkdownRow } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
@@ -37,14 +38,14 @@ export async function validateStoryTreeContractReferences(
   );
   const current = underIndex.length > 0 ? underIndex : currentTables.slice(0, 1);
   const rows = current.flatMap((table) => table.rows);
-  return validateContractIndex({ root, contractsDir, indexFile }, rows, model);
+  return await validateContractIndex({ root, contractsDir, indexFile }, rows, model);
 }
 
 /** The current index columns, as {@link normalizeHeaderKey} spells them. */
 const INDEX_COLUMNS = "id|title|file|dependson|reconciledwith|purpose";
 
 type IndexLocation = { root: string; contractsDir: string; indexFile: string };
-type ListedContract = { id: string; file: string };
+type ListedContract = { id: string; file: string; dependsOn: string };
 
 function indexIssue(message: string, file: string, refs: string[]): Issue {
   return issue("QFAI-CONTRACT-034", message, "error", file, "contracts.storyTreeIndex", refs);
@@ -60,19 +61,20 @@ function contractKind(relative: string): string | null {
 /**
  * Checks the index in its current columns. Each contract file under a kind
  * directory declares an ID of that kind, is named `<kind>-NNNN-<slug>.<ext>`
- * after it, and has a row whose ID and File agree with it. A number belongs to
+ * after it, and has a row whose ID, File and Depends On agree with it. A number belongs to
  * one contract, and every row names a contract file. A Markdown file under
  * `api/`, `db/` or `ui/`, and a file in any other directory, is not a
  * contract, and is reported as that alone.
  */
-function validateContractIndex(
+async function validateContractIndex(
   location: IndexLocation,
   rows: IndexTableRow[],
   model: StoryTreeModel,
-): Issue[] {
+): Promise<Issue[]> {
   const listed: ListedContract[] = rows.map((row) => ({
     id: bareCell(row.cells[0] ?? ""),
     file: toPosixPath(bareCell(row.cells[2] ?? "")).replace(/^\.\//, ""),
+    dependsOn: (row.cells[3] ?? "").trim(),
   }));
   const declared = new Map(model.contracts.map(({ id, file }) => [file, id]));
   const matched = new Set<ListedContract>();
@@ -115,6 +117,14 @@ function validateContractIndex(
     }
     const id = declared.get(file) ?? null;
     const problems = contractFileProblems(relative, kind, id, row, location.indexFile);
+    // A Markdown contract has no dependency declaration form, so its row has nothing to agree with,
+    // and a line in an example of one is not a declaration.
+    if (row && path.posix.extname(relative).toLowerCase() !== ".md") {
+      const text = await readSafe(path.resolve(location.root, file));
+      const dependencies = extractDeclaredDependencies(text, file);
+      const problem = dependencyProblem(row.dependsOn, dependencies);
+      if (problem) problems.push(problem);
+    }
     if (problems.length > 0) {
       issues.push(
         indexIssue(`Contract file ${file} ${problems.join(", and ")}`, file, [id ?? file]),
@@ -155,6 +165,21 @@ function contractFileProblems(
   if (!row) problems.push(`has no row in ${indexFile}`);
   else if (row.id !== (id ?? "")) problems.push(`is listed as ${row.id || "(empty)"}`);
   return problems;
+}
+
+/** A code span holding one whole Depends On entry, as `` `DB-0001` ``; one inside an entry stays. */
+const WHOLE_ENTRY_CODE_SPAN_RE = /(^|[,\s])`([^`,\s]+)`(?=$|[,\s])/g;
+
+/**
+ * The disagreement between a row's Depends On cell and the dependencies its
+ * contract declares, or `null` when both name the same contracts. A cell that is
+ * empty or holds anything but contract IDs or `-` names none, and disagrees.
+ */
+function dependencyProblem(cell: string, declared: string[]): string | null {
+  const listed = listedDependencyIds(cell.replace(WHOLE_ENTRY_CODE_SPAN_RE, "$1$2"));
+  if (listed && listed.join(",") === declared.join(",")) return null;
+  const declaration = declared.length > 0 ? declared.join(", ") : "-";
+  return `is listed as depending on ${cell || "(empty)"} but declares ${declaration}`;
 }
 
 /** Contract numbers are unique within a kind: `CLI-0001` and `DB-0001` are two contracts. */

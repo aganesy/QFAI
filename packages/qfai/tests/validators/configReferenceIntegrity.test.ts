@@ -5,14 +5,55 @@
  *   001: primarySpecId points to a missing spec dir
  *   002: paths.* points to a missing directory (warning; info when it is a shipped default that is absent)
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import type * as fsPromises from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { QfaiConfig } from "../../src/core/config.js";
+import { isEperm } from "../../src/core/fs/errno.js";
 import { validateConfigReferenceIntegrity } from "../../src/core/validators/configReferenceIntegrity.js";
+
+type FsPromises = typeof fsPromises;
+
+/**
+ * Error codes to raise for a path, per fs call. Empty by default, so every other
+ * case reads the real file system; a read failure cannot be produced portably
+ * on disk.
+ */
+const fsFaults = vi.hoisted(() => ({
+  stat: new Map<string, string>(),
+  lstat: new Map<string, string>(),
+}));
+
+function faultFor(faults: Map<string, string>, target: unknown): void {
+  const code = faults.get(String(target));
+  if (code !== undefined) {
+    throw Object.assign(new Error(`${code}: injected`), { code });
+  }
+}
+
+vi.mock("node:fs/promises", async () => {
+  const actual = await vi.importActual<FsPromises>("node:fs/promises");
+  return {
+    ...actual,
+    stat: async (...args: Parameters<FsPromises["stat"]>) => {
+      faultFor(fsFaults.stat, args[0]);
+      return actual.stat(...args);
+    },
+    lstat: async (...args: Parameters<FsPromises["lstat"]>) => {
+      faultFor(fsFaults.lstat, args[0]);
+      return actual.lstat(...args);
+    },
+  };
+});
+
+afterEach(() => {
+  fsFaults.stat.clear();
+  fsFaults.lstat.clear();
+});
 
 const tempDirs: string[] = [];
 
@@ -181,6 +222,90 @@ describe("validateConfigReferenceIntegrity", () => {
 
     const issues = await validateConfigReferenceIntegrity(root, config);
     expect(issues.some((i) => i.rule === "config.paths.contractsDir.reality")).toBe(true);
+  });
+
+  // QFAI:EX-0003-0003-07
+  it("stays silent when the shipped-default spec and contract directories are absent", async () => {
+    const root = await newTempDir();
+    const issues = await validateConfigReferenceIntegrity(root, makeConfig());
+    const rules = issues.map((i) => i.rule);
+
+    expect(rules).not.toContain("config.paths.specsDir.reality");
+    expect(rules).not.toContain("config.paths.contractsDir.reality");
+  });
+
+  // QFAI:EX-0003-0003-07
+  it("reads a default spec and contract path spelled with a leading ./ as the default", async () => {
+    const root = await newTempDir();
+    const base = makeConfig();
+    const issues = await validateConfigReferenceIntegrity(root, {
+      ...base,
+      paths: { ...base.paths, specsDir: "./.qfai/spec", contractsDir: "./.qfai/spec/03_contract" },
+    });
+    const rules = issues.map((i) => i.rule);
+
+    expect(rules).not.toContain("config.paths.specsDir.reality");
+    expect(rules).not.toContain("config.paths.contractsDir.reality");
+  });
+
+  // QFAI:EX-0003-0003-07
+  it("warns when a file stands at the shipped-default spec and contract paths", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "spec", "03_contract"), "not a directory", "utf-8");
+    const fileAtSpecs = await newTempDir();
+    await mkdir(path.join(fileAtSpecs, ".qfai"), { recursive: true });
+    await writeFile(path.join(fileAtSpecs, ".qfai", "spec"), "not a directory", "utf-8");
+
+    const contractIssue = (await validateConfigReferenceIntegrity(root, makeConfig())).find(
+      (i) => i.rule === "config.paths.contractsDir.reality",
+    );
+    const specIssue = (await validateConfigReferenceIntegrity(fileAtSpecs, makeConfig())).find(
+      (i) => i.rule === "config.paths.specsDir.reality",
+    );
+
+    expect(contractIssue?.severity).toBe("warning");
+    expect(contractIssue?.message).toContain("is not a directory");
+    expect(specIssue?.severity).toBe("warning");
+    expect(specIssue?.message).toContain("is not a directory");
+  });
+
+  // QFAI:EX-0003-0003-07
+  it("warns when a broken link stands at the shipped-default spec path", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    try {
+      await symlink(path.join(root, "missing-target"), path.join(root, ".qfai", "spec"));
+    } catch (error: unknown) {
+      if (process.platform === "win32" && isEperm(error)) {
+        return;
+      }
+      throw error;
+    }
+
+    const issues = await validateConfigReferenceIntegrity(root, makeConfig());
+    const specIssue = issues.find((i) => i.rule === "config.paths.specsDir.reality");
+
+    expect(specIssue?.severity).toBe("warning");
+    expect(specIssue?.message).toContain("is not a directory");
+  });
+
+  // QFAI:EX-0003-0003-07
+  it("warns when the shipped-default spec and contract paths cannot be read", async () => {
+    const root = await newTempDir();
+    const config = makeConfig();
+    // The spec path refuses stat outright; the contract path looks absent to stat but its lstat fails.
+    fsFaults.stat.set(path.resolve(root, config.paths.specsDir), "EACCES");
+    fsFaults.lstat.set(path.resolve(root, config.paths.contractsDir), "EIO");
+
+    const issues = await validateConfigReferenceIntegrity(root, config);
+    const specIssue = issues.find((i) => i.rule === "config.paths.specsDir.reality");
+    const contractIssue = issues.find((i) => i.rule === "config.paths.contractsDir.reality");
+
+    expect(specIssue?.severity).toBe("warning");
+    expect(specIssue?.message).toContain("could not be read");
+    expect(contractIssue?.severity).toBe("warning");
+    expect(contractIssue?.message).toContain("could not be read");
   });
 
   it("treats outDir absence as silent (lazy creation)", async () => {
