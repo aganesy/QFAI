@@ -22,8 +22,8 @@
 import type * as Jsdom from "jsdom";
 import type { JSDOM as JsdomInstance } from "jsdom";
 
+import { collectCssUrlReferences } from "./cssUrlReferences.js";
 import {
-  collectCssUrlReferences,
   collectVarUsages,
   parseRefreshUrl,
   parseSrcsetUrls,
@@ -81,7 +81,8 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
   const doc = dom.window.document;
   const allElements = doc.querySelectorAll("*");
 
-  for (const rawUrl of collectResourceReferences(dom, JSDOM, 0)) {
+  const srcdocBudget = { remaining: MAX_SRCDOC_DOCUMENTS };
+  for (const rawUrl of collectResourceReferences(dom, JSDOM, 0, srcdocBudget)) {
     classifyReference(rawUrl, result);
   }
 
@@ -201,6 +202,16 @@ const CSS_URL_ATTRIBUTES = [
  */
 const MAX_SRCDOC_DEPTH = 8;
 
+/**
+ * How many non-empty `srcdoc` documents one mock has read.
+ *
+ * Shortcut: each one costs a DOM of its own, a few milliseconds, so a mock with
+ * thousands of frames would hold the run for minutes. The frames past this count
+ * are left unread. A screen mock holds a handful at most; raise the ceiling if a
+ * real one is found holding more.
+ */
+const MAX_SRCDOC_DOCUMENTS = 50;
+
 /** Every element of a tree, including the content of each `template`, in document order. */
 function* elementsOf(root: ParentNode, window: JsdomInstance["window"]): Generator<Element> {
   for (const el of root.querySelectorAll("*")) {
@@ -224,8 +235,13 @@ function collectResourceReferences(
   dom: JsdomInstance,
   JSDOM: JsdomModule["JSDOM"],
   depth: number,
+  srcdocBudget: { remaining: number },
 ): string[] {
   const refs: string[] = [];
+  // One push per value: spreading a list of unbounded length into `push` can exceed the stack.
+  const add = (values: readonly string[]): void => {
+    for (const value of values) refs.push(value);
+  };
   for (const el of elementsOf(dom.window.document, dom.window)) {
     const tag = el.tagName.toLowerCase();
 
@@ -238,30 +254,31 @@ function collectResourceReferences(
       if (data !== null) refs.push(data);
     }
     const ping = el.getAttribute("ping");
-    if (ping !== null) refs.push(...ping.split(/[\t\n\f\r ]+/));
+    if (ping !== null) add(ping.split(/[\t\n\f\r ]+/));
     for (const attr of SRCSET_ATTRIBUTES) {
       const value = el.getAttribute(attr);
-      if (value !== null) refs.push(...parseSrcsetUrls(value));
+      if (value !== null) add(parseSrcsetUrls(value));
     }
     if (tag === "meta" && el.getAttribute("http-equiv")?.trim().toLowerCase() === "refresh") {
       const target = parseRefreshUrl(el.getAttribute("content") ?? "");
       if (target !== null) refs.push(target);
     }
 
-    refs.push(...collectCssUrlReferences(el.getAttribute("style")));
+    add(collectCssUrlReferences(el.getAttribute("style")));
     if (el.namespaceURI === SVG_NAMESPACE) {
       for (const attr of CSS_URL_ATTRIBUTES) {
-        refs.push(...collectCssUrlReferences(el.getAttribute(attr)));
+        add(collectCssUrlReferences(el.getAttribute(attr)));
       }
     }
     if (tag === "style") {
-      refs.push(...collectCssUrlReferences(el.textContent));
+      add(collectCssUrlReferences(el.textContent));
     }
 
     const srcdoc = tag === "iframe" ? el.getAttribute("srcdoc") : null;
-    if (srcdoc !== null && depth < MAX_SRCDOC_DEPTH) {
+    if (srcdoc?.trim() && depth < MAX_SRCDOC_DEPTH && srcdocBudget.remaining > 0) {
+      srcdocBudget.remaining -= 1;
       const inner = new JSDOM(srcdoc);
-      refs.push(...collectResourceReferences(inner, JSDOM, depth + 1));
+      add(collectResourceReferences(inner, JSDOM, depth + 1, srcdocBudget));
       inner.window.close();
     }
   }

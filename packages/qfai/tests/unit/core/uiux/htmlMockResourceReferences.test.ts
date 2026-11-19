@@ -43,6 +43,7 @@ const CSS_FORMS: readonly (readonly [string, string])[] = [
   ["single-quoted url()", `background: url( '${EXTERNAL}' )`],
   ["upper-case URL()", `background: URL(${EXTERNAL})`],
   ["escaped url()", `background: url(https\\3a //cdn.example.com/asset)`],
+  ["escaped function name", `background: \\75rl(${EXTERNAL})`],
   ["src()", `background: src("${EXTERNAL}")`],
   ["image-set() string", `background: image-set("${EXTERNAL}" 1x, "#x" 2x)`],
   [
@@ -111,6 +112,42 @@ describe("HTML mock resource references", () => {
     expect(result.externalUrls).toEqual([]);
     expect(result.localRefs).toEqual([]);
     expect(result.unsafeUrls).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0039-58
+  it("opens no comment at a /* inside an unquoted url() or a string", async () => {
+    const result = await parseHtmlMock(
+      [
+        "<style>.a { background: url(https://cdn.example.com/*); }",
+        '.b::after { content: "/*"; background: url("https://cdn.example.com/after"); }</style>',
+      ].join("\n"),
+    );
+    expect(result.externalUrls).toEqual([
+      "https://cdn.example.com/*",
+      "https://cdn.example.com/after",
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-58
+  it("reads the first 50 non-empty srcdoc documents of a mock", async () => {
+    const blank = '<iframe srcdoc="  "></iframe>'.repeat(5);
+    const frames = Array.from(
+      { length: 60 },
+      (_, n) => `<iframe srcdoc="<img src='${EXTERNAL}/${n}'>"></iframe>`,
+    ).join("");
+    const result = await parseHtmlMock(blank + frames);
+    expect(result.externalUrls).toHaveLength(50);
+    expect(result.externalUrls.at(-1)).toBe(`${EXTERNAL}/49`);
+  });
+
+  // QFAI:EX-0001-0039-58
+  it("reads hostile CSS in linear time", async () => {
+    const escapes = `<div style="background:url(${"\\a".repeat(200)}"></div>`;
+    const imageSets = `<style>${".x{background:image-set(".repeat(20_000)}</style>`;
+    const started = performance.now();
+    await parseHtmlMock(escapes);
+    await parseHtmlMock(imageSets);
+    expect(performance.now() - started).toBeLessThan(2_000);
   });
 });
 
