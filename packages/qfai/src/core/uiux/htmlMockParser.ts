@@ -81,6 +81,74 @@ export function collectVarUsages(text: string | null): VarCallUsage[] {
   return usages;
 }
 
+const HTML_WHITESPACE_RE = /[\t\n\f\r ]/;
+
+/**
+ * The URLs of a `srcset` or `imagesrcset` value, read as the HTML standard reads
+ * image candidates: a URL runs to the next whitespace, trailing commas end it, and
+ * its descriptors run to the next comma outside parentheses. A `data:` URL keeps
+ * the commas inside it.
+ */
+export function parseSrcsetUrls(value: string): string[] {
+  const urls: string[] = [];
+  let i = 0;
+  while (i < value.length) {
+    while (i < value.length && (HTML_WHITESPACE_RE.test(value[i] ?? "") || value[i] === ",")) {
+      i += 1;
+    }
+    const start = i;
+    while (i < value.length && !HTML_WHITESPACE_RE.test(value[i] ?? "")) {
+      i += 1;
+    }
+    // Trailing commas end the URL. An index walk, because a regular expression
+    // anchored at the end retries from every comma and turns quadratic.
+    let end = i;
+    while (end > start && value[end - 1] === ",") {
+      end -= 1;
+    }
+    const url = value.slice(start, end);
+    if (end === i) {
+      let depth = 0;
+      while (i < value.length) {
+        const ch = value[i];
+        if (ch === "(") {
+          depth += 1;
+        } else if (ch === ")") {
+          depth = Math.max(0, depth - 1);
+        } else if (ch === "," && depth === 0) {
+          break;
+        }
+        i += 1;
+      }
+    }
+    if (url !== "") {
+      urls.push(url);
+    }
+  }
+  return urls;
+}
+
+/**
+ * The URL a `<meta http-equiv="refresh">` `content` value redirects to, or `null`
+ * when it only reloads: the delay, a `;` or `,`, an optional `url=` and the URL,
+ * quoted or not.
+ */
+export function parseRefreshUrl(content: string): string | null {
+  const delay = /^[\t\n\f\r ]*[\d.]*[\t\n\f\r ]*[;,]?[\t\n\f\r ]*/.exec(content);
+  let rest = content.slice(delay ? delay[0].length : 0);
+  const label = /^url[\t\n\f\r ]*=[\t\n\f\r ]*/i.exec(rest);
+  if (label) {
+    rest = rest.slice(label[0].length);
+  }
+  const quote = rest[0];
+  if (quote === '"' || quote === "'") {
+    const end = rest.indexOf(quote, 1);
+    rest = rest.slice(1, end < 0 ? undefined : end);
+  }
+  const url = rest.trim();
+  return url === "" ? null : url;
+}
+
 function parseVarCall(
   text: string,
   start: number,

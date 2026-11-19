@@ -501,11 +501,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   flagged line, and each finding carries that line in its location so an
   editor or report can jump to it. Closes #4562.
 
+- **Each configuration load returns its own copy.** A project with no
+  `qfai.config.yaml`, or one that left out a key such as `paths` or
+  `validation`, received the shared default objects and lists themselves, so
+  a program that loaded a configuration and changed it changed the defaults
+  every later load in the same process started from. Each load now returns a
+  copy, and the defaults themselves can no longer be changed.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
+
+- **A qfai copy under a directory whose name begins with two dots counts as
+  inside the project.** `qfai validate` and `qfai sdd preflight` judged
+  where the running qfai came from by whether its path relative to the
+  project began with `..`, so a copy under a directory such as `..vendor` was
+  reported as resolved from outside the project. Only a `..` path segment now
+  leaves the project. Closes #4544.
 
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
@@ -535,6 +549,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   redefinition. Each part of a qualified name is now read under PostgreSQL's
   quoting rules: a bare part folds to lower case, a quoted part keeps its
   case and its doubled `""`, and a dot inside quotes does not split the name.
+
+- **`qfai validate` checks every resource reference in an HTML mock.** The
+  external URL, local file and unsafe scheme checks read only `href`, `src`
+  and `action`, so a mock could load a CDN asset through CSS `url()`,
+  `@import`, `srcset`, `poster` or a `<meta>` refresh without a finding. They
+  now also read `xlink:href`, `formaction`, `poster`, `background`,
+  `manifest`, `<object data>`, `ping`, `srcset`, `imagesrcset`, a refresh
+  target, every CSS `url()`, `src()`, `@import` string and `image-set()`
+  string in `style` attributes, `<style>` elements and SVG presentation
+  attributes, `<iframe srcdoc>` documents and `<template>` content. A mock
+  that relied on one of these forms now reports `QFAI-MOCK-002`,
+  `QFAI-MOCK-010` or `QFAI-MOCK-011` at error.
 
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
