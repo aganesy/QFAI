@@ -584,6 +584,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   has no such declaration, is not compared. The `QFAI-CONTRACT-015`
   message no longer names a rule `qfai validate` no longer has.
 
+- **The turn-end check tells a failure in another worktree from a repeat.**
+  When a continued turn failed with the same output it had blocked on, the
+  hook let the turn end, even when the agent had moved to another worktree
+  or the marked command had changed. A failure now repeats only from the same
+  project root, with links resolved, and the same command; any other is
+  blocked again. The limit of three blocks in a row still lets the turn end.
+  Closes #4595.
+
 - **A qfai copy under a directory whose name begins with two dots counts as
   inside the project.** `qfai validate` and `qfai sdd preflight` judged
   where the running qfai came from by whether its path relative to the
