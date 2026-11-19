@@ -17,7 +17,9 @@
  *   thread with that issue's number and resolves it, in that order, so a
  *   resolved thread always has its finding in the issue. It first checks that
  *   the thread belongs to the pull request it was given, in the repository of
- *   `origin`, and writes nothing when it does not.
+ *   `origin`, and writes nothing when it does not. It is safe to run again
+ *   after it stopped part way: a step whose result is already there, found by
+ *   the thread's id, is skipped, so no comment is posted twice.
  *
  * A reply takes its body from a file because a body typed into a shell argument
  * has its backticks and `$(...)` run by the shell before this sees it.
@@ -69,15 +71,29 @@ const RESOLVE_MUTATION = `mutation($id:ID!){
   resolveReviewThread(input:{threadId:$id}){ thread{ id isResolved } }
 }`;
 
+// SIMPLIFIED: a retried `defer` looks for its own reply among the newest 100
+// comments of the thread.
+// Lift when: a deferred thread carries more than 100 comments.
 const THREAD_QUERY = `query($id:ID!){
   node(id:$id){
     ... on PullRequestReviewThread {
-      path line
+      id isResolved path line
       pullRequest{ number repository{ nameWithOwner } }
       comments(first:1){ nodes{ url author{login} body } }
+      latest: comments(last:100){ nodes{ body } }
     }
   }
 }`;
+
+/** The hidden line that ties a follow-up issue comment to the thread it records. */
+function deferredMarker(threadId) {
+  return `<!-- qfai-deferred-thread:${threadId} -->`;
+}
+
+/** The reply `defer` leaves on a thread it deferred to issue `issue`. */
+function deferredReply(issue) {
+  return `Deferred to #${issue}.`;
+}
 
 /** The text cut to `EXCERPT_LENGTH`, with line breaks kept. */
 function excerpt(text) {
@@ -148,7 +164,7 @@ export function formatThread(thread) {
 export function deferredEntry(pr, response) {
   const thread = response?.data?.node;
   const first = thread?.comments?.nodes?.[0];
-  if (typeof first?.body !== "string") return undefined;
+  if (typeof first?.body !== "string" || typeof thread.id !== "string") return undefined;
   const path = typeof thread.path === "string" ? thread.path : "?";
   const where = Number.isInteger(thread.line) ? `${path}:${String(thread.line)}` : path;
   const author = typeof first.author?.login === "string" ? first.author.login : "unknown";
@@ -157,7 +173,30 @@ export function deferredEntry(pr, response) {
     `Thread: ${String(first.url ?? "")}`,
     "",
     first.body.trim(),
+    "",
+    deferredMarker(thread.id),
   ].join("\n");
+}
+
+/**
+ * Which steps of deferring thread `threadId` to issue `issue` are already
+ * done: the issue holds a comment marked with the thread's id, the thread holds
+ * the reply that names the issue, and the thread is resolved.
+ *
+ * Each step is read on its own, so a retry does exactly the steps still missing.
+ */
+export function deferralProgress(threadId, issue, response, issueBodies) {
+  const thread = response?.data?.node;
+  const replies = Array.isArray(thread?.latest?.nodes) ? thread.latest.nodes : [];
+  const marker = deferredMarker(threadId);
+  return {
+    recorded: issueBodies.some((body) => body.includes(marker)),
+    replied: replies.some(
+      (comment) =>
+        typeof comment?.body === "string" && comment.body.trim() === deferredReply(issue),
+    ),
+    resolved: thread?.isResolved === true,
+  };
 }
 
 /**
@@ -303,6 +342,25 @@ function resolveCommand(threadIds) {
   return 0;
 }
 
+/**
+ * The bodies of every comment on issue `issue`, one JSON string per line of
+ * `gh`'s output so a body's own line breaks cannot split it.
+ */
+function issueCommentBodies(slug, issue) {
+  const out = gh([
+    "api",
+    "--paginate",
+    `repos/${slug}/issues/${issue}/comments?per_page=100`,
+    "--jq",
+    ".[].body | @json",
+  ]);
+  return out
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line))
+    .filter((body) => typeof body === "string");
+}
+
 function deferCommand(slug, pr, threadId, issue) {
   const response = JSON.parse(
     gh(["api", "graphql", "-f", `query=${THREAD_QUERY}`, "-F", `id=${threadId}`]),
@@ -317,18 +375,29 @@ function deferCommand(slug, pr, threadId, issue) {
     console.error(`${mismatch} Nothing was recorded, replied to or resolved.`);
     return 2;
   }
-  gh(["api", `repos/${slug}/issues/${issue}/comments`, "-f", `body=${entry}`]);
-  gh([
-    "api",
-    "graphql",
-    "-f",
-    `query=${REPLY_MUTATION}`,
-    "-F",
-    `id=${threadId}`,
-    "-f",
-    `body=Deferred to #${issue}.`,
-  ]);
-  gh(["api", "graphql", "-f", `query=${RESOLVE_MUTATION}`, "-F", `id=${threadId}`]);
+  const done = deferralProgress(threadId, issue, response, issueCommentBodies(slug, issue));
+  if (done.recorded && done.replied && done.resolved) {
+    console.log(`${threadId} is already deferred to #${issue}; nothing was written.`);
+    return 0;
+  }
+  if (!done.recorded) {
+    gh(["api", `repos/${slug}/issues/${issue}/comments`, "-f", `body=${entry}`]);
+  }
+  if (!done.replied) {
+    gh([
+      "api",
+      "graphql",
+      "-f",
+      `query=${REPLY_MUTATION}`,
+      "-F",
+      `id=${threadId}`,
+      "-f",
+      `body=${deferredReply(issue)}`,
+    ]);
+  }
+  if (!done.resolved) {
+    gh(["api", "graphql", "-f", `query=${RESOLVE_MUTATION}`, "-F", `id=${threadId}`]);
+  }
   console.log(`deferred ${threadId} to #${issue}`);
   return 0;
 }

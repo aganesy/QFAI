@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const calls = vi.hoisted(() => ({
   list: [] as string[][],
   threadAnswer: "",
+  issueAnswer: "",
   threadPages: [] as string[],
   commentPages: [] as string[],
 }));
@@ -23,6 +24,7 @@ vi.mock("node:child_process", () => ({
       return calls.threadPages.shift() ?? "{}";
     if (args[1] === "-i") return calls.commentPages.shift() ?? "HTTP/2.0 404 Not Found\n\n{}";
     if (args.some((arg) => arg.includes("PullRequestReviewThread"))) return calls.threadAnswer;
+    if (args.includes("--paginate")) return calls.issueAnswer;
     return "{}";
   },
 }));
@@ -34,6 +36,7 @@ vi.mock("../../../../scripts/lib/bounded-read.mjs", () => ({
 
 import {
   codexFindings,
+  deferralProgress,
   deferredEntry,
   foreignThread,
   formatThread,
@@ -151,6 +154,7 @@ describe("the entry a deferred finding leaves in the follow-up issue", () => {
   const node = (overrides: Record<string, unknown>): unknown => ({
     data: {
       node: {
+        id: "T1",
         path: "src/a.ts",
         line: 7,
         comments: {
@@ -165,8 +169,12 @@ describe("the entry a deferred finding leaves in the follow-up issue", () => {
 
   it("names the pull request, the location, the author and the thread, then the finding", () => {
     expect(deferredEntry("12", node({}))).toBe(
-      "Deferred from pull request 12: src/a.ts:7, by @reviewer.\nThread: https://example.test/c/1\n\nCover it.",
+      "Deferred from pull request 12: src/a.ts:7, by @reviewer.\nThread: https://example.test/c/1\n\nCover it.\n\n<!-- qfai-deferred-thread:T1 -->",
     );
+  });
+
+  it("is undefined for a thread whose id the answer does not give", () => {
+    expect(deferredEntry("12", node({ id: null }))).toBeUndefined();
   });
 
   it("names the file alone for a thread with no line", () => {
@@ -231,12 +239,15 @@ describe("deferring a thread of another pull request", () => {
     JSON.stringify({
       data: {
         node: {
+          id: "T1",
+          isResolved: false,
           path: "src/a.ts",
           line: 7,
           pullRequest: { number, repository: { nameWithOwner } },
           comments: {
             nodes: [{ url: "https://x/c/1", author: { login: "reviewer" }, body: "Cover it." }],
           },
+          latest: { nodes: [{ body: "Cover it." }] },
         },
       },
     });
@@ -256,13 +267,114 @@ describe("deferring a thread of another pull request", () => {
 
   it("of the requested pull request records, replies and resolves", () => {
     calls.threadAnswer = answer(12, "aganesy/QFAI");
+    calls.issueAnswer = "";
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     expect(run(["defer", "12", "T1", "40"])).toBe(0);
     const ghCalls = calls.list.filter(([command]) => command === "gh").map((c) => c.join(" "));
-    expect(ghCalls).toHaveLength(4);
-    expect(ghCalls[1]).toContain("repos/aganesy/QFAI/issues/40/comments");
-    expect(ghCalls[2]).toContain("addPullRequestReviewThreadReply");
-    expect(ghCalls[3]).toContain("resolveReviewThread");
+    expect(ghCalls).toHaveLength(5);
+    expect(ghCalls[1]).toContain("--paginate repos/aganesy/QFAI/issues/40/comments");
+    expect(ghCalls[2]).toContain("repos/aganesy/QFAI/issues/40/comments -f body=");
+    expect(ghCalls[3]).toContain("addPullRequestReviewThreadReply");
+    expect(ghCalls[4]).toContain("resolveReviewThread");
+  });
+});
+
+describe("retrying a deferral that stopped part way", () => {
+  afterEach(() => {
+    calls.list.length = 0;
+    vi.restoreAllMocks();
+  });
+
+  const answer = (isResolved: boolean, replies: string[]): string =>
+    JSON.stringify({
+      data: {
+        node: {
+          id: "T1",
+          isResolved,
+          path: "src/a.ts",
+          line: 7,
+          pullRequest: { number: 12, repository: { nameWithOwner: "aganesy/QFAI" } },
+          comments: {
+            nodes: [{ url: "https://x/c/1", author: { login: "reviewer" }, body: "Cover it." }],
+          },
+          latest: { nodes: [{ body: "Cover it." }, ...replies.map((body) => ({ body }))] },
+        },
+      },
+    });
+  const recorded = `${JSON.stringify("Deferred from pull request 12.\n\n<!-- qfai-deferred-thread:T1 -->")}\n`;
+
+  const writes = (): string[] =>
+    calls.list
+      .filter(([command]) => command === "gh")
+      .slice(2)
+      .map((c) => c.join(" "));
+
+  it("after the issue entry was posted, replies and resolves without posting it again", () => {
+    calls.threadAnswer = answer(false, []);
+    calls.issueAnswer = recorded;
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    expect(run(["defer", "12", "T1", "40"])).toBe(0);
+    expect(writes()).toHaveLength(2);
+    expect(writes()[0]).toContain("addPullRequestReviewThreadReply");
+    expect(writes()[1]).toContain("resolveReviewThread");
+  });
+
+  it("after the reply was posted too, only resolves", () => {
+    calls.threadAnswer = answer(false, ["Deferred to #40."]);
+    calls.issueAnswer = recorded;
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    expect(run(["defer", "12", "T1", "40"])).toBe(0);
+    expect(writes()).toHaveLength(1);
+    expect(writes()[0]).toContain("resolveReviewThread");
+  });
+
+  it("after every step, writes nothing and says the thread is already deferred", () => {
+    calls.threadAnswer = answer(true, ["Deferred to #40."]);
+    calls.issueAnswer = recorded;
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    expect(run(["defer", "12", "T1", "40"])).toBe(0);
+    expect(writes()).toHaveLength(0);
+    expect(log.mock.calls.join(" ")).toContain("already deferred");
+  });
+});
+
+describe("which steps of a deferral are already done", () => {
+  const thread = (isResolved: unknown, replies: unknown): unknown => ({
+    data: { node: { id: "T1", isResolved, latest: { nodes: replies } } },
+  });
+
+  it("finds nothing done on a fresh thread and an issue without its entry", () => {
+    expect(deferralProgress("T1", "40", thread(false, [{ body: "Cover it." }]), [])).toEqual({
+      recorded: false,
+      replied: false,
+      resolved: false,
+    });
+  });
+
+  it("counts an issue entry only when it carries this thread's id", () => {
+    const other = deferralProgress("T1", "40", thread(false, []), [
+      "<!-- qfai-deferred-thread:T10 -->",
+      "<!-- qfai-deferred-thread:T2 -->",
+    ]);
+    expect(other.recorded).toBe(false);
+    const own = deferralProgress("T1", "40", thread(false, []), [
+      "Finding.\n\n<!-- qfai-deferred-thread:T1 -->",
+    ]);
+    expect(own.recorded).toBe(true);
+  });
+
+  it("counts a reply only when it names the same follow-up issue", () => {
+    expect(
+      deferralProgress("T1", "40", thread(false, [{ body: "Deferred to #41." }]), []).replied,
+    ).toBe(false);
+    expect(
+      deferralProgress("T1", "40", thread(false, [{ body: " Deferred to #40.\n" }]), []).replied,
+    ).toBe(true);
+  });
+
+  it("reads the thread as resolved only when the answer says so", () => {
+    expect(deferralProgress("T1", "40", thread(true, []), []).resolved).toBe(true);
+    expect(deferralProgress("T1", "40", thread("yes", null), []).resolved).toBe(false);
   });
 });
 
