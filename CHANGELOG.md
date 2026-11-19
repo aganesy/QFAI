@@ -467,6 +467,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   flagged line, and each finding carries that line in its location so an
   editor or report can jump to it. Closes #4562.
 
+- **A migration move between two filesystems no longer leaves a partial
+  copy.** When a spec-to-story migration step moved a file or directory onto
+  another filesystem, it copied straight to the destination, so a full disk or
+  a stopped run left an incomplete copy there, and the retry refused it as
+  existing data. The copy is now written beside the destination and appears
+  there only once complete, without replacing anything that appeared there
+  meanwhile, and the source is removed only after that. Closes #4480.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from
