@@ -40,6 +40,8 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { parse as parseYaml } from "yaml";
+
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectUiContractFiles } from "../discovery.js";
@@ -92,23 +94,36 @@ function markersIn(text: string): string[] {
  */
 function requiredElementIds(text: string): Set<string> {
   const required = new Set<string>();
-  // Read line by line rather than by parsing the document: `elements[]` sits at
-  // a different depth per contract, and a `required: true` under an element's
-  // `id:` is the only shape this needs. A parse would also fail the whole file
-  // on a contract another rule already reports as unparseable.
-  let currentId: string | null = null;
-  for (const line of text.split(/\r?\n/)) {
-    const id = /^\s*-?\s*id:\s*["']?([A-Za-z0-9_-]+)["']?\s*$/.exec(line);
-    if (id?.[1] !== undefined) {
-      currentId = id[1];
-      continue;
-    }
-    if (currentId !== null && /^\s*required:\s*true\s*$/.test(line)) {
-      required.add(currentId);
-      currentId = null;
-    }
+  // The flag is read from each parsed mapping, so key order and flow style do
+  // not matter: a line scan that remembered the last `id:` lost a `required`
+  // written before it or on the same line. `elements[]` sits at a different
+  // depth per contract, so every mapping is visited. A contract that does not
+  // parse states no flag here; its markers are still read from the text, and
+  // another rule reports the parse failure.
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(text);
+  } catch {
+    return required;
   }
+  collectRequiredIds(parsed, required);
   return required;
+}
+
+/** Adds the `id` of every mapping under `node` that sets `required: true`. */
+function collectRequiredIds(node: unknown, into: Set<string>): void {
+  if (Array.isArray(node)) {
+    for (const item of node) collectRequiredIds(item, into);
+    return;
+  }
+  if (node === null || typeof node !== "object") {
+    return;
+  }
+  const id: unknown = Reflect.get(node, "id");
+  if (typeof id === "string" && Reflect.get(node, "required") === true) {
+    into.add(id);
+  }
+  for (const value of Object.values(node)) collectRequiredIds(value, into);
 }
 
 /** The element half of a canonical `CONTRACT_ID:ELEMENT_ID` marker. */

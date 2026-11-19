@@ -86,6 +86,94 @@ describe("a marker the contract declares and no source carries", () => {
     expect(finding?.message).toContain("required: true");
   });
 
+  it("reads required from the element even when it comes before the element's id", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "elements:",
+        "  - required: true",
+        "    id: submit",
+        "    selector: \"[data-qfai='SCR-ORDER:submit']\"",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const [finding] = await validateUiMarkerPresence(root, defaultConfig);
+
+    expect(finding?.message).toContain("required: true");
+  });
+
+  it("reads required from an element written in flow style", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "elements:",
+        `  - { required: true, id: submit, selector: "[data-qfai='SCR-ORDER:submit']" }`,
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const [finding] = await validateUiMarkerPresence(root, defaultConfig);
+
+    expect(finding?.message).toContain("required: true");
+  });
+
+  it("does not lend one element's required flag to the element after it", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "elements:",
+        "  - id: cancel",
+        "    selector: \"[data-qfai='SCR-ORDER:cancel']\"",
+        "  - required: true",
+        "    id: submit",
+        "    selector: \"[data-qfai='SCR-ORDER:submit']\"",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const issues = await validateUiMarkerPresence(root, defaultConfig);
+    const byMarker = (marker: string) => issues.find((i) => i.message.includes(marker))?.message;
+
+    expect(byMarker("SCR-ORDER:cancel")).not.toContain("required");
+    expect(byMarker("SCR-ORDER:submit")).toContain("required: true");
+  });
+
+  it("still reports the marker of a contract that does not parse", async () => {
+    const root = await newRoot();
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      [
+        "id: SCR-ORDER",
+        "elements:",
+        "  - id: submit",
+        "    required: true",
+        "    selector: \"[data-qfai='SCR-ORDER:submit']\"",
+        "  bad: [unclosed",
+        "",
+      ].join("\n"),
+    );
+    await write(root, "src/OrderForm.tsx", "export const OrderForm = () => <form />;\n");
+
+    const issues = await validateUiMarkerPresence(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("SCR-ORDER:submit");
+  });
+
   it("says nothing about required for an element the contract left unmarked", async () => {
     const root = await newRoot();
     await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractDeclaring("submit"));
