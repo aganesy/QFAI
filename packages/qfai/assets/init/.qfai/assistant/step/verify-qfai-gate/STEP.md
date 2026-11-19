@@ -17,15 +17,26 @@ obligations this gate lists as pending.
 - The scope: `full` in a route, whose verify stage runs only the gates, and
   the scope `verify-context` declared when `qfai-verify` is invoked by name. The
   scopes and their profiles are the `## Scope` table of `verify-context`.
-- `.qfai/report/validate.json`. Its keys are in
+- The result the gate's own validate run wrote: the configured
+  `output.validateJsonPath` (default `.qfai/report/validate.json`) with
+  `-<profile>` before its extension, such as `validate-verify.json`. The
+  unsuffixed file holds whichever repository-wide run finished last, so it is
+  not this run's result. Use it only when its `profile` is the profile run and
+  its `generatedAt` is no earlier than the command's start. Its keys are in
   `.qfai/assistant/skill/qfai-verify/references/validate-json-schema.md`.
+  That check cannot tell this run from another run of the same profile that
+  finished after it started, because both write the same file. Where another
+  validate run of that profile can run on the same tree at the same time, read
+  this run's own run log instead: the `run-log:` line it prints names its
+  `run-*/` directory, whose `run.json` holds the counts and whose
+  `validator.json` lists its unsuppressed errors and warnings by `code`.
 - `.qfai/waivers.yml`, where the project has one.
 - In a route, whether the plan scope the session chose at the scope question
   carries `testsPending`, as `qfai-run`'s `references/plan.md` `## Scopes` says.
 
 ## Writes
 
-- `.qfai/report/validate.json` and the report output, through the commands.
+- The validation result and the report output, through the commands.
 - The `## QFAI gates` section of the evidence: each command, its exit code and
   its result.
 
@@ -37,7 +48,15 @@ obligations this gate lists as pending.
      `npx qfai validate --fail-on error`; a `Validate` entry that runs a
      partial profile is not the gate, as `## A custom Validate entry` says;
    - `prototyping`: `npx qfai validate --profile prototyping --fail-on error`.
-2. Run `npx qfai report` when the repository uses it.
+2. Where the repository uses the report, run
+   `npx qfai report --profile <profile>` with the profile step 1 ran, `full`
+   for the default command. Without `--profile` the report reads the
+   unsuffixed file, which another run may have replaced. Where another
+   validate run of that profile can overlap on the same tree, the suffixed
+   file can be replaced between steps 1 and 2 too: run
+   `npx qfai report --run-validate --profile <profile>` instead, which
+   validates again and renders the result of that run alone. The gate's
+   verdict still comes from step 1.
 3. Report each result in the stage report.
 
 ## What this gate is
@@ -111,8 +130,8 @@ has its reason.
   an `error` is a failure: fix the root cause.
 - `QFAI-WAIVER-002` means an invalid waiver. Remove it and resolve the `error`
   it hid.
-- A waiver's `rule:` is the finding's `issues[].code` in
-  `.qfai/report/validate.json`, copied verbatim. The array is `issues`, not
+- A waiver's `rule:` is the finding's `issues[].code` in the validation
+  result, copied verbatim. The array is `issues`, not
   `findings`.
 
 ## Gate
