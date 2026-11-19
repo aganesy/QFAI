@@ -524,6 +524,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
 
+- **The assistant anchor check reads only the assistant tree.** The
+  `QFAI-LINK-002` check followed every link under `.qfai/assistant/`: a link to
+  a directory or document outside the tree had its citations checked as if
+  they were QFAI's own, and a link to a named pipe stopped `qfai validate`
+  with no output. It now follows a link only when it resolves inside the tree,
+  which may itself be linked in whole, and skips an entry that is not a
+  regular file. A document in the tree that cannot be read, or is larger than
+  8 MiB, stops the run with a message naming it. A file whose name starts
+  with two dots, such as `..notes.md`, now counts as inside its directory, here
+  and in every other check that asks whether a link stays inside one.
+  Closes #4484.
+
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in
   `.github/instructions/`, including the one a second init in the same
