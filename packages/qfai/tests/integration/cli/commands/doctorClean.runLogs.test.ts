@@ -7,6 +7,7 @@
 // in-process `runDoctor` entry point with deterministic temp-dir
 // fixtures (no shelling out so Windows parallel-FS flake stays bounded).
 
+import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -46,6 +47,15 @@ async function seedRunLog(root: string, runId: string, ageDays: number): Promise
   const mtime = new Date(Date.now() - ageDays * DAY_MS);
   await utimes(dir, mtime, mtime);
   return dir;
+}
+
+/** Two projects in `mono` whose `paths.outDir` is the same `shared-report`. */
+async function seedSharedOutDirApps(mono: string): Promise<void> {
+  for (const name of ["app-a", "app-b"]) {
+    const dir = path.join(mono, name);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "qfai.config.yaml"), "paths:\n  outDir: ../shared-report\n");
+  }
 }
 
 /** Directory symlinks need Developer Mode or elevation on Windows. */
@@ -322,6 +332,51 @@ describe("doctor --clean prunes stale validate run logs", () => {
     // is what fails when this regresses.
     for (const owner of coOwners) {
       expect(owner, `co-owner path is not resolved: ${owner}`).toBe(path.resolve(owner));
+    }
+  });
+
+  it("finds a co-owner anywhere in the Git working tree", async () => {
+    const mono = await newTempDir("git-root");
+    execFileSync("git", ["init", "--quiet"], { cwd: mono });
+    await seedSharedOutDirApps(mono);
+
+    const coOwners = await findOutDirCoOwners(
+      path.join(mono, "app-a"),
+      path.join(mono, "shared-report"),
+    );
+    expect(coOwners).toEqual([path.join(mono, "app-b")]);
+  });
+
+  it("keeps a co-owner in scope when Git fails for a reason other than no repository", async () => {
+    // A broken global config makes every Git command fail, as dubious
+    // ownership does. That failure says nothing about where the repository
+    // ends, so the scan must not shrink to app-a alone.
+    const mono = await newTempDir("git-fails");
+    execFileSync("git", ["init", "--quiet"], { cwd: mono });
+    await seedSharedOutDirApps(mono);
+    const badConfig = path.join(mono, "bad.gitconfig");
+    await writeFile(badConfig, "[core\n", "utf-8");
+    const previous = process.env.GIT_CONFIG_GLOBAL;
+    process.env.GIT_CONFIG_GLOBAL = badConfig;
+    try {
+      // Precondition: Git really fails here, so the case is not vacuous.
+      expect(() =>
+        execFileSync("git", ["rev-parse", "--show-toplevel"], {
+          cwd: path.join(mono, "app-a"),
+          stdio: "pipe",
+        }),
+      ).toThrow();
+      const coOwners = await findOutDirCoOwners(
+        path.join(mono, "app-a"),
+        path.join(mono, "shared-report"),
+      );
+      expect(coOwners).toEqual([path.join(mono, "app-b")]);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.GIT_CONFIG_GLOBAL;
+      } else {
+        process.env.GIT_CONFIG_GLOBAL = previous;
+      }
     }
   });
 
