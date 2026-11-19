@@ -74,7 +74,7 @@ keep authors separate from reviewers.
    apply to their reports. Otherwise write `tmp/qfai-migration/plan.yaml`
    with each old story's destination flow, any criterion whose parent story needs a judgment, and
    each old business rule's destination contract. Name that contract by its
-   current path under `cli/`, `api/`, `db/`, `ui/` or `design/` of the
+   current path under `cli/`, `api/`, `db/` or `ui/` of the
    contracts directory: step 3 gives every contract a new ID and file name,
    and later steps find it from that path. Use the format in `references/migration-placement.md`. The plan
    may be written before step 1, from the old contract paths.

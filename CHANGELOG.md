@@ -601,6 +601,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   definition, and every step receives the one parsed URL.
   Closes #4585.
 
+- **The migration skill no longer offers `design/` as a contract for an old
+  business rule.** Its plan instructions named `design/` beside `cli/`,
+  `api/`, `db/` and `ui/`, although step 4 refuses a rule placed there and
+  step 3 removes that directory. They now name only the four contract kind
+  directories, as the placement guide does. Closes #4627.
+
 - **Story ID commands no longer answer from a partial or shared set of pull
   request heads.** `scripts/story-ids.mjs` read each head's commit from the
   shared `FETCH_HEAD`, so a fetch another process ran at the same time could
