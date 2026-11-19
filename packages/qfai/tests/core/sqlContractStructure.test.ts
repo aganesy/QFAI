@@ -155,6 +155,12 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     ["a mode written after the name", "f(a IN int)", "f(INOUT b int)"],
     ["a default holding a comma", "f(a text DEFAULT 'x,y', b int)", "f(a text, b int)"],
     ["a spaced type modifier on an unnamed argument", "f(numeric(10, 2))", "f(x numeric(10,2))"],
+    [
+      "the name of a precision-qualified zoned type",
+      "f(ts timestamp(3) with time zone)",
+      "f(timestamp(3) with time zone)",
+    ],
+    ["the name of an SQL-standard array type", "f(a int ARRAY)", "f(int ARRAY)"],
   ])("reports two functions that differ only by %s", (_label, left, right) => {
     const { statements } = parseSqlContract(
       `CREATE OR REPLACE FUNCTION ${left} RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
@@ -169,6 +175,27 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     const { statements } = parseSqlContract(
       `CREATE FUNCTION f(a int, b text) RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
         `CREATE FUNCTION f(a text, b int) RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  it.each([
+    [
+      "a precision-qualified time zone qualifier",
+      "f(timestamp(3) with time zone)",
+      "f(timestamp(3) without time zone)",
+    ],
+    [
+      "a precision-qualified time type",
+      "f(time(3) with time zone)",
+      "f(timestamp(3) with time zone)",
+    ],
+    ["the element type of an SQL-standard array", "f(int ARRAY)", "f(text ARRAY)"],
+    ["the element type of a sized SQL-standard array", "f(int ARRAY[3])", "f(text ARRAY[3])"],
+  ])("does not report two functions whose input types differ by %s", (_label, left, right) => {
+    const { statements } = parseSqlContract(
+      `CREATE FUNCTION ${left} RETURNS int AS $$ SELECT 1 $$ LANGUAGE sql;\n` +
+        `CREATE FUNCTION ${right} RETURNS int AS $$ SELECT 2 $$ LANGUAGE sql;\n`,
     );
     expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
   });

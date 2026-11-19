@@ -322,7 +322,10 @@ const ARGUMENT_MODES = new Set(["in", "out", "inout", "variadic"]);
  * contract uses such a type.
  */
 const MULTI_WORD_TYPE_START =
-  /^(?:double precision|(?:character|char|bit) varying|national (?:character|char)\b|(?:time|timestamp)(?:\s*\(\d+\))? with(?:out)? time zone|interval (?:year|month|day|hour|minute|second)\b)/;
+  /^(?:double precision|(?:character|char|bit) varying|national (?:character|char)\b|(?:time|timestamp)(?:\(\d+\))?\s*with(?:out)? time zone|interval (?:year|month|day|hour|minute|second)\b)/;
+
+/** The SQL-standard array suffix, lower-cased and with no space before `[`. */
+const ARRAY_SUFFIX = /^array(?:\[\d*\])?$/;
 
 /**
  * The PostgreSQL identity of a routine's argument list: its input argument
@@ -344,7 +347,10 @@ function identityArgumentTypes(argumentText: string, kind: string): string {
       mode = words[1];
       words.splice(1, 1);
     }
-    if (words.length > 1 && !MULTI_WORD_TYPE_START.test(words.join(" "))) words.shift();
+    // `int ARRAY` and `int ARRAY[3]` are one type: the suffix is not a type
+    // of its own, so it never makes the word before it an argument name.
+    const typeWords = ARRAY_SUFFIX.test(words.at(-1) ?? "") ? words.length - 1 : words.length;
+    if (typeWords > 1 && !MULTI_WORD_TYPE_START.test(words.join(" "))) words.shift();
     const type = words.join(" ");
     if (type.length === 0) continue;
     if (mode === "out" && kind === "FUNCTION") continue;
