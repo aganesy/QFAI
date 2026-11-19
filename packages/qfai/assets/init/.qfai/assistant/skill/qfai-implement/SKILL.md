@@ -153,8 +153,9 @@ actions instead.
 
 ## Default Autopilot Policy
 
-- auto-decide: implementation seam, test selector, and local refactor that
-  preserve the active story and contract behavior.
+- auto-decide:
+  - equivalent-option pick: implementation seam, test selector, and local
+    refactor that preserve the active story and contract behavior
 - ask-user: critical product choices.
 
 The BF, EX, and contract sources come from the invocation and configured tree.

@@ -13,7 +13,7 @@ Feature: Merge conflicted story-tree documents by sentence
 
   # AC-0001-0238-02
   Scenario: Leave what cannot be settled
-    Given both sides changed the same sentence differently, one side deleted the document, or the working file is no longer Git's conflict output
+    Given both sides changed the same sentence differently, one side deleted the document, the working file is no longer Git's conflict output, or the working file cannot safely be read or replaced
     When I run qfai sdd merge-docs
     Then that place stays between standard conflict markers or the document is left as it is, the rest is merged, and the command exits 1
 
