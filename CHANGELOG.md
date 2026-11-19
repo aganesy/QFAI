@@ -477,12 +477,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
 
+- **A null `requires:` is no longer read as an empty step list.** In a
+  step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
+  `requires: null`, or a `requires:` with no value, as `requires: []`. It now
+  reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
+  omitted `requires:` still counts as empty.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so
   `qfai db-drift --format json unused-positional` completed normally. Such a
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
+
+- **A file at an assistant layer path no longer counts as an installed
+  layer.** `qfai validate` accepted a regular file named, for example,
+  `.qfai/assistant/prompt` as the `prompt/` layer and reported nothing. It
+  now reports `QFAI-ASSISTANT-002` at info saying the path is not a
+  directory, as it already does for a layer that is missing.
 
 - **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
   `E'…'` a backslash escapes the next character, but the statement splitter
@@ -499,6 +511,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   find the declaration after the front matter, the same line the diagram
   budget check counts from, and report its file line; a `-->` in the front
   matter is not read as a transition.
+
+- **Graph queries reject a `qfai.config.yaml` or `paths` set to null.** A
+  config file holding only `~` or `null`, or a `paths:` key with no value or
+  `null`, was read as if it were left out, so the graph used the default
+  deliberation directory. The query now fails with the configuration error, as
+  it already did for any other value that is not a mapping. Defaults still
+  apply when the file or the `paths` key is absent.
 
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
@@ -615,6 +634,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   redefinition. Each part of a qualified name is now read under PostgreSQL's
   quoting rules: a bare part folds to lower case, a quoted part keeps its
   case and its doubled `""`, and a dot inside quotes does not split the name.
+
+- **An agent card's required sections must be real headings.** The
+  `QFAI-AGENT-005` check accepted any occurrence of a required heading's text,
+  so a card missing `## Stop conditions` passed when the frontmatter, a
+  sentence, a code sample, an HTML comment or a `### Stop conditions` heading
+  carried the same words. Only a level-2 heading of the card body now counts.
+  Closes #4573.
 
 - **`qfai validate` checks every resource reference in an HTML mock.** The
   external URL, local file and unsafe scheme checks read only `href`, `src`

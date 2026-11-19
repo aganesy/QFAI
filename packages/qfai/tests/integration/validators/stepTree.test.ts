@@ -185,6 +185,8 @@ describe("validateStepTree", () => {
   it("refuses a parent requires: that is not a list, names a step that is not common, or names no installed step", async () => {
     const cases: Array<[string, string, string]> = [
       ["common-share", "stepTree.requiresShape", "not a list"],
+      ["null", "stepTree.requiresShape", "not a list"],
+      ["", "stepTree.requiresShape", "not a list"],
       ["[demo-one]", "stepTree.requiresNonCommon", '"demo-one"'],
       ["[common-absent]", "stepTree.unknownStep", '"common-absent"'],
     ];
@@ -196,6 +198,20 @@ describe("validateStepTree", () => {
       expect(found[0]?.file, requires).toBe(".qfai/assistant/skill/qfai-demo/SKILL.md");
       expect(found[0]?.message, requires).toContain(named);
     }
+  });
+
+  it("refuses a step requires: that is null, and treats only an omitted one as empty", async () => {
+    for (const dir of ["demo-one", "common-share"]) {
+      await seedCleanTree();
+      const owner = dir === "demo-one" ? "qfai-demo" : "common";
+      await writeStep(dir, { owner, requires: "null" });
+      const found = await run();
+      expect(rules(found), dir).toEqual(["stepTree.requiresShape"]);
+      expect(found[0]?.file, dir).toBe(`.qfai/assistant/step/${dir}/STEP.md`);
+    }
+    await seedCleanTree();
+    await writeStep("common-share", { owner: "common" });
+    expect(await run()).toEqual([]);
   });
 
   // QFAI:EX-0001-0210-06
