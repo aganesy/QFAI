@@ -254,6 +254,7 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
     expect(await findings()).toEqual([]);
   });
 
+  // QFAI:EX-0001-0302-16
   it("skips a table inside an HTML comment", async () => {
     const commented = ["<!--", "| Background | Chosen |", "| --- | --- |", "| x | 1 |", "-->"];
     await put(
@@ -263,18 +264,40 @@ describe("QFAI-DELIB-001 reads nothing but the layout", () => {
     expect(await findings()).toEqual([]);
   });
 
-  it("does not take a heading inside an HTML comment as a section", async () => {
-    const text = [
-      "## Subject",
-      "Login.",
-      "## Interview",
-      table(HEADER, INTERVIEW_ROW),
+  // QFAI:EX-0001-0302-15
+  it("does not take a heading inside or after an HTML comment as a section", async () => {
+    const commented = [
       ["<!--", "## Agent decisions", "-->"].join("\n"),
+      "<!-- note --> ## Agent decisions",
+      ["<!--", "a note", "--> ## Agent decisions"].join("\n"),
+    ];
+    for (const comment of commented) {
+      const text = [
+        "## Subject",
+        "Login.",
+        "## Interview",
+        table(HEADER, INTERVIEW_ROW),
+        comment,
+      ].join("\n\n");
+      await put(RECORD, text);
+      const found = await findings();
+      expect(found, comment).toHaveLength(1);
+      expect(found[0]?.message, comment).toContain("has no `Agent decisions` section");
+    }
+  });
+
+  it("does not open a fence after the end of an HTML comment", async () => {
+    const text = [
+      "## Interview",
+      ["<!--", "a note", "--> ```"].join("\n"),
+      table(HEADER, INTERVIEW_ROW),
+      "## Agent decisions",
+      table(HEADER, "| Name | A | B | C | 1 |"),
     ].join("\n\n");
     await put(RECORD, text);
     const found = await findings();
     expect(found).toHaveLength(1);
-    expect(found[0]?.message).toContain("has no `Agent decisions` section");
+    expect(found[0]?.message).toContain("5 cells");
   });
 
   it("keeps each row's line number after an HTML comment", async () => {
