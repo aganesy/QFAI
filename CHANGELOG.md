@@ -721,6 +721,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dropped and appeared only after the migration. The run now reports those
   findings before `QFAI-LAYOUT-001`, so both can be fixed in one pass.
 
+- **Graph setup checks every graph output path against `.gitignore`.** When
+  the managed graph block was already present, `qfai init` checked one path
+  under `.qfai/tools/analysis/` that the current layout no longer writes, so a
+  narrower rule could leave runtimes, local state, engine caches or the graph
+  entrypoints visible to Git while the check passed. It now checks a path in
+  each place graph preparation and queries write, and the conflict it reports
+  names each path Git would still see.
+
 - **`qfai validate` no longer passes over a story-tree Markdown file it
   cannot read.** The HTML mock, Mermaid screen flow and UI definition checks
   skipped any file whose read failed, so a file the run had no permission to
