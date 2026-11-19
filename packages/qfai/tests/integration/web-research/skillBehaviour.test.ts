@@ -326,11 +326,19 @@ describe("web-research skill behaviour", () => {
     expect(braveSection).toContain("mcp-templates/brave-search-http/");
 
     const firecrawlSection = flatten(sectionLines(skill, "2.2 Firecrawl MCP"));
-    expect(firecrawlSection).toContain("`Authorization: Bearer <FIRECRAWL_API_KEY>`");
-    expect(firecrawlSection).toContain("mcp-templates/firecrawl-hosted/");
     expect(firecrawlSection).toContain(
-      "`FIRECRAWL_API_URL` names the Firecrawl API the local server calls; it does not change the MCP transport",
+      "Firecrawl's remote MCP server at `https://mcp.firecrawl.dev/v2/mcp`; the `firecrawl-hosted/` templates do this.",
     );
+    expect(firecrawlSection).toContain("`Authorization: Bearer <FIRECRAWL_API_KEY>`");
+    expect(firecrawlSection).toContain(
+      "export it in the shell that starts the agent. When it is unset, Claude Code still loads the server",
+    );
+    expect(firecrawlSection).toContain(
+      "Hosted server over HTTP transport: Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/firecrawl-hosted/`",
+    );
+
+    const toml = await readTemplate("firecrawl", "config.toml");
+    expect(toml).toContain("see ../firecrawl-hosted/");
   });
 
   // QFAI:AC-0001-0178-01
