@@ -245,6 +245,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   for its file in `.qfai/waivers.yml`, with its reason, evidence and expiry
   date.
 
+- **The implementer and the screen reviewer take a screen's type from its
+  `pattern`.** `implement-tdd` and the `product-surface-reviewer` card read an
+  application screen's business type from the `pattern` its UI contract
+  declares, and choose the type from the screen only when the contract writes
+  none, so both read the same entry of `business-ui-patterns.md`. A `pattern`
+  on a `surface: marketing` screen is now reported as `QFAI-CONTRACT-056` at
+  error: a marketing screen takes none, and its sections are read against the
+  marketing patterns.
+
 - The `qfai-run` extraction guide now says that a request to fix several items whose causes and fixes are already settled is one implementing request. It takes the shared or implementing intent, the entry flags `cause` and `fix`, and the union of the items' artifacts, so the plan gives one implementing route instead of the read-only re-triage route.
 
 - **A scope that stops before implementation can reach its own commit.** In
