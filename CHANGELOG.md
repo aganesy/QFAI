@@ -610,6 +610,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<!-- note --> ## Risks` line was read as a heading, and a code fence after
   a closing `-->` hid the rest of the document. Closes #4568.
 
+- **A release heading the publish would refuse now stops the tag.** Tagging
+  accepted any `CHANGELOG.md` line starting `## [X.Y.Z]`, while publishing
+  also required ` - YYYY-MM-DD` after it, so a heading without a date was
+  tagged and then refused by the publish. Tagging, publishing and the
+  release-notes comparison now read the heading through one parser, and a
+  heading that names the version in another shape fails the tag run with the
+  line it found. Closes #4599.
+
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
   `npx qfai` and the document lane's check for `node_modules/qfai` found

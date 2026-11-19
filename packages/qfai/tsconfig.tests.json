@@ -404,6 +404,7 @@
     "tests/scripts/assistantTreeLinks.test.ts",
     "tests/scripts/checkTrackedSymlinks.test.ts",
     "tests/scripts/checkShippedCiParity.test.ts",
+    "tests/scripts/changelogHeading.test.ts",
     "tests/scripts/changelogReleasedSections.test.ts",
     "tests/scripts/changelogEntries.test.ts",
     "tests/scripts/checkRepositoryLanguage.test.ts",

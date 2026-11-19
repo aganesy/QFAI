@@ -162,14 +162,16 @@ jobs:
             exit 1
           fi
 
-          # Literal prefix match, not a regex: as a basic regular expression the
-          # dots in `1.10.0` match any character, so a `## [1x10x0]` heading
-          # would satisfy the check here and then break the awk extraction that
-          # builds the release notes — publishing while the GitHub Release
-          # silently fails. `index($0, h) == 1` is the comparison the notes step
-          # makes, so the two cannot disagree.
-          if ! git show "${sha}:CHANGELOG.md" | awk -v h="## [${version}] - " 'index($0, h) == 1 { found = 1 } END { exit !found }'; then
-            echo "::error::CHANGELOG.md has no released heading for ${version} (expected '## [${version}] - YYYY-MM-DD')"
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped workflow set has no release workflow to read a CHANGELOG heading.
+          # Read by `scripts/changelog-heading.mjs`, the parser tag-release.yml runs before it
+          # pushes the tag, so a heading refused here was already refused there. It matches the
+          # version literally: under a regex the dots in `1.10.0` match any character, so a
+          # `## [1x10x0]` heading would pass here and break the extraction that builds the
+          # release notes. A released heading always starts `## [X.Y.Z] - `, which is the
+          # prefix the notes step cuts at, so the two cannot disagree.
+          if ! heading="$(git show "${sha}:CHANGELOG.md" | node ./scripts/changelog-heading.mjs "${version}" -)"; then
+            echo "::error::${heading}"
             exit 1
           fi
 
