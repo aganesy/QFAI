@@ -3,11 +3,14 @@
  * or its design catalogue, or with `--check` say whether the committed files are current.
  */
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, open, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
-import { findUnsafeHostFileComponent } from "../../core/init/fsGuards.js";
+import {
+  findUnsafeHostFileComponent,
+  findUnsafeWrapperComponent,
+} from "../../core/init/fsGuards.js";
 import { error, info } from "../../core/logger.js";
 import {
   COMPONENT_CATALOG_PATH,
@@ -181,7 +184,9 @@ export async function runCatalogDesign(options: CatalogDesignOptions): Promise<n
   const failure = await writePair(root, outputs);
   if (failure !== null) {
     error(
-      `qfai catalog design: could not write the design catalogue, so both files are as they were: ${failure}`,
+      failure.restored
+        ? `qfai catalog design: could not write the design catalogue, so both files are as they were: ${failure.message}`
+        : `qfai catalog design: could not write the design catalogue, and could not put both files back: ${failure.message}`,
     );
     return EXIT_CODES.findings;
   }
@@ -189,65 +194,162 @@ export async function runCatalogDesign(options: CatalogDesignOptions): Promise<n
   return EXIT_CODES.ok;
 }
 
+/** One file of the design pair, and what this run has done to it so far. */
+type PairEntry = {
+  file: string;
+  text: string;
+  /** The staging file this run created and has not renamed into place yet. */
+  staging: string | null;
+  /** The device and inode of this run's staging file, which stay with it once it is in place. */
+  identity: { dev: bigint; ino: bigint } | null;
+  /** Whether this run renamed its staging file onto the target. */
+  placed: boolean;
+  /** Where this run moved the existing target, under a name of its own. */
+  aside: string | null;
+};
+
 /**
- * Writes the token file and the theme as a pair. Each is written to a temporary file beside it;
- * then each existing file is moved aside by rename and the temporary file renamed into place.
- * When a step fails, every file placed is removed and every file moved aside is renamed back, so
- * the pair, its links and modes included, is as it was. On success the moved-aside files are
- * removed. A target that exists but is not a file or a link, such as a directory, stops the
- * command before anything is written. Returns the failure's message, or null.
+ * Writes the token file and the theme as a pair, only inside the project. Both destinations are
+ * checked before anything is written: each directory on their path, before and after it is
+ * created, must not be a symbolic link (a junction included) or an entry that is not a directory,
+ * and a target that exists must be a file or a link. Each text goes to a staging file this run
+ * creates exclusively under a name of its own beside its target; then each existing target is
+ * moved aside under a name of its own and the staging file renamed into place. When a step fails,
+ * the run undoes only what it did: it removes a file it placed while that file is still the one it
+ * placed, renames what it moved aside back, and removes its own staging files, so a file of
+ * another run is never removed or overwritten. On success the moved-aside files are removed.
+ * Returns null, or the failure's message and whether both files were put back as they were.
  */
 async function writePair(
   root: string,
   outputs: readonly { file: string; text: string }[],
-): Promise<string | null> {
-  const files = outputs.map((output) => path.join(root, output.file));
-  const temporaries = files.map((file) => `${file}.${process.pid}.tmp`);
-  const asides = files.map((file) => `${file}.${process.pid}.old`);
-  const movedAside: number[] = [];
-  const placed: number[] = [];
+): Promise<{ message: string; restored: boolean } | null> {
+  const entries: PairEntry[] = outputs.map((output) => ({
+    file: path.join(root, output.file),
+    text: output.text,
+    staging: null,
+    identity: null,
+    placed: false,
+    aside: null,
+  }));
+  const directories = [...new Set(outputs.map((output) => path.dirname(output.file)))];
   try {
-    for (const file of files) {
-      const found = await lstat(file).catch(() => null);
+    await assertDirectoriesInsideProject(root, directories);
+    for (const entry of entries) {
+      const found = await lstat(entry.file).catch(() => null);
       if (found !== null && !found.isFile() && !found.isSymbolicLink()) {
-        throw new Error(`${file} is not a file.`);
+        throw new Error(`${relativeTo(root, entry.file)} is not a file.`);
       }
     }
-    for (const [index, output] of outputs.entries()) {
-      const temporary = temporaries[index] ?? "";
-      await mkdir(path.dirname(temporary), { recursive: true });
-      await writeFile(temporary, output.text, "utf-8");
+    for (const directory of directories) {
+      await mkdir(path.join(root, directory), { recursive: true });
     }
-    for (const [index, file] of files.entries()) {
-      if ((await lstat(file).catch(() => null)) !== null) {
-        await rename(file, asides[index] ?? "");
-        movedAside.push(index);
-      }
-      await rename(temporaries[index] ?? "", file);
-      placed.push(index);
-    }
+    await assertDirectoriesInsideProject(root, directories);
+    for (const entry of entries) await stage(entry);
+    for (const entry of entries) await place(entry);
   } catch (caught) {
-    await restorePair(files, temporaries, asides, placed, movedAside);
-    return caught instanceof Error ? caught.message : String(caught);
+    const left = await undoPair(root, entries);
+    return { message: [messageOf(caught), ...left].join(" "), restored: left.length === 0 };
   }
-  await Promise.all(movedAside.map((index) => rm(asides[index] ?? "", { force: true })));
+  const asides = entries.flatMap((entry) => (entry.aside === null ? [] : [entry.aside]));
+  await Promise.all(asides.map((aside) => rm(aside, { force: true })));
   return null;
 }
 
-/** Puts the pair back after a failed write: placed files out, moved-aside files back, temporaries gone. */
-async function restorePair(
-  files: readonly string[],
-  temporaries: readonly string[],
-  asides: readonly string[],
-  placed: readonly number[],
-  movedAside: readonly number[],
+/** Throws when a directory on the path to a design file would lead a write outside the project. */
+async function assertDirectoriesInsideProject(
+  root: string,
+  directories: readonly string[],
 ): Promise<void> {
-  for (const index of placed) await rm(files[index] ?? "", { force: true });
-  for (const index of movedAside) await rename(asides[index] ?? "", files[index] ?? "");
-  for (const temporary of temporaries) {
-    const found = await lstat(temporary).catch(() => null);
-    if (found?.isFile()) await rm(temporary, { force: true });
+  for (const directory of directories) {
+    const unsafe = await findUnsafeWrapperComponent(root, directory.split(path.sep).join("/"));
+    if (unsafe === undefined) continue;
+    throw new Error(
+      `${unsafe.relativePath} is ${unsafe.symlink ? "a symbolic link" : "not a directory"}.`,
+    );
   }
+}
+
+/** A name of this run's own beside `file`, such as `.theme.css.<uuid>.tmp`. */
+function ownSibling(file: string, suffix: string): string {
+  return path.join(path.dirname(file), `.${path.basename(file)}.${randomUUID()}.${suffix}`);
+}
+
+/** Writes the entry's text to a staging file created exclusively, so no other file is reused. */
+async function stage(entry: PairEntry): Promise<void> {
+  const staging = ownSibling(entry.file, "tmp");
+  const handle = await open(staging, "wx");
+  entry.staging = staging;
+  try {
+    await handle.writeFile(entry.text, "utf-8");
+    const stats = await handle.stat({ bigint: true });
+    entry.identity = { dev: stats.dev, ino: stats.ino };
+  } finally {
+    await handle.close();
+  }
+}
+
+/** Moves an existing target aside, then renames the staging file onto the target. */
+async function place(entry: PairEntry): Promise<void> {
+  if ((await lstat(entry.file).catch(() => null)) !== null) {
+    const aside = ownSibling(entry.file, "old");
+    await rename(entry.file, aside);
+    entry.aside = aside;
+  }
+  if (entry.staging === null) throw new Error(`${entry.file} has no staging file.`);
+  await rename(entry.staging, entry.file);
+  entry.staging = null;
+  entry.placed = true;
+}
+
+/**
+ * Undoes what this run did to the pair after a failed write and returns a sentence for each step
+ * that could not be undone. A placed file that another run has since replaced is left in place,
+ * and the moved-aside file is then kept under its own name rather than renamed over it.
+ */
+async function undoPair(root: string, entries: readonly PairEntry[]): Promise<string[]> {
+  const left: string[] = [];
+  const attempt = (what: string, step: () => Promise<void>): Promise<void> =>
+    step().catch((caught: unknown) => {
+      left.push(`${what}: ${messageOf(caught)}`);
+    });
+  for (const entry of entries) {
+    const target = relativeTo(root, entry.file);
+    if (entry.placed && (await isOwnFile(entry))) {
+      await attempt(`${target} could not be removed`, () => rm(entry.file, { force: true }));
+    }
+    const aside = entry.aside;
+    if (aside !== null) {
+      await attempt(`${relativeTo(root, aside)} still holds the earlier ${target}`, async () => {
+        if ((await lstat(entry.file).catch(() => null)) !== null) {
+          throw new Error(`another file is at ${target}.`);
+        }
+        await rename(aside, entry.file);
+      });
+    }
+    const staging = entry.staging;
+    if (staging !== null) {
+      await attempt(`${relativeTo(root, staging)} could not be removed`, () =>
+        rm(staging, { force: true }),
+      );
+    }
+  }
+  return left;
+}
+
+/** Whether the entry's target is still the file this run placed there. */
+async function isOwnFile(entry: PairEntry): Promise<boolean> {
+  const found = await lstat(entry.file, { bigint: true }).catch(() => null);
+  return (
+    found !== null &&
+    entry.identity !== null &&
+    found.dev === entry.identity.dev &&
+    found.ino === entry.identity.ino
+  );
+}
+
+function relativeTo(root: string, file: string): string {
+  return path.relative(root, file).split(path.sep).join("/");
 }
 
 /**
