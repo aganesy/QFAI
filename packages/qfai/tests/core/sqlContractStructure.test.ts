@@ -58,6 +58,24 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     expect(statements).toHaveLength(1);
   });
 
+  it("splits after an identifier that holds a tag-like run", () => {
+    // `foo$tag$` is one identifier, since `$` continues a name. Read as an
+    // opener, it would swallow every statement up to the next `foo$tag$`.
+    const { statements, errors } = parseSqlContract(
+      "CREATE TABLE foo$tag$ (id int); SELECT 1; COMMENT ON TABLE foo$tag$ IS 'x';",
+    );
+    expect(errors).toEqual([]);
+    expect(statements).toHaveLength(3);
+  });
+
+  it("does not split on a `;` inside a body tagged with non-ASCII letters", () => {
+    const { statements, errors } = parseSqlContract(
+      "CREATE FUNCTION f() RETURNS int AS $é$ BEGIN RETURN 1; END $é$ LANGUAGE plpgsql;",
+    );
+    expect(errors).toEqual([]);
+    expect(statements).toHaveLength(1);
+  });
+
   it("does not split on a `;` inside a string literal", () => {
     const { statements } = parseSqlContract(`INSERT INTO t VALUES ('a;b'); SELECT 1;`);
     expect(statements).toHaveLength(2);
