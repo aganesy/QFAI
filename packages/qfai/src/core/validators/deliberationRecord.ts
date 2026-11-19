@@ -77,7 +77,7 @@ function checkRecord(file: string, text: string): Issue[] {
  * The lines under each Interview or Agent decisions heading, up to the next heading of its level or above.
  *
  * It reads the text {@link maskNonSpecRegions} leaves, so a heading or table inside a fenced
- * sample, an HTML comment or a raw HTML block is not a section or a table, and every line keeps
+ * sample, an HTML comment or another region it blanks is not a section or a table, and every line keeps
  * its number.
  */
 function collectSections(text: string): Section[] {

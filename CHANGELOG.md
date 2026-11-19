@@ -533,8 +533,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The deliberation record check ignores headings and tables inside HTML
   comments.** `QFAI-DELIB-001` skipped fenced samples only, so a commented
   `## Agent decisions` heading counted as the section and a commented table
-  under `Interview` was checked as one. The check now also skips HTML comments
-  and raw HTML blocks, and still reports each row at its line in the file.
+  under `Interview` was checked as one. The check now also skips HTML comments,
+  and still reports each row at its line in the file.
   Every check that skips comments in story-tree and contract documents now
   also skips the rest of a line that starts with a comment or that a
   multi-line comment ends on: before, a
