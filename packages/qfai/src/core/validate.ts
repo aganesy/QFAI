@@ -413,15 +413,16 @@ function consumesPlatformOption(profile: ValidationProfile): boolean {
 /**
  * Reports a `--platform` the requested profile never reads.
  *
- * The flag parses on every `validate` run but reaches `detectPlatform` from
- * four of the eight profiles, so on the other four the value was accepted and
- * dropped in silence: a stale or misspelled platform in a CI matrix fanned out
- * over identical legs with no finding naming the cause.
+ * The flag parses on every `validate` run but reaches `detectPlatform` only
+ * from the profiles `consumesPlatformOption` accepts, so on every other profile
+ * the value was accepted and dropped in silence: a stale or misspelled platform
+ * in a CI matrix fanned out over identical legs with no finding naming the
+ * cause.
  *
  * The invocations it fires on were legal when they were written, so a matrix
  * that passes one `--platform` uniformly across profiles meets the finding on
- * four legs at once. The fix is one edit per leg: drop the flag where the
- * profile does not read it.
+ * every leg whose profile discards it at once. The fix is one edit per leg:
+ * drop the flag where the profile does not read it.
  */
 /**
  * A finding when the running qfai was resolved from outside the project root.
