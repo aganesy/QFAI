@@ -1250,7 +1250,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-docs.yml", "dd5d7af338e0c31186cae22faac4a90fe56e25237710184ee850794bba5195b7"],
-  ["qfai-tests.yml", "d1d5ed3e34853884d6df58220b7cbde658e0fe74ae0cebdf6ce94c52b9389fb8"],
+  ["qfai-tests.yml", "7fb9b20b4f472d9ffa19bf254eb53d42032538756a62250abb4d8e8fcaf451f7"],
   ["qfai-validate.yml", "d6a3d5d691f777509066a9be2c844f51dff4b242d2ae40cbb29f5fb1739ecb3b"],
 ]);
 
@@ -2178,7 +2178,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#verdict",
-    '{"name":"Report the test lane\'s conclusion","env":{"QFAI_TESTS_RESULT":"${{ needs.tests.result }}","QFAI_SELECTED":"${{ needs.detection.outputs.selected }}"},"shell":"bash","run":"<body 54317e3ede3b9bddf8e36d16e3ea324b3fb8ccea95ab294553988ee4fc366df7>"}',
+    '{"name":"Report the test lane\'s conclusion","env":{"QFAI_TESTS_RESULT":"${{ needs.tests.result }}"},"shell":"bash","run":"<body b8ceb3b1b4e52b8a0109473b71d061d71b1869c75e819741a3cb62b9120322d5>"}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -2544,10 +2544,7 @@ export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   // The matrix leg's layer, which names the script the lane runs. Its value is a member of the
   // array above, so it is one of the five layer words and nothing else.
   ["QFAI_LAYER", "${{ matrix.layer }}"],
-  // What the verdict reads: the lane's conclusion, and the axis it was asked to run. The second
-  // is why a skip can be green — an empty axis is the adopter declaring no script — and it is
-  // the same output the lane's own condition reads.
-  ["QFAI_SELECTED", "${{ needs.detection.outputs.selected }}"],
+  // What the verdict reads: the lane's conclusion, one of GitHub's job results.
   ["QFAI_TESTS_RESULT", "${{ needs.tests.result }}"],
 ]);
 

@@ -473,6 +473,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   no check reports any more, so both were always 0. The file now holds
   `schema_version` and `nodes` only.
 
+- **The shipped test verdict no longer has a green branch for an empty
+  selection.** The verdict job of `qfai-tests.yml` never starts when detection
+  selects no lane, so its step no longer reads `QFAI_SELECTED`: a verdict that
+  starts is green only over a passed lane. Closes #4669.
+
 - **The shipped `qfai-docs.yml` aggregate no longer reads the change scope.**
   Its job already declines to start when the scope found nothing a document
   check reads, so the step's branch that turned that skip green could never
