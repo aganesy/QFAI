@@ -470,6 +470,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
 
+- **The `web-research` skill now ships the HTTP transport templates it
+  describes.** Every Brave Search and Firecrawl template started a stdio
+  server, and the skill called `FIRECRAWL_API_URL` the hosted mode, though it
+  only picks the Firecrawl API the local server calls. `firecrawl-hosted/`
+  connects Claude Code, Codex and Copilot CLI to Firecrawl's hosted server
+  and sends the API key as a bearer token from `FIRECRAWL_API_KEY`.
+  `brave-search-http/` connects them to a Brave Search server you start in
+  HTTP mode on loopback; the skill gives the command.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that

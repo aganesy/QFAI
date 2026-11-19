@@ -1,6 +1,7 @@
 # Firecrawl MCP - supports both hosted URL and local npx modes
 # Local npx mode: recommended for sensitive environments
-# Hosted mode: set FIRECRAWL_API_URL to https://api.firecrawl.dev
+# Hosted mode: HTTP transport to https://mcp.firecrawl.dev/v2/mcp, templates in ../firecrawl-hosted/
+# FIRECRAWL_API_URL names the Firecrawl API this local server calls, not an MCP transport
 [mcp_servers.firecrawl]
 command = "npx"
 args = ["-y", "firecrawl-mcp@3.11.0"]

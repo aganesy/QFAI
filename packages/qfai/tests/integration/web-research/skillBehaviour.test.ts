@@ -94,8 +94,11 @@ async function readTemplate(server: string, file: string): Promise<string> {
   return readFile(path.join(templateDir, server, file), "utf-8");
 }
 
-/** The server entry the three agent formats each declare for `name`, parsed. */
-async function serverEntries(name: string): Promise<{
+/** The server entry `name` that the three agent formats in template directory `dir` each declare, parsed. */
+async function serverEntries(
+  dir: string,
+  name: string = dir,
+): Promise<{
   claude: Record<string, unknown>;
   codex: Record<string, unknown>;
   copilot: Record<string, unknown>;
@@ -103,10 +106,10 @@ async function serverEntries(name: string): Promise<{
   codexRoot: Record<string, unknown>;
   copilotRoot: Record<string, unknown>;
 }> {
-  const claudeRoot = record(JSON.parse(await readTemplate(name, ".mcp.json")), ".mcp.json");
-  const codexRoot = record(parseToml(await readTemplate(name, "config.toml")), "config.toml");
+  const claudeRoot = record(JSON.parse(await readTemplate(dir, ".mcp.json")), ".mcp.json");
+  const codexRoot = record(parseToml(await readTemplate(dir, "config.toml")), "config.toml");
   const copilotRoot = record(
-    JSON.parse(await readTemplate(name, "mcp-config.json")),
+    JSON.parse(await readTemplate(dir, "mcp-config.json")),
     "mcp-config.json",
   );
   return {
@@ -295,6 +298,39 @@ describe("web-research skill behaviour", () => {
     expect(firecrawl.claude.env).toMatchObject(endpoint);
     expect(firecrawl.copilot.env).toMatchObject(endpoint);
     expect(firecrawl.codex.env).toEqual(endpoint);
+  });
+
+  // QFAI:EX-0001-0177-02
+  it("the HTTP templates connect by URL in every agent format, with the credential each endpoint needs", async () => {
+    // The hosted Firecrawl server takes the API key as a bearer token from the
+    // environment, never in the URL.
+    const hosted = await serverEntries("firecrawl-hosted", "firecrawl");
+    const hostedUrl = "https://mcp.firecrawl.dev/v2/mcp";
+    const bearer = { Authorization: "Bearer ${FIRECRAWL_API_KEY}" };
+    expect(hosted.claude).toEqual({ type: "http", url: hostedUrl, headers: bearer });
+    expect(hosted.copilot).toEqual({ type: "http", url: hostedUrl, headers: bearer, tools: ["*"] });
+    expect(hosted.codex).toEqual({ url: hostedUrl, bearer_token_env_var: "FIRECRAWL_API_KEY" });
+
+    // The Brave Search server started in HTTP mode holds the key itself and
+    // listens on loopback, so the agent sends no credential.
+    const brave = await serverEntries("brave-search-http", "brave-search");
+    const braveUrl = "http://127.0.0.1:8080/mcp";
+    expect(brave.claude).toEqual({ type: "http", url: braveUrl });
+    expect(brave.copilot).toEqual({ type: "http", url: braveUrl, tools: ["*"] });
+    expect(brave.codex).toEqual({ url: braveUrl });
+
+    const braveSection = flatten(sectionLines(skill, "2.1 Brave Search MCP"));
+    expect(braveSection).toContain(
+      "BRAVE_API_KEY=<key> npx -y @brave/brave-search-mcp-server@2.2.0 --transport http",
+    );
+    expect(braveSection).toContain("mcp-templates/brave-search-http/");
+
+    const firecrawlSection = flatten(sectionLines(skill, "2.2 Firecrawl MCP"));
+    expect(firecrawlSection).toContain("`Authorization: Bearer <FIRECRAWL_API_KEY>`");
+    expect(firecrawlSection).toContain("mcp-templates/firecrawl-hosted/");
+    expect(firecrawlSection).toContain(
+      "`FIRECRAWL_API_URL` names the Firecrawl API the local server calls; it does not change the MCP transport",
+    );
   });
 
   // QFAI:AC-0001-0178-01

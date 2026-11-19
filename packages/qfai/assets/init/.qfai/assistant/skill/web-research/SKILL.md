@@ -94,20 +94,34 @@ The final citation block is appended to the research artifact.
 
 ### 2.1 Brave Search MCP
 
-Primary search provider. Connects via **stdio** transport for local execution.
-Also supports **HTTP transport** (streamable HTTP) for remote/hosted deployments
-where HTTP-based MCP endpoints are preferred.
+Primary search provider. Connects via **stdio** transport for local execution:
+the agent starts the server itself.
 
 Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/brave-search/`
+
+Brave publishes no hosted MCP endpoint. For **HTTP transport** (streamable HTTP),
+start Brave's server in HTTP mode yourself, then point the agent at its URL:
+`BRAVE_API_KEY=<key> npx -y @brave/brave-search-mcp-server@2.2.0 --transport http`
+serves `http://127.0.0.1:8080/mcp`. The server holds the key, and the endpoint
+accepts requests without credentials, so keep it bound to loopback.
+
+Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/brave-search-http/`
 
 ### 2.2 Firecrawl MCP
 
 Content fetching and extraction. Supports two modes:
 
 - **Local**: `npx` execution via stdio transport.
-- **Hosted**: Remote Firecrawl service via HTTP transport.
+- **Hosted**: Firecrawl's hosted server `https://mcp.firecrawl.dev/v2/mcp` via HTTP
+  transport. The agent sends `Authorization: Bearer <FIRECRAWL_API_KEY>`; never put
+  the key in the URL.
+
+`FIRECRAWL_API_URL` names the Firecrawl API the local server calls; it does not
+change the MCP transport.
 
 Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/firecrawl/`
+
+Configuration templates: `.qfai/assistant/skill/web-research/mcp-templates/firecrawl-hosted/`
 
 ### 2.3 Playwright MCP
 

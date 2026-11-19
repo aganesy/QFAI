@@ -1,0 +1,5 @@
+# Firecrawl MCP - hosted mode over HTTP transport.
+# The API key travels as a bearer token read from FIRECRAWL_API_KEY, never in the URL.
+[mcp_servers.firecrawl]
+url = "https://mcp.firecrawl.dev/v2/mcp"
+bearer_token_env_var = "FIRECRAWL_API_KEY"
