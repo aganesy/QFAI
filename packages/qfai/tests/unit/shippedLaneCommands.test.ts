@@ -196,6 +196,10 @@ const ROOT_CAUSES = [
   // that no command scanner reads — so the payloads are enumerated by digest and every other is refused.
   "node -e 'process.stdout.write(\"x\")'",
   "node -e \"require('child_process').execSync('pnpm build')\"",
+  // Yarn's `node` is the same interpreter, so it takes the same two refusals: a payload nobody
+  // enumerated, and a script named by path instead of a payload.
+  "yarn node -e \"require('child_process').execSync('pnpm build')\"",
+  "yarn node build.mjs",
   // A one-line function definition, whose header used to swallow its whole body. The shipped tree
   // contains the construct, so this is the tree's own idiom rather than exotic shell.
   "build_once() { pnpm -C packages/qfai build; }",

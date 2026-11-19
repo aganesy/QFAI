@@ -19,7 +19,11 @@ import {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,
   unevaluatedPackageSelfGovernanceFamilies,
 } from "../../core/validators/packageSelfGovernance.js";
-import { writeReportFiles, writeValidateRunLog } from "../../core/runLog.js";
+import {
+  type RunLogResultStatus,
+  writeReportFiles,
+  writeValidateRunLog,
+} from "../../core/runLog.js";
 import { DERIVED_DECLARATION_FORM } from "../../core/validators/contractConsistency.js";
 import {
   DESIGN_AUDIT_CODE_PREFIX,
@@ -135,6 +139,14 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     emitStrictSupersededNotice(failOn);
   }
   const willFail = shouldFail(normalized, failOn);
+  // Whether the run finished is decided before the threshold is consulted:
+  // `--fail-on never` sets the exit code, and an unfinished run it lets exit 0
+  // is still no pass in the run log, the GitHub summary or the text output.
+  const status: RunLogResultStatus = isIncompleteRunResult(normalized)
+    ? "incomplete"
+    : willFail
+      ? "fail"
+      : "pass";
 
   const runLog = await writeValidateRunLog({
     root,
@@ -142,7 +154,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     result: normalized,
     startedAt,
     command: "/qfai-validate",
-    status: willFail ? "fail" : "pass",
+    status,
     failOn,
   });
   const runLogPath = toRelativePath(root, runLog.reportDir);
@@ -158,27 +170,43 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     normalized.profile ?? options.profile,
   );
 
+  // A scope that failed with `QFAI-FLOW-005` writes nothing, so it never
+  // replaces the file a healthy run of a similar scope would write.
+  const writeResult = async (): Promise<void> => {
+    if (resultPaths !== null && !normalized.issues.some((item) => item.code === "QFAI-FLOW-005")) {
+      await emitJson(normalized, root, resultPaths.write);
+    }
+  };
+
+  // The result files are written before any verdict is printed, so a run that
+  // could not save them never announces a pass or points at a file it did not
+  // write; the write failure then stops the command and exits 1.
   if (format === "text") {
     emitText(normalized, failOn, designAuditFindingsShownPerCode(configResult.config));
-    // A run that did not finish has no pass to report, even under `--fail-on never`.
-    if (!willFail && !isIncompleteRunResult(normalized)) {
+    // Kept, not thrown here: the run log was written, so `run-log:` still ends
+    // the output before the failure reaches stderr.
+    const writeFailure = await writeResult().then(
+      () => null,
+      (error: unknown) => ({ error }),
+    );
+    if (writeFailure === null && status === "pass") {
       const elapsedMs = Date.now() - startedAt.getTime();
       process.stdout.write(`${formatPassSummary(normalized, failOn, elapsedMs)}\n`);
     }
     process.stdout.write(`${formatRunLogLine(runLogPath)}\n`);
+    if (writeFailure !== null) {
+      throw writeFailure.error;
+    }
+  } else {
+    await writeResult();
   }
   if (format === "github") {
     const jsonPath = resolveJsonPath(root, resultPaths?.write[0] ?? configuredValidateJsonPath);
     emitGitHubOutput(normalized, root, jsonPath, {
       failOn,
-      willFail,
+      status,
       runLogPath,
     });
-  }
-  // A scope that failed with `QFAI-FLOW-005` writes nothing, so it never
-  // replaces the file a healthy run of a similar scope would write.
-  if (resultPaths !== null && !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-005")) {
-    await emitJson(normalized, root, resultPaths.write);
   }
 
   return willFail ? 1 : 0;
@@ -917,7 +945,7 @@ export function emitGitHubOutput(
   result: ValidationResult,
   root: string,
   jsonPath: string,
-  status: { failOn: FailOn; willFail: boolean; runLogPath: string },
+  status: { failOn: FailOn; status: RunLogResultStatus; runLogPath: string },
 ): void {
   const deduped = dedupeIssues(result.issues);
   const dropped = Math.max(result.issues.length - deduped.length, 0);
@@ -1046,7 +1074,7 @@ function emitGitHubSummary(
     runLogPath: string;
     root: string;
     failOn: FailOn;
-    willFail: boolean;
+    status: RunLogResultStatus;
     timingOverruns: string | null;
   },
 ): void {
@@ -1057,7 +1085,7 @@ function emitGitHubSummary(
     `info=${result.counts.info}`,
     `annotations=${options.emitted}/${options.total}`,
     `failOn=${options.failOn}`,
-    `result=${options.willFail ? "FAIL" : "PASS"}`,
+    `result=${options.status.toUpperCase()}`,
   ].join(" ");
   process.stdout.write(`${summary}\n`);
 

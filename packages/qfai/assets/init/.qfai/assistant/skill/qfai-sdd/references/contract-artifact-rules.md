@@ -170,11 +170,11 @@ that cannot run would pass `npx qfai validate --profile sdd --fail-on error`, si
 "this contract does not parse" check guarding UI and API files does not reach `.sql`.
 The structural lane:
 
-| Finding             | Fires when                                                                    | Severity |
-| ------------------- | ----------------------------------------------------------------------------- | -------- |
-| `QFAI-CONTRACT-021` | an unterminated string, comment or dollar-quoted body, or unbalanced `(`      | error    |
-| `QFAI-DB-002`       | one file creates the same object twice — only the last definition is in force | error    |
-| `QFAI-DB-001`       | a dangerous statement (`DROP TABLE`, `TRUNCATE`, …)                           | warning  |
+| Finding             | Fires when                                                                      | Severity |
+| ------------------- | ------------------------------------------------------------------------------- | -------- |
+| `QFAI-CONTRACT-021` | an unterminated string, comment or dollar-quoted body, or unbalanced `(` or `)` | error    |
+| `QFAI-DB-002`       | one file creates the same object twice — only the last definition is in force   | error    |
+| `QFAI-DB-001`       | a dangerous statement (`DROP TABLE`, `TRUNCATE`, …)                             | warning  |
 
 `QFAI-DB-002` covers tables, views, indexes, functions, procedures, types and
 domains. **Triggers are excluded**: a trigger name is unique per table, not per
