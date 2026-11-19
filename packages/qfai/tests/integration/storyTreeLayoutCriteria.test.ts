@@ -514,9 +514,8 @@ describe("the assistant tree", () => {
     const assistant = path.join(root, ".qfai", "assistant");
     // Beside the layers, init writes the file that records the release that wrote the tree.
     expect((await readdir(assistant)).sort()).toEqual(["VERSION", ...layers].sort());
-    const { config } = await loadConfig(root);
     const named = async () =>
-      (await validateAssistantTreeMigration(root, config))
+      (await validateAssistantTreeMigration(root))
         .filter((found) => found.code === "QFAI-ASSISTANT-001")
         .map((found) => found.file);
     expect(await named()).toEqual([]);

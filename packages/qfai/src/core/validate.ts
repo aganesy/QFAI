@@ -743,7 +743,7 @@ async function runStoryProfileValidators(
         )
       : []),
     ...(await timed(timings, "assistant-tree-migration", () =>
-      validateAssistantTreeMigration(root, config),
+      validateAssistantTreeMigration(root),
     )),
     ...(await timed(timings, "skill-doc-references", () =>
       validateSkillDocReferences(root, config),
