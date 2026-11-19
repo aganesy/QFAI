@@ -301,7 +301,7 @@ describe("web-research skill behaviour", () => {
   });
 
   // QFAI:EX-0001-0177-02
-  it("the HTTP templates connect by URL in every agent format, with the credential each endpoint needs", async () => {
+  it("the HTTP templates declare a URL endpoint in every agent format, with the credential each endpoint needs", async () => {
     // The hosted Firecrawl server takes the API key as a bearer token from the
     // environment, never in the URL.
     const hosted = await serverEntries("firecrawl-hosted", "firecrawl");
@@ -320,8 +320,10 @@ describe("web-research skill behaviour", () => {
     expect(brave.codex).toEqual({ url: braveUrl });
 
     const braveSection = flatten(sectionLines(skill, "2.1 Brave Search MCP"));
+    // The start command carries no shell-specific variable syntax, so it runs
+    // as written in POSIX shells, PowerShell and cmd alike.
     expect(braveSection).toContain(
-      "BRAVE_API_KEY=<key> npx -y @brave/brave-search-mcp-server@2.2.0 --transport http",
+      "with `BRAVE_API_KEY` set in your shell's environment, `npx -y @brave/brave-search-mcp-server@2.2.0 --transport http` serves",
     );
     expect(braveSection).toContain("mcp-templates/brave-search-http/");
 

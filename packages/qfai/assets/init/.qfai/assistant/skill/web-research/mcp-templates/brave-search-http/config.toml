@@ -1,5 +1,6 @@
 # Brave Search MCP - HTTP transport to a server you start first:
-#   BRAVE_API_KEY=<key> npx -y @brave/brave-search-mcp-server@2.2.0 --transport http
+#   npx -y @brave/brave-search-mcp-server@2.2.0 --transport http
+# with BRAVE_API_KEY set in the shell's environment.
 # The server holds the key and its endpoint takes no credentials, so keep it on loopback.
 [mcp_servers.brave-search]
 url = "http://127.0.0.1:8080/mcp"

@@ -99,8 +99,9 @@ the agent starts the server itself.
 
 Brave publishes no hosted MCP endpoint. For **HTTP transport** (streamable HTTP),
 start Brave's server in HTTP mode yourself, then point the agent at its URL:
-`BRAVE_API_KEY=<key> npx -y @brave/brave-search-mcp-server@2.2.0 --transport http`
-serves `http://127.0.0.1:8080/mcp`. The server holds the key, and the endpoint
+with `BRAVE_API_KEY` set in your shell's environment,
+`npx -y @brave/brave-search-mcp-server@2.2.0 --transport http` serves
+`http://127.0.0.1:8080/mcp`. The server holds the key, and the endpoint
 accepts requests without credentials, so keep it bound to loopback.
 
 Local launch over stdio:
