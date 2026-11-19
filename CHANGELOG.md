@@ -547,6 +547,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   catalogue and renames it into place, so a failed write leaves the old
   catalogue whole.
 
+- **`qfai report` refuses a validate result whose finding path is not text,
+  and names the field.** A finding whose `file` was a number passed the input
+  check and then failed while the Markdown report rendered its link under
+  `--base-url`. The input check now requires `file` to be absent or a string,
+  and every refusal of a malformed validate result names the field and the type
+  it must have, for example `issues[1].file must be a string`. Closes #4528.
+
 - **`qfai doctor` keeps a skill's dependency names away from the shell.**
   On Windows, `--autoremediate` ran `npm install` through `cmd.exe`, so a
   `runtimeDependencies` entry such as `playwright & calc` in a skill's
