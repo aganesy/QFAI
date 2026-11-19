@@ -639,6 +639,25 @@ describe("the read boundary", () => {
       },
     );
   });
+
+  it("reads a document whose name starts with two dots as part of the tree", async () => {
+    // `..notes.md` sits directly under the tree; only a `..` segment leaves it.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/rule/workflow.md": ["# Workflow", ""].join("\n"),
+        ".qfai/assistant/..notes.md": [
+          "# Notes",
+          "",
+          "See `rule/workflow.md#no-such-section`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await run(root);
+        expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
+      },
+    );
+  });
 });
 
 describe("profile wiring", () => {
