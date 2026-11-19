@@ -1,18 +1,37 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { parseAgentFrontmatter } from "../agentFrontmatter.js";
+import { agentCardBody, parseAgentFrontmatter } from "../agentFrontmatter.js";
+import { headingText, parseHeadings } from "../parse/markdown.js";
+import { maskNonSpecRegions } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
 const REQUIRED_AGENT_SECTIONS = [
-  "## Mission",
-  "## Domain Responsibilities",
-  "## Inputs you must read",
-  "## Deliverables",
-  "## Stop conditions",
-  "## Sign-off",
+  "Mission",
+  "Domain Responsibilities",
+  "Inputs you must read",
+  "Deliverables",
+  "Stop conditions",
+  "Sign-off",
 ];
+
+/**
+ * The level-2 section titles a card body declares.
+ *
+ * Only a real heading counts. A required title that appears in prose, in a
+ * fenced or indented sample, in an HTML comment or block, or in the frontmatter
+ * does not open the section, so matching the raw text let a card pass while
+ * missing it.
+ */
+function cardSectionTitles(content: string): Set<string> {
+  const body = maskNonSpecRegions(agentCardBody(content));
+  return new Set(
+    parseHeadings(body)
+      .filter((heading) => heading.level === 2)
+      .map((heading) => headingText(heading.title)),
+  );
+}
 
 export async function validateAgentDefinition(root: string): Promise<Issue[]> {
   const issues: Issue[] = [];
@@ -52,12 +71,13 @@ export async function validateAgentDefinition(root: string): Promise<Issue[]> {
       );
       continue;
     }
-    for (const heading of REQUIRED_AGENT_SECTIONS) {
-      if (!content.includes(heading)) {
+    const titles = cardSectionTitles(content);
+    for (const section of REQUIRED_AGENT_SECTIONS) {
+      if (!titles.has(section)) {
         issues.push(
           issue(
             "QFAI-AGENT-005",
-            `Missing required section "${heading}" in ${rel}`,
+            `Missing required section "## ${section}" in ${rel}`,
             "error",
             rel,
             "agentDefinition.missingRequiredSection",
