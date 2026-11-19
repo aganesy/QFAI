@@ -87,6 +87,30 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     expect(statements).toHaveLength(2);
   });
 
+  it("reads a backslash-escaped quote inside an E string as part of the literal", () => {
+    const { statements, errors } = parseSqlContract(
+      `SELECT E'it\\'s fine; really'; SELECT e'a\\\\'; SELECT 3;`,
+    );
+    expect(errors).toEqual([]);
+    expect(statements.map((statement) => statement.text)).toEqual([
+      `SELECT E'it\\'s fine; really'`,
+      `SELECT e'a\\\\'`,
+      "SELECT 3",
+    ]);
+  });
+
+  it("keeps a backslash literal in a standard string and in an identifier ending in E", () => {
+    const { statements, errors } = parseSqlContract(`SELECT 'a\\'; SELECT name'b\\'; SELECT 3;`);
+    expect(errors).toEqual([]);
+    expect(statements).toHaveLength(3);
+  });
+
+  it("counts a newline escaped inside an E string", () => {
+    const { statements, errors } = parseSqlContract(`SELECT E'a\\\nb';\nSELECT 2;`);
+    expect(errors).toEqual([]);
+    expect(statements.map((statement) => statement.line)).toEqual([1, 3]);
+  });
+
   it("does not split inside a comment", () => {
     const { statements } = parseSqlContract(`-- a; b\nSELECT 1;\n/* c; d */\nSELECT 2;`);
     expect(statements).toHaveLength(2);

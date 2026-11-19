@@ -468,6 +468,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
 
+- **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
+  `E'…'` a backslash escapes the next character, but the statement splitter
+  ended the literal at a backslash-escaped quote, so `SELECT E'it\'s';`
+  reported an unterminated string or split a statement at a `;` inside the
+  literal. The splitter now follows PostgreSQL's escape-string rules; a
+  backslash in a standard `'…'` string stays literal.
+
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its
