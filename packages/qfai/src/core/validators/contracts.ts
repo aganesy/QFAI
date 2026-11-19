@@ -291,23 +291,27 @@ export function lintSql(text: string, file: string): Issue[] {
 }
 
 const DO_BLOCK = /^DO\b/i;
+const DYNAMIC_EXECUTE = /\bEXECUTE\b/i;
 
 /**
  * Adds the label of each dangerous operation `text` runs when applied.
  *
  * Each statement is checked on its own, and only its code: a keyword in a
- * comment, a string, a quoted name or a function body runs nothing on apply.
- * A `DO` block is the exception, since it runs its body on apply, so the body
- * is checked as statements of its own.
+ * comment, a string, a quoted name or a quoted function body runs nothing on
+ * apply. A `DO` block is the exception, since it runs its body on apply, so the
+ * body is checked as statements of its own (`inDoBody`). There an `EXECUTE`
+ * runs its string as SQL, so that string is checked as statements too.
  */
-function collectDangerousOperations(text: string, found: Set<string>): void {
+function collectDangerousOperations(text: string, found: Set<string>, inDoBody = false): void {
   for (const statement of parseSqlContract(text).statements) {
     const { code, literals } = separateLiterals(statement.text);
     for (const { pattern, label } of SQL_DANGEROUS_PATTERNS) {
       if (pattern.test(code)) found.add(label);
     }
     if (DO_BLOCK.test(code)) {
-      for (const body of literals) collectDangerousOperations(body, found);
+      for (const body of literals) collectDangerousOperations(body, found, true);
+    } else if (inDoBody && DYNAMIC_EXECUTE.test(code)) {
+      for (const sql of literals) collectDangerousOperations(sql, found);
     }
   }
 }

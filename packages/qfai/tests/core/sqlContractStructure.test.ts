@@ -441,6 +441,24 @@ describe("the existing DB checks are unchanged", () => {
     ]);
   });
 
+  // EXECUTE in a DO block runs its string as SQL when the file is applied.
+  it("warns on a destructive statement a DO block runs through EXECUTE", async () => {
+    const issues = await runOn(`${HEADER}DO $$ BEGIN EXECUTE 'TRUNCATE orders'; END $$;\n`);
+    expect(issues.filter((i) => i.code === "QFAI-DB-001").map((i) => i.message)).toEqual([
+      expect.stringContaining("TRUNCATE"),
+    ]);
+  });
+
+  // Only a quoted body is a literal; a SQL-standard body is statements.
+  it("warns on a destructive statement in a BEGIN ATOMIC function body", async () => {
+    const issues = await runOn(
+      `${HEADER}CREATE FUNCTION reset() RETURNS void LANGUAGE sql BEGIN ATOMIC TRUNCATE orders; END;\n`,
+    );
+    expect(issues.filter((i) => i.code === "QFAI-DB-001").map((i) => i.message)).toEqual([
+      expect.stringContaining("TRUNCATE"),
+    ]);
+  });
+
   it("reports each dangerous operation once per file", async () => {
     const issues = await runOn(`${HEADER}DROP TABLE a;\nDROP TABLE b;\n`);
     expect(issues.filter((i) => i.code === "QFAI-DB-001")).toHaveLength(1);

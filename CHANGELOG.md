@@ -657,11 +657,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The dangerous-SQL warning reads statements, not raw text.**
   `QFAI-DB-001` matched its keywords against the whole `.sql` file, so a
-  `DROP TABLE` in a comment, a string, a quoted name or a function body, or an
+  `DROP TABLE` in a comment, a string, a quoted name or a quoted function body, or an
   `ALTER TABLE` in one statement and a `DROP` in a later one, warned on a
   contract that destroys nothing. It now checks each statement's code on its
   own, and still reads the body of a `DO` block, which runs when the file is
-  applied. Closes #4578.
+  applied, with the string each `EXECUTE` in it runs. Closes #4578.
 
 - **A DB contract that gives a regular and a unique index one name is
   reported.** PostgreSQL keeps both kinds of index in one namespace, so the
