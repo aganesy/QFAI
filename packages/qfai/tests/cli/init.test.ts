@@ -9,6 +9,7 @@ import {
   rm,
   writeFile,
   symlink,
+  utimes,
 } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFile as execFileCb, spawnSync } from "node:child_process";
@@ -1682,17 +1683,23 @@ describe("qfai init", () => {
   it("--force sweeps a staging file a killed run left in the tracked directory", async () => {
     // `replaceWithRegularFile` cleans up its own staging file, but `finally` is
     // a JavaScript construct: SIGKILL, a crash or a power loss ends the run
-    // without one. Every run stages under a fresh pid-timestamp name, so
-    // without a sweep the orphans only accumulate in a tracked directory until
-    // one is committed by accident.
+    // without one. Every run stages under a fresh pid-token name, so without a
+    // sweep the orphans only accumulate in a tracked directory until one is
+    // committed by accident.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       const instrDir = path.join(root, ".github", "instructions");
       await mkdir(instrDir, { recursive: true });
       // The shape a killed run leaves: a destination name, the infix, then the
-      // base-36 pid and timestamp.
-      const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
+      // base-36 pid and the 32-hex-digit token.
+      const orphan = path.join(
+        instrDir,
+        "code-review.instructions.md.qfai-init-1a2b-3c4d0000000000000000000000000000",
+      );
       await writeFile(orphan, "half-written\n", "utf-8");
+      // Old enough that no run can still be writing it.
+      const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      await utimes(orphan, longAgo, longAgo);
       // An unrelated dotfile in the same directory must survive: the sweep is
       // scoped to names this command could have written.
       const bystander = path.join(instrDir, "notes.qfai-init-notes.md");
@@ -1709,13 +1716,75 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0031-04
+  it("--force keeps a recent staging file and a look-alike, and removes an old staging file", async () => {
+    // Two inits in one project can run at once, so a staging file in the
+    // directory is no proof of an ended run: the other run may be between its
+    // write and its rename. Removing the file then fails that run's rename and
+    // loses its refresh. Neither the pid nor the host name in the directory
+    // identifies that run on a shared or cloned machine, so only age decides: a
+    // file younger than any write and rename take stays, whatever its pid.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      // A process that has already exited: its pid running or not changes nothing.
+      const exited = spawnSync(process.execPath, ["-e", ""]);
+      expect(exited.pid).toBeGreaterThan(0);
+      const deadPid = exited.pid.toString(36);
+      const staged = (dest: string, pid: string, token: string) =>
+        `${dest}.qfai-init-${pid}-${token}`;
+
+      const recent = [
+        staged("code-review.instructions.md", process.pid.toString(36), "a1".repeat(16)),
+        staged("principles.instructions.md", deadPid, "b2".repeat(16)),
+      ];
+      const old = [
+        staged("code-review.instructions.md", deadPid, "c3".repeat(16)),
+        staged("principles.instructions.md", process.pid.toString(36), "d4".repeat(16)),
+      ];
+      // Old files the project named, close to but not what init writes: another
+      // destination name, a short token, a pid with a leading zero and a pid
+      // too long to be one.
+      const lookAlikes = [
+        staged("notes.md", deadPid, "e5".repeat(16)),
+        staged("code-review.instructions.md", deadPid, "e5"),
+        staged("principles.instructions.md", `0${deadPid}`, "e5".repeat(16)),
+        // A pid longer than any 32-bit pid in base 36 (seven characters).
+        staged("principles.instructions.md", "z".repeat(100), "e5".repeat(16)),
+        // Seven characters, but above 2^32 - 1 (`1z141z3`): no pid writes it.
+        staged("principles.instructions.md", "zzzzzzz", "e5".repeat(16)),
+        staged("principles.instructions.md", "1z141z4", "e5".repeat(16)),
+      ];
+      const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      for (const name of [...recent, ...old, ...lookAlikes]) {
+        await writeFile(path.join(instrDir, name), "staged\n", "utf-8");
+        if (!recent.includes(name)) await utimes(path.join(instrDir, name), longAgo, longAgo);
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(
+        (await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-")).sort(),
+      ).toEqual([...recent, ...lookAlikes].sort());
+      for (const name of [...recent, ...lookAlikes]) {
+        expect(await readFile(path.join(instrDir, name), "utf-8")).toBe("staged\n");
+      }
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("--dry-run sweeps nothing", async () => {
     // `--dry-run` promises to change nothing, and an orphan is still a change.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       const instrDir = path.join(root, ".github", "instructions");
       await mkdir(instrDir, { recursive: true });
-      const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
+      const orphan = path.join(
+        instrDir,
+        "code-review.instructions.md.qfai-init-1a2b-3c4d0000000000000000000000000000",
+      );
       await writeFile(orphan, "half-written\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: true, yes: true });

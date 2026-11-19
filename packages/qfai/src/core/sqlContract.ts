@@ -38,6 +38,26 @@ export type SqlParseResult = {
 };
 
 /**
+ * The opening marker of a PostgreSQL dollar-quoted literal: `$$` or `$tag$`.
+ *
+ * The literal ends at the next occurrence of the same marker. Shared with the
+ * apply-order check, which has to skip the same literals this splitter does.
+ *
+ * A tag follows PostgreSQL's identifier rules without the `$`: a letter, `_` or
+ * any non-ASCII character first, then digits as well. PostgreSQL counts every
+ * byte above 0x7F as a letter here, so `\u0080-\uFFFF` stands for all of them,
+ * each half of a surrogate pair included.
+ *
+ * A marker directly after a letter, digit, `_`, non-ASCII character or `$`
+ * opens nothing: `$` continues an identifier, so `foo$tag$` is one name.
+ */
+export const DOLLAR_QUOTE_MARKER =
+  /(?<![A-Za-z0-9_$\u0080-\uFFFF])\$(?:[A-Za-z_\u0080-\uFFFF][A-Za-z0-9_\u0080-\uFFFF]*)?\$/;
+
+/** {@link DOLLAR_QUOTE_MARKER} at one offset of the whole text, so the lookbehind sees what precedes it. */
+const DOLLAR_QUOTE_AT = new RegExp(DOLLAR_QUOTE_MARKER.source, "y");
+
+/**
  * Splits SQL into statements on top-level `;`.
  *
  * "Top-level" is the whole point: a `;` inside a string literal, a comment, a
@@ -131,7 +151,8 @@ export function parseSqlContract(text: string): SqlParseResult {
 
     // `$tag$ … $tag$` dollar quoting (PostgreSQL function bodies)
     if (ch === "$") {
-      const tag = /^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$/.exec(text.slice(index));
+      DOLLAR_QUOTE_AT.lastIndex = index;
+      const tag = DOLLAR_QUOTE_AT.exec(text);
       if (tag) {
         const marker = tag[0];
         const openedAt = line;
@@ -258,7 +279,7 @@ export type CreatedObject = {
   kind: string;
   /** Normalised name: unquoted, lower-cased, schema-qualification preserved. */
   name: string;
-  /** For functions and procedures, the normalised argument list. */
+  /** For functions and procedures, the normalised identity argument types. */
   signature: string;
   line: number;
 };
@@ -266,9 +287,9 @@ export type CreatedObject = {
 /**
  * Every object a file creates, with the line it is created on.
  *
- * Functions and procedures carry their argument list, because PostgreSQL
- * overloading makes two same-named functions with different arguments two
- * distinct objects. Everything else is keyed on the name alone.
+ * Functions and procedures carry their identity argument types, because
+ * PostgreSQL overloading makes two same-named functions with different input
+ * types two distinct objects. Everything else is keyed on the name alone.
  */
 export function collectCreatedObjects(statements: SqlStatement[]): CreatedObject[] {
   const created: CreatedObject[] = [];
@@ -281,32 +302,109 @@ export function collectCreatedObjects(statements: SqlStatement[]): CreatedObject
     created.push({
       kind,
       name,
-      signature: kind === "FUNCTION" || kind === "PROCEDURE" ? argumentList(statement.text) : "",
+      signature:
+        kind === "FUNCTION" || kind === "PROCEDURE"
+          ? identityArgumentTypes(argumentList(statement.text), kind)
+          : "",
       line: statement.line,
     });
   }
   return created;
 }
 
-/** The parenthesised argument list of a `CREATE FUNCTION` / `PROCEDURE`. */
+/** The text inside the parentheses of a `CREATE FUNCTION` / `PROCEDURE`. */
 function argumentList(statement: string): string {
   const open = statement.indexOf("(");
   if (open === -1) return "";
   let depth = 0;
   for (let index = open; index < statement.length; index += 1) {
     const ch = statement[index];
+    if (ch === "'") {
+      index = statement.indexOf("'", index + 1);
+      if (index === -1) return "";
+      continue;
+    }
     if (ch === "(") depth += 1;
     if (ch === ")") {
       depth -= 1;
-      if (depth === 0) {
-        return statement
-          .slice(open, index + 1)
-          .replace(/\s+/g, " ")
-          .toLowerCase();
-      }
+      if (depth === 0) return statement.slice(open + 1, index);
     }
   }
   return "";
+}
+
+const ARGUMENT_MODES = new Set(["in", "out", "inout", "variadic"]);
+
+/**
+ * Type phrases whose first word could otherwise be read as an argument name.
+ * A shortcut, not a type parser: a multi-word type missing from this list is
+ * read as `name type`, so its first word is dropped and two definitions that
+ * differ only in that word are taken for one routine. Extend the list when a
+ * contract uses such a type.
+ */
+const MULTI_WORD_TYPE_START =
+  /^(?:double precision|(?:character|char|bit) varying|national (?:character|char)\b|(?:time|timestamp)(?:\(\d+\))?\s*with(?:out)? time zone|interval (?:year|month|day|hour|minute|second)\b)/;
+
+/** The SQL-standard array suffix, lower-cased and with no space before `[`. */
+const ARRAY_SUFFIX = /^array(?:\[\d*\])?$/;
+
+/**
+ * The PostgreSQL identity of a routine's argument list: its input argument
+ * types, in order. Argument names, DEFAULT expressions and spacing are not
+ * part of it; neither are a function's OUT arguments.
+ */
+function identityArgumentTypes(argumentText: string, kind: string): string {
+  const types: string[] = [];
+  for (const argument of splitTopLevel(argumentText)) {
+    const words = stripDefault(argument)
+      .toLowerCase()
+      .replace(/\s*([(),[\]])\s*/g, "$1")
+      .split(/\s+/)
+      .filter(Boolean);
+    let mode = "in";
+    if (words[0] !== undefined && ARGUMENT_MODES.has(words[0])) {
+      mode = words.shift() ?? mode;
+    } else if (words[1] !== undefined && ARGUMENT_MODES.has(words[1]) && words.length > 2) {
+      mode = words[1];
+      words.splice(1, 1);
+    }
+    // `int ARRAY` and `int ARRAY[3]` are one type: the suffix is not a type
+    // of its own, so it never makes the word before it an argument name.
+    const typeWords = ARRAY_SUFFIX.test(words.at(-1) ?? "") ? words.length - 1 : words.length;
+    if (typeWords > 1 && !MULTI_WORD_TYPE_START.test(words.join(" "))) words.shift();
+    const type = words.join(" ");
+    if (type.length === 0) continue;
+    if (mode === "out" && kind === "FUNCTION") continue;
+    types.push(type);
+  }
+  return types.join(",");
+}
+
+/** Split on commas outside parentheses and string literals. */
+function splitTopLevel(text: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let inString = false;
+  let current = "";
+  for (const ch of text) {
+    if (ch === "'") inString = !inString;
+    if (!inString && ch === "(") depth += 1;
+    if (!inString && ch === ")") depth -= 1;
+    if (!inString && depth === 0 && ch === ",") {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  parts.push(current);
+  return parts;
+}
+
+/** An argument without its `DEFAULT <expr>` or `= <expr>` tail. */
+function stripDefault(argument: string): string {
+  const match = /\s+default\s|\s+default$|=/i.exec(argument);
+  return match ? argument.slice(0, match.index) : argument;
 }
 
 export type Redefinition = {

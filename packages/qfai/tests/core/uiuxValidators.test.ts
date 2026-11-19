@@ -342,6 +342,61 @@ describe("uiux validators", () => {
     expect(issues.some((item) => item.code === "QFAI-MOCK-009")).toBe(true);
   });
 
+  it("finds the same mocks whether the specs directory is relative or absolute", async () => {
+    const root = await newTempDir();
+    const specsDir = path.join(root, ".qfai", "specs");
+    await mkdir(specsDir, { recursive: true });
+
+    const md = [
+      "## Screen Mock (HTML+CSS)",
+      "",
+      "```html",
+      '<button style="width: 20px; height: 20px">Tap</button>',
+      "```",
+      "",
+    ].join("\n");
+    await writeFile(path.join(specsDir, "mock.md"), md, "utf-8");
+
+    const relative = await validateHtmlMock(root, "mobile-ios", defaultConfig);
+    const absolute = await validateHtmlMock(root, "mobile-ios", {
+      ...defaultConfig,
+      paths: { ...defaultConfig.paths, specsDir },
+    });
+
+    expect(relative.some((item) => item.code === "QFAI-MOCK-009")).toBe(true);
+    expect(absolute).toEqual(relative);
+  });
+
+  it("aligns screens the same way whether the contract and specs directories are relative or absolute", async () => {
+    const root = await newTempDir();
+    const specsDir = path.join(root, ".qfai", "specs");
+    const contractsDir = path.join(root, ".qfai", "contracts");
+    await mkdir(specsDir, { recursive: true });
+    await mkdir(path.join(contractsDir, "ui"), { recursive: true });
+
+    await writeFile(
+      path.join(contractsDir, "ui", "screens.yaml"),
+      ["screens:", "  - id: List", "  - id: Detail", ""].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specsDir, "mock.md"),
+      ["<!-- Screen Mock: List -->", "<div></div>", ""].join("\n"),
+      "utf-8",
+    );
+
+    const relative = await validateUiDefinitionConsistency(root, defaultConfig);
+    const absolute = await validateUiDefinitionConsistency(root, {
+      ...defaultConfig,
+      paths: { ...defaultConfig.paths, specsDir, contractsDir },
+    });
+
+    expect(relative.map((item) => [item.code, item.refs])).toEqual([
+      ["QFAI-CONSISTENCY-002", ["Detail"]],
+    ]);
+    expect(absolute).toEqual(relative);
+  });
+
   it("validates inline HTML mock blocks in visual mock sections", async () => {
     const root = await newTempDir();
     const specsDir = path.join(root, ".qfai", "specs");
@@ -469,6 +524,63 @@ describe("uiux validators", () => {
     expect(issues.find((item) => item.code === "QFAI-DT-004")?.severity).toBe("error");
     expect(issues.find((item) => item.code === "QFAI-DT-006")?.severity).toBe("warning");
     expect(await validateDesignToken(root, defaultConfig)).toEqual([]);
+  });
+
+  // QFAI:EX-0001-0039-54
+  it("reports a cyclic or too deep design token file and still checks the rest", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, "tokens"), { recursive: true });
+    const cyclicYaml = [
+      "primitive:",
+      "  color:",
+      "    base:",
+      "      $value: ''",
+      "  loop: &loop",
+      "    again: *loop",
+      "  shadow:",
+      "    $value: &shadow",
+      "      inner: *shadow",
+      "",
+    ].join("\n");
+    await writeFile(path.join(root, "tokens", "design-tokens.yaml"), cyclicYaml, "utf-8");
+    const deepLines = ["primitive:"];
+    for (let level = 0; level < 80; level += 1) {
+      deepLines.push(`${"  ".repeat(level + 1)}l${level}:`);
+    }
+    deepLines.push(`${"  ".repeat(81)}$value: '#ffffff'`, "");
+    await writeFile(
+      path.join(root, "tokens", "design-tokens-deep.yaml"),
+      deepLines.join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "tokens", "design-tokens-plain.yaml"),
+      ["primitive:", "  size:", "    gap:", "      $value: ''", ""].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateDesignToken(root, tokensConfig);
+
+    const parseFindings = issues.filter((item) => item.code === "QFAI-DT-002");
+    expect(parseFindings.every((item) => item.severity === "error")).toBe(true);
+    const cyclic = parseFindings.filter((item) => item.file === "tokens/design-tokens.yaml");
+    expect(cyclic.map((item) => item.refs)).toEqual([
+      ["primitive.loop.again"],
+      ["primitive.shadow"],
+    ]);
+    expect(cyclic.every((item) => item.message.includes("cycle"))).toBe(true);
+    const deep = parseFindings.filter((item) => item.file === "tokens/design-tokens-deep.yaml");
+    expect(deep).toHaveLength(1);
+    expect(deep[0]?.message).toContain("64");
+    const emptyValues = issues
+      .filter((item) => item.code === "QFAI-DT-004")
+      .map((item) => [item.file, item.refs]);
+    expect(emptyValues).toEqual(
+      expect.arrayContaining([
+        ["tokens/design-tokens.yaml", ["primitive.color.base"]],
+        ["tokens/design-tokens-plain.yaml", ["primitive.size.gap"]],
+      ]),
+    );
   });
 
   it("normalizes design token platform values before validation", async () => {

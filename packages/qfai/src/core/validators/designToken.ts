@@ -32,8 +32,10 @@ export async function validateDesignToken(root: string, config: QfaiConfig): Pro
   const configuredDir = config.uiux?.designTokensDir;
   if (!configuredDir) return [];
   const designDir = path.resolve(root, configuredDir);
-  const pattern = path.posix.join(designDir.replace(/\\/g, "/"), "design-tokens*.yaml");
-  const files = await fg(pattern, {
+  // The directory is the walk's `cwd` rather than part of the pattern, so a directory named with
+  // glob syntax is read as the literal path it is.
+  const files = await fg("design-tokens*.yaml", {
+    cwd: designDir,
     absolute: true,
     ignore: ["**/*.schema.yaml", "**/*.schema.yml"],
   });
