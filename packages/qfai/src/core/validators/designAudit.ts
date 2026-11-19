@@ -130,22 +130,6 @@ export function findingToIssue(
 }
 
 // ---------------------------------------------------------------------------
-// Section Extraction
-// ---------------------------------------------------------------------------
-
-function _extractSection(content: string, heading: string): string | null {
-  const idx = content.indexOf(heading);
-  if (idx === -1) return null;
-  const start = idx + heading.length;
-  const headingLevel = heading.match(/^#+/)?.[0]?.length ?? 3;
-  const rest = content.slice(start);
-  const headingPattern = new RegExp(`^#{1,${headingLevel}} `, "m");
-  const nextHeadingMatch = headingPattern.exec(rest);
-  const sectionContent = nextHeadingMatch ? rest.slice(0, nextHeadingMatch.index) : rest;
-  return sectionContent.trim() || null;
-}
-
-// ---------------------------------------------------------------------------
 // Contracts / Selected Direction Checks
 // ---------------------------------------------------------------------------
 
