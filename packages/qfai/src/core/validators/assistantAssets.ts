@@ -12,7 +12,7 @@ import { readBoundedRegularFile, scanBoundedRegularFile } from "../../shared/bou
 import { parseHeadings } from "../parse/markdown.js";
 import { joinAssistantLayer } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
-import { splitMarkdownRow } from "../specPackParsers.js";
+import { maskNonSpecRegions, splitMarkdownRow } from "../specPackParsers.js";
 import { isPristineStorySeed } from "../storyTree/pristineSeed.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -882,7 +882,9 @@ async function collectReviewerGateBaselineIssues(baselinePath: string): Promise<
     if (!isEnoent(error)) throw error;
     content = "";
   }
-  const section = extractReviewerGateBaseline(content);
+  // Read the active text only: a fenced example, a comment or a raw HTML block
+  // can show this section's heading or its terms without stating the policy.
+  const section = extractReviewerGateBaseline(maskNonSpecRegions(content));
   if (section === null) {
     return [
       issue(

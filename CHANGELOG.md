@@ -768,6 +768,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   test check found no acceptance test there. The patterns are now joined from
   their path segments and read those directories at the top of the repository.
 
+- **The reviewer gate check reads only the active text of the delegation
+  baseline.** `QFAI-SKILLS-011` and `QFAI-SKILLS-012` searched the raw
+  Markdown, so a `## Reviewer Gate Baseline` heading or an obligation shown in a
+  fenced example, an HTML comment or a raw HTML block counted as the policy.
+  An example placed before the real section was checked in its place. Those
+  regions are now skipped, and only the section that applies is checked.
+
 - **The `tech.md` template shows each item in the shape validation accepts.**
   The template held placeholders such as `<package>`, so a project filling it
   in guessed the shapes and needed several validate rounds. Every value is now
