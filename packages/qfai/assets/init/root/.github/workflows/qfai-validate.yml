@@ -484,7 +484,7 @@ jobs:
               try {
                 entry = require.resolve("qfai");
               } catch {
-                console.error("::error::package.json declares qfai but Yarn resolves none; run yarn install and commit the lockfile");
+                console.error("::error::package.json declares qfai but Yarn resolves none; install it with Yarn and commit yarn.lock");
                 process.exit(1);
               }
               for (let dir = path.dirname(entry); ; dir = path.dirname(dir)) {
