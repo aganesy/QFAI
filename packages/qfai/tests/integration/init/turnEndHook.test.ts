@@ -480,6 +480,20 @@ describe("readTurnEndChecks", () => {
       checks: [{ label: "Lint", command: "pnpm lint" }],
       ambiguous: [],
     });
+    const otherParents = [
+      "## Standard commands (copy-paste)",
+      "",
+      "* Sample entry",
+      "  - Lint: `echo star`",
+      "1. Numbered entry",
+      "   - Lint: `echo numbered`",
+      "- Lint: `pnpm lint`",
+      "- Turn-end check: Lint",
+    ].join("\n");
+    expect(readTurnEndChecks(otherParents)).toEqual({
+      checks: [{ label: "Lint", command: "pnpm lint" }],
+      ambiguous: [],
+    });
   });
 
   // QFAI:EX-0001-0244-19

@@ -68,7 +68,9 @@ export function readTurnEndChecks(techText: string): TurnEndSelection {
       continue;
     }
     if (!inSection) continue;
-    const bullet = /^( *)-\s/.exec(line);
+    // Every list marker counts toward the top indent, so an item nested under a `*`, `+` or
+    // numbered parent stays nested; only `- Label:` items are read as commands.
+    const bullet = /^( *)(?:[-*+]|\d{1,9}[.)])(?:\s|$)/.exec(line);
     if (bullet === null) continue;
     const indent = (bullet[1] ?? "").length;
     topIndent ??= indent;
