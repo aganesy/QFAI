@@ -1563,19 +1563,26 @@ function unreadableRemedy(reasons: ReadonlySet<string>): string {
   return remedies.join(" ");
 }
 
-function reportUnreadableFiles(root: string, failures: UnreadableFile[]): Issue {
+/**
+ * The finding sits on the first failed file and names the rest as related, so
+ * an annotation and a path-scoped waiver reach a file that needs the repair.
+ */
+function reportUnreadableFiles(failures: UnreadableFile[]): Issue {
   const sorted = [...failures]
     .map(({ file, error }) => ({ file, reason: readFailureReason(error) }))
     .sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
+  const files = sorted.map(({ file }) => file);
+  const related = files.slice(1);
   return issue(
     "QFAI-TEST-002",
     `The stub scan could not read ${sorted.length} selected test file(s): ${sorted.map(({ file, reason }) => `${file} (${reason})`).join(", ")}. The other files were scanned, and a clean result is not evidence that these hold no stub.`,
     "info",
-    root,
+    files[0],
     "validation.testStrategy.stubScanUnreadable",
-    sorted.map(({ file }) => file),
+    files,
     "canonical",
     unreadableRemedy(new Set(sorted.map(({ reason }) => reason))),
+    related.length > 0 ? { relatedFiles: related } : undefined,
   );
 }
 
@@ -1751,7 +1758,7 @@ export async function validateTestTodoStubs(
   }
 
   if (unreadableFiles.length > 0) {
-    issues.push(reportUnreadableFiles(root, unreadableFiles));
+    issues.push(reportUnreadableFiles(unreadableFiles));
   }
 
   if (unscannedExtensions.size > 0) {

@@ -96,6 +96,9 @@ describe("QFAI-TEST-002 — selected files the scan could not read", () => {
     const findings = unreadableFindings(issues);
     expect(findings).toHaveLength(1);
     expect(findings[0]?.refs).toEqual(["tests/gone.test.ts", "tests/locked.test.ts"]);
+    // Placed on a failed file, so an annotation and a path-scoped waiver reach it.
+    expect(findings[0]?.file).toBe("tests/gone.test.ts");
+    expect(findings[0]?.relatedFiles).toEqual(["tests/locked.test.ts"]);
     expect(findings[0]?.message).toContain("tests/gone.test.ts (ENOENT)");
     expect(findings[0]?.message).toContain("tests/locked.test.ts (EACCES)");
     // Each cause brings its own repair: running again, and access or exclusion.
@@ -109,6 +112,8 @@ describe("QFAI-TEST-002 — selected files the scan could not read", () => {
     const [finding] = unreadableFindings(await validateTestTodoStubs(root, CONFIG));
 
     expect(finding?.refs).toEqual(["tests/gone.test.ts"]);
+    expect(finding?.file).toBe("tests/gone.test.ts");
+    expect(finding?.relatedFiles).toBeUndefined();
     expect(finding?.suggested_action).toContain("running `qfai validate` once more");
     expect(finding?.suggested_action).not.toContain("testFileExcludeGlobs");
   });
