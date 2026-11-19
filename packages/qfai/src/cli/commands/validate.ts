@@ -1,4 +1,3 @@
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { FailOn, OutputFormat } from "../../core/config.js";
@@ -20,7 +19,7 @@ import {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,
   unevaluatedPackageSelfGovernanceFamilies,
 } from "../../core/validators/packageSelfGovernance.js";
-import { writeValidateRunLog } from "../../core/runLog.js";
+import { writeReportFile, writeValidateRunLog } from "../../core/runLog.js";
 import { DERIVED_DECLARATION_FORM } from "../../core/validators/contractConsistency.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
@@ -1118,9 +1117,12 @@ function issueKey(issue: Issue): string {
 }
 
 async function emitJson(result: ValidationResult, root: string, jsonPath: string): Promise<void> {
-  const abs = resolveJsonPath(root, jsonPath);
-  await mkdir(path.dirname(abs), { recursive: true });
-  await writeFile(abs, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
+  await writeReportFile(
+    root,
+    resolveJsonPath(root, jsonPath),
+    `${JSON.stringify(result, null, 2)}\n`,
+    "qfai validate: the validation result",
+  );
 }
 
 function resolveJsonPath(root: string, jsonPath: string): string {

@@ -5,6 +5,7 @@ import type { ConfigLoadResult, FailOn, QfaiConfig } from "../../core/config.js"
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
+import { writeReportFile } from "../../core/runLog.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import {
   createReportData,
@@ -515,6 +516,10 @@ async function writeValidationResult(
   result: ValidationResult,
 ): Promise<void> {
   const abs = path.isAbsolute(outputPath) ? outputPath : path.resolve(root, outputPath);
-  await mkdir(path.dirname(abs), { recursive: true });
-  await writeFile(abs, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
+  await writeReportFile(
+    root,
+    abs,
+    `${JSON.stringify(result, null, 2)}\n`,
+    "qfai report: the validation result",
+  );
 }
