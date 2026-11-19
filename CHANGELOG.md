@@ -576,6 +576,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   outside the base URL stays unlinked, and a `--base-url` that is not an
   absolute http or https URL without a query, fragment or credentials exits 2.
 
+- **The design audit no longer drops findings past its display limit.** It
+  kept only the first `uiux.audit.maxDuplicateFindingsPerRule` findings of a
+  code and replaced the rest with one info finding, before flow scope and
+  waivers ran, so a waiver or the exit code could act on the wrong set and
+  `validate.json` lacked findings. The audit now returns every finding, and
+  the key only sets how many of a `QFAI-AUD-` code `--format text` prints
+  before `and <n> more`. Closes #4493.
+
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
   through a `preinstall` guard. npm never reaches that guard: it stops with
