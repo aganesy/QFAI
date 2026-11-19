@@ -2,6 +2,8 @@ import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isInside } from "./validators/utils.js";
+
 declare const __QFAI_TOOL_VERSION__: string | undefined;
 
 export async function resolveToolVersion(): Promise<string> {
@@ -226,10 +228,12 @@ export function classifyAgainstDeclaration(declaringDir: string, packageDir: str
   return isOutside(declaringDir, packageDir);
 }
 
-/** Whether `target` lies outside `base`. */
+/**
+ * Whether `target` lies outside `base`. Only a `..` segment leaves `base`, so a
+ * directory named `..vendor` is inside it.
+ */
 function isOutside(base: string, target: string): boolean {
-  const relative = path.relative(base, target);
-  return relative.startsWith("..") || path.isAbsolute(relative);
+  return !isInside(base, target);
 }
 
 /**
