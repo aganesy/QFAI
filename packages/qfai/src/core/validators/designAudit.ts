@@ -19,7 +19,6 @@ export type DesignAuditConfig = {
   slopDetection: boolean;
   qualityProfile: "default" | "high" | "strict";
   maxRawTokenLiteralWarnings: number;
-  maxDuplicateFindingsPerRule: number;
 };
 
 export type DesignFinding = {
@@ -75,8 +74,22 @@ export function resolveAuditConfig(config: QfaiConfig): DesignAuditConfig {
     slopDetection: audit?.slopDetection ?? true,
     qualityProfile: profile,
     maxRawTokenLiteralWarnings: audit?.maxRawTokenLiteralWarnings ?? 5,
-    maxDuplicateFindingsPerRule: audit?.maxDuplicateFindingsPerRule ?? 5,
   };
+}
+
+/** The code prefix of every finding the design audit raises. */
+export const DESIGN_AUDIT_CODE_PREFIX = "QFAI-AUD-";
+
+/**
+ * How many design audit findings of one code `--format text` prints before it
+ * counts the rest: `uiux.audit.maxDuplicateFindingsPerRule`, 5 when unset.
+ *
+ * Only a display limit. The audit returns every finding it raises, because flow
+ * scope, waivers, the counts, the JSON report and the exit code are all decided
+ * on the findings after the audit, and a finding dropped here would change them.
+ */
+export function designAuditFindingsShownPerCode(config: QfaiConfig): number {
+  return config.uiux?.audit?.maxDuplicateFindingsPerRule ?? 5;
 }
 
 // ---------------------------------------------------------------------------
@@ -320,37 +333,6 @@ async function checkTokenDrift(
 }
 
 // ---------------------------------------------------------------------------
-// Deduplication
-// ---------------------------------------------------------------------------
-
-export function deduplicateFindings(issues: Issue[], maxPerRule: number): Issue[] {
-  const counts = new Map<string, number>();
-  const result: Issue[] = [];
-
-  for (const iss of issues) {
-    const count = counts.get(iss.code) ?? 0;
-    if (count < maxPerRule) {
-      result.push(iss);
-    }
-    counts.set(iss.code, count + 1);
-  }
-
-  for (const [code, count] of counts) {
-    if (count > maxPerRule) {
-      result.push({
-        code,
-        severity: "info",
-        category: "canonical",
-        message: `${count - maxPerRule} additional "${code}" finding(s) suppressed (max ${maxPerRule} per rule)`,
-        rule: `audit.dedup.${code}`,
-      });
-    }
-  }
-
-  return result;
-}
-
-// ---------------------------------------------------------------------------
 // Main Validator
 // ---------------------------------------------------------------------------
 
@@ -368,6 +350,7 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   // Token drift check
   findings.push(...(await checkTokenDrift(root, auditConfig, config)));
 
-  const issues = findings.map((f) => findingToIssue(f, auditConfig.qualityProfile));
-  return deduplicateFindings(issues, auditConfig.maxDuplicateFindingsPerRule);
+  // Every finding, however many share a code: the display limit is applied where
+  // the text output prints them (`designAuditFindingsShownPerCode`).
+  return findings.map((f) => findingToIssue(f, auditConfig.qualityProfile));
 }

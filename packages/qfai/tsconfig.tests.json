@@ -307,6 +307,7 @@
     "tests/integration/contractDeferralNotes.test.ts",
     "tests/integration/configureSkillTuning.test.ts",
     "tests/integration/contractIdScheme.test.ts",
+    "tests/integration/designAuditDisplayLimit.test.ts",
     "tests/integration/designAuditTokenDrift.test.ts",
     "tests/integration/doctorAssistantDrift.test.ts",
     "tests/integration/doctorDocsLane.test.ts",
