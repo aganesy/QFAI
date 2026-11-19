@@ -313,15 +313,15 @@ function statesJsonDependencies(value: unknown): boolean {
 }
 
 /**
- * The ids a written dependency list states, sorted, or `undefined` when it states
- * none: an empty value, or one holding anything but contract ids. `-`, `[]` and
- * `none` state that nothing must be applied first. This is the list judgement the
- * declarations use, so the contract index cell is read as the contract is.
+ * The ids a contract index Depends On cell states, sorted, or `undefined` when it
+ * states none: an empty cell, or one holding anything but contract ids. The index
+ * writes "nothing must be applied first" as `-` alone; the other spellings a
+ * declaration accepts are not index values. The ids are judged as a declaration's.
  */
 export function listedDependencyIds(value: string): string[] | undefined {
   const trimmed = value.trim();
   if (trimmed.length === 0) return undefined;
-  if (DEPENDS_ON_NONE_VALUE_RE.test(trimmed)) return [];
+  if (trimmed === "-") return [];
   const ids = textDependencyIds(trimmed);
   return ids && Array.from(new Set(ids)).sort();
 }
