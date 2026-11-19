@@ -219,6 +219,7 @@
     "tests/cli/githubSummaryEscaping.test.ts",
     "tests/cli/initAgentEntryPointRules.test.ts",
     "tests/cli/initRepointHolds.test.ts",
+    "tests/cli/initForcedRelinkRollback.test.ts",
     "tests/cli/initConfigRefinementWrite.test.ts",
     "tests/cli/initNoDesignSeed.test.ts",
     "tests/cli/initRepairsUnfollowableLinks.test.ts",
