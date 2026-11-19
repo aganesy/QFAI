@@ -29,7 +29,7 @@ describe("validation profiles come from one list", () => {
     vi.restoreAllMocks();
   });
 
-  it("names the profiles in the order the CLI has always listed them", () => {
+  it("names the profiles in the order the parser's refusal already used", () => {
     expect(VALIDATION_PROFILE_CHOICES).toBe(
       "discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift",
     );
