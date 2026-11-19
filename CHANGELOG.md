@@ -452,6 +452,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The README says what a fresh `qfai init` needs.** The Quick start now
+  lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
+  or later with `uv`, and network access to the npm registry and PyPI, from
+  which init downloads CodeGraph and Graphify. A new user now sees these
+  requirements before init runs rather than only after it fails.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
@@ -467,6 +473,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   since the command has no warning tier. A contract or migration that would
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
+
+- **`qfai catalog components` writes only inside the project.** A
+  `.qfai/catalog` directory, or a directory above it, that was a symbolic link
+  or junction led the write to wherever the link pointed, overwriting a file
+  outside the project. The command now checks each directory on the path before
+  and after creating it, stops with exit 1 naming the link, and leaves any
+  existing file as it was. It writes to a new temporary file beside the
+  catalogue and renames it into place, so a failed write leaves the old
+  catalogue whole.
 
 - **`qfai db-drift` compares the full PostgreSQL column type.** It read
   `information_schema.columns.data_type`, which drops the varchar length, the
@@ -610,6 +625,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the API does not require, the two remedy sentences ran together with no
   space. They are now separated by one.
 
+- **`qfai validate --format github` keeps each path in its summary on one log
+  line.** The report and run-log paths in the closing notes were printed raw, so
+  a path holding a line break started a line of its own, which the runner reads
+  as a possible workflow command. A line break in them now shows as a visible
+  `\r` or `\n`, and `%` stays as written. The report and run-log are still
+  written at their original paths.
+
 - **The migration's step 12 scan no longer runs out of memory on large
   tracked files.** It held git's whole file listing and read each tracked file
   whole before checking it for 1.x paths, so a repository with large tracked
@@ -625,14 +647,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
-- **`qfai catalog components` writes only inside the project.** A
-  `.qfai/catalog` directory, or a directory above it, that was a symbolic link
-  or junction led the write to wherever the link pointed, overwriting a file
-  outside the project. The command now checks each directory on the path before
-  and after creating it, stops with exit 1 naming the link, and leaves any
-  existing file as it was. It writes to a new temporary file beside the
-  catalogue and renames it into place, so a failed write leaves the old
-  catalogue whole.
+- **`qfai sdd preflight` writes only inside its output directory.** A report
+  directory, or a directory under it, that was a link to somewhere else carried
+  the preflight summary there, and a `preflight_summary.md` that was a link was
+  written through. Preflight now stops and names the linked directory without
+  writing, also when `paths.outDir` lies outside the project and is itself a
+  link, and says so separately when a path it needs is a file. It writes each summary to a new file that replaces the old one,
+  so a linked summary file is replaced instead of followed.
 
 - **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
   that made a token group or a `$value` its own descendant overflowed the stack,

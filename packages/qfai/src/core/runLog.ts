@@ -218,9 +218,11 @@ async function refuseLinkedDestination(root: string, outDir: string): Promise<vo
 /**
  * Put `contents` at `filePath` by writing a new file beside it and renaming it
  * into place. A rename replaces the name, so a link or a hard link at
- * `filePath` is replaced rather than written through.
+ * `filePath` is replaced rather than written through, and a reader never sees a
+ * half-written file. Exported for every writer of a report file that a link
+ * could have replaced, such as the SDD preflight summaries.
  */
-async function replaceFile(filePath: string, contents: string): Promise<void> {
+export async function replaceFile(filePath: string, contents: string): Promise<void> {
   const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
   try {
     await writeNewFile(tempPath, contents);
