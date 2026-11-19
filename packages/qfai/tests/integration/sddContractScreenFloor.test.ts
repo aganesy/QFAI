@@ -58,3 +58,23 @@ describe("the contract step names each application screen's type by its ID", () 
     expect(reference.split(/\r?\n/)).toContain("ID: `list`.");
   });
 });
+
+// QFAI:AC-0001-0305-06
+describe("the implementation and the screen review read a screen's type from its pattern", () => {
+  it("takes the type from the contract's `pattern` and falls back to the screen only without one", async () => {
+    const reference = ".qfai/assistant/skill/qfai-sdd/references/business-ui-patterns.md";
+    const declared = "the `pattern` its UI contract declares";
+    const fallback = "only when the contract writes no `pattern`";
+    for (const reader of [
+      ".qfai/assistant/step/implement-tdd/STEP.md",
+      ".qfai/assistant/agent/product-surface-reviewer.md",
+    ]) {
+      const text = flat(await read(reader));
+      expect(text).toContain(reference);
+      expect(text).toContain(declared);
+      expect(text).toContain(fallback);
+      expect(text).toContain("`surface: marketing`");
+      expect(text.indexOf(declared)).toBeLessThan(text.indexOf(fallback));
+    }
+  });
+});

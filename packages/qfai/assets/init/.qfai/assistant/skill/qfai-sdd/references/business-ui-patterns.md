@@ -187,13 +187,18 @@ Catalogue: stat cards, a task list, an activity feed.
   concerns records a departure from it, with the reason, such as a
   `search` whose keyword is not kept in the address because the list is a
   picker in a dialog. `npx qfai validate` reports an ID this reference does
-  not have as `QFAI-CONTRACT-056`.
-- **Implementing.** Build what the contract names. A part of the screen's type
+  not have, and a `pattern` on a marketing screen, as `QFAI-CONTRACT-056`.
+- **Implementing.** Take the screen's type from the `pattern` its contract
+  declares, and choose the type the screen matches, or none, only when the
+  contract writes no `pattern`. Build what the contract names. A part of the
+  screen's type
   that the contract neither names nor excludes with a reason is drift: raise
   it to the contract stage under `.qfai/assistant/rule/drift-protocol.md`
   instead of building it. A behaviour of the type is built unless the contract
   leaves it out with a reason.
-- **Reviewing a screen.** A part of its type that is missing with no recorded
+- **Reviewing a screen.** Its type is read the same way: from its `pattern`,
+  or chosen from the screen when the contract writes none. A part of its type
+  that is missing with no recorded
   reason is a finding against the screen, named with the part and the type.
   For a type with a Behaviour list, a behaviour the screen breaks with no
   recorded reason is a finding in the same way.

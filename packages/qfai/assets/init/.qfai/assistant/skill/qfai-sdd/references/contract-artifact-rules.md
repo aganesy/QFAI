@@ -89,7 +89,8 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
 - **A screen's `pattern` is a business screen type ID.** The optional
   `pattern` names the screen's type in the business UI pattern reference:
   `list`, `detail`, `form`, `settings`, `members` or `dashboard`.
-  `QFAI-CONTRACT-056` reports any other value at error.
+  A `surface: marketing` screen takes none. `QFAI-CONTRACT-056` reports any
+  other value, and a `pattern` on a marketing screen, at error.
 - **A contract's ID comes from its directory.** `api/` holds `API` contracts,
   `db/` `DB` and `ui/` `UI`; the QFAI repository's own `cli/` holds `CLI`
   contracts. The ID is `<KIND>-NNNN`.
