@@ -87,6 +87,30 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     expect(statements).toHaveLength(2);
   });
 
+  it("reads a backslash-escaped quote inside an E string as part of the literal", () => {
+    const { statements, errors } = parseSqlContract(
+      `SELECT E'it\\'s fine; really'; SELECT e'a\\\\'; SELECT 3;`,
+    );
+    expect(errors).toEqual([]);
+    expect(statements.map((statement) => statement.text)).toEqual([
+      `SELECT E'it\\'s fine; really'`,
+      `SELECT e'a\\\\'`,
+      "SELECT 3",
+    ]);
+  });
+
+  it("keeps a backslash literal in a standard string and in an identifier ending in E", () => {
+    const { statements, errors } = parseSqlContract(`SELECT 'a\\'; SELECT name'b\\'; SELECT 3;`);
+    expect(errors).toEqual([]);
+    expect(statements).toHaveLength(3);
+  });
+
+  it("counts a newline escaped inside an E string", () => {
+    const { statements, errors } = parseSqlContract(`SELECT E'a\\\nb';\nSELECT 2;`);
+    expect(errors).toEqual([]);
+    expect(statements.map((statement) => statement.line)).toEqual([1, 3]);
+  });
+
   it("does not split inside a comment", () => {
     const { statements } = parseSqlContract(`-- a; b\nSELECT 1;\n/* c; d */\nSELECT 2;`);
     expect(statements).toHaveLength(2);
@@ -101,6 +125,21 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     const { statements } = parseSqlContract(`CREATE TABLE t (a int, b text DEFAULT 'x;y');`);
     expect(statements).toHaveLength(1);
   });
+
+  it("reports each closing parenthesis outside any open group at its own line", () => {
+    // Clamping the depth at zero accepted a stray `)` silently. The `)` on
+    // line 4 that closes the group opened on line 3 is not reported.
+    const { errors } = parseSqlContract(`SELECT 1;\nCREATE TABLE t (a int));\nSELECT (2;\n) ) ;\n`);
+    expect(errors).toEqual([
+      { kind: "unmatched-close-paren", line: 2, detail: 'unmatched ")" with no open "("' },
+      { kind: "unmatched-close-paren", line: 4, detail: 'unmatched ")" with no open "("' },
+    ]);
+  });
+
+  it("ignores a closing parenthesis inside a string, quoted identifier, comment or dollar quote", () => {
+    const { errors } = parseSqlContract(`SELECT ')', ")" FROM t; -- )\n/* ) */ SELECT $$ ) $$;\n`);
+    expect(errors).toEqual([]);
+  });
 });
 
 describe("QFAI-CONTRACT-021 now reaches DB contracts", () => {
@@ -109,6 +148,7 @@ describe("QFAI-CONTRACT-021 now reaches DB contracts", () => {
     ["an unterminated block comment", `${HEADER}/* never closed\nCREATE TABLE t (a int);\n`],
     ["an unterminated dollar quote", `${HEADER}CREATE FUNCTION f() AS $$ BEGIN\n`],
     ["unbalanced parentheses", `${HEADER}CREATE TABLE t (a int, b text;\n`],
+    ["an unmatched closing parenthesis", `${HEADER}CREATE TABLE t (a int));\n`],
   ] as const) {
     it(`errors on ${label}`, async () => {
       const issues = await runOn(sql);

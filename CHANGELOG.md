@@ -461,12 +461,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A SQL contract with an unmatched closing parenthesis now fails to
+  parse.** `qfai validate` accepted a `)` that closed nothing, such as the
+  second one in `CREATE TABLE t (a int));`, and treated the file as one that
+  could be applied. It now reports `QFAI-CONTRACT-021` at the line of each
+  such `)`. A `)` inside a string, quoted identifier, comment or
+  dollar-quoted body is still not counted.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so
   `qfai db-drift --format json unused-positional` completed normally. Such a
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
+
+- **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
+  `E'…'` a backslash escapes the next character, but the statement splitter
+  ended the literal at a backslash-escaped quote, so `SELECT E'it\'s';`
+  reported an unterminated string or split a statement at a `;` inside the
+  literal. The splitter now follows PostgreSQL's escape-string rules; a
+  backslash in a standard `'…'` string stays literal.
 
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
