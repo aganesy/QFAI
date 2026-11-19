@@ -288,7 +288,10 @@ and fails on its first run. Step 12 lists each line of a tracked file that names
 a 1.x path as an `old-path` item, with the file, the line number and the paths
 the line names. Step 12 prints `## Files scanned` whatever it finds: the number
 of files it read for lines, or that the project is not a git repository. Any
-other failure of git ends the step with exit 2 and git's message.
+other failure of git ends the step with exit 2 and git's message. A text file
+larger than 16 MiB, or one step 12 could not read, is named there as not
+checked for 1.x paths and does not make the step exit 3; check it by hand
+against the table below.
 
 Step 12 does not scan a file under `.qfai/`, a file under the configured spec
 and contract directories, `.github/copilot-instructions.md`, a symbolic link, a
