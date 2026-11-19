@@ -160,6 +160,21 @@ describe("qfai init writes the derived value", () => {
     // replacement goes through a temp file beside the target: it is created
     // `0600` and widened before the rename, and it is this function's alone —
     // a leftover would put a partial YAML in the project root.
+    //
+    // The expected mode is the one the copy itself gives the config, read from
+    // a run with no test file, where the refinement does not rewrite it. A
+    // fixed expectation would depend on the checkout: one that gives the
+    // template `0600` makes init preserve `0600` correctly.
+    let copiedMode = 0;
+    await withProject(async (root) => {
+      await plant(root, "src/index.ts");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const config = path.join(root, "qfai.config.yaml");
+      expect(globsLineOf(await readFile(config, "utf-8"))).toBe(EMPTY_TEST_FILE_GLOBS_LINE);
+      copiedMode = (await stat(config)).mode & 0o777;
+    });
     await withProject(async (root) => {
       await plant(root, "tests/unit/thing.test.ts");
 
@@ -168,9 +183,7 @@ describe("qfai init writes the derived value", () => {
       const config = path.join(root, "qfai.config.yaml");
       expect(globsLineOf(await readFile(config, "utf-8"))).toContain(`"tests/**/*.test.ts"`);
       const mode = (await stat(config)).mode & 0o777;
-      expect(mode, "the temp file's own 0600 must not survive the rename").not.toBe(0o600);
-      const sibling = (await stat(path.join(root, "AGENTS.md"))).mode & 0o777;
-      expect(mode, "the same mode as a root file the same run copied").toBe(sibling);
+      expect(mode, "the mode the copy gave the config, not the temp file's 0600").toBe(copiedMode);
       expect((await readdir(root)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
     });
   });
