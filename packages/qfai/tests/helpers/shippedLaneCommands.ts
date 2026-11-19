@@ -1249,9 +1249,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "dd5d7af338e0c31186cae22faac4a90fe56e25237710184ee850794bba5195b7"],
-  ["qfai-tests.yml", "7fb9b20b4f472d9ffa19bf254eb53d42032538756a62250abb4d8e8fcaf451f7"],
-  ["qfai-validate.yml", "d6a3d5d691f777509066a9be2c844f51dff4b242d2ae40cbb29f5fb1739ecb3b"],
+  ["qfai-docs.yml", "698f93291a942562a5449dd4cead0cfa0e6111f13b7bd7b6b0de6af098b20cfa"],
+  ["qfai-tests.yml", "a5367dce9a0a9c8e093b40ac407397ad2ea4379fd6f3b489edb359368f61651f"],
+  ["qfai-validate.yml", "b7edb0a89723c10822fba833a659a502eb8a3297559f97610d355f51e823b468"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */

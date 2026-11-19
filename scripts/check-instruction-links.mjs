@@ -224,7 +224,10 @@ export function run(root = process.cwd()) {
   for (const line of describeFindings(findings)) console.error(line);
   if (findings.unreadable.length > 0) return 2;
   if (findings.broken.length > 0) return 1;
-  console.log(`Every relative link under ${TREE}/ resolves (${String(findings.checked)} links).`);
+  console.log(
+    `Every relative link under ${TREE}/ points at a path that exists ` +
+      `(${String(findings.checked)} links; headings are not checked).`,
+  );
   return 0;
 }
 

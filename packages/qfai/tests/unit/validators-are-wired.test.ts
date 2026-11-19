@@ -1591,7 +1591,7 @@ async function buildExecutionGraph(): Promise<ExecutionGraph> {
 }
 
 /**
- * Declarations that run for *some* profile. `runProfileOwnValidators` dispatches
+ * Declarations that run for *some* profile. `runStoryProfileValidators` dispatches
  * on `switch (profile)`, which a static graph cannot evaluate, so every branch
  * merges here — this set answers "does this run at all", never "does this run
  * for a given profile".
