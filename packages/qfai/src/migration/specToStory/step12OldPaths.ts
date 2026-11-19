@@ -1,18 +1,31 @@
-import { execFileSync } from "node:child_process";
-import { lstat, readFile } from "node:fs/promises";
+import { execFileSync, spawn } from "node:child_process";
+import { lstat } from "node:fs/promises";
 import path from "node:path";
 
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { isRecord } from "../../core/workflow/parse.js";
+import { scanBoundedRegularFile } from "../../shared/boundedRead.js";
 import { MigrationInputError, type MigrationContext } from "./harness.js";
 
-/** What step 12 reports about the project files it reads: items for a person, and the scan's own line. */
-export type OldPathScan = { items: string[]; scanned: string };
+/** What step 12 reports about the project files it reads: items for a person, and the scan's own lines. */
+export type OldPathScan = { items: string[]; scanned: string[] };
 
 const NOT_CHECKED = "not checked: the project is not a git repository";
 const SYMBOLIC_LINK = "120000";
 const SUBMODULE = "160000";
 const COPILOT_FILE = ".github/copilot-instructions.md";
+
+/**
+ * The most bytes of one file the scan holds at once. A text file past it is
+ * named as not checked rather than read whole. Lifting it means matching lines
+ * across blocks, which no project has needed yet.
+ */
+const MAX_FILE_BYTES = 16 * 1024 * 1024;
+const TOO_LARGE = "larger than 16 MiB";
+const UNREADABLE = "could not be read";
+
+/** The most characters of git's standard error kept for its message. */
+const STDERR_MAX_CHARACTERS = 64 * 1024;
 
 /** A character that makes `_policies/` or `spec-NNNN` part of a longer name when it touches either. */
 const NAME_CHARACTER = String.raw`[\p{L}\p{Nd}_-]`;
@@ -43,24 +56,26 @@ const OLD_PATHS: readonly OldPath[] = [
 
 type TrackedEntry = { mode: string; file: string };
 
+function gitFailure(args: readonly string[], stderr: string, cause: unknown): MigrationInputError {
+  // A git that cannot be started has no stderr: its own message says why.
+  const own = cause instanceof Error ? cause.message : "";
+  return new MigrationInputError(stderr.trim() || own || `git ${args.join(" ")} failed`, {
+    cause,
+  });
+}
+
 /** Runs git from an argument vector, in English so a missing work tree reads the same everywhere. */
 function gitOutput(root: string, args: readonly string[]): string {
   try {
     return execFileSync("git", [...args], {
       cwd: root,
       encoding: "utf8",
-      maxBuffer: Infinity,
       env: { ...process.env, LC_ALL: "C" },
       stdio: ["ignore", "pipe", "pipe"],
     });
   } catch (error) {
     if (!isRecord(error)) throw error;
-    // A git that cannot be started has no stderr: its own message says why.
-    const stderr = typeof error.stderr === "string" ? error.stderr.trim() : "";
-    const own = typeof error.message === "string" ? error.message : "";
-    throw new MigrationInputError(stderr || own || `git ${args.join(" ")} failed`, {
-      cause: error,
-    });
+    throw gitFailure(args, typeof error.stderr === "string" ? error.stderr : "", error);
   }
 }
 
@@ -68,24 +83,67 @@ function outsideWorkTree(error: unknown): boolean {
   return error instanceof MigrationInputError && /not a git repository/i.test(error.message);
 }
 
-/** The tracked entries as git stores them, or `null` when the directory is outside a git work tree. */
-function trackedEntries(root: string): TrackedEntry[] | null {
+function insideWorkTree(root: string): boolean {
   try {
-    if (gitOutput(root, ["rev-parse", "--is-inside-work-tree"]).trim() !== "true") return null;
+    return gitOutput(root, ["rev-parse", "--is-inside-work-tree"]).trim() === "true";
   } catch (error) {
-    if (outsideWorkTree(error)) return null;
+    if (outsideWorkTree(error)) return false;
     throw error;
   }
-  // An unmerged path is listed once per stage; a link or submodule stage decides.
-  const modes = new Map<string, string>();
-  for (const record of gitOutput(root, ["ls-files", "-z", "-s"]).split("\0")) {
-    const tab = record.indexOf("\t");
-    if (tab < 0) continue;
-    const file = record.slice(tab + 1);
-    const mode = record.slice(0, record.indexOf(" "));
-    if (!modes.has(file) || mode === SYMBOLIC_LINK || mode === SUBMODULE) modes.set(file, mode);
+}
+
+/**
+ * The tracked entries as git stores them, taken from git's listing as it
+ * arrives, so the listing is never held whole.
+ */
+async function* trackedEntries(root: string): AsyncGenerator<TrackedEntry> {
+  const args = ["ls-files", "-z", "-s"];
+  const child = spawn("git", args, {
+    cwd: root,
+    env: { ...process.env, LC_ALL: "C" },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk: string) => {
+    if (stderr.length < STDERR_MAX_CHARACTERS) stderr += chunk;
+  });
+  const ended = new Promise<{ code: number | null; error?: Error }>((resolve) => {
+    child.once("error", (error) => resolve({ code: null, error }));
+    child.once("close", (code) => resolve({ code }));
+  });
+  try {
+    // An unmerged path is listed once per stage, its stages side by side; a link or submodule stage decides.
+    let pending: TrackedEntry | null = null;
+    let rest = Buffer.alloc(0);
+    for await (const chunk of child.stdout) {
+      const bytes = Buffer.concat([
+        rest,
+        Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)),
+      ]);
+      let start = 0;
+      for (let end = bytes.indexOf(0); end >= 0; end = bytes.indexOf(0, start)) {
+        const record = bytes.toString("utf8", start, end);
+        start = end + 1;
+        const tab = record.indexOf("\t");
+        if (tab < 0) continue;
+        const entry = { mode: record.slice(0, record.indexOf(" ")), file: record.slice(tab + 1) };
+        if (pending?.file === entry.file) {
+          if (entry.mode === SYMBOLIC_LINK || entry.mode === SUBMODULE) pending = entry;
+          continue;
+        }
+        if (pending !== null) yield pending;
+        pending = entry;
+      }
+      rest = bytes.subarray(start);
+    }
+    const { code, error } = await ended;
+    if (error !== undefined || code !== 0) throw gitFailure(args, stderr, error);
+    if (pending !== null) yield pending;
+  } finally {
+    // A scan that ends early leaves no git behind it.
+    if (child.exitCode === null) child.kill();
   }
-  return [...modes].map(([file, mode]) => ({ mode, file }));
 }
 
 function directoryPrefix(root: string, directory: string): string[] {
@@ -107,17 +165,37 @@ function isExcluded(entry: TrackedEntry, prefixes: readonly string[]): boolean {
   );
 }
 
-/** The text of a regular file in the working tree, or `null` for anything else or a binary file. */
-async function readableText(root: string, file: string): Promise<string | null> {
+/** A file's text, nothing to scan (no regular file, or binary), or why it was not checked. */
+type FileRead =
+  { kind: "text"; text: string } | { kind: "skip" } | { kind: "unchecked"; why: string };
+
+/** Reads a regular file of the working tree a block at a time, and stops at its first NUL byte. */
+async function readableText(root: string, file: string): Promise<FileRead> {
   const target = path.join(root, file);
   try {
-    if (!(await lstat(target)).isFile()) return null;
+    if (!(await lstat(target)).isFile()) return { kind: "skip" };
   } catch (error) {
-    if (isEnoent(error) || (hasErrnoCode(error) && error.code === "ENOTDIR")) return null;
+    if (isEnoent(error) || (hasErrnoCode(error) && error.code === "ENOTDIR")) {
+      return { kind: "skip" };
+    }
     throw error;
   }
-  const content = await readFile(target);
-  return content.includes(0) ? null : content.toString("utf8");
+  const blocks: Buffer[] = [];
+  const outcome = await scanBoundedRegularFile(target, MAX_FILE_BYTES, (block) => {
+    if (block.includes(0)) return "stop";
+    blocks.push(Buffer.from(block));
+    return "continue";
+  });
+  switch (outcome) {
+    case "stopped":
+      return { kind: "skip" };
+    case "unfinished":
+      return { kind: "unchecked", why: TOO_LARGE };
+    case "refused":
+      return { kind: "unchecked", why: UNREADABLE };
+    case "read":
+      return { kind: "text", text: Buffer.concat(blocks).toString("utf8") };
+  }
 }
 
 /** A file name for one report line: a control character is written as an escape, so a name cannot split it. */
@@ -147,25 +225,30 @@ function oldPathItems(file: string, text: string): string[] {
 
 /**
  * Reads every tracked project file the migration did not write and lists each
- * line that still names a 1.x path. A git failure other than "not a git
- * repository" is an input failure.
+ * line that still names a 1.x path. A file it could not check in full is named
+ * in the scan's own lines. A git failure other than "not a git repository" is
+ * an input failure.
  */
 export async function scanOldPaths(context: MigrationContext): Promise<OldPathScan> {
-  const tracked = trackedEntries(context.root);
-  if (tracked === null) return { items: [], scanned: NOT_CHECKED };
+  if (!insideWorkTree(context.root)) return { items: [], scanned: [NOT_CHECKED] };
   const prefixes = [
     ".qfai/",
     ...directoryPrefix(context.root, context.specsDir),
     ...directoryPrefix(context.root, context.contractsDir),
   ];
   const items: string[] = [];
+  const unchecked: string[] = [];
   let checked = 0;
-  for (const entry of tracked) {
+  for await (const entry of trackedEntries(context.root)) {
     if (isExcluded(entry, prefixes)) continue;
-    const text = await readableText(context.root, entry.file);
-    if (text === null) continue;
+    const read = await readableText(context.root, entry.file);
+    if (read.kind === "skip") continue;
+    if (read.kind === "unchecked") {
+      unchecked.push(`not checked for 1.x paths, ${read.why}: ${reportableName(entry.file)}`);
+      continue;
+    }
     checked += 1;
-    items.push(...oldPathItems(entry.file, text));
+    items.push(...oldPathItems(entry.file, read.text));
   }
-  return { items, scanned: `files checked for 1.x paths: ${checked}` };
+  return { items, scanned: [`files checked for 1.x paths: ${String(checked)}`, ...unchecked] };
 }

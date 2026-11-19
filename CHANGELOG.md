@@ -489,6 +489,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the API does not require, the two remedy sentences ran together with no
   space. They are now separated by one.
 
+- **The migration's step 12 scan no longer runs out of memory on large
+  tracked files.** It held git's whole file listing and read each tracked file
+  whole before checking it for 1.x paths, so a repository with large tracked
+  files could exhaust memory. It now reads the listing as git writes it and
+  each file in blocks, stops at a binary file's first NUL byte, and never holds
+  more than 16 MiB of one file. A text file larger than that, or one it could
+  not read, is named under `## Files scanned` as not checked for 1.x paths.
+
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
   info.** On a Windows `git worktree`, git can store a directory wrapper as a
   file symlink the OS will not follow. The canonical documents behind it read
