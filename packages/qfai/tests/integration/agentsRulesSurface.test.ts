@@ -65,6 +65,23 @@ describe("graph exploration rule", () => {
         "prefer the matching graph CLI first; ordinary search stays acceptable",
       );
   });
+
+  it("describes the graph CLI lifecycle once", async () => {
+    const text = (
+      await readFile(
+        path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/graph-exploration.md"),
+        "utf8",
+      )
+    ).replace(/\s+/g, " ");
+    const opening = text.split(" ## ")[0] ?? "";
+    expect(opening).toContain(
+      "This integration registers no graph MCP server and runs no daemon or IPC.",
+    );
+    const lifecycle =
+      "Each CLI prepares any needed analysis, queries it, and exits with a result or recovery guidance.";
+    expect(text.split(lifecycle)).toHaveLength(2);
+    expect(text.split("daemon")).toHaveLength(2);
+  });
 });
 
 describe("excess vocabulary covers code and product surface without adding tags", () => {
