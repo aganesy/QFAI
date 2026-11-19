@@ -241,7 +241,9 @@ export async function validateProject(
       oldLayoutRoot,
       "storyTree.oldLayout",
     );
-    const layoutIssues = [...versionIssues, layoutIssue, ...securityIssues];
+    // The configuration was read before the layout check, so its findings are
+    // reported now rather than after the migration.
+    const layoutIssues = [...versionIssues, ...configIssues, layoutIssue, ...securityIssues];
     return {
       toolVersion: await resolveToolVersion(),
       generatedAt: new Date().toISOString(),

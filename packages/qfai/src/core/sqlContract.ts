@@ -306,9 +306,60 @@ const CREATABLE_KINDS = [
 const CREATE_RE = new RegExp(
   `^\\s*CREATE\\s+(?:OR\\s+REPLACE\\s+)?(?:GLOBAL\\s+|LOCAL\\s+|TEMP\\s+|TEMPORARY\\s+)?(${CREATABLE_KINDS.map(
     (kind) => kind.replace(/ /g, "\\s+"),
-  ).join("|")})\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?("[^"]+"|[A-Za-z_][\\w$]*(?:\\.[A-Za-z_][\\w$]*)*)`,
+  ).join("|")})\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?`,
   "i",
 );
+
+/** The first character of a bare identifier, under the rules {@link IDENTIFIER_CHAR} continues. */
+const IDENTIFIER_START = /[A-Za-z_\u0080-\uFFFF]/;
+
+/**
+ * The normalised, possibly qualified object name that starts at `from`.
+ *
+ * Each dot-separated part follows PostgreSQL's identifier rules: a bare part
+ * folds to lower case, and a quoted part keeps its case, with `""` standing for
+ * one `"`. A quoted part is written back without its quotes unless it holds a
+ * `.` or a `"`, the two characters no bare part can hold; that keeps `"a.b"`,
+ * one name, apart from `a.b`, a schema and a table. Returns `""` when no name
+ * starts there.
+ */
+function readQualifiedName(text: string, from: number): string {
+  const parts: string[] = [];
+  let index = from;
+  for (;;) {
+    const part = readNamePart(text, index);
+    if (!part) break;
+    parts.push(part.name);
+    index = skipSpaces(text, part.end);
+    if (text[index] !== ".") break;
+    index = skipSpaces(text, index + 1);
+  }
+  return parts.join(".");
+}
+
+function readNamePart(text: string, from: number): { name: string; end: number } | undefined {
+  const first = text[from] ?? "";
+  if (first === '"') {
+    let close = text.indexOf('"', from + 1);
+    // A doubled quote is an escaped `"`, not the end of the part.
+    while (close !== -1 && text[close + 1] === '"') close = text.indexOf('"', close + 2);
+    if (close === -1) return undefined;
+    const value = text.slice(from + 1, close).replace(/""/g, '"');
+    if (value.length === 0) return undefined;
+    const name = /[."]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+    return { name, end: close + 1 };
+  }
+  if (!IDENTIFIER_START.test(first)) return undefined;
+  let end = from + 1;
+  while (end < text.length && IDENTIFIER_CHAR.test(text[end] ?? "")) end += 1;
+  return { name: text.slice(from, end).toLowerCase(), end };
+}
+
+function skipSpaces(text: string, from: number): number {
+  let index = from;
+  while (index < text.length && /\s/.test(text[index] ?? "")) index += 1;
+  return index;
+}
 
 export type CreatedObject = {
   kind: string;
@@ -332,8 +383,8 @@ export function collectCreatedObjects(statements: SqlStatement[]): CreatedObject
     const match = CREATE_RE.exec(statement.text);
     if (!match) continue;
     const kind = (match[1] ?? "").replace(/\s+/g, " ").toUpperCase();
-    const rawName = match[2] ?? "";
-    const name = rawName.startsWith('"') ? rawName.slice(1, -1) : rawName.toLowerCase();
+    const name = readQualifiedName(statement.text, match.index + match[0].length);
+    if (name.length === 0) continue;
     created.push({
       kind,
       name,
