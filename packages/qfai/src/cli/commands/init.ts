@@ -2506,9 +2506,10 @@ function stagingPathFor(dest: string): string {
  * `destNames`: that destination name, the infix, the base-36 pid as
  * `toString(36)` writes it (no leading zero), then the 32-hex-digit token.
  *
- * The pid takes one to seven characters: every platform Node.js runs on keeps
- * a pid within 32 unsigned bits, and the largest, 2^32 - 1, is `1z141z3` in
- * base 36.
+ * The pid takes one to seven characters and is at most {@link MAX_PID}: every
+ * platform Node.js runs on keeps a pid within 32 unsigned bits, and the
+ * largest, 2^32 - 1, is `1z141z3` in base 36. Seven characters reach past it
+ * (`zzzzzzz`), so the value is checked as well as the length.
  *
  * Exactly that shape and no looser: a file the project named to look like ours,
  * with another prefix, another pid or another token, is not ours to delete. Read back
@@ -2517,12 +2518,17 @@ function stagingPathFor(dest: string): string {
  * nothing.
  */
 function isStagingName(name: string, destNames: readonly string[]): boolean {
-  return destNames.some(
-    (dest) =>
-      name.startsWith(`${dest}${STAGING_INFIX}`) &&
-      /^[1-9a-z][0-9a-z]{0,6}-[0-9a-f]{32}$/.test(name.slice(dest.length + STAGING_INFIX.length)),
-  );
+  return destNames.some((dest) => {
+    if (!name.startsWith(`${dest}${STAGING_INFIX}`)) return false;
+    const match = /^([1-9a-z][0-9a-z]{0,6})-[0-9a-f]{32}$/.exec(
+      name.slice(dest.length + STAGING_INFIX.length),
+    );
+    return match !== null && Number.parseInt(match[1] ?? "", 36) <= MAX_PID;
+  });
 }
+
+/** The largest pid any platform Node.js runs on can hand out: 2^32 - 1. */
+const MAX_PID = 0xffffffff;
 
 /**
  * How old a staging file must be before the sweep removes it.

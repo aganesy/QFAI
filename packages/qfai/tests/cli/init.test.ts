@@ -1752,6 +1752,9 @@ describe("qfai init", () => {
         staged("principles.instructions.md", `0${deadPid}`, "e5".repeat(16)),
         // A pid longer than any 32-bit pid in base 36 (seven characters).
         staged("principles.instructions.md", "z".repeat(100), "e5".repeat(16)),
+        // Seven characters, but above 2^32 - 1 (`1z141z3`): no pid writes it.
+        staged("principles.instructions.md", "zzzzzzz", "e5".repeat(16)),
+        staged("principles.instructions.md", "1z141z4", "e5".repeat(16)),
       ];
       const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
       for (const name of [...recent, ...old, ...lookAlikes]) {
