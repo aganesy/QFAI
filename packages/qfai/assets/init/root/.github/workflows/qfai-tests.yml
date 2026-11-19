@@ -259,9 +259,11 @@ jobs:
           # scripts field that is not an object, or declares a layer-named
           # script that is not a string stops the step instead: reading
           # any of them as an empty list would leave every lane skipped
-          # and the required check green over tests nobody selected. The
-          # probe uses the runner's preinstalled node and installs
-          # nothing.
+          # and the required check green over tests nobody selected. A
+          # layer-named script that is empty or only whitespace stops it
+          # too: a blank script exits successfully without running
+          # anything, so its lane would go green over no tests. The probe
+          # uses the runner's preinstalled node and installs nothing.
           declared="[]"
           if [ -f package.json ]; then
             if ! declared="$(node -e '
@@ -296,6 +298,9 @@ jobs:
                 }
                 if (typeof script !== "string") {
                   stop("the test:" + layer + " script is not a string");
+                }
+                if (script.trim() === "") {
+                  stop("the test:" + layer + " script is blank");
                 }
                 declared.push(layer);
               }
