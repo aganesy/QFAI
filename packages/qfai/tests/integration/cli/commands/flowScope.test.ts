@@ -84,12 +84,14 @@ describe("story-tree CLI flow scope", () => {
         "utf8",
       );
     }
-    await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0001", "BF-0002"] });
+    await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0002", "BF-0001"] });
     const scoped = path.join(root, ".qfai/report/validate.flow-0001+0002.json");
     expect(await exists(scoped)).toBe(true);
     const result = JSON.parse(await readFile(scoped, "utf8")) as {
+      flowIds?: string[];
       issues: Array<{ code: string; file?: string; message: string }>;
     };
+    expect(result.flowIds).toEqual(["BF-0001", "BF-0002"]);
     const missing = result.issues
       .filter((finding) => finding.code === "QFAI-STORY-001")
       .map((finding) => `${finding.file ?? ""} ${finding.message}`)

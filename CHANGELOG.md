@@ -482,6 +482,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
 
+- **The Mermaid screen-flow checks now read a diagram behind front matter.**
+  When a Mermaid block opened with a `---` front-matter block, `qfai validate`
+  took the opening `---` as the diagram's declaration and skipped the
+  `stateDiagram`, `stateDiagram-v2` and `flowchart` checks
+  (`QFAI-FLOW-001`, `QFAI-FLOW-002`, `QFAI-FLOW-004`) for that block. They now
+  find the declaration after the front matter, the same line the diagram
+  budget check counts from, and report its file line; a `-->` in the front
+  matter is not read as a transition.
+
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its
@@ -631,6 +640,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **The changed-documents check widens to every document when the worktree
+  diff fails.** `check-mdschema --scope changed` already checked every
+  document when the branch diff failed, but read a failed diff of uncommitted
+  edits, such as one stopped by a corrupt index, as "nothing uncommitted". A
+  broken document edited but not yet committed then dropped out of the scope
+  and the run passed. Either failure now checks every document, and the
+  fail-open warning names the diff that failed, with Git's reason for a
+  failed worktree diff. Closes #4555.
+
 - **The validation result is written only inside its directory.** A
   `validate.json` that was a symbolic link, or a directory on the
   `output.validateJsonPath` path that was a link or junction, carried
@@ -777,6 +795,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and then published without replacing anything already there. On a
   filesystem without hard links it is written directly, as before. A hidden
   file the command cannot remove is named in its output. Closes #4538.
+
+- **`qfai report` checks the flows a validation result records.** A flow
+  report trusted a result named `validate.flow-<ids>.json`, so a result of
+  another scope copied or renamed to that name was rendered as the requested
+  flows'. `qfai validate --flow` now records the flows it checked in the
+  result's `flowIds` field, and `qfai report` exits 2, names the validate run
+  to repeat and writes no report when the recorded flows are not the requested
+  ones, including a result with no recorded flows under `--flow` and a result
+  with recorded flows read without `--flow`. Closes #4547.
 
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
