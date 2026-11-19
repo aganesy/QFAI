@@ -8,6 +8,10 @@
  * `vi.mock` is hoisted to module scope, so these cases live in their own file.
  * The failure travels through the real traversal; only the operating system's
  * refusal is replaced.
+ *
+ * A symbolic link beneath a document root is a finding for the same reason:
+ * the lane checks regular files and directories only, so what a link names
+ * would otherwise drop out of the inventory unseen.
  */
 import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -18,6 +22,8 @@ import { fileURLToPath } from "node:url";
 
 import type * as fs from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 
 type Fs = typeof fs;
 
@@ -160,6 +166,47 @@ describe("a document directory the lane cannot list", () => {
     refusal.dir = "";
 
     expect(await checkDocuments(root)).toEqual({ ok: true, checked: 1, violations: [] });
+  });
+});
+
+describe("a linked entry beneath a document root", () => {
+  /** A directory outside the tree holding one conforming flow, which the lane must not grade. */
+  async function outsideFlow(): Promise<string> {
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-mdschema-outside-"));
+    tempDirs.push(outside);
+    await writeFile(path.join(outside, "business-flow.md"), CONFORMING_FLOW, "utf-8");
+    return outside;
+  }
+
+  it.each<[string, string, "file" | "dir"]>([
+    ["document", `${HIDDEN}/business-flow.md`, "file"],
+    ["directory", `${FLOWS}/business-flow-0003`, "dir"],
+  ])("reports a linked %s by its path and fails the command", async (_, linked, type, context) => {
+    const root = await newTree();
+    refusal.dir = "";
+    const outside = await outsideFlow();
+    const target = type === "file" ? path.join(outside, "business-flow.md") : outside;
+    if (!(await createSymlinkFixture(target, path.join(root, linked), type))) {
+      context.skip();
+      return;
+    }
+
+    expect(await checkDocuments(root)).toEqual({
+      ok: true,
+      checked: 1,
+      violations: [
+        expect.objectContaining({
+          file: linked,
+          rule: "inventory",
+          line: 1,
+          message: expect.stringContaining("symbolic link") as unknown,
+        }),
+      ],
+    });
+    const result = runMain(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(linked);
+    expect(result.stderr).toContain("[inventory]");
   });
 });
 
