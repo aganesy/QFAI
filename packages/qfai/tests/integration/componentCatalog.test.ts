@@ -228,6 +228,7 @@ describe("the catalogue is written only inside the project", () => {
     expect(await readdir(outside)).toEqual(["components.yaml"]);
   });
 
+  // QFAI:EX-0001-0307-19
   it("replaces the catalogue in place and leaves no temporary file beside it", async () => {
     const root = await projectWith({
       "src/a.tsx": component("Alpha", []),
