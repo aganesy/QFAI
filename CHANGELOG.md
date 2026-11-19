@@ -565,6 +565,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   already wrote keeps its old steps; delete it and run `qfai init` again to
   get these.
 
+- **CSS beside an HTML mock now reaches the mock unchanged.** When
+  `qfai validate` put a `css` block into the HTML mock before it, it read
+  `$&`, `$$` and the other replacement patterns in the CSS as instructions, so
+  a rule such as `content: "$&"` was checked with `</head>` in its place. The
+  CSS is now inserted as written.
+
 - **The Markdown-schema check no longer passes over a linked document.** A
   symbolic link beneath `paths.specsDir` or `paths.contractsDir`, to a file or
   to a directory, was skipped without a word, so the documents behind it were
