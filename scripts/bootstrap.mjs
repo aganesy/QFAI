@@ -8,18 +8,6 @@ import { isPnpmEntry, pnpmCommand } from "./lib/pnpm-command.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-function hasBlockingAncestor(relative) {
-  const parts = relative.split("/");
-  for (let end = 1; end < parts.length; end++) {
-    try {
-      if (!statSync(path.join(root, ...parts.slice(0, end))).isDirectory()) return true;
-    } catch (error) {
-      return error?.code !== "ENOENT";
-    }
-  }
-  return false;
-}
-
 function bootstrap() {
   const cli = process.env.npm_execpath;
   const userAgent = process.env.npm_config_user_agent ?? "";
@@ -40,7 +28,8 @@ function bootstrap() {
   }
 
   for (const relative of ["node_modules", "packages/qfai/node_modules"]) {
-    // A missing leaf does not prove its existing parents are directories.
+    // A missing leaf does not prove its existing parents are directories, and Windows
+    // reports a child below a file as ENOENT, so inspect the parents before the leaf.
     let parent = root;
     for (const component of relative.split("/").slice(0, -1)) {
       parent = path.join(parent, component);
@@ -61,8 +50,7 @@ function bootstrap() {
     try {
       stats = lstatSync(path.join(root, ...relative.split("/")));
     } catch (error) {
-      // Windows reports a child below a file as ENOENT, so inspect its parents first.
-      if (error?.code === "ENOENT" && !hasBlockingAncestor(relative)) continue;
+      if (error?.code === "ENOENT") continue;
       process.stderr.write(`Cannot inspect dependency path ${relative}.\n`);
       return 1;
     }
