@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { unlink } from "node:fs/promises";
+import { lstat, unlink } from "node:fs/promises";
 import path from "node:path";
-import { hasErrnoCode } from "../fs/errno.js";
+import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { graphEnvironmentKey } from "./layout.js";
 import {
   graphStateDirectory,
@@ -24,35 +24,7 @@ export async function withGraphLock<T>(root: string, action: () => Promise<T>): 
     await writeGraphLocalFile(file, owner);
   } catch (cause: unknown) {
     if (!hasErrnoCode(cause) || cause.code !== "EEXIST") throw cause;
-    const text = await readGraphLocalFile(file);
-    let active = false;
-    try {
-      const existing: unknown = text === undefined ? undefined : JSON.parse(text);
-      if (typeof existing !== "object" || existing === null || Array.isArray(existing))
-        throw new Error("Invalid graph lock metadata.", { cause });
-      const value = existing as Record<string, unknown>;
-      if (
-        Object.keys(value).length !== 4 ||
-        value.kind !== "graph-lock" ||
-        typeof value.pid !== "number" ||
-        !Number.isSafeInteger(value.pid) ||
-        value.pid <= 0 ||
-        typeof value.createdAt !== "number" ||
-        !Number.isSafeInteger(value.createdAt) ||
-        value.createdAt < 0 ||
-        typeof value.token !== "string" ||
-        !GRAPH_UUID.test(value.token)
-      )
-        throw new Error("Invalid graph lock metadata.", { cause });
-      try {
-        process.kill(value.pid, 0);
-        active = true;
-      } catch (liveness: unknown) {
-        if (!hasErrnoCode(liveness) || liveness.code !== "ESRCH") active = true;
-      }
-    } catch {
-      // Invalid metadata is retained for manual recovery.
-    }
+    const active = await lockIsActive(file);
     throw new GraphLocalStateError(
       `Project graph analysis lock ${active ? "is contended" : "requires manual recovery"}.`,
       active
@@ -66,6 +38,69 @@ export async function withGraphLock<T>(root: string, action: () => Promise<T>): 
   } finally {
     await releaseGraphLock(file, JSON.stringify(owner));
   }
+}
+
+/**
+ * How long a lock without a complete owner record counts as still being written. The exclusive
+ * create publishes an empty file before its owner record lands, a gap of one write; the ceiling
+ * leaves room for slow disks and coarse modification times. After it, an incomplete record is
+ * abandoned and kept for manual recovery.
+ */
+const INITIALIZING_LOCK_MS = 10_000;
+
+/**
+ * Whether the existing lock belongs to a live operation, so the caller retries rather than
+ * recovering it by hand: its owner is running, its owner record is still being written, or it
+ * was released after the exclusive create saw it.
+ */
+async function lockIsActive(file: string): Promise<boolean> {
+  const text = await readGraphLocalFile(file);
+  if (text === undefined) return true;
+  let existing: unknown;
+  try {
+    existing = JSON.parse(text);
+  } catch {
+    return lockIsInitializing(file);
+  }
+  const pid = ownerPid(existing);
+  // Complete but invalid metadata is retained for manual recovery.
+  if (pid === undefined) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (liveness: unknown) {
+    return !hasErrnoCode(liveness) || liveness.code !== "ESRCH";
+  }
+}
+
+async function lockIsInitializing(file: string): Promise<boolean> {
+  try {
+    const { mtimeMs } = await lstat(file);
+    return Date.now() - mtimeMs < INITIALIZING_LOCK_MS;
+  } catch (cause: unknown) {
+    if (isEnoent(cause)) return true;
+    throw cause;
+  }
+}
+
+function ownerPid(existing: unknown): number | undefined {
+  if (typeof existing !== "object" || existing === null || Array.isArray(existing))
+    return undefined;
+  const value: Record<string, unknown> = { ...existing };
+  if (
+    Object.keys(value).length !== 4 ||
+    value.kind !== "graph-lock" ||
+    typeof value.pid !== "number" ||
+    !Number.isSafeInteger(value.pid) ||
+    value.pid <= 0 ||
+    typeof value.createdAt !== "number" ||
+    !Number.isSafeInteger(value.createdAt) ||
+    value.createdAt < 0 ||
+    typeof value.token !== "string" ||
+    !GRAPH_UUID.test(value.token)
+  )
+    return undefined;
+  return value.pid;
 }
 
 async function releaseGraphLock(file: string, owner: string): Promise<void> {
