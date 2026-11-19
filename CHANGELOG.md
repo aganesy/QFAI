@@ -510,6 +510,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now reports `QFAI-ASSISTANT-002` at info saying the path is not a
   directory, as it already does for a layer that is missing.
 
+- **The migration skill no longer offers `design/` as a contract for an old
+  business rule.** Its plan instructions named `design/` beside `cli/`,
+  `api/`, `db/` and `ui/`, although step 4 refuses a rule placed there and
+  step 3 removes that directory. They now name only the four contract kind
+  directories, as the placement guide does. Closes #4627.
+
 - **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
   `E'…'` a backslash escapes the next character, but the statement splitter
   ended the literal at a backslash-escaped quote, so `SELECT E'it\'s';`

@@ -827,6 +827,18 @@ describe("BF-0004 migration examples", () => {
     );
   });
 
+  // QFAI:EX-0004-0012-01
+  it("names only the four contract kind directories as a destination for an old business rule", async () => {
+    const skill = await readFile(
+      path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md"),
+      "utf8",
+    );
+    const prose = skill.replace(/\s+/g, " ");
+    expect(prose).toContain(
+      "Name that contract by its current path under `cli/`, `api/`, `db/` or `ui/` of the contracts directory",
+    );
+  });
+
   // QFAI:EX-0004-0012-06
   it("names the run on a 1.x project and the run on a project an earlier 2.x release migrated", async () => {
     const skillDir = path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2");
