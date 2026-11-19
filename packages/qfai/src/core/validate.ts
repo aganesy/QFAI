@@ -276,9 +276,9 @@ export async function validateProject(
     root,
     config,
     profile,
+    storyModel,
     timingsSink,
     options.platform,
-    storyModel,
     flowScope ? (file) => flowScopeContainsFile(flowScope, file, root) : undefined,
   );
   const findings = [
@@ -387,7 +387,7 @@ function toRepoRelative(root: string, absolute: string): string {
 }
 
 /**
- * Whether this profile's arm in `runProfileOwnValidators` forwards
+ * Whether this profile's arm in `runStoryProfileValidators` forwards
  * `platformOption` onwards. Only those arms reach `detectPlatform`, the single
  * site that raises `QFAI-PLATFORM-001`; the rest discard the value.
  *
@@ -612,9 +612,9 @@ async function runProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
   profile: ValidationProfile,
+  storyModel: StoryTreeModel,
   timings: TimingsSink,
   platformOption?: string,
-  storyModel?: StoryTreeModel,
   fileInScope?: (file: string) => boolean,
 ): Promise<ProfileValidatorRun> {
   // Runs in every profile, ahead of the profile's own validators. A broken
@@ -682,23 +682,18 @@ async function runProfileValidators(
       ...unusedPlatform,
       ...surface.issues,
       ...anchorIssues,
-      ...(await runProfileOwnValidators()),
+      ...(await runStoryProfileValidators(
+        root,
+        config,
+        profile,
+        storyModel,
+        timings,
+        platformOption,
+        fileInScope,
+      )),
     ],
     ranProfileValidators: true,
   };
-
-  async function runProfileOwnValidators(): Promise<Issue[]> {
-    if (!storyModel) return [];
-    return runStoryProfileValidators(
-      root,
-      config,
-      profile,
-      storyModel,
-      timings,
-      platformOption,
-      fileInScope,
-    );
-  }
 }
 
 /**
