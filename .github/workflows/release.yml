@@ -151,6 +151,8 @@ jobs:
           # No leading zeros, as prepare-release and tag-release refuse them. `v01.11.0` passes
           # every check above and is not SemVer: `node-semver` rejects it, so npm would refuse
           # the publish only after the gate had passed and the build had run.
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped templates publish nothing to npm and validate no release tag.
           major="${version%%.*}"
           minor="${after_major%%.*}"
           for part in "$major" "$minor" "$after_minor"; do
