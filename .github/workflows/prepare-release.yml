@@ -70,7 +70,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          reject() { echo "::error::prepare-release: '$RELEASE_VERSION' $1"; exit 1; }
+          # The reason alone, never the rejected value: a dispatched version can carry a newline,
+          # and the line after it would be read as a workflow command of its own.
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped set carries no release workflow, so no step there validates a version.
+          reject() { echo "::error::prepare-release: the requested version $1"; exit 1; }
 
           # Exactly X.Y.Z, anchored at both ends, checked by structure so it holds under any POSIX
           # shell: nothing but digits and dots, no empty component, exactly three of them. This is

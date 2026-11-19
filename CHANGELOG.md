@@ -490,6 +490,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
 
+- **A rejected release version or tag no longer reaches the Actions log as a
+  workflow command.** The manual prepare-release and release workflows put
+  the value they refused inside their error annotation, so a value carrying a
+  newline started a line of its own, which the runner reads as a command. The
+  refusal now states its reason without the value. Closes #4605.
+
 - **A file at an assistant layer path no longer counts as an installed
   layer.** `qfai validate` accepted a regular file named, for example,
   `.qfai/assistant/prompt` as the `prompt/` layer and reported nothing. It
