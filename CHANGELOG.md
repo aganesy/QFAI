@@ -540,6 +540,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `##[<command>]` form, which the runner finds anywhere in a line, prints as
   `##\[`. The JSON report keeps the exact values.
 
+- **External document analysis now requires `https`.** An external Graphify
+  processing endpoint could be configured with plain `http`, so documents and
+  the selected credential crossed the network unencrypted once a human
+  authorized the destination. Such an endpoint is now not ready, with a
+  recovery that names `https`, and no authorization is asked for it. The
+  extraction keeps the client's default certificate verification, and no
+  ambient certificate setting reaches it. Plain `http` still works for an
+  endpoint on `127.0.0.1`, `localhost` or `[::1]`. An endpoint written so that
+  Python reads a different host than the loopback check did, such as
+  `http://127.0.0.1\@evil.example/v1`, is now an invalid processing
+  definition, and every step receives the one parsed URL.
+  Closes #4585.
+
 - **`qfai validate` reports the actual line of a Mermaid screen-flow
   finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction
   warnings named the line before the one they flagged. They now name the
@@ -552,6 +565,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a program that loaded a configuration and changed it changed the defaults
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
+
+- **A failed graph tool download names a directory of its own to retry in.**
+  The recovery line of `qfai init` told you to rerun the download into a fixed
+  `qfai-graph-check` directory under the system temporary directory and then
+  delete it, even if that directory already held something else. Init now
+  creates a new empty directory for each failure, names only that one in the
+  command and in the deletion, and quotes the command for the shell of your
+  platform. Where no such directory can be created or shown safely, the
+  recovery line says to fix the cause and run `qfai init` again. Closes #4589.
 
 - **An unreadable completed graph analysis no longer stops reuse.** When one
   saved CodeGraph or Graphify analysis in the repository's graph cache could
@@ -610,6 +632,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<!-- note --> ## Risks` line was read as a heading, and a code fence after
   a closing `-->` hid the rest of the document. Closes #4568.
 
+- **A CommonJS consumer now gets the CommonJS declaration file.** The
+  package's exports map sent `import` and `require` to the same
+  `index.d.ts`, which TypeScript reads as an ES module in this package, so a
+  `.cts` file compiled in `node16` mode got TS1471 for a `require("qfai")`
+  that worked at runtime. `require` now resolves its types to `index.d.cts`,
+  and `import` keeps `index.d.ts`. Closes #4598.
+
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
   `npx qfai` and the document lane's check for `node_modules/qfai` found
@@ -659,6 +688,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   quoting rules: a bare part folds to lower case, a quoted part keeps its
   case and its doubled `""`, and a dot inside quotes does not split the name.
 
+- **A graph lock still being taken reads as busy, not abandoned.** A graph
+  query, analysis preparation or `qfai init` that found the worktree's
+  analysis lock in the moment between its creation and its owner record being
+  written, or just after its release, was told to inspect and remove the lock
+  by hand. It is now told to retry. A lock whose owner record is still missing
+  after ten seconds, or whose owner process has exited, is still kept and
+  reported for manual recovery. Closes #4591.
+
 - **An agent card's required sections must be real headings.** The
   `QFAI-AGENT-005` check accepted any occurrence of a required heading's text,
   so a card missing `## Stop conditions` passed when the frontmatter, a
@@ -683,6 +720,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reading `qfai.config.yaml`, such as an unknown `workflow.mode` value, was
   dropped and appeared only after the migration. The run now reports those
   findings before `QFAI-LAYOUT-001`, so both can be fixed in one pass.
+
+- **Graph setup checks every graph output path against `.gitignore`.** When
+  the managed graph block was already present, `qfai init` checked one path
+  under `.qfai/tools/analysis/` that the current layout no longer writes, so a
+  narrower rule could leave runtimes, local state, engine caches or the graph
+  entrypoints visible to Git while the check passed. It now checks a path in
+  each place graph preparation and queries write, and the conflict it reports
+  names each path Git would still see.
 
 - **`qfai validate` no longer passes over a story-tree Markdown file it
   cannot read.** The HTML mock, Mermaid screen flow and UI definition checks
