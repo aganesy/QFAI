@@ -10,7 +10,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { validateAssistantTreeMigration } from "../../src/core/validators/assistantTreeMigration.js";
-import { loadConfig } from "../../src/core/config.js";
 
 async function newRoot(prefix: string): Promise<string> {
   return mkdtemp(path.join(os.tmpdir(), `qfai-${prefix}-`));
@@ -24,17 +23,12 @@ async function seed4LayerTree(root: string): Promise<void> {
   }
 }
 
-async function getConfig(root: string) {
-  const r = await loadConfig(root);
-  return r.config;
-}
-
 // QFAI:EX-0001-0046-02
 describe("assistantTreeMigration validator", () => {
   it("returns no issues when .qfai/assistant/ is absent", async () => {
     const root = await newRoot("treemig-absent");
     try {
-      const issues = await validateAssistantTreeMigration(root, await getConfig(root));
+      const issues = await validateAssistantTreeMigration(root);
       expect(issues.filter((i) => i.code !== "QFAI-ASSISTANT-002").length).toBe(0);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -50,7 +44,7 @@ describe("assistantTreeMigration validator", () => {
       const off = path.join(root, ".qfai", "assistant", "extras");
       await mkdir(off, { recursive: true });
       await writeFile(path.join(off, ".gitkeep"), "", "utf-8");
-      const issues = await validateAssistantTreeMigration(root, await getConfig(root));
+      const issues = await validateAssistantTreeMigration(root);
       const enumIssues = issues.filter(
         (i) => i.code === "QFAI-ASSISTANT-001" && i.rule === "assistantTreeMigration.enumGuard",
       );
@@ -72,7 +66,7 @@ describe("assistantTreeMigration validator", () => {
         await mkdir(dir, { recursive: true });
         await writeFile(path.join(dir, ".gitkeep"), "", "utf-8");
       }
-      const issues = await validateAssistantTreeMigration(root, await getConfig(root));
+      const issues = await validateAssistantTreeMigration(root);
       const infoIssues = issues.filter((i) => i.code === "QFAI-ASSISTANT-002");
       expect(infoIssues.length).toBeGreaterThanOrEqual(1);
       // prompt/ should be the named offender.
@@ -90,7 +84,7 @@ describe("assistantTreeMigration validator", () => {
       const promptPath = path.join(root, ".qfai", "assistant", "prompt");
       await rm(promptPath, { recursive: true, force: true });
       await writeFile(promptPath, "not a directory\n", "utf-8");
-      const issues = await validateAssistantTreeMigration(root, await getConfig(root));
+      const issues = await validateAssistantTreeMigration(root);
       const layerIssues = issues.filter((i) => i.code === "QFAI-ASSISTANT-002");
       expect(layerIssues.map((i) => i.file)).toEqual([".qfai/assistant/prompt/"]);
       expect(layerIssues[0]?.severity).toBe("info");
@@ -112,7 +106,7 @@ describe("assistantTreeMigration validator", () => {
       await mkdir(catalog);
       await writeFile(path.join(catalog, "product.md"), "# Old\n", "utf-8");
       await mkdir(path.join(assistant, "extras"));
-      const changed = await validateAssistantTreeMigration(root, await getConfig(root));
+      const changed = await validateAssistantTreeMigration(root);
       expect(
         changed.filter((found) => found.code === "QFAI-ASSISTANT-001").map((found) => found.file),
       ).toEqual([".qfai/assistant/extras/", ".qfai/assistant/notes/"]);

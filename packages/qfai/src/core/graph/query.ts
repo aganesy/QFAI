@@ -11,9 +11,7 @@ import {
   inspectCurrentCodeAnalysis,
 } from "./analysis.js";
 import { graphAnalysisRoot, graphRuntimePaths } from "./layout.js";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { findUnsafeHostFileComponent } from "../init/fsGuards.js";
 import { inspectDocumentScope, readGraphProcessing } from "./documents.js";
 
 export interface GraphQuestion {
@@ -35,37 +33,6 @@ export interface GraphAnswer {
   failure?: string;
   inferenceNotice?: string;
   recovery?: string;
-}
-
-export async function readKnownGraphFile(root: string, relative: string): Promise<string> {
-  const parts = relative.split(/[\\/]/);
-  if (
-    path.isAbsolute(relative) ||
-    parts.some((part) => part === ".." || part === "" || part === ".") ||
-    (await findUnsafeHostFileComponent(root, parts))
-  ) {
-    throw new Error("Use an exact known source file inside the project.");
-  }
-  return readFile(path.join(root, ...parts), "utf8");
-}
-
-export async function continueGraphExploration(
-  root: string,
-  previous: GraphAnswer,
-  unresolved: GraphQuestion,
-  run: GraphProcess = runGraphProcess,
-): Promise<GraphAnswer> {
-  const nextEngine = unresolved.domain === "code" ? "codegraph" : "graphify";
-  if (
-    previous.status !== "answered" ||
-    previous.engine === nextEngine ||
-    unresolved.question.trim() === ""
-  ) {
-    throw new Error(
-      "State the unresolved question in the other domain after an answered graph query.",
-    );
-  }
-  return exploreGraph(root, unresolved, run);
 }
 
 export async function exploreGraph(

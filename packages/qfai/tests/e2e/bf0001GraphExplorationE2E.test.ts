@@ -4,7 +4,6 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
-import { readKnownGraphFile } from "../../src/core/graph/query.js";
 import { graphReuseEnvironment } from "../../src/core/graph/reuse.js";
 import { completedDocumentSnapshotFixture } from "../helpers/graphReuse.js";
 import { graphProcessFixture } from "../helpers/graphProcess.js";
@@ -38,7 +37,9 @@ it("initializes managed graph tools and completes graph-first exploration", asyn
     expect(code.output).toContain("checkout.ts");
     expect(code.value).toMatchObject({ engine: "codegraph", status: "answered" });
     expect(fixture.observed.some((args) => args.includes("query"))).toBe(false);
-    expect(await readKnownGraphFile(fixture.root, "checkout.ts")).toContain("function checkout");
+    expect(await readFile(path.join(fixture.root, "checkout.ts"), "utf8")).toContain(
+      "function checkout",
+    );
     const documents = await graphCliResult(
       fixture.root,
       ["documents", "Which requirement explains checkout?"],
