@@ -20,7 +20,7 @@ import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { countIssues, validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { error, info, warn } from "../../core/logger.js";
-import { appendIssue, profileSuffixedReportPath, scopedReportPath } from "./validate.js";
+import { appendIssue, scopedReportPath, validationResultPaths } from "./validate.js";
 
 export type ReportOptions = {
   root: string;
@@ -37,7 +37,7 @@ export type ReportOptions = {
 };
 
 type ReportPaths = {
-  /** Where the validate result is read from (or written to under `--run-validate`). */
+  /** Where the validate result of the requested scope and profile is read from. */
   validateJsonPath: string;
   /** Absolute path the rendered report is written to. */
   outPath: string;
@@ -55,17 +55,19 @@ function resolveReportPaths(
   const outRoot = resolvePath(root, config, "outDir");
   const defaultOut =
     options.format === "json" ? path.join(outRoot, "report.json") : path.join(outRoot, "report.md");
-  const configuredValidateJson = config.output.validateJsonPath;
   const flowIds = options.flowIds ?? [];
-  const scopedValidateJson =
-    flowIds.length > 0 ? scopedReportPath(configuredValidateJson, flowIds) : configuredValidateJson;
+  const resultPaths = validationResultPaths(
+    config.output.validateJsonPath,
+    flowIds,
+    options.profile,
+  );
   const scopedOut = flowIds.length > 0 ? scopedReportPath(defaultOut, flowIds) : defaultOut;
-  if (scopedValidateJson === null || scopedOut === null) {
+  if (resultPaths === null || scopedOut === null) {
     return null;
   }
   const out = options.outPath ?? scopedOut;
   return {
-    validateJsonPath: scopedValidateJson,
+    validateJsonPath: resultPaths.read,
     outPath: path.isAbsolute(out) ? out : path.resolve(root, out),
   };
 }
@@ -75,18 +77,10 @@ function resolveReportPaths(
  *
  * The stored validation result carries findings and waiver totals that cannot
  * be reconstructed by filtering a repository-wide result. The scoped file
- * name is the available provenance. `--profile` adds its suffix to that name.
+ * name is the available provenance; the profile is not part of it.
  */
-function inputCarriesRequestedScope(
-  inputPath: string,
-  scopedValidateJsonPath: string,
-  profile: ValidationProfile | undefined,
-): boolean {
-  const accepted = new Set([path.basename(scopedValidateJsonPath)]);
-  if (profile) {
-    accepted.add(path.basename(profileSuffixedReportPath(scopedValidateJsonPath, profile)));
-  }
-  return accepted.has(path.basename(inputPath));
+function inputCarriesRequestedScope(inputPath: string, scopedValidateJsonPath: string): boolean {
+  return path.basename(inputPath) === path.basename(scopedValidateJsonPath);
 }
 
 /**
@@ -174,20 +168,15 @@ export async function runReport(options: ReportOptions): Promise<number> {
     if (options.inputPath) {
       warn("report: --in is ignored because --run-validate was given.");
     }
-    const ran = await runValidateForReport(root, configResult, options, paths.validateJsonPath);
+    const ran = await runValidateForReport(root, configResult, options);
     ranNarrowProfileInCi = ran.ranNarrowProfileInCi;
     validation = ran.validation;
   } else {
-    const inputPath = resolveInputPath(
-      root,
-      paths.validateJsonPath,
-      options.inputPath,
-      options.profile,
-    );
+    const inputPath = resolveInputPath(root, paths.validateJsonPath, options.inputPath);
     if (
       options.inputPath !== undefined &&
       flowIds.length > 0 &&
-      !inputCarriesRequestedScope(inputPath, paths.validateJsonPath, options.profile)
+      !inputCarriesRequestedScope(inputPath, paths.validateJsonPath)
     ) {
       const unit = "flow";
       const scopeArgs = flowIds.map((id) => `--flow ${id}`).join(" ");
@@ -206,12 +195,21 @@ export async function runReport(options: ReportOptions): Promise<number> {
       inputPath,
       flowIds,
       options.profile,
-      resolveInputPath(root, paths.validateJsonPath, undefined, options.profile),
+      resolveInputPath(root, paths.validateJsonPath, undefined),
     );
     if (loaded === null) {
       return 2;
     }
-    warnOnProfileMismatch(inputPath, loaded, options.profile);
+    if (options.inputPath === undefined && options.profile !== undefined && flowIds.length > 0) {
+      // A flow-scoped file name carries no profile, so the profile the
+      // result records is the only evidence it is the requested one.
+      if (loaded.profile !== options.profile) {
+        error(buildProfileMismatchGuidance(inputPath, loaded.profile, flowIds, options.profile));
+        return 2;
+      }
+    } else {
+      warnOnProfileMismatch(inputPath, loaded, options.profile);
+    }
     // As on the --run-validate side, report that CI used a narrow profile.
     // No finding is added here: the validate output that was read already
     // carries QFAI-VALIDATE-017 from the validate run that wrote it.
@@ -265,13 +263,12 @@ export async function runReport(options: ReportOptions): Promise<number> {
  * `report --run-validate` is documented as the single-step CI usage, so a
  * finding `validate` raises must reach this exit code too.
  *
- * `writeTo` is the scope-resolved target.
+ * The result is written where `qfai validate` with the same options writes it.
  */
 async function runValidateForReport(
   root: string,
   configResult: ConfigLoadResult,
   options: ReportOptions,
-  writeTo: string,
 ): Promise<{ validation: ValidationResult; ranNarrowProfileInCi: boolean }> {
   const flowIds = options.flowIds ?? [];
   const ciProfileIssue = buildCiProfileIssue(options.profile);
@@ -281,8 +278,14 @@ async function runValidateForReport(
   });
   const withCiIssue = ciProfileIssue ? appendIssue(validated, ciProfileIssue) : validated;
   const normalized = normalizeValidationResult(root, withCiIssue);
-  // Profile suffixes compose with the flow-scoped path.
-  await writeValidationResults(root, writeTo, normalized, options.profile);
+  const resultPaths = validationResultPaths(
+    configResult.config.output.validateJsonPath,
+    flowIds,
+    normalized.profile ?? options.profile,
+  );
+  for (const target of resultPaths?.write ?? []) {
+    await writeValidationResult(root, target, normalized);
+  }
   return { validation: normalized, ranNarrowProfileInCi: ciProfileIssue !== null };
 }
 
@@ -299,21 +302,40 @@ function resolveFailOn(options: ReportOptions, fallback: FailOn): FailOn {
 /**
  * Decide the input path on the reading side (without `--run-validate`).
  *
- * When `--profile` is given, read the profile-suffixed file, never the
- * always-latest pointer (`validate.json`). `validate.json` is only the output
- * of "whichever profile ran last", and the Consumer rule of the CLI contract
- * also requires a reader scoped by profile to use the suffixed file. An
- * explicit `--in` is the operator's intent, so it always wins.
+ * `resolvedPath` already names the file `qfai validate` writes for the
+ * requested scope and profile. An explicit `--in` is the operator's intent,
+ * so it always wins.
  */
 function resolveInputPath(
   root: string,
-  configuredPath: string,
+  resolvedPath: string,
   inputPath: string | undefined,
-  profile: ValidationProfile | undefined,
 ): string {
-  const input =
-    inputPath ?? (profile ? profileSuffixedReportPath(configuredPath, profile) : configuredPath);
+  const input = inputPath ?? resolvedPath;
   return path.isAbsolute(input) ? input : path.resolve(root, input);
+}
+
+/**
+ * The refusal for a result that records another profile than `--profile`.
+ *
+ * A flow-scoped result has one file whatever the profile, so the file read
+ * can be the output of a later run with another profile. Rendering it would
+ * present that run's findings as the requested profile's.
+ */
+function buildProfileMismatchGuidance(
+  inputPath: string,
+  storedProfile: ValidationProfile | undefined,
+  flowIds: readonly string[],
+  profile: ValidationProfile,
+): string {
+  const scopeArgs = flowIds.map((id) => ` --flow ${id}`).join("");
+  return [
+    `qfai report: ${inputPath} records profile "${storedProfile ?? "none"}", not the requested "${profile}".`,
+    "Run validate with the same scope and profile first. For example:",
+    `  qfai validate${scopeArgs} --profile ${profile}`,
+    "",
+    "Alternatively, pass --run-validate to report.",
+  ].join("\n");
 }
 
 /**
@@ -483,30 +505,10 @@ function isValidationResult(value: unknown): value is ValidationResult {
 }
 
 /**
- * Write the `--run-validate` result to the same two places as a plain
- * `qfai validate`: the always-latest pointer (`validate.json`) and the
- * profile-suffixed file (`validate-<profile>.json`).
- *
- * The reading side (`resolveInputPath`) always looks at the suffixed file when
- * `--profile` is given. If the suffixed file is not updated here, a later
- * `qfai report --profile X` either exits 2 with "file not found" or builds
- * its report from a stale run.
+ * Write one `--run-validate` result file. The targets come from
+ * `validationResultPaths`, as for a plain `qfai validate`, so a later
+ * `qfai report` with the same options reads what this run wrote.
  */
-async function writeValidationResults(
-  root: string,
-  configuredPath: string,
-  result: ValidationResult,
-  requestedProfile: ValidationProfile | undefined,
-): Promise<void> {
-  await writeValidationResult(root, configuredPath, result);
-  const profileLabel = result.profile ?? requestedProfile ?? "full";
-  await writeValidationResult(
-    root,
-    profileSuffixedReportPath(configuredPath, profileLabel),
-    result,
-  );
-}
-
 async function writeValidationResult(
   root: string,
   outputPath: string,

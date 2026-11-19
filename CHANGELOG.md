@@ -607,6 +607,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   named `<file>.qfai-init-<pid>-<timestamp>`, stays: delete it by hand.
   Closes #4526.
 
+- **`qfai report --flow --profile` reads the result `qfai validate` wrote.**
+  `qfai validate --flow` writes one `validate.flow-<ids>.json` whatever the
+  profile, while `qfai report` with both `--flow` and `--profile` read a
+  profile-suffixed file that only an earlier `report --run-validate` wrote,
+  so a report either missed a fresh result or rendered a stale one. Both
+  commands now resolve the file name through one function, `--run-validate`
+  writes only the scoped file, and a report read without `--in` that records
+  another profile than `--profile` exits 2 and names the validate run to
+  repeat. Closes #4468.
+
 - **`qfai validate` no longer waits forever on the document-schema check.**
   An mdschema run that never exited held `validate` open, and one that printed
   without end was read into memory whole. Each run now stops after 120 seconds
