@@ -26,8 +26,9 @@ export type SqlParseError = {
     | "unterminated-string"
     | "unterminated-comment"
     | "unterminated-dollar-quote"
-    | "unbalanced-parens";
-  /** 1-based line where the offending construct opened. */
+    | "unbalanced-parens"
+    | "unmatched-close-paren";
+  /** 1-based line where the offending construct opened, or where a stray `)` sits. */
   line: number;
   detail: string;
 };
@@ -216,7 +217,17 @@ export function parseSqlContract(text: string): SqlParseResult {
       if (depth === 0) openParenLine = line;
       depth += 1;
     } else if (ch === ")") {
-      depth = Math.max(0, depth - 1);
+      if (depth === 0) {
+        // A `)` that closes nothing makes the statement unrunnable; it is
+        // reported where it sits, and the depth stays at zero.
+        errors.push({
+          kind: "unmatched-close-paren",
+          line,
+          detail: 'unmatched ")" with no open "("',
+        });
+      } else {
+        depth -= 1;
+      }
     }
 
     if (ch === ";" && depth === 0) {

@@ -461,6 +461,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A SQL contract with an unmatched closing parenthesis now fails to
+  parse.** `qfai validate` accepted a `)` that closed nothing, such as the
+  second one in `CREATE TABLE t (a int));`, and treated the file as one that
+  could be applied. It now reports `QFAI-CONTRACT-021` at the line of each
+  such `)`. A `)` inside a string, quoted identifier, comment or
+  dollar-quoted body is still not counted.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so
