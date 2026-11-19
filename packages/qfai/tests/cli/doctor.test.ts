@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import { chmod, mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -364,6 +365,57 @@ describe("doctor", () => {
 
       expect(check?.severity).toBe("warning");
       expect(Array.isArray(check?.details?.collisions)).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not treat an empty .git directory in a parent as the scan boundary", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      // A shared parent holding an empty `.git` directory is not a repository.
+      await mkdir(path.join(root, ".git"), { recursive: true });
+      const app = path.join(root, "app");
+      const unrelated = path.join(root, "unrelated");
+      await mkdir(app, { recursive: true });
+      await mkdir(unrelated, { recursive: true });
+      await writeFile(path.join(app, "qfai.config.yaml"), "paths:\n  outDir: out\n", "utf-8");
+      await writeFile(
+        path.join(unrelated, "qfai.config.yaml"),
+        "paths:\n  outDir: ../app/out\n",
+        "utf-8",
+      );
+
+      const parsed = await readDoctorData(app);
+      const check = findCheck(parsed.checks, "output.outDirCollision");
+
+      expect(check?.severity).toBe("ok");
+      expect(check?.details?.configRoots).toEqual(["."]);
+      expect(check?.details?.collisions).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("starts the collision scan at the Git working-tree root", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    try {
+      const repo = path.join(root, "repo");
+      await mkdir(repo, { recursive: true });
+      execFileSync("git", ["init", "--quiet"], { cwd: repo });
+      const appA = path.join(repo, "packages", "app-a");
+      const appB = path.join(repo, "packages", "app-b");
+      await mkdir(appA, { recursive: true });
+      await mkdir(appB, { recursive: true });
+      const configText = "paths:\n  outDir: ../shared-out\n";
+      await writeFile(path.join(appA, "qfai.config.yaml"), configText, "utf-8");
+      await writeFile(path.join(appB, "qfai.config.yaml"), configText, "utf-8");
+
+      const parsed = await readDoctorData(appA);
+      const check = findCheck(parsed.checks, "output.outDirCollision");
+
+      expect(check?.severity).toBe("warning");
+      expect(check?.details?.configRoots).toEqual(["packages/app-a", "packages/app-b"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

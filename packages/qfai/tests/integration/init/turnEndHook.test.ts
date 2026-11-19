@@ -3,8 +3,9 @@
 // QFAI:AC-0001-0244-03
 // QFAI:AC-0001-0244-04
 // QFAI:AC-0001-0244-05
+// QFAI:AC-0001-0244-06
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -165,9 +166,9 @@ describe("turn-end hook", () => {
     const examplesReplaced = shipped.replace(/<example: ([^<>\n]+)>/g, "$1");
     const everyReplaced = shipped.replace(/<(?:optional )?example: ([^<>\n]+)>/g, "$1");
 
-    expect(readTurnEndChecks(shipped)).toEqual([]);
-    expect(readTurnEndChecks(examplesReplaced)).toEqual([]);
-    expect(readTurnEndChecks(everyReplaced).map((check) => check.label)).toEqual([
+    expect(readTurnEndChecks(shipped).checks).toEqual([]);
+    expect(readTurnEndChecks(examplesReplaced).checks).toEqual([]);
+    expect(readTurnEndChecks(everyReplaced).checks.map((check) => check.label)).toEqual([
       "Format",
       "Lint",
       "Typecheck",
@@ -438,9 +439,126 @@ describe("readTurnEndChecks", () => {
       "## Other",
       "- Build: `pnpm build`",
     ].join("\n");
-    expect(readTurnEndChecks(text)).toEqual([
-      { label: "Typecheck", command: "pnpm check-types" },
-      { label: "Lint", command: "pnpm lint" },
-    ]);
+    expect(readTurnEndChecks(text)).toEqual({
+      checks: [
+        { label: "Typecheck", command: "pnpm check-types" },
+        { label: "Lint", command: "pnpm lint" },
+      ],
+      ambiguous: [],
+    });
+  });
+
+  // QFAI:EX-0001-0244-18
+  it("reads no item from an example, a block quote or a nested item", () => {
+    const text = [
+      "## Standard commands (copy-paste)",
+      "",
+      "- Lint: `pnpm lint`",
+      "  - Lint: `echo nested`",
+      "- Turn-end check: Lint",
+      "",
+      "```md",
+      "## Standard commands",
+      "- Lint: `echo fenced`",
+      "- Turn-end check: Lint, Build",
+      "```",
+      "",
+      "> - Lint: `echo quoted`",
+      "",
+      "<!-- - Turn-end check: Build -->",
+      "",
+      "    - Build: `echo indented`",
+      "",
+      "## Other",
+      "",
+      "~~~",
+      "## Standard commands",
+      "- Build: `echo other`",
+      "~~~",
+    ].join("\n");
+    expect(readTurnEndChecks(text)).toEqual({
+      checks: [{ label: "Lint", command: "pnpm lint" }],
+      ambiguous: [],
+    });
+    const otherParents = [
+      "## Standard commands (copy-paste)",
+      "",
+      "* Sample entry",
+      "  - Lint: `echo star`",
+      "1. Numbered entry",
+      "   - Lint: `echo numbered`",
+      "- Lint: `pnpm lint`",
+      "- Turn-end check: Lint",
+    ].join("\n");
+    expect(readTurnEndChecks(otherParents)).toEqual({
+      checks: [{ label: "Lint", command: "pnpm lint" }],
+      ambiguous: [],
+    });
+    const indentedFirst = [
+      "## Standard commands",
+      "",
+      "  * aside",
+      "- Lint: `pnpm lint`",
+      "  - Build: `rm -rf dist`",
+      "- Turn-end check: Build",
+    ].join("\n");
+    expect(readTurnEndChecks(indentedFirst)).toEqual({ checks: [], ambiguous: [] });
+  });
+
+  // QFAI:EX-0001-0244-19
+  it("names a marked label or Turn-end check item the section lists twice", () => {
+    const section = (...items: string[]): string =>
+      ["## Standard commands (copy-paste)", "", ...items].join("\n");
+    expect(
+      readTurnEndChecks(
+        section("- Lint: `pnpm lint`", "- lint: `echo other`", "- Turn-end check: Lint"),
+      ).ambiguous,
+    ).toEqual(["Lint"]);
+    expect(
+      readTurnEndChecks(
+        section("- Lint: `pnpm lint`", "- Turn-end check: Lint", "- Turn-end check: Build"),
+      ).ambiguous,
+    ).toEqual(["Turn-end check"]);
+    expect(
+      readTurnEndChecks(
+        section(
+          "- Build: `pnpm build`",
+          "- Build: `echo other`",
+          "- Lint: `pnpm lint`",
+          "- Turn-end check: Lint",
+        ),
+      ).ambiguous,
+    ).toEqual([]);
+  });
+});
+
+describe("turn-end hook with an ambiguous label", () => {
+  // QFAI:EX-0001-0244-19
+  it("runs no command and names the label", async () => {
+    const marker = path.join(root, "ran.txt");
+    await writeFile(
+      path.join(root, "mark.js"),
+      `require("fs").writeFileSync(${JSON.stringify(marker)}, "ran");process.exit(1);\n`,
+      "utf-8",
+    );
+    await project(["- Lint: `node mark.js`", "- Lint: `node mark.js`", "- Turn-end check: Lint"]);
+    const output = parsed(await hook({ hook_event_name: "Stop", session_id: "s1" }));
+    expect(output.decision).toBeUndefined();
+    expect(output.systemMessage).toContain("Lint is listed more than once under Standard commands");
+    expect(output.systemMessage).toContain("no turn-end check ran");
+    await expect(readFile(marker, "utf-8")).rejects.toThrow();
+  });
+
+  // QFAI:EX-0001-0244-19
+  it("drops the failure the session last blocked on", async () => {
+    const fail = await script("fail.js", "type error\n", 1);
+    await project([`- Lint: \`${fail}\``, "- Turn-end check: Lint"]);
+    expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
+    expect(await readdir(stateDir)).toHaveLength(1);
+    await project([`- Lint: \`${fail}\``, `- Lint: \`${fail}\``, "- Turn-end check: Lint"]);
+    expect(parsed(await hook({ session_id: "s1" })).systemMessage).toContain(
+      "no turn-end check ran",
+    );
+    expect(await readdir(stateDir)).toEqual([]);
   });
 });

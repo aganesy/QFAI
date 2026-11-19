@@ -1,4 +1,3 @@
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { FailOn, OutputFormat } from "../../core/config.js";
@@ -20,8 +19,12 @@ import {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,
   unevaluatedPackageSelfGovernanceFamilies,
 } from "../../core/validators/packageSelfGovernance.js";
-import { writeValidateRunLog } from "../../core/runLog.js";
+import { writeReportFiles, writeValidateRunLog } from "../../core/runLog.js";
 import { DERIVED_DECLARATION_FORM } from "../../core/validators/contractConsistency.js";
+import {
+  DESIGN_AUDIT_CODE_PREFIX,
+  designAuditFindingsShownPerCode,
+} from "../../core/validators/designAudit.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
 import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
@@ -156,7 +159,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   );
 
   if (format === "text") {
-    emitText(normalized, failOn);
+    emitText(normalized, failOn, designAuditFindingsShownPerCode(configResult.config));
     // A run that did not finish has no pass to report, even under `--fail-on never`.
     if (!willFail && !isIncompleteRunResult(normalized)) {
       const elapsedMs = Date.now() - startedAt.getTime();
@@ -175,9 +178,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // A scope that failed with `QFAI-FLOW-005` writes nothing, so it never
   // replaces the file a healthy run of a similar scope would write.
   if (resultPaths !== null && !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-005")) {
-    for (const target of resultPaths.write) {
-      await emitJson(normalized, root, target);
-    }
+    await emitJson(normalized, root, resultPaths.write);
   }
 
   return willFail ? 1 : 0;
@@ -702,11 +703,19 @@ function textGroupFixes(head: Issue, shown: readonly Issue[], failOn: FailOn): S
  * Renders the default `--format text` output.
  *
  * The emitted line grammar is the validate contract's text output grammar;
- * both must be changed together.
+ * both must be changed together. A design audit group prints
+ * `designAuditShownPerCode` issues in place of five.
  */
-export function emitText(result: ValidationResult, failOn: FailOn): void {
+export function emitText(
+  result: ValidationResult,
+  failOn: FailOn,
+  designAuditShownPerCode = TEXT_ISSUES_PER_GROUP,
+): void {
   for (const group of groupIssues(result.issues)) {
-    const shown = group.items.slice(0, TEXT_ISSUES_PER_GROUP);
+    const limit = group.head.code.startsWith(DESIGN_AUDIT_CODE_PREFIX)
+      ? designAuditShownPerCode
+      : TEXT_ISSUES_PER_GROUP;
+    const shown = group.items.slice(0, limit);
     for (const item of shown) {
       process.stdout.write(`${formatTextIssueLine(item)}\n`);
     }
@@ -1117,10 +1126,17 @@ function issueKey(issue: Issue): string {
   return [issue.code, issue.severity, issue.message, file, line, column, suppressed].join("|");
 }
 
-async function emitJson(result: ValidationResult, root: string, jsonPath: string): Promise<void> {
-  const abs = resolveJsonPath(root, jsonPath);
-  await mkdir(path.dirname(abs), { recursive: true });
-  await writeFile(abs, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
+async function emitJson(
+  result: ValidationResult,
+  root: string,
+  jsonPaths: readonly string[],
+): Promise<void> {
+  await writeReportFiles(
+    root,
+    jsonPaths.map((jsonPath) => resolveJsonPath(root, jsonPath)),
+    `${JSON.stringify(result, null, 2)}\n`,
+    "qfai validate: the validation result",
+  );
 }
 
 function resolveJsonPath(root: string, jsonPath: string): string {

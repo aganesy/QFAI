@@ -230,13 +230,15 @@ export async function mirrorGraphCorpus(
         )
       )
         continue;
+      const target = path.join(destination, ...next.split("/"));
       if (entry.isDirectory()) {
+        await replaceOtherEntryType(target, true);
         await visit(next);
       } else if (entry.isFile()) {
         const source = path.join(root, ...next.split("/"));
         const stats = await lstat(source);
         if (!stats.isFile() || stats.nlink > 1) continue;
-        const target = path.join(destination, ...next.split("/"));
+        await replaceOtherEntryType(target, false);
         await mkdir(path.dirname(target), { recursive: true });
         await copyFile(source, target);
         files.add(next);
@@ -256,6 +258,21 @@ export async function mirrorGraphCorpus(
       else if (!files.has(next)) await rm(target);
     }
   }
+}
+
+/**
+ * Removes the staged entry at `target` when it is not of the kind the source now holds, so a
+ * source directory replaced by a file, or a file replaced by a directory, can be copied in.
+ */
+async function replaceOtherEntryType(target: string, directory: boolean): Promise<void> {
+  try {
+    const stats = await lstat(target);
+    if (directory ? stats.isDirectory() : stats.isFile()) return;
+  } catch (cause: unknown) {
+    if (isEnoent(cause)) return;
+    throw cause;
+  }
+  await rm(target, { recursive: true, force: true });
 }
 
 function object(value: unknown): value is Record<string, unknown> {

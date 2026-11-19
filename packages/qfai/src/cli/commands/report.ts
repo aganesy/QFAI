@@ -5,6 +5,7 @@ import type { ConfigLoadResult, FailOn, QfaiConfig } from "../../core/config.js"
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
+import { writeReportFiles } from "../../core/runLog.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import {
   createReportData,
@@ -283,9 +284,7 @@ async function runValidateForReport(
     flowIds,
     normalized.profile ?? options.profile,
   );
-  for (const target of resultPaths?.write ?? []) {
-    await writeValidationResult(root, target, normalized);
-  }
+  await writeValidationResult(root, resultPaths?.write ?? [], normalized);
   return { validation: normalized, ranNarrowProfileInCi: ciProfileIssue !== null };
 }
 
@@ -505,16 +504,22 @@ function isValidationResult(value: unknown): value is ValidationResult {
 }
 
 /**
- * Write one `--run-validate` result file. The targets come from
+ * Write the `--run-validate` result files. The targets come from
  * `validationResultPaths`, as for a plain `qfai validate`, so a later
- * `qfai report` with the same options reads what this run wrote.
+ * `qfai report` with the same options reads what this run wrote. One linked
+ * target leaves every target unwritten.
  */
 async function writeValidationResult(
   root: string,
-  outputPath: string,
+  outputPaths: readonly string[],
   result: ValidationResult,
 ): Promise<void> {
-  const abs = path.isAbsolute(outputPath) ? outputPath : path.resolve(root, outputPath);
-  await mkdir(path.dirname(abs), { recursive: true });
-  await writeFile(abs, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
+  await writeReportFiles(
+    root,
+    outputPaths.map((outputPath) =>
+      path.isAbsolute(outputPath) ? outputPath : path.resolve(root, outputPath),
+    ),
+    `${JSON.stringify(result, null, 2)}\n`,
+    "qfai report: the validation result",
+  );
 }

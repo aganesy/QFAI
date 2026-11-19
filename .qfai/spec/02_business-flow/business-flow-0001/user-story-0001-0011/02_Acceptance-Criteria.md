@@ -40,6 +40,7 @@ Feature: Story-tree layout described by mdschema
     And `qfai validate` reports it as one `QFAI-DOCSCHEMA-001` error naming the file
     And a spelling of `paths.specsDir` or `paths.contractsDir` that `qfai validate` resolves to the same directory covers the same files
     And the lane and `qfai validate` read a `\` in either key as `/` on every platform, so one value names one directory for both
+    And the lane parses `qfai.config.yaml` with the YAML parser `qfai validate` uses, and exits 2 naming the problem where `qfai validate` reports the file as unreadable or either key as invalid
   # AC-0001-0011-06
   Scenario: The tech.md template and its schema's findings show the line to write
     Given the `tech.md` template, which writes every value as an example to replace, `<example: value>`, in the shape its schema accepts

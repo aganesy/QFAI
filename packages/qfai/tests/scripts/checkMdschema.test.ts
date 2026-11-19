@@ -1001,6 +1001,40 @@ describe("the ratchet in --scope changed", () => {
 
     expect(result.stdout).toContain("pre-existing, not this branch's");
   });
+
+  it("keeps a document in scope when its directory name is not ASCII", async () => {
+    // Under the default `core.quotePath`, Git prints such a path quoted with its
+    // bytes octal-escaped. That string names no document, so the edit would
+    // drop out of the scope and the branch would pass with a broken document.
+    // The directory name is the Japanese word for "specification", built from
+    // code points so the source stays ASCII.
+    const specsDir = String.fromCodePoint(0x4ed5, 0x69d8);
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      `paths:\n  specsDir: docs/${specsDir}\n  contractsDir: .qfai/contracts\n`,
+      "utf-8",
+    );
+    const dir = path.join(root, "docs", specsDir, "02_business-flow", "business-flow-0001");
+    git(root, "init", "-q", "-b", "main", ".");
+    git(root, "config", "core.autocrlf", "false");
+    git(root, "config", "core.quotePath", "true");
+    git(root, "config", "user.email", "lane@example.com");
+    git(root, "config", "user.name", "lane");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "business-flow.md"), CONFORMING_FLOW, "utf-8");
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "base");
+    git(root, "checkout", "-q", "-b", "work");
+    await writeFile(path.join(dir, "business-flow.md"), NON_CONFORMING_FLOW, "utf-8");
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "head");
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("story-business-flow");
+  });
 });
 
 /**

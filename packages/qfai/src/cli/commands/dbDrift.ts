@@ -9,7 +9,8 @@
  * `validate` rule: `validate` starts no processes, and that is worth keeping.
  *
  * A project that has not said where its migrations are is out of scope, not in
- * violation — the command says so and exits 0.
+ * violation — the command says so and exits 0. A configuration that did not
+ * load is neither: the command reports it and exits 2.
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
@@ -42,7 +43,20 @@ const EXIT_CANNOT_RUN = 2;
 
 export async function runDbDrift(options: DbDriftOptions): Promise<number> {
   const root = path.resolve(options.root);
-  const { config } = await loadConfig(root);
+  const { config, issues, configPath } = await loadConfig(root);
+  // `loadConfig` falls back to the defaults on a configuration it cannot use,
+  // and the defaults name no migrations directory. Reading on would report a
+  // broken configuration as out of scope and exit 0, or compare paths the
+  // operator never configured.
+  const configErrors = issues.filter((issue) => issue.severity === "error");
+  if (configErrors.length > 0) {
+    const shown = path.relative(root, configPath).split(path.sep).join("/");
+    error(`qfai db-drift: cannot use ${shown}, so nothing was compared:`);
+    for (const issue of configErrors) {
+      error(`  - ${issue.message}`);
+    }
+    return EXIT_CANNOT_RUN;
+  }
   const migrationsDir = config.paths.migrationsDir;
   const asJson = options.format === "json";
 

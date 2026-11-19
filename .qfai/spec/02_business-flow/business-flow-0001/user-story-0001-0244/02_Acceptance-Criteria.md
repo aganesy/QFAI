@@ -34,4 +34,10 @@ Feature: Keep an agent's turn going while a turn-end check fails
     Given an empty directory, or a project whose host hook files lack the Stop hook
     When qfai init runs
     Then .claude/settings.json and .codex/hooks.json carry the Stop and SubagentStop groups, merged the way the reminder groups merge
+
+  # AC-0001-0244-06
+  Scenario: Only the section's own items select a check
+    Given a tech.md whose Standard commands section shows an example, a block quote or a nested item, or lists a marked label twice
+    When the agent ends a turn
+    Then the hook reads only the section's top-level items, and where a marked label selects more than one item it runs no command and names that label
 ```
