@@ -17,7 +17,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runInit } from "../helpers/legacyInit.js";
-import { getInitAssetsDir } from "../../src/cli/lib/assets.js";
+import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 const created: string[] = [];
