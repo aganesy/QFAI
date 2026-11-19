@@ -388,7 +388,8 @@ async function readValidationResult(inputPath: string): Promise<ValidationResult
   const raw = await readFile(inputPath, "utf-8");
   const parsed = JSON.parse(raw) as unknown;
   if (!isValidationResult(parsed)) {
-    throw new Error(`validate.json has an invalid shape: ${inputPath}`);
+    const problem = validationResultShapeProblem(parsed) ?? "unreadable";
+    throw new Error(`validate.json has an invalid shape: ${inputPath} (${problem})`);
   }
   return reconcileCounts(parsed, inputPath);
 }
@@ -422,7 +423,8 @@ function reconcileCounts(result: ValidationResult, inputPath: string): Validatio
 }
 
 /**
- * The two fields the recount reads off an `--in` issue.
+ * The first field of an `--in` issue the recount or the renderer cannot read,
+ * as a suffix to its `issues[N]` path, or `null` when the issue is readable.
  *
  * `severity` picks the bucket, and `suppressed` decides whether the issue is
  * counted at all. `countIssues` tests `suppressed` for truthiness, so a
@@ -432,75 +434,94 @@ function reconcileCounts(result: ValidationResult, inputPath: string): Validatio
  * taught to trust. Neither field may arrive as anything but what its type
  * allows: `severity` one of the three names, `suppressed` absent or a boolean.
  */
-function isGateReadableIssue(issue: unknown): boolean {
+function issueShapeProblem(issue: unknown): string | null {
   if (!issue || typeof issue !== "object") {
-    return false;
+    return "must be an object";
   }
-  if (typeof Reflect.get(issue, "code") !== "string") return false;
-  if (typeof Reflect.get(issue, "message") !== "string") return false;
+  if (typeof Reflect.get(issue, "code") !== "string") return ".code must be a string";
+  if (typeof Reflect.get(issue, "message") !== "string") return ".message must be a string";
   const category: unknown = Reflect.get(issue, "category");
-  if (category !== "canonical" && category !== "change") return false;
+  if (category !== "canonical" && category !== "change") {
+    return '.category must be "canonical" or "change"';
+  }
   const severity: unknown = Reflect.get(issue, "severity");
   if (severity !== "info" && severity !== "warning" && severity !== "error") {
-    return false;
+    return '.severity must be "info", "warning" or "error"';
   }
   const suppressed: unknown = Reflect.get(issue, "suppressed");
-  return suppressed === undefined || typeof suppressed === "boolean";
+  if (suppressed !== undefined && typeof suppressed !== "boolean") {
+    return ".suppressed must be a boolean";
+  }
+  // The Markdown renderer reads `file` for the finding's source and its
+  // `--base-url` link; a number there fails mid-render instead of here.
+  const file: unknown = Reflect.get(issue, "file");
+  if (file !== undefined && typeof file !== "string") return ".file must be a string";
+  return null;
 }
 
-function isValidationResult(value: unknown): value is ValidationResult {
+const VALIDATION_PROFILES: readonly unknown[] = [
+  "discussion",
+  "sdd",
+  "prototyping",
+  "atdd",
+  "tdd",
+  "verify",
+  "full",
+  "saas-package",
+  "drift",
+];
+
+/**
+ * The first field of an `--in` validate result the report cannot read, as a
+ * path and the type it must have, or `null` when the whole result is readable.
+ */
+function validationResultShapeProblem(value: unknown): string | null {
   if (!value || typeof value !== "object") {
-    return false;
+    return "the result must be an object";
   }
-  const record = value as Record<string, unknown>;
-  if (typeof record.toolVersion !== "string") {
-    return false;
-  }
-  const profile = record.profile;
-  if (
-    profile !== undefined &&
-    profile !== "discussion" &&
-    profile !== "sdd" &&
-    profile !== "prototyping" &&
-    profile !== "atdd" &&
-    profile !== "tdd" &&
-    profile !== "verify" &&
-    profile !== "full" &&
-    profile !== "saas-package" &&
-    profile !== "drift"
-  ) {
-    return false;
+  if (typeof Reflect.get(value, "toolVersion") !== "string") return "toolVersion must be a string";
+  const profile: unknown = Reflect.get(value, "profile");
+  if (profile !== undefined && !VALIDATION_PROFILES.includes(profile)) {
+    return "profile must name a validation profile";
   }
   // `severity` and `suppressed` are load-bearing: the gate counts by the first
   // and skips on the second, so a value of the wrong type would silently drop
   // out of the recount instead of failing loudly.
-  if (!Array.isArray(record.issues) || !record.issues.every(isGateReadableIssue)) {
-    return false;
+  const issues: unknown = Reflect.get(value, "issues");
+  if (!Array.isArray(issues)) return "issues must be an array";
+  for (const [index, entry] of issues.entries()) {
+    const problem = issueShapeProblem(entry);
+    if (problem !== null) return `issues[${index}]${problem.startsWith(".") ? "" : " "}${problem}`;
   }
-  const counts = record.counts as Record<string, unknown> | undefined;
-  if (!counts) {
-    return false;
-  }
-  if (
-    typeof counts.info !== "number" ||
-    typeof counts.warning !== "number" ||
-    typeof counts.error !== "number"
-  ) {
-    return false;
+  const counts: unknown = Reflect.get(value, "counts");
+  if (!counts || typeof counts !== "object") return "counts must be an object";
+  for (const key of ["info", "warning", "error"]) {
+    if (typeof Reflect.get(counts, key) !== "number") return `counts.${key} must be a number`;
   }
 
-  if (record.waivers !== undefined) {
-    const waivers = record.waivers;
-    if (!waivers || typeof waivers !== "object") return false;
-    const active: unknown = Reflect.get(waivers, "active");
+  const waivers: unknown = Reflect.get(value, "waivers");
+  if (waivers !== undefined) {
+    if (!waivers || typeof waivers !== "object") return "waivers must be an object";
+    if (!Array.isArray(Reflect.get(waivers, "active"))) return "waivers.active must be an array";
     const suppressed: unknown = Reflect.get(waivers, "suppressed");
-    if (!Array.isArray(active) || !suppressed || typeof suppressed !== "object") return false;
-    if (typeof Reflect.get(suppressed, "total") !== "number") return false;
-    if (typeof Reflect.get(suppressed, "byWaiver") !== "object") return false;
-    if (typeof Reflect.get(suppressed, "byRule") !== "object") return false;
+    if (!suppressed || typeof suppressed !== "object")
+      return "waivers.suppressed must be an object";
+    if (typeof Reflect.get(suppressed, "total") !== "number") {
+      return "waivers.suppressed.total must be a number";
+    }
+    if (typeof Reflect.get(suppressed, "byWaiver") !== "object") {
+      return "waivers.suppressed.byWaiver must be an object";
+    }
+    if (typeof Reflect.get(suppressed, "byRule") !== "object") {
+      return "waivers.suppressed.byRule must be an object";
+    }
   }
 
-  return true;
+  return null;
+}
+
+function isValidationResult(value: unknown): value is ValidationResult {
+  return validationResultShapeProblem(value) === null;
 }
 
 /**

@@ -461,6 +461,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **An extra positional argument is now an argument error.** Only
+  `qfai sdd next-id` takes positional arguments, but every other command
+  dropped one and ran as if it had not been given, so
+  `qfai db-drift --format json unused-positional` completed normally. Such a
+  token now stops the command with `unexpected argument: <token>`, the
+  command's usage lines and exit code 2.
+
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its
@@ -490,14 +497,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
   `npx qfai` and the document lane's check for `node_modules/qfai` found
   nothing and fell back to the newest QFAI from the registry. When the project
-  has a `.pnp.cjs` and a `yarn.lock` and its `package.json` declares QFAI, both lanes now ask
-  Yarn which version it resolves and install that exact version under `tmp/`:
-  the validation lane runs both profiles with it, and the document lane runs
-  its checkers out of it. A project that declares no QFAI still gets the
+  has a `.pnp.cjs` and a `yarn.lock` and its `package.json` declares QFAI,
+  both lanes now ask Yarn which version it resolves and install that exact
+  version under `tmp/`: the validation lane runs both profiles with it, and
+  the document lane runs its checkers out of it. A project that declares no QFAI still gets the
   newest release, and one whose declared QFAI Yarn cannot resolve to one
   version stops before installing anything. A workflow file `qfai init`
   already wrote keeps its old steps; delete it and run `qfai init` again to
   get these.
+
+- **`qfai sdd merge-docs` no longer fails on a conflicted file it does not
+  merge.** A conflicted file under the specs directory that is not Markdown or
+  YAML, such as an image, made the command exit 1 even when no document was
+  conflicted. Such a file is now left to Git and not counted, so with no
+  conflicted document the command says there is nothing to merge and exits 0.
+  The configured specs directory is also read as a literal path, so a name
+  holding `*` no longer selects conflicted documents outside it. Closes #4523.
 
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
@@ -544,6 +559,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   existing file as it was. It writes to a new temporary file beside the
   catalogue and renames it into place, so a failed write leaves the old
   catalogue whole.
+
+- **`qfai report` refuses a validate result whose finding path is not text,
+  and names the field.** A finding whose `file` was a number passed the input
+  check and then failed while the Markdown report rendered its link under
+  `--base-url`. The input check now requires `file` to be absent or a string,
+  and every refusal of a malformed validate result names the field and the type
+  it must have, for example `issues[1].file must be a string`. Closes #4528.
 
 - **`qfai doctor` keeps a skill's dependency names away from the shell.**
   On Windows, `--autoremediate` ran `npm install` through `cmd.exe`, so a
@@ -595,6 +617,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the scan still stops at the nearest `.git` entry, so the run-log cleanup
   still finds every project that shares its output directory. Closes #4510.
 
+- **`qfai db-drift` keeps apart columns whose names join to the same text.**
+  The comparison keyed each column by its table and column names joined with a
+  period. A quoted Postgres name may hold a period itself, so `"a.b".c` and
+  `a."b.c"` shared one key and one of them dropped out of the comparison
+  unreported. Each column is now looked up by its table and then by its own
+  name. Closes #4533.
+
 - **Migration step 11 keeps a skill or step when its replacement fails.** Step
   11 deleted a skill or step directory that differed from the package's copy
   before writing the new one, so a failed copy left the project with neither.
@@ -619,6 +648,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with non-ASCII letters, such as `$é$`, and no longer open a literal at a
   `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
 
+- **Migration step 8 rewrites legacy annotations only in comments.** Step 8
+  also rewrote a `QFAI:SPEC-…` or `QFAI:CON-…` token written in a string
+  literal, so a test's input or expected value changed during migration. It
+  now rewrites a token only where it stands in a comment, read the same way
+  `qfai validate` reads test annotations, and leaves the same token in a
+  string or template literal as it was. The check that runs before a test file
+  is written now refuses a rewrite that changes a token in a literal. Closes
+  #4513.
+
 - **`qfai catalog design` no longer replaces a file it cannot inspect.** The
   command treated any failure to read a destination's metadata as a missing
   file, so a token file or theme it could not inspect, for example because
@@ -637,6 +675,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   outside the base URL stays unlinked, and a `--base-url` that is not an
   absolute http or https URL without a query, fragment or credentials exits 2.
 
+- **A `qfai validate` run that did not finish is no longer recorded as a
+  pass.** Under `--fail-on never` such a run exits 0, and its run log and the
+  `--format github` summary line took their verdict from that exit code, so
+  they said `pass` and `result=PASS` while the text output printed no pass
+  line. The run log now records the status `incomplete` and the summary line
+  reads `result=INCOMPLETE`, whatever `--fail-on` says. A reader of `run.json`,
+  `validator.json`, `summary.md` or `validate.log` that expects only `pass` or
+  `fail` now meets a third status.
+
 - **The design audit no longer drops findings past its display limit.** It
   kept only the first `uiux.audit.maxDuplicateFindingsPerRule` findings of a
   code and replaced the rest with one info finding, before flow scope and
@@ -644,6 +691,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `validate.json` lacked findings. The audit now returns every finding, and
   the key only sets how many of a `QFAI-AUD-` code `--format text` prints
   before `and <n> more`. Closes #4493.
+
+- **`--profile` is refused on a command that does not read it.** The
+  `catalog`, `init`, `atdd`, `sdd`, `db-drift`, `session-review` and
+  `workflow` commands accepted a validation profile and ran as if none had
+  been given; they now stop with an argument error. `qfai doctor --profile` takes
+  `prototyping` or a skill name, and a validation profile such as `full` is
+  refused there by the argument parser with the accepted values. Closes #4519.
 
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
@@ -667,6 +721,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   top-level items are read now. Where the `Turn-end check:` item or a label
   it marks is listed twice, the hook runs nothing and tells the user which
   label is listed more than once in tech.md. Closes #4470.
+
+- **`qfai db-drift --out` receives the result when there is nothing to
+  compare.** With no migrations directory configured, or no DB contracts or
+  migrations to apply, the command printed its out-of-scope result to stdout
+  and left the file `--out` named unwritten. That result, as text or as JSON,
+  now goes to the file the same way a finished comparison does.
+  Closes #4518.
 
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
