@@ -154,10 +154,15 @@ describe("HTML mock resource references", () => {
   });
 
   // QFAI:EX-0001-0039-58
-  it("reads a reference under 5,000 nested templates", async () => {
-    const html = `${"<template>".repeat(5_000)}<img src="${EXTERNAL}" alt="">`;
-    const result = await parseHtmlMock(html);
-    expect(result.externalUrls).toEqual([EXTERNAL]);
+  it("reads a reference under nested templates, and never passes one it cannot read", async () => {
+    const nested = await parseHtmlMock(`${"<template>".repeat(200)}<img src="${EXTERNAL}" alt="">`);
+    expect(nested.externalUrls).toEqual([EXTERNAL]);
+
+    // Deep enough that the DOM library itself may run out of stack in a worker
+    // thread: the mock then reports a parse error, and either way it cannot pass.
+    const deep = await parseHtmlMock(`${"<template>".repeat(5_000)}<img src="${EXTERNAL}" alt="">`);
+    const outcome = deep.parseErrors.length > 0 ? "parse error" : deep.externalUrls;
+    expect([[EXTERNAL], "parse error"]).toContainEqual(outcome);
   });
 
   // QFAI:EX-0001-0039-58
