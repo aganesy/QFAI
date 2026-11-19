@@ -13,6 +13,7 @@ vi.mock("node:fs/promises", async (original) => {
   const fs = await original<typeof NativeFs>();
   return {
     ...fs,
+    readdir: vi.fn(fs.readdir),
     rm: async (target: string, options?: Parameters<typeof fs.rm>[1]) => {
       if (removal.fail && path.basename(target).startsWith(".refreshing-graphify-"))
         throw new Error("Simulated locked refresh copy");
@@ -158,6 +159,58 @@ it("checks unchanged inputs where they stand without copying the active analysis
     expect(await readFile(path.join(fixture.documentAnalysis, "rationale.md"), "utf8")).toBe(
       "# Requirement rationale\n",
     );
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+/**
+ * How many times the top directory of an analysis `matches` picks out was read. Paths are compared
+ * in their namespaced form, the form the inventory process receives.
+ */
+function analysisWalks(matches: (directory: string) => boolean): number {
+  return vi
+    .mocked(readdir)
+    .mock.calls.filter(([directory]) =>
+      matches(path.toNamespacedPath(path.resolve(String(directory)))),
+    ).length;
+}
+
+// Mutation: packages/qfai/src/core/graph/documents.ts `if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope, "checked")))` -> `if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope)))` fails "walks the active analysis once for safety and once for changes when its inputs are unchanged"
+it("walks the active analysis once for safety and once for changes when its inputs are unchanged", async () => {
+  const fixture = await documentAnalysisFixture();
+  try {
+    vi.mocked(readdir).mockClear();
+    await expect(prepareDocumentAnalysis(fixture.root, fixture.run)).resolves.toMatchObject({
+      status: "prepared",
+      source: "current",
+    });
+    const active = path.toNamespacedPath(path.resolve(fixture.documentAnalysis));
+    // The safety walk, the fixture's stand-in for the inventory process, and the change check.
+    expect(analysisWalks((directory) => directory === active)).toBe(3);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+// Mutation: packages/qfai/src/core/graph/documents.ts `// The mirror checks the copy's independence before it writes anything.` -> `await assertIndependentAnalysis(staged);` fails "checks the refresh copy's independence once before refreshing its inputs"
+it("checks the refresh copy's independence once before refreshing its inputs", async () => {
+  const fixture = await documentAnalysisFixture();
+  try {
+    await writeFile(path.join(fixture.root, "rationale.md"), "# Changed rationale\n");
+    vi.mocked(readdir).mockClear();
+    await expect(prepareDocumentAnalysis(fixture.root, fixture.run)).resolves.toMatchObject({
+      status: "prepared",
+    });
+    const parent = path.toNamespacedPath(path.resolve(path.dirname(fixture.documentAnalysis)));
+    // One walk checks the copy's independence; the mirror's removal pass reads it once more.
+    expect(
+      analysisWalks(
+        (directory) =>
+          path.dirname(directory) === parent &&
+          path.basename(directory).startsWith(".refreshing-graphify-"),
+      ),
+    ).toBe(2);
   } finally {
     await fixture.dispose();
   }
