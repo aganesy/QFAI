@@ -527,6 +527,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
 
+- **`qfai doctor --autoremediate` exits 1 when an install fails.** A failed
+  `npm install` for a skill's runtime dependency was printed, but doctor still
+  exited 0 when the diagnosis passed, so a script read an incomplete
+  remediation as a success. Like a failed run-log removal, a failed install
+  now makes doctor exit 1 whatever `--fail-on` says.
+
 - **The GitHub Release is created only for the tag commit the release
   workflow verified.** The release job named a tag, not a commit, minutes
   after the tag was checked, so a tag moved in the meantime got a Release

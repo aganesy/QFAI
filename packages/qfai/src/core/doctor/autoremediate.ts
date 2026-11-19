@@ -57,6 +57,11 @@ export type AutoremediateSummary = {
   readonly disabledInCi: boolean;
   readonly lines: string[];
   readonly installed: readonly string[];
+  /**
+   * Dependencies whose install this run tried and failed. Non-empty means
+   * the remediation is incomplete and the caller must exit non-zero.
+   */
+  readonly failedInstalls: readonly string[];
   /** Validate run-log directories pruned by this run. */
   readonly prunedRunLogs: readonly string[];
   /**
@@ -190,6 +195,7 @@ export async function runAutoremediate(
       disabledInCi: true,
       lines,
       installed: [],
+      failedInstalls: [],
       prunedRunLogs: [],
       failedRunLogPrunes: [],
     };
@@ -201,6 +207,7 @@ export async function runAutoremediate(
 
   // (1) Probe runtimeDependencies and (optionally) install missing ones.
   const installed: string[] = [];
+  const failedInstalls: string[] = [];
   if (options.skill) {
     const probe = await probeSkillManifest(options.root, options.skill);
     const missing = probe.findings.filter((finding) => finding.status === "missing");
@@ -234,6 +241,7 @@ export async function runAutoremediate(
             installed.push(finding.name);
             lines.push(`autoremediate: ran ${finding.installCommand}`);
           } catch (error) {
+            failedInstalls.push(finding.name);
             lines.push(
               `autoremediate: install failed for ${finding.name}: ${error instanceof Error ? error.message : String(error)}`,
             );
@@ -285,6 +293,7 @@ export async function runAutoremediate(
     disabledInCi: false,
     lines,
     installed,
+    failedInstalls,
     prunedRunLogs,
     failedRunLogPrunes,
   };
