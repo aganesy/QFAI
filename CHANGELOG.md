@@ -548,6 +548,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
 
+- **`qfai validate` no longer reports an inline event handler that a mock
+  only mentions.** `QFAI-MOCK-012` searched the raw HTML for text such as
+  ` onclick=`, so a sentence, a comment or an escaped code sample that spelled
+  out a handler failed the mock. It now reads the attributes of the parsed
+  elements, including those inside a `<template>` and an `<iframe srcdoc>`,
+  so only a handler a browser would attach is reported. Closes #4550.
+
 - **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
   with no `--assume` copies the carry-over list from the previous
   `preflight_summary.md`. When that file existed but could not be read, the
