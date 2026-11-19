@@ -265,7 +265,7 @@ export async function prepareDocumentAnalysisLocked(
         status: "failed",
         recovery: cause
           ? `${cause} Narrow the document scope in .qfai/graph-processing.json, then retry the graph query.`
-          : "Check the selected local model and repair Graphify document analysis.",
+          : `Check the selected ${backend} backend and model ${processing.model} at ${selected.origin}, then repair Graphify document analysis.`,
       };
     }
     await writeFile(
