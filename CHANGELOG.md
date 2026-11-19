@@ -453,7 +453,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   run with your privileges. It now names the packages and installs them only
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
-  runs. Closes #4464.
+  runs. Ctrl+C at the prompt stops the command. Closes #4464.
 
 - **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
   difference exits 0 under `--fail-on never`, but the parser refused the flag

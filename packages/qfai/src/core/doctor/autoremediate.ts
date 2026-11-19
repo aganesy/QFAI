@@ -16,7 +16,8 @@
  * (the doctor contract requires it): the install scripts run with the operator's
  * privileges. `--yes` skips the prompt. A session whose stdin is not a
  * terminal cannot answer it, so without `--yes` nothing is installed there
- * and the pass says how to proceed. The rest of the pass runs either way.
+ * and the pass says how to proceed. The rest of the pass runs either way,
+ * except after Ctrl+C at the prompt, which stops the command.
  *
  * The `npm install` call is routed through a pluggable runner so tests
  * can substitute a no-op stub. The default runner is loaded lazily and
@@ -24,6 +25,7 @@
  */
 
 import path from "node:path";
+import type { ReadLineOptions } from "node:readline";
 
 import { loadConfig } from "../config.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "./cleanRunLogs.js";
@@ -84,17 +86,34 @@ async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
   });
 }
 
-async function defaultConfirmInstall(packages: readonly string[]): Promise<boolean> {
-  const { createInterface } = await import("node:readline/promises");
+/** Where the install prompt reads and writes; tests pass their own streams. */
+export type InstallPromptStreams = Pick<ReadLineOptions, "input" | "output" | "terminal">;
+
+/**
+ * The `[y/N]` prompt. Ctrl+D is a decline, since no answer is not a yes.
+ * Ctrl+C rejects, so the command stops instead of carrying on with the rest
+ * of the pass. Readline rejects both keys with the same `AbortError`, so
+ * Ctrl+C aborts the question through its own signal to stay distinguishable.
+ */
+export async function askBeforeInstall(
+  packages: readonly string[],
   // stderr, so a `--format json` report on stdout stays one JSON document.
-  const prompt = createInterface({ input: process.stdin, output: process.stderr });
+  streams: InstallPromptStreams = { input: process.stdin, output: process.stderr },
+): Promise<boolean> {
+  const { createInterface } = await import("node:readline/promises");
+  const prompt = createInterface(streams);
+  const interrupted = new AbortController();
+  prompt.once("SIGINT", () => interrupted.abort());
   try {
     const answer = await prompt.question(
       `doctor --autoremediate: run npm install for ${packages.join(", ")}? Install scripts run with your privileges. [y/N] `,
+      { signal: interrupted.signal },
     );
     return isAffirmative(answer);
-  } catch {
-    // stdin ended (Ctrl+D) before an answer: no answer is not a yes.
+  } catch (error: unknown) {
+    if (interrupted.signal.aborted) {
+      throw error;
+    }
     return false;
   } finally {
     prompt.close();
@@ -129,7 +148,7 @@ async function approveInstall(
       line: `autoremediate: install skipped — confirmation needed and this session is not interactive; rerun with --yes to install ${listed}`,
     };
   }
-  const confirm = options.confirmInstall ?? defaultConfirmInstall;
+  const confirm = options.confirmInstall ?? askBeforeInstall;
   if (await confirm(packages)) {
     return { approved: true };
   }

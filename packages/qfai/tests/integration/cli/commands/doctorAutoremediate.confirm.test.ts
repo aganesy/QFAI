@@ -2,16 +2,22 @@
 //
 // Integration: without `--yes`, `qfai doctor --autoremediate` names the
 // packages and runs `npm install` only after an affirmative answer, and a
-// session that cannot answer installs nothing. The prompt and the install
-// runner are both stubbed, so the test reads no stdin and touches no network.
+// session that cannot answer installs nothing. The install runner is stubbed,
+// and the prompt is either stubbed or fed keys through in-memory streams, so
+// the test reads no stdin and touches no network.
 
 import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runAutoremediate } from "../../../../src/core/doctor/autoremediate.js";
+import {
+  askBeforeInstall,
+  type InstallConfirmer,
+  runAutoremediate,
+} from "../../../../src/core/doctor/autoremediate.js";
 import { pathExists } from "../../../helpers/pathExists.js";
 
 const tempDirs: string[] = [];
@@ -37,6 +43,27 @@ async function seedProject(label: string): Promise<string> {
     "utf-8",
   );
   return root;
+}
+
+/** Two run logs under `keepLatestRuns: 1`, so a prune removes the aged one, whose path is returned. */
+async function seedStaleRunLog(root: string): Promise<string> {
+  await writeFile(path.join(root, "qfai.config.yaml"), "report:\n  keepLatestRuns: 1\n", "utf-8");
+  const staleRun = path.join(root, ".qfai", "report", "run-20260401120000001");
+  await mkdir(staleRun, { recursive: true });
+  await mkdir(path.join(root, ".qfai", "report", "run-20260811120000002"), { recursive: true });
+  const aged = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  await utimes(staleRun, aged, aged);
+  return staleRun;
+}
+
+/** The real prompt on in-memory streams, typing `keys` once the question is shown. */
+function promptAnswering(keys: string): InstallConfirmer {
+  return (packages) => {
+    const input = new PassThrough();
+    const output = new PassThrough();
+    output.once("data", () => input.write(keys));
+    return askBeforeInstall(packages, { input, output, terminal: true });
+  };
 }
 
 function recordingRunner(root: string): {
@@ -104,15 +131,55 @@ describe("doctor --autoremediate confirms before installing", () => {
     );
   });
 
+  // QFAI:EX-0003-0009-11
+  it("treats Ctrl+D at the prompt as a decline", async () => {
+    const root = await seedProject("ctrl-d");
+    const runner = recordingRunner(root);
+
+    const summary = await runAutoremediate({
+      root,
+      dryRun: false,
+      yes: false,
+      isCi: false,
+      skill: "qfai-prototyping",
+      interactive: true,
+      confirmInstall: promptAnswering("\u0004"),
+      installRunner: runner.run,
+    });
+
+    expect(runner.calls).toEqual([]);
+    expect(summary.lines).toContain(
+      "autoremediate: install declined; nothing installed (playwright)",
+    );
+  });
+
+  // QFAI:EX-0003-0009-14
+  it("stops the pass when the operator presses Ctrl+C at the prompt", async () => {
+    const root = await seedProject("ctrl-c");
+    const staleRun = await seedStaleRunLog(root);
+    const runner = recordingRunner(root);
+
+    await expect(
+      runAutoremediate({
+        root,
+        dryRun: false,
+        yes: false,
+        isCi: false,
+        skill: "qfai-prototyping",
+        interactive: true,
+        confirmInstall: promptAnswering("\u0003"),
+        installRunner: runner.run,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+
+    expect(runner.calls).toEqual([]);
+    expect(await pathExists(staleRun)).toBe(true);
+  });
+
   // QFAI:EX-0003-0009-12
   it("installs nothing in a non-interactive session without --yes, and still prunes run logs", async () => {
     const root = await seedProject("non-interactive");
-    await writeFile(path.join(root, "qfai.config.yaml"), "report:\n  keepLatestRuns: 1\n", "utf-8");
-    const staleRun = path.join(root, ".qfai", "report", "run-20260401120000001");
-    await mkdir(staleRun, { recursive: true });
-    await mkdir(path.join(root, ".qfai", "report", "run-20260811120000002"), { recursive: true });
-    const aged = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    await utimes(staleRun, aged, aged);
+    const staleRun = await seedStaleRunLog(root);
     const runner = recordingRunner(root);
     let prompted = false;
 
