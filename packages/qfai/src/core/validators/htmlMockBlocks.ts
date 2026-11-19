@@ -121,11 +121,13 @@ function mergeHtmlWithCss(html: string, css: string): string {
   }
 
   const styleTag = `<style>\n${trimmedCss}\n</style>`;
+  // A replacement function, not a string: CSS may hold `$&` or `$$`, which a
+  // replacement string would expand.
   if (/<\/head>/i.test(html)) {
-    return html.replace(/<\/head>/i, `${styleTag}\n</head>`);
+    return html.replace(/<\/head>/i, (closingTag) => `${styleTag}\n${closingTag}`);
   }
   if (/<\/body>/i.test(html)) {
-    return html.replace(/<\/body>/i, `${styleTag}\n</body>`);
+    return html.replace(/<\/body>/i, (closingTag) => `${styleTag}\n${closingTag}`);
   }
   return `${styleTag}\n${html}`;
 }

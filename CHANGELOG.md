@@ -543,6 +543,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   already wrote keeps its old steps; delete it and run `qfai init` again to
   get these.
 
+- **CSS beside an HTML mock now reaches the mock unchanged.** When
+  `qfai validate` put a `css` block into the HTML mock before it, it read
+  `$&`, `$$` and the other replacement patterns in the CSS as instructions, so
+  a rule such as `content: "$&"` was checked with `</head>` in its place. The
+  CSS is now inserted as written.
+
 - **The contract rules no longer claim `qfai validate` starts no processes.**
   Validation runs short-lived checkers, such as the document schema checker,
   as child processes. The `qfai-sdd` contract rules now state the narrower
