@@ -615,6 +615,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   files, so a marker kept only in such a module was reported as missing and
   blocked validation. Those four extensions are now read as well.
 
+- **A dependency lockfile no longer blocks graph reuse or a document query.**
+  The completed-analysis check treated every `.lock` or `.pid` file at any
+  depth as a run still in progress, so a project with a `Cargo.lock`,
+  `yarn.lock` or `poetry.lock` in scope could neither publish its graph to the
+  shared cache nor answer a local Graphify document query. Only such a file
+  inside the engine's own storage directory now counts as a live run.
+
 - **The verify gate reads the result its own validate run wrote.** The
   `verify-qfai-gate` step told agents to read `.qfai/report/validate.json` and
   then ran `qfai report` with no profile. That file is only the default path,

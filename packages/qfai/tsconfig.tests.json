@@ -50,6 +50,7 @@
     "tests/unit/graph/replacementFailure.examples.test.ts",
     "tests/unit/graph/unreadableCacheCandidate.test.ts",
     "tests/unit/graph/inventoryFiles.test.ts",
+    "tests/unit/graph/completedCorpus.test.ts",
     "tests/unit/graph/documentUpdateFailure.examples.test.ts",
     "tests/unit/graph/graphGitignore.examples.test.ts",
     "tests/unit/graph/ciPolicy.examples.test.ts",
