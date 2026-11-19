@@ -317,6 +317,49 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(collectCreatedObjects(statements))).toHaveLength(1);
   });
 
+  // The name pattern stopped after a quoted schema, so every table in `"app"`
+  // was keyed as `app` and two different tables were reported as one.
+  it("reads every part of a name whose schema is quoted", () => {
+    const { statements } = parseSqlContract(
+      `CREATE TABLE "app".users (a int);\nCREATE TABLE "app".orders (a int);\n`,
+    );
+    expect(collectCreatedObjects(statements).map((object) => object.name)).toEqual([
+      "app.users",
+      "app.orders",
+    ]);
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  it("folds each bare part and keeps each quoted part as written", () => {
+    const { statements } = parseSqlContract(
+      `CREATE TABLE App."Users" (a int);\n` +
+        `CREATE TABLE "app".users (a int);\n` +
+        `CREATE TABLE app . "Users" (a int);\n`,
+    );
+    expect(collectCreatedObjects(statements).map((object) => object.name)).toEqual([
+      "app.Users",
+      "app.users",
+      "app.Users",
+    ]);
+    expect(findRedefinitions(collectCreatedObjects(statements))[0]?.lines).toEqual([1, 3]);
+  });
+
+  // A quoted part may hold a dot or a doubled quote; neither is a separator or
+  // a terminator, and `"a.b"` is one name where `a.b` is a schema and a table.
+  it("keeps a quoted part holding a dot or a doubled quote distinct", () => {
+    const { statements } = parseSqlContract(
+      `CREATE TABLE "a.b" (x int);\nCREATE TABLE a.b (x int);\n` +
+        `CREATE TABLE "s""q".t (x int);\nCREATE TABLE "s".t (x int);\n`,
+    );
+    expect(collectCreatedObjects(statements).map((object) => object.name)).toEqual([
+      '"a.b"',
+      "a.b",
+      '"s""q".t',
+      "s.t",
+    ]);
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
   it("stays silent on a file that defines each object once", async () => {
     const issues = await runOn(
       `${HEADER}CREATE TABLE a (x int);\nCREATE TABLE b (y int);\nCREATE INDEX i ON a (x);\n`,
