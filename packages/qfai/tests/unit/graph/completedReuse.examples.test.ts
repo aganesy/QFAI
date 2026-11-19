@@ -83,6 +83,45 @@ it("publishes and independently restores a completed document graph after native
 });
 
 // QFAI:EX-0001-0236-01
+it("restores a compatible document snapshot when no processing configuration is present", async () => {
+  const fixture = await documentAnalysisFixture();
+  const common = await mkdtemp(path.join(os.tmpdir(), "qfai-document-cache-"));
+  const native = graphifyExtractionFixture(fixture);
+  const environment = { ...graphReuseEnvironment(), platform: "win32", architecture: "x64" };
+  const run: typeof fixture.run = async (command, args, options) => {
+    if (command === "git") return { exitCode: 0, stdout: common };
+    if (args.includes("-c")) return { exitCode: 0, stdout: "3.12.13" };
+    if (args.at(-1) === "inventory")
+      return { exitCode: 0, stdout: '{"files":["checkout.ts","rationale.md"]}' };
+    return native(command, args, options);
+  };
+  const configuration = path.join(fixture.root, ".qfai", "graph-processing.json");
+  const prepare = () => prepareDocumentAnalysis(fixture.root, run, undefined, environment);
+  try {
+    await rm(fixture.documentAnalysis, { recursive: true });
+    expect(await prepare()).toMatchObject({ source: "generated", reuse: "published" });
+    await rm(fixture.documentAnalysis, { recursive: true });
+    await rm(configuration);
+    fixture.calls.length = 0;
+    expect(await prepare()).toMatchObject({ status: "prepared", source: "restored" });
+    expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+
+    await rm(fixture.documentAnalysis, { recursive: true });
+    await writeFile(configuration, "{");
+    expect(await prepare()).toMatchObject({ status: "not-ready" });
+    await expect(lstat(fixture.documentAnalysis)).rejects.toMatchObject({ code: "ENOENT" });
+
+    await writeFile(configuration, JSON.stringify({ ...fixture.processing, scope: ["rationale.md"] }));
+    fixture.calls.length = 0;
+    expect(await prepare()).toMatchObject({ status: "prepared", source: "generated" });
+    expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(true);
+  } finally {
+    await fixture.dispose();
+    await rm(common, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0236-01
 // Mutation: packages/qfai/src/core/graph/reuse.ts `if (!(await inspectCodeAnalysisAt(root, staged, run))) continue;` -> `if (await inspectCodeAnalysisAt(root, staged, run)) continue;` fails "restores a compatible completed local copy and confirms native freshness without generation"
 it("restores a compatible completed local copy and confirms native freshness without generation", async () => {
   const fixture = await completedCodeSnapshotFixture();
