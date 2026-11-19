@@ -233,11 +233,16 @@ export async function findOutDirCoOwners(
  * `.git` directory left in a shared parent (a temporary directory, say)
  * is not a repository, and treating it as one widened a standalone
  * project's scan to unrelated directories.
+ *
+ * Whenever Git gives no usable answer, the on-disk marker walk decides
+ * instead. That walk can only widen the scan, so the pre-prune guard
+ * still sees every co-owner it would have seen before; a narrower scan
+ * there could authorise deleting a sibling project's run logs.
  */
 async function findMonorepoRoot(startDir: string): Promise<string> {
   const start = path.resolve(startDir);
   const gitRoot = await resolveGitRoot(start);
-  if (gitRoot.kind === "unavailable") {
+  if (gitRoot.kind === "unknown") {
     return findMarkerRoot(start, [".git", "pnpm-workspace.yaml"]);
   }
   let current = start;
@@ -250,33 +255,61 @@ async function findMonorepoRoot(startDir: string): Promise<string> {
     }
     const parent = path.dirname(current);
     if (parent === current) {
-      return start;
+      // Git named a root that is no ancestor under any spelling this walk
+      // sees (a work tree set elsewhere, a mapped-drive alias).
+      return gitRoot.kind === "root"
+        ? findMarkerRoot(start, [".git", "pnpm-workspace.yaml"])
+        : start;
     }
     current = parent;
   }
 }
 
+/** Variables that point Git at another repository or stop its discovery early. */
+const GIT_LOCATION_VARIABLES = ["GIT_DIR", "GIT_WORK_TREE", "GIT_CEILING_DIRECTORIES"];
+
 /**
- * The working-tree root Git reports for `dir`; `none` when `dir` is not in
- * a working tree. `unavailable` when Git itself cannot be started:
- * the caller then falls back to the on-disk `.git` marker, which can
- * only widen the scan, so the pre-prune guard still sees every co-owner
- * it saw before.
+ * The working-tree root Git reports for `dir`. `none` only when Git says
+ * `dir` is not in a repository; any other failure (Git missing, dubious
+ * ownership, a broken config) is `unknown`, since it proves nothing about
+ * where the repository ends.
+ *
+ * The child runs without the variables that redirect discovery, as a Git
+ * hook exports them, and in the C locale so the refusal text can be read.
  */
 async function resolveGitRoot(dir: string): Promise<GitRoot> {
+  // Compared case-blind: Windows environment names are.
+  const env: NodeJS.ProcessEnv = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([name]) => !GIT_LOCATION_VARIABLES.includes(name.toUpperCase()),
+      ),
+    ),
+    LC_ALL: "C",
+    LANGUAGE: "C",
+  };
   try {
     const { stdout } = await execute("git", ["rev-parse", "--show-toplevel"], {
       cwd: dir,
       encoding: "utf8",
+      env,
     });
     const top = stdout.trim();
-    return top === "" ? { kind: "none" } : { kind: "root", dir: path.resolve(top) };
+    return top === "" ? { kind: "unknown" } : { kind: "root", dir: path.resolve(top) };
   } catch (error) {
-    return isEnoent(error) ? { kind: "unavailable" } : { kind: "none" };
+    return isNotARepository(error) ? { kind: "none" } : { kind: "unknown" };
   }
 }
 
-type GitRoot = { kind: "root"; dir: string } | { kind: "none" } | { kind: "unavailable" };
+function isNotARepository(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("stderr" in error)) {
+    return false;
+  }
+  const { stderr } = error;
+  return typeof stderr === "string" && stderr.includes("not a git repository");
+}
+
+type GitRoot = { kind: "root"; dir: string } | { kind: "none" } | { kind: "unknown" };
 
 /** True when both paths name one directory once symlinks are resolved. */
 async function isSameDirectory(candidate: string, realDir: string): Promise<boolean> {
