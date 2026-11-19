@@ -500,6 +500,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **The shipped validation and document workflows run the QFAI a Yarn
+  Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
+  `npx qfai` and the document lane's check for `node_modules/qfai` found
+  nothing and fell back to the newest QFAI from the registry. When the project
+  has a `.pnp.cjs` and a `yarn.lock` and its `package.json` declares QFAI,
+  both lanes now ask Yarn which version it resolves and install that exact
+  version under `tmp/`: the validation lane runs both profiles with it, and
+  the document lane runs its checkers out of it. A project that declares no QFAI still gets the
+  newest release, and one whose declared QFAI Yarn cannot resolve to one
+  version stops before installing anything. A workflow file `qfai init`
+  already wrote keeps its old steps; delete it and run `qfai init` again to
+  get these.
+
 - **`qfai sdd merge-docs` no longer fails on a conflicted file it does not
   merge.** A conflicted file under the specs directory that is not Markdown or
   YAML, such as an image, made the command exit 1 even when no document was
@@ -579,6 +592,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   its entries is probed or installed. npm now starts without a shell on every
   platform; on Windows doctor runs npm's JavaScript entry with Node. Closes
   #4465.
+
+- **`qfai validate` announces a pass only after its result is saved.** The
+  text pass summary and the `--format github` summary, with its `result=PASS`
+  and the path of `validate.json`, were printed before the result files were
+  written, so a run whose write then failed showed a pass and a file it never
+  wrote, and exited 1. The result files are now written first: a run that
+  cannot write them prints no pass summary and no `--format github` output,
+  still ends its text output with `run-log:`, and exits 1 with the write
+  failure on stderr. Closes #4529.
 
 - **`qfai db-drift` compares the full PostgreSQL column type.** It read
   `information_schema.columns.data_type`, which drops the varchar length, the

@@ -228,7 +228,9 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
     // The full and drift profiles are two steps of one job, which also carries
     // the check name. Full excludes drift; the PR-only drift profile checks
     // downstream edits to upstream SSOT, and runs after a failing full profile
-    // so one run reports both. No job declares a matrix.
+    // so one run reports both. No job declares a matrix. Each step carries the
+    // invocation twice: once for the copy of the version Yarn resolves in a
+    // Plug'n'Play project, and once through `npx` for every other project.
     matrices: [],
     checkNames: [{ jobId: "validate", name: "qfai validate (full profile, fail on error)" }],
     invocations: [
@@ -236,6 +238,17 @@ const SHIPPED_FILE_EXPECTATIONS: readonly FileExpectation[] = [
         jobId: "validate",
         invocation: "qfai validate --profile full --fail-on error",
         selector: "",
+      },
+      {
+        jobId: "validate",
+        invocation: "qfai validate --profile full --fail-on error",
+        selector: "",
+      },
+      {
+        jobId: "validate",
+        invocation: "qfai validate --profile drift --fail-on error",
+        selector:
+          "${{ (success() || steps.full.outcome == 'failure') && github.event_name == 'pull_request' }}",
       },
       {
         jobId: "validate",
@@ -290,9 +303,15 @@ const SANCTIONED_THIRD_PARTY_USES: readonly string[] = ["pnpm/action-setup"];
 /** A public GitHub-hosted runner label by naming form (the label LIST is the runner row's SSOT). */
 const PUBLIC_HOSTED_LABEL_RE = /^(?:ubuntu|windows|macos)-[a-z0-9.]+$/;
 
-/** A run-body line invoking the QFAI CLI at COMMAND position. */
+/**
+ * A run-body line invoking the QFAI CLI at COMMAND position.
+ *
+ * The CLI entry run by path counts too: in a Yarn Plug'n'Play project the validation lane runs
+ * the copy it installed under `tmp/qfai-validate`. Left out, that line escaped this dimension,
+ * and a `|| true` after it would have gone unread.
+ */
 const QFAI_INVOCATION_RE =
-  /^\s*(?:npx\s+|pnpm\s+dlx\s+|pnpm\s+exec\s+|yarn\s+(?:dlx\s+)?)?qfai\s+([a-z][a-z-]*)\b/;
+  /^\s*(?:(?:npx\s+|pnpm\s+dlx\s+|pnpm\s+exec\s+|yarn\s+(?:dlx\s+)?)?qfai|node\s+tmp\/qfai-validate\/node_modules\/qfai\/dist\/cli\/index\.mjs)\s+([a-z][a-z-]*)\b/;
 
 /* ------------------------------------------------------------------ *
  * Tree loading
