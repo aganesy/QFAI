@@ -1285,7 +1285,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-015":
     "Every contract file states its apply order (`-- Depends on:` for SQL, `x-qfai-depends-on` for YAML/JSON), writing `-` when nothing has to be applied before it.",
   "QFAI-CONTRACT-034":
-    "Every contract under a kind directory declares one ID of that kind, is named `<kind>-NNNN-<slug>` after it, and has a contracts.md row that agrees with its ID and file. Every row names a contract file, and no two contracts of one kind share a number.",
+    "Every contract under a kind directory declares one ID of that kind, is named `<kind>-NNNN-<slug>` after it, and has a contracts.md row that agrees with its ID, file and declared apply order. Every row names a contract file, and no two contracts of one kind share a number.",
   "QFAI-CONTRACT-036":
     "Every table a DB contract's foreign key references is either created by that same contract or by one its declared apply order names, so applying the contracts in the declared order never meets a `REFERENCES` to a table that does not exist yet.",
   // Reads the implementation tree rather than another declaration, so what it

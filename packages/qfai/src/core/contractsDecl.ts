@@ -88,7 +88,7 @@ const DEPENDS_ON_COMMENT_RE = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:[ \t]*(.+
  * natural way to say *why* the order holds, but an end-of-line anchor stopped
  * matching it. The scalar fallback then read `[DB-0001] # …` as a value that
  * is not one of the "none" spellings, so a conforming declaration produced
- * `QFAI-CONTRACT-015` and its correct index row `QFAI-CONTRACT-033`.
+ * `QFAI-CONTRACT-015` and its correct index row `QFAI-CONTRACT-034`.
  */
 const DEPENDS_ON_YAML_FLOW_RE = /^x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t]*(?:#[^\n]*)?$/im;
 /**
@@ -100,14 +100,14 @@ const DEPENDS_ON_YAML_FLOW_RE = /^x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t]*(?:#
  * later one was dropped — silently, and worst where it matters most: a
  * declaration listing several contracts is exactly the multi-file composition
  * this key exists to state. The truncated list then disagreed with the correct
- * index row, which earned `QFAI-CONTRACT-033`.
+ * index row, which earned `QFAI-CONTRACT-034`.
  *
  * Line breaks are `\r?\n` throughout. This is the one form spanning several
  * lines, so it was also the only one a CRLF file broke: the key's hard `\n` did
  * not match `\r\n`, and even past it every item ended at its own `\r`, so the
  * repetition stopped after the first. A contract saved on Windows therefore
  * declared its apply order to no effect — `QFAI-CONTRACT-015` on a file that
- * had declared, and `-033` against its correct index row. The sibling forms
+ * had declared, and `-034` against its correct index row. The sibling forms
  * anchor on `$`, which already matches before a `\r`.
  *
  * The ids are read from the item *values* (see {@link blockSequenceValues})
@@ -159,7 +159,7 @@ const DEPENDS_ON_KEY = "x-qfai-depends-on";
  * above matches an unquoted YAML key on a single line. A JSON contract spelling
  * `"x-qfai-depends-on": []` — or spreading the array over several lines — read
  * as "never stated", so `QFAI-CONTRACT-015` fired on a file that had declared
- * its apply order, and `QFAI-CONTRACT-014` / `-033` never saw the ids it listed.
+ * its apply order, and `QFAI-CONTRACT-014` / `-034` never saw the ids it listed.
  *
  * Declaration lines are stripped before parsing: `QFAI-CONTRACT-010` requires a
  * `QFAI-CONTRACT-ID` comment line and a comment is not valid JSON, so the raw
@@ -231,7 +231,7 @@ const CONTRACT_ID_EXACT_RE = new RegExp(`^(?:${DECLARED_ID})$`, "i");
  * `-- Depends on: DB-0001, TBD` yielded `["DB-0001"]`, so
  * `QFAI-CONTRACT-015` saw a declaration, `-014` found every id it was given to
  * resolve, and an index cell mirroring just the known half agreed with it under
- * `-033`. The undetermined element left no trace anywhere, which is the one
+ * `-034`. The undetermined element left no trace anywhere, which is the one
  * outcome these rules exist to prevent.
  *
  * Rejecting the whole list rather than the bad element is what makes the file
@@ -278,7 +278,7 @@ function textDependencyIds(value: string): string[] | undefined {
  * merely *contained* one: `{"note": "API-0002"}`, or a single unwrapped
  * `"API-0002"`, yielded a dependency and returned early from
  * `hasDependencyDeclaration`, so a value that states no apply order passed
- * parsing, the `QFAI-CONTRACT-014` reference check and the `QFAI-CONTRACT-033`
+ * parsing, the `QFAI-CONTRACT-014` reference check and the `QFAI-CONTRACT-034`
  * index mirror as though it did. `["TBD"]` / `[null]` are rejected for the same
  * reason: they would suppress `QFAI-CONTRACT-015` while leaving nothing for
  * `QFAI-CONTRACT-014` to check.
@@ -310,6 +310,20 @@ function statesJsonDependencies(value: unknown): boolean {
     return jsonDependencyIds(value) !== undefined;
   }
   return typeof value === "string" && DEPENDS_ON_NONE_VALUE_RE.test(value.trim());
+}
+
+/**
+ * The ids a written dependency list states, sorted, or `undefined` when it states
+ * none: an empty value, or one holding anything but contract ids. `-`, `[]` and
+ * `none` state that nothing must be applied first. This is the list judgement the
+ * declarations use, so the contract index cell is read as the contract is.
+ */
+export function listedDependencyIds(value: string): string[] | undefined {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  if (DEPENDS_ON_NONE_VALUE_RE.test(trimmed)) return [];
+  const ids = textDependencyIds(trimmed);
+  return ids && Array.from(new Set(ids)).sort();
 }
 
 export function extractDeclaredDependencies(text: string, file?: string): string[] {

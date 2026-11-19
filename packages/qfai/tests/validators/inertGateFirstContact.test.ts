@@ -30,12 +30,11 @@ async function withPack<T>(files: Record<string, string>, fn: (root: string) => 
 }
 
 describe("the undeclared-dependency warning names what it is holding back", () => {
-  // `QFAI-CONTRACT-033` compares an index row's `Depends On` cell with the
+  // `QFAI-CONTRACT-034` compares an index row's `Depends On` cell with the
   // contract file's declaration. A blank cell it reports on its own, but a cell
   // reading `-` is compared — and while the file declares nothing, the two
   // agree. So a row that says "no dependencies" is unmeasured, not agreed, and
-  // says nothing until the file declares something. Both rules promote at the
-  // same release, which is what puts them on one deadline.
+  // says nothing until the file declares something.
   const CONTRACT = [
     "openapi: 3.0.0",
     "info:",
@@ -51,7 +50,7 @@ describe("the undeclared-dependency warning names what it is holding back", () =
     });
 
   it("names the rule that has nothing to compare until this one is answered", async () => {
-    expect(await undeclared()).toContain("QFAI-CONTRACT-033");
+    expect(await undeclared()).toContain("QFAI-CONTRACT-034");
   });
 
   it("says a `-` row is unmeasured rather than agreed", async () => {
