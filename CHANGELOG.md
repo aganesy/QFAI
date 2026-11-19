@@ -548,6 +548,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The configured specs directory is also read as a literal path, so a name
   holding `*` no longer selects conflicted documents outside it. Closes #4523.
 
+- **Two tables in one quoted schema are no longer reported as one.** The
+  same-file redefinition check (`QFAI-DB-002`) read a created object's name
+  only up to a quoted part, so `CREATE TABLE "app".users` and
+  `CREATE TABLE "app".orders` were both keyed as `app` and reported as a
+  redefinition. Each part of a qualified name is now read under PostgreSQL's
+  quoting rules: a bare part folds to lower case, a quoted part keeps its
+  case and its doubled `""`, and a dot inside quotes does not split the name.
+
 - **`qfai validate` checks every resource reference in an HTML mock.** The
   external URL, local file and unsafe scheme checks read only `href`, `src`
   and `action`, so a mock could load a CDN asset through CSS `url()`,
