@@ -493,6 +493,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **The shipped validation and document workflows run the QFAI a Yarn
+  Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
+  `npx qfai` and the document lane's check for `node_modules/qfai` found
+  nothing and fell back to the newest QFAI from the registry. When the project
+  has a `.pnp.cjs` and a `yarn.lock` and its `package.json` declares QFAI,
+  both lanes now ask Yarn which version it resolves and install that exact
+  version under `tmp/`: the validation lane runs both profiles with it, and
+  the document lane runs its checkers out of it. A project that declares no QFAI still gets the
+  newest release, and one whose declared QFAI Yarn cannot resolve to one
+  version stops before installing anything. A workflow file `qfai init`
+  already wrote keeps its old steps; delete it and run `qfai init` again to
+  get these.
+
 - **`qfai sdd merge-docs` no longer fails on a conflicted file it does not
   merge.** A conflicted file under the specs directory that is not Markdown or
   YAML, such as an image, made the command exit 1 even when no document was
@@ -508,6 +521,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
+- **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
+  with no `--assume` copies the carry-over list from the previous
+  `preflight_summary.md`. When that file existed but could not be read, the
+  rerun treated it as having no carry-over and replaced it with `- none`. Only
+  a missing file now counts as empty. Any other read failure stops the run
+  with exit code 1, names the file, and leaves it unchanged. Closes #4524.
 
 - **`qfai catalog design` writes only its own files, and only inside the
   project.** It staged both files under names built from its process ID, so a
@@ -626,6 +646,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   It now writes the package's copy beside the directory, checks it, and only
   then switches the two; if the switch fails, the project's copy is put back,
   and when even that fails the error names the hidden directory that holds it.
+
+- **The run log's `traceability.json` lists every story-tree ID a finding
+  cites.** It kept only the first ID in each reference a finding gave, missed
+  business flow IDs, contract-scoped business rule IDs such as
+  `BR-CLI-0014-0092`, and decision and open-question IDs, and still read the
+  ID forms of QFAI 1.x. It now lists every BF, US, AC, EX, BR, DEC and OQ ID in
+  each reference, read with the same ID rules `qfai validate` applies to the
+  story tree. Closes #4537.
 
 - **The document-schema check sees changes under a non-ASCII directory.**
   `check-mdschema.mjs --scope changed` read Git's changed paths line by line,

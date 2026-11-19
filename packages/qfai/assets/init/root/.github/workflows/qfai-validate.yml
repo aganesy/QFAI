@@ -440,9 +440,90 @@ jobs:
             # choice on first CI run.
             npm install --no-audit --no-fund
           fi
+      - name: Resolve the QFAI a Yarn Plug'n'Play project depends on
+        id: qfai
+        shell: bash
+        run: |
+          # `npx qfai` runs the copy under `node_modules/.bin`, and Yarn
+          # Plug'n'Play writes no `node_modules`: its packages stay in zip
+          # archives that only Yarn's own resolver reads. So in a PnP project
+          # `npx` found nothing, fetched the newest QFAI from the registry and
+          # validated with rules the project never chose. The `.pnp.cjs` Yarn
+          # writes is the sign of that layout, and Yarn resolves the version
+          # the project depends on.
+          #
+          # That exact version is installed under `tmp/` in the checkout, the
+          # way the document lane installs its tools, and the steps below run
+          # it. Under the checkout, because `qfai validate` reports a copy from
+          # outside the project, such as npx's cache, as one the project's
+          # declaration did not choose. `--no-save` keeps the install out of
+          # your manifest, `--registry` names where the version comes from, and
+          # `--ignore-scripts` runs no install script; `--include=optional`
+          # keeps the schema checker's platform binary, an optional dependency.
+          #
+          # A project that does not declare QFAI prints nothing here and runs
+          # the newest one, as `npx qfai` does everywhere else. A project that
+          # declares it and whose install cannot resolve it stops, rather than
+          # report what another version would say.
+          # Both files, because a `.pnp.cjs` alone does not mean Yarn: pnpm
+          # writes one too under `node-linker=pnp`, and the Yarn on the runner
+          # then has no Plug'n'Play resolver for the project. Such a project
+          # keeps the unpinned fallback, which is what the install step's own
+          # Yarn branch keys on as well.
+          if [ -f .pnp.cjs ] && [ -f yarn.lock ]; then
+            version="$(yarn node -e '
+              const { readFileSync } = require("node:fs");
+              const path = require("node:path");
+              const own = JSON.parse(readFileSync("package.json", "utf8"));
+              const declared = ["dependencies", "devDependencies", "optionalDependencies"].some(
+                (field) => own[field] !== null && typeof own[field] === "object" && Object.hasOwn(own[field], "qfai"),
+              );
+              if (!declared) process.exit(0);
+              const exact = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;
+              let entry;
+              try {
+                entry = require.resolve("qfai");
+              } catch {
+                console.error("::error::package.json declares qfai but Yarn resolves none; install it with Yarn and commit yarn.lock");
+                process.exit(1);
+              }
+              for (let dir = path.dirname(entry); ; dir = path.dirname(dir)) {
+                let manifest;
+                try {
+                  manifest = JSON.parse(readFileSync(path.join(dir, "package.json"), "utf8"));
+                } catch {
+                  manifest = undefined;
+                }
+                if (manifest !== undefined && manifest.name === "qfai") {
+                  if (typeof manifest.version !== "string" || !exact.test(manifest.version)) {
+                    console.error("::error::Yarn resolves a QFAI whose package.json names no exact version");
+                    process.exit(1);
+                  }
+                  process.stdout.write(manifest.version);
+                  process.exit(0);
+                }
+                if (path.dirname(dir) === dir) {
+                  console.error("::error::Yarn resolves QFAI to a file outside any QFAI package.json");
+                  process.exit(1);
+                }
+              }
+            ')"
+            if [ -n "$version" ]; then
+              npm install --no-save --no-audit --no-fund --ignore-scripts --include=optional --registry=https://registry.npmjs.org/ --prefix=tmp/qfai-validate "qfai@${version}"
+              echo "version=${version}" >> "$GITHUB_OUTPUT"
+            fi
+          fi
       - name: qfai validate
         id: full
-        run: npx qfai validate --profile full --fail-on error
+        env:
+          QFAI_VERSION: ${{ steps.qfai.outputs.version }}
+        shell: bash
+        run: |
+          if [ -n "$QFAI_VERSION" ]; then
+            node tmp/qfai-validate/node_modules/qfai/dist/cli/index.mjs validate --profile full --fail-on error
+          else
+            npx qfai validate --profile full --fail-on error
+          fi
       # Full validation excludes drift. This pull-request-only profile checks
       # downstream edits to upstream SSOT against the configured base branch.
       # It runs after a failing full profile too, so one run reports both, and
@@ -451,4 +532,12 @@ jobs:
       # must not report a result nothing computed.
       - name: qfai validate (drift protocol)
         if: ${{ (success() || steps.full.outcome == 'failure') && github.event_name == 'pull_request' }}
-        run: npx qfai validate --profile drift --fail-on error
+        env:
+          QFAI_VERSION: ${{ steps.qfai.outputs.version }}
+        shell: bash
+        run: |
+          if [ -n "$QFAI_VERSION" ]; then
+            node tmp/qfai-validate/node_modules/qfai/dist/cli/index.mjs validate --profile drift --fail-on error
+          else
+            npx qfai validate --profile drift --fail-on error
+          fi

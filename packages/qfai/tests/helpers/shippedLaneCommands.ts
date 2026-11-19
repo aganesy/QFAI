@@ -1100,6 +1100,10 @@ export const ALLOWED_INVOCATIONS: ReadonlySet<string> = new Set([
   // cache, satisfies `command -v` and still fails here. Asking the real question is the point.
   "yarn cache",
   "npx qfai",
+  // Yarn's own `node`, which loads the Plug'n'Play resolver so a payload can find the package the
+  // project depends on. Allowed only with an enumerated `-e` payload, exactly as `node` is below:
+  // `refusals` reads its payload the same way, and refuses `yarn node build.mjs` for the missing `-e`.
+  "yarn node",
   // `node` with no bare argument: its only shipped use is `node -e <payload>`, and a payload is opaque
   // to any scan. `node build.mjs` is a different invocation and is refused.
   "node",
@@ -1133,6 +1137,11 @@ export const ALLOWED_INVOCATIONS: ReadonlySet<string> = new Set([
   // under `tmp/`, so it is still a path inside an installed package and never one an adopter owns.
   "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mdschema.mjs",
   "node tmp/qfai-docs-tools/node_modules/qfai/assets/scripts/check-mermaid.mjs",
+  // The validator, at the version Yarn resolves for a Plug'n'Play project. Plug'n'Play writes no
+  // `node_modules/.bin`, so a bare `npx qfai` there fetched the newest release instead of the one
+  // the project depends on. The lane installs that version under `tmp/` and runs its CLI entry by
+  // path, the same fixed-directory reasoning as the two checkers above.
+  "node tmp/qfai-validate/node_modules/qfai/dist/cli/index.mjs",
 ]);
 
 /** Actions a shipped lane may use, and the input keys they may be given. */
@@ -1240,9 +1249,9 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "1d11d9a1db06c01ba851ad54991f2f99b19d9739ad11dc5ca07fb808c62d3edf"],
+  ["qfai-docs.yml", "bf3fe4f9816f8b3d4b5fe5173afd0decf0dd2ce4cf9fe6d0e30026dc0b7ed021"],
   ["qfai-tests.yml", "23936510c76f82647e4d48cce2a116bf44185f5ba90fac3ca9b91a560a969572"],
-  ["qfai-validate.yml", "a1407c67a98f053fd544b5a78b17b4c63c64be349c4483b55d647ef03c22145c"],
+  ["qfai-validate.yml", "d6a3d5d691f777509066a9be2c844f51dff4b242d2ae40cbb29f5fb1739ecb3b"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -2105,7 +2114,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 1b57ec180a18a6aea6e1945bbcccff2792b6659af41c8952c3971c322367bb5c>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body 59c1776f5e0733f28474994271b13ccc5280b621d25a1ff99a7ca6b7222851bd>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2201,11 +2210,15 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate","id":"full","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
+    '{"name":"Resolve the QFAI a Yarn Plug\'n\'Play project depends on","id":"qfai","shell":"bash","run":"<body 00c38dd41c48bbccc81b1fbe5b0132fd0f0d9a0505592045c2f29463eb867daf>"}',
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"qfai validate (drift protocol)","if":"${{ (success() || steps.full.outcome == \'failure\') && github.event_name == \'pull_request\' }}","run":"<body 995eb7509a0aa6e91297702f51ec1bdd4f4f5b3cfac4c354edcfa9b28b2303cc>"}',
+    '{"name":"qfai validate","id":"full","env":{"QFAI_VERSION":"${{ steps.qfai.outputs.version }}"},"shell":"bash","run":"<body 9f2a7323110019401a3aa0cf36c23e8aec58dc24677fdc9e1e5e97cb17bd554f>"}',
+  ],
+  [
+    "qfai-validate.yml#validate",
+    '{"name":"qfai validate (drift protocol)","if":"${{ (success() || steps.full.outcome == \'failure\') && github.event_name == \'pull_request\' }}","env":{"QFAI_VERSION":"${{ steps.qfai.outputs.version }}"},"shell":"bash","run":"<body 02dcd85237c8d8a7073e351ac012b5083222e5799c055134841aac14432cf8fc>"}',
   ],
 ];
 
@@ -2303,6 +2316,11 @@ export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
   // `node_modules/qfai/package.json`, prints it, and stops with a non-zero exit when it is not one
   // exact version. Reads one file, writes one line. 609 characters.
   "eac5aa604c041fccf1f050ea66703ef95b4d1bbc0d0c7ebe81a871eabb5fe67f",
+  // `qfai-validate.yml#validate` and `qfai-docs.yml#checks`, one payload run by `yarn node` in both —
+  // prints the version of the QFAI a Yarn Plug'n'Play project depends on, or nothing when its
+  // `package.json` declares none, and stops with a non-zero exit when the version Yarn resolves is
+  // not one SemVer version or Yarn resolves none. Reads files, writes one line. 1509 characters.
+  "982333c60aa93e836650970a3fafd4708f44aa47df80c02e4f2c77b65d155e2c",
 ]);
 
 /**
@@ -2401,6 +2419,14 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
   "@jackchuka/mdschema@${checker} mermaid@11.17.2 jsdom@29.1.1",
   "mermaid@11.17.2 jsdom@29.1.1 qfai",
+  // A Yarn Plug'n'Play project that depends on QFAI has no `node_modules/qfai` to run files out of,
+  // so the lane installs the version Yarn resolves for it. `${version}` is the output of an
+  // enumerated payload that prints one SemVer version or nothing, and an empty one takes the
+  // unpinned entry above instead.
+  "mermaid@11.17.2 jsdom@29.1.1 qfai@${version}",
+  // The validation lane's copy of that same version, for the same project, installed on its own
+  // because that lane runs the validator rather than the document checkers.
+  "qfai@${version}",
 ]);
 
 const TAKES_NO_PACKAGE: ReadonlySet<string> = new Set([
@@ -2455,6 +2481,11 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ["yarn install", new Set(["--immutable", "--frozen-lockfile"])],
   ["yarn", new Set(["--version"])],
   ["npx qfai", new Set(["--profile", "--fail-on"])],
+  ["yarn node", new Set(["-e"])],
+  [
+    "node tmp/qfai-validate/node_modules/qfai/dist/cli/index.mjs",
+    new Set(["--profile", "--fail-on"]),
+  ],
   ["node", new Set(["-e"])],
   // The document lane's checkers. `--scope all` is what makes the lane check the
   // whole tree rather than a diff (an adopter's CI has no ratchet to apply), and
@@ -2497,6 +2528,10 @@ export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   // literals the scope body writes.
   ["DOCS_SCOPE", "${{ needs.scope.outputs.run }}"],
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
+  // The QFAI version Yarn resolves in a Plug'n'Play project. The resolving step writes it only after
+  // its payload has checked it is one SemVer version and that version is installed, and the
+  // validation steps only test whether it is empty. It reaches no program.
+  ["QFAI_VERSION", "${{ steps.qfai.outputs.version }}"],
   // Which event started the run, so the detection body can take a two-dot diff on a push and a
   // three-dot one on a pull request. Its value comes from `github.event_name`, a closed set
   // GitHub controls, and the body compares it to one literal. It reaches no program.
@@ -2782,7 +2817,8 @@ export function refusals(body: string): string[] {
     // argument is not the absence of a program. So the missing `-e` is itself the refusal, which puts
     // `node` where every other entry on the invocation list already is — allowed as an exact invocation
     // rather than by name — and stops the next unnamed flag from arriving through the same hole.
-    if (program === "node") {
+    // `yarn node` is the same interpreter with Yarn's resolver loaded, so it takes the same rule.
+    if (program === "node" || invocation === "yarn node") {
       const eval_at = tokens.indexOf("-e");
       if (eval_at === -1) {
         // …unless the invocation names a FILE the list enumerates. `node` on its
@@ -2793,6 +2829,10 @@ export function refusals(body: string): string[] {
         // one branch above, before this one runs.
         if (invocation === "node") {
           out.push("node without -e (it would read its program from stdin)");
+          continue;
+        }
+        if (invocation === "yarn node") {
+          out.push("yarn node without -e (it would run a script nobody enumerated)");
           continue;
         }
         // An enumerated file invocation carries no payload to digest.

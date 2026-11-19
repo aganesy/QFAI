@@ -342,6 +342,7 @@
     "tests/integration/validateTimingsLine.test.ts",
     "tests/helpers/doctorFixtures.ts",
     "tests/integration/shippedWorkflowPins.test.ts",
+    "tests/integration/shippedWorkflowPnpQfai.test.ts",
     "tests/integration/shippedWorkflowPortability.test.ts",
     "tests/integration/shippedWorkflowRunners.test.ts",
     "tests/integration/shippedWorkflowShape.ts",
