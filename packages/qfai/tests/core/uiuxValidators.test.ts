@@ -134,6 +134,35 @@ describe("uiux validators", () => {
     expect(issues.some((item) => item.code === "QFAI-MOCK-009")).toBe(false);
   });
 
+  it("reads width and height whatever the case of the property name", async () => {
+    const html = '<button style="Width: 48px; MIN-HEIGHT: 4px; HEIGHT: 20PX">A</button>';
+
+    const result = await parseHtmlMock(html);
+
+    expect(result.inlineDimensions).toEqual([
+      { element: "button", width: 48, height: 20, interactive: true },
+    ]);
+  });
+
+  it("reports a small touch target declared with upper-case property names", async () => {
+    const root = await newTempDir();
+    const specsDir = path.join(root, ".qfai", "specs");
+    await mkdir(specsDir, { recursive: true });
+
+    const md = [
+      "## Screen Mock (HTML+CSS)",
+      "",
+      "```html",
+      '<button style="WIDTH: 10px; HEIGHT: 10px">Tap</button>',
+      "```",
+      "",
+    ].join("\n");
+    await writeFile(path.join(specsDir, "touch-target-upper-case.md"), md, "utf-8");
+
+    const issues = await validateHtmlMock(root, "mobile-ios", defaultConfig);
+    expect(issues.some((item) => item.code === "QFAI-MOCK-009")).toBe(true);
+  });
+
   it("returns null contrast ratio for out-of-range rgb values", () => {
     expect(computeContrastRatio("rgb(999,0,0)", "#ffffff")).toBeNull();
   });

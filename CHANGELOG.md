@@ -676,7 +676,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `border-width`, `max-height` or `line-height` could stand in for the real
   size: a 48px button with `min-width: 10px` drew `QFAI-MOCK-009`, and a
   later declaration of the same property was ignored. It now reads the parsed
-  declarations, so the declaration CSS applies is the one measured.
+  declarations, so the declaration CSS applies is the one measured, whatever
+  the case of its property name.
 
 - **The design audit no longer drops findings past its display limit.** It
   kept only the first `uiux.audit.maxDuplicateFindingsPerRule` findings of a

@@ -52,7 +52,7 @@ const PIXEL_LENGTH_RE = /^(\d+(?:\.\d+)?)px$/;
 /**
  * The pixel length a parsed declaration value states, or `null` for anything else.
  *
- * jsdom lower-cases the unit and keeps `!important` apart from the value, so only a plain
+ * The value arrives lower-cased with `!important` kept apart from it, so only a plain
  * `<number>px` is left to match; a percentage, a `calc()` or a keyword has no fixed size.
  */
 function readPixelLength(value: string | undefined): number | null {
@@ -136,6 +136,8 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
   // Script tags
   result.scriptTags = doc.querySelectorAll("script").length;
 
+  const dimensionProbe = doc.createElement("div");
+
   // Var usages from inline styles
   for (const el of allElements) {
     const style = el.getAttribute("style") ?? "";
@@ -149,12 +151,15 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
       });
     }
 
-    // Inline dimensions, read from jsdom's parsed declarations so that `min-width` or
-    // `border-width` is never taken for `width`.
-    const declarations =
-      el instanceof dom.window.HTMLElement || el instanceof dom.window.SVGElement ? el.style : null;
-    const width = readPixelLength(declarations?.getPropertyValue("width"));
-    const height = readPixelLength(declarations?.getPropertyValue("height"));
+    // Inline dimensions, read from parsed declarations so that `min-width` or `border-width` is
+    // never taken for `width`. jsdom drops a declaration whose property name is not lower-case,
+    // while CSS property names are case-insensitive, so the attribute is lower-cased and parsed
+    // on one detached element. Only the pixel values of `width` and `height` are read from it,
+    // and lower-casing cannot change those. The detached element also gives every element,
+    // MathML included, the same reading.
+    dimensionProbe.style.cssText = style.toLowerCase();
+    const width = readPixelLength(dimensionProbe.style.getPropertyValue("width"));
+    const height = readPixelLength(dimensionProbe.style.getPropertyValue("height"));
     if (width !== null || height !== null) {
       result.inlineDimensions.push({
         element: el.tagName.toLowerCase(),
