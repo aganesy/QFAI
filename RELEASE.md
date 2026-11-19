@@ -195,8 +195,7 @@ Note: run the commands below from the repository root unless stated otherwise.
    - `npm publish --dry-run` succeeds
 
    The dry-run needs no npm login. Without credentials npm warns that the
-   command requires you to be logged in, then still packs the package and
-   checks the version against the registry.
+   command requires you to be logged in, then still packs the package.
 
    After the dry-run, return to the repository root (Unix/Linux: `cd ../../`, PowerShell: `Set-Location ..\\..`). Run the remaining steps from the repository root.
 

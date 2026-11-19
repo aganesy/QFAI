@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -153,11 +154,13 @@ describe("the project layer describes the repository it is in", () => {
   // publish. It still asked a manual releaser for an npm login, which sent
   // someone who can push the tag looking for a credential nothing uses.
   it("asks a release operator for no npm credentials the publish job does not use", async () => {
-    const workflow = await readFile(
-      path.join(repoRoot, ".github", "workflows", "release.yml"),
-      "utf-8",
+    // Parsed, so a comment that mentions the permission cannot stand in for it.
+    const workflow: unknown = parseYaml(
+      await readFile(path.join(repoRoot, ".github", "workflows", "release.yml"), "utf-8"),
     );
-    expect(workflow, "release.yml no longer holds `id-token: write`").toMatch(/id-token:\s*write/);
+    expect(workflow, "the publish job no longer holds `id-token: write`").toMatchObject({
+      jobs: { publish: { permissions: { "id-token": "write" } } },
+    });
 
     const guide = withoutFencedBlocks(await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8"));
     // The commands and the token name, in code spans: prose that says no npm
