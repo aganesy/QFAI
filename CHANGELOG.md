@@ -612,6 +612,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
 
+- **The dangerous-SQL warning reads statements, not raw text.**
+  `QFAI-DB-001` matched its keywords against the whole `.sql` file, so a
+  `DROP TABLE` in a comment, a string, a quoted name or a function body, or an
+  `ALTER TABLE` in one statement and a `DROP` in a later one, warned on a
+  contract that destroys nothing. It now checks each statement's code on its
+  own, and still reads the body of a `DO` block, which runs when the file is
+  applied. Closes #4578.
+
 - **A DB contract that gives a regular and a unique index one name is
   reported.** PostgreSQL keeps both kinds of index in one namespace, so the
   second `CREATE` fails when the contract is applied, but `QFAI-DB-002`

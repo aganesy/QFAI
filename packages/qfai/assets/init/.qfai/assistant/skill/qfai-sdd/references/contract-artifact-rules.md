@@ -183,6 +183,9 @@ reporting them would be a false positive on valid input.
 
 The statement splitter honours SQL quoting, so a `;` inside a literal, a
 comment, a `$$ … $$` body or parentheses does not end a statement.
+`QFAI-DB-001` reads each statement on its own and only its code: a keyword in a
+comment, a literal, a quoted name or a function body does not warn. A `DO`
+block's body runs when the file is applied, so its statements are read too.
 
 **Not checked**: nothing here type-checks a query, resolves a column, or
 verifies the schema against the API contract. A green run means the file could
