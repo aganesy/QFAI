@@ -452,6 +452,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The README says what a fresh `qfai init` needs.** The Quick start now
+  lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
+  or later with `uv`, and network access to the npm registry and PyPI, from
+  which init downloads CodeGraph and Graphify. A new user now sees these
+  requirements before init runs rather than only after it fails.
+
+- **`qfai doctor --autoremediate` asks before it installs packages.**
+  Without `--yes` the install phase ran `npm install` for a skill's missing
+  runtime dependencies unattended, although those packages' install scripts
+  run with your privileges. It now names the packages and installs them only
+  after you answer `y`. A session whose stdin is not a terminal installs
+  nothing without `--yes` and says to rerun with it; the rest of the pass still
+  runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
 - **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
   difference exits 0 under `--fail-on never`, but the parser refused the flag
   on `db-drift` and the command exited 2. `db-drift` now takes
@@ -471,6 +485,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
 
+- **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
+  literal.** The check that compares a `db/` contract's foreign keys with its
+  `-- Depends on:` line skipped `$$ … $$` literals but not `$tag$ … $tag$`
+  ones, so text such as `$note$ REFERENCES orders $note$` was read as a
+  foreign key to `orders` and the contract was reported for not depending on
+  the contract that creates it. Both forms are now skipped, the same way the
+  SQL statement splitter already reads them. Both readers also accept a tag
+  with non-ASCII letters, such as `$é$`, and no longer open a literal at a
+  `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
+
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
   through a `preinstall` guard. npm never reaches that guard: it stops with
@@ -485,6 +509,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   command's usage lines (only the subcommand's when one was given) and a
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
+
+- **The GitHub Release is created only for the tag commit the release
+  workflow verified.** The release job named a tag, not a commit, minutes
+  after the tag was checked, so a tag moved in the meantime got a Release
+  describing a commit no gate ran on, and a deleted tag was recreated at the
+  default branch head. The job now reads the tag from the API just before it
+  creates the Release and stops unless the tag's commit, the verified commit
+  and the push event's commit are the same, and `gh release create` runs with
+  `--verify-tag`, so it never creates a tag. It reads the tag once more after
+  the create, and deletes the Release again and fails when the tag moved or
+  was deleted in between. Closes #4504.
 
 - **`qfai doctor` can no longer hang on the mdschema package's platform
   file.** After `mdschema --help` ran under its 15-second limit, the
@@ -513,6 +548,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   title, keeps its pattern. The `tech.md` Surface example is now the bare row,
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
+
+- **The assistant anchor check reads only the assistant tree.** The
+  `QFAI-LINK-002` check followed every link under `.qfai/assistant/`: a link to
+  a directory or document outside the tree had its citations checked as if
+  they were QFAI's own, and a link to a named pipe stopped `qfai validate`
+  with no output. It now follows a link only when it resolves inside the tree,
+  which may itself be linked in whole, and skips an entry that is not a
+  regular file. A document in the tree that cannot be read, or is larger than
+  8 MiB, stops the run with a message naming it. A file whose name starts
+  with two dots, such as `..notes.md`, now counts as inside its directory, here
+  and in every other check that asks whether a link stays inside one.
+  Closes #4484.
 
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in
@@ -569,12 +616,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the API does not require, the two remedy sentences ran together with no
   space. They are now separated by one.
 
-- **`qfai report --run-validate` stops on a stale install, as `qfai validate`
-  does.** When the installed qfai was not the version the lockfile pins,
-  `report --run-validate` only warned and then ran a fresh validation with the
-  outdated copy, so a single-step CI gate could pass on the old validator. It
-  now stops before it runs and exits 1, writing nothing. `qfai report` without
-  `--run-validate` reads a result already written, so it still only warns.
+- **`qfai validate --format github` keeps each path in its summary on one log
+  line.** The report and run-log paths in the closing notes were printed raw, so
+  a path holding a line break started a line of its own, which the runner reads
+  as a possible workflow command. A line break in them now shows as a visible
+  `\r` or `\n`, and `%` stays as written. The report and run-log are still
+  written at their original paths.
+
+- **The migration's step 12 scan no longer runs out of memory on large
+  tracked files.** It held git's whole file listing and read each tracked file
+  whole before checking it for 1.x paths, so a repository with large tracked
+  files could exhaust memory. It now reads the listing as git writes it and
+  each file in blocks, stops at a binary file's first NUL byte, and never holds
+  more than 16 MiB of one file. A text file larger than that, or one it could
+  not read, is named under `## Files scanned` as not checked for 1.x paths.
 
 - **Wrappers a Windows worktree stored as file symlinks are reported once, at
   info.** On a Windows `git worktree`, git can store a directory wrapper as a
@@ -583,11 +638,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **`qfai sdd preflight` writes only inside its output directory.** A report
+  directory, or a directory under it, that was a link to somewhere else carried
+  the preflight summary there, and a `preflight_summary.md` that was a link was
+  written through. Preflight now stops and names the linked directory without
+  writing, also when `paths.outDir` lies outside the project and is itself a
+  link, and says so separately when a path it needs is a file. It writes each summary to a new file that replaces the old one,
+  so a linked summary file is replaced instead of followed.
+
 - **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
   that made a token group or a `$value` its own descendant overflowed the stack,
   and the run reported no result at all. Such a file, or one nesting deeper than
   64 levels, now raises `QFAI-DT-002` at error naming the path where reading
   stopped, and every other check completes.
+
+- **`qfai report --run-validate` stops on a stale install, as `qfai validate`
+  does.** When the installed qfai was not the version the lockfile pins,
+  `report --run-validate` only warned and then ran a fresh validation with the
+  outdated copy, so a single-step CI gate could pass on the old validator. It
+  now stops before it runs and exits 1, writing nothing. `qfai report` without
+  `--run-validate` reads a result already written, so it still only warns.
 
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
@@ -652,6 +722,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   own, as part of the group's time. A run without `--timings` still runs them
   side by side, and the findings and counts are the same either way.
   Fixes #4279.
+
+- **`qfai sdd merge-docs` replaces only the document it read.** It wrote the
+  merged text through the working file's name, so a working file or story
+  directory that was a symbolic link had the text written wherever the link
+  pointed, outside the project included. It now leaves such a document, and
+  one whose working file is not UTF-8 text or is larger than 16 MiB, as it
+  is and names it. It sets the working file aside, checks it is still the
+  file it read, and gives the merged text the name only while nothing else
+  holds it, so a file an editor saves meanwhile is kept, not overwritten.
+  Fixes #4461.
 
 - **Document analysis reaches only the approved processing origin.**
   Graphify document extraction was given the selected or authorized endpoint,
