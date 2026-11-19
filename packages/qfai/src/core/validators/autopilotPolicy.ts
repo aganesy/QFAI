@@ -491,8 +491,9 @@ export function parseAutopilotPolicy(
 /**
  * An auto-decide category or entry reduced to what is compared: decoration
  * gone, a slash written without the spaces around it, and a closing full stop
- * dropped, so `ID/sequence numbering.` and `` `ID / sequence numbering` `` are
- * the same category.
+ * or semicolon dropped (list items end in either), so
+ * `ID/sequence numbering.`, `ID/sequence numbering;` and
+ * `` `ID / sequence numbering` `` are the same category.
  */
 function autoDecideForm(text: string): string {
   return decorationOnly(text)
