@@ -281,7 +281,7 @@ describe("BF-0002 CI verdict examples", () => {
   // whose closing check is deleted can no longer pass.
   // QFAI:EX-0002-0020-05
   it.skipIf(process.platform === "win32")(
-    "runs every self-validate profile and fails the step when one fails",
+    "runs every self-validate profile and fails the step when one or more fail",
     () => {
       const step = steps("build").find(
         (candidate) =>
