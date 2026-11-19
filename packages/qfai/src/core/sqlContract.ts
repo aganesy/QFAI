@@ -277,6 +277,67 @@ function opensEscapeString(text: string, quoteAt: number): boolean {
   return !IDENTIFIER_CHAR.test(text[quoteAt - 2] ?? "");
 }
 
+/** One statement split into the SQL it runs and the literals it carries. */
+export type StatementParts = {
+  /** The statement with each literal and quoted name replaced by one space. */
+  code: string;
+  /** The content of each string literal and dollar-quoted body, in order. Quoted names are not literals. */
+  literals: string[];
+};
+
+/**
+ * Separates a statement's code from its literals, under the quoting rules
+ * {@link parseSqlContract} follows. Takes one statement that splitter returned,
+ * so comments are already gone. A literal left open runs to the end.
+ */
+export function separateLiterals(statement: string): StatementParts {
+  let code = "";
+  const literals: string[] = [];
+  let index = 0;
+  while (index < statement.length) {
+    const ch = statement[index] ?? "";
+    if (ch === "$") {
+      DOLLAR_QUOTE_AT.lastIndex = index;
+      const marker = DOLLAR_QUOTE_AT.exec(statement)?.[0];
+      if (marker) {
+        const bodyStart = index + marker.length;
+        const close = statement.indexOf(marker, bodyStart);
+        const bodyEnd = close === -1 ? statement.length : close;
+        literals.push(statement.slice(bodyStart, bodyEnd));
+        code += " ";
+        index = close === -1 ? statement.length : close + marker.length;
+        continue;
+      }
+    }
+    if (ch === "'" || ch === '"') {
+      const escapes = ch === "'" && opensEscapeString(statement, index);
+      let cursor = index + 1;
+      let value = "";
+      while (cursor < statement.length) {
+        const current = statement[cursor] ?? "";
+        if (escapes && current === "\\") {
+          value += statement[cursor + 1] ?? "";
+          cursor += 2;
+          continue;
+        }
+        if (current === ch) {
+          cursor += 1;
+          if (statement[cursor] !== ch) break;
+        }
+        value += current;
+        cursor += 1;
+      }
+      if (ch === "'") literals.push(value);
+      code += " ";
+      index = cursor;
+      continue;
+    }
+    code += ch;
+    index += 1;
+  }
+  return { code, literals };
+}
+
 function countNewlines(value: string): number {
   let count = 0;
   for (const ch of value) {

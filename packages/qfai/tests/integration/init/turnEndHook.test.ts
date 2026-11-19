@@ -248,6 +248,48 @@ describe("turn-end hook", () => {
     expect(second.reason).toContain("another error");
   });
 
+  // QFAI:EX-0001-0244-21
+  it("blocks again when the same failure comes from another worktree or command", async () => {
+    await script("fail.js", "type error\n", 1);
+    await script("again.js", "type error\n", 1);
+    await project(["- Typecheck: `node fail.js`", "- Turn-end check: Typecheck"]);
+    const other = await mkdtemp(path.join(os.tmpdir(), "qfai-turn-end-other-"));
+    try {
+      await writeFile(
+        path.join(other, "qfai.config.yaml"),
+        await readFile(path.join(root, "qfai.config.yaml"), "utf-8"),
+        "utf-8",
+      );
+      const tech = path.join(".qfai", "spec", "03_contract", "tech.md");
+      await mkdir(path.dirname(path.join(other, tech)), { recursive: true });
+      await writeFile(
+        path.join(other, tech),
+        await readFile(path.join(root, tech), "utf-8"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(other, "fail.js"),
+        await readFile(path.join(root, "fail.js"), "utf-8"),
+        "utf-8",
+      );
+
+      expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
+      const moved = parsed(await hook({ cwd: other, session_id: "s1", stop_hook_active: true }));
+      expect(moved.decision).toBe("block");
+    } finally {
+      await removeTempTree(other);
+    }
+
+    expect(parsed(await hook({ session_id: "s2" })).decision).toBe("block");
+    await project(["- Typecheck: `node again.js`", "- Turn-end check: Typecheck"]);
+    const changed = parsed(await hook({ session_id: "s2", stop_hook_active: true }));
+    expect(changed.decision).toBe("block");
+    expect(changed.reason).toContain("node again.js");
+    const repeated = parsed(await hook({ session_id: "s2", stop_hook_active: true }));
+    expect(repeated.decision).toBeUndefined();
+    expect(repeated.systemMessage).toContain("ended anyway");
+  });
+
   // QFAI:EX-0001-0244-10
   it("releases a continued turn that has no session to compare", async () => {
     const fail = await script("fail.js", "type error\n", 1);

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, utimes, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { prepareDocumentAnalysis } from "../../../src/core/graph/documents.js";
@@ -45,6 +45,37 @@ it("retains contended and abandoned analysis locks with retry or exact manual re
       expect(
         await readFile(path.join(fixture.analysis, ".codegraph", "codegraph.db"), "utf8"),
       ).toBe("Process-port DB marker");
+    } finally {
+      await fixture.dispose();
+    }
+  }
+});
+
+// QFAI:EX-0001-0236-20
+it("reports a lock whose owner record is still being written as contention, and an old one as abandoned", async () => {
+  for (const state of ["initializing", "abandoned"] as const) {
+    const fixture = await codeAnalysisFixture();
+    try {
+      const directory = path.join(fixture.root, ".qfai", "tools", "state", graphEnvironmentKey());
+      await mkdir(directory, { recursive: true });
+      const lock = path.join(directory, "analysis.lock");
+      // The exclusive create publishes an empty file before the owner record lands in it.
+      await writeFile(lock, "");
+      if (state === "abandoned") {
+        const old = new Date(Date.now() - 60_000);
+        await utimes(lock, old, old);
+      }
+      const answer = await graphCliResult(fixture.root, ["code", "checkout callers"], fixture.run);
+      expect(answer.value).toMatchObject({
+        status: "failed",
+        failure: expect.stringContaining(
+          state === "initializing" ? "contended" : "manual recovery",
+        ),
+        recovery: expect.stringContaining(state === "initializing" ? "Retry" : "inspect"),
+      });
+      expect(fixture.calls).toEqual([]);
+      expect(await readFile(lock, "utf8")).toBe("");
+      expect(await readdir(directory)).toEqual(["analysis.lock"]);
     } finally {
       await fixture.dispose();
     }

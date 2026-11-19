@@ -553,14 +553,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
 
-- **A failed document graph refresh keeps the previous graph with the files it
-  was built from.** Checking whether the document graph was current copied the
-  changed project files into the active analysis first, so when the
-  replacement graph then failed, the previous graph sat beside inputs it was
-  never built from. When project files changed, the check now refreshes and
-  verifies a separate copy and makes it active, graph and inputs together,
-  only when the graph is current for them. Unchanged files are checked where
-  they are, with no copy. Closes #4588.
+- **A failed graph tool download names a directory of its own to retry in.**
+  The recovery line of `qfai init` told you to rerun the download into a fixed
+  `qfai-graph-check` directory under the system temporary directory and then
+  delete it, even if that directory already held something else. Init now
+  creates a new empty directory for each failure, names only that one in the
+  command and in the deletion, and quotes the command for the shell of your
+  platform. Where no such directory can be created or shown safely, the
+  recovery line says to fix the cause and run `qfai init` again. Closes #4589.
 
 - **An unreadable completed graph analysis no longer stops reuse.** When one
   saved CodeGraph or Graphify analysis in the repository's graph cache could
@@ -592,6 +592,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `x-qfai-depends-on` declaration, or is empty; a Markdown contract, which
   has no such declaration, is not compared. The `QFAI-CONTRACT-015`
   message no longer names a rule `qfai validate` no longer has.
+
+- **A failed document graph refresh keeps the previous graph with the files it
+  was built from.** Checking whether the document graph was current copied the
+  changed project files into the active analysis first, so when the
+  replacement graph then failed, the previous graph sat beside inputs it was
+  never built from. When project files changed, the check now refreshes and
+  verifies a separate copy and makes it active, graph and inputs together,
+  only when the graph is current for them. Unchanged files are checked where
+  they are, with no copy. Closes #4588.
+
+- **The turn-end check tells a failure in another worktree from a repeat.**
+  When a continued turn failed with the same output it had blocked on, the
+  hook let the turn end, even when the agent had moved to another worktree
+  or the marked command had changed. A failure now repeats only from the same
+  project root, with links resolved, and the same command; any other is
+  blocked again. The limit of three blocks in a row still lets the turn end.
+  Closes #4595.
 
 - **A qfai copy under a directory whose name begins with two dots counts as
   inside the project.** `qfai validate` and `qfai sdd preflight` judged
@@ -659,6 +676,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   redefinition. Each part of a qualified name is now read under PostgreSQL's
   quoting rules: a bare part folds to lower case, a quoted part keeps its
   case and its doubled `""`, and a dot inside quotes does not split the name.
+
+- **A graph lock still being taken reads as busy, not abandoned.** A graph
+  query, analysis preparation or `qfai init` that found the worktree's
+  analysis lock in the moment between its creation and its owner record being
+  written, or just after its release, was told to inspect and remove the lock
+  by hand. It is now told to retry. A lock whose owner record is still missing
+  after ten seconds, or whose owner process has exited, is still kept and
+  reported for manual recovery. Closes #4591.
 
 - **An agent card's required sections must be real headings.** The
   `QFAI-AGENT-005` check accepted any occurrence of a required heading's text,
@@ -771,6 +796,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the run passed. Either failure now checks every document, and the
   fail-open warning names the diff that failed, with Git's reason for a
   failed worktree diff. Closes #4555.
+
+- **The dangerous-SQL warning reads statements, not raw text.**
+  `QFAI-DB-001` matched its keywords against the whole `.sql` file, so a
+  `DROP TABLE` in a comment, a string, a quoted name or a quoted function body, or an
+  `ALTER TABLE` in one statement and a `DROP` in a later one, warned on a
+  contract that destroys nothing. It now checks each statement's code on its
+  own, and still reads the body of a `DO` block, which runs when the file is
+  applied, with the string each `EXECUTE` in it runs. Closes #4578.
 
 - **The validation result is written only inside its directory.** A
   `validate.json` that was a symbolic link, or a directory on the
