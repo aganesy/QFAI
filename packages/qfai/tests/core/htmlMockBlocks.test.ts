@@ -27,13 +27,13 @@ describe("CSS beside an HTML mock is inserted literally", () => {
     );
   });
 
-  it("keeps replacement patterns in CSS inserted before </body>", () => {
-    const html = "<body><p>Order</p></body>";
+  it("keeps replacement patterns in CSS inserted before </BODY>, and the tag's case", () => {
+    const html = "<BODY><p>Order</p></BODY>";
 
     const [block] = collectHtmlMockBlocks(mockWithCss(html));
 
     expect(block?.html).toBe(
-      `<body><p>Order</p><style>\n${CSS_WITH_REPLACEMENT_PATTERNS}\n</style>\n</body>`,
+      `<BODY><p>Order</p><style>\n${CSS_WITH_REPLACEMENT_PATTERNS}\n</style>\n</BODY>`,
     );
   });
 });
