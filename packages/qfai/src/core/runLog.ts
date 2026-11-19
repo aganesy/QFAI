@@ -809,10 +809,5 @@ async function allocateRunReportDir(outDir: string, startedAt: Date): Promise<Va
 }
 
 function isAlreadyExistsError(error: unknown): boolean {
-  return (
-    !!error &&
-    typeof error === "object" &&
-    "code" in error &&
-    (error as { code?: string }).code === "EEXIST"
-  );
+  return hasErrnoCode(error) && error.code === "EEXIST";
 }

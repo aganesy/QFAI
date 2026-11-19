@@ -4,7 +4,7 @@ import { access, lstat, open, readFile, stat } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
-import { isEnoent } from "../fs/errno.js";
+import { hasErrnoCode, isEnoent, isEperm } from "../fs/errno.js";
 
 /**
  * The first component of `target` at or below `destRoot` that is a symbolic
@@ -91,7 +91,7 @@ export async function readPinnedRegularFile(
     if (filled > maxBytes) return null;
     return buffer.subarray(0, filled).toString("utf-8");
   } catch (error: unknown) {
-    const code = (error as NodeJS.ErrnoException | null)?.code;
+    const code = hasErrnoCode(error) ? error.code : undefined;
     // `ENXIO` is what `O_NONBLOCK` returns for a FIFO with no writer, in place
     // of blocking. Neither it nor a directory is a bounded regular file, and
     // `open` is simply where that shows up instead of `fstat`.
@@ -160,7 +160,7 @@ export async function readPinnedRegularFileBytes(
       ino: pinned.ino,
     };
   } catch (error: unknown) {
-    const code = (error as NodeJS.ErrnoException | null)?.code;
+    const code = hasErrnoCode(error) ? error.code : undefined;
     if (code === "ENXIO" || code === "EISDIR") return null;
     throw error;
   } finally {
@@ -186,13 +186,7 @@ export function describeError(err: unknown): string {
 }
 
 export function isEpermOnWindows(err: unknown, platform = process.platform): boolean {
-  return (
-    platform === "win32" &&
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code: string }).code === "EPERM"
-  );
+  return platform === "win32" && isEperm(err);
 }
 
 export async function safeLstat(target: string): Promise<Stats | undefined> {
