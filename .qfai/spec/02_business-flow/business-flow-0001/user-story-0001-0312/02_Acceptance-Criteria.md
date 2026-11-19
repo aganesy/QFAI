@@ -52,4 +52,12 @@ Feature: Derive the design tokens and the theme from DESIGN.md
     When an agent reads the shipped implementation UI guidance and the DESIGN.md specification
     Then the UI guidance names both files, says to import the theme and use its variables instead of copying a value, and names `qfai catalog design` and the three warnings
     And the DESIGN.md specification says what the command writes from `visual.layout` and lists the `data_display` section
+
+  # AC-0001-0312-08
+  Scenario: The design catalogue is written only inside the project, by the run that owns it
+    Given a project with a root `DESIGN.md` whose front matter parses
+    When `qfai catalog design` runs
+    Then a `.qfai/catalog` that is a symbolic link stops it with exit 1 and one line naming the link, and the directory it points to is as it was
+    And it stages each file in a new file of its own, so a staging or moved-aside file of another run is never overwritten or removed
+    And when a step fails it undoes only what it did, says in one line whether both files are as they were, and keeps a moved-aside file it could not rename back
 ```

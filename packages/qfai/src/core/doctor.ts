@@ -42,6 +42,7 @@ import { applyWaivers } from "./waivers.js";
 import { resolveToolVersion } from "./version.js";
 import {
   probeSkillManifest,
+  quoteManifestEntries,
   SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD,
   type SkillManifestProbeResult,
 } from "./doctor/skillManifestProbe.js";
@@ -1024,14 +1025,18 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
 }
 
 /**
- * Report a manifest the probe could not read. An unprobed manifest is
- * NOT a clean bill of health: nothing was probed.
+ * Report a manifest whose dependencies the probe did not probe: one it
+ * could not find, read or parse, or one listing an entry that is not a
+ * registry package name. An unprobed manifest is NOT a clean bill of
+ * health: nothing was probed.
  *
- * The four unprobed states are diagnosed apart because they call for
+ * The unprobed states are diagnosed apart because they call for
  * different actions:
  * - `unparseable` / `unreadable` — the path is occupied by something
  *   unusable, so this is an error the user must repair (bad JSON,
  *   permissions, I/O, or a skill "directory" that is a regular file).
+ * - `invalid` — an entry is not a registry package name, so no entry
+ *   is probed and the manifest is an error to repair.
  * - skills root missing — the project is uninitialized (or its
  *   configured `paths.skillsDir` is gone). Every skill name resolves
  *   to a missing directory then, so blaming `--profile` would be a
@@ -1042,7 +1047,7 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
  *   here is the `--profile` value itself wrong (a typo, or a skill
  *   that was renamed), so that case is an error.
  */
-function buildUnreadableManifestCheck(
+function buildUnprobedManifestCheck(
   root: string,
   skill: string,
   result: SkillManifestProbeResult,
@@ -1064,6 +1069,14 @@ function buildUnreadableManifestCheck(
       ...base,
       severity: "error",
       message: `manifest for skill '${skill}' at ${manifestRel} is not JSON declaring a '${SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD}' array — runtimeDependencies were not probed`,
+    };
+  }
+  if (result.manifest === "invalid") {
+    return {
+      ...base,
+      details: { ...details, invalidEntries: result.invalidEntries },
+      severity: "error",
+      message: `manifest for skill '${skill}' at ${manifestRel} lists '${SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD}' entries that are not registry package names: ${quoteManifestEntries(result.invalidEntries)} — runtimeDependencies were not probed`,
     };
   }
   if (result.manifest === "unreadable") {
@@ -1097,7 +1110,7 @@ function buildUnreadableManifestCheck(
 async function buildSkillManifestProbeChecks(root: string, skill: string): Promise<DoctorCheck[]> {
   const result = await probeSkillManifest(root, skill);
   if (result.manifest !== "found") {
-    return [buildUnreadableManifestCheck(root, skill, result)];
+    return [buildUnprobedManifestCheck(root, skill, result)];
   }
   const findings = result.findings;
   const manifestPath = toRelativePath(root, result.manifestPath);
