@@ -1,10 +1,11 @@
 import type { Dirent } from "node:fs";
-import { readdir, readFile, realpath, stat } from "node:fs/promises";
+import { lstat, readdir, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import { resolvePath, type QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
-import { exists, issue } from "./utils.js";
+import { exists, isInside, issue } from "./utils.js";
 
 /**
  * Anchor integrity across the assistant tree.
@@ -24,6 +25,13 @@ import { exists, issue } from "./utils.js";
  *
  * Citations are read out of Markdown and YAML documents in the assistant tree.
  * Agent cards carry their own frontmatter and body in one Markdown file.
+ *
+ * The tree is also the read boundary: where the assistant directory resolves
+ * to. A link inside it is followed only when its target resolves inside that
+ * same place, and a document is read only as a regular file within
+ * {@link DOCUMENT_MAX_BYTES}. A link out of the tree held a document this rule
+ * then indexed and held to its citations, and a link to a FIFO stopped the run
+ * in the read with no finding and no exit.
  */
 
 /** Heading text with the markup GitHub drops before it slugs. */
@@ -281,48 +289,63 @@ function emptyTreeFiles(): TreeFiles {
 }
 
 /**
+ * Where `entry` resolves to, or `null` when it is damaged the way
+ * `QFAI-LINK-001` reports — see {@link isStructuralDamage}.
+ */
+async function resolveEntry(entry: string): Promise<string | null> {
+  try {
+    return await realpath(entry);
+  } catch (error) {
+    if (isStructuralDamage(error)) return null;
+    throw error;
+  }
+}
+
+/**
  * Every file under `dir` this rule reads, and every directory it listed.
  *
  * A subtree damaged in the ways `QFAI-LINK-001` reports is skipped rather than
  * thrown out of: raising `ENOTDIR` / `ELOOP` from here would reject the run and
  * take that finding with it. Every other read failure propagates — see
- * {@link isStructuralDamage}. A symlinked directory inside the tree IS
- * descended into, because a project may vendor the tree by link and its
- * documents are cited like any other; the resolved-path set is what stops a
- * cycle, and what stops a linked directory being walked twice.
+ * {@link isStructuralDamage}. A symlinked directory or document inside the
+ * tree IS followed when it resolves inside `boundary`, because a project may
+ * vendor the tree by link and its documents are cited like any other; one
+ * that resolves anywhere else is not listed. The resolved-path set is what
+ * stops a cycle, and what stops a linked directory being walked twice.
  */
 async function collectTreeFiles(
   dir: string,
+  boundary: string,
   out: TreeFiles = emptyTreeFiles(),
 ): Promise<TreeFiles> {
-  let entries: Dirent[];
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch (error) {
-    if (isStructuralDamage(error)) return out;
-    throw error;
-  }
-  const here = await realpath(dir).catch(() => path.resolve(dir));
+  const here = await resolveEntry(dir);
+  if (here === null || !isInside(boundary, here)) return out;
   // A tree vendored by link reaches the same directory twice — once by its own
   // path and once through the link — and a cycle reaches it forever. Keyed by
   // the resolved path, the second arrival is a no-op either way.
   if (out.directories.has(here)) return out;
+  let entries: Dirent[];
+  try {
+    entries = await readdir(here, { withFileTypes: true });
+  } catch (error) {
+    if (isStructuralDamage(error)) return out;
+    throw error;
+  }
   out.directories.add(path.resolve(dir));
   out.directories.add(here);
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      await collectTreeFiles(full, out);
+      await collectTreeFiles(full, boundary, out);
       continue;
     }
     if (entry.isSymbolicLink()) {
-      // A linked directory inside the tree is a layout a project may choose,
-      // and its documents are cited like any other. Followed through `stat`,
-      // which resolves the link, with the visited set above as the guard the
-      // "never descend" rule used to be.
-      const target = await stat(full).catch(() => null);
+      // A link that resolves out of the tree, or nowhere, is not part of it.
+      const resolved = await resolveEntry(full);
+      if (resolved === null || !isInside(boundary, resolved)) continue;
+      const target = await stat(resolved).catch(() => null);
       if (target?.isDirectory() === true) {
-        await collectTreeFiles(full, out);
+        await collectTreeFiles(full, boundary, out);
         continue;
       }
     }
@@ -359,20 +382,45 @@ type TreeIndex = {
 };
 
 /**
- * Read a file the walk listed, or `null` when it is damaged the way
- * `QFAI-LINK-001` reports.
+ * The largest document this rule reads.
  *
- * Absent from the index, so citations to it are skipped rather than reported
- * against a document nobody could read. Only the structural codes: a permission
- * or I/O failure is not a clean answer.
+ * SIMPLIFIED: one fixed ceiling, matching the one skill entry points are read
+ * under; the largest shipped document is a small fraction of it.
+ * Lift when: a real assistant document needs more, measured.
  */
-async function readIndexed(file: string): Promise<string | null> {
+const DOCUMENT_MAX_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Read a file the walk listed, or `null` when it is not a document of the tree.
+ *
+ * `null` covers damage of the kind `QFAI-LINK-001` reports, a file that now
+ * resolves outside `boundary`, and an entry that is not a regular file — a
+ * FIFO or a device reached through a link, which the walk already skips when
+ * it meets one directly. Absent from the index, so citations to it are
+ * skipped rather than reported against a document nobody could read.
+ *
+ * A regular file inside the tree that still cannot be read — permission, I/O,
+ * or larger than {@link DOCUMENT_MAX_BYTES} — throws: leaving it out would drop
+ * its headings and let every citation into it pass or fail on nothing.
+ */
+async function readIndexed(file: string, boundary: string): Promise<string | null> {
+  const resolved = await resolveEntry(file);
+  if (resolved === null || !isInside(boundary, resolved)) return null;
+  let kind;
   try {
-    return await readFile(file, "utf-8");
+    kind = await lstat(resolved);
   } catch (error) {
     if (isStructuralDamage(error)) return null;
     throw error;
   }
+  if (!kind.isFile()) return null;
+  const bytes = await readBoundedRegularFile(resolved, DOCUMENT_MAX_BYTES);
+  if (bytes === undefined) {
+    throw new Error(
+      `${file} cannot be read as a regular file of at most ${String(DOCUMENT_MAX_BYTES)} bytes, so the citations into it cannot be checked.`,
+    );
+  }
+  return bytes.toString("utf-8");
 }
 
 /**
@@ -388,11 +436,11 @@ async function readIndexed(file: string): Promise<string | null> {
  * a `foo.md#slug` in it is a citation whichever field carries it, and the line
  * the finding reports is then the line of the file the operator opens.
  */
-async function buildTreeIndex(files: TreeFiles): Promise<TreeIndex> {
+async function buildTreeIndex(files: TreeFiles, boundary: string): Promise<TreeIndex> {
   const documents = new Map<string, IndexedDocument>();
   const byBasename = new Map<string, string[]>();
   for (const file of files.markdown) {
-    const body = await readIndexed(file);
+    const body = await readIndexed(file, boundary);
     if (body === null) continue;
     const absolute = path.resolve(file);
     documents.set(absolute, {
@@ -403,7 +451,7 @@ async function buildTreeIndex(files: TreeFiles): Promise<TreeIndex> {
     byBasename.set(key, [...(byBasename.get(key) ?? []), absolute]);
   }
   for (const file of files.yaml) {
-    const body = await readIndexed(file);
+    const body = await readIndexed(file, boundary);
     if (body === null) continue;
     documents.set(path.resolve(file), {
       slugs: new Set(),
@@ -571,9 +619,13 @@ export async function validateAssistantAnchorReferences(
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantDir = resolveAssistantDir(skillsDir);
   if (!(await exists(assistantDir))) return [];
+  // The read boundary: where the tree resolves to, so a tree linked in whole
+  // is read where it lives, and nothing outside it is.
+  const boundary = await resolveEntry(assistantDir);
+  if (boundary === null) return [];
 
-  const files = await collectTreeFiles(assistantDir);
-  const index = await buildTreeIndex(files);
+  const files = await collectTreeFiles(assistantDir, boundary);
+  const index = await buildTreeIndex(files, boundary);
   const roots: ResolutionRoots = { root, assistantDir, skillsDir };
 
   const severity = "error";

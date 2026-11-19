@@ -53,7 +53,25 @@ describe("step 12 project-file scan", () => {
     const context = await trackedProject(".", ".qfai/spec/03_contract");
     const scan = await scanOldPaths(context);
     expect(scan.items).toEqual([]);
-    expect(scan.scanned).toBe("files checked for 1.x paths: 0");
+    expect(scan.scanned).toEqual(["files checked for 1.x paths: 0"]);
+  });
+
+  it("names a text file past 16 MiB as not checked and skips a binary file of any size", async () => {
+    const context = await trackedProject(".qfai/spec", ".qfai/spec/03_contract");
+    const huge = Buffer.alloc(16 * 1024 * 1024 + 1, "a");
+    huge.write(".qfai/specs\n", 0);
+    await writeFile(path.join(context.root, "docs", "huge.md"), huge);
+    const binary = Buffer.alloc(16 * 1024 * 1024 + 1, "a");
+    binary[1] = 0;
+    await writeFile(path.join(context.root, "docs", "huge.bin"), binary);
+    execFileSync("git", ["add", "."], { cwd: context.root });
+    const scan = await scanOldPaths(context);
+    expect(scan.items).toHaveLength(1);
+    expect(scan.items[0]).toContain("old-path: docs/notes.md:1:");
+    expect(scan.scanned).toEqual([
+      "files checked for 1.x paths: 1",
+      "not checked for 1.x paths, larger than 16 MiB: docs/huge.md",
+    ]);
   });
 
   it("writes a control character of a file name as an escape and keeps other characters", () => {
