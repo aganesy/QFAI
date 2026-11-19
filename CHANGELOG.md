@@ -664,6 +664,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   line; and the theme writer refuses a value that would break its
   declaration even when the design did not come through the parser.
 
+- **`qfai init` no longer activates graph runtimes beside a graph query.** Graph
+  queries and document preparation held a worktree lock, but `qfai init`
+  replaced the runtimes under `.qfai/tools/` without it, so a query or a second
+  `qfai init` in the same worktree could run against a half-replaced runtime.
+  `qfai init` now holds the same lock while it prepares the graph tools. A
+  query that meets it fails with the contention and a retry line, and an init
+  that meets it stops with the same retry line and asks to run `qfai init`
+  again. The graph CLI entrypoint, which a query loads before it can take the
+  lock, is now written beside its target and renamed into place, so a query
+  never loads it part-written. The `.gitignore` entry for `.qfai/tools/` is
+  still written before the lock is taken, so a `git add -A` never stages the
+  lock file. Closes #4586.
+
 - **The `QFAI-CONTRACT-041` fix text separates its two remedies.** When a
   derived-value declaration covered both a value the DB stores and a value
   the API does not require, the two remedy sentences ran together with no

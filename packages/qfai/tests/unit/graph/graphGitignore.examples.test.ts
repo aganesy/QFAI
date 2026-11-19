@@ -1,10 +1,11 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { runGraphProcess } from "../../../src/core/graph/process.js";
 import { ensureGraphGitignore, GRAPH_IGNORE_MARKER } from "../../../src/core/graph/ignore.js";
 import { prepareGraphIntegration } from "../../../src/core/graph/integration.js";
+import { graphEnvironmentKey } from "../../../src/core/graph/layout.js";
 import { graphProcessFixture } from "../../helpers/graphProcess.js";
 
 async function repository() {
@@ -112,6 +113,36 @@ it("ignores the tools directory even when a runtime download fails", async () =>
     expect(
       (await runGraphProcess("git", ["check-ignore", "-q", cache], { cwd: root })).exitCode,
     ).toBe(0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0236-16
+// Mutation: packages/qfai/src/core/graph/integration.ts moving `const ignore = await ensureGraphGitignore(root, run);` back inside the `withGraphLock` callback fails "ignores the graph lock file for as long as it exists"
+it("ignores the graph lock file for as long as it exists", async () => {
+  const root = await repository();
+  try {
+    const fixture = graphProcessFixture();
+    const lock = path.posix.join(".qfai", "tools", "state", graphEnvironmentKey(), "analysis.lock");
+    const exitCodes: number[] = [];
+    const result = await prepareGraphIntegration(root, async (command, args, options) => {
+      const present = await access(path.join(root, ...lock.split("/"))).then(
+        () => true,
+        () => false,
+      );
+      // A concurrent `git add -A` stages the live lock whenever it exists unignored.
+      if (present)
+        exitCodes.push(
+          (await runGraphProcess("git", ["check-ignore", "-q", lock], { cwd: root })).exitCode,
+        );
+      // Stopping at the download keeps the run to the steps that hold the lock.
+      return args[0] === "pip" ? { exitCode: 1, stdout: "" } : fixture.run(command, args, options);
+    });
+
+    expect(result.failedStep).toBe("Graphify download");
+    expect(exitCodes.length).toBeGreaterThan(0);
+    expect(exitCodes.every((code) => code === 0)).toBe(true);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
