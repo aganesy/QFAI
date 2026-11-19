@@ -467,6 +467,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   no check reports any more, so both were always 0. The file now holds
   `schema_version` and `nodes` only.
 
+- **The shipped test verdict no longer has a green branch for an empty
+  selection.** The verdict job of `qfai-tests.yml` never starts when detection
+  selects no lane, so its step no longer reads `QFAI_SELECTED`: a verdict that
+  starts is green only over a passed lane. Closes #4669.
+
 ### Fixed
 
 - **The Firecrawl integration now says where it processes data.** The
