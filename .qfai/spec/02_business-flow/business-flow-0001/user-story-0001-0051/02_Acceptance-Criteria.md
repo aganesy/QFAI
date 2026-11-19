@@ -9,7 +9,7 @@ Feature: Story-tree layout and ID validation
     Given a project whose `paths.specsDir` holds no `spec-*/` and no `_policies/` directory (the story tree)
     When `qfai validate --profile sdd` runs
     Then the story-tree finding families run on it and the spec-pack validators report nothing about it
-    And a `paths.specsDir` that holds a `spec-*/` or `_policies/` directory beside story-tree files raises `QFAI-LAYOUT-001` as the only finding, and no other validator runs
+    And a `paths.specsDir` that holds a `spec-*/` or `_policies/` directory beside story-tree files raises `QFAI-LAYOUT-001` as the only finding beside those from reading `qfai.config.yaml`, and no other validator runs
 
   # AC-0001-0051-02
   Scenario: A story directory without exactly its three files is reported
