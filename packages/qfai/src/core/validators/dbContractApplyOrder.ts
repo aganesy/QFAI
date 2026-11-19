@@ -23,6 +23,7 @@
 import path from "node:path";
 
 import { declaredContractId, extractDeclaredDependencies } from "../contractsDecl.js";
+import { DOLLAR_QUOTE_MARKER } from "../sqlContract.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -53,6 +54,17 @@ function tableKey(raw: string): string {
 }
 
 /**
+ * A line comment, a block comment, a quoted string, or a dollar-quoted literal.
+ *
+ * A dollar-quoted literal opens with `$$` or `$tag$` and closes at the same
+ * marker, so the marker is captured and matched again by backreference.
+ */
+const SQL_NOISE = new RegExp(
+  String.raw`--[^\n]*|\/\*[\s\S]*?\*\/|'(?:[^']|'')*'|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`,
+  "g",
+);
+
+/**
  * SQL with its comments and string literals blanked, keeping every offset.
  *
  * A `REFERENCES` inside a comment is prose, and one inside a quoted string is
@@ -61,9 +73,7 @@ function tableKey(raw: string): string {
  * reader sees it.
  */
 export function blankSqlNoise(sql: string): string {
-  return sql.replace(/--[^\n]*|\/\*[\s\S]*?\*\/|'(?:[^']|'')*'|\$\$[\s\S]*?\$\$/g, (matched) =>
-    matched.replace(/[^\n]/g, " "),
-  );
+  return sql.replace(SQL_NOISE, (matched) => matched.replace(/[^\n]/g, " "));
 }
 
 /** Every table `sql` creates, and every table it points a foreign key at. */
