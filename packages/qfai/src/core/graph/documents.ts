@@ -10,7 +10,7 @@ import { withGraphLock } from "./locks.js";
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { isEnoent } from "../fs/errno.js";
-import { mirrorGraphCorpus } from "./analysis.js";
+import { graphCorpusChanged, mirrorGraphCorpus } from "./analysis.js";
 import { graphAnalysisRoot, graphRuntimePaths, GRAPH_VERSIONS } from "./layout.js";
 import {
   GRAPH_PYTHON_FLAGS,
@@ -300,9 +300,10 @@ export async function inspectDocumentScope(
 }
 
 /**
- * `in-place` refreshes the inputs of a copy nothing else reads yet; `staged` refreshes and checks
- * an independent copy of the active analysis and activates it only when it is current, so a
- * failed refresh leaves the previous graph paired with the inputs it was built from.
+ * `in-place` refreshes the inputs of a copy nothing else reads yet. `staged` checks the active
+ * analysis where it stands when its inputs already match the project; otherwise it refreshes and
+ * checks an independent copy and activates it only when it is current, so a failed refresh
+ * leaves the previous graph paired with the inputs it was built from.
  */
 type InputRefresh = "none" | "in-place" | "staged";
 
@@ -330,7 +331,8 @@ async function inspectDocumentScopeAt(
   if (!(await safeDocumentCopy(root, analysis, run))) return notCurrent();
   const scope =
     object(processing) && validDocumentScope(processing.scope) ? processing.scope : undefined;
-  if (refresh === "staged") return refreshStagedDocumentScope(root, analysis, run, scope);
+  if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope)))
+    return refreshStagedDocumentScope(root, analysis, run, scope);
   if (refresh === "in-place") await mirrorGraphCorpus(root, analysis, scope);
   return nativeGraphifyScope(root, analysis, graphRuntimePaths(root).python, run);
 }
@@ -351,7 +353,15 @@ async function refreshStagedDocumentScope(
     if (status.current) await replaceGraphDirectory(staged, analysis, root);
     return status;
   } finally {
-    await rm(staged, { recursive: true, force: true });
+    await discardRefreshCopy(staged);
+  }
+}
+
+async function discardRefreshCopy(staged: string): Promise<void> {
+  try {
+    await rm(staged, { recursive: true, force: true, maxRetries: 3 });
+  } catch {
+    // The status already decided stands: a left-over hidden copy is never read as analysis.
   }
 }
 

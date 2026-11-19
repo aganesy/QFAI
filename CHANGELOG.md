@@ -557,9 +557,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   was built from.** Checking whether the document graph was current copied the
   changed project files into the active analysis first, so when the
   replacement graph then failed, the previous graph sat beside inputs it was
-  never built from. The check now refreshes and verifies a separate copy and
-  makes it active, graph and inputs together, only when the graph is current
-  for them. Closes #4588.
+  never built from. When project files changed, the check now refreshes and
+  verifies a separate copy and makes it active, graph and inputs together,
+  only when the graph is current for them. Unchanged files are checked where
+  they are, with no copy. Closes #4588.
 
 - **An unreadable completed graph analysis no longer stops reuse.** When one
   saved CodeGraph or Graphify analysis in the repository's graph cache could
