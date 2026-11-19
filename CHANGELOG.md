@@ -625,6 +625,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **`qfai sdd preflight` writes only inside its output directory.** A report
+  directory, or a directory under it, that was a link to somewhere else carried
+  the preflight summary there, and a `preflight_summary.md` that was a link was
+  written through. Preflight now stops and names the linked directory without
+  writing, also when `paths.outDir` lies outside the project and is itself a
+  link, and says so separately when a path it needs is a file. It writes each summary to a new file that replaces the old one,
+  so a linked summary file is replaced instead of followed.
+
 - **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
   that made a token group or a `$value` its own descendant overflowed the stack,
   and the run reported no result at all. Such a file, or one nesting deeper than
