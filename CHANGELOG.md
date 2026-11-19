@@ -477,6 +477,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
 
+- **A file at an assistant layer path no longer counts as an installed
+  layer.** `qfai validate` accepted a regular file named, for example,
+  `.qfai/assistant/prompt` as the `prompt/` layer and reported nothing. It
+  now reports `QFAI-ASSISTANT-002` at info saying the path is not a
+  directory, as it already does for a layer that is missing.
+
 - **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
   `E'…'` a backslash escapes the next character, but the statement splitter
   ended the literal at a backslash-escaped quote, so `SELECT E'it\'s';`
