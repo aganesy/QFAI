@@ -4,8 +4,9 @@ name: Tag release commit
 #
 # The version is not chosen here and cannot be: it is read out of
 # `packages/qfai/package.json`, and a tag is pushed only when `CHANGELOG.md` carries a matching
-# `## [X.Y.Z]` heading. Two independent statements of the same number, and a manifest bumped
-# without its release section produces nothing rather than a tag naming a release nobody wrote.
+# `## [X.Y.Z] - YYYY-MM-DD` heading. Two independent statements of the same number, and a
+# manifest bumped without its release section produces nothing rather than a tag naming a
+# release nobody wrote.
 #
 # Driven by the MANIFEST rather than by the commit message, and that is not a preference. The
 # first version matched `chore(release): qfai ` at the head of the pushed commit — and this
@@ -107,16 +108,25 @@ jobs:
           # described yet — an ordinary state part-way through preparing a release, and not a
           # reason to fail. It is a reason to do nothing.
           #
-          # Matched LITERALLY, by the same `index($0, h) == 1` release.yml uses. Under a regex
-          # the dots in `1.10.2` match any character, so a heading mistyped as `## [1010.2]`
-          # satisfied this check — and release.yml's literal match then rejected the same
-          # heading, leaving a wrong tag behind and a publish that could not succeed.
-          if ! awk -v h="## [${claimed}]" 'index($0, h) == 1 { found = 1; exit } END { exit !found }' CHANGELOG.md; then
-            echo "tag-release: packages/qfai/package.json says ${claimed} and CHANGELOG.md has no '## [${claimed}]' heading yet; nothing to tag"
-            echo "push=false" >> "$GITHUB_OUTPUT"
-            echo "version=${claimed}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped workflow set has no release workflow to read a CHANGELOG heading.
+          # Read by `scripts/changelog-heading.mjs`, the parser release.yml's verify job uses, so
+          # a heading the publish would refuse is refused here, before the tag exists. Read
+          # with its own rules, `## [X.Y.Z]` with no date was tagged and then refused by the
+          # publish, leaving a tag behind for a release that could not be published. A heading
+          # that names the version and is malformed stops the run; no heading at all does not.
+          heading_status=0
+          heading="$(node ./scripts/changelog-heading.mjs "${claimed}" CHANGELOG.md)" || heading_status=$?
+          case "$heading_status" in
+            0) recorded_date="$heading" ;;
+            3)
+              echo "tag-release: packages/qfai/package.json says ${claimed} and CHANGELOG.md has no '## [${claimed}]' heading yet; nothing to tag"
+              echo "push=false" >> "$GITHUB_OUTPUT"
+              echo "version=${claimed}" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+            *) reject "${heading}" ;;
+          esac
 
           # The token is required HERE, not at the top of the step. Everything above answers
           # from the tree and needs no credential — and this workflow fires on every push to
@@ -159,8 +169,6 @@ jobs:
           # day. Nothing here can fix that: correcting it now would mean a second commit to
           # `main` outside any pull request. So it is RECORDED, on the run that cut the tag, and
           # the release pull request says where it could still have been changed.
-          heading="$(awk -v h="## [${claimed}]" 'index($0, h) == 1 { print; exit }' CHANGELOG.md)"
-          recorded_date="${heading##*- }"
           today="$(date -u +%Y-%m-%d)"
           if [ "$recorded_date" != "$today" ]; then
             echo "::notice::tag-release: CHANGELOG.md dates ${claimed} as ${recorded_date} and this tag is being cut on ${today}. That date is written when the release is prepared, not when it ships."
