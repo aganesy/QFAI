@@ -546,6 +546,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   resolve the same directory, so raw color literals in those mocks are
   counted.
 
+- **`qfai init --force` keeps a project's own wrapper when the link replacing
+  it cannot be written.** A file or directory of the project's at a skill or
+  agent wrapper path was deleted before the link was created, so a refused
+  `symlink` left the path empty and the wrapper, with everything in it, gone.
+  The entry is now moved aside first and put back when the link fails, and
+  removed only once the link stands.
+
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
   entries `qfai init` writes trust the launcher the project installs. Claude
