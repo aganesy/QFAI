@@ -57,7 +57,6 @@ export async function validateUiDefinitionConsistency(
   const mockScreenIds = new Set<string>();
 
   for (const { filePath: mdFile, content } of mdFiles) {
-    if (content === null) continue;
     try {
       const rel = path.relative(root, mdFile).replace(/\\/g, "/");
       const htmlBlocks = collectHtmlMockBlocks(content);
