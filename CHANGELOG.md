@@ -602,6 +602,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<!-- note --> ## Risks` line was read as a heading, and a code fence after
   a closing `-->` hid the rest of the document. Closes #4568.
 
+- **A CommonJS consumer now gets the CommonJS declaration file.** The
+  package's exports map sent `import` and `require` to the same
+  `index.d.ts`, which TypeScript reads as an ES module in this package, so a
+  `.cts` file compiled in `node16` mode got TS1471 for a `require("qfai")`
+  that worked at runtime. `require` now resolves its types to `index.d.cts`,
+  and `import` keeps `index.d.ts`. Closes #4598.
+
 - **The shipped validation and document workflows run the QFAI a Yarn
   Plug'n'Play project depends on.** Plug'n'Play writes no `node_modules`, so
   `npx qfai` and the document lane's check for `node_modules/qfai` found
