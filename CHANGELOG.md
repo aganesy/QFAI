@@ -508,6 +508,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   order, and passes over a line added by hand. A cut body whose note records
   no count is held to the whole section.
 
+- **The design token drift audit reads mocks under an absolute
+  `paths.contractsDir`.** `QFAI-AUD-004` joined the override to the project
+  root, found no `ui/` directory there and stopped without a finding, though
+  the screen scan before it had read the screens at the override. Both now
+  resolve the same directory, so raw color literals in those mocks are
+  counted.
+
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
   entries `qfai init` writes trust the launcher the project installs. Claude
