@@ -35,6 +35,7 @@
     "tests/integration/refusedArgumentUsage.test.ts",
     "tests/integration/initStagingCleanup.test.ts",
     "tests/core/sqlContractStructure.test.ts",
+    "tests/core/contractRoot.test.ts",
     "tests/assets/uiProcurementCompatibility.test.ts",
     "tests/assets/implementAntiPatternSections.test.ts",
     "tests/assets/uiProcurementStates.test.ts",

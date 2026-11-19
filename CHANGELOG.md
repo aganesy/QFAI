@@ -546,6 +546,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   resolve the same directory, so raw color literals in those mocks are
   counted.
 
+- **A YAML or JSON contract whose top level is not a mapping is reported.**
+  An API contract holding only its declaration line, or a body that is
+  `null`, a list or a scalar, stopped `qfai validate` with an exception
+  instead of a finding. It is now reported as `QFAI-CONTRACT-021`, and the
+  other contracts are still checked. A UI contract with such a top level is
+  reported the same way.
+
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
   entries `qfai init` writes trust the launcher the project installs. Claude
