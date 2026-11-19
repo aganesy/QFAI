@@ -1,5 +1,6 @@
 # Firecrawl MCP - two separate settings decide where the work happens.
 # Process location: npx launches the MCP server on this machine (stdio).
+# For Firecrawl's hosted MCP server over HTTP instead, see ../firecrawl-hosted/.
 # Data destination: FIRECRAWL_API_URL is the API that fetches every page.
 # https://api.firecrawl.dev is Firecrawl's cloud API, so URLs and page
 # content pass through Firecrawl's service even though the server runs here.
