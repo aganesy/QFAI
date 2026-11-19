@@ -710,20 +710,22 @@ function walk(dir, root, unreadable) {
 }
 
 /**
- * The path column of one `--numstat` row, or `null` for a row without one.
+ * The path field of one `--numstat -z` record, or `null` for a record without one.
  *
- * A row is `<added>\t<deleted>\t<path>`, and a path may itself contain a tab,
- * so the path is everything past the second tab rather than the third field.
+ * A record is `<added>\t<deleted>\t<path>`, and a path may itself contain a
+ * tab, so the path is everything past the second tab rather than the third
+ * field. It is kept as Git wrote it: under `-z` the path is raw, and a space at
+ * either end is part of the name.
  *
- * @param {string} line
+ * @param {string} record
  * @returns {string | null}
  */
-function numstatPath(line) {
-  const firstTab = line.indexOf("\t");
+function numstatPath(record) {
+  const firstTab = record.indexOf("\t");
   if (firstTab === -1) return null;
-  const secondTab = line.indexOf("\t", firstTab + 1);
+  const secondTab = record.indexOf("\t", firstTab + 1);
   if (secondTab === -1) return null;
-  const file = line.slice(secondTab + 1).trim();
+  const file = record.slice(secondTab + 1);
   return file === "" ? null : file;
 }
 
@@ -750,6 +752,12 @@ function numstatPath(line) {
  *   `--ignore-all-space` hides that edit; the narrower flag reaches the line
  *   endings and nothing else.
  *
+ * `-z` because the path column is otherwise C-quoted under the default
+ * `core.quotePath`: a path with a non-ASCII character arrives wrapped in quotes
+ * with its bytes octal-escaped, matches no document, and the change drops out
+ * of the scope. Records are NUL-terminated, and `--no-renames` keeps each one
+ * to a single path.
+ *
  * @param {string} base
  * @returns {string[] | null}
  */
@@ -765,7 +773,7 @@ function changedFiles(base, root) {
   // means; a plain two-dot diff also reports everything the base gained.
   const diff = spawnSync(
     "git",
-    ["diff", "--numstat", "--no-renames", "--ignore-cr-at-eol", `${base}...HEAD`],
+    ["diff", "--numstat", "-z", "--no-renames", "--ignore-cr-at-eol", `${base}...HEAD`],
     { cwd: root, encoding: "utf-8" },
   );
   if (diff.status !== 0) {
@@ -773,12 +781,12 @@ function changedFiles(base, root) {
   }
   const staged = spawnSync(
     "git",
-    ["diff", "--numstat", "--no-renames", "--ignore-cr-at-eol", "HEAD"],
+    ["diff", "--numstat", "-z", "--no-renames", "--ignore-cr-at-eol", "HEAD"],
     { cwd: root, encoding: "utf-8" },
   );
-  const files = `${diff.stdout}\n${staged.status === 0 ? staged.stdout : ""}`
-    .split(/\r?\n/)
-    .map((line) => numstatPath(line))
+  const files = `${diff.stdout}\0${staged.status === 0 ? staged.stdout : ""}`
+    .split("\0")
+    .map((record) => numstatPath(record))
     .filter((file) => file !== null);
   return [...new Set(files)];
 }

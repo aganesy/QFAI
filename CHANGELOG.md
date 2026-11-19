@@ -558,6 +558,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   then switches the two; if the switch fails, the project's copy is put back,
   and when even that fails the error names the hidden directory that holds it.
 
+- **The document-schema check sees changes under a non-ASCII directory.**
+  `check-mdschema.mjs --scope changed` read Git's changed paths line by line,
+  where Git quotes a path with a non-ASCII character and escapes its bytes. The
+  quoted path matched no document, so an edit under such a directory was left
+  out of the check and a broken document passed. The check now reads the paths
+  NUL-delimited, as Git stores them. Closes #4491.
+
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
   `-- Depends on:` line skipped `$$ … $$` literals but not `$tag$ … $tag$`
