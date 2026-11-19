@@ -66,7 +66,34 @@ jobs:
             if (parts.some((part) => part === "" || part === "." || part === "..") || parts.slice(0, 3).join("/") !== "packages/qfai/tests" || !file.endsWith(".test.ts")) {
               throw new Error("file must be a test in the selected project, without traversal or glob characters");
             }
-            const workspace = readFileSync("packages/qfai/vitest.workspace.ts", "utf-8");
+            const sha = inputSha.toLowerCase();
+            const git = (...args) => execFileSync("git", args, { encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+            const ref = `refs/pull/${pr}/head`;
+            // Require a configured origin; an unconfigured name can resolve to a local path.
+            git("remote", "get-url", "origin");
+            const live = git("ls-remote", "--refs", "origin", ref).split(/\r?\n/u);
+            if (live.length !== 1 || live[0] !== `${sha}\t${ref}` || git("rev-parse", "HEAD") !== sha) throw new Error("the input SHA, live pull request head and checkout HEAD must agree");
+            const root = process.cwd();
+            // Return a tracked regular file's blob at HEAD, read within its byte limit,
+            // after requiring the unlinked checkout path to hold exactly those bytes.
+            const committedFile = (relative, limit, label) => {
+              const entry = git("ls-tree", "HEAD", "--", relative);
+              const tracked = /^(?:100644|100755) blob ([0-9a-f]{40}|[0-9a-f]{64})\t(.*)$/u.exec(entry);
+              if (tracked === null || tracked[2] !== relative) throw new Error(`${label} must be a tracked regular file at this head`);
+              const size = Number(git("cat-file", "-s", tracked[1]));
+              if (!Number.isSafeInteger(size) || size > limit) throw new Error(`${label} exceeds its ${limit}-byte limit`);
+              let target = root;
+              for (const part of relative.split("/")) {
+                target = path.join(target, part);
+                if (lstatSync(target).isSymbolicLink()) throw new Error(`${label} path may not contain a symbolic link`);
+              }
+              const local = lstatSync(target);
+              if (!local.isFile() || realpathSync(target) !== path.resolve(root, relative)) throw new Error(`${label} must resolve to a regular file inside the checkout`);
+              const committed = execFileSync("git", ["cat-file", "blob", tracked[1]], { maxBuffer: limit });
+              if (local.size !== committed.length || !committed.equals(readFileSync(target))) throw new Error(`${label} differs from its pull request head`);
+              return committed;
+            };
+            const workspace = committedFile("packages/qfai/vitest.workspace.ts", 64 * 1024, "the workspace configuration").toString("utf-8");
             const marks = [...workspace.matchAll(/name:\s*"([^"]+)"/gu)];
             const at = marks.findIndex((mark) => mark[1] === project);
             if (at < 0 || marks.filter((mark) => mark[1] === project).length !== 1) throw new Error("project must name one current workspace project");
@@ -77,24 +104,7 @@ jobs:
             // Lift when: the workspace introduces another include shape.
             if (globs.length === 0 || include[1].replace(/"[^"]*"/gu, "").replace(/[\s,]/gu, "") !== "" || globs.some((glob) => !/^tests\/[a-z0-9]+\/\*\*\/\*\.test\.ts$/u.test(glob))) throw new Error("workspace include patterns are missing or unsupported");
             if (!globs.some((glob) => file.startsWith(`packages/qfai/${glob.slice(0, glob.indexOf("**"))}`))) throw new Error("the current project includes do not match this file");
-            const sha = inputSha.toLowerCase();
-            const git = (...args) => execFileSync("git", args, { encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-            const ref = `refs/pull/${pr}/head`;
-            // Require a configured origin; an unconfigured name can resolve to a local path.
-            git("remote", "get-url", "origin");
-            const live = git("ls-remote", "--refs", "origin", ref).split(/\r?\n/u);
-            if (live.length !== 1 || live[0] !== `${sha}\t${ref}` || git("rev-parse", "HEAD") !== sha) throw new Error("the input SHA, live pull request head and checkout HEAD must agree");
-            const entry = git("ls-tree", "HEAD", "--", file);
-            if (!/^(?:100644|100755) blob [0-9a-f]{40,64}\t/u.test(entry) || entry.slice(entry.indexOf("\t") + 1) !== file) throw new Error("file must be a tracked regular test at this head");
-            const root = process.cwd();
-            let target = root;
-            for (const part of parts) {
-              target = path.join(target, part);
-              if (lstatSync(target).isSymbolicLink()) throw new Error("test paths may not contain a symbolic link");
-            }
-            if (!lstatSync(target).isFile() || realpathSync(target) !== path.resolve(root, file)) throw new Error("file must resolve to a regular test inside the checkout");
-            const committed = execFileSync("git", ["show", `HEAD:${file}`], { maxBuffer: 16 * 1024 * 1024 });
-            if (!committed.equals(readFileSync(target))) throw new Error("the test file differs from its pull request head");
+            committedFile(file, 16 * 1024 * 1024, "the test file");
             process.stdout.write(`Verified PR ${pr} at ${sha}: ${project} / ${file}\n`);
           } catch (cause) {
             process.stderr.write(`Named diagnostic: ${cause instanceof Error ? cause.message : String(cause)}\n`);

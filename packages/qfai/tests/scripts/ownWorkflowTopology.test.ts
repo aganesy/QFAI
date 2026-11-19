@@ -4627,6 +4627,49 @@ describe("the optional exact-file diagnostic", () => {
       rmSync(fixture.root, { recursive: true, force: true });
     }
   });
+
+  // QFAI:EX-0002-0026-15
+  it.each([
+    ["a symbolic link to identical bytes", "symbolic link"],
+    ["edited but still selecting the file", "differs from its pull request head"],
+    ["untracked at the requested head", "tracked regular file"],
+    ["committed beyond its byte limit", "byte limit"],
+  ])("refuses a workspace configuration %s before reading its includes", (label, message) => {
+    const fixture = namedFixture();
+    try {
+      const relative = "packages/qfai/vitest.workspace.ts";
+      const workspace = path.join(fixture.root, relative);
+      const original = readFileSync(workspace);
+      let sha = fixture.sha;
+      const publish = (subject: string): void => {
+        namedGit(fixture.root, "commit", "-m", subject);
+        namedGit(fixture.root, "push", "origin", "HEAD:refs/pull/37/head");
+        sha = namedGit(fixture.root, "rev-parse", "HEAD");
+      };
+      if (label.startsWith("a symbolic")) {
+        const copy = path.join(fixture.root, "workspace-copy.ts");
+        writeFileSync(copy, original);
+        rmSync(workspace);
+        symlinkSync(copy, workspace, "file");
+      } else if (label.startsWith("edited"))
+        writeFileSync(workspace, Buffer.concat([original, Buffer.from("// local edit\n")]));
+      else if (label.startsWith("untracked")) {
+        namedGit(fixture.root, "rm", "--cached", "--quiet", "--", relative);
+        publish("Untrack the workspace configuration");
+      } else {
+        const padding = `// ${"x".repeat(64 * 1024)}\n`;
+        writeFileSync(workspace, Buffer.concat([original, Buffer.from(padding)]));
+        namedGit(fixture.root, "add", "--", relative);
+        publish("Grow the workspace configuration");
+      }
+      const result = runNamedPreflight(fixture, { EXPECTED_SHA: sha });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("the workspace configuration");
+      expect(result.stderr).toContain(message);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("the optional Windows full-suite diagnostic", () => {
