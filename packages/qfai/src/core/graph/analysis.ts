@@ -1,6 +1,6 @@
 import path from "node:path";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { copyFile, lstat, mkdir, readdir, rm } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readFile, readdir, rm } from "node:fs/promises";
 import { isDirectoryInsideRoot, loadConfig, resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import { GraphLocalStateError } from "./localFiles.js";
@@ -210,17 +210,42 @@ export async function mirrorGraphCorpus(
   destination: string,
   scope?: readonly string[],
 ): Promise<void> {
+  await walkGraphCorpus(root, destination, scope, "write");
+}
+
+/** Whether mirroring the corpus into `destination` would change any file there. Writes nothing. */
+export async function graphCorpusChanged(
+  root: string,
+  destination: string,
+  scope?: readonly string[],
+): Promise<boolean> {
+  return walkGraphCorpus(root, destination, scope, "compare");
+}
+
+/**
+ * In `write` mode, mirrors the corpus into `destination` and returns false. In `compare` mode it
+ * writes nothing and returns true at the first entry a mirror would add, replace or remove.
+ */
+async function walkGraphCorpus(
+  root: string,
+  destination: string,
+  scope: readonly string[] | undefined,
+  mode: "write" | "compare",
+): Promise<boolean> {
   await assertGraphStoragePath(root, destination);
   await assertIndependentAnalysis(destination);
   const files = new Set<string>();
   const deliberationDir = await graphDeliberationDir(root);
+  let changed = false;
   await visit("");
   await removeAbsent("");
+  return changed;
 
   async function visit(relative: string): Promise<void> {
     for (const entry of await readdir(path.join(root, ...relative.split("/")), {
       withFileTypes: true,
     })) {
+      if (changed) return;
       const next = relative ? `${relative}/${entry.name}` : entry.name;
       if (excludedGraphInput(next, deliberationDir) || entry.isSymbolicLink()) continue;
       if (
@@ -232,12 +257,22 @@ export async function mirrorGraphCorpus(
         continue;
       const target = path.join(destination, ...next.split("/"));
       if (entry.isDirectory()) {
-        await replaceOtherEntryType(target, true);
-        await visit(next);
+        // A mirror creates no empty directory, so an absent one changes nothing until a file in it
+        // would be copied.
+        if (mode === "compare") {
+          const kind = await entryKind(target);
+          if (kind !== "directory" && kind !== "absent") changed = true;
+        } else await replaceOtherEntryType(target, true);
+        if (!changed) await visit(next);
       } else if (entry.isFile()) {
         const source = path.join(root, ...next.split("/"));
         const stats = await lstat(source);
         if (!stats.isFile() || stats.nlink > 1) continue;
+        if (mode === "compare") {
+          if (!(await sameFile(source, target))) changed = true;
+          files.add(next);
+          continue;
+        }
         await replaceOtherEntryType(target, false);
         await mkdir(path.dirname(target), { recursive: true });
         await copyFile(source, target);
@@ -250,14 +285,34 @@ export async function mirrorGraphCorpus(
     for (const entry of await readdir(path.join(destination, ...relative.split("/")), {
       withFileTypes: true,
     })) {
+      if (changed) return;
       const next = relative ? `${relative}/${entry.name}` : entry.name;
       if (entry.name === ".codegraph" || entry.name === ".git" || entry.name === "graphify-out")
         continue;
       const target = path.join(destination, ...next.split("/"));
       if (entry.isDirectory()) await removeAbsent(next);
-      else if (!files.has(next)) await rm(target);
+      else if (files.has(next)) continue;
+      else if (mode === "compare") changed = true;
+      else await rm(target);
     }
   }
+}
+
+async function entryKind(target: string): Promise<"directory" | "file" | "other" | "absent"> {
+  try {
+    const stats = await lstat(target);
+    if (stats.isDirectory()) return "directory";
+    return stats.isFile() ? "file" : "other";
+  } catch (cause: unknown) {
+    if (isEnoent(cause)) return "absent";
+    throw cause;
+  }
+}
+
+async function sameFile(source: string, target: string): Promise<boolean> {
+  if ((await entryKind(target)) !== "file") return false;
+  const [left, right] = await Promise.all([readFile(source), readFile(target)]);
+  return left.equals(right);
 }
 
 /**
