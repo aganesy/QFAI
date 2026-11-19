@@ -52,6 +52,8 @@ export type GraphProcess = (
     maxBufferBytes?: number;
     /** Keep a failed process's stderr in the result. Only version checks ask for it. */
     captureStderr?: boolean;
+    /** Non-zero exit codes the engine documents as an answer; their stdout is kept. */
+    answerExitCodes?: readonly number[];
   },
 ) => Promise<GraphProcessResult>;
 
@@ -158,9 +160,12 @@ export const runGraphProcess: GraphProcess = async (command, args, options) => {
     // Installation and backend stderr can contain credentials. Callers report the step instead;
     // the preparation names the command a failed download can be rerun with by hand.
     const stopped = stoppedProcess(cause, timeoutMs, maxBufferBytes);
+    const exitCode = typeof cause.code === "number" ? cause.code : 1;
+    const answered =
+      typeof cause.code === "number" && options.answerExitCodes?.includes(exitCode) === true;
     return {
-      exitCode: typeof cause.code === "number" ? cause.code : 1,
-      stdout: "",
+      exitCode,
+      stdout: answered && "stdout" in cause && typeof cause.stdout === "string" ? cause.stdout : "",
       ...stopped,
       ...(options.captureStderr && "stderr" in cause && typeof cause.stderr === "string"
         ? { stderr: cause.stderr }

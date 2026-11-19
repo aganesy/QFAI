@@ -633,6 +633,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   lists the file each kind of run writes, and `qfai-configure` inspects the
   result its own validate run wrote.
 
+- **A documents graph query with no match keeps Graphify's message.**
+  Graphify's `query` exits with code 4 when the graph holds no matching nodes,
+  and the documents query reads that code as a no-match answer. The process
+  runner discarded the output of every non-zero exit, so the answer arrived
+  empty. The runner now keeps the output of an exit code its caller names as an
+  answer, and the documents query names only Graphify's no-match code.
+
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
   took the opening `---` as the diagram's declaration and skipped the
