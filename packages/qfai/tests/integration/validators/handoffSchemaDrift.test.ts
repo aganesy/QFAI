@@ -154,4 +154,33 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
     const issues = await detectHandoffSchemaDrift(root);
     expect(issues.filter((i) => i.code === "QFAI-HANDOFF-001")).toEqual([]);
   });
+
+  // A directory where the file belongs is present but cannot be read as text,
+  // on every platform CI runs.
+  it("fires (error) naming the schema when it is present but cannot be read", async () => {
+    await mkdir(path.join(root, HANDOFF_SCHEMA_REL), { recursive: true });
+    for (const pair of HANDOFF_WRITER_PAIRS) {
+      await writeAt(pair.writerRel, `references ${pair.writerToken}\n`);
+    }
+    const findings = (await detectHandoffSchemaDrift(root)).filter(
+      (i) => i.code === "QFAI-HANDOFF-001",
+    );
+    expect(findings.map((f) => [f.file, f.severity])).toEqual([[HANDOFF_SCHEMA_REL, "error"]]);
+    expect(findings[0]?.message).toContain("could not be read");
+  });
+
+  it("fires (error) naming a writer that is present but cannot be read", async () => {
+    await writeAt(HANDOFF_SCHEMA_REL, SCHEMA_WITH_FIELDS);
+    const [unreadable, ...rest] = HANDOFF_WRITER_PAIRS;
+    if (!unreadable) throw new Error("expected at least one writer pair");
+    await mkdir(path.join(root, unreadable.writerRel), { recursive: true });
+    for (const pair of rest) {
+      await writeAt(pair.writerRel, `\`companyName\`, \`primaryUiContract\` ${pair.writerToken}\n`);
+    }
+    const findings = (await detectHandoffSchemaDrift(root)).filter(
+      (i) => i.code === "QFAI-HANDOFF-001",
+    );
+    expect(findings.map((f) => [f.file, f.severity])).toEqual([[unreadable.writerRel, "error"]]);
+    expect(findings[0]?.message).toContain("could not be read");
+  });
 });

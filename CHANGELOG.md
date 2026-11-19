@@ -503,6 +503,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
 
+- **The package self-governance checks report an input they cannot read.**
+  `QFAI-MANIFEST-001` and `QFAI-HANDOFF-001` skipped a source file that was
+  present but could not be read, such as one behind a permission error or a
+  directory in its place, and the run passed as if that pair were in sync.
+  Each now reports such a file at severity error, naming it and saying the
+  check is incomplete. A file that is absent is still skipped, so a project
+  without the qfai package source is unaffected.
+
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
   took the opening `---` as the diagram's declaration and skipped the
@@ -635,6 +643,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   quoting rules: a bare part folds to lower case, a quoted part keeps its
   case and its doubled `""`, and a dot inside quotes does not split the name.
 
+- **An agent card's required sections must be real headings.** The
+  `QFAI-AGENT-005` check accepted any occurrence of a required heading's text,
+  so a card missing `## Stop conditions` passed when the frontmatter, a
+  sentence, a code sample, an HTML comment or a `### Stop conditions` heading
+  carried the same words. Only a level-2 heading of the card body now counts.
+  Closes #4573.
+
 - **`qfai validate` checks every resource reference in an HTML mock.** The
   external URL, local file and unsafe scheme checks read only `href`, `src`
   and `action`, so a mock could load a CDN asset through CSS `url()`,
@@ -668,6 +683,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
+- **`qfai validate` reads every skill document within the same size limit.**
+  A document the skill-tree crawl found was read whole into memory, while the
+  same document named from a directory the crawl skips was read only up to
+  64 MiB. Every skill document now goes through one bounded reader: past the
+  limit its encoding is still checked and what it cites is left undecided,
+  wherever it sits. Closes #4577.
 
 - **A DB contract that gives a regular and a unique index one name is
   reported.** PostgreSQL keeps both kinds of index in one namespace, so the

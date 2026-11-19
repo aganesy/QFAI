@@ -216,7 +216,8 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // that each document enters it once and every check reads it from there.
   // Reported after the reference graph below, for the same reason the crawl
   // skips those trees.
-  const { documents, unreadable, unreadableDirectories } = await readSkillDocuments(skillsDir);
+  const { documents, unreadable, unreadableDirectories, unreadFiles } =
+    await readSkillDocuments(skillsDir);
 
   const skillFiles = await collectSkillFiles([skillsDir]);
 
@@ -238,9 +239,13 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   // the crawl's `skill.md` and the probe's `SKILL.md` are one file, read and
   // reported once. A hard link gives one identity several crawled paths, so
   // every one is kept.
-  const unreadableFiles = unreadable.flatMap((item) =>
-    item.file === undefined || unreadableDirectories.includes(item.file) ? [] : [item.file],
-  );
+  // A document too large to hold stands with them: what it cites is as unknown.
+  const unreadableFiles = [
+    ...unreadable.flatMap((item) =>
+      item.file === undefined || unreadableDirectories.includes(item.file) ? [] : [item.file],
+    ),
+    ...unreadFiles,
+  ];
   const crawled = new Map<string, string[]>();
   for (const crawledFile of [...documents.keys(), ...unreadableFiles]) {
     const identity = await fileIdentity(crawledFile);
@@ -275,10 +280,12 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     }
     // Crawled as this skill's own entry point, the file could not be read, and
     // the crawl has already said so. Reading it again reports the same fault
-    // twice.
+    // twice. A name the crawl left unread for its size has had nothing said
+    // about it, so it is probed below like an entry point the crawl never saw.
     let reportedAsEntryPoint = false;
     for (const alias of aliases) {
       if (
+        !unreadFiles.includes(alias) &&
         path.dirname(alias) === path.dirname(entryPoint) &&
         (await namesSkillEntryPoint(skillsDir, alias))
       ) {
@@ -292,7 +299,8 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     }
     // Not crawled as this entry point: a skill directory reached through a link,
     // which the walk does not follow, or an entry point linked to a document the
-    // crawl reported as the document it is. Nothing has said the skill cannot be
+    // crawl reported as the document it is, or one the crawl left unread for its
+    // size, which this smaller entry-point limit reports. Nothing has said the skill cannot be
     // loaded, and a read that fails here is the only chance to.
     //
     // Through the bounded reader rather than a bare read: the path is whatever
@@ -733,7 +741,7 @@ const ENCODING_SCAN_CEILING = 256 * 1024 * 1024;
 /**
  * The encoding of a file read a chunk at a time and kept nowhere.
  *
- * For a document past {@link CITED_DOCUMENT_READ_CEILING}: the text cannot be
+ * For a document past {@link DOCUMENT_READ_CEILING}: the text cannot be
  * held, and its encoding is still a thing the host will fail on. The decoder
  * runs in stream mode so a sequence split across two chunks is not read as
  * invalid, and the final call settles a sequence the last chunk left open.
@@ -1388,34 +1396,43 @@ type CitedDocument =
   | { kind: "unreadable"; finding: Issue };
 
 /**
- * The most of a cited document this run holds in memory.
+ * The most of a skill document this run holds in memory, whether the crawl
+ * found it or a step named it.
  *
- * SIMPLIFIED: a cited document past this size is not read. Nothing is reported
+ * SIMPLIFIED: a document past this size is not read. Nothing is reported
  * against it, since the host has no such limit; its citations are not followed,
  * so uncited references are left undecided rather than reported.
- * Lift when: a skill names a document this large and what it cites needs checking.
+ * Lift when: a skill holds a document this large and what it cites needs checking.
  */
-const CITED_DOCUMENT_READ_CEILING = 64 * 1024 * 1024;
+const DOCUMENT_READ_CEILING = 64 * 1024 * 1024;
 
 /**
- * A document a reachable step names and the crawl did not read, opened as the
- * host opens it: through a link, as an ordinary file within the size bound, and
- * decoded strictly. A path with no file at it names nothing.
+ * What reading one skill document found, before anything is said about it.
+ *
+ * `unreachable` is a path that could not be inspected, `refused` an ordinary
+ * file the bounded reader would not read, with the error an open gives where
+ * there is one, and `unread` a document past {@link DOCUMENT_READ_CEILING}
+ * whose bytes, as far as they were read, are UTF-8.
  */
-async function readCitedDocument(file: string): Promise<CitedDocument> {
-  const unreadable = (message: string, action: string): CitedDocument => ({
-    kind: "unreadable",
-    finding: issue(
-      "QFAI-SKILLS-014",
-      message,
-      "error",
-      file,
-      "skills.documentReadable",
-      undefined,
-      "canonical",
-      action,
-    ),
-  });
+type SkillDocumentRead =
+  | { kind: "missing" }
+  | { kind: "not-a-file" }
+  | { kind: "unreachable"; error: unknown }
+  | { kind: "refused"; error: unknown }
+  | { kind: "not-utf-8" }
+  | { kind: "unread" }
+  | { kind: "text"; text: string };
+
+/**
+ * A skill document opened as the host opens it: through a link, as an ordinary
+ * file within {@link DOCUMENT_READ_CEILING}, and decoded strictly.
+ *
+ * The crawl and the citation path both read through here, so where a document
+ * sits changes neither how much of it this run holds nor what is found about
+ * it. A whole-file read in the crawl held a multi-gigabyte reference in memory
+ * that the same document named from an uncrawled tree was never read into.
+ */
+async function readSkillDocument(file: string): Promise<SkillDocumentRead> {
   const found = await stat(file).then(
     (stats): { size: number } | "not-a-file" =>
       stats.isFile() ? { size: stats.size } : "not-a-file",
@@ -1432,59 +1449,91 @@ async function readCitedDocument(file: string): Promise<CitedDocument> {
         : "missing";
     },
   );
-  if (found === "missing") return { kind: "missing" };
-  if (found === "not-a-file") {
-    return unreadable(
-      "A path under `skills` that a step names is not an ordinary file — a directory, a device, a link to nothing, or a name below an ordinary file — so the host cannot open it, and the step that names it fails there.",
-      "Put the document the step expects at that path, or stop naming it.",
-    );
-  }
-  if ("error" in found) {
-    return unreadable(
-      `A document under \`skills\` that a step names could not be reached (${describeReadError(found.error)}). The host opens it only where a step names it, and a step that does fails there.`,
-      "Make the document, and each directory above it, readable to the account running `qfai validate`, or stop naming it.",
-    );
-  }
-  if (found.size > CITED_DOCUMENT_READ_CEILING) {
+  if (found === "missing" || found === "not-a-file") return { kind: found };
+  if ("error" in found) return { kind: "unreachable", error: found.error };
+  // Resolved first, because the host opens through a link and the bounded
+  // reader refuses one at the final component.
+  const resolved = await realpath(file).catch(() => file);
+  if (found.size > DOCUMENT_READ_CEILING) {
     // Too large to hold, and still a document the host opens. Its encoding is
     // read off the stream, a chunk at a time, so a file of bytes that are not
-    // UTF-8 is reported here rather than passed over for its size — the one
-    // thing this rule can still say about it. What it cites stays unknown,
-    // which is what `unread` records.
-    const encoding = await scanEncoding(await realpath(file).catch(() => file));
-    // `unsettled` joins `utf-8` here: the run says nothing about a document it
-    // did not finish reading, as it says nothing about what such a document
-    // cites.
+    // UTF-8 is reported rather than passed over for its size — the one thing
+    // this rule can still say about it. `unsettled` joins `utf-8`: the run says
+    // nothing about a document it did not finish reading, as it says nothing
+    // about what such a document cites.
+    const encoding = await scanEncoding(resolved);
     if (encoding === "utf-8" || encoding === "unsettled") return { kind: "unread" };
-    if (encoding === "unreadable") {
+    if (encoding === "unreadable") return { kind: "refused", error: await openFailure(resolved) };
+    return { kind: "not-utf-8" };
+  }
+  const bytes = await readBoundedRegularFile(resolved, DOCUMENT_READ_CEILING);
+  if (bytes === undefined) return { kind: "refused", error: await openFailure(resolved) };
+  const text = decodeUtf8(bytes);
+  return text === undefined ? { kind: "not-utf-8" } : { kind: "text", text };
+}
+
+/**
+ * Why a file the bounded reader refused cannot be opened, or `undefined` when
+ * it opens and the refusal was about what it is rather than whether it opens.
+ *
+ * The bounded reader answers every refusal alike, and a permission fault is
+ * the one an operator repairs from its name, so it is asked for here.
+ */
+async function openFailure(file: string): Promise<unknown> {
+  try {
+    const handle = await open(file, OPEN_READ_FLAGS);
+    await handle.close();
+    return undefined;
+  } catch (error) {
+    return error;
+  }
+}
+
+/**
+ * A document a reachable step names and the crawl did not read, through
+ * {@link readSkillDocument}. A path with no file at it names nothing.
+ */
+async function readCitedDocument(file: string): Promise<CitedDocument> {
+  const unreadable = (message: string, action: string): CitedDocument => ({
+    kind: "unreadable",
+    finding: issue(
+      "QFAI-SKILLS-014",
+      message,
+      "error",
+      file,
+      "skills.documentReadable",
+      undefined,
+      "canonical",
+      action,
+    ),
+  });
+  const read = await readSkillDocument(file);
+  switch (read.kind) {
+    case "missing":
+    case "unread":
+    case "text":
+      return read;
+    case "not-a-file":
+      return unreadable(
+        "A path under `skills` that a step names is not an ordinary file — a directory, a device, a link to nothing, or a name below an ordinary file — so the host cannot open it, and the step that names it fails there.",
+        "Put the document the step expects at that path, or stop naming it.",
+      );
+    case "unreachable":
+      return unreadable(
+        `A document under \`skills\` that a step names could not be reached (${describeReadError(read.error)}). The host opens it only where a step names it, and a step that does fails there.`,
+        "Make the document, and each directory above it, readable to the account running `qfai validate`, or stop naming it.",
+      );
+    case "refused":
       return unreadable(
         "A document under `skills` that a step names is not an ordinary file this run can read. The host opens it only where a step names it, and a step that does fails there.",
         "Make the document an ordinary readable file, or stop naming it.",
       );
-    }
-    return unreadable(
-      "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.",
-      "Save the document as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
-    );
+    case "not-utf-8":
+      return unreadable(
+        "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.",
+        "Save the document as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
+      );
   }
-  const bytes = await readBoundedRegularFile(
-    await realpath(file).catch(() => file),
-    CITED_DOCUMENT_READ_CEILING,
-  );
-  if (bytes === undefined) {
-    return unreadable(
-      "A document under `skills` that a step names is not an ordinary file this run can read. The host opens it only where a step names it, and a step that does fails there.",
-      "Make the document an ordinary readable file, or stop naming it.",
-    );
-  }
-  const text = decodeUtf8(bytes);
-  if (text === undefined) {
-    return unreadable(
-      "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.",
-      "Save the document as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
-    );
-  }
-  return { kind: "text", text };
 }
 
 /** Whether `target` lies under a skill directory the host does not list. */
@@ -1500,6 +1549,11 @@ type SkillDocuments = {
   unreadable: Issue[];
   /** The directories among them. */
   unreadableDirectories: string[];
+  /**
+   * Documents past {@link DOCUMENT_READ_CEILING} whose bytes, as far as they
+   * were read, are UTF-8: no finding, and what they cite is unknown.
+   */
+  unreadFiles: string[];
 };
 
 /**
@@ -1557,51 +1611,69 @@ async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
       );
     },
   });
+  const unreadFiles: string[] = [];
   for (const file of files.sort((a, b) => a.localeCompare(b))) {
-    try {
+    // Through the reader a cited document takes, so the crawl holds no more of
+    // a document in memory than that path would.
+    const read = await readSkillDocument(file);
+    if (read.kind === "text") {
+      documents.set(file, read.text);
+      continue;
+    }
+    if (read.kind === "unread") {
+      unreadFiles.push(file);
+      continue;
+    }
+    if (read.kind === "not-utf-8") {
       // Decoded strictly, like an uncrawled entry point: the lenient read turns
       // an invalid byte into a replacement character, so the document parses
       // and its metadata reads as usable while the host refuses the file.
-      const text = decodeUtf8(await readFile(file));
-      if (text === undefined) {
-        // What the host does about it turns on which document this is. It reads
-        // an entry point to register the skill at all, and a reference only
-        // once a step names one — so the same byte stops the skill in the first
-        // case and a step partway through the work in the second.
-        const message = (await namesSkillEntryPoint(skillsDir, file))
-          ? "A skill's entry point holds bytes that are not valid UTF-8, so the host reports it unreadable and registers no skill from it."
-          : "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.";
-        unreadable.push(
-          issue(
-            "QFAI-SKILLS-014",
-            message,
-            severity,
-            file,
-            "skills.documentReadable",
-            undefined,
-            "canonical",
-            "Save the document as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
-          ),
-        );
-        continue;
-      }
-      documents.set(file, text);
-    } catch (error) {
+      //
+      // What the host does about it turns on which document this is. It reads
+      // an entry point to register the skill at all, and a reference only once
+      // a step names one — so the same byte stops the skill in the first case
+      // and a step partway through the work in the second.
+      const message = (await namesSkillEntryPoint(skillsDir, file))
+        ? "A skill's entry point holds bytes that are not valid UTF-8, so the host reports it unreadable and registers no skill from it."
+        : "A document under `skills` holds bytes that are not valid UTF-8. The host opens it only where a step names it, and a step that does fails there.";
       unreadable.push(
         issue(
           "QFAI-SKILLS-014",
-          `A document under skills could not be read (${describeReadError(error)}). Reference reachability cannot be judged, so check permissions and I/O.`,
+          message,
           severity,
           file,
           "skills.documentReadable",
           undefined,
           "canonical",
-          "Resolve the I/O error the message names (grant read permission, relink a broken symlink, materialise a file that was not fetched, and so on). If the document should not be under skills, delete it.",
+          "Save the document as UTF-8. A byte that is not part of a valid sequence is usually text pasted from another encoding, or a binary file left at the path.",
         ),
       );
+      continue;
     }
+    unreadable.push(
+      issue(
+        "QFAI-SKILLS-014",
+        `A document under skills could not be read (${crawlReadFailure(read)}). Reference reachability cannot be judged, so check permissions and I/O.`,
+        severity,
+        file,
+        "skills.documentReadable",
+        undefined,
+        "canonical",
+        "Resolve the I/O error the message names (grant read permission, relink a broken symlink, materialise a file that was not fetched, and so on). If the document should not be under skills, delete it.",
+      ),
+    );
   }
-  return { documents, unreadable, unreadableDirectories };
+  return { documents, unreadable, unreadableDirectories, unreadFiles };
+}
+
+/** Why a crawled document could not be read, for the finding that says so. */
+function crawlReadFailure(
+  read: Extract<SkillDocumentRead, { kind: "missing" | "not-a-file" | "unreachable" | "refused" }>,
+): string {
+  if (read.kind === "missing") return "it is no longer there";
+  if (read.kind === "not-a-file") return "it is no longer an ordinary file";
+  if (read.error !== undefined) return describeReadError(read.error);
+  return `it was not an ordinary file within ${String(DOCUMENT_READ_CEILING)} bytes when it was read, or it changed while it was being read`;
 }
 
 function describeReadError(error: unknown): string {

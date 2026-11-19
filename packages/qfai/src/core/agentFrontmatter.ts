@@ -39,6 +39,15 @@ const FRONTMATTER_PATTERN = /^---\r?\n(?:([\s\S]*?)\r?\n)?---(?:\r?\n|$)/;
  */
 const FRONTMATTER_OPEN_PATTERN = /^---\r?\n/;
 
+/**
+ * The card body: the text after a closed frontmatter block, or the whole text
+ * when the document opens none.
+ */
+export function agentCardBody(content: string): string {
+  const match = content.match(FRONTMATTER_PATTERN);
+  return match ? content.slice(match[0].length) : content;
+}
+
 export function parseAgentFrontmatter(content: string): AgentFrontmatterParseResult {
   const match = content.match(FRONTMATTER_PATTERN);
   const rawFrontmatter = match?.[1];

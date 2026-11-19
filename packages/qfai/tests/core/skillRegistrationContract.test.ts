@@ -816,6 +816,69 @@ describe("the gate reads a skill as the host does", () => {
     expect(findings).toEqual([]);
   });
 
+  it("holds a crawled document to the same ceiling as one only a step names", async () => {
+    // The crawl and the citation path share one reader, so where a document
+    // sits does not decide whether this run holds all of it in memory. Read
+    // whole, the zeros past the heading decode as text, the document cites
+    // nothing, and the uncited reference beside it is reported as an orphan.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/huge.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    const huge = path.join(skillDir, "references", "huge.md");
+    await writeFile(huge, "# huge\n", "utf-8");
+    await truncate(huge, 65 * 1024 * 1024);
+    await writeFile(path.join(skillDir, "references", "uncited.md"), "# uncited\n", "utf-8");
+
+    const findings = (await validateAssistantAssets(root, defaultConfig)).filter(
+      (item) => item.code === "QFAI-SKILLS-014" || item.code === "QFAI-SKILLS-013",
+    );
+    expect(findings).toEqual([]);
+  });
+
+  it("reports a crawled entry point too large to hold rather than passing over its skill", async () => {
+    // Left unread for its size, it has had nothing said about it, so the
+    // entry-point probe reads it under its own limit and reports it. Taken as
+    // already reported, the skill went unchecked and every orphan in the tree
+    // was left undecided with no finding at all.
+    const root = await projectWithSkill([]);
+    const entryPoint = path.join(root, ".qfai", "assistant", "skill", "qfai-example", "SKILL.md");
+    await truncate(entryPoint, 65 * 1024 * 1024);
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === entryPoint)
+      .map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
+  it("reports a crawled document too large to hold whose bytes are not UTF-8", async () => {
+    // The twin of the case below, in a directory the crawl reads: the same
+    // stream decides its encoding wherever it sits.
+    const root = await projectWithSkill(['description: "Does the thing."']);
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-example");
+    const entryPoint = path.join(skillDir, "SKILL.md");
+    await writeFile(
+      entryPoint,
+      `${await readFile(entryPoint, "utf-8")}\nSee references/huge.md.\n`,
+      "utf-8",
+    );
+    await mkdir(path.join(skillDir, "references"), { recursive: true });
+    const huge = path.join(skillDir, "references", "huge.md");
+    // A lone continuation byte is valid in no sequence, wherever it sits.
+    await writeFile(huge, Buffer.from([0x23, 0x20, 0x68, 0x75, 0x67, 0x65, 0x0a, 0x80]));
+    await truncate(huge, 65 * 1024 * 1024);
+
+    const codes = (await validateAssistantAssets(root, defaultConfig))
+      .filter((item) => item.file === huge)
+      .map((item) => item.code);
+    expect(codes).toContain("QFAI-SKILLS-014");
+  });
+
   it("reports a named document too large to hold whose bytes are not UTF-8", async () => {
     // Its text cannot be held, and its encoding is still what the host fails
     // on, so the stream is decoded a chunk at a time and kept nowhere.
