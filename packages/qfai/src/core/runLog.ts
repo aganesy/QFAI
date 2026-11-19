@@ -1,8 +1,10 @@
-import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { chmod, lstat, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { FailOn, QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
+import { isEnoent } from "./fs/errno.js";
 import { findUnsafeHostFileComponent } from "./init/fsGuards.js";
 import { toRelativePath } from "./paths.js";
 import type { Issue, ValidationResult } from "./types.js";
@@ -251,21 +253,50 @@ export async function writeReportFile(
  * into place. A rename replaces the name, so a link or a hard link at
  * `filePath` is replaced rather than written through, and a reader never sees a
  * half-written file. Exported for every writer of a report file that a link
- * could have replaced, such as the SDD preflight summaries.
+ * could have replaced, such as the SDD preflight summaries, and for the
+ * migration's overwrites of a project's documents.
+ *
+ * A regular file at `filePath` keeps its permission bits: the new file is
+ * created `0600` and widened to them once complete, so its content is never
+ * readable under a mode the original did not carry. A link or an absent file
+ * gives the new file the default mode.
+ *
+ * The new file's name does not include the target's, so a target whose name is
+ * already near the file system's name length limit can still be replaced.
  */
 export async function replaceFile(filePath: string, contents: string): Promise<void> {
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  const mode = await regularFileMode(filePath);
+  const tempPath = path.join(
+    path.dirname(filePath),
+    `.qfai-replace-${randomBytes(6).toString("hex")}.tmp`,
+  );
   try {
-    await writeNewFile(tempPath, contents);
+    await writeNewFile(tempPath, contents, mode === undefined ? undefined : 0o600);
+    if (mode !== undefined) await chmod(tempPath, mode);
     await rename(tempPath, filePath);
   } finally {
     await rm(tempPath, { force: true });
   }
 }
 
+/** The permission bits of the regular file at `filePath`, or nothing for any other entry. */
+async function regularFileMode(filePath: string): Promise<number | undefined> {
+  try {
+    const stats = await lstat(filePath);
+    return stats.isFile() ? stats.mode & 0o7777 : undefined;
+  } catch (error) {
+    if (isEnoent(error)) return undefined;
+    throw error;
+  }
+}
+
 /** Create `filePath`; fail rather than open whatever, a link included, is already there. */
-async function writeNewFile(filePath: string, contents: string): Promise<void> {
-  await writeFile(filePath, contents, { encoding: "utf-8", flag: "wx" });
+async function writeNewFile(filePath: string, contents: string, mode?: number): Promise<void> {
+  await writeFile(filePath, contents, {
+    encoding: "utf-8",
+    flag: "wx",
+    ...(mode === undefined ? {} : { mode }),
+  });
 }
 
 /**
