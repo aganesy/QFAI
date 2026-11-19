@@ -277,6 +277,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   implementation runs no gate, like `narrow`, and its final report says the
   tests come with the implementation it left out.
 
+- **The graph exploration rule describes the graph CLI lifecycle once.** Its
+  opening now says the integration registers no graph MCP server and runs no
+  daemon or IPC, and one sentence after the command example says each CLI
+  prepares any needed analysis, queries it, and exits with a result or recovery
+  guidance, in place of the paragraph that restated both.
+
 - **A merge waits for every check of its head commit.** Step 3 of the shipped
   `triage-operate` step now says that the checks still running before a merge
   are every check run of the pull request's head commit that is queued or in

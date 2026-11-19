@@ -2,8 +2,8 @@
 
 For searching, exploring and investigating code or documents, prefer the
 project graph CLIs first. Run `qfai init` to prepare or repair the
-project-local runtimes and CLI. This integration registers and launches no
-graph MCP server.
+project-local runtimes and CLI. This integration registers no graph MCP server
+and runs no daemon or IPC.
 
 Ordinary search (`grep`, `rg`, `git grep`, `findstr`, `Select-String`) is
 acceptable, and no tool blocks it. Reach for it when the graph tools are not
@@ -32,9 +32,8 @@ node .qfai/tools/graph-cli.mjs code "your code question"
 node .qfai/tools/graph-cli.mjs documents "your document question"
 ```
 
-The CLI checks native freshness, prepares required analysis where possible and
-retries its query. Each command exits after returning evidence or an actionable
-failure; it uses no daemon or IPC.
+Each CLI prepares any needed analysis, queries it, and exits with a result or
+recovery guidance.
 
 Read an exact known source path directly. Use a second engine only for a
 specific unresolved question that crosses from code to documents or documents
