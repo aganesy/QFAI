@@ -567,6 +567,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **An `openai` document backend with no credential now stops before
+  extraction.** Graphify's `openai` client refuses to start without a non-empty
+  key, even for a local server that needs no authentication, so document
+  analysis used to fail only after extraction began. The documents CLI now
+  reports document analysis not ready and says to set `credentialEnv`, and
+  `.agents/rules/graph-exploration.md` shows a local setup that names a
+  variable holding a placeholder value instead of a real key.
+
 - **`qfai validate` compares the index's Depends On with each contract.** The
   `contracts.md` index check compared each row's ID and File with the contract
   but never read its Depends On cell, so the index could state an apply order
@@ -582,6 +590,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `workflow.stopGate` and so ran the project's turn-end checks. The hook now
   runs none and says which file it could not read and that no turn-end check
   ran.
+
+- **The turn-end check tells a failure in another worktree from a repeat.**
+  When a continued turn failed with the same output it had blocked on, the
+  hook let the turn end, even when the agent had moved to another worktree
+  or the marked command had changed. A failure now repeats only from the same
+  project root, with links resolved, and the same command; any other is
+  blocked again. The limit of three blocks in a row still lets the turn end.
+  Closes #4595.
 
 - **A qfai copy under a directory whose name begins with two dots counts as
   inside the project.** `qfai validate` and `qfai sdd preflight` judged
@@ -761,6 +777,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the run passed. Either failure now checks every document, and the
   fail-open warning names the diff that failed, with Git's reason for a
   failed worktree diff. Closes #4555.
+
+- **The dangerous-SQL warning reads statements, not raw text.**
+  `QFAI-DB-001` matched its keywords against the whole `.sql` file, so a
+  `DROP TABLE` in a comment, a string, a quoted name or a quoted function body, or an
+  `ALTER TABLE` in one statement and a `DROP` in a later one, warned on a
+  contract that destroys nothing. It now checks each statement's code on its
+  own, and still reads the body of a `DO` block, which runs when the file is
+  applied, with the string each `EXECUTE` in it runs. Closes #4578.
 
 - **The validation result is written only inside its directory.** A
   `validate.json` that was a symbolic link, or a directory on the

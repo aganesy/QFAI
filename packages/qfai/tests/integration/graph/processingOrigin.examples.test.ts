@@ -315,6 +315,7 @@ it("matches an internationalized approved host in its IDNA form", async () => {
 // Mutation: packages/qfai/src/core/graph/documents.ts `path.resolve(getInitAssetsDir(), "..", "graph", "graphify-origin.py"),` -> `"-m", "graphify",` fails "holds selected and authorized document processing to its origin"
 it("holds selected and authorized document processing to its origin", async () => {
   const fixture = await documentAnalysisFixture();
+  const previousKey = process.env.QFAI_TEST_SELECTED_KEY;
   try {
     const definition = path.join(fixture.root, ".qfai", "graph-processing.json");
     const run = graphifyExtractionFixture(fixture);
@@ -335,7 +336,9 @@ it("holds selected and authorized document processing to its origin", async () =
       model: "selected-model",
       endpoint: "https://selected.example.invalid/v1",
       scope: ["rationale.md"],
+      credentialEnv: "QFAI_TEST_SELECTED_KEY",
     };
+    process.env.QFAI_TEST_SELECTED_KEY = "fixture-selected-key";
     await writeFile(definition, JSON.stringify(external));
     fixture.calls.length = 0;
     const approvals: string[] = [];
@@ -347,6 +350,8 @@ it("holds selected and authorized document processing to its origin", async () =
     expect(approvals).toEqual([external.endpoint]);
     expect(guarded()).toEqual([external.endpoint, "extract"]);
   } finally {
+    if (previousKey === undefined) delete process.env.QFAI_TEST_SELECTED_KEY;
+    else process.env.QFAI_TEST_SELECTED_KEY = previousKey;
     await fixture.dispose();
   }
 });

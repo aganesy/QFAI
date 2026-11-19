@@ -1,6 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, realpath, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { findConfigRoot, loadConfig, readStopGate, resolvePath } from "./config.js";
@@ -277,6 +277,15 @@ async function readState(file: string | null): Promise<BlockState | null> {
   }
 }
 
+/** The project root with links resolved, so two spellings of one worktree count as one. */
+async function canonicalRoot(root: string): Promise<string> {
+  try {
+    return await realpath(root);
+  } catch {
+    return root;
+  }
+}
+
 /**
  * What the turn-end hook prints for one Stop or SubagentStop event: an empty string to let the
  * turn end silently, or one JSON object that blocks the stop or lets it through with a message.
@@ -321,8 +330,16 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
     if (!result.timedOut && result.code === 0) continue;
     const shown = tail(result.output);
     const ending = endingOf(result, timeoutMs);
+    // The worktree and command are kept whole, digits and all: the same failure in another
+    // worktree, or from another command, is a new failure and not a repeat.
     const digest = createHash("sha256")
-      .update([check.label, ending, tail(result.ordered)].join("\n").replace(/\d+/g, "#"))
+      .update(
+        [
+          await canonicalRoot(found.root),
+          check.command,
+          [check.label, ending, tail(result.ordered)].join("\n").replace(/\d+/g, "#"),
+        ].join("\0"),
+      )
       .digest("hex");
     const continued = event.stop_hook_active === true;
     const last = await readState(file);
