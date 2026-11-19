@@ -953,7 +953,7 @@ function dedupeStubFindings(issues: Issue[]): Issue[] {
       // every other field and the second one was dropped.
       entry.loc?.column ?? "",
       (entry.refs ?? []).join(","),
-      // `QFAI-TEST-002` names a state, not an occurrence, and its three forms
+      // `QFAI-TEST-002` names a state, not an occurrence, and its forms
       // carry no line and no column. The ATDD selection hitting the file limit
       // and the repo-wide selection being empty are different states of
       // different scans; keyed on the fields above they collapsed, and the

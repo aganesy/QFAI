@@ -695,6 +695,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   replace each result file with a new one, so a second name for the file is
   left unchanged. Closes #4485.
 
+- **The stub scan names the test files it could not read.** A selected test
+  file that failed to open was skipped without a word, so a clean
+  `QFAI-TEST-001` / `QFAI-TEST-003` result could mean the file was never
+  checked. The scan now reports each such file, with its error code, in a
+  `QFAI-TEST-002` finding of its own, and still checks every file it could
+  read. The
+  suggested fix depends on the error: run `qfai validate` again for a file that
+  was moved or replaced, or when the system ran out of file handles; for any
+  other error, make the file readable or exclude it. Closes #4558.
+
 - **Screen alignment reads `.yml` UI contracts.** The check that names a
   contract screen with no HTML mock (`QFAI-CONSISTENCY-002`) read only `.yaml`
   files under the UI contract directory, so a screen declared in a `.yml`
