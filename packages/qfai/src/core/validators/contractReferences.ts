@@ -117,7 +117,9 @@ async function validateContractIndex(
     }
     const id = declared.get(file) ?? null;
     const problems = contractFileProblems(relative, kind, id, row, location.indexFile);
-    if (row) {
+    // A Markdown contract has no dependency declaration form, so its row has nothing to agree with,
+    // and a line in an example of one is not a declaration.
+    if (row && path.posix.extname(relative).toLowerCase() !== ".md") {
       const text = await readSafe(path.resolve(location.root, file));
       const dependencies = extractDeclaredDependencies(text, file);
       const problem = dependencyProblem(row.dependsOn, dependencies);

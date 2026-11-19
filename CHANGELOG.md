@@ -519,7 +519,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   but never read its Depends On cell, so the index could state an apply order
   the contracts did not. `QFAI-CONTRACT-034` now also reports a row whose
   Depends On names other contracts than the file's `-- Depends on:` or
-  `x-qfai-depends-on` declaration, or is empty. The `QFAI-CONTRACT-015`
+  `x-qfai-depends-on` declaration, or is empty; a Markdown contract, which
+  has no such declaration, is not compared. The `QFAI-CONTRACT-015`
   message no longer names a rule `qfai validate` no longer has.
 
 - **A qfai copy under a directory whose name begins with two dots counts as

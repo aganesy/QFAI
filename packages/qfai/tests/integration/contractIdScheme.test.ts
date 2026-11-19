@@ -430,8 +430,10 @@ describe("contract IDs and contract-scoped business rules", () => {
   // QFAI:AC-0001-0052-03
   // QFAI:EX-0001-0052-13
   it("compares each row's Depends On with the dependencies its contract declares", async () => {
+    // A Markdown contract has no declaration form: an example in it declares nothing.
+    const cli = `${CLI_CONTRACT}\n\`\`\`yaml\nx-qfai-depends-on: [DB-0001]\n\`\`\`\n`;
     const files = {
-      "cli/cli-0001-check.md": CLI_CONTRACT,
+      "cli/cli-0001-check.md": cli,
       "api/api-0002-orders.yaml": API_CONTRACT,
       "db/db-0004-orders.sql": DB_CONTRACT,
     };
@@ -447,18 +449,15 @@ describe("contract IDs and contract-scoped business rules", () => {
 
     const disagreeing = await contractTree(
       [
-        indexRow("CLI-0001", "cli/cli-0001-check.md", ""),
-        indexRow("API-0002", "api/api-0002-orders.yaml"),
+        indexRow("CLI-0001", "cli/cli-0001-check.md"),
+        indexRow("API-0002", "api/api-0002-orders.yaml", ""),
         indexRow("DB-0004", "db/db-0004-orders.sql", "DB-0001"),
       ],
       files,
     );
     expect(await indexFindings(disagreeing)).toEqual([
       expect.stringMatching(
-        /^QFAI-CONTRACT-034 Contract file .*api-0002-orders\.yaml is listed as depending on - but declares DB-0004$/,
-      ),
-      expect.stringMatching(
-        /^QFAI-CONTRACT-034 Contract file .*cli-0001-check\.md is listed as depending on \(empty\) but declares -$/,
+        /^QFAI-CONTRACT-034 Contract file .*api-0002-orders\.yaml is listed as depending on \(empty\) but declares DB-0004$/,
       ),
       expect.stringMatching(
         /^QFAI-CONTRACT-034 Contract file .*db-0004-orders\.sql is listed as depending on DB-0001 but declares -$/,

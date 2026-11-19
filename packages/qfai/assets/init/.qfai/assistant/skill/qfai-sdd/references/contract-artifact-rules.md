@@ -156,7 +156,8 @@ A deliberation record is **non-normative** history — not upstream SSOT (`.qfai
   declares no ID of that kind, is not named after its ID, or has no row that
   agrees with its ID and path. It also reports a row whose `Depends On` names
   other contracts than the file's dependency declaration, or is empty, a row
-  that names no contract file, and a number two contracts declare.
+  that names no contract file, and a number two contracts declare. A Markdown
+  contract has no dependency declaration, so its `Depends On` is not compared.
 - **Target schema is the applier's, not the contract's.** A `db/` contract
   declares unqualified object names and is applied into whatever schema the
   runner selects (`SET search_path`, `USE`, the connection's default). Do not
