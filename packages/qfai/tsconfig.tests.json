@@ -456,6 +456,7 @@
     "tests/unit/core/testGlobExtensions.test.ts",
     "tests/unit/issueCatalogHasEmitters.test.ts",
     "tests/unit/shared/boundedRead.test.ts",
+    "tests/unit/shared/initAssetsDir.test.ts",
     "tests/unit/shared/text.test.ts",
     "tests/unit/removeOwnedDirs.test.ts",
     "tests/unit/pathExists.test.ts",
