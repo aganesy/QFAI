@@ -1006,13 +1006,16 @@ describe("the ratchet in --scope changed", () => {
     // Under the default `core.quotePath`, Git prints such a path quoted with its
     // bytes octal-escaped. That string names no document, so the edit would
     // drop out of the scope and the branch would pass with a broken document.
+    // The directory name is the Japanese word for "specification", built from
+    // code points so the source stays ASCII.
+    const specsDir = String.fromCodePoint(0x4ed5, 0x69d8);
     const root = await newTempDir();
     await writeFile(
       path.join(root, "qfai.config.yaml"),
-      "paths:\n  specsDir: docs/仕様\n  contractsDir: .qfai/contracts\n",
+      `paths:\n  specsDir: docs/${specsDir}\n  contractsDir: .qfai/contracts\n`,
       "utf-8",
     );
-    const dir = path.join(root, "docs", "仕様", "02_business-flow", "business-flow-0001");
+    const dir = path.join(root, "docs", specsDir, "02_business-flow", "business-flow-0001");
     git(root, "init", "-q", "-b", "main", ".");
     git(root, "config", "core.autocrlf", "false");
     git(root, "config", "core.quotePath", "true");
