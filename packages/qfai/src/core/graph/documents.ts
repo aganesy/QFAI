@@ -367,12 +367,13 @@ async function inspectDocumentScopeAt(
     !sameProcessing(managed.processing, processing)
   )
     return notCurrent();
+  // This walk refuses every shared file and link the corpus walks below would, so they skip theirs.
   if (!(await safeDocumentCopy(root, analysis, run))) return notCurrent();
   const scope =
     object(processing) && validDocumentScope(processing.scope) ? processing.scope : undefined;
-  if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope)))
+  if (refresh === "staged" && (await graphCorpusChanged(root, analysis, scope, "checked")))
     return refreshStagedDocumentScope(root, analysis, run, scope);
-  if (refresh === "in-place") await mirrorGraphCorpus(root, analysis, scope);
+  if (refresh === "in-place") await mirrorGraphCorpus(root, analysis, scope, "checked");
   return nativeGraphifyScope(root, analysis, graphRuntimePaths(root).python, run);
 }
 
@@ -386,7 +387,7 @@ async function refreshStagedDocumentScope(
   await assertGraphStoragePath(root, staged);
   try {
     await cp(analysis, staged, { recursive: true, dereference: false });
-    await assertIndependentAnalysis(staged);
+    // The mirror checks the copy's independence before it writes anything.
     await mirrorGraphCorpus(root, staged, scope);
     const status = await nativeGraphifyScope(root, staged, graphRuntimePaths(root).python, run);
     if (status.current) await replaceGraphDirectory(staged, analysis, root);

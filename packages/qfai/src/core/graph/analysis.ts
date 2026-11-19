@@ -205,12 +205,20 @@ export function excludedGraphInput(relative: string, deliberationDir: string): b
   );
 }
 
+/**
+ * `checked` says the caller has just walked `destination` with a check that refuses every shared
+ * file and link `assertIndependentAnalysis` refuses, such as `safeDocumentCopy`, so the walk is
+ * not repeated. Any other caller leaves it `unchecked`.
+ */
+export type DestinationIndependence = "unchecked" | "checked";
+
 export async function mirrorGraphCorpus(
   root: string,
   destination: string,
   scope?: readonly string[],
+  independence: DestinationIndependence = "unchecked",
 ): Promise<void> {
-  await walkGraphCorpus(root, destination, scope, "write");
+  await walkGraphCorpus(root, destination, scope, "write", independence);
 }
 
 /** Whether mirroring the corpus into `destination` would change any file there. Writes nothing. */
@@ -218,8 +226,9 @@ export async function graphCorpusChanged(
   root: string,
   destination: string,
   scope?: readonly string[],
+  independence: DestinationIndependence = "unchecked",
 ): Promise<boolean> {
-  return walkGraphCorpus(root, destination, scope, "compare");
+  return walkGraphCorpus(root, destination, scope, "compare", independence);
 }
 
 /**
@@ -231,9 +240,10 @@ async function walkGraphCorpus(
   destination: string,
   scope: readonly string[] | undefined,
   mode: "write" | "compare",
+  independence: DestinationIndependence,
 ): Promise<boolean> {
   await assertGraphStoragePath(root, destination);
-  await assertIndependentAnalysis(destination);
+  if (independence === "unchecked") await assertIndependentAnalysis(destination);
   const files = new Set<string>();
   const deliberationDir = await graphDeliberationDir(root);
   let changed = false;
