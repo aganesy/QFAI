@@ -50,7 +50,8 @@ export async function loadJsdom(): Promise<JsdomModule> {
   return jsdomModule;
 }
 
-const EVENT_HANDLER_RE = /\s(on[a-z]+)\s*=/gi;
+/** An attribute name a browser may run as an inline event handler, `onclick` and the like. */
+const EVENT_HANDLER_ATTRIBUTE_RE = /^on[a-z]+$/i;
 
 /** Anchored, with no nested quantifier, so it runs in time linear in the value it reads. */
 const PIXEL_LENGTH_RE = /^(\d+(?:\.\d+)?)px$/;
@@ -96,17 +97,16 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
   const allElements = doc.querySelectorAll("*");
 
   const srcdocBudget: SrcdocBudget = { remaining: MAX_SRCDOC_DOCUMENTS, unread: new Set() };
-  for (const rawUrl of collectResourceReferences(dom, JSDOM, 0, srcdocBudget)) {
+  for (const rawUrl of collectResourceReferences(
+    dom,
+    JSDOM,
+    0,
+    srcdocBudget,
+    result.eventHandlers,
+  )) {
     classifyReference(rawUrl, result);
   }
   result.parseErrors.push(...srcdocBudget.unread);
-
-  // Inline event handlers
-  for (const match of html.matchAll(EVENT_HANDLER_RE)) {
-    if (match[1]) {
-      result.eventHandlers.push(match[1].toLowerCase());
-    }
-  }
 
   // Script tags
   result.scriptTags = doc.querySelectorAll("script").length;
@@ -276,12 +276,17 @@ function* elementsOf(root: ParentNode, window: JsdomInstance["window"]): Generat
  * `style` attribute, `<style>` element and SVG presentation attribute, and the
  * document each `<iframe srcdoc>` holds. `data-*` and other attributes that name
  * no resource are not read.
+ *
+ * The same walk files the name of each inline event handler attribute into
+ * `eventHandlers`, so a handler is read from the elements a browser would build,
+ * and text or a comment that only spells one out is not.
  */
 function collectResourceReferences(
   dom: JsdomInstance,
   JSDOM: JsdomModule["JSDOM"],
   depth: number,
   srcdocBudget: SrcdocBudget,
+  eventHandlers: string[],
 ): string[] {
   const refs: string[] = [];
   // One push per value: spreading a list of unbounded length into `push` can exceed the stack.
@@ -291,6 +296,9 @@ function collectResourceReferences(
   for (const el of elementsOf(dom.window.document, dom.window)) {
     const tag = el.tagName.toLowerCase();
 
+    for (const name of el.getAttributeNames()) {
+      if (EVENT_HANDLER_ATTRIBUTE_RE.test(name)) eventHandlers.push(name.toLowerCase());
+    }
     for (const attr of URL_ATTRIBUTES) {
       const value = el.getAttribute(attr);
       if (value !== null) refs.push(value);
@@ -333,7 +341,7 @@ function collectResourceReferences(
     srcdocBudget.remaining -= 1;
     const inner = new JSDOM(srcdoc);
     try {
-      add(collectResourceReferences(inner, JSDOM, depth + 1, srcdocBudget));
+      add(collectResourceReferences(inner, JSDOM, depth + 1, srcdocBudget, eventHandlers));
     } finally {
       inner.window.close();
     }

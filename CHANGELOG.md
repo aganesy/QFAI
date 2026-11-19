@@ -482,6 +482,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
 
+- **The Mermaid screen-flow checks now read a diagram behind front matter.**
+  When a Mermaid block opened with a `---` front-matter block, `qfai validate`
+  took the opening `---` as the diagram's declaration and skipped the
+  `stateDiagram`, `stateDiagram-v2` and `flowchart` checks
+  (`QFAI-FLOW-001`, `QFAI-FLOW-002`, `QFAI-FLOW-004`) for that block. They now
+  find the declaration after the front matter, the same line the diagram
+  budget check counts from, and report its file line; a `-->` in the front
+  matter is not read as a transition.
+
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its
@@ -606,6 +615,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   When it cannot put both files back, its message says so and names the file it
   kept. Closes #4463.
 
+- **QFAI reads its templates only from its own installed package.** When the
+  installed package was missing its templates, the search went on to
+  directories above it, so `qfai init` and the checks that read the templates
+  could use an `assets/init` directory in the project or in another
+  dependency. QFAI now looks only in the package it was installed as, and an
+  installation without its templates stops with a message that names the
+  missing files and says to reinstall QFAI. Closes #4554.
+
 - **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
   difference exits 0 under `--fail-on never`, but the parser refused the flag
   on `db-drift` and the command exited 2. `db-drift` now takes
@@ -630,6 +647,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checks the run log, stop without writing and name the linked path, and
   replace each result file with a new one, so a second name for the file is
   left unchanged. Closes #4485.
+
+- **Screen alignment reads `.yml` UI contracts.** The check that names a
+  contract screen with no HTML mock (`QFAI-CONSISTENCY-002`) read only `.yaml`
+  files under the UI contract directory, so a screen declared in a `.yml`
+  contract was never compared with the mocks. It now reads the same contract
+  files as the other screen checks. Closes #4557.
 
 - **`qfai catalog components` writes only inside the project.** A
   `.qfai/catalog` directory, or a directory above it, that was a symbolic link
@@ -697,6 +720,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as `AC`, and a lower-case `dec` or `oq` gets the same reason as `DEC` or
   `OQ`. Closes #4445.
 
+- **A delayed older run can no longer move a latest run pointer back.**
+  `qfai validate` and `qfai sdd preflight` checked whether a newer run existed
+  and then wrote `validate.log` or `preflight_summary.md` as two separate
+  steps, so an older run that passed the check could write after a newer run
+  had. Both now check and write under one exclusive guard, a
+  `<pointer>.lock` file beside the pointer that a run waits on while another
+  run holds it, for up to 30 seconds. A guard left by a crashed run is
+  removed once its process is gone, or after 10 seconds when it names no
+  process; anything else stops the run with a message naming the file to
+  remove. Closes #4535.
+
 - **`qfai doctor` starts its output collision scan at the real Git root.** An
   empty `.git` directory in a parent directory counted as a repository, so a
   standalone project's scan reached unrelated directories beside it and could
@@ -751,6 +785,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   filesystem without hard links it is written directly, as before. A hidden
   file the command cannot remove is named in its output. Closes #4538.
 
+- **`qfai report` checks the flows a validation result records.** A flow
+  report trusted a result named `validate.flow-<ids>.json`, so a result of
+  another scope copied or renamed to that name was rendered as the requested
+  flows'. `qfai validate --flow` now records the flows it checked in the
+  result's `flowIds` field, and `qfai report` exits 2, names the validate run
+  to repeat and writes no report when the recorded flows are not the requested
+  ones, including a result with no recorded flows under `--flow` and a result
+  with recorded flows read without `--flow`. Closes #4547.
+
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
   `-- Depends on:` line skipped `$$ … $$` literals but not `$tag$ … $tag$`
@@ -769,6 +812,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   string or template literal as it was. The check that runs before a test file
   is written now refuses a rewrite that changes a token in a literal. Closes
   #4513.
+
+- **`qfai validate` no longer reports an inline event handler that a mock
+  only mentions.** `QFAI-MOCK-012` searched the raw HTML for text such as
+  ` onclick=`, so a sentence, a comment or an escaped code sample that spelled
+  out a handler failed the mock. It now reads the attributes of the parsed
+  elements, including those inside a `<template>` and an `<iframe srcdoc>`,
+  so only a handler a browser would attach is reported. Closes #4550.
 
 - **`qfai catalog design` no longer replaces a file it cannot inspect.** The
   command treated any failure to read a destination's metadata as a missing

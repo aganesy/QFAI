@@ -303,6 +303,62 @@ describe("uiux validators", () => {
     });
   });
 
+  it("reads the Mermaid declaration behind a front-matter block", async () => {
+    const root = await newTempDir();
+    const specsDir = path.join(root, ".qfai", "specs");
+    await mkdir(specsDir, { recursive: true });
+    await writeFile(
+      path.join(specsDir, "flow.md"),
+      [
+        "# Flow", // line 1
+        "", // line 2
+        "```mermaid", // line 3
+        "---", // line 4
+        "title: Legacy", // line 5
+        "---", // line 6
+        "stateDiagram", // line 7
+        "```", // line 8
+        "", // line 9
+        "```mermaid", // line 10
+        "---", // line 11
+        "title: Sign in --> Home", // line 12
+        "---", // line 13
+        "stateDiagram-v2", // line 14
+        "  Home --> Detail", // line 15
+        "```", // line 16
+        "", // line 17
+        "```mermaid", // line 18
+        "---", // line 19
+        "config:", // line 20
+        "  theme: neutral", // line 21
+        "---", // line 22
+        "flowchart", // line 23
+        "  A --> B", // line 24
+        "```", // line 25
+        "", // line 26
+        "```mermaid", // line 27
+        "---", // line 28
+        "title: |", // line 29
+        "  ---", // line 30
+        "  stateDiagram", // line 31
+        "---", // line 32
+        "stateDiagram-v2", // line 33
+        "  Home --> Detail: open", // line 34
+        "```", // line 35
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateMermaidScreenFlow(root, defaultConfig);
+
+    expect(issues.map((finding) => [finding.code, finding.loc?.line])).toEqual([
+      ["QFAI-FLOW-001", 7],
+      ["QFAI-FLOW-002", 15],
+      ["QFAI-FLOW-004", 23],
+    ]);
+  });
+
   it("returns empty issues for ui definition consistency validator when inputs are absent", async () => {
     const root = await newTempDir();
     const issues = await validateUiDefinitionConsistency(root, defaultConfig);
@@ -509,6 +565,36 @@ describe("uiux validators", () => {
       ["QFAI-CONSISTENCY-002", ["Detail"]],
     ]);
     expect(absolute).toEqual(relative);
+  });
+
+  it("aligns screens a UI contract with the .yml extension declares", async () => {
+    const root = await newTempDir();
+    const specsDir = path.join(root, ".qfai", "specs");
+    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    await mkdir(specsDir, { recursive: true });
+    await mkdir(uiDir, { recursive: true });
+
+    await writeFile(
+      path.join(uiDir, "screens.yaml"),
+      ["screens:", "  - id: List", ""].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(uiDir, "more-screens.yml"),
+      ["screens:", "  - id: Detail", ""].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specsDir, "mock.md"),
+      ["<!-- Screen Mock: List -->", "<div></div>", ""].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateUiDefinitionConsistency(root, defaultConfig);
+
+    expect(issues.map((item) => [item.code, item.refs])).toEqual([
+      ["QFAI-CONSISTENCY-002", ["Detail"]],
+    ]);
   });
 
   it("validates inline HTML mock blocks in visual mock sections", async () => {
