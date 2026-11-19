@@ -568,6 +568,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
 
+- **The document lane reads `qfai.config.yaml` the way `qfai validate` does.**
+  The shipped `check-mdschema.mjs` read `paths.specsDir` and
+  `paths.contractsDir` with its own line scanner. A value with a trailing
+  comment, or a flow mapping, sent it to the default `.qfai/spec` tree while
+  `qfai validate` checked the configured one, and a file it could not read
+  was silently treated as absent. It now parses the file with the YAML parser
+  `qfai validate` uses and the same rules for both keys. A file that cannot be
+  read or parsed, a `paths` that is not a mapping, or a key that is not a
+  non-blank string stops the lane with exit 2 naming the problem;
+  `checkDocuments` returns that the check did not run. Closes #4490.
+
 - **`qfai doctor --autoremediate` exits 1 when an install fails.** A failed
   `npm install` for a skill's runtime dependency was printed, but doctor still
   exited 0 when the diagnosis passed, so a script read an incomplete
