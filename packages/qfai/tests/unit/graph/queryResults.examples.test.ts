@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { exploreGraph } from "../../../src/core/graph/query.js";
 import { documentAnalysisFixture } from "../../helpers/graphAnalysis.js";
-import { rm } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { GraphProcess } from "../../../src/core/graph/process.js";
 import { graphCliResult } from "../../helpers/graphCli.js";
@@ -232,6 +232,41 @@ it("returns a preparation action for a missing index without raw search", async 
         call.args.some((arg) => ["rg", "grep", "context"].includes(arg)),
       ),
     ).toBe(false);
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+// QFAI:EX-0001-0234-15
+// Mutation: packages/qfai/src/core/graph/analysis.ts `await replaceOtherEntryType(target, false);` -> `` fails "refreshes the code corpus when a path changes between directory and file"
+it("refreshes the code corpus when a path changes between directory and file", async () => {
+  const fixture = await documentAnalysisFixture();
+  try {
+    const source = path.join(fixture.root, "src");
+    const staged = path.join(fixture.analysis, "src");
+    const query = () =>
+      exploreGraph(fixture.root, { domain: "code", question: "checkout" }, fixture.run);
+    await mkdir(source);
+    await writeFile(path.join(source, "checkout.ts"), "export const nested = 1;\n");
+    expect((await query()).status).toBe("answered");
+    expect(await readFile(path.join(staged, "checkout.ts"), "utf8")).toBe(
+      "export const nested = 1;\n",
+    );
+
+    await rm(source, { recursive: true });
+    await writeFile(source, "A regular file now holds the former directory path.\n");
+    expect((await query()).status).toBe("answered");
+    expect(await readFile(staged, "utf8")).toBe(
+      "A regular file now holds the former directory path.\n",
+    );
+
+    await rm(source);
+    await mkdir(source);
+    await writeFile(path.join(source, "checkout.ts"), "export const restored = 2;\n");
+    expect((await query()).status).toBe("answered");
+    expect(await readFile(path.join(staged, "checkout.ts"), "utf8")).toBe(
+      "export const restored = 2;\n",
+    );
   } finally {
     await fixture.dispose();
   }

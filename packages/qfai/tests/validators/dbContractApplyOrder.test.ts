@@ -21,6 +21,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   blankSqlNoise,
   readTableEdges,
+  tableName,
   validateDbContractApplyOrder,
 } from "../../src/core/validators/dbContractApplyOrder.js";
 
@@ -59,19 +60,56 @@ describe("reading a contract's own DDL", () => {
       ].join("\n"),
     );
 
-    expect([...creates].sort()).toEqual(["order_lines", "orders"]);
-    expect([...references].sort()).toEqual(["orders", "products"]);
+    expect([...creates.keys()].sort()).toEqual(["order_lines", "orders"]);
+    expect([...references.keys()].sort()).toEqual(["orders", "products"]);
   });
 
-  it("reads a name through its quoting and its schema", () => {
-    // One database, so `public.orders` and `"Orders"` are the same table. Kept
-    // apart, the map splits and the pair that matters reports nothing.
+  it("keeps a name's schema and the case of its quoted parts", () => {
+    // PostgreSQL folds only unquoted identifiers, so `"Orders"` and `orders` are
+    // two tables, while `"orders"` and `ORDERS` are one. The schema is part of
+    // the name: `audit.orders` is not `sales.orders`.
     const { creates, references } = readTableEdges(
-      'CREATE TABLE public."Orders" (id TEXT);\nCREATE TABLE l (o TEXT REFERENCES "orders");',
+      [
+        'CREATE TABLE public."Orders" (id TEXT);',
+        "CREATE TABLE Audit . Orders (id TEXT);",
+        'CREATE TABLE l (a TEXT REFERENCES "orders", b TEXT REFERENCES "Sales"."Orders",',
+        '  c TEXT REFERENCES "odd""name", d TEXT REFERENCES db.sales.items);',
+      ].join("\n"),
     );
 
-    expect(creates.has("orders")).toBe(true);
-    expect(references.has("orders")).toBe(true);
+    expect([...creates.keys()].sort()).toEqual(["audit.orders", 'public."Orders"', "l"].sort());
+    expect([...references.keys()].sort()).toEqual(
+      ['"Sales"."Orders"', '"odd""name"', "orders", "sales.items"].sort(),
+    );
+    expect(tableName('public."Orders"')).toEqual({
+      schema: "public",
+      name: "Orders",
+      key: 'public."Orders"',
+    });
+    expect(tableName("ORDERS")).toEqual(tableName('"orders"'));
+  });
+
+  it("reads a quoted name that holds spaces, dots or a dollar sign", () => {
+    const { creates, references } = readTableEdges(
+      'CREATE TABLE "order lines" (o TEXT REFERENCES "a.b" (id), p TEXT REFERENCES "$x$" (id));',
+    );
+
+    expect([...creates.keys()]).toEqual(['"order lines"']);
+    expect([...references.keys()].sort()).toEqual(['"$x$"', '"a.b"']);
+  });
+
+  it("does not read a dollar quote or a REFERENCES inside a quoted identifier", () => {
+    // A `$a$` inside `"$a$"` is part of a name. Read as an opener, it blanks
+    // everything up to the next `$a$`, including the real foreign key.
+    const sql = [
+      'CREATE TABLE "$a$" (parent_id int REFERENCES orders(id));',
+      "COMMENT ON TABLE \"$a$\" IS 'x';",
+      'CREATE TABLE "REFERENCES sessions" (id int);',
+    ].join("\n");
+    const { references } = readTableEdges(sql);
+
+    expect([...references.keys()]).toEqual(["orders"]);
+    expect(blankSqlNoise(sql)).toBe(sql.replace("'x'", "   "));
   });
 
   it("reads CREATE TABLE through the modifiers a statement may carry", () => {
@@ -119,7 +157,7 @@ describe("reading a contract's own DDL", () => {
     ].join("\n");
     const { references } = readTableEdges(sql);
 
-    expect(references).toEqual(new Set(["orders"]));
+    expect([...references.keys()]).toEqual(["orders"]);
   });
 
   it("does not read a REFERENCES inside a literal tagged with non-ASCII letters", () => {
@@ -219,6 +257,104 @@ describe("validateDbContractApplyOrder", () => {
     );
 
     expect(await validateDbContractApplyOrder(root, [one, two, child])).toEqual([]);
+  });
+
+  it("tells apart tables that differ only in schema or in a quoted name's case", async () => {
+    // Folded to one key, each pair below became a table two contracts create,
+    // and the undeclared dependency went unreported.
+    const root = await newRoot();
+    const audit = await contract(root, "DB-0080", "CREATE TABLE audit.events (id TEXT);\n");
+    const sales = await contract(root, "DB-0081", "CREATE TABLE sales.events (id TEXT);\n");
+    const quoted = await contract(root, "DB-0082", 'CREATE TABLE "Orders" (id TEXT);\n');
+    const plain = await contract(root, "DB-0083", "CREATE TABLE orders (id TEXT);\n");
+    const child = await contract(
+      root,
+      "DB-0084",
+      [
+        "-- Depends on: -",
+        "CREATE TABLE t (",
+        "  e TEXT REFERENCES audit.events (id),",
+        '  o TEXT REFERENCES "Orders" (id)',
+        ");",
+      ].join("\n"),
+    );
+
+    const issues = await validateDbContractApplyOrder(root, [audit, sales, quoted, plain, child]);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain('DB-0080 (audit.events), DB-0082 ("Orders")');
+    expect(issues[0]?.refs).toEqual(["DB-0084", "DB-0080", "DB-0082"]);
+  });
+
+  it("matches a name with no schema to the one created table it can denote", async () => {
+    // `orders` resolves through the search path, so it can be `public.orders`.
+    // With one candidate there is one contract to name.
+    const root = await newRoot();
+    const parent = await contract(root, "DB-0090", "CREATE TABLE public.orders (id TEXT);\n");
+    const child = await contract(
+      root,
+      "DB-0091",
+      "-- Depends on: -\nCREATE TABLE t (o TEXT REFERENCES orders (id));\n",
+    );
+
+    const issues = await validateDbContractApplyOrder(root, [parent, child]);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("DB-0090 (orders)");
+  });
+
+  it("names no contract for a name with no schema that two contracts' tables share", async () => {
+    // `orders` could be `audit.orders` or `sales.orders`; which one depends on
+    // a search path the contracts do not state, so naming either may be wrong.
+    const root = await newRoot();
+    const audit = await contract(root, "DB-0092", "CREATE TABLE audit.orders (id TEXT);\n");
+    const sales = await contract(root, "DB-0093", "CREATE TABLE sales.orders (id TEXT);\n");
+    const child = await contract(
+      root,
+      "DB-0094",
+      "-- Depends on: -\nCREATE TABLE t (o TEXT REFERENCES orders (id));\n",
+    );
+
+    expect(await validateDbContractApplyOrder(root, [audit, sales, child])).toEqual([]);
+  });
+
+  it("does not match a schema-qualified name to a table in another schema", async () => {
+    const root = await newRoot();
+    const parent = await contract(root, "DB-0095", "CREATE TABLE audit.orders (id TEXT);\n");
+    const child = await contract(
+      root,
+      "DB-0096",
+      "-- Depends on: -\nCREATE TABLE t (o TEXT REFERENCES sales.orders (id));\n",
+    );
+
+    expect(await validateDbContractApplyOrder(root, [parent, child])).toEqual([]);
+  });
+
+  it("names no contract when the referencing file may create the table itself", async () => {
+    // `public.orders` and `orders` may be one table. The referencing file
+    // creates one spelling and another contract the other, so the parent is
+    // either itself or that contract, and naming that contract may be wrong.
+    for (const [own, reference, other] of [
+      ["public.orders", "orders", "orders"],
+      ["orders", "public.orders", "public.orders"],
+    ]) {
+      const root = await newRoot();
+      const parent = await contract(root, "DB-0097", `CREATE TABLE ${other} (id TEXT);\n`);
+      const child = await contract(
+        root,
+        "DB-0098",
+        `-- Depends on: -\nCREATE TABLE ${own} (id TEXT);\n` +
+          `CREATE TABLE t (o TEXT REFERENCES ${reference} (id));\n`,
+      );
+
+      expect(await validateDbContractApplyOrder(root, [parent, child])).toEqual([]);
+    }
+  });
+
+  it("folds a backtick-quoted or bracketed name like an unquoted one", () => {
+    // Neither is PostgreSQL quoting, so neither keeps case.
+    expect(tableName("[Orders]").key).toBe("orders");
+    expect(tableName("`Sales`.`Orders`").key).toBe("sales.orders");
   });
 
   it("names every undeclared parent in one finding, with the tables behind it", async () => {

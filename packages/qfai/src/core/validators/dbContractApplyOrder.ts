@@ -30,37 +30,88 @@ import { issue, readSafe } from "./utils.js";
 /** Waivable as `QFAI-CONTRACT-036`; `CONTRACT-036` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const DB_CONTRACT_APPLY_ORDER_RULE_ID = "QFAI-CONTRACT-036";
 
-/**
- * `CREATE TABLE [IF NOT EXISTS] <name>` and `REFERENCES <name>`.
- *
- * The name may be quoted, schema-qualified, or both; {@link tableKey} reduces
- * the spellings to one. `REFERENCES` is matched without requiring the column
- * list, because a single-column key may omit it and inherit the primary key.
- */
-const CREATE_TABLE = /\bCREATE\s+(?:\w+\s+)*?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([\w."`[\]]+)/gi;
-const REFERENCES = /\bREFERENCES\s+([\w."`[\]]+)/gi;
+/** A double-quoted identifier, with `""` standing for one `"` inside it. */
+const QUOTED_IDENTIFIER = String.raw`"(?:[^"]|"")*"`;
 
 /**
- * A table name reduced to what two spellings of it have in common.
- *
- * The schema qualifier is dropped rather than compared: a contract set applies
- * into one database, and `public.orders` and `orders` are the same table there.
- * Keeping it would split the map and report nothing for the pair that matters.
+ * One part of a table name: a double-quoted, backtick-quoted or bracketed
+ * identifier, or a plain one. A plain identifier may hold `$` after its first
+ * character, as PostgreSQL allows, and any non-ASCII letter.
  */
-function tableKey(raw: string): string {
-  const bare = raw.replace(/["`[\]]/g, "");
-  const last = bare.split(".").at(-1) ?? bare;
-  return last.toLowerCase();
+const NAME_PART =
+  String.raw`"(?:[^"]|"")+"|` +
+  "`[^`]+`" +
+  String.raw`|\[[^\]]+\]|[A-Za-z_\u0080-\uFFFF][\w$\u0080-\uFFFF]*`;
+const TABLE_NAME = String.raw`(?:${NAME_PART})(?:\s*\.\s*(?:${NAME_PART}))*`;
+const NAME_PARTS = new RegExp(NAME_PART, "g");
+
+/**
+ * A double-quoted identifier, `CREATE TABLE [IF NOT EXISTS] <name>`, or
+ * `REFERENCES <name>`, whichever starts first.
+ *
+ * The quoted identifier is an alternative of its own so that a scan steps over
+ * it whole: a `REFERENCES` spelled inside one is part of a name, not a clause.
+ * `REFERENCES` is matched without requiring the column list, because a
+ * single-column key may omit it and inherit the primary key.
+ */
+const TABLE_EDGE = new RegExp(
+  QUOTED_IDENTIFIER +
+    String.raw`|\bCREATE\s+(?:\w+\s+)*?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?<created>${TABLE_NAME})` +
+    String.raw`|\bREFERENCES\s+(?<referenced>${TABLE_NAME})`,
+  "gi",
+);
+
+/**
+ * A table name as PostgreSQL resolves it.
+ *
+ * `schema` is the qualifier, or undefined when the name has none. A catalog
+ * qualifier before it is dropped, because a contract set applies into one
+ * database. `key` spells the whole name in one canonical form, so two
+ * spellings of one table share it and two different tables never do.
+ */
+export type TableName = { schema: string | undefined; name: string; key: string };
+
+/**
+ * One identifier part as PostgreSQL stores it.
+ *
+ * A double-quoted part is kept exactly, so `"Orders"` and `orders` stay two
+ * tables. An unquoted part is folded to lower case in ASCII only, as PostgreSQL
+ * does under UTF-8. A backtick-quoted or bracketed part is not PostgreSQL
+ * quoting; it folds like an unquoted one, so `[Orders]` is still `orders`.
+ */
+function identifierPart(raw: string): string {
+  if (raw.startsWith('"')) {
+    return raw.slice(1, -1).replace(/""/g, '"');
+  }
+  const bare = raw.startsWith("`") || raw.startsWith("[") ? raw.slice(1, -1) : raw;
+  return bare.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+}
+
+/** A part spelled so that reading it back gives the same part. */
+function canonicalPart(part: string): string {
+  return /^[a-z_][a-z0-9_$]*$/.test(part) ? part : `"${part.replace(/"/g, '""')}"`;
+}
+
+/** The table `raw` names, its qualifier kept and each part folded as PostgreSQL folds it. */
+export function tableName(raw: string): TableName {
+  const parts = [...raw.matchAll(NAME_PARTS)].map((match) => identifierPart(match[0]));
+  const name = parts.at(-1) ?? "";
+  const schema = parts.length > 1 ? parts.at(-2) : undefined;
+  const key = (schema === undefined ? [name] : [schema, name]).map(canonicalPart).join(".");
+  return { schema, name, key };
 }
 
 /**
- * A line comment, a block comment, a quoted string, or a dollar-quoted literal.
+ * A line comment, a block comment, a quoted string, a double-quoted
+ * identifier, or a dollar-quoted literal.
  *
  * A dollar-quoted literal opens with `$$` or `$tag$` and closes at the same
- * marker, so the marker is captured and matched again by backreference.
+ * marker, so the marker is captured and matched again by backreference. A
+ * quoted identifier is matched so that a `$tag$`, `'` or `--` inside it opens
+ * nothing; it is kept, not blanked, because it may be the table a key names.
  */
 const SQL_NOISE = new RegExp(
-  String.raw`--[^\n]*|\/\*[\s\S]*?\*\/|'(?:[^']|'')*'|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`,
+  String.raw`--[^\n]*|\/\*[\s\S]*?\*\/|'(?:[^']|'')*'|${QUOTED_IDENTIFIER}|(${DOLLAR_QUOTE_MARKER.source})[\s\S]*?\1`,
   "g",
 );
 
@@ -70,22 +121,31 @@ const SQL_NOISE = new RegExp(
  * A `REFERENCES` inside a comment is prose, and one inside a quoted string is
  * data. Removing the text would move the rest; replacing each character with a
  * space leaves the file the same length, so a later match still lands where the
- * reader sees it.
+ * reader sees it. Double-quoted identifiers are left as they are.
  */
 export function blankSqlNoise(sql: string): string {
-  return sql.replace(SQL_NOISE, (matched) => matched.replace(/[^\n]/g, " "));
+  return sql.replace(SQL_NOISE, (matched) =>
+    matched.startsWith('"') ? matched : matched.replace(/[^\n]/g, " "),
+  );
 }
 
-/** Every table `sql` creates, and every table it points a foreign key at. */
-export function readTableEdges(sql: string): { creates: Set<string>; references: Set<string> } {
-  const scannable = blankSqlNoise(sql);
-  const creates = new Set<string>();
-  const references = new Set<string>();
-  for (const match of scannable.matchAll(CREATE_TABLE)) {
-    creates.add(tableKey(match[1] ?? ""));
-  }
-  for (const match of scannable.matchAll(REFERENCES)) {
-    references.add(tableKey(match[1] ?? ""));
+/** Every table `sql` creates, and every table it points a foreign key at, by {@link TableName.key}. */
+export function readTableEdges(sql: string): {
+  creates: Map<string, TableName>;
+  references: Map<string, TableName>;
+} {
+  const creates = new Map<string, TableName>();
+  const references = new Map<string, TableName>();
+  for (const match of blankSqlNoise(sql).matchAll(TABLE_EDGE)) {
+    const { created, referenced } = match.groups ?? {};
+    if (created !== undefined) {
+      const table = tableName(created);
+      creates.set(table.key, table);
+    }
+    if (referenced !== undefined) {
+      const table = tableName(referenced);
+      references.set(table.key, table);
+    }
   }
   return { creates, references };
 }
@@ -94,8 +154,8 @@ type ContractFile = {
   rel: string;
   contractId: string;
   declared: Set<string>;
-  creates: Set<string>;
-  references: Set<string>;
+  creates: Map<string, TableName>;
+  references: Map<string, TableName>;
 };
 
 async function readContractFiles(
@@ -127,30 +187,58 @@ async function readContractFiles(
   return read;
 }
 
-/**
- * The contract that creates each table.
- *
- * A table two contracts both create is left out rather than attributed to one
- * of them. Which is the apply-order parent is not derivable, and naming the
- * wrong one sends the author to edit a line that is already right.
- */
-function ownersOfTables(files: readonly ContractFile[]): Map<string, string> {
-  const claims = new Map<string, Set<string>>();
+/** Every created table, with the contracts that create it. */
+type TableClaims = {
+  /** Contract IDs by {@link TableName.key}. */
+  byKey: Map<string, Set<string>>;
+  /** Created tables by their unqualified {@link TableName.name}. */
+  byName: Map<string, TableName[]>;
+};
+
+function claimTables(files: readonly ContractFile[]): TableClaims {
+  const byKey = new Map<string, Set<string>>();
+  const byName = new Map<string, TableName[]>();
   for (const file of files) {
-    for (const table of file.creates) {
-      const owners = claims.get(table) ?? new Set<string>();
-      owners.add(file.contractId);
-      claims.set(table, owners);
+    for (const table of file.creates.values()) {
+      const claimants = byKey.get(table.key);
+      if (claimants === undefined) {
+        byKey.set(table.key, new Set([file.contractId]));
+        byName.set(table.name, [...(byName.get(table.name) ?? []), table]);
+      } else {
+        claimants.add(file.contractId);
+      }
     }
   }
-  const owners = new Map<string, string>();
-  for (const [table, claimants] of claims) {
-    const only = claimants.size === 1 ? [...claimants][0] : undefined;
-    if (only !== undefined) {
-      owners.set(table, only);
-    }
-  }
-  return owners;
+  return { byKey, byName };
+}
+
+/**
+ * The one contract that creates the table `reference` names, or undefined.
+ *
+ * The candidates are the created tables of the same name that are spelled
+ * the same way, qualifier included, or where one side has no qualifier. An
+ * unqualified name resolves through a search path this check cannot see:
+ * `orders` may be `public.orders` or `sales.orders`, and a contract creating
+ * `public.orders` may be creating the `orders` another one references. A
+ * qualified name never matches a different qualifier.
+ *
+ * When the candidates belong to more than one contract the reference is
+ * ambiguous and is attributed to none of them, as is a table two contracts
+ * both create. Which is the apply-order parent is not derivable, and naming
+ * the wrong one sends the author to edit a line that is already right.
+ */
+function ownerOf(reference: TableName, claims: TableClaims): string | undefined {
+  const candidates = new Set(
+    (claims.byName.get(reference.name) ?? [])
+      .filter(
+        (table) =>
+          table.key === reference.key ||
+          reference.schema === undefined ||
+          table.schema === undefined,
+      )
+      .flatMap((table) => [...(claims.byKey.get(table.key) ?? [])]),
+  );
+  return candidates.size === 1 ? [...candidates][0] : undefined;
 }
 
 /**
@@ -166,23 +254,23 @@ export async function validateDbContractApplyOrder(
   }
 
   const files = await readContractFiles(root, dbFiles);
-  const owners = ownersOfTables(files);
+  const claims = claimTables(files);
 
   const severity = "error";
 
   const issues: Issue[] = [];
   for (const file of files) {
     const undeclared = new Map<string, string[]>();
-    for (const table of file.references) {
-      if (file.creates.has(table)) {
+    for (const table of file.references.values()) {
+      if (file.creates.has(table.key)) {
         // The contract creates it itself, so nothing has to be applied first.
         continue;
       }
-      const owner = owners.get(table);
+      const owner = ownerOf(table, claims);
       if (owner === undefined || owner === file.contractId || file.declared.has(owner)) {
         continue;
       }
-      undeclared.set(owner, [...(undeclared.get(owner) ?? []), table].sort());
+      undeclared.set(owner, [...(undeclared.get(owner) ?? []), table.key].sort());
     }
     if (undeclared.size === 0) {
       continue;
