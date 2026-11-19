@@ -29,6 +29,7 @@
     "means adding it here."
   ],
   "include": [
+    "tests/assets/validateJsonFailOnFormula.test.ts",
     "tests/assets/surfaceReviewChecklist.test.ts",
     "tests/integration/surfaceReviewChecklist.test.ts",
     "tests/integration/refusedArgumentUsage.test.ts",
@@ -405,6 +406,7 @@
     "tests/scripts/checkTrackedReadmes.test.ts",
     "tests/scripts/assistantTreeLinks.test.ts",
     "tests/scripts/checkTrackedSymlinks.test.ts",
+    "tests/scripts/scanPathAnnotations.test.ts",
     "tests/scripts/checkShippedCiParity.test.ts",
     "tests/scripts/changelogHeading.test.ts",
     "tests/scripts/changelogReleasedSections.test.ts",

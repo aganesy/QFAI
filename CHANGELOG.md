@@ -521,11 +521,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now reports `QFAI-ASSISTANT-002` at info saying the path is not a
   directory, as it already does for a layer that is missing.
 
-- **The migration skill no longer offers `design/` as a contract for an old
-  business rule.** Its plan instructions named `design/` beside `cli/`,
-  `api/`, `db/` and `ui/`, although step 4 refuses a rule placed there and
-  step 3 removes that directory. They now name only the four contract kind
-  directories, as the placement guide does. Closes #4627.
+- **The validate JSON guide now counts errors under `--fail-on warning`.**
+  It told a consumer to read `counts.warning` alone, so an error-only result
+  looked like a pass although the run fails it. The guide now states the
+  check the run makes: `counts.error + counts.warning > 0`.
 
 - **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
   `E'…'` a backslash escapes the next character, but the statement splitter
@@ -583,6 +582,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `http://127.0.0.1\@evil.example/v1`, is now an invalid processing
   definition, and every step receives the one parsed URL.
   Closes #4585.
+
+- **The migration skill no longer offers `design/` as a contract for an old
+  business rule.** Its plan instructions named `design/` beside `cli/`,
+  `api/`, `db/` and `ui/`, although step 4 refuses a rule placed there and
+  step 3 removes that directory. They now name only the four contract kind
+  directories, as the placement guide does. Closes #4627.
 
 - **Story ID commands no longer answer from a partial or shared set of pull
   request heads.** `scripts/story-ids.mjs` read each head's commit from the
