@@ -4,17 +4,16 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import type { Issue } from "../types.js";
 import { readMarkdownFiles, type MarkdownFileReader } from "./markdownFiles.js";
-import { extractFencedCodeBlocks, containsMermaidSyntax } from "./mermaidUtils.js";
+import {
+  extractFencedCodeBlocks,
+  containsMermaidSyntax,
+  findDiagramDeclaration,
+} from "./mermaidUtils.js";
 import { issue } from "./utils.js";
 
 const STATE_DIAGRAM_V2_RE = /^\s*stateDiagram-v2\b/;
 const STATE_DIAGRAM_V1_RE = /^\s*stateDiagram\b/;
 const FLOWCHART_RE = /^\s*flowchart\s+(TD|LR|TB|RL|BT)\b/;
-
-type DiagramDeclaration = {
-  line: string;
-  lineOffset: number;
-};
 
 type TransitionInfo = {
   from: string;
@@ -43,9 +42,10 @@ export async function validateMermaidScreenFlow(
 
       const declaration = findDiagramDeclaration(block.content);
       const firstLine = declaration?.line ?? "";
+      const declarationOffset = declaration?.lineOffset ?? 0;
       // `startLine` is the opening fence; content offset 0 is the line after it.
       const firstContentLine = block.startLine + 1;
-      const declarationLine = firstContentLine + (declaration?.lineOffset ?? 0);
+      const declarationLine = firstContentLine + declarationOffset;
 
       // Check for v1 stateDiagram (migration warning)
       if (STATE_DIAGRAM_V1_RE.test(firstLine) && !STATE_DIAGRAM_V2_RE.test(firstLine)) {
@@ -66,7 +66,7 @@ export async function validateMermaidScreenFlow(
 
       // Check unlabeled transitions in stateDiagram-v2
       if (STATE_DIAGRAM_V2_RE.test(firstLine)) {
-        for (const transition of parseTransitions(block.content)) {
+        for (const transition of parseTransitions(block.content, declarationOffset)) {
           if (transition.label) {
             continue;
           }
@@ -108,26 +108,12 @@ export async function validateMermaidScreenFlow(
   return issues;
 }
 
-function findDiagramDeclaration(content: string): DiagramDeclaration | null {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index]?.trim() ?? "";
-    if (!line) {
-      continue;
-    }
-    if (line.startsWith("%%")) {
-      continue;
-    }
-    return { line, lineOffset: index };
-  }
-  return null;
-}
-
-function parseTransitions(content: string): TransitionInfo[] {
+/** The transitions on the lines after the declaration at `declarationOffset`. */
+function parseTransitions(content: string, declarationOffset: number): TransitionInfo[] {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const transitions: TransitionInfo[] = [];
 
-  for (let index = 0; index < lines.length; index += 1) {
+  for (let index = declarationOffset + 1; index < lines.length; index += 1) {
     const line = lines[index]?.trim() ?? "";
     if (!line || line.startsWith("%%") || !line.includes("-->")) {
       continue;
