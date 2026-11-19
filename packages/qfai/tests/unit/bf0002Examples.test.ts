@@ -290,15 +290,17 @@ describe("BF-0002 CI verdict examples", () => {
       );
       const body = step?.["run"];
       if (typeof body !== "string") throw new Error("the self-validate step has no run body");
-      const run = (failing: string | undefined) => {
+      const run = (failing: readonly string[]) => {
         const directory = mkdtempSync(path.join(tmpdir(), "qfai-self-validate-"));
         try {
           // The stub stands in for the built CLI: it records each call and fails the
-          // profile under test.
+          // profiles under test.
           const stub = [
             "node() {",
             '  printf "%s\\n" "$*" >> calls.txt',
-            '  case " $* " in *" --profile $FAILING "*) return 1;; esac',
+            "  for profile in $FAILING; do",
+            '    case " $* " in *" --profile $profile "*) return 1;; esac',
+            "  done",
             "}",
           ].join("\n");
           const result = spawnSync("bash", ["-c", `${stub}\n${body}`], {
@@ -306,7 +308,7 @@ describe("BF-0002 CI verdict examples", () => {
             encoding: "utf8",
             env: {
               ...process.env,
-              FAILING: failing ?? "none",
+              FAILING: failing.join(" "),
               GITHUB_STEP_SUMMARY: path.join(directory, "summary.md"),
             },
           });
@@ -326,17 +328,20 @@ describe("BF-0002 CI verdict examples", () => {
         }
       };
 
-      for (const failing of ["tdd", "sdd", "full"]) {
+      // Two profiles failing in one run must both be named, not only the last.
+      for (const failing of [["tdd"], ["sdd"], ["full"], ["tdd", "sdd"]]) {
+        const label = failing.join(" ");
         const result = run(failing);
-        expect(result.status, `${failing}: ${result.stderr}`).toBe(1);
+        expect(result.status, `${label}: ${result.stderr}`).toBe(1);
         expect(
           result.calls.map((call) => /--profile (\S+)/u.exec(call)?.[1]),
-          failing,
+          label,
         ).toEqual(["tdd", "sdd", "full"]);
-        expect(result.stdout).toContain(`qfai validate failed for profile(s): ${failing}`);
-        expect(result.summary).toContain(`qfai validate failed for profile(s): ${failing}`);
+        const message = `qfai validate failed for profile(s): ${label}\n`;
+        expect(result.stdout).toContain(message);
+        expect(result.summary).toContain(message);
       }
-      const clean = run(undefined);
+      const clean = run([]);
       expect(clean.status, clean.stderr).toBe(0);
       expect(clean.calls).toHaveLength(3);
       expect(clean.summary).toBe("");
