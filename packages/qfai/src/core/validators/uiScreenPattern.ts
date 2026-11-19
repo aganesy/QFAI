@@ -34,7 +34,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { readUiContractDocuments } from "../contracts/screenContracts.js";
 import type { Issue } from "../types.js";
-import { screenSurfaceOf } from "./uiScreenSurface.js";
+import { isMapping, screenSurfaceOf, screensOf } from "./uiScreenSurface.js";
 import { issue } from "./utils.js";
 
 export const UI_SCREEN_PATTERN_RULE_ID = "QFAI-CONTRACT-056";
@@ -68,19 +68,6 @@ export function screenPatternOf(
     return null;
   }
   return isScreenPattern(value) ? value : undefined;
-}
-
-function isMapping(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** The `screens` list of a parsed contract, or nothing when it holds none. */
-function screensOf(parsed: unknown): unknown[] {
-  if (!isMapping(parsed)) {
-    return [];
-  }
-  const screens = parsed.screens;
-  return Array.isArray(screens) ? screens : [];
 }
 
 /**
