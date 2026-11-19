@@ -145,7 +145,10 @@ describe("validation result destinations reached through a link", () => {
 
     expect(await validate(root)).toBe(0);
 
-    expect(JSON.parse(await readFile(resultPath, "utf-8"))).toMatchObject({ issues: [] });
+    expect(JSON.parse(await readFile(resultPath, "utf-8"))).toMatchObject({
+      toolVersion: "0.0.0-test",
+      counts: { error: 0 },
+    });
     expect(await readFile(twin, "utf-8")).toBe("old\n");
     expect((await readdir(reportDir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
