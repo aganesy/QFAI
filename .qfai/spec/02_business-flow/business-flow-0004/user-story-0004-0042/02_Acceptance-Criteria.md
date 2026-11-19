@@ -36,4 +36,10 @@ Feature: A migrated project is told which of its own files still name a 1.x path
     Given a git repository whose index git cannot read
     When step 12 runs
     Then it exits 2 with git's message and does not say that the project is not a git repository
+
+  # AC-0004-0042-06
+  Scenario: Step 12 names a file it could not check in full
+    Given a tracked text file too large to hold, and a tracked binary file of the same size
+    When step 12 runs
+    Then `## Files scanned` names the text file as not checked for 1.x paths, and leaves the binary file out
 ```

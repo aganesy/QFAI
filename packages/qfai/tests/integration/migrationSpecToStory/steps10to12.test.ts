@@ -1381,6 +1381,27 @@ describe("migration step 12: project files that still name a 1.x path", () => {
     expect(section(result.output, "Files scanned")).toEqual(scanned(0));
   });
 
+  // QFAI:AC-0004-0042-06
+  // QFAI:EX-0004-0042-15
+  it("names a text file past 16 MiB as not checked and leaves out a binary file past it", async () => {
+    const huge = Buffer.alloc(16 * 1024 * 1024 + 1, "a");
+    huge.write("Read .qfai/specs\n", 0);
+    const blob = Buffer.alloc(16 * 1024 * 1024 + 1, "a");
+    blob.write("\u0000.qfai/specs\n", 0);
+    const root = await indexedProject(migrated11, {
+      "docs/huge.md": huge,
+      "assets/blob.bin": blob,
+      "README.md": "# Project\n",
+    });
+    const result = await checkedStep12(root);
+    expect(result.code, result.output).toBe(0);
+    expect(section(result.output, "For a person")).toEqual([]);
+    expect(section(result.output, "Files scanned")).toEqual([
+      ...scanned(1),
+      "not checked for 1.x paths, larger than 16 MiB: docs/huge.md",
+    ]);
+  });
+
   // QFAI:AC-0004-0042-02
   // QFAI:EX-0004-0042-12
   it("leaves out a submodule and an indexed file that is a directory in the working tree", async () => {
