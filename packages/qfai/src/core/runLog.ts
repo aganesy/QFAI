@@ -21,7 +21,12 @@ import { toRelativePath } from "./paths.js";
 import type { Issue, ValidationResult } from "./types.js";
 import { isInside } from "./validators/utils.js";
 
-type RunLogResultStatus = "pass" | "fail";
+/**
+ * `incomplete` is a run that did not finish. It is a state of its own because
+ * `--fail-on never` lets such a run exit 0, and a status derived from the exit
+ * code would record it as a pass.
+ */
+export type RunLogResultStatus = "pass" | "fail" | "incomplete";
 
 type RunLogIssue = {
   code: string;

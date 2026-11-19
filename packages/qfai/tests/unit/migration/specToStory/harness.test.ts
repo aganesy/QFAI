@@ -362,6 +362,31 @@ describe("migration harness", () => {
     expect(await readFile(path.join(ctx.root, target), "utf8")).toBe(original);
   });
 
+  it("refuses an annotation rewrite inside a string literal and allows it in a comment", async () => {
+    const ctx = await context();
+    const target = "tests/integration/parser.test.ts";
+    await mkdir(path.join(ctx.root, "tests/integration"), { recursive: true });
+    const old = ["QFAI", "SPEC-0001", "TC-0001-0001"].join(":");
+    const mapped = ["QFAI", "EX-0001-0001-01"].join(":");
+    const original = `expect(parse("${old}")).toBe(1); // ${old}\n`;
+    await writeFile(path.join(ctx.root, target), original);
+    const rewrite = (content: string): MigrationStep => ({
+      number: 8,
+      writeSet: ["test-annotations"],
+      plan: () =>
+        Promise.resolve({
+          annotationTargets: [target],
+          operations: [{ kind: "write", target, content }],
+        }),
+    });
+    const inLiteral = `expect(parse("${mapped}")).toBe(1); // ${mapped}\n`;
+    expect(await executePlannedStep(rewrite(inLiteral), ctx, false, capture().io)).toBe(2);
+    expect(await readFile(path.join(ctx.root, target), "utf8")).toBe(original);
+    const inComment = `expect(parse("${old}")).toBe(1); // ${mapped}\n`;
+    expect(await executePlannedStep(rewrite(inComment), ctx, false, capture().io)).toBe(0);
+    expect(await readFile(path.join(ctx.root, target), "utf8")).toBe(inComment);
+  });
+
   it("preserves an executable test file's mode during an atomic annotation rewrite", async () => {
     const ctx = await context();
     const target = "tests/e2e/checkout.test.ts";

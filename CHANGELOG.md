@@ -493,6 +493,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **`qfai sdd merge-docs` no longer fails on a conflicted file it does not
+  merge.** A conflicted file under the specs directory that is not Markdown or
+  YAML, such as an image, made the command exit 1 even when no document was
+  conflicted. Such a file is now left to Git and not counted, so with no
+  conflicted document the command says there is nothing to merge and exits 0.
+  The configured specs directory is also read as a literal path, so a name
+  holding `*` no longer selects conflicted documents outside it. Closes #4523.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
@@ -500,6 +508,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
+- **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
+  with no `--assume` copies the carry-over list from the previous
+  `preflight_summary.md`. When that file existed but could not be read, the
+  rerun treated it as having no carry-over and replaced it with `- none`. Only
+  a missing file now counts as empty. Any other read failure stops the run
+  with exit code 1, names the file, and leaves it unchanged. Closes #4524.
 
 - **`qfai catalog design` writes only its own files, and only inside the
   project.** It staged both files under names built from its process ID, so a
@@ -538,6 +553,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   existing file as it was. It writes to a new temporary file beside the
   catalogue and renames it into place, so a failed write leaves the old
   catalogue whole.
+
+- **`qfai report` refuses a validate result whose finding path is not text,
+  and names the field.** A finding whose `file` was a number passed the input
+  check and then failed while the Markdown report rendered its link under
+  `--base-url`. The input check now requires `file` to be absent or a string,
+  and every refusal of a malformed validate result names the field and the type
+  it must have, for example `issues[1].file must be a string`. Closes #4528.
 
 - **`qfai doctor` keeps a skill's dependency names away from the shell.**
   On Windows, `--autoremediate` ran `npm install` through `cmd.exe`, so a
@@ -597,6 +619,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai doctor --clean` already did. The preflight summary gains a
   `- started at:` line for that time. Closes #4534.
 
+- **`qfai db-drift` keeps apart columns whose names join to the same text.**
+  The comparison keyed each column by its table and column names joined with a
+  period. A quoted Postgres name may hold a period itself, so `"a.b".c` and
+  `a."b.c"` shared one key and one of them dropped out of the comparison
+  unreported. Each column is now looked up by its table and then by its own
+  name. Closes #4533.
+
 - **Migration step 11 keeps a skill or step when its replacement fails.** Step
   11 deleted a skill or step directory that differed from the package's copy
   before writing the new one, so a failed copy left the project with neither.
@@ -621,6 +650,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with non-ASCII letters, such as `$é$`, and no longer open a literal at a
   `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
 
+- **Migration step 8 rewrites legacy annotations only in comments.** Step 8
+  also rewrote a `QFAI:SPEC-…` or `QFAI:CON-…` token written in a string
+  literal, so a test's input or expected value changed during migration. It
+  now rewrites a token only where it stands in a comment, read the same way
+  `qfai validate` reads test annotations, and leaves the same token in a
+  string or template literal as it was. The check that runs before a test file
+  is written now refuses a rewrite that changes a token in a literal. Closes
+  #4513.
+
 - **`qfai catalog design` no longer replaces a file it cannot inspect.** The
   command treated any failure to read a destination's metadata as a missing
   file, so a token file or theme it could not inspect, for example because
@@ -638,6 +676,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   render as escaped text, each linked path segment is percent-encoded, a path
   outside the base URL stays unlinked, and a `--base-url` that is not an
   absolute http or https URL without a query, fragment or credentials exits 2.
+
+- **A `qfai validate` run that did not finish is no longer recorded as a
+  pass.** Under `--fail-on never` such a run exits 0, and its run log and the
+  `--format github` summary line took their verdict from that exit code, so
+  they said `pass` and `result=PASS` while the text output printed no pass
+  line. The run log now records the status `incomplete` and the summary line
+  reads `result=INCOMPLETE`, whatever `--fail-on` says. A reader of `run.json`,
+  `validator.json`, `summary.md` or `validate.log` that expects only `pass` or
+  `fail` now meets a third status.
 
 - **The design audit no longer drops findings past its display limit.** It
   kept only the first `uiux.audit.maxDuplicateFindingsPerRule` findings of a
