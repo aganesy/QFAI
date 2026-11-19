@@ -643,6 +643,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
 
+- **`qfai validate --flow` keeps the named flow's document-schema and
+  stale-term findings.** These checks name a file relative to the project
+  root while the story tree names it in full, so a scoped run found no match
+  and dropped every `QFAI-DOCSCHEMA-001` and `QFAI-STORY-016` finding, even
+  for a document inside the named flow. Both paths are now resolved against
+  the project root before they are compared. Closes #4477.
+
 - **A report without `--flow` counts every declared contract.** The summary
   counted only contracts holding a business rule linked to a flow, so a project
   with one declared contract and no linked rule reported zero contracts. Only a

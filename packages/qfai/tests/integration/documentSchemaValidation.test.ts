@@ -73,6 +73,24 @@ describe("qfai validate runs the document-schema check", () => {
     expect(findings.map((finding) => finding.message).join("\n")).toContain("Flow");
   });
 
+  // QFAI:EX-0001-0150-02
+  it("keeps a violation in the named flow when --flow scopes the run", async () => {
+    const withoutFlow = (await template()).replace(/^## Flow\n[\s\S]*?(?=^## |(?![\s\S]))/m, "");
+    const root = await treeWithFlow(withoutFlow);
+    const other = ".qfai/spec/02_business-flow/business-flow-0002/business-flow.md";
+    await mkdir(path.dirname(path.join(root, other)), { recursive: true });
+    await writeFile(path.join(root, other), withoutFlow.replace("BF-0001", "BF-0002"), "utf-8");
+
+    const unscoped = await schemaFindings(root);
+    const scoped = (
+      await validateProject(root, undefined, { profile: "sdd", flowIds: ["BF-0001"] })
+    ).issues.filter((finding) => finding.code.startsWith("QFAI-DOCSCHEMA-"));
+
+    expect(unscoped.some((finding) => finding.file === other)).toBe(true);
+    expect(scoped.length).toBeGreaterThan(0);
+    expect(scoped).toEqual(unscoped.filter((finding) => finding.file === FLOW));
+  });
+
   // QFAI:EX-0001-0011-13
   it("reports a Markdown file no schema covers as one error naming it", async () => {
     // QFAI:AC-0001-0011-05
