@@ -580,6 +580,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   When it cannot put both files back, its message says so and names the file it
   kept. Closes #4463.
 
+- **QFAI reads its templates only from its own installed package.** When the
+  installed package was missing its templates, the search went on to
+  directories above it, so `qfai init` and the checks that read the templates
+  could use an `assets/init` directory in the project or in another
+  dependency. QFAI now looks only in the package it was installed as, and an
+  installation without its templates stops with a message that names the
+  missing files and says to reinstall QFAI. Closes #4554.
+
 - **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
   difference exits 0 under `--fail-on never`, but the parser refused the flag
   on `db-drift` and the command exited 2. `db-drift` now takes
