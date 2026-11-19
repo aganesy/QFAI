@@ -496,6 +496,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **Diagnostic text can no longer reshape a Markdown report.** The Markdown
+  report of `qfai report` wrote each finding's code, message and file as raw
+  Markdown, so brackets, HTML or a line break in them could add links, headings
+  or markup, and a file path could move a `--base-url` link elsewhere. They now
+  render as escaped text, each linked path segment is percent-encoded, a path outside the
+  base URL stays unlinked, and a `--base-url` that is not an absolute http or
+  https URL without a query or fragment exits 2.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one

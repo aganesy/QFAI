@@ -6,7 +6,12 @@ import { loadConfig, resolvePath } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
-import { createReportData, formatReportJson, formatReportMarkdown } from "../../core/report.js";
+import {
+  createReportData,
+  formatReportJson,
+  formatReportMarkdown,
+  parseReportBaseUrl,
+} from "../../core/report.js";
 import { writeBusinessFlowReports } from "../../core/specPackReport.js";
 import { resolveFlowScope } from "../../core/flowScope.js";
 import { readStoryTreeModel } from "../../core/storyTree/tree.js";
@@ -134,6 +139,12 @@ export async function runReport(options: ReportOptions): Promise<number> {
   if (!storyTree) {
     error(
       "qfai report: this project does not contain a story tree. Migrate the specs before reporting.",
+    );
+    return 2;
+  }
+  if (options.baseUrl !== undefined && parseReportBaseUrl(options.baseUrl) === null) {
+    error(
+      `qfai report: --base-url must be an absolute http or https URL without a query, fragment or credentials: ${options.baseUrl}`,
     );
     return 2;
   }
