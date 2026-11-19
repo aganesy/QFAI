@@ -117,6 +117,9 @@ describe("qfai report on a story tree", () => {
     "not a url",
     "https://example.test/repo?x=1",
     "https://example.test/#a",
+    "https://example.test/repo?",
+    "https://example.test/repo#",
+    "https://user:secret@example.test/repo",
   ])("exits 2 before writing a report when --base-url is %s", async (baseUrl) => {
     const root = await storyRoot();
     await writeValidation(root, [issue("warning")]);

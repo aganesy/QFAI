@@ -125,16 +125,15 @@ export function formatReportMarkdown(data: ReportData, options: { baseUrl?: stri
 
 /**
  * The `--base-url` a report links from, or `null` when it is not an absolute
- * http(s) URL without a query or fragment: a path appended to one of those
+ * http(s) URL without a query, fragment or credentials: a path appended to one of those
  * would land in the query or fragment instead of the repository path.
  */
 export function parseReportBaseUrl(value: string): URL | null {
   if (!URL.canParse(value)) return null;
   const url = new URL(value);
   if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-  if (url.search !== "" || url.hash !== "" || url.username !== "" || url.password !== "") {
-    return null;
-  }
+  // An empty `?` or `#` leaves `search` and `hash` empty but stays in `href`.
+  if (/[?#]/.test(url.href) || url.username !== "" || url.password !== "") return null;
   return url;
 }
 
