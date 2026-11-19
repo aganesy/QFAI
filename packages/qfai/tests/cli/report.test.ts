@@ -80,6 +80,55 @@ describe("qfai report on a story tree", () => {
     );
   });
 
+  // QFAI:EX-0001-0060-02
+  it("renders diagnostic text as Markdown text and encodes each linked path segment", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [
+      {
+        ...issue("warning"),
+        code: "QFAI-[X]",
+        message: "see [here](https://evil.test) <b>*now*</b>\n# Heading",
+        file: "docs/a b/(x)](https:/evil.test)#.md",
+      },
+    ]);
+    await runReport({ root, format: "md", failOn: "never", baseUrl: "https://example.test/repo/" });
+    const output = await readFile(path.join(root, ".qfai/report/report.md"), "utf8");
+    expect(output).toContain(
+      "- WARNING QFAI-\\[X\\]: see \\[here\\](https://evil.test) \\<b\\>\\*now\\*\\</b\\> # Heading" +
+        " ([docs/a b/(x)\\](https:/evil.test)#.md]" +
+        "(https://example.test/repo/docs/a%20b/%28x%29%5D%28https%3A/evil.test%29%23.md))",
+    );
+    expect(output.split("\n").filter((line) => line.startsWith("# "))).toEqual(["# QFAI Report"]);
+  });
+
+  // QFAI:EX-0001-0060-02
+  it("leaves a path that climbs out of the base URL unlinked", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [{ ...issue("warning"), file: "../../other/secret.md" }]);
+    await runReport({ root, format: "md", failOn: "never", baseUrl: "https://example.test/repo" });
+    const output = await readFile(path.join(root, ".qfai/report/report.md"), "utf8");
+    expect(output).toContain("(../../other/secret.md)");
+    expect(output).not.toContain("](https://");
+  });
+
+  // QFAI:EX-0001-0060-03
+  it.each([
+    "javascript:alert(1)",
+    "not a url",
+    "https://example.test/repo?x=1",
+    "https://example.test/#a",
+    "https://example.test/repo?",
+    "https://example.test/repo#",
+    "https://user:secret@example.test/repo",
+  ])("exits 2 before writing a report when --base-url is %s", async (baseUrl) => {
+    const root = await storyRoot();
+    await writeValidation(root, [issue("warning")]);
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    expect(await runReport({ root, format: "md", failOn: "never", baseUrl })).toBe(2);
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain("--base-url");
+    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+  });
+
   it("uses loaded findings for the exit gate even when stored counts are stale", async () => {
     const root = await storyRoot();
     await writeValidation(root, [issue("error")]);

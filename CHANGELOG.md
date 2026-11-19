@@ -504,6 +504,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   with non-ASCII letters, such as `$é$`, and no longer open a literal at a
   `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
 
+- **Diagnostic text can no longer reshape a Markdown report.** The Markdown
+  report of `qfai report` wrote each finding's code, message and file as raw
+  Markdown, so brackets, HTML or a line break in them could add links, headings
+  or markup, and a file path could move a `--base-url` link elsewhere. They now
+  render as escaped text, each linked path segment is percent-encoded, a path
+  outside the base URL stays unlinked, and a `--base-url` that is not an
+  absolute http or https URL without a query, fragment or credentials exits 2.
+
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
   through a `preinstall` guard. npm never reaches that guard: it stops with
