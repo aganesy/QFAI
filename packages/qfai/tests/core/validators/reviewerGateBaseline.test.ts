@@ -106,4 +106,58 @@ describe("the reviewer gate lives in the shared baseline", () => {
     ]);
     expect(findings[0]?.message).toContain("test-layers.md");
   });
+
+  it("validates the operative section, not an earlier fenced example of it", async () => {
+    const example = [
+      "# Shared Skill Delegation Baseline",
+      "",
+      "An adopter's own baseline looks like this:",
+      "",
+      "```markdown",
+      "## Reviewer Gate Baseline",
+      "",
+      "- Reviewers check what the project asks.",
+      "```",
+      "",
+    ].join("\n");
+    const { root } = await project(
+      example + BASELINE.replace("# Shared Skill Delegation Baseline\n", ""),
+    );
+    expect(await gateFindings(root)).toEqual([]);
+  });
+
+  it("does not take a heading inside a comment or a fence for the section", async () => {
+    const { root, baselinePath } = await project(
+      [
+        "# Shared Skill Delegation Baseline",
+        "",
+        "<!--",
+        "## Reviewer Gate Baseline",
+        "-->",
+        "",
+        "```markdown",
+        "## Reviewer Gate Baseline",
+        "```",
+        "",
+      ].join("\n"),
+    );
+    const findings = await gateFindings(root);
+    expect(findings.map((finding) => [finding.code, finding.file])).toEqual([
+      ["QFAI-SKILLS-011", baselinePath],
+    ]);
+  });
+
+  it("does not count an obligation stated only in a comment", async () => {
+    const { root, baselinePath } = await project(
+      BASELINE.replace(
+        "- Reviewers must verify Drift Protocol enforcement.",
+        "<!-- - Reviewers must verify Drift Protocol enforcement. -->",
+      ),
+    );
+    const findings = await gateFindings(root);
+    expect(findings.map((finding) => [finding.code, finding.file])).toEqual([
+      ["QFAI-SKILLS-012", baselinePath],
+    ]);
+    expect(findings[0]?.message).toContain("Drift Protocol");
+  });
 });

@@ -6,9 +6,9 @@ import { getInitAssetsDir } from "../../shared/assets.js";
 import { isEnoent } from "../fs/errno.js";
 import { findUnsafeHostFileComponent, readPinnedRegularFile } from "../init/fsGuards.js";
 import { assertGraphStoragePath } from "./storage.js";
-import type { GraphSettingsComposition } from "./ignore.js";
+import type { GraphPreparedFiles } from "./ignore.js";
 
-export async function installGraphEntrypoints(root: string): Promise<GraphSettingsComposition> {
+export async function installGraphEntrypoints(root: string): Promise<GraphPreparedFiles> {
   const directory = path.join(root, ".qfai", "tools");
   await assertGraphStoragePath(root, directory);
   const bundle = path.resolve(getInitAssetsDir(), "..", "..", "dist", "graph");
@@ -104,7 +104,7 @@ function object(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function conflict(): GraphSettingsComposition {
+function conflict(): GraphPreparedFiles {
   return {
     files: [],
     conflicts: [

@@ -443,7 +443,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   from `.claude/settings.json` and `.codex/hooks.json`, and delete
   `.github/hooks/qfai-graph.json`, `.qfai/tools/graph-hook.mjs`,
   `.qfai/tools/graph-enforcement.json` and the `*.pending.json`, `*.draft.json`
-  and `*.grant.json` files under `.qfai/tools/state/`.
+  and `*.grant.json` files under `.qfai/tools/state/`. Closes #4056.
 
 - **The run log's `traceability.json` no longer carries `stats`.** Its
   `downstream_violations` and `shared_scope_violations` counted finding codes
@@ -451,6 +451,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `schema_version` and `nodes` only.
 
 ### Fixed
+
+- **`qfai validate` reports the actual line of a Mermaid screen-flow
+  finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction
+  warnings named the line before the one they flagged. They now name the
+  flagged line, and each finding carries that line in its location so an
+  editor or report can jump to it. Closes #4562.
 
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
@@ -499,6 +505,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   kind, though `AC` worked. The kind is now read in any case, so `ac` counts
   as `AC`, and a lower-case `dec` or `oq` gets the same reason as `DEC` or
   `OQ`. Closes #4445.
+
+- **Migration step 11 keeps a skill or step when its replacement fails.** Step
+  11 deleted a skill or step directory that differed from the package's copy
+  before writing the new one, so a failed copy left the project with neither.
+  It now writes the package's copy beside the directory, checks it, and only
+  then switches the two; if the switch fails, the project's copy is put back,
+  and when even that fails the error names the hidden directory that holds it.
 
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
@@ -766,6 +779,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   started with `/`, so they pointed at the filesystem root and the story-tree
   test check found no acceptance test there. The patterns are now joined from
   their path segments and read those directories at the top of the repository.
+
+- **The reviewer gate check reads only the active text of the delegation
+  baseline.** `QFAI-SKILLS-011` and `QFAI-SKILLS-012` searched the raw
+  Markdown, so a `## Reviewer Gate Baseline` heading or an obligation shown in a
+  fenced example, an HTML comment or a raw HTML block counted as the policy.
+  An example placed before the real section was checked in its place. Those
+  regions are now skipped, and only the section that applies is checked.
 
 - **The `tech.md` template shows each item in the shape validation accepts.**
   The template held placeholders such as `<package>`, so a project filling it

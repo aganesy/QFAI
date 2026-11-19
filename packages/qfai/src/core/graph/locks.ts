@@ -11,13 +11,9 @@ import {
   writeGraphLocalFile,
 } from "./localFiles.js";
 
-export async function withGraphLock<T>(
-  root: string,
-  kind: "analysis",
-  action: () => Promise<T>,
-): Promise<T> {
+export async function withGraphLock<T>(root: string, action: () => Promise<T>): Promise<T> {
   const directory = await graphStateDirectory(root);
-  const file = path.join(directory, `${kind}.lock`);
+  const file = path.join(directory, "analysis.lock");
   const owner = {
     kind: "graph-lock",
     pid: process.pid,
@@ -58,10 +54,10 @@ export async function withGraphLock<T>(
       // Invalid metadata is retained for manual recovery.
     }
     throw new GraphLocalStateError(
-      `Project graph ${kind} lock ${active ? "is contended" : "requires manual recovery"}.`,
+      `Project graph analysis lock ${active ? "is contended" : "requires manual recovery"}.`,
       active
         ? "Retry after the active worktree graph operation (a graph query, analysis preparation or qfai init) finishes; retain its lock."
-        : `Retain and inspect .qfai/tools/state/${graphEnvironmentKey()}/${kind}.lock; remove only a confirmed abandoned worktree lock before retrying.`,
+        : `Retain and inspect .qfai/tools/state/${graphEnvironmentKey()}/analysis.lock; remove only a confirmed abandoned worktree lock before retrying.`,
       { cause },
     );
   }
