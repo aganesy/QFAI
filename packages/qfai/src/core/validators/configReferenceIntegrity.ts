@@ -4,8 +4,10 @@
  * Verifies that values in `qfai.config.yaml` resolve to real filesystem
  * entities:
  *   - QFAI-CFG-LINK-001: prototyping.primaryUiContract names no UI contract
- *   - QFAI-CFG-LINK-002: paths.* points to a missing directory (warning), or, for
- *     the shipped default srcDir and testsDir that do not exist yet, info
+ *   - QFAI-CFG-LINK-002: paths.* points to a missing directory or to something
+ *     that is not a directory (warning), or, for the shipped default srcDir and
+ *     testsDir that do not exist yet, info. The shipped default specsDir and
+ *     contractsDir are skipped only when nothing is there at all.
  *
  * Catches dangling IDs in config that would otherwise go undetected.
  */
@@ -19,22 +21,24 @@ import { readUiContractInventory } from "../prototyping/specResolution.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-async function isDirectory(absolutePath: string): Promise<boolean> {
+/**
+ * What stands at a configured path: a directory, nothing at all, or something
+ * else. "other" covers a file, a broken link and a path that could not be read,
+ * so that none of them passes as an absence.
+ */
+async function inspectPath(absolutePath: string): Promise<"directory" | "absent" | "other"> {
   try {
-    const s = await stat(absolutePath);
-    return s.isDirectory();
-  } catch {
-    return false;
+    return (await stat(absolutePath)).isDirectory() ? "directory" : "other";
+  } catch (err: unknown) {
+    if (!isEnoent(err)) {
+      return "other";
+    }
   }
-}
-
-/** True only when nothing is at the path; a file, a broken link or an unreadable path is not absent. */
-async function isAbsent(absolutePath: string): Promise<boolean> {
   try {
     await lstat(absolutePath);
-    return false;
+    return "other";
   } catch (err: unknown) {
-    return isEnoent(err);
+    return isEnoent(err) ? "absent" : "other";
   }
 }
 
@@ -69,6 +73,20 @@ function defaultAbsentNote(key: ConfigPathKey, relPath: string): string | undefi
     : undefined;
 }
 
+function pathFindingMessage(
+  key: ConfigPathKey,
+  relPath: string,
+  found: "absent" | "other",
+  absentNote: string | undefined,
+): string {
+  if (absentNote !== undefined) {
+    return `qfai.config.yaml: paths.${key}="${relPath}" is the shipped default and does not exist yet: ${absentNote}.`;
+  }
+  return found === "absent"
+    ? `qfai.config.yaml: paths.${key}="${relPath}" but the directory does not exist.`
+    : `qfai.config.yaml: paths.${key}="${relPath}" but what is there is not a directory, or it could not be read.`;
+}
+
 export async function validateConfigReferenceIntegrity(
   root: string,
   config: QfaiConfig,
@@ -99,30 +117,25 @@ export async function validateConfigReferenceIntegrity(
   for (const key of VERIFIED_PATH_KEYS) {
     const relPath = config.paths[key];
     const absolutePath = path.resolve(root, relPath);
-    if (!(await isDirectory(absolutePath))) {
-      if (isDefaultSkillCreatedPath(key, relPath)) {
-        continue;
-      }
-      const absentNote = (await isAbsent(absolutePath))
-        ? defaultAbsentNote(key, relPath)
-        : undefined;
-      issues.push(
-        issue(
-          "QFAI-CFG-LINK-002",
-          absentNote === undefined
-            ? `qfai.config.yaml: paths.${key}="${relPath}" but the directory does not exist.`
-            : `qfai.config.yaml: paths.${key}="${relPath}" is the shipped default and does not exist yet: ${absentNote}.`,
-          absentNote === undefined ? "warning" : "info",
-          "qfai.config.yaml",
-          `config.paths.${key}.reality`,
-          undefined,
-          "canonical",
-          absentNote === undefined
-            ? `Point paths.${key} at an existing directory, or create the directory it names.`
-            : undefined,
-        ),
-      );
+    const found = await inspectPath(absolutePath);
+    if (found === "directory" || (found === "absent" && isDefaultSkillCreatedPath(key, relPath))) {
+      continue;
     }
+    const absentNote = found === "absent" ? defaultAbsentNote(key, relPath) : undefined;
+    issues.push(
+      issue(
+        "QFAI-CFG-LINK-002",
+        pathFindingMessage(key, relPath, found, absentNote),
+        absentNote === undefined ? "warning" : "info",
+        "qfai.config.yaml",
+        `config.paths.${key}.reality`,
+        undefined,
+        "canonical",
+        absentNote === undefined
+          ? `Point paths.${key} at an existing directory, or create the directory it names.`
+          : undefined,
+      ),
+    );
   }
 
   return issues;

@@ -5,13 +5,14 @@
  *   001: primarySpecId points to a missing spec dir
  *   002: paths.* points to a missing directory (warning; info when it is a shipped default that is absent)
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { QfaiConfig } from "../../src/core/config.js";
+import { isEperm } from "../../src/core/fs/errno.js";
 import { validateConfigReferenceIntegrity } from "../../src/core/validators/configReferenceIntegrity.js";
 
 const tempDirs: string[] = [];
@@ -181,6 +182,55 @@ describe("validateConfigReferenceIntegrity", () => {
 
     const issues = await validateConfigReferenceIntegrity(root, config);
     expect(issues.some((i) => i.rule === "config.paths.contractsDir.reality")).toBe(true);
+  });
+
+  it("stays silent when the shipped-default spec and contract directories are absent", async () => {
+    const root = await newTempDir();
+    const issues = await validateConfigReferenceIntegrity(root, makeConfig());
+    const rules = issues.map((i) => i.rule);
+
+    expect(rules).not.toContain("config.paths.specsDir.reality");
+    expect(rules).not.toContain("config.paths.contractsDir.reality");
+  });
+
+  it("warns when a file stands at the shipped-default spec and contract paths", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "spec", "03_contract"), "not a directory", "utf-8");
+    const fileAtSpecs = await newTempDir();
+    await mkdir(path.join(fileAtSpecs, ".qfai"), { recursive: true });
+    await writeFile(path.join(fileAtSpecs, ".qfai", "spec"), "not a directory", "utf-8");
+
+    const contractIssue = (await validateConfigReferenceIntegrity(root, makeConfig())).find(
+      (i) => i.rule === "config.paths.contractsDir.reality",
+    );
+    const specIssue = (await validateConfigReferenceIntegrity(fileAtSpecs, makeConfig())).find(
+      (i) => i.rule === "config.paths.specsDir.reality",
+    );
+
+    expect(contractIssue?.severity).toBe("warning");
+    expect(contractIssue?.message).toContain("is not a directory");
+    expect(specIssue?.severity).toBe("warning");
+    expect(specIssue?.message).toContain("is not a directory");
+  });
+
+  it("warns when a broken link stands at the shipped-default spec path", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    try {
+      await symlink(path.join(root, "missing-target"), path.join(root, ".qfai", "spec"));
+    } catch (error: unknown) {
+      if (process.platform === "win32" && isEperm(error)) {
+        return;
+      }
+      throw error;
+    }
+
+    const issues = await validateConfigReferenceIntegrity(root, makeConfig());
+    const specIssue = issues.find((i) => i.rule === "config.paths.specsDir.reality");
+
+    expect(specIssue?.severity).toBe("warning");
+    expect(specIssue?.message).toContain("is not a directory");
   });
 
   it("treats outDir absence as silent (lazy creation)", async () => {

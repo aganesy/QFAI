@@ -614,6 +614,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **`qfai validate` no longer hides a file or a broken link at the default
+  spec and contract paths.** `QFAI-CFG-LINK-002` stayed silent for the shipped
+  default `paths.specsDir` and `paths.contractsDir` whatever stood there, so a
+  file, a broken link or a path that could not be read went unreported. It now
+  stays silent only when nothing is at the path, and otherwise warns that what
+  is there is not a directory or could not be read. Closes #4559.
+
 - **The validation result is written only inside its directory.** A
   `validate.json` that was a symbolic link, or a directory on the
   `output.validateJsonPath` path that was a link or junction, carried
