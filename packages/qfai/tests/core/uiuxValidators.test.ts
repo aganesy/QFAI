@@ -335,6 +335,16 @@ describe("uiux validators", () => {
         "flowchart", // line 23
         "  A --> B", // line 24
         "```", // line 25
+        "", // line 26
+        "```mermaid", // line 27
+        "---", // line 28
+        "title: |", // line 29
+        "  ---", // line 30
+        "  stateDiagram", // line 31
+        "---", // line 32
+        "stateDiagram-v2", // line 33
+        "  Home --> Detail: open", // line 34
+        "```", // line 35
         "",
       ].join("\n"),
       "utf-8",

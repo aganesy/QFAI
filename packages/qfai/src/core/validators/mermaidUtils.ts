@@ -64,22 +64,27 @@ export type DiagramDeclaration = {
 
 /**
  * The diagram's declaration: the first line that is neither blank, nor a `%%`
- * comment, nor inside a leading `---` front-matter block. A front-matter block
- * that never closes leaves no declaration. Line offsets count `\n` breaks after
- * `\r\n` is folded, as `extractFencedCodeBlocks` counts them.
+ * comment, nor inside a leading `---` front-matter block. As in Mermaid, only a
+ * `---` at the opening fence's indentation closes the block, so a `---` inside
+ * an indented YAML scalar does not. A front-matter block that never closes
+ * leaves no declaration. Line offsets count `\n` breaks after `\r\n` is folded,
+ * as `extractFencedCodeBlocks` counts them.
  */
 export function findDiagramDeclaration(content: string): DiagramDeclaration | null {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   let frontMatter: "possible" | "open" | "done" = "possible";
+  let fence = "";
   for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index]?.trim() ?? "";
+    const raw = lines[index] ?? "";
     if (frontMatter === "open") {
-      if (line === "---") frontMatter = "done";
+      if (raw.trimEnd() === fence) frontMatter = "done";
       continue;
     }
+    const line = raw.trim();
     if (line === "" || line.startsWith("%%")) continue;
     if (line === "---" && frontMatter === "possible") {
       frontMatter = "open";
+      fence = raw.trimEnd();
       continue;
     }
     return { line, lineOffset: index };
