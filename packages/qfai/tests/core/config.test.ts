@@ -4,7 +4,12 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { loadConfig, readAcceptedDrift } from "../../src/core/config.js";
+import {
+  DEFAULT_DIAGRAM_BUDGET,
+  defaultConfig,
+  loadConfig,
+  readAcceptedDrift,
+} from "../../src/core/config.js";
 
 // QFAI:EX-0001-0038-05
 describe("story-tree default paths", () => {
@@ -426,5 +431,41 @@ describe("workflow.acceptedDrift", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("independent configuration per load", () => {
+  async function loadChangeAndReload(configBody: string | null) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-fresh-"));
+    try {
+      if (configBody !== null) {
+        await writeFile(path.join(root, "qfai.config.yaml"), configBody, "utf-8");
+      }
+      const first = await loadConfig(root);
+      first.config.paths.specsDir = "changed";
+      first.config.validation.traceability.testFileGlobs.push("changed/**");
+      const second = await loadConfig(root);
+      return second.config;
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  it.each([
+    ["no configuration file", null],
+    ["a file that sets no path or validation key", "baseBranch: main\n"],
+    ["a file that is not an object", "- item\n"],
+  ])("leaves a later load untouched by changes to an earlier one, with %s", async (_, body) => {
+    const config = await loadChangeAndReload(body);
+    expect(config.paths.specsDir).toBe(".qfai/spec");
+    expect(config.validation.traceability.testFileGlobs).toEqual([]);
+    expect(defaultConfig.paths.specsDir).toBe(".qfai/spec");
+    expect(defaultConfig.validation.traceability.testFileGlobs).toEqual([]);
+  });
+
+  it("keeps the canonical defaults immutable", () => {
+    expect(Object.isFrozen(defaultConfig.paths)).toBe(true);
+    expect(Object.isFrozen(defaultConfig.validation.traceability.testFileGlobs)).toBe(true);
+    expect(Object.isFrozen(DEFAULT_DIAGRAM_BUDGET)).toBe(true);
   });
 });

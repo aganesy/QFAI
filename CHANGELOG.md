@@ -487,6 +487,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   flagged line, and each finding carries that line in its location so an
   editor or report can jump to it. Closes #4562.
 
+- **Each configuration load returns its own copy.** A project with no
+  `qfai.config.yaml`, or one that left out a key such as `paths` or
+  `validation`, received the shared default objects and lists themselves, so
+  a program that loaded a configuration and changed it changed the defaults
+  every later load in the same process started from. Each load now returns a
+  copy, and the defaults themselves can no longer be changed.
+
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
   or later with `uv`, and network access to the npm registry and PyPI, from
