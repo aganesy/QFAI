@@ -363,6 +363,7 @@ describe("check-mdschema driver", () => {
     const result = runDriver(["--root", root, "--base", "no/such/ref"]);
 
     expect(result.status).toBe(1);
+    expect(result.stderr).toContain("cannot diff against no/such/ref (");
     expect(result.stderr).toContain("story-business-flow");
   });
 
@@ -1017,6 +1018,10 @@ describe("the ratchet in --scope changed", () => {
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
 
     expect(result.status).toBe(1);
+    // The warning names the worktree diff, not the base: the base resolved and
+    // its diff succeeded, so pointing the reader at the ref would mislead.
+    expect(result.stderr).toContain("cannot diff the worktree against HEAD (");
+    expect(result.stderr).not.toContain("cannot diff against main");
     expect(result.stderr).toContain("checking every document instead (fail open)");
     expect(result.stderr).toContain("business-flow-0001");
   });

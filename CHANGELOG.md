@@ -627,8 +627,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   document when the branch diff failed, but read a failed diff of uncommitted
   edits, such as one stopped by a corrupt index, as "nothing uncommitted". A
   broken document edited but not yet committed then dropped out of the scope
-  and the run passed. Either failure now prints the fail-open warning and
-  checks every document. Closes #4555.
+  and the run passed. Either failure now checks every document, and the
+  fail-open warning names the diff that failed, with Git's reason for a
+  failed worktree diff. Closes #4555.
 
 - **The validation result is written only inside its directory.** A
   `validate.json` that was a symbolic link, or a directory on the
