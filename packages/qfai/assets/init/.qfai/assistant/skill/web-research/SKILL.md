@@ -368,14 +368,6 @@ scored against 4 metrics:
 Each score is compared with its target in Section 5, and the scores and the
 comparison are reported with the evaluation run.
 
-## Completion Contract (Shared)
-
-Before declaring completion:
-
-- Resolve or explicitly defer open questions and ambiguous findings.
-- Confirm the research artifact includes sources, verification outcomes, and final citations.
-- Run a smoke check appropriate to the task and record the outcome.
-
 ## Evidence
 
 Create lightweight evidence that records:
@@ -385,18 +377,16 @@ Create lightweight evidence that records:
 - verification results,
 - final reviewer status.
 
-## FINAL CHECKLIST (Check Last)
-
-- [ ] Hard Constraints were followed.
-- [ ] Session-log requirements were satisfied.
-- [ ] Every Reviewer Gate finding is fixed or answered.
-- [ ] Evidence was recorded.
-
 ## Completion Checklist
 
-- [ ] The research result is traceable to cited sources.
-- [ ] Security controls were applied and documented.
-- [ ] Open risks were stated or resolved.
+Check every item before declaring completion:
+
+- [ ] Hard Constraints were followed, and security controls were applied and documented.
+- [ ] Session-log requirements were satisfied, and the evidence above was recorded.
+- [ ] The research artifact holds its sources, verification outcomes and final citations, and the result traces to those citations.
+- [ ] Open questions, ambiguous findings and open risks are resolved, or stated as deferred.
+- [ ] A smoke check appropriate to the task ran, and its outcome is recorded.
+- [ ] Every Reviewer Gate finding is fixed or answered.
 - [ ] The completion message was presented to the user.
 
 ## Completion Message & Next Actions
