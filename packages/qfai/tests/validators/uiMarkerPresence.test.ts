@@ -240,6 +240,7 @@ describe("a marker the contract declares and no source carries", () => {
 
     expect(issues).toHaveLength(1);
     expect(issues[0]?.message).toContain("SCR-ORDER:submit");
+    expect(issues[0]?.message).not.toContain("required");
   });
 
   it("says nothing about required for an element the contract left unmarked", async () => {
