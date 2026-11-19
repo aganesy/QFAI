@@ -13,7 +13,7 @@
  * side effects.
  *
  * Before `npm install` runs, the operator confirms the listed packages
- * (BR-CLI-0008-0014): the install scripts run with the operator's
+ * (the doctor contract requires it): the install scripts run with the operator's
  * privileges. `--yes` skips the prompt. A session whose stdin is not a
  * terminal cannot answer it, so without `--yes` nothing is installed there
  * and the pass says how to proceed. The rest of the pass runs either way.

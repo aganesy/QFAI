@@ -67,11 +67,11 @@ describe("doctor --autoremediate confirms before installing", () => {
       isCi: false,
       skill: "qfai-prototyping",
       interactive: true,
-      confirmInstall: async (packages) => {
+      confirmInstall: (packages) => {
         asked.push(packages);
         // The runner must not have run before the operator answered.
         expect(runner.calls).toEqual([]);
-        return true;
+        return Promise.resolve(true);
       },
       installRunner: runner.run,
     });
@@ -93,7 +93,7 @@ describe("doctor --autoremediate confirms before installing", () => {
       isCi: false,
       skill: "qfai-prototyping",
       interactive: true,
-      confirmInstall: async () => false,
+      confirmInstall: () => Promise.resolve(false),
       installRunner: runner.run,
     });
 
@@ -123,9 +123,9 @@ describe("doctor --autoremediate confirms before installing", () => {
       isCi: false,
       skill: "qfai-prototyping",
       interactive: false,
-      confirmInstall: async () => {
+      confirmInstall: () => {
         prompted = true;
-        return true;
+        return Promise.resolve(true);
       },
       installRunner: runner.run,
     });
@@ -153,9 +153,9 @@ describe("doctor --autoremediate confirms before installing", () => {
       isCi: false,
       skill: "qfai-prototyping",
       interactive: false,
-      confirmInstall: async () => {
+      confirmInstall: () => {
         prompted = true;
-        return false;
+        return Promise.resolve(false);
       },
       installRunner: runner.run,
     });
