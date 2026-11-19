@@ -132,7 +132,7 @@ async function readParents(
         name: entry.name,
         rel,
         steps,
-        requires: mapping?.requires ?? [],
+        requires: declaredRequires(mapping),
       });
     }
   }
@@ -248,7 +248,7 @@ function ownerIssues(step: StepDir, fm: Record<string, unknown>, tree: Tree): Is
 
 function requiresIssues(step: StepDir, fm: Record<string, unknown>, tree: Tree): Issue[] {
   const file = stepFileRel(step.dir);
-  const requires = fm.requires ?? [];
+  const requires = declaredRequires(fm);
   if (step.dir.startsWith(COMMON_PREFIX) && Array.isArray(requires) && requires.length > 0) {
     return [
       finding(
@@ -259,6 +259,11 @@ function requiresIssues(step: StepDir, fm: Record<string, unknown>, tree: Tree):
     ];
   }
   return requiresListIssues(file, requires, tree);
+}
+
+/** An omitted `requires` is an empty list; a declared one, null included, is checked as written. */
+function declaredRequires(fm: Record<string, unknown> | undefined): unknown {
+  return fm?.requires === undefined ? [] : fm.requires;
 }
 
 /**
