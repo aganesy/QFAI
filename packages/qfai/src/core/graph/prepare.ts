@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { access, cp, mkdir, rm } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -30,7 +30,7 @@ export interface GraphPreparation {
   documents: "documents-not-ready";
   failedStep?: string;
   recovery?: string;
-  /** A failed download repeated by hand into a throwaway directory, whose output shows the cause. */
+  /** A failed download repeated by hand into a directory created for it, whose output shows the cause. */
   rerun?: { command: string; directory: string };
   previousInstallation?: "retained" | "none";
 }
@@ -118,11 +118,13 @@ export async function prepareGraphRuntimes(
         { cwd: root, env, ...GRAPH_PROCESS_LIMITS.download },
       );
       if (install.exitCode !== 0)
-        return {
-          ...notReady,
-          failedStep: "CodeGraph download",
-          ...limitRecovery("CodeGraph download", install),
-          rerun: rerunByHand("codegraph", (directory) => [
+        return withRerun(
+          {
+            ...notReady,
+            failedStep: "CodeGraph download",
+            ...limitRecovery("CodeGraph download", install),
+          },
+          await rerunByHand("codegraph", (directory) => [
             "npm",
             "install",
             "--prefix",
@@ -133,7 +135,7 @@ export async function prepareGraphRuntimes(
             "--ignore-scripts",
             `@colbymchenry/codegraph@${GRAPH_VERSIONS.codegraph}`,
           ]),
-        };
+        );
       const codeVersion = await run(process.execPath, [staged.codegraph, "--version"], {
         cwd: root,
         env,
@@ -192,21 +194,23 @@ export async function prepareGraphRuntimes(
         { cwd: root, env: pythonEnvironment, ...GRAPH_PROCESS_LIMITS.download },
       );
       if (pythonInstall.exitCode !== 0)
-        return {
-          ...notReady,
-          failedStep: "Graphify download",
-          ...limitRecovery("Graphify download", pythonInstall),
-          rerun: rerunByHand("graphify", (directory) => [
+        return withRerun(
+          {
+            ...notReady,
+            failedStep: "Graphify download",
+            ...limitRecovery("Graphify download", pythonInstall),
+          },
+          await rerunByHand("graphify", (directory) => [
             "uv",
             "pip",
             "install",
             "--python",
-            '">=3.10"',
+            ">=3.10",
             "--target",
             directory,
-            `"graphifyy[ollama]==${GRAPH_VERSIONS.graphify}"`,
+            `graphifyy[ollama]==${GRAPH_VERSIONS.graphify}`,
           ]),
-        };
+        );
       const graphifyVersion = await run(
         staged.python,
         [
@@ -312,18 +316,55 @@ function limitRecovery(step: string, result: GraphProcessResult): { recovery?: s
   return cause ? { recovery: cause } : {};
 }
 
+function withRerun(
+  preparation: GraphPreparation,
+  rerun: GraphPreparation["rerun"],
+): GraphPreparation {
+  return rerun ? { ...preparation, rerun } : preparation;
+}
+
 // The installer's own output is not shown, since it can carry credentials. The same download,
-// run by hand into a throwaway directory, shows the cause in the user's terminal instead.
-// The directory is escaped as report paths are, so a temporary directory carrying a control
-// character cannot forge output lines.
-function rerunByHand(
+// run by hand, shows the cause in the user's terminal instead. It goes into a directory created
+// empty for this failure, so the deletion the recovery line asks for removes nothing else. Any
+// failure to create the directory, or a directory that has no literal displayed form, leaves
+// the generic recovery line: the run has already failed, and a rerun it cannot name safely is
+// not offered.
+async function rerunByHand(
   engine: "codegraph" | "graphify",
   command: (directory: string) => string[],
-): { command: string; directory: string } {
-  const raw = path.join(os.tmpdir(), "qfai-graph-check", engine);
-  const shown = formatReportPath(raw);
-  const directory = shown === raw ? `"${raw}"` : shown;
-  return { command: command(directory).join(" "), directory };
+): Promise<GraphPreparation["rerun"]> {
+  let created: string;
+  try {
+    created = await mkdtemp(path.join(os.tmpdir(), `qfai-graph-check-${engine}-`));
+  } catch {
+    return undefined;
+  }
+  const directory = shellArgument(created);
+  const args = command(created).map((arg) => shellArgument(arg));
+  if (directory === undefined || args.some((arg) => arg === undefined)) {
+    await rm(created, { recursive: true, force: true });
+    return undefined;
+  }
+  return { command: args.join(" "), directory };
+}
+
+const PLAIN_ARGUMENT = /^[\w@+=:,./-]+$/;
+
+/**
+ * One argument of a displayed command, as the shell of the platform reads it literally: bare when
+ * it holds no special character, otherwise single-quoted for a POSIX shell, and double-quoted on
+ * Windows, which cmd.exe and PowerShell both read literally when the value holds no `"`, `$`,
+ * backtick or `%`. A value that cannot be quoted so, or carries a control character that could
+ * forge an output line, has no displayed form.
+ */
+export function shellArgument(
+  value: string,
+  platform: NodeJS.Platform = process.platform,
+): string | undefined {
+  if (formatReportPath(value) !== value) return undefined;
+  if (PLAIN_ARGUMENT.test(value)) return value;
+  if (platform === "win32") return /["$`%]/.test(value) ? undefined : `"${value}"`;
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 async function compatibleRuntime(
