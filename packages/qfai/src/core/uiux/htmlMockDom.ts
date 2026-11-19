@@ -22,7 +22,13 @@
 import type * as Jsdom from "jsdom";
 import type { JSDOM as JsdomInstance } from "jsdom";
 
-import { collectVarUsages, type HtmlMockParseResult } from "./htmlMockParser.js";
+import {
+  collectCssUrlReferences,
+  collectVarUsages,
+  parseRefreshUrl,
+  parseSrcsetUrls,
+  type HtmlMockParseResult,
+} from "./htmlMockParser.js";
 
 type JsdomModule = typeof Jsdom;
 
@@ -75,41 +81,8 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
   const doc = dom.window.document;
   const allElements = doc.querySelectorAll("*");
 
-  // URL references (strictly from href/src/action attributes)
-  for (const el of allElements) {
-    for (const attr of ["href", "src", "action"] as const) {
-      const rawUrl = el.getAttribute(attr)?.trim();
-      if (!rawUrl) continue;
-
-      if (/^(https?:)?\/\//i.test(rawUrl)) {
-        result.externalUrls.push(rawUrl);
-        continue;
-      }
-
-      if (
-        /^javascript:/i.test(rawUrl) ||
-        (/^data:/i.test(rawUrl) &&
-          !/^data:image\/(png|jpe?g|gif|webp|avif|bmp|ico|tiff?)[;,]/i.test(rawUrl))
-      ) {
-        result.unsafeUrls.push(rawUrl);
-        continue;
-      }
-
-      if (/^data:image\/(png|jpe?g|gif|webp|avif|bmp|ico|tiff?)[;,]/i.test(rawUrl)) {
-        continue;
-      }
-
-      if (/^(#|mailto:|tel:)/i.test(rawUrl)) {
-        continue;
-      }
-
-      if (/^[a-z][a-z0-9+.-]*:/i.test(rawUrl)) {
-        result.externalUrls.push(rawUrl);
-        continue;
-      }
-
-      result.localRefs.push(rawUrl);
-    }
+  for (const rawUrl of collectResourceReferences(dom, JSDOM, 0)) {
+    classifyReference(rawUrl, result);
   }
 
   // Inline event handlers
@@ -187,6 +160,144 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
 
   dom.window.close();
   return result;
+}
+
+/** Attributes whose whole value is one URL a browser loads or navigates to. */
+const URL_ATTRIBUTES = [
+  "href",
+  "xlink:href",
+  "src",
+  "action",
+  "formaction",
+  "poster",
+  "background",
+  "manifest",
+] as const;
+
+/** Attributes holding a list of image candidates. */
+const SRCSET_ATTRIBUTES = ["srcset", "imagesrcset"] as const;
+
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+/** SVG presentation attributes that take a CSS `url()`. */
+const CSS_URL_ATTRIBUTES = [
+  "fill",
+  "stroke",
+  "filter",
+  "mask",
+  "clip-path",
+  "marker-start",
+  "marker-mid",
+  "marker-end",
+  "cursor",
+] as const;
+
+/**
+ * How many `srcdoc` documents deep the reference walk follows.
+ *
+ * Shortcut: a mock nesting frames deeper than this has its deepest `srcdoc`
+ * left unread. Each level escapes the one inside it again, so a real mock stops
+ * at one or two; raise the ceiling if a mock is ever found going further.
+ */
+const MAX_SRCDOC_DEPTH = 8;
+
+/** Every element of a tree, including the content of each `template`, in document order. */
+function* elementsOf(root: ParentNode, window: JsdomInstance["window"]): Generator<Element> {
+  for (const el of root.querySelectorAll("*")) {
+    yield el;
+    if (el instanceof window.HTMLTemplateElement) {
+      yield* elementsOf(el.content, window);
+    }
+  }
+}
+
+/**
+ * Every resource reference a parsed mock holds, raw and in document order.
+ *
+ * Read from each URL attribute, `ping`, `srcset` and `imagesrcset`, the `data` of
+ * an `<object>`, the target of a `<meta http-equiv="refresh">`, the CSS of each
+ * `style` attribute, `<style>` element and SVG presentation attribute, and the
+ * document each `<iframe srcdoc>` holds. `data-*` and other attributes that name
+ * no resource are not read.
+ */
+function collectResourceReferences(
+  dom: JsdomInstance,
+  JSDOM: JsdomModule["JSDOM"],
+  depth: number,
+): string[] {
+  const refs: string[] = [];
+  for (const el of elementsOf(dom.window.document, dom.window)) {
+    const tag = el.tagName.toLowerCase();
+
+    for (const attr of URL_ATTRIBUTES) {
+      const value = el.getAttribute(attr);
+      if (value !== null) refs.push(value);
+    }
+    if (tag === "object") {
+      const data = el.getAttribute("data");
+      if (data !== null) refs.push(data);
+    }
+    const ping = el.getAttribute("ping");
+    if (ping !== null) refs.push(...ping.split(/[\t\n\f\r ]+/));
+    for (const attr of SRCSET_ATTRIBUTES) {
+      const value = el.getAttribute(attr);
+      if (value !== null) refs.push(...parseSrcsetUrls(value));
+    }
+    if (tag === "meta" && el.getAttribute("http-equiv")?.trim().toLowerCase() === "refresh") {
+      const target = parseRefreshUrl(el.getAttribute("content") ?? "");
+      if (target !== null) refs.push(target);
+    }
+
+    refs.push(...collectCssUrlReferences(el.getAttribute("style")));
+    if (el.namespaceURI === SVG_NAMESPACE) {
+      for (const attr of CSS_URL_ATTRIBUTES) {
+        refs.push(...collectCssUrlReferences(el.getAttribute(attr)));
+      }
+    }
+    if (tag === "style") {
+      refs.push(...collectCssUrlReferences(el.textContent));
+    }
+
+    const srcdoc = tag === "iframe" ? el.getAttribute("srcdoc") : null;
+    if (srcdoc !== null && depth < MAX_SRCDOC_DEPTH) {
+      const inner = new JSDOM(srcdoc);
+      refs.push(...collectResourceReferences(inner, JSDOM, depth + 1));
+      inner.window.close();
+    }
+  }
+  return refs;
+}
+
+const ALLOWED_DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|avif|bmp|ico|tiff?)[;,]/i;
+
+/** Files one raw reference as external, unsafe or local, or lets it pass. */
+function classifyReference(raw: string, result: HtmlMockParseResult): void {
+  const rawUrl = raw.trim();
+  if (!rawUrl) return;
+
+  if (/^(https?:)?\/\//i.test(rawUrl)) {
+    result.externalUrls.push(rawUrl);
+    return;
+  }
+
+  if (
+    /^javascript:/i.test(rawUrl) ||
+    (/^data:/i.test(rawUrl) && !ALLOWED_DATA_IMAGE_RE.test(rawUrl))
+  ) {
+    result.unsafeUrls.push(rawUrl);
+    return;
+  }
+
+  if (ALLOWED_DATA_IMAGE_RE.test(rawUrl) || /^(#|mailto:|tel:)/i.test(rawUrl)) {
+    return;
+  }
+
+  if (/^[a-z][a-z0-9+.-]*:/i.test(rawUrl)) {
+    result.externalUrls.push(rawUrl);
+    return;
+  }
+
+  result.localRefs.push(rawUrl);
 }
 
 /**

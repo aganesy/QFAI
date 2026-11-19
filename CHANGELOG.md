@@ -486,6 +486,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which init downloads CodeGraph and Graphify. A new user now sees these
   requirements before init runs rather than only after it fails.
 
+- **`qfai validate` checks every resource reference in an HTML mock.** The
+  external URL, local file and unsafe scheme checks read only `href`, `src`
+  and `action`, so a mock could load a CDN asset through CSS `url()`,
+  `@import`, `srcset`, `poster` or a `<meta>` refresh without a finding. They
+  now also read `xlink:href`, `formaction`, `poster`, `background`,
+  `manifest`, `<object data>`, `ping`, `srcset`, `imagesrcset`, a refresh
+  target, every CSS `url()`, `src()`, `@import` string and `image-set()`
+  string in `style` attributes, `<style>` elements and SVG presentation
+  attributes, `<iframe srcdoc>` documents and `<template>` content. A mock
+  that relied on one of these forms now reports `QFAI-MOCK-002`,
+  `QFAI-MOCK-010` or `QFAI-MOCK-011` at error.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
