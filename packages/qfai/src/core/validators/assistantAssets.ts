@@ -280,10 +280,12 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     }
     // Crawled as this skill's own entry point, the file could not be read, and
     // the crawl has already said so. Reading it again reports the same fault
-    // twice.
+    // twice. A name the crawl left unread for its size has had nothing said
+    // about it, so it is probed below like an entry point the crawl never saw.
     let reportedAsEntryPoint = false;
     for (const alias of aliases) {
       if (
+        !unreadFiles.includes(alias) &&
         path.dirname(alias) === path.dirname(entryPoint) &&
         (await namesSkillEntryPoint(skillsDir, alias))
       ) {
@@ -297,7 +299,8 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     }
     // Not crawled as this entry point: a skill directory reached through a link,
     // which the walk does not follow, or an entry point linked to a document the
-    // crawl reported as the document it is. Nothing has said the skill cannot be
+    // crawl reported as the document it is, or one the crawl left unread for its
+    // size, which this smaller entry-point limit reports. Nothing has said the skill cannot be
     // loaded, and a read that fails here is the only chance to.
     //
     // Through the bounded reader rather than a bare read: the path is whatever
@@ -1670,7 +1673,7 @@ function crawlReadFailure(
   if (read.kind === "missing") return "it is no longer there";
   if (read.kind === "not-a-file") return "it is no longer an ordinary file";
   if (read.error !== undefined) return describeReadError(read.error);
-  return `it is not an ordinary file this run can read within ${String(DOCUMENT_READ_CEILING)} bytes`;
+  return `it was not an ordinary file within ${String(DOCUMENT_READ_CEILING)} bytes when it was read, or it changed while it was being read`;
 }
 
 function describeReadError(error: unknown): string {
