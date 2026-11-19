@@ -1,8 +1,10 @@
+import { randomBytes } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat, mkdir, open } from "node:fs/promises";
+import { link, lstat, mkdir, open, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { atddTestKindDirs } from "../atddTraceability.js";
+import { hasErrnoCode } from "../fs/errno.js";
 import { isStoryTreeId } from "../storyTree/ids.js";
 import { DEFAULT_SCAFFOLD_DIALECT, type ScaffoldDialect } from "./scaffoldDialect.js";
 
@@ -35,6 +37,17 @@ export type EmitSkeletonResult = {
   wrote: boolean;
 };
 
+/**
+ * Write `body` at `destPath` unless a test is already there. The full body is
+ * written to a hidden file beside `destPath` first and published by `link`,
+ * which refuses a taken path, so a failed write leaves nothing at `destPath`
+ * that a retry would keep as an existing test, and an existing test is never
+ * replaced.
+ *
+ * Ceiling: on a filesystem without hard links the body is written straight to
+ * `destPath` through an exclusive create, so a write that fails there can
+ * still leave a partial file. A no-replace rename exposed to Node lifts it.
+ */
 export async function emitSkeleton(
   target: ScaffoldTarget,
   destPath: string,
@@ -43,17 +56,35 @@ export async function emitSkeleton(
   if (!isScaffoldTarget(target)) throw new TypeError(`Invalid scaffold target: ${target.id}`);
   await mkdir(path.dirname(destPath), { recursive: true });
   try {
-    const handle = await open(destPath, "wx");
-    try {
-      await handle.writeFile(body, "utf8");
-    } finally {
-      await handle.close();
-    }
+    await publishNewFile(destPath, body);
     return { destPath, wrote: true };
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    if (!(hasErrnoCode(error) && error.code === "EEXIST")) throw error;
     await assertReadableTestFile(destPath);
     return { destPath, wrote: false };
+  }
+}
+
+/** The `link` errors that mean the filesystem has no hard links, not that the path is taken. */
+const NO_HARD_LINKS = new Set(["EPERM", "ENOSYS", "ENOTSUP", "EOPNOTSUPP", "EXDEV"]);
+
+/** Put the complete `body` at `destPath`, failing with `EEXIST` when an entry is already there. */
+async function publishNewFile(destPath: string, body: string): Promise<void> {
+  // The name leaves out the destination's, so a name near the length limit still stages.
+  const staged = path.join(
+    path.dirname(destPath),
+    `.qfai-scaffold-${randomBytes(6).toString("hex")}.tmp`,
+  );
+  try {
+    await writeFile(staged, body, { encoding: "utf8", flag: "wx" });
+    try {
+      await link(staged, destPath);
+    } catch (error) {
+      if (!(hasErrnoCode(error) && NO_HARD_LINKS.has(error.code))) throw error;
+      await writeFile(destPath, body, { encoding: "utf8", flag: "wx" });
+    }
+  } finally {
+    await rm(staged, { force: true });
   }
 }
 
