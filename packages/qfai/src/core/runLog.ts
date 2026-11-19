@@ -337,7 +337,6 @@ function buildTraceabilityJson(
 ): {
   schema_version: number;
   nodes: TraceabilityNode[];
-  stats: Record<string, number>;
 } {
   const idRegex = new RegExp(TRACEABILITY_ID_REGEX.source, TRACEABILITY_ID_REGEX.flags);
   const nodes = new Map<string, TraceabilityNode>();
@@ -372,12 +371,6 @@ function buildTraceabilityJson(
   return {
     schema_version: 1,
     nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
-    stats: {
-      downstream_violations: issues.filter((issue) => issue.code === "TRACE_DOWNSTREAM_REF").length,
-      shared_scope_violations: issues.filter(
-        (issue) => issue.code === "TRACE_SHARED_SCOPE_VIOLATION",
-      ).length,
-    },
   };
 }
 
