@@ -470,7 +470,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   API at `FIRECRAWL_API_URL` as separate settings. They say that URLs and page
   content pass through Firecrawl's service when the remote MCP server is used,
   or when `FIRECRAWL_API_URL` is unset or points at the cloud API. They also
-  show how to point it at a self-hosted Firecrawl instance. The templates still
+  show how to point it at a self-hosted Firecrawl instance and add that host to
+  `webResearch.allowlist`. The templates still
   default to the cloud API.
 
 - **An unknown `prototype.mode` written as an inline mapping is now

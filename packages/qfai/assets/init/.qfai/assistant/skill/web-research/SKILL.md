@@ -112,8 +112,8 @@ happens:
 - **Where the pages are scraped.** The MCP server sends each URL to the
   Firecrawl API at `FIRECRAWL_API_URL`, and that API fetches the page and
   returns its content. The templates set `https://api.firecrawl.dev`,
-  Firecrawl's cloud API, which `firecrawl-mcp` also uses when the variable is
-  unset.
+  Firecrawl's cloud API, which `firecrawl-mcp` 3.11.0, the version they pin,
+  also uses when the variable is unset.
 
 Launching the server locally does not keep the data local. Every URL the fetch
 stage requests, and the page content returned for it, passes through
@@ -129,7 +129,11 @@ For a sensitive environment, keep the local launch and point
    default.
 2. Set `FIRECRAWL_API_URL` in the template to that instance, for example
    `http://localhost:3002`.
-3. `FIRECRAWL_API_KEY` is optional against a self-hosted instance. Keep it when
+3. Add the instance's host to `webResearch.allowlist` in `qfai.config.yaml`.
+   The default-deny policy (Section 3.2) and the shipped sandbox template allow
+   network access only to the domains that list names, so an unlisted instance
+   is blocked like any other domain.
+4. `FIRECRAWL_API_KEY` is optional against a self-hosted instance. Keep it when
    the instance requires authentication; otherwise remove its entry from the
    template.
 

@@ -150,6 +150,10 @@ describe("web-research pipeline", () => {
       "For a sensitive environment, keep the local launch and point `FIRECRAWL_API_URL` at a Firecrawl instance you run yourself",
     );
     expect(section).toContain("`http://localhost:3002`");
+    // Under default-deny, an unlisted self-hosted instance is blocked.
+    expect(section).toContain(
+      "Add the instance's host to `webResearch.allowlist` in `qfai.config.yaml`.",
+    );
     expect(section).toContain("`FIRECRAWL_API_KEY` is optional against a self-hosted instance.");
 
     // The Codex template carries comments; the JSON formats cannot.
