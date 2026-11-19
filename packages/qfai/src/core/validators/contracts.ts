@@ -366,7 +366,7 @@ function validateDependencyDeclaration(text: string, ids: string[], file: string
       "QFAI-CONTRACT-015",
       `Contract file declares no apply-order dependency: ${id}.` +
         " Until it does, an index row reading `-` for this contract agrees with it by default:" +
-        " QFAI-CONTRACT-033 compares the two, so such a row is unmeasured rather than agreed," +
+        " QFAI-CONTRACT-034 compares the two, so such a row is unmeasured rather than agreed," +
         " and reports as soon as this declaration names anything.",
       dependencyDeclarationSeverity,
       file,
