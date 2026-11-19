@@ -184,9 +184,34 @@ describe("a linked entry beneath a document root", () => {
    */
   async function linkOutside(root: string, linked: string, type: "file" | "dir"): Promise<boolean> {
     const outside = await outsideFlow();
-    const target = type === "file" ? path.join(outside, "business-flow.md") : outside;
-    return createSymlinkFixture(target, path.join(root, linked), type);
+    if (type === "file") {
+      return createSymlinkFixture(
+        path.join(outside, "business-flow.md"),
+        path.join(root, linked),
+        type,
+      );
+    }
+    // A junction on Windows, which needs no privilege, so the case runs there.
+    const dirType = process.platform === "win32" ? "junction" : "dir";
+    return createSymlinkFixture(outside, path.join(root, linked), dirType);
   }
+
+  it("reports a configured root that is itself a link, without walking it", async (context) => {
+    const root = await newTree();
+    refusal.dir = "";
+    const contracts = ".qfai/contracts";
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      `paths:\n  specsDir: .qfai/spec\n  contractsDir: ${contracts}\n`,
+      "utf-8",
+    );
+    if (!(await linkOutside(root, contracts, "dir"))) {
+      context.skip();
+      return;
+    }
+
+    await expectReported(root, contracts);
+  });
 
   it("reports a linked document by its path and fails the command", async (context) => {
     const root = await newTree();

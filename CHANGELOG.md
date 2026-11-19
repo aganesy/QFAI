@@ -537,8 +537,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The Markdown-schema check no longer passes over a linked document.** A
   symbolic link beneath `paths.specsDir` or `paths.contractsDir`, to a file or
   to a directory, was skipped without a word, so the documents behind it were
-  never checked and the run still passed. Each link is now reported with its
-  path as an `inventory` finding, and the run fails, both in the document lane
+  never checked and the run still passed. Each link, and a configured root that
+  is itself a link, is now reported with its path as an `inventory` finding and
+  is not followed, and the run fails, both in the document lane
   and as `QFAI-DOCSCHEMA-001` in `qfai validate`. Closes #4569.
 
 - **The contract rules no longer claim `qfai validate` starts no processes.**

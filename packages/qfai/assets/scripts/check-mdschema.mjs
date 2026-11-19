@@ -1085,8 +1085,8 @@ function splitByOwnership(context, files) {
  *
  * A directory that could not be listed comes back as a violation of its own, so
  * a subtree that vanished from the universe fails the run instead of passing it.
- * So does a symbolic link beneath either root, whose target the walk does not
- * follow.
+ * So does a symbolic link at or beneath either root, whose target the walk does
+ * not follow.
  *
  * @param {string} root
  * @param {{ specsDir: string, contractsDir: string }} paths
@@ -1107,10 +1107,14 @@ function documentUniverse(root, paths) {
         // An absent configured root holds no documents. One that is a file, or
         // that cannot be inspected, is a tree whose documents were not checked.
         // The spec root rarely reaches here: the decision-register check inspects
-        // it first and stops the run on the same two conditions.
+        // it first and stops the run on the same two conditions. A root that is
+        // itself a symbolic link is not walked and is reported as a link, as one
+        // beneath it would be.
         let stats;
+        let link;
         try {
           stats = statSync(absolute);
+          link = lstatSync(absolute).isSymbolicLink();
         } catch (error) {
           if (!isMissing(error)) {
             roots.push({
@@ -1118,6 +1122,10 @@ function documentUniverse(root, paths) {
               problem: `could not be inspected (${describeFailure(error)})`,
             });
           }
+          return [];
+        }
+        if (link) {
+          linked.push(relative);
           return [];
         }
         if (!stats.isDirectory()) {
