@@ -369,11 +369,36 @@ describe("qfai sdd preflight", () => {
     expect(exitCode).toBe(1);
     expect(sinks.out).toEqual([]);
     expect(sinks.err.join("\n")).toContain(".qfai/report/preflight_summary.md");
+    expect(sinks.err.join("\n")).toContain("EISDIR");
     expect((await stat(summaryPath)).isDirectory()).toBe(true);
     expect(await readFile(kept, { encoding: "utf-8" })).toBe(
       "- OQ-0001 carried over to the next phase\n",
     );
     await expect(stat(path.join(root, ".qfai", "report", "preflight"))).rejects.toThrow();
+  });
+
+  it("names the output directory, not the summary, when the output directory is a file", async () => {
+    // Reading the previous summary under a file fails with ENOTDIR. That is
+    // no previous summary, so the output-directory check names the file.
+    const root = await newTempRoot();
+    await seedRecord(root);
+    const reportPath = path.join(root, ".qfai", "report");
+    await writeFile(reportPath, "not a directory\n", "utf-8");
+
+    const sinks = newSinks();
+    const exitCode = await runSddPreflightCommand({
+      root,
+      recordPath: RECORD_NAME,
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(sinks.out).toEqual([]);
+    const err = sinks.err.join("\n");
+    expect(err).toMatch(/\.qfai\/report is not a directory/);
+    expect(err).not.toContain("cannot read the previous summary");
+    expect(await readFile(reportPath, { encoding: "utf-8" })).toBe("not a directory\n");
   });
 
   it("reports the blockers without failing under --fail-on never", async () => {

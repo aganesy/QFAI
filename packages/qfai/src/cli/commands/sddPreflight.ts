@@ -94,15 +94,17 @@ function renderText(root: string, result: SddPreflightResult): string {
  * The summary is the Stage 0 SSOT, so a re-run (Required Process step 3) must
  * not silently replace hand-recorded carry-over with `- none`.
  *
- * Only a missing summary has no carry-over. Any other read failure throws,
- * naming the path, so the run stops before the summary is replaced.
+ * Only a missing summary has no carry-over. A directory above it that is a
+ * file (`ENOTDIR`) also means no summary: the output-directory check that runs
+ * next names that file. Any other read failure throws, naming the path, so the
+ * run stops before the summary is replaced.
  */
 async function readRecordedCarryOver(root: string, summaryPath: string): Promise<string[]> {
   let text: string;
   try {
     text = await readFile(summaryPath, "utf-8");
   } catch (err: unknown) {
-    if (isEnoent(err)) {
+    if (isEnoent(err) || (hasErrnoCode(err) && err.code === "ENOTDIR")) {
       return [];
     }
     const reason = hasErrnoCode(err) ? err.code : String(err);
