@@ -1,11 +1,33 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../../../src/core/config.js";
+import type * as BoundedRead from "../../../../src/shared/boundedRead.js";
+
+/** Work the next scan of a file runs just before it opens the file, as a swap between check and open would. */
+const { beforeScan } = vi.hoisted(() => {
+  const hook: { run: (() => Promise<void>) | null } = { run: null };
+  return { beforeScan: hook };
+});
+
+vi.mock("../../../../src/shared/boundedRead.js", async () => {
+  const actual = await vi.importActual<typeof BoundedRead>("../../../../src/shared/boundedRead.js");
+  return {
+    ...actual,
+    scanBoundedRegularFile: async (
+      ...args: Parameters<typeof actual.scanBoundedRegularFile>
+    ): ReturnType<typeof actual.scanBoundedRegularFile> => {
+      const run = beforeScan.run;
+      beforeScan.run = null;
+      if (run !== null) await run();
+      return actual.scanBoundedRegularFile(...args);
+    },
+  };
+});
 import {
   MigrationInputError,
   type MigrationContext,
@@ -47,6 +69,38 @@ describe("step 12 project-file scan", () => {
     const scan = await scanOldPaths(context);
     expect(scan.items).toHaveLength(1);
     expect(scan.items[0]).toContain("old-path: docs/notes.md:1:");
+  });
+
+  it("reads a project's own files when its root is reached through a link", async () => {
+    const context = await trackedProject(".qfai/spec", ".qfai/spec/03_contract");
+    const holder = await mkdtemp(path.join(os.tmpdir(), "qfai-step12-link-"));
+    roots.push(holder);
+    const linked = path.join(holder, "project");
+    await symlink(context.root, linked, "junction");
+    const scan = await scanOldPaths({
+      ...context,
+      root: linked,
+      specsDir: path.join(linked, ".qfai/spec"),
+      contractsDir: path.join(linked, ".qfai/spec/03_contract"),
+    });
+    expect(scan.items).toHaveLength(1);
+    expect(scan.items[0]).toContain("old-path: docs/notes.md:1:");
+    expect(scan.scanned).toEqual(["files checked for 1.x paths: 1"]);
+  });
+
+  it("leaves out a file whose directory is swapped for a link outside the project before the open", async () => {
+    const context = await trackedProject(".qfai/spec", ".qfai/spec/03_contract");
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-step12-swap-"));
+    roots.push(outside);
+    await writeFile(path.join(outside, "notes.md"), "Read .qfai/contracts\n");
+    beforeScan.run = async () => {
+      await rename(path.join(context.root, "docs"), path.join(context.root, "docs-moved"));
+      await symlink(outside, path.join(context.root, "docs"), "junction");
+    };
+    const scan = await scanOldPaths(context);
+    expect(beforeScan.run).toBeNull();
+    expect(scan.items).toEqual([]);
+    expect(scan.scanned).toEqual(["files checked for 1.x paths: 0"]);
   });
 
   it("leaves every tracked file out when a configured directory is the project root", async () => {
