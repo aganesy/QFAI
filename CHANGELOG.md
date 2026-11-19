@@ -359,6 +359,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
 
+- **`qfai --help` lists the validation profiles in the order the parser
+  names them.** The `--profile` line for validate and report now reads
+  `discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift`, the
+  same order as the refusal for an unknown profile; it listed `saas-package`
+  before `full`. The set of profiles is unchanged. Closes #4637.
+
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
   no confirmed prototype covers, even when the request asks no design question.
@@ -522,6 +528,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
   omitted `requires:` still counts as empty.
 
+- **The README's skipped-test check now names each allowed skip.** The
+  example script allowed a number of skipped tests per file, so one test's
+  skip could stand in for another's, and it read whatever report was on disk,
+  including one left by an earlier run. It now runs the test command itself,
+  removes any old report first, fails when the run writes none, and fails each
+  test that did not run unless `allowed-skips.json` lists its file and full
+  name. An allowlist written for the old script, with a count per file, makes
+  the new script stop with an error at the first skip in that file, so rewrite
+  each count as the names of the tests it covered.
+
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
   dropped one and ran as if it had not been given, so
@@ -616,6 +632,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   step 3 removes that directory. They now name only the four contract kind
   directories, as the placement guide does. Closes #4627.
 
+- **`qfai init` reads an installed file once, and only within a bound, when it
+  compares it with the template.** A plain run read a kept file in full twice,
+  as bytes and then as text, however large it was. It now reads each file once
+  and stops at twice the template's size, since a file larger than that cannot
+  hold the template with converted line endings. Closes #4638.
+
 - **Story ID commands no longer answer from a partial or shared set of pull
   request heads.** `scripts/story-ids.mjs` read each head's commit from the
   shared `FETCH_HEAD`, so a fetch another process ran at the same time could
@@ -638,6 +660,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a program that loaded a configuration and changed it changed the defaults
   every later load in the same process started from. Each load now returns a
   copy, and the defaults themselves can no longer be changed.
+
+- **`scripts/pr-threads.mjs list` counts every review thread and comment.** It
+  read only the newest 100 threads and the first 100 comments of a pull
+  request, so a longer one could show fewer unresolved threads or Codex review
+  comments than it had. It now reads every page of both. When a call fails or
+  the budget reserve stops it before the last page of comments, it says the
+  Codex comment count is incomplete (#4609).
 
 - **Graph preparation says when a step ran out of time or printed too much.**
   Runtime downloads and full code and document analysis ran under the same
