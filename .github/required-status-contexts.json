@@ -262,7 +262,7 @@
         "scripts/run-package-build.mjs": "b60ff1b51a8b1e38d6efa3a4e8785c05c2180a0502f2956b1e50df842d35cc92",
         "scripts/shipped-workflow-cost.mjs": "4276bdedc39470f2d03f26b40b027670cbc51c9965c50d8fe28ebe7827a14548",
         "scripts/smoke-qfai-cli.mjs": "7c223309c1791d97caf516d3218a845ca64e62dfe3fb1bb67e37470da688d4c2",
-        "scripts/story-ids.mjs": "21cea51c323df7a026633a88fd46d2cf6ca366d9fd5d7696396e51f97535b7d2",
+        "scripts/story-ids.mjs": "5679e37825d0ff970f0f5a34cc781c5ff9b6f3c8d48142816b114705cb0706c4",
         "scripts/sync-init-to-root.mjs": "fd2599d784c18907587da63bac4c270f488371a750219f3244971e0ba7f8af64",
         "scripts/sync-mdschema-version.mjs": "cab5dc15baaa9ce5581a29c49bdaa5bbfec763b2498ccf27723c37997dced8bd",
         "scripts/verify-pack.mjs": "5bb41d010268ba5577c0e37c650a602a08b48c1f09a5aa0000096e22cd6530f2"
@@ -411,7 +411,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "810c6e4eb7fbe80d",
-        "Verify the toolchain action before running it": "20c255efa36ee852",
+        "Verify the toolchain action before running it": "b3bb981d969ef0c3",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "99ec5e46f5e62e26",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "687b39b22ec0a032",
