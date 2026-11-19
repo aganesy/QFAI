@@ -101,6 +101,21 @@ describe("the statement splitter knows SQL's quoting rules", () => {
     const { statements } = parseSqlContract(`CREATE TABLE t (a int, b text DEFAULT 'x;y');`);
     expect(statements).toHaveLength(1);
   });
+
+  it("reports each closing parenthesis outside any open group at its own line", () => {
+    // Clamping the depth at zero accepted a stray `)` silently. The `)` on
+    // line 4 that closes the group opened on line 3 is not reported.
+    const { errors } = parseSqlContract(`SELECT 1;\nCREATE TABLE t (a int));\nSELECT (2;\n) ) ;\n`);
+    expect(errors).toEqual([
+      { kind: "unmatched-close-paren", line: 2, detail: 'unmatched ")" with no open "("' },
+      { kind: "unmatched-close-paren", line: 4, detail: 'unmatched ")" with no open "("' },
+    ]);
+  });
+
+  it("ignores a closing parenthesis inside a string, quoted identifier, comment or dollar quote", () => {
+    const { errors } = parseSqlContract(`SELECT ')', ")" FROM t; -- )\n/* ) */ SELECT $$ ) $$;\n`);
+    expect(errors).toEqual([]);
+  });
 });
 
 describe("QFAI-CONTRACT-021 now reaches DB contracts", () => {
@@ -109,6 +124,7 @@ describe("QFAI-CONTRACT-021 now reaches DB contracts", () => {
     ["an unterminated block comment", `${HEADER}/* never closed\nCREATE TABLE t (a int);\n`],
     ["an unterminated dollar quote", `${HEADER}CREATE FUNCTION f() AS $$ BEGIN\n`],
     ["unbalanced parentheses", `${HEADER}CREATE TABLE t (a int, b text;\n`],
+    ["an unmatched closing parenthesis", `${HEADER}CREATE TABLE t (a int));\n`],
   ] as const) {
     it(`errors on ${label}`, async () => {
       const issues = await runOn(sql);
