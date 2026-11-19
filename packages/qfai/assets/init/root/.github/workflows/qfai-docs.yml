@@ -751,16 +751,8 @@ jobs:
       - name: Require every document check to succeed
         env:
           CHECK_RESULT: ${{ needs.checks.result }}
-          DOCS_SCOPE: ${{ needs.scope.outputs.run }}
         shell: bash
         run: |
-          # A skip is green only where the scope said, explicitly, that nothing a
-          # document check reads changed. An absent scope says nothing about why
-          # the checks did not run, so it cannot make a skip green.
-          if [ "${CHECK_RESULT}" = "skipped" ] && [ "${DOCS_SCOPE:-}" = "false" ]; then
-            echo "qfai docs: no document could have changed - checks skipped"
-            exit 0
-          fi
           if [ "${CHECK_RESULT}" != "success" ]; then
             echo "::error::qfai docs: document checks concluded ${CHECK_RESULT:-missing}"
             exit 1

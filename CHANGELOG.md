@@ -467,6 +467,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   no check reports any more, so both were always 0. The file now holds
   `schema_version` and `nodes` only.
 
+- **The shipped `qfai-docs.yml` aggregate no longer reads the change scope.**
+  Its job already declines to start when the scope found nothing a document
+  check reads, so the step's branch that turned that skip green could never
+  run. The step loses that branch and its `DOCS_SCOPE` variable, and passes on
+  a successful check and fails on anything else, as before. Run `qfai init` to
+  refresh the workflow, or leave it: the removed branch never ran. Closes #4670.
+
 ### Fixed
 
 - **The Firecrawl integration now says where it processes data.** The

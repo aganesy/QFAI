@@ -2126,7 +2126,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#docs",
-    '{"name":"Require every document check to succeed","env":{"CHECK_RESULT":"${{ needs.checks.result }}","DOCS_SCOPE":"${{ needs.scope.outputs.run }}"},"shell":"bash","run":"<body f871286b4f3baaadb4d3881e59b5a8ba212a79083202654ae20a054c303b0e86>"}',
+    '{"name":"Require every document check to succeed","env":{"CHECK_RESULT":"${{ needs.checks.result }}"},"shell":"bash","run":"<body 8e8c3a23f87d1f0cbe19cf75d718fee8047e478cd11a4cc88a581a7696666c8a>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -2523,10 +2523,6 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
  */
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   ["CHECK_RESULT", "${{ needs.checks.result }}"],
-  // Whether the document lane's scope job found a change a document check reads. The aggregate
-  // needs it to tell a skip it asked for from a skip it did not, and its value is one of two
-  // literals the scope body writes.
-  ["DOCS_SCOPE", "${{ needs.scope.outputs.run }}"],
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   // The QFAI version Yarn resolves in a Plug'n'Play project. The resolving step writes it only after
   // its payload has checked it is one SemVer version and that version is installed, and the
