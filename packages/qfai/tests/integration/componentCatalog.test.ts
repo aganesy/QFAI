@@ -234,8 +234,10 @@ describe("the catalogue is written only inside the project", () => {
       "src/a.tsx": component("Alpha", []),
       [CATALOG]: "stale\n",
     });
+    const fresh = await projectWith({ "src/a.tsx": component("Alpha", []) });
+    expect((await cli(["catalog", "components", "--root", fresh])).code).toBe(0);
     expect((await cli(["catalog", "components", "--root", root])).code).toBe(0);
-    expect(await readCatalogText(root)).toContain("  - name: Alpha\n");
+    expect(await readCatalogText(root)).toBe(await readCatalogText(fresh));
     expect(await readdir(path.join(root, ".qfai", "catalog"))).toEqual(["components.yaml"]);
   });
 });

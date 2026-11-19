@@ -115,9 +115,19 @@ async function writeCatalog(root: string, text: string): Promise<string | null> 
     temporary = null;
     return null;
   } catch (caught) {
-    if (temporary !== null) await rm(temporary, { force: true });
-    return caught instanceof Error ? caught.message : String(caught);
+    const failure = messageOf(caught);
+    if (temporary === null) return failure;
+    // A failed cleanup is reported with the write's own failure, never in place of it.
+    const left = path.relative(root, temporary).split(path.sep).join("/");
+    return rm(temporary, { force: true }).then(
+      () => failure,
+      (cleanup: unknown) => `${failure} ${left} could not be removed: ${messageOf(cleanup)}`,
+    );
   }
+}
+
+function messageOf(caught: unknown): string {
+  return caught instanceof Error ? caught.message : String(caught);
 }
 
 /** Throws when a component of the catalogue path would lead a write outside the project. */
