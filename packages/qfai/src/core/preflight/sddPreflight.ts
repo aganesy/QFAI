@@ -1,8 +1,20 @@
-import { mkdir, open, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import {
+  mkdir,
+  open,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { blockedAncestor } from "../fs/templateCopy.js";
 import { allocateRunDir, hasNewerRunDir } from "../runLog.js";
 
 const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
@@ -80,7 +92,7 @@ export async function runSddPreflight(
 ): Promise<SddPreflightResult> {
   const deliberationRoot = resolvePath(root, config, "deliberationDir");
   const reportRoot = resolvePath(root, config, "outDir");
-  const run = await allocatePreflightRun(reportRoot, options.startedAt ?? new Date());
+  const run = await allocatePreflightRun(root, reportRoot, options.startedAt ?? new Date());
   const openQuestions = normalizeTextList(options.assumptions);
 
   if (options.recordPath !== undefined) {
@@ -264,9 +276,13 @@ function toSummaryPaths(
 }
 
 /** Reserve `<outDir>/preflight/run-<timestamp>/` for this preflight. */
-async function allocatePreflightRun(reportRoot: string, startedAt: Date): Promise<PreflightRun> {
+async function allocatePreflightRun(
+  root: string,
+  reportRoot: string,
+  startedAt: Date,
+): Promise<PreflightRun> {
   const runRoot = path.join(reportRoot, PREFLIGHT_RUN_ROOT);
-  await mkdir(runRoot, { recursive: true });
+  await ensureDirectoryWithin(root, isWithin(root, reportRoot) ? root : reportRoot, runRoot);
 
   const { runId, runDir } = await allocateRunDir(runRoot, startedAt);
   return {
@@ -302,7 +318,7 @@ const PREFLIGHT_RUN_ID_LINE_RE = /^-\s*run id:\s*(run-\d{17})\s*$/m;
  */
 async function publishPreflightSummary(run: PreflightRun, body: string): Promise<void> {
   const contents = `${body}\n`;
-  await writeFile(run.summaryPath, contents, "utf-8");
+  await publishFile(run.summaryPath, contents);
 
   if (await hasNewerRunDir(run.runRoot, run.runId)) {
     return;
@@ -317,7 +333,72 @@ async function publishPreflightSummary(run: PreflightRun, body: string): Promise
   if (existingRunId !== null && existingRunId > run.runId) {
     return;
   }
-  await writeFile(run.latestSummaryPath, contents, "utf-8");
+  await publishFile(run.latestSummaryPath, contents);
+}
+
+/** Whether `target` is `base` or lies under it, compared as paths. */
+function isWithin(base: string, target: string): boolean {
+  const relative = path.relative(base, target);
+  return relative === "" || (!path.isAbsolute(relative) && relative.split(path.sep)[0] !== "..");
+}
+
+/**
+ * Create `directory` and prove it physically lies under `boundary`.
+ *
+ * `boundary` is the project root when `paths.outDir` lies in the project, which
+ * the default `.qfai/report` does, and the configured `paths.outDir` itself
+ * when the project points it elsewhere. A component between the two that is a
+ * symbolic link or a junction would carry every write to wherever it points:
+ * `mkdir` and `writeFile` both follow it. So each component is `lstat`-ed
+ * before and after creating the directory, and the directory's real path is
+ * checked against the boundary's. Nothing is written when either check fails.
+ */
+async function ensureDirectoryWithin(
+  root: string,
+  boundary: string,
+  directory: string,
+): Promise<void> {
+  // `blockedAncestor` walks the parents of the path it is given, so a file name
+  // under `directory` makes it check `directory` itself too.
+  const probe = path.join(directory, PREFLIGHT_SUMMARY_FILE);
+  const refuse = (entry: string): Error =>
+    new Error(
+      `${toDisplayPath(root, entry)} is a symbolic link or not a directory, so the preflight ` +
+        "summary would be written outside the output directory. Nothing was written. " +
+        "Replace it with a directory, or set paths.outDir to one.",
+    );
+
+  await mkdir(boundary, { recursive: true });
+  const before = await blockedAncestor(boundary, probe);
+  if (before !== undefined) throw refuse(before);
+  await mkdir(directory, { recursive: true });
+  const after = await blockedAncestor(boundary, probe);
+  if (after !== undefined) throw refuse(after);
+
+  if (!isWithin(await realpath(boundary), await realpath(directory))) {
+    throw refuse(directory);
+  }
+}
+
+function toDisplayPath(root: string, target: string): string {
+  return (path.relative(root, target) || ".").replace(/\\/g, "/");
+}
+
+/**
+ * Write `target` whole or not at all: the contents go to a new file beside it,
+ * then replace it by rename. A leaf that is a symbolic link is replaced, not
+ * written through, and a reader never sees a half-written summary. The new
+ * file is created exclusively, so a link planted at its name stops the write.
+ */
+async function publishFile(target: string, contents: string): Promise<void> {
+  const temp = path.join(path.dirname(target), `.${path.basename(target)}.${randomUUID()}.tmp`);
+  try {
+    await writeFile(temp, contents, { encoding: "utf-8", flag: "wx" });
+    await rename(temp, target);
+  } catch (err: unknown) {
+    await rm(temp, { force: true });
+    throw err;
+  }
 }
 
 /**

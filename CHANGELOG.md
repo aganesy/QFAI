@@ -496,6 +496,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
+- **`qfai sdd preflight` writes only inside its output directory.** A report
+  directory, or a directory under it, that was a link to somewhere else carried
+  the preflight summary there, and a `preflight_summary.md` that was a link was
+  written through. Preflight now stops and names the linked directory without
+  writing, and it writes each summary to a new file that replaces the old one,
+  so a linked summary file is replaced instead of followed.
+
 - **The prototype reviewer prompt fits the 500-line ceiling again.** The
   business-screen floor passages are re-wrapped and tightened with the same
   rules, so the shipped prompt stays within the size an agent reads in one
