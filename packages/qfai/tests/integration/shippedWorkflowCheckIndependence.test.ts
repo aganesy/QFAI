@@ -281,27 +281,29 @@ describe("delivered validation profiles run as two steps of one job that carries
     );
     // Each step runs one profile: with the copy of the version Yarn resolves in a Plug'n'Play
     // project, or through `npx` otherwise, so it carries the invocation once per branch.
-    const pinned = "node tmp/qfai-validate/node_modules/qfai/dist/cli/index.mjs";
+    const pinned = ["node", "tmp/qfai-validate/node_modules/qfai/dist/cli/index.mjs"];
+    const profile = (name: string) => ["validate", "--profile", name, "--fail-on", "error"];
     expect(
       profiles.map((step) => ({
         invocations: String(step["run"])
           .split(/\r?\n/)
           .map((line) => line.trim())
-          .filter((line) => line.startsWith("npx ") || line.startsWith("node ")),
+          .filter((line) => line.startsWith("npx ") || line.startsWith("node "))
+          .map((line) => line.split(" ")),
         if: step["if"],
       })),
     ).toEqual([
       {
         invocations: [
-          `${pinned} validate --profile full --fail-on error`,
-          "npx qfai validate --profile full --fail-on error",
+          [...pinned, ...profile("full")],
+          ["npx", "qfai", ...profile("full")],
         ],
         if: undefined,
       },
       {
         invocations: [
-          `${pinned} validate --profile drift --fail-on error`,
-          "npx qfai validate --profile drift --fail-on error",
+          [...pinned, ...profile("drift")],
+          ["npx", "qfai", ...profile("drift")],
         ],
         if: DRIFT_STEP_CONDITION,
       },
