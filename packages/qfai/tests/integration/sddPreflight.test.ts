@@ -412,6 +412,65 @@ describe("runSddPreflight", () => {
     });
   });
 
+  // A daylight-saving fall-back repeats an hour of local time, so a run that
+  // starts after it can carry a run id that sorts before an earlier run's. The
+  // fixtures below give the earlier run the larger id, which is that case.
+  it("points at the run that started last when its run id sorts first", async () => {
+    await withRoot(async (root) => {
+      const reportRoot = path.join(root, ".qfai", "report");
+      const earlierRunId = "run-99991231235959999";
+      const earlierSummary = [
+        "- status: blocked",
+        `- run id: ${earlierRunId}`,
+        "- started at: 2026-02-16T01:00:00.000Z",
+        "",
+      ].join("\n");
+      await mkdir(path.join(reportRoot, "preflight", earlierRunId), { recursive: true });
+      await writeFile(
+        path.join(reportRoot, "preflight", earlierRunId, "preflight_summary.md"),
+        earlierSummary,
+        "utf-8",
+      );
+      await writeFile(path.join(reportRoot, "preflight_summary.md"), earlierSummary, "utf-8");
+
+      const later = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T02:00:00.000Z"),
+      });
+
+      expect(later.runId < earlierRunId).toBe(true);
+      const latest = await readFile(later.latestPreflightSummaryPath, "utf-8");
+      expect(latest).toContain(`- run id: ${later.runId}`);
+      expect(latest).toContain("- started at: 2026-02-16T02:00:00.000Z");
+    });
+  });
+
+  it("defers to a run that started later even when its run id sorts first", async () => {
+    await withRoot(async (root) => {
+      const reportRoot = path.join(root, ".qfai", "report");
+      const laterRunId = "run-00010101000000000";
+      const laterSummary = [
+        "- status: blocked",
+        `- run id: ${laterRunId}`,
+        "- started at: 2026-02-16T02:00:00.000Z",
+        "",
+      ].join("\n");
+      await mkdir(path.join(reportRoot, "preflight", laterRunId), { recursive: true });
+      await writeFile(
+        path.join(reportRoot, "preflight", laterRunId, "preflight_summary.md"),
+        laterSummary,
+        "utf-8",
+      );
+      await writeFile(path.join(reportRoot, "preflight_summary.md"), laterSummary, "utf-8");
+
+      const earlier = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T01:00:00.000Z"),
+      });
+
+      expect(earlier.runId > laterRunId).toBe(true);
+      expect(await readFile(earlier.latestPreflightSummaryPath, "utf-8")).toBe(laterSummary);
+    });
+  });
+
   it("keeps preflight runs out of the validate run-log namespace", async () => {
     await withRoot(async (root) => {
       const result = await runSddPreflight(root, defaultConfig);

@@ -172,6 +172,79 @@ describe("validate.log freshness under out-of-order completion", () => {
     await expect(readValidateLog(root, defaultConfig.paths.outDir)).rejects.toThrow();
   });
 
+  // A daylight-saving fall-back repeats an hour of local time, so a run that
+  // starts after it can carry a run id that sorts before an earlier run's. The
+  // fixtures below give the earlier run the larger id, which is that case.
+  it("points at the run that started last when its run id sorts first", async () => {
+    const root = await newTempDir();
+    const outDir = path.join(root, defaultConfig.paths.outDir);
+    const earlierRunId = "run-99991231235959999";
+    await mkdir(path.join(outDir, earlierRunId), { recursive: true });
+    await writeFile(
+      path.join(outDir, earlierRunId, "run.json"),
+      `${JSON.stringify({ run_id: earlierRunId, started_at: "2026-05-05T10:00:00.000Z" })}\n`,
+      "utf-8",
+    );
+    await writeFile(
+      path.join(outDir, "validate.log"),
+      `- run_id: ${earlierRunId}\n- started_at: 2026-05-05T10:00:00.000Z\n`,
+      "utf-8",
+    );
+
+    const laterRun = await writeValidateRunLog({
+      root,
+      config: defaultConfig,
+      result: cleanResult(),
+      startedAt: new Date("2026-05-05T10:00:05.000Z"),
+    });
+
+    expect(laterRun.runId < earlierRunId).toBe(true);
+    expect(await readValidateLog(root, defaultConfig.paths.outDir)).toContain(
+      `- run_id: ${laterRun.runId}`,
+    );
+  });
+
+  it("defers to a run that started later even when its run id sorts first", async () => {
+    const root = await newTempDir();
+    const outDir = path.join(root, defaultConfig.paths.outDir);
+    const laterRunId = "run-00010101000000000";
+    await mkdir(path.join(outDir, laterRunId), { recursive: true });
+    await writeFile(
+      path.join(outDir, laterRunId, "run.json"),
+      `${JSON.stringify({ run_id: laterRunId, started_at: "2026-05-05T10:00:05.000Z" })}\n`,
+      "utf-8",
+    );
+
+    const earlierRun = await writeValidateRunLog({
+      root,
+      config: defaultConfig,
+      result: cleanResult(),
+      startedAt: new Date("2026-05-05T10:00:00.000Z"),
+    });
+
+    expect(earlierRun.runId > laterRunId).toBe(true);
+    await expect(readValidateLog(root, defaultConfig.paths.outDir)).rejects.toThrow();
+  });
+
+  it("keeps a pointer whose run started later even when its run id sorts first", async () => {
+    // The newer run's directory is gone, so only the pointer's own start time
+    // can show it is newer.
+    const root = await newTempDir();
+    const outDir = path.join(root, defaultConfig.paths.outDir);
+    await mkdir(outDir, { recursive: true });
+    const pointer = "- run_id: run-00010101000000000\n- started_at: 2026-05-05T10:00:05.000Z\n";
+    await writeFile(path.join(outDir, "validate.log"), pointer, "utf-8");
+
+    await writeValidateRunLog({
+      root,
+      config: defaultConfig,
+      result: cleanResult(),
+      startedAt: new Date("2026-05-05T10:00:00.000Z"),
+    });
+
+    expect(await readValidateLog(root, defaultConfig.paths.outDir)).toBe(pointer);
+  });
+
   it("self-heals from an unparseable existing log", async () => {
     const root = await newTempDir();
     const outDir = path.join(root, defaultConfig.paths.outDir);

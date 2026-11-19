@@ -589,6 +589,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the scan still stops at the nearest `.git` entry, so the run-log cleanup
   still finds every project that shares its output directory. Closes #4510.
 
+- **`validate.log` and `preflight_summary.md` name the run that started last,
+  across a daylight-saving change.** A run's id is its local start time, and
+  both pointers took the run with the largest id as the newest. After clocks go
+  back an hour, a later run gets a smaller id, so the pointer kept naming the
+  earlier run. Both now compare the runs' recorded UTC start times, as
+  `qfai doctor --clean` already did. The preflight summary gains a
+  `- started at:` line for that time. Closes #4534.
+
 - **Migration step 11 keeps a skill or step when its replacement fails.** Step
   11 deleted a skill or step directory that differed from the package's copy
   before writing the new one, so a failed copy left the project with neither.
