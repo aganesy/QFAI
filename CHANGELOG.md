@@ -631,6 +631,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **The changed-documents check widens to every document when the worktree
+  diff fails.** `check-mdschema --scope changed` already checked every
+  document when the branch diff failed, but read a failed diff of uncommitted
+  edits, such as one stopped by a corrupt index, as "nothing uncommitted". A
+  broken document edited but not yet committed then dropped out of the scope
+  and the run passed. Either failure now checks every document, and the
+  fail-open warning names the diff that failed, with Git's reason for a
+  failed worktree diff. Closes #4555.
+
 - **The validation result is written only inside its directory.** A
   `validate.json` that was a symbolic link, or a directory on the
   `output.validateJsonPath` path that was a link or junction, carried
