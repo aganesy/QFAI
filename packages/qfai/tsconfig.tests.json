@@ -516,6 +516,7 @@
     "tests/unit/core/validators/forbiddenIdentifiers.test.ts",
     "tests/unit/core/validators/storyTreeObligations.test.ts",
     "tests/unit/core/validators/storyTreeStructure.test.ts",
+    "tests/unit/migration/specToStory/atomicOverwrite.test.ts",
     "tests/unit/migration/specToStory/harness.test.ts",
     "tests/unit/migration/specToStory/idMap.test.ts",
     "tests/unit/migration/specToStory/legacyRecords.test.ts",

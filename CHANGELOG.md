@@ -597,6 +597,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and in every other check that asks whether a link stays inside one.
   Closes #4484.
 
+- **A failed migration write leaves the document it was replacing whole.**
+  Each step of the spec-to-story migration wrote over an existing document in
+  place, so a full disk or a stopped run left it truncated. Each step now writes
+  the new content to a new file beside the document and renames it into place,
+  keeping the document's permissions, so a failure leaves the original as it
+  was. The same holds for the reminder text step 11 refreshes and for the hook
+  settings it and `qfai init` update. Closes #4457.
+
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in
   `.github/instructions/`, including the one a second init in the same
