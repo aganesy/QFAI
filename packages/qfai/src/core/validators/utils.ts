@@ -16,10 +16,15 @@ import type { Issue, IssueCategory, IssueLocation, IssueSeverity } from "../type
  * Both arguments should already be `realpath`-resolved: comparing a resolved
  * target against an unresolved base reports a link inside a symlinked project
  * root as outside it.
+ *
+ * Only a `..` segment leaves `base`: a name that merely starts with two dots,
+ * such as `..notes.md`, is a file under it.
  */
 export function isInside(base: string, candidate: string): boolean {
   const relative = path.relative(base, candidate);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  if (relative === "") return true;
+  if (path.isAbsolute(relative)) return false;
+  return relative !== ".." && !relative.startsWith(`..${path.sep}`);
 }
 
 export function issue(

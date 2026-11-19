@@ -12,10 +12,12 @@
  * Honors `--dry-run` by surfacing the plan in the future tense, without
  * side effects.
  *
- * `--yes` is meant to skip the interactive confirmation the CLI contract
- * requires before an install. That prompt is NOT implemented yet — this CLI
- * is non-interactive today — so the pass runs unattended either way. That is
- * a known deviation from the `qfai doctor` contract, not a relaxation of it.
+ * Before `npm install` runs, the operator confirms the listed packages
+ * (the doctor contract requires it): the install scripts run with the operator's
+ * privileges. `--yes` skips the prompt. A session whose stdin is not a
+ * terminal cannot answer it, so without `--yes` nothing is installed there
+ * and the pass says how to proceed. The rest of the pass runs either way,
+ * except after Ctrl+C at the prompt, which stops the command.
  *
  * The `npm install` call is routed through a pluggable runner so tests
  * can substitute a no-op stub. The default runner is loaded lazily and
@@ -23,12 +25,16 @@
  */
 
 import path from "node:path";
+import type { ReadLineOptions } from "node:readline";
 
 import { loadConfig } from "../config.js";
 import { cleanStaleRunLogs, precheckRunLogPrune } from "./cleanRunLogs.js";
 import { probeSkillManifest, type SkillManifestProbeResult } from "./skillManifestProbe.js";
 
 export type InstallRunner = (name: string, cwd: string) => Promise<void>;
+
+/** Asks the operator to approve installing `packages`; resolves true on an affirmative answer. */
+export type InstallConfirmer = (packages: readonly string[]) => Promise<boolean>;
 
 export type AutoremediateOptions = {
   readonly root: string;
@@ -41,6 +47,10 @@ export type AutoremediateOptions = {
   readonly installRunner?: InstallRunner;
   /** Test seam: skill to probe for runtimeDependencies. Defaults to none. */
   readonly skill?: string;
+  /** Test seam: whether the operator can answer a prompt. Defaults to stdin being a terminal. */
+  readonly interactive?: boolean;
+  /** Test seam: replace the confirmation prompt. Defaults to a `[y/N]` prompt on stderr. */
+  readonly confirmInstall?: InstallConfirmer;
 };
 
 export type AutoremediateSummary = {
@@ -79,6 +89,83 @@ async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
       }
     });
   });
+}
+
+/** Where the install prompt reads and writes; tests pass their own streams. */
+export type InstallPromptStreams = Pick<ReadLineOptions, "input" | "output" | "terminal">;
+
+/**
+ * The `[y/N]` prompt. Ctrl+D is a decline, since no answer is not a yes:
+ * the close it causes settles the prompt, because Node 20 leaves a pending
+ * question unsettled when the interface closes.
+ * Ctrl+C rejects, so the command stops instead of carrying on with the rest
+ * of the pass. Readline rejects both keys with the same `AbortError`, so
+ * Ctrl+C aborts the question through its own signal to stay distinguishable.
+ */
+export async function askBeforeInstall(
+  packages: readonly string[],
+  // stderr, so a `--format json` report on stdout stays one JSON document.
+  streams: InstallPromptStreams = { input: process.stdin, output: process.stderr },
+): Promise<boolean> {
+  const { createInterface } = await import("node:readline/promises");
+  const prompt = createInterface(streams);
+  const interrupted = new AbortController();
+  prompt.once("SIGINT", () => interrupted.abort());
+  const closed = new Promise<false>((resolve) => {
+    prompt.once("close", () => resolve(false));
+  });
+  try {
+    const answered = prompt.question(
+      `doctor --autoremediate: run npm install for ${packages.join(", ")}? Install scripts run with your privileges. [y/N] `,
+      { signal: interrupted.signal },
+    );
+    return await Promise.race([answered.then(isAffirmative), closed]);
+  } catch (error: unknown) {
+    if (interrupted.signal.aborted) {
+      throw error;
+    }
+    return false;
+  } finally {
+    prompt.close();
+  }
+}
+
+function isAffirmative(answer: string): boolean {
+  const normalized = answer.trim().toLowerCase();
+  return normalized === "y" || normalized === "yes";
+}
+
+type InstallApproval =
+  { readonly approved: true } | { readonly approved: false; readonly line: string };
+
+/**
+ * The install may run on `--yes`, or on an affirmative answer from an
+ * operator who can be asked. A refusal carries the line to log.
+ */
+async function approveInstall(
+  options: AutoremediateOptions,
+  packages: readonly string[],
+): Promise<InstallApproval> {
+  if (options.yes) {
+    return { approved: true };
+  }
+  const listed = packages.join(", ");
+  // `isTTY` is undefined, not false, on a stdin that is not a terminal.
+  const interactive = options.interactive ?? process.stdin.isTTY;
+  if (!interactive) {
+    return {
+      approved: false,
+      line: `autoremediate: install skipped — confirmation needed and this session is not interactive; rerun with --yes to install ${listed}`,
+    };
+  }
+  const confirm = options.confirmInstall ?? askBeforeInstall;
+  if (await confirm(packages)) {
+    return { approved: true };
+  }
+  return {
+    approved: false,
+    line: `autoremediate: install declined; nothing installed (${listed})`,
+  };
 }
 
 /**
@@ -135,12 +222,20 @@ export async function runAutoremediate(
       );
     } else if (missing.length === 0) {
       lines.push("autoremediate: runtimeDependencies — all installed");
-    } else {
+    } else if (options.dryRun || options.skipInstall) {
       for (const finding of missing) {
-        if (options.dryRun || options.skipInstall) {
-          lines.push(`autoremediate: would run ${finding.installCommand}`);
-        } else {
-          const runner = options.installRunner ?? defaultInstallRunner;
+        lines.push(`autoremediate: would run ${finding.installCommand}`);
+      }
+    } else {
+      const approval = await approveInstall(
+        options,
+        missing.map((finding) => finding.name),
+      );
+      if (!approval.approved) {
+        lines.push(approval.line);
+      } else {
+        const runner = options.installRunner ?? defaultInstallRunner;
+        for (const finding of missing) {
           try {
             await runner(finding.name, options.root);
             installed.push(finding.name);
