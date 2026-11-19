@@ -467,6 +467,7 @@ export async function validateStoryTreeStructure(
   root: string,
   config: QfaiConfig,
   model?: StoryTreeModel,
+  inScope?: (file: string) => boolean,
 ): Promise<Issue[]> {
   const roots = resolveStoryTreeRoots(root, config);
   const tree = model ?? (await readStoryTreeModel(root, config));
@@ -477,7 +478,7 @@ export async function validateStoryTreeStructure(
     ...(await validateConstraintIds(roots.specsDir)),
     ...(await validateTechArchitecture(roots.contractsDir)),
     ...(await validateCatalogueRegistry(roots.contractsDir, config)),
-    ...(await validateExternalReferences(root, config)),
+    ...(await validateExternalReferences(root, config, inScope)),
   ];
 }
 
