@@ -3011,6 +3011,10 @@ describe("a permitted rebuild is verified against where the package comes from",
   });
 });
 
+/** A run of the shared CHANGELOG heading parser over `CHANGELOG.md`, on one line either way round. */
+const CHANGELOG_HEADING_CALL =
+  /changelog-heading\.mjs[^\n]*CHANGELOG\.md|CHANGELOG\.md[^\n]*changelog-heading\.mjs/;
+
 describe("release automation performs decisions rather than making them", () => {
   // `prepare-release.yml` and `tag-release.yml` mechanise a release that a human has already
   // decided twice over: once by typing the version into the dispatch form, once by merging the
@@ -3117,9 +3121,9 @@ describe("release automation performs decisions rather than making them", () => 
       commands,
       "and the CHANGELOG must be SEARCHED for that version before anything is tagged: the " +
         "Release body is extracted from that section, so a tag without it publishes a release " +
-        "nobody described. The awk, not a mention — the message inside that branch names the " +
-        "file too, and a row that matched it stayed green when the check was removed",
-    ).toMatch(/awk[^\n]*CHANGELOG\.md/);
+        "nobody described. The parser call, not a mention — the message inside that branch " +
+        "names the file too, and a row that matched it stayed green when the check was removed",
+    ).toMatch(CHANGELOG_HEADING_CALL);
     expect(
       commands,
       "and the heading must be matched LITERALLY. Under a regex the dots in `1.10.2` match any " +
@@ -3131,6 +3135,33 @@ describe("release automation performs decisions rather than making them", () => 
       body,
       "and the CHANGELOG heading, because the GitHub Release body is extracted from that section",
     ).toContain("CHANGELOG.md");
+  });
+
+  it("reads the release heading with the parser the publish reads it with", () => {
+    // Tagging accepted any line starting `## [X.Y.Z]`, and the publish also required the
+    // ` - YYYY-MM-DD` after it. A heading without a date was tagged and then refused by the
+    // publish, leaving a tag for a release that could not be published. One parser in both
+    // jobs means a heading the publish refuses is refused before the tag exists.
+    for (const name of ["tag-release.yml", "release.yml"]) {
+      const document = workflow(name);
+      const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
+      const commands = Object.values(jobs)
+        .flatMap((job) => (isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : []))
+        .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+        .join("\n")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line !== "" && !line.startsWith("#"))
+        .join("\n");
+      expect(
+        commands,
+        `${name} must read the CHANGELOG heading through scripts/changelog-heading.mjs`,
+      ).toMatch(CHANGELOG_HEADING_CALL);
+      expect(
+        commands,
+        `${name} must not keep a heading check of its own beside the shared parser`,
+      ).not.toMatch(/awk[^\n]*"## \[\$\{(claimed|version)\}\]/);
+    }
   });
 
   it("says what the recorded release date means, while it can still be changed", () => {
@@ -3368,7 +3399,7 @@ describe("release automation performs decisions rather than making them", () => 
       .filter((line) => line !== "" && !line.startsWith("#"))
       .join("\n");
 
-    const changelogCheck = commands.search(/awk[^\n]*CHANGELOG\.md/);
+    const changelogCheck = commands.search(CHANGELOG_HEADING_CALL);
     const tokenCheck = commands.search(/-z[^\n]*GH_TOKEN/);
     const firstApiCall = commands.search(/gh api/);
     expect(changelogCheck, "the CHANGELOG check must be there to order against").toBeGreaterThan(
@@ -4623,6 +4654,49 @@ describe("the optional exact-file diagnostic", () => {
         env = { TEST_FILE: file };
       }
       expect(runNamedPreflight(fixture, env).status).toBe(1);
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0002-0026-15
+  it.each([
+    ["a symbolic link to identical bytes", "symbolic link"],
+    ["edited but still selecting the file", "differs from its pull request head"],
+    ["untracked at the requested head", "tracked regular file"],
+    ["committed beyond its byte limit", "byte limit"],
+  ])("refuses a workspace configuration %s before reading its includes", (label, message) => {
+    const fixture = namedFixture();
+    try {
+      const relative = "packages/qfai/vitest.workspace.ts";
+      const workspace = path.join(fixture.root, relative);
+      const original = readFileSync(workspace);
+      let sha = fixture.sha;
+      const publish = (subject: string): void => {
+        namedGit(fixture.root, "commit", "-m", subject);
+        namedGit(fixture.root, "push", "origin", "HEAD:refs/pull/37/head");
+        sha = namedGit(fixture.root, "rev-parse", "HEAD");
+      };
+      if (label.startsWith("a symbolic")) {
+        const copy = path.join(fixture.root, "workspace-copy.ts");
+        writeFileSync(copy, original);
+        rmSync(workspace);
+        symlinkSync(copy, workspace, "file");
+      } else if (label.startsWith("edited"))
+        writeFileSync(workspace, Buffer.concat([original, Buffer.from("// local edit\n")]));
+      else if (label.startsWith("untracked")) {
+        namedGit(fixture.root, "rm", "--cached", "--quiet", "--", relative);
+        publish("Untrack the workspace configuration");
+      } else {
+        const padding = `// ${"x".repeat(64 * 1024)}\n`;
+        writeFileSync(workspace, Buffer.concat([original, Buffer.from(padding)]));
+        namedGit(fixture.root, "add", "--", relative);
+        publish("Grow the workspace configuration");
+      }
+      const result = runNamedPreflight(fixture, { EXPECTED_SHA: sha });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("the workspace configuration");
+      expect(result.stderr).toContain(message);
     } finally {
       rmSync(fixture.root, { recursive: true, force: true });
     }

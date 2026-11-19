@@ -21,7 +21,7 @@ Feature: Shipped change detection and a green-on-skip verdict
   # AC-0002-0004-03
   Scenario: A manifest or input detection cannot read stops it instead of selecting no lane
     Given the script probe and the lane selection of the shipped detection job
-    When the probe reads a package.json that is not valid JSON, is not an object, has a scripts field that is not an object or declares a layer-named script that is not a string, and the selection reads a script list or a lane list that is unset, is not a JSON array or names something other than the five layers
+    When the probe reads a package.json that is not valid JSON, is not an object, has a scripts field that is not an object or declares a layer-named script that is not a string or is blank, and the selection reads a script list or a lane list that is unset, is not a JSON array or names something other than the five layers
     Then each step exits non-zero with an error annotation and publishes no output, so the verdict is red
     And a repository without a package.json, a package.json without scripts and a scripts object without a layer-named script are valid empty sets that publish an empty selection
 ```
