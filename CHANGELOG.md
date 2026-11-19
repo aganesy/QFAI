@@ -610,6 +610,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   error that does not mention QFAI. The README now describes npm's error and
   gives the guard's message to yarn alone. Closes #4626.
 
+- **The turn-end check runs only commands the Standard commands list itself
+  holds.** It read every `- Label:` line under the heading, so a fenced or
+  indented example, an item nested under another, and a heading inside a
+  sample could replace a real command or mark one. Only the section's
+  top-level items are read now. Where the `Turn-end check:` item or a label
+  it marks is listed twice, the hook runs nothing and tells the user which
+  label is listed more than once in tech.md. Closes #4470.
+
 - **A refused argument prints the command's usage, not the whole help.**
   `qfai sdd next-id BR <contract-ID>` without `--base`, or any other refused
   argument of a known command, printed the help of every command after the
