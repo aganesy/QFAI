@@ -195,6 +195,24 @@ describe("README facts", () => {
     }
   });
 
+  // npm stops at the root's `workspace:` dependency before the `preinstall`
+  // guard runs, so the guard's message is yarn's refusal, not npm's.
+  it("names npm's own error for a Git install and gives the preinstall guard to yarn", async () => {
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("> **Do not install from the GitHub repository.**");
+      expect(start, readmePath).toBeGreaterThanOrEqual(0);
+      const note = readme
+        .slice(start, readme.indexOf("\n\n", start))
+        .replace(/^> ?/gm, "")
+        .replace(/\s+/g, " ");
+      expect(note, readmePath).toContain("`EUNSUPPORTEDPROTOCOL`");
+      expect(note, readmePath).toContain("`workspace:`");
+      expect(note, readmePath).toMatch(/yarn refuses it [^.]*`preinstall` guard/);
+      expect(note, readmePath).not.toMatch(/npm and yarn refuse/i);
+    }
+  });
+
   it("names the prototype directory", async () => {
     for (const readmePath of READMES) {
       const readme = await readFile(readmePath, "utf-8");
