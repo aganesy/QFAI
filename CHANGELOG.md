@@ -475,6 +475,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
 
+- **A `.sql` contract with a PostgreSQL escape string now parses.** Inside
+  `E'…'` a backslash escapes the next character, but the statement splitter
+  ended the literal at a backslash-escaped quote, so `SELECT E'it\'s';`
+  reported an unterminated string or split a statement at a `;` inside the
+  literal. The splitter now follows PostgreSQL's escape-string rules; a
+  backslash in a standard `'…'` string stays literal.
+
 - **Repository text in `qfai validate` text output can no longer open a CI
   command.** The shipped CI workflow runs `qfai validate` in the default text
   format, and the GitHub runner reads a log line starting with `::`, after its
@@ -648,6 +655,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dubious ownership, a broken config), or names a root the scan cannot reach,
   the scan still stops at the nearest `.git` entry, so the run-log cleanup
   still finds every project that shares its output directory. Closes #4510.
+
+- **`validate.log` and `preflight_summary.md` name the run that started last,
+  across a daylight-saving change.** A run's id is its local start time, and
+  both pointers took the run with the largest id as the newest. After clocks go
+  back an hour, a later run gets a smaller id, so the pointer kept naming the
+  earlier run. Both now compare the runs' recorded UTC start times, as
+  `qfai doctor --clean` already did. The preflight summary gains a
+  `- started at:` line for that time. Closes #4534.
 
 - **`qfai db-drift` keeps apart columns whose names join to the same text.**
   The comparison keyed each column by its table and column names joined with a

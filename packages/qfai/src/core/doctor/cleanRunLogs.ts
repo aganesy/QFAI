@@ -42,6 +42,7 @@ import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import { readRunStartedAtMs } from "../runLog.js";
 import type { Issue } from "../types.js";
 import { findOutDirCoOwners } from "./outDirCollisions.js";
 import {
@@ -193,33 +194,6 @@ export async function precheckRunLogPrune(
 }
 
 /**
- * `run.json#started_at` for one run directory, in epoch milliseconds.
- *
- * `null` for every failure mode — absent file, unreadable file, invalid
- * JSON, missing or unparseable field — because a run whose real start
- * time cannot be established must fall back to the ordering keys that
- * are always available rather than be dropped from the listing.
- */
-function hasStartedAt(value: unknown): value is { started_at: unknown } {
-  return typeof value === "object" && value !== null && "started_at" in value;
-}
-
-async function readStartedAtMs(dirPath: string): Promise<number | null> {
-  try {
-    const parsed: unknown = JSON.parse(await readFile(path.join(dirPath, "run.json"), "utf-8"));
-    if (!hasStartedAt(parsed) || typeof parsed.started_at !== "string") {
-      return null;
-    }
-    const startedAtMs = Date.parse(parsed.started_at);
-    return Number.isFinite(startedAtMs) ? startedAtMs : null;
-  } catch {
-    // Absent, unreadable or invalid JSON: the caller falls back to the
-    // ordering keys that are always available.
-    return null;
-  }
-}
-
-/**
  * Newest run first, by real elapsed time rather than by run id.
  *
  * Run ids are `run-<17-digit LOCAL timestamp>`, so lexical order is only
@@ -281,7 +255,7 @@ async function listRunLogDirs(reportRoot: string): Promise<CleanRunLogEntry[]> {
         runId: name,
         dirPath,
         mtimeMs: stats.mtimeMs,
-        startedAtMs: await readStartedAtMs(dirPath),
+        startedAtMs: await readRunStartedAtMs(dirPath),
       });
     } catch {
       continue;
