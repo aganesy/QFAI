@@ -1076,7 +1076,7 @@ describe("migration steps 5 to 8", () => {
         "",
       ].join("\n"),
     );
-    expect(reportSection(report.output.join(""), "For a person")).toBe("");
+    expect(reportSection(report.output.join(""), "For a person")).toBe("none");
   });
 
   it("selects test files with padded globs and exclusions like the unpadded ones", async () => {
