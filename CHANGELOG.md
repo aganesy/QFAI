@@ -461,19 +461,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Repository text in `qfai validate` text output can no longer open a CI
+  command.** The shipped CI workflow runs `qfai validate` in the default text
+  format, and the GitHub runner reads a log line starting with `::`, after its
+  leading spaces, as a workflow command. A finding's message, path, refs or
+  suggested action comes from the repository, so a pull request could print
+  `::stop-commands::<token>` on a line of its own and hide every later
+  annotation. Each further line of a message or a `fix:` value now starts
+  with a vertical bar after its indent, and control characters in these
+  fields, in the `run-log:` path and in the `--format github` summary paths
+  print as visible escapes such as `\n`, `\t` and `\u001B`. The older
+  `##[<command>]` form, which the runner finds anywhere in a line, prints as
+  `##\[`. The JSON report keeps the exact values.
+
 - **`qfai validate` reports the actual line of a Mermaid screen-flow
   finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction
   warnings named the line before the one they flagged. They now name the
   flagged line, and each finding carries that line in its location so an
   editor or report can jump to it. Closes #4562.
-
-- **A migration move between two filesystems no longer leaves a partial
-  copy.** When a spec-to-story migration step moved a file or directory onto
-  another filesystem, it copied straight to the destination, so a full disk or
-  a stopped run left an incomplete copy there, and the retry refused it as
-  existing data. The copy is now written beside the destination and appears
-  there only once complete, without replacing anything that appeared there
-  meanwhile, and the source is removed only after that. Closes #4480.
 
 - **The README says what a fresh `qfai init` needs.** The Quick start now
   lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
@@ -488,6 +493,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   after you answer `y`. A session whose stdin is not a terminal installs
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
+
+- **`qfai catalog design` writes only its own files, and only inside the
+  project.** It staged both files under names built from its process ID, so a
+  second run could overwrite the first run's staging file, and a failed run
+  removed any file under that name, even one it had not written. A
+  `.qfai/catalog` directory that was a symbolic link or junction also led the
+  write outside the project. The command now checks each directory on the path
+  before and after creating it, stages each file in a new file it creates
+  exclusively under a name of its own, and on failure undoes only what it did.
+  When it cannot put both files back, its message says so and names the file it
+  kept. Closes #4463.
 
 - **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
   difference exits 0 under `--fail-on never`, but the parser refused the flag
@@ -506,6 +522,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   catalogue and renames it into place, so a failed write leaves the old
   catalogue whole.
 
+- **`qfai doctor` keeps a skill's dependency names away from the shell.**
+  On Windows, `--autoremediate` ran `npm install` through `cmd.exe`, so a
+  `runtimeDependencies` entry such as `playwright & calc` in a skill's
+  manifest ran a second command, and an entry such as `--global` reached npm
+  as an option. Doctor now accepts only registry package names there:
+  lowercase letters, digits and `-._~`, starting with a letter or digit,
+  optionally scoped. A manifest listing anything else, a non-string or a name
+  with spaces around it included, is an error naming the entry, and none of
+  its entries is probed or installed. npm now starts without a shell on every
+  platform; on Windows doctor runs npm's JavaScript entry with Node. Closes
+  #4465.
+
 - **`qfai db-drift` compares the full PostgreSQL column type.** It read
   `information_schema.columns.data_type`, which drops the varchar length, the
   numeric precision and scale and the array element type, and reads
@@ -516,6 +544,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that, for example `character varying(20)`. A type outside `pg_catalog` reads
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
+
+- **`qfai sdd next-id` reads the ID kind without regard to case.**
+  `qfai sdd next-id ac US-0001-0001 --base main` was refused as an unknown
+  kind, though `AC` worked. The kind is now read in any case, so `ac` counts
+  as `AC`, and a lower-case `dec` or `oq` gets the same reason as `DEC` or
+  `OQ`. Closes #4445.
 
 - **Migration step 11 keeps a skill or step when its replacement fails.** Step
   11 deleted a skill or step directory that differed from the package's copy
@@ -627,6 +661,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and in every other check that asks whether a link stays inside one.
   Closes #4484.
 
+- **A failed migration write leaves the document it was replacing whole.**
+  Each step of the spec-to-story migration wrote over an existing document in
+  place, so a full disk or a stopped run left it truncated. Each step now writes
+  the new content to a new file beside the document and renames it into place,
+  keeping the document's permissions, so a failure leaves the original as it
+  was. The same holds for the reminder text step 11 refreshes and for the hook
+  settings it and `qfai init` update. Closes #4457.
+
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in
   `.github/instructions/`, including the one a second init in the same
@@ -636,6 +678,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exact name is removed, so a leftover from an earlier version,
   named `<file>.qfai-init-<pid>-<timestamp>`, stays: delete it by hand.
   Closes #4526.
+
+- **A migration move between two filesystems no longer leaves a partial
+  copy.** When a spec-to-story migration step moved a file or directory onto
+  another filesystem, it copied straight to the destination, so a full disk or
+  a stopped run left an incomplete copy there, and the retry refused it as
+  existing data. The copy is now written beside the destination and appears
+  there only once complete, without replacing anything that appeared there
+  meanwhile, and the source is removed only after that. Closes #4480.
 
 - **`qfai report --flow --profile` reads the result `qfai validate` wrote.**
   `qfai validate --flow` writes one `validate.flow-<ids>.json` whatever the

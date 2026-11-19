@@ -23,6 +23,7 @@ import { captureStdout } from "../../helpers/stdout.js";
 import {
   emitText,
   formatPassSummary,
+  formatRunLogLine,
   ISSUE_FIX_BY_CODE,
   resolveIssueFix,
   runValidate,
@@ -91,18 +92,26 @@ function extractRemedyLabel(guideline: string): string {
 }
 
 /**
- * The continuation indent for `label`, from the arithmetic the rules state in
- * words: two spaces, plus the label's length, plus two.
+ * What starts each further line of a `label` value, from the arithmetic the
+ * rules state in words: two spaces plus the label's length, then a vertical
+ * bar and one space, so the value continues under its first character.
  */
-function documentedContinuationIndent(guideline: string, label: string): number {
-  if (!guideline.includes("two spaces, plus the label's length, plus two")) {
-    throw new Error("the text output grammar no longer states the continuation indent");
+function documentedContinuationPrefix(guideline: string, label: string): string {
+  if (
+    !guideline.includes("two spaces plus the label's length, then a vertical bar and one space")
+  ) {
+    throw new Error("the text output grammar no longer states the continuation prefix");
   }
-  return 2 + label.length + 2;
+  return `  ${" ".repeat(label.length)}| `;
 }
+
+/** What starts each further line of a message, as the rules state it in words. */
+const MESSAGE_CONTINUATION_WORDS =
+  "each further physical line of it starts with two spaces, a vertical bar and one space";
 
 /** Renders one issue by substituting it into the documented grammar. */
 function renderFromGrammar(grammar: string, issue: Issue): string {
+  const message = issue.message.split("\n").join("\n  | ");
   return grammar
     .replace(OPTIONAL_SLOTS.file, issue.file === undefined ? "" : ` (${issue.file})`)
     .replace(
@@ -112,7 +121,7 @@ function renderFromGrammar(grammar: string, issue: Issue): string {
     .replace(OPTIONAL_SLOTS.suppressed, issue.suppressed === true ? " suppressed=true" : "")
     .replace("[<severity>]", `[${issue.severity}]`)
     .replace("<CODE>", issue.code)
-    .replace("<message>", issue.message);
+    .replace("<message>", () => message);
 }
 
 /**
@@ -355,10 +364,11 @@ describe("validate --format text matches the validate contract's text output gra
     const label = extractRemedyLabel(guideline);
     expect(label).toBe("fix");
 
-    const indent = documentedContinuationIndent(guideline, label);
-    // The documented rule: `2 + <label> + 2`, i.e. the continuation aligns
-    // under the first character of the value.
-    expect(indent).toBe(2 + label.length + 2);
+    const prefix = documentedContinuationPrefix(guideline, label);
+    // The documented rule: the continuation aligns under the first character
+    // of the value, behind a bar that is the line's first visible character.
+    expect(prefix).toBe("     | ");
+    expect(prefix.length).toBe(`  ${label}: `.length);
 
     const multiline = SYNTHETIC_ISSUES.find((issue) => issue.code === "QFAI-TEST-005");
     expect(multiline).toBeDefined();
@@ -374,7 +384,7 @@ describe("validate --format text matches the validate contract's text output gra
 
     expect(lines.slice(headerIndex + 1, headerIndex + 3)).toEqual([
       `  fix: ${MULTILINE_FIX[0]}`,
-      `${" ".repeat(indent)}${MULTILINE_FIX[1]}`,
+      `${prefix}${MULTILINE_FIX[1]}`,
     ]);
     // The lines the old detail block repeated from the issue's own line are gone.
     expect(output).not.toMatch(DROPPED_LABELS);
@@ -764,6 +774,7 @@ describe("validate --format text matches the validate contract's text output gra
     const guideline = await readGuideline();
     const grammar = extractGrammar(guideline);
     expect(guideline).toContain("`<message>` may contain line breaks");
+    expect(guideline).toContain(MESSAGE_CONTINUATION_WORDS);
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-multiline-"));
     try {
@@ -878,6 +889,71 @@ describe("validate --format text matches the validate contract's text output gra
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+/**
+ * The shipped CI workflow runs `qfai validate` in the text format, and the GitHub runner reads
+ * every stdout line as a possible workflow command once its leading whitespace is stripped. The
+ * message, path, refs and remedy of an issue come from the repository, so a pull request could
+ * otherwise print `::stop-commands::<token>` on a line of its own and silence every annotation
+ * after it.
+ */
+describe("validate --format text prints repository text as log data", () => {
+  const INJECTED_COMMAND = "::stop-commands::7f3a9c";
+  /** The older command form, which the runner looks for anywhere in a line. */
+  const LEGACY_COMMAND = "##[stop-commands]7f3a9c";
+  const ESCAPED_LEGACY = "##\\[stop-commands]7f3a9c";
+
+  // QFAI:EX-0001-0039-56
+  it("keeps every line of an issue from opening a workflow command", async () => {
+    const guideline = await readGuideline();
+    expect(guideline).toContain(MESSAGE_CONTINUATION_WORDS);
+    const hostile: Issue = {
+      code: "QFAI-TEST-006",
+      severity: "error",
+      category: "canonical",
+      message: `first line\n${INJECTED_COMMAND}\r\n  ::error::forged\u001b[31m ${LEGACY_COMMAND}`,
+      file: `docs/a\n${INJECTED_COMMAND}${LEGACY_COMMAND}.md`,
+      refs: [`ref\r${INJECTED_COMMAND}`, "tab\there\u0007"],
+      suggested_action: `Repair the file.\n${INJECTED_COMMAND}`,
+      rule: "test.hostile",
+    };
+
+    const output = await captureStdout(() => {
+      emitText(resultOf([hostile]), DEFAULT_FAIL_ON);
+      return Promise.resolve();
+    });
+    const lines = output.trimEnd().split("\n");
+
+    expect(lines.filter((line) => line.trimStart().startsWith("::"))).toEqual([]);
+    expect(lines.filter((line) => line.includes("##["))).toEqual([]);
+    expect(lines.slice(0, 5)).toEqual([
+      "[error] QFAI-TEST-006 first line",
+      `  | ${INJECTED_COMMAND}`,
+      `  |   ::error::forged\\u001B[31m ${ESCAPED_LEGACY} ` +
+        `(docs/a\\n${INJECTED_COMMAND}${ESCAPED_LEGACY}.md) ` +
+        `refs=ref\\r${INJECTED_COMMAND},tab\\there\\u0007`,
+      "  fix: Repair the file.",
+      `${documentedContinuationPrefix(guideline, "fix")}${INJECTED_COMMAND}`,
+    ]);
+    expect(classifyByGuideline(lines).map((entry) => entry.kind)).toEqual([
+      "header",
+      "message-continuation",
+      "message-continuation",
+      "fix",
+      "fix-continuation",
+      "counts",
+      "codes",
+      "fail-on",
+    ]);
+  });
+
+  // QFAI:EX-0001-0039-56
+  it("keeps the run-log path on the last line", () => {
+    expect(formatRunLogLine(`.qfai/report/run\n${INJECTED_COMMAND}`)).toBe(
+      `run-log: .qfai/report/run\\n${INJECTED_COMMAND}`,
+    );
   });
 });
 

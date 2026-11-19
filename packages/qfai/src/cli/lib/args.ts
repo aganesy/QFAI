@@ -9,14 +9,15 @@ const TIMESTAMPED_ROWS: ReadonlyMap<string, string> = new Map([
 ]);
 const NEXT_ID_KINDS = STORY_TREE_ID_KINDS.filter((kind) => !TIMESTAMPED_ROWS.has(kind));
 
-/** The kind `qfai sdd next-id` counts, or why the token is refused. */
+/** The kind `qfai sdd next-id` counts, read without regard to case, or why the token is refused. */
 function readNextIdKind(token: string): { kind: StoryTreeIdKind } | { reason: string } {
-  const row = TIMESTAMPED_ROWS.get(token);
+  const upper = token.toUpperCase();
+  const row = TIMESTAMPED_ROWS.get(upper);
   if (row !== undefined)
     return {
-      reason: `qfai sdd next-id: ${token} takes no number; a ${row} row takes the UTC time it is written, as ${token}-yyyymmddhhMMss. Expected one of ${NEXT_ID_KINDS.join("|")}.`,
+      reason: `qfai sdd next-id: ${upper} takes no number; a ${row} row takes the UTC time it is written, as ${upper}-yyyymmddhhMMss. Expected one of ${NEXT_ID_KINDS.join("|")}.`,
     };
-  const kind = NEXT_ID_KINDS.find((value) => value === token);
+  const kind = NEXT_ID_KINDS.find((value) => value === upper);
   return kind
     ? { kind }
     : {
@@ -828,7 +829,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           // The kind, then the parent, may also follow the options.
           const read = readNextIdKind(arg);
           if (!options.sddIdKind && "kind" in read) options.sddIdKind = read.kind;
-          else if (!options.sddIdKind && TIMESTAMPED_ROWS.has(arg) && "reason" in read)
+          else if (
+            !options.sddIdKind &&
+            TIMESTAMPED_ROWS.has(arg.toUpperCase()) &&
+            "reason" in read
+          )
             markInvalid(read.reason);
           else if (options.sddIdKind && options.sddIdParent === undefined)
             options.sddIdParent = arg;
