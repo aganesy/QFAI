@@ -452,6 +452,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The README says what a fresh `qfai init` needs.** The Quick start now
+  lists, before the first init command, Node.js 20.19.0 or later, Python 3.10
+  or later with `uv`, and network access to the npm registry and PyPI, from
+  which init downloads CodeGraph and Graphify. A new user now sees these
+  requirements before init runs rather than only after it fails.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
@@ -488,6 +494,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   SQL statement splitter already reads them. Both readers also accept a tag
   with non-ASCII letters, such as `$é$`, and no longer open a literal at a
   `$tag$` that ends an identifier, such as `foo$tag$`. Closes #4656.
+
+- **Diagnostic text can no longer reshape a Markdown report.** The Markdown
+  report of `qfai report` wrote each finding's code, message and file as raw
+  Markdown, so brackets, HTML or a line break in them could add links, headings
+  or markup, and a file path could move a `--base-url` link elsewhere. They now
+  render as escaped text, each linked path segment is percent-encoded, a path
+  outside the base URL stays unlinked, and a `--base-url` that is not an
+  absolute http or https URL without a query, fragment or credentials exits 2.
 
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
@@ -610,6 +624,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the API does not require, the two remedy sentences ran together with no
   space. They are now separated by one.
 
+- **`qfai validate --format github` keeps each path in its summary on one log
+  line.** The report and run-log paths in the closing notes were printed raw, so
+  a path holding a line break started a line of its own, which the runner reads
+  as a possible workflow command. A line break in them now shows as a visible
+  `\r` or `\n`, and `%` stays as written. The report and run-log are still
+  written at their original paths.
+
 - **The migration's step 12 scan no longer runs out of memory on large
   tracked files.** It held git's whole file listing and read each tracked file
   whole before checking it for 1.x paths, so a repository with large tracked
@@ -625,13 +646,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   buried new warnings. That one finding is now at info. Its action is
   unchanged: `qfai init` relinks the wrappers.
 
-- **Diagnostic text can no longer reshape a Markdown report.** The Markdown
-  report of `qfai report` wrote each finding's code, message and file as raw
-  Markdown, so brackets, HTML or a line break in them could add links, headings
-  or markup, and a file path could move a `--base-url` link elsewhere. They now
-  render as escaped text, each linked path segment is percent-encoded, a path
-  outside the base URL stays unlinked, and a `--base-url` that is not an
-  absolute http or https URL without a query, fragment or credentials exits 2.
+- **`qfai sdd preflight` writes only inside its output directory.** A report
+  directory, or a directory under it, that was a link to somewhere else carried
+  the preflight summary there, and a `preflight_summary.md` that was a link was
+  written through. Preflight now stops and names the linked directory without
+  writing, also when `paths.outDir` lies outside the project and is itself a
+  link, and says so separately when a path it needs is a file. It writes each summary to a new file that replaces the old one,
+  so a linked summary file is replaced instead of followed.
 
 - **A cyclic design token file no longer stops `qfai validate`.** A YAML alias
   that made a token group or a `$value` its own descendant overflowed the stack,
