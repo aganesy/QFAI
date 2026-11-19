@@ -534,6 +534,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   already wrote keeps its old steps; delete it and run `qfai init` again to
   get these.
 
+- **The contract rules no longer claim `qfai validate` starts no processes.**
+  Validation runs short-lived checkers, such as the document schema checker,
+  as child processes. The `qfai-sdd` contract rules now state the narrower
+  guarantee that `qfai validate` never starts a database engine, which is why
+  `qfai db-drift` is a separate command.
+
 - **`qfai sdd merge-docs` no longer fails on a conflicted file it does not
   merge.** A conflicted file under the specs directory that is not Markdown or
   YAML, such as an image, made the command exit 1 even when no document was
@@ -541,6 +547,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   conflicted document the command says there is nothing to merge and exits 0.
   The configured specs directory is also read as a literal path, so a name
   holding `*` no longer selects conflicted documents outside it. Closes #4523.
+
+- **Two tables in one quoted schema are no longer reported as one.** The
+  same-file redefinition check (`QFAI-DB-002`) read a created object's name
+  only up to a quoted part, so `CREATE TABLE "app".users` and
+  `CREATE TABLE "app".orders` were both keyed as `app` and reported as a
+  redefinition. Each part of a qualified name is now read under PostgreSQL's
+  quoting rules: a bare part folds to lower case, a quoted part keeps its
+  case and its doubled `""`, and a dot inside quotes does not split the name.
 
 - **`qfai validate` checks every resource reference in an HTML mock.** The
   external URL, local file and unsafe scheme checks read only `href`, `src`
@@ -562,12 +576,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
 
-- **`qfai validate` no longer reports an inline event handler that a mock
-  only mentions.** `QFAI-MOCK-012` searched the raw HTML for text such as
-  ` onclick=`, so a sentence, a comment or an escaped code sample that spelled
-  out a handler failed the mock. It now reads the attributes of the parsed
-  elements, including those inside a `<template>` and an `<iframe srcdoc>`,
-  so only a handler a browser would attach is reported. Closes #4550.
+- **A DB contract that gives a regular and a unique index one name is
+  reported.** PostgreSQL keeps both kinds of index in one namespace, so the
+  second `CREATE` fails when the contract is applied, but `QFAI-DB-002`
+  compared `INDEX` and `UNIQUE INDEX` names separately and passed the file. It
+  now reports the pair as one index defined twice. Closes #4549.
 
 - **`qfai sdd preflight` keeps a previous summary it cannot read.** A rerun
   with no `--assume` copies the carry-over list from the previous
@@ -717,6 +730,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   out of the check and a broken document passed. The check now reads the paths
   NUL-delimited, as Git stores them. Closes #4491.
 
+- **`qfai atdd scaffold` leaves no partial test behind when a write fails.**
+  The command created the test file and then wrote its body, so a write that
+  failed left an incomplete file, and the next run kept it as an existing test.
+  The skeleton is now written in full to a hidden file beside the destination
+  and then published without replacing anything already there. On a
+  filesystem without hard links it is written directly, as before. A hidden
+  file the command cannot remove is named in its output. Closes #4538.
+
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
   `-- Depends on:` line skipped `$$ … $$` literals but not `$tag$ … $tag$`
@@ -735,6 +756,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   string or template literal as it was. The check that runs before a test file
   is written now refuses a rewrite that changes a token in a literal. Closes
   #4513.
+
+- **`qfai validate` no longer reports an inline event handler that a mock
+  only mentions.** `QFAI-MOCK-012` searched the raw HTML for text such as
+  ` onclick=`, so a sentence, a comment or an escaped code sample that spelled
+  out a handler failed the mock. It now reads the attributes of the parsed
+  elements, including those inside a `<template>` and an `<iframe srcdoc>`,
+  so only a handler a browser would attach is reported. Closes #4550.
 
 - **`qfai catalog design` no longer replaces a file it cannot inspect.** The
   command treated any failure to read a destination's metadata as a missing
@@ -762,6 +790,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reads `result=INCOMPLETE`, whatever `--fail-on` says. A reader of `run.json`,
   `validator.json`, `summary.md` or `validate.log` that expects only `pass` or
   `fail` now meets a third status.
+
+- **The touch-target check reads the exact `width` and `height` of an inline
+  style.** It took the first `width:` or `height:` it found, so `min-width`,
+  `border-width`, `max-height` or `line-height` could stand in for the real
+  size: a 48px button with `min-width: 10px` drew `QFAI-MOCK-009`, and a
+  later declaration of the same property was ignored. It now reads the parsed
+  declarations, so the declaration CSS applies is the one measured, whatever
+  the case of its property name.
 
 - **The design audit no longer drops findings past its display limit.** It
   kept only the first `uiux.audit.maxDuplicateFindingsPerRule` findings of a

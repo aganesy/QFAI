@@ -99,6 +99,70 @@ describe("uiux validators", () => {
     expect(issues.some((item) => item.code === "QFAI-MOCK-009")).toBe(false);
   });
 
+  it("reads only the exact width and height properties of an inline style", async () => {
+    const html = [
+      '<button style="min-width: 10px; border-width: 1px; max-height: 5px; height: 48px">A</button>',
+      '<a href="#x" style="width: 50px; min-height: 10px; line-height: 12px">B</a>',
+      '<input style="width: 30px !important; width: 44px; height: calc(100% - 1px)">',
+    ].join("\n");
+
+    const result = await parseHtmlMock(html);
+
+    expect(result.inlineDimensions).toEqual([
+      { element: "button", width: null, height: 48, interactive: true },
+      { element: "a", width: 50, height: null, interactive: true },
+      { element: "input", width: 30, height: null, interactive: true },
+    ]);
+  });
+
+  it("reports no touch target from min-width or min-height declarations", async () => {
+    const root = await newTempDir();
+    const specsDir = path.join(root, ".qfai", "specs");
+    await mkdir(specsDir, { recursive: true });
+
+    const md = [
+      "## Screen Mock (HTML+CSS)",
+      "",
+      "```html",
+      '<button style="min-width: 10px; min-height: 10px; width: 48px; height: 48px">Tap</button>',
+      "```",
+      "",
+    ].join("\n");
+    await writeFile(path.join(specsDir, "touch-target-min-dimension.md"), md, "utf-8");
+
+    const issues = await validateHtmlMock(root, "mobile-ios", defaultConfig);
+    expect(issues.some((item) => item.code === "QFAI-MOCK-009")).toBe(false);
+  });
+
+  it("reads width and height whatever the case of the property name", async () => {
+    const html = '<button style="Width: 48px; MIN-HEIGHT: 4px; HEIGHT: 20PX">A</button>';
+
+    const result = await parseHtmlMock(html);
+
+    expect(result.inlineDimensions).toEqual([
+      { element: "button", width: 48, height: 20, interactive: true },
+    ]);
+  });
+
+  it("reports a small touch target declared with upper-case property names", async () => {
+    const root = await newTempDir();
+    const specsDir = path.join(root, ".qfai", "specs");
+    await mkdir(specsDir, { recursive: true });
+
+    const md = [
+      "## Screen Mock (HTML+CSS)",
+      "",
+      "```html",
+      '<button style="WIDTH: 10px; HEIGHT: 10px">Tap</button>',
+      "```",
+      "",
+    ].join("\n");
+    await writeFile(path.join(specsDir, "touch-target-upper-case.md"), md, "utf-8");
+
+    const issues = await validateHtmlMock(root, "mobile-ios", defaultConfig);
+    expect(issues.some((item) => item.code === "QFAI-MOCK-009")).toBe(true);
+  });
+
   it("returns null contrast ratio for out-of-range rgb values", () => {
     expect(computeContrastRatio("rgb(999,0,0)", "#ffffff")).toBeNull();
   });

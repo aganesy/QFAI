@@ -310,11 +310,66 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
   });
 
+  // A regular and a unique index share PostgreSQL's relation namespace, so one
+  // name used for both is the same collision as one name used twice. Keying
+  // `INDEX` and `UNIQUE INDEX` as two kinds let the pair through.
+  it("reports a regular and a unique index that share a name", () => {
+    const { statements } = parseSqlContract(
+      `CREATE INDEX orders_idx ON orders (a);\nCREATE UNIQUE INDEX orders_idx ON orders (b);\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([
+      { kind: "INDEX", name: "orders_idx", lines: [1, 2] },
+    ]);
+  });
+
   it("treats a quoted identifier case-sensitively and a bare one not", () => {
     const { statements } = parseSqlContract(
       `CREATE TABLE Orders (a int);\nCREATE TABLE orders (b int);\n`,
     );
     expect(findRedefinitions(collectCreatedObjects(statements))).toHaveLength(1);
+  });
+
+  // The name pattern stopped after a quoted schema, so every table in `"app"`
+  // was keyed as `app` and two different tables were reported as one.
+  it("reads every part of a name whose schema is quoted", () => {
+    const { statements } = parseSqlContract(
+      `CREATE TABLE "app".users (a int);\nCREATE TABLE "app".orders (a int);\n`,
+    );
+    expect(collectCreatedObjects(statements).map((object) => object.name)).toEqual([
+      "app.users",
+      "app.orders",
+    ]);
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  it("folds each bare part and keeps each quoted part as written", () => {
+    const { statements } = parseSqlContract(
+      `CREATE TABLE App."Users" (a int);\n` +
+        `CREATE TABLE "app".users (a int);\n` +
+        `CREATE TABLE app . "Users" (a int);\n`,
+    );
+    expect(collectCreatedObjects(statements).map((object) => object.name)).toEqual([
+      "app.Users",
+      "app.users",
+      "app.Users",
+    ]);
+    expect(findRedefinitions(collectCreatedObjects(statements))[0]?.lines).toEqual([1, 3]);
+  });
+
+  // A quoted part may hold a dot or a doubled quote; neither is a separator or
+  // a terminator, and `"a.b"` is one name where `a.b` is a schema and a table.
+  it("keeps a quoted part holding a dot or a doubled quote distinct", () => {
+    const { statements } = parseSqlContract(
+      `CREATE TABLE "a.b" (x int);\nCREATE TABLE a.b (x int);\n` +
+        `CREATE TABLE "s""q".t (x int);\nCREATE TABLE "s".t (x int);\n`,
+    );
+    expect(collectCreatedObjects(statements).map((object) => object.name)).toEqual([
+      '"a.b"',
+      "a.b",
+      '"s""q".t',
+      "s.t",
+    ]);
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
   });
 
   it("stays silent on a file that defines each object once", async () => {

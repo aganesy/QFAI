@@ -169,8 +169,13 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
       summary.push(
         `${target.id}: ${outcome.wrote ? "created" : "existing test"} (${path.relative(options.root, destination).replace(/\\/g, "/")})`,
       );
+      if (outcome.leftBehind !== undefined) {
+        summary.push(
+          `${target.id}: could not remove the staging file ${path.relative(options.root, outcome.leftBehind).replace(/\\/g, "/")}; delete it.`,
+        );
+      }
     }
-    write(`qfai atdd scaffold: ${summary.length} target(s) processed.\n${summary.join("\n")}`);
+    write(`qfai atdd scaffold: ${targets.length} target(s) processed.\n${summary.join("\n")}`);
     return 0;
   } catch (caught) {
     writeErr(`qfai atdd scaffold: ${caught instanceof Error ? caught.message : String(caught)}`);
