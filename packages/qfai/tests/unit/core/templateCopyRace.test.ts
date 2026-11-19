@@ -4,8 +4,10 @@
  * not the template's.
  *
  * `copyFile` is wrapped so that the destination appears between the check and the create, the
- * moment no real process can be scheduled into reliably. `vi.mock` is hoisted to module scope, so
- * these cases live in their own file.
+ * moment no real process can be scheduled into reliably. The writer runs only on an exclusive
+ * create, so a copy that stopped creating exclusively would never meet the racing file and fail
+ * these cases by listing the path as copied. `vi.mock` is hoisted to module scope, so these cases
+ * live in their own file.
  */
 
 import { constants as fsConstants } from "node:fs";
