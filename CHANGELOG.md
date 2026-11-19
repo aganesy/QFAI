@@ -490,6 +490,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
 
+- **A rejected release version or tag no longer reaches the Actions log as a
+  workflow command.** The manual prepare-release and release workflows put
+  the value they refused inside their error annotation, so a value carrying a
+  newline started a line of its own, which the runner reads as a command. The
+  refusal now states its reason without the value. Closes #4605.
+
 - **A file at an assistant layer path no longer counts as an installed
   layer.** `qfai validate` accepted a regular file named, for example,
   `.qfai/assistant/prompt` as the `prompt/` layer and reported nothing. It
@@ -605,6 +611,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports document analysis not ready and says to set `credentialEnv`, and
   `.agents/rules/graph-exploration.md` shows a local setup that names a
   variable holding a placeholder value instead of a real key.
+
+- **A failed document graph refresh keeps the previous graph with the files it
+  was built from.** Checking whether the document graph was current copied the
+  changed project files into the active analysis first, so when the
+  replacement graph then failed, the previous graph sat beside inputs it was
+  never built from. When project files changed, the check now refreshes and
+  verifies a separate copy and makes it active, graph and inputs together,
+  only when the graph is current for them. Unchanged files are checked where
+  they are, with no copy. Closes #4588.
 
 - **`qfai validate` compares the index's Depends On with each contract.** The
   `contracts.md` index check compared each row's ID and File with the contract
