@@ -3,15 +3,7 @@ import { copyFile, lstat, mkdir, readdir, readFile, rm, stat } from "node:fs/pro
 import path from "node:path";
 
 import { readBoundedRegularFile } from "../../shared/boundedRead.js";
-
-/** The `code` of a Node filesystem error, or `undefined` for anything else thrown. */
-function errorCode(error: unknown): string | undefined {
-  if (typeof error !== "object" || error === null) {
-    return undefined;
-  }
-  const code: unknown = Reflect.get(error, "code");
-  return typeof code === "string" ? code : undefined;
-}
+import { hasErrnoCode, isEnoent } from "./errno.js";
 
 export type CopyOptions = {
   force: boolean;
@@ -171,7 +163,7 @@ async function copyFiles(
         try {
           await copyFile(file, dest, fsConstants.COPYFILE_EXCL);
         } catch (error) {
-          if (errorCode(error) === "EEXIST") {
+          if (hasErrnoCode(error) && error.code === "EEXIST") {
             skipped.push(dest);
             continue;
           }
@@ -215,7 +207,7 @@ async function lstatOrUndefined(target: string) {
   try {
     return await lstat(target);
   } catch (error) {
-    if (errorCode(error) === "ENOENT") return undefined;
+    if (isEnoent(error)) return undefined;
     throw error;
   }
 }
@@ -323,6 +315,6 @@ async function exists(target: string): Promise<boolean> {
     await lstat(target);
     return true;
   } catch (error: unknown) {
-    return (error as NodeJS.ErrnoException | null)?.code !== "ENOENT";
+    return !isEnoent(error);
   }
 }
