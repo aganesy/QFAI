@@ -359,6 +359,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
 
+- **`qfai --help` lists the validation profiles in the order the parser
+  names them.** The `--profile` line for validate and report now reads
+  `discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift`, the
+  same order as the refusal for an unknown profile; it listed `saas-package`
+  before `full`. The set of profiles is unchanged. Closes #4637.
+
 - **A request for new screens plans the prototype loop.** `qfai-run` now sets
   the qualifier `visual-open` when a request adds a screen or a UI surface that
   no confirmed prototype covers, even when the request asks no design question.
@@ -625,6 +631,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `api/`, `db/` and `ui/`, although step 4 refuses a rule placed there and
   step 3 removes that directory. They now name only the four contract kind
   directories, as the placement guide does. Closes #4627.
+
+- **`qfai init` reads an installed file once, and only within a bound, when it
+  compares it with the template.** A plain run read a kept file in full twice,
+  as bytes and then as text, however large it was. It now reads each file once
+  and stops at twice the template's size, since a file larger than that cannot
+  hold the template with converted line endings. Closes #4638.
 
 - **Story ID commands no longer answer from a partial or shared set of pull
   request heads.** `scripts/story-ids.mjs` read each head's commit from the
