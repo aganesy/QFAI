@@ -9,10 +9,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  readPinnedRegularFile,
-  readPinnedRegularFileBytes,
-} from "../../../src/core/init/fsGuards.js";
+import { readPinnedRegularFile } from "../../../src/core/init/fsGuards.js";
 
 const tempDirs: string[] = [];
 
@@ -32,15 +29,12 @@ async function newTempDir(): Promise<string> {
 }
 
 describe("readPinnedRegularFile", () => {
-  it("returns the byte reader's content decoded as UTF-8", async () => {
+  it("returns the file's content decoded as UTF-8", async () => {
     const dir = await newTempDir();
     const file = path.join(dir, "note.txt");
     await writeFile(file, "pinned — text\n", "utf-8");
 
-    const bytes = await readPinnedRegularFileBytes(file, 64);
-
     expect(await readPinnedRegularFile(file, 64)).toBe("pinned — text\n");
-    expect(bytes?.content.toString("utf-8")).toBe("pinned — text\n");
   });
 
   it("reads a file exactly at the ceiling and refuses one byte past it", async () => {
