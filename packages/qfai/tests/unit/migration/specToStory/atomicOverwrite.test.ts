@@ -7,8 +7,8 @@
  * target and is renamed over it instead, so a failed write leaves the original
  * exactly as it was and leaves no temporary file behind.
  *
- * The failure is injected into `writeFile` and `copyFile`: it writes half the
- * bytes and then fails as a full disk does. `vi.mock` is hoisted to module
+ * The failure is injected into `writeFile`: it writes half the bytes and then
+ * fails as a full disk does. `vi.mock` is hoisted to module
  * scope, so these cases live apart from `harness.test.ts`.
  */
 
@@ -45,12 +45,6 @@ vi.mock("node:fs/promises", async () => {
       const [file, data, options] = args;
       const text = typeof data === "string" ? data : "";
       await actual.writeFile(file, text.slice(0, Math.floor(text.length / 2)), options);
-      throw diskFull();
-    },
-    copyFile: async (...args: Parameters<FsPromises["copyFile"]>) => {
-      if (!failure.on) return actual.copyFile(...args);
-      const [, destination] = args;
-      await actual.writeFile(destination, "");
       throw diskFull();
     },
   };
