@@ -50,6 +50,9 @@ describe("test-layers.md defines the accessibility layer", () => {
     expect(layer).toMatch(/keyboard order/);
     expect(layer).toContain("design-anti-patterns.md#states-and-accessibility");
     expect(layer).toContain("`QFAI-AXE-001`");
+    expect(layer).toMatch(
+      /The\s+warning reads text only: a comment or an unused import silences it/,
+    );
   });
 });
 
@@ -111,6 +114,9 @@ describe("the verify gates run the layer and note whether it exists", () => {
     const step = await read("step", "verify-qfai-gate", "STEP.md");
     const note = section(step, "## Accessibility layer");
     expect(note).toContain("`QFAI-AXE-001` (`warning`)");
+    expect(note).toMatch(
+      /reads text only, so a file that names axe in a comment or an unused import/,
+    );
     expect(note).toMatch(/Record the layer as present or missing in the stage report/);
   });
 

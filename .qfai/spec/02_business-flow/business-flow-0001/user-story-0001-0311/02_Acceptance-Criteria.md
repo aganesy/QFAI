@@ -7,9 +7,9 @@ Feature: Check every route of the built app for accessibility
   # AC-0001-0311-01
   Scenario: Validate warns about a UI project with no accessibility check
     Given a project whose UI contracts declare a screen with a route that starts with `/`
-    When `qfai validate` runs the verify or full profile and no selected test file calls axe
+    When `qfai validate` runs the verify or full profile and no selected test file names axe
     Then it reports `QFAI-AXE-001` at warning
-    And it reports nothing once a selected test file calls axe, for a project with no such screen, or in a partial profile
+    And it reports nothing once a selected test file names axe, for a project with no such screen, or in a partial profile
 
   # AC-0001-0311-02
   Scenario: The shipped steps write, run and note the accessibility check

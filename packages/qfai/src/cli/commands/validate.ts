@@ -1306,7 +1306,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-052":
     "Every `omitted` list a UI contract screen declares is a list of mappings, each with a non-blank `part` naming a part the screen leaves out and a non-blank `reason` saying why, so a reviewer can tell a deliberate omission from a missing part.",
   "QFAI-AXE-001":
-    "A project whose UI contracts declare a screen with a web route has a selected test file that calls axe (`AxeBuilder` or an `@axe-core/` package), so its routes are checked against the WCAG 2.2 A and AA rules.",
+    "A project whose UI contracts declare a screen with a web route has a selected test file that contains `AxeBuilder` or an `@axe-core/` package name. The check reads the text of the test files only: a comment or an unused import satisfies it too, so whether the routes pass the WCAG 2.2 A and AA rules is shown by the accessibility gate in the repository's `Test` command.",
   "QFAI-CONTRACT-053":
     "Every application screen of a UI contract lists `states` with an entry for each of `default`, `empty`, `loading`, `error` and `success`, a state it cannot reach carrying `none` with the reason, so each state is built rather than assumed. A `surface: marketing` screen is asked nothing.",
   "QFAI-CONTRACT-054":

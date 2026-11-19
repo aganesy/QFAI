@@ -81,8 +81,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runs it through the `Test` command, and `verify-qfai-gate` records whether it
   exists. `qfai validate`
   warns with `QFAI-AXE-001` in the verify and full profiles when a project with
-  web screens has no test that calls axe. QFAI itself takes no axe dependency.
-  Closes #4309.
+  web screens has no selected test file whose text names `AxeBuilder` or an
+  `@axe-core/` package. That warning is a text search: a comment or an unused
+  import silences it too, and the accessibility gate is what shows the routes
+  pass. QFAI itself takes no axe dependency. Closes #4309 and #4565.
 
 - **Browser tests survive a rebuild that keeps the behaviour.** QFAI said
   nothing about how a browser test finds an element or injects a failure, so
