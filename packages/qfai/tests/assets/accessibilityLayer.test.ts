@@ -117,7 +117,8 @@ describe("the verify gates run the layer and note whether it exists", () => {
     expect(note).toMatch(
       /reads text only, so a file that names axe in a comment or an unused import/,
     );
-    expect(note).toMatch(/Record the layer as present or missing in the stage report/);
+    expect(note).toMatch(/a missing\s+warning alone does not make it present/);
+    expect(note).toMatch(/Record the layer as present or missing\s+in the stage report/);
   });
 
   it("keeps keyboard order and screen-reader names in the screen review checklist", async () => {
