@@ -363,6 +363,7 @@ describe("check-mdschema driver", () => {
     const result = runDriver(["--root", root, "--base", "no/such/ref"]);
 
     expect(result.status).toBe(1);
+    expect(result.stderr).toContain("cannot diff against no/such/ref (");
     expect(result.stderr).toContain("story-business-flow");
   });
 
@@ -1000,6 +1001,29 @@ describe("the ratchet in --scope changed", () => {
     const result = runDriver(["--root", root, "--scope", "changed", "--base", "main", "--summary"]);
 
     expect(result.stdout).toContain("pre-existing, not this branch's");
+  });
+
+  it("fails open to the whole tree when the worktree diff fails", async () => {
+    // The branch diff compares two commits and reads no index; the worktree
+    // diff reads the index, so a corrupt one fails it alone. Read as "nothing
+    // uncommitted", that failure would drop the uncommitted edit below from
+    // the scope and the run would report a broken document clean.
+    const root = await twoCommits(
+      { "business-flow-0001": CONFORMING_FLOW },
+      { "business-flow-0002": CONFORMING_FLOW },
+    );
+    await writeFlow(root, "business-flow-0001", NON_CONFORMING_FLOW);
+    await writeFile(path.join(root, ".git", "index"), "not an index", "utf-8");
+
+    const result = runDriver(["--root", root, "--scope", "changed", "--base", "main"]);
+
+    expect(result.status).toBe(1);
+    // The warning names the worktree diff, not the base: the base resolved and
+    // its diff succeeded, so pointing the reader at the ref would mislead.
+    expect(result.stderr).toContain("cannot diff the worktree against HEAD (");
+    expect(result.stderr).not.toContain("cannot diff against main");
+    expect(result.stderr).toContain("checking every document instead (fail open)");
+    expect(result.stderr).toContain("business-flow-0001");
   });
 
   it("keeps a document in scope when its directory name is not ASCII", async () => {
