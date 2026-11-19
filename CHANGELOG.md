@@ -461,8 +461,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   annotation. Each further line of a message or a `fix:` value now starts
   with a vertical bar after its indent, and control characters in these
   fields, in the `run-log:` path and in the `--format github` summary paths
-  print as visible escapes such as `\n`, `\t` and `\u001B`. The JSON report
-  keeps the exact values.
+  print as visible escapes such as `\n`, `\t` and `\u001B`. The older
+  `##[<command>]` form, which the runner finds anywhere in a line, prints as
+  `##\[`. The JSON report keeps the exact values.
 
 - **`qfai validate` reports the actual line of a Mermaid screen-flow
   finding.** The stateDiagram v1, unlabeled-transition and flowchart-direction

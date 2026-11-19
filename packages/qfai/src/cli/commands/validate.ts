@@ -1580,13 +1580,17 @@ function escapeGitHubCommandValue(value: string): string {
  * a tab as `\t`, and any other as `\u` and four hexadecimal digits, so a terminal or a CI log
  * viewer does not act on it. The runner decodes `%XX` only inside a workflow command, so a plain
  * line keeps `%` as written.
+ *
+ * `##[` prints as `##\[`: the runner also reads the older `##[<command>]` form, and it looks for
+ * that one anywhere in a line, so neither the issue's own prefix nor a continuation bar would
+ * stop `##[stop-commands]<token>`.
  */
 function escapePlainLine(value: string): string {
   let escaped = "";
   for (const char of value) {
     escaped += escapeControlCharacter(char);
   }
-  return escaped;
+  return escaped.replace(/##\[/g, "##\\[");
 }
 
 /** One character as `escapePlainLine` prints it. */

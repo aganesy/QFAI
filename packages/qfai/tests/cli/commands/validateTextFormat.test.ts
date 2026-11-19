@@ -901,6 +901,9 @@ describe("validate --format text matches the validate contract's text output gra
  */
 describe("validate --format text prints repository text as log data", () => {
   const INJECTED_COMMAND = "::stop-commands::7f3a9c";
+  /** The older command form, which the runner looks for anywhere in a line. */
+  const LEGACY_COMMAND = "##[stop-commands]7f3a9c";
+  const ESCAPED_LEGACY = "##\\[stop-commands]7f3a9c";
 
   // QFAI:EX-0001-0039-56
   it("keeps every line of an issue from opening a workflow command", async () => {
@@ -910,8 +913,8 @@ describe("validate --format text prints repository text as log data", () => {
       code: "QFAI-TEST-006",
       severity: "error",
       category: "canonical",
-      message: `first line\n${INJECTED_COMMAND}\r\n  ::error::forged\u001b[31m`,
-      file: `docs/a\n${INJECTED_COMMAND}.md`,
+      message: `first line\n${INJECTED_COMMAND}\r\n  ::error::forged\u001b[31m ${LEGACY_COMMAND}`,
+      file: `docs/a\n${INJECTED_COMMAND}${LEGACY_COMMAND}.md`,
       refs: [`ref\r${INJECTED_COMMAND}`, "tab\there\u0007"],
       suggested_action: `Repair the file.\n${INJECTED_COMMAND}`,
       rule: "test.hostile",
@@ -924,10 +927,12 @@ describe("validate --format text prints repository text as log data", () => {
     const lines = output.trimEnd().split("\n");
 
     expect(lines.filter((line) => line.trimStart().startsWith("::"))).toEqual([]);
+    expect(lines.filter((line) => line.includes("##["))).toEqual([]);
     expect(lines.slice(0, 5)).toEqual([
       "[error] QFAI-TEST-006 first line",
       `  | ${INJECTED_COMMAND}`,
-      `  |   ::error::forged\\u001B[31m (docs/a\\n${INJECTED_COMMAND}.md) ` +
+      `  |   ::error::forged\\u001B[31m ${ESCAPED_LEGACY} ` +
+        `(docs/a\\n${INJECTED_COMMAND}${ESCAPED_LEGACY}.md) ` +
         `refs=ref\\r${INJECTED_COMMAND},tab\\there\\u0007`,
       "  fix: Repair the file.",
       `${documentedContinuationPrefix(guideline, "fix")}${INJECTED_COMMAND}`,
