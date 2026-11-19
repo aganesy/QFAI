@@ -305,7 +305,8 @@ async function place(entry: PairEntry): Promise<void> {
 /**
  * Undoes what this run did to the pair after a failed write and returns a sentence for each step
  * that could not be undone. A placed file that another run has since replaced is left in place,
- * and the moved-aside file is then kept under its own name rather than renamed over it.
+ * as is one whose file system gives no inode number to tell the two apart, and the moved-aside
+ * file is then kept under its own name rather than renamed over it.
  */
 async function undoPair(root: string, entries: readonly PairEntry[]): Promise<string[]> {
   const left: string[] = [];
@@ -315,8 +316,13 @@ async function undoPair(root: string, entries: readonly PairEntry[]): Promise<st
     });
   for (const entry of entries) {
     const target = relativeTo(root, entry.file);
-    if (entry.placed && (await isOwnFile(entry))) {
+    const owner = entry.placed ? await ownerOf(entry) : "other";
+    if (owner === "this run") {
       await attempt(`${target} could not be removed`, () => rm(entry.file, { force: true }));
+    } else if (owner === "unknown") {
+      left.push(
+        `${target} was left in place: the file system gives no inode number, so it cannot be told apart from another run's file.`,
+      );
     }
     const aside = entry.aside;
     if (aside !== null) {
@@ -337,15 +343,17 @@ async function undoPair(root: string, entries: readonly PairEntry[]): Promise<st
   return left;
 }
 
-/** Whether the entry's target is still the file this run placed there. */
-async function isOwnFile(entry: PairEntry): Promise<boolean> {
+/**
+ * Whether the entry's target is still the file this run placed there, another file or none, or
+ * cannot be told: a volume that gives no inode number reports 0 for every file.
+ */
+async function ownerOf(entry: PairEntry): Promise<"this run" | "other" | "unknown"> {
   const found = await lstat(entry.file, { bigint: true }).catch(() => null);
-  return (
-    found !== null &&
-    entry.identity !== null &&
-    found.dev === entry.identity.dev &&
-    found.ino === entry.identity.ino
-  );
+  if (found === null) return "other";
+  if (entry.identity === null || entry.identity.ino === 0n || found.ino === 0n) return "unknown";
+  return found.dev === entry.identity.dev && found.ino === entry.identity.ino
+    ? "this run"
+    : "other";
 }
 
 function relativeTo(root: string, file: string): string {

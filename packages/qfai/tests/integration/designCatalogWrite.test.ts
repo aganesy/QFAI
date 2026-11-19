@@ -16,13 +16,32 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 type FsPromises = typeof fsPromises;
 type RenameFault = (from: string, to: string) => boolean;
 
-const fault = vi.hoisted((): { rename: RenameFault | null } => ({ rename: null }));
+const fault = vi.hoisted((): { rename: RenameFault | null; noInodes: boolean } => ({
+  rename: null,
+  noInodes: false,
+}));
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
   return {
     ...actual,
     default: actual,
+    // A volume with no inode numbers reports 0 for every file; the staging file's handle stands in.
+    open: async (...args: Parameters<FsPromises["open"]>): Promise<fsPromises.FileHandle> => {
+      const handle = await actual.open(...args);
+      if (!fault.noInodes || !String(args[0]).endsWith(".tmp")) return handle;
+      const stat = async (): Promise<{ dev: bigint; ino: bigint }> => ({
+        dev: (await handle.stat({ bigint: true })).dev,
+        ino: 0n,
+      });
+      return new Proxy(handle, {
+        get: (target, key): unknown => {
+          if (key === "stat") return stat;
+          const value: unknown = Reflect.get(target, key, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+    },
     rename: async (...args: Parameters<FsPromises["rename"]>): Promise<void> => {
       const [from, to] = args;
       if (fault.rename?.(String(from), String(to)) === true) {
@@ -52,6 +71,7 @@ const SAMPLE = path.join(
 
 afterEach(async () => {
   fault.rename = null;
+  fault.noInodes = false;
   vi.restoreAllMocks();
   while (roots.length > 0) {
     const root = roots.pop();
@@ -205,5 +225,28 @@ describe("the design catalogue is written only inside the project, by the run th
     expect(left.sort()).toEqual(["design.tokens.json", ...aside].sort());
     expect(aside).toHaveLength(1);
     expect(await readFile(catalogFile(root, aside[0] ?? ""))).toEqual(theme);
+  });
+
+  // QFAI:EX-0001-0312-19
+  it("leaves a placed file it cannot tell apart on a volume with no inode numbers", async () => {
+    const root = await project();
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    const tokens = await readFile(catalogFile(root, "design.tokens.json"));
+    const theme = await readFile(catalogFile(root, "theme.css"));
+    await changePrimary(root);
+    fault.noInodes = true;
+    fault.rename = placesTheme;
+    const failed = await cli(["catalog", "design", "--root", root]);
+    expect(failed.code).toBe(1);
+    expect(failed.err).toMatch(
+      /^qfai catalog design: could not write the design catalogue, and could not put both files back: EBUSY: resource busy or locked, rename \.qfai\/catalog\/design\.tokens\.json was left in place: the file system gives no inode number, so it cannot be told apart from another run's file\. \.qfai\/catalog\/\.design\.tokens\.json\.[0-9a-f-]+\.old still holds the earlier \.qfai\/catalog\/design\.tokens\.json: another file is at \.qfai\/catalog\/design\.tokens\.json\.\n$/,
+    );
+    expect(await readFile(catalogFile(root, "theme.css"))).toEqual(theme);
+    expect(await readFile(catalogFile(root, "design.tokens.json"))).not.toEqual(tokens);
+    const left = await readdir(path.join(root, ...CATALOG));
+    const aside = left.filter((name) => name.endsWith(".old"));
+    expect(left.sort()).toEqual(["design.tokens.json", "theme.css", ...aside].sort());
+    expect(aside).toHaveLength(1);
+    expect(await readFile(catalogFile(root, aside[0] ?? ""))).toEqual(tokens);
   });
 });
