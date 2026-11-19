@@ -196,6 +196,14 @@ export type ValidationResult = {
    * per-profile wording.
    */
   profileValidatorsRan?: boolean;
+  /**
+   * The business flows a `--flow` run checked, sorted, each named once.
+   *
+   * Absent on a repository-wide run. `qfai report` compares it with the flows
+   * it was asked for, since the file name alone cannot tell a result of
+   * another scope that was copied or renamed into place.
+   */
+  flowIds?: string[];
   issues: Issue[];
   counts: ValidationCounts;
   waivers?: ValidationWaivers;

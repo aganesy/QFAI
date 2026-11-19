@@ -778,6 +778,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   filesystem without hard links it is written directly, as before. A hidden
   file the command cannot remove is named in its output. Closes #4538.
 
+- **`qfai report` checks the flows a validation result records.** A flow
+  report trusted a result named `validate.flow-<ids>.json`, so a result of
+  another scope copied or renamed to that name was rendered as the requested
+  flows'. `qfai validate --flow` now records the flows it checked in the
+  result's `flowIds` field, and `qfai report` exits 2, names the validate run
+  to repeat and writes no report when the recorded flows are not the requested
+  ones, including a result with no recorded flows under `--flow` and a result
+  with recorded flows read without `--flow`. Closes #4547.
+
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
   `-- Depends on:` line skipped `$$ … $$` literals but not `$tag$ … $tag$`

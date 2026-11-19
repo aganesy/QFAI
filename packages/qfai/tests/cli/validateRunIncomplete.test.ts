@@ -16,12 +16,13 @@
  * particular validator's. A row that broke one validator's input would pass
  * while the handler was narrowed to that errno.
  */
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type * as ReportCommandModule from "../../src/cli/commands/report.js";
 import type * as CoreValidateModule from "../../src/core/validate.js";
 import { graphProcessFixture } from "../helpers/graphProcess.js";
 
@@ -45,6 +46,7 @@ const { run } = await import("../../src/cli/main.js");
 const { describeIncompleteRun } = await import("../../src/cli/lib/warnings.js");
 
 type CoreValidate = typeof CoreValidateModule;
+type ReportModule = typeof ReportCommandModule;
 
 const dirs: string[] = [];
 
@@ -270,6 +272,40 @@ describe("validate reports a run it could not finish", () => {
     expect(parsed.counts.error).toBe(1);
     expect(parsed.issues.map((entry) => entry.code)).toContain("QFAI-SCAN-002");
     expect(parsed.issues.find((entry) => entry.code === "QFAI-SCAN-002")?.severity).toBe("error");
+  });
+
+  // QFAI:EX-0001-0066-06
+  it("records the requested flows in a scoped result of a run that did not finish", async () => {
+    const root = await project();
+    const flow = path.join(root, ".qfai", "spec", "02_business-flow", "business-flow-0001");
+    await mkdir(flow, { recursive: true });
+    await writeFile(path.join(flow, "business-flow.md"), "# BF-0001: Checkout\n", "utf8");
+    validateProjectSpy.mockImplementation(() => Promise.reject(errno("EPERM", root)));
+
+    const write = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      await runValidate({
+        root,
+        strict: false,
+        format: "text",
+        failOn: "never",
+        flowIds: ["BF-0001", "BF-0001"],
+      });
+      const scoped = path.join(root, ".qfai", "report", "validate.flow-0001.json");
+      const parsed = JSON.parse(await readFile(scoped, "utf-8")) as { flowIds?: string[] };
+      expect(parsed.flowIds).toEqual(["BF-0001"]);
+
+      const { runReport } = await vi.importActual<ReportModule>("../../src/cli/commands/report.js");
+      expect(await runReport({ root, format: "md", failOn: "never", flowIds: ["BF-0001"] })).toBe(
+        0,
+      );
+      const report = path.join(root, ".qfai", "report", "report.flow-0001.md");
+      expect(await readFile(report, "utf-8")).toContain("QFAI-SCAN-002");
+    } finally {
+      write.mockRestore();
+      stderr.mockRestore();
+    }
   });
 
   it("fails the run whatever --fail-on says, except never", async () => {

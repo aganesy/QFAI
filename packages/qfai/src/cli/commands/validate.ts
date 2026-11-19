@@ -90,11 +90,18 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       ...(options.timings ? { familyTimings: true } : {}),
     });
   } catch (error: unknown) {
-    validated = incompleteRunResult(
+    const incomplete = incompleteRunResult(
       options.toolVersionOverride ?? (await resolveToolVersion()),
       buildIncompleteRunIssue(error, "validate"),
       options.profile,
     );
+    // A flow-scoped run still writes its scoped file, so it records the flows
+    // it was asked for: `qfai report --flow` must reach the failure it holds
+    // rather than refuse the file as a repository-wide result.
+    validated =
+      options.flowIds && options.flowIds.length > 0
+        ? { ...incomplete, flowIds: [...new Set(options.flowIds)].sort() }
+        : incomplete;
   }
   const rawResult = ciProfileIssue
     ? {

@@ -73,10 +73,16 @@ function fixture(code: string): Issue {
   return { code, severity: "warning", category: "canonical", message: `fixture ${code}` };
 }
 
-async function writeResult(root: string, name: string, issues: Issue[]): Promise<void> {
+async function writeResult(
+  root: string,
+  name: string,
+  issues: Issue[],
+  scope?: string[],
+): Promise<void> {
   const result: ValidationResult = {
     toolVersion: "2.0.0-test",
     profile: "full",
+    ...(scope ? { flowIds: scope } : {}),
     issues,
     counts: { info: 0, warning: issues.length, error: 0 },
   };
@@ -124,7 +130,7 @@ describe("flow-scoped report", () => {
   async function scopedRoot(): Promise<string> {
     const root = await twoFlowRoot();
     await cli(root, ["validate", "--flow", "BF-0001", "--fail-on", "never"]);
-    await writeResult(root, "validate.flow-0001.json", [fixture("QFAI-TEST-001")]);
+    await writeResult(root, "validate.flow-0001.json", [fixture("QFAI-TEST-001")], ["BF-0001"]);
     await writeResult(root, "validate.json", [fixture("QFAI-TEST-999")]);
     await writeFile(path.join(root, ".qfai/report/report.md"), "earlier report.md\n", "utf8");
     await writeFile(path.join(root, ".qfai/report/report.json"), "earlier report.json\n", "utf8");
