@@ -506,6 +506,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   nothing without `--yes` and says to rerun with it; the rest of the pass still
   runs. Ctrl+C at the prompt stops the command. Closes #4464.
 
+- **`qfai catalog design` writes only its own files, and only inside the
+  project.** It staged both files under names built from its process ID, so a
+  second run could overwrite the first run's staging file, and a failed run
+  removed any file under that name, even one it had not written. A
+  `.qfai/catalog` directory that was a symbolic link or junction also led the
+  write outside the project. The command now checks each directory on the path
+  before and after creating it, stages each file in a new file it creates
+  exclusively under a name of its own, and on failure undoes only what it did.
+  When it cannot put both files back, its message says so and names the file it
+  kept. Closes #4463.
+
 - **`qfai db-drift` accepts `--fail-on never`.** The exit-code help said a
   difference exits 0 under `--fail-on never`, but the parser refused the flag
   on `db-drift` and the command exited 2. `db-drift` now takes
@@ -523,6 +534,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   catalogue and renames it into place, so a failed write leaves the old
   catalogue whole.
 
+- **`qfai doctor` keeps a skill's dependency names away from the shell.**
+  On Windows, `--autoremediate` ran `npm install` through `cmd.exe`, so a
+  `runtimeDependencies` entry such as `playwright & calc` in a skill's
+  manifest ran a second command, and an entry such as `--global` reached npm
+  as an option. Doctor now accepts only registry package names there:
+  lowercase letters, digits and `-._~`, starting with a letter or digit,
+  optionally scoped. A manifest listing anything else, a non-string or a name
+  with spaces around it included, is an error naming the entry, and none of
+  its entries is probed or installed. npm now starts without a shell on every
+  platform; on Windows doctor runs npm's JavaScript entry with Node. Closes
+  #4465.
+
 - **`qfai db-drift` compares the full PostgreSQL column type.** It read
   `information_schema.columns.data_type`, which drops the varchar length, the
   numeric precision and scale and the array element type, and reads
@@ -533,6 +556,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that, for example `character varying(20)`. A type outside `pg_catalog` reads
   with its schema, such as `public.order_state`, whatever search path the
   applied SQL left behind. Closes #4476.
+
+- **`QFAI-CONTRACT-036` keeps a table's schema and the case of a quoted
+  name.** The foreign-key check dropped the schema and lowercased every name,
+  so `audit.events` and `sales.events`, or `"Orders"` and `orders`, read as
+  one table that two contracts create, and a missing `-- Depends on:` entry
+  went unreported. Names now compare as PostgreSQL resolves them: the schema
+  counts and only unquoted names fold. A name with no schema matches a table
+  of that name in any schema, and is attributed to no contract when those
+  tables belong to more than one. A `$tag$`, `'` or `REFERENCES` inside a
+  double-quoted identifier no longer opens a literal or reads as a foreign
+  key, and a quoted name holding spaces, dots or `$` is read whole.
+  Closes #4487.
 
 - **`qfai sdd next-id` reads the ID kind without regard to case.**
   `qfai sdd next-id ac US-0001-0001 --base main` was refused as an unknown
@@ -546,6 +581,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   It now writes the package's copy beside the directory, checks it, and only
   then switches the two; if the switch fails, the project's copy is put back,
   and when even that fails the error names the hidden directory that holds it.
+
+- **The document-schema check sees changes under a non-ASCII directory.**
+  `check-mdschema.mjs --scope changed` read Git's changed paths line by line,
+  where Git quotes a path with a non-ASCII character and escapes its bytes. The
+  quoted path matched no document, so an edit under such a directory was left
+  out of the check and a broken document passed. The check now reads the paths
+  NUL-delimited, as Git stores them. Closes #4491.
 
 - **`QFAI-CONTRACT-036` skips a `REFERENCES` inside a tagged dollar-quoted
   literal.** The check that compares a `db/` contract's foreign keys with its
@@ -565,6 +607,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   outside the base URL stays unlinked, and a `--base-url` that is not an
   absolute http or https URL without a query, fragment or credentials exits 2.
 
+- **The design audit no longer drops findings past its display limit.** It
+  kept only the first `uiux.audit.maxDuplicateFindingsPerRule` findings of a
+  code and replaced the rest with one info finding, before flow scope and
+  waivers ran, so a waiver or the exit code could act on the wrong set and
+  `validate.json` lacked findings. The audit now returns every finding, and
+  the key only sets how many of a `QFAI-AUD-` code `--format text` prints
+  before `and <n> more`. Closes #4493.
+
 - **The README names npm's own error for a Git install of QFAI.** It said
   npm and yarn both refuse a Git dependency such as `github:aganesy/QFAI`
   through a `preinstall` guard. npm never reaches that guard: it stops with
@@ -579,6 +629,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   command's usage lines (only the subcommand's when one was given) and a
   pointer to `qfai --help`. `--help`, no command and an unknown command name
   still print the whole help. Closes #4448.
+
+- **The document lane reads `qfai.config.yaml` the way `qfai validate` does.**
+  The shipped `check-mdschema.mjs` read `paths.specsDir` and
+  `paths.contractsDir` with its own line scanner. A value with a trailing
+  comment, or a flow mapping, sent it to the default `.qfai/spec` tree while
+  `qfai validate` checked the configured one, and a file it could not read
+  was silently treated as absent. It now parses the file with the YAML parser
+  `qfai validate` uses and the same rules for both keys. A file that cannot be
+  read or parsed, a `paths` that is not a mapping, or a key that is not a
+  non-blank string stops the lane with exit 2 naming the problem;
+  `checkDocuments` returns that the check did not run. Closes #4490.
 
 - **`qfai doctor --autoremediate` exits 1 when an install fails.** A failed
   `npm install` for a skill's runtime dependency was printed, but doctor still
@@ -604,6 +665,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   binary is the downloaded copy. That file now runs in a separate Node process
   stopped at the same limit; one that does not answer by then gives no finding,
   as a missing file already did. Closes #4616.
+
+- **A graph query still works after a source directory becomes a file, or a
+  file becomes a directory.** The code graph copies the project into its own
+  corpus before each query. A path that changed type since the last copy made
+  that copy fail, so the next query stopped with exit code 2. The stale entry
+  is now removed before the new one is copied in. Closes #4498.
 
 - **A DB contract that defines one SQL function twice is reported even when the
   two definitions differ only in defaults or argument names.** `QFAI-DB-002`
@@ -632,6 +699,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the checker reads a rule's example whatever order its keys are written
   in. `--show-patterns` still prints every pattern. Closes #4416.
 
+- **`qfai validate --flow` keeps the named flow's document-schema and
+  stale-term findings.** These checks name a file relative to the project
+  root while the story tree names it in full, so a scoped run found no match
+  and dropped every `QFAI-DOCSCHEMA-001` and `QFAI-STORY-016` finding, even
+  for a document inside the named flow. Both paths are now resolved against
+  the project root before they are compared. Closes #4477.
+
 - **A report without `--flow` counts every declared contract.** The summary
   counted only contracts holding a business rule linked to a flow, so a project
   with one declared contract and no linked rule reported zero contracts. Only a
@@ -650,6 +724,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and in every other check that asks whether a link stays inside one.
   Closes #4484.
 
+- **A failed migration write leaves the document it was replacing whole.**
+  Each step of the spec-to-story migration wrote over an existing document in
+  place, so a full disk or a stopped run left it truncated. Each step now writes
+  the new content to a new file beside the document and renames it into place,
+  keeping the document's permissions, so a failure leaves the original as it
+  was. The same holds for the reminder text step 11 refreshes and for the hook
+  settings it and `qfai init` update. Closes #4457.
+
 - **`qfai init --force` no longer removes another run's staging file.** Each
   run first removed every leftover `.qfai-init-*` staging file in
   `.github/instructions/`, including the one a second init in the same
@@ -659,6 +741,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exact name is removed, so a leftover from an earlier version,
   named `<file>.qfai-init-<pid>-<timestamp>`, stays: delete it by hand.
   Closes #4526.
+
+- **A migration move between two filesystems no longer leaves a partial
+  copy.** When a spec-to-story migration step moved a file or directory onto
+  another filesystem, it copied straight to the destination, so a full disk or
+  a stopped run left an incomplete copy there, and the retry refused it as
+  existing data. The copy is now written beside the destination and appears
+  there only once complete, without replacing anything that appeared there
+  meanwhile, and the source is removed only after that. Closes #4480.
 
 - **`qfai report --flow --profile` reads the result `qfai validate` wrote.**
   `qfai validate --flow` writes one `validate.flow-<ids>.json` whatever the

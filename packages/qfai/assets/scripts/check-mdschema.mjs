@@ -106,7 +106,9 @@
  * Exit codes:
  *   0  no document in scope carries a violation this run is responsible for
  *   1  at least one document does
- *   2  usage error, missing schema/manifest, or an mdschema binary that will not run
+ *   2  usage error, missing schema/manifest, a qfai.config.yaml that qfai validate
+ *      reports for paths.specsDir or paths.contractsDir, or an mdschema binary
+ *      that will not run
  *
  * Under `--scope all` and `--scope files` those two say what they always have:
  * every checked document conforms, or one does not. Under `--scope changed`
@@ -132,6 +134,8 @@ import path from "node:path";
 import process from "node:process";
 import { clearTimeout, setTimeout } from "node:timers";
 import { fileURLToPath } from "node:url";
+
+import { parse as parseYaml } from "yaml";
 
 /**
  * Where the schemas live: beside the script, always.
@@ -237,82 +241,98 @@ function mdschemaEntryPoint(packageDir) {
 }
 
 /**
- * The text of a double-quoted YAML scalar, with its escapes decoded the way the
- * configuration loader's YAML parser decodes them, so `"docs\tree"` names the
- * directory the loader reads and not `docs/tree`.
+ * A `qfai.config.yaml` the lane cannot read the two story-tree roots from.
  *
- * SIMPLIFIED: decodes the escapes JSON shares with YAML and keeps any other
- * escape as written.
- * Lift when: a configuration spells a path with an escape only YAML has, such
- * as `\x41` or `\_`.
- *
- * @param {string} body The text between the quotes.
- * @returns {string}
+ * Each case is one `qfai validate` reports as an error, so the lane stops on it
+ * rather than checking the default tree in place of the configured one.
  */
-function decodeDoubleQuoted(body) {
-  try {
-    return JSON.parse(`"${body}"`);
-  } catch {
-    return body;
-  }
+export class ConfigurationError extends Error {}
+
+/**
+ * @param {unknown} value
+ * @returns {value is Record<string, unknown>}
+ */
+function isMapping(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /**
- * Reads one directory under `paths` out of `qfai.config.yaml`.
+ * One story-tree root, read the way the package's configuration loader reads
+ * `paths.specsDir` and `paths.contractsDir`: an absent key is its default; any
+ * other value must be a string that is not blank. Trailing separators are
+ * removed unless nothing else is left, and every `\` is read as `/` on every
+ * platform.
  *
- * A hand-rolled read of two known keys rather than a YAML parse: this script
- * runs before (and independently of) the package build, and the value is a
- * single scalar under a single mapping. A missing or unreadable config is not
- * an error — the documented default is what a fresh tree has.
- *
- * The value is returned tree-relative with forward slashes, the form the
- * walked document paths take, so `./.qfai/spec` and `.qfai\spec` name the same
- * tree as `.qfai/spec`, as they do for `qfai validate`. A backslash is read as a
- * separator on every platform, which is how the package's configuration loader
- * reads these two keys too: a directory name holding one is not a spelling
- * anyone writes on purpose.
- *
- * @returns {string} Configured directory, or its default.
+ * @param {Record<string, unknown> | undefined} paths The parsed `paths` mapping.
+ * @param {string} key
+ * @param {string} fallback
+ * @param {string} config The configuration file, for the message.
+ * @returns {string}
  */
-function readConfiguredDir(root, key, fallback) {
+function readTreeDir(paths, key, fallback, config) {
+  const value = paths?.[key];
+  if (value === undefined) {
+    return fallback;
+  }
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new ConfigurationError(`${config}: paths.${key} must be a string.`);
+  }
+  const trimmed = value.replace(/[\\/]+$/, "");
+  return (trimmed.length > 0 ? trimmed : value).replace(/\\/g, "/");
+}
+
+/**
+ * The two story-tree roots the manifest's patterns expand from, out of
+ * `qfai.config.yaml`, read as the package's configuration loader reads them:
+ * parsed with the same YAML parser, which the qfai package depends on, and held
+ * to the same rules, so every spelling YAML allows (a trailing comment, a
+ * quoted value, a flow mapping) names the same directories for this lane and
+ * for `qfai validate`.
+ *
+ * A missing file means the documented defaults, which is what a fresh tree has.
+ * A file that cannot be read or parsed, a document or a `paths` value that is
+ * not a mapping, and a key that is not a non-blank string throw
+ * `ConfigurationError`. The message quotes nothing from the file.
+ *
+ * @param {string} root
+ * @returns {{ specsDir: string, contractsDir: string }} Tree-relative, forward-slashed.
+ */
+export function configuredPaths(root) {
   const config = path.join(root, "qfai.config.yaml");
-  if (!existsSync(config)) {
-    return fallback;
-  }
-  let text;
+  /** @type {unknown} */
+  let document;
   try {
-    text = readFileSync(config, "utf-8");
-  } catch {
-    return fallback;
+    document = parseYaml(readFileSync(config, "utf-8"));
+  } catch (error) {
+    if (isMissing(error)) {
+      return { specsDir: ".qfai/spec", contractsDir: ".qfai/spec/03_contract" };
+    }
+    throw new ConfigurationError(`${config}: the configuration file could not be read or parsed.`);
   }
-  // `paths:` at column 0, then the requested key indented beneath it. Anchored
-  // to the block so an unrelated key under another mapping cannot win.
-  const block = /^paths:[ \t]*$([\s\S]*?)^(?=\S)/m.exec(`${text}\n￿`);
-  const scope = block === null ? text : block[1];
-  const found = new RegExp(
-    `^[ \\t]+${key}:[ \\t]*(?:"((?:[^"\\\\\\r\\n]|\\\\.)*)"|'([^'\\r\\n]*)'|([^"'\\r\\n#]+))[ \\t]*$`,
-    "m",
-  ).exec(scope);
-  if (found === null) {
-    return fallback;
+  if (!isMapping(document)) {
+    throw new ConfigurationError(`${config}: the configuration file format is invalid.`);
   }
-  const value = (
-    found[1] === undefined ? (found[2] ?? found[3]) : decodeDoubleQuoted(found[1])
-  ).trim();
-  if (value === "") {
-    return fallback;
+  // A falsy `paths`, as an empty `paths:` parses, is the loader's defaults too.
+  if (document.paths && !isMapping(document.paths)) {
+    throw new ConfigurationError(`${config}: paths must be an object.`);
   }
-  const absolute = path.resolve(root, value.replaceAll("\\", "/"));
-  return path.relative(root, absolute).split(path.sep).join("/");
+  const mapping = isMapping(document.paths) ? document.paths : undefined;
+  /** @param {string} dir */
+  const treeRelative = (dir) =>
+    path.relative(root, path.resolve(root, dir)).split(path.sep).join("/");
+  return {
+    specsDir: treeRelative(readTreeDir(mapping, "specsDir", ".qfai/spec", config)),
+    contractsDir: treeRelative(
+      readTreeDir(mapping, "contractsDir", ".qfai/spec/03_contract", config),
+    ),
+  };
 }
 
 /**
  * Reads the manifest's `documents:` list.
  *
  * The manifest is a fixed two-key-per-entry shape authored in this repository,
- * so it is read with a line scanner rather than by adding a YAML dependency to
- * a script that must run before anything is installed beyond the root
- * devDependencies.
+ * so a line scanner reads it.
  *
  * @returns {{ id: string, schema: string, pattern: string }[]}
  */
@@ -446,9 +466,8 @@ export function carriesIgnoreMarker(text) {
 /**
  * The heading a schema requires at the document's root, or `null`.
  *
- * Read with a line scanner, for the reason the manifest and the config are:
- * these are fixed shapes authored in this repository, and this script must run
- * before anything is installed beyond the root devDependencies.
+ * Read with a line scanner, for the reason the manifest is: these are fixed
+ * shapes authored in this repository.
  *
  * The root heading is the first `pattern:` under `structure:`, which every
  * shipped schema declares. `null` for a schema that does not — the caller then
@@ -710,20 +729,22 @@ function walk(dir, root, unreadable) {
 }
 
 /**
- * The path column of one `--numstat` row, or `null` for a row without one.
+ * The path field of one `--numstat -z` record, or `null` for a record without one.
  *
- * A row is `<added>\t<deleted>\t<path>`, and a path may itself contain a tab,
- * so the path is everything past the second tab rather than the third field.
+ * A record is `<added>\t<deleted>\t<path>`, and a path may itself contain a
+ * tab, so the path is everything past the second tab rather than the third
+ * field. It is kept as Git wrote it: under `-z` the path is raw, and a space at
+ * either end is part of the name.
  *
- * @param {string} line
+ * @param {string} record
  * @returns {string | null}
  */
-function numstatPath(line) {
-  const firstTab = line.indexOf("\t");
+function numstatPath(record) {
+  const firstTab = record.indexOf("\t");
   if (firstTab === -1) return null;
-  const secondTab = line.indexOf("\t", firstTab + 1);
+  const secondTab = record.indexOf("\t", firstTab + 1);
   if (secondTab === -1) return null;
-  const file = line.slice(secondTab + 1).trim();
+  const file = record.slice(secondTab + 1);
   return file === "" ? null : file;
 }
 
@@ -750,6 +771,12 @@ function numstatPath(line) {
  *   `--ignore-all-space` hides that edit; the narrower flag reaches the line
  *   endings and nothing else.
  *
+ * `-z` because the path column is otherwise C-quoted under the default
+ * `core.quotePath`: a path with a non-ASCII character arrives wrapped in quotes
+ * with its bytes octal-escaped, matches no document, and the change drops out
+ * of the scope. Records are NUL-terminated, and `--no-renames` keeps each one
+ * to a single path.
+ *
  * @param {string} base
  * @returns {string[] | null}
  */
@@ -765,7 +792,7 @@ function changedFiles(base, root) {
   // means; a plain two-dot diff also reports everything the base gained.
   const diff = spawnSync(
     "git",
-    ["diff", "--numstat", "--no-renames", "--ignore-cr-at-eol", `${base}...HEAD`],
+    ["diff", "--numstat", "-z", "--no-renames", "--ignore-cr-at-eol", `${base}...HEAD`],
     { cwd: root, encoding: "utf-8" },
   );
   if (diff.status !== 0) {
@@ -773,12 +800,12 @@ function changedFiles(base, root) {
   }
   const staged = spawnSync(
     "git",
-    ["diff", "--numstat", "--no-renames", "--ignore-cr-at-eol", "HEAD"],
+    ["diff", "--numstat", "-z", "--no-renames", "--ignore-cr-at-eol", "HEAD"],
     { cwd: root, encoding: "utf-8" },
   );
-  const files = `${diff.stdout}\n${staged.status === 0 ? staged.stdout : ""}`
-    .split(/\r?\n/)
-    .map((line) => numstatPath(line))
+  const files = `${diff.stdout}\0${staged.status === 0 ? staged.stdout : ""}`
+    .split("\0")
+    .map((record) => numstatPath(record))
     .filter((file) => file !== null);
   return [...new Set(files)];
 }
@@ -1039,19 +1066,6 @@ function splitByOwnership(context, files) {
 }
 
 /**
- * The two configured roots the manifest's patterns expand from.
- *
- * @param {string} root
- * @returns {{ specsDir: string, contractsDir: string }}
- */
-export function configuredPaths(root) {
-  return {
-    specsDir: readConfiguredDir(root, "specsDir", ".qfai/spec"),
-    contractsDir: readConfiguredDir(root, "contractsDir", ".qfai/spec/03_contract"),
-  };
-}
-
-/**
  * Every file under the two configured roots, tree-relative and forward-slashed.
  *
  * Each configured tree is walked once. A contract directory nested in the spec
@@ -1132,8 +1146,7 @@ const FORBIDDEN_TEXT_MESSAGE = /^Forbidden text '(.*)' found in section '([^']*)
  * example line each of its required-text rules gives.
  *
  * Read with a line scanner, for the reason {@link rootHeadingPattern} is: the
- * schemas are fixed shapes authored here, and this script runs before anything
- * beyond the root devDependencies is installed. A description is a plain value
+ * schemas are fixed shapes authored here. A description is a plain value
  * or a folded or literal block. An example is the optional `example:` key of a
  * `required_text` item, a quoted or plain value on one line; mdschema ignores
  * the key. An item starts at its `- ` mark, and its keys may come in any order.
@@ -1802,20 +1815,27 @@ function decisionRegisterViolations(root, paths) {
  * manifest order, so the answer does not depend on which process finished first.
  *
  * @param {string} root
- * @param {{ specsDir: string, contractsDir: string }} [paths] tree-relative roots
+ * @param {{ specsDir: string, contractsDir: string }} [given] tree-relative roots;
+ *   read from the tree's `qfai.config.yaml` when absent, and a configuration
+ *   that cannot be read is the reason the check did not run
  * @param {{ timeoutMs: number, maxOutputBytes: number }} [limits] how long each
  *   mdschema run may take and how much it may print; a run past either is
  *   stopped, and the check reports that it did not finish
  * @returns {Promise<{ ok: true, checked: number, violations: {file: string, line: number, column: number, rule: string, message: string}[] } | { ok: false, reason: string }>}
  */
-export async function checkDocuments(
-  root,
-  paths = configuredPaths(root),
-  limits = MDSCHEMA_LIMITS,
-) {
+export async function checkDocuments(root, given = undefined, limits = MDSCHEMA_LIMITS) {
   const mdschema = findMdschemaCommand(root);
   if (mdschema === null) {
     return { ok: false, reason: `no ${MDSCHEMA_PACKAGE} installation was found` };
+  }
+  let paths = given;
+  if (paths === undefined) {
+    try {
+      paths = configuredPaths(root);
+    } catch (error) {
+      if (!(error instanceof ConfigurationError)) throw error;
+      return { ok: false, reason: error.message };
+    }
   }
   const register = decisionRegisterViolations(root, paths);
   if (register.unsafe) return { ok: true, checked: 0, violations: register.violations };
@@ -1957,7 +1977,14 @@ export function main() {
     return 2;
   }
 
-  const paths = configuredPaths(root);
+  let paths;
+  try {
+    paths = configuredPaths(root);
+  } catch (error) {
+    if (!(error instanceof ConfigurationError)) throw error;
+    console.error(`check-mdschema: ${error.message}`);
+    return 2;
+  }
   const entries = readManifest();
   if (entries.length === 0) {
     console.error("check-mdschema: the manifest declares no documents");

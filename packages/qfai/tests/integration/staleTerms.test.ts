@@ -25,7 +25,7 @@ async function put(file: string, text: string): Promise<void> {
   await writeFile(target, text, "utf8");
 }
 
-async function staleFindings(staleTerms: string[]) {
+async function staleFindings(staleTerms: string[], flowIds?: string[]) {
   const config = structuredClone(defaultConfig);
   config.paths.specsDir = specs;
   config.paths.contractsDir = `${specs}/03_contract`;
@@ -33,7 +33,7 @@ async function staleFindings(staleTerms: string[]) {
   const result = await validateProject(
     root,
     { config, issues: [], configPath: path.join(root, "qfai.config.yaml") },
-    { profile: "sdd" },
+    { profile: "sdd", ...(flowIds ? { flowIds } : {}) },
   );
   return result.issues.filter((item) => item.code === "QFAI-STORY-016");
 }
@@ -66,6 +66,22 @@ describe("a spec document that states a term the project lists as stale", () => 
     );
     expect((await staleFindings(["SMTP"])).map((item) => [item.file, item.loc?.line])).toEqual([
       [storyFile, 3],
+    ]);
+  });
+
+  // QFAI:EX-0001-0057-01
+  it("keeps the warning for the named flow when --flow scopes the run", async () => {
+    const otherStory = `${specs}/02_business-flow/business-flow-0002/user-story-0002-0001/01_User-story.md`;
+    for (const id of ["0001", "0002"]) {
+      await put(
+        `${specs}/02_business-flow/business-flow-${id}/business-flow.md`,
+        `# BF-${id}: Flow ${id}\n`,
+      );
+    }
+    await put(storyFile, "# US-0001-0001: Mail\n\nMail goes out over smtp.\n");
+    await put(otherStory, "# US-0002-0001: Mail\n\nMail goes out over smtp.\n");
+    expect((await staleFindings(["SMTP"], ["BF-0001"])).map((item) => item.file)).toEqual([
+      storyFile,
     ]);
   });
 

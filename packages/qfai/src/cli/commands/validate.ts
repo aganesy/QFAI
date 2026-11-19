@@ -22,6 +22,10 @@ import {
 } from "../../core/validators/packageSelfGovernance.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { DERIVED_DECLARATION_FORM } from "../../core/validators/contractConsistency.js";
+import {
+  DESIGN_AUDIT_CODE_PREFIX,
+  designAuditFindingsShownPerCode,
+} from "../../core/validators/designAudit.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
 import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
@@ -156,7 +160,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   );
 
   if (format === "text") {
-    emitText(normalized, failOn);
+    emitText(normalized, failOn, designAuditFindingsShownPerCode(configResult.config));
     // A run that did not finish has no pass to report, even under `--fail-on never`.
     if (!willFail && !isIncompleteRunResult(normalized)) {
       const elapsedMs = Date.now() - startedAt.getTime();
@@ -702,11 +706,19 @@ function textGroupFixes(head: Issue, shown: readonly Issue[], failOn: FailOn): S
  * Renders the default `--format text` output.
  *
  * The emitted line grammar is the validate contract's text output grammar;
- * both must be changed together.
+ * both must be changed together. A design audit group prints
+ * `designAuditShownPerCode` issues in place of five.
  */
-export function emitText(result: ValidationResult, failOn: FailOn): void {
+export function emitText(
+  result: ValidationResult,
+  failOn: FailOn,
+  designAuditShownPerCode = TEXT_ISSUES_PER_GROUP,
+): void {
   for (const group of groupIssues(result.issues)) {
-    const shown = group.items.slice(0, TEXT_ISSUES_PER_GROUP);
+    const limit = group.head.code.startsWith(DESIGN_AUDIT_CODE_PREFIX)
+      ? designAuditShownPerCode
+      : TEXT_ISSUES_PER_GROUP;
+    const shown = group.items.slice(0, limit);
     for (const item of shown) {
       process.stdout.write(`${formatTextIssueLine(item)}\n`);
     }

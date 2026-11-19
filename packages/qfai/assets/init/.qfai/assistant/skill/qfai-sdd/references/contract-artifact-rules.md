@@ -306,7 +306,11 @@ satisfied by a file that cannot run.
 
   The check is narrow on purpose. Only a `REFERENCES` clause counts, a table no
   contract in the set creates is left alone, and a table two contracts both
-  create is not attributed to either.
+  create is not attributed to either. Table names compare as PostgreSQL
+  resolves them: the schema counts, and only unquoted names fold to lower
+  case. A name with no schema matches a created table of that name in any
+  schema, and when those tables belong to two contracts it is attributed to
+  neither.
 
 - **Compare the contracts with the migrations.** `npx qfai db-drift` applies
   both to separate in-process databases and reports the columns they disagree
