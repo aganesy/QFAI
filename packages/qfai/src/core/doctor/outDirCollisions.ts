@@ -15,14 +15,18 @@
  * implementation instead of restating the scan.
  */
 
+import { execFile } from "node:child_process";
 import { realpath } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { loadConfig, resolvePath } from "../config.js";
 import { collectFilesByGlobs } from "../fs.js";
 import { isEnoent } from "../fs/errno.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
 import { exists } from "../validators/utils.js";
+
+const execute = promisify(execFile);
 
 export const DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS = [
   ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
@@ -220,19 +224,81 @@ export async function findOutDirCoOwners(
     .sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * The directory the config scan starts from: the nearest ancestor of
+ * `startDir` holding `pnpm-workspace.yaml`, else the Git working-tree
+ * root, else `startDir` itself.
+ *
+ * The Git root comes from Git, not from a `.git` entry on disk. An empty
+ * `.git` directory left in a shared parent (a temporary directory, say)
+ * is not a repository, and treating it as one widened a standalone
+ * project's scan to unrelated directories.
+ */
 async function findMonorepoRoot(startDir: string): Promise<string> {
-  let current = path.resolve(startDir);
+  const start = path.resolve(startDir);
+  const gitRoot = await resolveGitRoot(start);
+  if (gitRoot.kind === "unavailable") {
+    return findMarkerRoot(start, [".git", "pnpm-workspace.yaml"]);
+  }
+  let current = start;
   for (;;) {
-    const gitPath = path.join(current, ".git");
-    const workspacePath = path.join(current, "pnpm-workspace.yaml");
-    if ((await exists(gitPath)) || (await exists(workspacePath))) {
+    if (await exists(path.join(current, "pnpm-workspace.yaml"))) {
+      return current;
+    }
+    if (gitRoot.kind === "root" && (await isSameDirectory(current, gitRoot.dir))) {
       return current;
     }
     const parent = path.dirname(current);
     if (parent === current) {
-      break;
+      return start;
     }
     current = parent;
   }
-  return path.resolve(startDir);
+}
+
+/**
+ * The working-tree root Git reports for `dir`; `none` when `dir` is not in
+ * a working tree. `unavailable` when Git itself cannot be started:
+ * the caller then falls back to the on-disk `.git` marker, which can
+ * only widen the scan, so the pre-prune guard still sees every co-owner
+ * it saw before.
+ */
+async function resolveGitRoot(dir: string): Promise<GitRoot> {
+  try {
+    const { stdout } = await execute("git", ["rev-parse", "--show-toplevel"], {
+      cwd: dir,
+      encoding: "utf8",
+    });
+    const top = stdout.trim();
+    return top === "" ? { kind: "none" } : { kind: "root", dir: path.resolve(top) };
+  } catch (error) {
+    return isEnoent(error) ? { kind: "unavailable" } : { kind: "none" };
+  }
+}
+
+type GitRoot = { kind: "root"; dir: string } | { kind: "none" } | { kind: "unavailable" };
+
+/** True when both paths name one directory once symlinks are resolved. */
+async function isSameDirectory(candidate: string, realDir: string): Promise<boolean> {
+  try {
+    return path.relative(await realpath(candidate), realDir) === "";
+  } catch {
+    return false;
+  }
+}
+
+async function findMarkerRoot(start: string, markers: readonly string[]): Promise<string> {
+  let current = start;
+  for (;;) {
+    for (const marker of markers) {
+      if (await exists(path.join(current, marker))) {
+        return current;
+      }
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return start;
+    }
+    current = parent;
+  }
 }
