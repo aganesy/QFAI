@@ -22,8 +22,9 @@
  * `QFAI-TEST-002` (info) names the states in which the scan produced no
  * evidence: extensions with no dialect, an empty
  * `validation.traceability.testFileGlobs` (the value `qfai init` ships), where
- * no file is selected at all, and a selection the glob matcher refuses. None
- * may be mistaken for "no stubs".
+ * no file is selected at all, a selection the glob matcher refuses, a
+ * selection cut at the file limit, and selected files that could not be read.
+ * None may be mistaken for "no stubs".
  *
  * This validator closes the gap by emitting a finding for each stub found,
  * making qfai validate / CI reject the error-severity ones. Projects that need
@@ -1526,6 +1527,46 @@ function reportRefusedScan(error: unknown, callerGlobs: boolean, scannedRest: bo
   );
 }
 
+/** The errno code of a file-system failure, else the error's message. */
+function readFailureReason(error: unknown): string {
+  if (isFileSystemError(error) && error instanceof Error && "code" in error) {
+    return String(error.code);
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+// A file that vanished, turned into a directory, or met a busy or exhausted
+// system after it was selected reads on the next run.
+const TRANSIENT_READ_FAILURES = new Set([
+  "ENOENT",
+  "EISDIR",
+  "EMFILE",
+  "ENFILE",
+  "EBUSY",
+  "EAGAIN",
+]);
+
+/**
+ * The unreadable-file form of `QFAI-TEST-002`: the selection reached this file,
+ * but opening it failed, so it was never checked. One finding per file, so a
+ * path-scoped waiver covers exactly the file it names.
+ */
+function reportUnreadableFile(file: string, error: unknown): Issue {
+  const reason = readFailureReason(error);
+  return issue(
+    "QFAI-TEST-002",
+    `The stub scan could not read the selected test file ${file} (${reason}). Any other selected files were scanned, and a clean result is not evidence that this one holds no stub.`,
+    "info",
+    file,
+    "validation.testStrategy.stubScanUnreadable",
+    [file],
+    "canonical",
+    TRANSIENT_READ_FAILURES.has(reason)
+      ? "The file was moved or replaced, or the system was short of file handles, after it was selected. Run `qfai validate` once more to read it."
+      : "Make the file readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no test.",
+  );
+}
+
 export async function validateTestTodoStubs(
   root: string,
   config: QfaiConfig,
@@ -1676,7 +1717,9 @@ export async function validateTestTodoStubs(
     let content: string;
     try {
       content = await readFile(absFile, "utf-8");
-    } catch {
+    } catch (error) {
+      // Dropped silently, a file never opened read as one with no stubs.
+      issues.push(reportUnreadableFile(relFile, error));
       continue;
     }
 

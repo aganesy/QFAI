@@ -620,6 +620,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dropped and appeared only after the migration. The run now reports those
   findings before `QFAI-LAYOUT-001`, so both can be fixed in one pass.
 
+- **`qfai validate` no longer passes over a story-tree Markdown file it
+  cannot read.** The HTML mock, Mermaid screen flow and UI definition checks
+  skipped any file whose read failed, so a file the run had no permission to
+  read, or one lost to an I/O error, went unchecked with no message. Only a
+  file removed between the directory walk and the read is still left out. Any
+  other read failure now stops the run, which is recorded as incomplete with
+  `QFAI-SCAN-002` naming the file and the error.
+
 - **`qfai doctor --autoremediate` asks before it installs packages.**
   Without `--yes` the install phase ran `npm install` for a skill's missing
   runtime dependencies unattended, although those packages' install scripts
@@ -668,6 +676,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **`qfai validate` no longer hides a file or a broken link at the default
+  spec and contract paths.** `QFAI-CFG-LINK-002` stayed silent for the shipped
+  default `paths.specsDir` and `paths.contractsDir` whatever stood there, so a
+  file, a broken link or a path that could not be read went unreported. It now
+  stays silent only when nothing is at the path, and otherwise warns that what
+  is there is not a directory or could not be read. Closes #4559.
+
 - **The changed-documents check widens to every document when the worktree
   diff fails.** `check-mdschema --scope changed` already checked every
   document when the branch diff failed, but read a failed diff of uncommitted
@@ -686,6 +701,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checks the run log, stop without writing and name the linked path, and
   replace each result file with a new one, so a second name for the file is
   left unchanged. Closes #4485.
+
+- **The stub scan names the test files it could not read.** A selected test
+  file that failed to open was skipped without a word, so a clean
+  `QFAI-TEST-001` / `QFAI-TEST-003` result could mean the file was never
+  checked. The scan now reports each such file, with its error code, in a
+  `QFAI-TEST-002` finding of its own, and still checks every file it could
+  read. The
+  suggested fix depends on the error: run `qfai validate` again for a file that
+  was moved or replaced, or when the system ran out of file handles; for any
+  other error, make the file readable or exclude it. Closes #4558.
 
 - **Screen alignment reads `.yml` UI contracts.** The check that names a
   contract screen with no HTML mock (`QFAI-CONSISTENCY-002`) read only `.yaml`
