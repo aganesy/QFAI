@@ -829,7 +829,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           // The kind, then the parent, may also follow the options.
           const read = readNextIdKind(arg);
           if (!options.sddIdKind && "kind" in read) options.sddIdKind = read.kind;
-          else if (!options.sddIdKind && TIMESTAMPED_ROWS.has(arg) && "reason" in read)
+          else if (!options.sddIdKind && TIMESTAMPED_ROWS.has(arg.toUpperCase()) && "reason" in read)
             markInvalid(read.reason);
           else if (options.sddIdKind && options.sddIdParent === undefined)
             options.sddIdParent = arg;

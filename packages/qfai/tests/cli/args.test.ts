@@ -759,8 +759,11 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
   });
 
   // QFAI:EX-0001-0008-35
-  it("names the timestamped kind in upper case when it arrives in lower case", () => {
-    const parsed = parseArgs(["sdd", "next-id", "dec", "--base", "main"], process.cwd());
+  it.each([
+    [["sdd", "next-id", "dec", "--base", "main"]],
+    [["sdd", "next-id", "--base", "main", "dec"]],
+  ])("names the timestamped kind in upper case when it arrives in lower case %j", (argv) => {
+    const parsed = parseArgs(argv, process.cwd());
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.sddIdKind).toBeUndefined();
     expect(parsed.invalidReason).toBe(
