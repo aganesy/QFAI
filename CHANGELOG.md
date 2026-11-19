@@ -547,7 +547,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   recovery that names `https`, and no authorization is asked for it. The
   extraction keeps the client's default certificate verification, and no
   ambient certificate setting reaches it. Plain `http` still works for an
-  endpoint on `127.0.0.1`, `localhost` or `[::1]`.
+  endpoint on `127.0.0.1`, `localhost` or `[::1]`. An endpoint written so that
+  Python reads a different host than the loopback check did, such as
+  `http://127.0.0.1\@evil.example/v1`, is now an invalid processing
+  definition, and every step receives the one parsed URL.
   Closes #4585.
 
 - **`qfai validate` reports the actual line of a Mermaid screen-flow

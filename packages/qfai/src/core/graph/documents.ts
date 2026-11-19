@@ -140,8 +140,10 @@ export async function prepareDocumentAnalysisLocked(
     (await inspectDocumentScopeAt(root, analysis, run, refresh)).current;
   if ((await restoreCompletedDocumentAnalysis(root, run, inspect, environment)) === "restored")
     return { status: "prepared", source: "restored" };
-  const endpoint = processing.endpoint ?? "http://127.0.0.1:11434/v1";
-  const selected = new URL(endpoint);
+  const selected = new URL(processing.endpoint ?? "http://127.0.0.1:11434/v1");
+  // The approval, the origin guard and the Python client all receive the URL this check parsed,
+  // so no parser can read another host out of the configured text.
+  const endpoint = selected.href;
   const backend = processing.backend;
   const credential =
     typeof processing.credentialEnv === "string"
@@ -286,7 +288,10 @@ function validGraphProcessing(processing: unknown): processing is GraphProcessin
         endpoint.username ||
         endpoint.password ||
         endpoint.search ||
-        endpoint.hash
+        endpoint.hash ||
+        // Text another parser reads differently, such as a backslash before an `@`, is refused:
+        // only the canonical form, with or without the root path's slash, is accepted.
+        (endpoint.href !== processing.endpoint && endpoint.href !== `${processing.endpoint}/`)
       )
         return false;
     } catch {

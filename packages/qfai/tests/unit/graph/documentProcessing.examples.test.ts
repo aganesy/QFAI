@@ -254,7 +254,7 @@ it("uses explicitly selected local document processing settings", async () => {
     expect(extracts[0]?.env?.GRAPHIFY_OUT).toBe(
       path.toNamespacedPath(path.join(selectedCorpus, "graphify-out")),
     );
-    expect(extracts[0]?.env?.OLLAMA_BASE_URL).toBe("http://127.0.0.1:11434");
+    expect(extracts[0]?.env?.OLLAMA_BASE_URL).toBe("http://127.0.0.1:11434/");
     expect(extracts[0]?.env?.OPENAI_API_KEY).toBeUndefined();
     expect(await readFile(definition, "utf8")).toBe(selected);
     expect(JSON.stringify(result)).not.toContain(process.env.OPENAI_API_KEY);
@@ -301,9 +301,17 @@ it("uses explicitly selected local document processing settings", async () => {
 
 // QFAI:EX-0001-0234-23
 // Mutation: packages/qfai/src/core/graph/documents.ts `if (!local && selected.protocol !== "https:") {` -> `if (false) {` fails "refuses plain http for an external processing destination before asking for authorization"
+// Mutation: packages/qfai/src/core/graph/documents.ts `(endpoint.href !== processing.endpoint &&` -> `(false &&` fails "refuses plain http for an external processing destination before asking for authorization"
 it("refuses plain http for an external processing destination before asking for authorization", async () => {
   const fixture = await documentAnalysisFixture();
-  const certificateSettings = ["SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE"] as const;
+  const certificateSettings = [
+    "SSL_CERT_FILE",
+    "SSL_CERT_DIR",
+    "REQUESTS_CA_BUNDLE",
+    "CURL_CA_BUNDLE",
+    "SSLKEYLOGFILE",
+    "OPENSSL_CONF",
+  ] as const;
   const prior = certificateSettings.map((name) => process.env[name]);
   try {
     const definition = path.join(fixture.root, ".qfai", "graph-processing.json");
@@ -329,6 +337,26 @@ it("refuses plain http for an external processing destination before asking for 
       });
       expect(refused.status).toBe("not-ready");
       expect(refused.recovery).toContain("https");
+      expect(approvals).toEqual([]);
+      expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+    }
+    // Node reads a loopback host out of these, while Python's urlsplit and httpx read
+    // evil.example: the text is refused, so neither reading reaches the managed process.
+    for (const endpoint of [
+      "http://127.0.0.1\\@evil.example/v1",
+      "http://localhost\\@evil.example/v1",
+      "http://127.0.0.1:11434\t/v1",
+      " http://127.0.0.1:11434/v1",
+    ]) {
+      await writeFile(definition, external(endpoint));
+      fixture.calls.length = 0;
+      const approvals: ExternalProcessingRequest[] = [];
+      const refused = await prepareDocumentAnalysis(fixture.root, run, (request) => {
+        approvals.push(request);
+        return Promise.resolve(true);
+      });
+      expect(refused.status).toBe("not-ready");
+      expect(refused.recovery).toContain(".qfai/graph-processing.json");
       expect(approvals).toEqual([]);
       expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
     }
