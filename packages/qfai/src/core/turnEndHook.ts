@@ -286,6 +286,13 @@ export async function runTurnEndHook(input: unknown, options: TurnEndOptions): P
   const found = await findConfigRoot(stringField(event, "cwd") ?? options.processDir);
   if (!found.found) return "";
   const loaded = await loadConfig(found.root);
+  // Only a file that reads as keys, the form loadConfig accepts, can omit `workflow.stopGate`;
+  // the default applies to an omission, never to a file that could not be read or parsed.
+  if (!isRecord(loaded.document)) {
+    return `${JSON.stringify({
+      systemMessage: `QFAI turn-end check: ${found.configPath} could not be read as configuration, so no turn-end check ran. Run qfai validate to see why.`,
+    })}\n`;
+  }
   if (readStopGate(loaded.document) !== true) return "";
   const techPath = path.join(resolvePath(found.root, loaded.config, "contractsDir"), "tech.md");
   let techText: string;

@@ -4,6 +4,7 @@
 // QFAI:AC-0001-0244-04
 // QFAI:AC-0001-0244-05
 // QFAI:AC-0001-0244-06
+// QFAI:AC-0001-0244-07
 import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -314,6 +315,7 @@ describe("turn-end hook", () => {
   it.each([
     ["cannot be parsed", "workflow: [\n"],
     ["holds a list instead of keys", "- workflow\n"],
+    ["is empty", ""],
   ])("runs no command and names the config file when it %s", async (_case, config) => {
     const marker = path.join(root, "ran.txt");
     await writeFile(
@@ -328,13 +330,6 @@ describe("turn-end hook", () => {
     expect(output.systemMessage).toContain("could not be read as configuration");
     expect(output.systemMessage).toContain("no turn-end check ran");
     await expect(readFile(marker, "utf-8")).rejects.toThrow();
-  });
-
-  // QFAI:EX-0001-0244-20
-  it("reads an empty config file as one that omits workflow.stopGate", async () => {
-    const fail = await script("fail.js", "type error\n", 1);
-    await project([`- Typecheck: \`${fail}\``, "- Turn-end check: Typecheck"], "");
-    expect(parsed(await hook({ session_id: "s1" })).decision).toBe("block");
   });
 });
 

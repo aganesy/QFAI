@@ -568,6 +568,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   has no such declaration, is not compared. The `QFAI-CONTRACT-015`
   message no longer names a rule `qfai validate` no longer has.
 
+- **The turn-end hook no longer runs checks when `qfai.config.yaml` cannot be
+  read.** A file that could not be read or parsed, or whose top level was not
+  a set of keys, such as an empty file, was treated as omitting
+  `workflow.stopGate` and so ran the project's turn-end checks. The hook now
+  runs none and says which file it could not read and that no turn-end check
+  ran.
+
 - **A qfai copy under a directory whose name begins with two dots counts as
   inside the project.** `qfai validate` and `qfai sdd preflight` judged
   where the running qfai came from by whether its path relative to the
