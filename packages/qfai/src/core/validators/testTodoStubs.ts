@@ -22,8 +22,9 @@
  * `QFAI-TEST-002` (info) names the states in which the scan produced no
  * evidence: extensions with no dialect, an empty
  * `validation.traceability.testFileGlobs` (the value `qfai init` ships), where
- * no file is selected at all, and a selection the glob matcher refuses. None
- * may be mistaken for "no stubs".
+ * no file is selected at all, a selection the glob matcher refuses, a
+ * selection cut at the file limit, and selected files that could not be read.
+ * None may be mistaken for "no stubs".
  *
  * This validator closes the gap by emitting a finding for each stub found,
  * making qfai validate / CI reject the error-severity ones. Projects that need
@@ -1531,16 +1532,50 @@ function reportRefusedScan(error: unknown, callerGlobs: boolean, scannedRest: bo
  * files, but opening them failed, so the files that were read are reported and
  * these are named as not checked.
  */
-function reportUnreadableFiles(root: string, files: string[]): Issue {
+type UnreadableFile = { file: string; error: unknown };
+
+/** The errno code of a file-system failure, else the error's message. */
+function readFailureReason(error: unknown): string {
+  if (isFileSystemError(error) && error instanceof Error && "code" in error) {
+    return String(error.code);
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * The repair for each kind of read failure. A file that vanished, turned into a
+ * directory, or met a busy or exhausted system after it was selected reads on
+ * the next run; a denied read needs its permissions or an exclusion.
+ */
+function unreadableRemedy(reasons: ReadonlySet<string>): string {
+  const transient = ["ENOENT", "EISDIR", "EMFILE", "ENFILE", "EBUSY", "EAGAIN"];
+  const remedies: string[] = [];
+  if (transient.some((code) => reasons.has(code))) {
+    remedies.push(
+      "A file that was moved, replaced or opened while the system was short of file handles (ENOENT, EISDIR, EMFILE, ENFILE, EBUSY, EAGAIN) is read again by running `qfai validate` once more.",
+    );
+  }
+  if ([...reasons].some((reason) => !transient.includes(reason))) {
+    remedies.push(
+      "Make any other file readable to the account running `qfai validate`, or exclude it with `validation.traceability.testFileExcludeGlobs` where it holds no test.",
+    );
+  }
+  return remedies.join(" ");
+}
+
+function reportUnreadableFiles(root: string, failures: UnreadableFile[]): Issue {
+  const sorted = [...failures]
+    .map(({ file, error }) => ({ file, reason: readFailureReason(error) }))
+    .sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
   return issue(
     "QFAI-TEST-002",
-    `The stub scan could not read ${files.length} selected test file(s): ${files.join(", ")}. The other files were scanned, and a clean result is not evidence that these hold no stub.`,
+    `The stub scan could not read ${sorted.length} selected test file(s): ${sorted.map(({ file, reason }) => `${file} (${reason})`).join(", ")}. The other files were scanned, and a clean result is not evidence that these hold no stub.`,
     "info",
     root,
     "validation.testStrategy.stubScanUnreadable",
-    files,
+    sorted.map(({ file }) => file),
     "canonical",
-    "Make these files readable to the account running `qfai validate`, or exclude them with `validation.traceability.testFileExcludeGlobs` where they hold no test.",
+    unreadableRemedy(new Set(sorted.map(({ reason }) => reason))),
   );
 }
 
@@ -1683,7 +1718,7 @@ export async function validateTestTodoStubs(
   const unscannedExtensions = new Set<string>();
   // A selected file that could not be opened was never checked; dropping it
   // silently made "no stubs" mean "not read" as well.
-  const unreadableFiles: string[] = [];
+  const unreadableFiles: UnreadableFile[] = [];
   for (const absFile of files) {
     const relFile = path.relative(root, absFile).replace(/\\/g, "/");
     // No dialect means qfai knows no stub construct for this extension. Reading
@@ -1697,8 +1732,8 @@ export async function validateTestTodoStubs(
     let content: string;
     try {
       content = await readFile(absFile, "utf-8");
-    } catch {
-      unreadableFiles.push(relFile);
+    } catch (error) {
+      unreadableFiles.push({ file: relFile, error });
       continue;
     }
 
@@ -1716,7 +1751,7 @@ export async function validateTestTodoStubs(
   }
 
   if (unreadableFiles.length > 0) {
-    issues.push(reportUnreadableFiles(root, unreadableFiles.sort()));
+    issues.push(reportUnreadableFiles(root, unreadableFiles));
   }
 
   if (unscannedExtensions.size > 0) {

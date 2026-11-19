@@ -613,8 +613,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **The stub scan names the test files it could not read.** A selected test
   file that failed to open was skipped without a word, so a clean
   `QFAI-TEST-001` / `QFAI-TEST-003` result could mean the file was never
-  checked. The scan now reports those files in one `QFAI-TEST-002` finding and
-  still checks every file it could read. Closes #4558.
+  checked. The scan now reports those files, each with its error code, in one
+  `QFAI-TEST-002` finding, and still checks every file it could read. The
+  suggested fix depends on the error: run `qfai validate` again for a file that
+  was moved or replaced, or when the system ran out of file handles; for any
+  other error, make the file readable or exclude it. Closes #4558.
 
 - **`qfai catalog components` writes only inside the project.** A
   `.qfai/catalog` directory, or a directory above it, that was a symbolic link
