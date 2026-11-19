@@ -27,6 +27,7 @@ import {
   missingEntries,
   nextPageLink,
   nextPageUrl,
+  recordedCutoff,
   releasedSections,
   run,
 } from "../../../../scripts/check-release-notes.mjs";
@@ -264,19 +265,63 @@ describe("what the published body is allowed to be missing", () => {
     expect(missingEntries(section, "- **First**")).toEqual(["- **Second**"]);
   });
 
+  /** A cut body as the release workflow writes it: the kept entries, then its note. */
+  const cutBody = (entries: string[], kept: number): string =>
+    [
+      ...entries,
+      "",
+      "---",
+      "",
+      TRUNCATION_MARKER,
+      "",
+      "The `[9.9.9]` section of `CHANGELOG.md` runs to 200000 characters, past the 125000-character " +
+        "limit on a release body. What is above is that same section in document order, stopped at " +
+        `an entry boundary after its first ${String(kept)} ${kept === 1 ? "entry" : "entries"}.`,
+    ].join("\n");
+
   it("the tail, when the workflow had to cut it", () => {
     const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
-    const body = ["- **First**", "", TRUNCATION_MARKER].join("\n");
 
-    expect(missingEntries(section, body)).toEqual([]);
+    expect(recordedCutoff(cutBody(["- **First**"], 1))).toBe(1);
+    expect(missingEntries(section, cutBody(["- **First**"], 1))).toEqual([]);
   });
 
   it("but not a hole inside the part a cut body does cover", () => {
     // A cut body ends at an entry boundary, so it holds a PREFIX. An entry
     // missing from the middle of that prefix is drift, cut or not.
     const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
-    const body = ["- **First**", "- **Third**", "", TRUNCATION_MARKER].join("\n");
 
+    expect(missingEntries(section, cutBody(["- **First**", "- **Third**"], 3))).toEqual([
+      "- **Second**",
+    ]);
+  });
+
+  it("nor the entries its note says it kept, when the body has lost them", () => {
+    // The cutoff comes from the note, not from what the body still carries. Read
+    // from the body, a cut body emptied down to its note would cover nothing and
+    // so be missing nothing.
+    const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
+
+    expect(missingEntries(section, cutBody([], 2))).toEqual(["- **First**", "- **Second**"]);
+  });
+
+  it("nor its kept entries in another order", () => {
+    // A set would accept this: every kept entry is present. A cut keeps the
+    // section's order, so an entry out of place is reported where the section
+    // puts it.
+    const section = ["- **First**", "- **Second**", "- **Third**"].join("\n");
+
+    expect(missingEntries(section, cutBody(["- **Second**", "- **First**"], 2))).toEqual([
+      "- **First**",
+    ]);
+  });
+
+  it("and a cut body that records no count is held to the whole section", () => {
+    // Nothing says where its cut was, so no tail is excused.
+    const section = ["- **First**", "- **Second**"].join("\n");
+    const body = ["- **First**", "", TRUNCATION_MARKER].join("\n");
+
+    expect(recordedCutoff(body)).toBeNull();
     expect(missingEntries(section, body)).toEqual(["- **Second**"]);
   });
 

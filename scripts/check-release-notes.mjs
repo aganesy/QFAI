@@ -26,9 +26,15 @@
  * ## A body the workflow had to cut
  *
  * A release body is capped at 125,000 characters. Past that the workflow stops
- * the section at an entry boundary and appends a note saying so. Such a body
- * legitimately lacks the tail of its section, so the comparison asks only that
- * what it carries is a prefix of what the section carries.
+ * the section at an entry boundary and appends a note saying so, and the note
+ * records how many entries it kept. Such a body legitimately lacks the tail of
+ * its section, so the comparison asks that it carries the first that many
+ * entries of the section, in the section's order.
+ *
+ * The count is read from the note rather than from the body. Taken from the
+ * entries the body still carries, a body cut down to the note alone would cover
+ * nothing and so be missing nothing. A cut body whose note records no count is
+ * held to the whole section, because nothing says where its cut was.
  *
  * ## What it does about a difference
  *
@@ -72,6 +78,9 @@ const RELEASED_HEADING_RE = /^## \[(\d+\.\d+\.\d+)\][ \t]+-[ \t]+\d{4}-\d{2}-\d{
 
 /** The sentence `release.yml` appends when it had to cut the section. */
 export const TRUNCATION_MARKER = "**These notes are not the whole section.**";
+
+/** The sentence in that note, written by the same step, that records how many entries the cut kept. */
+const CUTOFF_RE = /stopped at an entry boundary after its first (\d+) entr(?:y|ies)\./u;
 
 /** Whether a published body says it is a cut of its section. */
 export function saysItWasCut(releaseBody) {
@@ -144,25 +153,50 @@ export function entryTitles(markdown) {
 }
 
 /**
+ * How many entries the workflow kept when it cut a body, as its note records,
+ * or `null` when the body records no count.
+ */
+export function recordedCutoff(releaseBody) {
+  const recorded = CUTOFF_RE.exec(releaseBody);
+  if (recorded === null) return null;
+  return Number(recorded[1]);
+}
+
+/**
  * What a section carries and its published body does not.
  *
- * A truncated body is compared as a prefix: it is missing the tail of its
- * section by construction, and only an entry missing from the part it does
- * cover is drift.
+ * A body that was not cut is compared as a set: it can be edited by hand, and
+ * only an entry it lacks is drift.
+ *
+ * A truncated body is the first entries of its section, in the section's order,
+ * as many as its note says it kept. It is missing the tail by construction, so
+ * only that prefix is required. The body is read up to its note and only for
+ * the entries its section names, since an entry somebody added is not the
+ * section's to require, and walked against the prefix in order: an entry it
+ * carries out of place is reported as missing from where the section puts it,
+ * so a reordered cut is drift rather than agreement.
  */
 export function missingEntries(sectionBody, releaseBody) {
   const wanted = entryTitles(sectionBody);
-  const published = new Set(entryTitles(releaseBody));
-  const truncated = saysItWasCut(releaseBody);
-  if (!truncated) {
+  const markerAt = releaseBody.indexOf(TRUNCATION_MARKER);
+  if (markerAt < 0) {
+    const published = new Set(entryTitles(releaseBody));
     return wanted.filter((title) => !published.has(title));
   }
-  // The covered part ends at the last section entry the body still carries.
-  let covered = -1;
-  for (let i = 0; i < wanted.length; i++) {
-    if (published.has(wanted[i] ?? "")) covered = i;
+  const known = new Set(wanted);
+  const published = entryTitles(releaseBody.slice(0, markerAt)).filter((title) => known.has(title));
+  const cutoff = recordedCutoff(releaseBody.slice(markerAt));
+  const required = cutoff === null ? wanted : wanted.slice(0, cutoff);
+  const missing = [];
+  let next = 0;
+  for (const title of required) {
+    if (published[next] === title) {
+      next += 1;
+    } else {
+      missing.push(title);
+    }
   }
-  return wanted.slice(0, covered + 1).filter((title) => !published.has(title));
+  return missing;
 }
 
 /**
@@ -344,6 +378,11 @@ function reportSection(tag, section, body) {
     return false;
   }
   console.error(`${tag}: ${String(missing.length)} entr(y|ies) the published body does not carry:`);
+  if (saysItWasCut(body) && recordedCutoff(body) === null) {
+    console.error(
+      "  (the body says it was cut and does not record how many entries it kept, so it is held to the whole section)",
+    );
+  }
   for (const title of missing) {
     console.error(`  ${title}`);
   }
