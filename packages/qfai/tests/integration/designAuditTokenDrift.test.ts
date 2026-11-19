@@ -56,8 +56,6 @@ describe("token drift", () => {
     expect(await driftFindings(withTokensDir("tokens"))).toEqual(["error"]);
   });
 
-  // QFAI:AC-0001-0039-01
-  // QFAI:EX-0001-0039-11
   it("audits the mocks under an absolute paths.contractsDir", async () => {
     outside = await mkdtemp(path.join(os.tmpdir(), "qfai-token-drift-contracts-"));
     await mkdir(path.join(outside, "ui"), { recursive: true });
