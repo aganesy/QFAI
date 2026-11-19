@@ -228,24 +228,30 @@ async function refuseLinkedDestination(
 }
 
 /**
- * Write a report file such as `validate.json` at `filePath`, refusing a
- * destination reached through a link the way the run log does: the checks of
- * `refuseLinkedDestination` run before and after the directory is created, and
- * the file is replaced by `replaceFile`, so a second name at `filePath` is
- * replaced rather than written through. `label` names the file in the error,
+ * Write the same report, such as `validate.json` and its profile-suffixed
+ * sibling, at every path in `filePaths`, refusing a destination reached
+ * through a link the way the run log does. Every path is checked by
+ * `refuseLinkedDestination` before any of them is written, so one linked path
+ * leaves all of them as they were; each is checked again after its directory
+ * is created, and replaced by `replaceFile`, so a second name at the path is
+ * replaced rather than written through. `label` names the files in the error,
  * as in `qfai validate: the validation result`. The ceiling of
  * `refuseLinkedDestination` applies.
  */
-export async function writeReportFile(
+export async function writeReportFiles(
   root: string,
-  filePath: string,
+  filePaths: readonly string[],
   contents: string,
   label: string,
 ): Promise<void> {
-  await refuseLinkedDestination(root, filePath, label);
-  await mkdir(path.dirname(filePath), { recursive: true });
-  await refuseLinkedDestination(root, filePath, label);
-  await replaceFile(filePath, contents);
+  for (const filePath of filePaths) {
+    await refuseLinkedDestination(root, filePath, label);
+  }
+  for (const filePath of filePaths) {
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await refuseLinkedDestination(root, filePath, label);
+    await replaceFile(filePath, contents);
+  }
 }
 
 /**

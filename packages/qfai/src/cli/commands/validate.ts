@@ -19,7 +19,7 @@ import {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,
   unevaluatedPackageSelfGovernanceFamilies,
 } from "../../core/validators/packageSelfGovernance.js";
-import { writeReportFile, writeValidateRunLog } from "../../core/runLog.js";
+import { writeReportFiles, writeValidateRunLog } from "../../core/runLog.js";
 import { DERIVED_DECLARATION_FORM } from "../../core/validators/contractConsistency.js";
 import {
   DESIGN_AUDIT_CODE_PREFIX,
@@ -178,9 +178,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // A scope that failed with `QFAI-FLOW-005` writes nothing, so it never
   // replaces the file a healthy run of a similar scope would write.
   if (resultPaths !== null && !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-005")) {
-    for (const target of resultPaths.write) {
-      await emitJson(normalized, root, target);
-    }
+    await emitJson(normalized, root, resultPaths.write);
   }
 
   return willFail ? 1 : 0;
@@ -1128,10 +1126,14 @@ function issueKey(issue: Issue): string {
   return [issue.code, issue.severity, issue.message, file, line, column, suppressed].join("|");
 }
 
-async function emitJson(result: ValidationResult, root: string, jsonPath: string): Promise<void> {
-  await writeReportFile(
+async function emitJson(
+  result: ValidationResult,
+  root: string,
+  jsonPaths: readonly string[],
+): Promise<void> {
+  await writeReportFiles(
     root,
-    resolveJsonPath(root, jsonPath),
+    jsonPaths.map((jsonPath) => resolveJsonPath(root, jsonPath)),
     `${JSON.stringify(result, null, 2)}\n`,
     "qfai validate: the validation result",
   );
