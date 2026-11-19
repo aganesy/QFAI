@@ -513,6 +513,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   not apply still exits 2 under `--fail-on never`, since no comparison was
   made. Closes #4516.
 
+- **The validation result is written only inside its directory.** A
+  `validate.json` that was a symbolic link, or a directory on the
+  `output.validateJsonPath` path that was a link or junction, carried
+  `qfai validate`'s result wherever it pointed. `qfai report --run-validate`,
+  which writes no run log, also wrote through a linked `.qfai/report`. Both
+  commands now check the result file and its directories as `qfai validate`
+  checks the run log, stop without writing and name the linked path, and
+  replace each result file with a new one, so a second name for the file is
+  left unchanged. Closes #4485.
+
 - **`qfai catalog components` writes only inside the project.** A
   `.qfai/catalog` directory, or a directory above it, that was a symbolic link
   or junction led the write to wherever the link pointed, overwriting a file
