@@ -595,8 +595,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **A YAML contract's `x-qfai-depends-on` is now read as YAML.** A comment
   line between two items of a block list no longer drops the items after it,
   quoted IDs such as `["DB-0001"]` are accepted, and `[DB-0001 DB-0002]`,
-  which YAML reads as one value, is no longer taken for two IDs. A contract
-  file that is not valid YAML now states no apply order. Closes #4709.
+  which YAML reads as one value, is no longer taken for two IDs. A `.json`
+  contract is read as JSON. A contract that does not parse gets only
+  `QFAI-CONTRACT-021`, not also `QFAI-CONTRACT-015`, and the `-015` hint now
+  says to write `x-qfai-depends-on: []`, not `-`, when a YAML or JSON
+  contract has no dependencies. Closes #4709.
 
 - **The README's skipped-test check now names each allowed skip.** The
   example script allowed a number of skipped tests per file, so one test's

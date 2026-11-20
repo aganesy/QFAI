@@ -147,9 +147,9 @@ async function validateContractFile(file: string, kind: ContractKind): Promise<I
   const text = await readFile(file, "utf-8");
   const declaredIds = extractDeclaredContractIds(text);
   issues.push(...validateDeclaredContractIds(declaredIds, file, kind));
-  issues.push(...validateDependencyDeclaration(text, declaredIds, file));
 
   if (kind === "DB") {
+    issues.push(...validateDependencyDeclaration(text, declaredIds, file));
     issues.push(...lintSql(text, file));
     // A `.sql` contract used to return here, which is what made it the only
     // contract kind qfai never parsed — the `QFAI-CONTRACT-021` block below is
@@ -162,8 +162,14 @@ async function validateContractFile(file: string, kind: ContractKind): Promise<I
 
   const parsed = parseContract(file, kind, text);
   if (!parsed.ok) {
+    // The apply order is read from the parsed document, so a file that does not
+    // parse states none for the same cause `QFAI-CONTRACT-021` already reports,
+    // and `-015` would only ask to add a key the file may already hold.
     issues.push(parsed.failure);
-  } else if (kind === "API" && !hasOpenApi(parsed.contract)) {
+    return issues;
+  }
+  issues.push(...validateDependencyDeclaration(text, declaredIds, file));
+  if (kind === "API" && !hasOpenApi(parsed.contract)) {
     issues.push(
       issue(
         "QFAI-CONTRACT-020",
@@ -401,7 +407,8 @@ function validateDependencyDeclaration(text: string, ids: string[], file: string
       [id],
       "change",
       "Add `-- Depends on: DB-0002` to a `.sql` file, or `x-qfai-depends-on: [API-0002]` " +
-        "to a `.yaml` / `.json` one. Write `-` when no contract has to be applied first.",
+        "to a `.yaml` / `.json` one. When no contract has to be applied first, write " +
+        "`-- Depends on: -` in a `.sql` file and `x-qfai-depends-on: []` in a `.yaml` / `.json` one.",
     ),
   ];
 }

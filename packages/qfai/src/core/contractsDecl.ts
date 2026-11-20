@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { parse as parseYaml } from "yaml";
 
 import { parseHeadings } from "./parse/markdown.js";
@@ -134,12 +136,17 @@ const DEPENDS_ON_KEY = "x-qfai-depends-on";
  * not carry the key. A file that does not parse earns its own finding from the
  * contract validator, and states no apply order here.
  */
-function readStructuredDependsOn(text: string): { value: unknown } | undefined {
+function readStructuredDependsOn(
+  text: string,
+  file: string | undefined,
+): { value: unknown } | undefined {
   const stripped = stripContractDeclarationLines(text);
+  // Parsed as `parseStructuredContract` parses it, so a `.json` file YAML would
+  // forgive, such as one with a trailing comma, states nothing here either.
   const entries =
-    parseJsonObjectEntries(text) ??
-    parseJsonObjectEntries(stripped) ??
-    parseYamlObjectEntries(stripped);
+    file !== undefined && path.extname(file).toLowerCase() === ".json"
+      ? parseJsonObjectEntries(stripped)
+      : parseYamlObjectEntries(stripped);
   if (!entries) {
     return undefined;
   }
@@ -302,7 +309,7 @@ export function extractDeclaredDependencies(text: string, file?: string): string
     }
   }
   if (lane !== "comment") {
-    const structured = readStructuredDependsOn(text);
+    const structured = readStructuredDependsOn(text, file);
     if (structured) add(structuredDependencyIds(structured.value));
   }
   return Array.from(found).sort();
@@ -345,6 +352,6 @@ export function hasDependencyDeclaration(text: string, file?: string): boolean {
   if (lane === "comment") {
     return false;
   }
-  const structured = readStructuredDependsOn(text);
+  const structured = readStructuredDependsOn(text, file);
   return structured !== undefined && statesStructuredDependencies(structured.value);
 }
