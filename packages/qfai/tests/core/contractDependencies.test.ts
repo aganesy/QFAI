@@ -156,6 +156,34 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     expect(hasDependencyDeclaration("-- Depends on: -\r\n", "a.sql")).toBe(true);
   });
 
+  it("reads a YAML block sequence across a standalone comment line", () => {
+    // A comment on its own line is valid YAML inside a sequence, but the
+    // pattern ended the sequence there: `DB-0002` was dropped and the
+    // truncated list still counted as a finished declaration.
+    const text = "x-qfai-depends-on:\n  - DB-0001\n  # the schema comes next\n  - DB-0002\n";
+    expect(extractDeclaredDependencies(text, "a.yaml")).toEqual(["DB-0001", "DB-0002"]);
+    const halfWritten = "x-qfai-depends-on:\n  - DB-0001\n  # still open\n  - TBD\n";
+    expect(extractDeclaredDependencies(halfWritten, "a.yaml")).toEqual([]);
+    expect(hasDependencyDeclaration(halfWritten, "a.yaml")).toBe(false);
+  });
+
+  it("reads quoted ids in a YAML sequence as the ids they quote", () => {
+    // Quoting is how YAML spells a string; the quotes are not part of the id.
+    const flow = "x-qfai-depends-on: [\"DB-0001\", 'DB-0002']\n";
+    expect(extractDeclaredDependencies(flow, "a.yaml")).toEqual(["DB-0001", "DB-0002"]);
+    expect(hasDependencyDeclaration(flow, "a.yaml")).toBe(true);
+    expect(
+      extractDeclaredDependencies('x-qfai-depends-on:\n  - "DB-0001"\n  - DB-0002\n', "a.yaml"),
+    ).toEqual(["DB-0001", "DB-0002"]);
+  });
+
+  it("does not split one YAML sequence element into several ids", () => {
+    // YAML reads `[DB-0001 DB-0002]` as one string element, not two ids.
+    const text = "x-qfai-depends-on: [DB-0001 DB-0002]\n";
+    expect(extractDeclaredDependencies(text, "a.yaml")).toEqual([]);
+    expect(hasDependencyDeclaration(text, "a.yaml")).toBe(false);
+  });
+
   it("reads `-` as no dependencies rather than as a malformed one", () => {
     // The shipped template writes `-` for the empty case; parsing it as a
     // dependency would make every scaffolded contract fail the new rule.

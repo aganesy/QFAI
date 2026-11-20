@@ -1,3 +1,5 @@
+import { parse as parseYaml } from "yaml";
+
 import { parseHeadings } from "./parse/markdown.js";
 import { maskNonSpecRegions } from "./specPackParsers.js";
 import { isContractId } from "./storyTree/ids.js";
@@ -81,49 +83,10 @@ export function stripContractDeclarationLines(text: string): string {
  * declaration.
  */
 const DEPENDS_ON_COMMENT_RE = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:[ \t]*(.+?)[ \t]*$/gim;
-/**
- * A trailing `#` comment is part of the line, not part of the value.
- *
- * `x-qfai-depends-on: [DB-0001] # apply DB first` is valid YAML and the
- * natural way to say *why* the order holds, but an end-of-line anchor stopped
- * matching it. The scalar fallback then read `[DB-0001] # …` as a value that
- * is not one of the "none" spellings, so a conforming declaration produced
- * `QFAI-CONTRACT-015` and its correct index row `QFAI-CONTRACT-034`.
- */
-const DEPENDS_ON_YAML_FLOW_RE = /^x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t]*(?:#[^\n]*)?$/im;
-/**
- * The block form, where a `#` comment may follow the key and every item.
- *
- * `- DB-0001 # schema first` is valid YAML and says the same thing the flow
- * form's trailing comment does, but the item pattern allowed only whitespace
- * after the value, so the sequence ended at the first commented item and every
- * later one was dropped — silently, and worst where it matters most: a
- * declaration listing several contracts is exactly the multi-file composition
- * this key exists to state. The truncated list then disagreed with the correct
- * index row, which earned `QFAI-CONTRACT-034`.
- *
- * Line breaks are `\r?\n` throughout. This is the one form spanning several
- * lines, so it was also the only one a CRLF file broke: the key's hard `\n` did
- * not match `\r\n`, and even past it every item ended at its own `\r`, so the
- * repetition stopped after the first. A contract saved on Windows therefore
- * declared its apply order to no effect — `QFAI-CONTRACT-015` on a file that
- * had declared, and `-034` against its correct index row. The sibling forms
- * anchor on `$`, which already matches before a `\r`.
- *
- * The ids are read from the item *values* (see {@link blockSequenceValues})
- * rather than from this capture, so a contract id mentioned inside a comment is
- * not silently taken for a dependency.
- */
-const DEPENDS_ON_YAML_BLOCK_RE =
-  /^x-qfai-depends-on:[ \t]*(?:#[^\r\n]*)?\r?\n((?:[ \t]*-[ \t]*\S+[ \t]*(?:#[^\r\n]*)?\r?\n?)+)/im;
-/** One block-sequence item: `-`, its value, and whatever comment follows it. */
-const BLOCK_SEQUENCE_ITEM_RE = /^[ \t]*-[ \t]*(\S+)/;
-/** What separates one listed dependency from the next, in a comment or a flow sequence. */
+/** What separates one listed dependency from the next, in a comment or an index cell. */
 const DECLARATION_SEPARATOR_RE = /[,\s]+/;
 /** The explicit ways to write "nothing must be applied before this contract". */
 const DEPENDS_ON_NONE_VALUE_RE = /^(?:[-–—]|\[[ \t]*\]|none)$/i;
-/** Non-global on purpose: a `/g` regex carries `lastIndex` between `exec` calls. */
-const DEPENDS_ON_YAML_SCALAR_RE = /^x-qfai-depends-on:[ \t]*(\S[^\n]*?)[ \t]*$/im;
 
 /**
  * Which idiom a contract file is allowed to declare in.
@@ -149,29 +112,34 @@ function laneFor(file: string | undefined): DeclarationLane {
   }
   return "any";
 }
-/** The declaration key itself, for the JSON lane where regexes cannot reach. */
+/** The top-level key a YAML or JSON contract declares its apply order with. */
 const DEPENDS_ON_KEY = "x-qfai-depends-on";
 
 /**
- * The declaration as a JSON contract writes it.
+ * The top-level `x-qfai-depends-on` value of a YAML or JSON contract.
  *
- * `.qfai/contracts/api/**` collects `.json` next to `.yaml`, but every regex
- * above matches an unquoted YAML key on a single line. A JSON contract spelling
- * `"x-qfai-depends-on": []` — or spreading the array over several lines — read
- * as "never stated", so `QFAI-CONTRACT-015` fired on a file that had declared
- * its apply order, and `QFAI-CONTRACT-014` / `-034` never saw the ids it listed.
+ * The value is read by the parsers, not by patterns over its lines. Patterns
+ * had to re-implement YAML and kept getting it wrong: a standalone comment line
+ * ended a block sequence, so the items after it were silently dropped; quoted
+ * ids were rejected; and `[DB-0001 DB-0002]`, which YAML reads as one string,
+ * was accepted as two ids. Parsing also keeps a key nested under some path, or
+ * written inside a block scalar, from counting as this file's declaration.
  *
  * Declaration lines are stripped before parsing: `QFAI-CONTRACT-010` requires a
- * `QFAI-CONTRACT-ID` comment line and a comment is not valid JSON, so the raw
- * text of a conforming JSON contract never parses on its own — the same reason
- * `validateContractFile` strips before `parseStructuredContract`.
+ * `QFAI-CONTRACT-ID` comment line and a `//` comment is not valid JSON, so the
+ * raw text of a conforming JSON contract never parses on its own — the same
+ * reason `validateContractFile` strips before `parseStructuredContract`.
  *
- * Returns `undefined` when the text is not a JSON object or does not carry the
- * key, so a YAML contract keeps taking the regex lane untouched.
+ * Returns `undefined` when the text is not a mapping, does not parse, or does
+ * not carry the key. A file that does not parse earns its own finding from the
+ * contract validator, and states no apply order here.
  */
-function readJsonDependsOn(text: string): { value: unknown } | undefined {
+function readStructuredDependsOn(text: string): { value: unknown } | undefined {
+  const stripped = stripContractDeclarationLines(text);
   const entries =
-    parseJsonObjectEntries(text) ?? parseJsonObjectEntries(stripContractDeclarationLines(text));
+    parseJsonObjectEntries(text) ??
+    parseJsonObjectEntries(stripped) ??
+    parseYamlObjectEntries(stripped);
   if (!entries) {
     return undefined;
   }
@@ -201,22 +169,18 @@ function parseJsonObjectEntries(text: string): [string, unknown][] | undefined {
   return Object.entries(parsed);
 }
 
-/**
- * The values a YAML block sequence lists, with each item's comment dropped.
- *
- * Scanning the matched block text for ids instead would read a comment as part
- * of the declaration: `- DB-0001 # replaces DB-0002` would list two
- * dependencies, one of which the author explicitly said is not one.
- */
-function blockSequenceValues(blob: string): string[] {
-  const values: string[] = [];
-  for (const line of blob.split(/\r?\n/)) {
-    const value = BLOCK_SEQUENCE_ITEM_RE.exec(line)?.[1];
-    if (value) {
-      values.push(value);
-    }
+/** The document's own entries, or `undefined` when the text is not a YAML mapping. */
+function parseYamlObjectEntries(text: string): [string, unknown][] | undefined {
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(text);
+  } catch {
+    return undefined;
   }
-  return values;
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return undefined;
+  }
+  return Object.entries(parsed);
 }
 
 /** A cell/element holding a contract id and nothing else. */
@@ -237,9 +201,8 @@ const CONTRACT_ID_EXACT_RE = new RegExp(`^(?:${DECLARED_ID})$`, "i");
  * Rejecting the whole list rather than the bad element is what makes the file
  * fall back to `QFAI-CONTRACT-015` ("states no apply order at all") — the
  * accurate finding, and the one the JSON lane already produced for `["TBD"]`.
- * This is the shared judgement behind all four lanes, so a `.sql` comment, a
- * YAML flow or block sequence and a JSON array cannot drift apart on what
- * counts as declared.
+ * This is the shared judgement behind every lane, so a `.sql` comment and a
+ * YAML or JSON sequence cannot drift apart on what counts as declared.
  */
 function dependencyIdsFromElements(elements: string[]): string[] | undefined {
   const ids: string[] = [];
@@ -254,11 +217,10 @@ function dependencyIdsFromElements(elements: string[]): string[] | undefined {
 }
 
 /**
- * The ids a comment line or a YAML flow sequence states.
+ * The ids a comment line or an index cell states.
  *
  * Both write the list as text: `DB-0002, DB-0003` in a `-- Depends on:`
- * comment, the same between brackets in `x-qfai-depends-on: [...]`. An empty
- * value is the flow spelling of "none" and lists nothing; anything else is
+ * comment or a Depends On cell. An empty value lists nothing; anything else is
  * split on commas and whitespace so that every token is judged on its own.
  */
 function textDependencyIds(value: string): string[] | undefined {
@@ -270,7 +232,7 @@ function textDependencyIds(value: string): string[] | undefined {
 }
 
 /**
- * The ids a JSON `x-qfai-depends-on` value declares, or `undefined` if it is not
+ * The ids a YAML or JSON `x-qfai-depends-on` value declares, or `undefined` if it is not
  * a well-formed declaration.
  *
  * The value must be an **array**, and every element a bare contract id. Reading
@@ -283,7 +245,7 @@ function textDependencyIds(value: string): string[] | undefined {
  * reason: they would suppress `QFAI-CONTRACT-015` while leaving nothing for
  * `QFAI-CONTRACT-014` to check.
  */
-function jsonDependencyIds(value: unknown): string[] | undefined {
+function structuredDependencyIds(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
   }
@@ -298,16 +260,16 @@ function jsonDependencyIds(value: unknown): string[] | undefined {
 }
 
 /**
- * Whether a JSON `x-qfai-depends-on` value states an apply order.
+ * Whether a YAML or JSON `x-qfai-depends-on` value states an apply order.
  *
- * The empty array is the JSON spelling of "nothing must be applied first", and a
+ * The empty sequence is the structured spelling of "nothing must be applied first", and a
  * non-empty one states an order only when every element is a contract id — the
- * same shape `jsonDependencyIds` extracts from, so declaration and extraction
+ * same shape `structuredDependencyIds` extracts from, so declaration and extraction
  * never disagree. A string counts only as one of the explicit "none" spellings.
  */
-function statesJsonDependencies(value: unknown): boolean {
+function statesStructuredDependencies(value: unknown): boolean {
   if (Array.isArray(value)) {
-    return jsonDependencyIds(value) !== undefined;
+    return structuredDependencyIds(value) !== undefined;
   }
   return typeof value === "string" && DEPENDS_ON_NONE_VALUE_RE.test(value.trim());
 }
@@ -340,12 +302,8 @@ export function extractDeclaredDependencies(text: string, file?: string): string
     }
   }
   if (lane !== "comment") {
-    const flow = DEPENDS_ON_YAML_FLOW_RE.exec(text);
-    if (flow) add(textDependencyIds(flow[1] ?? ""));
-    const block = DEPENDS_ON_YAML_BLOCK_RE.exec(text);
-    if (block) add(dependencyIdsFromElements(blockSequenceValues(block[1] ?? "")));
-    const json = readJsonDependsOn(text);
-    if (json) add(jsonDependencyIds(json.value));
+    const structured = readStructuredDependsOn(text);
+    if (structured) add(structuredDependencyIds(structured.value));
   }
   return Array.from(found).sort();
 }
@@ -387,16 +345,6 @@ export function hasDependencyDeclaration(text: string, file?: string): boolean {
   if (lane === "comment") {
     return false;
   }
-  const json = readJsonDependsOn(text);
-  if (json) {
-    return statesJsonDependencies(json.value);
-  }
-  // `[]` is the flow spelling of "none", with or without a trailing comment; the
-  // scalar fallback below would read `[] # none` as a value that is neither.
-  const flow = DEPENDS_ON_YAML_FLOW_RE.exec(text);
-  if (flow) {
-    return (flow[1] ?? "").trim().length === 0;
-  }
-  const scalar = DEPENDS_ON_YAML_SCALAR_RE.exec(text);
-  return scalar !== null && DEPENDS_ON_NONE_VALUE_RE.test((scalar[1] ?? "").trim());
+  const structured = readStructuredDependsOn(text);
+  return structured !== undefined && statesStructuredDependencies(structured.value);
 }

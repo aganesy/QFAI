@@ -566,6 +566,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reports `QFAI-SKILLS-016` for it as a `requires:` that is not a list. An
   omitted `requires:` still counts as empty.
 
+- **A YAML contract's `x-qfai-depends-on` is now read as YAML.** A comment
+  line between two items of a block list no longer drops the items after it,
+  quoted IDs such as `["DB-0001"]` are accepted, and `[DB-0001 DB-0002]`,
+  which YAML reads as one value, is no longer taken for two IDs. A contract
+  file that is not valid YAML now states no apply order. Closes #4709.
+
 - **The README's skipped-test check now names each allowed skip.** The
   example script allowed a number of skipped tests per file, so one test's
   skip could stand in for another's, and it read whatever report was on disk,
