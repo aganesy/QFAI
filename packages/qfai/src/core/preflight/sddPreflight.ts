@@ -38,8 +38,11 @@ export type RunSddPreflightOptions = {
   assumptions?: string[];
   /**
    * The deliberation record SDD consumes: the run's own, the one the work
-   * order names, or the one the user names. Read against the project root,
-   * then against `paths.deliberationDir`. Preflight never picks one itself.
+   * order names, or the one the user names. A bare name is read against
+   * `paths.deliberationDir` first and the project root second, so a record in
+   * the deliberation directory wins a collision. A name that contains a path
+   * separator is read against the project root only. Preflight never picks
+   * one itself.
    */
   recordPath?: string;
   /** An imported specification to use when no record is named. */
