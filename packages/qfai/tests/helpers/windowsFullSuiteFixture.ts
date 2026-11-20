@@ -141,6 +141,20 @@ export function runWindowsPreflight(
   });
 }
 
+export const PREFLIGHT_REFUSAL =
+  "Windows diagnostic: identity is invalid, changed or unavailable.\n";
+
+/** A refusal is the preflight's own exit 1 and diagnostic, never a launch error or a signal. */
+export function expectWindowsPreflightRefusal(result: SpawnSyncReturns<string>): void {
+  expect(result.error, "the preflight must launch").toBeUndefined();
+  expect(result.signal, "the preflight must exit, not be killed").toBeNull();
+  expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toEqual({
+    status: 1,
+    stdout: "",
+    stderr: PREFLIGHT_REFUSAL,
+  });
+}
+
 export const FULL_FLOW_TITLE =
   "returns findings to their owners, then carries the same flow through acceptance, implementation and report";
 
