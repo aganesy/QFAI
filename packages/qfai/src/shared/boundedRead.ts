@@ -168,8 +168,9 @@ type ScanOutcome = "read" | "stopped" | "unfinished" | "refused";
  * does not return. `maxBytes` is the caller's budget, and the size `fstat`
  * reported at open bounds it again: a file being appended to while the scan
  * runs is read to the length it had, not chased. Either bound reached before
- * the end answers `"unfinished"`, and the caller then says nothing about the
- * part it did not read rather than guessing at it.
+ * the end answers `"unfinished"`, and so does a file that still yields a byte
+ * once that length is read, because it grew while it was read. The caller then
+ * says nothing about the part it did not read rather than guessing at it.
  *
  * `"refused"` covers every reason the bytes were not read in full: absent, a
  * symlink, a FIFO, a device, a directory, an object that changed between the
@@ -194,6 +195,11 @@ export async function scanBoundedRegularFile(
       scanned += bytesRead;
       if (onChunk(buffer.subarray(0, bytesRead)) === "stop") return "stopped";
     }
-    return ceiling < stats.size ? "unfinished" : "read";
+    if (ceiling < stats.size) return "unfinished";
+    // The size `fstat` reported is the size at open, and comparing against it
+    // again cannot see bytes appended since. One more byte from the same
+    // descriptor can: a file that yields it grew while it was read.
+    const { bytesRead } = await handle.read(buffer, 0, 1, null);
+    return bytesRead > 0 ? "unfinished" : "read";
   });
 }

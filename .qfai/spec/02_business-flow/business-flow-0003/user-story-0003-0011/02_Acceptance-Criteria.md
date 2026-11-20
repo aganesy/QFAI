@@ -48,10 +48,11 @@ Feature: Shipped workflow checks
 
   # AC-0003-0011-12
   Scenario: Doctor reports the jobs the installed shipped workflows start per pull request event
-    Given a project holding some or all of the shipped workflows, one whose job condition the shipped templates do not use, and one with none
+    Given a project holding some or all of the shipped workflows, one whose job condition the shipped templates do not use, one whose triggers start it on no pull request or take a shape the check does not read, and one with none
     When `qfai doctor` runs
     Then the `workflows.cost` check is `info` and never a warning or an error
     And its message gives, for each installed shipped workflow, the jobs a pull request event starts when nothing is to run and the most it starts when its lane runs, and the runner selector of each job
+    And a workflow no pull request starts is reported as starting no job
     And a workflow it cannot read is named as not counted, and a project with no shipped workflow gets no check
     And doctor reads no repository variable and writes no file
 

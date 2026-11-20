@@ -225,6 +225,90 @@ describe("qfai doctor reports the jobs the shipped workflows start per pull requ
   });
 });
 
+describe("qfai doctor reads the triggers of the shipped workflows before counting their jobs", () => {
+  // QFAI:EX-0003-0011-42
+  it("reports a workflow whose triggers start it on no pull request as starting no job", async () => {
+    // QFAI:AC-0003-0011-12
+    const silent = [
+      "on:\n  push:\n    branches: [main, master]",
+      "on: push",
+      "on: [push, workflow_dispatch]",
+      "on:\n  pull_request:\n    types: [closed]",
+    ];
+    for (const on of silent) {
+      const root = await project({ "qfai-validate.yml": await validateWithTriggers(on) });
+
+      const check = await costCheck(root);
+
+      expect(check?.severity).toBe("info");
+      expect(check?.message).toContain(
+        "qfai-validate.yml starts no job on a pull request event: its `on:` does not start it on one.",
+      );
+      const details = check?.details;
+      expect(isRecord(details) ? details["workflows"] : undefined).toEqual([
+        {
+          file: "qfai-validate.yml",
+          idle: { jobs: 0, ids: "" },
+          laneRuns: { jobs: 0, ids: "" },
+        },
+      ]);
+    }
+  });
+
+  // QFAI:EX-0003-0011-42
+  it("counts the jobs of a workflow each pull request trigger form starts", async () => {
+    // QFAI:AC-0003-0011-12
+    const started = [
+      "on: pull_request",
+      "on: [push, pull_request]",
+      "on:\n  push:\n  pull_request:",
+      "on:\n  pull_request:\n    types: [opened, closed]",
+      "on:\n  pull_request:\n    types: synchronize",
+    ];
+    for (const on of started) {
+      const root = await project({ "qfai-validate.yml": await validateWithTriggers(on) });
+
+      const check = await costCheck(root);
+
+      expect(check?.message).toContain("qfai-validate.yml starts 1 job (validate)");
+    }
+  });
+
+  // QFAI:EX-0003-0011-43
+  it("names a workflow whose triggers it cannot read instead of guessing a count", async () => {
+    // QFAI:AC-0003-0011-12
+    const unreadable = [
+      "on:\n  pull_request:\n    branches: [main]",
+      "on:\n  pull_request:\n    paths: ['src/**']",
+      "on:\n  pull_request:\n    branches-ignore: [release]",
+      "on:\n  pull_request:\n    paths-ignore: ['docs/**']",
+      "on:\n  pull_request_target:",
+      "on: [pull_request_target]",
+      "on:\n  pull_request:\n    types: {opened: true}",
+      "on: [push, {pull_request: null}]",
+      "on: 1",
+      "run-name: no trigger",
+    ];
+    for (const on of unreadable) {
+      const root = await project({ "qfai-validate.yml": await validateWithTriggers(on) });
+
+      const check = await costCheck(root);
+
+      expect(check?.severity).toBe("info");
+      expect(check?.message).toContain("qfai-validate.yml could not be counted");
+      expect(check?.message).not.toContain("qfai-validate.yml starts");
+    }
+  });
+});
+
+/** The shipped validate workflow with its `on:` block replaced by the given text. */
+async function validateWithTriggers(on: string): Promise<string> {
+  const validate = await packagedText("qfai-validate.yml");
+  const edited = validate.replace(/^on:\n[\s\S]*?\n\n/m, () => `${on}\n\n`);
+  expect(edited).not.toBe(validate);
+  return edited;
+}
+
 /** The matrix lines given, as the value of `matrix:` inline when one line is not a key. */
 function matrixBlock(lines: readonly string[]): string {
   const [first, ...rest] = lines;

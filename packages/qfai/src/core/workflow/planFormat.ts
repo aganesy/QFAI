@@ -198,7 +198,8 @@ function kindHolds(stage: PlanStage, kind: string[]): boolean {
 }
 
 function vocabularyRefusals(stage: PlanStage, refuse: Refuse) {
-  const kind = KINDS[stage.kind];
+  // An own-key lookup, so a name such as `constructor` is not read as a known kind.
+  const kind = Object.hasOwn(KINDS, stage.kind) ? KINDS[stage.kind] : undefined;
   const names = namesOf(stage);
   const outside = [...(kind ? [] : [stage.kind]), ...names.filter((name) => !STEPS.has(name))];
   for (const name of outside) refuse("out-of-vocabulary", name);
