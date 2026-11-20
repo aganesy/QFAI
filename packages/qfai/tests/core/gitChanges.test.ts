@@ -170,3 +170,42 @@ it.each([".", "./", ""])("reads a repository-root register at configured %j", as
     ]),
   );
 });
+
+/** Runs git with `input` on stdin and returns its trimmed stdout. */
+const gitWithInput = (cwd: string, args: string[], input: string): string =>
+  execFileSync("git", args, { cwd, input, encoding: "utf8" }).trim();
+
+it("reads the register beside tracked names that contain a newline, keeping each name verbatim", async () => {
+  // Built with `mktree` rather than a working-tree file: Windows cannot name a
+  // file with a newline, but a POSIX contributor can commit one.
+  const register = "# Decisions\n";
+  const page = "# Decisions page\n";
+  const root = await newRepo({ "docs/spec/decisions.md": register });
+  const blob = (content: string): string =>
+    gitWithInput(root, ["hash-object", "-w", "--stdin"], content);
+  const pagesTree = gitWithInput(
+    root,
+    ["mktree", "-z"],
+    `100644 blob ${blob(page)}\tpage\n0001.md\0`,
+  );
+  const specTree = gitWithInput(
+    root,
+    ["mktree", "-z"],
+    [
+      `100644 blob ${blob(register)}\tdecisions.md`,
+      `040000 tree ${pagesTree}\tdecisions`,
+      `100644 blob ${blob("Not a register\n")}\tnotes\nfile.md`,
+      "",
+    ].join("\0"),
+  );
+  const docsTree = gitWithInput(root, ["mktree", "-z"], `040000 tree ${specTree}\tspec\0`);
+  const rootTree = gitWithInput(root, ["mktree", "-z"], `040000 tree ${docsTree}\tdocs\0`);
+  const commit = gitWithInput(root, ["commit-tree", rootTree, "-m", "newline names"], "");
+
+  expect(readDecisionFilesAtRevision(root, commit, "docs/spec")).toEqual(
+    new Map([
+      ["docs/spec/decisions.md", register],
+      ["docs/spec/decisions/page\n0001.md", page],
+    ]),
+  );
+});
