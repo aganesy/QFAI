@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
-import { resolveFlowScope } from "./flowScope.js";
+import { type FlowScope, resolveFlowScope } from "./flowScope.js";
 import { isStoryTreeId } from "./storyTree/ids.js";
 import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
 
@@ -16,10 +16,10 @@ type Graph = {
 function graphForFlow(
   model: StoryTreeModel,
   flowId: string,
+  scope: FlowScope,
   contractIdsByFile: ReadonlyMap<string, string>,
   root: string,
 ): Graph {
-  const scope = resolveFlowScope([flowId], model);
   const stories = model.stories.filter((story) => story.flowId === flowId);
   const storyIds = new Set(scope.storyIds);
   const criteria = model.acceptanceCriteria.filter((item) => storyIds.has(item.storyId));
@@ -84,7 +84,7 @@ export async function writeBusinessFlowReports(
     (item) => isStoryTreeId(item.id, "BF") && (!selected || selected.has(item.id)),
   )) {
     const scope = resolveFlowScope([flow.id], model);
-    const graph = graphForFlow(model, flow.id, contractIdsByFile, root);
+    const graph = graphForFlow(model, flow.id, scope, contractIdsByFile, root);
     const outputDir = path.join(outRoot, `business-flow-${flow.id.slice(3)}`);
     await mkdir(outputDir, { recursive: true });
     const coverage = [

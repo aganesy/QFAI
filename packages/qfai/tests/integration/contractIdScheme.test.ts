@@ -3,10 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { declaredContractId } from "../../src/core/contractsDecl.js";
+import type * as FlowScopeModule from "../../src/core/flowScope.js";
 import { writeBusinessFlowReports } from "../../src/core/specPackReport.js";
 import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
 import { contractNumber, isContractId, nextId } from "../../src/core/storyTree/ids.js";
@@ -19,6 +20,19 @@ import { validateStoryTreeContractReferences } from "../../src/core/validators/c
 import { validateContracts } from "../../src/core/validators/contracts.js";
 import { validateDbContractApplyOrder } from "../../src/core/validators/dbContractApplyOrder.js";
 import { validateStoryTreeStructureModel } from "../../src/core/validators/storyTreeStructure.js";
+
+// Counts the flow-scope resolutions a report run makes, passing each one through.
+const flowScopeCalls = vi.hoisted(() => ({ count: 0 }));
+vi.mock("../../src/core/flowScope.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof FlowScopeModule>();
+  return {
+    ...actual,
+    resolveFlowScope: (...args: Parameters<typeof actual.resolveFlowScope>) => {
+      flowScopeCalls.count += 1;
+      return actual.resolveFlowScope(...args);
+    },
+  };
+});
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -321,6 +335,22 @@ describe("contract IDs and contract-scoped business rules", () => {
       { from: "BR-CLI-0003-0001", to: "CLI-0003", relation: "BR_TO_CON" },
       { from: "BR-CLI-0009-0001", to: `${contracts}/tech.md`, relation: "BR_TO_CON" },
     ]);
+  });
+
+  it("resolves each flow's scope once for its coverage and its graph", async () => {
+    const root = await contractTree([], {});
+    for (const [relative, body] of tree("")) {
+      if (relative !== check) await put(root, relative, body);
+    }
+    await put(
+      root,
+      `${spec}/02_business-flow/business-flow-0001/business-flow.md`,
+      "# BF-0001: Flow\n",
+    );
+    await put(root, `${story}/01_User-story.md`, "# US-0001-0001: Check\n");
+    flowScopeCalls.count = 0;
+    await writeBusinessFlowReports(root, defaultConfig);
+    expect(flowScopeCalls.count).toBe(1);
   });
 
   // QFAI:AC-0001-0052-03
