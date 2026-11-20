@@ -571,6 +571,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **`qfai validate` reports a `.qfai/waivers.yml` it cannot read.** An
+  existence probe that swallowed every error ran first, so a `.qfai` directory
+  that could not be traversed read as having no waiver file and the
+  `QFAI-WAIVER-001` read failure never fired. The file is now read directly:
+  only a missing file means no waivers, and any other error is reported with
+  the file's path and the cause. Closes #4866.
+
 - **`qfai sdd preflight` keeps a carry-over entry that starts with `<`.** A
   flagless re-run dropped every recorded entry opening with a less-than sign,
   such as a tag or a comparison, as if it were the template's placeholder.

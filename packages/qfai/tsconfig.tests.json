@@ -690,6 +690,7 @@
     "tests/integration/grillingGlossaryCheck.test.ts",
     "tests/integration/grillingRuleReferences.test.ts",
     "tests/integration/noDiscussionSidecarMentions.test.ts",
-    "tests/scripts/syncInitToRoot.test.ts"
+    "tests/scripts/syncInitToRoot.test.ts",
+    "tests/core/waiversReadErrors.test.ts"
   ]
 }
