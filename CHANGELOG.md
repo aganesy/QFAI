@@ -614,6 +614,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
 
+- **The Mermaid check finds diagrams inside block quotes and list items.**
+  `check-mermaid.mjs` saw a fence only at the start of a line, so a diagram
+  written after `> ` or nested under a list item was never parsed, and a
+  broken one passed. It now reads each line inside its block quotes and list
+  items, as CommonMark does, and a fence there ends where its container ends.
+  A line such as ` ```npx qfai validate``` ` is inline code, not a fence,
+  so it no longer hides the diagrams below it. `<!-- mermaid-lint:ignore -->`
+  still skips the next block, also when both lines sit in the same block quote.
+
 - **A rejected release version or tag no longer reaches the Actions log as a
   workflow command.** The manual prepare-release and release workflows put
   the value they refused inside their error annotation, so a value carrying a
