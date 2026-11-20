@@ -441,6 +441,17 @@ describe("check-mdschema driver", () => {
     expect(result.stderr).toContain("--tools needs a directory");
   });
 
+  it("exits 2 when --base is followed by another option, which it must not take as a ref", async () => {
+    // Taken as a ref, `--summary` names no revision, so the ratchet would widen
+    // to a full scan and the summary the caller asked for would never print.
+    const root = await newTempDir();
+
+    const result = runDriver(["--root", root, "--base", "--summary"]);
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("--base needs a git ref");
+  });
+
   it("exits 2 when --scope files is given no path", async () => {
     const root = await newTempDir();
 
