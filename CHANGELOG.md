@@ -737,6 +737,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The entry is now moved aside first and put back when the link fails, and
   removed only once the link stands.
 
+- **The skeleton smoke now requires the path count it reports.** It accepted
+  the dry-run plan's `would write:` label with no number after it and then
+  printed a successful run that planned 0 paths, a count the plan never named.
+  A plan without a numeric count now fails the smoke, and the failure prints
+  the output it read. Closes #4754.
+
 - **`qfai db-drift` no longer calls a comparison equal when a SQL file failed
   to apply.** With a failed file and no differences among the files that did
   apply, the text output listed the failed file and then said both sides
