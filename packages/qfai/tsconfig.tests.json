@@ -469,6 +469,7 @@
     "tests/unit/core/detectJsTestRunner.test.ts",
     "tests/unit/core/globBraceRange.test.ts",
     "tests/unit/core/templateCopyReads.test.ts",
+    "tests/unit/core/templateCopyRace.test.ts",
     "tests/unit/core/instructionLanguageRules.test.ts",
     "tests/unit/core/testGlobExtensions.test.ts",
     "tests/unit/issueCatalogHasEmitters.test.ts",
