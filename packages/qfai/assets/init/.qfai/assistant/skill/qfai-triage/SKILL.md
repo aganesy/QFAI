@@ -121,10 +121,8 @@ list any remaining actions instead.
 
 project_memory:
 
-- Triage changes no tracked file except the run's deliberation record and the
-  `open-questions.md` rows it wrote, which `triage-close` commits locally, and
-  the approval row `qfai-run` records in `decisions.md` before `triage-handoff`;
-  only `triage-owned-cleanup` and `triage-operate` execute an operation.
+- Triage changes no tracked file except the run's deliberation record and `open-questions.md` rows, which `triage-close` commits locally, and the approval row `qfai-run` records in `decisions.md` before `triage-handoff`.
+- Only `triage-owned-cleanup` and `triage-operate` execute an operation.
 - Other work it finds is a follow-up request.
 - A follow-up is recorded, never routed inside the run that found it.
 - A security report stays private until the fix is ready to disclose.

@@ -190,7 +190,7 @@ describe("qfai-triage invoked by name", () => {
       /ending with no tracked change but its deliberation record, open questions and approval row:/,
     );
     expect(flat(sectionOf(skill, "## Default Autopilot Policy"))).toMatch(
-      /Triage changes no tracked file except the run's deliberation record and the `open-questions\.md` rows it wrote, which `triage-close` commits locally, and the approval row `qfai-run` records in `decisions\.md` before `triage-handoff`/,
+      /Triage changes no tracked file except the run's deliberation record and `open-questions\.md` rows, which `triage-close` commits locally, and the approval row `qfai-run` records in `decisions\.md` before `triage-handoff`/,
     );
 
     const policy = parseAutopilotPolicy(skill, "qfai-triage");
