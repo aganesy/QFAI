@@ -1,4 +1,14 @@
-import { cp, lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import {
+  cp,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
@@ -76,6 +86,75 @@ it("publishes and independently restores a completed document graph after native
     expect((await lstat(graph)).nlink).toBe(1);
     await writeFile(graph, "Changed only in this worktree");
     expect(await readFile(completed)).toEqual(before);
+  } finally {
+    await fixture.dispose();
+    await rm(common, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0236-01
+it("restores a compatible document snapshot when no processing configuration is present", async () => {
+  const fixture = await documentAnalysisFixture();
+  const common = await mkdtemp(path.join(os.tmpdir(), "qfai-document-cache-"));
+  const native = graphifyExtractionFixture(fixture);
+  const environment = { ...graphReuseEnvironment(), platform: "win32", architecture: "x64" };
+  const run: typeof fixture.run = async (command, args, options) => {
+    if (command === "git") return { exitCode: 0, stdout: common };
+    if (args.includes("-c")) return { exitCode: 0, stdout: "3.12.13" };
+    if (args.at(-1) === "inventory")
+      return { exitCode: 0, stdout: '{"files":["checkout.ts","rationale.md"]}' };
+    return native(command, args, options);
+  };
+  const configuration = path.join(fixture.root, ".qfai", "graph-processing.json");
+  const prepare = () => prepareDocumentAnalysis(fixture.root, run, undefined, environment);
+  const recordedProcessing = async () =>
+    JSON.parse(
+      await readFile(path.join(fixture.documentAnalysis, "graphify-out", "managed.json"), "utf8"),
+    ).processing;
+  try {
+    await rm(fixture.documentAnalysis, { recursive: true });
+    expect(await prepare()).toMatchObject({ source: "generated", reuse: "published" });
+    const cache = path.join(common, "qfai-graph-cache", "win32-x64", "graphify");
+    const [published] = await readdir(cache);
+    const wholeCorpus = path.join(cache, published ?? "");
+    // Another worktree's snapshot over a narrower scope, otherwise identical.
+    const narrow = path.join(cache, "narrow-scope-snapshot");
+    await cp(wholeCorpus, narrow, { recursive: true });
+    const narrowManaged = path.join(narrow, "analysis", "graphify-out", "managed.json");
+    const managed = JSON.parse(await readFile(narrowManaged, "utf8"));
+    await writeFile(
+      narrowManaged,
+      JSON.stringify({
+        ...managed,
+        processing: { ...managed.processing, scope: ["rationale.md"] },
+      }),
+    );
+    await rm(fixture.documentAnalysis, { recursive: true });
+    await rm(configuration);
+
+    const held = path.join(cache, ".held-whole-corpus");
+    await rename(wholeCorpus, held);
+    expect(await prepare()).toMatchObject({ status: "not-ready" });
+    await expect(lstat(fixture.documentAnalysis)).rejects.toMatchObject({ code: "ENOENT" });
+
+    await rename(held, wholeCorpus);
+    fixture.calls.length = 0;
+    expect(await prepare()).toMatchObject({ status: "prepared", source: "restored" });
+    expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(false);
+    expect(await recordedProcessing()).toEqual(fixture.processing);
+
+    await rm(fixture.documentAnalysis, { recursive: true });
+    await writeFile(configuration, "{");
+    expect(await prepare()).toMatchObject({ status: "not-ready" });
+    await expect(lstat(fixture.documentAnalysis)).rejects.toMatchObject({ code: "ENOENT" });
+
+    await writeFile(
+      configuration,
+      JSON.stringify({ ...fixture.processing, scope: ["checkout.ts"] }),
+    );
+    fixture.calls.length = 0;
+    expect(await prepare()).toMatchObject({ status: "prepared", source: "generated" });
+    expect(fixture.calls.some((call) => call.args.includes("extract"))).toBe(true);
   } finally {
     await fixture.dispose();
     await rm(common, { recursive: true, force: true });
