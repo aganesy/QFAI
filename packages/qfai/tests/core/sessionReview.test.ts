@@ -254,6 +254,29 @@ describe("where the transcripts are", () => {
     const found = await locateSessions(root, ["codex"], environment(base));
     expect(found.map((session) => session.sessionId)).toEqual(["recorded-id"]);
   });
+
+  it("reads Codex rollouts only under year, month and day directories, and only regular files", async () => {
+    const base = await tempDir();
+    const root = path.join(base, "project");
+    const sessions = path.join(base, "codex", "sessions");
+    const meta = (id: string): string =>
+      `${JSON.stringify({ type: "session_meta", payload: { id, cwd: root } })}\n`;
+    const name = "rollout-2026-11-10T10-00-00-0199aaaa-bbbb-7ccc-8ddd-eeeeffff0006.jsonl";
+    await place(path.join(sessions, "2026", "11", "10", name), meta("dated"));
+    // A copy kept beside the dated tree is no other session, however new it is.
+    await place(path.join(sessions, "backup", "old", "copy", name), meta("backup-copy"));
+    await place(path.join(sessions, "2026", "13", "10", name), meta("no-such-month"));
+    await place(path.join(sessions, "2026", "02", "30", name), meta("no-such-day"));
+    await place(path.join(sessions, "2026", "11", "1", name), meta("short-day"));
+    // A directory whose name matches a rollout is not opened as one.
+    await mkdir(
+      path.join(sessions, "2026", "11", "11", "rollout-2026-11-11T10-00-00-directory.jsonl"),
+      { recursive: true },
+    );
+
+    const found = await locateSessions(root, ["codex"], environment(base));
+    expect(found.map((session) => session.sessionId)).toEqual(["dated"]);
+  });
 });
 
 // QFAI:EX-0001-0294-09
