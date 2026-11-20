@@ -637,6 +637,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new script stop with an error at the first skip in that file, so rewrite
   each count as the names of the tests it covered.
 
+- **`qfai atdd scaffold` writes a CommonJS node:test skeleton that Node can
+  load.** For a project that runs `node --test`, the skeleton imported
+  `describe` and `it` with an `import` statement even in a `.cjs` file, and
+  Node stopped with `Cannot use import statement outside a module`. A `.cjs`
+  or `.cts` skeleton, and a `.js` one whose nearest `package.json` does not
+  set `"type": "module"`, or a `.ts` one whose nearest `package.json` sets
+  `"type": "commonjs"`, now loads them with `require`. Closes #4708.
+
 - **Design token references resolve the same way in any declaration order.**
   A chain of more than ten references raised `QFAI-DT-002` and kept a
   `{...}` placeholder when the file declared the first token before the
