@@ -4,9 +4,17 @@
  * The cases follow the two failures the guard exists for: an entry that a merge
  * conflict resolution dropped, and a change to shipped behaviour with no entry.
  */
-import { describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
+
+import { removeTempTree } from "../helpers/tempTree.js";
 
 import {
+  changedPaths,
   exemptionReason,
   parseBase,
   problemsOf,
@@ -77,6 +85,50 @@ describe("the shipped paths", () => {
         "scripts/check-bidi.mjs",
       ]),
     ).toEqual(["packages/qfai/src/cli/main.ts", "packages/qfai/assets/init/root/AGENTS.md"]);
+  });
+});
+
+const trees: string[] = [];
+afterEach(async () => {
+  await Promise.all(trees.splice(0).map((tree) => removeTempTree(tree)));
+});
+
+function git(root: string, ...args: string[]): string {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf-8" });
+  if (result.status !== 0) throw new Error(result.stderr);
+  return result.stdout;
+}
+
+describe("the changed paths of a range", () => {
+  it("reads a shipped path whose name git would quote as it is", async () => {
+    // Git quotes a path holding a non-ASCII byte, so a newline-split
+    // `--name-only` reads `"packages/...` and no prefix matches.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-changelog-paths-"));
+    trees.push(root);
+    git(root, "init", "-b", "main");
+    git(root, "config", "user.email", "fixture@example.invalid");
+    git(root, "config", "user.name", "Changelog fixture");
+    git(root, "config", "core.quotePath", "true");
+    await writeFile(path.join(root, "README.md"), "base\n");
+    git(root, "add", "README.md");
+    git(root, "commit", "-m", "Base");
+    const dir = path.join(root, "packages", "qfai", "src");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "café.ts"), "export {};\n");
+    git(root, "add", "packages");
+    git(root, "commit", "-m", "Shipped change");
+
+    const changed = changedPaths("HEAD~1..HEAD", root);
+
+    expect(shippedPaths(changed ?? [])).toEqual(["packages/qfai/src/café.ts"]);
+  });
+
+  it("is null when git cannot read the range", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-changelog-paths-"));
+    trees.push(root);
+    git(root, "init", "-b", "main");
+
+    expect(changedPaths("HEAD~1..HEAD", root)).toBeNull();
   });
 });
 
