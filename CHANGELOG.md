@@ -663,7 +663,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   backslash in a standard `'…'` string stays literal.
 
 - **The `validate.json` guide documents `profileValidatorsRan`.** The key is
-  in every result `qfai validate` writes, but the guide to the file did not
+  in every result of a `qfai validate` run that finishes, but the guide to the file did not
   name it, so a consumer could read a run that stopped before the profile's
   checks as a clean pass. The guide now says that `false` means those checks
   did not run, and that an absent key, from an older qfai or a run that could
