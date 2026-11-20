@@ -40,6 +40,7 @@ Feature: Get one fixed plan for every kind of request
     And unknown causes or controlled races require the real procedures
     And missing or mismatched Red cannot establish either exception; a Green of another test or command, stale Green or pending CI cannot establish the repetition exception
     And a report names the evidence and why stress or repetitions are unnecessary without claiming they ran or passed
+    And the number of repetitions is a named positive count, or three divided by a measured positive failure rate rounded up, and without either the soak step stops `blocked` naming the missing input instead of guessing a count
     And the route, step order, false pass-through flags and diagnosis verdict vocabulary are unchanged
 
   # AC-0001-0220-06
