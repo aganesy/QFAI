@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import type { Issue, ValidationResult } from "../../src/core/types.js";
+import { pathExists } from "../helpers/pathExists.js";
 
 const roots: string[] = [];
 
@@ -51,15 +52,6 @@ async function writeValidation(
   await writeFile(output, `${JSON.stringify(result)}\n`, "utf8");
 }
 
-async function exists(file: string): Promise<boolean> {
-  try {
-    await access(file);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 describe("qfai report on a story tree", () => {
   it("reads validation findings and writes a story-tree Markdown report", async () => {
     const root = await storyRoot();
@@ -70,7 +62,9 @@ describe("qfai report on a story tree", () => {
     expect(output).toContain("QFAI-TEST-001");
     expect(output).not.toContain("SC Coverage");
     expect(output).not.toContain("TC coverage");
-    expect(await exists(path.join(root, ".qfai/report/business-flow-0001/coverage.md"))).toBe(true);
+    expect(await pathExists(path.join(root, ".qfai/report/business-flow-0001/coverage.md"))).toBe(
+      true,
+    );
   });
 
   // QFAI:EX-0001-0058-01
@@ -151,7 +145,7 @@ describe("qfai report on a story tree", () => {
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     expect(await runReport({ root, format: "md", failOn: "never", baseUrl })).toBe(2);
     expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain("--base-url");
-    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 
   it("uses loaded findings for the exit gate even when stored counts are stale", async () => {
@@ -179,7 +173,7 @@ describe("qfai report on a story tree", () => {
     await mkdir(path.join(root, ".qfai/report"), { recursive: true });
     await writeFile(path.join(root, ".qfai/report/validate.json"), '{"issues":[]}', "utf8");
     await expect(runReport({ root, format: "md" })).rejects.toThrow("invalid shape");
-    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 
   it("rejects an invalid issue severity rather than dropping the gate", async () => {
@@ -197,7 +191,7 @@ describe("qfai report on a story tree", () => {
     await expect(
       runReport({ root, format: "md", failOn: "never", baseUrl: "https://example.test/repo" }),
     ).rejects.toThrow(/invalid shape: .*validate\.json \(issues\[1\]\.file must be a string\)/);
-    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 
   it.each([
@@ -221,7 +215,7 @@ describe("qfai report on a story tree", () => {
     await expect(runReport({ root, format: "json", failOn: "never" })).rejects.toThrow(
       `(${problem})`,
     );
-    expect(await exists(path.join(root, ".qfai/report/report.json"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.json"))).toBe(false);
   });
 
   it("accepts suppression maps of numeric counts", async () => {
@@ -325,7 +319,7 @@ describe("qfai report on a story tree", () => {
     );
     await writeValidation(root, [], "validate.flow-0001.json", ["BF-0001"]);
     expect(await runReport({ root, format: "md", flowIds: ["BF-0001"] })).toBe(0);
-    expect(await exists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(true);
+    expect(await pathExists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(true);
   });
 
   // QFAI:EX-0001-0066-06
@@ -343,7 +337,7 @@ describe("qfai report on a story tree", () => {
         await runReport({ root, format: "md", flowIds: ["BF-0001"], inputPath: elsewhere }),
       ).toBe(2);
     }
-    expect(await exists(scopedReport)).toBe(false);
+    expect(await pathExists(scopedReport)).toBe(false);
     expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
       "qfai validate --flow BF-0001",
     );
@@ -363,13 +357,13 @@ describe("qfai report on a story tree", () => {
 
     await writeValidation(root, [], "validate.json", ["BF-0001"]);
     expect(await runReport({ root, format: "md" })).toBe(2);
-    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+    expect(await pathExists(path.join(root, ".qfai/report/report.md"))).toBe(false);
 
     await writeValidation(root, [], elsewhere, ["BF-0001"]);
     expect(
       await runReport({ root, format: "md", flowIds: ["BF-0001"], inputPath: elsewhere }),
     ).toBe(0);
-    expect(await exists(scopedReport)).toBe(true);
+    expect(await pathExists(scopedReport)).toBe(true);
   });
 
   // QFAI:EX-0001-0062-02
