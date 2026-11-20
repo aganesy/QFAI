@@ -1,7 +1,7 @@
 ---
 name: qfai-triage
 title: QFAI Triage (Requests that end without a tracked change)
-description: "Use when invoked by name or handed a QFAI work order for a request that ends without a tracked change other than its own deliberation record, its open-questions.md rows and a qfai-run approval row: a question, a duplicate, missing information, a split, automated reports, a security report, an operation only a person can run, an operation the user named on finished work, or authorized cleanup of current-task temporary directories."
+description: "Use when invoked by name or handed a QFAI work order for a request ending with no tracked change but its deliberation record, open questions and approval row: a question, a duplicate, missing information, a split, automated reports, a security report, an operation only a person can run or the user named on finished work, or authorized cleanup of current-task temporary directories."
 argument-hint: "<the request, as it was reported>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
 steps:
@@ -121,7 +121,10 @@ list any remaining actions instead.
 
 project_memory:
 
-- Triage changes no tracked file except the run's deliberation record and the `open-questions.md` rows it wrote, which `triage-close` commits locally, and the approval row `qfai-run` records in `decisions.md` before `triage-handoff`; only `triage-owned-cleanup` and `triage-operate` execute an operation.
+- Triage changes no tracked file except the run's deliberation record and the
+  `open-questions.md` rows it wrote, which `triage-close` commits locally, and
+  the approval row `qfai-run` records in `decisions.md` before `triage-handoff`;
+  only `triage-owned-cleanup` and `triage-operate` execute an operation.
 - Other work it finds is a follow-up request.
 - A follow-up is recorded, never routed inside the run that found it.
 - A security report stays private until the fix is ready to disclose.

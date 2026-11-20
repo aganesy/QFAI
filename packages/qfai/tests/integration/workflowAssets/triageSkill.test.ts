@@ -187,7 +187,7 @@ describe("qfai-triage invoked by name", () => {
       /the commits the stage made touch only the run's deliberation record, the `open-questions\.md` rows the run wrote and the `decisions\.md` approval row the Reviewer Gate allows/,
     );
     expect(String(frontMatterOf(skill).description)).toMatch(
-      /ends without a tracked change other than its own deliberation record, its open-questions\.md rows and a qfai-run approval row:/,
+      /ending with no tracked change but its deliberation record, open questions and approval row:/,
     );
     expect(flat(sectionOf(skill, "## Default Autopilot Policy"))).toMatch(
       /Triage changes no tracked file except the run's deliberation record and the `open-questions\.md` rows it wrote, which `triage-close` commits locally, and the approval row `qfai-run` records in `decisions\.md` before `triage-handoff`/,
