@@ -434,6 +434,7 @@
     "tests/scripts/checkMdschemaConfigFile.test.ts",
     "tests/scripts/genCodexAgentsUnreadableProfile.test.ts",
     "tests/scripts/checkTscCompiler.test.ts",
+    "tests/scripts/checkTypesFuture.test.ts",
     "tests/scripts/checkTestEnumeration.test.ts",
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/ghBudget.test.ts",
