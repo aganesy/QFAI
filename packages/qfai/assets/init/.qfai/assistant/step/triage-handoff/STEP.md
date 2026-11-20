@@ -53,5 +53,9 @@ the request as `deferred`, so it is planned again as a request of its own.
 ## Gate
 
 The reviewer, or the stage worker where the work order names none, confirms the
-steps can be followed as written, every precondition is stated, the result is
-recorded as the person reported it, and nothing was run on their behalf.
+steps can be followed as written, every precondition is stated, and nothing
+was run on their behalf. It then confirms one of two outcomes: the result is
+recorded as the person reported it, or, where the user delegated the release
+while this step waited, the delegation is quoted word for word with its
+source, no `handed-off` is reported, and the delegated release is listed as
+the follow-up the closing step closes as `deferred`.
