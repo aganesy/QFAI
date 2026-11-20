@@ -565,6 +565,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   trigger, a missing `on:` and a trigger shape that is not an event name, a list
   of names or a mapping are named as not counted. Closes #4783.
 
+- **The `validate.json` reference matches what `qfai validate` writes.** Its
+  waiver example listed `error` findings, which a waiver is refused for; it now
+  lists `warning` and `info` findings and says an error is repaired. It
+  describes the empty `waivers` object every run writes and the runs that leave
+  it out, documents `timings` and `familyTimings` in milliseconds, names the
+  rule-shaped `rule` a waiver also accepts, drops the `dl_id` field no finding
+  carries, and says `qfai report` writes `report.md`. Closes #4906, #4909,
+  #4911, #4913, #4915, #4917 and #4919.
+
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
   `Set-Content -Encoding UTF8`, and both commands refused such a file as

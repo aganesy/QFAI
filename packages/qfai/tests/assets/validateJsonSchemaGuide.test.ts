@@ -51,4 +51,37 @@ describe.each(ASSISTANT_ROOTS)("validate.json guide under %s", (assistantRoot) =
     expect(text).toMatch(/^- absent: the file makes no claim either way\./m);
     expect(text).toMatch(/Read\s+absence\s+as\s+"not\s+known",\s+not\s+as\s+`true`\./);
   });
+
+  // `validateProject` writes `waivers` on every run that reaches its checks,
+  // and `timings` / `familyTimings` beside it, so a consumer needs each one's
+  // empty or optional state to read the file correctly.
+  it("lists waivers, timings and familyTimings with the empty waiver object", async () => {
+    const text = await readFile(path.join(assistantRoot, GUIDE), "utf8");
+
+    expect(topLevelKeys(text)).toEqual(
+      expect.arrayContaining(["waivers", "timings", "familyTimings"]),
+    );
+    expect(text).toContain(
+      '{ "active": [], "suppressed": { "total": 0, "byWaiver": {}, "byRule": {} } }',
+    );
+    expect(text).toContain("wall-clock milliseconds");
+  });
+
+  // A waiver on an `error` finding is refused with `QFAI-WAIVER-002`, so the
+  // example lists the codes a waiver can name.
+  it("lists waivable findings in the waiver example", async () => {
+    const text = await readFile(path.join(assistantRoot, GUIDE), "utf8");
+
+    expect(text).toContain(`select(.severity != "error")`);
+    expect(text).toContain("`QFAI-WAIVER-002`");
+  });
+
+  // `validate` never writes `report.md`; only `qfai report` does.
+  it("names qfai report as the step that writes report.md", async () => {
+    const text = await readFile(path.join(assistantRoot, GUIDE), "utf8");
+    const related = text.slice(text.indexOf("## Related"));
+
+    expect(related).toContain("`npx qfai report`");
+    expect(related).toContain("`npx qfai report --run-validate`");
+  });
 });

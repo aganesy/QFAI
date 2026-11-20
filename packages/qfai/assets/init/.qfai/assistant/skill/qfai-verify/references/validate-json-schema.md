@@ -19,15 +19,13 @@ It is a **public surface** (`@api` under
 `.qfai/assistant/rule/change-classification.md`): the skills instruct agents to read it,
 so a key change is a breaking change and takes the `@api` path.
 
-This file is the SSOT for its keys. Before it existed the situation was: the
-skills mandated reading the file, `.qfai/assistant/rule/change-classification.md` called it `@api`,
-the README called it internal and not a stable contract, and no shipped file
-named a single key — so an agent looking for the findings array guessed
-`findings` and got `undefined` from a file whose array is `issues`.
+This file is the SSOT for its keys.
 
 ## Contents
 
 - Top level
+- `waivers`
+- `timings` and `familyTimings`
 - `issues[]`
 - What is stable, and what is not
 - Reading it
@@ -43,7 +41,9 @@ named a single key — so an agent looking for the findings array guessed
 | `profileValidatorsRan` | `boolean?`                 | whether the profile's own validators ran; see below           |
 | `issues`               | `Issue[]`                  | **the findings array. It is `issues`, not `findings`**        |
 | `counts`               | `{ info, warning, error }` | all three always present, all numbers                         |
-| `waivers`              | object?                    | present only when `.qfai/waivers.yml` was read                |
+| `waivers`              | object?                    | the waivers applied and what they suppressed; see below       |
+| `timings`              | object?                    | UI/UX validator time in ms; see below                         |
+| `familyTimings`        | object?                    | time per finding family in ms, under `--timings`; see below   |
 
 `counts` is what `--fail-on` compares, so it is the field to read for a pass/fail
 decision. It is derived from `issues` and cannot disagree with it.
@@ -66,11 +66,85 @@ decision. It is derived from `issues` and cannot disagree with it.
 BF, AC, and EX test obligations appear in `issues` as `QFAI-STORY-006` through
 `QFAI-STORY-009` findings. There is no separate traceability summary field.
 
+## `waivers`
+
+Every run that reaches its checks writes `waivers`, whether or not a
+`.qfai/waivers.yml` exists, so its presence says nothing about a waiver file.
+With no file, or with one that could not be read or parsed, it is the empty
+object:
+
+```json
+{ "active": [], "suppressed": { "total": 0, "byWaiver": {}, "byRule": {} } }
+```
+
+- `active`: the waiver entries in force for this run, whether or not one
+  matched a finding. An expired, malformed or refused entry is not listed; the
+  run reports it as a `QFAI-WAIVER-*` finding.
+- `suppressed.total`: how many findings a `suppress` waiver hid.
+  `byWaiver` counts them by waiver `id`, `byRule` by the `rule:` as written.
+
+`waivers` is absent from a run that stopped before its checks: one stopped at a
+story tree in the old layout (`QFAI-LAYOUT-001`), and one that could not finish
+(`QFAI-SCAN-002`). A file written by an older qfai may not carry it either. Read
+absence as "no waiver result", not as "no waiver file".
+
+## `timings` and `familyTimings`
+
+Both describe the machine that ran the check, not the tree, so they raise no
+finding and never change `counts`. Every time is wall-clock milliseconds, a
+fractional number.
+
+`timings` is written by the profiles that run the UI/UX validator group
+(`verify`, `full`, `prototyping` and `saas-package`), and is absent from the
+others and from a run that stopped early:
+
+| key                | notes                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| `uiuxMs`           | the whole UI/UX group, without the one-off html-mock parser load     |
+| `uiuxBudgetMs`     | the target `uiuxMs` is compared with; going over is not a failure    |
+| `htmlMockMs`       | parsing the html mock blocks                                         |
+| `htmlMockBudgetMs` | the target for `htmlMockMs` (`uiux.htmlMockTimeout` when set)        |
+| `uiuxPartsRun`     | `side-by-side` on a plain run, `one-after-another` under `--timings` |
+| `uiuxParts`        | `{ name, ms }[]`, slowest first                                      |
+
+Side by side, each part's time includes waiting for the others, so the parts
+overlap and do not add up to `uiuxMs`. One after another, each is that
+validator's own work.
+
+`familyTimings` is written, by any profile, only when `npx qfai validate
+--timings` asks for it, and is absent from a run that stopped early:
+
+| key                    | notes                                                                  |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `sequential`           | `{ family, ms }[]` for the checks run one after another, slowest first |
+| `uiux`                 | `{ family, ms }[]` for each check of the UI/UX group, slowest first    |
+| `htmlMockLoadMs`       | the one-off html-mock parser load, `0` when no mock needed it          |
+| `sharedMarkdownReadMs` | the Markdown read the html-mock and UI definition checks share         |
+
+A `family` is the code family of the findings its checks returned (`STORY` for
+`QFAI-STORY-*`, several joined with `/`), or the check's own name when it
+returned none. The whole UI/UX group is the one `uiux` entry of `sequential`,
+which includes `htmlMockLoadMs` and `sharedMarkdownReadMs`.
+
+```json
+{
+  "familyTimings": {
+    "sequential": [
+      { "family": "STORY", "ms": 412.7 },
+      { "family": "uiux", "ms": 96.3 }
+    ],
+    "uiux": [{ "family": "html mock", "ms": 51.2 }],
+    "htmlMockLoadMs": 0,
+    "sharedMarkdownReadMs": 4.1
+  }
+}
+```
+
 ## `issues[]`
 
 | key                | type                             | notes                                                                |
 | ------------------ | -------------------------------- | -------------------------------------------------------------------- |
-| `code`             | `string`                         | the finding code — **this is what a waiver's `rule:` must equal**    |
+| `code`             | `string`                         | the finding code — **copy this into a waiver's `rule:`**             |
 | `severity`         | `"info" \| "warning" \| "error"` |                                                                      |
 | `category`         | `string`                         | `canonical` for a contract violation, `change` for an advisory       |
 | `message`          | `string`                         | human-readable, not stable across versions                           |
@@ -78,11 +152,10 @@ BF, AC, and EX test obligations appear in `issues` as `QFAI-STORY-006` through
 | `file`             | `string?`                        | repo-relative path, POSIX separators                                 |
 | `relatedFiles`     | `string[]?`                      | the other files a finding implicates when `file` is a representative |
 | `refs`             | `string[]?`                      | the IDs or values the finding is about                               |
-| `rule`             | `string?`                        | the internal rule id, for grouping                                   |
+| `rule`             | `string?`                        | the internal rule id, for grouping; see "Reading it" for waivers     |
 | `suppressed`       | `boolean?`                       | true when a waiver suppressed it; it stays in the array              |
 | `job`              | `string?`                        | the CI job, for findings ingested from a lane                        |
 | `loc`              | object?                          | line / column, where the producer reported one                       |
-| `dl_id`            | `string?`                        | the decision-log id, for change advisories                           |
 
 Only `code`, `severity`, `category` and `message` are always present. Everything
 else is optional and a consumer must treat it as such — a finding with no
@@ -100,13 +173,21 @@ given rule populates. A consumer that matches on `message` will break; match on
 
 ## Reading it
 
-A waiver's `rule:` is `issues[].code`, copied verbatim. The example assumes
-the default `output.validateJsonPath`; with another one, read its `-full`
-sibling instead:
+Write a waiver's `rule:` as `issues[].code`, copied verbatim. A waiver also
+matches a finding whose `rule` has the shape of a code (for example
+`WAIVER-003` on a `QFAI-WAIVER-003` finding), compared in upper case, so an
+existing entry written that way is valid; most `rule` values, such as
+`storyTree.oldLayout`, do not have that shape and cannot be used.
+
+A waiver covers only a `warning` or `info` finding. One that names an `error`
+finding is refused with `QFAI-WAIVER-002`, also when the run raises that code
+as an `error` elsewhere: repair what the error names instead.
+The example lists the codes a waiver can name. It assumes the default
+`output.validateJsonPath`; with another one, read its `-full` sibling instead:
 
 ```bash
 npx qfai validate --profile full --fail-on error
-jq -r '.issues[] | select(.severity == "error") | .code' .qfai/report/validate-full.json
+jq -r '.issues[] | select(.severity != "error") | .code' .qfai/report/validate-full.json
 ```
 
 For a pass/fail decision, read the counts rather than filtering the array — the
@@ -117,7 +198,11 @@ result fails both.
 
 ## Related
 
-- `.qfai/report/report.md` is the human-readable form of the same run. It is not
+- `npx qfai report` writes the human-readable form, `report.md` under
+  `paths.outDir` (by default `.qfai/report/`). `validate` does not write it, so
+  an existing `report.md` can describe an earlier run: before reading it as
+  current, run `npx qfai report` with the same `--profile` and `--flow` as the
+  validate run, or `npx qfai report --run-validate`. It is not
   machine-readable; this file is the one to parse.
 - `report.json`, `doctor.json` and the `run-*` JSON logs are **not** covered
   here and remain internal exports.
