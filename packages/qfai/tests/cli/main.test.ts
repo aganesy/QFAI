@@ -162,11 +162,15 @@ describe("cli root discovery", () => {
     expect(help).toContain("--out <path>                  report/doctor/db-drift/session-review:");
   });
 
-  it("names the current assistant skill and agent targets in init --force help", async () => {
+  it("names every shipped location init --force overwrites in the help text", async () => {
+    // The help named only the skill and agent layers, while `--force` also
+    // rewrites the shipped steps and rules and the rule masters, so an operator
+    // learned the broader scope only from the NOTE a running init prints.
     const help = await captureStdout(() => run(["--help"], process.cwd()));
 
-    expect(help).toContain(".qfai/assistant/{skill,agent}/**");
-    expect(help).not.toContain(".qfai/assistant/{skills,agents}/**");
+    expect(help).toContain(".qfai/assistant/{skill,step,agent,rule}/**");
+    expect(help).toContain("the rule masters under .agents/rules/");
+    expect(help).not.toContain(".qfai/assistant/{skill,agent}/**");
   });
 
   it("reports the unknown flag on stderr and exits 2 instead of running the command", async () => {
