@@ -372,6 +372,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
 
+- **The workflow rule delegates as the shared delegation baseline does.** Its
+  delegation section no longer hands analysis, contracts and CI to technical
+  roles, one of them a DevOps/CI Engineer no shipped card defines. It now says
+  a stage delegates only for an independent judgement or for parallel units
+  that pass the parallel-unit gate, that the plan's `review` field names the
+  reviewers, and that the verify stage runs the quality gates.
+
 - **`qfai --help` lists the validation profiles in the order the parser
   names them.** The `--profile` line for validate and report now reads
   `discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift`, the
@@ -523,6 +530,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `webResearch.allowlist`. The templates still
   default to the cloud API.
 
+- **The leakage guard catches a `schemaVersion` whose colon is on the next
+  line** (#4743). The guard's pattern allows any whitespace between the field
+  name and its colon, but grep read each file one line at a time, so a valid
+  JavaScript property split across a line break shipped without a failure.
+  The `schemaVersion` pass now reads each file as a whole and names every file
+  that holds the field.
+
 - **The UI strategy review no longer hands winner selection to the comparison
   review.** The comparison review owns no winner and the prototyping loop puts
   its latest iteration to the user, so a reviewer following the old sentence
@@ -572,11 +586,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
 
+- **`qfai catalog components` keeps an existing catalogue when
+  `qfai.config.yaml` cannot be used.** A configuration that did not parse, such
+  as one holding `paths: [`, fell back to the default surface paths, so the
+  command exited 0 and overwrote the catalogue with an empty one. The command
+  now stops before it scans, exits 1 naming `qfai.config.yaml` and each error,
+  and writes nothing; under `--check` it says nothing was compared instead of
+  calling the catalogue out of date. Closes #4748.
+
 - **The Markdown-schema checker refuses a `--base` with no ref.** Given
   `--base --summary`, it took `--summary` as the ref, could not diff against
   it, checked every document instead and printed no summary. It now leaves a
   following option alone, reports `--base needs a git ref` and exits 2, as it
   already did for `--tools`.
+
+- **`qfai report --in` refuses a malformed waiver suppression map.** A
+  `waivers.suppressed.byWaiver` or `byRule` that was `null`, an array, or an
+  object with a count that is not a number passed the input check and reached
+  the emitted report. The report now stops before writing and names the field,
+  such as `waivers.suppressed.byRule["QFAI-X"] must be a number`.
 
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
@@ -593,12 +621,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   compared, so an edit saved while `qfai init` ran was left out of the
   notice naming the files only `--force` brings up to date. It is now
   compared like a file that was already there. Closes #4703.
-
-- **The skeleton smoke now requires the path count it reports.** It accepted
-  the dry-run plan's `would write:` label with no number after it and then
-  printed a successful run that planned 0 paths, a count the plan never named.
-  A plan without a numeric count now fails the smoke, and the failure prints
-  the output it read. Closes #4754.
 
 - **`--show-patterns` on the shipped document-schema checker now applies to
   the run that asked for it only.** A run with the flag left it set for the
@@ -622,6 +644,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the verified commit; one that differs fails the job and
   is left as it is; and an answer other than "not found" fails the job
   instead of being read as no Release. Closes #4732.
+
+- **`qfai --help` now names everything `init --force` overwrites.** The
+  `--force` line named only the shipped skills and agents, while a forced run
+  also rewrites the shipped steps and rules under `.qfai/assistant/` and the
+  rule masters under `.agents/rules/`, so the full scope showed only in the
+  note a running `init` prints. The help now lists those locations, and names
+  `qfai.config.yaml`, `DESIGN.md` and `AGENTS.md` among the files it keeps,
+  as that note does. Closes #4758.
 
 - **The 1.x migration reports every old-path line of a file with very many
   of them.** The migration's last step lists each line of a tracked project
@@ -682,6 +712,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `symlink` left the path empty and the wrapper, with everything in it, gone.
   The entry is now moved aside first and put back when the link fails, and
   removed only once the link stands.
+
+- **The skeleton smoke now requires the path count it reports.** It accepted
+  the dry-run plan's `would write:` label with no number after it and then
+  printed a successful run that planned 0 paths, a count the plan never named.
+  A plan without a numeric count now fails the smoke, and the failure prints
+  the output it read. Closes #4754.
 
 - **`qfai db-drift` no longer calls a comparison equal when a SQL file failed
   to apply.** With a failed file and no differences among the files that did

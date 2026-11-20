@@ -221,6 +221,19 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     expect(r.stderr).toMatch(/schemaVersion field present in distributed surface .*package\.json/);
   });
 
+  it("fails on an unquoted schemaVersion whose colon sits on the next line (exit 1)", async () => {
+    // `schemaVersion\n: 2` is one valid JavaScript property, and the
+    // documented pattern allows any whitespace before the colon, a line break
+    // included. A line-by-line grep never sees the name and the colon together.
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["config.js", "export default {\n  schemaVersion\n  : 2,\n};\n"]]);
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/schemaVersion field present in distributed surface .*assets/);
+    // grep prints the path bash built, with forward slashes on every host.
+    expect(r.stderr).toContain("assets/config.js");
+  });
+
   it("fails on a private version marker in the published manifest (exit 1)", async () => {
     const tmp = await newTempDir();
     await stageAssets(tmp, [["clean.md", "clean body\n"]]);
@@ -424,7 +437,8 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
       bashEnv,
       [
         "grep() {",
-        '  if [[ "$1" == "-rnE" ]]; then',
+        // `-rnE` is the content pass, `-rlzE` the whole-file schemaVersion pass.
+        '  if [[ "$1" == "-rnE" || "$1" == "-rlzE" ]]; then',
         "    printf 'grep: %s/unreadable.md: Permission denied\\n' \"$3\" >&2",
         "    return 2",
         "  fi",
