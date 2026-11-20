@@ -188,4 +188,39 @@ describe("the project layer describes the repository it is in", () => {
       "each tag command names the commit after the tag",
     ).toEqual([]);
   });
+
+  // The host command lists under `.instruction/03_ai-agents/` were copied from
+  // another project: `generate:graphql`, `apply:backend`, `test:e2e` and `seed`
+  // are scripts this repository never had, and a root `pnpm test` runs nothing.
+  // Each `pnpm <script>` they name must be a script of the package it runs in.
+  it("names no pnpm script in a host command list that the package lacks", async () => {
+    const scriptsOf = async (manifestPath: string): Promise<Set<string>> => {
+      const manifest: unknown = JSON.parse(await readFile(manifestPath, "utf-8"));
+      const scripts = isRecord(manifest) ? manifest["scripts"] : undefined;
+      return new Set(isRecord(scripts) ? Object.keys(scripts) : []);
+    };
+    const rootScripts = await scriptsOf(path.join(repoRoot, "package.json"));
+    const packageScripts = await scriptsOf(path.join(repoRoot, "packages", "qfai", "package.json"));
+
+    const lists = await fg(".instruction/03_ai-agents/*/commands.md", {
+      cwd: repoRoot,
+      dot: true,
+    });
+    expect(lists.length, "no host command list to check").toBeGreaterThan(0);
+
+    const unknown: string[] = [];
+    for (const list of lists) {
+      const text = await readFile(path.join(repoRoot, list), "utf-8");
+      // A command is in a code span or follows a list label (`- Lint: pnpm lint`),
+      // so prose such as "when pnpm is not on PATH" is not read as one.
+      for (const [, scoped, script] of text.matchAll(
+        /(?:`|: )(?:corepack )?pnpm (-C packages\/qfai )?([a-z][\w:-]*)/g,
+      )) {
+        const known = scoped ? packageScripts : rootScripts;
+        if (script && !known.has(script)) unknown.push(`${list}: ${scoped ?? ""}${script}`);
+      }
+    }
+
+    expect(unknown, "a listed command runs no script").toEqual([]);
+  });
 });
