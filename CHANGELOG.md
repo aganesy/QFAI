@@ -533,6 +533,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `brave-search-http/` connects them to a Brave Search server you start in
   HTTP mode on loopback; the skill gives the command.
 
+- **`qfai init` now reports a file another writer creates during the copy
+  as kept when it differs from the template.** A file that appeared between
+  the existence check and the create was counted as skipped without being
+  compared, so an edit saved while `qfai init` ran was left out of the
+  notice naming the files only `--force` brings up to date. It is now
+  compared like a file that was already there. Closes #4703.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
@@ -687,6 +694,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   find the declaration after the front matter, the same line the diagram
   budget check counts from, and report its file line; a `-->` in the front
   matter is not read as a transition.
+
+- **A document query restores a shared completed analysis without a
+  processing configuration.** A worktree with no document analysis and no
+  `.qfai/graph-processing.json` answered "not ready" before it looked in the
+  shared completed-analysis cache. It now first restores a compatible
+  snapshot made with the default processing: the local Ollama backend at its
+  default endpoint, over the whole document corpus, with no credential.
+  Restoring calls no backend. A snapshot made with a document scope, another
+  endpoint or a credential is not restored in such a worktree, and a malformed
+  configuration blocks restoration. When nothing is restored, the query asks
+  for a configuration as before.
 
 - **Graph queries reject a `qfai.config.yaml` or `paths` set to null.** A
   config file holding only `~` or `null`, or a `paths:` key with no value or
