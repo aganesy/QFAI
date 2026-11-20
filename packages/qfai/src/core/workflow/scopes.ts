@@ -50,7 +50,7 @@ export function hasPrivateIntake(stages: readonly PlanStage[]): boolean {
 
 // The artifacts a stage of `kind` writes before its `serves`.
 export function kindWrites(kind: string): readonly Artifact[] {
-  return WRITES[kind] ?? [];
+  return (Object.hasOwn(WRITES, kind) ? WRITES[kind] : undefined) ?? [];
 }
 
 function writtenBy(stage: PlanStage): readonly Artifact[] {

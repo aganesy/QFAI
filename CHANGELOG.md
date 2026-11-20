@@ -630,6 +630,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declaration list's `const` flag, so a `let`, `var` or `using` binding is not
   listed however it is exported.
 
+- **A plan stage kind named after an object property is refused, not a crash**
+  (#4858). A workflow plan whose stage kind was `constructor`, `toString` or
+  another inherited name stopped with `kind.includes is not a function`, or
+  `written.some is not a function` when the stage also had `serves`, instead
+  of the `out-of-vocabulary` refusal. The kind vocabulary and the artifacts a
+  kind writes are now looked up by own key only.
+
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two
   revisions, though that command takes only the test command and cannot start

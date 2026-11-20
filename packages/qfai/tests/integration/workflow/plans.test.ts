@@ -238,6 +238,27 @@ for (const [title, to] of retiredNames) {
   });
 }
 
+// BR-CLI-0020-0016
+// QFAI:EX-0001-0218-01
+it("A stage kind named after an inherited object property, with and without serves", async () => {
+  const kindOf = (kind: string, serves?: string) => (text: string) =>
+    text.replace(
+      `kind: maintenance\n    ${EDIT_STEPS}`,
+      `kind: ${kind}\n    ${EDIT_STEPS}${serves ? `\n    serves: ${serves}` : ""}`,
+    );
+  expect({
+    constructor: await refusalsOf("edit-text", kindOf("constructor")),
+    toString: await refusalsOf("edit-text", kindOf("toString")),
+    proto: await refusalsOf("edit-text", kindOf("__proto__")),
+    serving: await refusalsOf("edit-text", kindOf("constructor", "[spec]")),
+  }).toEqual({
+    constructor: [{ reason: "out-of-vocabulary", subject: "constructor" }],
+    toString: [{ reason: "out-of-vocabulary", subject: "toString" }],
+    proto: [{ reason: "out-of-vocabulary", subject: "__proto__" }],
+    serving: [{ reason: "out-of-vocabulary", subject: "constructor" }],
+  });
+});
+
 // QFAI:EX-0001-0218-01
 it("A plan naming implement-guess, a test fix under an implement kind, and a mixed stage", async () => {
   expect({
