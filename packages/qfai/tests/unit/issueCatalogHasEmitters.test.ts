@@ -173,10 +173,10 @@ function collectParameterNames(
 
 /**
  * Index `param.prop` for a parameter its callers fill with an object literal.
- * `core/validators/orphanProhibition.ts` writes its codes as
- * `validateParentExists({ missingCode: "…", unknownCode: "…" })` and emits them
- * as `issue(input.missingCode, …)`, so the literal only reaches the producer
- * position through the parameter. This widens what an expression standing in a
+ * A helper written as `emit({ missingCode: "…" })` that emits
+ * `issue(input.missingCode, …)` gets the literal to the producer position only
+ * through the parameter — the pattern the "resolves a code the caller passes in
+ * through a parameter object" case below pins. This widens what an expression standing in a
  * code position resolves to; it adds no producer position, so a code that only
  * ever sits in a filter list or a message string is still not counted.
  */

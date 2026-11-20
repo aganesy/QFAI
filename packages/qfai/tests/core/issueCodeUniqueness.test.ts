@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -14,20 +14,7 @@ import {
 } from "../../src/cli/commands/validate.js";
 import { EMITTED_RULE_CODES } from "../../src/core/emittedRuleCodes.js";
 import { type IssueCodeUsage, collectIssueCodeUsage } from "../helpers/issueCodes.js";
-
-async function collectTsFiles(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await collectTsFiles(full)));
-    } else if (entry.name.endsWith(".ts")) {
-      files.push(full);
-    }
-  }
-  return files;
-}
+import { collectTsFiles } from "../helpers/typescriptSourceScan.js";
 
 function extractCodesWithRules(content: string): Map<string, Set<string>> {
   const lines = content.split("\n");
