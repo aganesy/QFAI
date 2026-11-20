@@ -222,9 +222,13 @@ export async function validateProject(
   let oldLayoutRoot: string | undefined;
   const oldLayoutFiles: string[] = [];
   for (const candidate of new Set([specsRoot, path.join(root, ".qfai", "specs")])) {
+    // Only a directory is a spec pack: an ordinary `spec-notes.md` beside the
+    // story tree must not stop every profile validator.
     let entries: string[] = [];
     try {
-      entries = await readdir(candidate);
+      entries = (await readdir(candidate, { withFileTypes: true }))
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }

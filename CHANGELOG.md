@@ -546,6 +546,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and refused with `plan-invalid` and `step-missing` as for the route's own
   steps.
 
+- **`qfai validate` takes only a directory for an old spec-pack layout.** An
+  ordinary file in the specs directory whose name matched `spec-*` or
+  `_policies`, such as `spec-notes.md`, raised `QFAI-LAYOUT-001` and stopped
+  every profile validator. Only `spec-*/` and `_policies/` directories now
+  count, as `qfai init` already did, and a matching file is no longer listed
+  in the finding's message.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which
@@ -692,6 +699,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   threshold row read as if a blocked preflight could never exit 0. The table
   now has a `sdd preflight` row for `--format`, and the threshold row says that
   with `--fail-on never` a blocked preflight exits 0. Closes #4894, #4896.
+
+- **The `web-research` skill keeps rendered `aria-hidden` text and keys a page
+  with no validator by its content.** The sanitize stage removed every
+  `aria-hidden="true"` element, although that attribute hides an element only
+  from assistive technology, so a visible counter or label could vanish from
+  the evidence. Removal now follows rendered visibility: `display: none` and
+  `visibility:hidden` content still goes, and a rendered `aria-hidden` element
+  stays. A response with neither an ETag nor a Last-Modified header fell back
+  to `hash(url + last-modified)`, so different content shared one key; such a
+  response is now keyed by the hash of its fetched bytes, with the URL, any
+  validator and the fetch time kept as lookup metadata. Closes #4936, #4939.
 
 - **A pull-request merge fetches the pull request's own base and checks it
   again before merging.** The `triage-operate` step merged the local
