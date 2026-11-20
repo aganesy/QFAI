@@ -550,6 +550,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
 
+- **`-h` and `-V` after a value-taking option are switches, not its value.**
+  `qfai init --dir -h` initialized a directory named `-h`. An option's value
+  now excludes `-h` and `-V` as it already excluded a `--` token, so they act
+  as `--help` and `--version` do in that place: `-h` reports the missing value
+  with the usage text and exits 2, and `-V` prints the version. Any other value
+  that starts with a single `-` is still taken.
+
 - **The example waiver in a new `.qfai/waivers.yml` now points at evidence
   that opens.** Its `evidence` linked `decisions.md#DEC-0001`, but a decision
   ID is a table cell, not an anchor, so the link jumped nowhere, and its fixed
