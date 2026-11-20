@@ -45,10 +45,15 @@ branch and keeps every record's meaning. `verify-commit` concludes the merge.
 1. Fetch the base (`git fetch`).
 2. Check for a merge already in progress with
    `git rev-parse -q --verify MERGE_HEAD`. When it prints nothing, start the
-   merge with `git merge --no-commit <base>`. When it prints the base's commit
-   (`git rev-parse <base>`), resume at step 3 and run no second merge. When it
-   prints any other commit, stop: report the in-progress merge and the commit
-   it names, and leave it in place. The union merge resolves `decisions.md`, its pages and `open-questions.md` by keeping
+   merge with `git merge --no-ff --no-commit <base>`, so that a branch the
+   base can fast-forward still gets a merge in progress for `verify-commit` to
+   conclude. When that merge reports `Already up to date.` and leaves no
+   `MERGE_HEAD`, the branch already holds the base: stop, report the base as
+   already merged, edit nothing and leave `verify-commit` no merge to conclude.
+   When `MERGE_HEAD` prints the base's commit (`git rev-parse <base>`), resume
+   at step 3 and run no second merge. When it prints any other commit, stop:
+   report the in-progress merge and the commit it names, and leave it in
+   place. The union merge resolves `decisions.md`, its pages and `open-questions.md` by keeping
    both sides' rows. Edit, move and renumber no register row, except that a
    question row the union merge kept although one side deleted it is deleted
    again, since that deletion settled the question.

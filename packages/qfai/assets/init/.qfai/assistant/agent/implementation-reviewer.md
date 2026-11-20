@@ -156,7 +156,7 @@ command.
 
 - `rule/**`, especially `agent-selection.md`, `test-layers.md` and the drift protocol.
 - `qfai.config.yaml` and the affected BF/US/AC/EX story files under `<paths.specsDir>/02_business-flow/**`.
-- `<paths.specsDir>/03_contract/tech.md`, plus the active API, DB or UI contracts this change affects.
+- `<paths.contractsDir>/tech.md`, plus the active API, DB or UI contracts this change affects.
 - The changed code and tests, their diff, repository review instructions, and actual quality-gate results.
 - For a change to a rule master under `.agents/rules/`, the rules it points to and the files that point to it.
 - The stage report for the reviewed EX: its test, selector and observed results. A missing required observation prevents PASS.

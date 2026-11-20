@@ -10,6 +10,7 @@ Feature: Shipped assistant file checks
     When `qfai doctor` runs
     Then each differing file is a `warning` and never an `error`, naming the installed file, the packaged file and `qfai init --force`
     And a matching file, one that differs only in line endings, an absent one and a file the package does not ship raise no finding
+    And an installed or packaged copy that exists but cannot be read is a `warning` naming that copy and the cause, and the other files are still compared
     And doctor writes no assistant file
 
   # AC-0003-0031-02

@@ -529,12 +529,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **Reviewer cards read the technology contract from the configured contracts
+  directory.** The architecture, implementation, product-surface and
+  requirements reviewer cards, the quality rule and the discussion skill named
+  `<paths.specsDir>/03_contract/tech.md`, so a project that set
+  `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
+  which they treat as absent evidence. They now name
+  `<paths.contractsDir>/tech.md`.
+
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
   said every scratch file goes under `tmp/`, while the temporary-files rule they
   point at puts it in the scratch directory the host names for the session and
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
+
+- **`DESIGN.md` accepts a font family whose name ends in many digits.** A
+  family such as `Brand9007199254740993` was refused as a number too large to
+  read exactly, although both catalog formats write a family name as text. The
+  precision check now reads only the fields that become numeric tokens.
 
 - **The saas-package profile reports a `DESIGN.md` or handoff record it
   cannot read, instead of calling it absent.** A directory or an unreadable
@@ -547,6 +560,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `db-drift` accepted `--format json` and `--out <path>`, but the options
   table named neither for it. The help now lists `db-drift` under both
   options.
+
+- **The prototyping preflight installs nothing.** Its step said to run
+  `npm i -D playwright`, which could rewrite the manifest and lockfile of a
+  step that promises to change no file, and npm cannot install a project
+  with `workspace:` dependencies. The step now probes the project's own Playwright launcher through
+  the `prototyping.playwrightCli` doctor check; when none resolves, it stops
+  and reports the missing prerequisite, leaving the install to setup the user
+  authorizes with the project's package manager.
+
+- **`qfai doctor` now names a shipped copy its drift checks cannot read.** The
+  `workflows.drift` and `assistant.drift` checks read every read failure as a
+  missing file, so an installed workflow or assistant file, or the packaged
+  copy it is compared with, that existed but could not be read dropped out of
+  the comparison without a word. Each such copy is now a `warning` naming the
+  path and the cause, and the rest of the scan goes on. A copy that does not
+  exist still raises nothing.
 
 - **Constitution Article XI is headed "Temporary files".** Its heading said
   every temporary file goes in `tmp/`, while the temporary-files rule it links
@@ -579,6 +608,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   records the open question, and now asks only as Articles VI and X allow:
   under `--auto` it asks nothing, and a needed `hard-required` input stops the
   run.
+
+- **`qfai session-review` reads a Codex exit status only from the result
+  envelope.** A shell call whose header said exit 0 was counted as exit 7 and a
+  failed tool call when the command printed a JSON object holding
+  `"exit_code": 7`, and an object-valued result lost its own `exit_code` to one
+  inside its output. The status now comes from the `exit_code` field, or the
+  one under `metadata`, of the result object or of a result text that is one
+  JSON object, and an `exit_code` in text around it is not read.
 
 - **The leakage guard catches a `schemaVersion` whose colon is on the next
   line** (#4743). The guard's pattern allows any whitespace between the field
@@ -625,6 +662,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   policy still applies, so a host that blocks scripts still reports the shim as
   not runnable.
 
+- **The `resolve-conflicts` route always leaves a merge for `verify-commit` to
+  conclude.** On a branch the base could fast-forward, `git merge --no-commit
+  <base>` moved the branch to the base and left no merge in progress, so
+  `verify-commit` had nothing to conclude or undo. The `maintain-edit` step now
+  starts the merge with `git merge --no-ff --no-commit <base>`. When git reports
+  `Already up to date.` and leaves no `MERGE_HEAD`, the branch already holds the
+  base: the step stops, reports the base as already merged and edits nothing.
+
 - **The `resolve-conflicts` route resumes a merge of the same base instead of
   starting a second one.** A branch still resolving an earlier merge of the
   base has `MERGE_HEAD`, so running `git merge --no-commit <base>` again failed
@@ -653,6 +698,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A directory named `.github/workflows/qfai-docs.yml` passed the existence
   check, so doctor reported the required lane installed although GitHub had
   no workflow there. The lane now counts only as a readable regular file.
+
+- **Verification reads its context from the configured spec and contract
+  directories.** The `verify-context` step read the policy, contracts and
+  `decisions.md` from the default `.qfai/spec` paths, and looked for gate
+  commands in the default `tech.md`, so a project that sets `paths.specsDir`
+  or `paths.contractsDir` could miss its rules or update the wrong file. The
+  step now resolves both directories from `qfai.config.yaml` once and uses
+  them for every read and write.
 
 - **`-h` and `-V` after a value-taking option are switches, not its value.**
   `qfai init --dir -h` initialized a directory named `-h`. An option's value
