@@ -25,6 +25,14 @@ the README called it internal and not a stable contract, and no shipped file
 named a single key — so an agent looking for the findings array guessed
 `findings` and got `undefined` from a file whose array is `issues`.
 
+## Contents
+
+- Top level
+- `issues[]`
+- What is stable, and what is not
+- Reading it
+- Related
+
 ## Top level
 
 | key                    | type                       | notes                                                         |
