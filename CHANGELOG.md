@@ -622,6 +622,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   expression that wraps a literal boolean, such as `${{ false }}`, is read as
   that boolean. Closes #4790.
 
+- **`qfai --help` lists `sdd preflight --format <text|json>` and says what
+  `--fail-on never` does to a blocked preflight.** The options table left the
+  preflight output formats out although the parser accepts both, and the
+  threshold row read as if a blocked preflight could never exit 0. The table
+  now has a `sdd preflight` row for `--format`, and the threshold row says that
+  with `--fail-on never` a blocked preflight exits 0. Closes #4894, #4896.
+
 - **A pull-request merge fetches the pull request's own base and checks it
   again before merging.** The `triage-operate` step merged the local
   `origin/<base>` into the branch without fetching it, so a stale

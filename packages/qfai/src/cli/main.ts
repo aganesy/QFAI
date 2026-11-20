@@ -100,9 +100,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
 
   if (!command || options.help) {
     // The rejection reason goes to stderr and the usage to stdout. Even if a
-    // caller discards stdout, it still learns which token was rejected. The
-    // reason is on stderr on the `--format json` path too, so the JSON on
-    // stdout stays clean.
+    // caller discards stdout, it still learns which token was rejected. A
+    // refused `--format json` call gets the same two streams: usage text on
+    // stdout and the reason on stderr, with no JSON document on either.
     //
     // The flag list is more specific than the stored reason when several
     // unknown flags arrived together, so it is preferred where it exists.
@@ -535,6 +535,7 @@ Options:
   --format <text|json>         doctor: output format
   --format <text|json>         db-drift: output format (text by default)
   --format <md|json>           session-review: output format (md by default)
+  --format <text|json>         sdd preflight: output format (text by default)
   --agent <claude|codex|all>   session-review: whose transcripts to read (all by default)
   --session <id>               session-review: the session to report, instead of the latest of each agent
   --since <date>               session-review: every session whose transcript changed at or after this ISO 8601 date (midnight UTC) or date and time with Z or an offset
@@ -544,7 +545,7 @@ Options:
   --profile <prototyping|<skill>>  doctor: prototyping-specific preflight diagnosis, or a skill manifest runtimeDependencies probe
   --fail-on <error|warning|never>  validate/report: failure threshold (takes precedence over --strict)
   --fail-on <error|warning|never>  doctor: failure threshold (defaults to validation.failOn; the shipped default is error)
-  --fail-on <error|warning|never>  sdd preflight: failure threshold (never exits 0 even when blocked; preflight has no warning tier, so warning means the same as error; a stale install, an installed qfai that is not the version the lockfile pins, makes sdd preflight, validate and report --run-validate exit 1 even under --fail-on never)
+  --fail-on <error|warning|never>  sdd preflight: failure threshold (with --fail-on never, a blocked preflight exits 0; preflight has no warning tier, so warning means the same as error; a stale install, an installed qfai that is not the version the lockfile pins, makes sdd preflight, validate and report --run-validate exit 1 even under --fail-on never)
   --fail-on <error|never>          db-drift: failure threshold (under --fail-on never, a difference exits 0 and a file that would not apply still exits 2; under --fail-on error, the default, a difference exits 1)
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
   --timings                     validate: print the time each finding family took, slowest first; runs the UI/UX checks one after another

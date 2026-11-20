@@ -162,6 +162,18 @@ describe("cli root discovery", () => {
     expect(help).toContain("--out <path>                  report/doctor/db-drift/session-review:");
   });
 
+  it("lists sdd preflight's JSON output and its never threshold in the help text", async () => {
+    // The parser accepts `--format text|json` for sdd preflight, but the
+    // options table left it out; and the threshold row read as if a blocked
+    // preflight could never exit 0, while `--fail-on never` makes it exit 0.
+    const help = await captureStdout(() => run(["--help"], process.cwd()));
+
+    expect(help).toContain(
+      "--format <text|json>         sdd preflight: output format (text by default)",
+    );
+    expect(help).toContain("with --fail-on never, a blocked preflight exits 0");
+  });
+
   it("names every shipped location init --force overwrites in the help text", async () => {
     // The help named only the skill and agent layers, while `--force` also
     // rewrites the shipped steps and rules and the rule masters, so an operator
