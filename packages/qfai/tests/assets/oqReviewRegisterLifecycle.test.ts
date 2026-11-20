@@ -24,6 +24,17 @@ describe("UI open-questions review", () => {
     expect(review).toContain("A row whose Content opens `Unadjudicated:`");
   });
 
+  it("blocks only on a question the reviewed UI needs answered now", async () => {
+    const review = await flat("uix-rev/oq-review.md");
+    expect(review).toContain(
+      "A row blocks the review when the reviewed UI needs its answer now: its Content or Approach names a screen, flow, story, AC, EX or contract the review covers, or the reviewed UI cannot be built without its answer.",
+    );
+    expect(review).toContain(
+      "A row whose Approach names a decision point after the reviewed UI does not block it, even when it names what the review covers. A deferred question's replacing row is such a row.",
+    );
+    expect(review).toContain("Any other row does not block this review and stays as it is.");
+  });
+
   it("resolves or defers a blocking question without editing its row", async () => {
     const review = await flat("uix-rev/oq-review.md");
     const template = await flat(

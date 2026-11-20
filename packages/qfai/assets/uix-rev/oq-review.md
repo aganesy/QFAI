@@ -7,9 +7,12 @@ Review `<paths.specsDir>/open-questions.md` for questions that block the UI unde
 The register has three columns: ID, Content and Approach. It has no status or
 severity column. A row is open while it exists, and a row is never edited.
 
-- A row blocks the review when its Content or Approach names a screen, flow,
-  story, AC, EX or contract the review covers, or when the reviewed UI cannot be
-  built without its answer.
+- A row blocks the review when the reviewed UI needs its answer now: its
+  Content or Approach names a screen, flow, story, AC, EX or contract the
+  review covers, or the reviewed UI cannot be built without its answer.
+- A row whose Approach names a decision point after the reviewed UI does not
+  block it, even when it names what the review covers. A deferred question's
+  replacing row is such a row.
 - A row whose Content opens `Unadjudicated:` is an unanswered critical product
   decision. It blocks every UI that depends on it, and `qfai validate` reports
   it while the row exists.
