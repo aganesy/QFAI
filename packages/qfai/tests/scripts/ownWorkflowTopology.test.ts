@@ -2354,6 +2354,7 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
   const TAG_OBJECT = "c".repeat(40);
   const CREATED = "fake-gh: release create";
   const DELETED = "fake-gh: release delete";
+  const NOTES = "### Fixed\n\n- **An entry.** Its body.";
 
   const releaseSteps = (): Array<Record<string, unknown>> => {
     const doc = parseYaml(
@@ -2364,16 +2365,27 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
     return found;
   };
 
+  /** A reply starting with this fails the call with the rest of it on stderr. */
+  const FAILS = "fails:";
+
   const apiCases = (answers: Record<string, string>): string[] => [
     '    case "$2" in',
-    ...Object.entries(answers).map(([route, reply]) => `      ${route}) echo '${reply}' ;;`),
+    ...Object.entries(answers).map(([route, reply]) =>
+      reply.startsWith(FAILS)
+        ? `      ${route}) echo '${reply.slice(FAILS.length)}' >&2; return 1 ;;`
+        : `      ${route}) echo '${reply}' ;;`,
+    ),
     '      *) echo "gh: Not Found (HTTP 404)" >&2; return 1 ;;',
     "    esac",
   ];
 
-  /** Runs the create step against a faked API; each table maps an API path to its reply. */
+  /**
+   * Runs the create step against a faked API; each table maps an API path to its reply.
+   * `looked` answers the calls after the Release lookup, `after` those after a create.
+   */
   const create = (run: {
     before: Record<string, string>;
+    looked?: Record<string, string>;
     after?: Record<string, string>;
     eventSha?: string;
     deleteFails?: boolean;
@@ -2393,7 +2405,10 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
       "  fi",
       '  if [ -n "${FAKE_CREATED:-}" ]; then',
       ...apiCases(run.after ?? run.before),
+      '  elif [ -n "${FAKE_LOOKED:-}" ]; then',
+      ...apiCases(run.looked ?? run.before),
       "  else",
+      '    case "$2" in */releases/tags/*) FAKE_LOOKED=1 ;; esac',
       ...apiCases(run.before),
       "  fi",
       "}",
@@ -2402,7 +2417,11 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
     try {
       const script = path.join(dir, "create.sh");
       writeFileSync(script, `${fake}\n${typeof body === "string" ? body : ""}`, "utf-8");
+      // The notes step leaves its output here, and the step reads it relative to the checkout.
+      mkdirSync(path.join(dir, "tmp"));
+      writeFileSync(path.join(dir, "tmp", "release-notes.md"), `${NOTES}\n`, "utf-8");
       const result = spawnSync("bash", [script], {
+        cwd: dir,
         env: {
           ...process.env,
           GITHUB_REPOSITORY: "owner/repo",
@@ -2479,6 +2498,84 @@ describe("the GitHub Release is created only for the tag commit the workflow ver
     });
     expect(stuck.status, "a Release that could not be deleted must fail the job").not.toBe(0);
     expect(stuck.output).toContain("by hand");
+  });
+
+  // A re-run of the job after its create succeeded used to fail on the Release it had made.
+  const RELEASE = "repos/owner/repo/releases/tags/v1.2.3";
+  const release = (changes: Record<string, unknown> = {}): string =>
+    JSON.stringify({
+      tag_name: "v1.2.3",
+      name: "qfai 1.2.3",
+      draft: false,
+      prerelease: false,
+      body: `${NOTES}\r\n`,
+      ...changes,
+    });
+
+  it("reuses a Release on the verified tag that says what this run would create", () => {
+    const retried = create({ before: { ...ANNOTATED, [RELEASE]: release() } });
+    expect(retried.status, retried.output).toBe(0);
+    expect(retried.output).toContain("reusing it");
+    expect(retried.output).not.toContain(CREATED);
+    expect(retried.output).not.toContain(DELETED);
+  });
+
+  it("refuses a Release on the tag that differs, naming what differs, and touches nothing", () => {
+    for (const [field, value] of [
+      ["name", "qfai 9.9.9"],
+      ["body", "Hand-edited notes."],
+      ["draft", true],
+      ["prerelease", true],
+    ] as const) {
+      const conflict = create({ before: { ...ANNOTATED, [RELEASE]: release({ [field]: value }) } });
+      expect(conflict.status, `a Release whose ${field} differs must fail the job`).not.toBe(0);
+      expect(conflict.output).toContain(`would create in: ${field}`);
+      expect(conflict.output).not.toContain(CREATED);
+      expect(conflict.output).not.toContain(DELETED);
+    }
+  });
+
+  it("creates the Release when the tag has none, and only on a 404", () => {
+    const absent = create({ before: ANNOTATED });
+    expect(absent.status, absent.output).toBe(0);
+    expect(absent.output).toContain(CREATED);
+
+    const unreadable = create({
+      before: { ...ANNOTATED, [RELEASE]: `${FAILS}gh: Server Error (HTTP 502)` },
+    });
+    expect(unreadable.status, "an API error is not an absent Release").not.toBe(0);
+    expect(unreadable.output).toContain("HTTP 502");
+    expect(unreadable.output).not.toContain(CREATED);
+  });
+
+  it("refuses an existing Release when the tag moved after verify", () => {
+    const moved = create({
+      before: { [REF]: `commit ${OTHER}`, [RELEASE]: release() },
+    });
+    expect(moved.status, "a moved tag must stop the job before any Release is reused").not.toBe(0);
+    expect(moved.output).not.toContain("reusing it");
+  });
+
+  it("refuses to reuse a Release when the tag moved while it was being looked up, deleting nothing", () => {
+    const raced = create({
+      before: { ...ANNOTATED, [RELEASE]: release() },
+      looked: { [REF]: `commit ${OTHER}` },
+    });
+    expect(raced.status, "a tag moved during the lookup must fail the job").not.toBe(0);
+    expect(raced.output).toContain(OTHER);
+    expect(raced.output).toContain("while its Release was being looked up");
+    expect(raced.output).not.toContain("reusing it");
+    expect(raced.output).not.toContain(CREATED);
+    expect(raced.output).not.toContain(DELETED);
+  });
+
+  it("refuses a lookup answer that is not a Release object, and creates nothing", () => {
+    for (const reply of ["null", "[]", '"text"', "not json"]) {
+      const odd = create({ before: { ...ANNOTATED, [RELEASE]: reply } });
+      expect(odd.status, `the lookup answer ${reply} must fail the job`).not.toBe(0);
+      expect(odd.output).toContain("its answer is not a Release");
+      expect(odd.output).not.toContain(CREATED);
+    }
   });
 
   it("creates the Release once, in that step, refusing to create a missing tag", () => {
@@ -4077,6 +4174,122 @@ describe("release automation performs decisions rather than making them", () => 
         expect(run.skipped, "and it is reported as nothing to tag").toBe(true);
         expect(run.tagged).toBe(false);
       }
+    });
+
+    /**
+     * The step from the association request through the gate's `fi`, run with
+     * `gh` replaced by a function that answers like the paginated endpoint: it
+     * prints every page only when asked for every page, and the first page
+     * otherwise. A string is printed as the raw response body.
+     */
+    const runFromRequest = (
+      pages: readonly unknown[] | string,
+      ghStatus = 0,
+    ): { tagged: boolean; output: string } => {
+      const allPages = typeof pages === "string" ? pages : JSON.stringify(pages);
+      const firstPage = typeof pages === "string" ? "[]" : JSON.stringify(pages[0] ?? []);
+      const document = workflow("tag-release.yml");
+      const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
+      const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+      const steps = Array.isArray(job["steps"]) ? job["steps"] : [];
+      const body =
+        steps
+          .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+          .find((run) => run.includes("/pulls")) ?? "";
+      const lines = body.split(/\r?\n/);
+      const start = lines.findIndex((line) => line.includes('pages="$(gh api'));
+      expect(
+        start,
+        "the association request is gone; this row has the wrong subject",
+      ).toBeGreaterThan(-1);
+      const open = lines.findIndex(
+        (line) => line.includes("grep -qxF") && line.includes("release/v"),
+      );
+      const close = lines.findIndex((line, at) => at > open && line.trim() === "fi");
+      expect(close, "the association check has no `fi`").toBeGreaterThan(start);
+      const dir = mkdtempSync(path.join(tmpdir(), "qfai-tagpages-"));
+      try {
+        const script = path.join(dir, "gate.sh");
+        writeFileSync(
+          script,
+          [
+            "set -euo pipefail",
+            'reject() { echo "REJECTED: $1"; exit 1; }',
+            `all_pages=${JSON.stringify(allPages)}`,
+            `first_page=${JSON.stringify(firstPage)}`,
+            `gh_status=${String(ghStatus)}`,
+            "gh() {",
+            '  if [ "$gh_status" != 0 ]; then echo "HTTP 502: Bad Gateway"; return "$gh_status"; fi',
+            '  case " $* " in',
+            "    *' --paginate '*) ;;",
+            "    *) printf '%s' \"$first_page\"; return 0 ;;",
+            "  esac",
+            '  case " $* " in',
+            "    *' --slurp '*) printf '%s' \"$all_pages\" ;;",
+            "    *) echo 'this stub answers --paginate only with --slurp'; return 1 ;;",
+            "  esac",
+            "}",
+            'claimed="1.10.2"',
+            "GITHUB_REPOSITORY=owner/repo",
+            "GITHUB_SHA=deadbeef",
+            `GITHUB_OUTPUT=${JSON.stringify(path.join(dir, "out").replace(/\\/g, "/"))}`,
+            "",
+            lines.slice(start, close + 1).join("\n"),
+            "",
+            "echo TAGGED",
+          ].join("\n"),
+          "utf-8",
+        );
+        const run = spawnSync("bash", [script], { encoding: "utf-8" });
+        if (run.error !== undefined) throw run.error;
+        const missing = /: ([\w.+-]+): command not found/.exec(run.stderr)?.[1];
+        if (missing !== undefined) {
+          throw new Error(
+            `the association request calls \`${missing}\`, which is not installed here; install it to run this case`,
+          );
+        }
+        const output = `${run.stdout}${run.stderr}`;
+        return { tagged: output.includes("TAGGED"), output };
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    };
+
+    it("reads every page of associated pull requests before declining to tag", () => {
+      const page = (refs: readonly string[]): unknown[] => refs.map((ref) => ({ head: { ref } }));
+      const firstPage = page(Array.from({ length: 100 }, (_, at) => `feature/change-${at}`));
+
+      const laterPage = runFromRequest([firstPage, page(["release/v1.10.2"])]);
+      expect(
+        laterPage.tagged,
+        "a release pull request listed on the second page must be tagged, not skipped green",
+      ).toBe(true);
+
+      expect(
+        runFromRequest([firstPage, page(["fix/another-change"])]).tagged,
+        "pages that carry no release branch still tag nothing",
+      ).toBe(false);
+      expect(runFromRequest([]).tagged, "no pages at all is a direct push").toBe(false);
+
+      for (const pages of [
+        [firstPage, {}],
+        [null],
+        ["release/v1.10.2"],
+        `[${JSON.stringify(firstPage)},[{"head":`,
+        "{}",
+      ]) {
+        const malformed = runFromRequest(pages);
+        expect(malformed.tagged, "a page that is not a list must not authorise a tag").toBe(false);
+        expect(malformed.output, "and it must stop the run rather than skip quietly").toContain(
+          "REJECTED: the pull requests associated with deadbeef did not arrive as a list of pages",
+        );
+      }
+
+      const failed = runFromRequest([page(["release/v1.10.2"])], 1);
+      expect(failed.tagged, "a failed request must not authorise a tag").toBe(false);
+      expect(failed.output).toContain(
+        "REJECTED: could not ask which pull request carried deadbeef",
+      );
     });
   });
 });

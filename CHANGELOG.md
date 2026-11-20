@@ -507,6 +507,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
 
+- **`qfai --help` lists the JSON output and output file of `db-drift`.**
+  `db-drift` accepted `--format json` and `--out <path>`, but the options
+  table named neither for it. The help now lists `db-drift` under both
+  options.
+
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
   `npx` launch for sensitive environments, while every template sends pages
@@ -597,12 +602,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
 
+- **Re-running the release workflow reuses the GitHub Release it already
+  made.** After the GitHub Release job had succeeded, re-running all jobs
+  failed in that job on the Release it had created, although the npm publish
+  job beside it skips a version already on npm. The job now looks the
+  Release up after the tag checks: a Release with this run's title and notes,
+  not a draft or prerelease, is reused once the tag, read again, still names
+  the verified commit; one that differs fails the job and
+  is left as it is; and an answer other than "not found" fails the job
+  instead of being read as no Release. Closes #4732.
+
 - **The 1.x migration reports every old-path line of a file with very many
   of them.** The migration's last step lists each line of a tracked project
   file that still names a 1.x path. A file with hundreds of thousands of
   such lines, such as a generated or vendored one, ended the migration with
   `RangeError: Maximum call stack size exceeded` before the report was
   written. The report now lists every such line.
+
+- **`qfai report --run-validate` records a validation it could not finish.**
+  When a validator failed, the command stopped with an uncaught error, even
+  under `--fail-on never`, and left the clean `validate.json` of an earlier run
+  in place. It now writes the same `QFAI-SCAN-002` result `qfai validate`
+  writes for an unfinished run, renders the report from it, and says the
+  report is not a clean result.
 
 - **`qfai report --run-validate` keeps the profile coverage notice.** On a
   partial profile, `qfai validate --profile sdd` records `QFAI-PROFILE-001`,
@@ -643,6 +665,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `symlink` left the path empty and the wrapper, with everything in it, gone.
   The entry is now moved aside first and put back when the link fails, and
   removed only once the link stands.
+
+- **`qfai db-drift` no longer calls a comparison equal when a SQL file failed
+  to apply.** With a failed file and no differences among the files that did
+  apply, the text output listed the failed file and then said both sides
+  declare the same columns, though the failed file may hold every missing
+  column. The output now says the comparison is incomplete, and states
+  equality only when every file applied.
 
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
