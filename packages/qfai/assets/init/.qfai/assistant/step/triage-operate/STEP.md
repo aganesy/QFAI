@@ -37,9 +37,15 @@ operation. This step runs it and reports what happened.
    stops the merge too, until a rerun clears it. Poll no faster than the checks
    change. A failing check that a rerun does not clear stops the operation as a
    tracked change it needs, as below.
-4. Never enable a host's auto-merge. Before a merge, merge the base branch into
-   the pull request's branch locally (`git merge origin/<base>`), push, and
-   wait for the checks that push starts; only then merge. A conflict the host
+4. Never enable a host's auto-merge. Before a merge, read the pull request's
+   base repository and base branch from the pull request's own metadata, never
+   an assumed `origin/main`. Fetch that branch from the remote for that
+   repository (`git fetch <remote> <base>`) and record the commit it fetched
+   (`git rev-parse FETCH_HEAD`); a local remote-tracking ref alone may be
+   stale. Merge that recorded commit into the pull request's branch locally,
+   push, and wait for the checks that push starts. Just before the merge, fetch
+   the base again: when it no longer points to the recorded commit, record the
+   new commit and merge it in the same way first; only then merge. A conflict the host
    shows only in `decisions.md`, its pages or `open-questions.md` is resolved
    the same way: the union merge completes it. Edit no register row except to
    delete again a question row the union merge kept although one side deleted
