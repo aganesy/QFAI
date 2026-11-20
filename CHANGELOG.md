@@ -606,6 +606,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check in the same process, printed raw patterns it never asked for. Each
   run now restores the setting it started with. Closes #4726.
 
+- **Two runs of `qfai catalog design` no longer mix their files.** Two runs at
+  the same time placed their files in turn, so the token file could come from
+  one revision of `DESIGN.md` and the theme from another, and a failing run
+  could meet the other run's files while undoing its own. A run now places and
+  undoes its files only while it holds `.qfai/catalog/.design.lock`. A run that
+  finds the lock held writes nothing and exits 1, saying whether to retry once
+  the other run finishes or to remove a lock no running process holds.
+  Closes #4756.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
