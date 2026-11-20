@@ -3882,7 +3882,8 @@ describe("release automation performs decisions rather than making them", () => 
      * The `version` step decides whether the commit arrived from the release pull
      * request. Everything before the check needs a token and a checkout; the
      * check itself needs only `pulls` and `claimed`, so it is extracted from the
-     * `if` through its `fi` and run with those two supplied.
+     * parse of the response through the `fi` of the branch match, and run with
+     * those two supplied and the step's own `reject` in front of it.
      */
     const associationGate = (): string => {
       const document = workflow("tag-release.yml");
@@ -3897,28 +3898,36 @@ describe("release automation performs decisions rather than making them", () => 
         "tag-release.yml has no step that asks which pull request carried the commit",
       ).toBeTypeOf("string");
       const lines = (body ?? "").split(/\r?\n/);
-      const open = lines.findIndex(
-        (line) => line.includes("grep -qxF") && line.includes("release/v"),
+      const reject = lines.find((line) => line.trim().startsWith("reject()"));
+      expect(reject, "the step defines no `reject` for the gate to stop with").toBeTypeOf("string");
+      const open = lines.findIndex((line) => line.includes('"$pulls"') && line.includes("node -e"));
+      expect(open, "the association response is no longer parsed by the step").toBeGreaterThan(-1);
+      const match = lines.findIndex(
+        (line, at) => at > open && line.includes("grep -qxF") && line.includes("release/v"),
       );
-      expect(open, "the association check is gone; this row has the wrong subject").toBeGreaterThan(
-        -1,
-      );
-      const close = lines.findIndex((line, at) => at > open && line.trim() === "fi");
-      expect(close, "the association check has no `fi`").toBeGreaterThan(open);
-      return lines.slice(open, close + 1).join("\n");
+      expect(
+        match,
+        "the association check is gone; this row has the wrong subject",
+      ).toBeGreaterThan(open);
+      const close = lines.findIndex((line, at) => at > match && line.trim() === "fi");
+      expect(close, "the association check has no `fi`").toBeGreaterThan(match);
+      return [reject ?? "", ...lines.slice(open, close + 1)].join("\n");
     };
 
-    /** Runs the gate over one payload; true when the commit would be tagged. */
-    const wouldTag = (pulls: unknown, claimed: string): boolean => {
+    /** Runs the gate over one raw response body, under the step's own shell options. */
+    const runGate = (
+      response: string,
+      claimed: string,
+    ): { status: number | null; tagged: boolean; skipped: boolean; output: string } => {
       const dir = mkdtempSync(path.join(tmpdir(), "qfai-tagref-"));
       try {
         const script = path.join(dir, "gate.sh");
         writeFileSync(
           script,
           [
-            "set -u",
+            "set -euo pipefail",
             `claimed=${JSON.stringify(claimed)}`,
-            `pulls=${JSON.stringify(JSON.stringify(pulls))}`,
+            `pulls=${JSON.stringify(response)}`,
             "GITHUB_SHA=deadbeef",
             `GITHUB_OUTPUT=${JSON.stringify(path.join(dir, "out").replace(/\\/g, "/"))}`,
             "",
@@ -3937,11 +3946,21 @@ describe("release automation performs decisions rather than making them", () => 
             `the association gate calls \`${missing}\`, which is not installed here; install it to run this case`,
           );
         }
-        return `${run.stdout}${run.stderr}`.includes("TAGGED");
+        const output = `${run.stdout}${run.stderr}`;
+        return {
+          status: run.status,
+          tagged: output.includes("TAGGED"),
+          skipped: output.includes("nothing to tag"),
+          output,
+        };
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
     };
+
+    /** Runs the gate over one payload; true when the commit would be tagged. */
+    const wouldTag = (pulls: unknown, claimed: string): boolean =>
+      runGate(JSON.stringify(pulls), claimed).tagged;
 
     // The shape `GET /repos/{owner}/{repo}/commits/{sha}/pulls` returns, trimmed to
     // the fields this gate can see. `head.ref` is where the branch name lives.
@@ -4035,6 +4054,28 @@ describe("release automation performs decisions rather than making them", () => 
         expect(wouldTag(payload, "1.10.2"), "a non-array response must not authorise a tag").toBe(
           false,
         );
+      }
+    });
+
+    it("fails on a response it cannot read, and skips only on a valid answer with no match", () => {
+      // A skip reports success and leaves the commit untagged. That is the right answer for a
+      // valid list with no release branch in it, and the wrong one for a response that says
+      // nothing at all: a release merge would stay untagged under a green run.
+      for (const response of ["{", "not json", "{}", "null", '"release/v1.10.2"', "42"]) {
+        const run = runGate(response, "1.10.2");
+        expect(run.status, `${response} must stop the step, not skip it`).not.toBe(0);
+        expect(run.output, `${response} must say why the step stopped`).toContain(
+          "::error::tag-release:",
+        );
+        expect(run.skipped, `${response} must not be reported as a non-release merge`).toBe(false);
+        expect(run.tagged, `${response} must not authorise a tag`).toBe(false);
+      }
+
+      for (const pulls of [[], restPayload("fix/issue-1149-three-dot-drift-diff"), [{}]]) {
+        const run = runGate(JSON.stringify(pulls), "1.10.2");
+        expect(run.status, "a valid answer with no release branch is an ordinary merge").toBe(0);
+        expect(run.skipped, "and it is reported as nothing to tag").toBe(true);
+        expect(run.tagged).toBe(false);
       }
     });
   });
