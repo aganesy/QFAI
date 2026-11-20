@@ -5,6 +5,11 @@ import { parse as parseYaml } from "yaml";
 import { extractIds } from "./ids.js";
 import { isRecord } from "./workflow/parse.js";
 
+/** A structured contract that parses, but whose top level is not a mapping. */
+export class ContractRootError extends Error {
+  override name = "ContractRootError";
+}
+
 /**
  * A YAML or JSON contract's top-level mapping.
  *
@@ -12,12 +17,14 @@ import { isRecord } from "./workflow/parse.js";
  * YAML file holding only its declaration line parses to `null`, and a body can
  * hold a list or a scalar. Every caller reads keys from the result, so such a
  * root is refused here, where callers already handle a contract that cannot be read.
+ * The refusal is a {@link ContractRootError}, so a caller that is not the one
+ * reporting it (`QFAI-CONTRACT-021` does) can tell it from text that does not parse.
  */
 export function parseStructuredContract(file: string, text: string): Record<string, unknown> {
   const ext = path.extname(file).toLowerCase();
   const root: unknown = ext === ".json" ? JSON.parse(text) : parseYaml(text);
   if (!isRecord(root)) {
-    throw new Error(`the top level is ${describeRoot(root)}, not a mapping of keys`);
+    throw new ContractRootError(`the top level is ${describeRoot(root)}, not a mapping of keys`);
   }
   return root;
 }
