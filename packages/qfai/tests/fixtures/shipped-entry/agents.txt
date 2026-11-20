@@ -15,7 +15,7 @@ The authoritative rule set lives under `.agents/rules/`. Those files are the
 single source of truth. Each line below says when to read its rule; when a rule
 changes, edit the master rather than this file. When a rule has a `<name>.local.md` overlay beside it, read the overlay with the rule: it adds this project's own guidance and overrides nothing.
 
-- `.agents/rules/temporary-files.md` — read when you create a scratch file: it goes under `tmp/`.
+- `.agents/rules/temporary-files.md` — read when you create a scratch file: it goes in the scratch directory the host names for the session, else under `tmp/`.
 - `.agents/rules/root-additions-policy.md` — read when you add a file or directory at the repository root: it needs explicit user approval.
 - `.agents/rules/distributed-surface.md` — read when you change a file the project publishes: keep internal identifiers and private version markers out of it.
 - `.agents/rules/version-discipline.md` — read before release, tag or publish work, or a change to a version number: the user decides the version, never you.

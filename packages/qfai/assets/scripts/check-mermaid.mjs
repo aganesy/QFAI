@@ -83,9 +83,151 @@ const IGNORE_MARKER = "<!-- mermaid-lint:ignore -->";
  * backticks or tildes, then the info string.
  *
  * Four or more leading spaces is an indented code block in CommonMark, which is
- * why the indent is bounded rather than `\s*`.
+ * why the indent is bounded rather than `\s*`. The info string after a backtick
+ * run may not hold a backtick (CommonMark 4.5): a line like ```` ```x``` ```` is
+ * an inline code span, and {@link fenceOpener} refuses it.
  */
-const FENCE_OPEN_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*([^\s`]*)/;
+const FENCE_OPEN_RE = /^( {0,3})(`{3,}|~{3,})(.*)$/;
+
+/** A closing fence: the opener's character, no info string. */
+const FENCE_CLOSE_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*$/;
+
+/** A block quote marker with its optional following space (CommonMark 5.1). */
+const QUOTE_RE = /^ {0,3}> ?/;
+
+/**
+ * A list item marker (CommonMark 5.2): up to three spaces, a bullet or an
+ * ordered number, then the spaces before the content, or the end of the line.
+ */
+const LIST_ITEM_RE = /^( {0,3})([-+*]|\d{1,9}[.)])( +|$)/;
+
+/** A thematic break, which wins over a list item when both could match. */
+const THEMATIC_BREAK_RE = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/;
+
+/**
+ * Expands the tabs in a line's leading container and indentation region to
+ * spaces at four-column stops, so every indent below is counted in columns.
+ *
+ * Shortcut: a tab after the first character outside that region is left as it
+ * is, and a tab is never split across a container boundary the way CommonMark's
+ * partial-tab rule does. That is exact for every prefix made of spaces, `>` and
+ * list markers; lift it if a document relies on a tab inside a list marker's
+ * spacing changing whether a fence is seen.
+ *
+ * @param {string} line
+ * @returns {string}
+ */
+function expandLeadingTabs(line) {
+  const region = /^[ \t>\-+*0-9.)]*/.exec(line)[0];
+  if (!region.includes("\t")) {
+    return line;
+  }
+  let expanded = "";
+  for (const char of region) {
+    expanded += char === "\t" ? " ".repeat(4 - (expanded.length % 4)) : char;
+  }
+  return expanded + line.slice(region.length);
+}
+
+/**
+ * The leading-space count of a line.
+ *
+ * @param {string} line
+ * @returns {number}
+ */
+function indentOf(line) {
+  return /^ */.exec(line)[0].length;
+}
+
+/**
+ * Reads a line, already inside its containers, as a fence opener.
+ *
+ * @param {string} content
+ * @returns {{ indent: number, marker: string, lang: string } | null}
+ */
+function fenceOpener(content) {
+  const match = FENCE_OPEN_RE.exec(content);
+  if (match === null) {
+    return null;
+  }
+  const [, indent, marker, info] = match;
+  if (marker[0] === "`" && info.includes("`")) {
+    return null;
+  }
+  const [lang = ""] = info.trim().split(/\s+/);
+  return { indent: indent.length, marker, lang: lang.toLowerCase() };
+}
+
+/**
+ * Strips the prefixes of the containers a line continues, outermost first.
+ *
+ * A block quote continues on a line carrying its `>`. A list item continues on a
+ * blank line and on a line indented at least to its content. The first container
+ * the line does not continue ends there, with every container inside it.
+ *
+ * Shortcut: lazy continuation (CommonMark 5.1 and 5.2) is not modelled, so a
+ * paragraph line that drops its `>` ends the quote here one line early. A lazy
+ * line can neither open nor continue a fence, so which fences are found does
+ * not change; lift it if this scanner ever reads paragraphs.
+ *
+ * @param {string} line
+ * @param {({ kind: "quote" } | { kind: "item", indent: number })[]} containers
+ * @returns {{ matched: number, content: string }}
+ */
+function continueContainers(line, containers) {
+  let content = line;
+  let matched = 0;
+  for (const container of containers) {
+    if (container.kind === "quote") {
+      const quote = QUOTE_RE.exec(content);
+      if (quote === null) {
+        break;
+      }
+      content = content.slice(quote[0].length);
+    } else if (content.trim() === "") {
+      content = "";
+    } else if (indentOf(content) >= container.indent) {
+      content = content.slice(container.indent);
+    } else {
+      break;
+    }
+    matched++;
+  }
+  return { matched, content };
+}
+
+/**
+ * Opens every container that starts on a line, innermost last, and returns what
+ * is left of the line inside them.
+ *
+ * A list item's content starts after the marker and one to four spaces; five or
+ * more begin indented code, so the content starts one column after the marker,
+ * as it does for a marker alone on its line (CommonMark 5.2).
+ *
+ * @param {string} content
+ * @param {({ kind: "quote" } | { kind: "item", indent: number })[]} containers Appended to.
+ * @returns {string}
+ */
+function openContainers(content, containers) {
+  let rest = content;
+  for (;;) {
+    const quote = QUOTE_RE.exec(rest);
+    if (quote !== null) {
+      containers.push({ kind: "quote" });
+      rest = rest.slice(quote[0].length);
+      continue;
+    }
+    const item = THEMATIC_BREAK_RE.test(rest) ? null : LIST_ITEM_RE.exec(rest);
+    if (item === null) {
+      return rest;
+    }
+    const [whole, lead, marker, spacing] = item;
+    const gap = spacing.length === 0 || spacing.length > 4 ? 1 : spacing.length;
+    const indent = lead.length + marker.length + gap;
+    containers.push({ kind: "item", indent });
+    rest = whole.length === rest.length ? "" : rest.slice(indent);
+  }
+}
 
 /**
  * The info strings whose body is a Mermaid diagram.
@@ -111,6 +253,10 @@ const MERMAID_LANGS = new Set(["mermaid", "mmd"]);
  * ```` ```mermaid ```` nested inside a wider fence documentation rather than a
  * diagram, and it is why this is not a regex over the whole file.
  *
+ * Each line is first read through the block quotes and list items it sits in,
+ * so a fence inside a container is found, its body loses the container's
+ * prefix, and it ends where its container ends (CommonMark 4.5, 5.1, 5.2).
+ *
  * @param {string} text Markdown source.
  * @returns {{ line: number, body: string, ignored: boolean }[]} Blocks in document order.
  */
@@ -118,77 +264,68 @@ export function extractMermaidBlocks(text) {
   const lines = text.split(/\r?\n/);
   const blocks = [];
 
-  /** @type {{ marker: string, lang: string, line: number, body: string[], ignored: boolean } | null} */
+  /** @type {({ kind: "quote" } | { kind: "item", indent: number })[]} */
+  let containers = [];
+  /** @type {{ marker: string, indent: number, depth: number, lang: string, line: number, body: string[], ignored: boolean } | null} */
   let open = null;
+  // The line above, read inside its own containers, decides whether the next
+  // fence is a template: `> <!-- mermaid-lint:ignore -->` covers `> ```mermaid`.
+  let previous = "";
+
+  const finish = () => {
+    if (open !== null && MERMAID_LANGS.has(open.lang)) {
+      blocks.push({ line: open.line, body: open.body.join("\n"), ignored: open.ignored });
+    }
+    open = null;
+  };
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = expandLeadingTabs(lines[i]);
+    const { matched, content } = continueContainers(line, containers);
 
-    if (open === null) {
-      const match = FENCE_OPEN_RE.exec(line);
-      if (match === null) {
-        continue;
+    if (open !== null && matched >= open.depth) {
+      // A closing fence is the same character, at least as long as the opener,
+      // and carries no info string. A SHORTER run of the same character is
+      // content — that is how a ```` ``` ```` inside a ```` ```` ```` block
+      // stays part of the diagram rather than ending it.
+      const closer = FENCE_CLOSE_RE.exec(content);
+      if (
+        closer !== null &&
+        closer[1][0] === open.marker[0] &&
+        closer[1].length >= open.marker.length
+      ) {
+        finish();
+      } else {
+        // The opener's own indent is removed from each body line, up to its width.
+        open.body.push(content.slice(Math.min(open.indent, indentOf(content))));
       }
-      // The line above decides whether this block is a template. Read here
-      // rather than after the block closes: by then the index has moved past it.
-      const previous = i > 0 ? lines[i - 1].trim() : "";
+      previous = content;
+      continue;
+    }
+
+    // The fence's container ended on this line, so the fence ended with it,
+    // and the line itself is read afresh below.
+    finish();
+    containers = containers.slice(0, matched);
+    const rest = openContainers(content, containers);
+    const opener = fenceOpener(rest);
+    if (opener !== null) {
       open = {
-        marker: match[1],
-        lang: match[2].toLowerCase(),
+        ...opener,
+        depth: containers.length,
         line: i + 1,
         body: [],
-        ignored: previous === IGNORE_MARKER,
+        ignored: previous.trim() === IGNORE_MARKER,
       };
-      continue;
     }
-
-    // A closing fence is the same character, at least as long as the opener,
-    // and carries no info string. A SHORTER run of the same character is
-    // content — that is how a ```` ``` ```` inside a ```` ```` ```` block stays
-    // part of the diagram rather than ending it.
-    const closer = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line);
-    if (
-      closer !== null &&
-      closer[1][0] === open.marker[0] &&
-      closer[1].length >= open.marker.length
-    ) {
-      if (MERMAID_LANGS.has(open.lang)) {
-        blocks.push({ line: open.line, body: open.body.join("\n"), ignored: open.ignored });
-      }
-      open = null;
-      continue;
-    }
-
-    open.body.push(line);
+    previous = rest;
   }
 
   // An unterminated fence runs to end of document, which is what CommonMark
   // says and what GitHub renders. Dropping it would hide a real diagram.
-  if (open !== null && MERMAID_LANGS.has(open.lang)) {
-    blocks.push({ line: open.line, body: open.body.join("\n"), ignored: open.ignored });
-  }
+  finish();
 
   return blocks;
-}
-
-/**
- * Whether a directory is a checkout of its own: a git worktree or a nested
- * clone, marked by a `.git` file or directory at its root.
- *
- * Its diagrams belong to another branch, so reading them here would report
- * that branch's findings against this tree, locally and never in a fresh CI
- * clone. The scan root itself is not asked.
- *
- * @param {string} dir Absolute path of a directory below the scan root.
- * @returns {Promise<boolean>}
- */
-async function isOtherCheckout(dir) {
-  try {
-    await stat(path.join(dir, ".git"));
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -225,9 +362,8 @@ async function collectMarkdown(target) {
     }
     for (const child of entries) {
       if (child.isDirectory()) {
-        const childPath = path.join(dir, child.name);
-        if (!SKIP_DIRS.has(child.name) && !(await isOtherCheckout(childPath))) {
-          pending.push(childPath);
+        if (!SKIP_DIRS.has(child.name)) {
+          pending.push(path.join(dir, child.name));
         }
         continue;
       }

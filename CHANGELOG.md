@@ -500,11 +500,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
-- **The UI strategy review no longer hands winner selection to the comparison
-  review.** The comparison review owns no winner and the prototyping loop puts
-  its latest iteration to the user, so a reviewer following the old sentence
-  looked for a historical winner. The strategy review now points at the
-  comparison criteria instead.
+- **The installed agent entry sends scratch files to the host's scratch
+  directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
+  said every scratch file goes under `tmp/`, while the temporary-files rule they
+  point at puts it in the scratch directory the host names for the session and
+  keeps `tmp/` for when the host names none. The one-line entry now says the
+  same.
 
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
@@ -516,6 +517,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   show how to point it at a self-hosted Firecrawl instance and add that host to
   `webResearch.allowlist`. The templates still
   default to the cloud API.
+
+- **The UI strategy review no longer hands winner selection to the comparison
+  review.** The comparison review owns no winner and the prototyping loop puts
+  its latest iteration to the user, so a reviewer following the old sentence
+  looked for a historical winner. The strategy review now points at the
+  comparison criteria instead.
 
 - **An unknown `prototype.mode` written as an inline mapping is now
   reported.** `QFAI-CONTRACT-038` scanned a UI contract line by line, so
@@ -643,6 +650,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new script stop with an error at the first skip in that file, so rewrite
   each count as the names of the tests it covered.
 
+- **`qfai atdd scaffold` reads vitest only from a script that runs it.**
+  A `package.json` script that only named `vitest` as an argument, such as
+  `echo vitest`, made the command write a vitest skeleton for a project that
+  runs `node --test`, so the test imported a package the project does not
+  have. Now `vitest` counts only as the command a script runs: directly,
+  after environment assignments, through a launcher such as `npx`,
+  `cross-env`, `dotenv`, `env-cmd`, `env` or `time`, through a package
+  manager such as `pnpm exec`, `pnpm vitest`, `yarn dlx`, `npm exec` or
+  `bun run`, or inside the quoted script of `sh -c`, `concurrently` or
+  `run-p`.
+
 - **`qfai atdd scaffold` writes a CommonJS node:test skeleton that Node can
   load.** For a project that runs `node --test`, the skeleton imported
   `describe` and `it` with an `import` statement even in a `.cjs` file, and
@@ -746,6 +764,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runner discarded the output of every non-zero exit, so the answer arrived
   empty. The runner now keeps the output of an exit code its caller names as an
   answer, and the documents query names only Graphify's no-match code.
+
+- **The Mermaid check finds diagrams inside block quotes and list items.**
+  `check-mermaid.mjs` saw a fence only at the start of a line, so a diagram
+  written after `> ` or nested under a list item was never parsed, and a
+  broken one passed. It now reads each line inside its block quotes and list
+  items, as CommonMark does, and a fence there ends where its container ends.
+  A line such as ` ```npx qfai validate``` ` is inline code, not a fence,
+  so it no longer hides the diagrams below it. `<!-- mermaid-lint:ignore -->`
+  still skips the next block, also when both lines sit in the same block quote.
 
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
