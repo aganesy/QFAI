@@ -5,9 +5,9 @@ name: Prepare release
 # What this does NOT do is write release prose. The `## [Unreleased]` section is filled in as the
 # work lands, by whoever made each change; the only thing that happens at release time is deciding
 # where to cut. So this renames `## [Unreleased]` to `## [X.Y.Z] - <date>`, reopens an empty one,
-# syncs `packages/qfai/package.json#version`, and opens a pull request. A release note nobody wrote
-# is not one a reader can use, so an empty `## [Unreleased]` is refused rather than shipped as an
-# empty section.
+# syncs `packages/qfai/package.json#version` and `.qfai/assistant/VERSION`, and opens a pull
+# request. A release note nobody wrote is not one a reader can use, so an empty `## [Unreleased]`
+# is refused rather than shipped as an empty section.
 #
 # The VERSION is an input, and that is the point rather than an inconvenience.
 # `.agents/rules/version-discipline.md` puts the choice of `X.Y.Z` with the user: an automation that
@@ -22,7 +22,8 @@ name: Prepare release
 #
 # One job of four steps, and the chain between them is data rather than habit. The refusals produce
 # the version and the branch name the two steps after them read. The edit step produces nothing but
-# the two rewritten files, so a separate job for the pull request would either redo the edit or
+# the three rewritten files (`CHANGELOG.md`, `packages/qfai/package.json` and
+# `.qfai/assistant/VERSION`), so a separate job for the pull request would either redo the edit or
 # carry the work tree across as an artifact. Nothing here installs or builds, so a leg's whole
 # preamble is a shallow checkout and a runner start — more than any one of these steps costs.
 #
@@ -119,11 +120,27 @@ jobs:
           fi
 
           # Asked of the API, because this checkout is shallow and carries no tags. A ref that
-          # exists answers 0; anything else — absent, or unreachable — answers non-zero, and only
-          # the first is a reason to stop.
-          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${RELEASE_VERSION}" > /dev/null 2>&1; then
+          # exists answers 0. `gh api` exits 1 both for an absent ref and for a question that
+          # could not be asked (a revoked token, a rate limit, an outage), so, as for the branch
+          # lookup below, the exit status is KEPT rather than tested for truth, and the response
+          # status line `--include` prints decides: only an explicit 404 means the tag is absent.
+          # Anything else stops with gh's own message left visible, because reading it as absent
+          # prepares a version-bump pull request for a version that may already be tagged.
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped set carries no release workflow, so no step there looks up a tag.
+          tag_lookup=0
+          tag_response="$(gh api --include "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${RELEASE_VERSION}")" || tag_lookup=$?
+          if [ "$tag_lookup" -eq 0 ]; then
             reject "already has a tag: releasing it again would mean two different trees under one name"
           fi
+          case "${tag_response%%$'\n'*}" in
+            "HTTP/"*" 404 "*) ;;
+            *)
+              # The version is safe to name here: it has passed the digits-and-dots checks above.
+              echo "::error::prepare-release: could not determine whether v${RELEASE_VERSION} is already tagged (gh api exited ${tag_lookup}; its message is above). Re-run once the API answers; nothing was prepared."
+              exit 1
+              ;;
+          esac
 
           # The section this release ships. Empty means nobody described the change, and a release
           # note nobody wrote is worse than a missing one: it reads as "nothing happened".
