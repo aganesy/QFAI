@@ -111,8 +111,8 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     label: "catalog components",
     lines: [
       `${EXIT_CODES.ok} = the catalogue was written, or --check found it up to date,`,
-      `${EXIT_CODES.findings} = --check found it missing or out of date, typescript cannot be loaded,`,
-      "      or a read or write failure",
+      `${EXIT_CODES.findings} = --check found it missing or out of date, qfai.config.yaml has an error,`,
+      "      typescript cannot be loaded, or a read or write failure",
     ],
   },
   {

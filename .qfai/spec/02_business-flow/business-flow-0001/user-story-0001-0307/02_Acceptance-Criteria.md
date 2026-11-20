@@ -60,4 +60,10 @@ Feature: Catalogue the components a project already has
     When `qfai catalog components` runs
     Then it exits 1 with one line naming `.qfai/catalog/components.yaml` and the link, and the file outside the project is as it was with nothing written beside it
     And in a project with no such link it replaces the catalogue and leaves no temporary file in `.qfai/catalog`
+
+  # AC-0001-0307-09
+  Scenario: A configuration the command cannot use stops it before it scans
+    Given a `qfai.config.yaml` that does not parse or holds a value `qfai validate` reports as an error, and a committed catalogue
+    When `qfai catalog components` runs, with or without `--check`
+    Then it exits 1 naming `qfai.config.yaml` and each error, and scans, compares and writes nothing, leaving the catalogue as it was
 ```

@@ -523,6 +523,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `webResearch.allowlist`. The templates still
   default to the cloud API.
 
+- **The leakage guard catches a `schemaVersion` whose colon is on the next
+  line** (#4743). The guard's pattern allows any whitespace between the field
+  name and its colon, but grep read each file one line at a time, so a valid
+  JavaScript property split across a line break shipped without a failure.
+  The `schemaVersion` pass now reads each file as a whole and names every file
+  that holds the field.
+
 - **The UI strategy review no longer hands winner selection to the comparison
   review.** The comparison review owns no winner and the prototyping loop puts
   its latest iteration to the user, so a reviewer following the old sentence
@@ -571,6 +578,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   word, as if it held no files. Only a directory that does not exist is still
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
+
+- **`qfai catalog components` keeps an existing catalogue when
+  `qfai.config.yaml` cannot be used.** A configuration that did not parse, such
+  as one holding `paths: [`, fell back to the default surface paths, so the
+  command exited 0 and overwrote the catalogue with an empty one. The command
+  now stops before it scans, exits 1 naming `qfai.config.yaml` and each error,
+  and writes nothing; under `--check` it says nothing was compared instead of
+  calling the catalogue out of date. Closes #4748.
 
 - **The Markdown-schema checker refuses a `--base` with no ref.** Given
   `--base --summary`, it took `--summary` as the ref, could not diff against

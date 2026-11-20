@@ -28,10 +28,6 @@ import { register } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-// The renderer is not in the package build, so it comes from `src/` — which
-// imports its siblings as `./x.js`. See the hook's own docblock.
-register("./lib/ts-specifier-hook.mjs", import.meta.url);
-
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const AGENTS_DIR = path.join(repoRoot, ".qfai", "assistant", "agent");
 const CODEX_DIR = path.join(repoRoot, ".codex", "agents");
@@ -40,6 +36,24 @@ const check = process.argv.includes("--check");
 
 /** Normalized so a CRLF checkout does not read as drift. */
 const lf = (text) => text.replace(/\r\n/g, "\n");
+
+/**
+ * The profile already at `target`, or `null` when there is none.
+ *
+ * Only a missing file is absent. Any other read failure rejects, naming the
+ * file and its cause: read as absent, `--check` would report a permission or
+ * I/O problem as drift, and a plain run would overwrite a file it never saw.
+ */
+export async function readExistingProfile(target) {
+  try {
+    return await readFile(target, "utf-8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    throw new Error(`Cannot read the existing Codex profile ${target}: ${String(error)}`, {
+      cause: error,
+    });
+  }
+}
 
 async function main() {
   const source = pathToFileURL(
@@ -71,7 +85,7 @@ async function main() {
     }
     const target = path.join(CODEX_DIR, `${name}.toml`);
     existing.delete(`${name}.toml`);
-    const before = await readFile(target, "utf-8").catch(() => null);
+    const before = await readExistingProfile(target);
     if (before !== null && lf(before) === rendered.toml) continue;
     stale.push(name);
     if (!check) {
@@ -107,4 +121,9 @@ async function main() {
   );
 }
 
-await main();
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  // The renderer is not in the package build, so it comes from `src/` — which
+  // imports its siblings as `./x.js`. See the hook's own docblock.
+  register("./lib/ts-specifier-hook.mjs", import.meta.url);
+  await main();
+}
