@@ -15,13 +15,12 @@
  * which surfaces were not exercised in this profile.
  */
 
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseDesignMd } from "../design/designMd.js";
 import type { Issue } from "../types.js";
 import { parseHandoff, validateHandoff } from "../schemas/handoff.js";
-import { issue } from "../validators/utils.js";
+import { issue, readPresentFile } from "../validators/utils.js";
 
 import { SAAS_PACKAGE_SKIPPED_GATES } from "./skippedGates.js";
 
@@ -32,13 +31,8 @@ const VERIFY_SKIPPED_CODE = "QFAI-SAAS-003";
 const ATTESTATION_MISSING_CODE = "QFAI-SAAS-001";
 const HANDOFF_SCHEMA_CODE = "QFAI-SAAS-002";
 
-async function readTextOrNull(p: string): Promise<string | null> {
-  try {
-    return await readFile(p, "utf-8");
-  } catch {
-    return null;
-  }
-}
+const UNREADABLE_ACTION = (rel: string): string =>
+  `Make ${rel} a regular file this process can read (check its permissions or file type), then rerun validate.`;
 
 function buildSkipFindings(): Issue[] {
   return SAAS_PACKAGE_SKIPPED_GATES.map((gate) =>
@@ -58,14 +52,30 @@ function buildSkipFindings(): Issue[] {
 /**
  * The design system a SaaS tenant ships is the root `DESIGN.md`, read
  * through the same parser the prototyping loop uses. A file that does not
- * parse attests nothing, so it is reported the same way as a missing one.
+ * parse attests nothing, so it is reported the same way as a missing one. A
+ * path that is there but cannot be read is reported with its cause instead,
+ * since authoring the file again would not fix it.
  */
 async function checkDesignAttestation(root: string): Promise<Issue[]> {
-  const text = await readTextOrNull(path.join(root, DESIGN_ATTESTATION_REL));
+  const read = await readPresentFile(path.join(root, DESIGN_ATTESTATION_REL));
+  if (read.kind === "unreadable") {
+    return [
+      issue(
+        ATTESTATION_MISSING_CODE,
+        `Design-system attestation ${DESIGN_ATTESTATION_REL} cannot be read (${read.reason}). The saas-package profile requires this attestation to PASS.`,
+        "error",
+        DESIGN_ATTESTATION_REL,
+        "validate.saasPackage.attestationMissing",
+        [DESIGN_ATTESTATION_REL],
+        "canonical",
+        UNREADABLE_ACTION(DESIGN_ATTESTATION_REL),
+      ),
+    ];
+  }
   const problem =
-    text === null
+    read.kind === "absent"
       ? "is absent"
-      : "error" in parseDesignMd(text)
+      : "error" in parseDesignMd(read.text)
         ? "does not parse as DESIGN.md"
         : null;
   if (problem === null) {
@@ -87,8 +97,22 @@ async function checkDesignAttestation(root: string): Promise<Issue[]> {
 
 async function checkHandoffSchema(root: string): Promise<Issue[]> {
   const handoffPath = path.join(root, HANDOFF_REL);
-  const text = await readTextOrNull(handoffPath);
-  if (text === null) {
+  const read = await readPresentFile(handoffPath);
+  if (read.kind === "unreadable") {
+    return [
+      issue(
+        HANDOFF_SCHEMA_CODE,
+        `The prototyping handoff record ${HANDOFF_REL} cannot be read (${read.reason}); the saas-package profile requires a conformant handoff.`,
+        "error",
+        HANDOFF_REL,
+        "validate.saasPackage.handoffSchema",
+        [HANDOFF_REL],
+        "canonical",
+        UNREADABLE_ACTION(HANDOFF_REL),
+      ),
+    ];
+  }
+  if (read.kind === "absent") {
     return [
       issue(
         HANDOFF_SCHEMA_CODE,
@@ -102,7 +126,7 @@ async function checkHandoffSchema(root: string): Promise<Issue[]> {
       ),
     ];
   }
-  const parsed = parseHandoff(text);
+  const parsed = parseHandoff(read.text);
   if (parsed === null) {
     return [
       issue(

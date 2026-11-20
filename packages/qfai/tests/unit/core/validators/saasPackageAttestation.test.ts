@@ -224,6 +224,34 @@ describe("TC-0004-0068: saas-package profile rejects a missing design-system att
     expect(missing?.file).toBe(".qfai/prototype/final/handoff.json");
   });
 
+  it("reports a DESIGN.md that cannot be read with its path and cause, not as absent", async () => {
+    await mkdir(path.join(root, "DESIGN.md"));
+    await seedHandoff(CONFORMING_HANDOFF);
+    const issues = await runSaasPackageProfile(root, []);
+    const errors = issues.filter((i) => i.severity === "error");
+    expect(errors.map((i) => [i.code, i.file])).toEqual([["QFAI-SAAS-001", "DESIGN.md"]]);
+    expect(errors[0]?.message).toContain("Design-system attestation DESIGN.md cannot be read");
+    expect(errors[0]?.message).toContain("EISDIR");
+    expect(errors[0]?.message).not.toContain("is absent");
+    expect(errors[0]?.suggested_action).toContain("permissions or file type");
+  });
+
+  it("reports a handoff record that cannot be read with its path and cause, not as missing", async () => {
+    await seedAttestation();
+    await mkdir(path.join(root, ...HANDOFF_DIR, "handoff.json"), { recursive: true });
+    const issues = await runSaasPackageProfile(root, []);
+    const errors = issues.filter((i) => i.severity === "error");
+    expect(errors.map((i) => [i.code, i.file])).toEqual([
+      ["QFAI-SAAS-002", ".qfai/prototype/final/handoff.json"],
+    ]);
+    expect(errors[0]?.message).toContain(
+      "The prototyping handoff record .qfai/prototype/final/handoff.json cannot be read",
+    );
+    expect(errors[0]?.message).toContain("EISDIR");
+    expect(errors[0]?.message).not.toContain("is missing");
+    expect(errors[0]?.suggested_action).toContain("permissions or file type");
+  });
+
   it("reads no handoff file other than the prototyping record", async () => {
     await seedAttestation();
     await seedHandoff(CONFORMING_HANDOFF);
