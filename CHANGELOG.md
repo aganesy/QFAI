@@ -530,6 +530,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The `schemaVersion` pass now reads each file as a whole and names every file
   that holds the field.
 
+- **`qfai doctor --profile prototyping` probes Playwright from the inspected
+  project** (#4765). The launcher probe ran in the directory doctor was started
+  from, so with `--root` naming another checkout, `npx` looked for Playwright
+  in the wrong project and a `scripts/playwright` wrapper read its relative
+  files from the wrong place. Every probe now runs with the `--root` directory
+  as its working directory.
+
 - **The UI strategy review no longer hands winner selection to the comparison
   review.** The comparison review owns no winner and the prototyping loop puts
   its latest iteration to the user, so a reviewer following the old sentence
