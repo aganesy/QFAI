@@ -36,6 +36,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+import { headerPath } from "./lib/git-quoted-path.mjs";
+
 const ROOT = process.cwd();
 
 /**
@@ -255,7 +257,9 @@ function changedLinesByFile(base) {
   let nextLine = 0;
   for (const raw of diff.split("\n")) {
     if (raw.startsWith("+++ ")) {
-      const p = raw.slice(4).trim();
+      // Decoded before the prefix is stripped: a path git printed quoted
+      // (`core.quotePath`, on by default) carries its `b/` inside the quotes.
+      const p = headerPath(raw.slice(4).trim());
       current = p === "/dev/null" ? null : p.replace(/^b\//, "");
       continue;
     }

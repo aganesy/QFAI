@@ -15,7 +15,8 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { headerPath, markersIn } from "../../../../scripts/check-shipped-ci-parity.mjs";
+import { markersIn } from "../../../../scripts/check-shipped-ci-parity.mjs";
+import { headerPath } from "../../../../scripts/lib/git-quoted-path.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/scripts → tests → packages/qfai → packages → repo root

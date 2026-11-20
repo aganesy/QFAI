@@ -220,12 +220,13 @@ async function repairFixture(
 ): Promise<{ root: string; base: string }> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-changelog-repair-"));
   repairTrees.push(root);
-  await mkdir(path.join(root, "scripts"));
+  await mkdir(path.join(root, "scripts", "lib"), { recursive: true });
   for (const name of [
     "changelog-heading.mjs",
     "check-changelog-released-sections.mjs",
     "check-release-notes.mjs",
     "check-shipped-ci-parity.mjs",
+    path.join("lib", "git-quoted-path.mjs"),
   ]) {
     await cp(path.join(repoRoot, "scripts", name), path.join(root, "scripts", name));
   }
