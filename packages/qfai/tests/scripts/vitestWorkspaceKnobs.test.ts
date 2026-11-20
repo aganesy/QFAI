@@ -70,7 +70,7 @@
  * phrased as a search, and a commented-out retry is still a retry someone will uncomment.
  */
 
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -441,6 +441,42 @@ describe("the knob set stays portable, because a fixture spreads it into a forei
       "the annotation suppressor patches `process.stdout` per FILE, and `pool: forks` with " +
         "`isolate: true` gives every file its own process — a project without it leaks real " +
         "GitHub annotations from whatever fixture it validates",
+    ).toEqual([]);
+  });
+});
+
+describe("the runner configuration loads under the native config loader", () => {
+  it("names every relative import by a file that exists as written", () => {
+    // Vite's native config loader hands the file to Node's own ESM resolver, which adds no
+    // extension: `./vitest.knobs` is `ERR_MODULE_NOT_FOUND` there even though the bundling
+    // loader finds `vitest.knobs.ts`. Vite warns about each such import on every run. The check
+    // is static, because the floor lane's Node predates type stripping and cannot load the
+    // file itself.
+    const unresolved: string[] = [];
+    let seen = 0;
+    for (const file of CONFIG_FILES) {
+      const absolute = path.join(PACKAGE_ROOT, file);
+      const source = ts.createSourceFile(
+        file,
+        readFileSync(absolute, "utf8"),
+        ts.ScriptTarget.Latest,
+        true,
+      );
+      for (const statement of source.statements) {
+        if (!ts.isImportDeclaration(statement) && !ts.isExportDeclaration(statement)) continue;
+        const specifier = statement.moduleSpecifier;
+        if (specifier === undefined || !ts.isStringLiteral(specifier)) continue;
+        if (!specifier.text.startsWith(".")) continue;
+        seen += 1;
+        if (!existsSync(path.resolve(path.dirname(absolute), specifier.text))) {
+          unresolved.push(`${file}: ${specifier.text}`);
+        }
+      }
+    }
+    expect(seen, "the config files must import each other for this to be about").toBeGreaterThan(0);
+    expect(
+      unresolved,
+      "a relative import without its extension does not resolve under the native loader",
     ).toEqual([]);
   });
 });

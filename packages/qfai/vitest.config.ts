@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 
-import { rootKnobs } from "./vitest.knobs";
-import projects from "./vitest.workspace";
+import { rootKnobs } from "./vitest.knobs.ts";
+import projects from "./vitest.workspace.ts";
 
 // The worker and file-parallelism axes live here, and not on the projects:
 // the runner treats them as root-only, so a per-project declaration is inert.
