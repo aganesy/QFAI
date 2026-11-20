@@ -331,8 +331,9 @@ export function configuredPaths(root) {
 /**
  * Reads the manifest's `documents:` list.
  *
- * The manifest is a fixed two-key-per-entry shape authored in this repository,
- * so a line scanner reads it.
+ * The manifest is a fixed shape authored in this repository, so a line scanner
+ * reads it: each entry has the three keys `id`, `schema` and `pattern`, and an
+ * entry missing any of them is left out of the result.
  *
  * @returns {{ id: string, schema: string, pattern: string }[]}
  */
@@ -1944,7 +1945,10 @@ function parseArgs(argv) {
       continue;
     }
     if (arg === "--base") {
-      base = argv[++i] ?? "";
+      // A following option is not a ref: taking it would drop that option and widen the scan.
+      const value = argv[i + 1] ?? "";
+      base = value.startsWith("-") ? "" : value;
+      i += base === "" ? 0 : 1;
       continue;
     }
     if (arg === "--root") {

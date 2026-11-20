@@ -524,6 +524,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   looked for a historical winner. The strategy review now points at the
   comparison criteria instead.
 
+- **The UI open-questions review now follows the register's real lifecycle.**
+  It asked reviewers to filter rows by a Status and a Severity and to
+  downgrade them, but the register has only ID, Content and Approach, and its
+  rows are never edited. The review now treats a row as blocking when the
+  reviewed UI needs its answer now, or when it opens `Unadjudicated:`; a row
+  deferred past the reviewed UI does not block it. It resolves the question
+  with a decision row that names it, or defers it with a replacing row, and
+  deletes the original row either way.
+
 - **An unknown `prototype.mode` written as an inline mapping is now
   reported.** `QFAI-CONTRACT-038` scanned a UI contract line by line, so
   `prototype: { mode: static }` passed unchecked. It now reads the mode from
@@ -531,12 +540,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
 
+- **The example waiver in a new `.qfai/waivers.yml` now points at evidence
+  that opens.** Its `evidence` linked `decisions.md#DEC-0001`, but a decision
+  ID is a table cell, not an anchor, so the link jumped nowhere, and its fixed
+  `expires` date was already past for anyone who copied it. The example now
+  names the register page and carries the decision ID in `reason` as
+  `DEC-yyyymmddhhMMss`, the form a new decision row takes. It leaves `expires`
+  as `YYYY-MM-DD`. Replace both with your decision's ID and a future date.
+
 - **A contract or spec directory that cannot be reached is now reported, not
   read as empty.** A directory behind a parent this process may not open
   dropped out of contract discovery and the diagram budget check without a
   word, as if it held no files. Only a directory that does not exist is still
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
+
+- **The Markdown-schema checker refuses a `--base` with no ref.** Given
+  `--base --summary`, it took `--summary` as the ref, could not diff against
+  it, checked every document instead and printed no summary. It now leaves a
+  following option alone, reports `--base needs a git ref` and exits 2, as it
+  already did for `--tools`.
 
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio

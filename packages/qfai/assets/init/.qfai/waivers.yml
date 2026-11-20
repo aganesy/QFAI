@@ -8,12 +8,17 @@ waivers: []
 # Waivers apply to `warning` and `info` findings only. A waiver aimed at an
 # `error` is a configuration error and fails the run.
 #
-# Example — a project whose design tokens name a platform QFAI does not know:
+# Example — a project whose design tokens name a platform QFAI does not know.
+# Replace `expires` with a future date you choose; a waiver past it stops
+# applying and is reported. Replace `DEC-yyyymmddhhMMss` with the ID of the
+# decision row that approved the waiver. `evidence` names the register page: a
+# decision ID is a table cell there, not an anchor, so the reason carries the
+# ID instead of a `#` fragment.
 # - id: WVR-20260207-01
 #   rule: QFAI-DT-006
 #   scope:
 #     paths: ["tokens/**"]
-#   reason: "The kiosk platform is owned by this project; tracked in DEC-0001."
-#   expires: "2026-03-01"
-#   evidence: ".qfai/spec/decisions.md#DEC-0001"
+#   reason: "The kiosk platform is owned by this project; tracked in DEC-yyyymmddhhMMss."
+#   expires: "YYYY-MM-DD"
+#   evidence: ".qfai/spec/decisions.md"
 #   owner: "team-foo"
