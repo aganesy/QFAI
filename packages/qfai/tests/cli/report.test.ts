@@ -166,6 +166,14 @@ describe("qfai report on a story tree", () => {
     expect(output.summary.counts.error).toBe(1);
   });
 
+  it("resolves the exit threshold as validate does: --fail-on, then --strict, then config", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [issue("warning")]);
+    expect(await runReport({ root, format: "json" })).toBe(0);
+    expect(await runReport({ root, format: "json", strict: true })).toBe(1);
+    expect(await runReport({ root, format: "json", strict: true, failOn: "error" })).toBe(0);
+  });
+
   it("rejects a malformed validate result before writing output", async () => {
     const root = await storyRoot();
     await mkdir(path.join(root, ".qfai/report"), { recursive: true });

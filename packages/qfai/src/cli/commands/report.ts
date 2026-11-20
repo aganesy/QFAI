@@ -19,7 +19,7 @@ import { isStoryTreeProject } from "../../core/storyTree/layout.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { isValidationProfile } from "../../core/validationProfiles.js";
 import { countIssues } from "../../core/validate.js";
-import { shouldFail } from "../lib/failOn.js";
+import { resolveFailOn, shouldFail } from "../lib/failOn.js";
 import { isIncompleteRunResult } from "../lib/warnings.js";
 import { error, info, warn } from "../../core/logger.js";
 import {
@@ -318,16 +318,6 @@ async function runValidateForReport(
   );
   await writeValidationResult(root, resultPaths?.write ?? [], normalized);
   return { validation: normalized, ranNarrowProfileInCi: ciProfileIssue !== null };
-}
-
-function resolveFailOn(options: ReportOptions, fallback: FailOn): FailOn {
-  if (options.failOn) {
-    return options.failOn;
-  }
-  if (options.strict) {
-    return "warning";
-  }
-  return fallback;
 }
 
 /**
