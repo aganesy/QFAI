@@ -512,6 +512,43 @@ describe("the edges a slug, a shell line and a calendar leave open", () => {
     ]);
   });
 
+  it("leaves result bytes unknown when another operand, extensionless or not, can add output", () => {
+    const bytesOf = (command: string): number => {
+      const events: SessionEvents = {
+        records: 2,
+        malformed: 0,
+        hookContexts: [],
+        calls: [{ id: "a", name: "Bash", command }],
+        results: [{ id: "a", isError: false, text: "123456", exitCode: 0 }],
+        userTurns: [],
+      };
+      return summarise(events, FACTS).reads[0]?.bytes ?? -1;
+    };
+    expect(bytesOf("cat .agents/rules/a.md LICENSE")).toBe(0);
+    expect(bytesOf("cat .agents/rules/a.md; cat NOTICE")).toBe(0);
+    expect(bytesOf("sed -n 1,20p .agents/rules/a.md Makefile")).toBe(0);
+    // A count, a sed or grep script, an option and the text echo prints are no files.
+    expect(bytesOf("head -n 20 .agents/rules/a.md")).toBe(6);
+    expect(bytesOf("sed -n '1,20p' .agents/rules/a.md")).toBe(6);
+    expect(bytesOf("Get-Content -Path .agents/rules/a.md -TotalCount 20")).toBe(6);
+    expect(bytesOf("cat .agents/rules/a.md | grep -n QFAI")).toBe(6);
+    expect(bytesOf("cat .agents/rules/a.md && echo done")).toBe(6);
+  });
+
+  it("reads a quoted operand with a blank as one word when it attributes result bytes", () => {
+    const events: SessionEvents = {
+      records: 2,
+      malformed: 0,
+      hookContexts: [],
+      calls: [{ id: "a", name: "Bash", command: "cat '.agents/rules/feature notes.md'" }],
+      results: [{ id: "a", isError: false, text: "123456", exitCode: 0 }],
+      userTurns: [],
+    };
+    expect(summarise(events, FACTS).reads).toEqual([
+      { path: ".agents/rules/feature notes.md", reads: 1, repeats: 0, bytes: 6 },
+    ]);
+  });
+
   it("reads a Codex exit status from the call's own result, not from an exit_code its output prints", () => {
     const events = emptyEvents();
     readCodexRecord(
