@@ -390,7 +390,7 @@ describe("web-research skill behaviour", () => {
       "cite",
     ]);
     expect(stages.find((line) => line.startsWith("5. **sanitize**"))).toContain(
-      "Remove control characters and content the page does not render, such as `display:none` content",
+      "Remove control characters and unrendered (`display:none`) content",
     );
 
     const items = bullets(sectionLines(skill, "3.1 Content Sanitization"));
@@ -424,7 +424,7 @@ describe("web-research skill behaviour", () => {
     const text = flatten(section);
     // An accessibility attribute alone never removes rendered content.
     expect(text).toContain(
-      'An element with `aria-hidden="true"` that the page renders is visible content and is kept',
+      'Removal follows rendered visibility: a rendered `aria-hidden` element stays.',
     );
     expect(text).toContain("Legitimate visible content is preserved unchanged by the sanitizer.");
     expect(text).toContain(

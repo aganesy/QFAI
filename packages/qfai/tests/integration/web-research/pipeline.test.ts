@@ -110,11 +110,9 @@ describe("web-research pipeline", () => {
   it("keys a response with neither ETag nor Last-Modified by the hash of its fetched bytes", async () => {
     const content = await readSkill();
     expect(content).toContain(
-      "When the response carries neither an ETag nor a Last-Modified header, the key is the hash of the fetched bytes.",
+      "with neither header, the hash of the fetched bytes.",
     );
-    expect(content).toContain(
-      "The URL, any validator and the fetch time are kept with the entry as lookup metadata",
-    );
+    expect(content).toContain("URL, validator and fetch time stay as lookup metadata.");
   });
 
   // QFAI:EX-0001-0176-05

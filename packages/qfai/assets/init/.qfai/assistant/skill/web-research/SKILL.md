@@ -80,7 +80,7 @@ The web research pipeline consists of **8 stages** executed in strict order:
 2. **rank** — Score and rank results by relevance, authority, and freshness.
 3. **fetch** — Retrieve full page content for top-ranked URLs (respecting concurrency limits).
 4. **extract** — Parse and extract meaningful content from fetched pages.
-5. **sanitize** — Remove control characters and content the page does not render, such as `display:none` content.
+5. **sanitize** — Remove control characters and unrendered (`display:none`) content.
 6. **cache** — Store extracted content with deduplication and staleness tracking.
 7. **verify** — Cross-reference extracted claims; flag contradictions and low-confidence assertions.
 8. **cite** — Generate structured citation output with source attribution.
@@ -191,9 +191,7 @@ The sanitize stage removes:
 - Elements with `display: none` or `visibility:hidden` CSS.
 - Embedded `<script>` and `<style>` blocks.
 
-Removal follows rendered visibility, not accessibility attributes.
-An element with `aria-hidden="true"` that the page renders is visible content and is kept:
-the attribute hides it only from assistive technology.
+Removal follows rendered visibility: a rendered `aria-hidden` element stays.
 
 Legitimate visible content is preserved unchanged by the sanitizer.
 The sanitizer is idempotent: applying it twice produces byte-identical output.
@@ -261,11 +259,8 @@ Risk classification is determined by query topic analysis and domain sensitivity
 
 Cache key = `hash(url + etag)`.
 
-When an ETag header is not available, the key falls back to `hash(url + last-modified)`.
-
-When the response carries neither an ETag nor a Last-Modified header, the key is the hash of the fetched bytes.
-The URL, any validator and the fetch time are kept with the entry as lookup metadata,
-so a lookup by URL still finds the entry and the TTL in 7.2 still applies to it.
+Without an ETag: `hash(url + last-modified)`; with neither header, the hash of the fetched bytes.
+URL, validator and fetch time stay as lookup metadata.
 
 ### 7.2 Cache Staleness
 
