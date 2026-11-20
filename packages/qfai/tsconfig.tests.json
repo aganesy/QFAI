@@ -339,6 +339,7 @@
     "tests/integration/doctorWorkflowCost.test.ts",
     "tests/integration/doctorWorkflowDrift.test.ts",
     "tests/integration/doctorWorkflowParse.test.ts",
+    "tests/integration/doctorWorkflowParseIo.test.ts",
     "tests/integration/doctorWorkflowPreconditions.test.ts",
     "tests/integration/documentSchemaValidation.test.ts",
     "tests/integration/initDistributionAcceptance.test.ts",

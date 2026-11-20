@@ -60,6 +60,7 @@ Feature: Shipped workflow checks
     When `qfai doctor` runs
     Then each file that cannot be parsed is a `warning` and never an `error`, naming the file, the line of the first error and its reason
     And a valid file, a file with another extension and a file outside those directories raise no finding
+    And a file that cannot be read and a directory that cannot be listed are each a `warning` naming the path and the cause, while a directory that does not exist raises no finding
     And doctor writes no file
 
   # AC-0003-0011-14

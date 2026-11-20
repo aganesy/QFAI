@@ -632,6 +632,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
 
+- **`qfai doctor` now names a workflow file or directory it cannot read.** A
+  YAML file under `.github/workflows/` or `.github/actions/` that could not be
+  read, and either directory when it could not be listed, dropped out of the
+  `workflows.parse` scan without a word, so a scan that missed files looked
+  like one that found every file valid. Each is now a `warning` naming the path
+  and the cause. A directory that does not exist still raises nothing.
+
 - **`qfai catalog components` keeps an existing catalogue when
   `qfai.config.yaml` cannot be used.** A configuration that did not parse, such
   as one holding `paths: [`, fell back to the default surface paths, so the

@@ -34,33 +34,75 @@ function reasonOf(message: string): string {
   return printable(first.replace(/ at line \d+, column \d+:?$/, ""));
 }
 
-async function yamlFilesUnder(root: string, dir: readonly string[]): Promise<string[]> {
+function errorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+  return typeof error.code === "string" ? error.code : undefined;
+}
+
+/**
+ * A warning for a file that cannot be read or a directory that cannot be listed, naming the path
+ * and the cause, so a scan that missed files does not read as one that found nothing wrong.
+ */
+function unreadFinding(
+  where: string,
+  kind: "file" | "directory",
+  error: unknown,
+): WorkflowParseCheck {
+  const cause = printable(error instanceof Error ? error.message : String(error));
+  const verb = kind === "file" ? "read" : "listed";
+  const shown = printable(where);
+  const skipped = kind === "file" ? "it" : "the files in it";
+  return {
+    id: `workflows.parse.${where.replace(/^\.github\//u, "")}`,
+    severity: "warning",
+    title: `Workflow ${kind} cannot be ${verb} (${shown})`,
+    message:
+      `${shown} cannot be ${verb}: ${cause}. doctor did not parse ${skipped}, so a file GitHub ` +
+      `cannot parse there would go unreported. Make it readable, then run doctor again.`,
+    details: {
+      path: where,
+      issues: [{ line: null, code: errorCode(error) ?? "unknown", reason: cause }],
+    },
+  };
+}
+
+type YamlListing = { files: string[]; unlisted: WorkflowParseCheck | null };
+
+/** The YAML files under one directory; a directory that does not exist holds none. */
+async function yamlFilesUnder(root: string, dir: readonly string[]): Promise<YamlListing> {
   let entries;
   try {
     entries = await readdir(path.join(root, ...dir), { recursive: true, withFileTypes: true });
-  } catch {
-    return [];
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return { files: [], unlisted: null };
+    return { files: [], unlisted: unreadFinding(dir.join("/"), "directory", error) };
   }
-  return entries
+  const files = entries
     .filter((entry) => entry.isFile() && /\.ya?ml$/u.test(entry.name))
     .map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)))
     .map((relative) => relative.split(path.sep).join("/"));
+  return { files, unlisted: null };
 }
 
 /**
  * A warning for each YAML file under `.github/workflows/` and `.github/actions/` that cannot be
  * parsed, naming the line. A file with a key twice is one: GitHub starts no job from it, so the
  * workflow stops running on every event and its checks never report, and a loader that accepts the
- * duplicate silently lets the edit that wrote it pass its own check. Nothing is written.
+ * duplicate silently lets the edit that wrote it pass its own check. A file that cannot be read
+ * and a directory that cannot be listed are warnings too; a directory that does not exist is not.
+ * Nothing is written.
  */
 export async function checkWorkflowParse(root: string): Promise<WorkflowParseCheck[]> {
-  const files = (await Promise.all(YAML_DIRS.map((dir) => yamlFilesUnder(root, dir)))).flat();
-  const findings: WorkflowParseCheck[] = [];
-  for (const file of files.sort()) {
+  const listings = await Promise.all(YAML_DIRS.map((dir) => yamlFilesUnder(root, dir)));
+  const findings: WorkflowParseCheck[] = listings.flatMap((listing) =>
+    listing.unlisted === null ? [] : [listing.unlisted],
+  );
+  for (const file of listings.flatMap((listing) => listing.files).sort()) {
     let text: string;
     try {
       text = await readFile(path.join(root, ...file.split("/")), "utf-8");
-    } catch {
+    } catch (error) {
+      findings.push(unreadFinding(file, "file", error));
       continue;
     }
     const issues = parseDocument(text).errors.map((error) => ({
