@@ -414,6 +414,7 @@
     "tests/scripts/checkInstructionsSize.test.ts",
     "tests/scripts/regenShippedEntry.test.ts",
     "tests/scripts/declaredSampleBandIds.test.ts",
+    "tests/scripts/declaredSampleBandIdsUnreadable.test.ts",
     "tests/scripts/checkTrackedReadmes.test.ts",
     "tests/scripts/assistantTreeLinks.test.ts",
     "tests/scripts/checkTrackedSymlinks.test.ts",
