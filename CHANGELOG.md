@@ -518,6 +518,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `webResearch.allowlist`. The templates still
   default to the cloud API.
 
+- **The UI strategy review no longer hands winner selection to the comparison
+  review.** The comparison review owns no winner and the prototyping loop puts
+  its latest iteration to the user, so a reviewer following the old sentence
+  looked for a historical winner. The strategy review now points at the
+  comparison criteria instead.
+
 - **The UI open-questions review now follows the register's real lifecycle.**
   It asked reviewers to filter rows by a Status and a Severity and to
   downgrade them, but the register has only ID, Content and Approach, and its
@@ -707,6 +713,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reference fails no longer keeps a half-substituted value, and nor does any
   token that references it, so the mock fallback check compares only values
   that fully resolved.
+
+- **The shipped diagram check reads `.markdown` and `.mdx` files.** The
+  document lane in `qfai-docs.yml` runs when a `.md`, `.markdown` or `.mdx`
+  file changes, but `check-mermaid.mjs` read only `.md` files, so a broken
+  Mermaid diagram in the other two passed the check its change triggered. A
+  directory scan and a file named on the command line now both read all three
+  extensions, in any letter case.
 
 - **An extra positional argument is now an argument error.** Only
   `qfai sdd next-id` takes positional arguments, but every other command
