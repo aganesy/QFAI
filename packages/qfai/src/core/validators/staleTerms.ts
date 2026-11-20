@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { collectFiles } from "../fs.js";
-import { readStoryTreeModel } from "../storyTree/tree.js";
+import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -21,9 +21,14 @@ function termPattern(term: string): RegExp {
  * Warns where a document of the spec tree still states a term the project lists in
  * `validation.staleTerms`. The check compares words only: it does not read whether the
  * sentence rejects the term or relies on it. The decision and open-question registers are
- * not read, because they record a rejected option by name.
+ * not read, because they record a rejected option by name. `validate` passes the story model it
+ * has already read; a standalone caller leaves it out and the tree is read here.
  */
-export async function validateStaleTerms(root: string, config: QfaiConfig): Promise<Issue[]> {
+export async function validateStaleTerms(
+  root: string,
+  config: QfaiConfig,
+  model?: StoryTreeModel,
+): Promise<Issue[]> {
   const terms = [...new Set((config.validation.staleTerms ?? []).map((term) => term.trim()))]
     .filter((term) => term.length > 0)
     .map((term) => ({ term, pattern: termPattern(term) }));
@@ -38,7 +43,9 @@ export async function validateStaleTerms(root: string, config: QfaiConfig): Prom
   }
   const issues: Issue[] = [];
   const decisionFiles = new Set(
-    (await readStoryTreeModel(root, config)).decisionFiles.map((file) => path.resolve(file)),
+    (model ?? (await readStoryTreeModel(root, config))).decisionFiles.map((file) =>
+      path.resolve(file),
+    ),
   );
   for (const file of [...files].sort()) {
     if (RECORD_FILES.has(path.basename(file)) || decisionFiles.has(path.resolve(file))) continue;

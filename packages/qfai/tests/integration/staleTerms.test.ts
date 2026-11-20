@@ -5,7 +5,9 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig, loadConfig } from "../../src/core/config.js";
+import { readStoryTreeModel } from "../../src/core/storyTree/tree.js";
 import { validateProject } from "../../src/core/validate.js";
+import { validateStaleTerms } from "../../src/core/validators/staleTerms.js";
 
 let root: string;
 const specs = ".qfai/spec";
@@ -67,6 +69,19 @@ describe("a spec document that states a term the project lists as stale", () => 
     expect((await staleFindings(["SMTP"])).map((item) => [item.file, item.loc?.line])).toEqual([
       [storyFile, 3],
     ]);
+  });
+
+  // QFAI:EX-0001-0053-25
+  it("takes the decision pages from a story model the caller has already read", async () => {
+    await put(storyFile, "# US-0001-0001: Mail\n\nMail goes out over smtp.\n");
+    const config = structuredClone(defaultConfig);
+    config.paths.specsDir = specs;
+    config.paths.contractsDir = `${specs}/03_contract`;
+    config.validation.staleTerms = ["SMTP"];
+    const model = await readStoryTreeModel(root, config);
+    expect((await validateStaleTerms(root, config)).map((item) => item.file)).toEqual([storyFile]);
+    model.decisionFiles = [path.join(root, storyFile)];
+    expect(await validateStaleTerms(root, config, model)).toEqual([]);
   });
 
   // QFAI:EX-0001-0057-01
