@@ -524,8 +524,8 @@ Commands:
 Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)
   --dir <path>    init: output directory (init only; --dir wins when both are given)
-  --force         init: overwrite .qfai/assistant/{skill,agent}/**, the published skills/agents, and the symlink-asset output under .agents/.claude/.github/.codex
-                  (that output includes the qfai-provided .github/copilot-instructions.md, which keeps the rule-list entries and sections the project added, and .github/instructions/**; the story tree, rule/*.local.md overlays and assistant/skill.local/** are never overwritten)
+  --force         init: overwrite .qfai/assistant/{skill,step,agent,rule}/**, the rule masters under .agents/rules/, and the symlink-asset output under .agents/.claude/.github/.codex
+                  (that output includes the qfai-provided .github/copilot-instructions.md, which keeps the rule-list entries and sections the project added, and .github/instructions/**; the story tree, rule/*.local.md overlays, assistant/skill.local/**, qfai.config.yaml, DESIGN.md and AGENTS.md are never overwritten)
   --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
   --yes           doctor --autoremediate: skip the interactive confirmation (no effect elsewhere)
   --dry-run       init / doctor: show what would change without writing anything

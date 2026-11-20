@@ -240,8 +240,12 @@ for idx in "${!SCAN_PATHS[@]}"; do
     printf '%s\n' "$name_hits" | head -20 >&2
     fail=1
   fi
+  # `-z` reads each file as one record, so `[[:space:]]*` also crosses a line
+  # break: `schemaVersion` on one line and its colon on the next is one valid
+  # JavaScript property. Read line by line, the pair never met and passed.
+  # `-l` names each file, as a whole-file record has no useful line to print.
   grep_status=0
-  schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$target" 2>"$grep_stderr") || grep_status=$?
+  schema_hits=$(grep -rlzE "$SCHEMA_VERSION_RE" "$target" 2>"$grep_stderr") || grep_status=$?
   if [[ "$grep_status" -gt 1 ]]; then
     report_unread "schemaVersion" "$target" "$grep_status"
   fi
