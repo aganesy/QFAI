@@ -567,6 +567,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   those exceptions, and `triage-owned-cleanup` keeps its own unchanged-tree
   check.
 
+- **The README's Actions minutes recipe reads every page of runs and jobs.**
+  Its `gh api` commands for a pull request's workflow runs and for a run's
+  jobs fetched one page, and the jobs page held at most 100, so a comparison
+  with more runs or jobs silently dropped their minutes. Both commands now
+  pass `--paginate`, and the per-item `--jq` filters still print one line per
+  run or job.
+
 - **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
   shipped workflow edited to run a job on two operating systems and three
   Node versions was reported as three runner allocations instead of six,
