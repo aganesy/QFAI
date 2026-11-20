@@ -1042,7 +1042,7 @@ jobs:
         # The runner's own Node runs this step, and a Node past 24 carries no corepack, so the
         # shared bootstrap installs it first, from the workflow's revision checked out above.
         # SHIPPED-CI: not-applicable
-        # Because: the shipped templates have no release workflow, and so no publish job to bootstrap.
+        # Because: the shipped templates have no release workflow.
         run: |
           set -euo pipefail
           bash .ci-actions/.github/actions/setup/bootstrap-corepack.sh
@@ -1087,6 +1087,8 @@ jobs:
         # The corepack step before `setup-node` has already fetched it, so this finds it downloaded.
         # `setup-node` has put another Node ahead of the one the first bootstrap installed into,
         # so the same absence can recur here, and the same bootstrap answers it.
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped templates have no release workflow, and so no publish job to bootstrap.
         run: |
           set -euo pipefail
           bash .ci-actions/.github/actions/setup/bootstrap-corepack.sh
