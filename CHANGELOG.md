@@ -529,6 +529,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   looked for a historical winner. The strategy review now points at the
   comparison criteria instead.
 
+- **`qfai db-drift --format` with a wrong value now lists the formats it
+  accepts.** `qfai db-drift --format yaml` said "--format is not valid for this
+  command", although db-drift reads `--format`. It now says the value is
+  invalid and that `text|json` is expected.
+
 - **The UI open-questions review now follows the register's real lifecycle.**
   It asked reviewers to filter rows by a Status and a Severity and to
   downgrade them, but the register has only ID, Content and Approach, and its
