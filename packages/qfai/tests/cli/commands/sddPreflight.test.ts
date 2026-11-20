@@ -376,7 +376,8 @@ describe("qfai sdd preflight", () => {
         writeErr: second.writeErr,
       }),
     ).toBe(0);
-    expect(JSON.parse(second.out.join("\n"))).toMatchObject({ openQuestions: assumptions });
+    const rerun: unknown = JSON.parse(second.out.join("\n"));
+    expect(rerun).toMatchObject({ openQuestions: assumptions });
     const summary = await readFile(summaryPath, { encoding: "utf-8" });
     const carryOver = summary.slice(summary.indexOf("## Open Questions (Carry-over)"));
     for (const assumption of assumptions) {
@@ -409,7 +410,8 @@ describe("qfai sdd preflight", () => {
         writeErr: sinks.writeErr,
       }),
     ).toBe(0);
-    expect(JSON.parse(sinks.out.join("\n"))).toMatchObject({ openQuestions: [] });
+    const parsed: unknown = JSON.parse(sinks.out.join("\n"));
+    expect(parsed).toMatchObject({ openQuestions: [] });
     const summary = await readFile(summaryPath, { encoding: "utf-8" });
     expect(summary.slice(summary.indexOf("## Open Questions (Carry-over)"))).toContain("- none");
   });
