@@ -551,6 +551,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`qfai validate` compares the decision register when a tracked name under
+  the specs directory contains a newline.** One such file anywhere beneath the
+  configured specs directory made the base inventory unreadable, and the drift
+  check failed with `QFAI-DRIFT-001` before it looked for the register. Each
+  name is now read verbatim after the first tab of its Git record.
+
 - **`qfai doctor` reads a shipped workflow's `on:` before counting its jobs in
   `workflows.cost`.** A shipped workflow edited to run on `push` alone was still
   reported as starting jobs on each pull request. A workflow whose `on:` starts
@@ -696,6 +702,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a redirection's target adds nothing to the output, and so does
   `FOO=1 cat <path>`, whose command name now comes after its `NAME=value`
   assignments.
+
+- **`qfai session-review` keeps each error on one line.** Redaction kept the
+  line breaks in a file-system error or a `--session` ID, so an `--out` path
+  holding a newline, or such an ID, could print further lines on standard
+  error. Line breaks in these messages, and in the line naming the written
+  `--out` file, now become a space after redaction.
 
 - **The `fullstack-engineer` card no longer rejects a file-level text reason.**
   Its own copy of the plain-text rule said a text with no reason directly
