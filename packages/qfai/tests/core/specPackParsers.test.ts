@@ -30,6 +30,17 @@ describe("splitMarkdownRow", () => {
   it("handles escaped pipes", () => {
     expect(splitMarkdownRow("| A \\| B | C |")).toEqual(["A | B", "C"]);
   });
+
+  // Every trailing pipe was stripped before decoding, so an escaped pipe that
+  // ended the last cell of a row without a closing delimiter was lost.
+  it("keeps an escaped pipe that ends the last cell without a closing pipe", () => {
+    expect(splitMarkdownRow("| x | text\\|")).toEqual(["x", "text|"]);
+  });
+
+  it("keeps an escaped pipe that ends the last cell before a closing pipe", () => {
+    expect(splitMarkdownRow("| x | text\\||")).toEqual(["x", "text|"]);
+    expect(splitMarkdownRow("| x | text\\| |")).toEqual(["x", "text|"]);
+  });
 });
 
 // escapeTableCell and splitMarkdownRow must agree on what a cell can contain.
