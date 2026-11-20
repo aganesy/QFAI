@@ -6,8 +6,9 @@ import { runTurnEndHook } from "../core/turnEndHook.js";
 /**
  * The Stop and SubagentStop hook `qfai init` installs, run by the guard in the host hook file.
  *
- * It never fails the host: every error is swallowed and the hook exits 0 with nothing printed, so
- * a broken install lets the turn end rather than holding it open.
+ * It never fails the host: on any error the hook prints nothing on stdout, writes one line saying
+ * why on stderr for the host's log, and exits 0, so a broken install lets the turn end rather
+ * than holding it open.
  */
 async function main(): Promise<void> {
   try {

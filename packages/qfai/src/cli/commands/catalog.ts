@@ -44,7 +44,17 @@ export type CatalogComponentsOptions = {
 
 export async function runCatalogComponents(options: CatalogComponentsOptions): Promise<number> {
   const root = path.resolve(options.root);
-  const { config } = await loadConfig(root);
+  const { config, issues, configPath } = await loadConfig(root);
+  // `loadConfig` falls back to the defaults on a configuration it cannot use, and scanning the
+  // default surface would overwrite a catalogue the project's own paths produced.
+  const configErrors = issues.filter((issue) => issue.severity === "error");
+  if (configErrors.length > 0) {
+    const shown = relativeTo(root, configPath);
+    const outcome = options.check ? "nothing was compared" : "no catalogue was written";
+    error(`qfai catalog components: cannot use ${shown}, so ${outcome}:`);
+    for (const issue of configErrors) error(`  - ${issue.message}`);
+    return EXIT_CODES.findings;
+  }
   const scan = await scanComponents(
     root,
     config,
