@@ -82,7 +82,7 @@ const SKIP_DIRS = new Set(["node_modules", "dist", ".git", "tmp", "coverage", ".
  * scan skipped would pass the very check its change triggered. Exported so a
  * test can hold this set to the extensions that lane's change scope matches.
  */
-export const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
+export const MARKDOWN_EXTENSIONS = [".md", ".markdown", ".mdx"];
 
 /**
  * Whether a file name carries one of the Markdown extensions.
@@ -94,7 +94,7 @@ function isMarkdownFile(name) {
   // A suffix test rather than `path.extname`, which is empty for a file named
   // `.md` itself — a name the lane's `*.md` pattern matches.
   const lower = name.toLowerCase();
-  return [...MARKDOWN_EXTENSIONS].some((extension) => lower.endsWith(extension));
+  return MARKDOWN_EXTENSIONS.some((extension) => lower.endsWith(extension));
 }
 
 /** The opt-out marker, recognised on the line directly above an opening fence. */
