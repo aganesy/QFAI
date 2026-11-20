@@ -50,7 +50,11 @@ async function project(installed: readonly string[]): Promise<string> {
   await writeFile(path.join(root, "qfai.config.yaml"), "paths:\n  specsDir: .qfai/spec\n", "utf-8");
   await mkdir(path.join(root, ".github", "workflows"), { recursive: true });
   for (const name of installed) {
-    await writeFile(path.join(root, ".github", "workflows", name), await packagedText(name), "utf-8");
+    await writeFile(
+      path.join(root, ".github", "workflows", name),
+      await packagedText(name),
+      "utf-8",
+    );
   }
   return root;
 }
@@ -103,6 +107,9 @@ describe("qfai doctor names a shipped workflow it cannot read in the job count",
 
     expect(check?.severity).toBe("info");
     expect(check?.message).toContain(".github/workflows/qfai-validate.yml could not be read (EIO");
-    expect(check?.details).toMatchObject({ workflows: [], unread: [{ file: "qfai-validate.yml" }] });
+    expect(check?.details).toMatchObject({
+      workflows: [],
+      unread: [{ file: "qfai-validate.yml" }],
+    });
   });
 });
