@@ -297,6 +297,7 @@
     "tests/helpers/childFailure.ts",
     "tests/helpers/fixedOutputLanguage.ts",
     "tests/helpers/gitConfigEnv.ts",
+    "tests/helpers/integrationWrapperFixture.ts",
     "tests/helpers/measurementClaim.ts",
     "tests/helpers/oldHostLinks.ts",
     "tests/helpers/pathExists.ts",

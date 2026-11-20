@@ -31,6 +31,11 @@ import type * as FsPromises from "node:fs/promises";
 
 import type { Issue } from "../../../src/core/types.js";
 import type * as IntegrationSurface from "../../../src/core/validators/integrationSurface.js";
+import {
+  canCreateSymlink,
+  SHIPPED_SKILL,
+  wireProject,
+} from "../../helpers/integrationWrapperFixture.js";
 
 /**
  * Findings to answer with instead of walking the tree.
@@ -109,8 +114,6 @@ afterEach(() => {
   initAssetsOverride = null;
 });
 
-/** A skill the shipped roster carries, so its wrapper is one init would write. */
-const SHIPPED_SKILL = "qfai-implement";
 const WRAPPER = `.claude/skills/${SHIPPED_SKILL}`;
 /** What the wrapper named before the migration, and what it names after. */
 const PLURAL_TARGET = path.join("..", "..", ".qfai", "assistant", "skills", SHIPPED_SKILL);
@@ -122,42 +125,6 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });
-  }
-}
-
-/** Whether this machine can create a symlink at all (Windows may not). */
-async function canCreateSymlink(root: string): Promise<boolean> {
-  const probe = path.join(root, "probe-link");
-  try {
-    await symlink(".qfai", probe, "dir");
-    await rm(probe, { force: true });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** The canonical tree the wrappers point at, plus every wrapper init writes. */
-async function wireProject(root: string): Promise<void> {
-  const canonical = path.join(root, ".qfai", "assistant", "skill", SHIPPED_SKILL);
-  await mkdir(canonical, { recursive: true });
-  await writeFile(path.join(canonical, "SKILL.md"), "# skill\n", "utf-8");
-  await mkdir(path.join(root, ".qfai", "assistant", "agent"), { recursive: true });
-
-  for (const dir of SKILL_INTEGRATION_DIRS) {
-    const absolute = path.join(root, ...dir.split("/"));
-    await mkdir(absolute, { recursive: true });
-    const target = path.join(
-      ...dir.split("/").map(() => ".."),
-      ".qfai",
-      "assistant",
-      "skill",
-      SHIPPED_SKILL,
-    );
-    await symlink(target, path.join(absolute, SHIPPED_SKILL), "dir");
-  }
-  for (const { dir } of AGENT_INTEGRATION_CONFIGS) {
-    await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
   }
 }
 
