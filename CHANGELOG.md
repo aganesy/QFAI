@@ -577,6 +577,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   table named neither for it. The help now lists `db-drift` under both
   options.
 
+- **`qfai session-review` counts a quoted rule path whole, and one reached
+  through `..`.** A shell command reading `'.agents/rules/feature notes.md'`
+  was counted as `.agents/rules/feature`, and `src/../.agents/rules/a.md` was
+  not counted at all. Each shell word is now read whole, quotes removed, and
+  normalized before it is tested against the watched directories.
+
 - **The prototyping preflight installs nothing.** Its step said to run
   `npm i -D playwright`, which could rewrite the manifest and lockfile of a
   step that promises to change no file, and npm cannot install a project
