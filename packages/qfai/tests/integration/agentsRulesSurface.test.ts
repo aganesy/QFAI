@@ -2381,7 +2381,15 @@ describe("rule overlays", () => {
     },
     {
       file: "root-additions-policy.local.md",
-      clauses: ["report.<pid>"],
+      clauses: [
+        "report.<pid>",
+        // The shipped entry points a new rule is cited from, and the step that
+        // re-pins them. Init writes no `CLAUDE.md`, so naming one sends the
+        // contributor to a file nothing ships.
+        "`packages/qfai/assets/init/root/AGENTS.md`",
+        "`buildCopilotInstructions`",
+        "`pnpm pins:entry`",
+      ],
     },
   ];
 
