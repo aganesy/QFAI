@@ -8,7 +8,7 @@ Feature: Prompt Injection Defense
   Scenario: Prompt injection in fetched web content
     Given a fetched web page containing hidden text with injection instructions
     When the content passes through the sanitization stage
-    Then hidden text (aria-hidden, display:none) is stripped
+    Then text the page does not render (display:none) is stripped
     And control characters are removed
     And the sanitized content is safe for LLM processing
 
