@@ -5,6 +5,8 @@
  *   - every Mermaid block parses                     -> exit 0
  *   - any block Mermaid refuses                      -> exit 1, naming file:line
  *   - a ```mermaid nested inside a wider fence       -> not a diagram
+ *   - a fence inside a block quote or list item      -> a diagram, ending with its container
+ *   - a backtick run with a backtick after it        -> inline code, never a fence
  *   - `<!-- mermaid-lint:ignore -->` above a fence   -> that block is skipped
  *   - unknown flag / unreadable path                 -> exit 2
  *   - a directory holding its own `.git`             -> not scanned (another checkout)
@@ -377,6 +379,186 @@ describe("check-mermaid fence scanning", () => {
     const source = ["```ts", "const a = 1;", "```", ""].join("\n");
 
     expect(extractMermaidBlocks(source)).toHaveLength(0);
+  });
+});
+
+/**
+ * Fences inside container blocks, and lines that only look like fence openers.
+ *
+ * Each case names the CommonMark 0.31.2 rule it follows: a fence may sit inside
+ * a block quote (5.1) or a list item (5.2), it ends with the container that holds
+ * it (4.5), and a backtick fence's info string may not contain a backtick (4.5).
+ */
+describe("check-mermaid fence scanning inside containers", () => {
+  it("finds a fence inside a block quote and strips the quote marker from its body", () => {
+    // 5.1 Block quotes, Example 237: a fenced code block is block quote content.
+    const source = [
+      "# Title",
+      "",
+      "> ```mermaid",
+      "> flowchart TD",
+      ">   A --> B",
+      "> ```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].line).toBe(3);
+    expect(blocks[0].body).toBe("flowchart TD\n  A --> B");
+  });
+
+  it("finds a fence inside a nested block quote", () => {
+    const source = ["> > ```mermaid", "> > flowchart TD", "> > ```", ""].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].body).toBe("flowchart TD");
+  });
+
+  it("finds a fence nested under an ordered list item, indented to the item's content", () => {
+    // 5.2 List items, Example 263: "1.  " sets the content indent to four columns.
+    const source = [
+      "1.  Draw the flow",
+      "",
+      "    ```mermaid",
+      "    flowchart TD",
+      "      A --> B",
+      "    ```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].line).toBe(3);
+    expect(blocks[0].body).toBe("flowchart TD\n  A --> B");
+  });
+
+  it("finds a fence that opens a bullet list item", () => {
+    const source = ["- ```mermaid", "  flowchart TD", "  ```", ""].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].body).toBe("flowchart TD");
+  });
+
+  it("finds a fence inside a block quote inside a list item", () => {
+    const source = ["- > ```mermaid", "  > flowchart TD", "  > ```", ""].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].body).toBe("flowchart TD");
+  });
+
+  it("ends an unclosed fence where its block quote ends", () => {
+    // 4.5 Fenced code blocks, Example 128: unclosed code blocks are closed by
+    // the enclosing block quote. Reading on would swallow the next diagram.
+    const source = [
+      "> ```mermaid",
+      "> flowchart TD",
+      "",
+      "Prose between the two.",
+      "",
+      "```mermaid",
+      "sequenceDiagram",
+      "```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0].body).toBe("flowchart TD");
+    expect(blocks[1].line).toBe(6);
+    expect(blocks[1].body).toBe("sequenceDiagram");
+  });
+
+  it("ends an unclosed fence where its list item ends", () => {
+    const source = ["- ```mermaid", "  flowchart TD", "", "```mermaid", "pie", "```", ""].join(
+      "\n",
+    );
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0].body).toBe("flowchart TD\n");
+    expect(blocks[1].line).toBe(4);
+  });
+
+  it("reads four spaces after a block quote marker as indented code, not a fence", () => {
+    // 4.4 Indented code blocks: the four columns are counted inside the container.
+    const source = [">     ```mermaid", ">     flowchart TD", ">     ```", ""].join("\n");
+
+    expect(extractMermaidBlocks(source)).toHaveLength(0);
+  });
+
+  it("applies the ignore comment written inside the same block quote", () => {
+    const source = [
+      "> <!-- mermaid-lint:ignore -->",
+      "> ```mermaid",
+      "> flowchart TD",
+      "> ```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].ignored).toBe(true);
+  });
+
+  it("does not open a fence on a line of triple-backtick inline code", () => {
+    // 4.5 Fenced code blocks, Example 145: a backtick fence's info string may not
+    // contain a backtick, so the line is a code span and the diagram below is seen.
+    const source = [
+      "```npx qfai validate```",
+      "",
+      "```mermaid",
+      "flowchart TD",
+      "  A --> B",
+      "```",
+      "",
+    ].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].line).toBe(3);
+    expect(blocks[0].body).toBe("flowchart TD\n  A --> B");
+  });
+
+  it("does not open a fence when a backtick follows the mermaid info string", () => {
+    const source = ["``` mermaid ```", "flowchart TD", ""].join("\n");
+
+    expect(extractMermaidBlocks(source)).toHaveLength(0);
+  });
+
+  it("opens a tilde fence whose info string carries a backtick", () => {
+    // 4.5 Fenced code blocks, Example 146: the backtick rule is for backtick fences only.
+    const source = ["~~~ mermaid ``` note", "flowchart TD", "~~~", ""].join("\n");
+
+    const blocks = extractMermaidBlocks(source);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].body).toBe("flowchart TD");
+  });
+
+  it("fails the lane on a broken diagram inside a block quote, naming its fence line", async () => {
+    const dir = await newTempDir();
+    const quoted = BROKEN_DIAGRAM.split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n");
+    await writeFile(path.join(dir, "quoted.md"), `# Quoted\n\n${quoted}\n`, "utf-8");
+
+    const result = runLane([dir]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("quoted.md:3");
   });
 });
 
