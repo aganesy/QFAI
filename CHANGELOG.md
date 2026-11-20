@@ -500,6 +500,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **The installed agent entry sends scratch files to the host's scratch
+  directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
+  said every scratch file goes under `tmp/`, while the temporary-files rule they
+  point at puts it in the scratch directory the host names for the session and
+  keeps `tmp/` for when the host names none. The one-line entry now says the
+  same.
+
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
   `npx` launch for sensitive environments, while every template sends pages
@@ -524,6 +531,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   word, as if it held no files. Only a directory that does not exist is still
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
+
+- **The Markdown-schema checker refuses a `--base` with no ref.** Given
+  `--base --summary`, it took `--summary` as the ref, could not diff against
+  it, checked every document instead and printed no summary. It now leaves a
+  following option alone, reports `--base needs a git ref` and exits 2, as it
+  already did for `--tools`.
 
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio

@@ -31,6 +31,7 @@ import { afterEach, describe, expect, it } from "vitest";
 // because that is the path `pnpm lint:mermaid` and CI invoke.
 // @ts-expect-error -- a plain .mjs guard with no type declarations
 import { extractMermaidBlocks, MARKDOWN_EXTENSIONS } from "../../assets/scripts/check-mermaid.mjs";
+import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/scripts -> tests -> packages/qfai -> packages -> repo root
@@ -669,6 +670,26 @@ describe("another repository checked out inside the scanned tree", () => {
       "gitdir: /elsewhere/.git/worktrees/nested\n",
       "utf-8",
     );
+    await writeFile(path.join(nested, "broken.md"), `# Nested\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+
+    const result = runLane([dir]);
+
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout + result.stderr).not.toContain("broken.md");
+  });
+
+  // The walk decides from the directory's listing, so a `.git` link whose target is gone still
+  // marks a checkout, though nothing can be read through it.
+  it("reads no document inside a directory whose `.git` is a link to nothing", async (ctx) => {
+    const dir = await newTempDir();
+    const nested = path.join(dir, "nested");
+    await mkdir(nested, { recursive: true });
+    const linked = await createSymlinkFixture(
+      path.join(dir, "missing-gitdir"),
+      path.join(nested, ".git"),
+      "dir",
+    );
+    if (!linked) ctx.skip();
     await writeFile(path.join(nested, "broken.md"), `# Nested\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
 
     const result = runLane([dir]);

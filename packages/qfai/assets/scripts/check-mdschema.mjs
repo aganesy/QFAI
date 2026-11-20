@@ -1944,7 +1944,10 @@ function parseArgs(argv) {
       continue;
     }
     if (arg === "--base") {
-      base = argv[++i] ?? "";
+      // A following option is not a ref: taking it would drop that option and widen the scan.
+      const value = argv[i + 1] ?? "";
+      base = value.startsWith("-") ? "" : value;
+      i += base === "" ? 0 : 1;
       continue;
     }
     if (arg === "--root") {
