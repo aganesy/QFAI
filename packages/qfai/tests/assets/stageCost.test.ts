@@ -12,13 +12,13 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { workOrderBlock } from "../helpers/workOrderTemplate.js";
+
 // tests/assets/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const STAGE_COST = "assistant/rule/stage-cost.md";
-const DELEGATION = "assistant/rule/shared-skill-delegation-baseline.md";
-const WORK_ORDER = "assistant/rule/references/worker-edit-boundary.md";
 const AGENT_CARDS = "assistant/agent";
 const EVERY_ROLE = "Every agent card under `agent/`";
 
@@ -47,22 +47,6 @@ function tableRows(text: string): string[][] {
         .split("|")
         .map((cell) => cell.trim()),
     );
-}
-
-async function workOrderBlock(tree: string): Promise<string> {
-  const baseline = await read(tree, DELEGATION);
-  const pointer = baseline.split("\n## Work order template\n")[1]?.split("\n## ")[0];
-  expect(pointer).toBeDefined();
-  expect(flat(pointer ?? "")).toContain("When preparing a delegation");
-  expect(pointer).toContain(
-    ".qfai/assistant/rule/references/worker-edit-boundary.md#work-order-template",
-  );
-  const source = await read(tree, WORK_ORDER);
-  const body = source.split("\n## Work order template\n")[1]?.split("\n## ")[0];
-  expect(body).toBeDefined();
-  const block = /```text\n([\s\S]*?)```/.exec(body ?? "");
-  expect(block).not.toBeNull();
-  return block?.[1] ?? "";
 }
 
 /** Agent IDs, one per card file under `agent/`. */
