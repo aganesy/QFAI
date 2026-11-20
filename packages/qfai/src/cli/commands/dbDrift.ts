@@ -143,11 +143,21 @@ export function renderText(
     for (const failure of failures) {
       lines.push(`  ${failure.side}: ${failure.file} — ${failure.message}`);
     }
-    lines.push("");
+    // A file that did not apply may declare any column, so what follows
+    // covers only the files that did: neither equality nor the list below
+    // holds for the schemas as written.
+    lines.push(
+      "The comparison is incomplete: the columns those files declare were not compared.",
+      "",
+    );
   }
 
   if (differences.length === 0) {
-    lines.push("The contracts and the migrations declare the same columns.");
+    lines.push(
+      failures.length > 0
+        ? "The files that applied show no column differences."
+        : "The contracts and the migrations declare the same columns.",
+    );
     return lines.join("\n");
   }
 

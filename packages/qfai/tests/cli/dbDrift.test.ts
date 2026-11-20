@@ -393,4 +393,37 @@ describe("the report", () => {
     expect(text).toContain("1 file(s) would not apply");
     expect(text).toContain("migrations: migrations/0002.sql");
   });
+
+  it("calls the comparison incomplete, not equal, when a file would not apply", () => {
+    const text = renderText(
+      [],
+      [{ side: "migrations", file: "migrations/0002.sql", message: "syntax error" }],
+    );
+
+    expect(text).not.toContain("the same columns");
+    expect(text).toContain("incomplete");
+  });
+
+  it("calls the differences incomplete when a file would not apply", () => {
+    const text = renderText(
+      [
+        {
+          kind: "only-in-contracts",
+          table: "orders",
+          column: "note",
+          contracts: {
+            table: "orders",
+            column: "note",
+            type: "text",
+            nullable: true,
+            columnDefault: null,
+          },
+        },
+      ],
+      [{ side: "migrations", file: "migrations/0002.sql", message: "syntax error" }],
+    );
+
+    expect(text).toContain("1 column difference(s)");
+    expect(text).toContain("incomplete");
+  });
 });
