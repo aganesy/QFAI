@@ -541,6 +541,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   notice naming the files only `--force` brings up to date. It is now
   compared like a file that was already there. Closes #4703.
 
+- **`--show-patterns` on the shipped document-schema checker now applies to
+  the run that asked for it only.** A run with the flag left it set for the
+  rest of the process, so a later run, or a `qfai validate` document-schema
+  check in the same process, printed raw patterns it never asked for. Each
+  run now restores the setting it started with. Closes #4726.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
