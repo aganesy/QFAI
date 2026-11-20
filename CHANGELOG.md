@@ -337,6 +337,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   components for the parts the screens repeat, and captured. The flow is not
   done until that is so.
 
+- **`qfai report` resolves each business flow's scope once.** The flow's
+  coverage and its traceability graph now share one resolution, so a report no
+  longer scans every story-tree collection twice per flow. The reports it
+  writes are unchanged. Closes #4875.
+
 - **The prototype reviewer checks the business-screen floor, not only what
   the UI contract declares.** On an application screen the run adds or
   changes, a missing way back, or empty, loading, error or success state with
