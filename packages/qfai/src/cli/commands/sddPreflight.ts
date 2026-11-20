@@ -56,6 +56,8 @@ export type SddPreflightCommandOptions = {
 };
 
 const CARRY_OVER_HEADING = "## Open Questions (Carry-over)";
+/** The unfilled entry of the shipped `preflight_summary.md` template. */
+const CARRY_OVER_PLACEHOLDER = "<carried-over assumption | none>";
 
 function toRelative(root: string, target: string): string {
   const relative = path.relative(root, target);
@@ -131,7 +133,9 @@ async function readRecordedCarryOver(root: string, summaryPath: string): Promise
     if (item === undefined || item.length === 0) {
       continue;
     }
-    if (item.toLowerCase() === "none" || item.startsWith("<")) {
+    // Only `none` and the template's own placeholder mean "no carry-over": a
+    // real entry may open with a tag or a comparison.
+    if (item.toLowerCase() === "none" || item === CARRY_OVER_PLACEHOLDER) {
       continue;
     }
     carried.push(item);
