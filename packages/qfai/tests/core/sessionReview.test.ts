@@ -519,6 +519,16 @@ describe("the signal helpers", () => {
     expect(pathsInCommand("cat ../.agents/rules/a.md /tmp/.agents/rules/a.md", facts)).toEqual([]);
   });
 
+  it("reads the paths inside a quoted script and an option's value", () => {
+    const facts = { root: "/work/app", platform: "linux" as const };
+    expect(
+      pathsInCommand(`bash -c "cat '.agents/rules/a b.md' .claude/rules/c.md"`, facts),
+    ).toEqual([".agents/rules/a b.md", ".claude/rules/c.md"]);
+    expect(pathsInCommand("tool --file=.agents/skills/x/SKILL.md>out.txt", facts)).toEqual([
+      ".agents/skills/x/SKILL.md",
+    ]);
+  });
+
   it("keys a hook context by exact text first, else unregistered when it names QFAI", () => {
     expect(
       reminderKeys("For new requests the user wrote, use qfai-run to plan.", REMINDER_TEXTS),
