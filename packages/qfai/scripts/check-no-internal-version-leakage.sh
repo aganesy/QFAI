@@ -132,7 +132,8 @@ SCHEMA_VERSION_RE='"schemaVersion"|schemaVersion[[:space:]]*:'
 # silently swallowed by `mapfile < <(...)`. A silent pass would defeat the
 # purpose of the leakage guard.
 pack_stderr=$(mktemp)
-trap 'rm -f "$pack_stderr"' EXIT
+grep_stderr=$(mktemp)
+trap 'rm -f "$pack_stderr" "$grep_stderr"' EXIT
 surfaces_listing=$(cd "$ROOT" && npm pack --dry-run --json --ignore-scripts 2>"$pack_stderr" | node -e '
   let raw = "";
   process.stdin.on("data", (chunk) => (raw += chunk));
@@ -188,10 +189,25 @@ if [[ -n "$not_built" ]]; then
   echo "WARN: scanned ${#SCAN_PATHS[@]} surface(s); package.json#files names entries that are not on disk yet (e.g. dist/ before build): ${not_built//$'\n'/ }" >&2
 fi
 
+# grep exits 1 when it selected no line and above 1 when it could not read
+# something, such as a file `find` lists whose contents are unreadable. Read
+# as "no match", that second case let the guard print OK over bytes it never
+# checked, so each content pass reports it with grep's own message, which
+# names the affected path. Matches grep did print are still reported.
+report_unread() {
+  echo "FAIL: could not read every file under $2 for the $1 pass (grep exit $3):" >&2
+  head -20 "$grep_stderr" >&2
+  fail=1
+}
+
 for idx in "${!SCAN_PATHS[@]}"; do
   target="${SCAN_PATHS[$idx]}"
   relative_target="${SCAN_RELATIVES[$idx]}"
-  hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE|$STORY_ID_RE" "$target" 2>/dev/null || true)
+  grep_status=0
+  hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE|$STORY_ID_RE" "$target" 2>"$grep_stderr") || grep_status=$?
+  if [[ "$grep_status" -gt 1 ]]; then
+    report_unread "content" "$target" "$grep_status"
+  fi
   if [[ -n "$hits" ]]; then
     echo "FAIL: internal spec id, version marker, or trace id leaked in $target:" >&2
     echo "$hits" | head -20 >&2
@@ -224,7 +240,11 @@ for idx in "${!SCAN_PATHS[@]}"; do
     printf '%s\n' "$name_hits" | head -20 >&2
     fail=1
   fi
-  schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$target" 2>/dev/null || true)
+  grep_status=0
+  schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$target" 2>"$grep_stderr") || grep_status=$?
+  if [[ "$grep_status" -gt 1 ]]; then
+    report_unread "schemaVersion" "$target" "$grep_status"
+  fi
   if [[ -n "$schema_hits" ]]; then
     echo "FAIL: schemaVersion field present in distributed surface $target:" >&2
     echo "$schema_hits" | head -20 >&2
