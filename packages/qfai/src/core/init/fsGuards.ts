@@ -4,6 +4,7 @@ import { access, lstat, open, readFile, stat } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
+import { readHandleWithin } from "../../shared/boundedRead.js";
 import { hasErrnoCode, isEnoent, isEperm } from "../fs/errno.js";
 
 /**
@@ -106,30 +107,14 @@ export async function readPinnedRegularFileBytes(
     handle = await open(filePath, OPEN_READ_FLAGS);
     const pinned = await handle.stat();
     if (!pinned.isFile() || pinned.size > maxBytes) return null;
-    // Read to the end, not once: `read` may return fewer bytes than asked for,
-    // and the unfilled tail stayed NUL — a correct flattened wrapper then
-    // failed its own signature comparison and was left in place.
-    //
-    // And to `maxBytes + 1`, not to the size just measured. Another process
-    // holding this inode from before the rename can append after the `fstat`,
-    // and stopping at the old size read a **prefix** — which still matched the
-    // target, so the repair went ahead and the cleanup deleted the sidecar with
-    // the appended bytes in it. One byte past the ceiling is what distinguishes
-    // "this is the whole file" from "this is as much as I asked for".
-    const buffer = Buffer.alloc(maxBytes + 1);
-    let filled = 0;
-    while (filled < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
-      if (bytesRead === 0) break;
-      filled += bytesRead;
-    }
-    if (filled > maxBytes) return null;
+    const content = await readHandleWithin(handle, maxBytes);
+    if (content === undefined) return null;
     // The metadata comes from this `fstat`, not from a separate `stat` on the
     // pathname. Two operations could land on two inodes: content read from a
     // replacement that somebody made `0600` for a reason, restored under the
     // `0644` the old entry carried, and readable by everyone.
     return {
-      content: Buffer.from(buffer.subarray(0, filled)),
+      content: Buffer.from(content),
       mode: pinned.mode & 0o7777,
       uid: pinned.uid,
       gid: pinned.gid,

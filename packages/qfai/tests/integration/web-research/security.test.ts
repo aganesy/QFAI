@@ -49,9 +49,11 @@ describe("web-research security", () => {
   });
 
   // QFAI:EX-0001-0179-02  TDD-0014
-  it("aria-hidden content removed", async () => {
+  it("rendered aria-hidden content is kept", async () => {
     const content = await readSkill();
-    expect(content).toMatch(/aria[_\s-]?hidden/i);
+    expect(content).toContain(
+      "Removal follows rendered visibility: a rendered `aria-hidden` element stays.",
+    );
   });
 
   // QFAI:EX-0001-0179-05

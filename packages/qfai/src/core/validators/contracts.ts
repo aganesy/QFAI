@@ -94,8 +94,6 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
     );
   }
 
-  // Resolved once for the whole run rather than per contract file: the promotion
-  // window is a property of the tool, not of the file being read.
   for (const file of uiFiles) {
     issues.push(...(await validateContractFile(file, "UI")));
   }

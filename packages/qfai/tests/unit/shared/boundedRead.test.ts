@@ -8,13 +8,14 @@
  */
 
 import { appendFileSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, open, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  readHandleWithin,
   sameObject,
   scanBoundedRegularFile,
   type ObjectIdentity,
@@ -148,5 +149,47 @@ describe("scanBoundedRegularFile", () => {
     expect(await scan(path.dirname(file))).toBe("refused");
     expect(await scan(path.join(path.dirname(file), "absent.txt"))).toBe("refused");
     expect(calls).toEqual([]);
+  });
+});
+
+describe("readHandleWithin", () => {
+  /** What `readHandleWithin` answers for a file holding `body`. */
+  async function readWithin(body: string, maxBytes: number): Promise<string | undefined> {
+    const handle = await open(await fileHolding(body), "r");
+    try {
+      return (await readHandleWithin(handle, maxBytes))?.toString("utf-8");
+    } finally {
+      await handle.close();
+    }
+  }
+
+  it("answers the whole file when it fits, up to the ceiling itself", async () => {
+    expect(await readWithin("abcdef", 1024)).toBe("abcdef");
+    expect(await readWithin("abcdef", 6)).toBe("abcdef");
+    expect(await readWithin("", 0)).toBe("");
+  });
+
+  it("refuses a file one byte past the ceiling rather than truncating it", async () => {
+    // The extra byte is how a file that grew after its size was measured is
+    // told apart from a whole one.
+    expect(await readWithin("abcdef", 5)).toBeUndefined();
+  });
+
+  it("keeps reading through short reads until the end", async () => {
+    // A read that returns fewer bytes than asked for left the tail as NUL.
+    const handle = await open(await fileHolding("abcdef"), "r");
+    try {
+      let calls = 0;
+      const shortReader = {
+        read: (buffer: Buffer, offset: number, length: number, position: number) => {
+          calls += 1;
+          return handle.read(buffer, offset, Math.min(length, 2), position);
+        },
+      };
+      expect((await readHandleWithin(shortReader, 1024))?.toString("utf-8")).toBe("abcdef");
+      expect(calls).toBe(4);
+    } finally {
+      await handle.close();
+    }
   });
 });
