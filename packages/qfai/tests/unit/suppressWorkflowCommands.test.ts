@@ -101,6 +101,29 @@ describe("the suite does not emit GitHub workflow commands", () => {
     expect(out).not.toContain("::warning");
   });
 
+  it("still calls the completion callback of a chunk it rewrote", () => {
+    const out = stdoutOf(
+      `process.stdout.write("before\\n::warning::dropped\\nafter\\n", () => { process.stdout.write("callback ran\\n"); });`,
+    );
+    expect(out).toContain("after");
+    expect(
+      out,
+      "a rewritten chunk that drops the callback leaves code awaiting the flush hanging",
+    ).toContain("callback ran");
+  });
+
+  it("writes a rewritten chunk in the encoding the caller named", () => {
+    const out = stdoutOf(
+      `process.stdout.write("before\\n::warning::dropped\\nafter\\n", "utf16le", () => { process.stdout.write("callback ran\\n"); });`,
+    );
+    expect(out).not.toContain("::warning");
+    // Read back as UTF-8, a UTF-16LE "after" is each letter followed by a NUL byte.
+    expect(out, "the kept text must go out in the caller's encoding, not UTF-8").toContain(
+      "a\u0000f\u0000t\u0000e\u0000r\u0000",
+    );
+    expect(out).toContain("callback ran");
+  });
+
   it("is installed in THIS process, which the child rows cannot show", () => {
     // The rows above prove the module filters. They cannot prove it is WIRED
     // into the runner: `setupFiles` could be misspelled, scoped to one project,
