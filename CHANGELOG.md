@@ -525,6 +525,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   table named neither for it. The help now lists `db-drift` under both
   options.
 
+- **Constitution Article XI is headed "Temporary files".** Its heading said
+  every temporary file goes in `tmp/`, while the temporary-files rule it links
+  puts a scratch file in the host's session scratch directory first and keeps
+  `tmp/` for when the host names none and for inputs the repository reads. The
+  heading no longer names a location, so a reader of the outline is not sent to
+  the wrong one.
+
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
   `npx` launch for sensitive environments, while every template sends pages
