@@ -546,6 +546,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and reports the missing prerequisite, leaving the install to setup the user
   authorizes with the project's package manager.
 
+- **`qfai doctor` now names a shipped copy its drift checks cannot read.** The
+  `workflows.drift` and `assistant.drift` checks read every read failure as a
+  missing file, so an installed workflow or assistant file, or the packaged
+  copy it is compared with, that existed but could not be read dropped out of
+  the comparison without a word. Each such copy is now a `warning` naming the
+  path and the cause, and the rest of the scan goes on. A copy that does not
+  exist still raises nothing.
+
 - **Constitution Article XI is headed "Temporary files".** Its heading said
   every temporary file goes in `tmp/`, while the temporary-files rule it links
   puts a scratch file in the host's session scratch directory first and keeps
