@@ -108,9 +108,20 @@ export function problemsOf({ base, head, changed }) {
   return problems;
 }
 
-function git(args) {
-  const result = spawnSync("git", args, { encoding: "utf-8" });
+function git(args, cwd) {
+  const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
   return result.status === 0 ? result.stdout : null;
+}
+
+/**
+ * The paths `range` changes, or `null` when git cannot read it.
+ *
+ * `-z`: without it git quotes a path holding a non-ASCII or special byte, and the
+ * quoted form starts with `"`, so no shipped prefix would match it.
+ */
+export function changedPaths(range, cwd) {
+  const out = git(["diff", "--name-only", "-z", range], cwd);
+  return out === null ? null : out.split("\0").filter((rel) => rel !== "");
 }
 
 /** The `--base` value, `undefined` when absent, or `null` for any other argument list. */
@@ -150,7 +161,7 @@ function main() {
     );
     return 0;
   }
-  const changed = git(["diff", "--name-only", range.range]);
+  const changed = changedPaths(range.range);
   const messages = git(["log", "--format=%B", `${range.baseRev}..HEAD`]);
   if (changed === null || messages === null) {
     stdout.write("check-changelog-entries: the range could not be read; nothing compared.\n");
@@ -160,7 +171,7 @@ function main() {
   const problems = problemsOf({
     base,
     head: readFileSync(CHANGELOG, "utf-8"),
-    changed: changed.split("\n").filter((line) => line !== ""),
+    changed,
   });
   if (problems.length === 0) {
     stdout.write("check-changelog-entries: the changelog entries match the change.\n");
