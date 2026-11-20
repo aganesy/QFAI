@@ -500,6 +500,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **The installed agent entry sends scratch files to the host's scratch
+  directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
+  said every scratch file goes under `tmp/`, while the temporary-files rule they
+  point at puts it in the scratch directory the host names for the session and
+  keeps `tmp/` for when the host names none. The one-line entry now says the
+  same.
+
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
   `npx` launch for sensitive environments, while every template sends pages
