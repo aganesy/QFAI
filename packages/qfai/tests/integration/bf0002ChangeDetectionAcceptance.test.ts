@@ -8,7 +8,11 @@ import { parse as parseYaml } from "yaml";
 
 import { removeTempTree } from "../helpers/tempTree.js";
 import { isRecord, REPO_ROOT } from "../scripts/helpers/hygieneTree.js";
-import { aggregateChecks } from "../helpers/aggregateChecks.js";
+import {
+  AGGREGATE_HELPER_REL,
+  aggregateArgument,
+  aggregateChecks,
+} from "../helpers/aggregateChecks.js";
 
 const FULL_LANE_CONDITION = "${{ needs.detect.outputs.full == 'true' }}";
 
@@ -301,40 +305,36 @@ describe("BF-0002 change detection acceptance", () => {
   });
 
   // QFAI:AC-0002-0013-07
-  it.skipIf(process.platform === "win32")(
-    "runs every later check of a lint-aggregate lane after one fails, then exits non-zero",
-    async () => {
-      const manifest: unknown = JSON.parse(
-        readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"),
-      );
-      const scripts =
-        isRecord(manifest) && isRecord(manifest["scripts"]) ? manifest["scripts"] : {};
-      const aggregate = readFileSync(path.join(REPO_ROOT, "scripts", "run-lint-checks.sh"), "utf8");
-      const lanes = [...aggregate.matchAll(/^\s*pnpm (ci:(?:lint|gate):[\w:-]+) &$/gm)].map(
-        (match) => match[1] ?? "",
-      );
-      expect(lanes.length).toBeGreaterThan(0);
-      for (const lane of lanes) {
-        const body = scripts[lane];
-        if (typeof body !== "string") throw new Error(`the root manifest does not declare ${lane}`);
-        const temp = mkdtempSync(path.join(os.tmpdir(), "qfai-lane-chain-"));
-        try {
-          // Every stubbed check records its call; the first one called fails.
-          const stub = [
-            'record() { printf "%s\\n" "$*" >> calls.txt; [ -f failed ] || { touch failed; return 1; }; }',
-            'pnpm() { record pnpm "$@"; }',
-            'node() { record node "$@"; }',
-          ].join("\n");
-          const run = spawnSync("sh", ["-c", `${stub}\n${body}`], { cwd: temp, encoding: "utf8" });
-          const calls = readFileSync(path.join(temp, "calls.txt"), "utf8").trim().split("\n");
-          const checks = body.split("; ").filter((link) => link.endsWith(" || status=1"));
-          expect(run.status, `${lane}: ${run.stderr}`).toBe(1);
-          expect(calls, lane).toHaveLength(checks.length);
-          expect(checks.length, `${lane} holds fewer than two checks`).toBeGreaterThan(1);
-        } finally {
-          await removeTempTree(temp);
-        }
+  it("runs every later check of a lint-aggregate lane after one fails, then exits non-zero", async () => {
+    const helper = readFileSync(path.join(REPO_ROOT, AGGREGATE_HELPER_REL), "utf8");
+    const aggregate = readFileSync(path.join(REPO_ROOT, "scripts", "run-lint-checks.sh"), "utf8");
+    const lanes = [...aggregate.matchAll(/^\s*pnpm (ci:(?:lint|gate):[\w:-]+) &$/gm)].map(
+      (match) => match[1] ?? "",
+    );
+    expect(lanes.length).toBeGreaterThan(0);
+    for (const lane of lanes) {
+      const argument = aggregateArgument(REPO_ROOT, lane);
+      const temp = mkdtempSync(path.join(os.tmpdir(), "qfai-lane-chain-"));
+      try {
+        // Every stubbed check records its call; the first one called fails.
+        const stub = [
+          'record() { printf "%s\\n" "$*" >> calls.txt; [ -f failed ] || { touch failed; return 1; }; }',
+          'pnpm() { record pnpm "$@"; }',
+          'node() { record node "$@"; }',
+        ].join("\n");
+        const run = spawnSync(
+          "bash",
+          ["-c", `${stub}\n${helper}`, "run-aggregate-checks", argument],
+          { cwd: temp, encoding: "utf8" },
+        );
+        const calls = readFileSync(path.join(temp, "calls.txt"), "utf8").trim().split("\n");
+        const checks = aggregateChecks(REPO_ROOT, lane);
+        expect(run.status, `${lane}: ${run.stderr}`).toBe(1);
+        expect(calls, lane).toHaveLength(checks.length);
+        expect(checks.length, `${lane} holds fewer than two checks`).toBeGreaterThan(1);
+      } finally {
+        await removeTempTree(temp);
       }
-    },
-  );
+    }
+  });
 });

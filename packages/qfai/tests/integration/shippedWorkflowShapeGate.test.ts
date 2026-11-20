@@ -999,21 +999,23 @@ describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not
       path.join(repoRoot, "scripts/run-lint-checks.sh"),
       path.join(root, "scripts/run-lint-checks.sh"),
     );
+    // The aggregate lanes' check lists live in this helper, which the manifest
+    // entries hand them to, so it is where the two named checks are written.
+    const aggregateHelper = path.join(root, "scripts/run-aggregate-checks.sh");
+    await cp(path.join(repoRoot, "scripts/run-aggregate-checks.sh"), aggregateHelper);
     const scripts = await readScripts(path.join(repoRoot, "package.json"));
     const manifest = path.join(root, "package.json");
     await writeFile(manifest, JSON.stringify({ scripts }), "utf-8");
     expect(lintScriptBodies(root)).toContain(GATE_ROOT_INVOCATION);
     expect(lintScriptBodies(root)).toContain(PRECEDENT_ROOT_INVOCATION);
 
-    const owners = Object.entries(scripts).filter(([, body]) =>
-      body.includes(GATE_ROOT_INVOCATION),
+    const helperText = await readFile(aggregateHelper, "utf-8");
+    expect(helperText.split(GATE_ROOT_INVOCATION)).toHaveLength(2);
+    await writeFile(
+      aggregateHelper,
+      helperText.replace(GATE_ROOT_INVOCATION, ":").replace(PRECEDENT_ROOT_INVOCATION, ":"),
+      "utf-8",
     );
-    expect(owners).toHaveLength(1);
-    for (const [name, body] of owners) {
-      scripts[name] = body
-        .replace(GATE_ROOT_INVOCATION, ":")
-        .replace(PRECEDENT_ROOT_INVOCATION, ":");
-    }
     scripts["uncalled-checks"] = `${GATE_ROOT_INVOCATION} && ${PRECEDENT_ROOT_INVOCATION}`;
     await writeFile(manifest, JSON.stringify({ scripts }), "utf-8");
     expect(scripts["uncalled-checks"]).toContain(GATE_ROOT_INVOCATION);
