@@ -5,6 +5,7 @@ import type { Artifact } from "./extraction.js";
 import { extractionFaultsOf, isExtraction } from "./extractionShape.js";
 import {
   loadInstalledPlan,
+  missingSteps,
   type PlanBranchPoint,
   type PlanRefusal,
   type WorkflowPlanFile,
@@ -154,6 +155,21 @@ async function loaded(root: string, route: WorkflowRoute): Promise<Loaded> {
   return load.ok ? load : { ok: false, document: planInvalid(load.refusals) };
 }
 
+// The plan with the specification stage the request needs. The stage may run steps the route does
+// not, so the plan it gives is refused as well when one of those is not installed.
+async function withInstalledSpecStage(
+  root: string,
+  plan: WorkflowPlanFile,
+  artifacts: readonly Artifact[],
+): Promise<Loaded> {
+  const wider = withSpecStage(plan, artifacts);
+  if (wider === plan) return { ok: true, plan };
+  const missing = await missingSteps(root, wider);
+  return missing.length > 0
+    ? { ok: false, document: planInvalid(missing) }
+    : { ok: true, plan: wider };
+}
+
 // The refusal for a request whose artifacts no stage of the route writes.
 function unservedRefusal(unserved: readonly Artifact[]): PlanDocument {
   const message =
@@ -187,7 +203,13 @@ async function candidatesOf(
     // A candidate that cannot serve the request is not an option.
     if (unservedArtifacts(stages, artifacts).length > 0) continue;
     const decisionPoints = decisionPointsOf(load.plan, choice.decision);
-    const plan = withSpecStage({ ...load.plan, decisionPoints }, artifacts);
+    const expanded = await withInstalledSpecStage(
+      root,
+      { ...load.plan, decisionPoints },
+      artifacts,
+    );
+    if (!expanded.ok) return expanded.document;
+    const { plan } = expanded;
     const summary = `${FAMILY_SUMMARIES[family] ?? "Run this plan."} Stages: ${plan.stages.map((stage) => stage.id).join(", ")}.`;
     candidates.push({
       route: choice.route,
@@ -238,7 +260,9 @@ async function planOfExtraction(root: string, extraction: unknown): Promise<Plan
   const unserved = unservedArtifacts(load.plan.stages, artifacts);
   if (unserved.length > 0) return unservedRefusal(unserved);
   const decisionPoints = decisionPointsOf(load.plan, extraction.entryFlags.includes("decision"));
-  const plan = withSpecStage({ ...load.plan, decisionPoints }, artifacts);
+  const expanded = await withInstalledSpecStage(root, { ...load.plan, decisionPoints }, artifacts);
+  if (!expanded.ok) return expanded.document;
+  const { plan } = expanded;
   return planned(
     plan,
     outcome.taken.rule,
@@ -272,5 +296,6 @@ async function planOfRoute(
   if (extraction === undefined) return planned(load.plan);
   const unserved = unservedArtifacts(load.plan.stages, extraction.artifacts);
   if (unserved.length > 0) return unservedRefusal(unserved);
-  return planned(withSpecStage(load.plan, extraction.artifacts));
+  const expanded = await withInstalledSpecStage(root, load.plan, extraction.artifacts);
+  return expanded.ok ? planned(expanded.plan) : expanded.document;
 }

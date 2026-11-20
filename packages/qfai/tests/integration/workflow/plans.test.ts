@@ -501,7 +501,12 @@ it("A project whose sdd-triage step, run only by the added specification stage, 
     ok: false,
     message: expect.any(String),
     reasons: [
-      { reason: "plan-invalid", subject: "sdd-triage", file: `${route}.yml`, cause: "step-missing" },
+      {
+        reason: "plan-invalid",
+        subject: "sdd-triage",
+        file: `${route}.yml`,
+        cause: "step-missing",
+      },
     ],
   });
 

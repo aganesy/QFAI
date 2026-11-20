@@ -507,6 +507,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow plan` refuses a plan whose added specification stage runs a
+  step that is not installed.** A request naming the story tree can give a
+  route a `spec` stage with `sdd-triage`, `sdd-story` or `sdd-contract`, but
+  only the route's own steps were checked, so the plan was reported usable
+  with one of those step files missing. The final plan is now checked, for a
+  routed extraction, each candidate and a named route given its extraction,
+  and refused with `plan-invalid` and `step-missing` as for the route's own
+  steps.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which

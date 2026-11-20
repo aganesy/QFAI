@@ -86,8 +86,13 @@ async function contractRefusals(root: string, steps: Map<string, string>): Promi
 export async function loadInstalledPlan(root: string, route: WorkflowRoute): Promise<PlanLoad> {
   const load = await loadPackagePlan(route);
   if (!load.ok) return load;
-  const missing = await contractRefusals(root, planSteps([load.plan]));
+  const missing = await missingSteps(root, load.plan);
   return missing.length > 0 ? { ok: false, refusals: missing } : load;
+}
+
+// Each step the plan runs that is not installed in the project.
+export async function missingSteps(root: string, plan: WorkflowPlanFile): Promise<PlanRefusal[]> {
+  return contractRefusals(root, planSteps([plan]));
 }
 
 // Every refusal over the package's plans and the steps they run.
