@@ -106,6 +106,47 @@ const JS_TS_DIALECT = jsTsDialect("vitest", "vitest");
 /** Chosen over the vitest skeleton only for a project that runs `node --test`. */
 const NODE_TEST_DIALECT = jsTsDialect("node:test", "node:test");
 
+/**
+ * The node:test skeleton for a file Node loads as CommonJS, where an `import`
+ * statement is a syntax error. vitest transforms what it loads, so only the
+ * node:test skeleton needs this form.
+ */
+const NODE_TEST_COMMONJS_DIALECT: ScaffoldDialectTemplate = {
+  ...NODE_TEST_DIALECT,
+  buildBody: (targetId) => [
+    `const { describe, it } = require("node:test");`,
+    ...NODE_TEST_DIALECT.buildBody(targetId).slice(1),
+  ],
+};
+
+/**
+ * The `type` field of a `package.json`: `module` or `commonjs` when it says
+ * so, and `unset` for anything else, which Node reads as no type at all.
+ */
+export type PackageModuleType = "module" | "commonjs" | "unset";
+
+/** Read the `type` field from a parsed `package.json`. */
+export function readPackageModuleType(manifest: unknown): PackageModuleType {
+  if (!isRecord(manifest)) return "unset";
+  const type = manifest["type"];
+  return type === "module" || type === "commonjs" ? type : "unset";
+}
+
+/**
+ * Whether the skeleton takes the `require` form. `.cjs` and `.cts` always do,
+ * since Node loads them as CommonJS. `.js` does unless its package says
+ * `module`: with no type, Node loads a file without module syntax as
+ * CommonJS, and `require` runs either way. `.ts` does only when its package
+ * says `commonjs`, where Node's own type stripping loads it as CommonJS; with
+ * no type, a TypeScript project usually compiles or transforms the file, and
+ * Node detects the `import` form when it runs it directly.
+ */
+function loadsAsCommonJs(extension: string, packageType: PackageModuleType): boolean {
+  if (extension === "cjs" || extension === "cts") return true;
+  if (extension === "js") return packageType !== "module";
+  return extension === "ts" && packageType === "commonjs";
+}
+
 const PYTHON_DIALECT: ScaffoldDialectTemplate = {
   id: "python",
   runner: "pytest (unittest-compatible)",
@@ -1105,17 +1146,25 @@ export type ScaffoldDialectOptions = {
 /**
  * Fit a resolved dialect to the project's JS/TS runner. A non-JS/TS dialect is
  * returned as it is; a JS/TS one keeps its file name and takes the runner's
- * body, or is refused when the runner has no skeleton here.
+ * body, or is refused when the runner has no skeleton here. `packageType` is
+ * the `type` of the `package.json` nearest the skeleton, which decides how
+ * Node loads a `.js` node:test skeleton.
  */
 export function applyJsRunner(
   dialect: ScaffoldDialect,
   jsRunner: JsTestRunner,
+  packageType: PackageModuleType,
 ): ScaffoldDialectResolution {
   if (dialect.id !== "js-ts") return { outcome: "resolved", dialect };
   if (jsRunner === "jest" || jsRunner === "none") {
     return { outcome: "unsupported-runner", runner: jsRunner };
   }
-  const template = jsRunner === "node:test" ? NODE_TEST_DIALECT : JS_TS_DIALECT;
+  const template =
+    jsRunner !== "node:test"
+      ? JS_TS_DIALECT
+      : loadsAsCommonJs(dialect.extension, packageType)
+        ? NODE_TEST_COMMONJS_DIALECT
+        : NODE_TEST_DIALECT;
   return {
     outcome: "resolved",
     dialect: {
