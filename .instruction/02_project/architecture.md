@@ -30,9 +30,9 @@ packages/qfai/
       commands/   # init / validate / report
       lib/        # shared code such as args and logger
     core/
-      validators/ # spec/delta/scenario/contracts/traceability/ids
-      parse/      # parsing of spec/delta/scenario
-      gherkin/    # Gherkin model helpers
+      validators/ # one module per check, re-exported from validators/index.ts
+      storyTree/  # story-tree layout, IDs, tables and contract-rule parsing
+      parse/      # Markdown and design-token parsing (markdown.ts, designToken.ts)
   assets/
     init/         # init templates
   tests/
