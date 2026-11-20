@@ -216,6 +216,9 @@ describe("a question answered without a change", () => {
     );
     expect(gate).toContain("`decisions.md`");
     expect(gate).toMatch(/`qfai-run`.*\b(?:records|writes)\b.*\bbefore\b.*`triage-handoff`/i);
+    expect(gate).toContain(
+      "The local commit holds only the record and those rows, and nothing was pushed.",
+    );
 
     for (const name of ["triage-handoff", "triage-close"]) {
       expect(flat(sectionOf(await step(name), "## What it writes")), name).toMatch(
