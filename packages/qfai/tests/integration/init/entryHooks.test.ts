@@ -18,6 +18,7 @@ import {
 } from "../../../src/core/claudeCodeHooks.js";
 import { initQuietly, withEmptyRepo } from "./upgradeStates.js";
 import { reminderSettings } from "../../helpers/reminderSettings.js";
+import { expectNoEmbeddedReminderText } from "../../helpers/reminderAssertions.js";
 
 // tests/integration/init/<this file> -> tests -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -26,23 +27,6 @@ const CODEX = path.join(".codex", "hooks.json");
 const CLAUDE = path.join(".claude", "settings.json");
 const TRUST_LINE =
   "Codex runs the hooks in .codex/hooks.json only after you review and trust them with /hooks.";
-
-function expectNoEmbeddedReminderText(program: string, messages: unknown): void {
-  if (typeof messages !== "object" || messages === null) throw new Error("no reminder catalog");
-  for (const message of Object.values(messages)) {
-    if (typeof message !== "object" || message === null) throw new Error("invalid reminder");
-    const output: unknown = Reflect.get(message, "hookSpecificOutput");
-    const full: unknown =
-      typeof output === "object" && output !== null
-        ? Reflect.get(output, "additionalContext")
-        : undefined;
-    for (const context of [full, Reflect.get(message, "briefContext")]) {
-      if (typeof context !== "string") continue;
-      expect(program).not.toContain(context);
-      expect(program).not.toContain(JSON.stringify(context).slice(1, -1));
-    }
-  }
-}
 
 function trustLines(output: string): string[] {
   return output.split("\n").filter((line) => line.includes("trust them with /hooks"));

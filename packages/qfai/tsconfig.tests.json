@@ -303,6 +303,7 @@
     "tests/helpers/prototypingPreflightFixture.ts",
     "tests/setup/disableGitAutoMaintenance.ts",
     "tests/helpers/recordProse.ts",
+    "tests/helpers/reminderAssertions.ts",
     "tests/helpers/reminderHooks.ts",
     "tests/helpers/repositoryAttribution.ts",
     "tests/helpers/runnerProjects.ts",
