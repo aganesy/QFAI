@@ -1,6 +1,6 @@
 export async function captureStderr(task: () => Promise<void>): Promise<string> {
   const output: string[] = [];
-  const originalWrite = process.stderr.write.bind(process.stderr);
+  const originalWrite = process.stderr.write;
   const mockWrite: typeof process.stderr.write = (
     chunk: string | Uint8Array,
     encoding?: BufferEncoding | ((err?: Error) => void),
