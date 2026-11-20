@@ -632,6 +632,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the emitted report. The report now stops before writing and names the field,
   such as `waivers.suppressed.byRule["QFAI-X"] must be a number`.
 
+- **HTML mock state checks read variants styled through classes.** An element
+  without a `style` attribute had its `data-state` and `data-breakpoint` passed
+  over, so a mock whose error variant was styled by class warned that the error
+  state was missing, and a mock styled only by class had no state check at all.
+  Both markers are now read from every element.
+
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
   server, though the skill and its contract call for HTTP transport too.

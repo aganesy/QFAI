@@ -113,8 +113,15 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
 
   const dimensionProbe = doc.createElement("div");
 
-  // Var usages from inline styles
   for (const el of allElements) {
+    // State and breakpoint markers, read before the inline-style checks below so that an element
+    // styled only through its classes still reports them.
+    const state = el.getAttribute("data-state");
+    if (state) result.stateAttributes.push(state);
+    const bp = el.getAttribute("data-breakpoint");
+    if (bp) result.breakpointAttributes.push(bp);
+
+    // Var usages from inline styles
     const style = el.getAttribute("style") ?? "";
     if (!style) continue;
 
@@ -159,14 +166,6 @@ export async function parseHtmlMock(html: string): Promise<HtmlMockParseResult> 
         backgroundColor: backgroundColor.trim(),
       });
     }
-
-    // State attributes
-    const state = el.getAttribute("data-state");
-    if (state) result.stateAttributes.push(state);
-
-    // Breakpoint attributes
-    const bp = el.getAttribute("data-breakpoint");
-    if (bp) result.breakpointAttributes.push(bp);
   }
 
   // Also extract var usages from style tags
