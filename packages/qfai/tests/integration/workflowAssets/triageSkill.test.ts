@@ -401,6 +401,9 @@ describe("a question answered without a change", () => {
     expect(flat(sectionOf(await step("triage-handoff"), "## Procedure"))).toMatch(
       /delegates the release to the agent while this step waits.*Quote the instruction word for word with its source, do not report `handed-off`, and list the delegated release as the follow-up for the closing step, which closes the request as `deferred`/,
     );
+    expect(flat(sectionOf(await step("triage-handoff"), "## Gate"))).toMatch(
+      /one of two outcomes: the result is recorded as the person reported it, or, where the user delegated the release while this step waited, the delegation is quoted word for word with its source, no `handed-off` is reported, and the delegated release is listed as the follow-up the closing step closes as `deferred`/,
+    );
   });
 
   // QFAI:AC-0001-0214-02

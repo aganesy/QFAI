@@ -602,6 +602,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declaration list's `const` flag, so a `let`, `var` or `using` binding is not
   listed however it is exported.
 
+- **The bisection step starts the session and skips untestable revisions.**
+  `implement-bisect` told the agent to run `git bisect run` between two
+  revisions, though that command takes only the test command and cannot start
+  the session, and a build failure in the command counted as a bad revision.
+  The step now starts with `git bisect start <bad> <good>`, has the runner
+  script exit 125 for a revision that cannot be built or started, runs
+  `git bisect reset` on every exit path, and reports an inconclusive candidate
+  set when skipped revisions prevent naming one change.
+
 - **The policy check no longer asks a question under `--auto`.** When policy
   information could not be verified, the policy check in
   `.qfai/assistant/rule/workflow.md` told the agent to ask the user in every
@@ -625,6 +634,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   The `schemaVersion` pass now reads each file as a whole and names every file
   that holds the field.
 
+- **`qfai session-review` reads each item of a mixed Codex message by its own
+  kind** (#4833). A user message holding typed text beside an injected
+  instruction counted both as one typed turn, so the instruction's words could
+  show as a correction, and a developer message with one hook item recorded
+  every item as hook context. Each content item now counts only under the kind
+  declared at its own index.
+
 - **`qfai doctor --profile prototyping` probes Playwright from the inspected
   project** (#4765). The launcher probe ran in the directory doctor was started
   from, so with `--root` naming another checkout, `npx` looked for Playwright
@@ -637,6 +653,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   its latest iteration to the user, so a reviewer following the old sentence
   looked for a historical winner. The strategy review now points at the
   comparison criteria instead.
+
+- **A release delegated while `triage-handoff` waits passes its gate**
+  (#4835). The step lets a user delegate the release while it waits, which
+  leaves no execution result to record, but its gate still asked for a
+  reported result in every case. The gate now also accepts the quoted
+  delegation with its source and the delegated release listed as the
+  follow-up that `triage-close` closes as `deferred`.
 
 - **`qfai doctor --profile prototyping` reports the Playwright probe command
   that ran** (#4769). The `displayCommand` of a direct `playwright` probe left
