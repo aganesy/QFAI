@@ -909,6 +909,46 @@ jobs:
           read_tag_commit || refuse "${REASON}, so whether it still names the verified commit ${VERIFIED_SHA} is unknown; no Release was created"
           [ "$TAG_COMMIT" = "$VERIFIED_SHA" ] || refuse "${RELEASE_TAG} now points at ${TAG_COMMIT}, not at ${VERIFIED_SHA}, the commit verify checked and the gates ran on; no Release was created"
 
+          # A re-run of this job after the create succeeded finds the Release already there, and
+          # `gh release create` would fail on it while the publish sibling retries cleanly. So a
+          # Release on this tag is looked up first: one that says what this run would create is
+          # reused, one that says something else is a conflict, and only a 404 means "absent".
+          # Any other answer is an error, never read as absent.
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped templates have no release job whose retry could meet its own Release.
+          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > tmp/existing-release.json 2> tmp/existing-release.err; then
+            if node - > tmp/existing-release.diff <<'SAME'
+          const { readFileSync } = require("node:fs");
+          const lf = (text) => String(text).replace(/\r\n/g, "\n").replace(/\n+$/, "");
+          let release;
+          try {
+            release = JSON.parse(readFileSync("tmp/existing-release.json", "utf8"));
+          } catch {
+            console.log("its answer is not a Release");
+            process.exit(1);
+          }
+          const expected = {
+            tag_name: process.env.RELEASE_TAG,
+            name: `qfai ${process.env.RELEASE_VERSION}`,
+            draft: false,
+            prerelease: false,
+            body: lf(readFileSync("tmp/release-notes.md", "utf8")),
+          };
+          const actual = { ...release, body: lf(release.body ?? "") };
+          const differs = Object.keys(expected).filter((key) => actual[key] !== expected[key]);
+          if (differs.length > 0) {
+            console.log(`it differs from what this run would create in: ${differs.join(", ")}`);
+            process.exit(1);
+          }
+          SAME
+            then
+              echo "release: ${RELEASE_TAG} already has the Release this run would create, at the verified commit ${VERIFIED_SHA}; reusing it"
+              exit 0
+            fi
+            refuse "${RELEASE_TAG} already has a Release, but $(cat tmp/existing-release.diff); it was left as it is and no Release was created"
+          fi
+          grep -q "HTTP 404" tmp/existing-release.err || refuse "whether ${RELEASE_TAG} already has a Release could not be read ($(cat tmp/existing-release.err)); no Release was created"
+
           gh release create "$RELEASE_TAG" --verify-tag --title "qfai $RELEASE_VERSION" --notes-file tmp/release-notes.md
 
           if read_tag_commit; then
