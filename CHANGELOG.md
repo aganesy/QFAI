@@ -671,6 +671,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declaration list's `const` flag, so a `let`, `var` or `using` binding is not
   listed however it is exported.
 
+- **A waiver id that names an inherited property is counted as a number.** A
+  waiver whose id was `toString` started its suppression count from the
+  inherited function, so the published total became a string, and one whose id
+  was `__proto__` was not counted at all. The counts are now kept in a `Map`,
+  so any id counts from zero and the total stays a number.
+
 - **`triage-close` routes the request again before it closes it.** Its first
   procedure step told the agent to pick an outcome from the closure table,
   which has no `info-received` or `adopted`, so an answered information request

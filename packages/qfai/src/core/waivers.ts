@@ -590,8 +590,10 @@ function applyWaiversToFindings(
   findings: Issue[],
   waivers: ParsedWaiver[],
 ): AppliedWaiverResult {
-  const suppressedByWaiver: Record<string, number> = {};
-  const suppressedByRule: Record<string, number> = {};
+  // Maps, not plain objects: a waiver id is any nonempty string, and one such as
+  // `toString` or `__proto__` would otherwise start from an inherited property.
+  const suppressedByWaiver = new Map<string, number>();
+  const suppressedByRule = new Map<string, number>();
   const out: Issue[] = [];
 
   for (const finding of findings) {
@@ -610,10 +612,10 @@ function applyWaiversToFindings(
     }
 
     if (waiver.action === "suppress") {
-      suppressedByWaiver[waiver.id] = (suppressedByWaiver[waiver.id] ?? 0) + 1;
+      suppressedByWaiver.set(waiver.id, (suppressedByWaiver.get(waiver.id) ?? 0) + 1);
       // Count under the waiver's own spelling, so the report reads back the
       // key the operator wrote rather than an alias they never chose.
-      suppressedByRule[waiver.rule] = (suppressedByRule[waiver.rule] ?? 0) + 1;
+      suppressedByRule.set(waiver.rule, (suppressedByRule.get(waiver.rule) ?? 0) + 1);
       out.push({ ...finding, suppressed: true });
       continue;
     }
@@ -626,7 +628,7 @@ function applyWaiversToFindings(
     out.push(finding);
   }
 
-  const totalSuppressed = Object.values(suppressedByWaiver).reduce((acc, value) => acc + value, 0);
+  const totalSuppressed = [...suppressedByWaiver.values()].reduce((acc, value) => acc + value, 0);
 
   return {
     issues: out,
@@ -1036,8 +1038,9 @@ function uniqueSorted(values: string[]): string[] {
   return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
 }
 
-function sortNumericRecord(input: Record<string, number>): Record<string, number> {
-  const sortedEntries = Object.entries(input).sort(([a], [b]) => a.localeCompare(b));
+function sortNumericRecord(input: Map<string, number>): Record<string, number> {
+  const sortedEntries = [...input].sort(([a], [b]) => a.localeCompare(b));
+  // fromEntries defines own properties, so `__proto__` stays a plain key.
   return Object.fromEntries(sortedEntries);
 }
 

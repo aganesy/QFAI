@@ -1110,6 +1110,25 @@ describe("applyWaiversToExtraFindings reports on the waiver file", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // A waiver id is any nonempty string, so it can name a property every plain
+  // object inherits: the count must start from zero, not from that property.
+  it.each(["toString", "__proto__"])("counts a waiver with the id %s as one", async (id) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        extraFindingWaiver("QFAI-CTYPE-004").replace("id: WVR-20260901-01", `id: "${id}"`),
+      );
+
+      const result = await applyWaiversToExtraFindings(root, [buildIssue({ rule: "CTYPE-004" })]);
+
+      expect(result.suppressed.total).toBe(1);
+      expect(Object.entries(result.suppressed.byWaiver)).toEqual([[id, 1]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 /** A repo-wide waiver on one rule, so only the rule id varies between cases. */
