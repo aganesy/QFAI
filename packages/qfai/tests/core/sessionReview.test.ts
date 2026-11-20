@@ -226,6 +226,34 @@ describe("where the transcripts are", () => {
       "0199aaaa-bbbb-7ccc-8ddd-eeeeffff0000",
     ]);
   });
+
+  it("leaves out a Codex rollout whose session_meta names the root but records no session id", async () => {
+    const base = await tempDir();
+    const root = path.join(base, "project");
+    const day = path.join(base, "codex", "sessions", "2026", "11", "10");
+    const meta = (payload: Record<string, unknown>): string =>
+      `${JSON.stringify({ type: "session_meta", payload })}\n`;
+    // Each file name carries a UUID, so a fallback to the name would invent a session ID.
+    await place(
+      path.join(day, "rollout-2026-11-10T10-00-00-0199aaaa-bbbb-7ccc-8ddd-eeeeffff0002.jsonl"),
+      meta({ cwd: root }),
+    );
+    await place(
+      path.join(day, "rollout-2026-11-10T11-00-00-0199aaaa-bbbb-7ccc-8ddd-eeeeffff0003.jsonl"),
+      meta({ id: "", cwd: root }),
+    );
+    await place(
+      path.join(day, "rollout-2026-11-10T12-00-00-0199aaaa-bbbb-7ccc-8ddd-eeeeffff0004.jsonl"),
+      meta({ id: 42, cwd: root }),
+    );
+    await place(
+      path.join(day, "rollout-2026-11-10T13-00-00-0199aaaa-bbbb-7ccc-8ddd-eeeeffff0005.jsonl"),
+      meta({ id: "recorded-id", cwd: root }),
+    );
+
+    const found = await locateSessions(root, ["codex"], environment(base));
+    expect(found.map((session) => session.sessionId)).toEqual(["recorded-id"]);
+  });
 });
 
 // QFAI:EX-0001-0294-09
