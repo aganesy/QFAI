@@ -12,7 +12,9 @@ import {
 import {
   detectJsTestRunner,
   type JsTestRunner,
+  type PackageModuleType,
   applyJsRunner,
+  readPackageModuleType,
   resolveScaffoldDialect,
   SCAFFOLD_RUNNERS,
 } from "../../core/atdd/scaffoldDialect.js";
@@ -51,28 +53,45 @@ function targetsForStory(
 async function readJsTestRunner(root: string, fromDir: string): Promise<JsTestRunner> {
   let found: JsTestRunner = "unknown";
   for (let dir = fromDir; ; dir = path.dirname(dir)) {
-    const manifestPath = path.join(dir, "package.json");
-    let text: string | undefined;
-    try {
-      text = await readFile(manifestPath, "utf8");
-    } catch (caught) {
-      if (!isEnoent(caught)) throw caught;
-    }
-    if (text !== undefined) {
-      let manifest: unknown;
-      try {
-        manifest = JSON.parse(text.replace(/^\uFEFF/, ""));
-      } catch (caught) {
-        throw new Error(
-          `${manifestPath} is not valid JSON: ${caught instanceof Error ? caught.message : String(caught)}`,
-          { cause: caught },
-        );
-      }
-      const runner = detectJsTestRunner(manifest);
+    const manifest = await readManifest(dir);
+    if (manifest !== undefined) {
+      const runner = detectJsTestRunner(manifest.value);
       if (runner !== "none") return runner;
       found = runner;
     }
     if (path.relative(root, dir) === "" || path.dirname(dir) === dir) return found;
+  }
+}
+
+/**
+ * The `type` of the `package.json` nearest `fromDir`, searched up to `root`,
+ * which is the one Node reads to decide how it loads a `.js` file there.
+ */
+async function readNearestPackageType(root: string, fromDir: string): Promise<PackageModuleType> {
+  for (let dir = fromDir; ; dir = path.dirname(dir)) {
+    const manifest = await readManifest(dir);
+    if (manifest !== undefined) return readPackageModuleType(manifest.value);
+    if (path.relative(root, dir) === "" || path.dirname(dir) === dir) return "commonjs";
+  }
+}
+
+/** The parsed `package.json` in `dir`, or `undefined` when there is none. */
+async function readManifest(dir: string): Promise<{ value: unknown } | undefined> {
+  const manifestPath = path.join(dir, "package.json");
+  let text: string;
+  try {
+    text = await readFile(manifestPath, "utf8");
+  } catch (caught) {
+    if (isEnoent(caught)) return undefined;
+    throw caught;
+  }
+  try {
+    return { value: JSON.parse(text.replace(/^\uFEFF/, "")) };
+  } catch (caught) {
+    throw new Error(
+      `${manifestPath} is not valid JSON: ${caught instanceof Error ? caught.message : String(caught)}`,
+      { cause: caught },
+    );
   }
 }
 
@@ -133,14 +152,13 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
       excludeGlobs,
       ids: targets.map((target) => target.id),
     });
+    const manifestDir = comparable ? path.dirname(probePath) : options.root;
     const resolution =
       globResolution.outcome === "resolved" && globResolution.dialect.id === "js-ts"
         ? applyJsRunner(
             globResolution.dialect,
-            await readJsTestRunner(
-              options.root,
-              comparable ? path.dirname(probePath) : options.root,
-            ),
+            await readJsTestRunner(options.root, manifestDir),
+            await readNearestPackageType(options.root, manifestDir),
           )
         : globResolution;
     if (resolution.outcome === "unsupported-stack") {

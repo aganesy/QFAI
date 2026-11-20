@@ -560,6 +560,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout or one downloaded from the npm registry without asking. The README
   now says so. Closes #4622.
 
+- **`qfai atdd scaffold` writes a CommonJS node:test skeleton that Node can
+  load.** For a project that runs `node --test`, the skeleton imported
+  `describe` and `it` with an `import` statement even in a `.cjs` file, and
+  Node stopped with `Cannot use import statement outside a module`. A `.cjs`
+  or `.cts` skeleton, and a `.js` one whose nearest `package.json` does not
+  set `"type": "module"`, now loads them with `require`. Closes #4708.
+
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
   `requires: null`, or a `requires:` with no value, as `requires: []`. It now
