@@ -605,6 +605,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
 
+- **`qfai doctor` no longer takes a directory for the document-schema lane.**
+  A directory named `.github/workflows/qfai-docs.yml` passed the existence
+  check, so doctor reported the required lane installed although GitHub had
+  no workflow there. The lane now counts only as a readable regular file.
+
 - **`-h` and `-V` after a value-taking option are switches, not its value.**
   `qfai init --dir -h` initialized a directory named `-h`. An option's value
   now excludes `-h` and `-V` as it already excluded a `--` token, so they act

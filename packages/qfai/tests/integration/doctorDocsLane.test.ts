@@ -53,6 +53,18 @@ describe("qfai doctor reports a missing document-schema lane", () => {
     expect((await docsLane(root))?.severity).toBe("error");
   });
 
+  // QFAI:EX-0003-0011-14
+  it("warns when a directory stands where the lane file belongs", async () => {
+    // QFAI:AC-0003-0011-07
+    const root = await project(false);
+    await mkdir(path.join(root, LANE), { recursive: true });
+
+    const check = await docsLane(root);
+
+    expect(check?.severity).toBe("error");
+    expect(check?.message).toContain(LANE);
+  });
+
   // QFAI:EX-0003-0011-15
   it("is ok when the lane is present", async () => {
     // QFAI:AC-0003-0011-07
