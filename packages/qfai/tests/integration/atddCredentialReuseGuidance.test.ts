@@ -322,11 +322,10 @@ describe("the optional test runner recipes ship beside the rule set", () => {
     expect(directory, "a missing directory does not stop the run").toContain(
       'throw new Error("TEST_SESSION_CACHE_DIR is not set',
     );
-    expect(directory).toContain("await deleteAccount(id);");
     expect(directory).toContain('"created.jsonl"');
     // One failed removal must not stop the others or hide the IDs left behind.
-    expect(directory, "one failed removal stops the rest").toMatch(
-      /try \{\s+await deleteAccount\(id\);\s+\} catch \(error\) \{\s+failed\.push\(id\);/,
+    expect(directory, "one failed removal stops the rest").toContain(
+      "await Promise.allSettled(ids.map((id) => deleteAccount(id)));",
     );
     expect(directory, "the IDs left behind are not recorded").toContain(
       "JSON.stringify({ ids: failed })",
@@ -335,7 +334,7 @@ describe("the optional test runner recipes ship beside the rule set", () => {
       "throw new AggregateError(errors,",
     );
     expect(directory, "the storage-state path is not defined").toContain(
-      "export function statePath(directory: string, slot: number): string {",
+      "export const statePath = (directory: string, slot: number): string =>",
     );
     const vitest = section(recipes, "Vitest: one session per pool slot and actor");
     expect(vitest).toContain("const directory = ownedSessionDirectory();");
@@ -361,7 +360,7 @@ describe("the optional test runner recipes ship beside the rule set", () => {
       /\/\/ auth\.teardown\.ts[\s\S]*await deleteCreatedAccounts\(directory\);/,
     );
     expect(playwright, "a failed removal keeps the storage states").toMatch(
-      /try \{\s+await deleteCreatedAccounts\(directory\);\s+\} finally \{\s+for \(let slot/,
+      /rm\(statePath\(directory, slot\), \{ force: true \}\)\)\);\s+await deleteCreatedAccounts\(directory\);/,
     );
     // Setup, fixture and teardown all take statePath from the shared module.
     const statePathImports = playwright.match(

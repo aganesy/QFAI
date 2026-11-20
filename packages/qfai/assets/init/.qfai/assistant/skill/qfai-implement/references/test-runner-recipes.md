@@ -29,7 +29,7 @@ nothing in and runs no browser, so nothing here is executed in this repository: 
 pattern to adopt, then prove it in your own suite with the adoption checklist at the end.
 
 The application supplies five adapters. QFAI ships none of them, and no recipe below assumes how
-they work inside. The recipes import them from an `app-adapters.ts` module the application writes:
+they work inside:
 
 | Adapter          | What it does                                                                          |
 | ---------------- | ------------------------------------------------------------------------------------- |
@@ -44,12 +44,10 @@ the business time section describes.
 
 ## The run-owned session directory
 
-Both runners share these helpers. The run's global setup creates one private directory and exports
-it as `TEST_SESSION_CACHE_DIR`; every worker reads that same directory. Each account the run
-creates is recorded by its ID in `created.jsonl`, which holds no secret, and the teardown deletes
-every recorded account, so an account made by a refresh is removed too. One failed removal does
-not stop the others: the teardown tries every ID, writes the IDs it could not remove to a recovery
-record outside the directory, which holds IDs only, and then fails with every error at once.
+Both runners share these helpers. The run's global setup creates one private directory, exported
+as `TEST_SESSION_CACHE_DIR`, that every worker reads. `created.jsonl` records each account the run
+creates by its ID alone, so the teardown deletes accounts made by a refresh too. It tries every
+ID, writes any it could not remove to an ID-only record outside the directory, then fails.
 
 ```ts
 // session-directory.ts
@@ -57,7 +55,6 @@ import { statSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { deleteAccount } from "./app-adapters";
 
 export async function createSessionDirectory(): Promise<string> {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "session-cache-"));
@@ -83,56 +80,41 @@ export async function recordCreated(directory: string, id: string): Promise<void
   });
 }
 
-/** The Playwright storage state of one worker slot; setup, fixture and teardown all use it. */
-export function statePath(directory: string, slot: number): string {
-  return path.join(directory, `storage-state-${slot}.json`);
-}
+export const statePath = (directory: string, slot: number): string =>
+  path.join(directory, `storage-state-${slot}.json`);
 
-/** Tries every recorded ID; the ones that fail go to a recovery record outside the directory. */
 export async function deleteCreatedAccounts(directory: string): Promise<void> {
-  let lines: string[] = [];
-  try {
-    lines = (await fs.readFile(path.join(directory, "created.jsonl"), "utf8")).split("\n");
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
-  }
-  const failed: string[] = [];
-  const errors: unknown[] = [];
-  for (const line of lines.filter((entry) => entry.trim() !== "")) {
-    const { id }: { id: string } = JSON.parse(line);
-    try {
-      await deleteAccount(id);
-    } catch (error) {
-      failed.push(id);
-      errors.push(error);
-    }
-  }
+  const text = await fs.readFile(path.join(directory, "created.jsonl"), "utf8").catch((error) => {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return "";
+    throw error;
+  });
+  const lines = text.split("\n").filter((line) => line.trim() !== "");
+  const ids: string[] = lines.map((line) => JSON.parse(line).id);
+  const results = await Promise.allSettled(ids.map((id) => deleteAccount(id)));
+  const failed = ids.filter((_, index) => results[index].status === "rejected");
   if (failed.length === 0) return;
   const recovery = path.join(os.tmpdir(), `${path.basename(directory)}-undeleted.json`);
   await fs.writeFile(recovery, JSON.stringify({ ids: failed }), { mode: 0o600 });
-  throw new AggregateError(errors, `${failed.length} account(s) were not deleted: see ${recovery}`);
+  const errors = results.flatMap((r) => (r.status === "rejected" ? [r.reason] : []));
+  throw new AggregateError(errors, `${failed.length} account(s) not deleted: see ${recovery}`);
 }
 ```
 
 The directory is how both recipes meet the rule that binds the cache's lifetime to the worker's:
 here a worker is a pool slot or a parallel index, which lasts the whole run, and the run's teardown
-removes the directory with every cached session in it. Each teardown below removes the cached
-sessions and storage states in a `finally` path, so they go even when an account removal fails.
+removes the directory with every cached session in it, even when an account removal fails.
 
 ## Vitest: one session per pool slot and actor
 
-Vitest isolates each test file in its own module registry, so a module-level cache does not outlive
-one file. A process ID or a per-file counter does not give a worker lifetime either. What survives
-is the pool slot, `VITEST_POOL_ID`, a stable number per worker slot. Key the cache by the private
-directory the run owns, the slot and the actor. In this recipe a worker is that pool slot, and the
-cache lives as long as the slot does: until the run's teardown removes the directory.
+Vitest isolates each test file in its own module registry, so a module-level cache dies with the
+file, and a process ID or per-file counter gives no worker lifetime. The pool slot, `VITEST_POOL_ID`,
+is stable per worker slot. Key the cache by the run's private directory, the slot and the actor. In this recipe
+a worker is that pool slot, and its cache lives until the run's teardown removes the directory.
 
 ```ts
-// worker-session.ts
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { ownedSessionDirectory } from "./session-directory";
 
 type SessionOptions = {
   actor: string;
@@ -176,11 +158,6 @@ A file-local map validates each actor once per file registry, so a file does not
 about the same session for every test:
 
 ```ts
-// session-for.ts
-import { acceptsSession, createAccount, issueSession } from "./app-adapters";
-import { ownedSessionDirectory, recordCreated } from "./session-directory";
-import { workerSession } from "./worker-session";
-
 const sessions = new Map<string, Promise<string>>();
 
 export function sessionFor(actor: string): Promise<string> {
@@ -201,13 +178,11 @@ export function sessionFor(actor: string): Promise<string> {
 }
 ```
 
-Global setup creates the directory before the workers start, and the teardown it returns, which
-runs after a failed run too, deletes the recorded accounts and removes the directory:
+Global setup creates the directory before the workers start; its teardown runs after a failure too:
 
 ```ts
 // vitest.global-setup.ts
 import fs from "node:fs/promises";
-import { createSessionDirectory, deleteCreatedAccounts } from "./session-directory";
 
 export default async function setup() {
   const directory = await createSessionDirectory();
@@ -221,10 +196,9 @@ export default async function setup() {
 }
 ```
 
-The workers see `TEST_SESSION_CACHE_DIR` because Vitest starts them after global setup and they
-inherit its environment; the recipe relies on that start-up order. Vitest's documented channel from
-global setup to tests is `provide` and `inject`: where your version offers it, pass the directory
-that way and have `ownedSessionDirectory()` read it from `inject`.
+Workers see `TEST_SESSION_CACHE_DIR` because Vitest starts them after global setup and they inherit
+its environment; the recipe relies on that start-up order. Where your Vitest version offers
+`provide` and `inject`, its documented channel, pass the directory that way instead.
 
 Keep these behaviours when you adapt it:
 
@@ -239,10 +213,10 @@ Keep these behaviours when you adapt it:
 ## Playwright: one account and storage state per worker
 
 A global setup creates the run's private directory; a setup project signs one account in per
-worker and saves its storage state there; the test project picks the state by the worker's parallel
-index; a teardown project deletes the recorded accounts and their states. The worker count is fixed
-in the configuration, so the setup and the run agree on it. In this recipe a worker is a parallel
-index, and its storage state lives until the run's teardown removes the directory.
+worker and saves its storage state there; the test project picks it by the parallel index; a
+teardown project removes the states and deletes the recorded accounts. The configuration fixes the
+worker count, so setup and run agree. Here a worker is a parallel index, and its storage state
+lives until the run's teardown removes the directory.
 
 ```ts
 // playwright.config.ts
@@ -267,7 +241,6 @@ export default defineConfig({
 ```ts
 // global-setup.ts: the environment it sets reaches every worker
 import fs from "node:fs/promises";
-import { createSessionDirectory } from "./session-directory";
 
 export default async function globalSetup() {
   const directory = await createSessionDirectory();
@@ -281,7 +254,6 @@ export default async function globalSetup() {
 // auth.setup.ts
 import { chmod } from "node:fs/promises";
 import { test as setup } from "@playwright/test";
-import { createAccount, signIn } from "./app-adapters";
 import { ownedSessionDirectory, recordCreated, statePath } from "./session-directory";
 
 setup("sign in one account per worker", async ({ browser }) => {
@@ -318,13 +290,9 @@ import { deleteCreatedAccounts, ownedSessionDirectory, statePath } from "./sessi
 
 teardown("delete the run's accounts and storage states", async () => {
   const directory = ownedSessionDirectory();
-  try {
-    await deleteCreatedAccounts(directory);
-  } finally {
-    for (let slot = 0; slot < teardown.info().config.workers; slot++) {
-      await rm(statePath(directory, slot), { force: true });
-    }
-  }
+  const slots = Array.from({ length: teardown.info().config.workers }, (_, slot) => slot);
+  await Promise.all(slots.map((slot) => rm(statePath(directory, slot), { force: true })));
+  await deleteCreatedAccounts(directory);
 });
 ```
 
@@ -334,18 +302,15 @@ subject. When the suite runs once per clock profile, each profile runs its own s
 
 ## Playwright: wait until the app is ready
 
-A server-rendered page shows its content before it reacts to input, so a test that fills a field
-too early loses the value when the framework takes over, and fails some runs. The app shell sets
-`data-qfai-ready` on `<html>` once it is interactive; the test waits for it after each page load.
-Do not wait a fixed time, and do not wrap an interaction in a blind retry such as `toPass`: both
-hide the cause and still fail on a slow run.
+A server-rendered page shows content before it reacts to input, so a test that fills a field too
+early loses the value and fails some runs. The app shell sets `data-qfai-ready` on `<html>` once it
+is interactive; the test waits for it after each page load.
+Do not wait a fixed time, and do not wrap an interaction in a blind retry such as `toPass`.
 
-The marker covers a page load only. `<html>` survives a route change. After a client-side
-route change, the test waits for that route's own content, such as its heading. Content
-inside a `<Suspense>` boundary can hydrate after the shell, so the test waits for it too.
+The marker covers a page load only. After a client-side
+route change, the test waits for that route's own content. Content inside a `<Suspense>` boundary can hydrate after the shell, so wait for it too.
 
-In React, an effect sets it in a `"use client"` component the root layout renders around every
-page, since the Next.js App Router root layout is a Server Component:
+In React, an effect in a `"use client"` component sets it, since the Next.js App Router root layout is a Server Component:
 
 ```tsx
 // app-ready.tsx (React): a client component the root layout renders around the page
@@ -365,8 +330,7 @@ export function AppReady({ children }: { children: ReactNode }) {
 document.documentElement.dataset.qfaiReady = "true";
 ```
 
-One helper waits. After a click that loads a new document, the old page and its marker stay until
-the new document arrives, so the test waits for the new URL first:
+One helper waits. After a click that loads a new document, the old marker stays until it arrives, so wait for the URL first:
 
 ```ts
 // ready.ts
@@ -393,13 +357,11 @@ Reusing an authenticated actor must not make one file depend on another file's b
 - Identities are unique per creation: a real-millisecond timestamp plus a random suffix, such as
   `` `order-${Date.now()}-${randomUUID().slice(0, 8)}` ``. A fixed name collides across workers.
 - Cleanup removes what the file created, and only that, including after a failed test.
-- No file resets a mutable business seed. A reset in one worker deletes data another worker is
-  asserting on.
+- No file resets a mutable business seed. A reset in one worker deletes data another worker reads.
 
 ## Database hooks only where a group needs them
 
-When one file holds source-only cases and live cases, register the database preparation inside
-the group that needs it, not at the top of the file:
+When one file holds source-only and live cases, register the database preparation in the group that needs it:
 
 ```ts
 describe("source contract", () => {
@@ -427,8 +389,7 @@ database is not configured, so a selected live case fails without it rather than
 
 ## Shared and exclusive access to a common database or server
 
-Four workers do not by themselves make concurrency safe. Admit files to a shared database or server
-by declared access:
+Four workers do not by themselves make concurrency safe. Admit files by declared access:
 
 - **Shared**: the file reads and writes only data it owns. Shared files run in parallel, bounded by
   what the database and server can serve, measured, not by the CPU count.
@@ -438,14 +399,12 @@ by declared access:
   global state, is exclusive until shown otherwise.
 
 The simplest bounded admission is two passes: the shared files with the measured worker count,
-then the exclusive files with one worker, for example a Vitest project with
-`fileParallelism: false`, or `npx --no-install playwright test --project=exclusive --workers=1` after a run of the `e2e`
-project.
+then the exclusive files with one worker: a Vitest project with `fileParallelism: false`, or
+`npx --no-install playwright test --project=exclusive --workers=1` after the `e2e` project.
 
 ## Deterministic business time
 
-A test that depends on the wall clock waits for a time of day or skips outside it. Control
-business time instead:
+A test that depends on the wall clock waits for a time of day or skips outside it. Control business time instead:
 
 - **Clock adapter.** The application reads business time through an adapter it supplies, with an
   explicit time zone and a fixed date and time per profile. Server-side decisions read the same
@@ -535,7 +494,6 @@ source-mutation probes and their counts separately; a probe count is not a test 
 - The aggregate check fails when any required lane fails, is cancelled or is skipped unexpectedly.
 - No artifact holds a session, a storage state or an account secret, and no trace, HAR file or
   HTML report from an authenticated project is uploaded where it is public or kept long.
-- The teardown deletes every account recorded in `created.jsonl`, after a failed run too. When one
-  removal fails, the others still run, the recovery record lists only the IDs left behind, the
-  cached sessions and storage states are still removed, and the teardown fails with every error.
+- The teardown deletes every account recorded in `created.jsonl`, after a failed run too, and one
+  failed removal still removes the rest and the secrets, recording only the IDs left behind.
 - Parallel workers are bounded by shared-state exclusion; measure before claiming a speedup.

@@ -600,8 +600,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   sessions and storage states, and lost the IDs still to remove. The shared
   session module now exports `statePath` and every site imports it; the
   cleanup tries every ID, writes the IDs left behind to an ID-only recovery
-  record outside the session directory, removes the cached sessions and
-  storage states in a `finally` path, and fails with an `AggregateError`.
+  record outside the session directory, and fails with an `AggregateError`,
+  while the cached sessions and storage states are removed either way.
   Closes #4929. Closes #4931.
 
 - **`qfai sdd preflight` keeps a carry-over entry that starts with `<`.** A
