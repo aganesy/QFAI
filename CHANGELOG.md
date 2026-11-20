@@ -655,6 +655,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now has a `sdd preflight` row for `--format`, and the threshold row says that
   with `--fail-on never` a blocked preflight exits 0. Closes #4894, #4896.
 
+- **The `web-research` skill keeps rendered `aria-hidden` text and keys a page
+  with no validator by its content.** The sanitize stage removed every
+  `aria-hidden="true"` element, although that attribute hides an element only
+  from assistive technology, so a visible counter or label could vanish from
+  the evidence. Removal now follows rendered visibility: `display: none` and
+  `visibility:hidden` content still goes, and a rendered `aria-hidden` element
+  stays. A response with neither an ETag nor a Last-Modified header fell back
+  to `hash(url + last-modified)`, so different content shared one key; such a
+  response is now keyed by the hash of its fetched bytes, with the URL, any
+  validator and the fetch time kept as lookup metadata. Closes #4936, #4939.
+
 - **A pull-request merge fetches the pull request's own base and checks it
   again before merging.** The `triage-operate` step merged the local
   `origin/<base>` into the branch without fetching it, so a stale
