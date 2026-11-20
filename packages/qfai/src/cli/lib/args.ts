@@ -347,11 +347,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    * decides whether the flag is used on an owning command — so rule 1 / 2 of
    * the flag-handling contract holds by construction rather than by each arm
    * remembering a trailing `i += 1`.
+   *
+   * A value is drawn from the same tokens as a positional: `init --dir -h`
+   * once initialized a directory named `-h`, so the reserved short switches
+   * stay out and reach the loop as switches.
    */
   let i = 0;
   const consumeOptionValue = (): string | null => {
     const next = args[i + 1];
-    if (!next || next.startsWith("--")) {
+    if (!isPositionalToken(next)) {
       return null;
     }
     i += 1;

@@ -315,6 +315,26 @@ describe("parseArgs", () => {
       expect(parsed.invalidReason).toBe("qfai validate: --format requires a value.");
     });
 
+    it.each(["-h", "-V"])(
+      "reads %s after a value-taking option as a switch, not its value",
+      (flag) => {
+        const cwd = process.cwd();
+        const parsed = parseArgs(["init", "--dir", flag], cwd);
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.invalidReason).toBe("qfai init: --dir requires a value.");
+        expect(parsed.options.dir).toBe(cwd);
+        expect(parsed.options.dirExplicit).toBe(false);
+        expect(parsed.options.help).toBe(true);
+        expect(parsed.options.version).toBe(flag === "-V");
+      },
+    );
+
+    it("still takes another single-dash token as an option's value", () => {
+      const parsed = parseArgs(["init", "--dir", "-out"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dir).toBe("-out");
+    });
+
     it("reuses the per-family subcommand wording when the subcommand is missing", () => {
       const cwd = process.cwd();
       expect(parseArgs(["atdd"], cwd).invalidReason).toBe(
