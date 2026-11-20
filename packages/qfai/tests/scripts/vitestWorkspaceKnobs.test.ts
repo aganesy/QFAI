@@ -16,8 +16,8 @@
  * ## Why the set is asserted at TWO sites
  *
  * The first draft of this row asserted all six knobs on every project, and the
- * implementation that satisfied it was inert. Three of the six bound the run as a whole —
- * `maxWorkers`, `minWorkers` and `fileParallelism` — and a project inherits what the root
+ * implementation that satisfied it was inert. The axes that bound the run as a whole —
+ * `maxWorkers` and `fileParallelism` — are inherited from what the root
  * declares, so repeating them per project puts one measured value in nine places where
  * eight can drift from the ninth with nothing failing.
  *
@@ -130,7 +130,7 @@ const DECLARED_CONCURRENCY = Math.min(DECLARED_START, availableParallelism());
  * A project inherits them, so a second declaration per project changes nothing and can
  * drift from the one the run uses.
  */
-const ROOT_ONLY = ["maxWorkers", "minWorkers", "fileParallelism"] as const;
+const ROOT_ONLY = ["maxWorkers", "fileParallelism"] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -215,7 +215,6 @@ describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob s
 
     const ROOT_KNOBS = [
       { key: "maxWorkers", kind: "count", want: "a positive worker ceiling" },
-      { key: "minWorkers", kind: "count", want: "a positive worker floor" },
       { key: "fileParallelism", kind: "flag", want: "an explicit file-parallelism boolean" },
     ] as const;
 
@@ -260,7 +259,7 @@ describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob s
   });
 
   // QFAI:EX-0002-0019-01
-  it("declares the worker ceiling, the worker floor and file parallelism in the root knobs only", async () => {
+  it("declares the worker ceiling and file parallelism in the root knobs only", async () => {
     const knobs: unknown = await import("../../vitest.knobs");
     const rootKnobs = isRecord(knobs) ? knobs["rootKnobs"] : undefined;
     const projectKnobs = isRecord(knobs) ? knobs["projectKnobs"] : undefined;
@@ -268,10 +267,9 @@ describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob s
       throw new Error("vitest.knobs.ts must export rootKnobs and projectKnobs");
     }
 
-    expect([...ROOT_ONLY].sort()).toEqual(["fileParallelism", "maxWorkers", "minWorkers"]);
+    expect([...ROOT_ONLY].sort()).toEqual(["fileParallelism", "maxWorkers"]);
     expect(Object.keys(rootKnobs).sort()).toEqual([...ROOT_ONLY].sort());
     expect(rootKnobs["maxWorkers"]).toBeTypeOf("number");
-    expect(rootKnobs["minWorkers"]).toBeTypeOf("number");
     expect(rootKnobs["fileParallelism"]).toBeTypeOf("boolean");
     expect(ROOT_ONLY.filter((key) => key in projectKnobs)).toEqual([]);
 
