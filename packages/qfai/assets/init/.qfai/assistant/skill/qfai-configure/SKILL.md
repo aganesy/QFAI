@@ -31,7 +31,7 @@ as labelled assumptions and recorded in the config diff — see
 inputs in Default Autopilot Policy are the exception: they are never assumed,
 and a missing one blocks the run until it is provided — but only where this run
 consumes it; one this run never reads is not asked for at all. The stops this
-skill declares — Step 5's zero-match glob, and an ambiguous tooling choice or
+skill declares — Step 4's zero-match glob, and an ambiguous tooling choice or
 runnable path — are `hard-required` inputs, not clarifications to assume, so
 both outlive an exhausted budget.
 
@@ -156,7 +156,7 @@ The final report includes:
 
 - chosen tools per layer (E2E/API/Integration/Component/Unit)
 - the Standard commands section in `03_contract/tech.md` and the commands actually executed
-- the proposed include and exclude globs, with 5 to 15 sample matched files
+- the proposed include and exclude globs, with 5 to 15 sample matched files, or every matched file when fewer than five match
 - the minimum runnable path
 - the files changed
 - gaps and open risks ("none" is acceptable if justified)
@@ -207,7 +207,6 @@ Every 5 major actions, pause and restate:
 
 ## Constraints
 
-- Only update `qfai.config.yaml` and project-owned policy and contract files under `.qfai/spec/` unless explicitly asked.
 - Do **not** modify tests or source code.
 - Avoid overly broad globs (e.g., `**/*`).
 - Exclude generated/output directories (`node_modules`, `.git`, `.qfai`, `dist`, `build`, `coverage`, `.next`, `out`, etc.).
@@ -227,7 +226,7 @@ Every 5 major actions, pause and restate:
    - `.qfai/assistant/rule/workflow.md` (or equivalent)
    - `.qfai/assistant/rule/quality.md` for general gate policy. Reconcile
      project commands against the toolchain detected in step 3, and record
-     them only under `03_contract/tech.md#standard-commands-copy-paste`.
+     them only under `<paths.contractsDir>/tech.md#standard-commands-copy-paste`.
 
 3. Inspect repo conventions:
    - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions
@@ -256,7 +255,9 @@ If analysis cannot be performed (missing access), clearly state what could not b
 
 ## Step 2 - Propose glob patterns
 
-Provide 3-10 **include globs** that cover all known test locations:
+Propose the smallest set of **include globs** that covers every test observed
+in Step 1, however few or many that is. Step 4 checks the files they match
+against those tests.
 
 - Prefer explicit patterns (e.g., `src/**/*.test.ts`, `tests/**/*.spec.ts`).
 - Include src-colocated tests if they exist.
@@ -275,38 +276,31 @@ Fill policy templates with repo evidence.
   - A layer is a group of modules whose imports point one way: an upper layer uses the layers below it, and a lower layer never imports an upper one.
   - Draw the layers first, as one `mermaid` `flowchart TD` with a node per layer and an `Upper --> Lower` edge per import direction. Then write the table rows from the uppermost layer down, so each Depends on names only rows below it. `npx qfai validate` reports a diagram and a table that disagree.
 
-## Step 4 - Update `qfai.config.yaml` (minimal diff)
+## Step 4 - Evidence sampling (before writing)
 
-Edit:
-
-- `validation.traceability.testFileGlobs`
-- `validation.traceability.testFileExcludeGlobs` (only if needed)
-- `uiux.surfacePaths`: the repository-relative globs of the paths observed to render a user-visible surface, or `[]` when the repository renders none. Keep an existing value unless the user asks to change it. An absent key leaves the UI impact decision unevaluable.
-
-Keep all other config keys unchanged. Add no key the package already defaults, `paths.specsDir` included; a value the project set stays.
-
-## Step 5 - Evidence sampling
-
-Sample 5-15 actual test files that match the proposed globs.
+Match the proposed globs against the repository before `qfai.config.yaml` is
+touched. Sample 5-15 actual test files that match the proposed globs, or every
+match when fewer than five exist. The matched set covers the tests Step 1
+observed and holds nothing that is not a test.
 
 - If zero matches exist, stop and ask for clarification. Under `--auto` do not ask:
   zero matches leave nothing to assume from, so stop with the empty match set reported
-  as a blocker and leave `testFileGlobs` unchanged.
+  as a blocker. `testFileGlobs` stays as it was, since Step 5 has not run.
   This stop is **not subject to the Article VI budget** — it is a `hard-required`
   input this run consumes, so it survives clarification-exhausted mode. Do not
   assume a glob and do not write the key; report the unresolved glob as the
   blocker.
 - If some directories are ambiguous, list them as Open Questions.
 
-## Checkpoints
+## Step 5 - Update `qfai.config.yaml` (minimal diff)
 
-- [ ] Repository analysis completed (frameworks, test layout, naming rules).
-- [ ] Project-owned policy and contract files updated with evidence or `TBD`.
-- [ ] Standard commands recorded only in `03_contract/tech.md`.
-- [ ] Proposed include/exclude globs with rationale.
-- [ ] `qfai.config.yaml` updated (minimal diff).
-- [ ] BF, AC, and EX test layers inspected.
-- [ ] Evidence: sample matched files listed.
+Write the globs Step 4 matched. Edit:
+
+- `validation.traceability.testFileGlobs`
+- `validation.traceability.testFileExcludeGlobs` (only if needed)
+- `uiux.surfacePaths`: the repository-relative globs of the paths observed to render a user-visible surface, or `[]` when the repository renders none. Keep an existing value unless the user asks to change it. An absent key leaves the UI impact decision unevaluable.
+
+Keep all other config keys unchanged. Add no key the package already defaults, `paths.specsDir` included; a value the project set stays.
 
 ## Output
 
@@ -328,21 +322,20 @@ When you declare DONE, include:
 - DEC IDs referenced (or "none" when no decision applies).
 - Confirmation that no rejected option was reintroduced.
 
-## FINAL CHECKLIST (Check Last)
-
-- [ ] Hard Constraints were followed.
-- [ ] The final report exists and is complete.
-- [ ] All mandatory checks were executed and recorded.
-- [ ] No untracked gaps remain (or they are explicitly documented).
-- [ ] Completion approved by a reviewer who did not modify the config.
-
 ## Completion Checklist
 
-- [ ] This skill's Definition of Done is satisfied.
-- [ ] Required artifacts were produced or updated (if applicable).
+Check it last; the deliverables themselves are listed in Final report.
+
+- [ ] Repository analysis completed (frameworks, test layout, naming rules).
+- [ ] BF, AC, and EX test layers inspected.
+- [ ] Project-owned policy and contract files updated with evidence or `TBD`.
+- [ ] Standard commands recorded only in `03_contract/tech.md`.
+- [ ] Include and exclude globs proposed with rationale, and their matches sampled before `qfai.config.yaml` was written (minimal diff).
+- [ ] Hard Constraints followed, and all mandatory checks executed and recorded.
+- [ ] The final report is complete, and no untracked gaps remain (or they are explicitly documented).
+- [ ] Completion approved by a reviewer who did not modify the config.
 - [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / proposed specification change per `.qfai/assistant/rule/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `open-questions.md`.
-- [ ] The completion message was presented to the user.
-- [ ] Next actions were enumerated for all available options.
+- [ ] The completion message was presented to the user, with next actions for all available options.
 
 ## Completion Message & Next Actions
 
@@ -372,7 +365,7 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
 - hard-required:
   - brand intent
   - a business-flow ID when the user requests flow-scoped configuration and the target cannot be inferred
-  - a `testFileGlobs` proposal that matches at least one real file (Step 5)
+  - a `testFileGlobs` proposal that matches at least one real file (Step 4)
   - a resolved tooling choice with a runnable path (Hard Constraints)
     — neither this nor the proposal above has a defensible default, and a guess
     is saved as if it were evidence

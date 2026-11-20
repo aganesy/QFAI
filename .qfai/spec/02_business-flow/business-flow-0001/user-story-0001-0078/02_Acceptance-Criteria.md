@@ -8,5 +8,5 @@ Feature: Evidence Sampling Confirmation
   Scenario: Evidence Sampling Produces Matches
     Given proposed glob patterns
     When evidence sampling runs
-    Then 5-15 actual test files are listed. Zero matches triggers a stop-and-ask.
+    Then 5-15 actual test files are listed, or every match when fewer than five exist, before `qfai.config.yaml` is written. Zero matches triggers a stop-and-ask.
 ```

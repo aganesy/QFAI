@@ -97,18 +97,18 @@ describe("Config Minimal Diff", () => {
   // QFAI:AC-0001-0076-02
   it("edits the test globs, adds no default, and writes nothing else", async () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
-    const step4 = section(skill, "## Step 4 - Update `qfai.config.yaml` (minimal diff)");
+    const step5 = section(skill, "## Step 5 - Update `qfai.config.yaml` (minimal diff)");
 
-    expect(step4).toContain("- `validation.traceability.testFileGlobs`");
-    expect(step4).toContain("- `validation.traceability.testFileExcludeGlobs` (only if needed)");
-    expect(step4).toContain("Keep all other config keys unchanged.");
-    expect(step4).toContain("Add no key the package already defaults");
+    expect(step5).toContain("- `validation.traceability.testFileGlobs`");
+    expect(step5).toContain("- `validation.traceability.testFileExcludeGlobs` (only if needed)");
+    expect(step5).toContain("Keep all other config keys unchanged.");
+    expect(step5).toContain("Add no key the package already defaults");
 
-    const constraints = section(skill, "## Constraints");
-    expect(constraints.replace(/\s+/g, " ")).toMatch(
+    const hardConstraints = section(skill, "## Hard Constraints (Read First)");
+    expect(hardConstraints.replace(/\s+/g, " ")).toMatch(
       /Only update `qfai\.config\.yaml`[^.]*project-owned policy and contract files under `\.qfai\/spec\/`[^.]*unless explicitly (?:asked|requested)/,
     );
-    expect(constraints).toMatch(/Do \*\*not\*\* modify tests or source code/);
+    expect(section(skill, "## Constraints")).toMatch(/Do \*\*not\*\* modify tests or source code/);
   });
 });
 
@@ -117,8 +117,8 @@ describe("Story-Tree Specs Directory Follows The Default", () => {
   // QFAI:EX-0001-0076-02
   it("leaves paths.specsDir out and resolves it to the story tree through the loader", async () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
-    const step4 = section(skill, "## Step 4 - Update `qfai.config.yaml` (minimal diff)");
-    expect(step4).toContain("`paths.specsDir` included");
+    const step5 = section(skill, "## Step 5 - Update `qfai.config.yaml` (minimal diff)");
+    expect(step5).toContain("`paths.specsDir` included");
     expect(skill).not.toContain(".qfai/specs");
 
     const loaded = await specsDirOf("paths:\n  testsDir: checks\n");
@@ -133,8 +133,8 @@ describe("Existing specs directory remains configured", () => {
   // QFAI:EX-0001-0076-08
   it("keeps a configured paths.specsDir and resolves to it through the loader", async () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
-    const step4 = section(skill, "## Step 4 - Update `qfai.config.yaml` (minimal diff)");
-    const update = step4.replace(/\s+/g, " ");
+    const step5 = section(skill, "## Step 5 - Update `qfai.config.yaml` (minimal diff)");
+    const update = step5.replace(/\s+/g, " ");
     expect(update).toMatch(/(?:Keep|Preserve) all other config keys unchanged/);
     expect(update).toMatch(/a value the project set (?:stays|is preserved)/);
 
