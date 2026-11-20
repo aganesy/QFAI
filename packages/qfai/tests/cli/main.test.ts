@@ -151,6 +151,15 @@ describe("cli root discovery", () => {
     expect(help).toContain("--fail-on <error|warning|never>  validate/report:");
   });
 
+  it("lists db-drift's JSON output and output file in the help text", async () => {
+    // db-drift accepts `--format text|json` and `--out <path>`, but the
+    // options table named neither for it, so --help hid both outputs.
+    const help = await captureStdout(() => run(["--help"], process.cwd()));
+
+    expect(help).toContain("--format <text|json>         db-drift: output format (text by default)");
+    expect(help).toContain("--out <path>                  report/doctor/db-drift/session-review:");
+  });
+
   it("names the current assistant skill and agent targets in init --force help", async () => {
     const help = await captureStdout(() => run(["--help"], process.cwd()));
 
