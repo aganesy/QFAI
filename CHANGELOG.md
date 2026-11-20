@@ -579,6 +579,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   heading no longer names a location, so a reader of the outline is not sent to
   the wrong one.
 
+- **`verify-repeat-run` no longer guesses how many times to run a test.** It
+  took three divided by the measured failure rate, which has no value when no
+  rate was measured or the observed rate is zero. It now uses a positive count
+  the quarantine record, the work order or the request names, or derives one
+  from a measured positive rate, rounded up to a whole run. With neither, the
+  stage is `blocked` and its report names the input needed instead of claiming
+  coverage.
+
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
   `npx` launch for sensitive environments, while every template sends pages
