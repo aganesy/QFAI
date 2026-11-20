@@ -61,24 +61,30 @@ export function namedFixture(
   sha256 = false,
 ): NamedFixture {
   const root = mkdtempSync(path.join(tmpdir(), "qfai-named-head-"));
-  mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
-  writeFileSync(path.join(root, file), "export const fixture = true;\n");
-  writeFileSync(
-    path.join(root, "packages", "qfai", "vitest.workspace.ts"),
-    readFileSync(path.join(REPO_ROOT, "packages", "qfai", "vitest.workspace.ts")),
-  );
-  namedGit(root, "init", "-b", "main", ...(sha256 ? ["--object-format=sha256"] : []));
-  namedGit(root, "config", "user.email", "fixture@example.invalid");
-  namedGit(root, "config", "user.name", "Named test fixture");
-  namedGit(root, "config", "core.autocrlf", "false");
-  namedGit(root, "add", "--", file, "packages/qfai/vitest.workspace.ts");
-  namedGit(root, "commit", "-m", "Test fixture");
-  const sha = namedGit(root, "rev-parse", "HEAD");
-  const origin = path.join(root, "origin.git");
-  namedGit(root, "init", "--bare", ...(sha256 ? ["--object-format=sha256"] : []), origin);
-  namedGit(root, "remote", "add", "origin", origin);
-  namedGit(root, "push", "origin", "HEAD:refs/pull/37/head");
-  return { root, sha, file };
+  // The caller can only clean up a fixture it was given, so a setup failure removes the root here.
+  try {
+    mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+    writeFileSync(path.join(root, file), "export const fixture = true;\n");
+    writeFileSync(
+      path.join(root, "packages", "qfai", "vitest.workspace.ts"),
+      readFileSync(path.join(REPO_ROOT, "packages", "qfai", "vitest.workspace.ts")),
+    );
+    namedGit(root, "init", "-b", "main", ...(sha256 ? ["--object-format=sha256"] : []));
+    namedGit(root, "config", "user.email", "fixture@example.invalid");
+    namedGit(root, "config", "user.name", "Named test fixture");
+    namedGit(root, "config", "core.autocrlf", "false");
+    namedGit(root, "add", "--", file, "packages/qfai/vitest.workspace.ts");
+    namedGit(root, "commit", "-m", "Test fixture");
+    const sha = namedGit(root, "rev-parse", "HEAD");
+    const origin = path.join(root, "origin.git");
+    namedGit(root, "init", "--bare", ...(sha256 ? ["--object-format=sha256"] : []), origin);
+    namedGit(root, "remote", "add", "origin", origin);
+    namedGit(root, "push", "origin", "HEAD:refs/pull/37/head");
+    return { root, sha, file };
+  } catch (error) {
+    rmSync(root, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 export function windowsSuiteWorkflow(): Record<string, unknown> {
