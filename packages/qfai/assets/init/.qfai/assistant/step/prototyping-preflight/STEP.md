@@ -56,10 +56,16 @@ Nothing. The CLI checks are read-only.
 - Confirm every declared screen ID matches `[A-Za-z0-9._-]+` and does not
   contain `..`. The loop builds file names from it, so an ID that fails either
   test stops the run, naming the contract and the ID.
-- Canonical launcher: `npx --no-install playwright`, or
-  `node_modules/.bin/playwright` when PATH reachability is uncertain. A bare
-  `npx playwright` can install a package mid-run.
-- Install `playwright` with `npm i -D playwright`.
+- Probe the project's own Playwright launcher through the
+  `prototyping.playwrightCli` check of `npx qfai doctor --profile prototyping`.
+  It tries a project wrapper under `scripts/`, then
+  `node_modules/.bin/playwright`, then PATH, then
+  `npx --no-install playwright`. The loop runs the launcher the check resolved,
+  never a bare `npx playwright`, which can install a package mid-run.
+- When that check fails, install nothing. The step stops and reports the
+  missing Playwright launcher as a prerequisite, quoting the check's message.
+  Installing it is separate setup the user authorizes, run with the project's
+  own package manager.
 
 Follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`

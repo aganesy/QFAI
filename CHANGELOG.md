@@ -538,6 +538,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   table named neither for it. The help now lists `db-drift` under both
   options.
 
+- **The prototyping preflight installs nothing.** Its step said to run
+  `npm i -D playwright`, which could rewrite the manifest and lockfile of a
+  step that promises to change no file, and npm cannot install a project
+  with `workspace:` dependencies. The step now probes the project's own Playwright launcher through
+  the `prototyping.playwrightCli` doctor check; when none resolves, it stops
+  and reports the missing prerequisite, leaving the install to setup the user
+  authorizes with the project's package manager.
+
 - **Constitution Article XI is headed "Temporary files".** Its heading said
   every temporary file goes in `tmp/`, while the temporary-files rule it links
   puts a scratch file in the host's session scratch directory first and keeps
