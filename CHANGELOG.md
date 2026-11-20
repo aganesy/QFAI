@@ -748,6 +748,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   literal. The splitter now follows PostgreSQL's escape-string rules; a
   backslash in a standard `'…'` string stays literal.
 
+- **The `validate.json` guide documents `profileValidatorsRan`.** The key is
+  in every result of a `qfai validate` run that finishes, but the guide to
+  the file did not name it, so a consumer could read a run that stopped
+  before the profile's checks as a clean pass. The guide now says that `false` means those checks
+  did not run, and that an absent key, from an older qfai or a run that could
+  not finish, means "not known" rather than `true`.
+
 - **The package self-governance checks report an input they cannot read.**
   `QFAI-MANIFEST-001` and `QFAI-HANDOFF-001` skipped a source file that was
   present but could not be read, such as one behind a permission error or a
