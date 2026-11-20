@@ -630,6 +630,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declaration list's `const` flag, so a `let`, `var` or `using` binding is not
   listed however it is exported.
 
+- **`triage-close` routes the request again before it closes it.** Its first
+  procedure step told the agent to pick an outcome from the closure table,
+  which has no `info-received` or `adopted`, so an answered information request
+  could be closed as `awaiting-info` instead of being routed again. The step
+  now applies those two re-routes first and uses the table only when the
+  request closes.
+
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two
   revisions, though that command takes only the test command and cannot start
