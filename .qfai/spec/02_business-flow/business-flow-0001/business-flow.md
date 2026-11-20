@@ -51,8 +51,12 @@ flowchart TD
   a mode of `off` or `shadow`, is not planned.
 - Fixed decision rules choose the route from the facts read out of the request.
   A request that needs no change runs a route that answers, closes, splits or
-  hands it back and writes nothing. A diagnosis showing the work is on the wrong
-  route moves it, at a branch point the route declares, to the route that fits.
+  hands it back and changes no product file. Its only tracked writes are the
+  run's deliberation record and the `open-questions.md` rows the run wrote,
+  which its last step commits locally without pushing, and an approval row
+  `qfai-run` records in `decisions.md` before a hand-off. A diagnosis showing
+  the work is on the wrong route moves it, at a branch point the route declares,
+  to the route that fits.
 - A request to write the acceptance tests of a flow runs the quality-phase
   route, which writes the bodies of the empty acceptance tests.
 - A scope change discovered after an accepted implementation item follows the
