@@ -148,8 +148,19 @@ jobs:
           # Asked of the API rather than read off the commit subject, so it holds under merge,
           # squash and rebase alike — the mistake this workflow already made once. A direct push
           # to `main` is associated with no pull request and therefore tags nothing.
-          if ! pulls="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" 2>&1)"; then
+          #
+          # SHIPPED-CI: not-applicable
+          # Because: release association tagging belongs to this package repository.
+          # Every page, not the first: the endpoint is paginated, and a release pull request
+          # listed on a later page would otherwise end the run green with nothing tagged.
+          # `--slurp` wraps the pages in one outer array; the next command flattens it.
+          if ! pulls="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls?per_page=100" 2>&1)"; then
             reject "could not ask which pull request carried ${GITHUB_SHA}, so whether this is a release merge is unknown: ${pulls}"
+          fi
+          # A list of pages, each a list, or nothing. Anything else is refused here rather
+          # than flattened into a partial answer, so a page that failed cannot hide a release.
+          if ! pulls="$(printf '%s' "$pulls" | node -e 'const pages = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (!Array.isArray(pages) || !pages.every(Array.isArray)) process.exit(1); process.stdout.write(JSON.stringify(pages.flat()));')"; then
+            reject "the pull requests associated with ${GITHUB_SHA} did not arrive as a list of pages, so whether this is a release merge is unknown"
           fi
           # SHIPPED-CI: not-applicable
           # Because: release association tagging belongs to this package repository.
