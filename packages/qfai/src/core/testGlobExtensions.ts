@@ -373,7 +373,8 @@ const POSIX_CLASS_MEMBERS: Readonly<Record<string, string>> = {
  *
  * A collating element (`[.ch.]`) or an equivalence class (`[=a=]`) is refused
  * rather than read as its own characters, which would select names the glob
- * does not. A leading `!` negates, as the dialect spells it.
+ * does not. A leading `^` negates the class; a leading `!` is a literal
+ * member, as the collector's matcher reads it.
  */
 function classBody(body: string): string | null {
   let source = "";
