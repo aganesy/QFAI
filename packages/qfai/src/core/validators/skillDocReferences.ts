@@ -25,8 +25,8 @@ export async function validateSkillDocReferences(
   // `.qfai/assistant/skill` and silently SKIPped every qfai-* SKILL
   // file under the actual configured location — letting
   // QFAI-SKILLDOC-001 drift go
-  // unreported. The fix mirrors the sister validators
-  // `staleReferences.ts` and `autopilotPolicy.ts`.
+  // unreported. The fix mirrors the sister validator
+  // `autopilotPolicy.ts`.
   const skillsDir = resolvePath(root, config, "skillsDir");
   if (!(await exists(skillsDir))) return issues;
 

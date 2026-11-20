@@ -718,7 +718,7 @@ export async function validateAutopilotPolicy(
   for (const { skillId, skillDoc, body } of skills) {
     // Operator-facing relPath derived from the actual scan path so a
     // relocated skillsDir surfaces under its real root-relative
-    // location (mirrors `staleReferences.ts` and `skillDocReferences.ts`).
+    // location (mirrors `skillDocReferences.ts`).
     const relPath = path.relative(root, skillDoc).replace(/\\/g, "/");
     issues.push(...skillPolicyIssues(relPath, skillId, parseAutopilotPolicy(body, skillId)));
   }
