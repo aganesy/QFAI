@@ -356,6 +356,11 @@ function componentsOfFile(
   const isExported = (statement: TsNode): boolean =>
     (statement.modifiers ?? []).some((modifier) => modifier.kind === k.ExportKeyword);
 
+  // `await using` sets `Const` together with `Using`, so the block-scoped bits must be `Const` alone.
+  const blockScoped = ts.NodeFlags.Let | ts.NodeFlags.Const | (ts.NodeFlags.Using ?? 0);
+  const isConstList = (list: TsNode["declarationList"]): boolean =>
+    list !== undefined && (list.flags & blockScoped) === ts.NodeFlags.Const;
+
   /** A top-level function or `const` that can be a component, by its local name. */
   type Candidate = {
     statement: TsNode;
@@ -371,7 +376,7 @@ function componentsOfFile(
       const name = statement.name.getText();
       candidates.set(name, { statement, fn: statement });
       if (direct) exported.add(name);
-    } else if (statement.kind === k.VariableStatement) {
+    } else if (statement.kind === k.VariableStatement && isConstList(statement.declarationList)) {
       for (const declaration of statement.declarationList?.declarations ?? []) {
         const name = declaration.name;
         if (!name || name.kind !== k.Identifier) continue;
