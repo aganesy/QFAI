@@ -21,6 +21,8 @@ vi.mock("node:child_process", () => ({
   execFileSync: (command: string, args: string[]): string => {
     calls.list.push([command, ...args]);
     if (command === "git") return "https://github.com/aganesy/QFAI.git\n";
+    const failure = calls.failGh?.(args);
+    if (failure !== undefined) throw failure;
     if (args.some((arg) => arg.includes("reviewThreads(")))
       return calls.threadPages.shift() ?? "{}";
     if (args[1] === "-i") return calls.commentPages.shift() ?? "HTTP/2.0 404 Not Found\n\n{}";
