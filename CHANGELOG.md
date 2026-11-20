@@ -637,6 +637,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new script stop with an error at the first skip in that file, so rewrite
   each count as the names of the tests it covered.
 
+- **`qfai atdd scaffold` reads vitest only from a script that runs it.**
+  A `package.json` script that only named `vitest` as an argument, such as
+  `echo vitest`, made the command write a vitest skeleton for a project that
+  runs `node --test`, so the test imported a package the project does not
+  have. Now `vitest` counts only as the command a script runs: directly,
+  after environment assignments, through a launcher such as `npx`,
+  `cross-env`, `dotenv`, `env-cmd`, `env` or `time`, through a package
+  manager such as `pnpm exec`, `pnpm vitest`, `yarn dlx`, `npm exec` or
+  `bun run`, or inside the quoted script of `sh -c`, `concurrently` or
+  `run-p`.
+
 - **`qfai atdd scaffold` writes a CommonJS node:test skeleton that Node can
   load.** For a project that runs `node --test`, the skeleton imported
   `describe` and `it` with an `import` statement even in a `.cjs` file, and
@@ -747,6 +758,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   runner discarded the output of every non-zero exit, so the answer arrived
   empty. The runner now keeps the output of an exit code its caller names as an
   answer, and the documents query names only Graphify's no-match code.
+
+- **The Mermaid check finds diagrams inside block quotes and list items.**
+  `check-mermaid.mjs` saw a fence only at the start of a line, so a diagram
+  written after `> ` or nested under a list item was never parsed, and a
+  broken one passed. It now reads each line inside its block quotes and list
+  items, as CommonMark does, and a fence there ends where its container ends.
+  A line such as ` ```npx qfai validate``` ` is inline code, not a fence,
+  so it no longer hides the diagrams below it. `<!-- mermaid-lint:ignore -->`
+  still skips the next block, also when both lines sit in the same block quote.
 
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
