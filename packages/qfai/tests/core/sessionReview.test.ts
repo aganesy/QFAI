@@ -474,6 +474,12 @@ describe("the edges a slug, a shell line and a calendar leave open", () => {
     expect(sinceInstant("2026-13-01")).toBeNull();
     expect(sinceInstant("2024-02-29")).toBe(Date.UTC(2024, 1, 29));
   });
+
+  it("keeps a --since year below 0100 as written", () => {
+    expect(sinceInstant("0099-09-09")).toBe(Date.parse("0099-09-09T00:00:00Z"));
+    expect(sinceInstant("0000-02-29T12:00:00Z")).toBe(Date.parse("0000-02-29T12:00:00Z"));
+    expect(sinceInstant("0099-02-29")).toBeNull();
+  });
 });
 
 // QFAI:EX-0001-0294-25
