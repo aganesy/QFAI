@@ -1446,7 +1446,16 @@ describe("qfai-maintain", () => {
     const resolving = flat(sectionOf(skill, "## Resolving conflicts"));
     expect(resolving).toMatch(/in the `resolve-conflicts` route/i);
     expect(resolving).toContain("Fetch the base (`git fetch`).");
-    expect(resolving).toContain("Start or resume the merge with `git merge --no-commit <base>`.");
+    expect(resolving).toContain(
+      "Check for a merge already in progress with `git rev-parse -q --verify MERGE_HEAD`. When it prints nothing, start the merge with `git merge --no-commit <base>`.",
+    );
+    // A merge of the same base already in progress is resumed, never merged a second time.
+    expect(resolving).toContain(
+      "When it prints the base's commit (`git rev-parse <base>`), resume at step 3 and run no second merge.",
+    );
+    expect(resolving).toContain(
+      "When it prints any other commit, stop: report the in-progress merge and the commit it names, and leave it in place.",
+    );
     expect(resolving).toContain(
       "The union merge resolves `decisions.md`, its pages and `open-questions.md` by keeping both sides' rows. Edit, move and renumber no register row, except that",
     );
