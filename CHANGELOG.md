@@ -546,6 +546,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and refused with `plan-invalid` and `step-missing` as for the route's own
   steps.
 
+- **`qfai validate` takes only a directory for an old spec-pack layout.** An
+  ordinary file in the specs directory whose name matched `spec-*` or
+  `_policies`, such as `spec-notes.md`, raised `QFAI-LAYOUT-001` and stopped
+  every profile validator. Only `spec-*/` and `_policies/` directories now
+  count, as `qfai init` already did, and a matching file is no longer listed
+  in the finding's message.
+
 - **`qfai session-review` takes a Codex rollout only when its `session_meta`
   records a session id.** A rollout whose metadata named the root but carried
   no `id` was reported under an ID made up from its file name, which

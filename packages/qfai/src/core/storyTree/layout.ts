@@ -1,4 +1,4 @@
-import { lstat, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
@@ -78,19 +78,18 @@ export function hasLegacySpecPackEntries(entries: readonly string[]): boolean {
   return entries.some(isLegacySpecPackEntry);
 }
 
-/** Every file under the spec-pack and policy directories of an old layout, project-relative. */
+/**
+ * Every file under the spec-pack and policy directories of an old layout, project-relative.
+ * `directories` holds the names of the layout root's subdirectories only.
+ */
 export async function listLegacySpecPackFiles(
   root: string,
   layoutRoot: string,
-  entries: readonly string[],
+  directories: readonly string[],
 ): Promise<string[]> {
   const files: string[] = [];
-  for (const entry of entries.filter(isLegacySpecPackEntry)) {
+  for (const entry of directories.filter(isLegacySpecPackEntry)) {
     const entryPath = path.join(layoutRoot, entry);
-    if (!(await lstat(entryPath)).isDirectory()) {
-      files.push(entryPath);
-      continue;
-    }
     for (const found of await readdir(entryPath, { recursive: true, withFileTypes: true })) {
       if (!found.isDirectory()) files.push(path.join(found.parentPath, found.name));
     }
