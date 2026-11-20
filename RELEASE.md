@@ -165,16 +165,19 @@ Note: run the commands below from the repository root unless stated otherwise.
    node scripts/check-bidi.mjs
    pnpm lint
    pnpm check-types
-   node scripts/check-build-warnings.mjs
+   corepack pnpm ci:gate:build
    pnpm -C packages/qfai test
    pnpm test:assets
    node packages/qfai/dist/cli/index.mjs --help
    node packages/qfai/dist/cli/index.mjs init --dry-run
    node packages/qfai/dist/cli/index.mjs doctor --fail-on error
-   pnpm verify:pack
    ```
 
-   Run `pnpm verify:pack` from the repository root (to run it directly, use `node ./scripts/verify-pack.mjs`).
+   `ci:gate:build` builds the package, fails on the build warnings it watches
+   for, then runs `pnpm verify:pack`. Run it through `corepack pnpm` from the
+   repository root, so the build check starts the pnpm that runs it. Run with
+   bare `node`, the check looks for a `pnpm` executable on PATH, which does not
+   find the `pnpm.cmd` shim on Windows.
 
 3. Package check (dry-run)
 
@@ -231,20 +234,27 @@ Note: run the commands below from the repository root unless stated otherwise.
 
 ## Final check after the release
 
-Run it in an empty working directory (to avoid clashing with existing files).
+Run it in a new directory under the OS temporary directory, with its own
+`package.json`. npm installs into the nearest directory that holds a
+`package.json`, so from inside this checkout the install would change the
+repository root and meet its workspace dependencies. A directory reused from
+an earlier run still holds the files that run generated, so make a new one
+every time.
 
 On Unix/Linux (bash/zsh):
 
 ```sh
-mkdir -p tmp/qfai-release-smoke
-cd tmp/qfai-release-smoke
+cd "$(mktemp -d)"
+npm init -y
 ```
 
 On PowerShell:
 
 ```powershell
-New-Item -ItemType Directory -Force -Path tmp/qfai-release-smoke
-Set-Location tmp/qfai-release-smoke
+$smoke = Join-Path ([System.IO.Path]::GetTempPath()) "qfai-release-smoke-$([guid]::NewGuid())"
+New-Item -ItemType Directory -Path $smoke | Out-Null
+Set-Location $smoke
+npm init -y
 ```
 
 The registry can lag the publish job by a minute or two, and `npm i -D qfai` would then

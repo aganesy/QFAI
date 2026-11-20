@@ -203,6 +203,57 @@ describe("the project layer describes the repository it is in", () => {
     ).toEqual([]);
   });
 
+  // npm installs into the nearest directory holding a `package.json`. The smoke
+  // check made a fixed `tmp/` directory inside the checkout and initialised no
+  // package there, so the install landed in the repository root, and a second
+  // run inherited the first run's files.
+  it("runs the release smoke install in a new temporary package", async () => {
+    const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
+    const start = guide.indexOf("## Final check after the release");
+    expect(start, "the release guide has no final check to read").toBeGreaterThanOrEqual(0);
+    const rest = guide.slice(start + 1);
+    const next = rest.search(/^## /m);
+    const smoke = next < 0 ? rest : rest.slice(0, next);
+
+    expect(smoke, "the Unix steps make a new temporary directory").toMatch(/\bmktemp -d\b/);
+    expect(smoke, "the PowerShell steps make one under the temp path").toMatch(/GetTempPath\(\)/);
+    expect(smoke, "a directory inside the checkout").not.toMatch(/\btmp\/qfai-release-smoke\b/);
+
+    const inits = [...smoke.matchAll(/^npm init -y$/gm)].map((match) => match.index);
+    const install = smoke.search(/^npm i -D qfai@/m);
+    expect(inits.length, "each shell's steps initialise their own package").toBe(2);
+    expect(install, "the guide shows no smoke install to check").toBeGreaterThanOrEqual(0);
+    expect(
+      inits.every((at) => at < install),
+      "the package exists before the install",
+    ).toBe(true);
+  });
+
+  // Run with bare `node`, the build-warning check starts a `pnpm` executable on
+  // PATH, which misses the `pnpm.cmd` shim on Windows. The `ci:gate:build`
+  // script hands it the running pnpm and runs `verify:pack` as well, so the
+  // release guide calls the script and lists no second pack check beside it.
+  it("runs the release build check through the ci:gate:build script", async () => {
+    const manifest: unknown = JSON.parse(
+      await readFile(path.join(repoRoot, "package.json"), "utf-8"),
+    );
+    const scripts = isRecord(manifest) ? manifest["scripts"] : undefined;
+    const gate = isRecord(scripts) ? scripts["ci:gate:build"] : undefined;
+    expect(gate, "ci:gate:build no longer runs both checks").toEqual(
+      expect.stringMatching(/check-build-warnings\.mjs[\s\S]*verify:pack/),
+    );
+
+    const guide = await readFile(path.join(repoRoot, "RELEASE.md"), "utf-8");
+    expect(guide, "the guide runs the build check with bare node").not.toMatch(
+      /^\s*node (?:\.\/)?scripts\/check-build-warnings\.mjs/m,
+    );
+    const block = [...guide.matchAll(/^\s*```sh\n([\s\S]*?)^\s*```/gm)]
+      .map(([, body]) => body ?? "")
+      .find((body) => /^\s*corepack pnpm ci:gate:build$/m.test(body));
+    expect(block, "no shell block runs corepack pnpm ci:gate:build").toBeDefined();
+    expect(block, "the block runs verify:pack a second time").not.toMatch(/^\s*pnpm verify:pack$/m);
+  });
+
   // The host command lists under `.instruction/03_ai-agents/` were copied from
   // another project: `generate:graphql`, `apply:backend`, `test:e2e` and `seed`
   // are scripts this repository never had, and a root `pnpm test` runs nothing.
