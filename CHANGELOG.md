@@ -806,6 +806,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `Already up to date.` and leaves no `MERGE_HEAD`, the branch already holds the
   base: the step stops, reports the base as already merged and edits nothing.
 
+- **A plan stage kind named after an object property is refused, not a crash**
+  (#4858). A workflow plan whose stage kind was `constructor`, `toString` or
+  another inherited name stopped with `kind.includes is not a function`, or
+  `written.some is not a function` when the stage also had `serves`, instead
+  of the `out-of-vocabulary` refusal. The kind vocabulary and the artifacts a
+  kind writes are now looked up by own key only.
+
 - **The `resolve-conflicts` route resumes a merge of the same base instead of
   starting a second one.** A branch still resolving an earlier merge of the
   base has `MERGE_HEAD`, so running `git merge --no-commit <base>` again failed
