@@ -242,6 +242,43 @@ describe("the catalogue is written only inside the project", () => {
   });
 });
 
+// QFAI:AC-0001-0307-09
+describe("a configuration the command cannot use stops it before it scans", () => {
+  const broken = { "qfai.config.yaml": "paths: [\n", "src/a.tsx": component("Alpha", []) };
+
+  // QFAI:EX-0001-0307-20
+  it("exits 1 naming qfai.config.yaml and leaves an existing catalogue as it was", async () => {
+    const root = await projectWith({ ...broken, [CATALOG]: "keep\n" });
+    const result = await cli(["catalog", "components", "--root", root]);
+    expect(result.code).toBe(1);
+    expect(result.out).toBe("");
+    expect(result.err).toBe(
+      [
+        "qfai catalog components: cannot use qfai.config.yaml, so no catalogue was written:",
+        "  - The configuration file could not be read or parsed.",
+        "",
+      ].join("\n"),
+    );
+    expect(await readCatalogText(root)).toBe("keep\n");
+    expect(await readdir(path.join(root, ".qfai", "catalog"))).toEqual(["components.yaml"]);
+  });
+
+  // QFAI:EX-0001-0307-21
+  it("under --check exits 1 naming qfai.config.yaml rather than calling the catalogue out of date", async () => {
+    const root = await projectWith({ ...broken, [CATALOG]: "keep\n" });
+    const result = await cli(["catalog", "components", "--check", "--root", root]);
+    expect(result.code).toBe(1);
+    expect(result.err).toBe(
+      [
+        "qfai catalog components: cannot use qfai.config.yaml, so nothing was compared:",
+        "  - The configuration file could not be read or parsed.",
+        "",
+      ].join("\n"),
+    );
+    expect(await readCatalogText(root)).toBe("keep\n");
+  });
+});
+
 // QFAI:AC-0001-0307-04
 describe("a component with no source, and two components for one pattern, are warnings", () => {
   it("warns on the unsourced component and once on the shared pattern", async () => {
