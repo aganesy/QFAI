@@ -47,6 +47,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
@@ -464,6 +465,108 @@ describe("the re-pin commits only the files its programs write", () => {
     expect(body).not.toMatch(/git add\s+(?:-A|--all|-u|--update|\.(?:\s|$))/u);
     expect(body).toMatch(/git add -- "\$\{expected\[@\]\}"/u);
     expect(body).toContain("REPIN_FILES");
+  });
+});
+
+describe("the scripts guard tells a stale base from a branch that edited scripts", () => {
+  // The guard refuses whenever the branch's `scripts/` differs from main's tip, and keeps doing
+  // so. A branch cut before main changed a script differs in the same way as a branch that edited
+  // one, so the refusal says which of the two it is: a stale base clears on a rebase, an edit
+  // does not.
+  //
+  // EXECUTED, not grepped: the step body runs under bash in a shallow clone of a scratch origin,
+  // the way the job's checkout leaves it.
+
+  const GUARD_STEP = "Refuse a branch that rewrote the programs this job runs";
+  const BRANCH = "renovate/example";
+
+  function guardBody(): string {
+    const body = stepsOf("repin").find((step) => step["name"] === GUARD_STEP)?.["run"];
+    expect(body, `the repin job has no "${GUARD_STEP}" step with a body`).toBeTypeOf("string");
+    return typeof body === "string" ? body : "";
+  }
+
+  type Shape = { branchEditsScripts: boolean; mainEditsScriptsLater: boolean };
+
+  function runGuard(shape: Shape): { status: number | null; output: string } {
+    const body = guardBody();
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-renovate-guard-"));
+    try {
+      const origin = path.join(dir, "origin");
+      const work = path.join(dir, "work");
+      const git = (cwd: string, ...args: string[]): void => {
+        execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.invalid", ...args], {
+          cwd,
+          stdio: "pipe",
+        });
+      };
+      const commit = (rel: string, text: string, message: string): void => {
+        mkdirSync(path.join(origin, path.dirname(rel)), { recursive: true });
+        writeFileSync(path.join(origin, rel), text, "utf-8");
+        git(origin, "add", "-A");
+        git(origin, "commit", "-q", "-m", message);
+      };
+
+      mkdirSync(origin, { recursive: true });
+      git(origin, "init", "-q", "-b", "main");
+      git(origin, "config", "core.autocrlf", "false");
+      commit(path.join("scripts", "guard.mjs"), "base\n", "base");
+      commit("README.md", "one\n", "main moves on");
+
+      git(origin, "checkout", "-q", "-b", BRANCH);
+      commit("package.json", "{}\n", "chore(deps): update");
+      if (shape.branchEditsScripts) {
+        commit(path.join("scripts", "guard.mjs"), "branch\n", "edit the guard");
+      }
+
+      git(origin, "checkout", "-q", "main");
+      if (shape.mainEditsScriptsLater) {
+        commit(path.join("scripts", "guard.mjs"), "main\n", "main changes the guard");
+      }
+
+      git(dir, "clone", "-q", "--depth=1", "--branch", BRANCH, pathToFileURL(origin).href, work);
+
+      const script = path.join(dir, "guard.sh");
+      writeFileSync(script, body, "utf-8");
+      const result = spawnSync("bash", [script], {
+        cwd: work,
+        env: { ...process.env, BRANCH_REF: `refs/heads/${BRANCH}` },
+        encoding: "utf-8",
+      });
+      if (result.error !== undefined) throw result.error;
+      return { status: result.status, output: `${result.stdout}${result.stderr}` };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("passes a branch whose scripts match main's tip", () => {
+    const run = runGuard({ branchEditsScripts: false, mainEditsScriptsLater: false });
+    expect(run.status, run.output).toBe(0);
+  });
+
+  it("refuses a stale base and says a rebase and retry clears it", () => {
+    const run = runGuard({ branchEditsScripts: false, mainEditsScriptsLater: true });
+    expect(run.status, run.output).not.toBe(0);
+    expect(run.output).toContain("differs from main under scripts/");
+    expect(run.output).toContain("stale base");
+    expect(run.output).toContain("Rebase the branch onto main");
+    expect(run.output).not.toContain("the branch itself changed scripts/");
+  });
+
+  it("refuses a branch that edited scripts and says a rebase does not clear it", () => {
+    const run = runGuard({ branchEditsScripts: true, mainEditsScriptsLater: false });
+    expect(run.status, run.output).not.toBe(0);
+    expect(run.output).toContain("the branch itself changed scripts/");
+    expect(run.output).toContain("a rebase will not clear it");
+    expect(run.output).not.toContain("stale base");
+  });
+
+  it("reports the branch edit when the base is also stale", () => {
+    const run = runGuard({ branchEditsScripts: true, mainEditsScriptsLater: true });
+    expect(run.status, run.output).not.toBe(0);
+    expect(run.output).toContain("the branch itself changed scripts/");
+    expect(run.output).not.toContain("stale base");
   });
 });
 

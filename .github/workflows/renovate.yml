@@ -205,9 +205,30 @@ jobs:
           # deliberately kept no credentials. Shallow on both sides — this compares two trees,
           # which are complete in a shallow clone, and never walks between them.
           git fetch --depth=1 origin main
-          if ! git diff --quiet FETCH_HEAD HEAD -- scripts; then
+          main_tip="$(git rev-parse FETCH_HEAD)"
+          if ! git diff --quiet "${main_tip}" HEAD -- scripts; then
             echo "::error::renovate repin: ${BRANCH_REF} differs from main under scripts/, which Renovate never writes. This job runs those programs with a write-capable token; it refuses rather than running a branch's own copy of them."
-            git --no-pager diff --stat FETCH_HEAD HEAD -- scripts
+            git --no-pager diff --stat "${main_tip}" HEAD -- scripts
+
+            # The refusal above stands either way; this only says which kind it is. A branch cut
+            # before main changed a script differs from main's tip exactly as a branch that edited
+            # one does, and only the first clears on a rebase. Telling them apart needs the commit
+            # where the branch left main, so the history is fetched here, on the failure path
+            # alone, and nothing from it is executed.
+            # SHIPPED-CI: not-applicable
+            # Because: the shipped templates carry no Renovate workflow and no scripts guard.
+            if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+              git fetch --quiet --unshallow origin main "${BRANCH_REF}" || true
+            fi
+            base="$(git merge-base "${main_tip}" HEAD 2> /dev/null || true)"
+            if [ -z "${base}" ]; then
+              echo "::error::renovate repin: could not find the commit where ${BRANCH_REF} left main, so this cannot say whether the branch edited scripts/ or main changed them after the branch was cut. In a full clone, run git diff \$(git merge-base origin/main ${BRANCH_REF#refs/heads/}) ${BRANCH_REF#refs/heads/} -- scripts: no output means a stale base, which a rebase onto main and a retry clears."
+            elif git diff --quiet "${base}" HEAD -- scripts; then
+              echo "::error::renovate repin: this is a stale base. ${BRANCH_REF} made no change under scripts/ since it left main at ${base}; main changed them after that. Rebase the branch onto main (tick the rebase box in its pull request, or let Renovate's next run do it); that push re-runs this job against the new base."
+            else
+              echo "::error::renovate repin: the branch itself changed scripts/ since it left main at ${base}, so a rebase will not clear it. Review these changes before anything runs them:"
+              git --no-pager diff --stat "${base}" HEAD -- scripts
+            fi
             exit 1
           fi
         shell: bash
