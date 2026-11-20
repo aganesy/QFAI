@@ -752,6 +752,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   empty. The runner now keeps the output of an exit code its caller names as an
   answer, and the documents query names only Graphify's no-match code.
 
+- **The Mermaid check finds diagrams inside block quotes and list items.**
+  `check-mermaid.mjs` saw a fence only at the start of a line, so a diagram
+  written after `> ` or nested under a list item was never parsed, and a
+  broken one passed. It now reads each line inside its block quotes and list
+  items, as CommonMark does, and a fence there ends where its container ends.
+  A line such as ` ```npx qfai validate``` ` is inline code, not a fence,
+  so it no longer hides the diagrams below it. `<!-- mermaid-lint:ignore -->`
+  still skips the next block, also when both lines sit in the same block quote.
+
 - **The Mermaid screen-flow checks now read a diagram behind front matter.**
   When a Mermaid block opened with a `---` front-matter block, `qfai validate`
   took the opening `---` as the diagram's declaration and skipped the
