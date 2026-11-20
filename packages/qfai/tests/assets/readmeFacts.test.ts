@@ -1,11 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
+import { WORKFLOW_HELP } from "../../src/cli/commands/workflow.js";
 import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
 // What the two READMEs state as fact. A README claim is pinned here and nowhere
@@ -383,6 +384,98 @@ describe("README facts", () => {
       expect(paragraph, readmePath).toContain("`node_modules/.bin/qfai`");
       expect(paragraph, readmePath).toContain("npm registry");
       expect(paragraph, readmePath).not.toContain("trust the launcher the project installs");
+    }
+  });
+
+  it("tells an upgrade to read the notes of every version it skips", async () => {
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("### Keeping QFAI itself up to date");
+      const section = readme.slice(start, readme.indexOf("\n## ", start)).replace(/\s+/g, " ");
+      expect(section, readmePath).toContain(
+        "Delete the files listed as retired in the release notes of every version after the one you had installed, up to and including the new one",
+      );
+    }
+  });
+
+  it("documents every form of qfai workflow plan the help prints", async () => {
+    // The flags come from the help text, so a new form fails here until both READMEs list it.
+    const flags = new Set(WORKFLOW_HELP.match(/--[a-z]+/g) ?? []);
+    expect([...flags].sort()).toEqual(["--in", "--order", "--route"]);
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("- `npx qfai workflow plan`");
+      expect(start, readmePath).toBeGreaterThanOrEqual(0);
+      const entry = readme.slice(start, readme.indexOf("\n- `npx qfai", start + 1));
+      for (const flag of flags) {
+        expect(entry, `${readmePath} must document ${flag}`).toContain(`\`${flag}`);
+      }
+      expect(entry, readmePath).toContain("`--route <route> --in <path>`");
+    }
+  });
+
+  it("lists every user-invoked shipped skill with how to invoke it", async () => {
+    const skillRoot = path.join(
+      repoRoot,
+      "packages",
+      "qfai",
+      "assets",
+      "init",
+      ".qfai",
+      "assistant",
+      "skill",
+    );
+    const userInvoked: string[] = [];
+    for (const entry of await readdir(skillRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const skill = await readFile(path.join(skillRoot, entry.name, "SKILL.md"), "utf-8").catch(
+        () => "",
+      );
+      if (/^disable-model-invocation:\s*true\s*$/m.test(skill)) userInvoked.push(entry.name);
+    }
+    expect(
+      userInvoked,
+      "no shipped skill is user-invoked, so this check measures nothing",
+    ).toContain("qfai-grill");
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      for (const name of userInvoked) {
+        expect(readme, `${readmePath} must list ${name}`).toContain(`- **${name}**:`);
+        expect(readme, `${readmePath} must show how to type ${name}`).toContain(`\`/${name} `);
+      }
+    }
+  });
+
+  it("documents qfai db-drift, its configuration and the engine the project installs", async () => {
+    const manifest: unknown = JSON.parse(
+      await readFile(path.join(repoRoot, "packages", "qfai", "package.json"), "utf-8"),
+    );
+    const dependencies =
+      typeof manifest === "object" && manifest !== null && "dependencies" in manifest
+        ? manifest.dependencies
+        : undefined;
+    expect(typeof dependencies, "packages/qfai/package.json#dependencies").toBe("object");
+    // The README tells the project to install the engine, which holds only while qfai does not.
+    const shipped =
+      typeof dependencies === "object" && dependencies !== null ? Object.keys(dependencies) : [];
+    expect(shipped).not.toContain("@electric-sql/pglite");
+    for (const readmePath of READMES) {
+      const readme = await readFile(readmePath, "utf-8");
+      const start = readme.indexOf("- `npx qfai db-drift`");
+      expect(start, readmePath).toBeGreaterThanOrEqual(0);
+      const entry = readme.slice(start, readme.indexOf("\n- `npx qfai", start + 1));
+      for (const fact of [
+        "`paths.migrationsDir`",
+        "`npm i -D @electric-sql/pglite`",
+        "`npx qfai db-drift --format json --out .qfai/report/db-drift.json`",
+        "`only-in-contracts`",
+        "`only-in-migrations`",
+        "`differs`",
+        '"out-of-scope"',
+        "`--fail-on never`",
+      ]) {
+        expect(entry, `${readmePath} must state ${fact}`).toContain(fact);
+      }
     }
   });
 
