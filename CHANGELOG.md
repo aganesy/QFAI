@@ -544,6 +544,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **`qfai sdd preflight` keeps a carry-over entry that starts with `<`.** A
+  flagless re-run dropped every recorded entry opening with a less-than sign,
+  such as a tag or a comparison, as if it were the template's placeholder.
+  Only the template's exact
+  placeholder is now read as no carry-over. Closes #4864.
+
 - **`qfai session-review --since` accepts a date with a year below 0100.** The
   calendar check read years 0000 through 0099 as 1900 through 1999, so a valid
   date such as `0099-09-09` was refused. The check now keeps the year as
