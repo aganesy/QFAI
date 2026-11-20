@@ -636,6 +636,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   date such as `0099-09-09` was refused. The check now keeps the year as
   written.
 
+- **The SDD gate references send DB contract execution evidence to the SDD
+  report.** The quality gate and phase checklists named a misspelled
+  destination that does not exist. Both now name the SDD report, matching the
+  contract artifact rules. Closes #4933.
+
 - **Reviewer cards read the technology contract from the configured contracts
   directory.** The architecture, implementation, product-surface and
   requirements reviewer cards, the quality rule and the discussion skill named
