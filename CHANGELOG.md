@@ -526,6 +526,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
 
+- **`DESIGN.md` accepts a font family whose name ends in many digits.** A
+  family such as `Brand9007199254740993` was refused as a number too large to
+  read exactly, although both catalog formats write a family name as text. The
+  precision check now reads only the fields that become numeric tokens.
+
 - **The saas-package profile reports a `DESIGN.md` or handoff record it
   cannot read, instead of calling it absent.** A directory or an unreadable
   file at either path was reported as missing, with instructions to author it.
