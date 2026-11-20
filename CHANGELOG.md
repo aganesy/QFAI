@@ -519,6 +519,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **`qfai session-review --since` accepts a date with a year below 0100.** The
+  calendar check read years 0000 through 0099 as 1900 through 1999, so a valid
+  date such as `0099-09-09` was refused. The check now keeps the year as
+  written.
+
 - **Reviewer cards read the technology contract from the configured contracts
   directory.** The architecture, implementation, product-surface and
   requirements reviewer cards, the quality rule and the discussion skill named

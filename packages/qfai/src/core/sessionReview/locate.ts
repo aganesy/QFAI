@@ -52,7 +52,9 @@ export function sinceInstant(value: string): number | null {
 function isCalendarDate(date: string): boolean {
   const [year, month, day] = date.split("-").map(Number);
   if (year === undefined || month === undefined || day === undefined) return false;
-  const parsed = new Date(Date.UTC(year, month - 1, day));
+  // `Date.UTC` reads years 0 through 99 as 1900 through 1999; `setUTCFullYear` keeps the year.
+  const parsed = new Date(0);
+  parsed.setUTCFullYear(year, month - 1, day);
   return (
     parsed.getUTCFullYear() === year &&
     parsed.getUTCMonth() === month - 1 &&
