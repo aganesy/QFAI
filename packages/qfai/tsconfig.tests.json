@@ -334,6 +334,7 @@
     "tests/integration/designAuditTokenDrift.test.ts",
     "tests/integration/doctorAssistantDrift.test.ts",
     "tests/integration/doctorDocsLane.test.ts",
+    "tests/integration/doctorDriftReadIo.test.ts",
     "tests/integration/doctorMdschemaBinary.test.ts",
     "tests/integration/doctorMutationProofs.test.ts",
     "tests/integration/doctorWorkflowCost.test.ts",

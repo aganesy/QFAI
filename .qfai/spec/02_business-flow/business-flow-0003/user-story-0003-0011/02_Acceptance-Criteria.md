@@ -43,6 +43,7 @@ Feature: Shipped workflow checks
     When `qfai doctor` runs
     Then each differing workflow is a `warning` and never an `error`, naming the installed file and the packaged file to copy from
     And a matching workflow, one that differs only in line endings and an absent one raise no finding
+    And an installed or packaged copy that exists but cannot be read is a `warning` naming that copy and the cause, and the other workflows are still compared
     And doctor writes no workflow file
 
   # AC-0003-0011-12

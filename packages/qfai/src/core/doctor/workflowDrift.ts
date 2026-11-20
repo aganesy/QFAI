@@ -6,6 +6,7 @@ import { parse as parseYaml } from "yaml";
 
 import type { AcceptedDrift } from "../config.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { SHIPPED_WORKFLOW_NAMES } from "../../shared/shippedWorkflowNames.js";
 
 const WORKFLOWS_DIR = [".github", "workflows"] as const;
@@ -15,15 +16,69 @@ export type WorkflowDriftCheck = {
   severity: "warning" | "info";
   title: string;
   message: string;
-  details: { path: string; packagedCopy: string; digest: string; acceptedReason?: string };
+  details:
+    | { path: string; packagedCopy: string; digest: string; acceptedReason?: string }
+    | { path: string; packagedCopy: string; unreadable: string; code: string };
 };
 
-export async function readText(target: string): Promise<string | undefined> {
+/** A copy that exists and cannot be read: the path to show, the error code and the cause. */
+export type UnreadableCopy = {
+  kind: "unreadable";
+  unreadable: string;
+  code: string;
+  cause: string;
+};
+
+/** Both copies' texts, `absent` when either does not exist, or the copy that cannot be read. */
+export type Copies =
+  { kind: "texts"; installed: string; packaged: string } | { kind: "absent" } | UnreadableCopy;
+
+/** Findings reach a terminal, so control characters in a path or an error message go. */
+export function printable(text: string): string {
+  return text.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/gu, " ").trim();
+}
+
+/** One copy's text, `undefined` when it does not exist, or why it cannot be read. */
+async function readCopy(file: string, shown: string): Promise<string | undefined | UnreadableCopy> {
   try {
-    return await readFile(target, "utf-8");
-  } catch {
-    return undefined;
+    return await readFile(file, "utf-8");
+  } catch (error) {
+    if (isEnoent(error)) return undefined;
+    return {
+      kind: "unreadable",
+      unreadable: shown,
+      code: hasErrnoCode(error) ? error.code : "unknown",
+      cause: printable(error instanceof Error ? error.message : String(error)),
+    };
   }
+}
+
+/**
+ * The installed copy (`installedPath`, `/`-separated below `root`) and the packaged copy of one
+ * compared file. Only a copy that does not exist is absent; any other read failure is returned
+ * with the copy it hit, so a drift check names it instead of dropping the file from the scan.
+ */
+export async function readCopies(
+  root: string,
+  installedPath: string,
+  packagedCopy: string,
+): Promise<Copies> {
+  const installed = await readCopy(path.join(root, ...installedPath.split("/")), installedPath);
+  if (installed === undefined) return { kind: "absent" };
+  if (typeof installed !== "string") return installed;
+  const packaged = await readCopy(packagedCopy, packagedCopy);
+  if (packaged === undefined) return { kind: "absent" };
+  if (typeof packaged !== "string") return packaged;
+  return { kind: "texts", installed, packaged };
+}
+
+/** The message of a drift finding for a copy of `installedPath` that cannot be read. */
+export function unreadableCopyMessage(copy: UnreadableCopy, installedPath: string): string {
+  return (
+    `${printable(copy.unreadable)} cannot be read: ${copy.cause}. doctor did not compare ` +
+    `${installedPath} with the copy this qfai package ships, so a difference there would go ` +
+    "unreported. Make it readable, then run doctor again."
+  );
 }
 
 /** Line endings are not an edit: a checkout may convert them. */
@@ -156,7 +211,8 @@ export function workflowDigest(text: string): string {
  * package ships, carrying the installed text's digest, and an `info` finding instead for one
  * `accepted` names with that same digest, carrying its reason. A file whose digest is not the
  * recorded one changed after it was accepted and is a warning again. Both copies are read and
- * nothing is written. A workflow the project does not have raises no finding here.
+ * nothing is written. A workflow the project does not have raises no finding here; one whose
+ * installed or packaged copy exists and cannot be read is a warning naming that copy and the cause.
  */
 export async function checkWorkflowDrift(
   root: string,
@@ -166,13 +222,28 @@ export async function checkWorkflowDrift(
   if (packagedDir === undefined) return [];
   const findings: WorkflowDriftCheck[] = [];
   for (const name of [...SHIPPED_WORKFLOW_NAMES].sort()) {
-    const installed = await readText(path.join(root, ...WORKFLOWS_DIR, name));
-    const packagedCopy = path.join(packagedDir, name);
-    const packaged = await readText(packagedCopy);
-    if (installed === undefined || packaged === undefined) continue;
-    if (withLf(installed) === withLf(packaged)) continue;
     const installedPath = [...WORKFLOWS_DIR, name].join("/");
     const id = `workflows.drift.${name.replace(/\.yml$/, "")}`;
+    const packagedCopy = path.join(packagedDir, name);
+    const copies = await readCopies(root, installedPath, packagedCopy);
+    if (copies.kind === "absent") continue;
+    if (copies.kind === "unreadable") {
+      findings.push({
+        id,
+        severity: "warning",
+        title: `Shipped workflow cannot be read (${printable(copies.unreadable)})`,
+        message: unreadableCopyMessage(copies, installedPath),
+        details: {
+          path: installedPath,
+          packagedCopy,
+          unreadable: copies.unreadable,
+          code: copies.code,
+        },
+      });
+      continue;
+    }
+    const { installed, packaged } = copies;
+    if (withLf(installed) === withLf(packaged)) continue;
     const difference = describeWorkflowDifference(installed, packaged);
     const digest = workflowDigest(installed);
     const entry = accepted.get(name);
