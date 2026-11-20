@@ -503,6 +503,7 @@
     "tests/unit/sourceReduction.test.ts",
     "tests/unit/suppressWorkflowCommands.test.ts",
     "tests/unit/symlinkFixture.test.ts",
+    "tests/unit/windowsFullSuiteFixture.test.ts",
     "tests/unit/legacyInitProcess.test.ts",
     "tests/integration/storyTreeValidateScan.test.ts",
     "tests/unit/core/validators/brokenWrapperRemedy.test.ts",

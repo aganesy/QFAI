@@ -13,12 +13,18 @@ afterEach(async () => {
   await Promise.all(temporary.splice(0).map((dir) => removeTempTree(dir)));
 });
 
-async function packageWithBuild(builtAt: number, sourceAt: number): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-built-cli-"));
-  temporary.push(root);
+async function packageWithBuild(
+  builtAt: number,
+  sourceAt: number,
+  baseConfigAt: number = 0,
+): Promise<string> {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "qfai-built-cli-"));
+  temporary.push(workspace);
+  const root = path.join(workspace, "packages", "qfai");
   await mkdir(path.join(root, "src"), { recursive: true });
   await mkdir(path.join(root, "dist", "cli"), { recursive: true });
   const written = [
+    [path.join(workspace, "tsconfig.base.json"), baseConfigAt],
     [path.join(root, "package.json"), 0],
     [path.join(root, "tsup.config.ts"), 0],
     [path.join(root, "tsconfig.build.json"), 0],
@@ -43,6 +49,13 @@ it("names the newer source file and the build command when the build is stale", 
   const root = await packageWithBuild(1000, 2000);
   const problem = describeBuiltCliProblem(path.join(root, "dist", "cli", "index.mjs"), root);
   expect(problem).toContain(path.join("src", "cli.ts"));
+  expect(problem).toContain("pnpm -C packages/qfai build");
+});
+
+it("names the inherited base tsconfig when it alone is newer than the build", async () => {
+  const root = await packageWithBuild(2000, 1000, 3000);
+  const problem = describeBuiltCliProblem(path.join(root, "dist", "cli", "index.mjs"), root);
+  expect(problem).toContain(path.join("..", "..", "tsconfig.base.json"));
   expect(problem).toContain("pnpm -C packages/qfai build");
 });
 

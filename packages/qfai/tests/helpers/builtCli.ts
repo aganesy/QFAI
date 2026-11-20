@@ -3,7 +3,12 @@ import path from "node:path";
 
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, "../..");
 const BUILD_COMMAND = "pnpm -C packages/qfai build";
-const BUILD_INPUTS = ["package.json", "tsup.config.ts", "tsconfig.build.json"];
+const BUILD_INPUTS = [
+  "package.json",
+  "tsup.config.ts",
+  "tsconfig.build.json",
+  path.join("..", "..", "tsconfig.base.json"),
+];
 
 function newestSource(packageRoot: string): { file: string; mtimeMs: number } | undefined {
   const sourceDir = path.join(packageRoot, "src");
