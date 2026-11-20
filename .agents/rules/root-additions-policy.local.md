@@ -57,9 +57,15 @@ restate, so `qfai init` refreshes the two together.
    `.claude/rules/`, because Claude Code loads everything there at session
    start. `scopedRules.test.ts` holds both.
 
-3. Cite it from `AGENTS.md` and `.github/copilot-instructions.md`.
-   A shipped rule is cited from `root/AGENTS.md` and `root/CLAUDE.md` too, so an
-   adopter's entry points name it.
+3. Cite it from `AGENTS.md` and `.github/copilot-instructions.md`. A shipped
+   rule is cited from the two entry points an adopter receives as well:
+   `packages/qfai/assets/init/root/AGENTS.md`, inside its managed rules
+   section, and `buildCopilotInstructions` in
+   `packages/qfai/src/cli/commands/init.ts`, which writes the adopter's
+   `.github/copilot-instructions.md`. Init writes no `CLAUDE.md`, so no template
+   for one exists to edit. Then run `pnpm build` and `pnpm pins:entry`, which
+   rewrite the fixture and digest that pin those two files, and commit what
+   they rewrite.
 
 4. Add a block to `agentsRulesSurface.test.ts` naming one token per clause, and
    each entry point that cites it. The heading and the citation in `AGENTS.md` are held
