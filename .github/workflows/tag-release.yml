@@ -154,12 +154,12 @@ jobs:
           # Every page, not the first: the endpoint is paginated, and a release pull request
           # listed on a later page would otherwise end the run green with nothing tagged.
           # `--slurp` wraps the pages in one outer array; the next command flattens it.
-          if ! pulls="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls?per_page=100" 2>&1)"; then
-            reject "could not ask which pull request carried ${GITHUB_SHA}, so whether this is a release merge is unknown: ${pulls}"
+          if ! pages="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls?per_page=100" 2>&1)"; then
+            reject "could not ask which pull request carried ${GITHUB_SHA}, so whether this is a release merge is unknown: ${pages}"
           fi
-          # A list of pages, each a list, or nothing. Anything else is refused here rather
-          # than flattened into a partial answer, so a page that failed cannot hide a release.
-          if ! pulls="$(printf '%s' "$pulls" | node -e 'const pages = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (!Array.isArray(pages) || !pages.every(Array.isArray)) process.exit(1); process.stdout.write(JSON.stringify(pages.flat()));')"; then
+          # A list of pages, each a list, or nothing. A page that cannot be read as a list is
+          # refused here rather than skipped, so an unreadable page cannot hide a release.
+          if ! pulls="$(printf '%s' "$pages" | node -e 'const pages = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (!Array.isArray(pages) || !pages.every(Array.isArray)) process.exit(1); process.stdout.write(JSON.stringify(pages.flat()));')"; then
             reject "the pull requests associated with ${GITHUB_SHA} did not arrive as a list of pages, so whether this is a release merge is unknown"
           fi
           # SHIPPED-CI: not-applicable
@@ -168,7 +168,18 @@ jobs:
           # Node reads the REST array and emits only string head.ref values.
           # Missing or nonstring refs are ignored. Malformed JSON or a nonarray
           # response fails without output, so it cannot authorize a tag.
-          if ! printf '%s' "$pulls" | node -e 'const pulls = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (!Array.isArray(pulls)) process.exit(1); const refs = pulls.flatMap((pull) => typeof pull?.head?.ref === "string" ? [pull.head.ref] : []); if (refs.length > 0) process.stdout.write(refs.join("\n") + "\n");' | grep -qxF "release/v${claimed}"; then
+          #
+          # SHIPPED-CI: not-applicable
+          # Because: the shipped workflow set has no release tagging step to parse this response.
+          # Parsed apart from the match, because the two answers mean different things. A
+          # response that cannot be read says nothing about whether this is a release merge, and
+          # skipping on it would leave a release commit untagged under a green run. Only a valid
+          # array with no matching branch is "not a release"; the parser's own error stays in
+          # the log above the rejection.
+          if ! refs="$(printf '%s' "$pulls" | node -e 'const pulls = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (!Array.isArray(pulls)) process.exit(1); const refs = pulls.flatMap((pull) => typeof pull?.head?.ref === "string" ? [pull.head.ref] : []); if (refs.length > 0) process.stdout.write(refs.join("\n") + "\n");')"; then
+            reject "the answer to which pull request carried ${GITHUB_SHA} is not a JSON array of pull requests, so whether this is a release merge is unknown"
+          fi
+          if ! printf '%s\n' "$refs" | grep -qxF "release/v${claimed}"; then
             echo "tag-release: ${GITHUB_SHA} did not arrive from release/v${claimed}; nothing to tag"
             echo "push=false" >> "$GITHUB_OUTPUT"
             echo "version=${claimed}" >> "$GITHUB_OUTPUT"

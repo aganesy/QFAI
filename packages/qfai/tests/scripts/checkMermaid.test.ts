@@ -30,7 +30,7 @@ import { afterEach, describe, expect, it } from "vitest";
 // test run during collection. The spawn cases below still address the delegator,
 // because that is the path `pnpm lint:mermaid` and CI invoke.
 // @ts-expect-error -- a plain .mjs guard with no type declarations
-import { extractMermaidBlocks } from "../../assets/scripts/check-mermaid.mjs";
+import { extractMermaidBlocks, MARKDOWN_EXTENSIONS } from "../../assets/scripts/check-mermaid.mjs";
 import { createSymlinkFixture } from "../helpers/symlinkFixture.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -107,6 +107,56 @@ const BROKEN_DIAGRAM = ["```mermaid", "flowchart TD", "  A[Start] -->--> B{{{oop
   "\n",
 );
 
+const DOCS_WORKFLOW = path.join(
+  REPO_ROOT,
+  "packages/qfai/assets/init/root/.github/workflows/qfai-docs.yml",
+);
+
+/**
+ * The file extensions whose change runs the shipped document lane, read from
+ * the `case` pattern that names a document change in its change scope.
+ */
+async function documentExtensions(): Promise<string[]> {
+  const workflow = await readFile(DOCS_WORKFLOW, "utf-8");
+  const match = /^\s*([^\s)]+)\) run_anyway "a document changed/m.exec(workflow);
+  if (match?.[1] === undefined) {
+    throw new Error(`no document-change pattern in ${DOCS_WORKFLOW}`);
+  }
+  return match[1].split("|").map((pattern) => pattern.replace(/^\*/, ""));
+}
+
+/**
+ * Writes one broken diagram per document extension, one more in an upper-case
+ * spelling, and two in files whose extension is not a document one.
+ */
+async function writeExtensionSamples(
+  dir: string,
+): Promise<{ markdown: string[]; other: string[] }> {
+  await mkdir(dir, { recursive: true });
+  const extensions = await documentExtensions();
+  // Distinct base names, so a case-insensitive file system keeps every file. A
+  // name that is the extension alone, such as `.md`, matches the lane's pattern
+  // too, and `path.extname` reads none in it.
+  const markdown = [
+    ...extensions.map((extension) => path.join(dir, `page-${extension.slice(1)}${extension}`)),
+    ...extensions.map((extension) => path.join(dir, extension)),
+    path.join(dir, `upper${extensions[extensions.length - 1]?.toUpperCase() ?? ""}`),
+  ];
+  const other = [path.join(dir, "notes.txt"), path.join(dir, "page.mdown.bak")];
+  for (const file of [...markdown, ...other]) {
+    await writeFile(file, `# P\n\n${BROKEN_DIAGRAM}\n`, "utf-8");
+  }
+  return { markdown, other };
+}
+
+describe("check-mermaid document extensions", () => {
+  it("reads exactly the extensions whose change runs the shipped document lane", async () => {
+    const fromWorkflow = await documentExtensions();
+
+    expect([...MARKDOWN_EXTENSIONS].sort()).toEqual([...fromWorkflow].sort());
+  });
+});
+
 describe("check-mermaid lane", () => {
   // QFAI:EX-0001-0011-05
   it("parses the business-flow diagram in a one-flow one-story SDD sample", async () => {
@@ -176,6 +226,40 @@ describe("check-mermaid lane", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("2 diagram(s) parsed");
+  });
+
+  // The shipped document lane runs for a change to any of the extensions its
+  // change scope matches, so a broken diagram in one that the scan skipped
+  // passed the check its change triggered.
+  it("fails a broken diagram in every document extension, found by a directory scan", async () => {
+    const dir = await newTempDir();
+    const nested = path.join(dir, "docs");
+    const { markdown } = await writeExtensionSamples(nested);
+
+    const result = runLane([dir]);
+
+    expect(result.status, result.stderr).toBe(1);
+    for (const file of markdown) {
+      expect(result.stderr).toContain(`${path.sep}${path.basename(file)}:3`);
+    }
+    expect(result.stderr).toContain(
+      `${markdown.length} of ${markdown.length} diagram(s) failed to parse`,
+    );
+  });
+
+  it("fails a broken diagram in every document extension, named on the command line", async () => {
+    const dir = await newTempDir();
+    const { markdown, other } = await writeExtensionSamples(dir);
+
+    const result = runLane([...markdown, ...other]);
+
+    expect(result.status, result.stderr).toBe(1);
+    for (const file of markdown) {
+      expect(result.stderr).toContain(`${path.sep}${path.basename(file)}:3`);
+    }
+    expect(result.stderr).toContain(
+      `${markdown.length} of ${markdown.length} diagram(s) failed to parse`,
+    );
   });
 
   it("reports every broken diagram rather than stopping at the first", async () => {
