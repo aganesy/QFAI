@@ -61,6 +61,23 @@ export const STORY_TREE_ROOT_ENTRIES = [
   "02_business-flow",
 ] as const;
 
+/** The files `qfai init` seeds into the story tree, relative to the specs directory. */
+export const STORY_SEED_PATHS: readonly string[] = [
+  "decisions.md",
+  "open-questions.md",
+  ...POLICY_FILES.map((name) => `01_policy/${name}`),
+  "02_business-flow/business-flows.md",
+  ...CONTRACT_LAYER_FILES.map((name) => `03_contract/${name}`),
+];
+
+/** The directories a freshly seeded story tree holds, relative to the specs directory. */
+export const STORY_SEED_DIRS: readonly string[] = [
+  "01_policy",
+  "02_business-flow",
+  "03_contract",
+  ...CONTRACT_KIND_DIRS.map((kind) => `03_contract/${kind}`),
+];
+
 export type StoryTreeRoots = { specsDir: string; contractsDir: string };
 
 export function resolveStoryTreeRoots(root: string, config: QfaiConfig): StoryTreeRoots {
