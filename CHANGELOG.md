@@ -592,6 +592,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
 
+- **A file that grows while it is scanned is reported as not finished.** The
+  streaming read behind the assistant-asset encoding check and the migration's
+  old-path scan stopped at the size measured when the file was opened and then
+  compared against that same size, so bytes appended during the scan went
+  unseen and the file could be certified as fully read. The scan now reads one
+  more byte from the same descriptor at that boundary, and a file that yields
+  one answers `unfinished`.
+
 - **`DESIGN.md` accepts a font family whose name ends in many digits.** A
   family such as `Brand9007199254740993` was refused as a number too large to
   read exactly, although both catalog formats write a family name as text. The
