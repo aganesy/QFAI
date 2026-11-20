@@ -597,6 +597,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `RangeError: Maximum call stack size exceeded` before the report was
   written. The report now lists every such line.
 
+- **`qfai report --run-validate` records a validation it could not finish.**
+  When a validator failed, the command stopped with an uncaught error, even
+  under `--fail-on never`, and left the clean `validate.json` of an earlier run
+  in place. It now writes the same `QFAI-SCAN-002` result `qfai validate`
+  writes for an unfinished run, renders the report from it, and says the
+  report is not a clean result.
+
 - **`qfai report --run-validate` keeps the profile coverage notice.** On a
   partial profile, `qfai validate --profile sdd` records `QFAI-PROFILE-001`,
   which lists the checks the run did not evaluate. The same run through
