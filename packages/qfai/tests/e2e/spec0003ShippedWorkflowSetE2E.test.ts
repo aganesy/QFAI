@@ -125,6 +125,12 @@ type StepRun = {
 };
 
 /**
+ * The note a case reports when `runStep` found no `bash`. A case that returned instead would be
+ * counted as passed, claiming executed-workflow coverage that the host never ran.
+ */
+const BASH_ABSENT = "bash is not installed on this host, so the delivered step cannot run";
+
+/**
  * Executes one delivered `run:` body under bash with a stubbed `GITHUB_OUTPUT`, returning the exit
  * status, both streams and the `key=value` pairs the shell published.
  *
@@ -478,13 +484,13 @@ describe(
       );
     });
 
-    it("resolves the opt-in from the adopter's package.json, executed", async () => {
+    it("resolves the opt-in from the adopter's package.json, executed", async (ctx) => {
       const body = await stepBody(ORCHESTRATOR, "detection", "scripts");
       const cwd = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-0003-scripts-"));
       try {
         // No package.json at all: nothing is declared, so no lane may run.
         const empty = await runStep(body, cwd);
-        if (empty.skipped) return;
+        if (empty.skipped) ctx.skip(BASH_ABSENT);
         expect(empty.status).toBe(0);
         expect(empty.outputs["scripts"]).toBe("[]");
 
@@ -537,14 +543,14 @@ describe(
       }
     });
 
-    it("selects the empty set for documentation and the superset for source, executed", async () => {
+    it("selects the empty set for documentation and the superset for source, executed", async (ctx) => {
       const body = await stepBody(ORCHESTRATOR, "detection", "diff");
       const docs = await scratchRepo([
         { "README.md": "base\n" },
         { "README.md": "base\ndocs only\n", "docs/guide.md": "prose\n" },
       ]);
       const first = await runStep(body, docs.dir, { QFAI_BASE_REF: docs.shas[0] ?? "" });
-      if (first.skipped) return;
+      if (first.skipped) ctx.skip(BASH_ABSENT);
       expect(first.status).toBe(0);
       // Documentation needs no test lane — the minimal set, and the one a `contains()` gate reads
       // as "no lane".
@@ -565,13 +571,13 @@ describe(
       ]);
     });
 
-    it("fails open to the superset with a warning when the base is unreachable", async () => {
+    it("fails open to the superset with a warning when the base is unreachable", async (ctx) => {
       const body = await stepBody(ORCHESTRATOR, "detection", "diff");
       const repo = await scratchRepo([{ "README.md": "base\n" }]);
       const degraded = await runStep(body, repo.dir, {
         QFAI_BASE_REF: "0".repeat(40),
       });
-      if (degraded.skipped) return;
+      if (degraded.skipped) ctx.skip(BASH_ABSENT);
       // Fail OPEN: a degraded input must not report a narrower lane set than it established.
       expect(degraded.status).toBe(0);
       expect(degraded.stdout).toContain("::warning::");
@@ -590,7 +596,7 @@ describe(
       expect(missing.outputs["lanes"]).not.toBe("[]");
     });
 
-    it("returns a green verdict for a passed lane and a red one for any other result, executed", async () => {
+    it("returns a green verdict for a passed lane and a red one for any other result, executed", async (ctx) => {
       const job = (await jobsOf(ORCHESTRATOR))[`${ORCHESTRATOR}#verdict`];
       expect(job, "no verdict job was delivered").toBeDefined();
       expect(String(job?.["if"] ?? ""), "the verdict does not always run").toContain("always()");
@@ -602,7 +608,7 @@ describe(
       const cwd = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-0003-verdict-"));
       try {
         const passed = await runStep(body, cwd, { QFAI_TESTS_RESULT: "success" });
-        if (passed.skipped) return;
+        if (passed.skipped) ctx.skip(BASH_ABSENT);
         expect(passed.status).toBe(0);
 
         // A skipped lane under a verdict that started was asked to run and did not: the job
@@ -674,12 +680,12 @@ describe(
   "E2E: Node fails open and the package manager fails closed, on the delivered file (US-0003-0026)",
   { timeout: 120000 },
   () => {
-    it("prefers the adopter's own Node version file and falls open with a warning", async () => {
+    it("prefers the adopter's own Node version file and falls open with a warning", async (ctx) => {
       const body = await stepBody(VALIDATE, "validate", "node-version");
       const cwd = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-0003-node-"));
       try {
         const none = await runStep(body, cwd);
-        if (none.skipped) return;
+        if (none.skipped) ctx.skip(BASH_ABSENT);
         // Fail OPEN: a tree that never pinned a Node version must still get a lane.
         expect(none.status).toBe(0);
         expect(none.stdout).toContain("::warning::");
@@ -701,13 +707,13 @@ describe(
       }
     });
 
-    it("stops the pnpm route closed, and only the pnpm route", async () => {
+    it("stops the pnpm route closed, and only the pnpm route", async (ctx) => {
       const body = await stepBody(VALIDATE, "validate", "package-manager");
       const cwd = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-0003-pm-"));
       try {
         // No pnpm lockfile: nothing to resolve, and stopping here would stop on a resolvable case.
         const npmTree = await runStep(body, cwd);
-        if (npmTree.skipped) return;
+        if (npmTree.skipped) ctx.skip(BASH_ABSENT);
         expect(npmTree.status).toBe(0);
 
         await writeFile(path.join(cwd, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n", "utf8");

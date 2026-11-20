@@ -129,6 +129,12 @@ async function exists(rel: string): Promise<boolean> {
 }
 
 /**
+ * The note a case reports when `runStep` found no `bash`. A case that returned instead would be
+ * counted as passed, claiming executed-workflow coverage that the host never ran.
+ */
+const BASH_ABSENT = "bash is not installed on this host, so the delivered step cannot run";
+
+/**
  * Executes one extracted `run:` body under bash with a stubbed `GITHUB_OUTPUT`, returning the exit
  * status, the streams and the `key=value` pairs the shell published.
  *
@@ -386,7 +392,7 @@ describe(
         .toEqual([]);
     });
 
-    it("resolves the version by running the shipped step, not by naming a file in prose", async () => {
+    it("resolves the version by running the shipped step, not by naming a file in prose", async (ctx) => {
       // The positive half of "file-derived". Round 1's `completion-reviewer` was right that the
       // first version of this row asserted only the negative half, and justified the gap with a
       // claim that was false: the matrix said "nothing here proves the version comes from a file
@@ -507,7 +513,7 @@ describe(
         const withBoth = await fixture("d");
         await writeFile(path.join(withFile, ".nvmrc"), "23.4.1\n", "utf8");
         const pinned = await runStep(resolverBody, withFile);
-        if (pinned.skipped) return;
+        if (pinned.skipped) ctx.skip(BASH_ABSENT);
         expect
           .soft(
             pinned.outputs["version"],
@@ -534,7 +540,7 @@ describe(
 
         // With none present it must fall OPEN rather than fail, and say so.
         const fallback = await runStep(resolverBody, withoutFile);
-        if (fallback.skipped) return;
+        if (fallback.skipped) ctx.skip(BASH_ABSENT);
         expect.soft(fallback.status, "no version file must not fail the lane").toBe(0);
         // The documented literal, not "any leading digit". Round 2 pointed out that the integration
         // row at `tests/integration/shippedWorkflowPortability.test.ts` asserts the exact value, and
