@@ -347,6 +347,73 @@ describe("qfai sdd preflight", () => {
     expect(summary).not.toContain("- none");
   });
 
+  it("keeps carry-over that starts with a less-than sign across two back-to-back runs", async () => {
+    // Only the template's own placeholder is the empty state. A real entry
+    // that opens with a tag or a comparison must survive the flagless re-run.
+    const root = await newTempRoot();
+    await seedRecord(root);
+    const summaryPath = path.join(root, ".qfai", "report", "preflight_summary.md");
+    const assumptions = ["<dialog> stays out of the first release", "< 200 ms page load assumed"];
+
+    const first = newSinks();
+    expect(
+      await runSddPreflightCommand({
+        root,
+        recordPath: RECORD_NAME,
+        assumptions,
+        write: first.write,
+        writeErr: first.writeErr,
+      }),
+    ).toBe(0);
+
+    const second = newSinks();
+    expect(
+      await runSddPreflightCommand({
+        root,
+        format: "json",
+        recordPath: RECORD_NAME,
+        write: second.write,
+        writeErr: second.writeErr,
+      }),
+    ).toBe(0);
+    expect(JSON.parse(second.out.join("\n"))).toMatchObject({ openQuestions: assumptions });
+    const summary = await readFile(summaryPath, { encoding: "utf-8" });
+    const carryOver = summary.slice(summary.indexOf("## Open Questions (Carry-over)"));
+    for (const assumption of assumptions) {
+      expect(carryOver).toContain(`- ${assumption}`);
+    }
+    expect(carryOver).not.toContain("- none");
+  });
+
+  it("reads the template's unfilled placeholder as no carry-over", async () => {
+    const root = await newTempRoot();
+    await seedRecord(root);
+    const summaryPath = path.join(root, ".qfai", "report", "preflight_summary.md");
+    const template = await readFile(
+      path.join(
+        repoRoot,
+        "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/report/preflight_summary.md",
+      ),
+      "utf-8",
+    );
+    await mkdir(path.dirname(summaryPath), { recursive: true });
+    await writeFile(summaryPath, template, "utf-8");
+
+    const sinks = newSinks();
+    expect(
+      await runSddPreflightCommand({
+        root,
+        format: "json",
+        recordPath: RECORD_NAME,
+        write: sinks.write,
+        writeErr: sinks.writeErr,
+      }),
+    ).toBe(0);
+    expect(JSON.parse(sinks.out.join("\n"))).toMatchObject({ openQuestions: [] });
+    const summary = await readFile(summaryPath, { encoding: "utf-8" });
+    expect(summary.slice(summary.indexOf("## Open Questions (Carry-over)"))).toContain("- none");
+  });
+
   it("stops and keeps the previous summary when it cannot be read", async () => {
     // A summary that exists but cannot be read is not one with no carry-over:
     // treating it as empty would let the re-run replace it without its notes.
