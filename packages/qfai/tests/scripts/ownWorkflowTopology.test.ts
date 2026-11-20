@@ -1819,8 +1819,8 @@ describe("one lane runs on the floor `engines.node` declares", () => {
 
   it("builds before it tests, or the lane is red for a reason that is not the floor", () => {
     // `dist/` is not committed and two slices read it — `cliStartupCost.test.ts` fails with "no
-    // shipped bundle was readable" and `spec0010DiscussionMockAndPointerE2E.test.ts` spawns
-    // `dist/cli/index.cjs`. Without a build those legs are structurally ALWAYS RED, and an
+    // shipped bundle was readable" and `bf0003DoctorRepairFlowE2E.test.ts` spawns
+    // `dist/cli/index.mjs`. Without a build those legs are structurally ALWAYS RED, and an
     // always-red leg of a required lane conveys no differential signal: a genuine Node 20 break
     // and a missing bundle look identical, so the lane gets un-required or "fixed" by dropping
     // the pin.

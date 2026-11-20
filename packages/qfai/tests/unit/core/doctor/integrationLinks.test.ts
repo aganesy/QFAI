@@ -4,19 +4,20 @@
 // it answered: the severity, the waivers, and the fact that the remedy differs
 // by damage class and is the validator's to state.
 
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  AGENT_INTEGRATION_CONFIGS,
-  SKILL_INTEGRATION_DIRS,
-} from "../../../../src/core/init/integrationDirs.js";
 import { createDoctorData } from "../../../../src/core/doctor.js";
 import type { Issue } from "../../../../src/core/types.js";
 import type * as IntegrationSurface from "../../../../src/core/validators/integrationSurface.js";
+import {
+  canCreateSymlink,
+  SHIPPED_SKILL,
+  wireProject,
+} from "../../../helpers/integrationWrapperFixture.js";
 
 /**
  * Findings to answer with instead of walking the tree, for the one state a
@@ -63,57 +64,12 @@ afterEach(() => {
   inspectionThrows = false;
 });
 
-/** A skill the shipped roster carries, so its wrapper is in scope. */
-const SHIPPED_SKILL = "qfai-implement";
-
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-links-"));
   try {
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });
-  }
-}
-
-/**
- * Whether this machine can create one at all.
- *
- * Windows refuses without Developer Mode or elevation, and every fixture here
- * is built out of symlinks — so without this probe the suite fails on the
- * platform whose behaviour it exists to describe.
- */
-async function canCreateSymlink(root: string): Promise<boolean> {
-  const probe = path.join(root, "probe-link");
-  try {
-    await symlink(".qfai", probe, "dir");
-    await rm(probe, { force: true });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** The canonical tree the wrappers point at, plus every wrapper init writes. */
-async function wireProject(root: string): Promise<void> {
-  const canonical = path.join(root, ".qfai", "assistant", "skill", SHIPPED_SKILL);
-  await mkdir(canonical, { recursive: true });
-  await writeFile(path.join(canonical, "SKILL.md"), "# skill\n", "utf-8");
-  await mkdir(path.join(root, ".qfai", "assistant", "agent"), { recursive: true });
-
-  for (const dir of SKILL_INTEGRATION_DIRS) {
-    const absolute = path.join(root, ...dir.split("/"));
-    await mkdir(absolute, { recursive: true });
-    const target = path.join(
-      ...dir.split("/").map(() => ".."),
-      ".qfai",
-      "assistant",
-      "skill",
-      SHIPPED_SKILL,
-    );
-    await symlink(target, path.join(absolute, SHIPPED_SKILL), "dir");
-  }
-  for (const { dir } of AGENT_INTEGRATION_CONFIGS) {
-    await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
   }
 }
 

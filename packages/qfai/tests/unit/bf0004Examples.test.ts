@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { cp, mkdtemp, mkdir, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -13,6 +12,7 @@ import { validateProject } from "../../src/core/validate.js";
 import { runInit } from "../helpers/legacyInit.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { expectSentence } from "../helpers/shippedSentences.js";
+import { treeHash } from "../helpers/treeHash.js";
 import {
   executePlannedStep,
   runStep,
@@ -77,23 +77,6 @@ async function put(root: string, relative: string, content: string): Promise<voi
 
 async function read(root: string, relative: string): Promise<string> {
   return readFile(path.join(root, relative), "utf8");
-}
-
-async function treeHash(root: string): Promise<string> {
-  const hash = createHash("sha256");
-  async function visit(directory: string): Promise<void> {
-    for (const entry of (await readdir(directory, { withFileTypes: true })).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    )) {
-      const target = path.join(directory, entry.name);
-      const relative = path.relative(root, target).replaceAll(path.sep, "/");
-      hash.update(relative);
-      if (entry.isDirectory()) await visit(target);
-      else hash.update(await readFile(target));
-    }
-  }
-  await visit(root);
-  return hash.digest("hex");
 }
 
 function capture() {

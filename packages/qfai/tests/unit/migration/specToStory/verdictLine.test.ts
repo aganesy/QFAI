@@ -1,5 +1,4 @@
-import { createHash } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -8,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { runInit } from "../../../helpers/legacyInit.js";
 import { runStep } from "../../../../src/migration/specToStory/harness.js";
 import { captureStdout } from "../../../helpers/stdout.js";
+import { treeHash } from "../../../helpers/treeHash.js";
 
 const FIXTURE = path.resolve(__dirname, "../../../fixtures/migration-spec-to-story/old-layout");
 const FOUND = "1.x layout found, migrating";
@@ -71,24 +71,6 @@ async function oldLayout(): Promise<string> {
   const root = await scratch();
   await cp(FIXTURE, root, { recursive: true });
   return root;
-}
-
-/** What every file under `root` holds. */
-async function treeHash(root: string): Promise<string> {
-  const hash = createHash("sha256");
-  async function visit(directory: string): Promise<void> {
-    for (const entry of (await readdir(directory, { withFileTypes: true })).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    )) {
-      const target = path.join(directory, entry.name);
-      const relative = path.relative(root, target).replaceAll(path.sep, "/");
-      hash.update(relative);
-      if (entry.isDirectory()) await visit(target);
-      else hash.update(await readFile(target));
-    }
-  }
-  await visit(root);
-  return hash.digest("hex");
 }
 
 function opening(output: string): string[] {

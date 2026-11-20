@@ -166,6 +166,22 @@ describe("init assets root mirror", () => {
     }
   });
 
+  // The root copy is this repository's own config, so its `paths.srcDir` must
+  // name the package source this checkout holds. The shipped default `src` does
+  // not exist here; left in place, self-validation reports QFAI-CFG-LINK-002
+  // and every source-based check reads an empty directory.
+  it("points the repo root's srcDir at the package source directory", async () => {
+    const buffer = await readOrNull(rootConfig);
+    expect(buffer, "qfai.config.yaml is missing at the repo root").not.toBeNull();
+    if (buffer === null) {
+      return;
+    }
+    const srcDir = asRecord(asRecord(parseYaml(buffer.toString("utf-8")))?.paths)?.srcDir;
+    expect(srcDir).toBe("packages/qfai/src");
+    const entries = await readdir(path.join(repoRoot, "packages", "qfai", "src"));
+    expect(entries.length, "packages/qfai/src holds no files").toBeGreaterThan(0);
+  });
+
   // Hold the shipped `testStrategy` block equal to the LIVE surface the loader
   // resolves, so every key an operator can see in the file is a key that can
   // change an outcome, `forbidTestTodoStubs` being the one a validator gates on.
