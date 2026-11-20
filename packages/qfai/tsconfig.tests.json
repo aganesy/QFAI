@@ -414,6 +414,7 @@
     "tests/scripts/checkDocClarity.test.ts",
     "tests/scripts/listStartupContext.test.ts",
     "tests/scripts/checkRegisterDuplicates.test.ts",
+    "tests/scripts/lintShippingInventory.test.ts",
     "tests/scripts/checkInstructionLinks.test.ts",
     "tests/scripts/scopedRules.test.ts",
     "tests/scripts/stepRequiredRules.test.ts",

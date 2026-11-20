@@ -317,25 +317,29 @@ const TARGET_GLOBS: ReadonlyArray<{ rootRel: string; matchExtensions: ReadonlyAr
   // Files that ship verbatim into the user repo via `qfai init`.
   { rootRel: "assets/init", matchExtensions: [".md", ".yaml", ".yml", ".json", ".ts"] },
   { rootRel: "assets/defaults", matchExtensions: [".yaml", ".yml", ".json"] },
-  // Production source. Compiled to dist/ without comments, so JSDoc
-  // traceability lines are excluded by content rule below.
+  // Production source. Comment lines get the `src-comment` rules below,
+  // because exported JSDoc reaches `dist/*.d.ts`.
   { rootRel: "src", matchExtensions: [".ts"] },
 ];
 
 /**
  * Directories / files excluded entirely from the scan:
  * - Tests and any *.test.ts file.
+ *
+ * Matched against the path relative to the package root, so a checkout
+ * beneath an ancestor directory named `tests` is still scanned.
  */
 const EXCLUDED_PATH_PATTERNS: ReadonlyArray<RegExp> = [
-  /[\\/](?:tests|__tests__)[\\/]/,
+  /(?:^|[\\/])(?:tests|__tests__)(?:[\\/]|$)/,
   /\.test\.ts$/,
 ];
 
 /**
  * Lines whose trimmed start indicates a TS comment (single-line `//`,
- * block-open `/*` / `/**`, JSDoc body `*`, block-close `* /`). These are
- * stripped from `dist/` by tsup, so traceability markers in JSDoc do not
- * ship to user repos.
+ * block-open `/*` / `/**`, JSDoc body `*`, block-close `* /`). tsup strips
+ * comments from the emitted `dist/*.js`, but exported JSDoc can remain in
+ * `dist/*.d.ts`, so in `src/` these lines get the `src-comment` rules
+ * instead of the code rules.
  */
 const TS_COMMENT_LINE_RE = /^\s*(?:\/\/|\/\*\*?|\*\/|\*)/;
 
@@ -347,30 +351,37 @@ const TS_COMMENT_LINE_RE = /^\s*(?:\/\/|\/\*\*?|\*\/|\*)/;
  */
 const YAML_COMMENT_LINE_RE = /^\s*#/;
 
-async function listFiles(root: string): Promise<string[]> {
+/**
+ * Every file under `root`, or none when `root` does not exist: a package need
+ * not carry every target tree. Any other listing or stat failure propagates,
+ * so an unreadable tree fails the lint instead of passing as clean.
+ */
+async function listFiles(root: string, pkgRoot: string): Promise<string[]> {
+  let entries: string[];
+  try {
+    entries = await readdir(root);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
   const out: string[] = [];
-  await walk(root, out);
+  await walkEntries(root, entries, pkgRoot, out);
   return out;
 }
 
-async function walk(dir: string, out: string[]): Promise<void> {
-  let entries: string[];
-  try {
-    entries = await readdir(dir);
-  } catch {
-    return;
-  }
+async function walkEntries(
+  dir: string,
+  entries: ReadonlyArray<string>,
+  pkgRoot: string,
+  out: string[],
+): Promise<void> {
   for (const name of entries) {
     const full = path.join(dir, name);
-    if (EXCLUDED_PATH_PATTERNS.some((re) => re.test(full))) continue;
-    let s: Awaited<ReturnType<typeof stat>>;
-    try {
-      s = await stat(full);
-    } catch {
-      continue;
-    }
+    const relative = path.relative(pkgRoot, full);
+    if (EXCLUDED_PATH_PATTERNS.some((re) => re.test(relative))) continue;
+    const s = await stat(full);
     if (s.isDirectory()) {
-      await walk(full, out);
+      await walkEntries(full, await readdir(full), pkgRoot, out);
     } else if (s.isFile()) {
       out.push(full);
     }
@@ -409,18 +420,11 @@ function classifyTarget(absolutePath: string, pkgRoot: string): Target | null {
 async function lintFile(
   absolutePath: string,
   pkgRoot: string,
+  targetCategory: Target,
   rules: ReadonlyArray<PatternRule>,
 ): Promise<LintViolation[]> {
   const violations: LintViolation[] = [];
-  const targetCategory = classifyTarget(absolutePath, pkgRoot);
-  if (targetCategory === null) return violations;
-
-  let body: string;
-  try {
-    body = await readFile(absolutePath, "utf-8");
-  } catch {
-    return violations;
-  }
+  const body = await readFile(absolutePath, "utf-8");
   const isTs = absolutePath.endsWith(".ts");
   const lines = body.split(/\r?\n/);
   const relPath = path.relative(pkgRoot, absolutePath).replace(/\\/g, "/");
@@ -536,17 +540,21 @@ export async function runLintShipping(
   const allFiles: string[] = [];
   for (const target of TARGET_GLOBS) {
     const absolute = path.join(pkgRoot, target.rootRel);
-    allFiles.push(...(await listFiles(absolute)));
+    allFiles.push(...(await listFiles(absolute, pkgRoot)));
   }
   const targetFiles = allFiles.filter((f) => isTargetFile(f, pkgRoot));
   const rules = [...PATTERNS, ...declaredSampleBandRules(pkgRoot)];
 
   const violations: LintViolation[] = [];
+  let scannedFileCount = 0;
   for (const file of targetFiles) {
-    violations.push(...(await lintFile(file, pkgRoot, rules)));
+    const category = classifyTarget(file, pkgRoot);
+    if (category === null) continue;
+    violations.push(...(await lintFile(file, pkgRoot, category, rules)));
+    scannedFileCount += 1;
   }
 
-  return { violations, scannedFileCount: targetFiles.length };
+  return { violations, scannedFileCount };
 }
 
 export function formatViolations(violations: ReadonlyArray<LintViolation>): string {
@@ -558,33 +566,42 @@ export function formatViolations(violations: ReadonlyArray<LintViolation>): stri
   return lines.join("\n");
 }
 
+/**
+ * Run the lint on `pkgRoot`, write its report, and return the exit code: 0
+ * when clean, 2 on a violation or a failure. It never calls `process.exit`,
+ * so a long report written to a pipe drains before the process ends.
+ */
+export async function runLintShippingCli(pkgRoot: string): Promise<number> {
+  let result: Awaited<ReturnType<typeof runLintShipping>>;
+  try {
+    result = await runLintShipping(pkgRoot);
+  } catch (err) {
+    process.stderr.write(`lint-shipping: unexpected error: ${String(err)}\n`);
+    return 2;
+  }
+  const { violations, scannedFileCount } = result;
+  if (violations.length === 0) {
+    process.stdout.write(
+      `lint-shipping: clean (no spec/AC/TC/REQ literals in shipped templates) — ${scannedFileCount} files scanned\n`,
+    );
+    return 0;
+  }
+  process.stderr.write(`lint-shipping: ${violations.length} violation(s) detected\n\n`);
+  process.stderr.write(`${formatViolations(violations)}\n\n`);
+  process.stderr.write(
+    "If you intentionally need to reference an ID, add an inline pragma above the line:\n" +
+      '  Markdown: <!-- qfai-shipping:allow reason="<concrete reason>" -->\n' +
+      '  YAML:     # qfai-shipping:allow reason="<concrete reason>"\n' +
+      '  TS:       // qfai-shipping:allow reason="<concrete reason>"\n',
+  );
+  return 2;
+}
+
 // ─── CLI entry point ───────────────────────────────────────────────────────
 
 const __filename = fileURLToPath(import.meta.url);
 const __isCli = process.argv[1] === __filename;
 
 if (__isCli) {
-  const pkgRoot = path.resolve(path.dirname(__filename), "..");
-  runLintShipping(pkgRoot)
-    .then(({ violations, scannedFileCount }) => {
-      if (violations.length === 0) {
-        process.stdout.write(
-          `lint-shipping: clean (no spec/AC/TC/REQ literals in shipped templates) — ${scannedFileCount} files scanned\n`,
-        );
-        process.exit(0);
-      }
-      process.stderr.write(`lint-shipping: ${violations.length} violation(s) detected\n\n`);
-      process.stderr.write(`${formatViolations(violations)}\n\n`);
-      process.stderr.write(
-        "If you intentionally need to reference an ID, add an inline pragma above the line:\n" +
-          '  Markdown: <!-- qfai-shipping:allow reason="<concrete reason>" -->\n' +
-          '  YAML:     # qfai-shipping:allow reason="<concrete reason>"\n' +
-          '  TS:       // qfai-shipping:allow reason="<concrete reason>"\n',
-      );
-      process.exit(2);
-    })
-    .catch((err: unknown) => {
-      process.stderr.write(`lint-shipping: unexpected error: ${String(err)}\n`);
-      process.exit(2);
-    });
+  process.exitCode = await runLintShippingCli(path.resolve(path.dirname(__filename), ".."));
 }
