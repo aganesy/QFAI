@@ -507,6 +507,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
+  with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
+  `Set-Content -Encoding UTF8`, and both commands refused such a file as
+  invalid JSON. They now drop one leading mark before parsing, as the
+  `package.json` reader of `qfai atdd scaffold` already did.
+
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
   said every scratch file goes under `tmp/`, while the temporary-files rule they
