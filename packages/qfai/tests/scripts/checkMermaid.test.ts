@@ -102,9 +102,12 @@ async function writeExtensionSamples(
 ): Promise<{ markdown: string[]; other: string[] }> {
   await mkdir(dir, { recursive: true });
   const extensions = await documentExtensions();
-  // Distinct base names, so a case-insensitive file system keeps every file.
+  // Distinct base names, so a case-insensitive file system keeps every file. A
+  // name that is the extension alone, such as `.md`, matches the lane's pattern
+  // too, and `path.extname` reads none in it.
   const markdown = [
     ...extensions.map((extension) => path.join(dir, `page-${extension.slice(1)}${extension}`)),
+    ...extensions.map((extension) => path.join(dir, extension)),
     path.join(dir, `upper${extensions[extensions.length - 1]?.toUpperCase() ?? ""}`),
   ];
   const other = [path.join(dir, "notes.txt"), path.join(dir, "page.mdown.bak")];
@@ -205,7 +208,7 @@ describe("check-mermaid lane", () => {
 
     expect(result.status, result.stderr).toBe(1);
     for (const file of markdown) {
-      expect(result.stderr).toContain(`${path.basename(file)}:3`);
+      expect(result.stderr).toContain(`${path.sep}${path.basename(file)}:3`);
     }
     expect(result.stderr).toContain(
       `${markdown.length} of ${markdown.length} diagram(s) failed to parse`,
@@ -220,7 +223,7 @@ describe("check-mermaid lane", () => {
 
     expect(result.status, result.stderr).toBe(1);
     for (const file of markdown) {
-      expect(result.stderr).toContain(`${path.basename(file)}:3`);
+      expect(result.stderr).toContain(`${path.sep}${path.basename(file)}:3`);
     }
     expect(result.stderr).toContain(
       `${markdown.length} of ${markdown.length} diagram(s) failed to parse`,
