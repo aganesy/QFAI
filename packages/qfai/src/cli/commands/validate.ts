@@ -1287,7 +1287,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // nothing read before them, so a project meeting one of them for the first
   // time has a backlog to work through rather than a single edit.
   "QFAI-CONTRACT-015":
-    "Every contract file states its apply order (`-- Depends on:` for SQL, `x-qfai-depends-on` for YAML/JSON), writing `-` when nothing has to be applied before it.",
+    "Every contract file states its apply order (`-- Depends on:` for SQL, `x-qfai-depends-on` for YAML/JSON), writing `-- Depends on: -` or `x-qfai-depends-on: []` when nothing has to be applied before it.",
   "QFAI-CONTRACT-034":
     "Every contract under a kind directory declares one ID of that kind, is named `<kind>-NNNN-<slug>` after it, and has a contracts.md row that agrees with its ID and file, and, unless the contract is Markdown, with its declared apply order. Every row names a contract file, and no two contracts of one kind share a number.",
   "QFAI-CONTRACT-036":

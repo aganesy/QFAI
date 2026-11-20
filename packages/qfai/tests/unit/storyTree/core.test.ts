@@ -266,6 +266,26 @@ describe("story-tree core", () => {
     expect(model.stories.map((story) => story.id)).toEqual(["US-0001-0001"]);
   });
 
+  it("reads index and example tables outside fenced samples and comments", () => {
+    const files = new Map(storyFiles);
+    files.set(
+      ".qfai/spec/02_business-flow/business-flows.md",
+      "```md\n| BF-ID | Title |\n| --- | --- |\n| BF-9999 | Sample |\n```\n\n<!--\n| BF-ID | Title |\n| --- | --- |\n| BF-9998 | Draft |\n-->\n\n| BF-ID | Title |\n| --- | --- |\n| BF-0001 | Checkout |\n",
+    );
+    files.set(
+      ".qfai/spec/02_business-flow/business-flow-0001/user-stories.md",
+      "<!--\n| US-ID | Title |\n| --- | --- |\n| US-0001-9999 | Draft |\n-->\n\n~~~\n| US-ID | Title |\n| --- | --- |\n| US-0001-9998 | Sample |\n~~~\n\n| US-ID | Title |\n| --- | --- |\n| US-0001-0001 | Buy |\n",
+    );
+    files.set(
+      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md",
+      "```md\n| EX-ID | AC-Ref | Given | When | Then |\n| --- | --- | --- | --- | --- |\n| EX-0001-0001-99 | AC-0001-0001-01 | Sample | Buy | Paid |\n```\n\n<!--\n| EX-ID | AC-Ref | Given | When | Then |\n| --- | --- | --- | --- | --- |\n| EX-0001-0001-98 | AC-0001-0001-01 | Draft | Buy | Paid |\n-->\n\n| EX-ID | AC-Ref | Given | When | Then |\n| --- | --- | --- | --- | --- |\n| EX-0001-0001-01 | AC-0001-0001-01 | Cart | Buy | Paid |\n",
+    );
+    const model = buildStoryTreeModel(files);
+    expect(model.flowIndex?.ids).toEqual(["BF-0001"]);
+    expect(model.storyIndexes.map(({ ids }) => ids)).toEqual([["US-0001-0001"]]);
+    expect(model.examples.map(({ id }) => id)).toEqual(["EX-0001-0001-01"]);
+  });
+
   it("reads rules from the contract layer's tech file", () => {
     const files = new Map(storyFiles);
     files.delete(".qfai/spec/03_contract/api/pay.yaml");

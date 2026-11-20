@@ -595,6 +595,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout or one downloaded from the npm registry without asking. The README
   now says so. Closes #4622.
 
+- **A sample table in a code fence or an HTML comment no longer declares
+  anything.** The story tree read every table in `business-flows.md`,
+  `user-stories.md` and `03_Example.md`, so a fenced example of the format or a
+  commented-out draft row added its BF, US or EX ID to the index or to the
+  declared examples, and changed which examples coverage and the index checks
+  expected. The story tree now reads only tables Markdown renders. Closes
+  #4711.
+
 - **A heading inside an HTML comment no longer names a flow or a story.** The
   story tree took the first level-one heading of `business-flow.md` or
   `01_User-story.md` as its ID even when that heading sat in an HTML comment or
@@ -629,6 +637,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the new script stop with an error at the first skip in that file, so rewrite
   each count as the names of the tests it covered.
 
+- **`qfai atdd scaffold` writes a CommonJS node:test skeleton that Node can
+  load.** For a project that runs `node --test`, the skeleton imported
+  `describe` and `it` with an `import` statement even in a `.cjs` file, and
+  Node stopped with `Cannot use import statement outside a module`. A `.cjs`
+  or `.cts` skeleton, and a `.js` one whose nearest `package.json` does not
+  set `"type": "module"`, or a `.ts` one whose nearest `package.json` sets
+  `"type": "commonjs"`, now loads them with `require`. Closes #4708.
+
 - **Design token references resolve the same way in any declaration order.**
   A chain of more than ten references raised `QFAI-DT-002` and kept a
   `{...}` placeholder when the file declared the first token before the
@@ -645,6 +661,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai db-drift --format json unused-positional` completed normally. Such a
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
+
+- **A YAML contract's `x-qfai-depends-on` is now read as YAML.** A comment
+  line between two items of a block list no longer drops the items after it,
+  quoted IDs such as `["DB-0001"]` are accepted, and `[DB-0001 DB-0002]`,
+  which YAML reads as one value, is no longer taken for two IDs. A `.json`
+  contract is read as JSON. A contract that does not parse gets only
+  `QFAI-CONTRACT-021`, not also `QFAI-CONTRACT-015`, and the `-015` hint now
+  says to write `x-qfai-depends-on: []`, not `-`, when a YAML or JSON
+  contract has no dependencies. Closes #4709.
 
 - **A rejected release version or tag no longer reaches the Actions log as a
   workflow command.** The manual prepare-release and release workflows put
