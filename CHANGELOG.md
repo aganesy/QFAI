@@ -612,6 +612,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which they treat as absent evidence. They now name
   `<paths.contractsDir>/tech.md`.
 
+- **`qfai doctor` names a shipped workflow it cannot read in
+  `workflows.cost`.** The check skipped every read failure as if the workflow
+  were not installed, so an installed workflow that could not be read
+  disappeared from the count and from `details.unread`. Only a workflow that
+  does not exist is skipped now; one that cannot be read is named with its path
+  and the cause as not counted, and each `details.unread` entry gives the
+  workflow's path and why it was not counted. A job `if:` written as an
+  expression that wraps a literal boolean, such as `${{ false }}`, is read as
+  that boolean. Closes #4790.
+
 - **A pull-request merge fetches the pull request's own base and checks it
   again before merging.** The `triage-operate` step merged the local
   `origin/<base>` into the branch without fetching it, so a stale
