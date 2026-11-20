@@ -28,51 +28,81 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 // scripts/<this file> -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CLI = path.join(repoRoot, "packages", "qfai", "dist", "cli", "index.mjs");
 
+/** The plan's path count. Usage and an unknown command name no count. */
+const PLANNED_COUNT = /would write: (\d+)/;
+
 /** A path only `qfai init` writes; usage and an unknown command name neither. */
-const SURFACE_MARKERS = ["would write:", "qfai.config.yaml"];
+const CONFIG_MARKER = "qfai.config.yaml";
 
-let workspace;
-try {
-  // Outside the repository on purpose: run inside it, and the CLI reads this
-  // repository's own git configuration rather than the empty project it is
-  // supposed to be initializing.
-  workspace = await mkdtemp(path.join(os.tmpdir(), "qfai-skeleton-"));
-
-  const output = execFileSync(process.execPath, [CLI, "init", "--dry-run"], {
-    cwd: workspace,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-
-  const missing = SURFACE_MARKERS.filter((marker) => !output.includes(marker));
+/**
+ * Whether `output` is the initialization surface, and the line to print.
+ *
+ * The count is part of the predicate rather than read after it: the label alone
+ * is not the result this script reports, and a success that printed a count the
+ * plan never named would record a number nothing produced.
+ */
+export function judgeSurface(output) {
+  const planned = PLANNED_COUNT.exec(output)?.[1];
+  const missing = [
+    ...(planned === undefined ? ["would write: <count>"] : []),
+    ...(output.includes(CONFIG_MARKER) ? [] : [CONFIG_MARKER]),
+  ];
   if (missing.length > 0) {
-    process.stderr.write(
-      `smoke-qfai-cli: the initialization surface was not reached — the plan named ` +
+    return {
+      ok: false,
+      message:
+        `smoke-qfai-cli: the initialization surface was not reached — the plan named ` +
         `none of: ${missing.join(", ")}\n${output}`,
-    );
+    };
+  }
+  return {
+    ok: true,
+    message: `smoke-qfai-cli: qfai -> US-0003-0001 reached; the dry run planned ${planned} path(s)\n`,
+  };
+}
+
+/** Start the built CLI in a directory it owns and judge what it printed. */
+async function main() {
+  let workspace;
+  try {
+    // Outside the repository on purpose: run inside it, and the CLI reads this
+    // repository's own git configuration rather than the empty project it is
+    // supposed to be initializing.
+    workspace = await mkdtemp(path.join(os.tmpdir(), "qfai-skeleton-"));
+
+    const output = execFileSync(process.execPath, [CLI, "init", "--dry-run"], {
+      cwd: workspace,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    const verdict = judgeSurface(output);
+    (verdict.ok ? process.stdout : process.stderr).write(verdict.message);
+    if (!verdict.ok) process.exitCode = 1;
+  } catch (error) {
+    // A non-zero exit from the CLI, or a failure to start it at all. Either way
+    // the entrypoint did not answer, and the phase may not record that it did.
+    const detail = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`smoke-qfai-cli: the entrypoint did not answer — ${detail}\n`);
     process.exitCode = 1;
-  } else {
-    const planned = /would write: (\d+)/.exec(output)?.[1] ?? "0";
-    process.stdout.write(
-      `smoke-qfai-cli: qfai -> US-0003-0001 reached; the dry run planned ${planned} path(s)\n`,
-    );
+  } finally {
+    // On every exit path: the script owns the directory it made, and the next
+    // cycle must not read what this one left.
+    if (workspace !== undefined) {
+      await rm(workspace, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+    }
   }
-} catch (error) {
-  // A non-zero exit from the CLI, or a failure to start it at all. Either way
-  // the entrypoint did not answer, and the phase may not record that it did.
-  const detail = error instanceof Error ? error.message : String(error);
-  process.stderr.write(`smoke-qfai-cli: the entrypoint did not answer — ${detail}\n`);
-  process.exitCode = 1;
-} finally {
-  // On every exit path: the script owns the directory it made, and the next
-  // cycle must not read what this one left.
-  if (workspace !== undefined) {
-    await rm(workspace, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
-  }
+}
+
+// `pathToFileURL`, not `file://` + the path: on Windows `process.argv[1]` is a
+// drive-letter path with backslashes, which concatenation turns into a string no
+// `import.meta.url` ever equals.
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
 }

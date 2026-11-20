@@ -594,6 +594,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   notice naming the files only `--force` brings up to date. It is now
   compared like a file that was already there. Closes #4703.
 
+- **The skeleton smoke now requires the path count it reports.** It accepted
+  the dry-run plan's `would write:` label with no number after it and then
+  printed a successful run that planned 0 paths, a count the plan never named.
+  A plan without a numeric count now fails the smoke, and the failure prints
+  the output it read. Closes #4754.
+
 - **`--show-patterns` on the shipped document-schema checker now applies to
   the run that asked for it only.** A run with the flag left it set for the
   rest of the process, so a later run, or a `qfai validate` document-schema
