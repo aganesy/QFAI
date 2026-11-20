@@ -162,6 +162,8 @@ describe("output language is stated in one place only", () => {
       /agentSelectionReferenceTargets/,
       /the owner wins/,
       /Adding a file/,
+      // Stored prose follows the repository rule, not its author's language.
+      /`\.agents\/rules\/repository-language\.md`/,
     ]) {
       expect(text).toMatch(clause);
     }

@@ -38,8 +38,9 @@ directory, where it overrode the Absolute Rule for every operator working in
 another language. `outputLanguageSingleSource.test.ts` sweeps this tree with the
 same matcher that guards the shipped one.
 
-The prose here is in whatever language its author used. That says nothing about
-what an agent writes back.
+The language of the prose stored here is decided by
+`.agents/rules/repository-language.md`, like every other tracked file. That
+says nothing about what an agent writes back.
 
 ## Adding a file
 
