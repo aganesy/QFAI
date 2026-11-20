@@ -423,6 +423,24 @@ describe("a question answered without a change", () => {
   });
 });
 
+describe("a request routed again from the close", () => {
+  // QFAI:AC-0001-0214-03
+  // QFAI:EX-0001-0214-04
+  it("applies the info-received and adopted re-routes before it picks a closure outcome", async () => {
+    const close = await step("triage-close");
+    const phases = sectionOf(close, "## Procedure").split(/(?=^\d+\.)/m);
+    const first = flat(phases.find((phase) => /^1\./.test(phase)) ?? "");
+    expect(first).toMatch(
+      /^1\. Apply the re-routing cases first: .*report `info-received` or `adopted` .*pick nothing from the table\. Otherwise the request closes here: pick exactly one outcome from the table above\./,
+    );
+    const table = sectionOf(close, "## Outcomes");
+    expect(table).not.toMatch(/`info-received`|`adopted`/);
+    const rerouting = flat(sectionOf(close, "## Re-routing"));
+    expect(rerouting).toMatch(/report the outcome\s+`info-received`/);
+    expect(rerouting).toMatch(/report the outcome `adopted`/);
+  });
+});
+
 describe("a split request", () => {
   // QFAI:AC-0001-0214-06
   // QFAI:EX-0001-0214-08
