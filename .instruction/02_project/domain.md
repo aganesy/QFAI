@@ -50,5 +50,3 @@ Tests annotate BF in E2E, AC in integration or API, and EX in a selected
 non-E2E test. `validate` checks IDs, links, layers and uncovered obligations.
 
 Full grammar: `02_project/naming.md`.
-
-For the detailed naming conventions, see `02_project/naming.md`.
