@@ -141,18 +141,30 @@ export async function prepareDocumentAnalysisLocked(
 ): Promise<DocumentPreparation> {
   if (!(await graphifyConfigurationSafe(root))) return providerConflict();
   if (await inspectDocumentAnalysis(root, run)) return { status: "prepared", source: "current" };
+  const inspect = async (analysis: string, refresh: boolean) =>
+    (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none")).current;
   const processing = await readGraphProcessing(root);
+  // Restoration calls no backend, so only new generation needs one configured. A malformed
+  // configuration is refused, and the inspection refuses a snapshot whose definition differs from
+  // the configured one. Without a configuration only a snapshot made with the defaults (the
+  // local Ollama endpoint over the whole corpus, no credential) is accepted, so a narrower or
+  // remote snapshot from another worktree is never restored as this one's analysis.
+  const restoreInspect = processing
+    ? inspect
+    : async (analysis: string, refresh: boolean) =>
+        (await recordsDefaultProcessing(analysis)) && inspect(analysis, refresh);
+  if (
+    (processing || (await processingConfigurationAbsent(root))) &&
+    (await restoreCompletedDocumentAnalysis(root, run, restoreInspect, environment)) === "restored"
+  )
+    return { status: "prepared", source: "restored" };
   if (!processing) {
     return {
       status: "not-ready",
       recovery: DOCUMENT_PROCESSING_SETUP,
     };
   }
-  const inspect = async (analysis: string, refresh: boolean) =>
-    (await inspectDocumentScopeAt(root, analysis, run, refresh ? "in-place" : "none")).current;
-  if ((await restoreCompletedDocumentAnalysis(root, run, inspect, environment)) === "restored")
-    return { status: "prepared", source: "restored" };
-  const selected = new URL(processing.endpoint ?? "http://127.0.0.1:11434/v1");
+  const selected = new URL(processing.endpoint ?? DEFAULT_PROCESSING_ENDPOINT);
   // The approval, the origin guard and the Python client all receive the URL this check parsed,
   // so no parser can read another host out of the configured text.
   const endpoint = selected.href;
@@ -284,6 +296,22 @@ export async function prepareDocumentAnalysisLocked(
   }
 }
 
+const DEFAULT_PROCESSING_ENDPOINT = "http://127.0.0.1:11434/v1";
+
+async function recordsDefaultProcessing(analysis: string): Promise<boolean> {
+  const managed = await readOptionalJson(path.join(analysis, "graphify-out", "managed.json"));
+  if (!object(managed)) return false;
+  const recorded = managed.processing;
+  return (
+    validGraphProcessing(recorded) &&
+    recorded.backend === "ollama" &&
+    (recorded.endpoint === undefined ||
+      new URL(recorded.endpoint).href === DEFAULT_PROCESSING_ENDPOINT) &&
+    recorded.scope === undefined &&
+    recorded.credentialEnv === undefined
+  );
+}
+
 export async function readGraphProcessing(root: string): Promise<GraphProcessing | undefined> {
   const processing = await readOptionalJson(path.join(root, ".qfai", "graph-processing.json"));
   return validGraphProcessing(processing) ? processing : undefined;
@@ -413,14 +441,19 @@ async function processingForCompletedQuery(
   recorded: unknown,
 ): Promise<unknown> {
   if (selected !== undefined) return selected;
-  try {
-    await readFile(path.join(root, ".qfai", "graph-processing.json"));
-    return undefined;
-  } catch (cause: unknown) {
-    if (!isEnoent(cause)) throw cause;
-  }
+  if (!(await processingConfigurationAbsent(root))) return undefined;
   if (!validGraphProcessing(recorded)) return undefined;
   return recorded;
+}
+
+async function processingConfigurationAbsent(root: string): Promise<boolean> {
+  try {
+    await readFile(path.join(root, ".qfai", "graph-processing.json"));
+    return false;
+  } catch (cause: unknown) {
+    if (!isEnoent(cause)) throw cause;
+    return true;
+  }
 }
 
 async function currentGraphifyCorpus(

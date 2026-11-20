@@ -28,30 +28,8 @@ afterEach(async () => {
 });
 
 describe("the copy creates, and records only what it created", () => {
-  it("creates EXCLUSIVELY when not forcing, so a file that appeared meanwhile is not overwritten", async () => {
-    // The race is between two syscalls inside one function — `shouldWrite`'s `exists` and the
-    // `copyFile` after it — and no in-process test can interleave them without a seam. Measured:
-    // a row that pre-creates the destination exercises `shouldWrite` instead, and passes with the
-    // plain `copyFile` restored. So the PROPERTY is asserted on the source, the same way this
-    // repository pins workflow bodies, and the behavioural rows below cover what is observable.
-    //
-    // What the race costs is not only the adopter's bytes: the overwritten path lands in `copied`,
-    // so the packaged digest is recorded as QFAI's own, doctor reports no drift on a file QFAI
-    // never wrote.
-    const source = await readFile(
-      path.join(__dirname, "..", "..", "..", "src", "core", "fs", "templateCopy.ts"),
-      "utf-8",
-    );
-    expect(
-      source,
-      "a create-only copy must create exclusively; `shouldWrite` answers about a moment that has passed",
-    ).toContain("COPYFILE_EXCL");
-    expect(
-      source,
-      "and losing the race must be a SKIP rather than a throw — the adopter got there first, which is " +
-        "the outcome `shouldWrite` intended for a file that was already present",
-    ).toMatch(/EEXIST[\s\S]{0,120}skipped\.push/);
-  });
+  // A file created between `shouldWrite` and the exclusive create is driven through a `copyFile`
+  // seam in `tests/unit/core/templateCopyRace.test.ts`, which needs a module mock of its own.
 
   it("skips a destination that is already there, and records nothing for it", async () => {
     // `shouldWrite` answers a question about a moment that has passed. A second process — another
