@@ -538,6 +538,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`qfai doctor` reads a shipped workflow's `on:` before counting its jobs in
+  `workflows.cost`.** A shipped workflow edited to run on `push` alone was still
+  reported as starting jobs on each pull request. A workflow whose `on:` starts
+  it on no pull request other than a close is now reported as starting no job.
+  A `pull_request` trigger with a branch or path filter, a `pull_request_target`
+  trigger, a missing `on:` and a trigger shape that is not an event name, a list
+  of names or a mapping are named as not counted. Closes #4783.
+
 - **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
   with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
   `Set-Content -Encoding UTF8`, and both commands refused such a file as
@@ -584,11 +592,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
 
-- **`qfai session-review` keeps each error on one line.** Redaction kept the
-  line breaks in a file-system error or a `--session` ID, so an `--out` path
-  holding a newline, or such an ID, could print further lines on standard
-  error. Line breaks in these messages, and in the line naming the written
-  `--out` file, now become a space after redaction.
+- **A file that grows while it is scanned is reported as not finished.** The
+  streaming read behind the assistant-asset encoding check and the migration's
+  old-path scan stopped at the size measured when the file was opened and then
+  compared against that same size, so bytes appended during the scan went
+  unseen and the file could be certified as fully read. The scan now reads one
+  more byte from the same descriptor at that boundary, and a file that yields
+  one answers `unfinished`.
 
 - **`DESIGN.md` accepts a font family whose name ends in many digits.** A
   family such as `Brand9007199254740993` was refused as a number too large to
@@ -636,6 +646,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and reports the missing prerequisite, leaving the install to setup the user
   authorizes with the project's package manager.
 
+- **`qfai session-review` reads a shell line's background job, redirections
+  and leading assignments** (#4855). A `qfai` command that a trailing `&`
+  runs in the background now counts its exit status as unknown, since the
+  shell's status is only the job's start. A file read such as
+  `cat <path> 2>/dev/null`, `> out` or `< in` keeps its result bytes, because
+  a redirection's target adds nothing to the output, and so does
+  `FOO=1 cat <path>`, whose command name now comes after its `NAME=value`
+  assignments.
+
+- **`qfai session-review` keeps each error on one line.** Redaction kept the
+  line breaks in a file-system error or a `--session` ID, so an `--out` path
+  holding a newline, or such an ID, could print further lines on standard
+  error. Line breaks in these messages, and in the line naming the written
+  `--out` file, now become a space after redaction.
+
 - **The `fullstack-engineer` card no longer rejects a file-level text reason.**
   Its own copy of the plain-text rule said a text with no reason directly
   before it is always an error, so a worker could reject a valid
@@ -650,6 +675,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the comparison without a word. Each such copy is now a `warning` naming the
   path and the cause, and the rest of the scan goes on. A copy that does not
   exist still raises nothing.
+
+- **A waiver file's quoted version must be exactly `"1"`.** A quoted version
+  was read up to its first non-digit, so `version: "1.5"` or `version: "1abc"`
+  passed as version 1 and the file was applied in the wrong format. Such a file
+  is now refused with `QFAI-WAIVER-001`, the same as any other unsupported
+  version; `version: 1` and `version: "1"` are still accepted.
 
 - **Constitution Article XI is headed "Temporary files".** Its heading said
   every temporary file goes in `tmp/`, while the temporary-files rule it links

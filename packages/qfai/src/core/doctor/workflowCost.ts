@@ -46,6 +46,8 @@ export type StartedJob = {
 
 export type WorkflowJobCounts = {
   readonly file: string;
+  /** Whether a pull request event that is not a close starts the workflow at all. */
+  readonly triggered: boolean;
   readonly idle: readonly StartedJob[];
   readonly laneRuns: readonly StartedJob[];
 };
@@ -202,9 +204,37 @@ function jobsStarted(
   return started;
 }
 
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+/**
+ * Whether a pull request event that is not a close starts the workflow, or `undefined` for a
+ * trigger shape this does not read. A `pull_request` trigger is read with no filter or with
+ * `types` alone; a branch or path filter decides per change, and `pull_request_target` runs in
+ * another context, so neither is counted.
+ */
+function pullRequestStarts(on: unknown): boolean | undefined {
+  const events = typeof on === "string" ? [on] : on;
+  if (isStringList(events)) {
+    if (events.includes("pull_request_target")) return undefined;
+    return events.includes("pull_request");
+  }
+  if (!isRecord(events) || "pull_request_target" in events) return undefined;
+  if (!("pull_request" in events)) return false;
+  const trigger = events["pull_request"] ?? {};
+  if (!isRecord(trigger) || Object.keys(trigger).some((key) => key !== "types")) return undefined;
+  const types = trigger["types"];
+  if (types === undefined) return true;
+  const listed = typeof types === "string" ? [types] : types;
+  if (!isStringList(listed)) return undefined;
+  return listed.some((type) => type !== "closed");
+}
+
 /**
  * The jobs a pull request event starts in a workflow's text, in the two scenarios, or `undefined`
- * when the text is not a workflow this can read. Nothing is written and no variable is looked up.
+ * when the text is not a workflow this can read. A workflow whose `on:` starts it on no pull
+ * request starts no job. Nothing is written and no variable is looked up.
  */
 export function countWorkflowJobs(file: string, text: string): WorkflowJobCounts | undefined {
   let parsed: unknown;
@@ -213,12 +243,16 @@ export function countWorkflowJobs(file: string, text: string): WorkflowJobCounts
   } catch {
     return undefined;
   }
-  const jobs = isRecord(parsed) ? parsed["jobs"] : undefined;
+  if (!isRecord(parsed)) return undefined;
+  const jobs = parsed["jobs"];
   if (!isRecord(jobs)) return undefined;
+  const triggered = pullRequestStarts(parsed["on"]);
+  if (triggered === undefined) return undefined;
+  if (!triggered) return { file, triggered, idle: [], laneRuns: [] };
   const idle = jobsStarted(jobs, IDLE_SCENARIO);
   const laneRuns = jobsStarted(jobs, LANE_RUNS_SCENARIO);
   if (idle === undefined || laneRuns === undefined) return undefined;
-  return { file, idle, laneRuns };
+  return { file, triggered, idle, laneRuns };
 }
 
 /** The jobs as the headers and the finding list them: ids in file order, a matrix width as `xN`. */
@@ -263,6 +297,9 @@ function pluralJobs(count: number): string {
 }
 
 function describeWorkflow(counts: WorkflowJobCounts): string {
+  if (!counts.triggered) {
+    return `${counts.file} starts no job on a pull request event: its \`on:\` does not start it on one.`;
+  }
   const idle = describeJobs(counts.idle);
   const lane = describeJobs(counts.laneRuns);
   const started =
@@ -311,7 +348,7 @@ export async function checkWorkflowCost(root: string): Promise<WorkflowCostCheck
   const clauses = counted.map(describeWorkflow);
   if (unread.length > 0) {
     clauses.push(
-      `${unread.join(" and ")} could not be counted: the file or one of its job conditions is not one this check reads.`,
+      `${unread.join(" and ")} could not be counted: the file, its triggers or one of its job conditions is not one this check reads.`,
     );
   }
   return {

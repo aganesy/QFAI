@@ -783,9 +783,10 @@ function normalizeVersion(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
-  if (typeof value === "string" && value.trim().length > 0) {
-    const parsed = Number.parseInt(value.trim(), 10);
-    return Number.isNaN(parsed) ? null : parsed;
+  // A quoted version counts only when it is exactly the supported spelling;
+  // "1.5" or "1abc" are not partly read as 1.
+  if (value === "1") {
+    return 1;
   }
   return null;
 }
