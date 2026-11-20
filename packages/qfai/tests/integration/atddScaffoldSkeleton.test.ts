@@ -1,12 +1,16 @@
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runAtddScaffold } from "../../src/cli/commands/atddScaffold.js";
 import { buildSkeleton } from "../../src/core/atdd/scaffold.js";
 import { resolveScaffoldDialect } from "../../src/core/atdd/scaffoldDialect.js";
+
+const execFileAsync = promisify(execFile);
 
 let root: string;
 const flowId = "BF-0008";
@@ -193,6 +197,50 @@ describe("atdd scaffold story-tree targets", () => {
     expect(body).toContain(`import { describe, it } from "vitest";`);
   });
 
+  // QFAI:EX-0001-0073-11
+  it.each([
+    ["a .cjs file", "cjs", {}, "require"],
+    ["a .cjs file in a module package", "cjs", { type: "module" }, "require"],
+    ["a .js file in a package with no type", "js", {}, "require"],
+    ["a .js file in a commonjs package", "js", { type: "commonjs" }, "require"],
+    ["a .js file in a module package", "js", { type: "module" }, "import"],
+  ] as const)(
+    "writes a node:test skeleton that node --test runs, for %s",
+    async (_label, extension, packageFields, loads) => {
+      await seedStory();
+      await writeNodeTestProject(
+        { ...packageFields, scripts: { test: "node --test tests/" } },
+        extension,
+      );
+      expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
+      const file = path.join(root, "tests", "e2e", `${flowId}.test.${extension}`);
+      const body = await readFile(file, "utf8");
+      expect(body.split("\n")[0]).toBe(`// QFAI:${flowId}`);
+      expect(body).toContain(
+        loads === "require"
+          ? `const { describe, it } = require("node:test");`
+          : `import { describe, it } from "node:test";`,
+      );
+      // A load failure exits 1, which rejects the run.
+      const run = await runNodeTest(file);
+      expect(run.stdout).toMatch(/^# pass 1$/m);
+      expect(run.stdout).toMatch(/^# fail 0$/m);
+    },
+  );
+
+  it("reads the module type from the package.json nearest the destination", async () => {
+    await seedStory();
+    await writeNodeTestProject({ type: "module", scripts: { test: "node --test tests/" } }, "js");
+    await mkdir(path.join(root, "tests", "e2e"), { recursive: true });
+    await writeFile(path.join(root, "tests", "package.json"), JSON.stringify({}));
+    expect(await runAtddScaffold({ root, flowId, write: () => {}, writeErr: () => {} })).toBe(0);
+    const file = path.join(root, "tests", "e2e", `${flowId}.test.js`);
+    expect(await readFile(file, "utf8")).toContain(
+      `const { describe, it } = require("node:test");`,
+    );
+    expect((await runNodeTest(file)).stdout).toMatch(/^# pass 1$/m);
+  });
+
   // QFAI:EX-0001-0073-09
   it("refuses a package.json that names no test runner, before writing", async () => {
     await seedStory();
@@ -353,8 +401,11 @@ async function scaffoldedMemberFlowTest(): Promise<string> {
   return readFile(path.join(root, "packages", "app", "tests", "e2e", `${flowId}.test.ts`), "utf8");
 }
 
-/** A package.json with `manifest`, and globs that collect `tests/**\/*.test.mjs`. */
-async function writeNodeTestProject(manifest: Record<string, unknown>): Promise<void> {
+/** A package.json with `manifest`, and globs that collect `tests/**\/*.test.<extension>`. */
+async function writeNodeTestProject(
+  manifest: Record<string, unknown>,
+  extension = "mjs",
+): Promise<void> {
   await writeFile(path.join(root, "package.json"), JSON.stringify(manifest));
   await writeFile(
     path.join(root, "qfai.config.yaml"),
@@ -362,10 +413,17 @@ async function writeNodeTestProject(manifest: Record<string, unknown>): Promise<
       "validation:",
       "  traceability:",
       "    testFileGlobs:",
-      "      - tests/**/*.test.mjs",
+      `      - tests/**/*.test.${extension}`,
       "",
     ].join("\n"),
   );
+}
+
+/** Run one test file with the Node test runner of the Node running this suite. */
+async function runNodeTest(file: string): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync(process.execPath, ["--test", "--test-reporter=tap", file], {
+    cwd: root,
+  });
 }
 
 describe("atdd scaffold dialects", () => {
