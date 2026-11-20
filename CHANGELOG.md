@@ -518,6 +518,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
 
+- **A contract or spec directory that cannot be reached is now reported, not
+  read as empty.** A directory behind a parent this process may not open
+  dropped out of contract discovery and the diagram budget check without a
+  word, as if it held no files. Only a directory that does not exist is still
+  read as empty. Any other failure now stops the scan with its error, or is
+  reported as an unreadable directory where the check already reports those.
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
   server, though the skill and its contract call for HTTP transport too.
@@ -533,6 +539,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   could be applied. It now reports `QFAI-CONTRACT-021` at the line of each
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
+
+- **The 1.x migration reports every old-path line of a file with very many
+  of them.** The migration's last step lists each line of a tracked project
+  file that still names a 1.x path. A file with hundreds of thousands of
+  such lines, such as a generated or vendored one, ended the migration with
+  `RangeError: Maximum call stack size exceeded` before the report was
+  written. The report now lists every such line.
 
 - **The release-notes drift check holds a cut body to its kept entries, in
   order.** When a changelog section is too long for a GitHub Release body,
@@ -566,6 +579,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Node stopped with `Cannot use import statement outside a module`. A `.cjs`
   or `.cts` skeleton, and a `.js` one whose nearest `package.json` does not
   set `"type": "module"`, now loads them with `require`. Closes #4708.
+
+- **The business rules of a JSON contract with a `// QFAI-CONTRACT-ID` line
+  are read.** Contract validation accepted such a file, but the story tree
+  read it before removing that line, which is not JSON, so it found no rules
+  and reported `Invalid structured contract`. The declaration line is now
+  removed first, and the rest is read as JSON. Closes #4707.
 
 - **A null `requires:` is no longer read as an empty step list.** In a
   step's `STEP.md` or a skill's `SKILL.md`, `qfai validate` treated
@@ -675,6 +694,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   deliberation directory. The query now fails with the configuration error, as
   it already did for any other value that is not a mapping. Defaults still
   apply when the file or the `paths` key is absent.
+
+- **A repeated code query no longer rewrites the whole code corpus.** Every
+  code query copied each project file into the local CodeGraph corpus again
+  before checking freshness, so an unchanged repository paid a write per file
+  on every query. A file whose bytes already match its copy is now left as it
+  stands; an uncommitted edit, an added file or a removed file is still
+  reconciled before the freshness check.
 
 - **The review-cycle gate no longer reads as asking for a second re-review.**
   The completion step and the gate of `common-review-cycle` said every

@@ -299,13 +299,13 @@ describe("story-tree core", () => {
     expect(
       parseContractRules(
         "a.json",
-        JSON.stringify({
+        `// QFAI-CONTRACT-ID: API-0001\n${JSON.stringify({
           "x-qfai-rules": [
             { id: "BR-API-0001-0004", statement: "Keep", examples: ["EX-0001-0001-01"] },
           ],
-        }),
-      ).rules.map((rule) => rule.id),
-    ).toEqual(["BR-API-0001-0004"]);
+        })}\n`,
+      ),
+    ).toMatchObject({ rules: [{ id: "BR-API-0001-0004" }], errors: [] });
     expect(
       parseContractRules("a.sql", "-- Rule BR-DB-0001-0005: Missing examples\nSELECT 1;\n").rules[0]
         ?.examples,
