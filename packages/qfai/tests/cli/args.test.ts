@@ -943,6 +943,19 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
     );
   });
 
+  it("lists the db-drift formats when --format is given an unsupported value", () => {
+    // db-drift accepts text|json, but formatChoicesFor() had no db-drift entry,
+    // so `--format yaml` was reported as "--format is not valid for this
+    // command" — the caller was told the flag itself was wrong.
+    const parsed = parseArgs(["db-drift", "--format", "yaml"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.invalidExitCode).toBe(2);
+    expect(parsed.options.dbDriftFormat).toBeUndefined();
+    expect(parsed.invalidReason).toBe(
+      'qfai db-drift: invalid value for --format: "yaml". Expected: text|json',
+    );
+  });
+
   it("rejects an unsupported --fail-on value instead of silently dropping it", () => {
     // `--fail-on neve` used to fall through as `undefined`, so a run meant to
     // report-only exited 1 on blockers with nothing explaining the typo.
