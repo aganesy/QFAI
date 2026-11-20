@@ -97,18 +97,19 @@ describe("Glob Patterns Cover Test Locations", () => {
     expect(content).toContain("testFileExcludeGlobs");
   });
 
-  it("SKILL.md specifies 3-10 include globs requirement", async () => {
+  it("SKILL.md names the include globs it writes", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toContain("testFileGlobs");
   });
 
   // QFAI:AC-0001-0076-01
-  it("asks for 3-10 explicit include globs, forbids a catch-all and adds excludes only beyond the defaults", async () => {
+  it("asks for the smallest set of explicit include globs covering the observed tests, forbids a catch-all and adds excludes only beyond the defaults", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     const proposal = section(content, "Step 2");
     expect(proposal).toContain(
-      "Provide 3-10 **include globs** that cover all known test locations",
+      "Propose the smallest set of **include globs** that covers every test observed in Step 1, however few or many that is.",
     );
+    expect(proposal).toContain("Step 4 checks the files they match against those tests.");
     expect(proposal).toContain(
       "Prefer explicit patterns (e.g., `src/**/*.test.ts`, `tests/**/*.spec.ts`).",
     );
@@ -116,7 +117,7 @@ describe("Glob Patterns Cover Test Locations", () => {
       "Provide **exclude globs** only when necessary (beyond the default exclusions).",
     );
     expect(section(content, "Constraints")).toContain("Avoid overly broad globs (e.g., `**/*`).");
-    expect(section(content, "Step 4")).toContain(
+    expect(section(content, "Step 5")).toContain(
       "`validation.traceability.testFileExcludeGlobs` (only if needed)",
     );
   });
@@ -261,14 +262,27 @@ describe("Evidence Sampling Produces Valid Matches", () => {
   });
 
   // QFAI:AC-0001-0078-01
-  it("samples 5-15 test files matching the proposed globs, and the final report lists them", async () => {
+  it("samples 5-15 test files matching the proposed globs, or every match below five, and the final report lists them", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
-    expect(section(content, "Step 5")).toContain(
-      "Sample 5-15 actual test files that match the proposed globs.",
+    expect(section(content, "Step 4")).toContain(
+      "Sample 5-15 actual test files that match the proposed globs, or every match when fewer than five exist.",
     );
     expect(section(content, "Final report")).toContain(
-      "the proposed include and exclude globs, with 5 to 15 sample matched files",
+      "the proposed include and exclude globs, with 5 to 15 sample matched files, or every matched file when fewer than five match",
     );
+  });
+
+  // QFAI:AC-0001-0078-01
+  it("samples the proposed globs before the step that writes them to qfai.config.yaml", async () => {
+    const content = await readFile(SKILL_PATH, "utf-8");
+    const sampling = content.indexOf("\n## Step 4 - Evidence sampling (before writing)");
+    const write = content.indexOf("\n## Step 5 - Update `qfai.config.yaml` (minimal diff)");
+    expect(sampling, "the sampling step").toBeGreaterThanOrEqual(0);
+    expect(write, "the sampling step comes before the write").toBeGreaterThan(sampling);
+    expect(section(content, "Step 4")).toContain(
+      "Match the proposed globs against the repository before `qfai.config.yaml` is touched.",
+    );
+    expect(section(content, "Step 5")).toContain("Write the globs Step 4 matched.");
   });
 });
 
@@ -282,7 +296,7 @@ describe("Zero Match Triggers Stop", () => {
   // QFAI:EX-0001-0078-01
   it("stops to ask when the proposed glob matches no file, and writes no guessed glob", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
-    const sampling = section(content, "Step 5");
+    const sampling = section(content, "Step 4");
     expect(sampling).toContain("If zero matches exist, stop and ask for clarification.");
     expect(sampling).toContain("Do not assume a glob and do not write the key");
 
@@ -343,7 +357,7 @@ describe("Minimum Runnable Path Is Documented", () => {
     );
     expect(section(content, "Final report")).toContain("the minimum runnable path");
     expect(section(content, "Step 0 - Load Context")).toContain(
-      "`03_contract/tech.md#standard-commands-copy-paste`",
+      "`<paths.contractsDir>/tech.md#standard-commands-copy-paste`",
     );
     expect(section(content, "Completion Contract")).toContain(
       "A path recorded but never executed is UNRUN.",

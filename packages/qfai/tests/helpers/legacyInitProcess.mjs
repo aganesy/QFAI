@@ -92,13 +92,20 @@ async function acquire(command, args, options) {
     invocation[4] === 'from importlib.metadata import version; print(version("graphifyy"))'
   )
     return { stdout: "0.9.86", stderr: "" };
+  // Anything acquisition-shaped that the cases above did not recognise fails here, so a
+  // changed pin or argument list stops the test instead of reaching the real network.
+  const graphPackage = (argument) =>
+    typeof argument === "string" &&
+    (argument.startsWith("@colbymchenry/codegraph") || argument.startsWith("graphifyy"));
   if (
     command === "uv" ||
-    invocation.includes("@colbymchenry/codegraph@1.6.2") ||
-    invocation.includes("graphifyy[ollama]==0.9.86") ||
+    (npmLauncher && invocation[0] === "install") ||
+    invocation.some(graphPackage) ||
     inside(command)
   )
-    throw new Error("Unexpected acquisition operation in legacy init preload.");
+    throw new Error(
+      `Unexpected acquisition operation in legacy init preload: ${[command, ...invocation].join(" ")}`,
+    );
   return undefined;
 }
 

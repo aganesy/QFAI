@@ -31,7 +31,7 @@ describe("stack-neutral quality rule", () => {
         " ",
       );
       expect(configure).toContain(
-        "record them only under `03_contract/tech.md#standard-commands-copy-paste`",
+        "record them only under `<paths.contractsDir>/tech.md#standard-commands-copy-paste`",
       );
       expect(configure).not.toContain(".qfai/assistant/catalog/");
     });

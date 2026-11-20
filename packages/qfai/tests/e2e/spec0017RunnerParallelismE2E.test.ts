@@ -67,7 +67,7 @@
  *
  * ## What this test does NOT establish, since a sibling already does
  *
- * `tests/scripts/vitestWorkspaceKnobs.test.ts` asserts the split directly — `maxWorkers`, `minWorkers` and
+ * `tests/scripts/vitestWorkspaceKnobs.test.ts` asserts the split directly — `maxWorkers` and
  * `fileParallelism` must be shaped at root, and a root-only option declared on a project is "a declaration
  * nothing reads". So mutation 5 reddens there too, and this test is not the only instrument that catches
  * it. What it adds is the direction that one cannot: that the axis, correctly declared, has an EFFECT. The

@@ -22,7 +22,7 @@ The gate checks the story-tree files against their shipped templates, the docume
 - Every contract file written has a contracts.md row from the same change.
 - Every persisted attribute and state named by an AC, EX, or BR is realizable by its contract directly or through a stated join.
 - Paired API and DB contracts agree on terminal states and error outcomes.
-- Each changed DB contract was applied to a scratch database and its declared write paths were exercised as the contract artifact rules require. The result appears under Contract executability in the SDD repdence.
+- Each changed DB contract was applied to a scratch database and its declared write paths were exercised as the contract artifact rules require. The result appears under Contract executability in the SDD report.
 - UI work uses a product-owned DESIGN.md that parses and validates; a sample design is not adopted.
 
 ## Flow validation

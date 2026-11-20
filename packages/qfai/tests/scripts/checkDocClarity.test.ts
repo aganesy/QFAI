@@ -586,6 +586,22 @@ describe("scripts/check-doc-clarity.mjs", () => {
       expect(result.status).toBe(1);
       expect(result.stderr).toContain("src/old.ts:2");
     });
+
+    it("fails on a line added to a file whose name git prints quoted", async () => {
+      const dir = await newRepoWithHistory({ "docs/plain.md": "Plain prose.\n" });
+      // Git's own default, set here so a machine-wide `false` cannot hide the
+      // quoted header: with it, the accented name arrives as `"b/docs/caf\303\251.md"`.
+      git(dir, ["config", "core.quotePath", "true"]);
+      git(dir, ["checkout", "--quiet", "-b", "topic"]);
+      await writeFiles(dir, { "docs/café.md": `Fixed for ${CITATION}, see #1234.\n` });
+      git(dir, ["add", "--all"]);
+      git(dir, ["commit", "--quiet", "-m", "add"]);
+
+      const result = runGuard(dir);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("docs/café.md:1");
+    });
   });
 });
 

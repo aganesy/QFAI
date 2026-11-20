@@ -194,6 +194,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai-configure` checks its test globs before it writes them.** The
+  sampling step now runs before the step that writes `qfai.config.yaml`, so a
+  proposal that matches no file stops the run with the key never touched. A
+  repository with fewer than five tests lists every match instead of the five
+  samples it could not supply, and the skill asks for the smallest set of
+  include globs that covers the observed tests in place of three to ten. Its
+  three end checklists are one `Completion Checklist`, the file boundary is
+  stated once, and the Standard commands home is named as
+  `<paths.contractsDir>/tech.md#standard-commands-copy-paste`, so a project
+  with its own contracts directory is pointed at the right file.
+
 - **Breaking: each contract kind has its own number sequence, and a business
   rule ID names its contract's kind.** A project with five DB contracts and
   two API contracts can number them `DB-0001` to `DB-0005` and `API-0001` to
@@ -629,6 +640,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   calendar check read years 0000 through 0099 as 1900 through 1999, so a valid
   date such as `0099-09-09` was refused. The check now keeps the year as
   written.
+
+- **The SDD gate references send DB contract execution evidence to the SDD
+  report.** The quality gate and phase checklists named a misspelled
+  destination that does not exist. Both now name the SDD report, matching the
+  contract artifact rules. Closes #4933.
 
 - **Reviewer cards read the technology contract from the configured contracts
   directory.** The architecture, implementation, product-surface and

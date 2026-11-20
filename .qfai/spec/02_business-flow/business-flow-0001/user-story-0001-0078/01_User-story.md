@@ -2,4 +2,4 @@
 
 ## User Story
 
-As a QFAI user, I want to see 5-15 sample test files matching the proposed globs, so that I can confirm the configuration is correct before proceeding.
+As a QFAI user, I want to see 5-15 sample test files matching the proposed globs, or every match when fewer exist, before they are written, so that I can confirm the configuration is correct before proceeding.
