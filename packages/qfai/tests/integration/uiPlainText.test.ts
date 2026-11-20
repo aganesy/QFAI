@@ -196,7 +196,9 @@ describe("the duty reaches the agents that write and review screens", () => {
     ]) {
       const text = await read(writer);
       expect(text).toContain("qfai-text: why=");
-      expect(text).toMatch(/a text the user needs|is needed\. Keep it and write its reason/);
+      expect(text).toMatch(
+        /a text the user needs|is needed\. Keep it and write its reason|ui-affecting\.md#plain-text-in-ui-source/,
+      );
     }
     for (const reviewer of [
       "skill/qfai-prototyping/references/reviewer-prompt.md",

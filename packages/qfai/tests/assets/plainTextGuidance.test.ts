@@ -66,8 +66,14 @@ describe("the plain-text duty reaches writers and reviewers", () => {
     const section = at === -1 ? naming : naming.slice(at);
     expect(section).toContain(`.qfai/assistant/${PROCEDURE}`);
     const text = await read(file);
-    expect(text).toMatch(/a text the user needs[\s\S]*?stays with its reason/);
     expect(text).not.toMatch(/^\s*1\. Delete it\./m);
+  });
+
+  it("links the worker card to the procedure's section, which exists", async () => {
+    const card = await read("agent/fullstack-engineer.md");
+    expect(card).toContain(`.qfai/assistant/${PROCEDURE}#plain-text-in-ui-source`);
+    expect(card).toContain("qfai-text-file");
+    expect(await read(PROCEDURE)).toMatch(/^## Plain text in UI source$/m);
   });
 
   it.each(REVIEWERS)("%s reviews each reason and the copy a contract describes", async (file) => {
