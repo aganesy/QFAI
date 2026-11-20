@@ -228,6 +228,28 @@ describe("story-tree layout dispatch", () => {
     ]);
   });
 
+  it("ignores an ordinary file whose name matches a spec-pack directory", async () => {
+    await put(`${specs}/spec-notes.md`, "# Notes\n");
+    await put(`${specs}/_policies`, "not a directory\n");
+    await put(".qfai/specs/spec-0001", "not a directory\n");
+
+    const result = await validateProject(root, configured(), { profile: "full" });
+
+    expect(result.issues.filter((item) => item.code === "QFAI-LAYOUT-001")).toEqual([]);
+  });
+
+  it("lists only the files under spec-pack directories, not a matching file beside them", async () => {
+    await put(`${specs}/spec-0001/01_Spec.md`, "# Spec\n");
+    await put(`${specs}/spec-notes.md`, "# Notes\n");
+
+    const result = await validateProject(root, configured(), { profile: "full" });
+
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]?.code).toBe("QFAI-LAYOUT-001");
+    expect(result.issues[0]?.message).toContain(`${specs}/spec-0001/01_Spec.md`);
+    expect(result.issues[0]?.message).not.toContain("spec-notes.md");
+  });
+
   it("writes only the migration finding to validate.json for an old layout", async () => {
     await mkdir(path.join(root, specs, "spec-0001"), { recursive: true });
 
