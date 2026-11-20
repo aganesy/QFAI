@@ -130,18 +130,49 @@ export async function readBoundedRegularFile(
     if (stats.size > maxBytes) {
       return undefined;
     }
-    const ceiling = Math.min(stats.size, maxBytes);
-    const buffer = Buffer.alloc(ceiling + 1);
-    let filled = 0;
-    while (filled < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, null);
-      if (bytesRead === 0) {
-        break;
-      }
-      filled += bytesRead;
-    }
-    return filled > ceiling ? undefined : buffer.subarray(0, filled);
+    return readHandleWithin(handle, Math.min(stats.size, maxBytes));
   });
+}
+
+/** The one `FileHandle` method {@link readHandleWithin} reads through. */
+export type PositionalReader = {
+  read(
+    buffer: Buffer,
+    offset: number,
+    length: number,
+    position: number,
+  ): Promise<{ bytesRead: number }>;
+};
+
+/**
+ * Every byte of an open file from its start, or `undefined` when it holds more
+ * than `maxBytes`.
+ *
+ * Read to the end, not once: `read` may return fewer bytes than asked for — a
+ * network filesystem is the usual reason — and a single call left the tail of
+ * the buffer as NUL, which then failed every comparison made against it.
+ *
+ * And to `maxBytes + 1`, not to `maxBytes`. Another process holding the inode
+ * can append after the caller's `fstat`, and stopping at the measured size
+ * returned a **prefix** that could still match what the caller compared it to.
+ * One byte past the ceiling is what separates "this is the whole file" from
+ * "this is as much as I asked for".
+ *
+ * The handle, its open flags, its metadata and what a failed `read` means all
+ * stay with the caller: a fault is thrown, not answered.
+ */
+export async function readHandleWithin(
+  handle: PositionalReader,
+  maxBytes: number,
+): Promise<Buffer | undefined> {
+  const buffer = Buffer.alloc(maxBytes + 1);
+  let filled = 0;
+  while (filled < buffer.length) {
+    const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
+    if (bytesRead === 0) break;
+    filled += bytesRead;
+  }
+  return filled > maxBytes ? undefined : buffer.subarray(0, filled);
 }
 
 /** How much of a streamed file is held at once. */
