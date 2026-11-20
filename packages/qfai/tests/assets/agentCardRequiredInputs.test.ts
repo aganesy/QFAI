@@ -45,6 +45,26 @@ describe.each(trees)("%s agent card inputs", (tree) => {
   });
 });
 
+describe.each(trees)("%s contract directory placeholder", (tree) => {
+  // `paths.contractsDir` is configured apart from `paths.specsDir`, so a shipped
+  // asset that spells the contract directory as `<paths.specsDir>/03_contract`
+  // sends a reviewer to the wrong place once the contracts move.
+  it("names the contract directory by `<paths.contractsDir>`, never under the specs directory", async () => {
+    const directory = path.join(repoRoot, tree, "assistant");
+    const names = (await readdir(directory, { recursive: true })).filter((name) =>
+      name.endsWith(".md"),
+    );
+    const offenders: string[] = [];
+    for (const name of names) {
+      const text = await readFile(path.join(directory, name), "utf8");
+      if (text.includes("<paths.specsDir>/03_contract")) {
+        offenders.push(name.split(path.sep).join("/"));
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe("required-input path extraction", () => {
   const section = (bullets: string[]): string =>
     ["## Inputs you must read", "", ...bullets, "", "## Next"].join("\n");

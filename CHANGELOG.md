@@ -519,6 +519,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **Reviewer cards read the technology contract from the configured contracts
+  directory.** The architecture, implementation, product-surface and
+  requirements reviewer cards, the quality rule and the discussion skill named
+  `<paths.specsDir>/03_contract/tech.md`, so a project that set
+  `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
+  which they treat as absent evidence. They now name
+  `<paths.contractsDir>/tech.md`.
+
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
   said every scratch file goes under `tmp/`, while the temporary-files rule they
@@ -659,6 +667,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A directory named `.github/workflows/qfai-docs.yml` passed the existence
   check, so doctor reported the required lane installed although GitHub had
   no workflow there. The lane now counts only as a readable regular file.
+
+- **Verification reads its context from the configured spec and contract
+  directories.** The `verify-context` step read the policy, contracts and
+  `decisions.md` from the default `.qfai/spec` paths, and looked for gate
+  commands in the default `tech.md`, so a project that sets `paths.specsDir`
+  or `paths.contractsDir` could miss its rules or update the wrong file. The
+  step now resolves both directories from `qfai.config.yaml` once and uses
+  them for every read and write.
 
 - **`-h` and `-V` after a value-taking option are switches, not its value.**
   `qfai init --dir -h` initialized a directory named `-h`. An option's value
