@@ -4078,6 +4078,122 @@ describe("release automation performs decisions rather than making them", () => 
         expect(run.tagged).toBe(false);
       }
     });
+
+    /**
+     * The step from the association request through the gate's `fi`, run with
+     * `gh` replaced by a function that answers like the paginated endpoint: it
+     * prints every page only when asked for every page, and the first page
+     * otherwise. A string is printed as the raw response body.
+     */
+    const runFromRequest = (
+      pages: readonly unknown[] | string,
+      ghStatus = 0,
+    ): { tagged: boolean; output: string } => {
+      const allPages = typeof pages === "string" ? pages : JSON.stringify(pages);
+      const firstPage = typeof pages === "string" ? "[]" : JSON.stringify(pages[0] ?? []);
+      const document = workflow("tag-release.yml");
+      const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
+      const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+      const steps = Array.isArray(job["steps"]) ? job["steps"] : [];
+      const body =
+        steps
+          .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+          .find((run) => run.includes("/pulls")) ?? "";
+      const lines = body.split(/\r?\n/);
+      const start = lines.findIndex((line) => line.includes('pages="$(gh api'));
+      expect(
+        start,
+        "the association request is gone; this row has the wrong subject",
+      ).toBeGreaterThan(-1);
+      const open = lines.findIndex(
+        (line) => line.includes("grep -qxF") && line.includes("release/v"),
+      );
+      const close = lines.findIndex((line, at) => at > open && line.trim() === "fi");
+      expect(close, "the association check has no `fi`").toBeGreaterThan(start);
+      const dir = mkdtempSync(path.join(tmpdir(), "qfai-tagpages-"));
+      try {
+        const script = path.join(dir, "gate.sh");
+        writeFileSync(
+          script,
+          [
+            "set -euo pipefail",
+            'reject() { echo "REJECTED: $1"; exit 1; }',
+            `all_pages=${JSON.stringify(allPages)}`,
+            `first_page=${JSON.stringify(firstPage)}`,
+            `gh_status=${String(ghStatus)}`,
+            "gh() {",
+            '  if [ "$gh_status" != 0 ]; then echo "HTTP 502: Bad Gateway"; return "$gh_status"; fi',
+            '  case " $* " in',
+            "    *' --paginate '*) ;;",
+            "    *) printf '%s' \"$first_page\"; return 0 ;;",
+            "  esac",
+            '  case " $* " in',
+            "    *' --slurp '*) printf '%s' \"$all_pages\" ;;",
+            "    *) echo 'this stub answers --paginate only with --slurp'; return 1 ;;",
+            "  esac",
+            "}",
+            'claimed="1.10.2"',
+            "GITHUB_REPOSITORY=owner/repo",
+            "GITHUB_SHA=deadbeef",
+            `GITHUB_OUTPUT=${JSON.stringify(path.join(dir, "out").replace(/\\/g, "/"))}`,
+            "",
+            lines.slice(start, close + 1).join("\n"),
+            "",
+            "echo TAGGED",
+          ].join("\n"),
+          "utf-8",
+        );
+        const run = spawnSync("bash", [script], { encoding: "utf-8" });
+        if (run.error !== undefined) throw run.error;
+        const missing = /: ([\w.+-]+): command not found/.exec(run.stderr)?.[1];
+        if (missing !== undefined) {
+          throw new Error(
+            `the association request calls \`${missing}\`, which is not installed here; install it to run this case`,
+          );
+        }
+        const output = `${run.stdout}${run.stderr}`;
+        return { tagged: output.includes("TAGGED"), output };
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    };
+
+    it("reads every page of associated pull requests before declining to tag", () => {
+      const page = (refs: readonly string[]): unknown[] => refs.map((ref) => ({ head: { ref } }));
+      const firstPage = page(Array.from({ length: 100 }, (_, at) => `feature/change-${at}`));
+
+      const laterPage = runFromRequest([firstPage, page(["release/v1.10.2"])]);
+      expect(
+        laterPage.tagged,
+        "a release pull request listed on the second page must be tagged, not skipped green",
+      ).toBe(true);
+
+      expect(
+        runFromRequest([firstPage, page(["fix/another-change"])]).tagged,
+        "pages that carry no release branch still tag nothing",
+      ).toBe(false);
+      expect(runFromRequest([]).tagged, "no pages at all is a direct push").toBe(false);
+
+      for (const pages of [
+        [firstPage, {}],
+        [null],
+        ["release/v1.10.2"],
+        `[${JSON.stringify(firstPage)},[{"head":`,
+        "{}",
+      ]) {
+        const malformed = runFromRequest(pages);
+        expect(malformed.tagged, "a page that is not a list must not authorise a tag").toBe(false);
+        expect(malformed.output, "and it must stop the run rather than skip quietly").toContain(
+          "REJECTED: the pull requests associated with deadbeef did not arrive as a list of pages",
+        );
+      }
+
+      const failed = runFromRequest([page(["release/v1.10.2"])], 1);
+      expect(failed.tagged, "a failed request must not authorise a tag").toBe(false);
+      expect(failed.output).toContain(
+        "REJECTED: could not ask which pull request carried deadbeef",
+      );
+    });
   });
 });
 
