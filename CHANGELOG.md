@@ -646,6 +646,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and reports the missing prerequisite, leaving the install to setup the user
   authorizes with the project's package manager.
 
+- **`qfai session-review` reads a shell line's background job, redirections
+  and leading assignments** (#4855). A `qfai` command that a trailing `&`
+  runs in the background now counts its exit status as unknown, since the
+  shell's status is only the job's start. A file read such as
+  `cat <path> 2>/dev/null`, `> out` or `< in` keeps its result bytes, because
+  a redirection's target adds nothing to the output, and so does
+  `FOO=1 cat <path>`, whose command name now comes after its `NAME=value`
+  assignments.
+
 - **The `fullstack-engineer` card no longer rejects a file-level text reason.**
   Its own copy of the plain-text rule said a text with no reason directly
   before it is always an error, so a worker could reject a valid
