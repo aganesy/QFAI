@@ -250,6 +250,7 @@
     "tests/unit/core/uiux/htmlMockResourceReferences.test.ts",
     "tests/core/markdownFiles.test.ts",
     "tests/core/literalGlobDirectories.test.ts",
+    "tests/core/collectFilesRoot.test.ts",
     "tests/core/installedOlderThanDeclared.test.ts",
     "tests/core/platformOptionProfileScope.test.ts",
     "tests/core/prototyping/specResolution.test.ts",

@@ -3,6 +3,8 @@ import path from "node:path";
 
 import fg from "fast-glob";
 
+import { isEnoent } from "./fs/errno.js";
+
 export const DEFAULT_IGNORE_DIRS: ReadonlySet<string> = new Set([
   "node_modules",
   ".git",
@@ -30,8 +32,9 @@ export type CollectFilesOptions = {
    */
   skipDirectory?: (directory: string) => boolean;
   /**
-   * Called for a directory the walk cannot list, which is then passed over.
-   * Without it the listing error rejects the whole collection.
+   * Called for a directory the walk cannot list, which is then passed over,
+   * and for a root that cannot be checked for any reason but its absence.
+   * Without it the error rejects the whole collection.
    */
   onUnreadableDirectory?: (directory: string, error: unknown) => void;
 };
@@ -95,7 +98,16 @@ export async function collectFiles(
   options: CollectFilesOptions = {},
 ): Promise<string[]> {
   const entries: string[] = [];
-  if (!(await exists(root))) {
+  // Only a root that is not there is an empty scan. One the check cannot reach,
+  // such as a root behind a parent this process may not traverse, goes through
+  // the same policy as a directory the walk cannot list, so it is reported
+  // rather than read as holding nothing.
+  try {
+    await access(root);
+  } catch (error) {
+    if (isEnoent(error)) return entries;
+    if (options.onUnreadableDirectory === undefined) throw error;
+    options.onUnreadableDirectory(root, error);
     return entries;
   }
 
@@ -190,15 +202,6 @@ async function walk(
       }
       out.push(fullPath);
     }
-  }
-}
-
-async function exists(target: string): Promise<boolean> {
-  try {
-    await access(target);
-    return true;
-  } catch {
-    return false;
   }
 }
 

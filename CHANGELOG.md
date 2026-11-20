@@ -518,6 +518,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   contract that does not parse is left to `QFAI-CONTRACT-021`. The skill
   references now say the finding is an error, which it already was.
 
+- **A contract or spec directory that cannot be reached is now reported, not
+  read as empty.** A directory behind a parent this process may not open
+  dropped out of contract discovery and the diagram budget check without a
+  word, as if it held no files. Only a directory that does not exist is still
+  read as empty. Any other failure now stops the scan with its error, or is
+  reported as an unreadable directory where the check already reports those.
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
   server, though the skill and its contract call for HTTP transport too.
