@@ -94,6 +94,46 @@ describe("applyWaivers", () => {
     }
   });
 
+  it.each([
+    { version: "1", accepted: true },
+    { version: '"1"', accepted: true },
+    { version: '"1.5"', accepted: false },
+    { version: '"1abc"', accepted: false },
+  ])("reads waiver file version $version as accepted=$accepted", async ({ version, accepted }) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          `version: ${version}`,
+          "waivers:",
+          "  - id: WVR-20260208-01",
+          "    rule: COMPAT-003",
+          "    scope:",
+          '      paths: ["src/**"]',
+          '    reason: "temporary suppression"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [
+        buildIssue({ rule: "COMPAT-003", file: path.join(root, "src", "index.ts") }),
+      ]);
+      const versionRefusals = result.issues.filter(
+        (item) =>
+          item.code === "QFAI-WAIVER-001" &&
+          item.message === "The version in waivers.yml must be 1.",
+      );
+
+      expect(versionRefusals).toHaveLength(accepted ? 0 : 1);
+      expect(result.waivers.suppressed.total).toBe(accepted ? 1 : 0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("downgrades warning to info when action=downgrade", async () => {
     const root = await createRoot();
     try {
