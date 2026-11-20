@@ -14,7 +14,7 @@ This guide defines how the session agent divides and merges work, and when it st
 - Do the work in the session agent. Delegate only for the two reasons `.qfai/assistant/rule/shared-skill-delegation-baseline.md` states: an independent judgement, or parallel units that pass the parallel-unit gate
 - Never split work by role or technical area; work that shares the conversation stays in the session agent
 - Always share the plan and keep progress up to date
-- Prefer MCP for investigation and editing (list: `.instruction/02_project/mcp.md`)
+- Investigate code and documents as `.agents/rules/graph-exploration.md` states, with the project graph CLIs first; MCP servers, Serena among them, are optional (list: `.instruction/02_project/mcp.md`)
 
 ## Workflow
 
