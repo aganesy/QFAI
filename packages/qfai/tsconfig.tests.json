@@ -680,6 +680,7 @@
     "tests/scripts/alwaysLoadedFootprint.test.ts",
     "tests/integration/grillingGlossaryCheck.test.ts",
     "tests/integration/grillingRuleReferences.test.ts",
-    "tests/integration/noDiscussionSidecarMentions.test.ts"
+    "tests/integration/noDiscussionSidecarMentions.test.ts",
+    "tests/scripts/syncInitToRoot.test.ts"
   ]
 }

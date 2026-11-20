@@ -372,6 +372,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
 
+- **The workflow rule delegates as the shared delegation baseline does.** Its
+  delegation section no longer hands analysis, contracts and CI to technical
+  roles, one of them a DevOps/CI Engineer no shipped card defines. It now says
+  a stage delegates only for an independent judgement or for parallel units
+  that pass the parallel-unit gate, that the plan's `review` field names the
+  reviewers, and that the verify stage runs the quality gates.
+
 - **`qfai --help` lists the validation profiles in the order the parser
   names them.** The `--profile` line for validate and report now reads
   `discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift`, the
@@ -637,6 +644,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the verified commit; one that differs fails the job and
   is left as it is; and an answer other than "not found" fails the job
   instead of being read as no Release. Closes #4732.
+
+- **`qfai --help` now names everything `init --force` overwrites.** The
+  `--force` line named only the shipped skills and agents, while a forced run
+  also rewrites the shipped steps and rules under `.qfai/assistant/` and the
+  rule masters under `.agents/rules/`, so the full scope showed only in the
+  note a running `init` prints. The help now lists those locations, and names
+  `qfai.config.yaml`, `DESIGN.md` and `AGENTS.md` among the files it keeps,
+  as that note does. Closes #4758.
 
 - **The 1.x migration reports every old-path line of a file with very many
   of them.** The migration's last step lists each line of a tracked project

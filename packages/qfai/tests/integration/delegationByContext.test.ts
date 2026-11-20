@@ -140,6 +140,20 @@ describe("the shipped catalogue", () => {
     expect([...unknown].sort()).toEqual([]);
   });
 
+  // QFAI:EX-0001-0161-10
+  it("has the workflow rule delegate through the baseline and the plan's review, naming no role", async () => {
+    const delegation = section(
+      await flatText(path.join(ASSISTANT, "rule", "workflow.md")),
+      "## Delegation",
+    );
+    expect(delegation).toContain(
+      "A stage delegates only for the two reasons `.qfai/assistant/rule/shared-skill-delegation-baseline.md#sub-agent-delegation` states",
+    );
+    expect(delegation).toContain("the plan's `review` field names the stage's reviewers");
+    expect(delegation).toContain("A reviewer reads their results and runs none of them.");
+    expect(delegation).not.toMatch(/DevOps|Contract Designer|Architect|\bQA\b|Code Reviewer/);
+  });
+
   // QFAI:EX-0001-0161-11
   it("lets validate pass a worker card an earlier release left beside the shipped ones", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-kept-card-"));
