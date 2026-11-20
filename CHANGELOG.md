@@ -670,6 +670,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   path and the cause, and the rest of the scan goes on. A copy that does not
   exist still raises nothing.
 
+- **A waiver file's quoted version must be exactly `"1"`.** A quoted version
+  was read up to its first non-digit, so `version: "1.5"` or `version: "1abc"`
+  passed as version 1 and the file was applied in the wrong format. Such a file
+  is now refused with `QFAI-WAIVER-001`, the same as any other unsupported
+  version; `version: 1` and `version: "1"` are still accepted.
+
 - **Constitution Article XI is headed "Temporary files".** Its heading said
   every temporary file goes in `tmp/`, while the temporary-files rule it links
   puts a scratch file in the host's session scratch directory first and keeps
