@@ -301,6 +301,79 @@ describe("qfai doctor reads the triggers of the shipped workflows before countin
   });
 });
 
+describe("qfai doctor reads a job condition written as a boolean", () => {
+  // QFAI:EX-0003-0011-44
+  it("starts no job whose condition is false and starts a job whose condition is true", async () => {
+    // QFAI:AC-0003-0011-12
+    const root = await project({
+      "qfai-docs.yml": await withCondition("qfai-docs.yml", "checks", "true"),
+      "qfai-tests.yml": await withCondition("qfai-tests.yml", "tests", "false"),
+    });
+
+    const check = await costCheck(root);
+
+    expect(check?.severity).toBe("info");
+    expect(check?.message).toContain(
+      "qfai-docs.yml starts 3 jobs when nothing is to run (scope, checks x2) and up to 4 when its lane runs (scope, checks x2, docs)",
+    );
+    expect(check?.message).toContain(
+      "qfai-tests.yml starts 1 job when nothing is to run (detection) and up to 2 when its lane runs (detection, verdict)",
+    );
+  });
+
+  // QFAI:EX-0003-0011-44
+  it("reports a workflow whose every job condition is false as starting no job", async () => {
+    // QFAI:AC-0003-0011-12
+    const root = await project({
+      "qfai-docs.yml": await withCondition("qfai-docs.yml", "scope", "false"),
+      "qfai-validate.yml": await withCondition("qfai-validate.yml", "validate", "false"),
+    });
+
+    const check = await costCheck(root);
+
+    expect(check?.message).toContain(
+      "qfai-docs.yml starts no job when nothing is to run and up to 3 when its lane runs (checks x2, docs)",
+    );
+    expect(check?.message).toContain(
+      "qfai-validate.yml starts no job on a pull request event: the `if:` of each of its jobs is false.",
+    );
+    const details = check?.details;
+    const workflows = isRecord(details) ? details["workflows"] : undefined;
+    expect(Array.isArray(workflows) ? workflows[1] : undefined).toEqual({
+      file: "qfai-validate.yml",
+      idle: { jobs: 0, ids: "" },
+      laneRuns: { jobs: 0, ids: "" },
+    });
+  });
+
+  // QFAI:EX-0003-0011-44
+  it("names a workflow whose job condition is neither a string nor a boolean as not counted", async () => {
+    // QFAI:AC-0003-0011-12
+    for (const value of ["0", "[false]", "{}", ""]) {
+      const root = await project({
+        "qfai-validate.yml": await withCondition("qfai-validate.yml", "validate", value),
+      });
+
+      const check = await costCheck(root);
+
+      expect(check?.severity).toBe("info");
+      expect(check?.message).toContain("qfai-validate.yml could not be counted");
+      expect(check?.message).not.toContain("qfai-validate.yml starts");
+    }
+  });
+});
+
+/** The shipped workflow with the `if:` of the given job replaced by the given YAML value. */
+async function withCondition(name: string, job: string, value: string): Promise<string> {
+  const text = await packagedText(name);
+  const pattern = new RegExp(`^( {2}${job}:\\n(?: {4}.*\\n)*? {4}if:).*$`, "m");
+  const edited = text.replace(pattern, (_line, head: string) =>
+    value === "" ? head : `${head} ${value}`,
+  );
+  expect(edited).not.toBe(text);
+  return edited;
+}
+
 /** The shipped validate workflow with its `on:` block replaced by the given text. */
 async function validateWithTriggers(on: string): Promise<string> {
   const validate = await packagedText("qfai-validate.yml");
