@@ -152,27 +152,39 @@ async function locateCodex(
 ): Promise<SessionFile[]> {
   const sessionsDir = path.join(env.codexHome ?? path.join(env.home, ".codex"), "sessions");
   const sessions: SessionFile[] = [];
-  for (const file of await rolloutFiles(sessionsDir, list, 3)) {
+  for (const file of await rolloutFiles(sessionsDir, list)) {
+    // A name that matches but is no regular file is not opened.
+    const mtimeMs = await fileTime(file);
+    if (mtimeMs === null) continue;
     // A rollout opens with its session_meta record, so only that one is read.
     const meta = await firstValue(file, (record) => codexSessionMeta(record) ?? undefined, 1);
     if (meta?.cwd === undefined || !sameDirectory(meta.cwd, root, env.platform)) continue;
     // The recorded id is the session's identity; a name-derived one could match another session.
     const sessionId = meta.id;
     if (sessionId === undefined || sessionId === "") continue;
-    const mtimeMs = await fileTime(file);
-    if (mtimeMs === null) continue;
     sessions.push({ agent: "codex", sessionId, file, mtimeMs });
   }
   return sessions;
 }
 
-/** `rollout-*.jsonl` files under `sessions/YYYY/MM/DD/`. */
-async function rolloutFiles(dir: string, list: ListDirectory, depth: number): Promise<string[]> {
+/**
+ * `rollout-*.jsonl` names under `sessions/YYYY/MM/DD/`, where the three directories name a day the
+ * calendar has. A copy kept elsewhere under `sessions`, such as `backup/old/copy`, is not read.
+ */
+async function rolloutFiles(dir: string, list: ListDirectory): Promise<string[]> {
   const files: string[] = [];
-  for (const name of await sortedEntries(dir, list)) {
-    const entry = path.join(dir, name);
-    if (depth > 0) files.push(...(await rolloutFiles(entry, list, depth - 1)));
-    else if (/^rollout-.*\.jsonl$/.test(name)) files.push(entry);
+  for (const year of await sortedEntries(dir, list)) {
+    if (!/^\d{4}$/.test(year)) continue;
+    for (const month of await sortedEntries(path.join(dir, year), list)) {
+      if (!/^\d{2}$/.test(month)) continue;
+      for (const day of await sortedEntries(path.join(dir, year, month), list)) {
+        if (!/^\d{2}$/.test(day) || !isCalendarDate(`${year}-${month}-${day}`)) continue;
+        const dayDir = path.join(dir, year, month, day);
+        for (const name of await sortedEntries(dayDir, list)) {
+          if (/^rollout-.*\.jsonl$/.test(name)) files.push(path.join(dayDir, name));
+        }
+      }
+    }
   }
   return files;
 }
