@@ -291,6 +291,7 @@
     "tests/e2e/spec0016ResearchAllowlistE2E.test.ts",
     "tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
     "tests/e2e/spec0017RunnerParallelismE2E.test.ts",
+    "tests/helpers/aggregateChecks.ts",
     "tests/helpers/assistantVersion.ts",
     "tests/helpers/buildCommand.ts",
     "tests/helpers/childFailure.ts",
@@ -338,6 +339,7 @@
     "tests/integration/doctorMdschemaBinary.test.ts",
     "tests/integration/doctorMutationProofs.test.ts",
     "tests/integration/doctorWorkflowCost.test.ts",
+    "tests/integration/doctorWorkflowCostIo.test.ts",
     "tests/integration/doctorWorkflowDrift.test.ts",
     "tests/integration/doctorWorkflowParse.test.ts",
     "tests/integration/doctorWorkflowParseIo.test.ts",
@@ -689,6 +691,7 @@
     "tests/integration/grillingGlossaryCheck.test.ts",
     "tests/integration/grillingRuleReferences.test.ts",
     "tests/integration/noDiscussionSidecarMentions.test.ts",
-    "tests/scripts/syncInitToRoot.test.ts"
+    "tests/scripts/syncInitToRoot.test.ts",
+    "tests/core/waiversReadErrors.test.ts"
   ]
 }

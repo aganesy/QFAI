@@ -322,6 +322,31 @@ describe("qfai doctor reads a job condition written as a boolean", () => {
   });
 
   // QFAI:EX-0003-0011-44
+  it("reads an expression that wraps a literal boolean as that boolean", async () => {
+    // QFAI:AC-0003-0011-12
+    for (const [checks, tests] of [
+      ["${{ true }}", "${{ false }}"],
+      ["${{true}}", "${{false}}"],
+      ['"${{  true  }}"', "'${{ false }}'"],
+    ] as const) {
+      const root = await project({
+        "qfai-docs.yml": await withCondition("qfai-docs.yml", "checks", checks),
+        "qfai-tests.yml": await withCondition("qfai-tests.yml", "tests", tests),
+      });
+
+      const check = await costCheck(root);
+
+      expect(check?.severity).toBe("info");
+      expect(check?.message).toContain(
+        "qfai-docs.yml starts 3 jobs when nothing is to run (scope, checks x2) and up to 4 when its lane runs (scope, checks x2, docs)",
+      );
+      expect(check?.message).toContain(
+        "qfai-tests.yml starts 1 job when nothing is to run (detection) and up to 2 when its lane runs (detection, verdict)",
+      );
+    }
+  });
+
+  // QFAI:EX-0003-0011-44
   it("reports a workflow whose every job condition is false as starting no job", async () => {
     // QFAI:AC-0003-0011-12
     const root = await project({

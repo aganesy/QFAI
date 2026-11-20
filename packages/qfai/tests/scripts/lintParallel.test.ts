@@ -6,7 +6,15 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { invokedScriptBodies } from "../../../../scripts/check-workflow-hygiene.mjs";
+import {
+  invokedFileDigests,
+  invokedScriptBodies,
+} from "../../../../scripts/check-workflow-hygiene.mjs";
+import {
+  AGGREGATE_HELPER_REL,
+  aggregateArgument,
+  aggregateChecks,
+} from "../helpers/aggregateChecks.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const helper = path.join(root, "scripts/run-lint-checks.sh");
@@ -310,53 +318,18 @@ function rootScripts(): Record<string, string> {
   return manifest.scripts;
 }
 
-/** How an aggregate lane opens, records a failed check, and ends. */
-const CHAIN_HEAD = "status=0; ";
-const CHAIN_LINK = " || status=1";
-const CHAIN_TAIL = "; exit $status";
-
-/**
- * The checks of one aggregate lane's body, in order.
- *
- * Every check runs and records its failure, and the lane exits with the recorded
- * status at the end, so a failing check does not hide the checks after it. A body
- * in any other shape is refused, because a check written without its link would
- * be one whose failure no exit status carries.
- */
-function chainCommands(script: string, body: string): string[] {
-  if (!body.startsWith(CHAIN_HEAD) || !body.endsWith(CHAIN_TAIL)) {
-    throw new Error(
-      `${script} does not open with \`${CHAIN_HEAD}\` and end with \`${CHAIN_TAIL}\``,
-    );
-  }
-  return body
-    .slice(CHAIN_HEAD.length, -CHAIN_TAIL.length)
-    .split("; ")
-    .map((link) => {
-      if (!link.endsWith(CHAIN_LINK)) {
-        throw new Error(`${script} runs \`${link}\` without recording its failure`);
-      }
-      return link.slice(0, -CHAIN_LINK.length);
-    });
-}
-
 /**
  * The commands one profile's lanes run, resolved one level: a lane naming an
- * aggregate expands to that aggregate's chain of checks, and a lane naming a
- * single command stays as it is.
+ * aggregate expands to that aggregate's checks in the aggregate helper, and a
+ * lane naming a single command stays as it is.
  */
 function laneCommands(name: string): string[][] {
-  const scripts = rootScripts();
   return laneInvocations(name).map((invocation) => {
     const script = invocation.slice("pnpm ".length);
     if (!script.startsWith("ci:lint:") && !script.startsWith("ci:gate:")) {
       return [invocation];
     }
-    const body = scripts[script];
-    if (body === undefined) {
-      throw new Error(`the helper starts ${invocation}, which the root manifest does not declare`);
-    }
-    return chainCommands(script, body);
+    return aggregateChecks(root, script);
   });
 }
 
@@ -367,11 +340,11 @@ const aggregateLanes = (profile: Profile): string[] =>
     .filter((args) => args.startsWith("ci:lint:") || args.startsWith("ci:gate:"));
 
 /**
- * Runs one aggregate lane's real body under `sh`, with `pnpm` and `node` stubbed
- * to record each call and fail the one named `failing`.
+ * Runs the real aggregate helper under `bash` with `argv`, with `pnpm` and
+ * `node` stubbed to record each call and fail the one named `failing`.
  */
 function runAggregate(
-  body: string,
+  argv: readonly string[],
   failing: string,
 ): { status: number | null; calls: string[]; output: string } {
   const temp = mkdtempSync(path.join(os.tmpdir(), "qfai-lint-chain-"));
@@ -380,14 +353,20 @@ function runAggregate(
       'pnpm() { printf "pnpm %s\\n" "$*" >> calls.txt; [ "pnpm $*" != "$FAILING" ]; }',
       'node() { printf "node %s\\n" "$*" >> calls.txt; [ "node $*" != "$FAILING" ]; }',
     ].join("\n");
-    const result = spawnSync("sh", ["-c", `${stub}\n${body}`], {
+    const body = readFileSync(path.join(root, AGGREGATE_HELPER_REL), "utf-8");
+    const result = spawnSync("bash", ["-c", `${stub}\n${body}`, "run-aggregate-checks", ...argv], {
       cwd: temp,
       encoding: "utf-8",
       timeout: 30_000,
       env: { ...process.env, FAILING: failing },
     });
     expect(result.error).toBeUndefined();
-    const calls = readFileSync(path.join(temp, "calls.txt"), "utf-8").trim().split("\n");
+    let calls: string[] = [];
+    try {
+      calls = readFileSync(path.join(temp, "calls.txt"), "utf-8").trim().split("\n");
+    } catch {
+      // No check ran, so no stub wrote one.
+    }
     return { status: result.status, calls, output: `${result.stdout}\n${result.stderr}` };
   } finally {
     rmSync(temp, { recursive: true, force: true });
@@ -460,21 +439,22 @@ for (const profile of PROFILES) {
     });
 
     // QFAI:EX-0002-0013-13
-    it.skipIf(process.platform === "win32").each(aggregateLanes(profile))(
+    // Not skipped on Windows: the lists moved out of the manifest because cmd.exe
+    // refused the inline form there, and the helper runs under Bash on every platform.
+    it.each(aggregateLanes(profile))(
       "runs every check of %s after one fails and exits non-zero",
       (script) => {
-        const body = rootScripts()[script];
-        if (body === undefined) throw new Error(`the root manifest does not declare ${script}`);
-        const checks = chainCommands(script, body);
+        const argv = [aggregateArgument(root, script)];
+        const checks = aggregateChecks(root, script);
         expect(checks.length, `${script} holds fewer than two checks`).toBeGreaterThan(1);
         // The first check fails, which under a serial `&&` chain ran nothing after it.
         for (const failing of [checks[0], checks[checks.length - 1]]) {
           if (failing === undefined) continue;
-          const run = runAggregate(body, failing);
+          const run = runAggregate(argv, failing);
           expect(run.status, `${failing}: ${run.output}`).toBe(1);
           expect(run.calls).toEqual(checks);
         }
-        const clean = runAggregate(body, "none");
+        const clean = runAggregate(argv, "none");
         expect(clean.status, clean.output).toBe(0);
         expect(clean.calls).toEqual(checks);
       },
@@ -531,6 +511,37 @@ describe("the lane profile", () => {
       rmSync(temp, { recursive: true, force: true });
     }
   });
+});
+
+describe("the aggregate helper", () => {
+  it("hands every aggregate entry of the root manifest to the helper", () => {
+    // An entry written inline again would hand its list to the platform shell,
+    // which on Windows is cmd.exe and refuses it before any check runs.
+    const entries = Object.keys(rootScripts()).filter((name) =>
+      /^ci:(?:lint|gate):(?:structure|scans)$/.test(name),
+    );
+    expect(entries.sort()).toEqual([
+      "ci:gate:scans",
+      "ci:gate:structure",
+      "ci:lint:scans",
+      "ci:lint:structure",
+    ]);
+    for (const entry of entries) {
+      expect(rootScripts()[entry]).toBe(
+        `bash ./${AGGREGATE_HELPER_REL} ${entry.slice("ci:".length)}`,
+      );
+    }
+  });
+
+  it.each([[[]], [["typo"]]])(
+    "refuses the arguments %j instead of running nothing and reporting success",
+    (argv) => {
+      const run = runAggregate(argv, "none");
+      expect(run.status, run.output).toBe(2);
+      expect(run.output).toContain("unknown aggregate");
+      expect(run.calls).toEqual([]);
+    },
+  );
 });
 
 describe("a machine without pnpm", () => {
@@ -604,12 +615,20 @@ describe("script resolution through the helper", () => {
       ".#preci:lint:scans",
       ".#format:check",
       ".#lint",
+      ".#bash:scripts/run-aggregate-checks.sh",
+      ".#lint:md",
+      "packages/qfai#lint:shipping",
     ]) {
       expect(
         bodies.some(([name]) => name === key),
         `${key} is not reachable from pnpm ci:lint`,
       ).toBe(true);
     }
+    // The checkers the scans lane runs are files rather than package scripts, and
+    // the digest reaches them through the helper's literal `node ./scripts/...` lines.
+    const files = invokedFileDigests("pnpm ci:lint", root, ".").map(([name]) => name);
+    expect(files).toContain("scripts/check-bidi.mjs");
+    expect(files).toContain("packages/qfai/scripts/check-markdownlint-config.mjs");
   });
 
   it("resolves the mirror lane through the command its own job runs", () => {

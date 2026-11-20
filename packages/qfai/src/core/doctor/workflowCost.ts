@@ -4,7 +4,9 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { SHIPPED_WORKFLOW_NAMES } from "../../shared/shippedWorkflowNames.js";
+import { isEnoent } from "../fs/errno.js";
 import { isRecord } from "../workflow/parse.js";
+import { printable } from "./workflowDrift.js";
 
 const WORKFLOWS_DIR = [".github", "workflows"] as const;
 
@@ -71,7 +73,8 @@ function conditionText(condition: string): string {
 /**
  * Whether a pull request event that is not a close starts the job, or `undefined` for a condition
  * this does not recognise. Only the forms the shipped templates use are read, plus a condition
- * YAML parses as a boolean: `true` starts the job as no condition does and `false` never starts it.
+ * YAML parses as a boolean or an expression that wraps one, such as `${{ false }}`: `true` starts
+ * the job as no condition does and `false` never starts it.
  * A count taken from a condition that was guessed would be a figure nobody can check.
  *
  * SIMPLIFIED: compares the condition text with the shipped forms instead of evaluating it.
@@ -85,6 +88,9 @@ function jobStarts(
   if (condition === undefined || typeof condition === "boolean") return condition !== false;
   if (typeof condition !== "string") return undefined;
   const text = conditionText(condition);
+  // An expression that wraps a literal boolean reads as the boolean YAML would give.
+  if (text === "false") return false;
+  if (text === "true") return true;
   if (text === "" || text === CLOSE_GATE || text === PUSH_POLICY_GATE) return true;
   if (text === `always() && ${CLOSE_GATE}` || text === "always()") return true;
   if (text === SCOPE_GATE || text === SCOPE_AGGREGATE) return scenario.documentsTouched;
@@ -331,9 +337,16 @@ export type WorkflowCostCheck = {
       idle: { jobs: number; ids: string };
       laneRuns: { jobs: number; ids: string };
     }[];
-    unread: string[];
+    /**
+     * Each installed workflow not counted: its name, its path below the project root and why,
+     * the read error for a file that cannot be read.
+     */
+    unread: { file: string; path: string; cause: string }[];
   };
 };
+
+const NOT_READ_FORM =
+  "the file, its triggers or one of its job conditions is not one this check reads";
 
 /**
  * What a pull request event costs in jobs, by shipped workflow installed in the project. GitHub
@@ -343,25 +356,35 @@ export type WorkflowCostCheck = {
  */
 export async function checkWorkflowCost(root: string): Promise<WorkflowCostCheck | undefined> {
   const counted: WorkflowJobCounts[] = [];
-  const unread: string[] = [];
+  const unread: WorkflowCostCheck["details"]["unread"] = [];
+  const unreadable: string[] = [];
+  const unparsed: string[] = [];
   for (const name of [...SHIPPED_WORKFLOW_NAMES].sort()) {
+    const shown = [...WORKFLOWS_DIR, name].join("/");
     let text: string;
     try {
       text = await readFile(path.join(root, ...WORKFLOWS_DIR, name), "utf-8");
-    } catch {
+    } catch (error) {
+      if (isEnoent(error)) continue;
+      const cause = printable(error instanceof Error ? error.message : String(error));
+      unread.push({ file: name, path: shown, cause });
+      unreadable.push(`${shown} could not be read (${cause}), so its jobs are not counted.`);
       continue;
     }
     const counts = countWorkflowJobs(name, text);
-    if (counts === undefined) unread.push(name);
-    else counted.push(counts);
+    if (counts === undefined) {
+      unread.push({ file: name, path: shown, cause: NOT_READ_FORM });
+      unparsed.push(name);
+    } else {
+      counted.push(counts);
+    }
   }
   if (counted.length === 0 && unread.length === 0) return undefined;
   const clauses = counted.map(describeWorkflow);
-  if (unread.length > 0) {
-    clauses.push(
-      `${unread.join(" and ")} could not be counted: the file, its triggers or one of its job conditions is not one this check reads.`,
-    );
+  if (unparsed.length > 0) {
+    clauses.push(`${unparsed.join(" and ")} could not be counted: ${NOT_READ_FORM}.`);
   }
+  clauses.push(...unreadable);
   return {
     id: "workflows.cost",
     severity: "info",

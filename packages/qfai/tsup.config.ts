@@ -31,11 +31,13 @@ export default defineConfig({
   clean: true,
   target: "node20",
   splitting: false,
-  // Neither is a dependency of this package: each is loaded through a dynamic
-  // import only when the command that needs it runs, and resolved from the
-  // project's own `node_modules`. Bundling either is wrong in the same way —
-  // the engine ships a data file beside its entry point, so an inlined copy
-  // looks for that file next to `dist/` and fails on the first use.
+  // The two arrive differently: Playwright is an optionalDependency of this
+  // package, so installing qfai normally installs it too, while PGlite is not a
+  // runtime dependency at all and the project installs it itself. Either way
+  // each is loaded through a dynamic import only when the command that needs
+  // it runs, and resolved from `node_modules`. Bundling either is wrong in the
+  // same way — the engine ships a data file beside its entry point, so an
+  // inlined copy looks for that file next to `dist/` and fails on the first use.
   external: ["playwright", "@electric-sql/pglite"],
   outExtension({ format }) {
     return { js: format === "esm" ? ".mjs" : ".cjs" };
