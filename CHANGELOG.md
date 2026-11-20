@@ -522,6 +522,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `--session` could then select. Such a rollout is now left out, since the
   recorded `id` is the session's identity.
 
+- **`qfai doctor` counts every leg of a matrix job in `workflows.cost`.** A
+  shipped workflow edited to run a job on two operating systems and three
+  Node versions was reported as three runner allocations instead of six,
+  because only the widest axis was counted, and `include` and `exclude` were
+  read as axes. The count is now every combination of the axes, less each
+  `exclude` match, plus each `include` entry that extends no remaining
+  combination. A `strategy`, matrix, `include` or `exclude` given as an
+  expression, an `exclude` key that is not an axis, and a written-out matrix
+  with no leg, which GitHub rejects, are named as not counted. Closes #4780.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
@@ -638,6 +648,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   component is a top-level `function` or `const`. The scanner now reads the
   declaration list's `const` flag, so a `let`, `var` or `using` binding is not
   listed however it is exported.
+
+- **`triage-close` routes the request again before it closes it.** Its first
+  procedure step told the agent to pick an outcome from the closure table,
+  which has no `info-received` or `adopted`, so an answered information request
+  could be closed as `awaiting-info` instead of being routed again. The step
+  now applies those two re-routes first and uses the table only when the
+  request closes.
 
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two
