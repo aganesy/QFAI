@@ -2,7 +2,7 @@
 
 Review the brand SSOT (root `DESIGN.md` front-matter + `# Brand Philosophy` body) for completeness and quality.
 
-This review is scoped to planner-quality only. Winner selection belongs to the prototyping harness and `comparison-review.md`.
+This review is scoped to planner quality only. Directions are judged against the comparison criteria in `comparison-review.md`.
 
 ## Required Coverage
 

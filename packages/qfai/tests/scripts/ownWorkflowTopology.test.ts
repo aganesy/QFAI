@@ -2643,6 +2643,103 @@ describe("the publish job confirms its environment before it runs anything the t
   });
 });
 
+describe("every corepack call runs after the shared corepack bootstrap", () => {
+  // A Node past 24 carries no corepack. The publish job called `corepack enable` on the runner's
+  // own Node, before `setup-node`, so on an image without corepack it stopped before the download
+  // retries ever ran. The toolchain action already installed corepack from pinned, verified bytes
+  // in that case; the publish job now runs the same file, and the action runs it from that file
+  // rather than from a copy of its own.
+  const BOOTSTRAP_REL = path.join(".github", "actions", "setup", "bootstrap-corepack.sh");
+  const RELEASE_BOOTSTRAP = "bash .ci-actions/.github/actions/setup/bootstrap-corepack.sh";
+  const ACTION_BOOTSTRAP = 'bash "${{ github.action_path }}/bootstrap-corepack.sh"';
+  // Any corepack command, not a list of subcommands: every one of them needs corepack on PATH.
+  // The bootstrap's own path, `bootstrap-corepack.sh`, is not a command word, so it is not a call.
+  const COREPACK_CALL = /(?:^|[\s;&|(!])corepack(?=\s|$)/m;
+
+  // The commands of a step, without its comment lines, so a comment naming corepack is not a call.
+  const commandsOf = (step: Record<string, unknown>): string =>
+    String(step["run"] ?? "")
+      .split(/\r?\n/)
+      .filter((line) => !line.trim().startsWith("#"))
+      .join("\n");
+
+  // The steps that call corepack, each with whether the bootstrap runs before its first call.
+  const corepackSteps = (
+    steps: Array<Record<string, unknown>>,
+    bootstrap: string,
+  ): Array<{ at: number; name: string; bootstrapped: boolean }> =>
+    steps.flatMap((step, at) => {
+      const commands = commandsOf(step);
+      const call = commands.search(COREPACK_CALL);
+      if (call === -1) return [];
+      const boot = commands.indexOf(bootstrap);
+      const name = String(step["name"] ?? step["uses"] ?? `step ${at + 1}`);
+      return [{ at, name, bootstrapped: boot !== -1 && boot < call }];
+    });
+
+  it("bootstraps corepack in the publish job before its first corepack call", () => {
+    const doc: unknown = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "release.yml"), "utf-8"),
+    );
+    const jobs = isRecord(doc) ? doc["jobs"] : undefined;
+    const publish = isRecord(jobs) ? jobs["publish"] : undefined;
+    const listed = isRecord(publish) ? publish["steps"] : undefined;
+    const steps = Array.isArray(listed) ? listed.filter(isRecord) : [];
+    const calls = corepackSteps(steps, RELEASE_BOOTSTRAP);
+    expect(calls.length, "the publish job calls corepack nowhere").toBeGreaterThan(0);
+
+    expect(
+      calls.filter((call) => !call.bootstrapped).map((call) => call.name),
+      "these publish steps call corepack before the shared bootstrap has run",
+    ).toEqual([]);
+
+    // The bootstrap is read from the workflow's own revision, so that checkout comes first.
+    const actionsCheckoutAt = steps.findIndex((step) => {
+      const withBlock = step["with"];
+      return (
+        String(step["uses"] ?? "").startsWith("actions/checkout@") &&
+        isRecord(withBlock) &&
+        withBlock["path"] === ".ci-actions"
+      );
+    });
+    const firstCall = calls[0]?.at ?? -1;
+    expect(actionsCheckoutAt, "the publish job checks out no .ci-actions tree").toBeGreaterThan(-1);
+    expect(
+      actionsCheckoutAt,
+      "the .ci-actions checkout must come before the first corepack call",
+    ).toBeLessThan(firstCall);
+
+    // And before `setup-node`, whose `cache: pnpm` lookup is the first pnpm call.
+    const setupNodeAt = steps.findIndex((step) =>
+      String(step["uses"] ?? "").startsWith("actions/setup-node@"),
+    );
+    expect(setupNodeAt, "the publish job sets no Node up").toBeGreaterThan(-1);
+    expect(firstCall, "the first corepack call must come before setup-node").toBeLessThan(
+      setupNodeAt,
+    );
+  });
+
+  it("runs the bootstrap from the shared file in the toolchain action too", () => {
+    const calls = corepackSteps(setupActionSteps(), ACTION_BOOTSTRAP);
+    expect(calls.length, "the toolchain action calls corepack nowhere").toBeGreaterThan(0);
+    expect(
+      calls.filter((call) => !call.bootstrapped).map((call) => call.name),
+      "these toolchain-action steps call corepack before the shared bootstrap has run",
+    ).toEqual([]);
+
+    // One definition: the pinned integrity lives in the shared file and nowhere else.
+    const integrity =
+      "sha512-9BuIGHDFE7Zieor1CeRsvt7X7AJFEuJ6OnbSbsVprq83ChDFoBh1wP98NeUS9FT3ZwlzFllPElXcz/OiDf0YGw==";
+    expect(readFileSync(path.join(REPO_ROOT, BOOTSTRAP_REL), "utf-8")).toContain(integrity);
+    for (const rel of [SETUP_ACTION_REL, path.join(".github", "workflows", "release.yml")]) {
+      expect(
+        readFileSync(path.join(REPO_ROOT, rel), "utf-8"),
+        `${rel} restates the corepack bootstrap instead of running the shared file`,
+      ).not.toContain(integrity);
+    }
+  });
+});
+
 describe("the environment guard tells a denied read apart from an unprotected environment", () => {
   // `Get an environment` requires repository `Administration: read`, and the workflow
   // `permissions:` block has no key that grants it. The read was `2>/dev/null || echo ""`, so a
@@ -3853,7 +3950,8 @@ describe("release automation performs decisions rather than making them", () => 
      * The `version` step decides whether the commit arrived from the release pull
      * request. Everything before the check needs a token and a checkout; the
      * check itself needs only `pulls` and `claimed`, so it is extracted from the
-     * `if` through its `fi` and run with those two supplied.
+     * parse of the response through the `fi` of the branch match, and run with
+     * those two supplied and the step's own `reject` in front of it.
      */
     const associationGate = (): string => {
       const document = workflow("tag-release.yml");
@@ -3868,28 +3966,36 @@ describe("release automation performs decisions rather than making them", () => 
         "tag-release.yml has no step that asks which pull request carried the commit",
       ).toBeTypeOf("string");
       const lines = (body ?? "").split(/\r?\n/);
-      const open = lines.findIndex(
-        (line) => line.includes("grep -qxF") && line.includes("release/v"),
+      const reject = lines.find((line) => line.trim().startsWith("reject()"));
+      expect(reject, "the step defines no `reject` for the gate to stop with").toBeTypeOf("string");
+      const open = lines.findIndex((line) => line.includes('"$pulls"') && line.includes("node -e"));
+      expect(open, "the association response is no longer parsed by the step").toBeGreaterThan(-1);
+      const match = lines.findIndex(
+        (line, at) => at > open && line.includes("grep -qxF") && line.includes("release/v"),
       );
-      expect(open, "the association check is gone; this row has the wrong subject").toBeGreaterThan(
-        -1,
-      );
-      const close = lines.findIndex((line, at) => at > open && line.trim() === "fi");
-      expect(close, "the association check has no `fi`").toBeGreaterThan(open);
-      return lines.slice(open, close + 1).join("\n");
+      expect(
+        match,
+        "the association check is gone; this row has the wrong subject",
+      ).toBeGreaterThan(open);
+      const close = lines.findIndex((line, at) => at > match && line.trim() === "fi");
+      expect(close, "the association check has no `fi`").toBeGreaterThan(match);
+      return [reject ?? "", ...lines.slice(open, close + 1)].join("\n");
     };
 
-    /** Runs the gate over one payload; true when the commit would be tagged. */
-    const wouldTag = (pulls: unknown, claimed: string): boolean => {
+    /** Runs the gate over one raw response body, under the step's own shell options. */
+    const runGate = (
+      response: string,
+      claimed: string,
+    ): { status: number | null; tagged: boolean; skipped: boolean; output: string } => {
       const dir = mkdtempSync(path.join(tmpdir(), "qfai-tagref-"));
       try {
         const script = path.join(dir, "gate.sh");
         writeFileSync(
           script,
           [
-            "set -u",
+            "set -euo pipefail",
             `claimed=${JSON.stringify(claimed)}`,
-            `pulls=${JSON.stringify(JSON.stringify(pulls))}`,
+            `pulls=${JSON.stringify(response)}`,
             "GITHUB_SHA=deadbeef",
             `GITHUB_OUTPUT=${JSON.stringify(path.join(dir, "out").replace(/\\/g, "/"))}`,
             "",
@@ -3908,11 +4014,21 @@ describe("release automation performs decisions rather than making them", () => 
             `the association gate calls \`${missing}\`, which is not installed here; install it to run this case`,
           );
         }
-        return `${run.stdout}${run.stderr}`.includes("TAGGED");
+        const output = `${run.stdout}${run.stderr}`;
+        return {
+          status: run.status,
+          tagged: output.includes("TAGGED"),
+          skipped: output.includes("nothing to tag"),
+          output,
+        };
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
     };
+
+    /** Runs the gate over one payload; true when the commit would be tagged. */
+    const wouldTag = (pulls: unknown, claimed: string): boolean =>
+      runGate(JSON.stringify(pulls), claimed).tagged;
 
     // The shape `GET /repos/{owner}/{repo}/commits/{sha}/pulls` returns, trimmed to
     // the fields this gate can see. `head.ref` is where the branch name lives.
@@ -4006,6 +4122,28 @@ describe("release automation performs decisions rather than making them", () => 
         expect(wouldTag(payload, "1.10.2"), "a non-array response must not authorise a tag").toBe(
           false,
         );
+      }
+    });
+
+    it("fails on a response it cannot read, and skips only on a valid answer with no match", () => {
+      // A skip reports success and leaves the commit untagged. That is the right answer for a
+      // valid list with no release branch in it, and the wrong one for a response that says
+      // nothing at all: a release merge would stay untagged under a green run.
+      for (const response of ["{", "not json", "{}", "null", '"release/v1.10.2"', "42"]) {
+        const run = runGate(response, "1.10.2");
+        expect(run.status, `${response} must stop the step, not skip it`).not.toBe(0);
+        expect(run.output, `${response} must say why the step stopped`).toContain(
+          "::error::tag-release:",
+        );
+        expect(run.skipped, `${response} must not be reported as a non-release merge`).toBe(false);
+        expect(run.tagged, `${response} must not authorise a tag`).toBe(false);
+      }
+
+      for (const pulls of [[], restPayload("fix/issue-1149-three-dot-drift-diff"), [{}]]) {
+        const run = runGate(JSON.stringify(pulls), "1.10.2");
+        expect(run.status, "a valid answer with no release branch is an ordinary merge").toBe(0);
+        expect(run.skipped, "and it is reported as nothing to tag").toBe(true);
+        expect(run.tagged).toBe(false);
       }
     });
   });

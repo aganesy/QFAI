@@ -531,6 +531,20 @@ describe("assets guardrails", () => {
     expect(content).toMatch(/best-of-history is gone/i);
   });
 
+  it("points the strategy review at the comparison criteria, which own no winner", async () => {
+    const uixRevDir = path.join(repoRoot, "packages", "qfai", "assets", "uix-rev");
+    const [strategy, comparison] = await Promise.all([
+      readFile(path.join(uixRevDir, "strategy-review.md"), "utf-8"),
+      readFile(path.join(uixRevDir, "comparison-review.md"), "utf-8"),
+    ]);
+
+    expect(strategy.replace(/\s+/g, " ")).toContain(
+      "This review is scoped to planner quality only. Directions are judged against the comparison criteria in `comparison-review.md`.",
+    );
+    expect(strategy).not.toMatch(/winner selection belongs/i);
+    expect(comparison).toContain("no winner ownership");
+  });
+
   // TC-0003 (static) — workflow template exists in init tree
   it("ships the qfai-validate GitHub Actions workflow template (spec-0003)", async () => {
     const workflowPath = path.join(templateRootDir, ".github", "workflows", "qfai-validate.yml");
