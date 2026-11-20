@@ -482,6 +482,7 @@ describe("the edges a slug, a shell line and a calendar leave open", () => {
   });
 });
 
+// QFAI:EX-0001-0294-10
 // QFAI:EX-0001-0294-25
 // QFAI:EX-0001-0294-26
 describe("the signal helpers", () => {
@@ -504,6 +505,18 @@ describe("the signal helpers", () => {
       ".qfai/assistant/rule/a.md",
     );
     expect(watchedPath("C:/Work/App/.agents/rules/../../src/a.ts", facts)).toBeNull();
+  });
+
+  it("reads a quoted path whole, and a path that enters a watched directory through ..", () => {
+    const facts = { root: "/work/app", platform: "linux" as const };
+    expect(pathsInCommand("cat '.agents/rules/feature notes.md'", facts)).toEqual([
+      ".agents/rules/feature notes.md",
+    ]);
+    expect(pathsInCommand('cat "/work/app/.claude/skills/a b/SKILL.md"', facts)).toEqual([
+      ".claude/skills/a b/SKILL.md",
+    ]);
+    expect(pathsInCommand("cat src/../.agents/rules/a.md", facts)).toEqual([".agents/rules/a.md"]);
+    expect(pathsInCommand("cat ../.agents/rules/a.md /tmp/.agents/rules/a.md", facts)).toEqual([]);
   });
 
   it("keys a hook context by exact text first, else unregistered when it names QFAI", () => {
