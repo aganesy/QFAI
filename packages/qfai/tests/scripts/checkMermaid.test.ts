@@ -228,7 +228,7 @@ describe("check-mermaid lane", () => {
 
     const result = runLane([dir], await failReaddir({ locked: "EACCES" }));
 
-    expect(result.status, result.stdout).toBe(2);
+    expect(result.status, result.stdout + result.stderr).toBe(2);
     expect(result.stderr).toContain("cannot read");
     expect(result.stderr).toContain("locked");
     expect(result.stderr).toContain("EACCES");
@@ -240,7 +240,7 @@ describe("check-mermaid lane", () => {
 
     const result = runLane([dir], await failReaddir({ [path.basename(dir)]: "EIO" }));
 
-    expect(result.status, result.stdout).toBe(2);
+    expect(result.status, result.stdout + result.stderr).toBe(2);
     expect(result.stderr).toContain("cannot read");
     expect(result.stderr).toContain("EIO");
   });
