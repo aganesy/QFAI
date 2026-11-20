@@ -45,6 +45,18 @@ describe.each(trees)("%s — implementation stage binding", (tree) => {
     expect(workflow).toContain("### Policy check");
     expect(baseline).toContain("## Policy check");
   });
+
+  it("asks about unverifiable policy information only as Articles VI and X allow", async () => {
+    const workflow = (await read(tree, "assistant/rule/workflow.md")).replace(/\s+/g, " ");
+    const section = workflow.slice(
+      workflow.indexOf("### Policy check"),
+      workflow.indexOf("## Delegation pattern"),
+    );
+    expect(section).not.toContain("`<paths.specsDir>/open-questions.md` and ask the user.");
+    expect(section).toContain(
+      "append an OQ row to `<paths.specsDir>/open-questions.md`, and ask the user only as Articles VI and X of `.qfai/assistant/rule/constitution.md` allow: under `--auto` no question is asked, and a needed `hard-required` input stops the run.",
+    );
+  });
 });
 
 describe.each(trees)("%s — migration skill shared-rule pointers", (tree) => {

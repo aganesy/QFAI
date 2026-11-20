@@ -23,6 +23,7 @@ import { isEnoent } from "../../core/fs/errno.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
 import { readStoryTreeModel } from "../../core/storyTree/tree.js";
 import { error as logError, info as logInfo } from "../../core/logger.js";
+import { parseJsonText } from "../../shared/jsonText.js";
 
 export type AtddScaffoldOptions = {
   root: string;
@@ -86,7 +87,7 @@ async function readManifest(dir: string): Promise<{ value: unknown } | undefined
     throw caught;
   }
   try {
-    return { value: JSON.parse(text.replace(/^\uFEFF/, "")) };
+    return { value: parseJsonText(text) };
   } catch (caught) {
     throw new Error(
       `${manifestPath} is not valid JSON: ${caught instanceof Error ? caught.message : String(caught)}`,

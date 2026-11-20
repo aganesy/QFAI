@@ -372,6 +372,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `stale-install`. The upgrade guide now tells every checkout and worktree to
   run its install after pulling a qfai upgrade.
 
+- **The workflow rule delegates as the shared delegation baseline does.** Its
+  delegation section no longer hands analysis, contracts and CI to technical
+  roles, one of them a DevOps/CI Engineer no shipped card defines. It now says
+  a stage delegates only for an independent judgement or for parallel units
+  that pass the parallel-unit gate, that the plan's `review` field names the
+  reviewers, and that the verify stage runs the quality gates.
+
 - **`qfai --help` lists the validation profiles in the order the parser
   names them.** The `--profile` line for validate and report now reads
   `discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package|drift`, the
@@ -500,6 +507,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
+  with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
+  `Set-Content -Encoding UTF8`, and both commands refused such a file as
+  invalid JSON. They now drop one leading mark before parsing, as the
+  `package.json` reader of `qfai atdd scaffold` already did.
+
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
   said every scratch file goes under `tmp/`, while the temporary-files rule they
@@ -522,6 +535,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   show how to point it at a self-hosted Firecrawl instance and add that host to
   `webResearch.allowlist`. The templates still
   default to the cloud API.
+
+- **The policy check no longer asks a question under `--auto`.** When policy
+  information could not be verified, the policy check in
+  `.qfai/assistant/rule/workflow.md` told the agent to ask the user in every
+  mode, while the constitution forbids any question under `--auto`. It still
+  records the open question, and now asks only as Articles VI and X allow:
+  under `--auto` it asks nothing, and a needed `hard-required` input stops the
+  run.
 
 - **The leakage guard catches a `schemaVersion` whose colon is on the next
   line** (#4743). The guard's pattern allows any whitespace between the field
@@ -621,6 +642,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check in the same process, printed raw patterns it never asked for. Each
   run now restores the setting it started with. Closes #4726.
 
+- **Two runs of `qfai catalog design` no longer mix their files.** Two runs at
+  the same time placed their files in turn, so the token file could come from
+  one revision of `DESIGN.md` and the theme from another, and a failing run
+  could meet the other run's files while undoing its own. A run now places and
+  undoes its files only while it holds `.qfai/tools/state/design-catalog.lock`,
+  under the `.qfai/tools/` that `qfai init` keeps out of Git, so a lock a
+  killed run leaves is never committed. A run that finds the lock held writes
+  nothing and exits 1, saying whether to retry once the other run finishes or
+  to remove a lock no running process holds. Closes #4756.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
@@ -637,6 +668,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the verified commit; one that differs fails the job and
   is left as it is; and an answer other than "not found" fails the job
   instead of being read as no Release. Closes #4732.
+
+- **`qfai --help` now names everything `init --force` overwrites.** The
+  `--force` line named only the shipped skills and agents, while a forced run
+  also rewrites the shipped steps and rules under `.qfai/assistant/` and the
+  rule masters under `.agents/rules/`, so the full scope showed only in the
+  note a running `init` prints. The help now lists those locations, and names
+  `qfai.config.yaml`, `DESIGN.md` and `AGENTS.md` among the files it keeps,
+  as that note does. Closes #4758.
 
 - **The 1.x migration reports every old-path line of a file with very many
   of them.** The migration's last step lists each line of a tracked project
@@ -697,6 +736,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `symlink` left the path empty and the wrapper, with everything in it, gone.
   The entry is now moved aside first and put back when the link fails, and
   removed only once the link stands.
+
+- **The skeleton smoke now requires the path count it reports.** It accepted
+  the dry-run plan's `would write:` label with no number after it and then
+  printed a successful run that planned 0 paths, a count the plan never named.
+  A plan without a numeric count now fails the smoke, and the failure prints
+  the output it read. Closes #4754.
 
 - **`qfai db-drift` no longer calls a comparison equal when a SQL file failed
   to apply.** With a failed file and no differences among the files that did

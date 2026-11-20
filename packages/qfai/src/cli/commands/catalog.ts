@@ -9,6 +9,7 @@ import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
+import { type OwnerLockOptions, withOwnerLock } from "../../core/fs/ownerLock.js";
 import {
   findUnsafeHostFileComponent,
   findUnsafeWrapperComponent,
@@ -196,15 +197,23 @@ export async function runCatalogDesign(options: CatalogDesignOptions): Promise<n
   const failure = await writePair(root, outputs);
   if (failure !== null) {
     error(
-      failure.restored
+      failure.state === "restored"
         ? `qfai catalog design: could not write the design catalogue, so both files are as they were: ${failure.message}`
-        : `qfai catalog design: could not write the design catalogue, and could not put both files back: ${failure.message}`,
+        : failure.state === "left"
+          ? `qfai catalog design: could not write the design catalogue, and could not put both files back: ${failure.message}`
+          : `qfai catalog design: wrote ${targets.join(" and ")}, but ${failure.message}`,
     );
     return EXIT_CODES.findings;
   }
   info(`Wrote ${targets.join(" and ")}: ${countTokens(source.design)} token(s) from DESIGN.md.`);
   return EXIT_CODES.ok;
 }
+
+/**
+ * Why the pair write failed: `restored` when both files are as they were, `left` when the undo
+ * could not put both back, and `written` when both are written but the lock was not released.
+ */
+type PairFailure = { message: string; state: "restored" | "left" | "written" };
 
 /** One file of the design pair, and what this run has done to it so far. */
 type PairEntry = {
@@ -231,14 +240,18 @@ type PairEntry = {
  * moved aside under a name of its own and the staging file renamed into place. When a step fails,
  * the run undoes only what it did: it removes a file it placed while that file is still the one it
  * placed, renames what it moved aside back, and removes its own staging files, so a file of
- * another run is never removed or overwritten. On success the moved-aside files are removed.
- * Returns null, or the failure's message and whether both files were put back as they were; when
- * they were not, the message names each file left behind and each target that is as it was.
+ * another run is never removed or overwritten. Staging, placing and undoing run while this run
+ * holds the design catalogue lock, so two runs never place their files in turn and leave the
+ * pair from two revisions of `DESIGN.md`; a run that finds the lock held writes nothing. On
+ * success the moved-aside files are removed. Returns null, or the failure's message and whether
+ * both files were put back as they were, could not be, or were written but the lock not released;
+ * when they could not be, the message names each file left behind and each target that is as it
+ * was.
  */
 async function writePair(
   root: string,
   outputs: readonly { file: string; text: string }[],
-): Promise<{ message: string; restored: boolean } | null> {
+): Promise<PairFailure | null> {
   const entries: PairEntry[] = outputs.map((output) => ({
     file: path.join(root, output.file),
     text: output.text,
@@ -247,7 +260,13 @@ async function writePair(
     placed: false,
     aside: null,
   }));
-  const directories = [...new Set(outputs.map((output) => path.dirname(output.file)))];
+  // The lock's directory is checked and created with the pair's, and after them.
+  const directories = [
+    ...new Set([...outputs.map((output) => path.dirname(output.file)), DESIGN_LOCK_DIRECTORY]),
+  ];
+  // Set once the lock is held, so a failure to release it is told from one to take it.
+  const held: { committed?: PairFailure | null } = {};
+  let committed: PairFailure | null;
   try {
     await assertDirectoriesInsideProject(root, directories);
     for (const entry of entries) {
@@ -260,22 +279,77 @@ async function writePair(
       await mkdir(path.join(root, directory), { recursive: true });
     }
     await assertDirectoriesInsideProject(root, directories);
+    committed = await withOwnerLock(path.join(root, DESIGN_LOCK_PATH), designLock(), async () => {
+      held.committed = await commitPair(root, entries);
+      return held.committed;
+    });
+  } catch (caught) {
+    const failed = held.committed;
+    if (failed === undefined) return { message: messageOf(caught), state: "restored" };
+    // The pair was written or undone under the lock, but the lock was not released.
+    if (failed !== null) {
+      return { message: `${failed.message} ${messageOf(caught)}`, state: failed.state };
+    }
+    await removeAsides(entries);
+    return { message: messageOf(caught), state: "written" };
+  }
+  if (committed !== null) return committed;
+  await removeAsides(entries);
+  return null;
+}
+
+/** Removes the files this run moved aside, once both of its files are in place. */
+async function removeAsides(entries: readonly PairEntry[]): Promise<void> {
+  const asides = entries.flatMap((entry) => (entry.aside === null ? [] : [entry.aside]));
+  await Promise.all(asides.map((aside) => rm(aside, { force: true })));
+}
+
+/**
+ * The lock that lets one run at a time place or undo the pair. It sits with the project's local
+ * state under `.qfai/tools/`, which the graph preparation keeps out of Git, so a lock a killed
+ * run leaves is never committed with the catalogue. Unlike the graph state it carries no
+ * platform key, so runs from every platform on one checkout share it.
+ */
+const DESIGN_LOCK_DIRECTORY = path.join(".qfai", "tools", "state");
+const DESIGN_LOCK_PATH = path.join(DESIGN_LOCK_DIRECTORY, "design-catalog.lock");
+
+function designLock(): OwnerLockOptions {
+  const lock = DESIGN_LOCK_PATH.split(path.sep).join("/");
+  return {
+    kind: "design-catalog-lock",
+    maxBytes: 4096,
+    invalid: () => new Error(`${lock} is not a plain file.`),
+    refused: (active) =>
+      new Error(
+        active
+          ? `another run of qfai catalog design is writing it and holds ${lock}. Run the command again once that run finishes.`
+          : `${lock} is held by no running qfai catalog design. Remove it once no run is writing the catalogue, then run the command again.`,
+      ),
+    changed: () => new Error(`${lock} no longer holds this run's record, so it was left in place.`),
+  };
+}
+
+/**
+ * Stages both files and renames them into place, or undoes what this run did when a step fails.
+ * Runs while this run holds the design catalogue lock, so another run's files never mix with
+ * these and its undo never meets them.
+ */
+async function commitPair(root: string, entries: PairEntry[]): Promise<PairFailure | null> {
+  try {
     for (const entry of entries) await stage(entry);
     for (const entry of entries) await place(entry);
+    return null;
   } catch (caught) {
     const undo = await undoPair(root, entries);
-    if (undo.left.length === 0) return { message: messageOf(caught), restored: true };
+    if (undo.left.length === 0) return { message: messageOf(caught), state: "restored" };
     const kept =
       undo.restored.length === 0
         ? []
         : [
             `${undo.restored.join(" and ")} ${undo.restored.length === 1 ? "is as it was" : "are as they were"}.`,
           ];
-    return { message: [messageOf(caught), ...undo.left, ...kept].join(" "), restored: false };
+    return { message: [messageOf(caught), ...undo.left, ...kept].join(" "), state: "left" };
   }
-  const asides = entries.flatMap((entry) => (entry.aside === null ? [] : [entry.aside]));
-  await Promise.all(asides.map((aside) => rm(aside, { force: true })));
-  return null;
 }
 
 /** Throws when a directory on the path to a design file would lead a write outside the project. */
