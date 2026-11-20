@@ -99,6 +99,36 @@ describe("TC-0006-0012: playwright primary probe detects node_modules/.bin/playw
     expect(details?.resolvedStage).toBe("primary");
     expect(String(details?.executable ?? "")).toMatch(/playwright(\.cmd)?$/u);
   });
+
+  // cmd.exe cannot run a `.ps1` script, so this case needs a real Windows host;
+  // the command the probe starts is asserted on every platform in
+  // tests/unit/core/prototyping/playwrightLauncherPowerShell.test.ts.
+  it.runIf(isWin)("resolves a project whose only shim is playwright.ps1", async () => {
+    const root = await newTempDir("tc12-ps1");
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const binDir = path.join(root, "node_modules", ".bin");
+    await mkdir(binDir, { recursive: true });
+    await writeFile(path.join(binDir, "playwright.ps1"), "Write-Output 1.52.0\r\n", "utf-8");
+    const originalPath = process.env.PATH;
+    // Keep only the system directories that hold powershell.exe, so no playwright or npx
+    // installed on the machine is probed.
+    const system32 = path.join(process.env.SystemRoot ?? "C:\\Windows", "System32");
+    process.env.PATH = [system32, path.join(system32, "WindowsPowerShell", "v1.0")].join(
+      path.delimiter,
+    );
+    try {
+      const playwrightCheck = findCheck(await readDoctorJson(root), "prototyping.playwrightCli");
+      expect(playwrightCheck).toMatchObject({
+        severity: "ok",
+        details: {
+          resolvedStage: "primary",
+          executable: expect.stringMatching(/playwright\.ps1$/u),
+        },
+      });
+    } finally {
+      process.env.PATH = originalPath;
+    }
+  });
 });
 
 describe("TC-0006-0013: playwright probe order documented and observable", () => {
