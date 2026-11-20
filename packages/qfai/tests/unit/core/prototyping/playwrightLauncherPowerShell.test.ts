@@ -60,7 +60,6 @@ afterEach(async () => {
   }
 });
 
-// QFAI:AC-0003-0006-01
 // QFAI:EX-0003-0006-01
 describe("a PowerShell-only Playwright shim on Windows", () => {
   it("is probed with PowerShell -File, not cmd.exe", async () => {
