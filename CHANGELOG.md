@@ -520,6 +520,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
 
+- **The saas-package profile reports a `DESIGN.md` or handoff record it
+  cannot read, instead of calling it absent.** A directory or an unreadable
+  file at either path was reported as missing, with instructions to author it.
+  `QFAI-SAAS-001` and `QFAI-SAAS-002` now say the file cannot be read, name the
+  cause, and ask for its permissions or file type to be fixed; only a path with
+  nothing there is reported as absent.
+
 - **`qfai --help` lists the JSON output and output file of `db-drift`.**
   `db-drift` accepted `--format json` and `--out <path>`, but the options
   table named neither for it. The help now lists `db-drift` under both
