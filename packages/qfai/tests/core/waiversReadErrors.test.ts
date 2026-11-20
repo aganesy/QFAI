@@ -22,17 +22,21 @@ import type { Issue } from "../../src/core/types.js";
 
 type FsPromises = typeof fsPromises;
 
-const { accessSpy, readFileSpy } = vi.hoisted(() => ({
-  accessSpy: vi.fn(),
-  readFileSpy: vi.fn(),
-}));
+/** The errno each operation raises on the waiver file; empty means no fault. */
+const faults = vi.hoisted(() => ({ access: "", readFile: "" }));
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
   return {
     ...actual,
-    access: (...args: unknown[]) => accessSpy(actual, ...args),
-    readFile: (...args: unknown[]) => readFileSpy(actual, ...args),
+    access: async (...args: Parameters<FsPromises["access"]>) => {
+      if (faults.access && isWaiverFile(args[0])) throw errno(faults.access, args[0]);
+      return actual.access(...args);
+    },
+    readFile: async (...args: Parameters<FsPromises["readFile"]>) => {
+      if (faults.readFile && isWaiverFile(args[0])) throw errno(faults.readFile, args[0]);
+      return actual.readFile(...args);
+    },
   };
 });
 
@@ -51,8 +55,8 @@ const WAIVERS = [
   "",
 ].join("\n");
 
-function errno(code: string, target: string): NodeJS.ErrnoException {
-  const error = new Error(`${code}: simulated, open '${target}'`) as NodeJS.ErrnoException;
+function errno(code: string, target: unknown): NodeJS.ErrnoException {
+  const error: NodeJS.ErrnoException = new Error(`${code}: simulated, open '${String(target)}'`);
   error.code = code;
   return error;
 }
@@ -81,35 +85,22 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
 }
 
 beforeEach(() => {
-  accessSpy.mockReset();
-  readFileSpy.mockReset();
-  accessSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.access(...args));
-  readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
-    actual.readFile(...args),
-  );
+  faults.access = "";
+  faults.readFile = "";
 });
 
 describe("applyWaivers when the waiver file cannot be read", () => {
   it("reports an untraversable directory with the path and cause", async () => {
     await withProject(async (root) => {
-      const waiverPath = path.join(root, ".qfai", "waivers.yml");
       // A directory without search permission fails the probe and the read alike.
-      accessSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
-        isWaiverFile(target)
-          ? Promise.reject(errno("EACCES", target))
-          : actual.access(target, ...rest),
-      );
-      readFileSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
-        isWaiverFile(target)
-          ? Promise.reject(errno("EACCES", target))
-          : actual.readFile(target, ...rest),
-      );
+      faults.access = "EACCES";
+      faults.readFile = "EACCES";
 
       const result = await applyWaivers(root, [finding]);
 
       const readFailures = result.issues.filter((item) => item.code === "QFAI-WAIVER-001");
       expect(readFailures).toHaveLength(1);
-      expect(readFailures[0]?.file).toBe(waiverPath);
+      expect(readFailures[0]?.file).toBe(path.join(root, ".qfai", "waivers.yml"));
       expect(readFailures[0]?.message).toContain("Failed to read waivers.yml");
       expect(readFailures[0]?.message).toContain("EACCES");
       expect(result.waivers.active).toEqual([]);
@@ -119,11 +110,7 @@ describe("applyWaivers when the waiver file cannot be read", () => {
   it("treats a file removed before the read as no waiver file", async () => {
     await withProject(async (root) => {
       // The file was there when a probe would have looked, and gone by the read.
-      readFileSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
-        isWaiverFile(target)
-          ? Promise.reject(errno("ENOENT", target))
-          : actual.readFile(target, ...rest),
-      );
+      faults.readFile = "ENOENT";
 
       const result = await applyWaivers(root, [finding]);
 
