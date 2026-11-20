@@ -507,6 +507,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai session-review` takes a Codex rollout only when its `session_meta`
+  records a session id.** A rollout whose metadata named the root but carried
+  no `id` was reported under an ID made up from its file name, which
+  `--session` could then select. Such a rollout is now left out, since the
+  recorded `id` is the session's identity.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
