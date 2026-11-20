@@ -1039,9 +1039,13 @@ jobs:
         # re-run while the rest of the workflow run is still in progress, so a failed download
         # would otherwise hold the release.
         #
+        # The runner's own Node runs this step, and a Node past 24 carries no corepack, so the
+        # shared bootstrap installs it first, from the workflow's revision checked out above.
         # SHIPPED-CI: not-applicable
         # Because: the shipped templates have no release workflow.
         run: |
+          set -euo pipefail
+          bash .ci-actions/.github/actions/setup/bootstrap-corepack.sh
           corepack enable
           attempt=1
           until corepack prepare --activate; do
@@ -1081,7 +1085,14 @@ jobs:
         # The version comes from the checked-out tag's `package.json#packageManager`, which every
         # published tag carries, so a re-publish of an older tag installs the pnpm it was built with.
         # The corepack step before `setup-node` has already fetched it, so this finds it downloaded.
-        run: corepack prepare --activate
+        # `setup-node` has put another Node ahead of the one the first bootstrap installed into,
+        # so the same absence can recur here, and the same bootstrap answers it.
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped templates have no release workflow, and so no publish job to bootstrap.
+        run: |
+          set -euo pipefail
+          bash .ci-actions/.github/actions/setup/bootstrap-corepack.sh
+          corepack prepare --activate
         shell: bash
       # `--ignore-scripts` for the reason the toolchain action carries it: a dependency's
       # manifest is not in this tree, it arrives inside a tarball, and its `postinstall` would
