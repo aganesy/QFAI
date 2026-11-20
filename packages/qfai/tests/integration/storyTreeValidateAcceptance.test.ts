@@ -768,6 +768,26 @@ describe("story-tree validation acceptance", () => {
 
   // QFAI:AC-0001-0055-07
   // QFAI:EX-0001-0055-13
+  it("leaves a contract holding only its declaration line to the contract check", async () => {
+    // Its top level is empty, which QFAI-CONTRACT-021 reports. It declares no
+    // rule, so it neither raises a story-tree error nor switches the
+    // uncited-example check off.
+    const yaml = `${contract}/api/api-0001-orders.yaml`;
+    const declarationOnly = "# QFAI-CONTRACT-ID: API-0001\n";
+    const kept = await validateTree(changed({ [yaml]: declarationOnly }));
+    expect(only(kept.issues, "QFAI-STORY-005")).toEqual([]);
+
+    const uncited = await validateTree(
+      changed({ [`${contract}/cli/cli-0001-check.md`]: null, [yaml]: declarationOnly }),
+    );
+    expect(errorsNaming(uncited.issues, "QFAI-STORY-005", "EX-0001-0001-01")).toHaveLength(1);
+    expect(
+      only(uncited.issues, "QFAI-STORY-005").filter((found) => found.severity === "info"),
+    ).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0055-07
+  // QFAI:EX-0001-0055-13
   it("reads a contract file that produced a rule even when it also raised an error", async () => {
     // The rule's examples are a string, not a list: the file reports a field
     // error but still declares the rule, so it is loaded and the check applies.
