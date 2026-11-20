@@ -4,7 +4,11 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { declaredContractId } from "../contractsDecl.js";
 import { parseHeadings } from "../parse/markdown.js";
-import { maskNonSpecRegions, parseAllMarkdownTables } from "../specPackParsers.js";
+import {
+  maskNonSpecRegions,
+  parseAllMarkdownTables,
+  type MarkdownTable,
+} from "../specPackParsers.js";
 import { extractFencedCodeBlocks } from "../validators/mermaidUtils.js";
 import { parseContractRules, type ContractRule } from "./contractRules.js";
 import { nextId, type StoryTreeIdKind } from "./ids.js";
@@ -82,8 +86,13 @@ function firstH1Id(text: string, prefix: "BF" | "US"): string | null {
   );
 }
 
+/** Reads the tables Markdown renders, so a sample in a fence or comment declares nothing. */
+function renderedTables(text: string): MarkdownTable[] {
+  return parseAllMarkdownTables(maskNonSpecRegions(text));
+}
+
 function indexIds(text: string, column: "BF-ID" | "US-ID"): string[] {
-  return parseAllMarkdownTables(text).flatMap((table) => {
+  return renderedTables(text).flatMap((table) => {
     const columnIndex = table.headers.indexOf(column);
     return columnIndex < 0 ? [] : table.rows.map((row) => row[columnIndex] ?? "");
   });
@@ -214,7 +223,7 @@ export function buildStoryTreeModel(
     }
     const example = EXAMPLE_FILE.exec(file);
     if (example) {
-      for (const table of parseAllMarkdownTables(text)) {
+      for (const table of renderedTables(text)) {
         const idColumn = table.headers.indexOf("EX-ID");
         const acColumn = table.headers.indexOf("AC-Ref");
         if (idColumn < 0 || acColumn < 0) continue;
