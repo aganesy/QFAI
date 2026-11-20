@@ -21,10 +21,11 @@ go through the same accessor. Writing data to a curated index file when the
 authoritative source is the filesystem is forbidden — readers MUST scan the
 filesystem (or call a helper that does).
 
-Example: `report.md` aggregates round artifacts from
-`.qfai/evidence/prototyping/rounds/<rN>/*.json` directly, not from
-`prototyping.json.rounds[]`. The index is allowed to exist as a cache, but
-it is not authoritative.
+Example: the saas-package validate profile
+(`src/core/saasPackage/profile.ts`) reads the prototyping handoff record
+`.qfai/prototype/final/handoff.json` itself and checks it against the
+canonical handoff schema. It takes no copy of that record from any other
+file.
 
 ## P3. Package self-containment
 
@@ -79,7 +80,8 @@ checks.
 
 The Phase 1.8.3 retrospective showed six layers all being silent at once
 (build-lint, unit, pipeline-integration, E2E, runtime, audit). The refactor
-ensures each layer has at least one preventive mechanism:
+added a preventive mechanism to four of those layers; this document names no
+dedicated mechanism for the E2E or audit layer:
 
 | Layer      | Mechanism (Phase)                                   |
 | ---------- | --------------------------------------------------- |
