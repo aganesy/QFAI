@@ -103,7 +103,7 @@ export function pnpmPinnedVersion(text: string): string | null {
   const keys: string[] = [];
   const indents: number[] = [];
   let leftImporters = false;
-  for (const line of text.split(/\r?\n/)) {
+  for (const line of linesOf(text)) {
     const match = /^(\s*)(['"]?)([^'":#]+)\2:(?:\s+(.*))?$/.exec(line);
     if (match === null) continue;
     const indent = (match[1] ?? "").length;
@@ -128,6 +128,19 @@ export function pnpmPinnedVersion(text: string): string | null {
     }
   }
   return null;
+}
+
+/**
+ * The lines of `text` as `text.split(/\r?\n/)` gives them, cut one at a time
+ * so a scan that stops early never slices the rest of the text.
+ */
+function* linesOf(text: string): Generator<string> {
+  let start = 0;
+  for (let end = text.indexOf("\n"); end !== -1; end = text.indexOf("\n", start)) {
+    yield text.slice(start, end > start && text[end - 1] === "\r" ? end - 1 : end);
+    start = end + 1;
+  }
+  yield text.slice(start);
 }
 
 /**
