@@ -591,6 +591,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   under `--auto` it asks nothing, and a needed `hard-required` input stops the
   run.
 
+- **`qfai session-review` reads a Codex exit status only from the result
+  envelope.** A shell call whose header said exit 0 was counted as exit 7 and a
+  failed tool call when the command printed a JSON object holding
+  `"exit_code": 7`, and an object-valued result lost its own `exit_code` to one
+  inside its output. The status now comes from the `exit_code` field, or the
+  one under `metadata`, of the result object or of a result text that is one
+  JSON object, and an `exit_code` in text around it is not read.
+
 - **The leakage guard catches a `schemaVersion` whose colon is on the next
   line** (#4743). The guard's pattern allows any whitespace between the field
   name and its colon, but grep read each file one line at a time, so a valid
