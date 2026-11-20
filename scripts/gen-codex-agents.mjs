@@ -61,9 +61,7 @@ async function main() {
   ).href;
   const { renderCodexAgentToml, parseAgentCardKind } = await import(source);
   const cards = (await readdir(AGENTS_DIR)).filter((name) => name.endsWith(".md"));
-  const existing = new Set(
-    (await readdir(CODEX_DIR)).filter((name) => name.endsWith(".toml")).map((name) => name),
-  );
+  const existing = new Set((await readdir(CODEX_DIR)).filter((name) => name.endsWith(".toml")));
 
   const stale = [];
   const skipped = [];
