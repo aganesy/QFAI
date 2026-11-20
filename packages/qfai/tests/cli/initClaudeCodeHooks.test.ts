@@ -8,7 +8,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../helpers/legacyInit.js";
+import { keptHookGroupNote, planReminderHooks } from "../../src/core/init/reminderHooks.js";
 import {
+  CLAUDE_SETTINGS_RELATIVE_PATH,
   DOCUMENTATION_CLARITY_HOOK_MARKER,
   GRILLING_DELEGATION_HOOK_MARKER,
   GRILLING_DESIGN_ARTIFACT_HOOK_MARKER,
@@ -723,11 +725,12 @@ describe("init upgrades the official prompt groups before CI-monitor filtering",
         await readFile(path.join(root, ".agents", "rules", "reminders.json"), "utf-8"),
       );
       expectNoEmbeddedReminderText(JSON.stringify(groups), messages);
+      // A repeated run, forced or not, asks the same planner: it finds nothing to write.
       const updated = await readFile(path.join(root, SETTINGS), "utf-8");
-      for (const repeatedForce of [false, true]) {
-        await initInto(root, repeatedForce);
-        expect(await readFile(path.join(root, SETTINGS), "utf-8")).toBe(updated);
-      }
+      await expect(
+        planReminderHooks(assetsRoot, root, CLAUDE_SETTINGS_RELATIVE_PATH),
+      ).resolves.toEqual({ kind: "current", edited: [] });
+      expect(await readFile(path.join(root, SETTINGS), "utf-8")).toBe(updated);
     });
   });
 
@@ -741,23 +744,26 @@ describe("init upgrades the official prompt groups before CI-monitor filtering",
           hooks: [{ ...group.hooks[0], command: "project-node" }],
         };
         await seedSettings(root, { hooks: { UserPromptSubmit: [edited] } });
-        let previous: string | undefined;
-        for (const force of [false, true, false]) {
-          const stdout = await initReporting(root, force);
-          const groups = readHookGroups(await readSettings(root), "UserPromptSubmit");
-          expect(groups[0]).toEqual(edited);
-          expect(
-            groups.filter((candidate) =>
-              JSON.stringify(candidate).includes(group.hooks[0].statusMessage),
-            ),
-          ).toEqual([edited]);
-          expect(stdout).toContain(
-            `kept: .claude/settings.json hook group UserPromptSubmit "${group.hooks[0].statusMessage}" (edited here)`,
-          );
-          const current = await readFile(path.join(root, SETTINGS), "utf-8");
-          if (previous !== undefined) expect(current).toBe(previous);
-          previous = current;
-        }
+        const kept = `kept: .claude/settings.json hook group UserPromptSubmit "${group.hooks[0].statusMessage}" (edited here)`;
+        const stdout = await initReporting(root, true);
+        const groups = readHookGroups(await readSettings(root), "UserPromptSubmit");
+        expect(groups[0]).toEqual(edited);
+        expect(
+          groups.filter((candidate) =>
+            JSON.stringify(candidate).includes(group.hooks[0].statusMessage),
+          ),
+        ).toEqual([edited]);
+        expect(stdout).toContain(kept);
+        // A repeated run, forced or not, asks the same planner: it writes nothing
+        // and still names the edited group, which init prints on every run.
+        const written = await readFile(path.join(root, SETTINGS), "utf-8");
+        const plan = await planReminderHooks(assetsRoot, root, CLAUDE_SETTINGS_RELATIVE_PATH);
+        expect(plan.kind).toBe("current");
+        if (plan.kind !== "current") throw new Error(`expected a current plan, got ${plan.kind}`);
+        expect(
+          plan.edited.map((label) => keptHookGroupNote(CLAUDE_SETTINGS_RELATIVE_PATH, label)),
+        ).toContain(kept);
+        expect(await readFile(path.join(root, SETTINGS), "utf-8")).toBe(written);
       });
     },
   );
