@@ -543,6 +543,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `webResearch.allowlist`. The templates still
   default to the cloud API.
 
+- **`qfai catalog components` lists only `const` bindings.** An exported
+  `let` or `var` binding that returned JSX was listed as a component, though a
+  component is a top-level `function` or `const`. The scanner now reads the
+  declaration list's `const` flag, so a `let`, `var` or `using` binding is not
+  listed however it is exported.
+
 - **The policy check no longer asks a question under `--auto`.** When policy
   information could not be verified, the policy check in
   `.qfai/assistant/rule/workflow.md` told the agent to ask the user in every

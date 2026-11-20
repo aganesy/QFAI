@@ -119,7 +119,8 @@ export type TsNode = {
   arguments?: readonly TsNode[];
   dotDotDotToken?: TsNode;
   propertyName?: TsNode;
-  declarationList?: { declarations: readonly TsNode[] };
+  /** A variable statement's list; its `flags` carry `NodeFlags.Const` for a `const` list. */
+  declarationList?: { declarations: readonly TsNode[]; flags: number };
   statements?: readonly TsNode[];
   expression?: TsNode;
   exportClause?: TsNode;
@@ -141,6 +142,7 @@ export type TsApi = {
     kind: number,
   ): TsNode & { getLineAndCharacterOfPosition(pos: number): { line: number } };
   SyntaxKind: Record<string, number>;
+  NodeFlags: { Let: number; Const: number; Using?: number };
   ScriptTarget: { Latest: number };
   ScriptKind: { TSX: number; JSX: number };
 };
