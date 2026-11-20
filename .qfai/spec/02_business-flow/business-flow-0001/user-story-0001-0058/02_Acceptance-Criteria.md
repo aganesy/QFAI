@@ -11,5 +11,6 @@ Feature: Markdown report generation
     Then `report.md` is written under `paths.outDir`
     And it opens with summary counts of the story tree and of the findings
     And it lists each finding under a `## Findings` heading
+    And it marks each finding a waiver suppressed as waived
     And it lists the stories, acceptance criteria, examples and business rules of each business flow under a `## Business flows` heading
 ```

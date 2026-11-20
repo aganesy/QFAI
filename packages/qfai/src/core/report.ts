@@ -121,8 +121,10 @@ export function formatReportMarkdown(data: ReportData, options: { baseUrl?: stri
         ? ` ([${markdownText(issue.file)}](${link}))`
         : ` (${markdownText(issue.file)})`
       : "";
+    // A waived finding keeps its severity but no longer counts; the mark tells it apart.
+    const waived = issue.suppressed ? " (waived)" : "";
     lines.push(
-      `- ${issue.severity.toUpperCase()} ${markdownText(issue.code)}: ${markdownText(issue.message)}${source}`,
+      `- ${issue.severity.toUpperCase()}${waived} ${markdownText(issue.code)}: ${markdownText(issue.message)}${source}`,
     );
   }
   return lines.join("\n");

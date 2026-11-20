@@ -16,7 +16,7 @@ export const EXIT_CODES = {
   /** Success, or below the fail-on threshold. */
   ok: 0,
   /**
-   * validate / doctor / preflight: the --fail-on threshold was reached.
+   * validate / doctor / preflight / report: the --fail-on threshold was reached.
    * Also the default for runtime errors. An unknown *command* name
    * (including one given with --help) stops with this value too. That is a
    * row of its own, separate from CLI argument errors: the init CLI contract's
@@ -83,8 +83,9 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "report",
     lines: [
-      `${EXIT_CODES.ok} = success,`,
-      `${EXIT_CODES.findings} = the input validate.json is corrupt or off-schema, or a runtime error`,
+      `${EXIT_CODES.ok} = success, or findings below the --fail-on threshold,`,
+      `${EXIT_CODES.findings} = the findings reach the --fail-on threshold (the report is still written),`,
+      "      the input validate.json is corrupt or off-schema, or a runtime error",
       "      (a read or write I/O failure),",
       `${EXIT_CODES.inputError} = the input validate.json is missing (--in, or the config default)`,
     ],

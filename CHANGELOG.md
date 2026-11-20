@@ -605,6 +605,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read exactly, although both catalog formats write a family name as text. The
   precision check now reads only the fields that become numeric tokens.
 
+- **The Markdown report marks waived findings.** A finding a waiver
+  suppressed kept its severity in the `## Findings` list and read like an
+  active one, while the summary did not count it. Each such finding now shows
+  as, for example, `WARNING (waived)`; the JSON report is unchanged.
+
 - **`qfai session-review` counts a blank transcript line as malformed.** The
   JSONL reader skipped a blank or whitespace-only line without counting it, so
   the malformed count missed lines that are not JSON objects. It now counts
@@ -628,6 +633,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   was counted as `.agents/rules/feature`, and `src/../.agents/rules/a.md` was
   not counted at all. Each shell word is now read whole, quotes removed, and
   normalized before it is tested against the watched directories.
+
+- **`qfai --help` says `report` exits 1 when its findings reach the
+  `--fail-on` threshold.** The `report` exit-code row gave 1 only for a
+  corrupt input or a runtime error, though `qfai report` also writes the
+  report and then exits 1 when the findings reach the threshold. The row now
+  names that gate result first, so CI can tell findings from an I/O error.
 
 - **`qfai session-review` leaves a read's result bytes unknown when another
   file can add to the output.** `cat .agents/rules/a.md LICENSE` gave all of
