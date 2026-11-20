@@ -437,7 +437,8 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
       bashEnv,
       [
         "grep() {",
-        '  if [[ "$1" == "-rnE" ]]; then',
+        // `-rnE` is the content pass, `-rlzE` the whole-file schemaVersion pass.
+        '  if [[ "$1" == "-rnE" || "$1" == "-rlzE" ]]; then',
         "    printf 'grep: %s/unreadable.md: Permission denied\\n' \"$3\" >&2",
         "    return 2",
         "  fi",
