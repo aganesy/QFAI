@@ -539,6 +539,7 @@
     "tests/validators/uiScreenOmitted.test.ts",
     "tests/validators/uiContractDocumentReuse.test.ts",
     "tests/validators/testStubScanUnreadable.test.ts",
+    "tests/validators/storyTestScanReadBound.test.ts",
     "tests/integration/uiScreenOmitted.test.ts",
     "tests/integration/localeJaReference.test.ts",
     "tests/integration/uiAccessibilityLayer.test.ts",

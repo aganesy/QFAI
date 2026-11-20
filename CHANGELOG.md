@@ -570,6 +570,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   expression, an `exclude` key that is not an axis, and a written-out matrix
   with no leg, which GitHub rejects, are named as not counted. Closes #4780.
 
+- **The story-tree test scan opens at most 64 test files at once.** Every
+  selected test file was opened together, and a selection may hold up to
+  20,000 files, so a large tree could run out of file descriptors and fail
+  validation with `QFAI-SCAN-002`. The files are now read in batches, in the
+  same order and with the same truncation result. Closes #4943.
+
 - **A failed document extraction names the backend that ran it.** The recovery
   message told every project to check its local model, including a project
   whose documents go to an approved external OpenAI-compatible service. It now
