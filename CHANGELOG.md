@@ -591,6 +591,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   under `--auto` it asks nothing, and a needed `hard-required` input stops the
   run.
 
+- **A test that never failed is no longer quarantined as flaky** (#4832). The
+  `implement-quarantine` step told the agent to run a test again or quarantine
+  it when one of its runs passed, which also covered five passes and no
+  failure, so a healthy gating test could be taken out of the gate. The step
+  now quarantines a test only when its runs on one revision hold at least one
+  failure matching the report and at least one pass. When every run passes, it
+  records the test as `unreproduced` and writes no quarantine marker.
+
 - **The leakage guard catches a `schemaVersion` whose colon is on the next
   line** (#4743). The guard's pattern allows any whitespace between the field
   name and its colon, but grep read each file one line at a time, so a valid
