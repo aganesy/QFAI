@@ -522,8 +522,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that opens.** Its `evidence` linked `decisions.md#DEC-0001`, but a decision
   ID is a table cell, not an anchor, so the link jumped nowhere, and its fixed
   `expires` date was already past for anyone who copied it. The example now
-  names the register page, keeps the decision ID in `reason`, and leaves
-  `expires` as `YYYY-MM-DD` for you to replace with a future date.
+  names the register page and carries the decision ID in `reason` as
+  `DEC-yyyymmddhhMMss`, the form a new decision row takes. It leaves `expires`
+  as `YYYY-MM-DD`. Replace both with your decision's ID and a future date.
 
 - **A contract or spec directory that cannot be reached is now reported, not
   read as empty.** A directory behind a parent this process may not open

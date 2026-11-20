@@ -838,7 +838,9 @@ describe("assets guardrails", () => {
     // register page and the reason carries the ID.
     const evidence = /^#\s+evidence:\s*"([^"]*)"/m.exec(waiversTemplate)?.[1];
     expect(evidence).toBe(".qfai/spec/decisions.md");
-    expect(/^#\s+reason:\s*"[^"]*\bDEC-\d+/m.test(waiversTemplate)).toBe(true);
+    // A new register row takes a timestamp ID, so the example writes that
+    // shape as a placeholder the adopter replaces with a real row's ID.
+    expect(/^#\s+reason:\s*"[^"]*\bDEC-yyyymmddhhMMss\b/m.test(waiversTemplate)).toBe(true);
     // A concrete date is already past for whoever copies the example later.
     const expires = /^#\s+expires:\s*"([^"]*)"/m.exec(waiversTemplate)?.[1];
     expect(expires).toBe("YYYY-MM-DD");
