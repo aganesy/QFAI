@@ -107,6 +107,20 @@ describe("the project layer describes the repository it is in", () => {
     expect(missing, "a path named here resolves to nothing in this tree").toEqual([]);
   });
 
+  // Both guides told an agent to start an investigation with MCP and named
+  // Serena for impact analysis, while the graph exploration rule chooses the
+  // project graph CLIs first. Each guide now defers to that rule.
+  it("sends exploration to the graph exploration rule before any MCP server", async () => {
+    const rule = ".agents/rules/graph-exploration.md";
+    const undeferring: string[] = [];
+    for (const name of ["mcp.md", "orchestrator.md"]) {
+      const text = await readFile(path.join(repoRoot, LAYER, name), "utf-8");
+      if (!citedPaths(text).includes(rule)) undeferring.push(name);
+    }
+
+    expect(undeferring, `each guide cites ${rule}`).toEqual([]);
+  });
+
   // The floor is the one fact in this layer with a machine-readable source, and
   // it moved twice without either file noticing. A stated floor must match; a
   // file that points at `package.json#engines` instead states nothing to match.
