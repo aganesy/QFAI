@@ -85,8 +85,8 @@ operation pass. List each follow-up in the final report, since no close step
 follows.
 
 For a request to take one base change into several branches, first check each
-branch with `git merge-tree --write-tree <branch> <base>`, which writes
-nothing. A branch that merges cleanly, or whose only conflicts lie in
+branch with `git merge-tree --write-tree <branch> <base>`, which leaves
+refs, the index and the working tree unchanged. A branch that merges cleanly, or whose only conflicts lie in
 `decisions.md`, its pages or `open-questions.md`, is a branch update the user
 asked for: update it here as an operation, merged and pushed only as the
 instruction names. A branch with any other conflict is not an operation: report `needs-change` with

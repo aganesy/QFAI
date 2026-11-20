@@ -557,6 +557,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   fetches that branch, merges the commit it fetched, and fetches again just
   before the merge, merging any newer base commit first.
 
+- **The branch preflight says what `git merge-tree` leaves unchanged.** The
+  `triage-operate` step said `git merge-tree --write-tree` writes nothing,
+  though git stores the merge result as objects. It now says the check leaves
+  refs, the index and the working tree unchanged.
+
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
   said every scratch file goes under `tmp/`, while the temporary-files rule they
