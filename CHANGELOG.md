@@ -355,6 +355,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   no longer reads a shell reason recorded on the app frame as missing.
   Closes #4389.
 
+- **The package README documents more of what the package ships.** It now
+  lists the forms of `qfai workflow plan` (`--in`, `--route`, `--route` with
+  `--in` for a chosen candidate, and `--order`), the user-invoked
+  `/qfai-grill` skill, and `qfai db-drift` with `paths.migrationsDir`, the
+  project-installed PGlite engine, its JSON output and its exit codes. Its
+  upgrade steps now say to read the release notes of every version between
+  the installed one and the target. Closes #4877, #4880, #4882 and #4883.
+
 - **`verify-repo-gate` no longer escalates a gate whose only failures are
   pending test obligations.** Its fix loop still stops and escalates a failing
   gate it has no fix list for, except when the only failures are the

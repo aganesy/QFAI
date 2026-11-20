@@ -225,6 +225,10 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   defines the plan and report. This skill is not
   a CLI command. See the [2.0.0 migration guide](https://github.com/aganesy/QFAI/blob/main/packages/qfai/docs/MIGRATION-2.0.0.md).
 - **qfai-verify**: Run documented quality gates and report the reviewer-approved result.
+- **qfai-grill**: Interview you about a design, a product direction or a piece of writing, one round
+  of open decisions at a time, until you confirm or close the session. It needs no repository and
+  writes no file. The agent never starts it on its own, so a free-text request does not reach it:
+  type it with its subject, for example `/qfai-grill the retry policy for failed payments`.
 
 On a project with the old spec layout, `qfai init` installs the migration skill
 without seeding a competing `.qfai/spec/` tree. Run the skill before adopting
@@ -375,6 +379,29 @@ flowchart LR
     `--profile prototyping` adds preflight checks for the primary UI contract, design contract readiness,
     active agent-wrapper integrations, shipped role-input readiness, Playwright CLI launcher resolution and probing,
     and target URL reachability.
+- `npx qfai db-drift`
+  - Compares the DB contracts with the project's migrations as schemas. It applies the `.sql` files
+    under `<paths.contractsDir>/db/`, in the order their `-- Depends on:` lines give, to one empty
+    database, and the `.sql` files under `paths.migrationsDir`, in filename order, to another. It
+    then reports each column found on one side only, and each column both sides declare with a
+    different type, nullability or default.
+  - Set `paths.migrationsDir` in `qfai.config.yaml` first, for example `migrationsDir: db/migrations`
+    under `paths:`. It has no default. Without it, or with no `.sql` file on either side, the
+    command says there is nothing to compare and exits 0.
+  - The database engine is PGlite, an in-process Postgres build. qfai does not install it: add it to
+    the project with `npm i -D @electric-sql/pglite`. It is loaded only when this command runs, and
+    `qfai validate` never starts it.
+  - Example: `npx qfai db-drift --format json --out .qfai/report/db-drift.json`. The text output, the
+    default, gives a count and then one line per difference, grouped by table. `--format json` gives
+    one JSON object with `differences` (each with `kind` `only-in-contracts`, `only-in-migrations` or
+    `differs`, and its `table` and `column`), `failures` (the files that would not apply) and
+    `applied` (the files applied on each side). With nothing to compare it gives
+    `{ "status": "out-of-scope", "reason": ... }`. `--out <path>` writes the output to that file
+    instead of standard output.
+  - Exit codes: 0 (no difference, nothing to compare, or a difference under `--fail-on never`),
+    1 (the contracts and the migrations differ), 2 (the comparison could not be made, even under
+    `--fail-on never`: `qfai.config.yaml` has an error, a file on either side would not apply, or
+    the engine or the schemas could not be read). `--fail-on` takes `error`, the default, or `never`.
 - `npx qfai session-review`
   - Counts what this project's own Claude Code and Codex transcripts show, for the session review
     in `.agents/rules/session-feedback.md`: the QFAI reminders shown, the rule, skill and step files
@@ -407,12 +434,19 @@ flowchart LR
     `DESIGN.md` and about a hex colour in UI source that matches no token (`QFAI-DCAT-001` to
     `QFAI-DCAT-003`).
 - `npx qfai workflow plan`
-  - The route planning behind the free-text entry. `--in <path>`, or `--in -` for standard input,
-    reads a request's extraction; `--route <route>` names a route instead. It prints one JSON
-    document: the route's stages and step files with its decision, release and branch points, the
-    candidate routes of an unsure extraction, or a refusal. It starts nothing and writes no file.
-    Exit codes: 0 (a plan or candidates), 2 (input refused), 1 (the `--in` file cannot be read, or a
-    shipped plan does not load).
+  - The route planning behind the free-text entry. It prints one JSON document: the route's stages
+    and step files with its decision, release and branch points, the candidate routes of an unsure
+    extraction, or a refusal. It starts nothing and writes no file. Give it one of these forms:
+
+    | Form                          | Plans                                                                                                                                                                                                         |
+    | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `--in <path>`, or `--in -`    | The route a request's extraction gives, read from the file or from standard input.                                                                                                                            |
+    | `--route <route>`             | The named route on its own.                                                                                                                                                                                   |
+    | `--route <route> --in <path>` | The route chosen from an unsure extraction's candidates, with that extraction: the plan gains the stages its artifacts need, and a route that cannot serve them is refused. Use it when you pick a candidate. |
+    | `--order`                     | An operation on finished work, with no extraction.                                                                                                                                                            |
+
+    Any other combination is refused. Exit codes: 0 (a plan or candidates), 2 (input refused),
+    1 (the `--in` file cannot be read, or a shipped plan does not load).
 - `npx qfai sdd preflight`
   - Runs the Stage 0 gate of `/qfai-sdd`: selects the source, resolves the blockers, and writes the summary
     run-scoped at `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md`
@@ -974,9 +1008,10 @@ Moving a project from the spec-pack layout to the story tree also requires
 migration skill moves project content and reports items that need a person.
 
 The release notes of each version are the body of its GitHub Release, listed
-at <https://github.com/aganesy/QFAI/releases>. Read them before you upgrade:
-they name the files a version retires and any change to the exact version of a
-dependency the package pins, such as `@jackchuka/mdschema`.
+at <https://github.com/aganesy/QFAI/releases>. Before you upgrade, read the
+notes of every version after the one you have installed, up to and including
+the target: each names the files that version retires and any change to the
+exact version of a dependency the package pins, such as `@jackchuka/mdschema`.
 
 To upgrade by hand:
 
@@ -988,8 +1023,10 @@ To upgrade by hand:
 3. Run `npx qfai init --force`. It replaces the skills and steps an agent may
    be reading, so an agent upgrading the project reads them again from disk
    afterwards.
-4. Delete the files the release notes of the new version list as retired, once
-   nothing you keep reads them.
+4. Delete the files listed as retired in the release notes of every version
+   after the one you had installed, up to and including the new one, once
+   nothing you keep reads them. Each version's notes name only the files that
+   version retired, so a jump over several versions needs all of their notes.
 5. `init --force` does not touch the workflows under `.github/workflows/`. For
    each one `npx qfai doctor` reports as differing, copy the packaged file over
    it, or list it under `workflow.acceptedDrift` with the digest doctor prints
