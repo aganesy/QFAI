@@ -566,6 +566,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   following option alone, reports `--base needs a git ref` and exits 2, as it
   already did for `--tools`.
 
+- **`qfai report --in` refuses a malformed waiver suppression map.** A
+  `waivers.suppressed.byWaiver` or `byRule` that was `null`, an array, or an
+  object with a count that is not a number passed the input check and reached
+  the emitted report. The report now stops before writing and names the field,
+  such as `waivers.suppressed.byRule["QFAI-X"] must be a number`.
+
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
   server, though the skill and its contract call for HTTP transport too.

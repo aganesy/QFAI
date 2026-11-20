@@ -192,6 +192,43 @@ describe("qfai report on a story tree", () => {
     expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
 
+  it.each([
+    ["byWaiver", null, "waivers.suppressed.byWaiver must be an object"],
+    ["byWaiver", [], "waivers.suppressed.byWaiver must be an object"],
+    ["byWaiver", { "WVR-1": "1" }, 'waivers.suppressed.byWaiver["WVR-1"] must be a number'],
+    ["byRule", null, "waivers.suppressed.byRule must be an object"],
+    ["byRule", [1], "waivers.suppressed.byRule must be an object"],
+    ["byRule", { "QFAI-X": null }, 'waivers.suppressed.byRule["QFAI-X"] must be a number'],
+  ])("refuses waivers.suppressed.%s set to %j before writing output", async (key, map, problem) => {
+    const root = await storyRoot();
+    const suppressed = { total: 0, byWaiver: {}, byRule: {}, [key]: map };
+    const result = {
+      toolVersion: "2.0.0-test",
+      issues: [],
+      counts: { info: 0, warning: 0, error: 0 },
+      waivers: { active: [], suppressed },
+    };
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(path.join(root, ".qfai/report/validate.json"), JSON.stringify(result), "utf8");
+    await expect(runReport({ root, format: "json", failOn: "never" })).rejects.toThrow(
+      `(${problem})`,
+    );
+    expect(await exists(path.join(root, ".qfai/report/report.json"))).toBe(false);
+  });
+
+  it("accepts suppression maps of numeric counts", async () => {
+    const root = await storyRoot();
+    const result = {
+      toolVersion: "2.0.0-test",
+      issues: [],
+      counts: { info: 0, warning: 0, error: 0 },
+      waivers: { active: [], suppressed: { total: 1, byWaiver: { "WVR-1": 1 }, byRule: { R: 1 } } },
+    };
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(path.join(root, ".qfai/report/validate.json"), JSON.stringify(result), "utf8");
+    expect(await runReport({ root, format: "json", failOn: "never" })).toBe(0);
+  });
+
   it("names the top-level field that makes a validate result malformed", async () => {
     const root = await storyRoot();
     await mkdir(path.join(root, ".qfai/report"), { recursive: true });
