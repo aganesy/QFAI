@@ -38,7 +38,9 @@
  * Usage:
  *   node scripts/check-conflict-markers.mjs
  *
- * Exit codes: 0 clean, 1 markers found, 2 the file list could not be read.
+ * Exit codes: 0 clean, 1 markers found, 2 the scan is incomplete (the file
+ * list, or a tracked file that is present, could not be read). A path deleted
+ * between listing and reading, or one that is not a regular file, is skipped.
  */
 /* global console, process */
 import { execFileSync } from "node:child_process";
@@ -151,19 +153,46 @@ export function markersIn(text, { fenced = false } = {}) {
   return hits;
 }
 
-/** Whether this entry is a regular file this should read. */
-function isScannableEntry(absolute) {
-  let info;
-  try {
-    info = lstatSync(absolute);
-  } catch {
-    return false;
-  }
-  return info.isFile() && readsText(absolute);
+/**
+ * Error codes that mean the entry is not there to read, or is not a regular
+ * file: a path deleted between `git ls-files` and the read, a parent directory
+ * replaced by a file, a file replaced by a directory. Skipping these claims
+ * nothing about content the working tree holds. Any other failure (access,
+ * I/O) leaves content unread, so the scan is incomplete.
+ */
+const ABSENT_CODES = new Set(["ENOENT", "ENOTDIR", "EISDIR"]);
+
+/** Whether a thrown error says the entry is absent or not a regular file. */
+function isAbsent(cause) {
+  return (
+    typeof cause === "object" &&
+    cause !== null &&
+    "code" in cause &&
+    ABSENT_CODES.has(String(cause.code))
+  );
 }
 
-/** Runs the scan over `cwd` and returns the process exit code. */
-export function run(cwd = process.cwd()) {
+/** A short reason for an unreadable entry: its error code, else its message. */
+function reasonOf(cause) {
+  if (typeof cause === "object" && cause !== null && "code" in cause) {
+    return String(cause.code);
+  }
+  return cause instanceof Error ? cause.message : String(cause);
+}
+
+/**
+ * Runs the scan over `cwd` and returns the process exit code.
+ *
+ * `lstat` and `read` default to node:fs and are parameters so a test can make
+ * one path fail the way a locked or damaged file does on any platform.
+ *
+ * @param {string} [cwd]
+ * @param {{ lstat?: (absolute: string) => { isFile(): boolean }, read?: (absolute: string) => string }} [options]
+ */
+export function run(
+  cwd = process.cwd(),
+  { lstat = lstatSync, read = (absolute) => readFileSync(absolute, "utf-8") } = {},
+) {
   const tracked = trackedFiles(cwd);
   if (tracked === null) {
     console.error("check-conflict-markers: `git ls-files` produced no list; nothing was scanned.");
@@ -171,22 +200,30 @@ export function run(cwd = process.cwd()) {
   }
 
   const findings = [];
+  const unreadable = [];
   let scanned = 0;
   for (const relative of tracked) {
     const absolute = path.join(cwd, relative);
-    if (!isScannableEntry(absolute)) {
-      continue;
-    }
     let text;
     try {
-      text = readFileSync(absolute, "utf-8");
-    } catch {
+      if (!lstat(absolute).isFile() || !readsText(absolute)) {
+        continue;
+      }
+      text = read(absolute);
+    } catch (cause) {
+      if (!isAbsent(cause)) {
+        unreadable.push({ file: relative, reason: reasonOf(cause) });
+      }
       continue;
     }
     scanned += 1;
     for (const hit of markersIn(text, { fenced: readsFences(relative) })) {
       findings.push({ file: relative, ...hit });
     }
+  }
+
+  for (const entry of unreadable) {
+    console.error(`${entry.file}: could not be read (${entry.reason})`);
   }
 
   if (findings.length > 0) {
@@ -198,6 +235,17 @@ export function run(cwd = process.cwd()) {
         "where a reader expects one, and no other lane rejects it. Resolve the " +
         "block: keep the side that is true and delete the markers with it.",
     );
+  }
+
+  if (unreadable.length > 0) {
+    console.error(
+      `check-conflict-markers: the scan is incomplete; ${String(unreadable.length)} tracked ` +
+        "file(s) above could not be read, so a clean result would claim content nobody inspected.",
+    );
+    return 2;
+  }
+
+  if (findings.length > 0) {
     return 1;
   }
 
