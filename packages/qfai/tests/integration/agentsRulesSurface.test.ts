@@ -2061,6 +2061,16 @@ describe("the question shape has one owner", () => {
     expect(text).toContain("user-questions.md");
   });
 
+  it(".instruction working-practice.md points delegation and suite runs at their owners", async () => {
+    const text = await readFile(
+      path.join(ROOT, ".instruction/00_universal/working-practice.md"),
+      "utf-8",
+    );
+    const section = text.slice(text.indexOf("## Sub-agents and division of work"));
+    expect(section).toContain(".qfai/assistant/rule/shared-skill-delegation-baseline.md");
+    expect(section).toContain(".qfai/assistant/rule/workflow.md");
+  });
+
   it(".instruction/00_universal/communication.md points at the master", async () => {
     const text = await readFile(
       path.join(ROOT, ".instruction/00_universal/communication.md"),

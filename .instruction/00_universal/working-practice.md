@@ -107,5 +107,5 @@ a row is the guess it exists to prevent.
 
 ## Sub-agents and division of work (when needed)
 
-- If there are sub-agents with clear roles, consider delegating to them.
-- Divide the areas of responsibility in the Plan, and always run the full tests and a consistency check after integrating.
+- When to start a sub-agent: `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
+- When the full suite and the other checks run: `.qfai/assistant/rule/workflow.md`, "Stages (canonical)".
