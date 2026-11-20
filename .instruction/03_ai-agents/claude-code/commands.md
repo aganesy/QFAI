@@ -9,31 +9,17 @@ version: 1.0.0
 
 ## Setup
 
-- Install dependencies: `pnpm install`
-- Generate GraphQL: `pnpm generate:graphql`
+- Install, build and link the local CLI: `pnpm bootstrap`; use
+  `corepack pnpm bootstrap` when pnpm is not on PATH. The steps it runs and
+  the Windows shell notes are in `.instruction/02_project/development.md`.
 
-## Development
+## Build and Quality Gates
 
-- Frontend dev server: `pnpm dev`
-- Backend apply: `pnpm apply:backend`
 - Build: `pnpm build`
-
-## Quality
-
-- Lint: `pnpm lint`
 - Format: `pnpm format`; check only: `pnpm format:check`
+- Lint: `pnpm lint`, `pnpm lint:mdschema`, `pnpm lint:mermaid`
 - Type check: `pnpm check-types`
-
-## Tests
-
-- All tests: `pnpm test`
-- Coverage: `pnpm test:coverage`
-- Backend Unit: `pnpm test:unit`
-- Backend Integration: `pnpm test:integration`
-- E2E: `pnpm test:e2e`
-
-## Seed and Data
-
-- Run seed: `pnpm seed`
+- Tests: `pnpm -C packages/qfai test`
+- Package contents: `pnpm verify:pack`
 
 > State whether each run succeeded or failed, and on failure give a log summary and the response.
