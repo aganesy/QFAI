@@ -573,6 +573,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout or one downloaded from the npm registry without asking. The README
   now says so. Closes #4622.
 
+- **A heading inside an HTML comment no longer names a flow or a story.** The
+  story tree took the first level-one heading of `business-flow.md` or
+  `01_User-story.md` as its ID even when that heading sat in an HTML comment or
+  a `<pre>` block, so a hidden draft such as `# BF-9999: sample` replaced the
+  real `# BF-0001` and broke every link to it. The story tree now reads only
+  headings Markdown renders, as contract IDs already did. Closes #4710.
+
 - **The business rules of a JSON contract with a `// QFAI-CONTRACT-ID` line
   are read.** Contract validation accepted such a file, but the story tree
   read it before removing that line, which is not JSON, so it found no rules
