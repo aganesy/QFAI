@@ -524,6 +524,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   word, as if it held no files. Only a directory that does not exist is still
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
+
 - **The `web-research` skill now ships the HTTP transport templates it
   describes.** Every Brave Search and Firecrawl template started a stdio
   server, though the skill and its contract call for HTTP transport too.
@@ -579,6 +580,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   other contracts are still checked. A UI contract with such a top level is
   reported the same way.
 
+- **`qfai init --force` keeps a project's own wrapper when the link replacing
+  it cannot be written.** A file or directory of the project's at a skill or
+  agent wrapper path was deleted before the link was created, so a refused
+  `symlink` left the path empty and the wrapper, with everything in it, gone.
+  The entry is now moved aside first and put back when the link fails, and
+  removed only once the link stands.
+
 - **The README states what the Claude Code launcher permission allows.** It
   said the `Bash(npx qfai:*)`, `Bash(yarn exec qfai:*)` and `Bash(yarn qfai:*)`
   entries `qfai init` writes trust the launcher the project installs. Claude
@@ -586,6 +594,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `npx qfai` in a checkout without its own install runs a copy outside the
   checkout or one downloaded from the npm registry without asking. The README
   now says so. Closes #4622.
+
+- **A sample table in a code fence or an HTML comment no longer declares
+  anything.** The story tree read every table in `business-flows.md`,
+  `user-stories.md` and `03_Example.md`, so a fenced example of the format or a
+  commented-out draft row added its BF, US or EX ID to the index or to the
+  declared examples, and changed which examples coverage and the index checks
+  expected. The story tree now reads only tables Markdown renders. Closes
+  #4711.
 
 - **A heading inside an HTML comment no longer names a flow or a story.** The
   story tree took the first level-one heading of `business-flow.md` or
@@ -627,6 +643,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   exits 2 and names the directory, as it already did for an unreadable file. A
   directory removed while the check runs is still passed over. Closes #4717.
 
+- **`qfai atdd scaffold` writes a CommonJS node:test skeleton that Node can
+  load.** For a project that runs `node --test`, the skeleton imported
+  `describe` and `it` with an `import` statement even in a `.cjs` file, and
+  Node stopped with `Cannot use import statement outside a module`. A `.cjs`
+  or `.cts` skeleton, and a `.js` one whose nearest `package.json` does not
+  set `"type": "module"`, or a `.ts` one whose nearest `package.json` sets
+  `"type": "commonjs"`, now loads them with `require`. Closes #4708.
+
 - **Design token references resolve the same way in any declaration order.**
   A chain of more than ten references raised `QFAI-DT-002` and kept a
   `{...}` placeholder when the file declared the first token before the
@@ -643,6 +667,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai db-drift --format json unused-positional` completed normally. Such a
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
+
+- **A YAML contract's `x-qfai-depends-on` is now read as YAML.** A comment
+  line between two items of a block list no longer drops the items after it,
+  quoted IDs such as `["DB-0001"]` are accepted, and `[DB-0001 DB-0002]`,
+  which YAML reads as one value, is no longer taken for two IDs. A `.json`
+  contract is read as JSON. A contract that does not parse gets only
+  `QFAI-CONTRACT-021`, not also `QFAI-CONTRACT-015`, and the `-015` hint now
+  says to write `x-qfai-depends-on: []`, not `-`, when a YAML or JSON
+  contract has no dependencies. Closes #4709.
 
 - **A rejected release version or tag no longer reaches the Actions log as a
   workflow command.** The manual prepare-release and release workflows put

@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyJsRunner,
   detectJsTestRunner,
+  readPackageModuleType,
   resolveScaffoldDialect,
 } from "../../../src/core/atdd/scaffoldDialect.js";
 
@@ -48,7 +49,7 @@ describe("applyJsRunner", () => {
   it("leaves a Python dialect as it is whatever the JS/TS runner", () => {
     const resolution = resolveScaffoldDialect(["tests/**/test_*.py"]);
     if (resolution.outcome !== "resolved") throw new Error(resolution.outcome);
-    const applied = applyJsRunner(resolution.dialect, "none");
+    const applied = applyJsRunner(resolution.dialect, "none", "commonjs");
     if (applied.outcome !== "resolved") throw new Error(applied.outcome);
     expect(applied.dialect.runner).toBe("pytest (unittest-compatible)");
   });
@@ -56,7 +57,7 @@ describe("applyJsRunner", () => {
   it("keeps the JS/TS file name and takes the node:test body", () => {
     const resolution = resolveScaffoldDialect(["tests/**/*.test.mjs"]);
     if (resolution.outcome !== "resolved") throw new Error(resolution.outcome);
-    const applied = applyJsRunner(resolution.dialect, "node:test");
+    const applied = applyJsRunner(resolution.dialect, "node:test", "commonjs");
     if (applied.outcome !== "resolved") throw new Error(applied.outcome);
     expect(applied.dialect.fileName("BF-0001")).toBe("BF-0001.test.mjs");
     expect(applied.dialect.buildBody("BF-0001")[0]).toBe(
@@ -64,10 +65,55 @@ describe("applyJsRunner", () => {
     );
   });
 
+  it.each([
+    ["cjs", "module", "require"],
+    ["cts", "module", "require"],
+    ["js", "commonjs", "require"],
+    ["js", "unset", "require"],
+    ["js", "module", "import"],
+    ["mjs", "commonjs", "import"],
+    ["ts", "commonjs", "require"],
+    ["ts", "unset", "import"],
+    ["ts", "module", "import"],
+    ["mts", "commonjs", "import"],
+  ] as const)(
+    "loads node:test in a .%s file of a %s package with %s",
+    (extension, packageType, loads) => {
+      const resolution = resolveScaffoldDialect([`tests/**/*.test.${extension}`]);
+      if (resolution.outcome !== "resolved") throw new Error(resolution.outcome);
+      const applied = applyJsRunner(resolution.dialect, "node:test", packageType);
+      if (applied.outcome !== "resolved") throw new Error(applied.outcome);
+      expect(applied.dialect.buildBody("BF-0001")[0]).toBe(
+        loads === "require"
+          ? 'const { describe, it } = require("node:test");'
+          : 'import { describe, it } from "node:test";',
+      );
+    },
+  );
+
+  it("keeps the vitest import in a CommonJS file", () => {
+    const resolution = resolveScaffoldDialect(["tests/**/*.test.cjs"]);
+    if (resolution.outcome !== "resolved") throw new Error(resolution.outcome);
+    const applied = applyJsRunner(resolution.dialect, "vitest", "commonjs");
+    if (applied.outcome !== "resolved") throw new Error(applied.outcome);
+    expect(applied.dialect.buildBody("BF-0001")[0]).toBe('import { describe, it } from "vitest";');
+  });
+
+  it.each([
+    [{ type: "module" }, "module"],
+    [{ type: "commonjs" }, "commonjs"],
+    [{}, "unset"],
+    [{ type: "esm" }, "unset"],
+    [["module"], "unset"],
+    [null, "unset"],
+  ])("reads the package type of %j as %s", (manifest, packageType) => {
+    expect(readPackageModuleType(manifest)).toBe(packageType);
+  });
+
   it.each(["jest", "none"] as const)("refuses a JS/TS dialect for %s", (runner) => {
     const resolution = resolveScaffoldDialect(["tests/**/*.test.ts"]);
     if (resolution.outcome !== "resolved") throw new Error(resolution.outcome);
-    expect(applyJsRunner(resolution.dialect, runner)).toEqual({
+    expect(applyJsRunner(resolution.dialect, runner, "commonjs")).toEqual({
       outcome: "unsupported-runner",
       runner,
     });

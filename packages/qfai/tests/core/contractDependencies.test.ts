@@ -156,6 +156,47 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     expect(hasDependencyDeclaration("-- Depends on: -\r\n", "a.sql")).toBe(true);
   });
 
+  it("reads a YAML block sequence across a standalone comment line", () => {
+    // A comment on its own line is valid YAML inside a sequence, but the
+    // pattern ended the sequence there: `DB-0002` was dropped and the
+    // truncated list still counted as a finished declaration.
+    const text = "x-qfai-depends-on:\n  - DB-0001\n  # the schema comes next\n  - DB-0002\n";
+    expect(extractDeclaredDependencies(text, "a.yaml")).toEqual(["DB-0001", "DB-0002"]);
+    const halfWritten = "x-qfai-depends-on:\n  - DB-0001\n  # still open\n  - TBD\n";
+    expect(extractDeclaredDependencies(halfWritten, "a.yaml")).toEqual([]);
+    expect(hasDependencyDeclaration(halfWritten, "a.yaml")).toBe(false);
+  });
+
+  it("reads quoted ids in a YAML sequence as the ids they quote", () => {
+    // Quoting is how YAML spells a string; the quotes are not part of the id.
+    const flow = "x-qfai-depends-on: [\"DB-0001\", 'DB-0002']\n";
+    expect(extractDeclaredDependencies(flow, "a.yaml")).toEqual(["DB-0001", "DB-0002"]);
+    expect(hasDependencyDeclaration(flow, "a.yaml")).toBe(true);
+    expect(
+      extractDeclaredDependencies('x-qfai-depends-on:\n  - "DB-0001"\n  - DB-0002\n', "a.yaml"),
+    ).toEqual(["DB-0001", "DB-0002"]);
+  });
+
+  it("does not split one YAML sequence element into several ids", () => {
+    // YAML reads `[DB-0001 DB-0002]` as one string element, not two ids.
+    const text = "x-qfai-depends-on: [DB-0001 DB-0002]\n";
+    expect(extractDeclaredDependencies(text, "a.yaml")).toEqual([]);
+    expect(hasDependencyDeclaration(text, "a.yaml")).toBe(false);
+  });
+
+  it("does not read `-` as a YAML declaration, which YAML cannot parse", () => {
+    // `-- Depends on: -` is the SQL spelling of "none"; a YAML contract writes `[]`.
+    expect(hasDependencyDeclaration("x-qfai-depends-on: -\n", "a.yaml")).toBe(false);
+    expect(hasDependencyDeclaration("x-qfai-depends-on: []\n", "a.yaml")).toBe(true);
+  });
+
+  it("reads a JSON contract as JSON, not through the YAML parser", () => {
+    // YAML accepts the trailing comma; JSON, and so the contract validator, does not.
+    const text = '// QFAI-CONTRACT-ID: API-0001\n{ "x-qfai-depends-on": ["DB-0001"], }\n';
+    expect(extractDeclaredDependencies(text, "a.json")).toEqual([]);
+    expect(hasDependencyDeclaration(text, "a.json")).toBe(false);
+  });
+
   it("reads `-` as no dependencies rather than as a malformed one", () => {
     // The shipped template writes `-` for the empty case; parsing it as a
     // dependency would make every scaffolded contract fail the new rule.
@@ -426,6 +467,31 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
       async (root) => {
         const issues = await validateContracts(root, defaultConfig);
         expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-015");
+      },
+    );
+  });
+
+  it("leaves a contract that does not parse to QFAI-CONTRACT-021 alone", async () => {
+    // The apply order is read from the parsed document, so a parse failure is
+    // the one cause; `-015` would ask to add a key the file already holds.
+    await withContracts(
+      {
+        api: {
+          "a.yaml": [
+            "# QFAI-CONTRACT-ID: API-0001",
+            "openapi: 3.0.0",
+            "x-qfai-depends-on: []",
+            "openapi: 3.1.0",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const issues = await validateContracts(root, defaultConfig);
+        const forFile = issues
+          .filter((i) => i.file !== undefined && path.basename(i.file) === "a.yaml")
+          .map((i) => i.code);
+        expect(forFile).toEqual(["QFAI-CONTRACT-021"]);
       },
     );
   });
