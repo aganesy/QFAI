@@ -100,6 +100,27 @@ describe("pnpmPinnedVersion", () => {
     expect(pnpmPinnedVersion(quoted)).toBe("2.4.0");
     expect(pnpmPinnedVersion(onlyInPackages)).toBeNull();
   });
+
+  it("reads the importer ahead of a large packages section, with LF or CRLF line ends", () => {
+    const packages = Array.from({ length: 20_000 }, (_, index) => [
+      `  pkg-${index}@1.0.0:`,
+      "    resolution: {integrity: sha512-x}",
+    ]).flat();
+    const lines = [
+      "lockfileVersion: '9.0'",
+      "importers:",
+      "  .:",
+      "    devDependencies:",
+      "      qfai:",
+      "        specifier: ^2.4.0",
+      "        version: 2.4.0",
+      "packages:",
+      ...packages,
+      "",
+    ];
+    expect(pnpmPinnedVersion(lines.join("\n"))).toBe("2.4.0");
+    expect(pnpmPinnedVersion(lines.join("\r\n"))).toBe("2.4.0");
+  });
 });
 
 // QFAI:EX-0001-0313-03
