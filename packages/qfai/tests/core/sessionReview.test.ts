@@ -898,6 +898,47 @@ describe("the gaps a host's record shapes and a shell line's syntax leave", () =
     );
   });
 
+  it("reads a Codex exit_code only from the result envelope, never from text that wraps one", () => {
+    const status = (output: unknown) =>
+      codexEvents([
+        codexCall("shell_command", "s", { command: "npx qfai validate" }),
+        codexOutput("s", output),
+      ]).results[0];
+    const printed = JSON.stringify({ exit_code: 7, ok: false });
+    expect(status(`Exit code: 0\nWall time: 0.1 seconds\nOutput:\n${printed}`)).toEqual(
+      expect.objectContaining({ isError: false, exitCode: 0 }),
+    );
+    expect(status(`the command printed ${printed}`)).toEqual(
+      expect.objectContaining({ isError: false, exitCode: null }),
+    );
+    expect(
+      status([
+        { type: "input_text", text: "Script completed" },
+        { type: "input_text", text: `result: ${printed}` },
+      ]),
+    ).toEqual(expect.objectContaining({ isError: false, exitCode: null }));
+    expect(status({ exit_code: 0, output: printed })).toEqual(
+      expect.objectContaining({ isError: false, exitCode: 0 }),
+    );
+    expect(status({ exit_code: 3, output: "boom" })).toEqual(
+      expect.objectContaining({ isError: true, exitCode: 3 }),
+    );
+    expect(status({ output: printed })).toEqual(
+      expect.objectContaining({ isError: false, exitCode: null }),
+    );
+    expect(status(JSON.stringify({ output: printed, metadata: { exit_code: 2 } }))).toEqual(
+      expect.objectContaining({ isError: true, exitCode: 2 }),
+    );
+
+    const late = codexEvents([
+      codexCall("exec_command", "c", { cmd: "npx qfai validate" }),
+      codexOutput("c", `Process exited with code 0\nOutput:\n${printed}`),
+      commandExecution("c", "completed", 0),
+    ]);
+    expect(late.results).toEqual([expect.objectContaining({ isError: false, exitCode: 0 })]);
+    expect(summarise(late, FACTS).toolErrors).toEqual([]);
+  });
+
   it("takes a Codex command's status from its execution event, tied to its call", () => {
     const script = codexEvents([
       {
