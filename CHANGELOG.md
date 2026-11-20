@@ -518,6 +518,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `webResearch.allowlist`. The templates still
   default to the cloud API.
 
+- **The UI open-questions review now follows the register's real lifecycle.**
+  It asked reviewers to filter rows by a Status and a Severity and to
+  downgrade them, but the register has only ID, Content and Approach, and its
+  rows are never edited. The review now treats a row as blocking when the
+  reviewed UI needs its answer now, or when it opens `Unadjudicated:`; a row
+  deferred past the reviewed UI does not block it. It resolves the question
+  with a decision row that names it, or defers it with a replacing row, and
+  deletes the original row either way.
+
 - **An unknown `prototype.mode` written as an inline mapping is now
   reported.** `QFAI-CONTRACT-038` scanned a UI contract line by line, so
   `prototype: { mode: static }` passed unchecked. It now reads the mode from
