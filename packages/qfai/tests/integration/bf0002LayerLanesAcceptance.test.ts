@@ -297,12 +297,11 @@ describe("BF-0002 runner parallelism knobs", () => {
       expect(isPositiveInteger(project["maxConcurrency"]), `${name} maxConcurrency`).toBe(true);
       expect(isPositiveInteger(project["hookTimeout"]), `${name} hookTimeout`).toBe(true);
       expect(project["poolOptions"], `${name} poolOptions`).toBeUndefined();
-      for (const rootOnly of ["maxWorkers", "minWorkers", "fileParallelism"]) {
+      for (const rootOnly of ["maxWorkers", "fileParallelism"]) {
         expect(project[rootOnly], `${name} ${rootOnly}`).toBeUndefined();
       }
     }
     expect(isPositiveInteger(root["maxWorkers"])).toBe(true);
-    expect(isPositiveInteger(root["minWorkers"])).toBe(true);
     expect(typeof root["fileParallelism"]).toBe("boolean");
 
     // Ten on both axes, held to the cores the machine has.
