@@ -312,21 +312,63 @@ const SHELL_BREAK = /[\s;|&()`<>]/;
  * redirections outside quotes, so a quoted blank stays inside its word.
  */
 function shellWords(command: string): string[] {
-  const words: string[] = [];
+  return shellTokens(command).map((token) => token.word);
+}
+
+/**
+ * The words of a shell line as `shellWords` reads them, each marked when it belongs to a
+ * redirection: the target after `>`, `>>`, `<` or `&>`, as in `2>/dev/null` or `> out`, an `&`
+ * duplicate such as the `1` of `2>&1`, and the descriptor number fused before the operator.
+ */
+function shellTokens(command: string): { word: string; redirection: boolean }[] {
+  const tokens: { word: string; redirection: boolean }[] = [];
   let current = "";
+  let quoted = false;
   let quote: "'" | '"' | null = null;
+  // Whether the next word is a redirection's target.
+  let target = false;
+  const finish = (): void => {
+    if (current !== "" || quoted) {
+      tokens.push({ word: current, redirection: target });
+      target = false;
+    }
+    current = "";
+    quoted = false;
+  };
   for (const char of command) {
     if (quote !== null) {
       if (char === quote) quote = null;
       else current += char;
-    } else if (char === "'" || char === '"') quote = char;
-    else if (SHELL_BREAK.test(char)) {
-      if (current !== "") words.push(current);
+    } else if (char === "'" || char === '"') {
+      quote = char;
+      quoted = true;
+    } else if (char === "<" || char === ">") {
+      if (!quoted && /^\d+$/.test(current)) tokens.push({ word: current, redirection: true });
+      else finish();
       current = "";
-    } else current += char;
+      quoted = false;
+      target = true;
+    } else if (SHELL_BREAK.test(char)) finish();
+    else current += char;
   }
-  if (current !== "") words.push(current);
-  return words;
+  finish();
+  return tokens.filter((token) => token.word !== "");
+}
+
+/** A leading `NAME=value` word: an assignment the shell makes for the command, not its name. */
+const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+
+/**
+ * The name and operand words of one shell command: its words after the leading `NAME=value`
+ * assignments, with every redirection's words left out.
+ */
+function commandWords(segment: string): { name: string; words: string[] } {
+  const words = shellTokens(segment)
+    .filter((token) => !token.redirection)
+    .map((token) => token.word);
+  const start = words.findIndex((word) => !ASSIGNMENT.test(word));
+  const [name = "", ...rest] = start === -1 ? [] : words.slice(start);
+  return { name, words: rest };
 }
 
 /** Whether a normalized path names one file: not a directory, a glob or a variable. */
@@ -374,15 +416,16 @@ const TEXT_ONLY = new Set(["echo", "printf"]);
 
 /**
  * How many operands of a shell line, other than the watched files it names, can name a file
- * that adds to its output: every word after each command's name that is no option, no count
- * and no leading script, so an extensionless file such as `LICENSE` counts. Each word is read
+ * that adds to its output: every word after each command's name that is no option, no count,
+ * no redirection and no leading script, so an extensionless file such as `LICENSE` counts. The
+ * name is the first word after the leading `NAME=value` assignments. Each word is read
  * whole, a quoted blank included; a quoted script that names no watched file is read as a
  * command in turn.
  */
 function otherOperands(command: string, facts: Pick<ProjectFacts, "root" | "platform">): number {
   let count = 0;
   for (const segment of shellSegments(slashed(command))) {
-    const [name = "", ...words] = shellWords(segment);
+    const { name, words } = commandWords(segment);
     const base = path.posix.basename(name).toLowerCase();
     if (TEXT_ONLY.has(base)) continue;
     let scriptPending = SCRIPT_FIRST.has(base);
@@ -480,12 +523,20 @@ function inRedirection(command: string, at: number): boolean {
   return before === ">" || before === "<" || command[at + 1] === ">";
 }
 
+/**
+ * Whether the line's last nonempty command runs `qfai` in the foreground. After a trailing `&`
+ * the shell's status is the background job's start, not qfai's.
+ */
 function endsWithQfai(command: string): boolean {
-  const last = shellSegments(command)
-    .map((segment) => segment.trim())
-    .filter((segment) => segment !== "")
-    .at(-1);
-  return last !== undefined && qfaiCommandsIn(last).length === 1;
+  const parts = shellParts(command);
+  const lastAt = parts.flatMap((part, index) => (part.text.trim() === "" ? [] : [index])).at(-1);
+  if (lastAt === undefined) return false;
+  const after = parts
+    .slice(lastAt)
+    .map((part) => part.separator)
+    .join("");
+  if (/^&(?!&)/.test(after)) return false;
+  return qfaiCommandsIn(parts[lastAt]?.text.trim() ?? "").length === 1;
 }
 
 /** The variables a shell expands to the last command's status: Bash's and PowerShell's. */

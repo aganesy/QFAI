@@ -600,6 +600,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
 
+- **A file that grows while it is scanned is reported as not finished.** The
+  streaming read behind the assistant-asset encoding check and the migration's
+  old-path scan stopped at the size measured when the file was opened and then
+  compared against that same size, so bytes appended during the scan went
+  unseen and the file could be certified as fully read. The scan now reads one
+  more byte from the same descriptor at that boundary, and a file that yields
+  one answers `unfinished`.
+
 - **`DESIGN.md` accepts a font family whose name ends in many digits.** A
   family such as `Brand9007199254740993` was refused as a number too large to
   read exactly, although both catalog formats write a family name as text. The
@@ -645,6 +653,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the `prototyping.playwrightCli` doctor check; when none resolves, it stops
   and reports the missing prerequisite, leaving the install to setup the user
   authorizes with the project's package manager.
+
+- **`qfai session-review` reads a shell line's background job, redirections
+  and leading assignments** (#4855). A `qfai` command that a trailing `&`
+  runs in the background now counts its exit status as unknown, since the
+  shell's status is only the job's start. A file read such as
+  `cat <path> 2>/dev/null`, `> out` or `< in` keeps its result bytes, because
+  a redirection's target adds nothing to the output, and so does
+  `FOO=1 cat <path>`, whose command name now comes after its `NAME=value`
+  assignments.
 
 - **The `fullstack-engineer` card no longer rejects a file-level text reason.**
   Its own copy of the plain-text rule said a text with no reason directly

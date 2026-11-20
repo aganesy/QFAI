@@ -7,6 +7,7 @@
  * path and a verdict about the wrong bytes.
  */
 
+import { appendFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -111,6 +112,22 @@ describe("scanBoundedRegularFile", () => {
 
     expect(outcome).toBe("unfinished");
     expect(seen.join("")).toBe("abc");
+  });
+
+  it("says the file was not finished when it grew while it was read", async () => {
+    // The size measured at open is reached with the appended bytes unread, so
+    // only a read past that size on the same descriptor sees them.
+    const file = await fileHolding("abcdef");
+    const seen: string[] = [];
+
+    const outcome = await scanBoundedRegularFile(file, 1024, (chunk) => {
+      if (seen.length === 0) appendFileSync(file, "ghi", "utf-8");
+      seen.push(chunk.toString("utf-8"));
+      return "continue";
+    });
+
+    expect(outcome).toBe("unfinished");
+    expect(seen.join("")).toBe("abcdef");
   });
 
   it("ends where the caller says it has seen enough", async () => {
