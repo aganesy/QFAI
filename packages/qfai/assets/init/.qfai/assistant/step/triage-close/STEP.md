@@ -35,7 +35,11 @@ and what is left for someone else to do.
 
 ## Procedure
 
-1. Pick exactly one outcome from the table above.
+1. Apply the re-routing cases first: when the answers to a request for
+   information arrived, or a proposal was accepted for building, report
+   `info-received` or `adopted` as Re-routing below says, and pick nothing
+   from the table. Otherwise the request closes here: pick exactly one outcome
+   from the table above.
    Use `cleaned` only after `triage-owned-cleanup` passed its gate with the
    absence and unchanged-content and index evidence recorded. A denial,
    partial failure or missing check leaves cleanup unfinished, not closed as

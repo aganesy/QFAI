@@ -18,7 +18,17 @@ the graph's handling of an unreadable configuration, a double configuration load
 | Which scope to run for the six fixes | Fix, verify and commit locally                                         | Fix only, with no gate or commit  |                          |                  | 1                    |
 | What happens after the local commit  | Push, open a pull request, merge when CI, threads and review are clear | Push and open a pull request only | Stop at the local commit |                  | 1                    |
 
+### Agent decisions
+
+| Background | Option 1 | Option 2 | Option 3 | Option 4 (other) | Chosen option number |
+| ---------- | -------- | -------- | -------- | ---------------- | -------------------- |
+
 ## qfai-implement
+
+### Interview
+
+| Background | Option 1 | Option 2 | Option 3 | Option 4 (other) | Chosen option number |
+| ---------- | -------- | -------- | -------- | ---------------- | -------------------- |
 
 ### Agent decisions
 
