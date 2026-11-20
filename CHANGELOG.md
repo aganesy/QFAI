@@ -564,6 +564,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   looked for a historical winner. The strategy review now points at the
   comparison criteria instead.
 
+- **`qfai doctor --profile prototyping` reports the Playwright probe command
+  that ran** (#4769). The `displayCommand` of a direct `playwright` probe left
+  out the `--help` argument the probe was run with, so rerunning the reported
+  command did not repeat the probe. It now shows the full argument list.
+
 - **`qfai db-drift --format` with a wrong value now lists the formats it
   accepts.** `qfai db-drift --format yaml` said "--format is not valid for this
   command", although db-drift reads `--format`. It now says the value is

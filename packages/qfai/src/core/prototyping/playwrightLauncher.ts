@@ -93,10 +93,11 @@ export async function resolvePlaywrightLauncher(
   }
 
   for (const candidate of candidates) {
-    const probe = await probeCandidate(candidate, root, timeoutMs);
+    const probeArgs = buildProbeArgs(candidate);
+    const probe = await probeCandidate(candidate, probeArgs, root, timeoutMs);
     const attempt: PlaywrightLauncherAttempt = {
       ...candidate,
-      displayCommand: renderCommand(candidate.executable, candidate.args),
+      displayCommand: renderCommand(candidate.executable, probeArgs),
       probe,
     };
     attempts.push(attempt);
@@ -181,11 +182,11 @@ async function collectNpxCandidates(): Promise<PlaywrightLauncherCandidate[]> {
 
 async function probeCandidate(
   candidate: PlaywrightLauncherCandidate,
+  args: string[],
   root: string,
   timeoutMs: number,
 ): Promise<PlaywrightLauncherProbe> {
   const startedAt = Date.now();
-  const args = buildProbeArgs(candidate);
   return spawnProbe(candidate, args, root, timeoutMs, startedAt);
 }
 
