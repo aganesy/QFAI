@@ -307,4 +307,32 @@ describe("verify context loading", () => {
     expect(text).not.toMatch(/\.qfai\/(specs?|contracts?)\b/);
     expect(text).not.toContain("catalog");
   });
+
+  // QFAI:AC-0001-0158-02
+  // QFAI:EX-0001-0158-02
+  it("resolves both roots once in verify-context and reads and writes only under them", async () => {
+    const text = await readFile(path.join(assistant, "step", "verify-context", "STEP.md"), "utf8");
+    expect(text.replace(/\s+/g, " ")).toContain(
+      "Resolve `paths.specsDir` and `paths.contractsDir` from `qfai.config.yaml` once, before the first read.",
+    );
+    const config: Record<string, string> = {
+      "<paths.specsDir>": "docs/specs",
+      "<paths.contractsDir>": "docs/contracts",
+    };
+    const resolved = [...text.matchAll(/`([^`\s]+)`/g)]
+      .map((match) => match[1] ?? "")
+      .filter((value) => value.startsWith("<paths.") && value.includes("/"))
+      .map((value) =>
+        Object.entries(config).reduce((acc, [key, dir]) => acc.replace(key, dir), value),
+      );
+    expect(resolved).toEqual([
+      "docs/specs/01_policy/",
+      "docs/contracts/",
+      "docs/specs/decisions.md",
+      "docs/contracts/tech.md#standard-commands-copy-paste",
+      "docs/contracts/tech.md#standard-commands-copy-paste",
+      "docs/contracts/tech.md",
+    ]);
+    expect(text).not.toMatch(/\.qfai\/spec\b/);
+  });
 });

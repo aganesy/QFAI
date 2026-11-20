@@ -519,6 +519,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   invalid JSON. They now drop one leading mark before parsing, as the
   `package.json` reader of `qfai atdd scaffold` already did.
 
+- **Reviewer cards read the technology contract from the configured contracts
+  directory.** The architecture, implementation, product-surface and
+  requirements reviewer cards, the quality rule and the discussion skill named
+  `<paths.specsDir>/03_contract/tech.md`, so a project that set
+  `paths.contractsDir` elsewhere sent its reviewers to a missing or stale file,
+  which they treat as absent evidence. They now name
+  `<paths.contractsDir>/tech.md`.
+
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
   said every scratch file goes under `tmp/`, while the temporary-files rule they
@@ -537,6 +545,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `db-drift` accepted `--format json` and `--out <path>`, but the options
   table named neither for it. The help now lists `db-drift` under both
   options.
+
+- **The prototyping preflight installs nothing.** Its step said to run
+  `npm i -D playwright`, which could rewrite the manifest and lockfile of a
+  step that promises to change no file, and npm cannot install a project
+  with `workspace:` dependencies. The step now probes the project's own Playwright launcher through
+  the `prototyping.playwrightCli` doctor check; when none resolves, it stops
+  and reports the missing prerequisite, leaving the install to setup the user
+  authorizes with the project's package manager.
 
 - **Constitution Article XI is headed "Temporary files".** Its heading said
   every temporary file goes in `tmp/`, while the temporary-files rule it links
@@ -615,6 +631,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   policy still applies, so a host that blocks scripts still reports the shim as
   not runnable.
 
+- **The `resolve-conflicts` route resumes a merge of the same base instead of
+  starting a second one.** A branch still resolving an earlier merge of the
+  base has `MERGE_HEAD`, so running `git merge --no-commit <base>` again failed
+  before conflict resolution could run. The `maintain-edit` step now checks
+  `MERGE_HEAD` first: when it is the base's commit, the step goes on to resolve
+  the conflicts; when it is another commit, the step stops, reports that
+  merge and leaves it in place.
+
 - **The UI open-questions review now follows the register's real lifecycle.**
   It asked reviewers to filter rows by a Status and a Severity and to
   downgrade them, but the register has only ID, Content and Approach, and its
@@ -635,6 +659,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   A directory named `.github/workflows/qfai-docs.yml` passed the existence
   check, so doctor reported the required lane installed although GitHub had
   no workflow there. The lane now counts only as a readable regular file.
+
+- **Verification reads its context from the configured spec and contract
+  directories.** The `verify-context` step read the policy, contracts and
+  `decisions.md` from the default `.qfai/spec` paths, and looked for gate
+  commands in the default `tech.md`, so a project that sets `paths.specsDir`
+  or `paths.contractsDir` could miss its rules or update the wrong file. The
+  step now resolves both directories from `qfai.config.yaml` once and uses
+  them for every read and write.
 
 - **`-h` and `-V` after a value-taking option are switches, not its value.**
   `qfai init --dir -h` initialized a directory named `-h`. An option's value

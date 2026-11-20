@@ -1633,16 +1633,16 @@ function validateShadow(d: DesignMd, issues: ValidationIssue[]): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Sentinel carried by every DESIGN.md the package ships as a sample:
- *   - `assets/init/root/DESIGN.md` (seeded into the project root by `qfai init`)
- *   - `assets/init/.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`
+ * Sentinel carried by every DESIGN.md the package ships as a sample. The
+ * only one is
+ * `assets/init/.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample`;
+ * `qfai init` seeds no root DESIGN.md, so a sample reaches the project root
+ * only when someone copies it there.
  *
- * The two files are the same fictional brand but are NOT byte-identical
- * (they differ in front-matter whitespace alignment), so a sha256-equality
- * guard would have to enumerate — and keep in sync — one digest per shipped
- * sample. A marker is content-addressed instead of byte-addressed: it
- * survives whitespace edits, covers both samples with one constant, and
- * keeps covering any future sample that carries it.
+ * A sha256-equality guard would miss such a copy as soon as its whitespace
+ * changed. A marker is content-addressed instead of byte-addressed: it
+ * survives whitespace edits, needs no digest kept in sync with the sample,
+ * and keeps covering any future sample that carries it.
  *
  * The marker lives in the markdown body, so `parseDesignMd` (which only
  * reads front-matter) is unaffected: an unreplaced sample still parses and

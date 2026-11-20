@@ -454,6 +454,17 @@ describe.each(TREES)("%s", (tree) => {
     expect(preflight).toContain("can answer 404 on `/`, so pass a URL that answers 200");
   });
 
+  it("probes the project's Playwright launcher and reports a missing one instead of installing it", async () => {
+    const preflight = flat(await read(tree, "step/prototyping-preflight/STEP.md"));
+    expect(preflight).toContain(
+      "Probe the project's own Playwright launcher through the `prototyping.playwrightCli` check of `npx qfai doctor --profile prototyping`.",
+    );
+    expect(preflight).toContain(
+      "When that check fails, install nothing. The step stops and reports the missing Playwright launcher as a prerequisite",
+    );
+    expect(preflight).not.toMatch(/npm i(nstall)? |pnpm add|yarn add/);
+  });
+
   it("serves the iteration it reviews and checks each payload before writing it", async () => {
     const loop = flat(await read(tree, "step/prototyping-loop/STEP.md"));
     expect(loop).toContain(
