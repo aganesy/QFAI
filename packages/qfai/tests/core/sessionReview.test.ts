@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { emptyEvents, type SessionEvents } from "../../src/core/sessionReview/events.js";
+import { emptyEvents, readJsonl, type SessionEvents } from "../../src/core/sessionReview/events.js";
 import {
   claudeProjectSlug,
   locateSessions,
@@ -316,6 +316,21 @@ describe("what a Claude Code transcript shows", () => {
     expect(crlfEvents.records).toBe(lf.records);
     expect(crlfEvents.malformed).toBe(2);
     expect(summarise(crlfEvents, FACTS)).toEqual(summarise(lf, FACTS));
+  });
+
+  it("counts an interior blank or whitespace-only line as malformed, and not the last line end", async () => {
+    const dir = await tempDir();
+    const cases: Array<[string, string, { records: number; malformed: number }]> = [
+      ["lf.jsonl", '{"a":1}\n\n \t\n{"b":2}\n', { records: 2, malformed: 2 }],
+      ["crlf.jsonl", '{"a":1}\r\n\r\n \t\r\n{"b":2}\r\n', { records: 2, malformed: 2 }],
+      ["ended.jsonl", '{"a":1}\r\n{"b":2}\r\n', { records: 2, malformed: 0 }],
+      ["unended.jsonl", '{"a":1}\n{"b":2}', { records: 2, malformed: 0 }],
+    ];
+    for (const [name, text, counts] of cases) {
+      const file = path.join(dir, name);
+      await writeFile(file, text, "utf-8");
+      expect(await readJsonl(file, () => true), name).toEqual(counts);
+    }
   });
 });
 
