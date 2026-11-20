@@ -662,6 +662,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   token now stops the command with `unexpected argument: <token>`, the
   command's usage lines and exit code 2.
 
+- **A YAML contract's `x-qfai-depends-on` is now read as YAML.** A comment
+  line between two items of a block list no longer drops the items after it,
+  quoted IDs such as `["DB-0001"]` are accepted, and `[DB-0001 DB-0002]`,
+  which YAML reads as one value, is no longer taken for two IDs. A `.json`
+  contract is read as JSON. A contract that does not parse gets only
+  `QFAI-CONTRACT-021`, not also `QFAI-CONTRACT-015`, and the `-015` hint now
+  says to write `x-qfai-depends-on: []`, not `-`, when a YAML or JSON
+  contract has no dependencies. Closes #4709.
+
 - **A rejected release version or tag no longer reaches the Actions log as a
   workflow command.** The manual prepare-release and release workflows put
   the value they refused inside their error annotation, so a value carrying a
