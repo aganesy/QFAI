@@ -142,7 +142,7 @@ its own is a run of its own. The ultra-light routes `answer-in-session` and
    - `03_contract/tech.md`
 2. Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, outdated facts). A table with no rows or a `- None.` list is complete where the template allows it.
 3. If a stage of the run owns the file, fill verified facts into the sections its template has, adding none. Otherwise follow the drift protocol and rerun the owning stage.
-4. If information cannot be verified, append an OQ row to `<paths.specsDir>/open-questions.md` and ask the user.
+4. If information cannot be verified, append an OQ row to `<paths.specsDir>/open-questions.md`, and ask the user only as Articles VI and X of `.qfai/assistant/rule/constitution.md` allow: under `--auto` no question is asked, and a needed `hard-required` input stops the run.
 5. Record new facts discovered during the run and route an upstream change to its owner.
 
 Do not continue affected downstream work on stale policy. The procedure that
@@ -154,15 +154,19 @@ of those files must additionally be verified and repaired before the run proceed
 
 ---
 
-## Delegation pattern (multi‑role)
+## Delegation
 
-A QFAI custom prompt may delegate to subagents (roles) and then consolidate results.
+A stage delegates only for the two reasons
+`.qfai/assistant/rule/shared-skill-delegation-baseline.md#sub-agent-delegation`
+states: an independent judgement, or parallel units that pass the
+parallel-unit gate. The session agent does all other work itself, analysis and
+contracts included, and consolidates what its sub-agents return.
 
-Recommended delegation rules:
-
-- Delegate **analysis** and **review** (Architect / QA / Code Reviewer) early.
-- Delegate **contracts** only when needed (Contract Designer).
-- Delegate **CI/gates** verification to DevOps/CI Engineer when changes affect scripts or packaging.
+- Inside a route, the plan's `review` field names the stage's reviewers, from
+  the cards `.qfai/assistant/rule/agent-selection.md` lists. No stage delegates
+  by technical role.
+- The verify stage runs the quality gates below. A reviewer reads their
+  results and runs none of them.
 
 ### Subagent response contract (required)
 

@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { orderExtraction } from "../../core/workflow/extraction.js";
 import { planOf, refusal, type PlanDocument } from "../../core/workflow/plan.js";
+import { parseJsonText } from "../../shared/jsonText.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 
 // The one operation, as `npx qfai workflow --help` or `-h` prints it. Help and the version
@@ -55,7 +56,7 @@ async function readExtraction(root: string, inPath: string): Promise<Read> {
     return { ok: false, document: refusal(message, [{ reason: "io-error", subject: inPath }]) };
   }
   try {
-    return { ok: true, value: JSON.parse(text) };
+    return { ok: true, value: parseJsonText(text) };
   } catch {
     const message = "The input is not one JSON object, so fix it and try again.";
     return {

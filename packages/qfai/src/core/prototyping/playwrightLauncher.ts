@@ -93,7 +93,7 @@ export async function resolvePlaywrightLauncher(
   }
 
   for (const candidate of candidates) {
-    const probe = await probeCandidate(candidate, timeoutMs);
+    const probe = await probeCandidate(candidate, root, timeoutMs);
     const attempt: PlaywrightLauncherAttempt = {
       ...candidate,
       displayCommand: renderCommand(candidate.executable, candidate.args),
@@ -181,11 +181,12 @@ async function collectNpxCandidates(): Promise<PlaywrightLauncherCandidate[]> {
 
 async function probeCandidate(
   candidate: PlaywrightLauncherCandidate,
+  root: string,
   timeoutMs: number,
 ): Promise<PlaywrightLauncherProbe> {
   const startedAt = Date.now();
   const args = buildProbeArgs(candidate);
-  return spawnProbe(candidate, args, timeoutMs, startedAt);
+  return spawnProbe(candidate, args, root, timeoutMs, startedAt);
 }
 
 function buildProbeArgs(candidate: PlaywrightLauncherCandidate): string[] {
@@ -197,11 +198,12 @@ function buildProbeArgs(candidate: PlaywrightLauncherCandidate): string[] {
 function spawnProbe(
   candidate: PlaywrightLauncherCandidate,
   args: string[],
+  root: string,
   timeoutMs: number,
   startedAt: number,
 ): Promise<PlaywrightLauncherProbe> {
   return new Promise((resolve) => {
-    const child = spawnProbeChild(candidate, args);
+    const child = spawnProbeChild(candidate, args, root);
     const state: ProbeState = {
       stdout: "",
       stderr: "",
@@ -224,9 +226,12 @@ function spawnProbe(
   });
 }
 
+// Every branch runs from the inspected root: a project wrapper reads files
+// relative to it, and `npx` resolves packages from its working directory.
 function spawnProbeChild(
   candidate: PlaywrightLauncherCandidate,
   args: string[],
+  root: string,
 ): ReturnType<typeof spawn> {
   if (process.platform === "win32" && /\.ps1$/i.test(candidate.executable)) {
     // cmd.exe cannot run a PowerShell script. `-NoProfile` keeps the operator's
@@ -235,17 +240,23 @@ function spawnProbeChild(
     return spawn(
       "powershell.exe",
       ["-NoProfile", "-NonInteractive", "-File", candidate.executable, ...args],
-      { stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
+      { cwd: root, stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
     );
   }
   if (process.platform === "win32" && /\.(cmd|bat)$/i.test(candidate.executable)) {
     return spawn(
       process.env.ComSpec ?? "cmd.exe",
       ["/d", "/s", "/c", `"${toCmdCommand(candidate, args)}"`],
-      { stdio: ["ignore", "pipe", "pipe"], windowsHide: true, windowsVerbatimArguments: true },
+      {
+        cwd: root,
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+        windowsVerbatimArguments: true,
+      },
     );
   }
   return spawn(candidate.executable, args, {
+    cwd: root,
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
