@@ -2140,6 +2140,18 @@ describe("a no-question run opens every node, on every surface that says so", ()
     );
     expect(rule).toContain(".agents/rules/grilling.md#under-a-no-question-mode");
   });
+
+  // The temporary-files rule Article XI links puts a scratch file in the
+  // host's session scratch directory first, so a heading naming `tmp/` would
+  // send a reader of the outline to the fallback.
+  it.each([
+    ".qfai/assistant/rule/constitution.md",
+    "packages/qfai/assets/init/.qfai/assistant/rule/constitution.md",
+  ])("%s heads Article XI without naming a location", async (rel) => {
+    const text = await readFile(path.join(ROOT, rel), "utf-8");
+    const heading = text.split("\n").find((line) => line.startsWith("## Article XI"));
+    expect(heading).toBe("## Article XI — Temporary files");
+  });
 });
 
 describe("the reporting contract covers what an agent says while it works", () => {
