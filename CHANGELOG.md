@@ -595,6 +595,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   checkout or one downloaded from the npm registry without asking. The README
   now says so. Closes #4622.
 
+- **A sample table in a code fence or an HTML comment no longer declares
+  anything.** The story tree read every table in `business-flows.md`,
+  `user-stories.md` and `03_Example.md`, so a fenced example of the format or a
+  commented-out draft row added its BF, US or EX ID to the index or to the
+  declared examples, and changed which examples coverage and the index checks
+  expected. The story tree now reads only tables Markdown renders. Closes
+  #4711.
+
 - **A heading inside an HTML comment no longer names a flow or a story.** The
   story tree took the first level-one heading of `business-flow.md` or
   `01_User-story.md` as its ID even when that heading sat in an HTML comment or
