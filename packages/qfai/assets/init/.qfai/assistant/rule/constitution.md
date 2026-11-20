@@ -301,7 +301,7 @@ This article survives context compaction because `.qfai/assistant/rule/constitut
 
 ---
 
-## Article XI — Temporary files go in `tmp/`
+## Article XI — Temporary files
 
 Purpose: a scratch file never lands in a production or artifact directory or in a commit. The rules
 are `.agents/rules/temporary-files.md`. A test's `mkdtemp` sandbox under the OS temporary directory
