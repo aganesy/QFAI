@@ -507,6 +507,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
 
+- **`qfai --help` lists the JSON output and output file of `db-drift`.**
+  `db-drift` accepted `--format json` and `--out <path>`, but the options
+  table named neither for it. The help now lists `db-drift` under both
+  options.
+
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
   `npx` launch for sensitive environments, while every template sends pages

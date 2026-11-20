@@ -416,7 +416,7 @@
         "Verify the toolchain action before running it": "588904ea89c54f7a",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "99ec5e46f5e62e26",
-        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "687b39b22ec0a032",
+        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "20e186dc249ec3c2",
         "QFAI self-validate this repo (dogfooding — TDD, SDD and full profiles)": "08febeb8aa3e904b",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
         "Run lint gate": "b698c0256454bfce",
