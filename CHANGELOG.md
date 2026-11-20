@@ -624,6 +624,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   declaration list's `const` flag, so a `let`, `var` or `using` binding is not
   listed however it is exported.
 
+- **A waiver id that names an inherited property is counted as a number.** A
+  waiver whose id was `toString` started its suppression count from the
+  inherited function, so the published total became a string, and one whose id
+  was `__proto__` was not counted at all. The counts are now kept in a `Map`,
+  so any id counts from zero and the total stays a number.
+
 - **The bisection step starts the session and skips untestable revisions.**
   `implement-bisect` told the agent to run `git bisect run` between two
   revisions, though that command takes only the test command and cannot start
