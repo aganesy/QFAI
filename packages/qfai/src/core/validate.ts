@@ -719,7 +719,7 @@ async function runStoryProfileValidators(
     )),
     ...(await timed(timings, "diagram-budget", () => validateDiagramBudget(root, config))),
     ...(await timed(timings, "document-schema", () => validateDocumentSchema(root, config))),
-    ...(await timed(timings, "stale-terms", () => validateStaleTerms(root, config))),
+    ...(await timed(timings, "stale-terms", () => validateStaleTerms(root, config, model))),
     ...(await timed(timings, "story-contract-index", () =>
       validateStoryTreeContractReferences(root, config, model),
     )),
