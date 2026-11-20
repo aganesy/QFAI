@@ -25,10 +25,10 @@
     "skill listing qfai-prototyping (every session)": 165,
     "skill listing qfai-run (every session)": 314,
     "skill listing qfai-sdd (every session)": 171,
-    "skill listing qfai-triage (every session)": 349,
+    "skill listing qfai-triage (every session)": 444,
     "skill listing qfai-verify (every session)": 107,
     "skill listing web-research (every session)": 187,
-    "skill listing, total (every session)": 2471
+    "skill listing, total (every session)": 2566
   },
   "lines": { "AGENTS.md, managed section": 36 }
 }

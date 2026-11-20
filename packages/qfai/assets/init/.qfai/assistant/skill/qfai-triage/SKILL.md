@@ -1,7 +1,7 @@
 ---
 name: qfai-triage
 title: QFAI Triage (Requests that end without a tracked change)
-description: "Use when invoked by name or handed a QFAI work order for a request that ends without a tracked change: a question, a duplicate, missing information, a split, automated reports, a security report, an operation only a person can run, an operation the user named on finished work, or authorized cleanup of current-task temporary directories."
+description: "Use when invoked by name or handed a QFAI work order for a request that ends without a tracked change other than its own deliberation record, its open-questions.md rows and a qfai-run approval row: a question, a duplicate, missing information, a split, automated reports, a security report, an operation only a person can run, an operation the user named on finished work, or authorized cleanup of current-task temporary directories."
 argument-hint: "<the request, as it was reported>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
 steps:
@@ -27,7 +27,8 @@ Run the entry check of
 first.
 
 This skill answers, closes, splits or hands over a request, or carries out an
-operation the user named, and changes no file git tracks. Work the request needs is recorded as a follow-up request,
+operation the user named, and changes no file git tracks except the ones the
+Reviewer Gate below allows. Work the request needs is recorded as a follow-up request,
 never done here except the exact current-task temporary cleanup that
 `triage-owned-cleanup` permits, after rechecking existing user authority and
 repository-local scope, and the named operation `triage-operate` runs. No other
@@ -78,19 +79,31 @@ this file adds nothing to it.
 
 ## Review
 
-Invoked by name, the skill runs no review: its steps change no tracked file.
+Invoked by name, the skill runs no review: its steps change no tracked file
+other than the ones the Reviewer Gate allows.
 Each step's `## Gate` section says what passes it.
 
 ### Reviewer Gate
 
-A tracked file the stage changed fails the review, whatever the change was.
+A tracked file the stage changed fails the review, whatever the change was,
+except these:
+
+- the run's deliberation record and the `open-questions.md` rows the run
+  wrote, which `triage-close` commits locally and does not push;
+- the approval row, if any, that `qfai-run` records in `decisions.md` before
+  `triage-handoff` runs.
+
+`triage-owned-cleanup` keeps its own check that tracked contents and the index
+are unchanged.
 
 ## Completion
 
 Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contract-shared`.
 **Smallest applicable smoke check** (this skill's override):
 `git status --porcelain --untracked-files=no` lists no file the stage did not
-find changed when it started.
+find changed when it started, and the commits the stage made touch only the
+run's deliberation record, the `open-questions.md` rows the run wrote and the
+`decisions.md` approval row the Reviewer Gate allows.
 
 The report states the outcome `triage-close` recorded and lists each follow-up
 request. It never says a tracked change is done. `cleaned` says only that the
@@ -108,7 +121,7 @@ list any remaining actions instead.
 
 project_memory:
 
-- Triage changes no tracked file; only `triage-owned-cleanup` and `triage-operate` execute an operation.
+- Triage changes no tracked file except the run's deliberation record and the `open-questions.md` rows it wrote, which `triage-close` commits locally, and the approval row `qfai-run` records in `decisions.md` before `triage-handoff`; only `triage-owned-cleanup` and `triage-operate` execute an operation.
 - Other work it finds is a follow-up request.
 - A follow-up is recorded, never routed inside the run that found it.
 - A security report stays private until the fix is ready to disclose.
