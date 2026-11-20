@@ -507,6 +507,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   keeps `tmp/` for when the host names none. The one-line entry now says the
   same.
 
+- **`qfai --help` lists the JSON output and output file of `db-drift`.**
+  `db-drift` accepted `--format json` and `--out <path>`, but the options
+  table named neither for it. The help now lists `db-drift` under both
+  options.
+
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
   `npx` launch for sensitive environments, while every template sends pages
@@ -596,6 +601,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   could be applied. It now reports `QFAI-CONTRACT-021` at the line of each
   such `)`. A `)` inside a string, quoted identifier, comment or
   dollar-quoted body is still not counted.
+
+- **Re-running the release workflow reuses the GitHub Release it already
+  made.** After the GitHub Release job had succeeded, re-running all jobs
+  failed in that job on the Release it had created, although the npm publish
+  job beside it skips a version already on npm. The job now looks the
+  Release up after the tag checks: a Release with this run's title and notes,
+  not a draft or prerelease, is reused once the tag, read again, still names
+  the verified commit; one that differs fails the job and
+  is left as it is; and an answer other than "not found" fails the job
+  instead of being read as no Release. Closes #4732.
 
 - **The 1.x migration reports every old-path line of a file with very many
   of them.** The migration's last step lists each line of a tracked project
