@@ -48,8 +48,10 @@ export const CANDIDATE_TEST_FILE_GLOBS: readonly string[] = [
  *
  * Matching is per candidate rather than one combined run: the result is the
  * list to write, so which candidate matched is the answer, not how many files
- * did. `limit: 1` stops each probe at the first hit, so a large repository
- * costs one directory walk per candidate and not a full enumeration.
+ * did. `limit: 1` keeps one file, but the collector checks the limit only when
+ * the next match arrives: a probe stops early at its second hit, and one that
+ * finds a single file or none walks the rest of the tree. A large repository
+ * still costs one directory walk per candidate, never a list of every file.
  *
  * The default excludes apply, so a dependency's vendored tests do not make a
  * layout look present. Without them `**\/*_test.go` matches inside
