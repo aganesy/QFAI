@@ -576,6 +576,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   out the `--help` argument the probe was run with, so rerunning the reported
   command did not repeat the probe. It now shows the full argument list.
 
+- **`qfai doctor --clean` stops on a run log it cannot `stat`** (#4811). A
+  listed `run-*` directory whose `stat` failed with `EACCES` or an I/O error
+  was skipped without a word, so the clean pass reported success while some
+  run ages were never examined. Only a run removed meanwhile (`ENOENT`) is
+  still skipped; any other error now aborts the pass before anything is
+  removed and names the run.
+
 - **`qfai db-drift --format` with a wrong value now lists the formats it
   accepts.** `qfai db-drift --format yaml` said "--format is not valid for this
   command", although db-drift reads `--format`. It now says the value is
