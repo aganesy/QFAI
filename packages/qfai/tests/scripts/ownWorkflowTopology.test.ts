@@ -3291,11 +3291,12 @@ describe("release automation performs decisions rather than making them", () => 
     // truth with its stderr discarded, a 401 or a 5xx read as "no such tag", and the run went on
     // to prepare a version-bump pull request for a version that may already be tagged. Only the
     // response status says which it was, so the step's own body runs against a stubbed `gh`.
-    const doc = parseYaml(
-      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "prepare-release.yml"), "utf-8"),
-    ) as { jobs?: Record<string, { steps?: Array<Record<string, unknown>> }> };
-    const step = (doc.jobs?.["prepare"]?.steps ?? []).find((entry) => entry["id"] === "check");
-    const body = step?.["run"];
+    const prepare = workflow("prepare-release.yml");
+    const jobs = isRecord(prepare["jobs"]) ? prepare["jobs"] : {};
+    const job = isRecord(jobs["prepare"]) ? jobs["prepare"] : {};
+    const steps = Array.isArray(job["steps"]) ? job["steps"] : [];
+    const step = steps.find((entry) => isRecord(entry) && entry["id"] === "check");
+    const body = isRecord(step) ? step["run"] : undefined;
     expect(body, "prepare-release has no `check` step with a body").toBeTypeOf("string");
 
     const dir = mkdtempSync(path.join(tmpdir(), "qfai-prepare-tag-"));
@@ -3313,14 +3314,22 @@ describe("release automation performs decisions rather than making them", () => 
       );
       const outputFile = path.join(dir, "github-output");
 
-      /** Runs the step with `gh api` answering `statusLine` on stdout and exiting `exitCode`. */
+      /**
+       * Runs the step with `gh api` answering `statusLine` on stdout and exiting `exitCode`. The
+       * stub prints a status line only when asked for `--include`, as gh does, so a lookup that
+       * stopped asking for it reads every answer as inconclusive and the 404 row goes red.
+       */
       const run = (statusLine: string, exitCode: number, stderr: string) => {
         writeFileSync(outputFile, "", "utf-8");
         const fake = [
           "gh() {",
           '  [ "$1" = "api" ] || { echo "fake-gh: unexpected $1" >&2; return 99; }',
-          `  printf '%s' ${JSON.stringify(statusLine === "" ? "" : `${statusLine}\n\n{}`)}`,
-          `  printf '%s\\n' ${JSON.stringify(stderr)} >&2`,
+          '  case " $* " in',
+          '    *" --include "*) ;;',
+          '    *) echo "fake-gh: called without --include" >&2; return 98 ;;',
+          "  esac",
+          ...(statusLine === "" ? [] : [`  printf '%s\\n\\n{}' '${statusLine}'`]),
+          `  printf '%s\\n' '${stderr}' >&2`,
           `  return ${exitCode}`,
           "}",
         ].join("\n");
