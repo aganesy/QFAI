@@ -8,7 +8,7 @@ Feature: Config Glob Tuning
   Scenario: Glob Pattern Coverage
     Given the analysis results
     When glob patterns are proposed
-    Then 3-10 include patterns cover all discovered test locations and no overly broad patterns (e.g., `**/*`) are used.
+    Then the smallest set of include patterns that covers all discovered test locations is proposed, and no overly broad patterns (e.g., `**/*`) are used.
     And exclude patterns are added only when the default exclusions do not cover the observed path.
 
   # AC-0001-0076-02

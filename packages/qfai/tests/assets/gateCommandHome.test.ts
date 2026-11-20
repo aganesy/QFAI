@@ -18,7 +18,7 @@ describe("the story-tree contract owns quality-gate commands", () => {
       const baseline = await read(tree, "assistant/rule/shared-skill-operating-baseline.md");
       const gateRun = await read(tree, "assistant/step/common-gate-run/STEP.md");
       const quality = await read(tree, "assistant/rule/quality.md");
-      expect(configure).toContain("03_contract/tech.md#standard-commands-copy-paste");
+      expect(configure).toContain("`<paths.contractsDir>/tech.md#standard-commands-copy-paste`");
       expect(baseline).toContain(
         "`<paths.contractsDir>/tech.md#standard-commands-copy-paste`. The directory comes",
       );
