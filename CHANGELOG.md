@@ -523,6 +523,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `webResearch.allowlist`. The templates still
   default to the cloud API.
 
+- **The leakage guard catches a `schemaVersion` whose colon is on the next
+  line** (#4743). The guard's pattern allows any whitespace between the field
+  name and its colon, but grep read each file one line at a time, so a valid
+  JavaScript property split across a line break shipped without a failure.
+  The `schemaVersion` pass now reads each file as a whole and names every file
+  that holds the field.
+
 - **The UI strategy review no longer hands winner selection to the comparison
   review.** The comparison review owns no winner and the prototyping loop puts
   its latest iteration to the user, so a reviewer following the old sentence
@@ -639,6 +646,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the verified commit; one that differs fails the job and
   is left as it is; and an answer other than "not found" fails the job
   instead of being read as no Release. Closes #4732.
+
+- **`qfai --help` now names everything `init --force` overwrites.** The
+  `--force` line named only the shipped skills and agents, while a forced run
+  also rewrites the shipped steps and rules under `.qfai/assistant/` and the
+  rule masters under `.agents/rules/`, so the full scope showed only in the
+  note a running `init` prints. The help now lists those locations, and names
+  `qfai.config.yaml`, `DESIGN.md` and `AGENTS.md` among the files it keeps,
+  as that note does. Closes #4758.
 
 - **The 1.x migration reports every old-path line of a file with very many
   of them.** The migration's last step lists each line of a tracked project
