@@ -237,6 +237,23 @@ describe("qfai report on a story tree", () => {
     expect(await runReport({ root, format: "json", failOn: "never" })).toBe(0);
   });
 
+  it("reads a validate result saved with a leading UTF-8 byte order mark", async () => {
+    const root = await storyRoot();
+    const result: ValidationResult = {
+      toolVersion: "2.0.0-test",
+      profile: "full",
+      issues: [issue("warning")],
+      counts: { info: 0, warning: 1, error: 0 },
+    };
+    // Windows PowerShell 5.1 `Set-Content -Encoding UTF8` writes these bytes.
+    const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+    const input = path.join(root, "windows-validate.json");
+    await writeFile(input, Buffer.concat([bom, Buffer.from(`${JSON.stringify(result)}\r\n`)]));
+    expect(await runReport({ root, format: "md", failOn: "never", inputPath: input })).toBe(0);
+    const output = await readFile(path.join(root, ".qfai/report/report.md"), "utf8");
+    expect(output).toContain("QFAI-TEST-001");
+  });
+
   it("names the top-level field that makes a validate result malformed", async () => {
     const root = await storyRoot();
     await mkdir(path.join(root, ".qfai/report"), { recursive: true });

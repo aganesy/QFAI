@@ -22,6 +22,7 @@ import { countIssues } from "../../core/validate.js";
 import { resolveFailOn, shouldFail } from "../lib/failOn.js";
 import { isIncompleteRunResult } from "../lib/warnings.js";
 import { error, info, warn } from "../../core/logger.js";
+import { parseJsonText } from "../../shared/jsonText.js";
 import {
   finishValidationResult,
   scopedReportPath,
@@ -408,7 +409,7 @@ function warnOnProfileMismatch(
 
 async function readValidationResult(inputPath: string): Promise<ValidationResult> {
   const raw = await readFile(inputPath, "utf-8");
-  const parsed = JSON.parse(raw) as unknown;
+  const parsed = parseJsonText(raw);
   if (!isValidationResult(parsed)) {
     const problem = validationResultShapeProblem(parsed) ?? "unreadable";
     throw new Error(`validate.json has an invalid shape: ${inputPath} (${problem})`);
