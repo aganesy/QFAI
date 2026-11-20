@@ -43,10 +43,11 @@
  * between listing and reading, or one that is not a regular file, is skipped.
  */
 /* global console, process */
-import { execFileSync } from "node:child_process";
 import { lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+
+import { trackedFiles } from "./lib/tracked-files.mjs";
 
 /** Seven of one marker character, then a space or the end of the line. */
 const MARKER_RE = /^(?:<{7}|={7}|>{7}|\|{7})(?: |$)/;
@@ -92,28 +93,6 @@ const fencedExtensions = new Set([".md", ".markdown"]);
  */
 export function readsFences(relative) {
   return fencedExtensions.has(path.extname(relative).toLowerCase());
-}
-
-/**
- * Every tracked path, or `null` when git cannot answer.
- *
- * `null` is a distinct outcome rather than an empty list: a caller outside a
- * repository would otherwise get a clean run over nothing at all, which claims
- * a result this never established.
- */
-export function trackedFiles(cwd = process.cwd()) {
-  try {
-    return execFileSync("git", ["ls-files", "-z"], {
-      cwd,
-      encoding: "buffer",
-      maxBuffer: 64 * 1024 * 1024,
-    })
-      .toString("utf-8")
-      .split("\0")
-      .filter((entry) => entry !== "");
-  } catch {
-    return null;
-  }
 }
 
 /**

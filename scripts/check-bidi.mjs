@@ -41,10 +41,11 @@
  * hazard — invisible in a diff, legal inside a string literal.
  */
 /* global console */
-import { execFileSync } from "node:child_process";
 import { readFileSync, lstatSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+
+import { trackedFiles } from "./lib/tracked-files.mjs";
 
 /**
  * Trees whose files are FROZEN RECORDS, exempt from the bidi/BOM scan.
@@ -184,34 +185,6 @@ function scanBidi(relative, bytes) {
 }
 
 /**
- * The tracked files, from git rather than from a walk.
- *
- * `-z` because a path may carry a newline, and git quotes such a path in the
- * default output — a quoted path does not open.
- *
- * `null` on any failure, and the caller says so on stderr rather than
- * diagnosing it: no checkout (a tarball, a vendored copy), no git on PATH, or
- * output past `maxBuffer` all reach here identically, and naming one of them
- * would be wrong about the others. Reporting nothing rather than failing keeps
- * a caller without a repository working; the lane this runs in has one, and
- * the skip line is what makes its absence visible there.
- */
-function trackedFiles(cwd = process.cwd()) {
-  try {
-    return execFileSync("git", ["ls-files", "-z"], {
-      cwd,
-      encoding: "buffer",
-      maxBuffer: 64 * 1024 * 1024,
-    })
-      .toString("utf-8")
-      .split("\0")
-      .filter((entry) => entry !== "");
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Whether this entry is a regular file whose bytes are text.
  *
  * `lstat`, not `stat`: the skill trees are directories reached through
@@ -244,6 +217,10 @@ function isScannableEntry(absolute) {
  */
 const maxHitsPerFile = 20;
 
+// No list is reported on stderr rather than diagnosed: every way git fails
+// reaches here identically, and naming one would be wrong about the others.
+// Skipping rather than failing keeps a caller without a repository working;
+// the lane this runs in has one, and the skip line makes its absence visible.
 const tracked = trackedFiles();
 let skipReason = null;
 if (tracked === null) {
