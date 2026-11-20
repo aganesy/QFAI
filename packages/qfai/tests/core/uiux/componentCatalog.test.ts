@@ -203,6 +203,23 @@ describe("the scanner lists exported components", () => {
     ]);
   });
 
+  // QFAI:EX-0001-0307-22
+  it("lists a const binding and never a let or var one, however it is exported", async () => {
+    const found = await components({
+      "src/ui/bindings.tsx": [
+        "export const Card = () => <div />, Chip = () => <i />;",
+        "export let Banner = () => <div />, Badge = () => <b />;",
+        "export var Panel = () => <section />;",
+        "let Toast = () => <output />;",
+        "var Tile = () => <figure />;",
+        "export { Toast };",
+        "export default Tile;",
+        "",
+      ].join("\n"),
+    });
+    expect(found.map((component) => component.name)).toEqual(["Card", "Chip"]);
+  });
+
   it("keeps the key order fixed and omits empty tags", () => {
     const text = renderCatalog([
       { name: "Badge", file: "src/badge.tsx", props: [], source: "authored", reason: "No item" },
