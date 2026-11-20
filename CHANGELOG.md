@@ -555,6 +555,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   read as empty. Any other failure now stops the scan with its error, or is
   reported as an unreadable directory where the check already reports those.
 
+- **`qfai catalog components` keeps an existing catalogue when
+  `qfai.config.yaml` cannot be used.** A configuration that did not parse, such
+  as one holding `paths: [`, fell back to the default surface paths, so the
+  command exited 0 and overwrote the catalogue with an empty one. The command
+  now stops before it scans, exits 1 naming `qfai.config.yaml` and each error,
+  and writes nothing; under `--check` it says nothing was compared instead of
+  calling the catalogue out of date. Closes #4748.
+
 - **The Markdown-schema checker refuses a `--base` with no ref.** Given
   `--base --summary`, it took `--summary` as the ref, could not diff against
   it, checked every document instead and printed no summary. It now leaves a
