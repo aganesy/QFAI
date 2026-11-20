@@ -183,6 +183,35 @@ describe("check-branch-version-pin.sh", () => {
     expect(r.status).toBe(0);
   });
 
+  it.each(["prepare-docs", "nextjs-upgrade", "preview-notes", "alphabetize"])(
+    "does NOT reject a slug that merely starts with a pre-release token (%s)",
+    async (slug) => {
+      const v = await readCurrentVersion();
+      const r = runGuard({ GITHUB_REF_NAME: `release/v${v}-${slug}` });
+      expect(r.stderr).not.toMatch(/pre-release \/ build/);
+      expect(r.status).toBe(0);
+      expect(r.stdout).toMatch(new RegExp(`pinned to ${v.replace(/\./g, "\\.")}`));
+    },
+  );
+
+  it.each(["release/v1.9.0-rc1", "release/v1.9.0-beta-docs", "release/v1.9.0-rc.1/notes"])(
+    "rejects a complete pre-release token followed by a boundary (%s)",
+    (branch) => {
+      const r = runGuard({ GITHUB_REF_NAME: branch });
+      expect(r.status).toBe(1);
+      expect(r.stderr).toMatch(/pre-release \/ build/);
+    },
+  );
+
+  it.each(["feature/libv1.9.0-rc.1", "feature/libv1.9.0+build.5"])(
+    "skips a pre-release shape whose v is not a version-token prefix (%s)",
+    (branch) => {
+      const r = runGuard({ GITHUB_REF_NAME: branch });
+      expect(r.status).toBe(0);
+      expect(r.stdout).toMatch(/no SemVer pin/);
+    },
+  );
+
   it("VERSION_PIN_SKIP=1 still honoured for legitimate pre-release branches", () => {
     const r = runGuard({
       GITHUB_REF_NAME: "release/v1.9.0-rc.1",

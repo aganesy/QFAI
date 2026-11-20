@@ -49,13 +49,16 @@ if [[ -z "$branch" ]]; then branch="$(git rev-parse --abbrev-ref HEAD)"; fi
 # when package.json#version is `1.9.0` — exactly the failure mode that
 # ships pre-release as stable.
 #
-# Match conservatively: the suffix must look like canonical SemVer
-# pre-release tokens (`rc`, `alpha`, `beta`, `pre`, `next`) with an
-# optional `.N` discriminator, OR build metadata (`+...`). Branch
-# naming convention `<type>/v<X.Y.Z>[-<slug>]` (e.g. `feature/v1.8.8-bugfix-x`)
-# is a slug, NOT a pre-release identifier, and must keep passing.
-if [[ "$branch" =~ v[0-9]+\.[0-9]+\.[0-9]+-(rc|alpha|beta|pre|next)(\.[0-9A-Za-z-]+)? ]] \
-   || [[ "$branch" =~ v[0-9]+\.[0-9]+\.[0-9]+\+ ]]; then
+# Match conservatively: the suffix must be a complete canonical SemVer
+# pre-release token (`rc`, `alpha`, `beta`, `pre`, `next`, optionally
+# followed by digits as in `rc1`) that ends at the branch end or at a
+# `.`, `/`, `_` or `-` boundary, OR build metadata (`+...`). The `v` must
+# open a version token, exactly as in the pin match below. Branch naming
+# convention `<type>/v<X.Y.Z>[-<slug>]` (e.g. `feature/v1.8.8-bugfix-x`,
+# `release/v1.8.8-prepare-docs`) is a slug, NOT a pre-release identifier,
+# and must keep passing even when the slug starts with a token's letters.
+if [[ "$branch" =~ (^|[/_-])v[0-9]+\.[0-9]+\.[0-9]+-(rc|alpha|beta|pre|next)[0-9]*($|[./_-]) ]] \
+   || [[ "$branch" =~ (^|[/_-])v[0-9]+\.[0-9]+\.[0-9]+\+ ]]; then
   cat <<EOF >&2
 ERROR: branch name appears to encode a SemVer with a pre-release / build
 metadata suffix (e.g. v1.9.0-rc.1).
