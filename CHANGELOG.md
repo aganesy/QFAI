@@ -500,6 +500,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **The UI strategy review no longer hands winner selection to the comparison
+  review.** The comparison review owns no winner and the prototyping loop puts
+  its latest iteration to the user, so a reviewer following the old sentence
+  looked for a historical winner. The strategy review now points at the
+  comparison criteria instead.
+
 - **The Firecrawl integration now says where it processes data.** The
   `web-research` skill and the Codex Firecrawl template recommended a local
   `npx` launch for sensitive environments, while every template sends pages
