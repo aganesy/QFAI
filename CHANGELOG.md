@@ -589,6 +589,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   policy still applies, so a host that blocks scripts still reports the shim as
   not runnable.
 
+- **The `resolve-conflicts` route resumes a merge of the same base instead of
+  starting a second one.** A branch still resolving an earlier merge of the
+  base has `MERGE_HEAD`, so running `git merge --no-commit <base>` again failed
+  before conflict resolution could run. The `maintain-edit` step now checks
+  `MERGE_HEAD` first: when it is the base's commit, the step goes on to resolve
+  the conflicts; when it is another commit, the step stops, reports that
+  merge and leaves it in place.
+
 - **The UI open-questions review now follows the register's real lifecycle.**
   It asked reviewers to filter rows by a Status and a Severity and to
   downgrade them, but the register has only ID, Content and Approach, and its
