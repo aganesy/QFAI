@@ -98,6 +98,41 @@ function silencedTsconfigs(tsconfigFiles) {
   return silenced;
 }
 
+/**
+ * Runs the future compiler and says how its run ended, as the exit code this lane
+ * takes and the line it prints.
+ *
+ * The output is streamed rather than captured: a capture has a buffer limit, and
+ * diagnostics past it left no exit status, which read as a type failure with none
+ * printed. A run that did not finish, because the compiler could not start or a
+ * signal stopped it, is named as that, so it is never mistaken for a type error.
+ *
+ * `spawn` is a parameter so a test can stand in for the compiler.
+ */
+export function runFutureCompiler(spawn = spawnSync) {
+  const result = spawn(process.execPath, [futureTscPath, "-b", "--pretty", "false"], {
+    cwd: repoRoot,
+    stdio: "inherit",
+  });
+
+  if (result.error) {
+    return {
+      code: 1,
+      message: `check-types-future: could not run ${futureTscPath}: ${result.error.message}`,
+    };
+  }
+  if (result.signal) {
+    return {
+      code: 1,
+      message: `check-types-future: the compiler stopped on signal ${result.signal} before it finished`,
+    };
+  }
+  if (result.status !== 0) {
+    return { code: result.status ?? 1, message: null };
+  }
+  return { code: 0, message: "Future TypeScript compatibility check passed." };
+}
+
 function main() {
   const { tsconfigs: tsconfigFiles, buildConfigs: buildConfigFiles } = collectConfigFiles(repoRoot);
 
@@ -118,19 +153,15 @@ function main() {
     );
   }
 
-  const result = spawnSync(process.execPath, [futureTscPath, "-b", "--pretty", "false"], {
-    cwd: repoRoot,
-    encoding: "utf-8",
-  });
-
-  process.stdout.write(result.stdout ?? "");
-  process.stderr.write(result.stderr ?? "");
-
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+  const { code, message } = runFutureCompiler();
+  if (message !== null) {
+    if (code === 0) {
+      console.log(message);
+    } else {
+      console.error(message);
+    }
   }
-
-  console.log("Future TypeScript compatibility check passed.");
+  process.exit(code);
 }
 
 // Importing this file reads its decision; running it scans the tree and runs the compiler.
