@@ -99,7 +99,24 @@ describe("qfai --help exit-code section", () => {
     // A corrupt / schema-invalid validate.json throws out of runReport, and
     // cli/index.ts turns any throw into exit 1 — the row has to say so.
     expect(reportRow).toMatch(
-      new RegExp(`${EXIT_CODES.findings} = the input validate.json is corrupt`),
+      new RegExp(`${EXIT_CODES.findings} = [\\s\\S]*?the input validate.json is corrupt`),
+    );
+  });
+
+  it("documents report's 1 for findings that reach the --fail-on threshold", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const reportRow = section.slice(
+      section.indexOf("\n  report"),
+      section.indexOf("atdd scaffold"),
+    );
+
+    // runReport writes a valid report and then returns 1 when shouldFail()
+    // reaches the threshold (main.test.ts pins that return). A row naming only
+    // corrupt input and runtime errors makes an ordinary gate result read as
+    // an I/O failure.
+    expect(reportRow).toMatch(
+      new RegExp(`${EXIT_CODES.findings} = the findings reach the --fail-on threshold`),
     );
   });
 
