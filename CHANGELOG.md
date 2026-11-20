@@ -532,6 +532,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   which they treat as absent evidence. They now name
   `<paths.contractsDir>/tech.md`.
 
+- **A pull-request merge fetches the pull request's own base and checks it
+  again before merging.** The `triage-operate` step merged the local
+  `origin/<base>` into the branch without fetching it, so a stale
+  remote-tracking ref could report "already up to date" while the remote base
+  had moved, and the merge went ahead on an integration nobody had checked. It
+  now reads the base repository and branch from the pull request itself,
+  fetches that branch, merges the commit it fetched, and fetches again just
+  before the merge, merging any newer base commit first.
+
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
   said every scratch file goes under `tmp/`, while the temporary-files rule they
