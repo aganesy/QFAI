@@ -18,7 +18,11 @@ import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
 import { validateDocumentSchema } from "./validators/documentSchema.js";
 import { validateStaleTerms } from "./validators/staleTerms.js";
 import { validateForbiddenIdentifiers } from "./validators/forbiddenIdentifiers.js";
-import { validateStoryTreeObligations } from "./validators/storyTreeObligations.js";
+import {
+  readStoryTests,
+  validateStoryTreeObligations,
+  type StoryTestScan,
+} from "./validators/storyTreeObligations.js";
 import { validateStoryTreeContractReferences } from "./validators/contractReferences.js";
 import { validateStoryPolicyPlaceholders } from "./validators/assistantAssets.js";
 import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
@@ -753,9 +757,14 @@ async function runStoryProfileValidators(
       runPackageSelfGovernanceValidators(root),
     )),
   ];
+  // `verify` and `full` run both obligation passes; they share one read of the
+  // selected test files instead of each reading them again.
+  let storyTests: Promise<StoryTestScan> | undefined;
+  const readStoryTestsOnce = (): Promise<StoryTestScan> =>
+    (storyTests ??= readStoryTests(root, config));
   const atdd = async (): Promise<Issue[]> => [
     ...(await timed(timings, "story-test-obligations", () =>
-      validateStoryTreeObligations(root, config, "atdd", model),
+      validateStoryTreeObligations(root, config, "atdd", model, readStoryTestsOnce),
     )),
     ...(await timed(timings, "test-stubs", () =>
       validateTestTodoStubs(root, config, acceptanceStubScan(root, config)),
@@ -763,7 +772,7 @@ async function runStoryProfileValidators(
   ];
   const tdd = async (includeContracts = true, includeDrift = true): Promise<Issue[]> => [
     ...(await timed(timings, "story-test-obligations", () =>
-      validateStoryTreeObligations(root, config, "tdd", model),
+      validateStoryTreeObligations(root, config, "tdd", model, readStoryTestsOnce),
     )),
     ...(includeDrift
       ? await timed(timings, "drift", () => validateStoryTreeDrift(root, config, "tdd"))
