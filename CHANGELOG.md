@@ -591,6 +591,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `RangeError: Maximum call stack size exceeded` before the report was
   written. The report now lists every such line.
 
+- **`qfai report --run-validate` records a validation it could not finish.**
+  When a validator failed, the command stopped with an uncaught error, even
+  under `--fail-on never`, and left the clean `validate.json` of an earlier run
+  in place. It now writes the same `QFAI-SCAN-002` result `qfai validate`
+  writes for an unfinished run, renders the report from it, and says the
+  report is not a clean result.
+
 - **The release-notes drift check holds a cut body to its kept entries, in
   order.** When a changelog section is too long for a GitHub Release body,
   the release workflow cuts it and appends a note. The check compared such a

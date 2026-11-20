@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { FailOn, OutputFormat } from "../../core/config.js";
+import type { ConfigLoadResult, FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
@@ -30,7 +30,7 @@ import {
   DESIGN_AUDIT_CODE_PREFIX,
   designAuditFindingsShownPerCode,
 } from "../../core/validators/designAudit.js";
-import { validateProject } from "../../core/validate.js";
+import { type ValidationOptions, validateProject } from "../../core/validate.js";
 import { resolveToolPackageDir, resolveToolVersion } from "../../core/version.js";
 import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
 import {
@@ -72,38 +72,18 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // for one. Replacing the run made every stage gate that names a narrow
   // profile unreachable in CI.
   const ciProfileIssue = buildCiProfileIssue(options.profile);
-  // Wrapped, because an unhandled rejection here would leave the operator with
-  // one stderr line and no verdict — no `counts:`, no `run-log:`, no
-  // `validate.json` — and a caller that keeps only the end of the output, as
-  // an agent often does, would see that line alone. Enumerating the `stat` sites
-  // that can raise reduces the ways in; this is what answers when the next one
-  // appears.
-  //
-  // `unknown`, deliberately not narrowed to a filesystem error: the point is a
-  // verdict for anything unexpected, and a narrowed catch would put the next
-  // unclassified failure back on the path this exists to close.
-  let validated: ValidationResult;
-  try {
-    validated = await validateProject(root, configResult, {
+  const validated = await validateProjectOrIncomplete(
+    root,
+    configResult,
+    {
       ...(options.profile ? { profile: options.profile } : {}),
       ...(options.platform ? { platform: options.platform } : {}),
       ...(options.flowIds && options.flowIds.length > 0 ? { flowIds: options.flowIds } : {}),
       ...(options.timings ? { familyTimings: true } : {}),
-    });
-  } catch (error: unknown) {
-    const incomplete = incompleteRunResult(
-      options.toolVersionOverride ?? (await resolveToolVersion()),
-      buildIncompleteRunIssue(error, "validate"),
-      options.profile,
-    );
-    // A flow-scoped run still writes its scoped file, so it records the flows
-    // it was asked for: `qfai report --flow` must reach the failure it holds
-    // rather than refuse the file as a repository-wide result.
-    validated =
-      options.flowIds && options.flowIds.length > 0
-        ? { ...incomplete, flowIds: [...new Set(options.flowIds)].sort() }
-        : incomplete;
-  }
+    },
+    "validate",
+    options.toolVersionOverride,
+  );
   const rawResult = ciProfileIssue
     ? {
         ...validated,
@@ -218,6 +198,46 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   }
 
   return willFail ? 1 : 0;
+}
+
+/**
+ * Run the validators, or return the incomplete-run verdict when they reject.
+ * `validate` and `report --run-validate` both run validation through here, so
+ * a run that could not finish writes the same verdict from either command.
+ *
+ * Wrapped, because an unhandled rejection here would leave the operator with
+ * one stderr line and no verdict — no `counts:`, no `run-log:`, no
+ * `validate.json`, and under `report` the clean result of an earlier run left
+ * in place — and a caller that keeps only the end of the output, as an agent
+ * often does, would see that line alone. Enumerating the `stat` sites that can
+ * raise reduces the ways in; this is what answers when the next one appears.
+ *
+ * `unknown`, deliberately not narrowed to a filesystem error: the point is a
+ * verdict for anything unexpected, and a narrowed catch would put the next
+ * unclassified failure back on the path this exists to close.
+ */
+export async function validateProjectOrIncomplete(
+  root: string,
+  configResult: ConfigLoadResult,
+  options: ValidationOptions,
+  command: "validate" | "report",
+  toolVersionOverride?: string,
+): Promise<ValidationResult> {
+  try {
+    return await validateProject(root, configResult, options);
+  } catch (error: unknown) {
+    const incomplete = incompleteRunResult(
+      toolVersionOverride ?? (await resolveToolVersion()),
+      buildIncompleteRunIssue(error, command),
+      options.profile,
+    );
+    // A flow-scoped run still writes its scoped file, so it records the flows
+    // it was asked for: `qfai report --flow` must reach the failure it holds
+    // rather than refuse the file as a repository-wide result.
+    return options.flowIds && options.flowIds.length > 0
+      ? { ...incomplete, flowIds: [...new Set(options.flowIds)].sort() }
+      : incomplete;
+  }
 }
 
 /**

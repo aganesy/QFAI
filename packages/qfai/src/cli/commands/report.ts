@@ -19,10 +19,16 @@ import { readStoryTreeModel } from "../../core/storyTree/tree.js";
 import { isStoryTreeProject } from "../../core/storyTree/layout.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { isValidationProfile } from "../../core/validationProfiles.js";
-import { countIssues, validateProject } from "../../core/validate.js";
+import { countIssues } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
+import { isIncompleteRunResult } from "../lib/warnings.js";
 import { error, info, warn } from "../../core/logger.js";
-import { appendIssue, scopedReportPath, validationResultPaths } from "./validate.js";
+import {
+  appendIssue,
+  scopedReportPath,
+  validateProjectOrIncomplete,
+  validationResultPaths,
+} from "./validate.js";
 
 export type ReportOptions = {
   root: string;
@@ -266,6 +272,11 @@ export async function runReport(options: ReportOptions): Promise<number> {
   // would stay green even in a state validate rejects, so the exit code is
   // decided by the same failOn resolution and severity comparison as validate.
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
+  if (isIncompleteRunResult(validation)) {
+    // `--fail-on never` can exit 0 here, so the output itself says the
+    // report holds no verdict on the tree.
+    warn("report: validation did not finish, so this report is not a clean result.");
+  }
   info(
     `report: info=${data.summary.counts.info} warning=${data.summary.counts.warning} error=${data.summary.counts.error} failOn=${failOn}`,
   );
@@ -289,10 +300,17 @@ async function runValidateForReport(
 ): Promise<{ validation: ValidationResult; ranNarrowProfileInCi: boolean }> {
   const flowIds = options.flowIds ?? [];
   const ciProfileIssue = buildCiProfileIssue(options.profile);
-  const validated = await validateProject(root, configResult, {
-    ...(options.profile ? { profile: options.profile } : {}),
-    ...(flowIds.length > 0 ? { flowIds } : {}),
-  });
+  // A run the validators could not finish still writes its verdict, so the
+  // clean result of an earlier run is not left in place to be read as this one.
+  const validated = await validateProjectOrIncomplete(
+    root,
+    configResult,
+    {
+      ...(options.profile ? { profile: options.profile } : {}),
+      ...(flowIds.length > 0 ? { flowIds } : {}),
+    },
+    "report",
+  );
   const withCiIssue = ciProfileIssue ? appendIssue(validated, ciProfileIssue) : validated;
   const normalized = normalizeValidationResult(root, withCiIssue);
   const resultPaths = validationResultPaths(

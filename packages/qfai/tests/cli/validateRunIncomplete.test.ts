@@ -406,6 +406,79 @@ describe("validate reports a run it could not finish", () => {
     expect(run.validatorJson).toMatchObject({ status: "pass" });
   });
 
+  // QFAI:EX-0001-0061-03
+  it("replaces an earlier clean result with the unfinished verdict, from validate and from report --run-validate", async () => {
+    // `report --run-validate` let the rejection escape before it wrote any
+    // result, so the clean `validate.json` of the run before stayed in place
+    // and `--fail-on never` ended in an uncaught error instead of a verdict.
+    const commands = {
+      validate: (root: string, failOn: "never" | "error") =>
+        runValidate({ root, strict: false, format: "text", failOn }),
+      report: async (root: string, failOn: "never" | "error") => {
+        const { runReport } = await vi.importActual<ReportModule>(
+          "../../src/cli/commands/report.js",
+        );
+        return runReport({ root, format: "md", runValidate: true, failOn });
+      },
+    };
+    for (const [name, runCommand] of Object.entries(commands)) {
+      for (const [failOn, expectedExit] of [
+        ["never", 0],
+        ["error", 1],
+      ] as const) {
+        const root = await project();
+        const resultPath = path.join(root, ".qfai", "report", "validate.json");
+        const lines: string[] = [];
+        const write = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+          lines.push(String(chunk));
+          return true;
+        });
+        const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+        try {
+          await runCommand(root, "never");
+          const clean = JSON.parse(await readFile(resultPath, "utf-8")) as {
+            issues: { code: string }[];
+          };
+          expect(clean.issues.map((entry) => entry.code)).not.toContain("QFAI-SCAN-002");
+          expect(lines.join("")).not.toContain("not a clean result");
+
+          validateProjectSpy.mockImplementation(() => Promise.reject(errno("EPERM", root)));
+          expect(await runCommand(root, failOn), `${name} --fail-on ${failOn}`).toBe(expectedExit);
+          if (name === "report") {
+            expect(lines.join("")).toContain(
+              "report: validation did not finish, so this report is not a clean result.",
+            );
+          }
+        } finally {
+          write.mockRestore();
+          stderr.mockRestore();
+          validateProjectSpy.mockReset();
+          validateProjectSpy.mockImplementation(
+            (
+              actual: CoreValidate,
+              target: Parameters<CoreValidate["validateProject"]>[0],
+              config: Parameters<CoreValidate["validateProject"]>[1],
+              opts: Parameters<CoreValidate["validateProject"]>[2],
+            ) => actual.validateProject(target, config, opts),
+          );
+        }
+
+        const parsed = JSON.parse(await readFile(resultPath, "utf-8")) as {
+          counts: { error: number };
+          issues: { code: string; severity: string; message: string }[];
+        };
+        const finding = parsed.issues.find((entry) => entry.code === "QFAI-SCAN-002");
+        expect(finding?.severity, name).toBe("error");
+        expect(finding?.message, name).toContain(`${name}: validation could not run to completion`);
+        expect(parsed.counts.error, name).toBeGreaterThanOrEqual(1);
+        if (name === "report") {
+          const report = await readFile(path.join(root, ".qfai", "report", "report.md"), "utf-8");
+          expect(report).toContain("QFAI-SCAN-002");
+        }
+      }
+    }
+  });
+
   it("does not report an incomplete run when validation completes", async () => {
     // The negative control. Without it a handler that always reported would
     // pass every row above.
