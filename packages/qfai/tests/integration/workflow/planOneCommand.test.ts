@@ -99,6 +99,20 @@ it("The extraction on standard input prints the document the file gives", async 
   expect([fromStdin.status, fromStdin.stdout]).toEqual([0, fromFile.stdout]);
 });
 
+it("An extraction saved with a leading UTF-8 byte order mark plans as the plain file does", async () => {
+  const { root, file } = await withRequest();
+  // Windows PowerShell 5.1 `Set-Content -Encoding UTF8` writes these bytes.
+  const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+  const windowsFile = path.join(root, "tmp", "windows-request.json");
+  await writeFile(windowsFile, Buffer.concat([bom, Buffer.from(JSON.stringify(FEATURE))]));
+  const fromFile = workflow(root, ["plan", "--in", file]);
+  const fromWindowsFile = workflow(root, ["plan", "--in", windowsFile]);
+  const fromStdin = workflow(root, ["plan", "--in", "-"], `\uFEFF${JSON.stringify(FEATURE)}`);
+
+  expect([fromWindowsFile.status, fromWindowsFile.stdout]).toEqual([0, fromFile.stdout]);
+  expect([fromStdin.status, fromStdin.stdout]).toEqual([0, fromFile.stdout]);
+});
+
 // QFAI:EX-0001-0222-04
 it("A route named directly returns its plan with no rule", async () => {
   const root = await minimalProject();

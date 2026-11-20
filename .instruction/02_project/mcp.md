@@ -15,16 +15,21 @@ This guide lists where MCP helps speed up QFAI documentation, implementation and
 
 ## Basic Policy
 
-- First use MCP to **read existing material and code accurately**
+- To search, explore or investigate code and documents, follow
+  `.agents/rules/graph-exploration.md` first: it chooses the project CodeGraph or
+  Graphify CLI, and allows ordinary search for a known path or an engine that is
+  not ready. The MCP servers below serve what that rule does not cover
+- Use MCP to **read existing material and code accurately** where it helps
 - **Do not include confidential information** in inputs used for analysis or specification
 - Which servers are installed depends on the environment, so check with `list/get`
 
 ## MCP Servers (Representative Examples)
 
-### `serena` (semantic search and safe editing)
+### `serena` (optional: semantic search and safe editing)
 
-- Purpose: structural search of existing code and documents, and editing support
-- Typical use: finding existing patterns in `core/validators` and understanding the impact of a change
+- Purpose: optional structural search and editing support, where it is installed
+- Typical use: following up a graph CLI answer, for example a pattern in `core/validators`
+- It does not replace the graph CLIs as the first engine for impact analysis
 
 ### `context7` (official documentation lookup)
 
@@ -54,9 +59,11 @@ This guide lists where MCP helps speed up QFAI documentation, implementation and
 3. Cite it from the run's deliberation record, and use the record as the input
    to the spec.
 
-### Recipe B: start an impact investigation with Serena
+### Recipe B: start an impact investigation with the code graph
 
-- Understand how existing validators and parsers reference each other, and limit the scope of the change
+- Ask the CodeGraph CLI how existing validators and parsers reference each other, as
+  `.agents/rules/graph-exploration.md` states, and limit the scope of the change
+- Serena, where installed, is an optional follow-up for a question the graph left open
 
 ### Recipe C: use Context7 to check a dependency's behavior
 

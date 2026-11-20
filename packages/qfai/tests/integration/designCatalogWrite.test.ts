@@ -1,11 +1,12 @@
 /**
  * How `qfai catalog design` writes its pair of files: only inside the project, through staging
- * files of its own, and undoing only what the run itself did when a step fails.
+ * files of its own, one run at a time, and undoing only what the run itself did when a step fails.
  *
  * `vi.mock` is hoisted to module scope, so the rename fault lives apart from the other design
  * catalogue acceptance tests, where every rename must be the real one.
  */
 
+import { randomUUID } from "node:crypto";
 import type * as fsPromises from "node:fs/promises";
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -16,12 +17,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 type FsPromises = typeof fsPromises;
 type RenameFault = (from: string, to: string) => boolean;
 type LstatFault = (file: string) => boolean;
+type RenamePause = (from: string, to: string) => Promise<void>;
 
 const fault = vi.hoisted(
-  (): { rename: RenameFault | null; lstat: LstatFault | null; noInodes: boolean } => ({
+  (): {
+    rename: RenameFault | null;
+    lstat: LstatFault | null;
+    noInodes: boolean;
+    pause: RenamePause | null;
+  } => ({
     rename: null,
     lstat: null,
     noInodes: false,
+    pause: null,
   }),
 );
 
@@ -57,6 +65,8 @@ vi.mock("node:fs/promises", async () => {
     },
     rename: async (...args: Parameters<FsPromises["rename"]>): Promise<void> => {
       const [from, to] = args;
+      // A run held just before this rename, while another run starts.
+      await fault.pause?.(String(from), String(to));
       if (fault.rename?.(String(from), String(to)) === true) {
         throw Object.assign(new Error("EBUSY: resource busy or locked, rename"), {
           code: "EBUSY",
@@ -68,6 +78,7 @@ vi.mock("node:fs/promises", async () => {
 });
 
 const { run } = await import("../../src/cli/main.js");
+const { runCatalogDesign } = await import("../../src/cli/commands/catalog.js");
 const { getInitAssetsDir } = await import("../../src/shared/assets.js");
 
 const roots: string[] = [];
@@ -86,6 +97,7 @@ afterEach(async () => {
   fault.rename = null;
   fault.lstat = null;
   fault.noInodes = false;
+  fault.pause = null;
   vi.restoreAllMocks();
   while (roots.length > 0) {
     const root = roots.pop();
@@ -107,6 +119,43 @@ async function project(): Promise<string> {
 }
 
 const catalogFile = (root: string, name: string): string => path.join(root, ...CATALOG, name);
+const lockFile = (root: string): string =>
+  path.join(root, ".qfai", "tools", "state", "design-catalog.lock");
+
+/** A lock record of another run, as the command writes its own. */
+const otherRecord = (pid: number): string =>
+  JSON.stringify({ kind: "design-catalog-lock", pid, createdAt: Date.now(), token: randomUUID() });
+
+/**
+ * Holds the next run just before it renames its theme into place, after its token file is in
+ * place. Resolves once it is held; `resume` lets it go on.
+ */
+function holdBeforeTheme(): { held: Promise<void>; resume: () => void } {
+  let resume = (): void => undefined;
+  const resumed = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  const held = new Promise<void>((resolve) => {
+    fault.pause = async (from, to) => {
+      if (!placesTheme(from, to)) return;
+      fault.pause = null;
+      resolve();
+      await resumed;
+    };
+  });
+  return { held, resume };
+}
+
+/** Silences standard output and collects what is written to standard error. */
+function captureStderr(): string[] {
+  const err: string[] = [];
+  vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    err.push(String(chunk));
+    return true;
+  });
+  return err;
+}
 
 /** Changes `primary` in `DESIGN.md`, so the next run writes both files anew. */
 async function changePrimary(root: string): Promise<void> {
@@ -321,5 +370,106 @@ describe("the design catalogue is written only inside the project, by the run th
     expect(left.sort()).toEqual(["design.tokens.json", "theme.css", ...aside].sort());
     expect(aside).toHaveLength(1);
     expect(await readFile(catalogFile(root, aside[0] ?? ""))).toEqual(tokens);
+  });
+
+  // QFAI:EX-0001-0312-21
+  it("refuses a second run while the first places the pair, so both files come from one DESIGN.md", async () => {
+    const root = await project();
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    const hold = holdBeforeTheme();
+    const err = captureStderr();
+    const first = runCatalogDesign({ root });
+    await hold.held;
+    await changePrimary(root);
+    const second = await runCatalogDesign({ root });
+    hold.resume();
+    expect(await first).toBe(0);
+    vi.restoreAllMocks();
+    expect(second).toBe(1);
+    expect(err.join("")).toBe(
+      "qfai catalog design: could not write the design catalogue, so both files are as they were: another run of qfai catalog design is writing it and holds .qfai/tools/state/design-catalog.lock. Run the command again once that run finishes.\n",
+    );
+    const tokens = await readFile(catalogFile(root, "design.tokens.json"), "utf-8");
+    const theme = await readFile(catalogFile(root, "theme.css"), "utf-8");
+    expect(tokens).toContain('"#1f2937"');
+    expect(tokens).not.toContain('"#202938"');
+    expect(theme).toContain("--color-primary: #1F2937;");
+    expect((await readdir(path.join(root, ...CATALOG))).sort()).toEqual([
+      "design.tokens.json",
+      "theme.css",
+    ]);
+  });
+
+  // QFAI:EX-0001-0312-21
+  it("keeps a lock whose owner is not running and names it for removal by hand", async () => {
+    const root = await project();
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    const tokens = await readFile(catalogFile(root, "design.tokens.json"));
+    const theme = await readFile(catalogFile(root, "theme.css"));
+    await changePrimary(root);
+    const lock = otherRecord(2147483647);
+    await writeFile(lockFile(root), lock, "utf-8");
+    const failed = await cli(["catalog", "design", "--root", root]);
+    expect(failed.code).toBe(1);
+    expect(failed.err).toBe(
+      "qfai catalog design: could not write the design catalogue, so both files are as they were: .qfai/tools/state/design-catalog.lock is held by no running qfai catalog design. Remove it once no run is writing the catalogue, then run the command again.\n",
+    );
+    expect(await readFile(lockFile(root), "utf-8")).toBe(lock);
+    expect(await readFile(catalogFile(root, "design.tokens.json"))).toEqual(tokens);
+    expect(await readFile(catalogFile(root, "theme.css"))).toEqual(theme);
+  });
+
+  // QFAI:EX-0001-0312-22
+  it("leaves a lock that another record replaced while it wrote, and says both files were written", async () => {
+    const root = await project();
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    await changePrimary(root);
+    const hold = holdBeforeTheme();
+    const err = captureStderr();
+    const running = runCatalogDesign({ root });
+    await hold.held;
+    const lock = otherRecord(process.pid);
+    await writeFile(lockFile(root), lock, "utf-8");
+    hold.resume();
+    const code = await running;
+    vi.restoreAllMocks();
+    expect(code).toBe(1);
+    expect(err.join("")).toBe(
+      "qfai catalog design: wrote .qfai/catalog/design.tokens.json and .qfai/catalog/theme.css, but .qfai/tools/state/design-catalog.lock no longer holds this run's record, so it was left in place.\n",
+    );
+    expect(await readFile(lockFile(root), "utf-8")).toBe(lock);
+    expect(await readFile(catalogFile(root, "theme.css"), "utf-8")).toContain(
+      "--color-primary: #202938;",
+    );
+    expect((await readdir(path.join(root, ...CATALOG))).sort()).toEqual([
+      "design.tokens.json",
+      "theme.css",
+    ]);
+  });
+
+  // QFAI:EX-0001-0312-22
+  it("names the replaced lock after saying both files are as they were when a step fails too", async () => {
+    const root = await project();
+    expect((await cli(["catalog", "design", "--root", root])).code).toBe(0);
+    const tokens = await readFile(catalogFile(root, "design.tokens.json"));
+    const theme = await readFile(catalogFile(root, "theme.css"));
+    await changePrimary(root);
+    const hold = holdBeforeTheme();
+    fault.rename = placesTheme;
+    const err = captureStderr();
+    const running = runCatalogDesign({ root });
+    await hold.held;
+    const lock = otherRecord(process.pid);
+    await writeFile(lockFile(root), lock, "utf-8");
+    hold.resume();
+    const code = await running;
+    vi.restoreAllMocks();
+    expect(code).toBe(1);
+    expect(err.join("")).toBe(
+      "qfai catalog design: could not write the design catalogue, so both files are as they were: EBUSY: resource busy or locked, rename .qfai/tools/state/design-catalog.lock no longer holds this run's record, so it was left in place.\n",
+    );
+    expect(await readFile(lockFile(root), "utf-8")).toBe(lock);
+    expect(await readFile(catalogFile(root, "design.tokens.json"))).toEqual(tokens);
+    expect(await readFile(catalogFile(root, "theme.css"))).toEqual(theme);
   });
 });

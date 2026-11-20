@@ -507,6 +507,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   names the selected backend, the model and the origin of the service it
   called.
 
+- **`qfai report --in` and `qfai workflow plan --in` read a JSON file saved
+  with a UTF-8 byte order mark.** Windows PowerShell 5.1 writes one with
+  `Set-Content -Encoding UTF8`, and both commands refused such a file as
+  invalid JSON. They now drop one leading mark before parsing, as the
+  `package.json` reader of `qfai atdd scaffold` already did.
+
 - **The installed agent entry sends scratch files to the host's scratch
   directory first.** The `AGENTS.md` and Copilot instructions `qfai init` writes
   said every scratch file goes under `tmp/`, while the temporary-files rule they
@@ -530,12 +536,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `webResearch.allowlist`. The templates still
   default to the cloud API.
 
+- **The policy check no longer asks a question under `--auto`.** When policy
+  information could not be verified, the policy check in
+  `.qfai/assistant/rule/workflow.md` told the agent to ask the user in every
+  mode, while the constitution forbids any question under `--auto`. It still
+  records the open question, and now asks only as Articles VI and X allow:
+  under `--auto` it asks nothing, and a needed `hard-required` input stops the
+  run.
+
 - **The leakage guard catches a `schemaVersion` whose colon is on the next
   line** (#4743). The guard's pattern allows any whitespace between the field
   name and its colon, but grep read each file one line at a time, so a valid
   JavaScript property split across a line break shipped without a failure.
   The `schemaVersion` pass now reads each file as a whole and names every file
   that holds the field.
+
+- **`qfai doctor --profile prototyping` probes Playwright from the inspected
+  project** (#4765). The launcher probe ran in the directory doctor was started
+  from, so with `--root` naming another checkout, `npx` looked for Playwright
+  in the wrong project and a `scripts/playwright` wrapper read its relative
+  files from the wrong place. Every probe now runs with the `--root` directory
+  as its working directory.
 
 - **The UI strategy review no longer hands winner selection to the comparison
   review.** The comparison review owns no winner and the prototyping loop puts
@@ -628,6 +649,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   check in the same process, printed raw patterns it never asked for. Each
   run now restores the setting it started with. Closes #4726.
 
+- **Two runs of `qfai catalog design` no longer mix their files.** Two runs at
+  the same time placed their files in turn, so the token file could come from
+  one revision of `DESIGN.md` and the theme from another, and a failing run
+  could meet the other run's files while undoing its own. A run now places and
+  undoes its files only while it holds `.qfai/tools/state/design-catalog.lock`,
+  under the `.qfai/tools/` that `qfai init` keeps out of Git, so a lock a
+  killed run leaves is never committed. A run that finds the lock held writes
+  nothing and exits 1, saying whether to retry once the other run finishes or
+  to remove a lock no running process holds. Closes #4756.
+
 - **A SQL contract with an unmatched closing parenthesis now fails to
   parse.** `qfai validate` accepted a `)` that closed nothing, such as the
   second one in `CREATE TABLE t (a int));`, and treated the file as one that
@@ -712,6 +743,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `symlink` left the path empty and the wrapper, with everything in it, gone.
   The entry is now moved aside first and put back when the link fails, and
   removed only once the link stands.
+
+- **The skeleton smoke now requires the path count it reports.** It accepted
+  the dry-run plan's `would write:` label with no number after it and then
+  printed a successful run that planned 0 paths, a count the plan never named.
+  A plan without a numeric count now fails the smoke, and the failure prints
+  the output it read. Closes #4754.
 
 - **`qfai db-drift` no longer calls a comparison equal when a SQL file failed
   to apply.** With a failed file and no differences among the files that did
