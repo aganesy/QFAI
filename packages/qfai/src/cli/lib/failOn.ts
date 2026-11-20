@@ -18,7 +18,7 @@ export function shouldFail(result: ValidationResult, failOn: FailOn): boolean {
  * `--strict` > the configured value (`validation.failOn`, whose shipped
  * default is `error`).
  *
- * Both validate and doctor use this one function. When doctor ignored the
+ * Validate, report and doctor use this one function. When doctor ignored the
  * config and always returned 0 without a flag, two commands reading the same
  * config disagreed on how much an `[error]` weighs.
  */

@@ -32,7 +32,8 @@
  *
  * Exit codes: 0 answered, 1 the remaining budget is below the reserve, 2 the
  * arguments, `git` or `gh` could not be read, or `defer` was given a thread of
- * another pull request or repository.
+ * another pull request or repository. A `gh` that fails or cannot be started
+ * gives 2 and a line naming the operation it was doing, not a stack trace.
  */
 /* global console, process */
 import { execFileSync } from "node:child_process";
@@ -218,8 +219,28 @@ export function foreignThread(slug, pr, response) {
   return `The thread belongs to ${nameWithOwner}#${String(pullRequest.number)}, not ${slug}#${String(requested)}.`;
 }
 
-function gh(args) {
-  return execFileSync("gh", args, { encoding: "utf-8", maxBuffer: 16 * 1024 * 1024 });
+/** A `gh` call that failed, with the operation it was doing. */
+class GhFailure extends Error {}
+
+/** Why `gh` failed: it could not be started, it exited with an error, or Node stopped it. */
+function failureCause(error) {
+  const code = typeof error?.code === "string" ? error.code : undefined;
+  if (code === "ENOENT" || code === "EACCES") return `could not be started (${code})`;
+  if (Number.isInteger(error?.status)) return `exited with status ${String(error.status)}`;
+  return code === undefined ? "failed" : `failed (${code})`;
+}
+
+/**
+ * `gh`'s output, or a `GhFailure` naming `operation` when `gh` cannot be
+ * started or exits with an error. `gh`'s own message has already reached
+ * stderr, so the failure adds only what was being done.
+ */
+function gh(args, operation) {
+  try {
+    return execFileSync("gh", args, { encoding: "utf-8", maxBuffer: 16 * 1024 * 1024 });
+  } catch (error) {
+    throw new GhFailure(`\`gh\` ${failureCause(error)} while ${operation}.`);
+  }
 }
 
 function origin() {
@@ -253,7 +274,7 @@ function readThreads(owner, repo, number) {
       `size=${String(PAGE_SIZE)}`,
     ];
     if (before !== undefined) args.push("-f", `before=${before}`);
-    const response = JSON.parse(gh(args));
+    const response = JSON.parse(gh(args, `reading the review threads of pull request ${number}`));
     const page = unresolvedThreads(response);
     if (page === undefined) return undefined;
     threads.unshift(...page);
@@ -319,16 +340,19 @@ function listCommand(slug, number) {
 
 function replyCommand(threadId, bodyFile) {
   const out = JSON.parse(
-    gh([
-      "api",
-      "graphql",
-      "-f",
-      `query=${REPLY_MUTATION}`,
-      "-F",
-      `id=${threadId}`,
-      "-F",
-      `body=@${bodyFile}`,
-    ]),
+    gh(
+      [
+        "api",
+        "graphql",
+        "-f",
+        `query=${REPLY_MUTATION}`,
+        "-F",
+        `id=${threadId}`,
+        "-F",
+        `body=@${bodyFile}`,
+      ],
+      `replying to review thread ${threadId}`,
+    ),
   );
   console.log(out?.data?.addPullRequestReviewThreadReply?.comment?.url ?? "replied");
   return 0;
@@ -336,7 +360,10 @@ function replyCommand(threadId, bodyFile) {
 
 function resolveCommand(threadIds) {
   for (const id of threadIds) {
-    gh(["api", "graphql", "-f", `query=${RESOLVE_MUTATION}`, "-F", `id=${id}`]);
+    gh(
+      ["api", "graphql", "-f", `query=${RESOLVE_MUTATION}`, "-F", `id=${id}`],
+      `resolving review thread ${id}`,
+    );
     console.log(`resolved ${id}`);
   }
   return 0;
@@ -347,13 +374,16 @@ function resolveCommand(threadIds) {
  * `gh`'s output so a body's own line breaks cannot split it.
  */
 function issueCommentBodies(slug, issue) {
-  const out = gh([
-    "api",
-    "--paginate",
-    `repos/${slug}/issues/${issue}/comments?per_page=100`,
-    "--jq",
-    ".[].body | @json",
-  ]);
+  const out = gh(
+    [
+      "api",
+      "--paginate",
+      `repos/${slug}/issues/${issue}/comments?per_page=100`,
+      "--jq",
+      ".[].body | @json",
+    ],
+    `reading the comments of issue ${issue}`,
+  );
   return out
     .split("\n")
     .filter((line) => line.trim() !== "")
@@ -363,7 +393,10 @@ function issueCommentBodies(slug, issue) {
 
 function deferCommand(slug, pr, threadId, issue) {
   const response = JSON.parse(
-    gh(["api", "graphql", "-f", `query=${THREAD_QUERY}`, "-F", `id=${threadId}`]),
+    gh(
+      ["api", "graphql", "-f", `query=${THREAD_QUERY}`, "-F", `id=${threadId}`],
+      `reading review thread ${threadId}`,
+    ),
   );
   const entry = deferredEntry(pr, response);
   if (entry === undefined) {
@@ -381,22 +414,31 @@ function deferCommand(slug, pr, threadId, issue) {
     return 0;
   }
   if (!done.recorded) {
-    gh(["api", `repos/${slug}/issues/${issue}/comments`, "-f", `body=${entry}`]);
+    gh(
+      ["api", `repos/${slug}/issues/${issue}/comments`, "-f", `body=${entry}`],
+      `recording the finding of review thread ${threadId} in issue ${issue}`,
+    );
   }
   if (!done.replied) {
-    gh([
-      "api",
-      "graphql",
-      "-f",
-      `query=${REPLY_MUTATION}`,
-      "-F",
-      `id=${threadId}`,
-      "-f",
-      `body=${deferredReply(issue)}`,
-    ]);
+    gh(
+      [
+        "api",
+        "graphql",
+        "-f",
+        `query=${REPLY_MUTATION}`,
+        "-F",
+        `id=${threadId}`,
+        "-f",
+        `body=${deferredReply(issue)}`,
+      ],
+      `replying to review thread ${threadId}`,
+    );
   }
   if (!done.resolved) {
-    gh(["api", "graphql", "-f", `query=${RESOLVE_MUTATION}`, "-F", `id=${threadId}`]);
+    gh(
+      ["api", "graphql", "-f", `query=${RESOLVE_MUTATION}`, "-F", `id=${threadId}`],
+      `resolving review thread ${threadId}`,
+    );
   }
   console.log(`deferred ${threadId} to #${issue}`);
   return 0;
@@ -427,10 +469,16 @@ export function run(argv) {
     console.error("The `origin` remote does not name a GitHub repository.");
     return 2;
   }
-  if (command === "list") return listCommand(slug, args[0]);
-  if (command === "reply") return replyCommand(args[0], args[1]);
-  if (command === "defer") return deferCommand(slug, args[0], args[1], args[2]);
-  return resolveCommand(args);
+  try {
+    if (command === "list") return listCommand(slug, args[0]);
+    if (command === "reply") return replyCommand(args[0], args[1]);
+    if (command === "defer") return deferCommand(slug, args[0], args[1], args[2]);
+    return resolveCommand(args);
+  } catch (error) {
+    if (!(error instanceof GhFailure)) throw error;
+    console.error(error.message);
+    return 2;
+  }
 }
 
 // `pathToFileURL`, not `file://` + the path: on Windows `process.argv[1]` is a
